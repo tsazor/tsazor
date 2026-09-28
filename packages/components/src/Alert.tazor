@@ -1,0 +1,28 @@
+@if (visible) {
+    <div class="@alertClass" role="alert">
+        @childContent
+        @if (dismissible) {
+            <button type="button" class="btn-close" aria-label="Close" @onclick="dismiss"></button>
+        }
+    </div>
+}
+
+@code {
+    /** Bootstrap color variant: primary | secondary | success | danger | warning | info | light | dark. */
+    @Parameter() variant: string = "primary";
+    /** Renders the dismiss button; the alert closes itself and fires OnDismissed. */
+    @Parameter() dismissible: boolean = false;
+    @Parameter() onDismissed?: EventCallback<MouseEvent>;
+    @Parameter() childContent?: RenderFragment;
+
+    private visible = true;
+
+    private get alertClass(): string {
+        return `alert alert-${this.variant} alert-dismissible fade show`;
+    }
+
+    private dismiss(e: MouseEvent): void {
+        this.visible = false;
+        this.onDismissed?.invokeAsync(e);
+    }
+}

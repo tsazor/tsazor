@@ -1,0 +1,54 @@
+import { ComponentBase } from "../components/component-base";
+import { Parameter } from "../components/parameter-metadata";
+import { inject } from "../di/service-provider";
+import type { ServiceProvider, Token } from "../di/service-collection";
+import { NavigationManager } from "../navigation/navigation-manager";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
+import { matchRoute, RouteManifest, type RouteData, type RouteEntry } from "./route-data";
+
+/**
+ * Blazor's Router: matches the current location against the route manifest
+ * and renders the found/not-found content. The manifest is an explicit list
+ * of RouteEntry values (M7's Vite plugin generates it from @page modules —
+ * Blazor uses assembly reflection, which TS does not have).
+ */
+export class Router extends ComponentBase {
+  /** The app's route manifest (template + component per @page). */
+  @Parameter() routes: RouteEntry[] = [];
+  /** RenderFragment factory receiving the RouteData (Blazor's <Found Context>). */
+  @Parameter() found?: (routeData: RouteData) => RenderFragment;
+  /** Content rendered when no route matches (Blazor's <NotFound>). */
+  @Parameter() notFound?: RenderFragment;
+
+  private readonly navigation = this.inject(NavigationManager);
+  private unsubscribe?: () => void;
+
+  protected override onInitialized(): void {
+    if (this.routes.length === 0) {
+      // Fall back to the app-provided manifest (createTasorApp `routes` option).
+      const services = this.componentServices as ServiceProvider | null;
+      const manifest = services?.tryGet(RouteManifest as unknown as Token<RouteManifest>);
+      if (manifest) this.routes = manifest.entries;
+    }
+    this.unsubscribe = this.navigation.addLocationChanged(() => this.stateHasChangedInternal());
+    // Same-origin anchor clicks become SPA navigations from here on (Blazor
+    // enables interception when the Router renders, too).
+    this.navigation.enableNavigationInterception();
+  }
+
+  protected override buildRenderTree(b: RenderTreeBuilder): void {
+    const matched = matchRoute(this.routes, this.navigation.baseRelativePath);
+    if (matched) {
+      const fragment = this.found?.(matched);
+      if (fragment) {
+        b.addContent(0, fragment);
+      }
+    } else if (this.notFound) {
+      b.addContent(1, this.notFound);
+    }
+  }
+
+  dispose(): void {
+    this.unsubscribe?.();
+  }
+}

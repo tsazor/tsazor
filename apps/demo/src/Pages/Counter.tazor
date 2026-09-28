@@ -1,0 +1,16 @@
+@page "/counter"
+
+<h1>Counter</h1>
+
+<div class="card">
+    <p class="count-display" role="status">Current count: <strong>@currentCount</strong></p>
+    <button class="btn" @onclick="incrementCount">Click me</button>
+</div>
+
+@code {
+    private currentCount = 0;
+
+    private incrementCount() {
+        this.currentCount++;
+    }
+}

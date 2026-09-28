@@ -1,0 +1,30 @@
+{
+  "name": "@tasor/components",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Bootstrap 5 UI component library for Tasor — written in .tazor (dogfooding the compiler and runtime).",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@tasor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@tasor/compiler": "workspace:*",
+    "@tasor/runtime": "workspace:*",
+    "@tasor/testing": "workspace:*",
+    "@tasor/workspace": "workspace:*",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^18.0.1",
+    "vitest": "^3.2.7"
+  }
+}

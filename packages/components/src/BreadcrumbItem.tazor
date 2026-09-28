@@ -1,0 +1,20 @@
+<li class="@itemClass">
+    @if (active) {
+        @childContent
+    } else {
+        <a href="@href">@childContent</a>
+    }
+</li>
+
+@code {
+    /** Entry text/content — must be declared so the runtime applies ChildContent. */
+    @Parameter() childContent?: RenderFragment;
+    /** Link target; ignored when active. */
+    @Parameter() href: string = "#";
+    /** The current (last) breadcrumb entry: plain text, no link. */
+    @Parameter() active: boolean = false;
+
+    private get itemClass(): string {
+        return this.active ? "breadcrumb-item active" : "breadcrumb-item";
+    }
+}

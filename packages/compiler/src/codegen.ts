@@ -1,0 +1,780 @@
+import type {
+  AttributeNode,
+  CodeBlockNode,
+  DocumentNode,
+  ElementNode,
+  MarkupNode,
+} from "./ast";
+import { DiagnosticBag, type SourcePos } from "./diagnostics";
+import { decodeHtmlEntities } from "./entities";
+import { TSScanner } from "./scanner";
+
+export interface ResolvedComponent {
+  specifier: string;
+  /** Exported name; undefined = default export. */
+  exportName?: string;
+}
+
+export interface ResolvedType {
+  specifier: string;
+  exportName?: string;
+}
+
+export interface CodegenOptions {
+  className: string;
+  /** Resolves an uppercase markup tag to its module. */
+  resolveComponent?: (tagName: string, usings: string[]) => ResolvedComponent | null;
+  /** Resolves an identifier (@inject type, @inherits base) to its module. */
+  resolveType?: (name: string, usings: string[]) => ResolvedType | null;
+  /** Extra import lines (e.g. composed from _Imports.tazor). */
+  imports?: string[];
+  /** Map of usings to emit as plain module imports (namespace → specifier). */
+  usingSpecifiers?: Record<string, string>;
+  /** Source file name used in the sourcemap. */
+  fileName?: string;
+}
+
+export interface CodegenResult {
+  code: string;
+  mappings: Array<{ genLine: number; genCol: number; srcLine: number; srcCol: number }>;
+  metadata: {
+    routeTemplate?: string;
+    layout?: string;
+    usings: string[];
+    injects: Array<{ type: string; name: string }>;
+    typeParams: string[];
+    inherits?: string;
+  };
+}
+
+interface MapEntry {
+  genLine: number;
+  genCol: number;
+  srcLine: number;
+  srcCol: number;
+}
+
+/** Component attributes whose name marks them as event callbacks (On*, on*). */
+const EVENT_ATTR_PATTERN = /^on/i;
+
+/** Emission context: tracks sequence numbers per fragment scope. */
+interface SeqScope {
+  next: number;
+}
+
+/** TS globals (and keywords) that must not be turned into member references. */
+const KNOWN_GLOBALS = new Set([
+  "this", "Math", "JSON", "Date", "Number", "String", "Boolean", "Array", "Object", "Promise",
+  "Map", "Set", "Symbol", "WeakMap", "WeakSet", "Intl", "Reflect", "Proxy", "RegExp", "Error",
+  "console", "window", "document", "location", "navigator", "undefined", "NaN", "Infinity",
+  "super", "globalThis", "arguments", "crypto", "URL", "fetch", "structuredClone",
+]);
+
+/** JS keywords that must never be treated as member references. */
+// Note: "type" is deliberately NOT in this list. It is only a contextual
+// keyword (type aliases) and can never appear as a keyword inside a markup
+// expression — but it is an extremely common property name, and skipping it
+// broke `@type` (rendered bare `type` instead of `this.type` at runtime).
+const JS_KEYWORDS = new Set([
+  "if", "else", "for", "while", "do", "switch", "case", "default", "break", "continue",
+  "return", "throw", "try", "catch", "finally", "new", "delete", "typeof", "void",
+  "instanceof", "in", "of", "await", "async", "yield", "const", "let", "var", "function",
+  "class", "extends", "implements", "interface", "enum", "import", "export",
+  "from", "as", "get", "set", "null", "true", "false", "constructor",
+]);
+
+export function generateCode(document: DocumentNode, options: CodegenOptions, diagnostics: DiagnosticBag): CodegenResult {
+  return new Codegen(options, diagnostics).run(document);
+}
+
+class Codegen {
+  private readonly lines: string[] = [];
+  private maps: MapEntry[] = [];
+  private readonly runtimeImports = new Set<string>();
+  private readonly componentImports = new Map<string, string>(); // tagName → local name
+  private readonly componentLocalNames = new Map<string, string>(); // tagName → local
+  private readonly typeImports = new Map<string, string>(); // typeName → local
+  private readonly plainImports: string[] = [];
+  private readonly seqStack: SeqScope[] = [{ next: 0 }];
+  /** Locals declared by loops / inline code — emitted without a `this.` prefix. */
+  private readonly locals = new Set<string>();
+  private readonly metadata: CodegenResult["metadata"] = { usings: [], injects: [], typeParams: [] };
+  private inheritsBase = "ComponentBase";
+
+  constructor(
+    private readonly options: CodegenOptions,
+    private readonly diagnostics: DiagnosticBag,
+  ) {}
+
+  run(document: DocumentNode): CodegenResult {
+    const directives = document.directives;
+    for (const d of directives) {
+      switch (d.name) {
+        case "page":
+          this.metadata.routeTemplate = unquote(d.value);
+          break;
+        case "layout":
+          this.metadata.layout = d.value.trim();
+          break;
+        case "using":
+          this.metadata.usings.push(d.value.trim());
+          break;
+        case "inject": {
+          const parts = d.value.trim().split(/\s+/);
+          if (parts.length < 2) {
+            this.diagnostics.error("TZR001", d.pos, "Usage: @inject <Type> <Name>.");
+            break;
+          }
+          const name = parts[parts.length - 1]!;
+          const type = parts.slice(0, -1).join(" ");
+          this.metadata.injects.push({ type, name });
+          this.resolveType(type);
+          break;
+        }
+        case "inherits":
+          this.metadata.inherits = d.value.trim();
+          break;
+        case "typeparam":
+          this.metadata.typeParams.push(d.value.trim());
+          break;
+        default:
+          this.diagnostics.error("TZR001", d.pos, `Unknown directive '@${d.name}'.`);
+      }
+    }
+
+    if (this.metadata.inherits) {
+      const base = this.metadata.inherits;
+      this.inheritsBase = this.resolveType(base);
+    }
+
+    // Collect member code blocks and scan for runtime API usage.
+    const memberCode = document.body.filter((n): n is Extract<MarkupNode, { kind: "codeBlock" }> => n.kind === "codeBlock" && n.member === true);
+    const renderBody = document.body.filter((n) => !(n.kind === "codeBlock" && n.member === true));
+
+    const memberSource = memberCode.map((n) => n.code).join("\n");
+    if (/@Parameter\s*\(/.test(memberSource)) this.runtimeImports.add("Parameter");
+    if (/@CascadingParameter\s*\(/.test(memberSource)) this.runtimeImports.add("CascadingParameter");
+    if (this.metadata.injects.length > 0 || /\binject\s*\(/.test(memberSource)) this.runtimeImports.add("inject");
+
+    // Pre-resolve component tags so imports come out once, before the class.
+    this.preResolve(document.body, this.metadata.usings);
+
+    // --- Emit the module -------------------------------------------------
+    this.runtimeImports.add("ComponentBase");
+    this.runtimeImports.add("RenderTreeBuilder");
+    this.line(`/* Generated by @tasor/compiler from ${this.options.fileName ?? "component"} — do not edit. */`);
+    this.line("");
+    // The runtime import depends on APIs discovered during body emission
+    // (e.g. EventCallback from event handlers), so its line is spliced in
+    // after the body has been generated.
+    const runtimeImportLine = this.lines.length;
+
+    for (const [tagName, local] of this.componentImports) {
+      const resolved = this.options.resolveComponent?.(tagName, this.metadata.usings) ?? null;
+      const spec = resolved?.specifier ?? tagName;
+      if (resolved?.exportName) {
+        this.line(`import { ${resolved.exportName} as ${local} } from "${spec}";`);
+      } else {
+        this.line(`import ${local} from "${spec}";`);
+      }
+    }
+    if (this.componentImports.size > 0) this.line("");
+
+    for (const [typeName, local] of this.typeImports) {
+      const resolved = this.options.resolveType?.(typeName, this.metadata.usings) ?? null;
+      const spec = resolved?.specifier ?? typeName;
+      if (resolved?.exportName) this.line(`import { ${resolved.exportName} as ${typeName} } from "${spec}";`);
+      else this.line(`import ${typeName} from "${spec}";`);
+    }
+    if (this.typeImports.size > 0) this.line("");
+
+    for (const imp of this.options.imports ?? []) this.line(imp);
+    if ((this.options.imports ?? []).length > 0) this.line("");
+
+    for (const [ns, spec] of Object.entries(this.options.usingSpecifiers ?? {})) {
+      this.line(`import { ${ns} } from "${spec}";`);
+    }
+
+    if (this.metadata.routeTemplate) {
+      this.line(`export const routeTemplate = ${JSON.stringify(this.metadata.routeTemplate)};`);
+      this.line("");
+    }
+
+    const typeParams = this.metadata.typeParams;
+    const typeDecl = typeParams.length > 0 ? `<${typeParams.join(", ")}>` : "";
+    for (const attr of directives.filter((d) => d.name === "attribute")) {
+      this.line(attr.value.trim());
+    }
+    this.line(`export default class ${this.options.className}${typeDecl} extends ${this.inheritsBase} {`);
+    if (this.metadata.routeTemplate) {
+      this.line("  static routeTemplate = routeTemplate;");
+      this.line("");
+    }
+    for (const inject of this.metadata.injects) {
+      this.line(`  private readonly ${inject.name} = inject(${inject.type});`);
+    }
+    if (this.metadata.injects.length > 0) this.line("");
+
+    // @code blocks verbatim, re-indented into the class.
+    for (const block of memberCode) {
+      this.commentLine(`/* @code (${this.options.fileName ?? ""}:${block.pos.line}) */`);
+      this.emitCodeVerbatim(block.code, block.pos.line, 2);
+      this.line("");
+    }
+
+    this.line("  protected override buildRenderTree(b: RenderTreeBuilder): void {");
+    this.emitNodes(renderBody, { line: 0, column: 0 });
+    this.line("  }");
+    this.line("}");
+    this.line("");
+
+    // Splice the runtime import in at its header position, now that body
+    // emission has revealed every runtime API the module uses. Mappings
+    // recorded so far are 1-based line indices, so they shift with the insert.
+    this.maps = this.maps.map((m) => ({ ...m, genLine: m.genLine + 2 }));
+    this.lines.splice(
+      runtimeImportLine,
+      0,
+      `import { ${[...this.runtimeImports].sort().join(", ")} } from "@tasor/runtime";`,
+      "",
+    );
+
+    const code = this.lines.join("\n") + "\n";
+    return { code, mappings: this.takeMappings(), metadata: this.metadata };
+  }
+
+  /** Produces the mapping entries for the sourcemap stage. */
+  takeMappings(): MapEntry[] {
+    return this.maps;
+  }
+
+  /* ------------------------------------------------------------------ */
+
+  private preResolve(nodes: MarkupNode[], usings: string[]): void {
+    for (const node of nodes) {
+      if (node.kind === "element" && node.isComponent) {
+        this.localForComponent(node.tagName, usings, node.pos);
+      }
+      const nested =
+        node.kind === "element" ? node.children
+        : node.kind === "textTag" ? node.children
+        : node.kind === "if" ? node.branches.flatMap((br) => br.children)
+        : node.kind === "for" ? node.children
+        : node.kind === "switch" ? node.cases.flatMap((c) => c.children)
+        : [];
+      if (nested.length > 0) this.preResolve(nested, usings);
+    }
+  }
+
+  private localForComponent(tagName: string, usings: string[], pos: SourcePos): string | null {
+    const existing = this.componentLocalNames.get(tagName);
+    if (existing !== undefined) return existing;
+    const resolved = this.options.resolveComponent?.(tagName, usings) ?? null;
+    if (!resolved) {
+      this.diagnostics.warning("TZR005", pos, `Component '<${tagName}>' could not be resolved; it will be emitted as an element.`);
+      this.componentLocalNames.set(tagName, "__tasor_unresolved");
+      return null;
+    }
+    const local = `__tasor_comp_${tagName.replace(/[^A-Za-z0-9_]/g, "_")}`;
+    this.componentLocalNames.set(tagName, local);
+    this.componentImports.set(tagName, local);
+    return local;
+  }
+
+  private resolveType(name: string): string {
+    if (this.typeImports.has(name)) return name;
+    const resolved = this.options.resolveType?.(name, this.metadata.usings) ?? null;
+    if (resolved) this.typeImports.set(name, name);
+    return name;
+  }
+
+  private seq(): number {
+    return this.seqStack[this.seqStack.length - 1]!.next++;
+  }
+
+  private enterScope(): void {
+    this.seqStack.push({ next: 0 });
+  }
+
+  private leaveScope(): void {
+    this.seqStack.pop();
+  }
+
+  /**
+   * Rewrites an expression's bare member references to `this.X` (C# allows
+   * bare member references; TS does not). Locals (loop variables, arrow
+   * parameters), TS globals and keywords pass through untouched; identifiers
+   * after a `.` are property accesses and stay bare.
+   */
+  private expr(code: string): string {
+    const trimmed = code.trim();
+    if (trimmed.length === 0) return code;
+    return this.bakeMemberRefs(trimmed);
+  }
+
+  /**
+   * Rewrites every bare identifier to `this.name` across the whole expression
+   * (not just the leading one — `@for (const x of items)` and conditions like
+   * `a && b` need this too). Skips strings, comments, property accesses after
+   * `.`, keywords, TS globals, enclosing locals, locals declared in the span
+   * itself and arrow parameters.
+   */
+  private bakeMemberRefs(code: string): string {
+    if (!/[A-Za-z_$]/.test(code)) return code;
+
+    const spanLocals = new Set<string>(this.locals);
+    for (const m of code.matchAll(/(?:^|[\s(,;])(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
+      spanLocals.add(m[1]!);
+    }
+    // Arrow parameters: `(a, b) =>` or `x =>` — their names are locals too.
+    for (const m of code.matchAll(/=>/g)) {
+      const arrowAt = m.index ?? 0;
+      let j = arrowAt - 1;
+      while (j >= 0 && /\s/.test(code[j]!)) j--;
+      if (j >= 0 && code[j] === ")") {
+        let depth = 0;
+        let k = j;
+        while (k >= 0) {
+          const c = code[k];
+          if (c === ")") depth++;
+          else if (c === "(") {
+            depth--;
+            if (depth === 0) break;
+          }
+          k--;
+        }
+        if (k >= 0) {
+          for (const part of code.slice(k + 1, j).split(",")) {
+            for (const idm of part.matchAll(/[A-Za-z_$][\w$]*/g)) spanLocals.add(idm[0]);
+          }
+        }
+      } else if (j >= 0) {
+        let k = j;
+        while (k >= 0 && /[\w$]/.test(code[k]!)) k--;
+        const name = code.slice(k + 1, j + 1);
+        if (/^[A-Za-z_$]/.test(name)) spanLocals.add(name);
+      }
+    }
+
+    const scanner = new TSScanner(code, () => ({ line: 0, column: 0 }));
+    let out = "";
+    let i = 0;
+    while (i < code.length) {
+      const ch = code[i]!;
+      if (ch === '"' || ch === "'" || ch === "`") {
+        const end = scanner.skipStringFor(i, ch);
+        const stop = end > i ? end : i + 1;
+        out += code.slice(i, stop);
+        i = stop;
+        continue;
+      }
+      if (ch === "/" && code[i + 1] === "/") {
+        const end = code.indexOf("\n", i);
+        const stop = end < 0 ? code.length : end;
+        out += code.slice(i, stop);
+        i = stop;
+        continue;
+      }
+      if (ch === "/" && code[i + 1] === "*") {
+        const end = code.indexOf("*/", i + 2);
+        const stop = end < 0 ? code.length : end + 2;
+        out += code.slice(i, stop);
+        i = stop;
+        continue;
+      }
+      if (/[A-Za-z_$]/.test(ch)) {
+        let e = i;
+        while (e < code.length && /[\w$]/.test(code[e]!)) e++;
+        const name = code.slice(i, e);
+        const afterDot = i > 0 && code[i - 1] === ".";
+        if (afterDot || spanLocals.has(name) || KNOWN_GLOBALS.has(name) || JS_KEYWORDS.has(name)) {
+          out += name;
+        } else {
+          out += `this.${name}`;
+        }
+        i = e;
+        continue;
+      }
+      out += ch;
+      i++;
+    }
+    return out;
+  }
+
+  private line(text: string): void {
+    this.lines.push(text);
+  }
+
+  private commentLine(text: string): void {
+    this.line(text);
+  }
+
+  private stmt(text: string, pos: SourcePos): void {
+    this.line("    " + text);
+    this.maps.push({ genLine: this.lines.length, genCol: 4, srcLine: pos.line - 1, srcCol: pos.column });
+  }
+
+  private emitCodeVerbatim(code: string, srcLine: number, indent: number): void {
+    for (const rawLine of code.split("\n")) {
+      const line = rawLine.replace(/\t/g, "  ");
+      this.line(line.length > 0 ? " ".repeat(indent) + line : "");
+      if (line.trim().length > 0) {
+        const firstContent = line.length - line.trimStart().length;
+        this.maps.push({
+          genLine: this.lines.length,
+          genCol: indent + firstContent,
+          srcLine: srcLine - 1,
+          srcCol: firstContent,
+        });
+      }
+      srcLine++;
+    }
+  }
+
+  private emitNodes(nodes: MarkupNode[], pos: SourcePos): void {
+    for (const node of nodes) this.emitNode(node, pos);
+  }
+
+  private emitNode(node: MarkupNode, _pos: SourcePos): void {
+    switch (node.kind) {
+      case "text": {
+        if (node.content.length === 0) return;
+        // Whitespace-only text that spans lines separates block-level nodes —
+        // Razor treats it as insignificant and so do we.
+        if (/^\s+$/.test(node.content) && node.content.includes("\n")) return;
+        this.stmt(`b.addContent(${this.seq()}, ${JSON.stringify(decodeHtmlEntities(node.content))});`, node.pos);
+        break;
+      }
+      case "directive":
+        break; // handled at document level
+      case "expression":
+        this.stmt(`b.addContent(${this.seq()}, ${this.expr(node.code)});`, node.pos);
+        break;
+      case "codeBlock": {
+        this.stmt(`{`, node.pos);
+        this.emitCodeVerbatim(this.bakeMemberRefs(node.code), node.pos.line, 4);
+        this.stmt(`}`, node.pos);
+        break;
+      }
+      case "textTag":
+        this.emitNodes(node.children, node.pos);
+        break;
+      case "element":
+        if (node.isComponent) {
+          if (this.componentLocalNames.get(node.tagName) === "__tasor_unresolved") {
+            this.emitElement(node);
+          } else {
+            this.emitComponent(node);
+          }
+        } else {
+          this.emitElement(node);
+        }
+        break;
+      case "if":
+        this.emitIf(node);
+        break;
+      case "for": {
+        if (node.isForEach) {
+          // C#-style @foreach (var item in items) → for (const item of this.items).
+          const match = /^\s*(?:var|let|const)?\s*([A-Za-z_$][A-Za-z0-9_$]*)\s+in\s+([\s\S]+)$/.exec(node.code);
+          if (match) {
+            const [, name, iterable] = match;
+            this.stmt(`for (const ${name} of ${this.expr(iterable!)}) {`, node.pos);
+            this.locals.add(name!);
+            for (const child of node.children) this.emitNode(child, node.pos);
+            this.locals.delete(name!);
+            this.stmt(`}`, node.pos);
+            break;
+          }
+          this.diagnostics.warning("TZR001", node.pos, "@foreach expects '(variable in iterable)'; falling back to verbatim for-header.");
+        }
+        // Plain @for: register declared loop variables so their bodies resolve.
+        const init = node.code.split(";")[0] ?? "";
+        const declared = [...init.matchAll(/(?:^|[\s(,])(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g)].map((m) => m[1]!);
+        for (const name of declared) this.locals.add(name);
+        this.stmt(`for (${this.bakeMemberRefs(node.code)}) {`, node.pos);
+        for (const child of node.children) this.emitNode(child, node.pos);
+        for (const name of declared) this.locals.delete(name);
+        this.stmt(`}`, node.pos);
+        break;
+      }
+      case "switch":
+        this.emitSwitch(node);
+        break;
+    }
+  }
+
+  private emitElement(node: ElementNode): void {
+    const name = node.tagName;
+    const key = node.attributes.find((a) => a.kind === "key");
+    const refs = node.attributes.filter((a) => a.kind === "ref");
+    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
+
+    this.stmt(`b.openElement(${this.seq()}, ${JSON.stringify(name)});`, node.pos);
+    if (key && key.kind === "key") this.stmt(`b.setKey(${this.expr(key.code)});`, node.pos);
+    for (const attr of regular) this.emitAttribute(attr, { tag: name, attributes: regular });
+    for (const ref of refs) {
+      if (ref.kind !== "ref") continue;
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
+        this.diagnostics.error("TZR008", node.pos, "@ref requires a bare property name.");
+        continue;
+      }
+      this.stmt(`b.addElementReferenceCapture(${this.seq()}, (el) => { this.${ref.code} = el; });`, node.pos);
+    }
+    this.emitNodes(node.children, node.pos);
+    this.stmt(`b.closeElement();`, node.pos);
+  }
+
+  private emitComponent(node: ElementNode): void {
+    const local = this.localForComponent(node.tagName, this.metadata.usings, node.pos)!;
+    const key = node.attributes.find((a) => a.kind === "key");
+    const refs = node.attributes.filter((a) => a.kind === "ref");
+    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
+    const hasChildren = node.children.length > 0;
+
+    this.stmt(`b.openComponent(${this.seq()}, ${local});`, node.pos);
+    if (key && key.kind === "key") this.stmt(`b.setKey(${this.expr(key.code)});`, node.pos);
+    for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true });
+    for (const ref of refs) {
+      if (ref.kind !== "ref") continue;
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
+        this.diagnostics.error("TZR008", node.pos, "@ref on components requires a bare property name.");
+        continue;
+      }
+      this.stmt(`b.addElementReferenceCapture(${this.seq()}, (el) => { this.${ref.code} = el; });`, node.pos);
+    }
+    if (hasChildren) {
+      this.stmt(`b.addContent(${this.seq()}, (b) => {`, node.pos);
+      this.enterScope();
+      for (const child of node.children) this.emitNode(child, node.pos);
+      this.leaveScope();
+      this.stmt(`});`, node.pos);
+    }
+    this.stmt(`b.closeComponent();`, node.pos);
+  }
+
+  private emitAttribute(attr: AttributeNode, ctx?: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
+    const pos = attr.pos;
+    switch (attr.kind) {
+      case "static":
+        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${JSON.stringify(decodeHtmlEntities(attr.value))});`, pos);
+        break;
+      case "expression": {
+        const baked = this.expr(attr.code);
+        // Razor's method-group / lambda conversion: on a component tag, an
+        // on*-named attribute value is an event callback. Razor binds method
+        // groups AND lambdas to the component instance via the
+        // EventCallbackFactory; in TS a bare `this.handler` loses `this`, and
+        // an arrow passed as a plain function is bound by the renderer to the
+        // nearest component (wrong receiver inside child-content fragments —
+        // the owning page would never re-render). So the compiler binds every
+        // on*-named component attribute value to `this` up front: the handler
+        // runs on the authoring component and its StateHasChanged fires.
+        let value = baked;
+        if (ctx?.isComponent && EVENT_ATTR_PATTERN.test(attr.name)) {
+          value = `EventCallback.bind(this, ${baked})`;
+          this.runtimeImports.add("EventCallback");
+        }
+        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`, pos);
+        break;
+      }
+      case "mixedValue": {
+        const template = attr.parts
+          .map((p) => (p.code !== undefined ? `\${${this.expr(p.code)}}` : escapeTemplate(decodeHtmlEntities(p.text ?? ""))))
+          .join("");
+        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, \`${template}\`);`, pos);
+        break;
+      }
+      case "eventHandler": {
+        const callback = bareIdentifier(attr.code) ? `this.${attr.code}` : this.expr(attr.code);
+        const flags = attr.flags === 0 ? "" : `, ${attr.flags}`;
+        this.stmt(
+          `b.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, EventCallback.bind(this, ${callback})${flags});`,
+          pos,
+        );
+        this.runtimeImports.add("EventCallback");
+        break;
+      }
+      case "attributes":
+        this.stmt(`b.addMultipleAttributes(${this.seq()}, ${this.expr(attr.code)});`, pos);
+        break;
+      case "bind":
+        this.emitBind(attr, ctx ?? { tag: "", attributes: [attr] });
+        break;
+      case "key":
+      case "ref":
+        break; // handled by emitElement/emitComponent
+    }
+  }
+
+  /** Emits Blazor's @bind family: value + change handler, get/set/after, or
+   *  Value + ValueChanged for component parameter targets. */
+  private emitBind(attr: Extract<AttributeNode, { kind: "bind" }>, ctx: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
+    const pos = attr.pos;
+
+    if (attr.format !== undefined) {
+      // v1: native input display formatting applies; a custom format string is
+      // accepted but only affects parsing of number/date inputs.
+      this.diagnostics.warning("TZR008", pos, "'@bind:format' has limited v1 support: number and date inputs use native parsing.");
+    }
+
+    // Component parameter binding: @bind-Target or @bind on a component tag
+    // → Target + TargetChanged / Value + ValueChanged parameter pair.
+    if (attr.bindTarget !== undefined || ctx.isComponent === true) {
+      const target = attr.bindTarget ?? "Value";
+      this.emitComponentBind(attr, target, pos);
+      return;
+    }
+
+    // Element binding: @bind / @bind:get / @bind:set / @bind:after / @bind:event.
+    const tag = ctx.tag.toLowerCase();
+    const inputType = staticAttributeValue(ctx.attributes, "type")?.toLowerCase();
+    const isCheckbox = tag === "input" && inputType === "checkbox";
+    const isNumber = tag === "input" && inputType === "number";
+    const isDate = tag === "input" && inputType === "date";
+    const valueAttribute = isCheckbox ? "checked" : "value";
+    const event = attr.event ?? "onchange";
+
+    // Value side: @bind:get overrides @bind's expression.
+    const display = attr.get !== undefined ? this.expr(attr.get) : this.expr(attr.expression ?? "");
+    if (display.length === 0) {
+      this.diagnostics.error("TZR009", pos, "'@bind' requires an expression.");
+      return;
+    }
+
+    // Extraction of the DOM value inside the change handler.
+    let extract = "(e.target as HTMLInputElement).value";
+    if (isCheckbox) extract = "(e.target as HTMLInputElement).checked";
+    else if (isNumber) extract = "Number((e.target as HTMLInputElement).value)";
+    else if (isDate) extract = "new Date((e.target as HTMLInputElement).value)";
+
+    const handlerBody = () => {
+      const parts: string[] = [];
+      if (attr.set !== undefined) {
+        parts.push(`(${this.expr(attr.set)})(${extract})`);
+      } else {
+        const assignmentTarget = this.expr(attr.expression ?? "");
+        if (!isAssignableTarget(assignmentTarget)) {
+          this.diagnostics.error("TZR008", pos, `@bind requires a settable member expression (got '${assignmentTarget}').`);
+        } else if (isCheckbox) {
+          parts.push(`${assignmentTarget} = ${extract}`);
+        } else if (isNumber) {
+          parts.push(`${assignmentTarget} = Number.isNaN(Number((e.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
+        } else if (isDate) {
+          parts.push(`${assignmentTarget} = ${extract}`);
+        } else {
+          parts.push(`${assignmentTarget} = ${extract}`);
+        }
+      }
+      if (attr.after !== undefined) {
+        const after = bareIdentifier(attr.after) ? `this.${attr.after}()` : `(${this.expr(attr.after)})()`;
+        parts.push(after);
+      }
+      return parts.join("; ");
+    };
+
+    this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
+    this.stmt(
+      `b.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, EventCallback.bind(this, (e) => { ${handlerBody()}; }));`,
+      pos,
+    );
+    this.runtimeImports.add("EventCallback");
+  }
+
+  /**
+   * Emits a component parameter bind: `<Target>` from the bound expression
+   * plus `<Target>Changed` as an EventCallback that writes back. Supports
+   * the @bind:get/:set/:after modifiers (Blazor's .NET-7 semantics).
+   */
+  private emitComponentBind(attr: Extract<AttributeNode, { kind: "bind" }>, target: string, pos: SourcePos): void {
+    const label = attr.bindTarget !== undefined ? `@bind-${target}` : `@bind (component)`;
+
+    const display = attr.get !== undefined ? this.expr(attr.get) : this.expr(attr.expression ?? "");
+    if (display.length === 0) {
+      this.diagnostics.error("TZR009", pos, `${label} requires an expression.`);
+      return;
+    }
+
+    let setter: string;
+    if (attr.set !== undefined) {
+      setter = `(${this.expr(attr.set)})(v)`;
+    } else {
+      const assignmentTarget = this.expr(attr.expression ?? "");
+      if (!isAssignableTarget(assignmentTarget)) {
+        this.diagnostics.error("TZR008", pos, `${label} requires a settable member expression.`);
+        return;
+      }
+      setter = `${assignmentTarget} = v`;
+    }
+    const after = attr.after !== undefined
+      ? (bareIdentifier(attr.after) ? `; this.${attr.after}()` : `; (${this.expr(attr.after)})()`)
+      : "";
+
+    this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(target)}, ${display});`, pos);
+    this.stmt(
+      `b.addAttribute(${this.seq()}, ${JSON.stringify(`${target}Changed`)}, EventCallback.bind(this, (v) => { ${setter}${after}; }));`,
+      pos,
+    );
+    this.runtimeImports.add("EventCallback");
+  }
+
+  private emitIf(node: Extract<MarkupNode, { kind: "if" }>): void {
+    node.branches.forEach((branch, index) => {
+      const prefix = index === 0 ? "if" : branch.condition !== null ? "else if" : "else";
+      if (prefix === "else") {
+        this.stmt(`else {`, branch.span?.pos ?? node.pos);
+      } else {
+        this.stmt(`${prefix} (${this.expr(branch.condition!)}) {`, branch.span?.pos ?? node.pos);
+      }
+      for (const child of branch.children) this.emitNode(child, node.pos);
+      this.stmt(`}`, node.pos);
+    });
+  }
+
+  private emitSwitch(node: Extract<MarkupNode, { kind: "switch" }>): void {
+    this.stmt(`switch (${this.expr(node.code)}) {`, node.pos);
+    for (const c of node.cases) {
+      if (c.code === null) {
+        this.stmt(`default: {`, c.span?.pos ?? node.pos);
+      } else {
+        this.stmt(`case ${this.bakeMemberRefs(c.code)}: {`, c.span?.pos ?? node.pos);
+      }
+      for (const child of c.children) this.emitNode(child, node.pos);
+      this.stmt(`break;`, c.span?.pos ?? node.pos);
+      this.stmt(`}`, c.span?.pos ?? node.pos);
+    }
+    this.stmt(`}`, node.pos);
+  }
+}
+
+/** Attribute frames come first: emit them before children. */
+function unquote(value: string): string {
+  const v = value.trim();
+  if (v.startsWith('"') && v.endsWith('"')) return v.slice(1, -1);
+  return v;
+}
+
+function bareIdentifier(code: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(code);
+}
+
+/** Whether an emitted left-hand side can be assigned to (this.x, item.Name). */
+function isAssignableTarget(target: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(target);
+}
+
+/** Static string value of an attribute (only literal values are resolvable). */
+function staticAttributeValue(attributes: AttributeNode[], name: string): string | undefined {
+  for (const attr of attributes) {
+    if (attr.kind === "static" && attr.name.toLowerCase() === name.toLowerCase()) {
+      return attr.value;
+    }
+  }
+  return undefined;
+}
+
+function escapeTemplate(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+}
+
+export type { MapEntry };

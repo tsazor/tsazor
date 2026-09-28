@@ -1,0 +1,206 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Tasor",
+  "scopeName": "source.tazor",
+  "patterns": [
+    {
+      "include": "#tasor-escaped-at"
+    },
+    {
+      "include": "#code-block"
+    },
+    {
+      "include": "#directive"
+    },
+    {
+      "include": "#explicit-expression"
+    },
+    {
+      "include": "#code-expression"
+    },
+    {
+      "include": "#implicit-expression"
+    },
+    {
+      "include": "#text-tag"
+    },
+    {
+      "include": "text.html.basic"
+    }
+  ],
+  "repository": {
+    "tasor-escaped-at": {
+      "comment": "Escaped @ (@@) — emits a literal @ in the output.",
+      "match": "@@",
+      "name": "constant.character.escape.tazor"
+    },
+    "code-block": {
+      "comment": "@code { ... } / @functions { ... } blocks contain TypeScript members.",
+      "begin": "(@)(code|functions)\\b",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tazor"
+        },
+        "2": {
+          "name": "keyword.control.tazor"
+        }
+      },
+      "end": "(?<=\\})",
+      "patterns": [
+        {
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.block.begin.bracket.curly.ts"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.block.end.bracket.curly.ts"
+            }
+          },
+          "contentName": "meta.embedded.block.tazor-code.ts",
+          "patterns": [
+            {
+              "include": "source.ts"
+            }
+          ]
+        }
+      ]
+    },
+    "directive": {
+      "comment": "Razor directives: @page, @layout, @using, @inject, @typeparam, @attribute, @inherits.",
+      "begin": "(@)(page|layout|using|inject|typeparam|attribute|inherits)\\b",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tazor"
+        },
+        "2": {
+          "name": "keyword.control.directive.tazor"
+        }
+      },
+      "end": "(?=$)|(?=<)",
+      "name": "meta.directive.tazor",
+      "patterns": [
+        {
+          "include": "#directive-value"
+        }
+      ]
+    },
+    "directive-value": {
+      "comment": "The directive's argument line (template, specifier, type + name, …).",
+      "patterns": [
+        {
+          "include": "#string-literal"
+        },
+        {
+          "include": "source.ts"
+        }
+      ]
+    },
+    "explicit-expression": {
+      "comment": "@(expression) — balanced parens (TextMate cannot count nesting; deep nesting is a known limit).",
+      "begin": "@\\(",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.tazor"
+        }
+      },
+      "end": "\\)",
+      "contentName": "source.ts",
+      "patterns": [
+        {
+          "include": "source.ts"
+        }
+      ]
+    },
+    "code-expression": {
+      "comment": "@{ statement code }.",
+      "begin": "@\\{",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.tazor"
+        }
+      },
+      "end": "\\}",
+      "contentName": "source.ts",
+      "patterns": [
+        {
+          "include": "source.ts"
+        }
+      ]
+    },
+    "implicit-expression": {
+      "comment": "Implicit expression: @identifier — dot chains and balanced calls until whitespace/angle bracket.",
+      "match": "@[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z0-9_$]+)*(\\(([^()]|\\([^()]*\\))*\\))?",
+      "name": "meta.expression.implicit.tazor",
+      "captures": {
+        "0": {
+          "patterns": [
+            {
+              "include": "source.ts"
+            }
+          ]
+        }
+      }
+    },
+    "text-tag": {
+      "comment": "<text>…</text> escapes markup-to-code transitions.",
+      "begin": "(<)(text)\\s*>",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.html"
+        },
+        "2": {
+          "name": "entity.name.tag.text.html"
+        }
+      },
+      "end": "(</)(text)\\s*>",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.html"
+        },
+        "2": {
+          "name": "entity.name.tag.html"
+        }
+      },
+      "contentName": "source.tazor",
+      "patterns": [
+        {
+          "include": "#tasor-escaped-at"
+        },
+        {
+          "include": "#implicit-expression"
+        }
+      ]
+    },
+    "event-attributes": {
+      "comment": "Event handler attributes: @onclick, @onchange, … with :preventDefault/:stopPropagation modifiers.",
+      "match": "(@on[a-z]+)(:[a-z]+)?",
+      "name": "meta.attribute.handler.tazor",
+      "captures": {
+        "1": {
+          "name": "entity.other.attribute-name.event.tazor"
+        },
+        "2": {
+          "name": "keyword.other.tazor"
+        }
+      }
+    },
+    "string-literal": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.tazor"
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "name": "string.quoted.single.tazor"
+        }
+      ]
+    }
+  }
+}

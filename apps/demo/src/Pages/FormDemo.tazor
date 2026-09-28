@@ -1,0 +1,54 @@
+@page "/form"
+
+<h1>Contact form</h1>
+
+@if (submitted) {
+    <p class="success">Thanks, @model.name — your message was sent.</p>
+}
+
+<div class="card">
+    <EditForm Model="@model" Validators="@validators" OnValidSubmit="@handleSubmit">
+        <div class="field">
+            <label>Name</label>
+            <InputText @bind="model.name" placeholder="Your name" />
+            <ValidationMessage For="name" />
+        </div>
+        <div class="field">
+            <label>Age</label>
+            <InputNumber @bind="model.age" />
+            <ValidationMessage For="age" />
+        </div>
+        <div class="field">
+            <label>Topic</label>
+            <InputSelect @bind="model.topic">
+                <option value="general">General</option>
+                <option value="support">Support</option>
+                <option value="feedback">Feedback</option>
+            </InputSelect>
+            <ValidationMessage For="topic" />
+        </div>
+        <div class="field">
+            <label>
+                <InputCheckbox @bind="model.newsletter" />
+                Subscribe to updates
+            </label>
+        </div>
+        <button type="submit" class="btn">Send</button>
+        <ValidationSummary />
+    </EditForm>
+</div>
+
+@code {
+    private model = { name: "", age: 0, topic: "general", newsletter: false };
+    private submitted = false;
+
+    private validators: Record<string, ModelValidator> = {
+        name: (value) => (String(value ?? "").trim().length > 0 ? null : "Name is required."),
+        age: (value) => (Number(value) >= 0 ? null : "Age must not be negative."),
+        topic: (value) => (String(value ?? "").length > 0 ? null : "Choose a topic."),
+    };
+
+    private handleSubmit = EventCallback.bind(this, () => {
+        this.submitted = true;
+    });
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@tasor/vite-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Vite plugin for Tasor (.tazor): compile, route manifest, HMR.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:vite --external:esbuild",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@jridgewell/gen-mapping": "^0.3.8",
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "@tasor/compiler": "workspace:*",
+    "@tasor/workspace": "workspace:*",
+    "esbuild": "^0.28.2"
+  },
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.7"
+  }
+}

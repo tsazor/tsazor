@@ -1,0 +1,43 @@
+<div class="dropdown">
+    <button class="@toggleClass" type="button" aria-expanded="@open" @onclick="toggle">
+        @label
+    </button>
+    @if (open) {
+        <div class="dropdown-menu show">@childContent</div>
+    }
+</div>
+
+@code {
+    /** Toggle button label. */
+    @Parameter() label: string = "";
+    /** Toggle button color variant. */
+    @Parameter() variant: string = "primary";
+    /** Renders the outline variant of the color. */
+    @Parameter() outline: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+
+    private open = false;
+
+    readonly isCascadingValueSupplier = true;
+    readonly isFixed = false;
+    readonly cascadeName = "Dropdown";
+    get cascadeValue(): unknown {
+        return this;
+    }
+
+    private get toggleClass(): string {
+        const base = this.outline ? `btn-outline-${this.variant}` : `btn-${this.variant}`;
+        return `btn ${base} dropdown-toggle`;
+    }
+
+    private toggle(): void {
+        this.open = !this.open;
+    }
+
+    /** @internal Called by DropdownItem after selection. */
+    close(): void {
+        if (!this.open) return;
+        this.open = false;
+        this.stateHasChangedInternal();
+    }
+}

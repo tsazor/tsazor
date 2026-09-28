@@ -1,0 +1,23 @@
+{
+  "name": "@tasor/lsp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Language server for Tasor (.tazor): live compiler diagnostics, hover and go-to-definition.",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tasor/compiler": "workspace:*",
+    "@tasor/workspace": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.9.2",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vitest": "^3.2.4",
+    "vscode-languageserver": "^9.0.1"
+  }
+}

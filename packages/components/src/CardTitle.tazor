@@ -1,0 +1,5 @@
+<h5 class="card-title">@childContent</h5>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+}

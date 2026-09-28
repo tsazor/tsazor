@@ -1,0 +1,43 @@
+@page "/auth"
+@inject DemoAuthProvider Auth
+
+<div class="card">
+    <h1>Auth-Demo</h1>
+    <p class="muted">AuthorizeView mit Blazor-Semantik — der AuthenticationStateProvider ist über DI registriert.</p>
+
+    <AuthorizeView ChildContent=@granted NotAuthorized=@denied />
+
+    <div class="field">
+        <button class="btn" @onclick="signIn">Anmelden (alice)</button>
+        <button class="btn" @onclick="signOut">Abmelden</button>
+    </div>
+</div>
+
+@code {
+    private granted: RenderFragment = (b) => this.renderGranted(b);
+    private denied: RenderFragment = (b) => {
+        b.openElement(0, "p");
+        b.addAttribute(1, "class", "error-text");
+        b.addContent(2, "Nicht angemeldet — geschützter Inhalt ist ausgeblendet.");
+        b.closeElement();
+    };
+
+    private renderGranted(b: RenderTreeBuilder): void {
+        const name = this.Auth.peekState()?.user.name ?? "";
+        b.openElement(0, "div");
+        b.addAttribute(1, "class", "success");
+        b.addContent(2, `Angemeldet als ${name}.`);
+        b.closeElement();
+        b.openElement(3, "p");
+        b.addContent(4, "Diese Zeile sieht nur der angemeldete Benutzer.");
+        b.closeElement();
+    }
+
+    private signIn() {
+        this.Auth.signIn("alice");
+    }
+
+    private signOut() {
+        this.Auth.signOut();
+    }
+}

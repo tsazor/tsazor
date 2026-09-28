@@ -1,0 +1,204 @@
+@page "/components"
+
+<h1>Komponenten-POC (Bootstrap 5)</h1>
+<p class="text-muted">Alle Komponenten stammen aus dem @@components-Paket — jede davon ist eine echte .tazor-Datei, kompiliert mit dem Tasor-Compiler.</p>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <Card>
+            <CardHeader>Buttons, Badge &amp; Spinner</CardHeader>
+            <CardBody>
+                <CardTitle>Zähler über EventCallbacks</CardTitle>
+                <p class="d-flex gap-2 align-items-center">
+                    <Button Variant="primary" OnClick="@poke">Zählen</Button>
+                    <Button Variant="success" Outline="@true" Size="sm" OnClick="@poke">Outline sm</Button>
+                    <Button Variant="danger" Disabled="@true">Disabled</Button>
+                    <Badge Variant="danger" Pill="@true">@clicks</Badge>
+                    <Spinner Variant="primary" Size="sm" />
+                </p>
+            </CardBody>
+        </Card>
+
+        <Card>
+            <CardHeader>Progress</CardHeader>
+            <CardBody>
+                <Progress Value="@progress" Variant="success" Striped="@true" Animated="@true" />
+                <p class="d-flex gap-2 mt-2">
+                    <Button Variant="secondary" Size="sm" OnClick="@moreProgress">+10 %</Button>
+                    <Button Variant="secondary" Size="sm" OnClick="@resetProgress">Reset</Button>
+                    <span class="text-muted">@progress %</span>
+                </p>
+            </CardBody>
+        </Card>
+
+        <Card>
+            <CardHeader>Alert (dismissible)</CardHeader>
+            <CardBody>
+                @if (alertVisible) {
+                    <Alert Variant="warning" Dismissible="@true" OnDismissed="@alertGone">
+                        Warnhinweis — über das × schließt sich die Alert selbst.
+                    </Alert>
+                } else {
+                    <Button Variant="outline-secondary" Size="sm" OnClick="@restoreAlert">Alert wieder zeigen</Button>
+                }
+            </CardBody>
+        </Card>
+    </div>
+
+    <div class="col-lg-6">
+        <Card>
+            <CardHeader>Modal</CardHeader>
+            <CardBody>
+                <Button Variant="primary" OnClick="@openModal">Modal öffnen</Button>
+                <Modal IsOpen="@modalOpen" Title="Bestätigen" Footer="@modalFooter">
+                    Inhalt des Modals — der Tasor-Renderer patcht das DOM ohne VDOM.
+                </Modal>
+            </CardBody>
+        </Card>
+
+        <Card>
+            <CardHeader>Tabs &amp; Accordion</CardHeader>
+            <CardBody>
+                <Tabs>
+                    <Tab Title="Erster">Inhalt Tab 1.</Tab>
+                    <Tab Title="Zweiter">Inhalt Tab 2.</Tab>
+                    <Tab Title="Dritter">Inhalt Tab 3.</Tab>
+                </Tabs>
+                <div class="mt-3">
+                    <Accordion>
+                        <AccordionItem Title="Was ist Tasor?">Ein Blazor-Spiegel für TypeScript.</AccordionItem>
+                        <AccordionItem Title="Wie funktioniert das?">RenderTree-Frames wie Blazor, aber rein browserseitig.</AccordionItem>
+                    </Accordion>
+                </div>
+            </CardBody>
+        </Card>
+
+        <Card>
+            <CardHeader>Dropdown &amp; Collapse</CardHeader>
+            <CardBody>
+                <p>
+                    <Dropdown Label="@chosenAction">
+                        <DropdownItem OnSelect="@(() => choose('Öffnen'))">Öffnen</DropdownItem>
+                        <DropdownItem OnSelect="@(() => choose('Speichern'))">Speichern</DropdownItem>
+                        <DropdownItem OnSelect="@(() => choose('Löschen'))">Löschen</DropdownItem>
+                    </Dropdown>
+                </p>
+                <Button Variant="outline-secondary" Size="sm" OnClick="@toggleCollapse">Collapse umschalten</Button>
+                <Collapse IsOpen="@collapseOpen">
+                    <div class="border rounded p-2 mt-2">Versteckter Inhalt, nur sichtbar bei IsOpen.</div>
+                </Collapse>
+            </CardBody>
+        </Card>
+    </div>
+</div>
+
+<div class="mt-3">
+    <Card>
+        <CardHeader>Tabelle, Pagination &amp; Navigation</CardHeader>
+        <CardBody>
+            <Breadcrumb>
+                <BreadcrumbItem Href="/">Start</BreadcrumbItem>
+                <BreadcrumbItem Href="/components">Komponenten</BreadcrumbItem>
+                <BreadcrumbItem Active="@true">Beispiele</BreadcrumbItem>
+            </Breadcrumb>
+
+            <Table Striped="@true" Hover="@true" Responsive="@true">
+                <thead>
+                    <tr><th>#</th><th>Komponente</th><th>Variant</th></tr>
+                </thead>
+                <tbody>
+                    @for (const item of tableRows) {
+                        <tr>
+                            <td>@item.n</td>
+                            <td>@item.name</td>
+                            <td><Badge Variant="@item.variant">@item.variant</Badge></td>
+                        </tr>
+                    }
+                </tbody>
+            </Table>
+
+            <div class="mt-3">
+                <Pagination Page="@page" PageCount="@pageCount" OnPageChanged="@goToPage" />
+                <span class="text-muted ms-2">Seite @(page) von @(pageCount)</span>
+            </div>
+
+            <div class="mt-3">
+                <ListGroup>
+                    <ListGroupItem Href="/" Active="@true">ListGroup-Eintrag (aktiv)</ListGroupItem>
+                    <ListGroupItem OnClick="@listClick">Klickbarer Eintrag (@listClicks)</ListGroupItem>
+                </ListGroup>
+            </div>
+        </CardBody>
+    </Card>
+</div>
+
+@code {
+    private clicks = 0;
+    private progress = 40;
+    private modalOpen = false;
+    private collapseOpen = false;
+    private chosenAction = "Aktion wählen…";
+    private page = 2;
+    private pageCount = 7;
+    private listClicks = 0;
+    private alertVisible = true;
+
+    private tableRows = [
+        { n: 1, name: "Button", variant: "primary" },
+        { n: 2, name: "Alert", variant: "warning" },
+        { n: 3, name: "Modal", variant: "secondary" },
+    ];
+
+    private modalFooter: RenderFragment = (b) => {
+        b.openElement(0, "button");
+        b.addAttribute(1, "type", "button");
+        b.addAttribute(2, "class", "btn btn-secondary");
+        b.addAttribute(3, "onclick", EventCallback.bind(this, () => this.closeModal()));
+        b.addContent(4, "Schließen");
+        b.closeElement();
+    };
+
+    private poke(): void {
+        this.clicks++;
+    }
+
+    private moreProgress(): void {
+        this.progress = Math.min(100, this.progress + 10);
+    }
+
+    private resetProgress(): void {
+        this.progress = 0;
+    }
+
+    private alertGone(): void {
+        this.alertVisible = false;
+    }
+
+    private restoreAlert(): void {
+        this.alertVisible = true;
+    }
+
+    private openModal(): void {
+        this.modalOpen = true;
+    }
+
+    private closeModal(): void {
+        this.modalOpen = false;
+    }
+
+    private choose(action: string): void {
+        this.chosenAction = action;
+    }
+
+    private toggleCollapse(): void {
+        this.collapseOpen = !this.collapseOpen;
+    }
+
+    private goToPage(next: number): void {
+        this.page = next;
+    }
+
+    private listClick(): void {
+        this.listClicks++;
+    }
+}

@@ -1,0 +1,28 @@
+@if (isActive) {
+    <div class="tab-pane fade show active">@childContent</div>
+}
+
+@code {
+    /** Label shown in the parent Tabs' nav. */
+    @Parameter() title: string = "";
+    @Parameter() childContent?: RenderFragment;
+
+    /** Resolved from the nearest Tabs ancestor (by cascade name). */
+    @CascadingParameter({ name: "Tabs" }) tabs?: Tabs;
+
+    /** Assigned by the parent Tabs at registration time. */
+    private index = -1;
+
+    /** @internal Called once by the parent Tabs at registration. */
+    setIndex(index: number): void {
+        this.index = index;
+    }
+
+    private get isActive(): boolean {
+        return this.tabs?.activeIndex === this.index;
+    }
+
+    protected override onInitialized(): void {
+        this.tabs?.registerTab(this);
+    }
+}

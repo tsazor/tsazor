@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.build/
+*.tsbuildinfo
+*.vsix
+*.log
+.DS_Store

@@ -1,0 +1,32 @@
+@if (href) {
+    <a class="@itemClass" href="@href" aria-current="@ariaCurrent">@childContent</a>
+} else {
+    <li class="@itemClass" @onclick="handleClick">@childContent</li>
+}
+
+@code {
+    /** Marks the item active. */
+    @Parameter() active: boolean = false;
+    /** Renders the disabled look (non-interactive items). */
+    @Parameter() disabled: boolean = false;
+    /** Renders an anchor instead of a list item. */
+    @Parameter() href?: string;
+    /** Fires for plain list items on click. */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    @Parameter() childContent?: RenderFragment;
+
+    private get itemClass(): string {
+        const parts = ["list-group-item"];
+        if (this.active) parts.push("active");
+        if (this.disabled) parts.push("disabled");
+        return parts.join(" ");
+    }
+
+    private get ariaCurrent(): string | null {
+        return this.active ? "true" : null;
+    }
+
+    private handleClick(e: MouseEvent): void {
+        if (!this.disabled) this.onClick?.invokeAsync(e);
+    }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@tasor/compiler",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tasor (.tazor) compiler: Razor-compatible markup + TypeScript code blocks.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@jridgewell/gen-mapping": "^0.3.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

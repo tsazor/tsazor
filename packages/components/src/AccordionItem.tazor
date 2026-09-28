@@ -1,0 +1,43 @@
+<div class="accordion-item">
+    <h2 class="accordion-header">
+        <button class="@buttonClass" type="button" aria-expanded="@isOpen" @onclick="toggle">@title</button>
+    </h2>
+    @if (isOpen) {
+        <div class="accordion-collapse collapse show">
+            <div class="accordion-body">@childContent</div>
+        </div>
+    }
+</div>
+
+@code {
+    /** Label shown in the item's header button. */
+    @Parameter() title: string = "";
+    @Parameter() childContent?: RenderFragment;
+
+    /** Resolved from the nearest Accordion ancestor (by cascade name). */
+    @CascadingParameter({ name: "Accordion" }) accordion?: Accordion;
+
+    /** Assigned by the parent Accordion at registration time. */
+    private index = -1;
+
+    /** @internal Called once by the parent Accordion at registration. */
+    setIndex(index: number): void {
+        this.index = index;
+    }
+
+    private get isOpen(): boolean {
+        return this.accordion?.openIndex === this.index;
+    }
+
+    private get buttonClass(): string {
+        return this.isOpen ? "accordion-button" : "accordion-button collapsed";
+    }
+
+    private toggle(): void {
+        this.accordion?.toggle(this.index);
+    }
+
+    protected override onInitialized(): void {
+        this.accordion?.registerItem(this);
+    }
+}

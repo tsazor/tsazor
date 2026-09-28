@@ -1,0 +1,26 @@
+<div class="progress" role="progressbar" aria-valuenow="@value" aria-valuemin="0" aria-valuemax="100">
+    <div class="@barClass" style="width: @(clamped)%">@label</div>
+</div>
+
+@code {
+    /** Progress value in percent (0–100). */
+    @Parameter() value: number = 0;
+    @Parameter() striped: boolean = false;
+    /** Animates the stripes (implies striped). */
+    @Parameter() animated: boolean = false;
+    @Parameter() variant: string = "";
+    /** Optional label rendered inside the bar. */
+    @Parameter() label?: string;
+
+    private get clamped(): number {
+        return Math.max(0, Math.min(100, this.value));
+    }
+
+    private get barClass(): string {
+        const parts = ["progress-bar"];
+        if (this.variant) parts.push(`bg-${this.variant}`);
+        if (this.striped || this.animated) parts.push("progress-bar-striped");
+        if (this.animated) parts.push("progress-bar-animated");
+        return parts.join(" ");
+    }
+}
