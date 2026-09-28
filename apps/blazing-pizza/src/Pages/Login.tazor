@@ -1,0 +1,40 @@
+@page "/login"
+@inject AuthProvider Auth
+@inject NavigationManager NavigationManager
+
+<div class="main auth-page">
+    <h2>Log in</h2>
+
+    @if (this.error !== null) {
+        <p class="error-text">@this.error</p>
+    }
+
+    <div class="form-field">
+        <label>Email:</label>
+        <input @bind="this.email" placeholder="test@@example.com" />
+    </div>
+    <div class="form-field">
+        <label>Password:</label>
+        <input type="password" @bind="this.password" />
+    </div>
+
+    <button class="btn btn-success" @onclick="login">Log in</button>
+
+    <p>No account? <a href="register">Register</a></p>
+    <p class="hint">Test account: test@@example.com / test1234</p>
+</div>
+
+@code {
+    private email = "";
+    private password = "";
+    private error: string | null = null;
+
+    private login = async (): Promise<void> => {
+        const ok = await this.Auth.login(this.email, this.password);
+        if (ok) {
+            this.NavigationManager.navigateTo("/myorders");
+        } else {
+            this.error = "Login failed. Check email and password.";
+        }
+    };
+}

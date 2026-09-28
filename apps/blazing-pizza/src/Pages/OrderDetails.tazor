@@ -1,0 +1,64 @@
+@page "/myorders/{orderId:int}"
+@authorize
+@inherits PizzaComponentBase
+@inject OrdersClient OrdersClient
+
+<div class="main">
+    @if (this.invalidOrder) {
+        <h2>Nope</h2>
+        <p>Sorry, this order could not be loaded.</p>
+    } else if (this.orderWithStatus === null) {
+        <text>Loading...</text>
+    } else {
+        <div class="track-order">
+            <div class="track-order-title">
+                <h2>
+                    Order placed @formatLongDate(this.orderWithStatus.order.createdTime)
+                </h2>
+                <p class="ml-auto mb-0">
+                    Status: <strong>@this.orderWithStatus.statusText</strong>
+                </p>
+            </div>
+            <div class="track-order-body">
+                <div class="track-order-details">
+                    <OrderReview Order="@this.orderWithStatus.order" />
+                </div>
+                <div class="track-order-map">
+                    <Map Zoom="13" Markers="@this.orderWithStatus.mapMarkers" />
+                </div>
+            </div>
+        </div>
+
+        @if (this.orderWithStatus.statusText !== "Delivered") {
+            <Poller Interval="@4000" OnTick="@this.refreshOrder" />
+        }
+    }
+</div>
+
+@code {
+    @Parameter() orderId!: number;
+
+    private orderWithStatus: OrderWithStatus | null = null;
+    private invalidOrder = false;
+
+    protected override onParametersSet(): void {
+        void this.refreshOrder();
+    }
+
+    // Runs through the Poller's OnTick EventCallback: the callback's receiver
+    // is this page, so it re-renders after each tick (original: manual
+    // CancellationTokenSource + StateHasChanged).
+    private refreshOrder = async (): Promise<void> => {
+        try {
+            this.orderWithStatus = await this.OrdersClient.getOrder(this.orderId);
+            this.invalidOrder = false;
+        } catch (err) {
+            this.invalidOrder = true;
+            console.error(err);
+        }
+        // Called directly from onParametersSet (not via an EventCallback), so
+        // the async result needs an explicit re-render (original:
+        // StateHasChanged after the fetch).
+        this.stateHasChanged();
+    };
+}

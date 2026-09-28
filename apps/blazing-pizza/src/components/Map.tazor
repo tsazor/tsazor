@@ -1,0 +1,98 @@
+<div id="@this.elementId" class="delivery-map" style="height: 100%; width: 100%;"></div>
+
+@code {
+    @Parameter() zoom?: number;
+    @Parameter() markers?: Marker[];
+
+    private static nextId = 0;
+    private readonly elementId = `map-${(Map as any).nextId++}`;
+    private leaflet: any = null;
+    private map: any = null;
+    private addedMarkers: any[] = [];
+    private firstRender = true;
+
+    // Tasor IS JS: the workshop wrapped Leaflet behind a JS-interop script
+    // (deliveryMap.showOrUpdate). Here we simply import Leaflet directly —
+    // no interop layer needed. The CSS comes in via the dynamic import too.
+    protected override async onAfterRender(firstRender: boolean): Promise<void> {
+        if (!this.firstRender && this.markersEqual(this.lastMarkers, this.markers)) return;
+        this.firstRender = false;
+        await this.showOrUpdate();
+    }
+
+    private lastMarkers: Marker[] | null = null;
+
+    private markersEqual(a: Marker[] | null, b: Marker[] | undefined): boolean {
+        if (!a || !b || a.length !== b.length) return false;
+        return a.every((m, i) => m.x === b[i].x && m.y === b[i].y && m.description === b[i].description);
+    }
+
+    private async showOrUpdate(): Promise<void> {
+        const elem = document.getElementById(this.elementId);
+        if (!elem) return;
+        if (!this.leaflet) {
+            this.leaflet = await import("leaflet");
+            await import("leaflet/dist/leaflet.css");
+        }
+        const L = this.leaflet;
+
+        if (!this.map) {
+            this.map = L.map(this.elementId);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+            }).addTo(this.map);
+            this.map.setView([51.5001, -0.1239], this.zoom ?? 13);
+        }
+
+        const markers = this.markers ?? [];
+        this.lastMarkers = markers;
+
+        if (this.addedMarkers.length !== markers.length) {
+            // Markers have changed, so reset
+            for (const marker of this.addedMarkers) marker.removeFrom(this.map);
+            this.addedMarkers = markers.map((m) => L.marker([m.y, m.x]).bindPopup(m.description).addTo(this.map));
+
+            // Auto-fit the view, then open the applicable popups (can only be
+            // done after the view was fitted).
+            const markersGroup = new L.featureGroup(this.addedMarkers);
+            this.map.fitBounds(markersGroup.getBounds().pad(0.3));
+            markers.forEach((marker, index) => {
+                if (marker.showPopup) this.addedMarkers[index].openPopup();
+            });
+        } else {
+            // Same number of markers: update positions/text with an animated
+            // move, keeping the view bounds (deliveryMap.js's animateMarkerMove).
+            markers.forEach((marker, index) => this.animateMarkerMove(this.addedMarkers[index], marker, 4000));
+        }
+    }
+
+    private animateMarkerMove(marker: any, coords: Marker, durationMs: number): void {
+        if (!marker) return;
+        if (marker.existingAnimation) {
+            cancelAnimationFrame(marker.existingAnimation.callbackHandle);
+        }
+
+        const startCoords = { x: marker.getLatLng().lng, y: marker.getLatLng().lat };
+        const startTime = performance.now();
+
+        const frame = (): void => {
+            const proportion = Math.min(1, (performance.now() - startTime) / durationMs);
+            marker.setLatLng([
+                startCoords.y + (coords.y - startCoords.y) * proportion,
+                startCoords.x + (coords.x - startCoords.x) * proportion,
+            ]);
+            if (proportion < 1) {
+                marker.existingAnimation.callbackHandle = requestAnimationFrame(frame);
+            }
+        };
+
+        marker.existingAnimation = { startCoords, callbackHandle: requestAnimationFrame(frame) };
+    }
+
+    dispose(): void {
+        if (this.map) {
+            this.map.remove();
+            this.map = null;
+        }
+    }
+}

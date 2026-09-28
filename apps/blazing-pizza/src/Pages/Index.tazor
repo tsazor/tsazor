@@ -1,0 +1,81 @@
+@page "/"
+@inherits PizzaComponentBase
+@inject OrderState OrderState
+
+<div class="main">
+    <ul class="pizza-cards">
+        @foreach (var special in this.specials) {
+            <li style="@this.cardStyle(special)" @onclick="@(() => this.OrderState.showConfigurePizzaDialog(special))">
+                <div class="pizza-info">
+                    <span class="title">@special.name</span>
+                    @special.description
+                    <span class="price">@specialFormattedBasePrice(special)</span>
+                </div>
+            </li>
+        }
+    </ul>
+</div>
+
+<div class="sidebar">
+    @if (this.order.pizzas.length > 0) {
+        <div class="order-contents">
+            <h2>Your order</h2>
+
+            @foreach (var configuredPizza in this.order.pizzas) {
+                <ConfiguredPizzaItem Pizza="@configuredPizza" OnRemoved="@(() => this.removePizza(configuredPizza))" />
+            }
+        </div>
+    } else {
+        <div class="empty-cart">Choose a pizza<br>to get started</div>
+    }
+
+    <div class="@this.orderTotalClass">
+        Total:
+        <span class="total-price">@orderFormattedTotalPrice(this.order)</span>
+        <a href="checkout" class="@this.checkoutLinkClass">
+            Order >
+        </a>
+    </div>
+</div>
+
+@if (this.OrderState.showingConfigureDialog) {
+    <ConfigurePizzaDialog Pizza="@this.OrderState.configuringPizza" OnCancel="@(() => this.OrderState.cancelConfigurePizzaDialog())" OnConfirm="@(() => this.OrderState.confirmConfigurePizzaDialog())" />
+}
+
+@code {
+    private specials: PizzaSpecial[] = [];
+
+    private get order(): Order {
+        return this.OrderState.order;
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const http = new TasorHttp();
+        try {
+            this.specials = await http.getJson<PizzaSpecial[]>("/specials");
+        } catch {
+            this.specials = [];
+        }
+        // Async load after the render pass → explicit re-render
+        // (original: StateHasChanged after the await).
+        this.stateHasChanged();
+    }
+
+    private cardStyle(special: PizzaSpecial): string {
+        return `background-image: url('${special.imageUrl}')`;
+    }
+
+    private get orderTotalClass(): string {
+        return this.order.pizzas.length > 0 ? "order-total" : "order-total hidden";
+    }
+
+    private get checkoutLinkClass(): string {
+        return this.order.pizzas.length === 0 ? "btn btn-warning disabled" : "btn btn-warning";
+    }
+
+    private async removePizza(pizza: Pizza): Promise<void> {
+        if (window.confirm(`Remove ${pizza.special.name} pizza from the order?`)) {
+            this.OrderState.removeConfiguredPizza(pizza);
+        }
+    }
+}

@@ -119,6 +119,16 @@ describe("codegen", () => {
     expect(metadata.injects).toEqual([{ type: "UserService", name: "Users" }]);
   });
 
+  it("emits routeAuthorize for a bare @authorize directive", () => {
+    const { code, metadata } = gen('@page "/myorders"\n@authorize\n<p>protected</p>\n');
+    expect(metadata.authorize).toBe(true);
+    expect(code).toContain("export const routeAuthorize = true;");
+    expect(code).toContain("static routeAuthorize = routeAuthorize;");
+    // Without @authorize nothing is emitted.
+    const { code: plain } = gen('@page "/open"\n<p>public</p>\n');
+    expect(plain).not.toContain("routeAuthorize");
+  });
+
   it("emits setKey and element reference captures", () => {
     const { code } = gen('<li @key="item.Id" @ref="listItem">x</li>');
     expect(code).toContain("b.setKey(this.item.Id);");

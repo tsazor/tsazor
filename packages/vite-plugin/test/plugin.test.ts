@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { tasor } from "../src";
+import { generateRoutesModule } from "../src/routes";
 
 const COUNTER = /* tazor */ `
 @page "/counter"
@@ -126,5 +127,14 @@ describe("tasor vite plugin", () => {
     expect(module).toContain('import FetchDataLayout from "/MainLayout.tazor"');
     expect(module).toContain('{ template: "/counter", type: Counter },');
     expect(module).toContain('{ template: "/fetchdata", type: FetchData, layout: FetchDataLayout },');
+  });
+
+  it("emits authorize: {} into the manifest for @authorize pages", () => {
+    const module = generateRoutesModule(root, [
+      { template: "/myorders", componentPath: path.join(root, "Pages", "MyOrders.tazor"), authorize: true },
+      { template: "/", componentPath: path.join(root, "Pages", "Index.tazor") },
+    ]);
+    expect(module).toContain('{ template: "/myorders", type: MyOrders, authorize: {} },');
+    expect(module).toContain('{ template: "/", type: Index },');
   });
 });

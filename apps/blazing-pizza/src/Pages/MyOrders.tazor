@@ -1,0 +1,54 @@
+@page "/myorders"
+@authorize
+@inherits PizzaComponentBase
+@inject OrdersClient OrdersClient
+
+<div class="main">
+    @if (this.error !== null) {
+        <h2>Something went wrong</h2>
+        <p>@this.error</p>
+    } else if (this.ordersWithStatus === null) {
+        <text>Loading...</text>
+    } else if (this.ordersWithStatus.length === 0) {
+        <h2>No orders placed</h2>
+        <a class="btn btn-success" href="/">Order some pizza</a>
+    } else {
+        <div class="list-group orders-list">
+            @foreach (var item in this.ordersWithStatus) {
+                <div class="list-group-item">
+                    <div class="col">
+                        <h5>@formatLongDate(item.order.createdTime)</h5>
+                        Items:
+                        <strong>@item.order.pizzas.length</strong>;
+                        Total price:
+                        <strong>£@orderFormattedTotalPrice(item.order)</strong>
+                    </div>
+                    <div class="col">
+                        Status: <strong>@item.statusText</strong>
+                    </div>
+                    <div class="col flex-grow-0">
+                        <a href="myorders/@item.order.orderId" class="btn btn-success">
+                            Track >
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private ordersWithStatus: OrderWithStatus[] | null = null;
+    private error: string | null = null;
+
+    protected override async onParametersSet(): Promise<void> {
+        try {
+            this.ordersWithStatus = await this.OrdersClient.getOrders();
+        } catch (err) {
+            this.error = err instanceof Error ? err.message : String(err);
+        }
+        // Async load after the render pass → explicit re-render
+        // (original: StateHasChanged after the await).
+        this.stateHasChanged();
+    }
+}

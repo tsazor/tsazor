@@ -11,6 +11,8 @@ export interface ScannedRoute {
   componentPath: string;
   /** Absolute path of the layout .tazor, when the page (or _Imports) sets one. */
   layoutPath?: string;
+  /** Bare @authorize directive → authentication-required route ({} → auth suffices). */
+  authorize?: boolean;
 }
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", ".vscode", ".claude"]);
@@ -50,7 +52,12 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
     } else if (chain.layout) {
       layoutPath = context.resolveLayout(chain.layout);
     }
-    routes.push({ template: result.metadata.routeTemplate, componentPath: filePath, layoutPath });
+    routes.push({
+      template: result.metadata.routeTemplate,
+      componentPath: filePath,
+      layoutPath,
+      authorize: result.metadata.authorize === true,
+    });
   }
   return routes;
 }
@@ -72,12 +79,13 @@ export function generateRoutesModule(root: string, routes: ScannedRoute[]): stri
     const componentSpec = toRootRelativeSpecifier(rootPath, route.componentPath);
     lines.push(`import ${local} from "${componentSpec}";`);
     const layoutSpec = route.layoutPath ? toRootRelativeSpecifier(rootPath, route.layoutPath) : undefined;
+    const authorizeSpec = route.authorize ? ", authorize: {}" : "";
     if (layoutSpec) {
       const layoutLocal = `${local}Layout`;
       lines.push(`import ${layoutLocal} from "${layoutSpec}";`);
-      entries.push(`  { template: ${JSON.stringify(route.template)}, type: ${local}, layout: ${layoutLocal} },`);
+      entries.push(`  { template: ${JSON.stringify(route.template)}, type: ${local}, layout: ${layoutLocal}${authorizeSpec} },`);
     } else {
-      entries.push(`  { template: ${JSON.stringify(route.template)}, type: ${local} },`);
+      entries.push(`  { template: ${JSON.stringify(route.template)}, type: ${local}${authorizeSpec} },`);
     }
   });
   lines.push("");

@@ -1,0 +1,46 @@
+@inject AuthProvider Auth
+
+<div class="user-info">
+    <AuthorizeView Authorized="@authorizedContent" NotAuthorized="@signInLinks" />
+</div>
+
+@code {
+    private authorizedContent = (state: AuthenticationState): RenderFragment => this.renderAuthorized(state);
+
+    private renderAuthorized(state: AuthenticationState): RenderFragment {
+        return (b: RenderTreeBuilder) => {
+            b.openElement(0, "img");
+            b.addAttribute(1, "src", "img/user.svg");
+            b.closeElement();
+            b.openElement(2, "div");
+            b.openElement(3, "a");
+            b.addAttribute(4, "href", "myorders");
+            b.addAttribute(5, "class", "username");
+            b.addContent(6, state.user.name || "My orders");
+            b.closeElement();
+            b.openElement(7, "button");
+            b.addAttribute(8, "class", "btn btn-link sign-out");
+            b.addEventHandler(9, "onclick", EventCallback.bind(this, this.signOut));
+            b.addContent(10, "Sign out");
+            b.closeElement();
+            b.closeElement();
+        };
+    }
+
+    private signInLinks: RenderFragment = (b: RenderTreeBuilder) => {
+        b.openElement(0, "a");
+        b.addAttribute(1, "class", "sign-in");
+        b.addAttribute(2, "href", "register");
+        b.addContent(3, "Register");
+        b.closeElement();
+        b.openElement(4, "a");
+        b.addAttribute(5, "class", "sign-in");
+        b.addAttribute(6, "href", "login");
+        b.addContent(7, "Log in");
+        b.closeElement();
+    };
+
+    private signOut(): void {
+        void this.Auth.logout();
+    }
+}

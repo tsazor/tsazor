@@ -1,0 +1,56 @@
+@page "/checkout"
+@authorize
+@inject OrderState OrderState
+@inject OrdersClient OrdersClient
+@inject NavigationManager NavigationManager
+
+<div class="main">
+    <EditForm Model="@this.order.deliveryAddress" Validators="@this.validators" OnValidSubmit="@this.placeOrder">
+        <div class="checkout-cols">
+            <div class="checkout-order-details">
+                <h4>Review order</h4>
+                <OrderReview Order="@this.order" />
+            </div>
+
+            <div class="checkout-delivery-address">
+                <h4>Deliver to...</h4>
+                <AddressEditor Address="@this.order.deliveryAddress" />
+            </div>
+        </div>
+
+        <button type="submit" class="checkout-button btn btn-warning" Disabled="@this.isSubmitting">
+            Place order
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    private isSubmitting = false;
+
+    private get order(): Order {
+        return this.OrderState.order;
+    }
+
+    // DataAnnotations on Address.cs → functional validators (documented
+    // deviation: Required/MaxLength as functions, no reflection).
+    private validators: Record<string, ModelValidator> = {
+        name: (value) => (String(value ?? "").trim().length > 0 && String(value).length <= 100 ? null : "Name is required (max 100 chars)."),
+        line1: (value) => (String(value ?? "").trim().length > 0 && String(value).length <= 100 ? null : "Line 1 is required (max 100 chars)."),
+        line2: (value) => (String(value ?? "").length <= 100 ? null : "Line 2 must be at most 100 chars."),
+        city: (value) => (String(value ?? "").trim().length > 0 && String(value).length <= 50 ? null : "City is required (max 50 chars)."),
+        region: (value) => (String(value ?? "").trim().length > 0 && String(value).length <= 20 ? null : "Region is required (max 20 chars)."),
+        postalCode: (value) => (String(value ?? "").trim().length > 0 && String(value).length <= 20 ? null : "Postal code is required (max 20 chars)."),
+    };
+
+    private placeOrder = async (): Promise<void> => {
+        this.isSubmitting = true;
+        try {
+            const newOrderId = await this.OrdersClient.placeOrder(this.order);
+            this.OrderState.resetOrder();
+            this.NavigationManager.navigateTo(`myorders/${newOrderId}`);
+        } catch (err) {
+            console.error("Placing the order failed:", err);
+            this.isSubmitting = false;
+        }
+    };
+}

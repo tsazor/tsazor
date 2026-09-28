@@ -5,7 +5,7 @@ import type { Plugin } from "vite";
 import { hmrAppendix } from "./hmr";
 import { generateRoutesModule, scanRoutes } from "./routes";
 import { chainSourceMaps } from "./sourcemap";
-import { collectCodeImports, collectImports, createFileContext } from "@tasor/workspace";
+import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tasor/workspace";
 
 const ROUTES_MODULE_ID = "virtual:tasor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tasor-routes";
@@ -50,6 +50,13 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
       }
       const context = createFileContext(filePath, chain);
 
+      // Runtime enums/values referenced in markup (e.g. NavLinkMatch.All) are
+      // imported by collectCodeImports — they must not be baked to this.*.
+      const knownGlobals = new Set<string>();
+      for (const match of code.matchAll(/\b[A-Z][A-Za-z0-9_$]*\b/g)) {
+        if (RUNTIME_TYPES.has(match[0])) knownGlobals.add(match[0]);
+      }
+
       // Pass 1 compiles without extra imports so we can see which bindings
       // the compiler emitted itself; the scan then adds import lines for
       // identifiers used inside verbatim @code blocks (pass 2).
@@ -67,6 +74,7 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
         fileName: filePath,
         resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
         resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
+        knownGlobals,
         imports: extraImports,
         generateSourceMap: true,
       });

@@ -30,6 +30,8 @@ export interface CodegenOptions {
   imports?: string[];
   /** Map of usings to emit as plain module imports (namespace → specifier). */
   usingSpecifiers?: Record<string, string>;
+  /** Extra module-level identifiers (imported enums/values) that must not be baked to this.*. */
+  knownGlobals?: ReadonlySet<string>;
   /** Source file name used in the sourcemap. */
   fileName?: string;
 }
@@ -40,6 +42,8 @@ export interface CodegenResult {
   metadata: {
     routeTemplate?: string;
     layout?: string;
+    /** Bare @authorize directive on a @page → authentication-required route. */
+    authorize?: boolean;
     usings: string[];
     injects: Array<{ type: string; name: string }>;
     typeParams: string[];
@@ -115,6 +119,9 @@ class Codegen {
           break;
         case "layout":
           this.metadata.layout = d.value.trim();
+          break;
+        case "authorize":
+          this.metadata.authorize = true;
           break;
         case "using":
           this.metadata.usings.push(d.value.trim());
@@ -197,6 +204,7 @@ class Codegen {
 
     if (this.metadata.routeTemplate) {
       this.line(`export const routeTemplate = ${JSON.stringify(this.metadata.routeTemplate)};`);
+      if (this.metadata.authorize) this.line(`export const routeAuthorize = true;`);
       this.line("");
     }
 
@@ -208,6 +216,7 @@ class Codegen {
     this.line(`export default class ${this.options.className}${typeDecl} extends ${this.inheritsBase} {`);
     if (this.metadata.routeTemplate) {
       this.line("  static routeTemplate = routeTemplate;");
+      if (this.metadata.authorize) this.line("  static routeAuthorize = routeAuthorize;");
       this.line("");
     }
     for (const inject of this.metadata.injects) {
@@ -387,7 +396,7 @@ class Codegen {
         while (e < code.length && /[\w$]/.test(code[e]!)) e++;
         const name = code.slice(i, e);
         const afterDot = i > 0 && code[i - 1] === ".";
-        if (afterDot || spanLocals.has(name) || KNOWN_GLOBALS.has(name) || JS_KEYWORDS.has(name)) {
+        if (afterDot || spanLocals.has(name) || KNOWN_GLOBALS.has(name) || this.options.knownGlobals?.has(name) || JS_KEYWORDS.has(name)) {
           out += name;
         } else {
           out += `this.${name}`;

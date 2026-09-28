@@ -1,0 +1,104 @@
+@inherits PizzaComponentBase
+@inject OrdersClient OrdersClient
+
+<div class="dialog-container">
+    <div class="dialog">
+        <div class="dialog-title">
+            <h2>@this.pizza.special.name</h2>
+            @this.pizza.special.description
+        </div>
+        <div class="dialog-body">
+            <div>
+                <label>Size:</label>
+                <input type="range" min="@PIZZA_MINIMUM_SIZE" max="@PIZZA_MAXIMUM_SIZE" step="1" value="@this.pizza.size" @oninput="sizeInput" />
+                <span class="size-label">
+                    @(this.pizza.size)" (£@pizzaFormattedTotalPrice(this.pizza))
+                </span>
+            </div>
+            <div>
+                <label>Extra Toppings:</label>
+                @if (this.toppings === null) {
+                    <select class="custom-select" disabled>
+                        <option>(loading...)</option>
+                    </select>
+                } else if (this.pizza.toppings.length >= 6) {
+                    <div>(maximum reached)</div>
+                } else {
+                    <select class="custom-select" @onchange="toppingSelected">
+                        <option value="-1" disabled selected>(select)</option>
+                        @for (let i = 0; i < this.toppings.length; i++) {
+                            <option value="@i">@this.toppings[i].name - (£@toppingFormattedPrice(this.toppings[i]))</option>
+                        }
+                    </select>
+                }
+            </div>
+
+            <div class="toppings">
+                @foreach (var pt in this.pizza.toppings) {
+                    <div class="topping">
+                        @pt.topping.name
+                        <span class="topping-price">@toppingFormattedPrice(pt.topping)</span>
+                        <button type="button" class="delete-topping" @onclick="@(() => this.removeTopping(pt.topping))">x</button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="dialog-buttons">
+            <button type="button" class="btn btn-secondary mr-auto" @onclick="cancel">Cancel</button>
+            <span class="mr-center">
+                Price: <span class="price">@pizzaFormattedTotalPrice(this.pizza)</span>
+            </span>
+            <button type="button" class="btn btn-success ml-auto" @onclick="confirmOrder">Order ></button>
+        </div>
+    </div>
+</div>
+
+@code {
+    @Parameter() pizza!: Pizza;
+    @Parameter() onCancel?: EventCallback;
+    @Parameter() onConfirm?: EventCallback;
+
+    private toppings: Topping[] | null = null;
+
+    protected override async onInitialized(): Promise<void> {
+        try {
+            this.toppings = await this.OrdersClient.getToppings();
+        } catch {
+            this.toppings = [];
+        }
+        // Async load after the render pass → explicit re-render.
+        this.stateHasChanged();
+    }
+
+    // Native range input: coerce to a number on every input event so the
+    // size label and price track the slider live (Blazor's @bind:event="oninput").
+    private sizeInput(e: Event): void {
+        this.pizza.size = Number((e.target as HTMLInputElement).value);
+    }
+
+    private toppingSelected(e: Event): void {
+        const index = Number((e.target as HTMLSelectElement).value);
+        if (Number.isInteger(index) && index >= 0 && this.toppings !== null) {
+            this.addTopping(this.toppings[index]!);
+        }
+    }
+
+    private addTopping(topping: Topping): void {
+        if (!this.pizza.toppings.some((pt) => pt.topping.id === topping.id)) {
+            this.pizza.toppings.push({ topping });
+        }
+    }
+
+    private removeTopping(topping: Topping): void {
+        this.pizza.toppings = this.pizza.toppings.filter((pt) => pt.topping.id !== topping.id);
+    }
+
+    private cancel(): void {
+        void this.onCancel?.invokeAsync(null);
+    }
+
+    private confirmOrder(): void {
+        void this.onConfirm?.invokeAsync(null);
+    }
+}

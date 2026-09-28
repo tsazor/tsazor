@@ -1,0 +1,51 @@
+<div class="form-field">
+    <label>Name:</label>
+    <div>
+        <InputText @bind="this.address.name" />
+        <ValidationMessage For="name" />
+    </div>
+</div>
+
+<div class="form-field">
+    <label>Line 1:</label>
+    <div>
+        <InputText @bind="this.address.line1" />
+        <ValidationMessage For="line1" />
+    </div>
+</div>
+
+<div class="form-field">
+    <label>Line 2:</label>
+    <div>
+        <InputText @bind="this.address.line2" />
+        <ValidationMessage For="line2" />
+    </div>
+</div>
+
+<div class="form-field">
+    <label>City:</label>
+    <div>
+        <InputText @bind="this.address.city" />
+        <ValidationMessage For="city" />
+    </div>
+</div>
+
+<div class="form-field">
+    <label>Region:</label>
+    <div>
+        <InputText @bind="this.address.region" />
+        <ValidationMessage For="region" />
+    </div>
+</div>
+
+<div class="form-field">
+    <label>Postal code:</label>
+    <div>
+        <InputText @bind="this.address.postalCode" />
+        <ValidationMessage For="postalCode" />
+    </div>
+</div>
+
+@code {
+    @Parameter() address!: Address;
+}

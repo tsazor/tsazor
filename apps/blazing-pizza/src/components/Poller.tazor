@@ -1,0 +1,36 @@
+/**
+ * Port of the workshop's Poller component (BlazingPizza.ComponentsLibrary):
+ * invokes OnTick every Interval milliseconds while it is rendered.
+ */
+@code {
+    @Parameter() interval?: number;
+    @Parameter() onTick?: EventCallback;
+
+    private handle: number | null = null;
+
+    protected override onInitialized(): void {
+        this.startPolling();
+    }
+
+    protected override onParametersSet(): void {
+        // Polling starts once; the page stops it by removing this component
+        // (dispose runs clearInterval when the render tree drops it).
+        this.startPolling();
+    }
+
+    private startPolling(): void {
+        if (this.handle !== null) return;
+        const interval = this.interval ?? 0;
+        if (interval <= 0) return;
+        this.handle = window.setInterval(() => {
+            void this.onTick?.invokeAsync(null);
+        }, interval);
+    }
+
+    dispose(): void {
+        if (this.handle !== null) {
+            window.clearInterval(this.handle);
+            this.handle = null;
+        }
+    }
+}

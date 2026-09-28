@@ -18,7 +18,7 @@ import { DiagnosticBag, type SourcePos } from "./diagnostics";
 import { TSScanner } from "./scanner";
 
 const DIRECTIVE_NAMES = new Set([
-  "page", "layout", "using", "inject", "inherits", "attribute", "typeparam",
+  "page", "layout", "using", "inject", "inherits", "attribute", "typeparam", "authorize",
 ]);
 
 const CONTROL_KEYWORDS = new Set(["if", "else", "for", "foreach", "switch", "case", "default"]);

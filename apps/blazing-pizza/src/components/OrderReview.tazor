@@ -1,0 +1,28 @@
+@inherits PizzaComponentBase
+
+@foreach (var pizza in this.order.pizzas) {
+    <p>
+        <strong>
+            @(pizza.size)"
+            @pizza.special.name
+            (£@pizzaFormattedTotalPrice(pizza))
+        </strong>
+    </p>
+
+    <ul>
+        @foreach (var pt in pizza.toppings) {
+            <li>+ @pt.topping.name</li>
+        }
+    </ul>
+}
+
+<p>
+    <strong>
+        Total price:
+        £@orderFormattedTotalPrice(this.order)
+    </strong>
+</p>
+
+@code {
+    @Parameter() order!: Order;
+}

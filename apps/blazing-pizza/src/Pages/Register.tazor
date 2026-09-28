@@ -1,0 +1,44 @@
+@page "/register"
+@inject AuthProvider Auth
+@inject NavigationManager NavigationManager
+
+<div class="main auth-page">
+    <h2>Register</h2>
+
+    @if (this.error !== null) {
+        <p class="error-text">@this.error</p>
+    }
+
+    <div class="form-field">
+        <label>Name:</label>
+        <input @bind="this.name" />
+    </div>
+    <div class="form-field">
+        <label>Email:</label>
+        <input @bind="this.email" />
+    </div>
+    <div class="form-field">
+        <label>Password:</label>
+        <input type="password" @bind="this.password" />
+    </div>
+
+    <button class="btn btn-success" @onclick="register">Register</button>
+
+    <p>Already have an account? <a href="login">Log in</a></p>
+</div>
+
+@code {
+    private name = "";
+    private email = "";
+    private password = "";
+    private error: string | null = null;
+
+    private register = async (): Promise<void> => {
+        const result = await this.Auth.register(this.name, this.email, this.password);
+        if (result === true) {
+            this.NavigationManager.navigateTo("/");
+        } else {
+            this.error = typeof result === "string" ? result.replace(/^\[tasor-http\] \d+ [^:]*: /, "") : "Registration failed.";
+        }
+    };
+}
