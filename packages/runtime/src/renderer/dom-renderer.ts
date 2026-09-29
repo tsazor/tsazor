@@ -38,7 +38,7 @@ export class DomRenderer {
 
   /** First render of a component: builds DOM between its markers. */
   renderInitial(state: ComponentState, frames: RenderTreeFrame[]): void {
-    const nodes = new Map<number, Node>();
+    const nodes: Node[] = [];
     const ctx: FrameContext = {
       parentDom: state.startMarker.parentNode!,
       boundary: state.endMarker,
@@ -50,7 +50,7 @@ export class DomRenderer {
 
   /** Diff-and-patch: compares new frames against the previous tree and patches the DOM. */
   renderUpdate(state: ComponentState, oldFrames: RenderTreeFrame[], newFrames: RenderTreeFrame[]): void {
-    const nodes = new Map<number, Node>();
+    const nodes: Node[] = [];
     const ctx: FrameContext = {
       parentDom: state.startMarker.parentNode!,
       boundary: state.endMarker,
@@ -84,7 +84,7 @@ export class DomRenderer {
     oldFrames: RenderTreeFrame[] | null,
     oldParentIndex: number,
     ctx: FrameContext,
-    nodes: Map<number, Node>,
+    nodes: Node[],
   ): void {
     const newChildren = directChildren(newFrames, newParentIndex, newSubtreeLength);
     const match = oldFrames !== null ? matchChildren(oldFrames, oldParentIndex, newFrames, newParentIndex) : null;
@@ -110,7 +110,7 @@ export class DomRenderer {
     oldFrames: RenderTreeFrame[] | null,
     oldIndex: number | null,
     ctx: FrameContext,
-    nodes: Map<number, Node>,
+    nodes: Node[],
   ): void {
     let oldFrame: RenderTreeFrame | null = null;
     if (oldIndex !== null && oldFrames !== null) {
@@ -159,7 +159,7 @@ export class DomRenderer {
     oldIndex: number | null,
     oldFrame: RenderTreeFrame | null,
     ctx: FrameContext,
-    nodes: Map<number, Node>,
+    nodes: Node[],
   ): void {
     const canUpdate =
       oldFrame !== null &&
@@ -169,11 +169,11 @@ export class DomRenderer {
       oldIndex >= 0;
 
     if (canUpdate) {
-      const node = state.renderedNodes.get(oldIndex!) as Element | undefined;
+      const node = state.renderedNodes[oldIndex!] as Element | undefined;
       if (node) {
         this.updateElementAttributes(node, oldFrames!, oldIndex!, newFrames, newIndex);
         positionNode(node, ctx);
-        nodes.set(newIndex, node);
+        nodes[newIndex] = node;
         ctx.lastNode = node;
         this.processRange(
           state,
@@ -197,7 +197,7 @@ export class DomRenderer {
     const element = document.createElement(frame.elementName!);
     applyAttributes(element, frame, newFrames, newIndex);
     insertNode(element, ctx);
-    nodes.set(newIndex, element);
+    nodes[newIndex] = element;
     ctx.lastNode = element;
 
     this.processRange(
@@ -221,20 +221,20 @@ export class DomRenderer {
     oldFrame: RenderTreeFrame | null,
     state: ComponentState,
     ctx: FrameContext,
-    nodes: Map<number, Node>,
+    nodes: Node[],
   ): void {
-    const node = oldFrame && oldIndex !== null ? (state.renderedNodes.get(oldIndex) as Text | undefined) : undefined;
+    const node = oldFrame && oldIndex !== null ? (state.renderedNodes[oldIndex] as Text | undefined) : undefined;
     if (node && oldFrame) {
       if (oldFrame.textContent !== frame.textContent) {
         node.nodeValue = String(frame.textContent);
       }
       positionNode(node, ctx);
-      nodes.set(newIndex, node);
+      nodes[newIndex] = node;
       ctx.lastNode = node;
     } else {
       const textNode = document.createTextNode(String(frame.textContent));
       insertNode(textNode, ctx);
-      nodes.set(newIndex, textNode);
+      nodes[newIndex] = textNode;
       ctx.lastNode = textNode;
     }
   }
@@ -248,12 +248,12 @@ export class DomRenderer {
     oldFrame: RenderTreeFrame | null,
     state: ComponentState,
     ctx: FrameContext,
-    nodes: Map<number, Node>,
+    nodes: Node[],
   ): void {
-    const anchor = oldFrame && oldIndex !== null ? (state.renderedNodes.get(oldIndex) as Comment | undefined) : undefined;
+    const anchor = oldFrame && oldIndex !== null ? (state.renderedNodes[oldIndex] as Comment | undefined) : undefined;
     if (anchor && oldFrame && oldFrame.markupContent === frame.markupContent) {
       positionMarkup(anchor, ctx);
-      nodes.set(newIndex, anchor);
+      nodes[newIndex] = anchor;
       ctx.lastNode = findMarkupEnd(anchor);
     } else {
       if (anchor && oldIndex !== null && oldIndex >= 0 && oldFrame) {
@@ -264,7 +264,7 @@ export class DomRenderer {
       }
       const [start, end] = insertMarkup(frame.markupContent!, ctx);
       markupEnds.set(start, end);
-      nodes.set(newIndex, start);
+      nodes[newIndex] = start;
       ctx.lastNode = end;
     }
   }
@@ -278,7 +278,7 @@ export class DomRenderer {
     oldIndex: number | null,
     oldFrame: RenderTreeFrame | null,
     ctx: FrameContext,
-    nodes: Map<number, Node>,
+    nodes: Node[],
   ): void {
     const childState = oldIndex !== null && oldIndex >= 0 ? state.slotChildren.get(oldIndex) : undefined;
     const canUpdate = childState !== undefined && oldFrame !== null && this.isSameComponentType(oldFrame.componentType, frame.componentType);
@@ -290,7 +290,7 @@ export class DomRenderer {
       }
       positionComponent(childState, ctx);
       state.newSlotChildren.set(newIndex, childState);
-      nodes.set(newIndex, childState.startMarker);
+      nodes[newIndex] = childState.startMarker;
       ctx.lastNode = childState.endMarker;
       this.renderer.setComponentParameters(childState, attributeMap(newFrames, newIndex));
       return;
@@ -302,7 +302,7 @@ export class DomRenderer {
 
     const child = this.renderer.attachComponent(state, frame, attributeMap(newFrames, newIndex), ctx);
     state.newSlotChildren.set(newIndex, child);
-    nodes.set(newIndex, child.startMarker);
+    nodes[newIndex] = child.startMarker;
     ctx.lastNode = child.endMarker;
   }
 
@@ -341,7 +341,7 @@ export class DomRenderer {
 
   private removeOldFrame(state: ComponentState, oldFrames: RenderTreeFrame[], oldIndex: number): void {
     const frame = oldFrames[oldIndex]!;
-    const node = state.renderedNodes.get(oldIndex);
+    const node = state.renderedNodes[oldIndex];
     switch (frame.frameType) {
       case FrameType.Element:
       case FrameType.Text:

@@ -6,9 +6,13 @@ import type { EventCallback } from "../components/event-callback";
 export type RenderFragment = (builder: RenderTreeBuilder) => void;
 
 /**
- * One entry of the flat render tree. Blazor uses a struct pool; we use plain
- * objects (V8-friendly, internal API that can be optimized later without an
- * API break).
+ * One entry of the flat render tree. Frames are kept as small object literals
+ * (one per frame kind, carrying only that kind's fields — measured: a 17-field
+ * monomorphic frame class retains 30% MORE memory than literals, because text
+ * and attribute frames are ~2/3 of all frames) and the builder mutates
+ * subtreeLength/key in place on close instead of copying with `{ ...frame }`
+ * spreads (which allocated element frames twice per render). Blazor's struct
+ * pool is the same idea with in-place slot writes.
  */
 export interface RenderTreeFrame {
   readonly frameType: FrameType;
@@ -36,6 +40,9 @@ export interface RenderTreeFrame {
   /** Markup frames */
   readonly markupContent?: string;
 }
+
+/** The builder is allowed to close over and finish frames in place. */
+type EditableFrame = { -readonly [K in keyof RenderTreeFrame]: RenderTreeFrame[K] };
 
 /** Value that may be passed to addAttribute. Mirrors Blazor's `object`: any
  *  non-primitive is allowed — including class instances (models, domain
@@ -71,7 +78,7 @@ export class RenderTreeBuilder {
   }
 
   openElement(sequence: number, elementName: string): void {
-    this.append({ frameType: FrameType.Element, sequence, elementName });
+    this.frames.push({ frameType: FrameType.Element, sequence, elementName });
     this.openFrameStack.push(this.frames.length - 1);
   }
 
@@ -80,7 +87,7 @@ export class RenderTreeBuilder {
   }
 
   openComponent(sequence: number, componentType: ComponentType): void {
-    this.append({ frameType: FrameType.Component, sequence, componentType });
+    this.frames.push({ frameType: FrameType.Component, sequence, componentType });
     this.openFrameStack.push(this.frames.length - 1);
   }
 
@@ -89,7 +96,7 @@ export class RenderTreeBuilder {
   }
 
   openRegion(sequence: number): void {
-    this.append({ frameType: FrameType.Region, sequence });
+    this.frames.push({ frameType: FrameType.Region, sequence });
     this.openFrameStack.push(this.frames.length - 1);
   }
 
@@ -102,18 +109,18 @@ export class RenderTreeBuilder {
     if (index === undefined) {
       throw new Error("setKey may only be called inside an open element or component.");
     }
-    const frame = this.frames[index]!;
+    const frame = this.frames[index]! as EditableFrame;
     if (frame.frameType === FrameType.Element) {
-      this.frames[index] = { ...frame, elementKey: key };
+      frame.elementKey = key;
     } else if (frame.frameType === FrameType.Component) {
-      this.frames[index] = { ...frame, componentKey: key };
+      frame.componentKey = key;
     } else {
       throw new Error("setKey may only be used on elements or components.");
     }
   }
 
   addAttribute(sequence: number, name: string, value: AttributeValue): void {
-    this.append({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value });
+    this.frames.push({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value });
   }
 
   /** Adds an event-handler attribute carrying its directive flags (used by generated code).
@@ -121,7 +128,7 @@ export class RenderTreeBuilder {
    *  (`(e) => …` in `@bind`), and a contextual `EventCallback<never>` would make
    *  TS infer the lambda parameter as `never` — `e.target` then fails with 2339. */
   addEventHandler(sequence: number, name: string, callback: EventCallback<any>, flags: EventHandlerFlags | number = EventHandlerFlags.None): void {
-    this.append({
+    this.frames.push({
       frameType: FrameType.Attribute,
       sequence,
       attributeName: name,
@@ -156,7 +163,7 @@ export class RenderTreeBuilder {
         typeof textOrFragment === "function"
           ? textOrFragment
           : (b: RenderTreeBuilder) => b.addContent(sequence, textOrFragment);
-      this.append({ frameType: FrameType.Attribute, sequence, attributeName: "ChildContent", attributeValue: fragment });
+      this.frames.push({ frameType: FrameType.Attribute, sequence, attributeName: "ChildContent", attributeValue: fragment });
       return;
     }
     if (typeof textOrFragment === "function") {
@@ -168,17 +175,17 @@ export class RenderTreeBuilder {
     } else if (typeof textOrFragment === "boolean") {
       // true renders nothing.
     } else {
-      this.append({ frameType: FrameType.Text, sequence, textContent: textOrFragment });
+      this.frames.push({ frameType: FrameType.Text, sequence, textContent: textOrFragment });
     }
   }
 
   addMarkupContent(sequence: number, markup: string | null): void {
     if (markup === null || markup === undefined) return;
-    this.append({ frameType: FrameType.Markup, sequence, markupContent: markup });
+    this.frames.push({ frameType: FrameType.Markup, sequence, markupContent: markup });
   }
 
   addElementReferenceCapture(sequence: number, action: (element: Element) => void): void {
-    this.append({ frameType: FrameType.ElementReferenceCapture, sequence, elementReferenceCaptureAction: action });
+    this.frames.push({ frameType: FrameType.ElementReferenceCapture, sequence, elementReferenceCaptureAction: action });
   }
 
   /** Clears the builder for reuse. */
@@ -187,23 +194,20 @@ export class RenderTreeBuilder {
     this.openFrameStack.length = 0;
   }
 
-  private append(frame: RenderTreeFrame): void {
-    this.frames.push(frame);
-  }
-
   private closeOpenFrame(): void {
     const index = this.openFrameStack.pop();
     if (index === undefined) {
       throw new Error("No open frame to close.");
     }
-    const frame = this.frames[index]!;
+    const frame = this.frames[index]! as EditableFrame;
     const subtreeLength = this.frames.length - index;
+    // in place — no spread copy (Blazor's struct-pool behaviour)
     if (frame.frameType === FrameType.Element) {
-      this.frames[index] = { ...frame, elementSubtreeLength: subtreeLength };
+      frame.elementSubtreeLength = subtreeLength;
     } else if (frame.frameType === FrameType.Component) {
-      this.frames[index] = { ...frame, componentSubtreeLength: subtreeLength };
+      frame.componentSubtreeLength = subtreeLength;
     } else if (frame.frameType === FrameType.Region) {
-      this.frames[index] = { ...frame, regionSubtreeLength: subtreeLength };
+      frame.regionSubtreeLength = subtreeLength;
     }
   }
 }

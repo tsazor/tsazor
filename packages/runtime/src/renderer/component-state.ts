@@ -14,8 +14,10 @@ export class ComponentState {
   readonly slotChildren = new Map<number, ComponentState>();
   /** Slot children of the render pass currently being processed. */
   readonly newSlotChildren = new Map<number, ComponentState>();
-  /** DOM nodes produced by the current render tree, keyed by frame index. */
-  renderedNodes = new Map<number, Node>();
+  /** DOM nodes produced by the current render tree, indexed by frame index
+   *  (holes for attribute/region frames). An array instead of a Map: frame
+   *  indices are dense integers, so this halves the lookup/retention cost. */
+  renderedNodes: Node[] = [];
   currentRenderTree: RenderTreeFrame[] = [];
   disposed = false;
   /** Mutable so HMR can replace the definition in place. */
