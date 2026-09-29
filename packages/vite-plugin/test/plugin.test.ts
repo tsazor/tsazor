@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { tasor } from "../src";
 import { generateRoutesModule } from "../src/routes";
+import { processScopedCss, scopeHashFor, scopeSelector } from "../src/scoped-css";
 
 const COUNTER = /* tazor */ `
 @page "/counter"
@@ -53,6 +54,14 @@ beforeAll(async () => {
   await writeFile(path.join(root, "services", "CounterService.ts"), "export class CounterService {}\n");
   await writeFile(path.join(root, "Pages", "Counter.tazor"), COUNTER);
   await writeFile(path.join(root, "Pages", "FetchData.tazor"), FETCH_DATA);
+  await writeFile(
+    path.join(root, "Shared", "Greeter.tazor.css"),
+    "h1 { color: red; }\n.list > .item:hover { color: blue; }\n/* .a { } */\n@keyframes spin { from { opacity: 1; } }\n",
+  );
+  await writeFile(
+    path.join(root, "Shared", "Greeter.tazor.ts"),
+    'import { ComponentBase, Parameter } from "@tasor/runtime";\n\nexport default class Greeter extends ComponentBase {\n    @Parameter() Name = "";\n    count = 0;\n}\n',
+  );
 });
 
 afterAll(async () => {
@@ -136,5 +145,81 @@ describe("tasor vite plugin", () => {
     ]);
     expect(module).toContain('{ template: "/myorders", type: MyOrders, authorize: {} },');
     expect(module).toContain('{ template: "/", type: Index },');
+  });
+
+  it("emits the scoped-CSS import and scope attribute when a sidecar exists", async () => {
+    const plugin = await createPlugin();
+    const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tazor"));
+    expect(result!.code).toContain('import "./Greeter.tazor.css";');
+    expect(result!.code).toMatch(/b\.addAttribute\(1, "b-[0-9a-f]{8}", ""\)/);
+  });
+
+  it("keeps files without a sidecar free of scope emission", async () => {
+    const plugin = await createPlugin();
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
+    expect(result!.code).not.toContain(".tazor.css");
+    expect(result!.code).not.toMatch(/b\.addAttribute\(\d+, "b-/);
+  });
+
+  it("rewrites sidecar CSS selectors to the scope attribute", async () => {
+    const plugin = await createPlugin();
+    const cssPath = path.join(root, "Shared", "Greeter.tazor.css");
+    const hash = scopeHashFor(root, cssPath.slice(0, -4));
+    const source = "h1 { color: red; } .list > .item:hover { color: blue; }\n";
+    const result = await plugin.transform?.call({} as never, source, cssPath);
+    expect(result!.code).toContain(`h1[${hash}] { color: red; }`);
+    expect(result!.code).toContain(`.list[${hash}] > .item[${hash}]:hover { color: blue; }`);
+  });
+
+  it("imports the .ts code-behind and makes the generated class extend it", async () => {
+    const plugin = await createPlugin();
+    const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tazor"));
+    expect(result!.code).toContain('import GreeterBase from "./Greeter.tazor.ts";');
+    expect(result!.code).toContain("export default class Greeter extends GreeterBase {");
+    expect(result!.code).not.toContain("extends ComponentBase");
+  });
+
+  it("keeps .tazor files without a .ts sidecar on ComponentBase", async () => {
+    const plugin = await createPlugin();
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
+    expect(result!.code).toContain("export default class Counter extends ComponentBase {");
+    expect(result!.code).not.toMatch(/import \w+Base from "\.\/.*\.ts";/);
+  });
+});
+
+describe("scoped-css rewriter (unit)", () => {
+  it("derives a deterministic hash from the project-relative POSIX path", () => {
+    const hash = scopeHashFor("D:/proj", "D:/proj\\src\\".replace(/\\/g, "/") + "Comp.tazor");
+    expect(hash).toMatch(/^b-[0-9a-f]{8}$/);
+    expect(hash).toBe(scopeHashFor("D:\\proj", "D:\\proj\\src\\Comp.tazor"));
+    expect(scopeHashFor("D:/proj", "D:/proj/src/Other.tazor")).not.toBe(hash);
+  });
+
+  it("scopes compound selectors before pseudo-classes", () => {
+    expect(scopeSelector(".a > .b:hover", "b-1")).toBe(".a[b-1] > .b[b-1]:hover");
+    expect(scopeSelector("p::after", "b-1")).toBe("p[b-1]::after");
+    // Attribute selectors precede the scope attribute (pseudo boundary starts later).
+    expect(scopeSelector('input[type="x"] a:focus', "b-1")).toBe('input[type="x"][b-1] a[b-1]:focus');
+  });
+
+  it("handles ::deep in all three positions", () => {
+    expect(scopeSelector("::deep .child", "b-1")).toBe("[b-1] .child");
+    expect(scopeSelector(".parent ::deep .child", "b-1")).toBe(".parent[b-1] .child");
+    expect(scopeSelector(".a > ::deep .b", "b-1")).toBe(".a[b-1] > .b");
+    expect(scopeSelector("::deep", "b-1")).toBe("[b-1]");
+  });
+
+  it("traverses @media and leaves @keyframes untouched", async () => {
+    const css = `@media (min-width: 600px) { h1 { color: red; } }\n@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n`;
+    const result = await processScopedCss(css, "b-1", "/tmp/Greeter.tazor.css");
+    expect(result).toContain("@media (min-width: 600px) { h1[b-1] { color: red; } }");
+    expect(result).toContain("from { transform: rotate(0deg); }"); // NOT percent[b-1]
+    expect(result).toContain("to" + " { transform: rotate(360deg); }");
+  });
+
+  it("ignores selector-like content in comments", async () => {
+    const result = await processScopedCss("/* .spoof:hover {} */ h1 { color: red; }", "b-1", "/tmp/Greeter.tazor.css");
+    expect(result).toContain("/* .spoof:hover {} */");
+    expect(result).toContain("h1[b-1] { color: red; }");
   });
 });

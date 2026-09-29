@@ -30,6 +30,7 @@ const CODES = {
   TZR008: "Unsupported directive attribute.",
   TZR009: "Missing attribute value.",
   TZR010: "Invalid implicit expression terminator.",
+  TZR011: "Conflicting code-behind.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

@@ -246,4 +246,77 @@ export default class Stepper extends ComponentBase {
     expect(parsed.sources).toContain("Smap.tazor");
     expect(code).toContain('b.addContent(1, this.Title);');
   });
+
+  it("applies the scope attribute to rendered DOM when scopeHash is set", async () => {
+    const source = `
+<div><p class="inner">Hello</p></div>
+
+@code {
+  title = "";
+}
+`;
+    const { code, diagnostics } = compile(source, {
+      className: "Scoped",
+      fileName: "Scoped.tazor",
+      generateSourceMap: false,
+      scopeHash: "b-1a2b3c4d",
+    });
+    expect(diagnostics.hasErrors).toBe(false);
+
+    const mod = await instantiate(code);
+    const Scoped = mod.default as abstract new () => unknown;
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(Scoped as never, container);
+    await renderer.waitUntilIdle();
+
+    // Both plain elements carry the scope attribute, matched by the CSS attr selector.
+    expect(container.querySelectorAll('[b-1a2b3c4d]').length).toBe(2);
+  });
+
+  it("renders a component whose state lives in a code-behind class (extends chain)", async () => {
+    const source = `
+<h1 data-testid="count">Count: @count</h1>
+<button data-testid="inc" @onclick="increment">+</button>
+<p data-testid="double">@doubleCount</p>
+`;
+    // The sidecar is what Vite would compile from the sibling X.tazor.ts.
+    const sidecar = `
+import { ComponentBase } from "@tasor/runtime";
+export default class BeCode extends ComponentBase {
+  count = 0;
+  increment(): void { this.count++; }
+  get doubleCount(): number { return this.count * 2; }
+}
+`;
+    const { code, diagnostics } = compile(source, {
+      className: "Counter",
+      fileName: "Counter.tazor",
+      generateSourceMap: false,
+      codeBehindClass: "CounterBase",
+      imports: ['import CounterBase from "./Counter.tazor.ts";'],
+    });
+    expect(diagnostics.hasErrors).toBe(false);
+    expect(code).toContain("export default class Counter extends CounterBase {");
+    expect(code).not.toContain("extends ComponentBase");
+
+    const mod = await instantiate(code, [{ name: "./Counter.tazor.ts", contents: sidecar }]);
+    const Counter = mod.default as abstract new () => unknown;
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(Counter as never, container);
+    await renderer.waitUntilIdle();
+
+    expect(container.querySelector('[data-testid="count"]')?.textContent).toBe("Count: 0");
+    expect(container.querySelector('[data-testid="double"]')?.textContent).toBe("0");
+
+    (container.querySelector('[data-testid="inc"]') as HTMLElement).dispatchEvent(new Event("click"));
+    await renderer.waitUntilIdle();
+    // State lives on the code-behind class; markup renders through the chain.
+    expect(container.querySelector('[data-testid="count"]')?.textContent).toBe("Count: 1");
+    // Bare markup identifiers (baked to this.*) resolve to code-behind members.
+    expect(container.querySelector('[data-testid="double"]')?.textContent).toBe("2");
+  });
 });

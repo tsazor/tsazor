@@ -1,0 +1,16 @@
+@page "/scoped-demo"
+
+<h1>Scoped CSS Demo</h1>
+
+<div class="demo-card">
+    <p class="count">Count: <strong>@count</strong></p>
+    <button class="btn btn-primary" @onclick="incrementCount">increment</button>
+</div>
+
+@code {
+    private count = 0;
+
+    private incrementCount() {
+        this.count++;
+    }
+}

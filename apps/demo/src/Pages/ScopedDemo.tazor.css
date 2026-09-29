@@ -1,0 +1,42 @@
+/* Scoped CSS demo (X.tazor.css sidecar): every selector is rewritten to
+   target the `b-<hash>` attribute the compiler stamps on this file's markup. */
+
+.demo-card {
+    border: 2px solid #6c757d;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #f8f9fa;
+}
+
+.demo-card .count strong {
+    color: #0d6efd;
+}
+
+.demo-card button:hover {
+    color: #fff;
+}
+
+/* ::deep reaches past the scope (child component DOM, in unscoped position). */
+.demo-card ::deep .btn {
+    border-radius: 16px;
+}
+
+@keyframes demo-pop {
+    from {
+        transform: scale(0.9);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+h1 {
+    animation: demo-pop 0.4s;
+    text-decoration: underline;
+}
+
+@media (min-width: 600px) {
+    .demo-card {
+        background: #e9f4ff;
+    }
+}

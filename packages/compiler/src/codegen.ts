@@ -34,6 +34,20 @@ export interface CodegenOptions {
   knownGlobals?: ReadonlySet<string>;
   /** Source file name used in the sourcemap. */
   fileName?: string;
+  /**
+   * Full scope attribute name (e.g. "b-1a2b3c4d") for scoped CSS. When set,
+   * every emitted plain DOM element gets this attribute first; components are
+   * left alone (Blazor behavior). Unset → byte-identical emission as before.
+   */
+  scopeHash?: string;
+  /**
+   * Class name of the default export of the sibling `X.tazor.ts` (code-behind).
+   * When set, the generated class extends it — the code-behind class itself
+   * declares its own base (usually ComponentBase). Takes precedence over
+   * @inherits; a conflicting @inherits emits a TZR011 warning. Unset →
+   * byte-identical emission as before.
+   */
+  codeBehindClass?: string;
 }
 
 export interface CodegenResult {
@@ -48,6 +62,10 @@ export interface CodegenResult {
     injects: Array<{ type: string; name: string }>;
     typeParams: string[];
     inherits?: string;
+    /** Echo of options.scopeHash (scoped-CSS attribute name), when set. */
+    scopeHash?: string;
+    /** Echo of options.codeBehindClass (sibling X.tazor.ts base class), when set. */
+    codeBehindClass?: string;
   };
 }
 
@@ -111,6 +129,7 @@ class Codegen {
   ) {}
 
   run(document: DocumentNode): CodegenResult {
+    if (this.options.scopeHash) this.metadata.scopeHash = this.options.scopeHash;
     const directives = document.directives;
     for (const d of directives) {
       switch (d.name) {
@@ -152,6 +171,17 @@ class Codegen {
     if (this.metadata.inherits) {
       const base = this.metadata.inherits;
       this.inheritsBase = this.resolveType(base);
+    }
+    if (this.options.codeBehindClass) {
+      if (this.metadata.inherits) {
+        this.diagnostics.warning(
+          "TZR011",
+          document.directives.find((d) => d.name === "inherits")!.pos,
+          "… the code-behind file's own base class (X.tazor.ts) wins — remove the '@inherits' directive.",
+        );
+      }
+      this.metadata.codeBehindClass = this.options.codeBehindClass;
+      this.inheritsBase = this.options.codeBehindClass;
     }
 
     // Collect member code blocks and scan for runtime API usage.
@@ -520,6 +550,9 @@ class Codegen {
     const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
 
     this.stmt(`b.openElement(${this.seq()}, ${JSON.stringify(name)});`, node.pos);
+    if (this.options.scopeHash) {
+      this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(this.options.scopeHash)}, "");`, node.pos);
+    }
     if (key && key.kind === "key") this.stmt(`b.setKey(${this.expr(key.code)});`, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: name, attributes: regular });
     for (const ref of refs) {

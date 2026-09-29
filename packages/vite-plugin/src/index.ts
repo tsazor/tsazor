@@ -1,9 +1,11 @@
 import { compile, type ResolvedComponent, type ResolvedType } from "@tasor/compiler";
 import { transformSync } from "esbuild";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 import { hmrAppendix } from "./hmr";
 import { generateRoutesModule, scanRoutes } from "./routes";
+import { processScopedCss, scopeHashFor } from "./scoped-css";
 import { chainSourceMaps } from "./sourcemap";
 import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tasor/workspace";
 
@@ -39,7 +41,21 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
 
     async transform(code, id) {
       const filePath = stripQuery(id);
-      if (!filePath.endsWith(".tazor") || filePath.includes("node_modules") || filePath.startsWith("\0")) {
+      if (filePath.includes("node_modules") || filePath.startsWith("\0")) {
+        return null;
+      }
+
+      // Scoped CSS sidecar (Blazor mechanism): rewrite selectors to the scope
+      // attribute of the owning .tazor file, then hand back to Vite's CSS
+      // pipeline (which handles dev injection, extraction and HMR).
+      if (filePath.endsWith(".tazor.css")) {
+        const owner = filePath.slice(0, -".css".length);
+        if (!existsSync(owner)) return null;
+        const css = await processScopedCss(code, scopeHashFor(projectRoot, owner), filePath);
+        return { code: css, map: null };
+      }
+
+      if (!filePath.endsWith(".tazor")) {
         return null;
       }
 
@@ -69,6 +85,24 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
       });
       const extraImports = collectCodeImports(code, first.code, context);
 
+      // Code-behind: when a sibling X.tazor.ts exists (the compiled module's
+      // own default import), the generated class extends its default export.
+      // The .ts sidecar itself is compiled by Vite's normal TS pipeline.
+      const codeBehindPath = `${filePath}.ts`;
+      const codeBehindClass = existsSync(codeBehindPath) ? `${context.className}Base` : undefined;
+      if (codeBehindClass) {
+        extraImports.push(`import ${codeBehindClass} from "./${path.basename(codeBehindPath)}";`);
+      }
+
+      // Scoped CSS: when a sidecar exists, emit its import into the module
+      // and let the compiler stamp the scope attribute on this file's markup.
+      const sidecarPath = `${filePath}.css`;
+      const sidecar = existsSync(sidecarPath);
+      const scopeHash = sidecar ? scopeHashFor(projectRoot, filePath) : undefined;
+      if (sidecar) {
+        extraImports.push(`import "./${path.basename(sidecarPath)}";`);
+      }
+
       const compiled = compile(code, {
         className: context.className,
         fileName: filePath,
@@ -76,6 +110,8 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
         resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
         knownGlobals,
         imports: extraImports,
+        codeBehindClass,
+        scopeHash,
         generateSourceMap: true,
       });
       reportDiagnostics(first.diagnostics, filePath);

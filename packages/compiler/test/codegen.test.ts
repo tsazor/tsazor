@@ -213,4 +213,56 @@ describe("codegen", () => {
     expect(code).toContain("addEventHandler");
     expect(code).not.toContain('"ValueChanged"');
   });
+
+  it("emits the scope attribute first on plain elements when scopeHash is set", () => {
+    const { code: scoped, metadata } = gen('<input @bind="name" />', { scopeHash: "b-1a2b3c4d" });
+    // The scope attribute is the first frame after openElement...
+    expect(scoped).toContain('b.addAttribute(1, "b-1a2b3c4d", "");');
+    // ...and subsequent frames shift by one sequence number.
+    expect(scoped).toContain('b.addAttribute(2, "value", this.name);');
+    expect(metadata.scopeHash).toBe("b-1a2b3c4d");
+  });
+
+  it("scopes every plain element (including child fragments) but not component tags", () => {
+    const { code } = gen(
+      '<div><Alert><span>child markup</span></Alert><button>ok</button></div>',
+      {
+        scopeHash: "b-7f3e00aa",
+        resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tazor" } : null),
+      },
+    );
+    expect(code.match(/b\.addAttribute\(\d+, "b-7f3e00aa", ""\)/g)?.length).toBe(3); // outer div, child span, button
+    expect(code).toMatch(/b\.openComponent\(\d+, __tasor_comp_Alert\);/); // component tag itself gets no scope frame
+  });
+
+  it("leaves emission byte-identical when scopeHash is unset (regression guard)", () => {
+    // Without the option, no scope frames and unchanged sequence numbers —
+    // this is what keeps the existing hard-coded-sequence tests stable.
+    const { code } = gen('<input @bind="name" />');
+    expect(code).toContain('b.addAttribute(1, "value", this.name);');
+    expect(code).not.toContain('b.addAttribute(1, "b-');
+  });
+
+  it("extends the code-behind class instead of ComponentBase when codeBehindClass is set", () => {
+    const { code, metadata } = gen('<p>@count</p>', { codeBehindClass: "DemoBase" });
+    expect(code).toContain("export default class Demo extends DemoBase {");
+    expect(code).not.toContain("extends ComponentBase");
+    expect(metadata.codeBehindClass).toBe("DemoBase");
+  });
+
+  it("code-behind wins over @inherits and warns (TZR011)", () => {
+    const { code, diagnostics } = gen("@inherits LayoutComponentBase\n<p>hi</p>", { codeBehindClass: "DemoBase" });
+    expect(code).toContain("export default class Demo extends DemoBase {");
+    const warning = diagnostics.all.find((d) => d.code === "TZR011");
+    expect(warning).toBeDefined();
+    expect(warning!.severity).toBe("warning");
+  });
+
+  it("leaves emission byte-identical when codeBehindClass is unset (regression guard)", () => {
+    const { code } = gen("@inherits LayoutComponentBase\n<div class=\"card\"><p>@Body</p></div>", {
+      resolveType: (name) => (name === "LayoutComponentBase" ? { specifier: "@tasor/runtime", exportName: "LayoutComponentBase" } : null),
+    });
+    expect(code).toContain("export default class Demo extends LayoutComponentBase {");
+    expect(code).not.toContain("DemoBase");
+  });
 });

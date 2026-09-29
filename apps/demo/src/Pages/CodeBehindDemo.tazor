@@ -1,0 +1,12 @@
+@page "/code-behind-demo"
+
+<h1>Code-behind Demo</h1>
+
+<p>State and logic live in the sibling <strong>CodeBehindDemo.tazor.ts</strong> —
+this file has no <code>@(code)</code> block at all.</p>
+
+<div class="demo-card card">
+    <p class="count">Count: <strong>@count</strong> · double: <strong>@doubleCount</strong></p>
+    <p>@greetingMessage</p>
+    <button class="btn btn-primary" @onclick="increment">increment</button>
+</div>
