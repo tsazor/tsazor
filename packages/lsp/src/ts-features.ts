@@ -417,9 +417,12 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 }
 
 /**
- * Semantic diagnostics of one shadow mapped back to .tazor coordinates:
- * diagnostics that do not map (synthetic regions, plumbing) are dropped —
- * that leaves only squiggles anchored on real source. Capped at 200.
+ * Type diagnostics of one shadow (syntactic + semantic) mapped back to .tazor
+ * coordinates: diagnostics that do not map (synthetic regions, plumbing) are
+ * dropped — that leaves only squiggles anchored on real source. Capped at 200.
+ *
+ * Syntactic diagnostics catch @code parse errors (e.g. `private pass word = "";`)
+ * that otherwise only surface at build time (esbuild), not in the editor.
  *
  * Two shadow-false-positive classes are filtered:
  *  - TS2307 on static-asset specifiers (`.css`, images, fonts): vite serves
@@ -431,7 +434,11 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 export function tsDiagnostics(service: TasorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
   const parameterSpans = parameterPropertySpans(entry.shadow.code);
   const results: TsDiagnostic[] = [];
-  for (const diag of service.semanticDiagnosticsOnShadow(entry)) {
+  const diagnostics = [
+    ...service.syntacticDiagnosticsOnShadow(entry),
+    ...service.semanticDiagnosticsOnShadow(entry),
+  ];
+  for (const diag of diagnostics) {
     if (diag.start === undefined) continue;
     // Shadow-false positives (see docstring above) — match before mapping.
     if (diag.code === 2307 && isAssetModuleSpecifier(ts.flattenDiagnosticMessageText(diag.messageText, " "))) continue;

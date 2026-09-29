@@ -62,6 +62,20 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
   return routes;
 }
 
+/**
+ * Root-relative dev-module URLs of all .tazor components (pages + plain
+ * components) — the input for dev-server warmup, so compile errors inside
+ * verbatim @code surface at startup instead of on the first page visit.
+ */
+export async function scanTazorModules(root: string): Promise<string[]> {
+  const rootPath = path.resolve(root);
+  const urls: string[] = [];
+  for await (const filePath of walkTazorFiles(rootPath, rootPath)) {
+    urls.push(toRootRelativeSpecifier(rootPath, filePath));
+  }
+  return urls;
+}
+
 /** Generates the `virtual:tasor-routes` module content (RouteEntry[] literal). */
 export function generateRoutesModule(root: string, routes: ScannedRoute[]): string {
   const rootPath = path.resolve(root);

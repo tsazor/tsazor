@@ -2,9 +2,9 @@ import { compile, type ResolvedComponent, type ResolvedType } from "@tasor/compi
 import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 import { hmrAppendix } from "./hmr";
-import { generateRoutesModule, scanRoutes } from "./routes";
+import { generateRoutesModule, scanRoutes, scanTazorModules } from "./routes";
 import { processScopedCss, scopeHashFor } from "./scoped-css";
 import { chainSourceMaps } from "./sourcemap";
 import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tasor/workspace";
@@ -26,6 +26,13 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
 
     configResolved(config) {
       projectRoot = path.resolve(options.root ?? config.root);
+    },
+
+    configureServer(server) {
+      // Eager compile: dev transforms are lazy, so @code errors would only
+      // surface when the browser requests the module. Warm every .tazor at
+      // startup — vite logs pre-transform errors to the terminal immediately.
+      void warmupTazorModules(server, projectRoot);
     },
 
     resolveId(id) {
@@ -139,6 +146,15 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
 function stripQuery(id: string): string {
   const query = id.indexOf("?");
   return query >= 0 ? id.slice(0, query) : id;
+}
+
+async function warmupTazorModules(server: ViteDevServer, projectRoot: string): Promise<void> {
+  // vite <5.1 has no warmupRequest — fall back to on-demand behavior.
+  if (typeof server.warmupRequest !== "function") return;
+  for (const url of await scanTazorModules(projectRoot)) {
+    // warmupRequest logs pre-transform errors itself; it never rejects.
+    await server.warmupRequest(url);
+  }
 }
 
 /**

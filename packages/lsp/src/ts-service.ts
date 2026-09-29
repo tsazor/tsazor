@@ -256,6 +256,12 @@ export class TasorTypeService {
     return this.ls.getSemanticDiagnostics(entry.shadow.virtualPath) as ts.DiagnosticWithLocation[];
   }
 
+  /** Parse errors (e.g. from a typo like `private pass word`) come as
+   *  syntactic diagnostics — a bucket the semantic query never includes. */
+  syntacticDiagnosticsOnShadow(entry: ShadowEntry): readonly ts.DiagnosticWithLocation[] {
+    return this.ls.getSyntacticDiagnostics(entry.shadow.virtualPath) as ts.DiagnosticWithLocation[];
+  }
+
   /**
    * Builds a one-request variant shadow from a patched .tazor source and
    * computes the query cursor at the end of the baked `this.<chain>` text.

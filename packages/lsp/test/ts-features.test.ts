@@ -172,6 +172,18 @@ describe("tsHover and tsDefinition", () => {
     expect(ts2322!.message).toContain("string");
   });
 
+  it("maps a @code parse error (syntactic bucket) onto the offending line", async () => {
+    // `pass word` breaks the member declaration — the shadow catches it in
+    // getSyntacticDiagnostics, not getSemanticDiagnostics.
+    const typoSource = '<p>@ticker.points.length</p>\n\n@code {\n    private pass word = "";\n}\n';
+    const entry = await service.ensureTazor(path.join(root, "Pages", "TypoProbe.tazor"), typoSource);
+    const diags = tsDiagnostics(service, entry!);
+    // Without the syntactic bucket the editor would stay silent until esbuild
+    // rejects the transpile at request time.
+    expect(diags.length).toBeGreaterThan(0);
+    expect(diags[0]!.line).toBe(3);
+  });
+
   it("keeps the synthetic bind handler inference-clean (no `e`-is-never TS2339)", async () => {
     // The generated `EventCallback.bind(this, (e) => { … e.target … })` sits in
     // a synthetic region: `e.target` errors only when the callback parameter
