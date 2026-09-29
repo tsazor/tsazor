@@ -26,9 +26,13 @@ export interface AnalyzedFile {
   filePath: string;
   fileDir: string;
   className: string;
+  /** The raw source the document was parsed from (completion classification). */
+  source: string;
   document: DocumentNode;
   context: FileContext;
   diagnostics: readonly TzrDiagnostic[];
+  /** @inject names declared in the component (expression completions). */
+  injects: ReadonlyArray<{ type: string; name: string }>;
 }
 
 /** Parses the AST and compiles once, sharing the workspace resolution with the build. */
@@ -39,6 +43,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
   const context = createFileContext(absolute, chain);
 
   let diagnostics: readonly TzrDiagnostic[] = [];
+  let injects: ReadonlyArray<{ type: string; name: string }> = [];
   let document: DocumentNode;
   try {
     document = parseDocument(source, new DiagnosticBag());
@@ -50,6 +55,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
       generateSourceMap: false,
     });
     diagnostics = compiled.diagnostics.all;
+    injects = compiled.metadata.injects;
   } catch (error) {
     // The compiler throws for codegen-level failures; surface the message.
     document = { directives: [], body: [], codeBlocks: [] };
@@ -60,7 +66,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
       pos: { line: 1, column: 0 },
     }];
   }
-  return { filePath: absolute, fileDir, className: context.className, document, context, diagnostics };
+  return { filePath: absolute, fileDir, className: context.className, source, document, context, diagnostics, injects };
 }
 
 /* Node lookup --------------------------------------------------------------- */

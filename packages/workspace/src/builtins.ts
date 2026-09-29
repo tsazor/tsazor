@@ -28,6 +28,93 @@ export const RUNTIME_COMPONENTS: ReadonlySet<string> = new Set([
   "ValidationSummary",
 ]);
 
+/**
+ * Parameters of the built-in runtime components (attribute completions in the
+ * language server). Hand-maintained — mirrors the @Parameter() declarations in
+ * packages/runtime/src (input components inherit InputBase's Value/ValueChanged/
+ * ValueExpression/additionalAttributes).
+ */
+const INPUT_PARAMS: ReadonlyArray<{ name: string; doc?: string }> = [
+  { name: "Value", doc: "Two-way bound value (@bind-Value)." },
+  { name: "ValueChanged", doc: "Change callback (@bind-Value binds this automatically)." },
+  { name: "ValueExpression", doc: "Field expression for validation." },
+  { name: "additionalAttributes", doc: "Attribute splat (captureUnmatchedValues)." },
+];
+
+export const RUNTIME_COMPONENT_PARAMS: Readonly<Record<string, ReadonlyArray<{ name: string; doc?: string }>>> = {
+  Router: [
+    { name: "routes", doc: "Route entries (from the generated routes module)." },
+    { name: "found", doc: "RenderFragment receiving the matched RouteData." },
+    { name: "notFound", doc: "RenderFragment when no route matches." },
+  ],
+  RouteView: [
+    { name: "routeData", doc: "RouteData supplied by the Router." },
+    { name: "defaultLayout", doc: "Layout for pages without an @layout directive." },
+  ],
+  AuthorizeRouteView: [
+    { name: "routeData", doc: "RouteData supplied by the Router." },
+    { name: "defaultLayout", doc: "Layout for pages without an @layout directive." },
+    { name: "authorized", doc: "Content when authorization succeeds." },
+    { name: "notAuthorized", doc: "Content when authorization fails." },
+    { name: "authorizing", doc: "Content while authorization is in-flight." },
+  ],
+  NavLink: [
+    { name: "href", doc: "Target href, base-relative (\"/counter\")." },
+    { name: "match", doc: "NavLinkMatch.Prefix (default) or NavLinkMatch.All." },
+    { name: "activeClass", doc: "Class added while active (default \"active\")." },
+    { name: "cssClass", doc: "Static classes always present on the anchor." },
+    { name: "childContent", doc: "Link content." },
+  ],
+  LayoutView: [
+    { name: "layout", doc: "Layout component to render the content inside." },
+    { name: "childContent", doc: "Content to project into the layout's Body." },
+  ],
+  PageTitle: [{ name: "childContent", doc: "The title text." }],
+  CascadingValue: [
+    { name: "value", doc: "The value to cascade." },
+    { name: "name", doc: "Optional name for @bind:by-name style cascading." },
+    { name: "childContent", doc: "Children that can consume the value." },
+    { name: "additionalAttributes", doc: "Attribute splat (captureUnmatchedValues)." },
+  ],
+  AuthorizeView: [
+    { name: "policy", doc: "Named policy or policy function." },
+    { name: "roles", doc: "Comma-separated roles or role array." },
+    { name: "childContent", doc: "Content when authorized." },
+    { name: "authorized", doc: "RenderFragment(state) when authorized." },
+    { name: "notAuthorized", doc: "Content when authorization fails." },
+    { name: "authorizing", doc: "Content while authorization is in-flight." },
+  ],
+  CascadingAuthenticationState: [{ name: "childContent", doc: "App content under authentication cascading." }],
+  Virtualize: [
+    { name: "items", doc: "In-memory items to virtualize." },
+    { name: "itemsProvider", doc: "Async provider for paged data." },
+    { name: "itemSize", doc: "Estimated item height in px (default 50)." },
+    { name: "overscan", doc: "Extra items rendered above/below (default 3)." },
+    { name: "itemTemplate", doc: "RenderFragment factory per item." },
+    { name: "additionalAttributes", doc: "Attribute splat (captureUnmatchedValues)." },
+  ],
+  EditForm: [
+    { name: "model", doc: "The form's model object." },
+    { name: "validators", doc: "Named ModelValidators." },
+    { name: "onValidSubmit", doc: "Handler invoked after validation passes." },
+    { name: "childContent", doc: "Form fields." },
+    { name: "additionalAttributes", doc: "Attribute splat (captureUnmatchedValues)." },
+  ],
+  InputText: INPUT_PARAMS,
+  InputTextArea: INPUT_PARAMS,
+  InputNumber: INPUT_PARAMS,
+  InputCheckbox: INPUT_PARAMS,
+  InputDate: INPUT_PARAMS,
+  InputSelect: INPUT_PARAMS,
+  ValidationMessage: [
+    { name: "For", doc: "Field name the message belongs to." },
+    { name: "additionalAttributes", doc: "Attribute splat (captureUnmatchedValues)." },
+  ],
+  ValidationSummary: [
+    { name: "additionalAttributes", doc: "Attribute splat (captureUnmatchedValues)." },
+  ],
+};
+
 /** Types/classes referenced from @code blocks. */
 export const RUNTIME_TYPES: ReadonlySet<string> = new Set([
   "ComponentBase",

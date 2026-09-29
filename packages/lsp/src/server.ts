@@ -8,14 +8,27 @@ import {
   type InitializeParams,
   type InitializeResult,
   type DefinitionParams,
+  type CompletionParams,
+  type CompletionItem,
+  type CompletionList,
   type Hover,
   type HoverParams,
   Location,
+  CompletionItemKind,
   type MarkupContent,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { analyzeSource, definitionAt, hoverAt, type AnalyzedFile } from "./analysis";
+import { completeAt, type CompletionKind } from "./completions";
+
+/** Pure candidates → LSP items. */
+const COMPLETION_KINDS: Record<CompletionKind, CompletionItemKind> = {
+  component: CompletionItemKind.Class,
+  attribute: CompletionItemKind.Property,
+  directive: CompletionItemKind.Keyword,
+  member: CompletionItemKind.Value,
+};
 
 /**
  * Tasor language server (stdio). Publishes compiler diagnostics as you type
@@ -89,11 +102,30 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     });
   });
 
+  connection.onCompletion(async (params: CompletionParams): Promise<CompletionList> => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return { isIncomplete: false, items: [] };
+    const current = await analyzed(document);
+    const candidates = completeAt(current, params.position.line, params.position.character);
+    return {
+      isIncomplete: false,
+      items: candidates.map((candidate): CompletionItem => {
+        const item: CompletionItem = { label: candidate.label, kind: COMPLETION_KINDS[candidate.kind], detail: candidate.detail, documentation: candidate.doc };
+        if (candidate.snippet) {
+          item.insertText = candidate.snippet;
+          item.insertTextFormat = 2; // Snippet
+        }
+        return item;
+      }),
+    };
+  });
+
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       hoverProvider: true,
       definitionProvider: true,
+      completionProvider: { triggerCharacters: ["<", "@", " "], resolveProvider: false },
     },
   };
 });
