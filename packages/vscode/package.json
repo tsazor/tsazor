@@ -2,7 +2,7 @@
   "name": "tasor-vscode",
   "displayName": "Tasor Language Support",
   "description": "Syntax highlighting and language services (diagnostics, hover, go-to-definition) for Tasor (.tazor) files — Razor markup with TypeScript.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "tasor",
   "main": "./dist/extension.js",
   "engines": {
