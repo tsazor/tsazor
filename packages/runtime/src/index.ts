@@ -8,7 +8,7 @@ export { ComponentBase } from "./components/component-base";
 export { ParameterView } from "./components/parameter-view";
 export { Parameter, CascadingParameter, type ParameterMeta } from "./components/parameter-metadata";
 export { EventCallback } from "./components/event-callback";
-export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition } from "./components/component-definition";
+export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition, type ComponentType } from "./components/component-definition";
 export { CascadingValue } from "./components/cascading-value";
 
 // Renderer

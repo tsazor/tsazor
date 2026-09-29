@@ -1,5 +1,5 @@
 import { FrameType, EventHandlerFlags } from "./frame-type";
-import type { ComponentDefinition } from "../components/component-definition";
+import type { ComponentType } from "../components/component-definition";
 import type { EventCallback } from "../components/event-callback";
 
 /** A fragment of render output: writes frames into a builder. Blazor's RenderFragment. */
@@ -25,7 +25,7 @@ export interface RenderTreeFrame {
   readonly eventHandlerName?: string;
   readonly eventHandlerFlags?: EventHandlerFlags;
   /** Component frames */
-  readonly componentType?: ComponentDefinition;
+  readonly componentType?: ComponentType;
   readonly componentId?: number;
   readonly componentKey?: string | number | null;
   readonly componentSubtreeLength?: number;
@@ -37,16 +37,21 @@ export interface RenderTreeFrame {
   readonly markupContent?: string;
 }
 
-/** Value that may be passed to addAttribute. */
+/** Value that may be passed to addAttribute. Mirrors Blazor's `object`: any
+ *  non-primitive is allowed — including class instances (models, domain
+ *  objects) that TS structurally rejects for `Record<string, unknown>` due to
+ *  the missing index signature. Consumption reads frames as `unknown`, so the
+ *  narrowing happens at the actual usage, not here. */
 export type AttributeValue =
   | string
   | number
   | boolean
   | null
   | undefined
-  | EventCallback<never>
+  | EventCallback<any>
   | RenderFragment
-  | Record<string, unknown>;
+  | Record<string, unknown>
+  | object;
 
 /**
  * Builds a flat render tree, mirroring Blazor's RenderTreeBuilder.
@@ -74,7 +79,7 @@ export class RenderTreeBuilder {
     this.closeOpenFrame();
   }
 
-  openComponent(sequence: number, componentType: ComponentDefinition): void {
+  openComponent(sequence: number, componentType: ComponentType): void {
     this.append({ frameType: FrameType.Component, sequence, componentType });
     this.openFrameStack.push(this.frames.length - 1);
   }
@@ -111,8 +116,11 @@ export class RenderTreeBuilder {
     this.append({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value });
   }
 
-  /** Adds an event-handler attribute carrying its directive flags (used by generated code). */
-  addEventHandler(sequence: number, name: string, callback: EventCallback<never>, flags: EventHandlerFlags | number = EventHandlerFlags.None): void {
+  /** Adds an event-handler attribute carrying its directive flags (used by generated code).
+   *  `any` (not `never`!): the generated code types inline handlers by inference
+   *  (`(e) => …` in `@bind`), and a contextual `EventCallback<never>` would make
+   *  TS infer the lambda parameter as `never` — `e.target` then fails with 2339. */
+  addEventHandler(sequence: number, name: string, callback: EventCallback<any>, flags: EventHandlerFlags | number = EventHandlerFlags.None): void {
     this.append({
       frameType: FrameType.Attribute,
       sequence,

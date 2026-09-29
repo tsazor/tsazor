@@ -8,11 +8,19 @@ import type { ComponentBase } from "./component-base";
 export class EventCallback<TArg = unknown> {
   private constructor(
     private readonly receiver: ComponentBase | null,
-    private readonly delegate: ((arg: TArg) => void | Promise<void>) | null,
+    private readonly delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg> | null,
   ) {}
 
-  /** Creates a callback whose owner re-renders after invocation. */
-  static bind<TArg>(receiver: ComponentBase, delegate: (arg: TArg) => void | Promise<void>): EventCallback<TArg> {
+  /** Creates a callback whose owner re-renders after invocation. Accepts an
+   *  already-bound callback as the delegate too: the compiler wraps every on*-
+   *  named attribute value in `bind` without knowing whether the referenced
+   *  member already holds an EventCallback (e.g. a field like
+   *  `submit = EventCallback.bind(this, …)` referenced by `@onclick`). Without
+   *  the unwrapping below, invokeAsync would call an object like a function. */
+  static bind<TArg>(
+    receiver: ComponentBase,
+    delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg>,
+  ): EventCallback<TArg> {
     return new EventCallback(receiver, delegate);
   }
 
@@ -28,6 +36,12 @@ export class EventCallback<TArg = unknown> {
 
   async invokeAsync(arg: TArg): Promise<void> {
     if (this.delegate === null) return;
+    // Re-wrapped callback: invoke it directly — it binds to its own receiver
+    // and re-renders after running, so forwarding keeps the semantics intact.
+    if (this.delegate instanceof EventCallback) {
+      await this.delegate.invokeAsync(arg);
+      return;
+    }
     // Call with the receiver as `this` (Blazor's Factory.Bind semantics): the
     // compiler passes method references like `this.incrementCount`, which are
     // not bound — without this, `this.state` inside the handler is undefined.

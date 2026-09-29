@@ -17,6 +17,15 @@ export function isComponentDefinition(value: unknown): value is ComponentDefinit
   return typeof value === "object" && value !== null && "type" in (value as Record<string, unknown>);
 }
 
+/**
+ * A component type as it flows through the render tree: the compiler emits the
+ * class itself, hand-built call sites pass a `defineComponent(...)` record.
+ * The renderer normalizes classes via `toComponentDefinition`.
+ */
+export type ComponentType<T extends ComponentBase = ComponentBase> =
+  | ComponentDefinition<T>
+  | (abstract new () => T);
+
 /** Wraps a component class into a definition. Cached per class so repeated
  *  `defineComponent(SomeClass)` calls (every render!) yield identical
  *  definitions — the diff compares component types by identity. */

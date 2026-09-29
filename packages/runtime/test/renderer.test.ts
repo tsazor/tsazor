@@ -51,6 +51,27 @@ class MethodCounter extends ComponentBase {
   }
 }
 
+// The compiler wraps every on*-named attribute value in bind() without knowing
+// whether the referenced member already holds an EventCallback — re-binding a
+// bound callback must unwrap it on invocation, not call an object like a
+// function (the FormDemo `OnValidSubmit="@handleSubmit"` pattern).
+class PreboundCounter extends ComponentBase {
+  count = 0;
+  readonly handleClick = EventCallback.bind(this, (): void => {
+    this.count++;
+  });
+
+  protected override buildRenderTree(b: RenderTreeBuilder): void {
+    b.openElement(0, "span");
+    b.addContent(1, `${this.count}`);
+    b.closeElement();
+    b.openElement(2, "button");
+    b.addAttribute(3, "onclick", EventCallback.bind(this, this.handleClick));
+    b.addContent(4, "+");
+    b.closeElement();
+  }
+}
+
 class Greeter extends ComponentBase {
   @Parameter() name = "";
   protected override buildRenderTree(b: RenderTreeBuilder): void {
@@ -131,6 +152,19 @@ describe("Renderer", () => {
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(MethodCounter, container);
+    await renderer.waitUntilIdle();
+
+    const button = container.querySelector("button")!;
+    button.dispatchEvent(new Event("click"));
+    await renderer.waitUntilIdle();
+
+    expect(container.querySelector("span")?.textContent).toBe("1");
+  });
+
+  it("unwraps a re-wrapped (already-bound) callback on invocation", async () => {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(PreboundCounter, container);
     await renderer.waitUntilIdle();
 
     const button = container.querySelector("button")!;
