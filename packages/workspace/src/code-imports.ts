@@ -24,6 +24,17 @@ export function collectCodeImports(source: string, compiledCode: string, context
     const file = context.resolveImportable(name);
     if (file) {
       imports.push(`import ${name} from "${relativeSpecifier(context.fileDir, file)}";`);
+      continue;
+    }
+    // Any other resolvable type (named export of a .ts module, bare-package
+    // type from a `@using @scope/pkg`): named import so @code type-checks.
+    const resolved = context.resolveType(name, []);
+    if (resolved) {
+      imports.push(
+        resolved.exportName
+          ? `import { ${resolved.exportName} } from "${resolved.specifier}";`
+          : `import ${name} from "${resolved.specifier}";`,
+      );
     }
   }
   return imports;

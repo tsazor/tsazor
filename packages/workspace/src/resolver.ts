@@ -1,5 +1,5 @@
 import type { ResolvedComponent, ResolvedType } from "@tasor/compiler";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins";
 import { candidateDirs, relativeSpecifier, type ImportsChain } from "./imports";
@@ -46,6 +46,25 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
     return undefined;
   };
 
+  /** First .ts file in the candidate dirs that exports `name` (declaration or
+   *  `export {…}` list); declaration files (.d.ts) are skipped. */
+  const findExportedFrom = (name: string): string | undefined => {
+    for (const dir of dirs) {
+      let entries: string[] = [];
+      try {
+        entries = readdirSync(dir);
+      } catch {
+        continue;
+      }
+      for (const entry of entries.sort()) {
+        if (!entry.endsWith(".ts") || entry.endsWith(".d.ts")) continue;
+        const candidate = path.join(dir, entry);
+        if (existsSync(candidate) && exportsOf(candidate).has(name)) return candidate;
+      }
+    }
+    return undefined;
+  };
+
   const context: FileContext = {
     filePath: resolved,
     fileDir,
@@ -67,6 +86,18 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
       if (localType) {
         return { specifier: relativeSpecifier(fileDir, localType) };
       }
+      // Named export of any .ts module in the candidate dirs (Blazor: folders
+      // are namespaces; here a barrel like `models.ts` exporting `Address`).
+      const exportedFrom = findExportedFrom(name);
+      if (exportedFrom) {
+        return { specifier: relativeSpecifier(fileDir, exportedFrom), exportName: name };
+      }
+      // JS globals (Math, Date, …) and TS utility types (Record, Pick, …)
+      // already exist in scope — the bare-package trust branch below would
+      // otherwise emit `import { Math } from "<pkg>"` for a plain global
+      // reference and break the bundle. Local files/exports above may still
+      // shadow a global intentionally.
+      if (isJsGlobal(name)) return null;
       if (RUNTIME_TYPES.has(name)) {
         return { specifier: RUNTIME_PACKAGE, exportName: name };
       }
@@ -88,10 +119,64 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
   return context;
 }
 
+/* JS globals ------------------------------------------------------------------ */
+
+/** Runtime globals (`Object.getOwnPropertyNames(globalThis)`) plus the TS
+ *  utility types, which live on the type side but are referenced by the same
+ *  PascalCase identifiers. Nothing here should ever be turned into an import. */
+const JS_GLOBALS: ReadonlySet<string> = new Set([
+  ...Object.getOwnPropertyNames(globalThis),
+  "Record", "Partial", "Readonly", "Required", "Pick", "Omit",
+  "Exclude", "Extract", "NonNullable", "ReturnType", "InstanceType",
+  "Parameters", "ConstructorParameters", "Awaited", "ThisType",
+  "Uppercase", "Lowercase", "Capitalize", "Uncapitalize",
+]);
+
+function isJsGlobal(name: string): boolean {
+  return JS_GLOBALS.has(name);
+}
+
 function isPathLikeUsing(using: string): boolean {
   const value = stripQuotes(using);
   if (value.startsWith("@")) return false; // scoped npm package
   return value.startsWith(".") || value.startsWith("/") || /[\\/]/.test(value);
+}
+
+/* Named-export scan ---------------------------------------------------------- */
+
+const EXPORT_DECLARATION =
+  /\bexport\s+(?:default\s+)?(?:abstract\s+)?(?:declare\s+)?(?:async\s+)?(?:interface|type|enum|class|function|const|let|var)\s+([A-Za-z_$][\w$]*)/g;
+const EXPORT_LIST = /\bexport\s*\{([^}]*)\}/g;
+
+const exportCache = new Map<string, { mtimeMs: number; names: Set<string> }>();
+
+/** Named exports of one .ts file (declaration + `export {…}` lists), cached
+ *  per file+mtime — the resolver runs on every compile and rebuild. */
+function exportsOf(tsFile: string): Set<string> {
+  let mtimeMs: number;
+  try {
+    mtimeMs = statSync(tsFile).mtimeMs;
+  } catch {
+    return new Set();
+  }
+  const cached = exportCache.get(tsFile);
+  if (cached && cached.mtimeMs === mtimeMs) return cached.names;
+  let source = "";
+  try {
+    source = readFileSync(tsFile, "utf8");
+  } catch {
+    return new Set();
+  }
+  const names = new Set<string>();
+  for (const match of source.matchAll(EXPORT_DECLARATION)) names.add(match[1]!);
+  for (const match of source.matchAll(EXPORT_LIST)) {
+    for (const piece of match[1]!.split(",")) {
+      const name = piece.split(/\s+as\s+/)[0]?.trim();
+      if (name) names.add(name);
+    }
+  }
+  exportCache.set(tsFile, { mtimeMs, names });
+  return names;
 }
 
 function stripQuotes(value: string): string {
