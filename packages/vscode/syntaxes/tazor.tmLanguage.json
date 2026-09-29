@@ -25,6 +25,9 @@
       "include": "#text-tag"
     },
     {
+      "include": "#component-tag"
+    },
+    {
       "include": "text.html.basic"
     }
   ],
@@ -144,6 +147,36 @@
           ]
         }
       }
+    },
+    "component-tag": {
+      "comment": "Component tags (Razor-style PascalCase): <EditForm Model=\"…\">. Handled here, before the HTML fallback, so component names get the normal tag color instead of the builtin grammar's invalid.illegal.unrecognized-tag.html red for unknown elements.",
+      "begin": "(</?)([A-Z][\\w$]*)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.html"
+        },
+        "2": {
+          "name": "entity.name.tag.component.tazor entity.name.tag.html"
+        }
+      },
+      "end": "(/?>)",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.end.html"
+        }
+      },
+      "contentName": "meta.tag.component.tazor",
+      "patterns": [
+        {
+          "include": "#tasor-escaped-at"
+        },
+        {
+          "include": "#event-attributes"
+        },
+        {
+          "include": "text.html.basic#attribute"
+        }
+      ]
     },
     "text-tag": {
       "comment": "<text>…</text> escapes markup-to-code transitions.",
