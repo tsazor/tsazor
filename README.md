@@ -26,6 +26,21 @@ TypeScript; abgesehen davon sind die Markups weitgehend austauschbar mit Blazors
 }
 ```
 
+## Feature-Überblick
+
+- **Blazor-Architektur 1:1:** RenderTree, Renderer/Diff, Komponenten-Lifecycle, Parameter
+  (`@Parameter()`), Cascading, DI, Routing mit Layouts, EditForm/`@bind`-Validierung,
+  Virtualize.
+- **Scoped CSS:** `X.tazor.css` als Sidecar-Stylesheet, Selector-Rewriting per postcss,
+  `::deep` wie in Blazor ([docs/scoped-css.md](docs/scoped-css.md)).
+- **Code-behind:** `X.tazor.ts` als Sidecar-Klasse (per Vererbung statt partial classes,
+  [docs/code-behind.md](docs/code-behind.md)).
+- **Language Server:** Diagnostics, Hover, Go-to-Definition und Auto-Complete für `.tazor`
+  ([docs/language-server.md](docs/language-server.md)).
+- **Debugging in DevTools:** Inline-Sourcemaps binden `.tazor` an die echte Quelle —
+  Breakpoints in `@code` und Variablen-Inspektion funktionieren im Browser
+  ([docs/debugging.md](docs/debugging.md)).
+
 ## Quickstart
 
 ```bash
@@ -33,6 +48,27 @@ pnpm install
 pnpm demo:dev        # Demo-App (Vite Dev-Server mit HMR)
 pnpm -r build        # alle Pakete bauen
 pnpm -r test         # alle Tests (Vitest + happy-dom)
+```
+
+Realer Härtetest 1: **[Blazing Pizza](apps/blazing-pizza)** (Port der Blazor-Workshop-App,
+Details in [docs/port-findings.md](docs/port-findings.md)):
+
+```bash
+pnpm --filter blazing-pizza server   # API auf :5300
+pnpm --filter blazing-pizza dev      # App auf :5301
+node apps/blazing-pizza/scripts/verify-pizza.mjs   # E2E (startet/kills Server selbst)
+```
+
+Seed-Login: `test@example.com` / `test1234`.
+
+Realer Härtetest 2: **[Sleipnir Ticker](apps/sleipnir-ticker)** — Live-Daten statt Forms:
+eine ASP.NET-Core-API relaisiert Binance-WebSocket-Ticker-Daten als Sleipnir
+Command-API, das Tasor-Frontend rendert sie per SSE-Push live:
+
+```bash
+pnpm --filter sleipnir-ticker api    # API auf :5310
+pnpm --filter sleipnir-ticker codegen   # generierten TS-Client in src/api/ regenerieren
+node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic-Feed, self-starting)
 ```
 
 Eine eigene App:
@@ -68,25 +104,54 @@ createTasorApp({ root: App, routes });
 ## Pakete
 
 | Paket | Inhalt |
-|---|---|
+| --- | --- |
 | `@tasor/runtime` | RenderTree (flaches Frame-Array wie Blazor), Renderer/DomRenderer, Diff, ComponentBase-Lifecycle, Parameter + Cascading, DI, Navigation/Router, Forms/@bind (EditForm, Input*-Familie, Validierung), Data (Virtualize, TasorHttp) |
-| `@tasor/compiler` | `.tazor` → TS-Modul: Lexer/Parser/Codegen mit Sourcemaps und Diagnostics (`TZR001…`) |
-| `@tasor/vite-plugin` | Vite-Plugin: Transform + Route-Manifest (`virtual:tasor-routes`) + HMR + Compiler-Fehler im Dev-Overlay |
+| `@tasor/compiler` | `.tazor` → TS-Modul: Lexer/Parser/Codegen mit Sourcemaps, Diagnostics (`TZR001…`), Scoped-CSS-Scope-Hash, Code-behind-Erkennung, `@authorize` |
+| `@tasor/vite-plugin` | Vite-Plugin: Transform + Route-Manifest (`virtual:tasor-routes`) + HMR mit State-Retention + Compiler-Fehler im Dev-Overlay + Scoped-CSS-Rewriter (postcss) |
+| `@tasor/components` | Bootstrap-5-UI-Bibliothek, selbst in `.tazor` geschrieben (Dogfooding) |
+| `@tasor/lsp` | Language Server: Diagnostics, Hover, Go-to-Definition, Auto-Complete |
 | `@tasor/testing` | `render()`-Testhelper über happy-dom |
-| `packages/vscode` | VS Code Extension (Phase 1): TextMate-Grammar für `.tazor` |
+| `packages/vscode` | VS Code Extension: TextMate-Grammar + LSP-Client |
+| `@tasor/workspace` | Workspace-Infrastruktur (Package-Build-Chain, Test-Gates) |
 
 ## Dokumentation
 
 - [Getting Started](docs/getting-started.md)
 - [Sprach-Referenz (.tazor)](docs/language-reference.md)
 - [Architektur & HMR](docs/architecture.md)
+- [Scoped CSS (`X.tazor.css`)](docs/scoped-css.md)
+- [Code-behind (`X.tazor.ts`)](docs/code-behind.md)
+- [Language Server](docs/language-server.md)
+- [Debugging in DevTools](docs/debugging.md)
+- [Port-Findings (Blazing Pizza)](docs/port-findings.md)
 
-## Status (M0–M8)
+## Status
 
-- **M1–M6 abgeschlossen:** Runtime-Kern, Compiler, Parameter-System, Routing/Layout,
-  Forms/@bind, Data (Virtualize, TasorHttp) — jeweils mit Akzeptanztests.
-- **M7 abgeschlossen:** Vite-Plugin (Transform, Route-Manifest, HMR mit State-Retention),
-  VS-Code-TextMate-Grammar, Demo-App (`apps/demo`) mit 5 Routen.
-- **M8:** Diagnostics-Katalog + Fehler-Overlay im Dev-Server umgesetzt, Docs (dieses Verzeichnis),
-  `@inherits` unterstützt. Phase 2 (LSP, `@inherits`/Partials-Feinschliff, `@tasor/components`
-  als dogfooded Bibliothek) folgt.
+Alle Meilensteine M1–M8 und der Phase-2-Baustein sind umgesetzt:
+
+- **Runtime-Kern bis Data** (M1–M6): RenderTree, Diff, Lifecycle, Parameter/Cascading,
+  Routing/Layout, Forms/@bind, Virtualize + TasorHttp — jeweils mit Akzeptanztests.
+- **Tooling** (M7/M8): Vite-Plugin mit HMR und State-Retention, Route-Manifest,
+  Diagnostics-Katalog mit Fehler-Overlay im Dev-Server, Demo-App (`apps/demo`).
+- **Components-POC** (`@tasor/components`): Bootstrap 5 in `.tazor` — Dogfooding des
+  Frameworks mit dem Framework.
+- **Blazing-Pizza-Port**: reale Workshop-App (Konfigurator, Checkout, Orders) läuft 1:1,
+  19/19 E2E-Tests; Gaps und Learnings in [docs/port-findings.md](docs/port-findings.md).
+- **Sleipnir-Ticker**: zweite, anders geartete App (Live-Daten statt Forms) — ASP.NET-Core-API
+  (NuGet `Sleipnir.Server`) mit `[SleipnirEvent]`-Push, Tasor-Frontend über den
+  **generierten TS-Client** (`sleipnir-codegen`, Typesicherheit aus dem Contract); bindet Tasor
+  ↔ Sleipnir, 15/15 E2E-Checks inkl. Subscription-Survival über Navigation.
+- **Scoped CSS & Code-behind**: Blazor-Parität (`b-<hash>`-Isolation, `::deep`;
+  `X.tazor.ts` via Vererbung statt partial classes).
+- **Language Server**: Diagnostics, Hover, Go-to-Definition, Auto-Complete (Tag-, Attribut-,
+  Direktiven- und Expression-Kontext); VS-Code-Extension v0.2.0.
+- **Debugging**: DevTools-Sourcemap-Story am echten Browser (CDP) verifiziert —
+  Breakpoints in `@code`, State-Inspektion, Steps auf `.tazor`-Zeilen.
+
+**Gates:** Package-Tests 180 ✓ · Pizza-E2E 19/19 ✓ · Demo-Regression 31/31 ✓ ·
+Scoped-Demo 10/10 ✓ · Code-behind-Demo 5/5 ✓ · Debugging-Verifikation 14/14 ✓ ·
+Ticker-E2E 15/15 ✓ (inkl. Live-Updates ohne Polling, Scoped-CSS, Subscription-Survival).
+
+Damit bewusst vertagt (nicht ohne Rücksprache starten): Web Components
+(`defineCustomElement`), named child slots, `@bind:format`, typecheck-CLI,
+LSP-Rename, published npm layout.

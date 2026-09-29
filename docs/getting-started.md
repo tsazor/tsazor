@@ -25,11 +25,16 @@ my-app/
     ├── _Imports.tazor       # projektweite Direktiven (z. B. @layout MainLayout)
     ├── App.tazor            # Wurzelkomponente (Router)
     ├── MainLayout.tazor     # Layout (@inherits LayoutComponentBase, @Body)
+    ├── MainLayout.tazor.css # (optional) scoped CSS, nur für MainLayout
     └── Pages/
         ├── Home.tazor       # @page "/"
         ├── Counter.tazor    # @page "/counter"
         └── …
 ```
+
+Optional zu jeder `X.tazor`-Datei: ein Sidecar-Stylesheet `X.tazor.css` (CSS Isolation,
+[Scoped CSS](scoped-css.md)) und eine Code-behind-Klasse `X.tazor.ts`
+([Code-behind](code-behind.md)).
 
 ## Bootstrap
 
@@ -80,5 +85,15 @@ test("increments", async () => {
 
 ## VS Code
 
-`packages/vscode` enthält die TextMate-Grammar (`source.tazor`). Zum lokalen Testen:
-Ordner `packages/vscode` in VS Code öffnen → `F5` (Extension Development Host).
+`packages/vscode` enthält die Extension (v0.2.0): TextMate-Grammar (`source.tazor`)
+plus den mitgelieferten Language Server (`@tasor/lsp`, `--stdio`), der pro Workspace
+eine Server-Instanz startet:
+
+- **Diagnostics** live aus dem Compiler (Katalog `TZR001…`)
+- **Hover** über Komponenten und Direktiven
+- **Go-to-Definition** zu `.tazor`-Quelldateien
+- **Auto-Complete**: Tag-Namen, Komponenten-Parameter (inkl. `@bind-<param>`),
+  Direktiven-Keywords und Expression-Members
+
+Zum lokalen Testen: Ordner `packages/vscode` in VS Code öffnen → `F5`
+(Extension Development Host). Details: [language-server.md](language-server.md).

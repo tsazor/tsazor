@@ -69,10 +69,12 @@
 | DataAnnotations-Validierung | abweichend (funktionsbasiert: `validators: Record<string, (value, model) => string \| null>`) |
 | `@bind:format` | begrenzt v1 |
 | Benannte Child-Slots (`<Found Context>`-Stil) | Phase 2 |
-| `@inherits`, Partials (code-behind) | `@inherits` ja; Partials Phase 2 |
+| `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
+| `@authorize` | ja (Tasor-Erweiterung, bare Direktive) |
 | `@implements` | out-of-scope (TS-Interfaces sind strukturell) |
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZR001`–`TZR010` mit Quellposition.
+Der Compiler scheitert nie still — Codes `TZR001`–`TZR011` mit Quellposition
+(`TZR011` ist eine Warnung, z. B. `@inherits`-Konflikt mit Code-behind).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
