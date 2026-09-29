@@ -14,6 +14,8 @@ import { analyzeSource, type AnalyzedFile } from "../src/analysis";
 import { TasorTypeService, type ShadowEntry } from "../src/ts-service";
 import {
   classifyCodeContext,
+  prettifyHoverDisplay,
+  sanitizeDoc,
   tsCompletions,
   tsDefinition,
   tsDiagnostics,
@@ -39,8 +41,12 @@ beforeAll(async () => {
   );
   writeFileSync(
     path.join(root, "node_modules", "@tasor", "runtime", "index.d.ts"),
-    "export declare interface RenderTreeBuilder { openElement(seq: number, tag: string): void; closeElement(): void; addAttribute(seq: number, name: string, value?: unknown): void; addContent(seq: number, value: unknown): void; }\n" +
+    // Mirrors the real runtime signatures the generated bind/handler code
+    // relies on (shaped like packages/runtime/src; addEventHandler is
+    // `EventCallback<any>` — a `never` would infer lambda params to never).
+    "export declare interface RenderTreeBuilder { openElement(seq: number, tag: string): void; closeElement(): void; addAttribute(seq: number, name: string, value?: unknown): void; addEventHandler(seq: number, name: string, callback: EventCallback<any>, flags?: number): void; addContent(seq: number, value: unknown): void; }\n" +
       "export declare class ComponentBase { protected buildRenderTree(b: RenderTreeBuilder): void {} }\n" +
+      "export declare class EventCallback<TArg = unknown> { static bind<TArg>(receiver: ComponentBase, delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg>): EventCallback<TArg>; }\n" +
       "export declare const Parameter: ParameterDecorator;\n",
   );
 
@@ -164,5 +170,55 @@ describe("tsHover and tsDefinition", () => {
     expect(ts2322!.line).toBe(3);
     expect(ts2322!.message).toContain("number");
     expect(ts2322!.message).toContain("string");
+  });
+
+  it("keeps the synthetic bind handler inference-clean (no `e`-is-never TS2339)", async () => {
+    // The generated `EventCallback.bind(this, (e) => { … e.target … })` sits in
+    // a synthetic region: `e.target` errors only when the callback parameter
+    // infers to never via a contextual EventCallback<never>. Nothing on this
+    // page is wrong — the mapped diagnostics must stay empty.
+    const bindSource = '<input @bind="mode" />\n\n@code {\n    mode = "";\n}\n';
+    const entry = await service.ensureTazor(path.join(root, "Pages", "BindProbe.tazor"), bindSource);
+    const diags = tsDiagnostics(service, entry!);
+    expect(diags.find((d) => d.code === 2339 || d.code === 2345)).toBeUndefined();
+  });
+
+  it("drops TS2307 for static-asset imports and TS2564 for @Parameter properties", async () => {
+    const source =
+      '@Parameter() variant?: string;\n\n@code {\n    const css = await import("./x.css");\n    priceText: string = 42;\n}\n';
+    const entry = await service.ensureTazor(path.join(root, "Pages", "FilterProbe.tazor"), source);
+    const diags = tsDiagnostics(service, entry!);
+    expect(diags.find((d) => d.code === 2307)).toBeUndefined(); // "./x.css" — vite serves it
+    expect(diags.find((d) => d.code === 2564)).toBeUndefined(); // `variant` — set by the renderer
+    // Real errors on ordinary verbatim @code lines survive the filters.
+    expect(diags.find((d) => d.code === 2322)).toBeDefined();
+  });
+
+  it("prettifies component-alias quick info to the real component name", () => {
+    // What TS renders for `import { ValidationMessage as __tasor_comp_ValidationMessage } from "@tasor/runtime"`.
+    const alias = "(alias) class __tasor_comp_ValidationMessage\nimport __tasor_comp_ValidationMessage";
+    expect(prettifyHoverDisplay(alias)).toBe("class ValidationMessage");
+    // Other symbols (no compiler alias) pass through untouched.
+    const plain = "(property) TickerStore.points: PricePoint[]";
+    expect(prettifyHoverDisplay(plain)).toBe(plain);
+  });
+
+  it("sanitizes runtime design-note docstrings to Tasor-native descriptions", () => {
+    // The full ValidationMessage docstrings (runtime/src/forms/validation.ts).
+    expect(sanitizeDoc(
+      "Blazor's ValidationMessage<T>: shows validation messages for one field.\n" +
+      "v1 deviation: `For` is a plain field name string (Blazor uses an expression).",
+    )).toBe("shows validation messages for one field.");
+    // Analogue/equivalent headings.
+    expect(sanitizeDoc("Blazor's IServiceCollection analogue: register factories, then build a provider."))
+      .toBe("register factories, then build a provider.");
+    expect(sanitizeDoc("Blazor's InputText: single-line string input."))
+      .toBe("single-line string input.");
+    // Lineage-only docs (no colon heading) vanish entirely.
+    expect(sanitizeDoc("Blazor's OnInitialized / OnInitializedAsync.")).toBe("");
+    expect(sanitizeDoc("Renderer-side state for one component instance (Blazor's ComponentState).")).toBe("");
+    // Non-runtime docs pass through untouched.
+    const own = "The pizza checkout: collects the delivery address.\n";
+    expect(sanitizeDoc(own)).toBe("The pizza checkout: collects the delivery address.");
   });
 });

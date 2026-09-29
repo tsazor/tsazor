@@ -218,9 +218,10 @@ export function tsCompletionDetail(
     ? details.documentation
     : (details.documentation ?? []).map((p) => p.text).join("");
   if (!details.displayParts.length && !documentation) return null;
+  const cleanedDoc = sanitizeDoc(documentation);
   return {
     detail: details.displayParts.map((p) => p.text).join(""),
-    doc: documentation || undefined,
+    doc: cleanedDoc || undefined,
   };
 }
 
@@ -238,12 +239,59 @@ export function tsHover(service: TasorTypeService, entry: ShadowEntry, line: num
   if (!gen) return null;
   const info = service.quickInfoOnShadow(entry, gen.line, gen.column);
   if (!info) return null;
-  const display = (info.displayParts ?? []).map((p) => p.text).join("");
+  const display = prettifyHoverDisplay((info.displayParts ?? []).map((p) => p.text).join(""));
   const doc = typeof info.documentation === "string"
     ? info.documentation
     : (info.documentation ?? []).map((p) => p.text).join("");
   if (!display && !doc) return null;
-  return { markdown: (display ? "```ts\n" + display + "\n```" : "") + (doc ? "\n\n" + doc : "") };
+  const cleaned = sanitizeDoc(doc);
+  if ((display || doc) && !display && !cleaned) return null; // doc was lineage-only
+  return { markdown: (display ? "```ts\n" + display + "\n```" : "") + (cleaned ? "\n\n" + cleaned : "") };
+}
+
+/**
+ * Component tags resolve to an `__tasor_comp_*` import alias in the generated
+ * code, so TS quick info renders compiler plumbing —"(alias) class
+ * __tasor_comp_X" plus the `import …` context line. Rewrite it to the real
+ * component name so the hover reads like the markup (`class ValidationMessage`).
+ */
+export function prettifyHoverDisplay(display: string): string {
+  if (!display.includes("__tasor_comp_")) return display;
+  return display
+    .replace(/^\(alias\) /, "")
+    .replace(/\n\s*import [^\n]*$/, "") // TS's import-context line for the alias
+    .replace(/__tasor_comp_([A-Za-z0-9_]+)/g, (_match, name: string) => name);
+}
+
+/**
+ * Runtime docstrings double as design notes ("Blazor's NavLink: …", "v1
+ * deviation: …"), but editor surfaces (hover, completion details) must read
+ * Tasor-native. Sanitize to the component's own description: the "Blazor's X:"
+ * heading is stripped to its description, lineage sentences referencing Blazor
+ * and "v1 deviation" notes are dropped. The full notes stay in the source.
+ */
+export function sanitizeDoc(doc: string): string {
+  const lines: string[] = [];
+  for (const raw of doc.split("\n")) {
+    const head = /^(\s*)(?:([-*])\s+)?(.*)$/.exec(raw);
+    const indent = head?.[1] ?? "";
+    const bullet = head?.[2];
+    let body = head?.[3] ?? "";
+    // "Blazor's InputText: single-line string input." → "single-line string input."
+    body = body.replace(/^Blazor'?s\s+[A-Za-z0-9_.$]+(?:<[^>:]*>)?(?:\s+(?:analogue|equivalent))?:\s*/, "");
+    // Sentence-level: drop lineage/deviation sentences, keep the rest of the line.
+    body = body
+      .split(/(?<=\.)\s+/)
+      .filter((sentence) => sentence.trim() !== "" && !/\bBlazor\b|v1 deviation/.test(sentence))
+      .join(" ");
+    if (body.trim() === "") continue;
+    lines.push(`${indent}${bullet ? bullet + " " : ""}${body}`.trimEnd());
+  }
+  while (lines.length > 0 && lines[0]!.trim() === "") lines.shift();
+  while (lines.length > 0 && lines.at(-1)!.trim() === "") lines.pop();
+  // Collapse runs of blank lines left by dropped ones.
+  const collapsed = lines.filter((line, i) => i === 0 || line.trim() !== "" || lines[i - 1]!.trim() !== "");
+  return collapsed.join("\n").trim();
 }
 
 /* ------------------------------------------------------------------ */
@@ -336,15 +384,58 @@ export interface TsDiagnostic {
   message: string;
 }
 
+/** Static assets vite-style builds serve directly: no TS type declarations
+ *  exist for them, so a plain `import "./x.css"` is TS2307 noise in the shadow. */
+const ASSET_MODULE_SPECIFIER = /\.(?:css|scss|sass|less|html|svg|png|jpe?g|gif|webp|ico|woff2?|ttf|otf|eot|mp3|mp4)$/i;
+
+/** True for a TS2307 message whose quoted specifier is a static asset. */
+function isAssetModuleSpecifier(message: string): boolean {
+  const quoted = /Cannot find module '([^']+)'/i.exec(message)?.[1];
+  return quoted !== undefined && ASSET_MODULE_SPECIFIER.test(quoted);
+}
+
+/** Text spans of the `@Parameter`-decorated properties in the shadow source —
+ *  used to drop TS2564 (strictPropertyInitialization), where the renderer's
+ *  parameter assignment replaces the initializer (Blazor semantics). */
+function parameterPropertySpans(code: string): Array<{ start: number; end: number }> {
+  const sourceFile = ts.createSourceFile("__tazor_shadow__.ts", code, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const spans: Array<{ start: number; end: number }> = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyDeclaration(node) &&
+      (ts.getDecorators(node) ?? []).some((decorator) =>
+        decorator.expression.getText(sourceFile).startsWith("Parameter"),
+      )
+    ) {
+      spans.push({ start: node.getStart(sourceFile), end: node.end });
+      return; // nested properties do not exist
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sourceFile, visit);
+  return spans;
+}
+
 /**
  * Semantic diagnostics of one shadow mapped back to .tazor coordinates:
  * diagnostics that do not map (synthetic regions, plumbing) are dropped —
  * that leaves only squiggles anchored on real source. Capped at 200.
+ *
+ * Two shadow-false-positive classes are filtered:
+ *  - TS2307 on static-asset specifiers (`.css`, images, fonts): vite serves
+ *    them at runtime, but no type declaration exists in the shadow program.
+ *  - TS2564 ("no initializer") on `@Parameter`-decorated properties: the
+ *    renderer assigns parameters before first render (Blazor semantics), so
+ *    the initializer never belongs in user code.
  */
 export function tsDiagnostics(service: TasorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
+  const parameterSpans = parameterPropertySpans(entry.shadow.code);
   const results: TsDiagnostic[] = [];
   for (const diag of service.semanticDiagnosticsOnShadow(entry)) {
     if (diag.start === undefined) continue;
+    // Shadow-false positives (see docstring above) — match before mapping.
+    if (diag.code === 2307 && isAssetModuleSpecifier(ts.flattenDiagnosticMessageText(diag.messageText, " "))) continue;
+    if (diag.code === 2564 && parameterSpans.some((span) => diag.start! >= span.start && diag.start! < span.end)) continue;
     const genPos = shadowOffsetToPos(entry.shadow.code, diag.start);
     const src = entry.shadow.map.genToSrc(genPos.line, genPos.column);
     if (!src) continue;
