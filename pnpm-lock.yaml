@@ -119,6 +119,9 @@ importers:
       '@jridgewell/gen-mapping':
         specifier: ^0.3.8
         version: 0.3.13
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.25
+        version: 0.3.31
     devDependencies:
       esbuild:
         specifier: ^0.28.2
@@ -162,13 +165,13 @@ importers:
       '@tasor/workspace':
         specifier: workspace:*
         version: link:../workspace
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
     devDependencies:
       '@types/node':
         specifier: ^20.17.0
         version: 20.19.43
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.3
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)

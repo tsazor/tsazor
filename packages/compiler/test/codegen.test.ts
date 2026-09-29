@@ -159,6 +159,37 @@ describe("codegen", () => {
     expect(mappings[0]!.srcLine).toBe(0);
   });
 
+  it("emits token-precise mappings for identifiers inside markup expressions", () => {
+    // `<p>@Title.name</p>`: @ at col 3 → implicit code base 1. `Title` bakes to
+    // `this.` + token — its entry anchors at its own generated token (5 chars
+    // after the baked prefix's start), `name` is an after-dot access mapping at
+    // its own source column.
+    const { mappings } = gen('<p>@Title.name</p>');
+    const onLine0 = mappings.filter((m) => m.srcLine === 0);
+    expect(onLine0.some((m) => m.genCol === 4 && m.srcCol === 3)).toBe(true);  // statement start (@)
+    // Baked expression starts at statement-text offset 16 (`    b.addContent(1, `);
+    // entries are anchored in statement text coordinates + token landing offset.
+    expect(onLine0.some((m) => m.genCol === 25 && m.srcCol === 4)).toBe(true);  // `Title` (position inside this.Title)
+    expect(onLine0.some((m) => m.genCol === 31 && m.srcCol === 10)).toBe(true); // `name` (11 after "this.Title.")
+  });
+
+  it("maps parenthesized expressions with inner-whitespace padding", () => {
+    // `<p>@( count + 1 )</p>`: base 2 for `@(` + 1 for the inner space → `count`
+    // lands exactly on its source column 6.
+    const { mappings } = gen("<p>@( count + 1 )</p>");
+    const entry = mappings.find((m) => m.srcLine === 0 && m.srcCol === 6);
+    expect(entry).toBeDefined();
+  });
+
+  it("keeps control headers at statement-level granularity (no token entries)", () => {
+    // Control statements get no srcBase — only markup expressions do. The
+    // `@if` header maps to its '@' (and the closing brace to node.pos); if a
+    // token-precise base leaked in, `bVisible`'s srcCol would appear twice.
+    const { mappings } = gen("@if (bVisible) { <p>@bVisible</p> }@code { private bVisible = true; }");
+    expect(mappings.some((m) => m.srcLine === 0 && m.srcCol === 0)).toBe(true);  // if-header statement
+    expect(mappings.filter((m) => m.srcLine === 0 && m.srcCol === 5).length).toBe(0); // no leak at header token
+  });
+
   it("wraps @code members and re-emits verbatim", () => {
     const { code } = gen("@code {\n  count = 0;\n}");
     expect(code).toContain("  count = 0;");

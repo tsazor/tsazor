@@ -148,7 +148,9 @@ describe("completeAt — expression members", () => {
 });
 
 describe("completeAt — boundaries", () => {
-  it("returns nothing inside a @code block", async () => {
+  it("defers @code positions to the v2 TypeScript layer (v1 returns nothing)", async () => {
+    // The v1 heuristics own markup only; inside @code the server routes to the
+    // TypeScript shadow layer (see test/ts-features.test.ts).
     const source = "@page \"/x\"\n\n@code {\n    c \n}\n";
     const labels = await complete(source, 3, 6); // inside the code block
     expect(labels).toEqual([]);

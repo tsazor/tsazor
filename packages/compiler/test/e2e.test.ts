@@ -247,6 +247,29 @@ export default class Stepper extends ComponentBase {
     expect(code).toContain('b.addContent(1, this.Title);');
   });
 
+  it("sourcemap decodes 1-based via trace-mapping on both sides (convention pin)", async () => {
+    // gen-mapping/trace-mapping 0.3.x APIs take 1-BASED lines both directions
+    // (verified empirically) — this test pins the round trip so later refactors
+    // of the chain don't silently break the DevTools debugging story.
+    const source = "<p>@Title</p>\n";
+    const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tazor" });
+    const genLine0 = code.split("\n").findIndex((l) => l.includes("b.addContent(1, this.Title);"));
+    const { TraceMap, originalPositionFor, generatedPositionFor } = await import("@jridgewell/trace-mapping");
+    const trace = new TraceMap(JSON.parse(map!));
+    const orig = originalPositionFor(trace, { line: genLine0 + 1, column: 4 });
+    expect(orig.line).toBe(1);      // .tazor line 1 (trace-mapping 1-based)
+    expect(orig.column).toBe(3);    // the '@'
+    const back = generatedPositionFor(trace, { source: "Smap.tazor", line: 1, column: 3 });
+    expect(back.line).toBe(genLine0 + 1);
+  });
+
+  it("exposes the raw per-statement mappings for position-aware tooling (LSP)", () => {
+    const { mappings, map } = compile('<p>@Title</p>', { className: "Raw", fileName: "Raw.tazor", generateSourceMap: false });
+    expect(mappings).toBeDefined();
+    expect(map).toBeUndefined();
+    expect(mappings!.some((m) => m.srcLine === 0 && m.srcCol === 4)).toBe(true); // `Title` token
+  });
+
   it("applies the scope attribute to rendered DOM when scopeHash is set", async () => {
     const source = `
 <div><p class="inner">Hello</p></div>

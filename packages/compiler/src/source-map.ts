@@ -14,6 +14,11 @@ export interface SourceMapEntry {
 export function buildSourceMap(entries: SourceMapEntry[], sourceFile: string, generatedFile: string): string {
   const map = new GenMapping({ file: generatedFile });
   for (const entry of entries) {
+    // Conventions (verified empirically against @jridgewell/gen-mapping and
+    // trace-mapping 0.3.x): addMapping expects 1-based lines on BOTH axes and
+    // encodes them into the v3 map's 0-based format; trace-mapping's
+    // originalPositionFor/generatedPositionFor also take 1-based lines.
+    // SourceMapEntry.genLine is 1-based — as-is; srcLine is 0-based → +1.
     addMapping(map, {
       generated: { line: entry.genLine, column: entry.genCol },
       original: { line: entry.srcLine + 1, column: entry.srcCol },

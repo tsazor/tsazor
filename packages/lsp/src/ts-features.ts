@@ -1,0 +1,360 @@
+/**
+ * v2 feature layer: routes .tazor positions between the v1 heuristic layer
+ * (markup) and the TypeScript shadow layer (@code, @{…}, @-expressions) and
+ * translates TS results back into .tazor coordinates.
+ *
+ * Everything here is graceful: whenever the shadow module or the mapping has
+ * nothing to offer for a position (returns `null` / `[]`), the server falls
+ * back to the v1 heuristics — the TS layer can never make an existing feature
+ * worse, it only covers @code and expressions, which v1 does not.
+ */
+import * as ts from "typescript";
+import type { AnalyzedFile } from "./analysis";
+import { nodeAt } from "./analysis";
+import { readFileSync } from "node:fs";
+import {
+  shadowOffsetToPos,
+  TasorTypeService,
+  type ShadowEntry,
+} from "./ts-service";
+
+/* ------------------------------------------------------------------ */
+/* Context routing                                                     */
+/* ------------------------------------------------------------------ */
+
+export type CodeContext = "code" | "markup";
+
+/**
+ * "code" = the position sits inside @code/@{…} or behind an `@` in a markup
+ * expression or attribute value — the TS layer owns it. "markup" = plain
+ * text/tag/attribute-name context — v1 owns it.
+ */
+export function classifyCodeContext(analyzed: AnalyzedFile, line: number, character: number): CodeContext {
+  if (line < 0) return "markup";
+  const node = nodeAt(analyzed.document, line, character);
+  if (node?.kind === "codeBlock" || node?.kind === "expression") return "code";
+  // Member completions fire one past an expression's end (`@ticker.` with the
+  // cursor after the dot is end-exclusive in the AST): the boundary belongs to
+  // the TS layer when the previous character sits inside an expression.
+  const before = nodeAt(analyzed.document, line, character - 1);
+  if (before?.kind === "expression") return "code";
+  // `@`-expression typed inside an attribute value (v1's value state offers
+  // nothing there): `Variant="@mo` — the raw slice decides.
+  const cursor = offsetAt(analyzed.source, line, character);
+  const lineStart = analyzed.source.lastIndexOf("\n", cursor - 1) + 1;
+  const value = attributeValueTail(analyzed.source.slice(lineStart, cursor));
+  if (value !== null && value.startsWith("@")) return "code";
+  return "markup";
+}
+
+/** The unquoted attribute value being typed before the cursor, or null. */
+function attributeValueTail(sliceBeforeCursor: string): string | null {
+  const eq = sliceBeforeCursor.lastIndexOf("=");
+  if (eq < 0) return null;
+  const tail = sliceBeforeCursor.slice(eq + 1).trimStart();
+  if (tail.startsWith('"') || tail.startsWith("'")) {
+    const quote = tail[0]!;
+    // The opening quote is still unclosed → the tail is the value so far.
+    return tail.slice(1).includes(quote) ? null : tail.slice(1);
+  }
+  return tail === "" ? null : tail;
+}
+
+/** Text offset into the raw source. */
+function offsetAt(source: string, line: number, character: number): number {
+  let offset = 0;
+  for (let l = 0; l < line; l++) {
+    const nl = source.indexOf("\n", offset);
+    if (nl < 0) return source.length;
+    offset = nl + 1;
+  }
+  return offset + character;
+}
+
+/* ------------------------------------------------------------------ */
+/* Completions                                                         */
+/* ------------------------------------------------------------------ */
+
+export interface TsCompletionCandidate {
+  label: string;
+  kind: "member";
+  detail?: string;
+  doc?: string;
+  /** Plain (non-snippet) insertText from TS, e.g. `method(`. */
+  insert?: string;
+}
+
+/**
+ * TypeScript completions at a .tazor position, or `null` when the position
+ * maps nowhere in the shadow (→ v1 fallback).
+ *
+ * Mapping-first strategy: if the position maps into the shadow, the generated
+ * text already contains the baked `this.` prefix and the full member chain, so
+ * TS answers directly. Only the bare-prefix case right after `@` (nothing
+ * generated yet) uses the variant-patch mechanism.
+ */
+export async function tsCompletions(
+  service: TasorTypeService,
+  entry: ShadowEntry,
+  analyzed: AnalyzedFile,
+  line: number,
+  character: number,
+): Promise<TsCompletionCandidate[] | null> {
+  // Defense-in-depth for direct callers: plain markup positions (tag names,
+  // attribute names, plain text) never belong to the TS layer. An `@`-prefix
+  // before the cursor (`@ticker.` / `@ti`) overrides it — the raw-text check
+  // below is exact where the AST is end-exclusive against the cursor.
+  const prefix = expressionPrefixBefore(analyzed.source, line, character);
+  if (prefix?.atLineStart) {
+    // A bare `@` or partial word at the start of a line is a directive
+    // completion context — v1 offers directives and members together there.
+    return null;
+  }
+  if (!prefix && classifyCodeContext(analyzed, line, character) !== "code") return null;
+  if (prefix?.endsWithDot) {
+    // Trailing-dot case (`@ticker.`): the parser ends the expression BEFORE
+    // the dot (it becomes a separate text node), so srcToGen maps the cursor
+    // into an unrelated text statement. Append a placeholder identifier so
+    // the scanner keeps the whole chain in ONE implicit expression, then
+    // query TS right behind the baked trailing dot — inside the placeholder
+    // ident TS answers with the full member list.
+    const variant = await service.buildVariant(entry, analyzed.source, {
+      line,
+      start: prefix.start,
+      end: prefix.end,
+      replacement: `${prefix.text}__tasorQuery`,
+      cursorAfter: `this.${prefix.text}`,
+    });
+    if (variant) {
+      const info = service.completionsOnShadow(variant.entry, variant.cursor.line, variant.cursor.column);
+      if (info) return completionCandidates(info);
+    }
+    return null;
+  }
+  const gen = entry.shadow.map.srcToGen(line, character);
+  if (gen) {
+    // The baked gen text already contains the `this.` prefix + member chain,
+    // so TS answers directly.
+    const info = service.completionsOnShadow(entry, gen.line, gen.column);
+    if (info) return completionCandidates(info);
+    if (!prefix) return null;
+  }
+  // Bare prefix right after `@` (`this.<prefix>` baked) with no mapped gen
+  // text: query the variant shadow. Without a typed prefix there is nothing
+  // to complete.
+  if (!prefix) return null;
+  const patch = { line, start: prefix.start, end: prefix.end, replacement: `this.${prefix.text}` };
+  const variant = await service.buildVariant(entry, analyzed.source, patch);
+  if (!variant) return null;
+  const info = service.completionsOnShadow(variant.entry, variant.cursor.line, variant.cursor.column);
+  return info ? completionCandidates(info) : null;
+}
+
+/**
+ * The `@`-expression being typed directly before the cursor, or `null`.
+ * Two cases: a chain ending in a trailing dot (`@ticker.` — the parser ends
+ * the expression before such a dot, so it must be handled as a whole) and a
+ * bare or partial word (`@`, `@ti`). `at` is the `@`'s column, `start`/`end`
+ * span the typed text after it.
+ */
+export function expressionPrefixBefore(
+  source: string,
+  line: number,
+  character: number,
+): { at: number; start: number; end: number; text: string; endsWithDot: boolean; atLineStart: boolean } | null {
+  const lineStart = offsetAt(source, line, 0);
+  const cursorOffset = offsetAt(source, line, character);
+  const before = source.slice(lineStart, cursorOffset);
+  // Trailing dot: `@ticker.` / `@ticker.points.` — at least one identifier
+  // required before every dot, including the trailing one.
+  const dotMatch = /@([\w$]+(?:\.[\w$]+)*\.)$/.exec(before);
+  if (dotMatch) {
+    const at = lineStart + (dotMatch.index ?? 0);
+    return {
+      at,
+      start: at + 1,
+      end: cursorOffset,
+      text: dotMatch[1] ?? "",
+      endsWithDot: true,
+      atLineStart: before.slice(0, dotMatch.index ?? 0).trim() === "",
+    };
+  }
+  // Bare or partial word right after `@`: `@` / `@ti`.
+  const wordMatch = /@([\w$]*)$/.exec(before);
+  if (!wordMatch) return null;
+  const at = lineStart + (wordMatch.index ?? 0);
+  return {
+    at,
+    start: at + 1,
+    end: cursorOffset,
+    text: wordMatch[1] ?? "",
+    endsWithDot: false,
+    atLineStart: before.slice(0, wordMatch.index ?? 0).trim() === "",
+  };
+}
+
+function completionCandidates(info: ts.CompletionInfo): TsCompletionCandidate[] {
+  return info.entries
+    .filter((entry) => entry.name)
+    .map((entry) => ({
+      label: entry.name!,
+      kind: "member" as const,
+      insert: entry.insertText ?? undefined,
+    }));
+}
+
+/** Filled-in details for one completion item (resolveProvider round-trip). */
+export function tsCompletionDetail(
+  service: TasorTypeService,
+  entry: ShadowEntry,
+  genLine: number,
+  genCol: number,
+  entryName: string,
+  source?: string,
+): { detail?: string; doc?: string } | null {
+  const details = service.completionEntryDetail(entry, genLine, genCol, entryName, source);
+  if (!details) return null;
+  const documentation = typeof details.documentation === "string"
+    ? details.documentation
+    : (details.documentation ?? []).map((p) => p.text).join("");
+  if (!details.displayParts.length && !documentation) return null;
+  return {
+    detail: details.displayParts.map((p) => p.text).join(""),
+    doc: documentation || undefined,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Hover                                                               */
+/* ------------------------------------------------------------------ */
+
+export interface TsHoverInfo {
+  markdown: string;
+}
+
+/** QuickInfo at a .tazor position, or null when unmapped (→ v1 fallback). */
+export function tsHover(service: TasorTypeService, entry: ShadowEntry, line: number, character: number): TsHoverInfo | null {
+  const gen = entry.shadow.map.srcToGen(line, character);
+  if (!gen) return null;
+  const info = service.quickInfoOnShadow(entry, gen.line, gen.column);
+  if (!info) return null;
+  const display = (info.displayParts ?? []).map((p) => p.text).join("");
+  const doc = typeof info.documentation === "string"
+    ? info.documentation
+    : (info.documentation ?? []).map((p) => p.text).join("");
+  if (!display && !doc) return null;
+  return { markdown: (display ? "```ts\n" + display + "\n```" : "") + (doc ? "\n\n" + doc : "") };
+}
+
+/* ------------------------------------------------------------------ */
+/* Definition                                                          */
+/* ------------------------------------------------------------------ */
+
+export interface TsDefinitionTarget {
+  file: string;
+  line: number; // 0-based
+  character: number;
+  endLine: number;
+  endCharacter: number;
+}
+
+/**
+ * Go-to-definition for shadow-mapped positions:
+ *   shadow target → mapped back onto the .tazor source
+ *   real .ts/.d.ts target → verbatim into that file
+ * No mapped position / no targets → null (→ v1 fallback).
+ */
+export function tsDefinition(
+  service: TasorTypeService,
+  entry: ShadowEntry,
+  line: number,
+  character: number,
+): TsDefinitionTarget[] | null {
+  const gen = entry.shadow.map.srcToGen(line, character);
+  if (!gen) return null;
+  const defs = service.definitionOnShadow(entry, gen.line, gen.column);
+  const targets: TsDefinitionTarget[] = [];
+  for (const def of defs) {
+    const translated = translateTarget(service, entry, def.fileName, def.textSpan.start, def.textSpan.length);
+    if (translated) targets.push(translated);
+  }
+  return targets.length > 0 ? targets : null;
+}
+
+/** One TS definition target: shadow targets map back, real files go verbatim. */
+function translateTarget(
+  service: TasorTypeService,
+  entry: ShadowEntry,
+  fileName: string,
+  genStart: number,
+  genLength: number,
+): TsDefinitionTarget | null {
+  // Own or cross-shadow virtual module: map back onto the originating .tazor.
+  const targetEntry = service.entryOf(fileName);
+  if (targetEntry) {
+    const genPos = shadowOffsetToPos(targetEntry.shadow.code, genStart);
+    const src = targetEntry.shadow.map.genToSrc(genPos.line, genPos.column);
+    if (!src) return null;
+    // End of the mapped token (or the plain end position for verbatim files).
+    const endPos = shadowOffsetToPos(targetEntry.shadow.code, genStart + genLength);
+    const srcEnd = targetEntry.shadow.map.genToSrc(endPos.line, endPos.column);
+    return {
+      file: targetEntry.shadow.realPath,
+      line: src.line,
+      character: src.character,
+      endLine: srcEnd ? srcEnd.line : src.line,
+      endCharacter: srcEnd ? srcEnd.character + 1 : src.character + 1,
+    };
+  }
+  // Variant shadows map back through their origin entry.
+  if (/\.variant\.ts$/.test(fileName)) return null;
+  // A real file: 1:1 location from the text offset.
+  let text: string;
+  try {
+    text = readFileSync(fileName, "utf8");
+  } catch {
+    return null;
+  }
+  const pos = shadowOffsetToPos(text, genStart);
+  const endPos = shadowOffsetToPos(text, genStart + genLength);
+  return { file: fileName, line: pos.line, character: pos.column, endLine: endPos.line, endCharacter: endPos.column };
+}
+
+/** True for shadow-internal definitions (used to prefer real targets, v2). */
+export function targetIsShadowTarget(service: TasorTypeService, fileName: string): boolean {
+  return service.entryOf(fileName) !== undefined;
+}
+
+/* ------------------------------------------------------------------ */
+/* Diagnostics                                                         */
+/* ------------------------------------------------------------------ */
+
+export interface TsDiagnostic {
+  line: number; // 0-based
+  character: number;
+  code: number;
+  message: string;
+}
+
+/**
+ * Semantic diagnostics of one shadow mapped back to .tazor coordinates:
+ * diagnostics that do not map (synthetic regions, plumbing) are dropped —
+ * that leaves only squiggles anchored on real source. Capped at 200.
+ */
+export function tsDiagnostics(service: TasorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
+  const results: TsDiagnostic[] = [];
+  for (const diag of service.semanticDiagnosticsOnShadow(entry)) {
+    if (diag.start === undefined) continue;
+    const genPos = shadowOffsetToPos(entry.shadow.code, diag.start);
+    const src = entry.shadow.map.genToSrc(genPos.line, genPos.column);
+    if (!src) continue;
+    results.push({
+      line: src.line,
+      character: src.character,
+      code: diag.code,
+      message: ts.flattenDiagnosticMessageText(diag.messageText, " "),
+    });
+    if (results.length >= cap) break;
+  }
+  return results;
+}
