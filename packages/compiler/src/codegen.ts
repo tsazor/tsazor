@@ -589,11 +589,21 @@ class Codegen {
     const refs = node.attributes.filter((a) => a.kind === "ref");
     const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
 
-    this.stmt(`b.openElement(${this.seq()}, ${JSON.stringify(name)});`, node.pos);
+    const seq = this.seq();
+    const raw = JSON.stringify(name);
+    const open = `b.openElement(${seq}, ${raw});`;
+    // Tag token: hovering `<div` maps to the generated tag literal instead of
+    // plumbing on a shared anchor (see plumbingStmt); +1 puts the offset inside
+    // the string literal.
+    this.pendingExprEntries.push({
+      outOffset: "b.openElement(".length + String(seq).length + 2 + 1,
+      srcOffset: 1,
+    });
+    this.stmt(open, node.pos);
     if (this.options.scopeHash) {
       this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(this.options.scopeHash)}, "");`, node.pos);
     }
-    if (key && key.kind === "key") this.stmt(`b.setKey(${this.expr(key.code)});`, node.pos);
+    if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: name, attributes: regular });
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
@@ -601,10 +611,31 @@ class Codegen {
         this.diagnostics.error("TZR008", node.pos, "@ref requires a bare property name.");
         continue;
       }
-      this.stmt(`b.addElementReferenceCapture(${this.seq()}, (el) => { this.${ref.code} = el; });`, node.pos);
+      this.emitRefStmt(ref, node.pos);
     }
     this.emitNodes(node.children, node.pos);
-    this.stmt(`b.closeElement();`, node.pos);
+    this.plumbingStmt(`b.closeElement();`);
+  }
+
+  /** `@ref="name"` → synthetic `this.name` member capture, token-anchored so
+   *  hover/go-to-def on the ref name resolves the captured property. */
+  private emitRefStmt(ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos): void {
+    const seq = this.seq();
+    const text = `b.addElementReferenceCapture(${seq}, (el) => { this.${ref.code} = el; });`;
+    if (ref.codeStart !== undefined) {
+      this.pendingExprEntries.push({
+        outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
+        srcOffset: ref.codeStart.column - pos.column,
+      });
+    }
+    this.stmt(text, pos);
+  }
+
+  /** `@key="expr"` → `b.setKey(...)`, token-precise like attribute values. */
+  private emitKeyStmt(key: Extract<AttributeNode, { kind: "key" }>, pos: SourcePos): void {
+    const baked = this.expr(key.code, key.codeStart === undefined ? undefined : key.codeStart.column - pos.column);
+    const text = `b.setKey(${baked});`;
+    this.stmt(text, pos, text.indexOf(baked));
   }
 
   private emitComponent(node: ElementNode): void {
@@ -614,8 +645,13 @@ class Codegen {
     const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
     const hasChildren = node.children.length > 0;
 
-    this.stmt(`b.openComponent(${this.seq()}, ${local});`, node.pos);
-    if (key && key.kind === "key") this.stmt(`b.setKey(${this.expr(key.code)});`, node.pos);
+    const seq = this.seq();
+    const open = `b.openComponent(${seq}, ${local});`;
+    // Tag token: hovering `<AddressEditor` maps to the component local (quick
+    // info / go-to-def on the component) instead of plumbing on a shared anchor.
+    this.pendingExprEntries.push({ outOffset: "b.openComponent(".length + String(seq).length + 2, srcOffset: 1 });
+    this.stmt(open, node.pos);
+    if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true });
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
@@ -623,7 +659,7 @@ class Codegen {
         this.diagnostics.error("TZR008", node.pos, "@ref on components requires a bare property name.");
         continue;
       }
-      this.stmt(`b.addElementReferenceCapture(${this.seq()}, (el) => { this.${ref.code} = el; });`, node.pos);
+      this.emitRefStmt(ref, node.pos);
     }
     if (hasChildren) {
       this.stmt(`b.addContent(${this.seq()}, (b) => {`, node.pos);
@@ -632,17 +668,33 @@ class Codegen {
       this.leaveScope();
       this.stmt(`});`, node.pos);
     }
-    this.stmt(`b.closeComponent();`, node.pos);
+    this.plumbingStmt(`b.closeComponent();`);
+  }
+
+  /** Emits a statement whose generated text has NO source mapping: plumbing
+   *  lines (closeElement/closeComponent) stay anchor-free so position lookups
+   *  from the source (hover, go-to-def) can never land on them — an equal
+   *  srcCol anchor of open + close used to let the close entry win every
+   *  lookup on the tag line (TazorGenMap.findSrc takes the last entry
+   *  at-or-left). These lines fall back to null → v1 heuristics. */
+  private plumbingStmt(text: string): void {
+    this.line("    " + text);
   }
 
   private emitAttribute(attr: AttributeNode, ctx?: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
     const pos = attr.pos;
+    // Token-precise source base for the attribute's value expression: offset
+    // between the statement anchor (the attribute name) and the code text.
+    const srcBase = (): number | undefined => {
+      const cs = "codeStart" in attr ? attr.codeStart : undefined;
+      return cs === undefined ? undefined : cs.column - pos.column;
+    };
     switch (attr.kind) {
       case "static":
         this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${JSON.stringify(decodeHtmlEntities(attr.value))});`, pos);
         break;
       case "expression": {
-        const baked = this.expr(attr.code);
+        const baked = this.expr(attr.code, srcBase());
         // Razor's method-group / lambda conversion: on a component tag, an
         // on*-named attribute value is an event callback. Razor binds method
         // groups AND lambdas to the component instance via the
@@ -657,29 +709,52 @@ class Codegen {
           value = `EventCallback.bind(this, ${baked})`;
           this.runtimeImports.add("EventCallback");
         }
-        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`, pos);
+        const text = `b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`;
+        this.stmt(text, pos, text.indexOf(value));
         break;
       }
       case "mixedValue": {
-        const template = attr.parts
-          .map((p) => (p.code !== undefined ? `\${${this.expr(p.code)}}` : escapeTemplate(decodeHtmlEntities(p.text ?? ""))))
-          .join("");
-        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, \`${template}\`);`, pos);
+        // Per-part precise entries: bakeMemberRefs only fills pendingExprEntries
+        // for the part currently being baked, so capture and re-offset per part.
+        // Offsets are left in stmt-text coordinates — no expressionStart pass.
+        const precise: Array<{ outOffset: number; srcOffset: number }> = [];
+        let template = "";
+        for (const part of attr.parts) {
+          if (part.code !== undefined) {
+            this.pendingExprEntries = [];
+            const baked = this.expr(part.code, part.codeStart === undefined ? undefined : part.codeStart.column - pos.column);
+            for (const entry of this.pendingExprEntries) {
+              precise.push({ outOffset: template.length + 2 + entry.outOffset, srcOffset: entry.srcOffset });
+            }
+            template += `\${${baked}}`;
+          } else {
+            template += escapeTemplate(decodeHtmlEntities(part.text ?? ""));
+          }
+        }
+        this.pendingExprEntries = precise;
+        const text = `b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, \`${template}\`);`;
+        this.stmt(text, pos);
         break;
       }
       case "eventHandler": {
-        const callback = bareIdentifier(attr.code) ? `this.${attr.code}` : this.expr(attr.code);
+        const bare = bareIdentifier(attr.code);
+        const callback = bare ? `this.${attr.code}` : this.expr(attr.code, srcBase());
         const flags = attr.flags === 0 ? "" : `, ${attr.flags}`;
-        this.stmt(
-          `b.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, EventCallback.bind(this, ${callback})${flags});`,
-          pos,
-        );
+        const text = `b.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, EventCallback.bind(this, ${callback})${flags});`;
+        if (bare && srcBase() !== undefined) {
+          // Synthetic `this.` prefix — anchor the handler name token manually.
+          this.pendingExprEntries.push({ outOffset: text.indexOf(callback) + "this.".length, srcOffset: srcBase()! });
+        }
+        this.stmt(text, pos, bare ? undefined : text.indexOf(callback));
         this.runtimeImports.add("EventCallback");
         break;
       }
-      case "attributes":
-        this.stmt(`b.addMultipleAttributes(${this.seq()}, ${this.expr(attr.code)});`, pos);
+      case "attributes": {
+        const baked = this.expr(attr.code, srcBase());
+        const text = `b.addMultipleAttributes(${this.seq()}, ${baked});`;
+        this.stmt(text, pos, text.indexOf(baked));
         break;
+      }
       case "bind":
         this.emitBind(attr, ctx ?? { tag: "", attributes: [attr] });
         break;

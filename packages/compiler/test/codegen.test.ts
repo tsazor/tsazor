@@ -181,6 +181,45 @@ describe("codegen", () => {
     expect(entry).toBeDefined();
   });
 
+  it("anchors component tags, attribute value expressions and refs token-precise (hover/def)", () => {
+    // Acceptance regression (LSP v2): hover on `<AddressEditor Address="@this.…"
+    // />` used to land on the *closeComponent* line — open/close shared the
+    // node.pos anchor and attribute values had no token entries at all.
+    const source = '<AddressEditor Address="@this.order.deliveryAddress" />';
+    const { code, mappings } = gen(source, {
+      resolveComponent: (tag) => (tag === "AddressEditor" ? { specifier: "./AddressEditor.tazor" } : null),
+    });
+    const lineOf = (needle: string): number => {
+      const idx = code.split("\n").findIndex((l) => l.includes(needle));
+      expect(idx).toBeGreaterThanOrEqual(0);
+      return idx + 1; // genLine is 1-based
+    };
+
+    // Open-tag line: statement anchor at `<` + precise tag-token entry (srcCol 1).
+    const openMaps = mappings.filter((m) => m.genLine === lineOf("b.openComponent("));
+    expect(openMaps.some((m) => m.genCol === 4 && m.srcCol === 0)).toBe(true);
+    expect(openMaps.some((m) => m.genCol > 4 && m.srcCol === 1)).toBe(true);
+
+    // Attribute line: anchor at the attribute name + precise expression tokens
+    // (`@this.order.deliveryAddress` → cols 10 / 15 / 21 relative to the name).
+    const attrMaps = mappings.filter((m) => m.genLine === lineOf("b.addAttribute(1,"));
+    expect(attrMaps.some((m) => m.genCol === 4 && m.srcCol === 15)).toBe(true);
+    expect(attrMaps.some((m) => m.srcCol === 25)).toBe(true); // `this`
+    expect(attrMaps.some((m) => m.srcCol === 30)).toBe(true); // `order`
+    expect(attrMaps.some((m) => m.srcCol === 36)).toBe(true); // `deliveryAddress`
+
+    // closeComponent: unmapped plumbing — lookups from source can never land on it.
+    expect(mappings.filter((m) => m.genLine === lineOf("b.closeComponent();")).length).toBe(0);
+  });
+
+  it("anchors element tags and leaves closeElement unmapped", () => {
+    const { code, mappings } = gen("<div class=\"x\">y</div>");
+    const openMaps = mappings.filter((m) => m.genLine === code.split("\n").findIndex((l) => l.includes('b.openElement(')) + 1);
+    expect(openMaps.some((m) => m.genCol === 4 && m.srcCol === 0)).toBe(true);
+    expect(openMaps.some((m) => m.genCol > 4 && m.srcCol === 1)).toBe(true); // tag name inside the literal
+    expect(mappings.filter((m) => m.genLine === code.split("\n").findIndex((l) => l.includes("b.closeElement();")) + 1).length).toBe(0);
+  });
+
   it("keeps control headers at statement-level granularity (no token entries)", () => {
     // Control statements get no srcBase — only markup expressions do. The
     // `@if` header maps to its '@' (and the closing brace to node.pos); if a

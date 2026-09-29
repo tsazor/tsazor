@@ -40,6 +40,15 @@ interface ParseStop {
   closeTag?: string | null;
 }
 
+/** One interpolated slice of an attribute value (`static text`, or `@(...)`
+ *  / bare `@x` code), with the absolute index of its first character — for
+ *  token-precise source maps in the LSP. */
+interface ValuePart {
+  text?: string;
+  code?: string;
+  start?: number;
+}
+
 class Parser {
   private readonly locator: (index: number) => SourcePos;
   private readonly ts: TSScanner;
@@ -600,16 +609,20 @@ class Parser {
     const value = this.parseAttributeValue();
     if (value === null) return null;
 
+    const codePos = (start: number | undefined): SourceSpan["pos"] | undefined =>
+      start === undefined ? undefined : this.locator(start);
+
     if (value.kind === "parts") {
-      if (value.parts.length === 1 && value.parts[0]!.code !== undefined) {
-        return { kind: "expression", name, code: value.parts[0]!.code!, pos, endPos: this.locator(this.i) };
+      const parts = value.parts.map((p) => (p.code !== undefined ? { code: p.code, codeStart: codePos(p.start) } : { text: p.text }));
+      if (parts.length === 1 && parts[0]!.code !== undefined) {
+        return { kind: "expression", name, code: parts[0]!.code!, codeStart: parts[0]!.codeStart, pos, endPos: this.locator(this.i) };
       }
-      if (value.parts.length === 1 && value.parts[0]!.text !== undefined) {
-        return { kind: "static", name, value: value.parts[0]!.text!, pos, endPos: this.locator(this.i) };
+      if (parts.length === 1 && parts[0]!.text !== undefined) {
+        return { kind: "static", name, value: parts[0]!.text!, pos, endPos: this.locator(this.i) };
       }
-      return { kind: "mixedValue", name, parts: value.parts, pos, endPos: this.locator(this.i) };
+      return { kind: "mixedValue", name, parts, pos, endPos: this.locator(this.i) };
     }
-    return { kind: "expression", name, code: value.code, pos, endPos: this.locator(this.i) };
+    return { kind: "expression", name, code: value.code, codeStart: codePos(value.start), pos, endPos: this.locator(this.i) };
   }
 
   private finishValuelessAttribute(name: string, pos: SourcePos): AttributeNode {
@@ -629,7 +642,8 @@ class Parser {
       const code = this.parseRequiredExpression(body, pos);
       if (code === null) return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
       const kind = body === "key" ? "key" : body === "ref" ? "ref" : "attributes";
-      return { kind, code, pos, endPos: this.locator(this.i) } as AttributeNode;
+      const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+      return { kind, code: code.code, codeStart, pos, endPos: this.locator(this.i) } as AttributeNode;
     }
 
     // Event handler: @onclick / @onchange with optional :modifier parts.
@@ -653,7 +667,7 @@ class Parser {
       this.i++;
       const code = this.parseRequiredExpression(base!, pos);
       if (code === null) return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
-      return { kind: "eventHandler", name: base!, code, flags, pos, endPos: this.locator(this.i) };
+      return { kind: "eventHandler", name: base!, code: code.code, codeStart: code.start === undefined ? undefined : this.locator(code.start), flags, pos, endPos: this.locator(this.i) };
     }
 
     if (body.startsWith("bind")) {
@@ -680,7 +694,7 @@ class Parser {
     // @bind="expr"
     if (rest === "") {
       const expression = this.parseRequiredExpression("bind", pos);
-      return { kind: "bind", expression: expression ?? "", ...end() };
+      return { kind: "bind", expression: expression?.code ?? "", ...end() };
     }
 
     // @bind-<Target>[:event|:format] — component parameter binding.
@@ -697,10 +711,10 @@ class Parser {
       }
       if (modifier === undefined) {
         const expression = this.parseRequiredExpression(`bind-${targetName}`, pos);
-        return { kind: "bind", bindTarget: targetName, expression: expression ?? "", ...end() };
+        return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...end() };
       }
       if (modifier === "event" || modifier === "format") {
-        const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos) ?? "";
+        const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos)?.code ?? "";
         return { kind: "bind", bindTarget: targetName, [modifier]: value, ...end() };
       }
       this.diagnostics.error("TZR008", pos, `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
@@ -719,7 +733,7 @@ class Parser {
         this.parseAttributeValue();
         return { kind: "bind", ...end() };
       }
-      const value = this.parseRequiredExpression(`bind:${modifier}`, pos) ?? "";
+      const value = this.parseRequiredExpression(`bind:${modifier}`, pos)?.code ?? "";
       return { kind: "bind", [modifier.toLowerCase()]: value, ...end() } as AttributeNode;
     }
 
@@ -729,7 +743,10 @@ class Parser {
     return { kind: "bind", ...end() };
   }
 
-  private parseRequiredExpression(attrName: string, pos: SourcePos): string | null {
+  /** Parses an attribute's required expression value. `start` is the absolute
+   *  index of the code's first character (undefined for quoted plain values
+   *  that double as expression source — `@onclick="Increment"`). */
+  private parseRequiredExpression(attrName: string, pos: SourcePos): { code: string; start?: number } | null {
     const src = this.source;
     if (src[this.i] === "=") this.i++;
     const value = this.parseAttributeValue();
@@ -739,20 +756,21 @@ class Parser {
     }
     // Directive attributes take expressions: a quoted plain value is the
     // expression source itself (Blazor's @onclick="Increment" style).
-    if (value.kind === "code") return value.code;
+    if (value.kind === "code") return { code: value.code, start: value.start };
     if (value.kind === "parts" && value.parts.length === 1) {
       const part = value.parts[0]!;
-      if (part.code !== undefined) return part.code;
-      if (part.text !== undefined) return part.text;
+      if (part.code !== undefined) return { code: part.code, start: part.start };
+      if (part.text !== undefined) return { code: part.text, start: part.start };
     }
     this.diagnostics.error("TZR009", pos, `Attribute '@${attrName}' requires a single expression value.`);
     return null;
   }
 
-  private parseAttributeValue(): { kind: "code"; code: string } | { kind: "parts"; parts: Array<{ text?: string; code?: string }> } | null {
+  private parseAttributeValue(): { kind: "code"; code: string; start?: number } | { kind: "parts"; parts: ValuePart[] } | null {
     const src = this.source;
     if (src[this.i] === "@") {
       // Unquoted expression value.
+      const at = this.i;
       const end = this.ts.scanImplicitExpression(this.i + 1);
       if (end <= this.i + 1 && src[this.i + 1] !== "(") {
         this.diagnostics.error("TZR009", this.locator(this.i), "Expected an expression value.");
@@ -760,7 +778,10 @@ class Parser {
       }
       const code = src.slice(this.i + 1, end);
       this.i = end;
-      return { kind: "code", code };
+      // `start` = absolute index of the code's first character (right after
+      // the `@`, parens included when the value is `@(...)`), for token-precise
+      // source maps in the LSP.
+      return { kind: "code", code, start: at + 1 };
     }
     const quote = src[this.i];
     if (quote !== '"' && quote !== "'") {
@@ -768,11 +789,13 @@ class Parser {
       return null;
     }
     this.i++;
-    const parts: Array<{ text?: string; code?: string }> = [];
+    const parts: ValuePart[] = [];
     let textBuf = "";
+    let partTextStart: number | undefined;
     const pushText = (): void => {
-      if (textPartsBuffer.length > 0) parts.push({ text: textPartsBuffer.join("") });
+      if (textPartsBuffer.length > 0) parts.push({ text: textPartsBuffer.join(""), start: partTextStart });
       textPartsBuffer.length = 0;
+      partTextStart = undefined;
     };
     const textPartsBuffer: string[] = [];
     while (this.i < src.length && src[this.i] !== quote) {
@@ -780,6 +803,7 @@ class Parser {
       if (ch === "@") {
         if (src[this.i + 1] === "@") {
           textPartsBuffer.push("@");
+          if (partTextStart === undefined) partTextStart = this.i;
           this.i += 2;
           continue;
         }
@@ -791,7 +815,7 @@ class Parser {
             return null;
           }
           pushText();
-          parts.push({ code: src.slice(this.i + 2, end - 1) });
+          parts.push({ code: src.slice(this.i + 2, end - 1), start: this.i + 2 });
           this.i = end;
           continue;
         }
@@ -799,12 +823,13 @@ class Parser {
           const idStart = this.i + 1;
           const end = this.ts.scanImplicitExpression(idStart);
           pushText();
-          parts.push({ code: src.slice(idStart, end) });
+          parts.push({ code: src.slice(idStart, end), start: idStart });
           this.i = end;
           continue;
         }
       }
       textPartsBuffer.push(ch);
+      if (partTextStart === undefined) partTextStart = this.i;
       this.i++;
     }
     if (src[this.i] !== quote) {

@@ -90,12 +90,30 @@ export type MarkupNode =
 
 export type AttributeNode =
   | (SourceSpan & { kind: "static"; name: string; value: string })
-  | (SourceSpan & { kind: "expression"; name: string; code: string })
-  | (SourceSpan & { kind: "mixedValue"; name: string; parts: Array<{ text?: string; code?: string }> })
-  | (SourceSpan & { kind: "eventHandler"; name: string; code: string; flags: number })
-  | (SourceSpan & { kind: "key"; code: string })
-  | (SourceSpan & { kind: "ref"; code: string })
-  | (SourceSpan & { kind: "attributes"; code: string })
+  | (SourceSpan & {
+      kind: "expression";
+      name: string;
+      code: string;
+      /** Absolute position of the expression's first character (the `@` of
+       *  `@expr`, or the first inner character of `@(...)`), for token-precise
+       *  source maps in the LSP. */
+      codeStart?: SourceSpan["pos"];
+    })
+  | (SourceSpan & {
+      kind: "mixedValue";
+      name: string;
+      parts: Array<{ text?: string; code?: string; /** Abs. code first char, like codeStart. */ codeStart?: SourceSpan["pos"] }>;
+    })
+  | (SourceSpan & {
+      kind: "eventHandler";
+      name: string;
+      code: string;
+      flags: number;
+      codeStart?: SourceSpan["pos"];
+    })
+  | (SourceSpan & { kind: "key"; code: string; codeStart?: SourceSpan["pos"] })
+  | (SourceSpan & { kind: "ref"; code: string; codeStart?: SourceSpan["pos"] })
+  | (SourceSpan & { kind: "attributes"; code: string; codeStart?: SourceSpan["pos"] })
   /** @bind and its modifiers. Modifier-only nodes (@bind:event etc.) carry exactly one detail field. */
   | (SourceSpan & {
       kind: "bind";
