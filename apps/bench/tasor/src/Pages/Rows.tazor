@@ -1,0 +1,85 @@
+@page "/rows"
+
+<section class="rowsbench">
+    <div class="rows-toolbar">
+        <button @onclick="create10k">create 10,000 rows</button>
+        <button @onclick="create1k">append 1,000 rows</button>
+        <button @onclick="updateEvery10th">update every 10th row</button>
+        <button @onclick="swapRows">swap rows</button>
+    </div>
+    <p class="rows-linecount" role="status" aria-live="polite">@this.rows.length lines</p>
+    <table class="rows-table">
+        <tbody>
+            @foreach (var row in this.rows) {
+                <tr class="@this.rowClass(row)">
+                    <td class="col-id">@row.id</td>
+                    <td class="col-title" @onclick="@(e => this.select(e, row))">@row.label</td>
+                    <td class="col-remove" @onclick="@(e => this.remove(e, row))"><span aria-hidden="true">x</span></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+@code {
+    private rows: Array<{ id: number; label: string }> = [];
+    private selectedId: number = -1;
+    private usedRowIds: Set<number> = new Set<number>();
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender) (window as { __benchReadyAt?: number }).__benchReadyAt = performance.now();
+    }
+
+    private rowClass(row: { id: number; label: string }): string {
+        return row.id === this.selectedId ? "selected" : "";
+    }
+
+    private nextRowId(): number {
+        // random 6-digit but globally unique: duplicate ids collide statistically
+        // at 10k+ rows and make "remove one row" ambiguous
+        for (;;) {
+            const id = 100000 + Math.floor(Math.random() * 900000);
+            if (!this.usedRowIds.has(id)) {
+                this.usedRowIds.add(id);
+                return id;
+            }
+        }
+    }
+
+    private makeRows(count: number): Array<{ id: number; label: string }> {
+        const rows: Array<{ id: number; label: string }> = [];
+        for (let i = 0; i < count; i++) {
+            const id = this.nextRowId();
+            rows.push({ id, label: `item #${id}` });
+        }
+        return rows;
+    }
+
+    private create10k(): void {
+        this.rows = this.makeRows(10000);
+    }
+
+    private create1k(): void {
+        this.rows = [...this.rows, ...this.makeRows(1000)];
+    }
+
+    private updateEvery10th(): void {
+        this.rows = this.rows.map((row, index) => (index % 10 === 0 ? { ...row, label: `${row.label} !!!` } : row));
+    }
+
+    private swapRows(): void {
+        if (this.rows.length < 2) return;
+        const swapped = [...this.rows];
+        swapped[0] = this.rows[1]!;
+        swapped[1] = this.rows[0]!;
+        this.rows = swapped;
+    }
+
+    private select(e: Event, row: { id: number; label: string }): void {
+        this.selectedId = row.id;
+    }
+
+    private remove(e: Event, row: { id: number; label: string }): void {
+        this.rows = this.rows.filter((r) => r.id !== row.id);
+    }
+}

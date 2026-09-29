@@ -1,0 +1,87 @@
+@page "/rows"
+@inject IJSRuntime JS
+
+<section class="rowsbench">
+    <div class="rows-toolbar">
+        <button @onclick="@(e => CreateRows(10000))">create 10,000 rows</button>
+        <button @onclick="@(e => AppendRows(1000))">append 1,000 rows</button>
+        <button @onclick="@(e => UpdateEvery10th())">update every 10th row</button>
+        <button @onclick="@(e => SwapRows())">swap rows</button>
+    </div>
+    <p class="rows-linecount" role="status" aria-live="polite">@rows.Count lines</p>
+    <table class="rows-table">
+        <tbody>
+            @foreach (var row in rows)
+            {
+                <tr class="@(row.Id == selectedId ? "selected" : "")">
+                    <td class="col-id">@row.Id</td>
+                    <td class="col-title" @onclick="@(e => Select(row))">@row.Label</td>
+                    <td class="col-remove" @onclick="@(e => Remove(row))"><span aria-hidden="true">x</span></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</section>
+
+@code {
+    record BenchRow(int Id, string Label);
+
+    private List<BenchRow> rows = new();
+    private int selectedId = -1;
+    private readonly HashSet<int> usedRowIds = new();
+
+    // Bench ready marker: after the initial view first rendered (uniform protocol).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", "window.__benchReadyAt = performance.now();");
+        }
+    }
+
+    private int NextRowId()
+    {
+        // random 6-digit but globally unique: duplicate ids collide statistically
+        // at 10k+ rows and make "remove one row" ambiguous
+        for (; ; )
+        {
+            var id = Random.Shared.Next(100000, 999999);
+            if (usedRowIds.Add(id)) return id;
+        }
+    }
+
+    private void CreateRows(int count)
+    {
+        rows = Enumerable.Range(0, count)
+            .Select(_ => { var id = NextRowId(); return new BenchRow(id, $"item #{id}"); })
+            .ToList();
+    }
+
+    private void AppendRows(int count)
+    {
+        var appended = rows
+            .Concat(Enumerable.Range(0, count).Select(_ => { var id = NextRowId(); return new BenchRow(id, $"item #{id}"); }))
+            .ToList();
+        rows = appended;
+    }
+
+    private void UpdateEvery10th()
+    {
+        rows = rows.Select((row, index) => index % 10 == 0 ? new BenchRow(row.Id, row.Label + " !!!") : row).ToList();
+    }
+
+    private void SwapRows()
+    {
+        if (rows.Count < 2) return;
+        var swapped = new List<BenchRow> { rows[1], rows[0] };
+        swapped.AddRange(rows.Skip(2));
+        rows = swapped;
+    }
+
+    private void Select(BenchRow row) => selectedId = row.Id;
+
+    private void Remove(BenchRow row)
+    {
+        rows = rows.Where(r => r.Id != row.Id).ToList();
+    }
+}

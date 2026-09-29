@@ -1,0 +1,154 @@
+@page "/todo"
+
+<section class="todoapp">
+    <h1>todos</h1>
+    <input class="new-todo" placeholder="What needs to be done?" @onkeydown="newTodoKey" />
+    @if (this.todos.length > 0) {
+        <ul class="todo-list">
+            @foreach (var todo in this.visible) {
+                <li class="@this.rowClass(todo)">
+                    @if (this.editingId === todo.id) {
+                        <input class="edit-todo" value="@todo.title"
+                               @onchange="@(e => this.saveEdit(e, todo))"
+                               @onkeydown="@(e => this.editKey(e, todo))" />
+                    } else {
+                        <input type="checkbox" checked="@todo.completed" @onchange="@(e => this.toggle(e, todo))" />
+                        <span class="todo-title" @ondblclick="@(e => this.startEdit(e, todo))">@todo.title</span>
+                        <button class="destroy" @onclick="@(e => this.destroy(e, todo))">x</button>
+                    }
+                </li>
+            }
+        </ul>
+        <div class="todo-footer">
+            <input type="checkbox" checked="@this.allCompleted" @onchange="toggleAll" title="Toggle all" />
+            <span class="todo-count">@this.leftCount items left</span>
+            <div class="todo-filter">
+                <button class="@this.filterClass("all")" @onclick="@(() => this.setFilter("all"))">All</button>
+                <button class="@this.filterClass("active")" @onclick="@(() => this.setFilter("active"))">Active</button>
+                <button class="@this.filterClass("completed")" @onclick="@(() => this.setFilter("completed"))">Completed</button>
+            </div>
+            @if (this.doneCount > 0) {
+                <button class="clear-completed" @onclick="clearCompleted">Clear completed</button>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private todos: Array<{ id: number; title: string; completed: boolean }> = [];
+    private editingId: number = -1;
+    private filter: string = "all";
+
+    protected override onInitialized(): void {
+        this.todos = this.loadTodos();
+    }
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender) (window as { __benchReadyAt?: number }).__benchReadyAt = performance.now();
+    }
+
+    private get visible(): Array<{ id: number; title: string; completed: boolean }> {
+        return this.filter === "active" ? this.todos.filter((t) => !t.completed)
+             : this.filter === "completed" ? this.todos.filter((t) => t.completed)
+             : this.todos;
+    }
+
+    private get leftCount(): number {
+        return this.todos.filter((t) => !t.completed).length;
+    }
+
+    private get doneCount(): number {
+        return this.todos.length - this.leftCount;
+    }
+
+    private get allCompleted(): boolean {
+        return this.todos.length > 0 && this.doneCount === this.todos.length;
+    }
+
+    private rowClass(todo: { id: number; title: string; completed: boolean }): string {
+        return (todo.completed ? "completed" : "") + (this.editingId === todo.id ? " editing" : "");
+    }
+
+    private filterClass(name: string): string {
+        return this.filter === name ? "selected" : "";
+    }
+
+    private setFilter(name: string): void {
+        this.filter = name;
+    }
+
+    private loadTodos(): Array<{ id: number; title: string; completed: boolean }> {
+        try {
+            const parsed: unknown = JSON.parse(localStorage.getItem("bench-todo-mvc") ?? "null");
+            return Array.isArray(parsed)
+                ? parsed.map((t) => ({ id: Number(t.id), title: String(t.title), completed: Boolean(t.completed) }))
+                : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private saveTodos(): void {
+        try {
+            localStorage.setItem("bench-todo-mvc", JSON.stringify(this.todos));
+        } catch {
+            /* storage unavailable — tolerated */
+        }
+    }
+
+    private newTodoKey(e: KeyboardEvent): void {
+        if (e.key !== "Enter") return;
+        const input = e.target as HTMLInputElement;
+        const title = input.value.trim();
+        if (!title) return;
+        this.todos = [...this.todos, { id: Date.now() + Math.floor(Math.random() * 1000), title, completed: false }];
+        this.saveTodos();
+        input.value = "";
+    }
+
+    private toggle(e: Event, todo: { id: number; title: string; completed: boolean }): void {
+        todo.completed = (e.target as HTMLInputElement).checked;
+        this.saveTodos();
+    }
+
+    private toggleAll(e: Event): void {
+        const completed = (e.target as HTMLInputElement).checked;
+        this.todos = this.todos.map((t) => ({ ...t, completed }));
+        this.saveTodos();
+    }
+
+    private clearCompleted(): void {
+        this.todos = this.todos.filter((t) => !t.completed);
+        this.saveTodos();
+    }
+
+    private startEdit(e: Event, todo: { id: number; title: string; completed: boolean }): void {
+        this.editingId = todo.id;
+    }
+
+    private editKey(e: KeyboardEvent, todo: { id: number; title: string; completed: boolean }): void {
+        const input = e.target as HTMLInputElement;
+        if (e.key === "Enter") this.commitEdit(todo, input.value);
+        else if (e.key === "Escape") this.editingId = -1;
+    }
+
+    private saveEdit(e: Event, todo: { id: number; title: string; completed: boolean }): void {
+        this.commitEdit(todo, (e.target as HTMLInputElement).value);
+    }
+
+    private destroy(e: Event, todo: { id: number; title: string; completed: boolean }): void {
+        this.todos = this.todos.filter((t) => t.id !== todo.id);
+        this.saveTodos();
+    }
+
+    private commitEdit(todo: { id: number; title: string; completed: boolean }, value: string): void {
+        const title = value.trim();
+        this.editingId = -1;
+        if (title) {
+            this.todos = this.todos.map((t) => (t.id === todo.id ? { ...t, title } : t));
+        } else {
+            this.todos = this.todos.filter((t) => t.id !== todo.id);
+        }
+        this.saveTodos();
+    }
+}

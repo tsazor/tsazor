@@ -1,0 +1,188 @@
+/* Shared bench stylesheet — byte-identical across all bench apps so CSS is
+ * never part of the comparison. TodoMVC chrome + 10k-rows table styling. */
+
+:root {
+    --bench-ink: #34495e;
+    --bench-muted: #7f8c8d;
+    --bench-accent: #2980b9;
+    --bench-danger: #c0392b;
+    --bench-selected: #ffe4e1;
+    --bench-line: #dcdcdc;
+}
+
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--bench-ink);
+    margin: 0;
+    padding: 1.5rem;
+}
+
+.bench-nav {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.bench-nav a {
+    color: var(--bench-accent);
+    text-decoration: none;
+}
+
+.bench-nav a.active {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+/* ----------------------------- todo-mvc ----------------------------- */
+
+.todoapp {
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.todoapp h1 {
+    font-weight: 200;
+    text-align: center;
+    color: #af2b2b;
+    font-size: 2.5rem;
+    margin: 0.25rem 0 1rem;
+}
+
+.new-todo,
+.edit-todo {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem;
+    font-size: 1.2rem;
+    border: 1px solid var(--bench-line);
+}
+
+.todo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--bench-line);
+    border-top: none;
+}
+
+.todo-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--bench-line);
+}
+
+.todo-list li.completed .todo-title {
+    text-decoration: line-through;
+    color: var(--bench-muted);
+}
+
+.todo-list li.editing .todo-title {
+    display: none;
+}
+
+.todo-list input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.todo-title {
+    flex: 1;
+    cursor: pointer;
+}
+
+.destroy {
+    flex: 0 0 auto;
+    border: none;
+    background: none;
+    color: var(--bench-danger);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.todo-footer {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--bench-line);
+    border-top: none;
+}
+
+.todo-count {
+    margin-right: auto;
+}
+
+.todo-filter {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.todo-filter button {
+    border: 1px solid transparent;
+    background: none;
+    cursor: pointer;
+    padding: 0.15rem 0.4rem;
+}
+
+.todo-filter button.selected {
+    border-color: #af2b2b;
+    color: #af2b2b;
+}
+
+.clear-completed {
+    border: none;
+    background: none;
+    color: var(--bench-accent);
+    cursor: pointer;
+}
+
+/* ------------------------------ rows ------------------------------- */
+
+.rows-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.rows-toolbar button {
+    padding: 0.4rem 0.8rem;
+}
+
+.rows-linecount {
+    margin: 0 0 0.5rem 0;
+    color: var(--bench-muted);
+}
+
+.rows-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.rows-table td {
+    padding: 0.25rem 0.75rem;
+    border-top: 1px solid var(--bench-line);
+}
+
+.col-id {
+    width: 4.5rem;
+}
+
+.col-title {
+    cursor: pointer;
+    user-select: none;
+}
+
+.col-remove {
+    width: 2rem;
+    text-align: center;
+    cursor: pointer;
+    color: var(--bench-danger);
+}
+
+.rows-table tr.selected {
+    background: var(--bench-selected);
+}

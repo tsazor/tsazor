@@ -1,0 +1,168 @@
+[
+  {
+    "name": "tasor",
+    "bundle": {
+      "codeRawKB": 55.6,
+      "codeGzipKB": 14,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": null,
+      "readyMs": 24.2
+    },
+    "ops": {
+      "create10kMs": 447.2,
+      "append1kMs": 187.6,
+      "updateEvery10thMs": 162.9,
+      "swapMs": 231.4,
+      "selectMs": 91.6,
+      "removeMs": 405.6,
+      "removeWorked": true,
+      "cycles": 5
+    },
+    "memoryMB": 16.5,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "react",
+    "bundle": {
+      "codeRawKB": 221.6,
+      "codeGzipKB": 69.2,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": null,
+      "readyMs": 42.7
+    },
+    "ops": {
+      "create10kMs": 538.4,
+      "append1kMs": 120.5,
+      "updateEvery10thMs": 92.3,
+      "swapMs": 185.2,
+      "selectMs": 26,
+      "removeMs": 222.9,
+      "removeWorked": true,
+      "cycles": 5
+    },
+    "memoryMB": 25.1,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "vue",
+    "bundle": {
+      "codeRawKB": 66.6,
+      "codeGzipKB": 26.3,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": null,
+      "readyMs": 24.3
+    },
+    "ops": {
+      "create10kMs": 421.7,
+      "append1kMs": 123,
+      "updateEvery10thMs": 99.3,
+      "swapMs": 199.8,
+      "selectMs": 37.6,
+      "removeMs": 212,
+      "removeWorked": true,
+      "cycles": 5
+    },
+    "memoryMB": 18.8,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "svelte",
+    "bundle": {
+      "codeRawKB": 38.7,
+      "codeGzipKB": 15.1,
+      "cssGzipKB": 0.8
+    },
+    "load": {
+      "fcpMs": null,
+      "readyMs": 23.5
+    },
+    "ops": {
+      "create10kMs": 575.7,
+      "append1kMs": 78,
+      "updateEvery10thMs": 130.7,
+      "swapMs": 180.2,
+      "selectMs": 11.5,
+      "removeMs": 211,
+      "removeWorked": true,
+      "cycles": 5
+    },
+    "memoryMB": 23.8,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  },
+  {
+    "name": "blazor",
+    "bundle": {
+      "codeRawKB": 8517.1,
+      "codeGzipKB": 3314.9,
+      "cssGzipKB": 1,
+      "runtimeGzipKB": 6382.3
+    },
+    "load": {
+      "fcpMs": 68,
+      "readyMs": 441.7
+    },
+    "ops": {
+      "create10kMs": 564.8,
+      "append1kMs": 184.3,
+      "updateEvery10thMs": 111.7,
+      "swapMs": 212.4,
+      "selectMs": 101,
+      "removeMs": 265.7,
+      "removeWorked": true,
+      "cycles": 5
+    },
+    "memoryMB": 19.8,
+    "errors": [],
+    "todoChecks": {
+      "addsTodo": true,
+      "edit": true,
+      "toggle": true,
+      "filterActive": true,
+      "toggleAll": true,
+      "clearCompleted": true,
+      "emptyAfterClear": true
+    }
+  }
+]

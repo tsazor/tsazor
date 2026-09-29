@@ -1,0 +1,164 @@
+@page "/todo"
+@inject IJSRuntime JS
+
+<section class="todoapp">
+    <h1>todos</h1>
+    <input class="new-todo" placeholder="What needs to be done?" @bind-value="newTitle" @bind-value:event="oninput" @onkeydown="NewTodoKey" />
+    @if (todos.Count > 0)
+    {
+        <ul class="todo-list">
+            @foreach (var todo in Visible)
+            {
+                <li class="@(RowClass(todo))">
+                    @if (editingId == todo.Id)
+                    {
+                        <input class="edit-todo" @bind-value="editTitle" @bind-value:event="oninput" @onkeydown="@(e => EditKey(e, todo))" />
+                    }
+                    else
+                    {
+                        <input type="checkbox" checked="@todo.Completed" @onchange="@(e => Toggle((bool)(e.Value ?? false), todo))" />
+                        <span class="todo-title" @ondblclick="@(e => StartEdit(todo))">@todo.Title</span>
+                        <button class="destroy" @onclick="@(e => Destroy(todo))">x</button>
+                    }
+                </li>
+            }
+        </ul>
+        <div class="todo-footer">
+            <input type="checkbox" checked="@AllCompleted" @onchange="@(e => ToggleAll((bool)(e.Value ?? false)))" title="Toggle all" />
+            <span class="todo-count">@LeftCount items left</span>
+            <div class="todo-filter">
+                <button class="@FilterClass("all")" @onclick="@(e => Filter = "all")">All</button>
+                <button class="@FilterClass("active")" @onclick="@(e => Filter = "active")">Active</button>
+                <button class="@FilterClass("completed")" @onclick="@(e => Filter = "completed")">Completed</button>
+            </div>
+            @if (DoneCount > 0)
+            {
+                <button class="clear-completed" @onclick="@(e => ClearCompleted())">Clear completed</button>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    record TodoItem(long Id, string Title, bool Completed);
+
+    private List<TodoItem> todos = new();
+    private long editingId = -1;
+    private string Filter = "all";
+    private string newTitle = "";
+    private string editTitle = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTodos();
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Bench ready marker: after the initial view first rendered (uniform protocol).
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", "window.__benchReadyAt = performance.now();");
+        }
+    }
+
+    private IEnumerable<TodoItem> Visible => Filter switch
+    {
+        "active" => todos.Where(t => !t.Completed),
+        "completed" => todos.Where(t => t.Completed),
+        _ => todos,
+    };
+
+    private int LeftCount => todos.Count(t => !t.Completed);
+    private int DoneCount => todos.Count - LeftCount;
+    private bool AllCompleted => todos.Count > 0 && DoneCount == todos.Count;
+
+    private string FilterClass(string name) => Filter == name ? "selected" : "";
+    private string RowClass(TodoItem todo) => (todo.Completed ? "completed " : "") + (editingId == todo.Id ? "editing" : "");
+
+    private async Task LoadTodos()
+    {
+        try
+        {
+            var raw = await JS.InvokeAsync<string?>("localStorage.getItem", "bench-todo-mvc");
+            if (!string.IsNullOrEmpty(raw))
+            {
+                todos = System.Text.Json.JsonSerializer.Deserialize<List<TodoItem>>(raw) ?? new();
+            }
+        }
+        catch
+        {
+            // spec tolerates corrupt/absent storage
+        }
+    }
+
+    private async Task SaveTodos()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "bench-todo-mvc",
+                System.Text.Json.JsonSerializer.Serialize(todos));
+        }
+        catch
+        {
+            // storage unavailable — tolerated
+        }
+    }
+
+    private async Task NewTodoKey(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter" || string.IsNullOrWhiteSpace(newTitle)) return;
+        todos.Add(new TodoItem(
+            (DateTime.Now.Ticks % 1_000_000_000) + Random.Shared.Next(1000),
+            newTitle.Trim(), false));
+        newTitle = "";
+        await SaveTodos();
+    }
+
+    private async Task Toggle(bool completed, TodoItem todo)
+    {
+        todos = todos.Select(t => t.Id == todo.Id ? new TodoItem(t.Id, t.Title, completed) : t).ToList();
+        await SaveTodos();
+    }
+
+    private async Task ToggleAll(bool completed)
+    {
+        todos = todos.Select(t => new TodoItem(t.Id, t.Title, completed)).ToList();
+        await SaveTodos();
+    }
+
+    private async Task ClearCompleted()
+    {
+        todos = todos.Where(t => !t.Completed).ToList();
+        await SaveTodos();
+    }
+
+    private void StartEdit(TodoItem todo)
+    {
+        editingId = todo.Id;
+        editTitle = todo.Title;
+    }
+
+    private async Task EditKey(KeyboardEventArgs e, TodoItem todo)
+    {
+        if (e.Key == "Enter") await CommitEdit(todo, editTitle);
+        else if (e.Key == "Escape") editingId = -1;
+    }
+
+    private async Task CommitEdit(TodoItem todo, string value)
+    {
+        var title = value.Trim();
+        editingId = -1;
+        todos = string.IsNullOrEmpty(title)
+            ? todos.Where(t => t.Id != todo.Id).ToList()
+            : todos.Select(t => t.Id == todo.Id ? new TodoItem(t.Id, title, t.Completed) : t).ToList();
+        await SaveTodos();
+    }
+
+    private async Task Destroy(TodoItem todo)
+    {
+        todos = todos.Where(t => t.Id != todo.Id).ToList();
+        await SaveTodos();
+    }
+}

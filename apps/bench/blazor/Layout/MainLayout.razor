@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<nav class="bench-nav">
+    <NavLink class="" href="/todo" Match="NavLinkMatch.Prefix">Todo</NavLink>
+    <NavLink href="/rows" Match="NavLinkMatch.All">Rows</NavLink>
+</nav>
+<main>
+    @Body
+</main>
+
+<style>
+    .bench-nav { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .bench-nav a { color: #2980b9; text-decoration: none; }
+    .bench-nav a.active { font-weight: 700; text-decoration: underline; }
+</style>

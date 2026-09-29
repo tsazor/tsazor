@@ -1,0 +1,9 @@
+@inherits LayoutComponentBase
+
+<nav class="bench-nav">
+    <NavLink Href="/todo">Todo</NavLink>
+    <NavLink Href="/rows">Rows</NavLink>
+</nav>
+<main>
+    @Body
+</main>

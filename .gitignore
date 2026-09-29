@@ -5,3 +5,9 @@ dist/
 *.vsix
 *.log
 .DS_Store
+# bench build outputs
+apps/bench/blazor/bin/
+apps/bench/blazor/obj/
+apps/bench/blazor/publish/
+apps/bench/*/dist/
+apps/bench/*/node_modules/
