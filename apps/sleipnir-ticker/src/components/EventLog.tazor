@@ -1,0 +1,28 @@
+<div class="event-log">
+    @if (this.entries.length === 0) {
+        <p class="event-log-empty">Warten auf den ersten Tick…</p>
+    } else {
+        <ListGroup Flush="@true">
+            @for (const entry of this.entries) {
+                <ListGroupItem>
+                    <span class="at">@this.clock(entry.at)</span>
+                    <span class="pt">@this.price(entry.snapshot.lastPrice)</span>
+                    <Badge Variant="@entry.changeVariant">@entry.changeText</Badge>
+                </ListGroupItem>
+            }
+        </ListGroup>
+    }
+</div>
+
+@code {
+    /** Recent ticks, newest first (owned by the store). */
+    @Parameter() entries: TickerLogEntry[];
+
+    private clock(at: number): string {
+        return new Date(at).toTimeString().slice(0, 8);
+    }
+
+    private price(value: number): string {
+        return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+}

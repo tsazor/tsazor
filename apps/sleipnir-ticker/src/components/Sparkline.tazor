@@ -1,0 +1,40 @@
+<div class="sparkline-box">
+    @if (this.linePoints !== null) {
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="sparkline-svg" role="img" aria-label="Price chart">
+            <polygon points="@this.linePoints" class="sparkline-area"></polygon>
+            <polyline points="@this.linePoints" class="sparkline-line"></polyline>
+        </svg>
+    } else {
+        <p class="sparkline-empty">Keine Daten noch…</p>
+    }
+</div>
+
+@code {
+    /** Historical price points (ring buffer), newest last. */
+    @Parameter() points: PricePoint[];
+
+    private linePoints: string | null = null;
+
+    protected override onParametersSet(): void {
+        this.linePoints = this.normalize();
+    }
+
+    /** Maps every point into a 0-100 × 0-100 SVG coordinate string. */
+    private normalize(): string | null {
+        if (this.points.length < 2) return null;
+        let min = this.points[0].price;
+        let max = min;
+        for (const point of this.points) {
+            if (point.price < min) min = point.price;
+            if (point.price > max) max = point.price;
+        }
+        const span = max - min || 1;
+        const parts: string[] = [];
+        for (let i = 0; i < this.points.length; i++) {
+            const x = Math.round((i / (this.points.length - 1)) * 10000) / 100;
+            const y = Math.round((1 - (this.points[i].price - min) / span) * 10000) / 100;
+            parts.push(`${x},${y}`);
+        }
+        return parts.join(" ");
+    }
+}

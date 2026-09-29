@@ -83,6 +83,37 @@ importers:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
 
+  apps/sleipnir-ticker:
+    dependencies:
+      '@tasor/components':
+        specifier: workspace:*
+        version: link:../../packages/components
+      '@tasor/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+      '@tasor/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin
+      bootstrap:
+        specifier: ^5.3.8
+        version: 5.3.8(@popperjs/core@2.11.8)
+      sleipnir-client:
+        specifier: ^1.4.3
+        version: 1.4.3
+    devDependencies:
+      playwright-core:
+        specifier: ^1.63.0
+        version: 1.63.0
+      sleipnir-codegen:
+        specifier: ^1.4.3
+        version: 1.4.3
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.7
+        version: 7.3.6(@types/node@20.19.43)
+
   packages/compiler:
     dependencies:
       '@jridgewell/gen-mapping':
@@ -1242,6 +1273,18 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
+  sleipnir-client@1.4.3:
+    resolution: {integrity: sha512-Lmf0AwNA+ZXN6Sia2AuWrnnNW2ZnNMd80WWfRoOVHMB2SFB1PsDdx9TKXT52z65M1ohVZQ+KxZDQ4v/xmpjOOg==}
+    peerDependencies:
+      '@microsoft/signalr': '>=6.0.0'
+    peerDependenciesMeta:
+      '@microsoft/signalr':
+        optional: true
+
+  sleipnir-codegen@1.4.3:
+    resolution: {integrity: sha512-WEHLBdNKJqRMnciqcm+Rw5t79D1Ap8c+wvI8c/BBBGpw/7Jgqt1ybGZZKsiIwL4V99aO/y3xzpyS+lJK7+4eMA==}
+    hasBin: true
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -1445,6 +1488,18 @@ packages:
   wrap-ansi@8.1.0:
     resolution: {integrity: sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==}
     engines: {node: '>=12'}
+
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
 
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
@@ -2381,6 +2436,21 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
+  sleipnir-client@1.4.3:
+    optionalDependencies:
+      ws: 8.22.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  sleipnir-codegen@1.4.3:
+    dependencies:
+      sleipnir-client: 1.4.3
+    transitivePeerDependencies:
+      - '@microsoft/signalr'
+      - bufferutil
+      - utf-8-validate
+
   source-map-js@1.2.1: {}
 
   stackback@0.0.2: {}
@@ -2574,5 +2644,8 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 5.1.2
       strip-ansi: 7.2.0
+
+  ws@8.22.0:
+    optional: true
 
   yocto-queue@0.1.0: {}

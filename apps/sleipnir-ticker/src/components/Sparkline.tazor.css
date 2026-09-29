@@ -1,0 +1,14 @@
+/* Scoped to Sparkline.tazor (CSS isolation) — the box chrome only. */
+.sparkline-box {
+    height: 160px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px;
+    background: #fafafa;
+}
+
+.sparkline-empty {
+    color: #6b7280;
+    padding: 1rem;
+    margin: 0;
+}

@@ -1,0 +1,79 @@
+@page "/"
+@inject TickerStore Store
+
+<div class="ticker-page">
+    @if (this.Store.lastError !== null) {
+        <Alert Variant="danger">@this.Store.lastError</Alert>
+    }
+
+    <Card>
+        <CardBody>
+            <p class="ticker-price" role="status">
+                <span class="price">@this.Store.priceText</span>
+                <Badge Variant="@this.Store.changeVariant">@this.Store.changeText</Badge>
+            </p>
+            <div class="ticker-stats">
+                <Card>
+                    <CardBody>
+                        <div class="stat-card">
+                            <span class="stat-label">24h Hoch</span>
+                            <span class="stat-value">@this.Store.highText</span>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card>
+                    <CardBody>
+                        <div class="stat-card">
+                            <span class="stat-label">24h Tief</span>
+                            <span class="stat-value">@this.Store.lowText</span>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card>
+                    <CardBody>
+                        <div class="stat-card">
+                            <span class="stat-label">Volume (Basis)</span>
+                            <span class="stat-value">@this.Store.volumeText</span>
+                        </div>
+                    </CardBody>
+                </Card>
+                <Card>
+                    <CardBody>
+                        <div class="stat-card">
+                            <span class="stat-label">Volume (Quote)</span>
+                            <span class="stat-value">@this.Store.quoteVolumeText</span>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+            <div class="sync-line">Letzte Aktualisierung: @this.Store.updatedText · @this.Store.statusText</div>
+        </CardBody>
+    </Card>
+
+    <Card>
+        <CardHeader>Verlauf (60 s)</CardHeader>
+        <CardBody>
+            <Sparkline Points="@this.Store.points" />
+        </CardBody>
+    </Card>
+
+    <Card>
+        <CardHeader>Eingehende Ticks</CardHeader>
+        <CardBody>
+            <EventLog Entries="@this.Store.log" />
+        </CardBody>
+    </Card>
+</div>
+
+@code {
+    private unsub: () => void = () => {};
+
+    protected override onInitialized(): void {
+        // Page re-renders on every store tick (push, not polling).
+        this.unsub = this.Store.subscribe(() => this.stateHasChanged());
+    }
+
+    dispose(): void {
+        this.unsub();
+    }
+}

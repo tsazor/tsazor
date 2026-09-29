@@ -1,0 +1,50 @@
+@page "/history"
+@inject TickerStore Store
+
+<div class="history-page">
+    <h1>Verlauf</h1>
+    <p class="text-muted">@this.Store.points.length erfasste Preis-Punkte (neueste zuerst).</p>
+
+    @if (this.Store.points.length === 0) {
+        <p class="loading">Noch keine Daten…</p>
+    } else {
+        <table class="history-table">
+            <thead>
+                <tr><th>Zeit</th><th>Preis</th></tr>
+            </thead>
+            <tbody>
+                @for (const point of this.reversed) {
+                    <tr>
+                        <td>@this.cellTime(point.t)</td>
+                        <td>@this.cellPrice(point.price)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private unsub: () => void = () => {};
+    private reversed: PricePoint[] = [];
+
+    protected override onInitialized(): void {
+        this.unsub = this.Store.subscribe(() => {
+            this.reversed = [...this.Store.points].reverse().slice(0, 120);
+            this.stateHasChanged();
+        });
+        this.reversed = [...this.Store.points].reverse().slice(0, 120);
+    }
+
+    private cellTime(t: number): string {
+        return new Date(t).toTimeString().slice(0, 8);
+    }
+
+    private cellPrice(price: number): string {
+        return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    dispose(): void {
+        this.unsub();
+    }
+}
