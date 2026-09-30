@@ -12,3 +12,4 @@ apps/bench/blazor/publish/
 apps/bench/*/dist/
 apps/bench/*/node_modules/
 .probe/
+.claude/worktrees/

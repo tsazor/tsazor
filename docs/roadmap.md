@@ -88,6 +88,14 @@ befüllen; Tab-Spalten korrekt. Behebt C10 und die Spaltenfehler.
 
 *Warum zuerst:* Kleinster, isolierter Schritt; alle späteren Schritte emittieren über den
 Writer, und falsche Maps würden jede spätere Fehlersuche (auch im LSP) verfälschen.
+**Stand: A1 umgesetzt** (gemergt in `roadmap/phase-0`). `CodeWriter` (writer.ts) ist die einzige
+Stelle, die generierten Code + Mappings schreibt; Anker werden über eingebettete Zeilenumbrüche
+aufgelöst. Token-genaue Mappings auch auf Folgezeilen, exakte `@code`-Spalten (Tabs bleiben
+erhalten), `sourcesContent` bis durch die Plugin-Kette. Nebenbei behoben: `@(x)` eine Spalte
+zu früh, `on*`-Werte auf Komponenten um die Wrapper-Länge versetzt. Konformität: alle 4
+Sourcemap-Tests grün. **Offen für A2:** mehrzeilige Control-Header (`@if (a &&
+ b)`) haben
+keine Quellposition im AST — ihre Folgezeilen bleiben ungemappt.
 
 ### A2 — Code-first-Parser
 
@@ -190,7 +198,7 @@ berechnet statt dreimal.
 *Warum zuerst:* Alle weiteren Schritte konsumieren diese Edit-Liste. Die Disposal-Liste ist
 Voraussetzung für R3.
 
-**Stand: B1 umgesetzt** (Branch `roadmap/b1-diff`). `computeDiff` (diff.ts) liefert Blazors
+**Stand: B1 umgesetzt** (gemergt in `roadmap/phase-0`). `computeDiff` (diff.ts) liefert Blazors
 Edit-Typen + `components`/`disposedComponents`; der DomRenderer wendet sie an. Konformität:
 R1, R2, R3 (alle drei), Insert-Kosten, Fokus grün; dazu R4-Markup (Inserts bewegen nichts
 mehr, Permutationen verschieben Komponenten-/Markup-Bereiche als Einheit). Der R4-Komponenten-
