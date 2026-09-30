@@ -124,6 +124,8 @@ describe("R7 — OnAfterRender", () => {
 });
 
 describe("R9 — render queue", () => {
+  // Tsazor-specific, not Blazor: Blazor's ComponentRenderQueue is FIFO (K, P, K here).
+  // Parent-first is a deliberate optimization (roadmap B2).
   it("renders parents before children when both are dirty (child renders once)", async () => {
     const order: string[] = [];
     let kid!: Kid;
