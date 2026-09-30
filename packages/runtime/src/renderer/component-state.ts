@@ -31,6 +31,22 @@ export class ComponentState {
   renderQueueOrder = 0;
   /** @internal Render passes in the current batch (render-loop guard). */
   batchRenderCount = 0;
+  /**
+   * @internal Cascading subscriptions (Blazor's CascadingParameterState):
+   * the non-fixed suppliers this component's cascading parameters resolved
+   * to (plus "pending" by-type candidates), null when there are none.
+   */
+  cascadingSuppliers: ComponentState[] | null = null;
+  /** @internal Supplier side: the consumers subscribed to this component's cascadeValue. */
+  subscribers: Set<ComponentState> | null = null;
+  /** @internal Supplier side: cascadeValue at the last render pass (change detection). */
+  lastCascadeValue: unknown = undefined;
+  /**
+   * @internal Blazor's _latestDirectParametersSnapshot: the parent-supplied
+   * parameters of the last set, kept for components with cascading
+   * parameters so a cascade notification can re-set them.
+   */
+  directParameters: ReadonlyMap<string, unknown> | null = null;
   /** Mutable so HMR can replace the definition in place. */
   definition: ComponentDefinition;
 

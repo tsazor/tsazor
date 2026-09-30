@@ -31,8 +31,8 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   readonly isCascadingValueSupplier = true;
   /** The state changes over time (login/logout) — never fixed. */
   readonly isFixed = false;
-  /** Cascades under this name OR by the AuthenticationState type token. */
-  readonly cascadeName = "AuthenticationState";
+  /** Cascades by type, unnamed (Blazor cascades its Task<AuthenticationState> the same way). */
+  readonly cascadeType = AuthenticationState;
   get cascadeValue(): unknown {
     return this.authenticationState ?? ANONYMOUS;
   }

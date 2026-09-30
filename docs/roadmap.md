@@ -375,6 +375,30 @@ unterstützen (R11, R12).
 *Warum vor B6:* Heute funktionieren Cascades nur, weil jeder Parent-Render alle Kinder
 neu parametriert. Das fällt mit B6 weg.
 
+**Stand: B5 umgesetzt** (Branch `roadmap/b5-b6`). Matching wie Blazors `CanSupplyValue`
+(`canSupplyValue` in renderer/cascading-value.ts): haben weder Parameter noch Supplier einen
+Namen ⇒ by-type (Parameter ohne Typ-Token nimmt den nächsten unbenannten Supplier), sonst nur
+by-name, case-insensitiv; ein benannter Supplier bedient keine by-type-Anfrage mehr (vorher
+schon). `CascadingValue` liefert `Name` als `cascadeName` (R11) und hat `IsFixed` als Parameter
+(Wechsel nach dem ersten Set wirft wie in Blazor). By-type prüft den statischen
+`cascadeType` des Suppliers (Blazors `TValue`; EditForm: `EditContext`, Auth-Supplier:
+`AuthenticationState` — die beiden Auth-Supplier sind dafür jetzt unbenannt wie in Blazor), ohne
+ihn den Laufzeitwert (`instanceof`); ist der noch `null`/`undefined`, gilt der Supplier als
+„pending": abonniert, Suche läuft weiter nach außen. **Subscriptions** (Blazors
+`CascadingParameterState`/`Subscribe`): der Renderer löst Cascades bei jedem Parameter-Set frisch
+auf und hält pro Consumer die nicht-fixen Supplier (`ComponentState.cascadingSuppliers`), pro
+Supplier die Abonnenten (`subscribers`), dazu den letzten direkten Parameter-Snapshot des
+Consumers (`directParameters`, Blazors `_latestDirectParametersSnapshot`). Vor jedem
+Render-Pass eines Suppliers vergleicht er `cascadeValue` mit dem Wert des vorigen Passes
+(`mayHaveChanged`, Blazors `ChangeDetection`, components/change-detection.ts); bei möglicher
+Änderung bekommen alle Abonnenten Snapshot + frische Cascades direkt gesetzt (`onParametersSet`
++ Render) — unabhängig von Zwischenkomponenten (R12). Dispose meldet ab. Abweichung: Blazors
+`CascadingValue` benachrichtigt aus `SetParametersAsync`; hier löst der Render-Pass des
+Suppliers aus — für `CascadingValue` gleichwertig (rendert bei jedem Set), und handgeschriebene
+Supplier (Tabs, Accordion, FluentProvider, Auth, EditForm, …) brauchen keinen eigenen
+Notify-Aufruf, nur ein Re-Render bei Wertänderung. Objektwerte (auch `this`) gelten wie in
+Blazor stets als geändert. Konformität: R11, R12 grün.
+
 ### B6 — Parameter-Change-Detection
 
 Blazors `MayHaveChanged`: unveränderte Primitive/Immutables ⇒ kein `setParameters`.

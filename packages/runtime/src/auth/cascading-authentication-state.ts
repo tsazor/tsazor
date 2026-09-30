@@ -18,8 +18,8 @@ export class CascadingAuthenticationState extends ComponentBase implements Casca
 
   readonly isCascadingValueSupplier = true;
   readonly isFixed = false;
-  /** Cascades under this name OR by the AuthenticationState type token. */
-  readonly cascadeName = "AuthenticationState";
+  /** Cascades by type, unnamed (Blazor cascades its Task<AuthenticationState> the same way). */
+  readonly cascadeType = AuthenticationState;
   get cascadeValue(): unknown {
     return this.authenticationState ?? ANONYMOUS;
   }

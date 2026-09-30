@@ -5,7 +5,8 @@ import { toComponentDefinition, type ComponentDefinition } from "../components/c
 import { completedLifecycle, isPromiseLike, type ComponentBase } from "../components/component-base.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
-import { isCascadingValueSupplier } from "./cascading-value.js";
+import { mayHaveChanged } from "../components/change-detection.js";
+import { canSupplyValue, isCascadingValueSupplier, type CascadingParameterRequest, type CascadingValueSupplier } from "./cascading-value.js";
 import { ComponentState } from "./component-state.js";
 import { Dispatcher } from "./dispatcher.js";
 import { DomRenderer } from "./dom-renderer.js";
@@ -21,6 +22,8 @@ const EVENT_PARAM_PATTERN = /^on/i;
  * drops its pending render instead of freezing the page.
  */
 const MAX_RENDERS_PER_BATCH = 100;
+
+const EMPTY_PARAMETERS: ReadonlyMap<string, unknown> = new Map();
 
 /** Where a component error surfaced (the stage of Blazor's pipeline). */
 export type RenderErrorPhase =
@@ -206,9 +209,30 @@ export class Renderer {
 
   /** Applies attributes (plus resolved cascading values) and runs the lifecycle. */
   setComponentParameters(state: ComponentState, attributes: Map<string, { frame: RenderTreeFrame }>): void {
+    const direct = new Map<string, unknown>();
+    for (const [name, { frame }] of attributes) {
+      let value = frame.attributeValue;
+      // Blazor's EventCallbackFactory conversion: a plain function passed to
+      // an on*-named event parameter is bound to the declaring component so
+      // the parent re-renders after the handler ran. Already-bound callbacks
+      // pass through untouched.
+      if (EVENT_PARAM_PATTERN.test(name) && typeof value === "function" && !(value instanceof EventCallback)) {
+        value = EventCallback.bind(state.parent?.component ?? state.component, value as never);
+      }
+      direct.set(name, value);
+    }
+    this.supplyParameters(state, direct);
+  }
+
+  /**
+   * Blazor's ComponentState.SetDirectParameters + WithCascadingParameters:
+   * adds the cascading values (resolved fresh, subscribing to their
+   * suppliers) to the parent-supplied parameters and runs setParametersAsync.
+   */
+  private supplyParameters(state: ComponentState, direct: ReadonlyMap<string, unknown>): void {
     let lifecycle: Promise<void>;
     try {
-      const view = this.buildParameterView(state, attributes);
+      const view = this.buildParameterView(state, direct);
       // A synchronous lifecycle requests its render right here, i.e. into
       // the running batch; only async hooks continue after it.
       lifecycle = state.component.setParametersAsync(view);
@@ -229,53 +253,84 @@ export class Renderer {
 
   private readonly inFlight = new Set<Promise<unknown>>();
 
-  private buildParameterView(state: ComponentState, attributes: Map<string, { frame: RenderTreeFrame }>): ParameterView {
-    const values = new Map<string, unknown>();
-    for (const [name, { frame }] of attributes) {
-      let value = frame.attributeValue;
-      // Blazor's EventCallbackFactory conversion: a plain function passed to
-      // an on*-named event parameter is bound to the declaring component so
-      // the parent re-renders after the handler ran. Already-bound callbacks
-      // pass through untouched.
-      if (EVENT_PARAM_PATTERN.test(name) && typeof value === "function" && !(value instanceof EventCallback)) {
-        value = EventCallback.bind(state.parent?.component ?? state.component, value as never);
-      }
-      values.set(name, value);
-    }
+  private buildParameterView(state: ComponentState, direct: ReadonlyMap<string, unknown>): ParameterView {
     const metadata = state.component.getAllParameterMetadata();
+    let values: Map<string, unknown> | null = null;
+    let subscriptions: ComponentState[] | null = null;
     for (const [propertyName, meta] of metadata) {
       if (!meta.cascading) continue;
-      const value = this.resolveCascade(state, meta);
-      if (value !== undefined) {
-        values.set(propertyName, value);
-      }
+      values ??= new Map(direct);
+      subscriptions ??= [];
+      const supplier = this.resolveCascade(state, meta, subscriptions);
+      if (supplier !== null) values.set(propertyName, supplier.cascadeValue);
     }
-    return ParameterView.fromAttributes(values.entries());
+    if (subscriptions !== null) {
+      // Only components with cascading parameters keep the snapshot (Blazor).
+      state.directParameters = direct;
+      this.updateCascadingSubscriptions(state, subscriptions);
+    }
+    return ParameterView.fromAttributes((values ?? direct).entries());
   }
 
-  /** Nearest matching cascading value from the ancestor chain wins. */
-  private resolveCascade(state: ComponentState, meta: { cascadingName?: string; cascadingType?: abstract new (...args: never[]) => unknown }): unknown {
-    let current = state.parent;
-    while (current !== null) {
-      if (isCascadingValueSupplier(current.component)) {
-        const supplierName = current.component.cascadeName;
-        const value = current.component.cascadeValue;
-        if (meta.cascadingName !== undefined) {
-          if (supplierName === meta.cascadingName) return value;
-        } else if (meta.cascadingType !== undefined) {
-          if (value !== null && value !== undefined) {
-            const token = meta.cascadingType as abstract new (...args: never[]) => unknown;
-            if (value instanceof (token as unknown as new () => unknown)) return value;
-            if ((value as object).constructor === (token as unknown as object)) return value;
-          }
-        } else {
-          // Untyped, unnamed cascade parameter: match the nearest unnamed supplier.
-          if (supplierName === undefined) return value;
-        }
-      }
-      current = current.parent;
+  /**
+   * Blazor's CascadingParameterState.FindCascadingParameters for one
+   * parameter: the nearest ancestor supplier that can supply it wins (by
+   * name, case-insensitive, or by type — see canSupplyValue). The non-fixed
+   * supplier it resolves to, and "pending" by-type candidates it passes (no
+   * value yet), are added to `subscriptions`.
+   */
+  private resolveCascade(state: ComponentState, meta: CascadingParameterRequest, subscriptions: ComponentState[]): CascadingValueSupplier | null {
+    for (let current = state.parent; current !== null; current = current.parent) {
+      const supplier = current.component;
+      if (!isCascadingValueSupplier(supplier)) continue;
+      const match = canSupplyValue(supplier, meta);
+      if (match === "no") continue;
+      if (!supplier.isFixed && !subscriptions.includes(current)) subscriptions.push(current);
+      if (match === "yes") return supplier;
     }
-    return undefined;
+    return null;
+  }
+
+  /** Blazor's Add/RemoveCascadingParameterSubscriptions, diffed against the previous set. */
+  private updateCascadingSubscriptions(state: ComponentState, suppliers: ComponentState[]): void {
+    const previous = state.cascadingSuppliers;
+    if (previous !== null) {
+      if (previous.length === suppliers.length && previous.every((supplier, i) => supplier === suppliers[i])) return;
+      for (const supplier of previous) {
+        if (!suppliers.includes(supplier)) supplier.subscribers?.delete(state);
+      }
+    }
+    for (const supplier of suppliers) {
+      (supplier.subscribers ??= new Set()).add(state);
+    }
+    state.cascadingSuppliers = suppliers.length > 0 ? suppliers : null;
+  }
+
+  private removeCascadingSubscriptions(state: ComponentState): void {
+    if (state.cascadingSuppliers === null) return;
+    for (const supplier of state.cascadingSuppliers) supplier.subscribers?.delete(state);
+    state.cascadingSuppliers = null;
+  }
+
+  /**
+   * Supplier side (Blazor's CascadingValue.NotifySubscribers →
+   * ComponentState.NotifyCascadingValueChanged): runs before each render
+   * pass of a supplier. When its cascadeValue may have changed since the
+   * previous pass (mayHaveChanged), every subscriber gets its last direct
+   * parameters plus the fresh cascading values re-set — directly, so an
+   * intermediate component that does not re-render cannot stop the update.
+   * As in Blazor's CascadingValue this happens before the supplier renders
+   * (a subscriber the render then removes is disposed with its queued render).
+   */
+  private notifyCascadingSubscribers(state: ComponentState, supplier: CascadingValueSupplier): void {
+    const value = supplier.cascadeValue;
+    const previous = state.lastCascadeValue;
+    state.lastCascadeValue = value;
+    const subscribers = state.subscribers;
+    if (subscribers === null || subscribers.size === 0 || !mayHaveChanged(previous, value)) return;
+    for (const subscriber of [...subscribers]) {
+      if (!subscriber.disposed) this.supplyParameters(subscriber, subscriber.directParameters ?? EMPTY_PARAMETERS);
+    }
   }
 
   /**
@@ -294,6 +349,9 @@ export class Renderer {
       const state = queue[i]!;
       state.disposed = true;
       this.states.delete(state.id);
+      // Blazor's RemoveCascadingParameterSubscriptions (subscribers are descendants, disposed below).
+      this.removeCascadingSubscriptions(state);
+      state.subscribers = null;
       this.disposeInstance(state);
       for (const child of state.slotChildren.values()) {
         if (!child.disposed) queue.push(child);
@@ -410,6 +468,7 @@ export class Renderer {
       );
       return false;
     }
+    if (isCascadingValueSupplier(component)) this.notifyCascadingSubscribers(state, component);
 
     // Ping-pong the state's two builders: this pass builds into one while
     // the previous tree lives in the other (the diff source). The spent

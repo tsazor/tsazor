@@ -54,8 +54,15 @@ export class EventCallback<TArg = unknown> {
     return this.delegate !== null;
   }
 
-  /** Identity used by the diff to skip unnecessary listener rebinds. */
+  /**
+   * Blazor's EventCallback.Equals: same receiver and same delegate. A
+   * re-wrapped callback compares its inner callback the same way (the
+   * compiler re-binds a forwarded EventCallback on every render). Used by the
+   * diff to skip listener rebinds and by parameter change detection.
+   */
   equals(other: EventCallback<never>): boolean {
-    return this.receiver === other.receiver && this.delegate === other.delegate;
+    if (this.receiver !== other.receiver) return false;
+    if (this.delegate === other.delegate) return true;
+    return this.delegate instanceof EventCallback && other.delegate instanceof EventCallback && this.delegate.equals(other.delegate as EventCallback<never>);
   }
 }
