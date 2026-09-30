@@ -3,8 +3,20 @@
  * @inherits), C21 (user-written buildRenderTree).
  */
 import { describe, expect, it } from "vitest";
-import { matchRoute } from "@tsazor/runtime";
-import { scanRoutes } from "../../../vite-plugin/src/routes.js";
+import {
+  AuthenticationState,
+  AuthenticationStateProvider,
+  AuthorizeRouteView,
+  ComponentBase,
+  Renderer,
+  ServiceCollection,
+  createUser,
+  defineComponent,
+  matchRoute,
+  type ClaimsPrincipal,
+  type RenderTreeBuilder,
+} from "@tsazor/runtime";
+import { generateRoutesModule, scanRoutes } from "../../../vite-plugin/src/routes.js";
 import { compileFiles, diagnosticsOf, errorCodes, mount } from "../harness.js";
 
 describe("C19 — Blazor-only directives are accepted and ignored", () => {
@@ -70,9 +82,66 @@ describe("C7 — C# constructs without a TS equivalent are errors", () => {
 });
 
 describe("C19 — @attribute", () => {
-  it.fails("the documented form compiles", async () => {
+  it("the documented form compiles", async () => {
     const diagnostics = await diagnosticsOf(`@attribute [Marker]\n<p>x</p>\n@code { }`);
     expect(errorCodes(diagnostics)).toEqual([]);
+  });
+
+  it("a C# attribute without TS meaning is ignored with a TZS014 warning", async () => {
+    const m = await mount(`@attribute [CascadingTypeParameter(nameof(TItem))]\n@attribute [StreamRendering]\n<p>x</p>`);
+    expect(m.diagnostics.map((d) => [d.code, d.severity])).toEqual([["TZS014", "warning"], ["TZS014", "warning"]]);
+    expect(m.html()).toBe("<p>x</p>");
+  });
+
+  it("the TS form @attribute @decorator(…) decorates the class", async () => {
+    const m = await mount({
+      "Test.tsazor": `@import { label } from "./deco"\n@attribute @label("decorated")\n<p>@tag</p>`,
+      "deco.ts": `export function label(text: string) { return (target: { prototype: { tag?: string } }) => { target.prototype.tag = text; }; }\n`,
+    });
+    expect(m.diagnostics).toEqual([]);
+    expect(m.html()).toBe("<p>decorated</p>");
+  });
+
+  it("[Authorize(Roles = …)] protects the route (through AuthorizeRouteView)", async () => {
+    const compiled = await compileFiles({
+      "Admin.tsazor": `@page "/admin"\n@attribute [Authorize(Roles = "admin")]\n<h1>admin</h1>`,
+      "Open.tsazor": `@page "/open"\n@attribute [Authorize]\n@attribute [AllowAnonymous]\n<h1>open</h1>`,
+    });
+    expect(errorCodes(compiled.diagnostics["Admin.tsazor"]!)).toEqual([]);
+    const routes = await scanRoutes(compiled.dir);
+    const admin = routes.find((r) => r.template === "/admin")!;
+    expect(admin).toMatchObject({ authorize: true, authorizeRequirements: { roles: ["admin"] } });
+    expect(routes.find((r) => r.template === "/open")!.authorize).toBe(false);
+    expect(generateRoutesModule(compiled.dir, routes)).toContain(`{ template: "/admin", type: Admin, authorize: {"roles":["admin"]} }`);
+
+    const { default: Page } = await import(/* @vite-ignore */ compiled.modules["Admin.tsazor"]!);
+    const render = async (user: ClaimsPrincipal): Promise<string> => {
+      class Provider extends AuthenticationStateProvider {
+        getState(): Promise<AuthenticationState> {
+          return Promise.resolve(new AuthenticationState(user));
+        }
+      }
+      const services = new ServiceCollection();
+      services.registerValue(AuthenticationStateProvider, new Provider());
+      const renderer = new Renderer(services.build());
+      const routeData = { route: { template: admin.template, type: Page, authorize: admin.authorizeRequirements ?? {} }, values: {} };
+      class App extends ComponentBase {
+        protected override buildRenderTree(b: RenderTreeBuilder): void {
+          b.openComponent(0, defineComponent(AuthorizeRouteView));
+          b.addAttribute(1, "RouteData", routeData as never);
+          b.addAttribute(2, "NotAuthorized", ((inner: RenderTreeBuilder) => inner.addContent(0, "denied")) as never);
+          b.closeComponent();
+        }
+      }
+      const container = document.createElement("div");
+      renderer.renderInContainer(App, container);
+      await renderer.waitUntilIdle();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await renderer.waitUntilIdle();
+      return container.textContent ?? "";
+    };
+    expect(await render(createUser({ name: "u", roles: ["editor"] }))).toBe("denied");
+    expect(await render(createUser({ name: "a", roles: ["admin"] }))).toBe("admin");
   });
 });
 
@@ -103,7 +172,7 @@ export default Base;
 });
 
 describe("C21 — user-written buildRenderTree", () => {
-  it.fails("is reported instead of being silently replaced", async () => {
+  it("is reported instead of being silently replaced", async () => {
     const diagnostics = await diagnosticsOf(`
 @code {
     protected override buildRenderTree(b: RenderTreeBuilder): void {
@@ -111,5 +180,14 @@ describe("C21 — user-written buildRenderTree", () => {
     }
 }`);
     expect(errorCodes(diagnostics).length).toBeGreaterThan(0);
+  });
+
+  it("also in a file with markup, and in the code-behind", async () => {
+    const withMarkup = await diagnosticsOf(`<p>x</p>\n@code {\n    protected override buildRenderTree(b: RenderTreeBuilder): void { }\n}`);
+    expect(errorCodes(withMarkup)).toEqual(["TZS020"]);
+    const codeBehind = await diagnosticsOf(`<p>x</p>`, {
+      "Test.tsazor.ts": `import { ComponentBase } from "@tsazor/runtime";\nexport default class TestBase extends ComponentBase { protected override buildRenderTree(): void {} }\n`,
+    });
+    expect(errorCodes(codeBehind)).toEqual(["TZS020"]);
   });
 });

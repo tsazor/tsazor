@@ -17,7 +17,6 @@ import type {
   TryNode,
   WhileNode,
 } from "./ast.js";
-import { EVENT_FLAGS } from "./ast.js";
 import { analyzeStatements, CodeScanner, type CodeToken } from "./code-scanner.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { TSScanner } from "./scanner.js";
@@ -632,8 +631,10 @@ class Parser {
       return;
     }
     const end = this.lineEnd(afterWord);
-    const raw = this.source.slice(afterWord, end).trim();
-    out.push({ kind: "directive", name: word, value: raw, pos, endPos: this.locator(end) });
+    const slice = this.source.slice(afterWord, end);
+    const raw = slice.trim();
+    const valueStart = word === "attribute" ? this.locator(afterWord + slice.length - slice.trimStart().length) : undefined;
+    out.push({ kind: "directive", name: word, value: raw, valueStart, pos, endPos: this.locator(end) });
     this.i = end;
   }
 
@@ -998,17 +999,13 @@ class Parser {
       }
       const attr = this.parseAttribute();
       if (!attr) continue;
-      // Fold a valueless modifier attribute (@onclick:preventDefault) into the
-      // preceding handler, like Blazor does.
-      if (attr.kind === "eventHandler" && attr.code === "" && attr.name !== "") {
-        const base = attr.name.toLowerCase();
-        const previous = [...attributes].reverse().find((a) => a.kind === "eventHandler" && a.name.toLowerCase() === base);
-        if (previous && previous.kind === "eventHandler" && previous.code !== "") {
-          previous.flags |= attr.flags;
-          continue;
-        }
-        if (attr.flags !== 0) {
-          this.diagnostics.error("TZS008", attr.pos, `Modifier attribute for '@${attr.name}' has no matching handler.`);
+      // Event modifiers are attributes of their own (Blazor), also without a
+      // handler; each at most once per event.
+      if (attr.kind === "eventModifier") {
+        const duplicate = attributes.some((a) =>
+          a.kind === "eventModifier" && a.modifier === attr.modifier && a.name.toLowerCase() === attr.name.toLowerCase());
+        if (duplicate) {
+          this.diagnostics.error("TZS008", attr.pos, `Duplicate modifier '@${attr.name}:${attr.modifier}'.`);
           continue;
         }
       }
@@ -1035,6 +1032,15 @@ class Parser {
         // precise error if it never becomes a usable bind.
         attributes.push(attr);
         continue;
+      }
+      // A base bind after its modifiers (`@bind:after="f" @bind="x"`) joins
+      // their latent host — attribute order does not matter in Razor.
+      if (attr.kind === "bind") {
+        const latent = attributes.find((a) => a.kind === "bind" && a.expression === undefined && a.bindTarget === attr.bindTarget);
+        if (latent && latent.kind === "bind") {
+          latent.expression = attr.expression;
+          continue;
+        }
       }
       attributes.push(attr);
     }
@@ -1102,28 +1108,33 @@ class Parser {
       return { kind, code: code.code, codeStart, pos, endPos: this.locator(this.i) } as AttributeNode;
     }
 
-    // Event handler: @onclick / @onchange with optional :modifier parts.
+    // Event handler `@onclick="…"`, or one of its modifiers
+    // `@onclick:preventDefault[="bool"]` / `@onclick:stopPropagation[="bool"]`.
     if (/^on[A-Za-z]/i.test(body)) {
       const [base, ...modifiers] = body.split(":");
-      let flags = 0;
-      let modifierOnly = false;
-      for (const mod of modifiers) {
-        if (mod.toLowerCase() === "preventdefault") { flags |= EVENT_FLAGS.preventDefault; modifierOnly = true; }
-        else if (mod.toLowerCase() === "stoppropagation") { flags |= EVENT_FLAGS.stopPropagation; modifierOnly = true; }
-        else this.diagnostics.error("TZS008", pos, `Unknown event modifier ':${mod}'.`);
-      }
       const hasValue = src[this.i] === "=";
-      if (!hasValue) {
-        if (modifierOnly) {
-          return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
+      if (modifiers.length > 0) {
+        const lower = modifiers.join(":").toLowerCase();
+        const modifier = lower === "preventdefault" ? "preventDefault" : lower === "stoppropagation" ? "stopPropagation" : null;
+        if (modifier === null) {
+          this.diagnostics.error("TZS008", pos, `Unknown event modifier ':${modifiers.join(":")}' (expected ':preventDefault' or ':stopPropagation').`);
+          if (hasValue) this.parseRequiredExpression(body, pos);
+          return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
         }
-        this.diagnostics.error("TZS008", pos, `'@${base}' without a handler value.`);
-        return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
+        // Valueless form = true (Blazor).
+        if (!hasValue) return { kind: "eventModifier", name: base!, modifier, pos, endPos: this.locator(this.i) };
+        const code = this.parseRequiredExpression(body, pos);
+        if (code === null) return { kind: "eventModifier", name: base!, modifier, pos, endPos: this.locator(this.i) };
+        const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+        return { kind: "eventModifier", name: base!, modifier, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
       }
-      this.i++;
+      if (!hasValue) {
+        this.diagnostics.error("TZS008", pos, `'@${base}' without a handler value.`);
+        return { kind: "eventHandler", name: base!, code: "", pos, endPos: this.locator(this.i) };
+      }
       const code = this.parseRequiredExpression(base!, pos);
-      if (code === null) return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
-      return { kind: "eventHandler", name: base!, code: code.code, codeStart: code.start === undefined ? undefined : this.locator(code.start), flags, pos, endPos: this.locator(this.i) };
+      if (code === null) return { kind: "eventHandler", name: base!, code: "", pos, endPos: this.locator(this.i) };
+      return { kind: "eventHandler", name: base!, code: code.code, codeStart: code.start === undefined ? undefined : this.locator(code.start), pos, endPos: this.locator(this.i) };
     }
 
     if (body.startsWith("bind")) {
@@ -1153,7 +1164,7 @@ class Parser {
       return { kind: "bind", expression: expression?.code ?? "", ...end() };
     }
 
-    // @bind-<Target>[:event|:format] — component parameter binding.
+    // @bind-<Target>[:event|:format|:get|:set|:after] — component parameter binding.
     if (rest.startsWith("-")) {
       const target = rest.slice(1);
       const colon = target.indexOf(":");
@@ -1169,7 +1180,7 @@ class Parser {
         const expression = this.parseRequiredExpression(`bind-${targetName}`, pos);
         return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...end() };
       }
-      if (modifier === "event" || modifier === "format") {
+      if (modifier === "event" || modifier === "format" || modifier === "get" || modifier === "set" || modifier === "after") {
         const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos)?.code ?? "";
         return { kind: "bind", bindTarget: targetName, [modifier]: value, ...end() };
       }

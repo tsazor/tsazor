@@ -11,8 +11,11 @@ import { childNodes } from "./ast.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
+import { csharpString, parseAttributeLists } from "./attributes.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import {
+  bodyMemberOffset,
+  checkBindTarget,
   collectBodyMembers,
   collectDefaultClassMembers,
   emptyMembers,
@@ -87,8 +90,11 @@ export interface CodegenResult {
     /** Every @page template in source order — Blazor registers each as a route. */
     routeTemplates: string[];
     layout?: string;
-    /** Bare @authorize directive on a @page → authentication-required route. */
+    /** @authorize or `@attribute [Authorize]` on a @page → protected route. */
     authorize?: boolean;
+    /** Roles/policy of `@attribute [Authorize(Roles = "…", Policy = "…")]`
+     *  (the route's AuthorizationRequirements); absent = authentication suffices. */
+    authorizeData?: { roles?: string[]; policy?: string };
     usings: string[];
     /** The file's own `@import` directives, parsed (invalid ones are dropped). */
     imports: ImportInfo[];
@@ -174,6 +180,11 @@ class Codegen {
   private readonly ownImportDirectives: Array<{ value: string; pos: SourcePos; valueStart: SourcePos }> = [];
   private readonly inheritedImportLines: string[] = [];
   private inheritsBase = "ComponentBase";
+  /** `@attribute @decorator(…)` directives, emitted on the class. */
+  private readonly decorators: DirectiveNode[] = [];
+  /** Requirements of each `[Authorize(…)]` (Blazor ANDs several), and `[AllowAnonymous]`. */
+  private readonly authorizeAttributes: Array<{ roles?: string[]; policy?: string; pos: SourcePos }> = [];
+  private allowAnonymous = false;
 
   constructor(
     private readonly options: CodegenOptions,
@@ -200,6 +211,9 @@ class Codegen {
           break;
         case "authorize":
           this.metadata.authorize = true;
+          break;
+        case "attribute":
+          this.attributeDirective(d);
           break;
         case "using": {
           this.metadata.usings.push(d.value.trim());
@@ -244,6 +258,7 @@ class Codegen {
           this.diagnostics.error("TZS001", d.pos, `Unknown directive '@${d.name}'.`);
       }
     }
+    this.resolveAuthorization();
 
     if (this.metadata.inherits) {
       const base = this.metadata.inherits;
@@ -276,6 +291,7 @@ class Codegen {
     for (const block of memberCode) collectBodyMembers(block.code, this.members);
     if (this.options.codeBehindSource !== undefined) collectDefaultClassMembers(this.options.codeBehindSource, this.members);
     for (const inject of this.metadata.injects) this.members.instance.add(inject.name);
+    this.checkRenderMethodConflict(memberCode);
 
     // Pre-resolve component tags so imports come out once, before the class.
     this.preResolve(document.body, this.metadata.usings);
@@ -332,14 +348,16 @@ class Codegen {
       if (this.metadata.routeTemplates.length > 1) {
         this.line(`export const routeTemplates = ${JSON.stringify(this.metadata.routeTemplates)};`);
       }
-      if (this.metadata.authorize) this.line(`export const routeAuthorize = true;`);
+      if (this.metadata.authorize) this.line(`export const routeAuthorize = ${this.metadata.authorizeData ? JSON.stringify(this.metadata.authorizeData) : "true"};`);
       this.line("");
     }
 
     const typeParams = this.metadata.typeParams;
     const typeDecl = typeParams.length > 0 ? `<${typeParams.join(", ")}>` : "";
-    for (const attr of directives.filter((d) => d.name === "attribute")) {
-      this.line(attr.value.trim());
+    // `@attribute @decorator(…)`: a real class decorator (mapped for the LSP).
+    for (const decorator of this.decorators) {
+      const start = decorator.valueStart ?? decorator.pos;
+      this.writer.line(decorator.value.trim(), [{ offset: 0, srcLine: start.line - 1, srcCol: start.column }]);
     }
     this.line(`export default class ${this.options.className}${typeDecl} extends ${this.inheritsBase} {`);
     if (this.metadata.routeTemplate) {
@@ -392,6 +410,99 @@ class Codegen {
 
     const code = this.writer.toString();
     return { code, mappings: this.takeMappings(), metadata: this.metadata };
+  }
+
+  /**
+   * `@attribute` (C19). The TS form `@attribute @decorator(…)` decorates the
+   * class. A C# attribute list has no TS meaning, with one exception the
+   * runtime understands: `[Authorize]` (= `@authorize`, with `Roles`/`Policy`
+   * as the route's AuthorizationRequirements) and `[AllowAnonymous]`. Every
+   * other C# attribute is ignored with a TZS014 warning.
+   */
+  private attributeDirective(d: DirectiveNode): void {
+    const value = d.value.trim();
+    if (value.startsWith("@")) {
+      this.decorators.push(d);
+      return;
+    }
+    const attributes = parseAttributeLists(value);
+    if (attributes === null) {
+      this.diagnostics.error("TZS019", d.pos, "Expected a TS decorator ('@attribute @decorator(…)') or a C# attribute list ('@attribute [Authorize]').");
+      return;
+    }
+    for (const attribute of attributes) {
+      if (attribute.name === "AllowAnonymous") {
+        this.allowAnonymous = true;
+        continue;
+      }
+      if (attribute.name !== "Authorize") {
+        this.diagnostics.warning("TZS014", d.pos, `C# attribute '[${attribute.written}]' has no TypeScript equivalent and is ignored.`);
+        continue;
+      }
+      const requirement: { roles?: string[]; policy?: string; pos: SourcePos } = { pos: d.pos };
+      attribute.args.forEach((arg, index) => {
+        const key = arg.name ?? (index === 0 ? "Policy" : undefined);
+        const text = csharpString(arg.value);
+        if (key === "Roles" && text !== null) {
+          requirement.roles = text.split(",").map((role) => role.trim()).filter((role) => role.length > 0);
+        } else if (key === "Policy" && text !== null) {
+          requirement.policy = text;
+        } else if (key === "Roles" || key === "Policy") {
+          this.diagnostics.error("TZS019", d.pos, `'[${attribute.written}]': ${key} must be a string literal (got '${arg.value}').`);
+        } else {
+          this.diagnostics.warning("TZS014", d.pos, `'[${attribute.written}]' argument '${arg.name ?? arg.value}' is ignored (only Roles and Policy apply).`);
+        }
+      });
+      this.authorizeAttributes.push(requirement);
+    }
+  }
+
+  /**
+   * C21: every .tsazor generates `buildRenderTree` — also one without markup,
+   * as Razor generates BuildRenderTree for every .razor — so a hand-written
+   * one in `@code` or in the code-behind class conflicts (Blazor: CS0111
+   * duplicate member). Hand-written render code belongs in a plain `.ts`
+   * component class.
+   */
+  private checkRenderMethodConflict(memberCode: CodeBlockNode[]): void {
+    const hint = "Every .tsazor file generates buildRenderTree (also without markup) — write markup instead, or make it a plain .ts component class.";
+    for (const block of memberCode) {
+      const offset = bodyMemberOffset(block.code, "buildRenderTree");
+      if (offset === undefined) continue;
+      const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, offset)) : block.pos;
+      this.diagnostics.error("TZS020", pos, `'buildRenderTree' in @code duplicates the generated member. ${hint}`);
+    }
+    if (this.options.codeBehindSource !== undefined) {
+      const codeBehind = emptyMembers();
+      collectDefaultClassMembers(this.options.codeBehindSource, codeBehind);
+      if (codeBehind.instance.has("buildRenderTree")) {
+        this.diagnostics.error("TZS020", { line: 1, column: 0 }, `'buildRenderTree' in the code-behind class would be replaced by the generated member. ${hint}`);
+      }
+    }
+  }
+
+  /** Merges `@authorize` and `[Authorize]`/`[AllowAnonymous]` into the route metadata. */
+  private resolveAuthorization(): void {
+    if (this.allowAnonymous) {
+      // Blazor: [AllowAnonymous] wins over any [Authorize].
+      this.metadata.authorize = undefined;
+      return;
+    }
+    if (this.authorizeAttributes.length === 0) return;
+    this.metadata.authorize = true;
+    const withRoles = this.authorizeAttributes.filter((a) => a.roles !== undefined);
+    const withPolicy = this.authorizeAttributes.filter((a) => a.policy !== undefined);
+    // Blazor requires every [Authorize] to pass; AuthorizationRequirements
+    // holds one role set and one policy, so a second of either cannot be
+    // represented — refused instead of weakening the check.
+    for (const extra of [...withRoles.slice(1), ...withPolicy.slice(1)]) {
+      this.diagnostics.error("TZS019", extra.pos, "Several [Authorize] attributes with Roles (or with a Policy) cannot be combined — use one role list and one policy.");
+    }
+    const roles = withRoles[0]?.roles;
+    const policy = withPolicy[0]?.policy;
+    if (roles !== undefined || policy !== undefined) {
+      this.metadata.authorizeData = { ...(roles !== undefined ? { roles } : {}), ...(policy !== undefined ? { policy } : {}) };
+    }
   }
 
   /** Produces the mapping entries for the sourcemap stage. */
@@ -974,9 +1085,22 @@ class Codegen {
       }
       case "eventHandler": {
         const callback = this.callbackValue(attr.code, codeStart());
-        const flags = attr.flags === 0 ? "" : `, ${attr.flags}`;
-        const text = `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, ${callback}${flags});`;
+        const text = `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, ${callback});`;
         this.stmt(text, pos, text.indexOf(callback));
+        break;
+      }
+      case "eventModifier": {
+        // Blazor's `__internal_preventDefault_onclick` attribute: a flag of the
+        // element's listener, re-evaluated per render, also without a handler.
+        // On a component it is a plain attribute, as in Blazor: a component
+        // capturing unmatched values splats it onto its element.
+        const value = attr.code === undefined ? "true" : this.expr(attr.code, codeStart());
+        if (value.length === 0) {
+          this.diagnostics.error("TZS009", pos, `'@${attr.name}:${attr.modifier}' requires a bool expression (or no value).`);
+          break;
+        }
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(`__internal_${attr.modifier}_${attr.name}`)}, ${value});`;
+        this.stmt(text, pos, text.lastIndexOf(value));
         break;
       }
       case "attributes": {
@@ -998,22 +1122,28 @@ class Codegen {
    *  Value + ValueChanged for component parameter targets. */
   private emitBind(attr: Extract<AttributeNode, { kind: "bind" }>, ctx: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
     const pos = attr.pos;
-
-    if (attr.format !== undefined) {
-      // v1: native input display formatting applies; a custom format string is
-      // accepted but only affects parsing of number/date inputs.
-      this.diagnostics.warning("TZS008", pos, "'@bind:format' has limited v1 support: number and date inputs use native parsing.");
-    }
-
     // Component parameter binding: @bind-Target or @bind on a component tag
     // → Target + TargetChanged / Value + ValueChanged parameter pair.
-    if (attr.bindTarget !== undefined || ctx.isComponent === true) {
-      const target = attr.bindTarget ?? "Value";
-      this.emitComponentBind(attr, target, pos);
+    const isComponentBind = attr.bindTarget !== undefined || ctx.isComponent === true;
+    const label = attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}` : "@bind";
+    if (!this.checkBindShape(attr, label)) return;
+
+    if (attr.format !== undefined) {
+      if (isComponentBind) {
+        this.diagnostics.warning("TZS008", pos, `'${label}:format' has no effect on a component (Blazor ignores it).`);
+      } else {
+        // v1: native input display formatting applies; a custom format string is
+        // accepted but only affects parsing of number/date inputs.
+        this.diagnostics.warning("TZS008", pos, "'@bind:format' has limited v1 support: number and date inputs use native parsing.");
+      }
+    }
+
+    if (isComponentBind) {
+      this.emitComponentBind(attr, attr.bindTarget ?? "Value", label, pos);
       return;
     }
 
-    // Element binding: @bind / @bind:get / @bind:set / @bind:after / @bind:event.
+    // Element binding: @bind / @bind:get + @bind:set / @bind:after / @bind:event.
     const tag = ctx.tag.toLowerCase();
     const inputType = staticAttributeValue(ctx.attributes, "type")?.toLowerCase();
     const isCheckbox = tag === "input" && inputType === "checkbox";
@@ -1022,8 +1152,8 @@ class Codegen {
     const valueAttribute = isCheckbox ? "checked" : "value";
     const event = attr.event ?? "onchange";
 
-    // Value side: @bind:get overrides @bind's expression.
-    const display = attr.get !== undefined ? this.expr(attr.get) : this.expr(attr.expression ?? "");
+    // Value side: @bind or @bind:get.
+    const display = this.expr(attr.get ?? attr.expression ?? "");
     if (display.length === 0) {
       this.diagnostics.error("TZS009", pos, "'@bind' requires an expression.");
       return;
@@ -1035,79 +1165,116 @@ class Codegen {
     else if (isNumber) extract = "Number((__event.target as HTMLInputElement).value)";
     else if (isDate) extract = "new Date((__event.target as HTMLInputElement).value)";
 
-    const handlerBody = () => {
-      const parts: string[] = [];
-      if (attr.set !== undefined) {
-        parts.push(`(${this.expr(attr.set)})(${extract})`);
+    const parts: string[] = [];
+    if (attr.set !== undefined) {
+      // Blazor awaits an async setter (and :after) before re-rendering.
+      parts.push(`await (${this.expr(attr.set)})(${extract})`);
+    } else {
+      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, pos);
+      if (assignmentTarget === null) return;
+      if (isNumber) {
+        parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
       } else {
-        const assignmentTarget = this.expr(attr.expression ?? "");
-        if (!isAssignableTarget(assignmentTarget)) {
-          this.diagnostics.error("TZS008", pos, `@bind requires a settable member expression (got '${assignmentTarget}').`);
-        } else if (isCheckbox) {
-          parts.push(`${assignmentTarget} = ${extract}`);
-        } else if (isNumber) {
-          parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
-        } else if (isDate) {
-          parts.push(`${assignmentTarget} = ${extract}`);
-        } else {
-          parts.push(`${assignmentTarget} = ${extract}`);
-        }
+        parts.push(`${assignmentTarget} = ${extract}`);
       }
-      if (attr.after !== undefined) {
-        const after = bareIdentifier(attr.after) ? `${this.expr(attr.after)}()` : `(${this.expr(attr.after)})()`;
-        parts.push(after);
-      }
-      return parts.join("; ");
-    };
+    }
+    if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after)}`);
+    const async = attr.set !== undefined || attr.after !== undefined ? "async " : "";
 
     this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
     this.stmt(
-      `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, (__event) => { ${handlerBody()}; }));`,
+      `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, ${async}(__event) => { ${parts.join("; ")}; }));`,
       pos,
     );
   }
 
   /**
-   * Emits a component parameter bind: `<Target>` from the bound expression
-   * plus `<Target>Changed` as an EventCallback that writes back. Supports
-   * the @bind:get/:set/:after modifiers (Blazor's .NET-7 semantics).
+   * Blazor's (.NET 7) rules for combining a bind with its modifiers:
+   * `:get` and `:set` come as a pair and replace the base bind (RZ10015,
+   * RZ10016, RZ10018), `:after` cannot follow `:set` (RZ10019), and a
+   * modifier needs a bind to modify (RZ10004). False = nothing to emit.
    */
-  private emitComponentBind(attr: Extract<AttributeNode, { kind: "bind" }>, target: string, pos: SourcePos): void {
-    const label = attr.bindTarget !== undefined ? `@bind-${target}` : `@bind (component)`;
+  private checkBindShape(attr: Extract<AttributeNode, { kind: "bind" }>, label: string): boolean {
+    const error = (message: string): false => {
+      this.diagnostics.error("TZS008", attr.pos, message);
+      return false;
+    };
+    const base = attr.expression !== undefined;
+    if (base && attr.get !== undefined) return error(`'${label}' can't be used together with '${label}:get'.`);
+    if (attr.get !== undefined && attr.set === undefined) return error(`'${label}:get' must be used with '${label}:set'.`);
+    if (attr.set !== undefined && attr.get === undefined) return error(`'${label}:set' was used but no '${label}:get' was found.`);
+    if (attr.set !== undefined && attr.after !== undefined) {
+      return error(`'${label}:after' can't be used with '${label}:set' — invoke the ':after' code inside ':set' instead.`);
+    }
+    if (!base && attr.get === undefined) {
+      const modifier = (["event", "format", "after"] as const).find((k) => attr[k] !== undefined);
+      // No modifier either: an invalid bind attribute the parser already reported.
+      return modifier === undefined ? false : error(`'${label}:${modifier}' was used but no '${label}' was found.`);
+    }
+    return true;
+  }
 
-    const display = attr.get !== undefined ? this.expr(attr.get) : this.expr(attr.expression ?? "");
+  /** The rewritten assignment target of a two-way bind; null (TZS008) when
+   *  the expression cannot be assigned to (checked on the TS AST). */
+  private bindAssignmentTarget(expression: string, label: string, pos: SourcePos): string | null {
+    const code = expression.trim();
+    const target = checkBindTarget(code);
+    if (!target.ok) {
+      this.diagnostics.error("TZS008", pos, `'${label}' target '${code}' ${target.reason}.`);
+      return null;
+    }
+    return this.expr(code);
+  }
+
+  /** Invocation of an `:after` value: a method group or a lambda. */
+  private afterCall(after: string): string {
+    return bareIdentifier(after.trim()) ? `${this.expr(after)}()` : `(${this.expr(after)})()`;
+  }
+
+  /**
+   * Emits a component parameter bind: `<Target>` from the bound expression
+   * (or `:get`) plus `<Target>Changed` — or the parameter `:event` names —
+   * as an EventCallback that writes back (`:set`, or an assignment followed
+   * by `:after`; async ones are awaited, Blazor's InvokeAsynchronousDelegate).
+   */
+  private emitComponentBind(attr: Extract<AttributeNode, { kind: "bind" }>, target: string, label: string, pos: SourcePos): void {
+    const display = this.expr(attr.get ?? attr.expression ?? "");
     if (display.length === 0) {
       this.diagnostics.error("TZS009", pos, `${label} requires an expression.`);
       return;
     }
 
-    let setter: string;
-    if (attr.set !== undefined) {
-      setter = `(${this.expr(attr.set)})(__value)`;
-    } else {
-      const assignmentTarget = this.expr(attr.expression ?? "");
-      if (!isAssignableTarget(assignmentTarget)) {
-        this.diagnostics.error("TZS008", pos, `${label} requires a settable member expression.`);
-        return;
-      }
-      setter = `${assignmentTarget} = __value`;
+    // On a component `:event` names the change callback parameter (Blazor).
+    const changed = attr.event !== undefined ? attr.event.trim() : `${target}Changed`;
+    if (!bareIdentifier(changed)) {
+      this.diagnostics.error("TZS008", pos, `'${label}:event' on a component names its change callback parameter (e.g. '${target}Changed'), got '${changed}'.`);
+      return;
     }
-    const after = attr.after !== undefined
-      ? (bareIdentifier(attr.after) ? `; ${this.expr(attr.after)}()` : `; (${this.expr(attr.after)})()`)
-      : "";
+
+    let handler: string;
+    if (attr.set !== undefined) {
+      handler = `async (__value) => { await (${this.expr(attr.set)})(__value); }`;
+    } else {
+      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, pos);
+      if (assignmentTarget === null) return;
+      handler = attr.after !== undefined
+        ? `async (__value) => { ${assignmentTarget} = __value; await ${this.afterCall(attr.after)}; }`
+        : `(__value) => { ${assignmentTarget} = __value; }`;
+    }
 
     this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(target)}, ${display});`, pos);
     // InputBase keys EditContext validation on a plain field-name string
     // (v1 contract): derive it from the bound member path — `this.model.name`
-    // registers under "name", matching the validators map's field keys.
-    if (target === "Value" && attr.get === undefined && attr.set === undefined) {
-      const field = lastFieldIdentifier(attr.expression ?? "");
-      if (field) {
-        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, "ValueExpression", ${JSON.stringify(field)});`, pos);
+    // and `Model!.name` register under "name", matching the validators map's
+    // field keys. Blazor emits ValueExpression for `:get` too.
+    if (target === "Value") {
+      const bound = checkBindTarget((attr.get ?? attr.expression ?? "").trim());
+      if (bound.ok && bound.field) {
+        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, "ValueExpression", ${JSON.stringify(bound.field)});`, pos);
       }
     }
     this.stmt(
-      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(`${target}Changed`)}, ${this.eventCallback()}.bind(this, (__value) => { ${setter}${after}; }));`,
+      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(changed)}, ${this.eventCallback()}.bind(this, ${handler}));`,
       pos,
     );
   }
@@ -1248,21 +1415,6 @@ function unquote(value: string): string {
 
 function bareIdentifier(code: string): boolean {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(code);
-}
-
-/** Whether an emitted left-hand side can be assigned to (this.x, item.Name). */
-function isAssignableTarget(target: string): boolean {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(target);
-}
-
-/** The bound member path's field name for EditContext validation: the last
- *  identifier of `this.model.name` → "name", `model.age` → "age". Bare
- *  identifiers bind their own name; computed/indexed paths yield nothing. */
-function lastFieldIdentifier(code: string): string | undefined {
-  const target = code.trim();
-  if (!isAssignableTarget(target)) return undefined;
-  const last = target.split(".").pop()!;
-  return last.length > 0 ? last : undefined;
 }
 
 /** Static string value of an attribute (only literal values are resolvable). */

@@ -247,6 +247,60 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
   return rewrite;
 }
 
+/* Bind targets --------------------------------------------------------------- */
+
+export type BindTarget =
+  /** `field`: the last member name of the path (EditContext field key), if it has one. */
+  | { ok: true; field?: string }
+  | { ok: false; reason: string };
+
+/**
+ * Checks that a `@bind` expression is an assignment target, syntactically —
+ * what C# requires of `@bind="x"` (an lvalue) and TS of `x = __value`:
+ * identifiers, member and element access (`a.b`, `a[i].name`, `map[key]`),
+ * non-null assertions (`Model!.Title`), parentheses and type assertions
+ * around them. Optional chaining is never assignable (TS2779).
+ */
+export function checkBindTarget(code: string): BindTarget {
+  const file = ts.createSourceFile("bind.ts", `(${code}\n);`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const statement = file.statements[0];
+  const syntaxErrors = (file as unknown as { parseDiagnostics?: readonly unknown[] }).parseDiagnostics ?? [];
+  if (file.statements.length !== 1 || !statement || !ts.isExpressionStatement(statement) || syntaxErrors.length > 0) {
+    return { ok: false, reason: "is not a single expression" };
+  }
+  let target = statement.expression;
+  // The wrapping parentheses of the snippet itself.
+  if (ts.isParenthesizedExpression(target)) target = target.expression;
+  const unwrap = (node: ts.Expression): ts.Expression => {
+    while (
+      ts.isParenthesizedExpression(node) || ts.isNonNullExpression(node) || ts.isAsExpression(node) ||
+      ts.isTypeAssertionExpression(node) || ts.isSatisfiesExpression(node)
+    ) {
+      node = node.expression;
+    }
+    return node;
+  };
+  const outer = unwrap(target);
+  for (let node: ts.Expression = outer; ;) {
+    if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+      if (node.questionDotToken) return { ok: false, reason: "uses optional chaining ('?.'), which cannot be assigned to" };
+      node = unwrap(node.expression);
+      continue;
+    }
+    if (ts.isCallExpression(node) && node.questionDotToken) {
+      return { ok: false, reason: "uses optional chaining ('?.'), which cannot be assigned to" };
+    }
+    break;
+  }
+  if (ts.isIdentifier(outer)) return { ok: true, field: outer.text };
+  if (ts.isPropertyAccessExpression(outer)) return { ok: true, field: outer.name.text };
+  if (ts.isElementAccessExpression(outer)) {
+    const argument = outer.argumentExpression;
+    return { ok: true, field: ts.isStringLiteralLike(argument) ? argument.text : undefined };
+  }
+  return { ok: false, reason: "is not assignable (expected a field, property or element access)" };
+}
+
 /* Member collection ---------------------------------------------------------- */
 
 export interface ClassMembers {
@@ -265,6 +319,15 @@ export function collectBodyMembers(body: string, into: ClassMembers): void {
   const file = ts.createSourceFile("members.ts", `class __tsazor_members {\n${body}\n}`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const cls = file.statements.find(ts.isClassDeclaration);
   if (cls) addClassMembers(cls, into);
+}
+
+/** Offset (within `body`) of the name of the first member called `name` declared by `@code` text. */
+export function bodyMemberOffset(body: string, name: string): number | undefined {
+  const prefix = "class __tsazor_members {\n";
+  const file = ts.createSourceFile("members.ts", `${prefix}${body}\n}`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const cls = file.statements.find(ts.isClassDeclaration);
+  const member = cls?.members.find((m) => m.name !== undefined && (ts.isIdentifier(m.name) || ts.isStringLiteral(m.name)) && m.name.text === name);
+  return member?.name === undefined ? undefined : member.name.getStart(file) - prefix.length;
 }
 
 /** Members of the default-exported class of a module (the code-behind `X.tsazor.ts`). */

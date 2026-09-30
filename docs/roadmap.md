@@ -65,7 +65,9 @@ Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
   **Verlauf:** nach A1+B1 unverändert 13 · nach A2+B2 **145/217** sauber (182 ohne Fehler, 19 mit
   stillen Fehlern — `@context` ×18, Modifier-Wert ×1; 35 mit Fehlern — v. a. TZS008 `@bind` `!.` ×139 → A5)
   · nach A3 unverändert 145/217 (die Probe kompiliert ohne Workspace-Auflösung)
-  · nach A4 unverändert 145/217 (verbleibende Befunde: `@bind`-`!.`, `@context`/Slots → A5/Phase 2).
+  · nach A4 unverändert 145/217 (verbleibende Befunde: `@bind`-`!.`, `@context`/Slots → A5/Phase 2)
+  · nach A5 **178/217** sauber (216 ohne Fehler; 1 Datei mit Fehlern — TZS009 ×12, C#-`$"…"` als
+  unquoted Attributwert; stille Befunde nur noch `@context` ×18; unaufgelöste Tags ×36 → Phase 2).
 
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
@@ -246,6 +248,36 @@ Setzt auf dem neuen AST auf, jetzt jeweils klein:
 
 **Messpunkt:** FluentCMS-Probe erneut laufen lassen (Erwartung: fast alle Markup-Fehler weg,
 verbleibend nur Slots/Templates).
+
+**Stand: A5 umgesetzt** (Branch `roadmap/a5-bind`). **Bind-Ziele (C17):** `checkBindTarget`
+(rewrite.ts) prüft auf dem TS-AST — Identifier, Member-/Element-Zugriffe, `!`, Klammern,
+Type-Assertions; `?.` irgendwo im Pfad ⇒ TZS008 („not assignable“), Nicht-L-Values ebenso; die
+Zuweisung ist genau der (umgeschriebene) Ausdruck, `ValueExpression` der letzte Member-Name.
+**Bind-Modifier (C16):** `@bind-X:get/:set/:after/:event` auf Komponenten; `:after`/`:set`
+werden awaited (Blazors `InvokeAsynchronousDelegate`), `:event` benennt auf Komponenten den
+Change-Callback-Parameter (Blazor lehnt es dort nicht ab — geprüft an `ComponentBindLoweringPass`),
+`:format` wird dort ignoriert (Warnung); die .NET-7-Kombinationsregeln RZ10004/RZ10015–RZ10019
+gelten für Elemente und Komponenten, Attributreihenfolge egal. `ValueExpression` jetzt auch aus
+`:get` (Blazor). **Event-Modifier (C15):** eigener AST-Knoten `eventModifier` ⇒
+`addAttribute(seq, "__internal_preventDefault_onclick", <bool>)` wie Blazor, ohne Wert `true`;
+ohne Handler erlaubt; auf Komponenten ein normales Attribut (per `@attributes` gesplattet —
+FluentCMS-`Button`). Runtime (nur `dom-attributes.ts`): die Attribute setzen Flags des
+Listener-Records (`modifierFlags`, journaled), ein Flag ohne Handler hält einen eigenen
+Listener, der Listener geht erst, wenn weder Handler noch Flag bleiben; `EventHandlerFlags` von
+`addEventHandler` bleibt (verodert). **`@attribute` (C19):** TS-Form `@attribute @dec(…)` ⇒
+echter Class-Decorator (gemappt); `[Authorize]` = `@authorize`, `Roles`/`Policy` ⇒
+`metadata.authorizeData` ⇒ `routeAuthorize`/Route-Manifest `authorize: { roles, policy }`
+(`AuthorizationRequirements`/`AuthorizeRouteView` können beides), `[AllowAnonymous]` hebt auf,
+nicht abbildbare Kombinationen ⇒ TZS019; andere C#-Attribute ⇒ TZS014. **C21:**
+`buildRenderTree` in `@code` oder Code-behind ⇒ TZS020 — auch ohne Markup (Razor erzeugt
+`BuildRenderTree` für jede `.razor`, CS0111). Konformität: C15 ×2, C16, C17, C19 `@attribute`,
+C21 grün + 12 neue Fälle; Tests 604 → 665. Pizza-, Gallery-, Sleipnir- und Demo-E2E grün. Regression über alle 116 `.tsazor` im Repo: Ausgabe
+byte-identisch (kein Repo-Code nutzt die geänderten Formen). Probe: clean 145 → 178, Dateien mit
+Fehlern 35 → 1 (TZS008 ×139 und TZS001 ×1 weg, stiller Befund „Modifier-Wert“ weg).
+**Offen:** `@bind-value` auf *Elementen* (`<input @bind-value="x">`, Blazor: Element-Bind auf
+`value`) wird weiter als Komponenten-Bind emittiert; Bind direkt an eine `@foreach`-Variable (`@bind="item"`,
+C#: CS1656) scheitert erst zur Laufzeit (Zuweisung an `const`) statt beim Compile; `[Authorize]`-Kombinationen mit mehreren Rollenlisten/Policies bräuchten
+eine Liste von Requirements in der Runtime; `[Route]` ist kein `@page`-Ersatz (TZS014).
 
 ---
 

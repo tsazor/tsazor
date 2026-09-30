@@ -106,13 +106,16 @@ describe("parser", () => {
     const el = doc.body[0]!;
     expect(el.kind).toBe("element");
     if (el.kind !== "element") return;
-    const [id, cls, title, key, ref, click] = el.attributes;
+    const [id, cls, title, key, ref, click, modifier] = el.attributes;
     expect(id).toMatchObject({ kind: "static", name: "id", value: "x" });
     expect(cls).toMatchObject({ kind: "mixedValue", name: "class" });
     expect(title).toMatchObject({ kind: "expression", name: "title", code: "title" });
     expect(key).toMatchObject({ kind: "key", code: "k" });
     expect(ref).toMatchObject({ kind: "ref", code: "field" });
-    expect(click).toMatchObject({ kind: "eventHandler", name: "onclick", flags: 1 });
+    expect(click).toMatchObject({ kind: "eventHandler", name: "onclick", code: "Go" });
+    // A modifier is an attribute of its own (Blazor's __internal_preventDefault_onclick).
+    expect(modifier).toMatchObject({ kind: "eventModifier", name: "onclick", modifier: "preventDefault" });
+    expect(modifier).not.toHaveProperty("code");
   });
 
   it("parses component tags (uppercase or dotted)", () => {

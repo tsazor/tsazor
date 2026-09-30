@@ -3,7 +3,7 @@
  * Phase-0 finding `Interval="@4000"`.
  */
 import { describe, expect, it } from "vitest";
-import { mount } from "../harness.js";
+import { diagnosticsOf, errorCodes, mount } from "../harness.js";
 
 const probe = `<span>@(typeof Value):@(String(Value))</span>\n@code { @Parameter() Value: unknown; }`;
 
@@ -76,7 +76,7 @@ describe("C13 — templated components", () => {
 });
 
 describe("C15 — event modifiers with values", () => {
-  it.fails("@onclick:preventDefault=\"cond\" is a flag, not a second handler", async () => {
+  it("@onclick:preventDefault=\"cond\" is a flag, not a second handler", async () => {
     const m = await mount(`<a href="#" @onclick="go" @onclick:preventDefault="prevent">x</a><p>@count</p>
 @code { private count = 0; private prevent = true; private go() { this.count++; } }`);
     const event = new MouseEvent("click", { bubbles: true, cancelable: true });
@@ -85,11 +85,43 @@ describe("C15 — event modifiers with values", () => {
     expect({ count: m.text(), prevented: event.defaultPrevented }).toEqual({ count: "x1", prevented: true });
   });
 
-  it.fails("a modifier without a handler is allowed", async () => {
+  it("a modifier without a handler is allowed", async () => {
     const m = await mount(`<form @onsubmit:preventDefault><button>s</button></form>`);
     const event = new Event("submit", { bubbles: true, cancelable: true });
     m.container.querySelector("form")!.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("the flag follows its expression from render to render", async () => {
+    const m = await mount(`<div @onclick="outer"><a @onclick="go" @onclick:preventDefault="prevent" @onclick:stopPropagation="stop">x</a></div><p>@count/@bubbled</p>
+@code { private count = 0; private bubbled = 0; private prevent = true; private stop = false;
+    private go() { this.count++; this.prevent = !this.prevent; this.stop = !this.stop; }
+    private outer() { this.bubbled++; } }`);
+    const click = async (): Promise<boolean> => {
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      m.container.querySelector("a")!.dispatchEvent(event);
+      await m.settle();
+      return event.defaultPrevented;
+    };
+    expect(await click()).toBe(true);
+    expect(m.container.querySelector("p")!.textContent).toBe("1/1");
+    expect(await click()).toBe(false);
+    expect(m.container.querySelector("p")!.textContent).toBe("2/1");
+    expect(await click()).toBe(true);
+    expect(m.container.querySelector("p")!.textContent).toBe("3/2");
+    expect(m.container.querySelector("a")!.getAttributeNames()).toEqual([]);
+  });
+
+  it("on a component it is an attribute its @attributes splat applies (FluentCMS Button)", async () => {
+    const m = await mount({
+      "Test.tsazor": `<div @onclick="outer"><Btn @onclick:stopPropagation="true" /></div><p>@bubbled</p>
+@code { private bubbled = 0; private outer() { this.bubbled++; } }`,
+      "Btn.tsazor": `<button @attributes="AdditionalAttributes">b</button>
+@code { @Parameter({ captureUnmatchedValues: true }) AdditionalAttributes?: Record<string, unknown>; }`,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.container.querySelector("p")!.textContent).toBe("0");
   });
 });
 
@@ -97,7 +129,7 @@ const field = `<button @onclick="() => ValueChanged.invokeAsync('x')">set</butto
 @code { @Parameter() Value = ""; @Parameter() ValueChanged!: EventCallback<string>; }`;
 
 describe("C16 — @bind-Value modifiers on components", () => {
-  it.fails("@bind-Value:after runs after the assignment", async () => {
+  it("@bind-Value:after runs after the assignment", async () => {
     const m = await mount({
       "Test.tsazor": `<Field @bind-Value="v" @bind-Value:after="changed" /><p>@v/@log</p>
 @code { private v = ""; private log = ""; private changed() { this.log = "after:" + this.v; } }`,
@@ -107,10 +139,39 @@ describe("C16 — @bind-Value modifiers on components", () => {
     await m.settle();
     expect(m.container.querySelector("p")!.textContent).toBe("x/after:x");
   });
+
+  it("@bind-Value:get/:set bind through the setter", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Field @bind-Value:get="v" @bind-Value:set="store" /><p>@v</p>
+@code { private v = "a"; private store(value: string) { this.v = value.toUpperCase(); } }`,
+      "Field.tsazor": `<span>@Value</span>${field}`,
+    });
+    expect(m.container.querySelector("span")!.textContent).toBe("a");
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.container.querySelector("span")!.textContent).toBe("X");
+    expect(m.container.querySelector("p")!.textContent).toBe("X");
+  });
+
+  it("an async :after is awaited before the re-render", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Field @bind-Value="v" @bind-Value:after="changed" /><p>@log</p>
+@code { private v = ""; private log = ""; private async changed() { await Promise.resolve(); this.log = "done:" + this.v; } }`,
+      "Field.tsazor": field,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.container.querySelector("p")!.textContent).toBe("done:x");
+  });
+
+  it("@bind-Value:set together with :after is rejected (Blazor RZ10019)", async () => {
+    const diagnostics = await diagnosticsOf(`<Field @bind-Value:get="v" @bind-Value:set="s" @bind-Value:after="a" />`, { "Field.tsazor": field });
+    expect(errorCodes(diagnostics)).toEqual(["TZS008"]);
+  });
 });
 
 describe("C17 — @bind targets", () => {
-  it.fails("accepts a non-null assertion in the member path", async () => {
+  it("accepts a non-null assertion in the member path", async () => {
     const m = await mount({
       "Test.tsazor": `<Field @bind-Value="Model!.name" /><p>@Model!.name</p>
 @code { private Model: { name: string } | null = { name: "" }; }`,
@@ -119,5 +180,24 @@ describe("C17 — @bind targets", () => {
     m.container.querySelector("button")!.click();
     await m.settle();
     expect(m.container.querySelector("p")!.textContent).toBe("x");
+  });
+
+  it("element @bind to non-null and element-access targets", async () => {
+    const m = await mount(`<input id="a" @bind="Model!.name" /><input id="b" @bind="items[i].name" /><input id="c" @bind="map[key]" /><p>@Model!.name/@items[1].name/@map.k</p>
+@code { private Model: { name: string } | null = { name: "" }; private items = [{ name: "" }, { name: "" }]; private i = 1;
+    private map: Record<string, string> = { k: "" }; private key = "k"; }`);
+    for (const [id, value] of [["a", "m"], ["b", "n"], ["c", "o"]]) {
+      const input = m.container.querySelector<HTMLInputElement>(`#${id}`)!;
+      input.value = value!;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await m.settle();
+    }
+    expect(m.container.querySelector("p")!.textContent).toBe("m/n/o");
+  });
+
+  it("rejects optional chaining — not assignable (TS2779)", async () => {
+    const diagnostics = await diagnosticsOf(`<Field @bind-Value="Model?.name" />`, { "Field.tsazor": field });
+    expect(errorCodes(diagnostics)).toEqual(["TZS008"]);
+    expect(diagnostics.find((d) => d.code === "TZS008")!.message).toMatch(/optional chaining/);
   });
 });

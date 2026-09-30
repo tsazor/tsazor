@@ -505,3 +505,112 @@ describe("applier — attributes and properties (R10)", () => {
     expect([adds, removes]).toEqual([2, 3]);
   });
 });
+
+describe("applier — event modifier flags (A5, review C15)", () => {
+  const click = (target: Element): Event => {
+    const event = new Event("click", { bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  it("follows __internal_preventDefault_<event> / __internal_stopPropagation_<event> per render", async () => {
+    let prevent: unknown = true;
+    let stop: unknown = false;
+    let calls = 0;
+    let bubbled = 0;
+    const h = await mount((b) => {
+      b.openElement(0, "div");
+      b.addAttribute(1, "onclick", () => bubbled++);
+      b.openElement(2, "a");
+      b.addAttribute(3, "onclick", () => calls++);
+      b.addAttribute(4, "__internal_preventDefault_onclick", prevent);
+      b.addAttribute(5, "__internal_stopPropagation_onclick", stop);
+      b.closeElement();
+      b.closeElement();
+    });
+    const a = h.container.querySelector("a")!;
+    // Never a DOM attribute.
+    expect(a.getAttributeNames()).toEqual([]);
+    expect(click(a).defaultPrevented).toBe(true);
+    await h.renderer.waitUntilIdle();
+    expect([calls, bubbled]).toEqual([1, 1]);
+
+    prevent = false;
+    stop = true;
+    await h.update();
+    expect(click(a).defaultPrevented).toBe(false);
+    await h.renderer.waitUntilIdle();
+    expect([calls, bubbled]).toEqual([2, 1]);
+
+    prevent = null;
+    stop = undefined;
+    await h.update();
+    expect(click(a).defaultPrevented).toBe(false);
+    await h.renderer.waitUntilIdle();
+    expect([calls, bubbled]).toEqual([3, 2]);
+  });
+
+  it("prevents default without a handler and drops the listener once the flag goes", async () => {
+    let prevent = true;
+    let withHandler = false;
+    let calls = 0;
+    const h = await mount((b) => {
+      b.openElement(0, "form");
+      if (withHandler) b.addAttribute(1, "onsubmit", () => calls++);
+      if (prevent) b.addAttribute(2, "__internal_preventDefault_onsubmit", true);
+      b.closeElement();
+    });
+    const form = h.container.querySelector("form")!;
+    const submit = (): boolean => {
+      const event = new Event("submit", { cancelable: true });
+      form.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(submit()).toBe(true);
+
+    // A handler joins the flag's listener; removing the handler keeps the flag.
+    withHandler = true;
+    await h.update();
+    expect(submit()).toBe(true);
+    await h.renderer.waitUntilIdle();
+    expect(calls).toBe(1);
+    withHandler = false;
+    await h.update();
+    expect(submit()).toBe(true);
+    await h.renderer.waitUntilIdle();
+    expect(calls).toBe(1);
+
+    prevent = false;
+    await h.update();
+    expect(submit()).toBe(false);
+  });
+
+  it("keeps the static EventHandlerFlags of addEventHandler (compat)", async () => {
+    const h = await mount((b) => {
+      b.openElement(0, "a");
+      b.addEventHandler(1, "onclick", EventCallback.unbound(() => {}), 1 /* PreventDefault */);
+      b.closeElement();
+    });
+    expect(click(h.container.querySelector("a")!).defaultPrevented).toBe(true);
+  });
+
+  it("rolls a modifier change back with a failed pass", async () => {
+    let step = 0;
+    const h = await mount((b) => {
+      b.openElement(0, "a");
+      b.addAttribute(1, "__internal_preventDefault_onclick", step === 0);
+      b.closeElement();
+      if (step === 1) {
+        b.openElement(2, "div");
+        b.addElementReferenceCapture(3, () => {
+          throw new Error("capture failed");
+        });
+        b.closeElement();
+      }
+    });
+    step = 1;
+    await h.update();
+    expect(h.errors).toHaveLength(1);
+    expect(click(h.container.querySelector("a")!).defaultPrevented).toBe(true);
+  });
+});
