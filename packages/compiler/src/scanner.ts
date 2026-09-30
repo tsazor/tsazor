@@ -55,9 +55,33 @@ export class TSScanner {
     while (i < this.source.length && isIdPart(this.source[i]!)) i++;
     for (;;) {
       const ch = this.source[i];
-      if (ch === "." && isIdStart(this.source[i + 1] ?? "")) {
+      const next = this.source[i + 1];
+      if (ch === "." && isIdStart(next ?? "")) {
         i += 2;
-        while (i < this.source.length && isIdPart(this.source[i]!)) i++;
+        i = this.eatIdentifier(i);
+      } else if (ch === "?" && next === ".") {
+        // Optional chaining `?.`: member access, `?.(` call or `?.[` indexer.
+        // A bare `??` (nullish coalescing) must still terminate (Blazor parity).
+        const after = this.source[i + 2];
+        if (after === "(") {
+          const nextIdx = this.scanBalanced(i + 2, "(", ")");
+          if (nextIdx < 0) return i;
+          i = nextIdx;
+        } else if (after === "[") {
+          const nextIdx = this.scanBalanced(i + 2, "[", "]");
+          if (nextIdx < 0) return i;
+          i = nextIdx;
+        } else if (isIdStart(after ?? "")) {
+          i += 3;
+          i = this.eatIdentifier(i);
+        } else {
+          break;
+        }
+      } else if (ch === "!" && (next === "." || next === "[" || next === "(" || next === "?")) {
+        // Postfix non-null assertion when an access continues: `a!.b`, `a![0]`,
+        // `a!(x)`, `a?.b`. A lone `!` without continuation stays markup text
+        // (Razor parity: `@flag!` renders `flag` + `!`).
+        i++;
       } else if (ch === "(") {
         const next = this.scanBalanced(i, "(", ")");
         if (next < 0) return i;
@@ -70,6 +94,11 @@ export class TSScanner {
         break;
       }
     }
+    return i;
+  }
+
+  private eatIdentifier(i: number): number {
+    while (i < this.source.length && isIdPart(this.source[i]!)) i++;
     return i;
   }
 

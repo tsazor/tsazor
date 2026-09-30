@@ -25,6 +25,16 @@ describe("codegen", () => {
     expect(code).toContain("this.model.name");
   });
 
+  it("compiles non-null assertions and optional chains inside markup expressions (regression: `!.title` rendered as literal)", () => {
+    const { code } = gen(
+      '<span>@this.items[i]!.title</span><p>@this.user?.name</p>' +
+        '@code { private items: Array<{ title: string }> = []; private user?: { name: string }; private i = 0; }',
+    );
+    expect(code).toContain("this.items[this.i]!.title");
+    expect(code).not.toContain('"!.title"');
+    expect(code).toContain("this.user?.name");
+  });
+
   it("bakes the contextual keyword 'type' as a member reference (regression)", () => {
     // "type" is only a contextual keyword (type aliases) and can never start
     // a keyword position inside a markup expression — but it is a very common

@@ -221,6 +221,11 @@ describe("Tabs + Tab", () => {
 
     const links = container.querySelectorAll(".nav-link");
     expect(links).toHaveLength(2);
+    // The nav title renders the Tab's `title` value — once a compiler bug
+    // rendered `@this.tabs[i]!.title` as `[object Object]!.title` because the
+    // `!` non-null assertion split out of the expression.
+    expect(links[0]!.textContent).toBe("One");
+    expect(links[1]!.textContent).toBe("Two");
     expect(links[0]!.className).toContain("active");
 
     links[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));

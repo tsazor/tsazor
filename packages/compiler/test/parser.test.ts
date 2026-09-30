@@ -30,6 +30,20 @@ describe("parser", () => {
     expect(doc.body[6]).toMatchObject({ kind: "text", content: " + 1) trailing" });
   });
 
+  it("keeps postfix ! and ?. inside implicit expressions (regression: `!.title` leaked as literal text)", () => {
+    const { doc } = parse("@this.items[i]!.title | @user?.profile?.name | @obj?.method() | @flag!");
+    const exprs = doc.body.filter((n) => n.kind === "expression").map((n) => (n as { code: string }).code);
+    expect(exprs).toEqual(["this.items[i]!.title", "user?.profile?.name", "obj?.method()", "flag"]);
+    // A lone `!` without a continuation stays markup text (Razor parity), and
+    // `??` still terminates (nullish coalescing is not part of an expression).
+    const texts = doc.body.filter((n) => n.kind === "text").map((n) => (n as { content: string }).content);
+    const tail = texts[3]!;
+    expect(tail).toContain("!");
+    const { doc: nullish } = parse("@value ?? fallback");
+    expect(nullish.body[0]).toMatchObject({ kind: "expression", code: "value" });
+    expect(nullish.body[1]).toMatchObject({ kind: "text", content: " ?? fallback" });
+  });
+
   it("escapes @@ and supports @:text lines", () => {
     const { doc } = parse("@@hello@:world");
     const joined = doc.body.filter((n) => n.kind === "text").map((n) => (n as { content: string }).content).join("");
