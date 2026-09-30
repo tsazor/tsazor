@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { mount } from "../harness.js";
 
 describe("C1 — statements inside control-block bodies", () => {
-  it.fails("declares a local in an @if body and uses it in markup", async () => {
+  it("declares a local in an @if body and uses it in markup", async () => {
     const m = await mount(`
 @if (show) {
     const label = this.title.toUpperCase();
@@ -17,7 +17,7 @@ describe("C1 — statements inside control-block bodies", () => {
     expect(m.html()).toBe("<p>HI</p>");
   });
 
-  it.fails("nests a plain if (no @) inside @foreach", async () => {
+  it("nests a plain if (no @) inside @foreach", async () => {
     const m = await mount(`
 @foreach (var n in nums) {
     if (n > 1) {
@@ -30,12 +30,12 @@ describe("C1 — statements inside control-block bodies", () => {
 });
 
 describe("C2 — @{ } blocks", () => {
-  it.fails("shares its locals with the following markup", async () => {
+  it("shares its locals with the following markup", async () => {
     const m = await mount(`@{ const greeting = "hi"; }<p>@greeting</p>`);
     expect(m.html()).toBe("<p>hi</p>");
   });
 
-  it.fails("contains markup inside statements", async () => {
+  it("contains markup inside statements", async () => {
     const m = await mount(`
 @{
     if (this.a) {
@@ -57,7 +57,7 @@ describe("C3 — markup text inside blocks is not code", () => {
     expect(m.html()).toBe("<p>it's</p>");
   });
 
-  it.fails("keeps a literal brace in element text", async () => {
+  it("keeps a literal brace in element text", async () => {
     const m = await mount(`
 @if (a) {
     <p>50% off {</p>
@@ -68,7 +68,7 @@ describe("C3 — markup text inside blocks is not code", () => {
 });
 
 describe("C7 — further control keywords", () => {
-  it.fails("@while renders each iteration", async () => {
+  it("@while renders each iteration", async () => {
     const m = await mount(`
 @{ let i = 0; }
 @while (i < 3) {
@@ -78,7 +78,7 @@ describe("C7 — further control keywords", () => {
     expect(m.html()).toBe("<i>0</i><i>1</i><i>2</i>");
   });
 
-  it.fails("@do … while renders at least once", async () => {
+  it("@do … while renders at least once", async () => {
     const m = await mount(`
 @{ let i = 5; }
 @do {
@@ -88,7 +88,7 @@ describe("C7 — further control keywords", () => {
     expect(m.html()).toBe("<i>5</i>");
   });
 
-  it.fails("@try / catch renders the catch branch", async () => {
+  it("@try / catch renders the catch branch", async () => {
     const m = await mount(`
 @try {
     const v = this.risky();
@@ -102,7 +102,7 @@ describe("C7 — further control keywords", () => {
 });
 
 describe("C11 — @switch", () => {
-  it.fails("falls through stacked case labels", async () => {
+  it("falls through stacked case labels", async () => {
     const m = await mount(`
 @switch (k) {
     case 1:
@@ -119,7 +119,7 @@ describe("C11 — @switch", () => {
 });
 
 describe("C20 — @: line transitions", () => {
-  it.fails("processes @ expressions on a @: line", async () => {
+  it("processes @ expressions on a @: line", async () => {
     const m = await mount(`
 @if (true) {
     @:Hello @name!
