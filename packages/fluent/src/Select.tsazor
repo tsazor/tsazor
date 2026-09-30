@@ -1,0 +1,61 @@
+@inherits InputBase
+<div class="@this.wrapperClass">
+    @if (this.label) {
+        <label class="fui-input__label" for="@this.labelFor">@this.label</label>
+    }
+    <select id="@this.id" value="@this.currentValue" @attributes="@this.inputAttributes" @onchange="this.handleChange">@childContent</select>
+    @if (this.message) {
+        <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
+    }
+</div>
+
+@code {
+    /** Optional field label. */
+    @Parameter() label?: string;
+    @Parameter() disabled: boolean = false;
+    @Parameter() required: boolean = false;
+    /** Element id; needed for a `<label for>` association. */
+    @Parameter() id?: string;
+    /** Overrides the select's accessible name. */
+    @Parameter() ariaLabel?: string;
+    /** Option elements rendered inside the select. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get labelFor(): string | null {
+        return this.id ?? null;
+    }
+
+    private get wrapperClass(): string {
+        const base = "fui-input-wrapper fui-select-wrapper";
+        if (this.fieldClass.includes("invalid")) return `${base} fui-input-wrapper--invalid`;
+        if (this.fieldClass) return `${base} fui-input-wrapper--valid`;
+        return base;
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        const attrs: Record<string, unknown> = { class: "fui-input fui-select" };
+        if (this.disabled) attrs.disabled = true;
+        if (this.required) attrs.required = true;
+        if (this.ariaLabel) attrs["aria-label"] = this.ariaLabel;
+        if (this.message) attrs["aria-describedby"] = this.messageId;
+        for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
+            if (name === "class") continue;
+            attrs[name] = value;
+        }
+        return attrs;
+    }
+
+    private get messageId(): string | null {
+        return this.id ? `${this.id}-message` : "fui-select-message";
+    }
+
+    private get message(): string {
+        if (!this.editContext || !this.ValueExpression) return "";
+        const messages = this.editContext.getValidationMessages(this.ValueExpression);
+        return messages[0] ?? "";
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLSelectElement).value as never;
+    }
+}

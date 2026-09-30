@@ -1,0 +1,17 @@
+<span class="@spinnerClass" role="status" aria-label="@ariaLabel">@childContent</span>
+
+@code {
+    /** small | medium | large (24/32/40 px on the control grid). */
+    @Parameter() size: string = "medium";
+    /** Accessible label announcing the busy state (defaults to "Loading…"). */
+    @Parameter() ariaLabel: string | null = "Loading…";
+    /** Optional slot next to the spinner (e.g. a text line). */
+    @Parameter() childContent?: RenderFragment;
+
+    private get spinnerClass(): string {
+        const base = "fui-spinner";
+        if (this.size === "small") return `${base} fui-spinner--small`;
+        if (this.size === "large") return `${base} fui-spinner--large`;
+        return base;
+    }
+}

@@ -1,0 +1,96 @@
+/* Button — Fluent 2 appearance set on the control token layer. */
+
+.fui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fui-gap-sm);
+  height: var(--fui-height);
+  padding: 0 var(--fui-spacing-l);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  font-weight: var(--fui-font-weight-semibold);
+  border: 1px solid var(--fui-control-stroke);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-control-fill);
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+  transition: background var(--fui-duration-fast) var(--fui-ease-standard);
+  white-space: nowrap;
+}
+
+.fui-button:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-button:active {
+  color: var(--fui-accent-active);
+  background: var(--fui-control-fill-active);
+}
+
+.fui-button:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-button--primary {
+  background: var(--fui-accent);
+  color: var(--fui-foreground-on-brand);
+  border-color: transparent;
+}
+
+.fui-button--primary:hover {
+  background: var(--fui-accent-hover);
+}
+
+.fui-button--primary:active {
+  background: var(--fui-accent-active);
+  color: var(--fui-foreground-on-brand-selected);
+}
+
+.fui-button--subtle,
+.fui-button--transparent {
+  background: transparent;
+  border-color: transparent;
+}
+
+.fui-button--subtle:hover,
+.fui-button--transparent:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-button--subtle:active,
+.fui-button--transparent:active {
+  background: var(--fui-control-fill-active);
+  color: var(--fui-accent-active);
+}
+
+.fui-button--small {
+  height: var(--fui-height-s);
+  padding: 0 var(--fui-spacing-m);
+  font-size: var(--fui-font-size-caption-lg);
+}
+
+.fui-button--large {
+  height: var(--fui-height-l);
+  padding: 0 calc(var(--fui-spacing-l) + 8px);
+  font-size: var(--fui-font-size-body-lg);
+}
+
+.fui-button--circular {
+  border-radius: var(--fui-radius-circular);
+}
+
+.fui-button--disabled,
+.fui-button:disabled {
+  background: var(--fui-control-fill-disabled);
+  border-color: var(--fui-control-stroke-disabled);
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-button--primary.fui-button--disabled,
+.fui-button--primary:disabled {
+  background: var(--fui-foreground-disabled);
+  color: var(--fui-background-1);
+}

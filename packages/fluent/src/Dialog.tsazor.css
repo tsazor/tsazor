@@ -1,0 +1,102 @@
+/* Dialog — Fluent 2 modal in-place: fixed overlay, dialog surface, header/body/footer. */
+
+.fui-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--fui-spacing-l);
+  background: var(--fui-surface-overlay);
+  z-index: var(--fui-z-dialog);
+  outline: none;
+}
+
+.fui-dialog {
+  width: min(560px, 100%);
+  max-height: min(650px, calc(100vh - 2 * var(--fui-spacing-l)));
+  display: flex;
+  flex-direction: column;
+  background: var(--fui-background-2);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-lg);
+  box-shadow: var(--fui-shadow-16);
+  animation: fui-dialog-enter var(--fui-duration-gentle) var(--fui-ease-standard);
+}
+
+.fui-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fui-gap-md);
+  padding: var(--fui-spacing-m) var(--fui-spacing-l);
+  padding-bottom: var(--fui-spacing-s);
+}
+
+.fui-dialog__title {
+  margin: 0;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-subtitle);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-1);
+}
+
+.fui-dialog__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--fui-radius-md);
+  color: var(--fui-foreground-2);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-dialog__close:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-dialog__close:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+.fui-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--fui-spacing-m) var(--fui-spacing-l);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+  font-family: var(--fui-font-family);
+}
+
+.fui-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--fui-gap-sm);
+  padding: var(--fui-spacing-s) var(--fui-spacing-l) var(--fui-spacing-m);
+}
+
+@keyframes fui-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-dialog {
+    animation: none;
+  }
+}

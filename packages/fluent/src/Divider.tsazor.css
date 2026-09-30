@@ -1,0 +1,27 @@
+/* Divider — Fluent 2 separator. */
+
+.fui-divider {
+  display: block;
+  width: 100%;
+  height: 1px;
+  border: none;
+  margin: var(--fui-spacing-s) 0;
+  background: var(--fui-stroke-1);
+}
+
+.fui-divider--vertical {
+  display: inline-block;
+  width: 1px;
+  height: var(--fui-height);
+  margin: 0;
+  align-self: stretch;
+  vertical-align: middle;
+}
+
+.fui-divider--subtle {
+  background: var(--fui-stroke-2);
+}
+
+.fui-divider--stronger {
+  background: var(--fui-foreground-3);
+}

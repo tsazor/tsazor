@@ -1,0 +1,63 @@
+@inherits InputBase
+<div class="@this.wrapperClass">
+    <input id="@this.id" type="checkbox" checked="@this.isChecked" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    @if (this.label) {
+        <label class="fui-checkbox__label" for="@this.labelFor">@this.label</label>
+    }
+    @if (this.message) {
+        <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
+    }
+</div>
+
+@code {
+    /** Label rendered to the right of the box. */
+    @Parameter() label?: string;
+    @Parameter() disabled: boolean = false;
+    @Parameter() required: boolean = false;
+    /** Element id; needed for a `<label for>` association. */
+    @Parameter() id?: string;
+    /** Overrides the accessible name (when unlabelled). */
+    @Parameter() ariaLabel?: string;
+
+    private get labelFor(): string | null {
+        return this.id ?? null;
+    }
+
+    private get isChecked(): boolean {
+        return this.currentValue === true;
+    }
+
+    private get wrapperClass(): string {
+        const base = "fui-checkbox";
+        if (this.fieldClass.includes("invalid")) return `${base} fui-checkbox--invalid`;
+        if (this.fieldClass) return `${base} fui-checkbox--valid`;
+        return base;
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        const attrs: Record<string, unknown> = { class: "fui-checkbox__native" };
+        if (this.disabled) attrs.disabled = true;
+        if (this.required) attrs.required = true;
+        if (this.ariaLabel) attrs["aria-label"] = this.ariaLabel;
+        if (this.message) attrs["aria-describedby"] = this.messageId;
+        for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
+            if (name === "class") continue;
+            attrs[name] = value;
+        }
+        return attrs;
+    }
+
+    private get messageId(): string | null {
+        return this.id ? `${this.id}-message` : "fui-checkbox-message";
+    }
+
+    private get message(): string {
+        if (!this.editContext || !this.ValueExpression) return "";
+        const messages = this.editContext.getValidationMessages(this.ValueExpression);
+        return messages[0] ?? "";
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).checked as never;
+    }
+}

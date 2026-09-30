@@ -1,0 +1,129 @@
+/* Shared control layer for fluent inputs: text/number/textarea/select/switch.
+ * Component sidecars add block-specific tweaks only. */
+
+.fui-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+  min-width: 0;
+}
+
+.fui-input__label {
+  font-size: var(--fui-font-size-caption-lg);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-2);
+  padding-inline-start: 2px;
+}
+
+.fui-input {
+  height: var(--fui-height);
+  padding: 0 var(--fui-spacing-m);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+  background: var(--fui-control-fill-input);
+  border: 1px solid var(--fui-control-stroke);
+  border-radius: var(--fui-radius-md);
+  transition:
+    border-color var(--fui-duration-fast) var(--fui-ease-standard),
+    background var(--fui-duration-fast) var(--fui-ease-standard);
+  outline: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.fui-input:hover {
+  background: var(--fui-control-fill-input-hover);
+  border-color: var(--fui-control-stroke-hover);
+}
+
+.fui-input:focus-visible {
+  outline: none;
+  border-color: var(--fui-control-focus-stroke);
+  box-shadow: 0 1px 4px var(--fui-control-focus-outer-stroke);
+}
+
+.fui-input::placeholder {
+  color: var(--fui-foreground-3);
+}
+
+.fui-input:disabled {
+  background: var(--fui-control-fill-disabled);
+  border-color: var(--fui-control-stroke-disabled);
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-input--valid {
+  border-color: var(--fui-color-green-1);
+}
+
+.fui-input--invalid {
+  border-color: var(--fui-color-red-1);
+}
+
+.fui-input-wrapper--invalid .fui-input__label {
+  color: var(--fui-color-red-1);
+}
+
+.fui-input__message {
+  font-size: var(--fui-font-size-caption);
+  line-height: var(--fui-line-height-caption);
+  color: var(--fui-color-red-1);
+}
+
+/* Validation state also lands on the wrapper (InputBase fieldClass merge). */
+.fui-input-wrapper--invalid .fui-input__message {
+  color: var(--fui-color-red-1);
+}
+
+/* Select shares the input chrome. */
+.fui-select {
+  height: var(--fui-height);
+  padding-right: var(--fui-spacing-m);
+}
+
+/* Textarea grows vertically; height resets to auto. */
+.fui-textarea {
+  height: auto;
+  min-height: calc(var(--fui-height) * 2 + var(--fui-spacing-xs));
+  resize: vertical;
+  box-sizing: border-box;
+  font-size: var(--fui-font-size-body);
+}
+
+/* Checkbox: native control with accent color. */
+.fui-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fui-gap-sm);
+}
+
+.fui-checkbox__native {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--fui-accent);
+  flex: none;
+  cursor: pointer;
+}
+
+.fui-checkbox--invalid .fui-checkbox__native {
+  outline: 2px solid var(--fui-color-red-1);
+  outline-offset: -1px;
+}
+
+.fui-checkbox__label {
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+}
+
+.fui-checkbox:has(.fui-checkbox__native:disabled) .fui-checkbox__label {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-input__message {
+  min-height: var(--fui-line-height-caption);
+}

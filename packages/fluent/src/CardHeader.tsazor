@@ -1,0 +1,5 @@
+<header class="fui-card-header">@childContent</header>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+}

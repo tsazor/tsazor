@@ -1,0 +1,17 @@
+@using @tsazor/runtime
+<EditForm class="fui-form" Model="@model" Validators="@validators" OnValidSubmit="@handleSubmit">@childContent</EditForm>
+
+@code {
+    /** Model to edit and validate (passed to the inner EditForm). */
+    @Parameter() model!: object;
+    /** Field validators (passed to the inner EditForm). */
+    @Parameter() validators?: Record<string, unknown>;
+    /** Invoked after a successful submit. */
+    @Parameter() onValidSubmit?: EventCallback<Event>;
+    /** Form contents (the fluent inputs + submit Button). */
+    @Parameter() childContent?: RenderFragment;
+
+    private handleSubmit = EventCallback.bind(this, (e: Event) => {
+        this.onValidSubmit?.invokeAsync(e);
+    });
+}

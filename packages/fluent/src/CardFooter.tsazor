@@ -1,0 +1,5 @@
+<footer class="fui-card-footer">@childContent</footer>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+}

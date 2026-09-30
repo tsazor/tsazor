@@ -1,0 +1,323 @@
+/* ==========================================================================
+ * Fluent 2 design tokens — the single source of truth for @tsazor/fluent.
+ *
+ * Every component consumes `--fui-*` custom properties only; no component
+ * sheet hardcodes a color, radius, shadow or motion value. That is what makes
+ * FluentProvider's TokenOverrides and app re-theming work without touching
+ * component CSS.
+ *
+ * Layer order (later blocks override earlier for the same element):
+ *   1. `:root`           — light values (the default)
+ *   2. `[data-fluent-theme="dark"]`  — explicit dark (html or any subtree)
+ *   3. `@media (prefers-color-scheme: dark)` gated behind
+ *      `:root:not([data-fluent-theme])` — OS dark until the app opts in
+ *      explicitly (either "dark" or "light" attribute)
+ *   4. `[data-fluent-density="compact"]` — smaller control heights/spacing
+ *
+ * Color anchors follow Fluent 2 (Fluent UI v9): brand 80 #0F6CBD is the
+ * primary brand, neutrals #FFFFFF/#FAFAFA on light and #292929/#1F1F1F on
+ * dark, status green 0E700E / amber B75C06 / red B10E1C / blue 0F6CBD.
+ * ========================================================================== */
+
+/* ---------------------------------- light --------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  /* Brand ramp — Fluent 2 primary ramp. */
+  --fui-brand-10: #061724;
+  --fui-brand-20: #082338;
+  --fui-brand-30: #0A2E4A;
+  --fui-brand-40: #0C3B5E;
+  --fui-brand-50: #0E4775;
+  --fui-brand-60: #0F548C;
+  --fui-brand-70: #115EA3;
+  --fui-brand-80: #0F6CBD;
+  --fui-brand-90: #2886DE;
+  --fui-brand-100: #479EF5;
+  --fui-brand-110: #62ABF5;
+  --fui-brand-120: #77B7F7;
+  --fui-brand-130: #96C6FA;
+  --fui-brand-140: #B4D6FA;
+  --fui-brand-150: #CFE4FA;
+  --fui-brand-160: #EBF3FC;
+
+  /* Neutral ramp — gray steps 1..170 (light). */
+  --fui-neutral-1: #FFFFFF;
+  --fui-neutral-2: #FAFAFA;
+  --fui-neutral-3: #F5F5F5;
+  --fui-neutral-4: #F0F0F0;
+  --fui-neutral-6: #E6E6E6;
+  --fui-neutral-8: #DCDCDC;
+  --fui-neutral-10: #D1D1D1;
+  --fui-neutral-12: #C7C7C7;
+  --fui-neutral-14: #C2C2C2;
+  --fui-neutral-16: #B8B8B8;
+  --fui-neutral-20: #B3B3B3;
+  --fui-neutral-22: #9A9A9A;
+  --fui-neutral-24: #828282;
+  --fui-neutral-26: #616161;
+  --fui-neutral-28: #565656;
+  --fui-neutral-30: #4A4A4A;
+  --fui-neutral-32: #424242;
+  --fui-neutral-34: #383838;
+  --fui-neutral-36: #323232;
+  --fui-neutral-38: #2B2B2B;
+  --fui-neutral-40: #242424;
+  --fui-neutral-50: #1A1A1A;
+  --fui-neutral-170: #141414;
+
+  /* Semantic surfaces & strokes (light). */
+  --fui-background-1: #FFFFFF;
+  --fui-background-2: #FAFAFA;
+  --fui-background-3: #F5F5F5;
+  --fui-background-4: #F0F0F0;
+  --fui-background-5: #EBEBEB;
+  --fui-foreground-1: #242424;
+  --fui-foreground-2: #424242;
+  --fui-foreground-3: #616161;
+  --fui-foreground-disabled: #BEBEBE;
+  --fui-foreground-on-brand: #FFFFFF;
+  --fui-foreground-on-brand-selected: #FFFFFF;
+  --fui-foreground-inverted: #FFFFFF;
+  --fui-background-inverted: #1A1A1A;
+  --fui-stroke-1: #D1D1D1;
+  --fui-stroke-2: #E0E0E0;
+  --fui-stroke-disabled: #E0E0E0;
+  --fui-surface-overlay: rgba(0, 0, 0, 0.4);
+  --fui-scrim-backdrop: rgba(0, 0, 0, 0.3);
+
+  /* Semantic status colors (shared across themes; dark uses brighter ramps). */
+  --fui-color-green-1: #0E700E;
+  --fui-color-glass-green: #B7F3B7;
+  --fui-color-amber-1: #B75C06;
+  --fui-color-glass-amber: #FBF7B5;
+  --fui-color-red-1: #B10E1C;
+  --fui-color-glass-red: #FDC6C6;
+  --fui-color-blue-1: #0F6CBD;
+  --fui-color-glass-blue: #CFE4FA;
+
+  /* Control colors (light). */
+  --fui-control-fill: #F5F5F5;
+  --fui-control-fill-hover: #F0F0F0;
+  --fui-control-fill-active: #E6E6E6;
+  --fui-control-fill-disabled: #F0F0F0;
+  --fui-control-fill-input: #FFFFFF;
+  --fui-control-fill-input-hover: #FFFFFF;
+  --fui-control-fill-input-active: #FFFFFF;
+  --fui-control-fill-selected: #F0F0F0;
+  --fui-control-stroke: #D1D1D1;
+  --fui-control-stroke-hover: #C7C7C7;
+  --fui-control-stroke-active: #B8B8B8;
+  --fui-control-stroke-disabled: #E0E0E0;
+  --fui-control-focus-stroke: #0F6CBD;
+  --fui-control-focus-outer-stroke: rgba(0, 0, 0, 0.55);
+
+  /* Alias: the primary interaction color most components resolve against. */
+  --fui-accent: var(--fui-brand-80);
+  --fui-accent-hover: var(--fui-brand-70);
+  --fui-accent-active: var(--fui-brand-40);
+
+  /* Radius — Fluent 2 corner style. */
+  --fui-radius-none: 0;
+  --fui-radius-sm: 2px;
+  --fui-radius-md: 4px;
+  --fui-radius-lg: 8px;
+  --fui-radius-circular: 9999px;
+
+  /* Spacing — 4px grid. */
+  --fui-spacing-xs: 4px;
+  --fui-spacing-s: 8px;
+  --fui-spacing-m: 12px;
+  --fui-spacing-l: 16px;
+  --fui-spacing-xl: 24px;
+  --fui-spacing-xxl: 32px;
+  --fui-spacing-xxxl: 40px;
+  --fui-gap-sm: var(--fui-spacing-m);
+  --fui-gap-md: var(--fui-spacing-l);
+
+  /* Control heights (s24 / m32 / l40 on the standard grid). */
+  --fui-height-s: 24px;
+  --fui-height-m: 32px;
+  --fui-height-l: 40px;
+  --fui-height: var(--fui-height-m);
+  --fui-height-input: var(--fui-height-m);
+
+  /* Typography — Segoe UI stack + Fluent 2 type ramp. */
+  --fui-font-family:
+    "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+    "Helvetica Neue", Arial, sans-serif;
+  --fui-font-family-mono: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --fui-font-size-caption: 12px;
+  --fui-font-size-caption-lg: 13px;
+  --fui-font-size-body: 14px;
+  --fui-font-size-body-lg: 16px;
+  --fui-font-size-subtitle: 20px;
+  --fui-font-size-title: 28px;
+  --fui-font-size-display: 68px;
+  --fui-font-weight-regular: 400;
+  --fui-font-weight-semibold: 600;
+  --fui-font-weight-bold: 700;
+  --fui-line-height: 20px;          /* body: 14px/20px */
+  --fui-line-height-caption: 16px;  /* caption: 12px/16px */
+
+  /* Elevation — Fluent 2 shadow ramps (light favors tighter ambient). */
+  --fui-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --fui-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --fui-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --fui-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --fui-shadow-28: 0 14px 28px rgba(0, 0, 0, 0.24), 0 0 8px rgba(0, 0, 0, 0.2);
+  --fui-flyout-shadow: 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --fui-dialog-shadow: var(--fui-shadow-28);
+
+  /* Motion. */
+  --fui-duration-fast: 100ms;
+  --fui-duration-normal: 200ms;
+  --fui-duration-gentle: 250ms;
+  --fui-duration-slow: 300ms;
+  --fui-ease-standard: cubic-bezier(0.33, 0, 0.67, 1);
+  --fui-ease-decelerate: cubic-bezier(0.1, 0.9, 0.2, 1);
+  --fui-ease-accelerate: cubic-bezier(0.7, 0, 1, 0.5);
+
+  /* Z-order layers. */
+  --fui-z-dialog: 1000;
+  --fui-z-toast: 2000;
+}
+
+/* ----------------------------------- dark --------------------------------- */
+
+[data-fluent-theme="dark"] {
+  color-scheme: dark;
+
+  /* Neutrals are re-anchored in dark; the brand ramp stays usable as-is,
+     with slightly brighter accents for on-dark contrast. */
+  --fui-neutral-1: #242424;
+  --fui-neutral-2: #1F1F1F;
+  --fui-neutral-3: #1A1A1A;
+  --fui-neutral-4: #161616;
+  --fui-neutral-6: #141414;
+  --fui-neutral-170: #FFFFFF;
+
+  --fui-background-1: #292929;
+  --fui-background-2: #262626;
+  --fui-background-3: #1F1F1F;
+  --fui-background-4: #1A1A1A;
+  --fui-background-5: #141414;
+  --fui-foreground-1: #FFFFFF;
+  --fui-foreground-2: #D6D6D6;
+  --fui-foreground-3: #ADADAD;
+  --fui-foreground-disabled: #656565;
+  --fui-foreground-on-brand: #FFFFFF;
+  --fui-foreground-inverted: #1A1A1A;
+  --fui-background-inverted: #EBEBEB;
+  --fui-stroke-1: #5D5D5D;
+  --fui-stroke-2: #454545;
+  --fui-stroke-disabled: #454545;
+  --fui-surface-overlay: rgba(0, 0, 0, 0.6);
+  --fui-scrim-backdrop: rgba(0, 0, 0, 0.5);
+
+  --fui-color-green-1: #54B054;
+  --fui-color-glass-green: #042304;
+  --fui-color-amber-1: #E8A87A;
+  --fui-color-glass-amber: #3D2B00;
+  --fui-color-red-1: #EF6A6A;
+  --fui-color-glass-red: #3D0D0D;
+  --fui-color-blue-1: #77B7F7;
+  --fui-color-glass-blue: #082338;
+
+  --fui-control-fill: #292929;
+  --fui-control-fill-hover: #333333;
+  --fui-control-fill-active: #3D3D3D;
+  --fui-control-fill-disabled: #292929;
+  --fui-control-fill-input: #2C2C2C;
+  --fui-control-fill-input-hover: #333333;
+  --fui-control-fill-input-active: #3A3A3A;
+  --fui-control-fill-selected: #333333;
+  --fui-control-stroke: #5D5D5D;
+  --fui-control-stroke-hover: #6B6B6B;
+  --fui-control-stroke-active: #777777;
+  --fui-control-stroke-disabled: #454545;
+  --fui-control-focus-stroke: #75B9F7;
+  --fui-control-focus-outer-stroke: rgba(255, 255, 255, 0.6);
+
+  --fui-accent: var(--fui-brand-100);
+  --fui-accent-hover: var(--fui-brand-90);
+  --fui-accent-active: var(--fui-brand-70);
+
+  --fui-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
+  --fui-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
+  --fui-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
+  --fui-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
+  --fui-shadow-28: 0 14px 28px rgba(0, 0, 0, 0.6), 0 0 8px rgba(0, 0, 0, 0.4);
+  --fui-flyout-shadow: var(--fui-shadow-8);
+}
+
+/* OS dark applied until the app opts into a theme explicitly on <html>
+ * (set either data-fluent-theme="dark" or "light" to pin). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-fluent-theme]) {
+    color-scheme: dark;
+
+    --fui-background-1: #292929;
+    --fui-background-2: #262626;
+    --fui-background-3: #1F1F1F;
+    --fui-background-4: #1A1A1A;
+    --fui-background-5: #141414;
+    --fui-foreground-1: #FFFFFF;
+    --fui-foreground-2: #D6D6D6;
+    --fui-foreground-3: #ADADAD;
+    --fui-foreground-disabled: #656565;
+    --fui-foreground-inverted: #1A1A1A;
+    --fui-background-inverted: #EBEBEB;
+    --fui-stroke-1: #5D5D5D;
+    --fui-stroke-2: #454545;
+    --fui-stroke-disabled: #454545;
+    --fui-surface-overlay: rgba(0, 0, 0, 0.6);
+    --fui-scrim-backdrop: rgba(0, 0, 0, 0.5);
+
+    --fui-color-green-1: #54B054;
+    --fui-color-glass-green: #042304;
+    --fui-color-amber-1: #E8A87A;
+    --fui-color-glass-amber: #3D2B00;
+    --fui-color-red-1: #EF6A6A;
+    --fui-color-glass-red: #3D0D0D;
+    --fui-color-blue-1: #77B7F7;
+    --fui-color-glass-blue: #082338;
+
+    --fui-control-fill: #292929;
+    --fui-control-fill-hover: #333333;
+    --fui-control-fill-active: #3D3D3D;
+    --fui-control-fill-disabled: #292929;
+    --fui-control-fill-input: #2C2C2C;
+    --fui-control-fill-input-hover: #333333;
+    --fui-control-fill-input-active: #3A3A3A;
+    --fui-control-fill-selected: #333333;
+    --fui-control-stroke: #5D5D5D;
+    --fui-control-stroke-hover: #6B6B6B;
+    --fui-control-stroke-active: #777777;
+    --fui-control-stroke-disabled: #454545;
+    --fui-control-focus-stroke: #75B9F7;
+
+    --fui-accent: var(--fui-brand-100);
+    --fui-accent-hover: var(--fui-brand-70);
+    --fui-accent-active: var(--fui-brand-40);
+  }
+}
+
+/* ----------------------------- density (compact) -------------------------- */
+
+[data-fluent-density="compact"] {
+  --fui-height-s: 20px;
+  --fui-height-m: 24px;
+  --fui-height-l: 32px;
+  --fui-height: var(--fui-height-m);
+  --fui-height-input: var(--fui-height-m);
+  --fui-spacing-l: 12px;
+  --fui-spacing-xl: 16px;
+}
+
+/* ------------------------------ base element set -------------------------- */
+
+/* The provider ships the base ramp on the document level; apps that do not
+ * want a reset can rely on these being plain custom properties (no element
+ * styling beyond the ramp above). */

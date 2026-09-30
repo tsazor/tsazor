@@ -1,0 +1,71 @@
+/* Badge — Fluent 2 pill with glass-color accents. */
+
+.fui-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--fui-spacing-s);
+  border-radius: var(--fui-radius-circular);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-caption);
+  font-weight: var(--fui-font-weight-semibold);
+  line-height: var(--fui-line-height-caption);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.fui-badge--small {
+  height: 16px;
+  padding: 0 var(--fui-spacing-xs);
+  font-size: 11px;
+}
+
+.fui-badge--filled {
+  border: 1px solid transparent;
+}
+
+.fui-badge--subtle {
+  border: 1px solid transparent;
+}
+
+/* Color themes: filled = solid, subtle = glass ("color-*-2" pairs). */
+
+.fui-badge--filled.fui-badge--brand {
+  background: var(--fui-accent);
+  color: var(--fui-foreground-on-brand);
+}
+
+.fui-badge--subtle.fui-badge--brand {
+  background: var(--fui-color-glass-blue);
+  color: var(--fui-color-blue-1);
+}
+
+.fui-badge--filled.fui-badge--success {
+  background: var(--fui-color-green-1);
+  color: #FFFFFF;
+}
+
+.fui-badge--subtle.fui-badge--success {
+  background: var(--fui-color-glass-green);
+  color: var(--fui-color-green-1);
+}
+
+.fui-badge--filled.fui-badge--warning {
+  background: var(--fui-color-amber-1);
+  color: #FFFFFF;
+}
+
+.fui-badge--subtle.fui-badge--warning {
+  background: var(--fui-color-glass-amber);
+  color: var(--fui-color-amber-1);
+}
+
+.fui-badge--filled.fui-badge--error {
+  background: var(--fui-color-red-1);
+  color: #FFFFFF;
+}
+
+.fui-badge--subtle.fui-badge--error {
+  background: var(--fui-color-glass-red);
+  color: var(--fui-color-red-1);
+}

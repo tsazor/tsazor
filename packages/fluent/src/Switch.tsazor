@@ -1,0 +1,45 @@
+@inherits InputBase
+<label class="@this.wrapperClass" for="@this.labelFor">
+    <input id="@this.id" type="checkbox" checked="@this.isChecked" role="switch" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    <span class="fui-switch__track" aria-hidden="true"></span>
+    @if (this.label) {
+        <span class="fui-switch__label">@this.label</span>
+    }
+</label>
+
+@code {
+    /** Label rendered to the right of the switch. */
+    @Parameter() label?: string;
+    @Parameter() disabled: boolean = false;
+    /** Element id; the wrapping label already associates the control. */
+    @Parameter() id?: string;
+    /** Overrides the accessible name (when unlabelled). */
+    @Parameter() ariaLabel?: string;
+
+    private get labelFor(): string | null {
+        return this.id ?? null;
+    }
+
+    private get isChecked(): boolean {
+        return this.currentValue === true;
+    }
+
+    private get wrapperClass(): string {
+        return this.disabled ? "fui-switch fui-switch--disabled" : "fui-switch";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        const attrs: Record<string, unknown> = { class: "fui-switch__native" };
+        if (this.disabled) attrs.disabled = true;
+        if (this.ariaLabel) attrs["aria-label"] = this.ariaLabel;
+        for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
+            if (name === "class") continue;
+            attrs[name] = value;
+        }
+        return attrs;
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).checked as never;
+    }
+}

@@ -1,0 +1,46 @@
+/* Spinner — Fluent 2 circular indeterminate, token-driven. */
+
+.fui-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+  vertical-align: middle;
+}
+
+/* The ring itself: a pseudo-element keeps the role=status accessible node
+   free of decoration. */
+.fui-spinner::before {
+  content: "";
+  width: var(--fui-height);
+  height: var(--fui-height);
+  flex: none;
+  border-radius: var(--fui-radius-circular);
+  border: 2px solid var(--fui-stroke-2);
+  border-top-color: var(--fui-accent);
+  animation: fui-spinner-rotate var(--fui-duration-normal) linear infinite;
+  animation-duration: 1.25s;
+}
+
+.fui-spinner--small::before {
+  width: var(--fui-height-s);
+  height: var(--fui-height-s);
+}
+
+.fui-spinner--large::before {
+  width: var(--fui-height-l);
+  height: var(--fui-height-l);
+}
+
+@keyframes fui-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-spinner::before {
+    animation-duration: 3s;
+  }
+}

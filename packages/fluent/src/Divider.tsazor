@@ -1,0 +1,14 @@
+<hr class="@dividerClass" role="separator" aria-orientation="@orientation" />
+
+@code {
+    /** horizontal (default) | vertical. */
+    @Parameter() orientation: string = "horizontal";
+    /** default | subtle | stronger. */
+    @Parameter() appearance: string = "default";
+
+    private get dividerClass(): string {
+        let cls = this.orientation === "vertical" ? "fui-divider fui-divider--vertical" : "fui-divider";
+        if (this.appearance !== "default") cls += ` fui-divider--${this.appearance}`;
+        return cls;
+    }
+}

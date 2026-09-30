@@ -1,0 +1,44 @@
+@if (this.active) {
+    <div class="fui-tab-panel" role="tabpanel" id="@this.panelId" aria-labelledby="@this.labelledBy">@childContent</div>
+}
+
+@code {
+    /** Label shown in the parent Tabs' list. */
+    @Parameter() title: string = "";
+    /** Panel content (rendered only while the tab is active). */
+    @Parameter() childContent?: RenderFragment;
+
+    /** Resolved from the nearest Tabs ancestor (by cascade name). */
+    @CascadingParameter({ name: "FluentTabs" }) owner?: unknown;
+
+    private index = -1;
+
+    private get host(): unknown | undefined {
+        return this.owner;
+    }
+
+    get active(): boolean {
+        return (this.host as { activeIndex?: number } | undefined)?.activeIndex === this.index;
+    }
+
+    private get panelId(): string | null {
+        const p = this.host as { panelIdFor?: (i: number) => string | null } | undefined;
+        return p?.panelIdFor ? p.panelIdFor(this.index) : null;
+    }
+
+    private get labelledBy(): string | null {
+        const p = this.host as { tabIdFor?: (i: number) => string | null } | undefined;
+        return p?.tabIdFor ? p.tabIdFor(this.index) : null;
+    }
+
+    protected override onInitialized(): void {
+        const p = this.host as
+            { registerTab?: (tab: { title: string; setIndex(index: number): void }) => void } | undefined;
+        p?.registerTab?.(this);
+    }
+
+    /** @internal Called by the parent Tabs at registration. */
+    setIndex(index: number): void {
+        this.index = index;
+    }
+}

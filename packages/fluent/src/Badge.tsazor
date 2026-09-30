@@ -1,0 +1,16 @@
+<span class="@badgeClass">@childContent</span>
+
+@code {
+    /** Fills the badge pill: filled | subtle (Fluent 2 appearances). */
+    @Parameter() appearance: string = "filled";
+    /** Semantic color: brand | success | warning | error. */
+    @Parameter() color: string = "brand";
+    /** small | medium. */
+    @Parameter() size: string = "medium";
+    @Parameter() childContent?: RenderFragment;
+
+    private get badgeClass(): string {
+        return `fui-badge fui-badge--${this.appearance} fui-badge--${this.color}` +
+            (this.size === "small" ? " fui-badge--small" : "");
+    }
+}

@@ -1,0 +1,87 @@
+@inherits InputBase
+<div class="@this.wrapperClass">
+    @if (this.label) {
+        <label class="fui-input__label" for="@this.labelFor">@this.label</label>
+    }
+    <input id="@this.id" type="number" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    @if (this.message) {
+        <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
+    }
+</div>
+
+@code {
+    /** Optional field label. */
+    @Parameter() label?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    @Parameter() disabled: boolean = false;
+    @Parameter() required: boolean = false;
+    /** Native numeric bounds/step (strings stay forwardable; null skips). */
+    @Parameter() min: number | null = null;
+    @Parameter() max: number | null = null;
+    @Parameter() step: number | null = null;
+    /** Element id; needed for a `<label for>` association. */
+    @Parameter() id?: string;
+    /** Overrides the input's accessible name. */
+    @Parameter() ariaLabel?: string;
+
+    private get labelFor(): string | null {
+        return this.id ?? null;
+    }
+
+    private get displayValue(): string {
+        const value = this.currentValue;
+        return value === undefined || value === null ? "" : String(value);
+    }
+
+    private get wrapperClass(): string {
+        const base = "fui-input-wrapper";
+        if (this.fieldClass.includes("invalid")) return `${base} fui-input-wrapper--invalid`;
+        if (this.fieldClass) return `${base} fui-input-wrapper--valid`;
+        return base;
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        const attrs: Record<string, unknown> = { class: this.inputClass };
+        if (this.placeholder) attrs.placeholder = this.placeholder;
+        if (this.disabled) attrs.disabled = true;
+        if (this.required) attrs.required = true;
+        if (this.min !== null) attrs.min = this.min;
+        if (this.max !== null) attrs.max = this.max;
+        if (this.step !== null) attrs.step = this.step;
+        if (this.ariaLabel) attrs["aria-label"] = this.ariaLabel;
+        if (this.message) attrs["aria-describedby"] = this.messageId;
+        for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
+            if (name === "class") continue;
+            attrs[name] = value;
+        }
+        return attrs;
+    }
+
+    private get inputClass(): string {
+        const base = "fui-input";
+        if (this.fieldClass.includes("invalid")) return `${base} fui-input--invalid`;
+        if (this.fieldClass) return `${base} fui-input--valid`;
+        return base;
+    }
+
+    private get messageId(): string | null {
+        return this.id ? `${this.id}-message` : `fui-number-message`;
+    }
+
+    private get message(): string {
+        if (!this.editContext || !this.ValueExpression) return "";
+        const messages = this.editContext.getValidationMessages(this.ValueExpression);
+        return messages[0] ?? "";
+    }
+
+    private handleChange(e: Event): void {
+        const raw = (e.target as HTMLInputElement).value;
+        if (raw === "") {
+            this.currentValue = "" as never;
+            return;
+        }
+        const parsed = Number(raw);
+        this.currentValue = (Number.isNaN(parsed) ? raw : parsed) as never;
+    }
+}

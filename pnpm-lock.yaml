@@ -165,6 +165,28 @@ importers:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
 
+  apps/gallery:
+    dependencies:
+      '@tsazor/fluent':
+        specifier: workspace:*
+        version: link:../../packages/fluent
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+      '@tsazor/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin
+    devDependencies:
+      playwright-core:
+        specifier: ^1.63.0
+        version: 1.63.0
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.7
+        version: 7.3.6(@types/node@20.19.43)
+
   apps/sleipnir-ticker:
     dependencies:
       '@tsazor/components':
@@ -216,6 +238,30 @@ importers:
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
   packages/components:
+    devDependencies:
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@tsazor/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      happy-dom:
+        specifier: ^18.0.1
+        version: 18.0.1
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
+
+  packages/fluent:
     devDependencies:
       '@tsazor/compiler':
         specifier: workspace:*

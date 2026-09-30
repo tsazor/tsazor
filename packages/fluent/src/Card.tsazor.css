@@ -1,0 +1,41 @@
+/* Card — Fluent 2 surface with header/body/footer composition via slots. */
+
+.fui-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-m);
+  padding: var(--fui-spacing-l);
+  background: var(--fui-background-1);
+  border: 1px solid var(--fui-stroke-2);
+  border-radius: var(--fui-radius-lg);
+  color: var(--fui-foreground-1);
+}
+
+.fui-card--filled {
+  background: var(--fui-background-2);
+}
+
+/* Card header/footer helpers: app composes `<CardHeader>` inside the card's
+ * child content; no named child slots are needed. */
+
+.fui-card-header,
+.fui-card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
+}
+
+.fui-card-header {
+  padding-bottom: var(--fui-spacing-m);
+  border-bottom: 1px solid var(--fui-stroke-2);
+  font-size: var(--fui-font-size-body-lg);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-1);
+}
+
+.fui-card-footer {
+  padding-top: var(--fui-spacing-m);
+  margin-top: auto;
+  font-size: var(--fui-font-size-caption);
+  color: var(--fui-foreground-3);
+}

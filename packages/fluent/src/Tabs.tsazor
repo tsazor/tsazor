@@ -1,0 +1,89 @@
+<div class="fui-tabs">
+    <div class="fui-tabs__list" role="tablist" @onkeydown="this.handleKeydown" @ref="listElement">
+        @for (let i = 0; i < this.tabs.length; i++) {
+            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabIdFor(i)" aria-selected="@this.selectedText(i)" aria-controls="@this.panelIdFor(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@this.tabs[i]!.title</button>
+        }
+    </div>
+    <div class="fui-tabs__panels">@childContent</div>
+</div>
+
+@code {
+    @Parameter() id?: string;
+    /** Invoked after the selected tab changes (for stateful hosts). */
+    @Parameter() onSelected?: EventCallback<number>;
+    @Parameter() childContent?: RenderFragment;
+
+    readonly isCascadingValueSupplier = true;
+    /** The active index changes — the Tab children must re-render. */
+    readonly isFixed = false;
+    /** Tabs cascade themselves by name so Tab finds its parent. */
+    readonly cascadeName = "FluentTabs";
+    get cascadeValue(): unknown {
+        return this;
+    }
+
+    private tabs: { title: string; setIndex(index: number): void }[] = [];
+    private activeIndexInternal = 0;
+    private listElement?: HTMLElement;
+
+    get activeIndex(): number {
+        return this.activeIndexInternal;
+    }
+
+    /** @internal Called by Tab during its initialization. */
+    registerTab(tab: { title: string; setIndex(index: number): void }): void {
+        if (this.tabs.includes(tab)) return;
+        tab.setIndex(this.tabs.length);
+        this.tabs.push(tab);
+        // The tab list only exists after the children have registered, so the
+        // nav needs one more render pass than the initial one.
+        this.stateHasChangedInternal();
+    }
+
+    /** @internal Switches the active tab (no-op out of range or same index). */
+    select(index: number): void {
+        if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return;
+        this.activeIndexInternal = index;
+        this.stateHasChangedInternal();
+        this.onSelected?.invokeAsync(index);
+    }
+
+    private handleKeydown(e: KeyboardEvent): void {
+        let next = -1;
+        if (e.key === "ArrowRight") {
+            next = (this.activeIndexInternal + 1) % this.tabs.length;
+        } else if (e.key === "ArrowLeft") {
+            next = (this.activeIndexInternal - 1 + this.tabs.length) % this.tabs.length;
+        } else if (e.key === "Home") {
+            next = 0;
+        } else if (e.key === "End") {
+            next = this.tabs.length - 1;
+        }
+        if (next < 0) return;
+        e.preventDefault();
+        this.select(next);
+        this.listElement?.querySelectorAll("button")[next]?.focus();
+    }
+
+    /** aria-selected as a literal attribute text value. */
+    private selectedText(index: number): string {
+        return this.activeIndexInternal === index ? "true" : "false";
+    }
+
+    private tabClassFor(index: number): string {
+        return this.activeIndexInternal === index ? "fui-tab fui-tab--active" : "fui-tab";
+    }
+
+    /** Roving tabindex: only the selected tab is in the tab order. */
+    private tabIndexOf(index: number): string {
+        return this.activeIndexInternal === index ? "0" : "-1";
+    }
+
+    private tabIdFor(index: number): string | null {
+        return this.id ? `${this.id}-tab-${index}` : null;
+    }
+
+    private panelIdFor(index: number): string | null {
+        return this.id ? `${this.id}-panel-${index}` : null;
+    }
+}

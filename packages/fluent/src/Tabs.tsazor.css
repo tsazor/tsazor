@@ -1,0 +1,70 @@
+/* Tabs — Fluent 2 tablist with underline indicator. */
+
+.fui-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-m);
+}
+
+.fui-tabs__list {
+  display: flex;
+  gap: var(--fui-gap-sm);
+  border-bottom: 1px solid var(--fui-stroke-2);
+}
+
+.fui-tab {
+  height: var(--fui-height-l);
+  padding: 0 var(--fui-spacing-m);
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-2);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--fui-radius-sm) var(--fui-radius-sm) 0 0;
+  cursor: pointer;
+  transition:
+    color var(--fui-duration-fast) var(--fui-ease-standard),
+    border-color var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-tab:hover {
+  color: var(--fui-foreground-1);
+}
+
+.fui-tab:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+.fui-tab--active {
+  color: var(--fui-foreground-1);
+  border-bottom-color: var(--fui-accent);
+}
+
+.fui-tab-panel {
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+  font-family: var(--fui-font-family);
+  animation: fui-tab-enter var(--fui-duration-gentle) var(--fui-ease-standard);
+}
+
+@keyframes fui-tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-tab-panel {
+    animation: none;
+  }
+}

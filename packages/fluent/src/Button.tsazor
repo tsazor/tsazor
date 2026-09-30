@@ -1,0 +1,32 @@
+<button type="@type" class="@buttonClass" disabled="@disabled" @onclick="handleClick">@childContent</button>
+
+@code {
+    /** Fluent 2 appearance: primary | secondary | subtle | transparent. */
+    @Parameter() appearance: string = "secondary";
+    /** rounded (default) | circular. */
+    @Parameter() shape: string = "rounded";
+    /** small | medium | large. */
+    @Parameter() size: string = "medium";
+    @Parameter() disabled: boolean = false;
+    @Parameter() type: string = "button";
+    /** Accessible label for icon-only buttons. */
+    @Parameter() ariaLabel?: string;
+    /** Associates the button with an id-list for screen readers. */
+    @Parameter() ariaDescribedBy?: string;
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    @Parameter() childContent?: RenderFragment;
+
+    private get buttonClass(): string {
+        let cls = `fui-button fui-button--${this.appearance}`;
+        if (this.shape === "circular") cls += " fui-button--circular";
+        if (this.size === "small") cls += " fui-button--small";
+        else if (this.size === "large") cls += " fui-button--large";
+        if (this.disabled) cls += " fui-button--disabled";
+        return cls;
+    }
+
+    private handleClick(e: MouseEvent): void {
+        if (this.disabled) return;
+        this.onClick?.invokeAsync(e);
+    }
+}
