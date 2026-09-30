@@ -8,13 +8,23 @@
                   buildRenderTree(b: RenderTreeBuilder): void { … }
               }
 TS      ──(esbuild)──►  JS (Sourcemap-Kette Compiler → esbuild)
-Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  DomRenderer-Patch
+Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit-Liste ──(DomRenderer)──►  DOM
 ```
 
 - **RenderTree:** flaches Frame-Array (`FrameType`: Element, Text, Attribute, Component,
   Region, ElementReferenceCapture, Markup) mit monotonen Sequenz-Nummern pro Pfad —
   Grundlage des Blazor-ähnlichen Diffs (Sequenz-Matching, `@key`-Support).
-- **Renderer/DomRenderer:** direkte DOM-Patches (keine Zwischen-VDOM), Property-first
+- **Diff** (`render-tree/diff.ts`): Port von Blazors `RenderTreeDiffBuilder` — geordneter
+  Zwei-Zeiger-Walk über Sequenznummern, Key-Dictionary nur wenn Keys vorkommen, Key-Miss ⇒
+  Remove + Insert, doppelte Keys ⇒ Fehler. Reine Daten ohne DOM-Zugriff: Edit-Liste
+  (`RenderTreeEditType`, Blazors Edit-Typen mit Sibling-Indizes, `StepIn`/`StepOut`,
+  Permutationslisten) plus Kind-Komponenten zum Instanziieren/Behalten und zum Disposen
+  (auch verschachtelt in entfernten Elementen). Der erste Render ist ein Diff gegen den
+  leeren Baum.
+- **Renderer/DomRenderer:** Renderer instanziiert/disposed laut Diff, der DomRenderer wendet
+  die Edits an (Sibling-Index → DOM-Knoten per Vorwärts-Cursor; Komponenten- und
+  Markup-Ausgaben sind Kommentar-begrenzte Bereiche, die als Einheit verschoben/entfernt
+  werden). Direkte DOM-Patches (keine Zwischen-VDOM), Property-first
   für `value`/`checked`, Event-Listener direkt am Knoten (bewusst: Blazors Delegation
   existiert wegen der WASM-Bridge, die hier entfällt).
 - **Dispatcher/Batching:** Microtask-Flush; `EventCallback` re-rendert den Owner nach
