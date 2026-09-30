@@ -140,9 +140,7 @@ describe("R4 — moving logical ranges moves their content", () => {
     expect(h.text()).toBe("NM");
   });
 
-  // Since B1 an insert moves nothing; this now fails on R5 instead (shouldRender=false
-  // also suppresses the first render, so there is no "S" to keep).
-  it.fails("a component that skips re-rendering keeps its content between its markers", async () => {
+  it("a component that skips re-rendering keeps its content between its markers", async () => {
     class Static extends ComponentBase {
       protected override shouldRender(): boolean {
         return false;

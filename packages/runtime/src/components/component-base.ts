@@ -6,9 +6,23 @@ import { findParameterMetadata } from "./parameter-metadata.js";
 import { getCurrentServices } from "../di/service-provider.js";
 
 /**
+ * The settled promise a lifecycle returns when it completed synchronously;
+ * the renderer does not track it (nothing is in flight).
+ * @internal
+ */
+export const completedLifecycle: Promise<void> = Promise.resolve();
+
+/**
+ * The compiler emits `ValueExpression` for every component `@bind-Value`;
+ * Razor only does so when the component declares that parameter, which needs
+ * parameter metadata (roadmap 2.2). Until then an undeclared one is dropped
+ * instead of being an unknown-parameter error.
+ */
+const BIND_VALUE_EXPRESSION = "ValueExpression";
+/**
  * Blazor's ComponentBase. Sync-first lifecycle: hooks may return a Promise;
- * when they do, the renderer orchestrates renders around the awaits just
- * like Blazor's async lifecycle orchestration.
+ * when they do, the component renders around the awaits exactly like
+ * Blazor's async lifecycle orchestration (see setParametersAsync).
  */
 export abstract class ComponentBase {
   /** @internal Assigned by the renderer at instantiation time. */
@@ -20,49 +34,64 @@ export abstract class ComponentBase {
   private initialized = false;
   private hasPendingRender = false;
   private firstRenderDone = false;
+  private hasCalledOnAfterRender = false;
   private readonly afterRenderCallbacks: Array<(firstRender: boolean) => void | Promise<void>> = [];
 
   /**
-   * Blazor's SetParametersAsync. Parameter values are applied synchronously
-   * first (so cascading values resolve correctly for children created in the
-   * same render walk — a documented deviation from Blazor's ordering, where
-   * OnInitialized runs before parameter application), then the lifecycle runs.
+   * Blazor's SetParametersAsync: parameter values are applied first (an
+   * unknown parameter throws, as in Blazor), then the first call runs
+   * RunInitAndSetParametersAsync, later calls CallOnParametersSetAsync.
+   *
+   * Hooks that complete synchronously continue synchronously, so a sync
+   * lifecycle requests its render while the caller (the parent's render pass)
+   * runs — the child renders in the same batch, exactly once. A hook that
+   * returns a Promise renders the state its synchronous part produced right
+   * away (loading state) and continues after the Promise settled. Deviation:
+   * Blazor skips that intermediate render when the Task already completed
+   * synchronously; a JS Promise's state cannot be inspected synchronously, so
+   * an `async` hook without a real await renders once more here.
    */
   setParametersAsync(parameters: ParameterView): Promise<void> {
-    const wasInitialized = this.initialized;
+    this.applyParameterValues(parameters);
     if (!this.initialized) {
       this.initialized = true;
+      return this.runInitAndSetParameters();
     }
-    this.applyParameterValues(parameters);
-    return this.runLifecycle(!wasInitialized);
+    return this.callOnParametersSet();
+  }
+
+  /** Blazor's RunInitAndSetParametersAsync. */
+  private runInitAndSetParameters(): Promise<void> {
+    const initialized = this.onInitialized();
+    if (isPromiseLike(initialized)) {
+      // Render after the synchronous part of onInitialized (loading state);
+      // callOnParametersSet renders again once it completed.
+      this.stateHasChanged();
+      return Promise.resolve(initialized).then(() => this.callOnParametersSet());
+    }
+    return this.callOnParametersSet();
   }
 
   /**
-   * Blazor's RunInitAndSetParametersAsync: hooks that complete synchronously
-   * continue synchronously, so a sync lifecycle requests its render while the
-   * caller (the parent's render pass) runs — the child renders in the same
-   * batch. Only a returned Promise is awaited (then renders once at the end).
+   * Blazor's CallOnParametersSetAsync: always renders after (the synchronous
+   * part of) onParametersSet; a returned Promise renders again on completion
+   * (CallStateHasChangedOnAsyncCompletion).
    */
-  private runLifecycle(runInitialize: boolean): Promise<void> {
-    if (runInitialize) {
-      const initialized = this.onInitialized();
-      if (isPromiseLike(initialized)) {
-        return Promise.resolve(initialized).then(() => this.runParametersSet());
-      }
-    }
-    return this.runParametersSet();
-  }
-
-  private runParametersSet(): Promise<void> {
+  private callOnParametersSet(): Promise<void> {
     const parametersSet = this.onParametersSet();
+    this.stateHasChanged();
     if (isPromiseLike(parametersSet)) {
       return Promise.resolve(parametersSet).then(() => this.stateHasChanged());
     }
-    this.stateHasChanged();
-    return Promise.resolve();
+    return completedLifecycle;
   }
 
-  /** Writes decorated parameter properties (normal + resolved cascading ones). */
+  /**
+   * Writes decorated parameter properties (normal + resolved cascading ones).
+   * A parameter the component does not declare (case-insensitive) goes to
+   * the captureUnmatchedValues property, or throws like Blazor's
+   * ParameterView.SetParameterProperties when there is none.
+   */
   applyParameterValues(parameters: ParameterView): void {
     const metadata = this.getAllParameterMetadata();
     // Blazor matches attribute names to parameters case-insensitively.
@@ -87,9 +116,13 @@ export abstract class ComponentBase {
       const meta = propertyName ? metadata.get(propertyName) : undefined;
       if (meta && !meta.captureUnmatchedValues) {
         (this as unknown as Record<string, unknown>)[meta.propertyName] = value;
-      } else if (captureProperty !== null && !meta) {
+      } else if (!meta) {
         // Unmatched attribute → the capture dictionary (Blazor semantics).
-        captureTarget![name] = value;
+        if (captureProperty !== null) {
+          captureTarget![name] = value;
+        } else if (name !== BIND_VALUE_EXPRESSION) {
+          throw unknownParameterError(this, name);
+        }
       }
     }
     if (captureProperty !== null) {
@@ -106,7 +139,7 @@ export abstract class ComponentBase {
   /** Blazor's OnAfterRender / OnAfterRenderAsync. */
   protected onAfterRender(firstRender: boolean): void | Promise<void> {}
 
-  /** Blazor's ShouldRender. */
+  /** Blazor's ShouldRender: consulted by stateHasChanged, never for the first render. */
   protected shouldRender(): boolean {
     return true;
   }
@@ -116,10 +149,24 @@ export abstract class ComponentBase {
     this.stateHasChangedInternal();
   }
 
-  /** @internal Public re-render request (used by the event system). */
+  /**
+   * @internal Public re-render request (used by the event system). Blazor's
+   * StateHasChanged: at most one queued render; the first render always
+   * happens, later ones only when shouldRender() agrees.
+   */
   stateHasChangedInternal(): void {
+    if (this.hasPendingRender || !this.renderHandle) return;
+    if (!this.firstRenderDone || this.shouldRender()) {
+      this.hasPendingRender = true;
+      this.renderHandle.render();
+    }
+  }
+
+  /** @internal Queues a render regardless of shouldRender (hot reload, Blazor's IsRenderingOnMetadataUpdate). */
+  forceRenderInternal(): void {
+    if (this.hasPendingRender || !this.renderHandle) return;
     this.hasPendingRender = true;
-    this.renderHandle?.render();
+    this.renderHandle.render();
   }
 
   /**
@@ -133,15 +180,25 @@ export abstract class ComponentBase {
     this.afterRenderCallbacks.push(callback);
   }
 
-  /** @internal Called by the renderer after DOM patching completed. */
-  async notifyAfterRender(firstRender: boolean): Promise<void> {
-    if (this.afterRenderCallbacks.length > 0) {
-      const callbacks = this.afterRenderCallbacks.splice(0);
+  /**
+   * @internal Blazor's IHandleAfterRender.OnAfterRenderAsync, called by the
+   * renderer once the batch that rendered this component completed.
+   * `firstRender` is true on the first call per instance. Like Blazor, a
+   * completed (async) onAfterRender does not trigger a render.
+   */
+  notifyAfterRender(): void | Promise<void> {
+    const firstRender = !this.hasCalledOnAfterRender;
+    this.hasCalledOnAfterRender = true;
+    if (this.afterRenderCallbacks.length === 0) {
+      return this.onAfterRender(firstRender);
+    }
+    const callbacks = this.afterRenderCallbacks.splice(0);
+    return (async () => {
       for (const cb of callbacks) {
         await cb(firstRender);
       }
-    }
-    await this.onAfterRender(firstRender);
+      await this.onAfterRender(firstRender);
+    })();
   }
 
   /** @internal Whether a render is queued but not yet flushed. */
@@ -152,11 +209,6 @@ export abstract class ComponentBase {
   /** @internal Renderer entry: builds the current output (wraps protected buildRenderTree). */
   renderCurrentOutput(builder: RenderTreeBuilder): void {
     this.buildRenderTree(builder);
-  }
-
-  /** @internal Renderer entry: shouldRender check. */
-  shouldRenderInternal(): boolean {
-    return this.shouldRender();
   }
 
   /** @internal */
@@ -199,6 +251,27 @@ export abstract class ComponentBase {
   }
 }
 
-function isPromiseLike(value: unknown): value is PromiseLike<void> {
+/** @internal */
+export function isPromiseLike(value: unknown): value is PromiseLike<void> {
   return typeof (value as PromiseLike<void> | null | undefined)?.then === "function";
+}
+
+/**
+ * Blazor's "Object of type 'X' does not have a property matching the name
+ * 'Y'" (ParameterView.SetParameterProperties), plus its variant for a
+ * property that exists but is not a parameter.
+ */
+function unknownParameterError(component: ComponentBase, name: string): Error {
+  const type = (component.constructor as { name?: string }).name || "(anonymous component)";
+  const lower = name.toLowerCase();
+  let property: string | undefined;
+  for (let target: object | null = component; target !== null && target !== ComponentBase.prototype; target = Object.getPrototypeOf(target)) {
+    property = Object.getOwnPropertyNames(target).find((key) => key.toLowerCase() === lower);
+    if (property !== undefined) break;
+  }
+  return new Error(
+    property !== undefined
+      ? `Object of type '${type}' has a property matching the name '${name}', but it is not declared as @Parameter() or @CascadingParameter().`
+      : `Object of type '${type}' does not have a property matching the name '${name}'.`,
+  );
 }

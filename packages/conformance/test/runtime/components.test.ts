@@ -115,7 +115,7 @@ describe("R12 — cascading updates reach subscribers directly", () => {
 });
 
 describe("parameters", () => {
-  it.fails("T3 — an unknown parameter is reported (Blazor throws)", async () => {
+  it("T3 — an unknown parameter is reported (Blazor throws)", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     let rejected = false;
     try {
