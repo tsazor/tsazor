@@ -205,6 +205,23 @@ function setBooleanState(element: Element, name: "checked" | "selected", on: boo
   }
 }
 
+/**
+ * Blazor's BrowserRenderer.normalizeInputValue: Chromium misbehaves when a time
+ * value carries ":00" seconds, and without a `step` attribute any seconds part
+ * is invalid — so the seconds are trimmed in both cases (`type` and `step` are
+ * read as currently set, like Blazor).
+ */
+function normalizeInputValue(value: string, input: HTMLInputElement): string {
+  switch (input.getAttribute("type")) {
+    case "time":
+      return value.length === 8 && (value.endsWith("00") || !input.hasAttribute("step")) ? value.substring(0, 5) : value;
+    case "datetime-local":
+      return value.length === 19 && (value.endsWith("00") || !input.hasAttribute("step")) ? value.substring(0, 16) : value;
+    default:
+      return value;
+  }
+}
+
 function applyValue(element: Element, value: unknown, journal: DomJournal | null): boolean {
   switch (element.tagName) {
     case "INPUT":
@@ -219,6 +236,7 @@ function applyValue(element: Element, value: unknown, journal: DomJournal | null
         text = "";
       } else {
         text = value === true ? "" : String(value);
+        if (element.tagName === "INPUT") text = normalizeInputValue(text, input);
       }
       if (input.value !== text) {
         journal?.property(input, "value");

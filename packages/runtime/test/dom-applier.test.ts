@@ -614,3 +614,29 @@ describe("applier — event modifier flags (A5, review C15)", () => {
     expect(click(h.container.querySelector("a")!).defaultPrevented).toBe(true);
   });
 });
+
+describe("input value normalization (Blazor normalizeInputValue)", () => {
+  async function inputWith(attrs: Record<string, string>): Promise<string> {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    const state = renderer.renderInContainer(Fn, container);
+    (state.component as Fn).build = (b) => {
+      b.openElement(0, "input");
+      let seq = 1;
+      for (const [name, value] of Object.entries(attrs)) b.addAttribute(seq++, name, value);
+      b.closeElement();
+    };
+    (state.component as unknown as { stateHasChanged(): void }).stateHasChanged();
+    await renderer.waitUntilIdle();
+    return container.querySelector("input")!.value;
+  }
+
+  it("trims :00 seconds and seconds without step on time/datetime-local, keeps them otherwise", async () => {
+    expect(await inputWith({ type: "time", value: "13:45:00" })).toBe("13:45");
+    expect(await inputWith({ type: "time", value: "13:45:30" })).toBe("13:45");
+    expect(await inputWith({ type: "time", step: "1", value: "13:45:30" })).toBe("13:45:30");
+    expect(await inputWith({ type: "datetime-local", value: "2026-09-30T13:45:00" })).toBe("2026-09-30T13:45");
+    expect(await inputWith({ type: "datetime-local", step: "1", value: "2026-09-30T13:45:30" })).toBe("2026-09-30T13:45:30");
+    expect(await inputWith({ type: "text", value: "13:45:00" })).toBe("13:45:00");
+  });
+});
