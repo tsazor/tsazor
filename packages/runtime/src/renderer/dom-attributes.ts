@@ -35,10 +35,14 @@ export interface EventHandlerHost {
 
 interface EventHandlerRecord {
   readonly eventName: string;
-  readonly host: EventHandlerHost;
-  readonly state: ComponentState;
-  callback: EventCallback<never>;
+  host: EventHandlerHost;
+  state: ComponentState;
+  /** null: no handler, only modifier flags (a listener-less preventDefault). */
+  callback: EventCallback<never> | null;
+  /** Flags passed along with the handler frame (`addEventHandler`). */
   flags: number;
+  /** Flags set by `__internal_preventDefault_<event>` / `__internal_stopPropagation_<event>` attributes. */
+  modifierFlags: number;
   readonly listener: (event: Event) => void;
 }
 
@@ -72,6 +76,11 @@ export function setAttributeValue(
   flags: number,
   journal: DomJournal | null,
 ): void {
+  const modifier = eventModifierOf(name);
+  if (modifier !== null) {
+    setEventModifier(host, state, element, modifier.eventName, modifier.flag, !isAbsent(value), journal);
+    return;
+  }
   if (value instanceof EventCallback || typeof value === "function") {
     // Unbound function: no owning component, so no automatic re-render.
     const callback = value instanceof EventCallback ? (value as EventCallback<never>) : EventCallback.unbound(value as (arg: never) => void | Promise<void>);
@@ -82,7 +91,7 @@ export function setAttributeValue(
     return;
   }
   // Any other value replaces a handler bound under this name.
-  if (stateOf(element)[HANDLERS] !== undefined) removeEventHandler(element, eventNameOf(name), journal);
+  if (stateOf(element)[HANDLERS] !== undefined) clearEventHandler(element, eventNameOf(name), journal);
 
   if (applyFormProperty(element, name, value, journal)) return;
   // Blazor's conditional-attribute semantics: null/undefined = absent
@@ -102,6 +111,25 @@ function eventNameOf(attributeName: string): string {
   return attributeName.length > 2 && (attributeName.charCodeAt(0) | 32) === 111 && (attributeName.charCodeAt(1) | 32) === 110
     ? attributeName.slice(2).toLowerCase()
     : attributeName;
+}
+
+const PREVENT_DEFAULT_PREFIX = "__internal_preventDefault_";
+const STOP_PROPAGATION_PREFIX = "__internal_stopPropagation_";
+
+/**
+ * Blazor's event-modifier attributes (`@onclick:preventDefault="cond"` ⇒
+ * `__internal_preventDefault_onclick`): a flag of the element's listener for
+ * that event, not a DOM attribute. Returns null for any other name.
+ */
+function eventModifierOf(name: string): { eventName: string; flag: number } | null {
+  if (name.length < 12 || name.charCodeAt(0) !== 95 /* _ */ || !name.startsWith("__internal_")) return null;
+  if (name.startsWith(PREVENT_DEFAULT_PREFIX)) {
+    return { eventName: eventNameOf(name.slice(PREVENT_DEFAULT_PREFIX.length)), flag: EventHandlerFlags.PreventDefault };
+  }
+  if (name.startsWith(STOP_PROPAGATION_PREFIX)) {
+    return { eventName: eventNameOf(name.slice(STOP_PROPAGATION_PREFIX.length)), flag: EventHandlerFlags.StopPropagation };
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -292,36 +320,89 @@ function setEventHandler(
   flags: number,
   journal: DomJournal | null,
 ): void {
-  const map = handlersOf(element);
-  const existing = map.get(eventName);
+  const existing = handlersOf(element).get(eventName);
   if (existing !== undefined) {
-    // Same listener, new handler: no DOM listener churn per changed callback.
-    journal?.restore(existing, restoreCallback, existing.callback);
-    journal?.restore(existing, restoreFlags, existing.flags);
+    // Same listener, new handler: no DOM listener churn per changed callback
+    // (the record may exist for a modifier flag only).
+    journal?.restore(existing, restoreHandler, { host: existing.host, state: existing.state, callback: existing.callback, flags: existing.flags });
+    existing.host = host;
+    existing.state = state;
     existing.callback = callback;
     existing.flags = flags;
     return;
   }
+  attachRecord(host, state, element, eventName, callback, flags, journal);
+}
+
+/**
+ * Turns a modifier flag of `eventName`'s listener on or off. A flag without a
+ * handler still gets a listener (Blazor: `@onsubmit:preventDefault` alone
+ * prevents the submit); the listener goes once neither remains.
+ */
+function setEventModifier(
+  host: EventHandlerHost,
+  state: ComponentState,
+  element: Element,
+  eventName: string,
+  flag: number,
+  on: boolean,
+  journal: DomJournal | null,
+): void {
+  let record = stateOf(element)[HANDLERS]?.get(eventName);
+  if (record === undefined) {
+    if (!on) return;
+    record = attachRecord(host, state, element, eventName, null, 0, journal);
+  }
+  const next = on ? record.modifierFlags | flag : record.modifierFlags & ~flag;
+  if (next === record.modifierFlags) return;
+  journal?.restore(record, restoreModifierFlags, record.modifierFlags);
+  record.modifierFlags = next;
+  if (next === 0 && record.callback === null) detachRecord(element, record, journal);
+}
+
+/** Removes the handler bound under `eventName`; modifier flags keep the listener. */
+function clearEventHandler(element: Element, eventName: string, journal: DomJournal | null): void {
+  const record = stateOf(element)[HANDLERS]?.get(eventName);
+  if (record === undefined || record.callback === null) return;
+  if (record.modifierFlags === 0) {
+    detachRecord(element, record, journal);
+    return;
+  }
+  journal?.restore(record, restoreHandler, { host: record.host, state: record.state, callback: record.callback, flags: record.flags });
+  record.callback = null;
+  record.flags = 0;
+}
+
+function attachRecord(
+  host: EventHandlerHost,
+  state: ComponentState,
+  element: Element,
+  eventName: string,
+  callback: EventCallback<never> | null,
+  flags: number,
+  journal: DomJournal | null,
+): EventHandlerRecord {
   const record: EventHandlerRecord = {
     eventName,
     host,
     state,
     callback,
     flags,
+    modifierFlags: 0,
     listener: (event: Event): void => {
-      if (record.flags & EventHandlerFlags.PreventDefault) event.preventDefault();
-      if (record.flags & EventHandlerFlags.StopPropagation) event.stopPropagation();
-      record.host.invokeEventHandler(record.state, record.callback, event);
+      const effective = record.flags | record.modifierFlags;
+      if (effective & EventHandlerFlags.PreventDefault) event.preventDefault();
+      if (effective & EventHandlerFlags.StopPropagation) event.stopPropagation();
+      if (record.callback !== null) record.host.invokeEventHandler(record.state, record.callback, event);
     },
   };
   journal?.restore(element, detachHandler, record);
   element.addEventListener(eventName, record.listener);
-  map.set(eventName, record);
+  handlersOf(element).set(eventName, record);
+  return record;
 }
 
-function removeEventHandler(element: Element, eventName: string, journal: DomJournal | null): void {
-  const record = stateOf(element)[HANDLERS]?.get(eventName);
-  if (record === undefined) return;
+function detachRecord(element: Element, record: EventHandlerRecord, journal: DomJournal | null): void {
   journal?.restore(element, attachHandler, record);
   detachHandler(element, record);
 }
@@ -341,10 +422,15 @@ function attachHandler(element: Element, record: EventHandlerRecord): void {
   handlersOf(element).set(record.eventName, record);
 }
 
-function restoreCallback(record: EventHandlerRecord, callback: EventCallback<never>): void {
-  record.callback = callback;
+type HandlerSnapshot = Pick<EventHandlerRecord, "host" | "state" | "callback" | "flags">;
+
+function restoreHandler(record: EventHandlerRecord, saved: HandlerSnapshot): void {
+  record.host = saved.host;
+  record.state = saved.state;
+  record.callback = saved.callback;
+  record.flags = saved.flags;
 }
 
-function restoreFlags(record: EventHandlerRecord, flags: number): void {
-  record.flags = flags;
+function restoreModifierFlags(record: EventHandlerRecord, flags: number): void {
+  record.modifierFlags = flags;
 }
