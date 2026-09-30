@@ -1,5 +1,5 @@
 /**
- * End-to-end integration: compiles a real demo page (.tazor) through the same
+ * End-to-end integration: compiles a real demo page (.tsazor) through the same
  * 2-pass pipeline as the vite plugin, evaluates the module and mounts it in
  * happy-dom. Guards the full compiler → runtime → DOM path against
  * regressions that hand-built render trees cannot catch (e.g. the Razor
@@ -7,14 +7,14 @@
  * to be invoked with the wrong receiver, so the owning page never re-rendered).
  */
 import { describe, expect, it } from "vitest";
-import { compile } from "@tasor/compiler";
-import { collectCodeImports, collectImports, createFileContext } from "@tasor/workspace";
+import { compile } from "@tsazor/compiler";
+import { collectCodeImports, collectImports, createFileContext } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { Renderer } from "@tasor/runtime";
+import { Renderer } from "@tsazor/runtime";
 
-const pagePath = path.resolve("../../apps/demo/src/Pages/ComponentsDemo.tazor");
+const pagePath = path.resolve("../../apps/demo/src/Pages/ComponentsDemo.tsazor");
 const root = path.resolve("../../apps/demo");
 
 /** Same pipeline as the vite plugin / library build: 2-pass compile + esbuild. */

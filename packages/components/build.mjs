@@ -1,7 +1,7 @@
 /**
- * Library build for @tasor/components: compiles every src/*.tazor through the
+ * Library build for @tsazor/components: compiles every src/*.tsazor through the
  * real compiler + workspace resolution, transpiles with esbuild and rewrites
- * sibling .tazor imports to the built .js outputs. The bundle itself is
+ * sibling .tsazor imports to the built .js outputs. The bundle itself is
  * esbuild-bundled to a scratch runner first (raw node ESM cannot load the
  * compiler's extensionless dist imports).
  */

@@ -1,8 +1,8 @@
 {
-  "name": "@tasor/vite-plugin",
+  "name": "@tsazor/vite-plugin",
   "version": "0.1.0",
   "type": "module",
-  "description": "Vite plugin for Tasor (.tazor): compile, route manifest, HMR.",
+  "description": "Vite plugin for Tsazor (.tsazor): compile, route manifest, HMR.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -21,8 +21,8 @@
   "dependencies": {
     "@jridgewell/gen-mapping": "^0.3.8",
     "@jridgewell/trace-mapping": "^0.3.25",
-    "@tasor/compiler": "workspace:*",
-    "@tasor/workspace": "workspace:*",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
     "esbuild": "^0.28.2",
     "postcss": "^8.5.6"
   },

@@ -1,5 +1,5 @@
 /**
- * TasorTypeService tests over a temp workspace: real ts.LanguageService over
+ * TsazorTypeService tests over a temp workspace: real ts.LanguageService over
  * shadow modules — inheritance through the code-behind sidecar, imports from
  * typed .ts files, cross-shadow component chains, and the variant-patch
  * completion mechanism.
@@ -9,25 +9,25 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { TasorTypeService, shadowOffsetToPos, type ShadowEntry } from "../src/ts-service";
+import { TsazorTypeService, shadowOffsetToPos, type ShadowEntry } from "../src/ts-service";
 
 let root = "";
-let service: TasorTypeService;
+let service: TsazorTypeService;
 let ticker: ShadowEntry | null = null;
 let alert: ShadowEntry | null = null;
 
 beforeAll(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "tasor-lsp-ts-"));
+  root = await mkdtemp(path.join(tmpdir(), "tsazor-lsp-ts-"));
   await mkdir(path.join(root, "Pages"), { recursive: true });
   await mkdir(path.join(root, "Shared"), { recursive: true });
-  await writeFile(path.join(root, "_Imports.tazor"), "@using ./Shared\n");
+  await writeFile(path.join(root, "_Imports.tsazor"), "@using ./Shared\n");
 
-  // @tasor/runtime stub: typed ComponentBase + RenderTreeBuilder + Parameter.
-  const rt = path.join(root, "node_modules", "@tasor", "runtime");
+  // @tsazor/runtime stub: typed ComponentBase + RenderTreeBuilder + Parameter.
+  const rt = path.join(root, "node_modules", "@tsazor", "runtime");
   await mkdir(rt, { recursive: true });
   writeFileSync(
     path.join(rt, "package.json"),
-    JSON.stringify({ name: "@tasor/runtime", version: "0.1.0", types: "./index.d.ts" }),
+    JSON.stringify({ name: "@tsazor/runtime", version: "0.1.0", types: "./index.d.ts" }),
   );
   writeFileSync(
     path.join(rt, "index.d.ts"),
@@ -52,9 +52,9 @@ beforeAll(async () => {
 
   // Code-behind sidecar extends the runtime base and owns a typed store.
   await writeFile(
-    path.join(root, "Pages", "Ticker.tazor.ts"),
+    path.join(root, "Pages", "Ticker.tsazor.ts"),
     [
-      'import { ComponentBase } from "@tasor/runtime";',
+      'import { ComponentBase } from "@tsazor/runtime";',
       'import { TickerStore } from "./TickerStore";',
       "",
       "export default class TickerBase extends ComponentBase {",
@@ -65,9 +65,9 @@ beforeAll(async () => {
   );
   // Own sidecars for the Probe/Prefix test docs (inherited `ticker`).
   const probeSidecar =
-    'import { ComponentBase } from "@tasor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class %CLASS%Base extends ComponentBase {\n    ticker = new TickerStore();\n}\n';
-  await writeFile(path.join(root, "Pages", "Probe.tazor.ts"), probeSidecar.replace("%CLASS%", "Probe"));
-  await writeFile(path.join(root, "Pages", "Prefix.tazor.ts"), probeSidecar.replace("%CLASS%", "Prefix"));
+    'import { ComponentBase } from "@tsazor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class %CLASS%Base extends ComponentBase {\n    ticker = new TickerStore();\n}\n';
+  await writeFile(path.join(root, "Pages", "Probe.tsazor.ts"), probeSidecar.replace("%CLASS%", "Probe"));
+  await writeFile(path.join(root, "Pages", "Prefix.tsazor.ts"), probeSidecar.replace("%CLASS%", "Prefix"));
   await writeFile(
     path.join(root, "Pages", "TickerStore.ts"),
     [
@@ -84,11 +84,11 @@ beforeAll(async () => {
     ].join("\n"),
   );
   await writeFile(
-    path.join(root, "Shared", "Alert.tazor"),
+    path.join(root, "Shared", "Alert.tsazor"),
     '<div class="alert">@Variant</div>\n\n@code {\n    @Parameter() Variant?: string;\n}\n',
   );
   await writeFile(
-    path.join(root, "Pages", "Ticker.tazor"),
+    path.join(root, "Pages", "Ticker.tsazor"),
     [
       "<Alert Variant=\"@mode\" />",
       "<p>@ticker.points.length</p>",
@@ -100,9 +100,9 @@ beforeAll(async () => {
     ].join("\n"),
   );
 
-  service = new TasorTypeService(root);
-  alert = await service.ensureTazor(path.join(root, "Shared", "Alert.tazor"));
-  ticker = await service.ensureTazor(path.join(root, "Pages", "Ticker.tazor"));
+  service = new TsazorTypeService(root);
+  alert = await service.ensureTsazor(path.join(root, "Shared", "Alert.tsazor"));
+  ticker = await service.ensureTsazor(path.join(root, "Pages", "Ticker.tsazor"));
 });
 
 afterAll(async () => {
@@ -110,7 +110,7 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("TasorTypeService", () => {
+describe("TsazorTypeService", () => {
   it("type-checks the shadow graph across the cross-shadow component chain", async () => {
     // With Alert's shadow registered, the whole graph resolves cleanly.
     const diags = service.semanticDiagnosticsOnShadow(ticker!);
@@ -126,7 +126,7 @@ describe("TasorTypeService", () => {
       "    probe = this.",
       "}",
     ].join("\n");
-    const entry = await service.openTazor(path.join(root, "Pages", "Probe.tazor"), source);
+    const entry = await service.openTsazor(path.join(root, "Pages", "Probe.tsazor"), source);
     expect(entry).not.toBeNull();
     const genLine = entry!.shadow.code.split("\n").findIndex((l) => l.includes("probe = this."));
     expect(genLine).toBeGreaterThan(0);
@@ -140,8 +140,8 @@ describe("TasorTypeService", () => {
   });
 
   it("completes via the variant patch on a bare markup prefix", async () => {
-    const entry = await service.openTazor(
-      path.join(root, "Pages", "Prefix.tazor"),
+    const entry = await service.openTsazor(
+      path.join(root, "Pages", "Prefix.tsazor"),
       "<p>@ti</p>\n\n@code {\n    priceText = \"\";\n}\n",
     );
     expect(entry).not.toBeNull();
@@ -170,7 +170,7 @@ describe("TasorTypeService", () => {
     // `ticker` (source col 4) → the code-behind sidecar member declaration.
     const tickerGen = ticker!.shadow.map.srcToGen(1, 5);
     const defs1 = service.definitionOnShadow(ticker!, tickerGen!.line, tickerGen!.column);
-    expect(defs1.some((d) => d.fileName.replace(/\\/g, "/").endsWith("Ticker.tazor.ts"))).toBe(true);
+    expect(defs1.some((d) => d.fileName.replace(/\\/g, "/").endsWith("Ticker.tsazor.ts"))).toBe(true);
 
     // `points` (source col 11) → TickerStore.ts — the type comes from a real file.
     const pointsGen = ticker!.shadow.map.srcToGen(1, 11);
@@ -178,7 +178,7 @@ describe("TasorTypeService", () => {
     expect(defs2.some((d) => d.fileName.replace(/\\/g, "/").endsWith("TickerStore.ts"))).toBe(true);
   });
 
-  it("maps TS error positions back onto the .tazor source lines", async () => {
+  it("maps TS error positions back onto the .tsazor source lines", async () => {
     // A declared type in @code creates a real TS2322 verbatim in the shadow:
     // the field initializer's `42` is the diagnostic start.
     const badSource = [
@@ -188,7 +188,7 @@ describe("TasorTypeService", () => {
       "    priceText: string = 42;",
       "}",
     ].join("\n");
-    const entry = await service.openTazor(path.join(root, "Pages", "Bad.tazor"), badSource);
+    const entry = await service.openTsazor(path.join(root, "Pages", "Bad.tsazor"), badSource);
     expect(entry).not.toBeNull();
     const diags = service.semanticDiagnosticsOnShadow(entry!);
     const ts2322 = diags.find((d) => d.code === 2322); // Type 'number' is not assignable to type 'string'
@@ -200,11 +200,11 @@ describe("TasorTypeService", () => {
   });
 
   it("caches on-demand shadows by mtime", async () => {
-    const first = await service.ensureTazor(path.join(root, "Shared", "Alert.tazor"));
-    const second = await service.ensureTazor(path.join(root, "Shared", "Alert.tazor"));
+    const first = await service.ensureTsazor(path.join(root, "Shared", "Alert.tsazor"));
+    const second = await service.ensureTsazor(path.join(root, "Shared", "Alert.tsazor"));
     expect(second!.version).toBe(first!.version);
     // After a rebuild (mtime change — simulated here by a fresh open), version bumps.
-    const rebuilt = await service.openTazor(path.join(root, "Shared", "Alert.tazor"), "<b>@Variant</b>\n");
+    const rebuilt = await service.openTsazor(path.join(root, "Shared", "Alert.tsazor"), "<b>@Variant</b>\n");
     expect(rebuilt!.version).not.toBe(first!.version);
   });
 });

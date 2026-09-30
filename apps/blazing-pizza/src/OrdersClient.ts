@@ -1,13 +1,13 @@
 /**
- * Port of BlazingPizza.Client/OrdersClient.cs against TasorHttp.
+ * Port of BlazingPizza.Client/OrdersClient.cs against TsazorHttp.
  * The vite dev proxy makes /specials, /toppings, /orders & /notifications
  * same-origin — exactly the workshop's configured HttpClient base.
  */
-import { TasorHttp } from "@tasor/runtime";
+import { TsazorHttp } from "@tsazor/runtime";
 import type { Order, OrderWithStatus, Topping } from "./models";
 
 export class OrdersClient {
-  private readonly http = new TasorHttp();
+  private readonly http = new TsazorHttp();
 
   getToppings(): Promise<Topping[]> {
     return this.http.getJson<Topping[]>("/toppings");

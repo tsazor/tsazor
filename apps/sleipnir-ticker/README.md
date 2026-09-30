@@ -1,8 +1,8 @@
 # Sleipnir Ticker — Live-Bitcoin-Viewer
 
-Erste reale App, die **Tasor** mit **Sleipnir** verdrahtet: eine ASP.NET Core API
+Erste reale App, die **Tsazor** mit **Sleipnir** verdrahtet: eine ASP.NET Core API
 (NuGet `Sleipnir.Server`) relaisiert Binance-WebSocket-Ticker-Daten als
-Command-API mit Server-Push-Events; das Tasor-Frontend rendert sie live —
+Command-API mit Server-Push-Events; das Tsazor-Frontend rendert sie live —
 ohne Polling, die Updates kommen per SSE-Event in die Komponenten.
 
 ## Starten
@@ -49,7 +49,7 @@ pnpm --filter sleipnir-ticker codegen   # startet ggf. die API selbst, generiert
 | `api/` | ASP.NET Core (net9.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated über `IObservable<TickerSnapshot>`), `TickerFeed`-Singleton, `BinanceTickerSource`/`SyntheticTickerSource` hinter `ITickerSource` |
 | `src/TickerStore.ts` | App-weiter Store: 1 SSE-Subscription für die App-Laufzeit, Pages subscriben in `onInitialized` und unsubscriben in `dispose()` |
 | `src/Pages/` | `/` Live-Dashboard (Preis, 24h-Stats, Sparkline, Event-Log) · `/history` Ring-Buffer-Tabelle |
-| `src/components/` | `Sparkline.tazor` (+`.tazor.css` — Scoped-CSS-Isolation) · `EventLog.tazor` |
+| `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — Scoped-CSS-Isolation) · `EventLog.tsazor` |
 | `scripts/` | `verify.mjs` (E2E, 15 Checks, self-starting) · `codegen.mjs` |
 | `test/` | `node --test` über die Pure-Helper (`src/formatters.mjs`) |
 

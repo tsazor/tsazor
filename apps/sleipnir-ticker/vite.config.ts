@@ -1,12 +1,12 @@
 import { defineConfig } from "vite";
-import { tasor } from "@tasor/vite-plugin";
+import { tsazor } from "@tsazor/vite-plugin";
 
 // The API (api/, ASP.NET Core + Sleipnir) runs on :5310. Its endpoints are
 // same-origin through this proxy; CORS headers are only a fallback for
 // direct calls without the proxy.
 export default defineConfig({
   publicDir: "wwwroot",
-  plugins: [tasor()],
+  plugins: [tsazor()],
   server: {
     port: 5311,
     strictPort: true,

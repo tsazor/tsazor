@@ -39,8 +39,8 @@ export class ComponentState {
     readonly parent: ComponentState | null,
   ) {
     this.definition = definition;
-    this.startMarker = document.createComment(`bl-tasor:${id}`);
-    this.endMarker = document.createComment(`/bl-tasor:${id}`);
+    this.startMarker = document.createComment(`bl-tsazor:${id}`);
+    this.endMarker = document.createComment(`/bl-tsazor:${id}`);
     this.renderHandle = {
       render: () => {
         /* set by the renderer to avoid a circular field initialization */

@@ -1,7 +1,7 @@
-# Port-Findings: Blazing Pizza → Tasor
+# Port-Findings: Blazing Pizza → Tsazor
 
 Ergebnis des ersten Ports einer realen, nicht-trivialen Blazor-App
-(dotnet-presentations/blazor-workshop, MIT) nach Tasor. Der Port deckt ab:
+(dotnet-presentations/blazor-workshop, MIT) nach Tsazor. Der Port deckt ab:
 Specials-Grid, Pizza-Konfigurator, Checkout mit Adressvalidierung, MyOrders,
 OrderDetails mit Polling + Leaflet-Karte, Auth (Login/Logout/Registrierung),
 Status-Progression (Preparing → Out for delivery → Delivered).
@@ -16,7 +16,7 @@ Status-Progression (Preparing → Out for delivery → Delivered).
 
 ### 1. `@authorize`-Direktive fehlte — **beheb, hinzugefügt**
 
-Blazor-Seiten schützen sich mit einer bare `@authorize`-Direktive; der Tasor-Compiler
+Blazor-Seiten schützen sich mit einer bare `@authorize`-Direktive; der Tsazor-Compiler
 kannte sie nicht.
 
 **Fix:** `packages/compiler/src/parser.ts` (`authorize` in `DIRECTIVE_NAMES`),
@@ -41,14 +41,14 @@ und übergibt sie. Regressionsgetestet (vite-plugin).
 `onInitialized`/`onParametersSet` laufen innerhalb des Render-Passes. Ein
 `await` + Feldzuweisung danach triggert **kein** Re-Render — die Seite bleibt
 im Loading-State (Blazor verhält sich identisch, das Original ruft dort
-explizit `StateHasChanged` auf). Tasor verhält sich also korrekt
+explizit `StateHasChanged` auf). Tsazor verhält sich also korrekt
 Blazor-ähnlich, aber der Port zeigte, dass jede async-ladende Page das
 braucht — drei Pages/Components hatten den Bug latent (sie rendernten nur
 zufällig korrekt, weil ein Auth-Probe-Re-Render hinterherkam).
 
 **Workaround (in der App):** Nach dem `await` in `onInitialized`/`onParametersSet`
 explizit `this.stateHasChanged()` aufrufen — exakt wie im Blazor-Original.
-**Offene Frage fürs Framework:** Sollte Tasor hier komfortabler sein als
+**Offene Frage fürs Framework:** Sollte Tsazor hier komfortabler sein als
 Blazor (z. B. async Lifecycle-Hooks automatisch nach-awaiten und re-rendern)?
 Blazor-Kompatibilität sagt nein, DX sagt ja. Entscheidung offen.
 
@@ -58,7 +58,7 @@ Blazor-Kompatibilität sagt nein, DX sagt ja. Entscheidung offen.
 |---|---|
 | Component-Event-Attrs | Proven form: `OnSelect="@(() => fn())"`. `@() => ...` **ohne** äußere Klammern ist kaputt (parses als expliziter Ausdruck + Text). |
 | Element-Handler | Kleinschreibung `@onclick="handlerName"` (bare Name) oder `@onclick="@(() => ...)"`. PascalCase-Element-Attrs funktionieren ebenfalls. |
-| `@foreach` | Razor-Syntax `@foreach (var x in y)` → `for (const x of ...)`. `@foreach (const x of y)` löst den TZR001-Fallback aus (funktioniert versehentlich, aber falsch). |
+| `@foreach` | Razor-Syntax `@foreach (var x in y)` → `for (const x of ...)`. `@foreach (const x of y)` löst den TZS001-Fallback aus (funktioniert versehentlich, aber falsch). |
 | `@@`-Escape | `@@` escape't das @: `placeholder="test@@example.com"` (plain `@example.com` parst `@example` als Expression). |
 | `<text>`-Tags | Werden unterstützt (textTag-Node). |
 | `@inject` | Nur auf Dokument-Ebene, **nie** innerhalb von `@code` (sonst esbuild-Fehler `Expected ";" but found ...`). |
@@ -82,14 +82,14 @@ scannt es nur PascalCase-Identifier (Typen/Components).
 
 ## D. Dokumentierte Abweichungen vom Original
 
-| Original | Tasor-Port | Begründung |
+| Original | Tsazor-Port | Begründung |
 |---|---|---|
 | ASP.NET Core Server + EF/SQLite | `server/server.mjs` (node:http, zero deps, in-memory) | Port-Test-Case; REST-Vertrag 1:1 |
 | ASP.NET Identity + OIDC (RemoteAuthenticator) | Cookie-Session-Auth: `POST /auth/register\|login\|logout`, `GET /auth/user` | OIDC wäre eigenes Projekt; AuthProvider-Integration ist das Testziel |
 | `GET /auth/user` anonymous → 401 | → `200 { user: null }` | Hält die Browser-Console beim App-Start fehlerfrei (E2E-Gate: null Console-Errors) |
-| DataAnnotations (`[Required]`, `[MaxLength]`) | Funktionale `ModelValidator`-Map im `@code`-Block | Keine Reflection in TS; siehe `Checkout.tazor` |
-| BootstrapFieldClassProvider | 2–3 CSS-Regeln in `wwwroot/css/site.css`, die Tasors `invalid`/`modified valid`-Klassen auf Bootstrap-Farben mappen | Kein Provider-Konzept nötig |
-| ComponentsLibrary Map (JS-Interop + Leaflet) | `Map.tazor` importiert Leaflet **direkt** via npm (`await import("leaflet")`) | Tasor IST JS — kein Interop nötig; der größte Einzelgewinn des Ports |
+| DataAnnotations (`[Required]`, `[MaxLength]`) | Funktionale `ModelValidator`-Map im `@code`-Block | Keine Reflection in TS; siehe `Checkout.tsazor` |
+| BootstrapFieldClassProvider | 2–3 CSS-Regeln in `wwwroot/css/site.css`, die Tsazors `invalid`/`modified valid`-Klassen auf Bootstrap-Farben mappen | Kein Provider-Konzept nötig |
+| ComponentsLibrary Map (JS-Interop + Leaflet) | `Map.tsazor` importiert Leaflet **direkt** via npm (`await import("leaflet")`) | Tsazor IST JS — kein Interop nötig; der größte Einzelgewinn des Ports |
 | Push-Notifications (VAPID/Service-Worker) | **skip** (PUT/GET /notifications-Vertrag wird honored, Subscription nur in Memory) | Eigenes Projekt; kein Testwert fürs Framework |
 | GraphQL Special Offers (Workshop-Modul 6) | **skip** | Ebenfalls eigenes Projekt |
 | LocalStorage/Geolocation via JS-Interop | Direkter `window.*`-Zugriff im `@code`-Block | dito |
@@ -103,7 +103,7 @@ scannt es nur PascalCase-Identifier (Typen/Components).
 - `EventCallback` (Child → Parent, receiver re-rendert nach invoke — Poller/Dialog-Flow)
 - Cascading `OrderState`-Service via DI (Zustandsänderung → Re-Render der Konsumenten)
 - Route-Parameter mit Constraint (`@page "/myorders/{orderId:int}"` → `@Parameter() orderId!: number;`)
-- Dynamischer npm-Import in `.tazor` (`await import("leaflet")` + CSS-Import)
+- Dynamischer npm-Import in `.tsazor` (`await import("leaflet")` + CSS-Import)
 
 ## F. Verifikation
 

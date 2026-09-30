@@ -1,7 +1,0 @@
-@page "/"
-
-<h1>Tasor Demo</h1>
-<p>
-    TypeScript Razor — a Blazor-style SPA framework without WASM or C#.
-    This page, the layout and the router are all compiled from <code>.tazor</code> files.
-</p>

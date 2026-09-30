@@ -1,11 +1,11 @@
 /**
- * TasorHttp: fetch-based HTTP client for @inject-ed data access, mirroring
+ * TsazorHttp: fetch-based HTTP client for @inject-ed data access, mirroring
  * Blazor's HttpClient usage patterns (GetFromJsonAsync / PostAsJsonAsync) as
  * getJson/postJson. Supports interceptor chains for requests and responses
  * (auth headers, error mapping, …).
  */
 
-export interface TasorHttpOptions {
+export interface TsazorHttpOptions {
   /** Prepended to relative URLs (no trailing slash). */
   baseUrl?: string;
   /** Sent with every request unless overridden. */
@@ -17,11 +17,11 @@ export type RequestInterceptor = (request: Request) => Request | Promise<Request
 /** Transforms (or replaces) the response before JSON parsing. */
 export type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
 
-export class TasorHttp {
+export class TsazorHttp {
   private readonly requestInterceptors: RequestInterceptor[] = [];
   private readonly responseInterceptors: ResponseInterceptor[] = [];
 
-  constructor(private readonly options: TasorHttpOptions = {}) {}
+  constructor(private readonly options: TsazorHttpOptions = {}) {}
 
   addRequestInterceptor(interceptor: RequestInterceptor): () => void {
     this.requestInterceptors.push(interceptor);
@@ -98,7 +98,7 @@ export class TasorHttp {
 
   private async parse(response: Response): Promise<unknown> {
     if (!response.ok) {
-      throw new Error(`[tasor-http] ${response.status} ${response.statusText}: ${await safeText(response)}`);
+      throw new Error(`[tsazor-http] ${response.status} ${response.statusText}: ${await safeText(response)}`);
     }
     const text = await response.text();
     return text.length === 0 ? null : JSON.parse(text);

@@ -1,7 +1,7 @@
 /**
  * Duck-typed contract for components that supply cascading values to their
  * subtree (Blazor's ICascadingValueSupplier). Implemented by the
- * CascadingValue component in @tasor/components.
+ * CascadingValue component in @tsazor/components.
  */
 export interface CascadingValueSupplier {
   readonly isCascadingValueSupplier: true;

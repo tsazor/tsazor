@@ -1,7 +1,7 @@
 /**
  * Blazing Pizza backend — a dependency-free re-implementation of the
  * workshop's ASP.NET Core server (BlazingPizza.Server) against the same
- * REST contract, so the Tasor client can be ported 1:1.
+ * REST contract, so the Tsazor client can be ported 1:1.
  *
  * Deviations from the original (documented in docs/port-findings.md):
  *  - node:http instead of ASP.NET Core; in-memory store instead of EF/SQLite.
@@ -144,7 +144,7 @@ const isDelivered = (ows) => ows.statusText === "Delivered";
 /* Auth (cookie sessions — the documented deviation)                       */
 /* ---------------------------------------------------------------------- */
 
-const SESSION_COOKIE = "tasor_session";
+const SESSION_COOKIE = "tsazor_session";
 const sessions = new Map(); // token -> userId
 
 function parseCookies(req) {

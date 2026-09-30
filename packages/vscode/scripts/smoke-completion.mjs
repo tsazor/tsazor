@@ -13,16 +13,16 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 const serverPath = path.join(repoRoot, "packages", "vscode", "dist", "server.js");
 
-const work = await mkdtemp(path.join(tmpdir(), "tasor-lsp-smoke-"));
+const work = await mkdtemp(path.join(tmpdir(), "tsazor-lsp-smoke-"));
 await mkdir(path.join(work, "Shared"), { recursive: true });
 await mkdir(path.join(work, "Pages"), { recursive: true });
 await writeFile(
-  path.join(work, "Shared", "Greeter.tazor"),
+  path.join(work, "Shared", "Greeter.tsazor"),
   '<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n    count = 0;\n}\n',
 );
-await writeFile(path.join(work, "_Imports.tazor"), "@using ./Shared\n");
-await writeFile(path.join(work, "Pages", "Demo.tazor"), "@page \"/demo\"\n<p>@c</p>\n");
-await writeFile(path.join(work, "Pages", "GreeterPage.tazor"), "@page \"/gp\"\n<Greeter\n    \n/>\n");
+await writeFile(path.join(work, "_Imports.tsazor"), "@using ./Shared\n");
+await writeFile(path.join(work, "Pages", "Demo.tsazor"), "@page \"/demo\"\n<p>@c</p>\n");
+await writeFile(path.join(work, "Pages", "GreeterPage.tsazor"), "@page \"/gp\"\n<Greeter\n    \n/>\n");
 
 const child = spawn(process.execPath, [serverPath, "--stdio"], { stdio: ["pipe", "pipe", "pipe"] });
 let stderr = "";
@@ -88,9 +88,9 @@ try {
   console.log("initialize:", init.capabilities.completionProvider ? "completionProvider ok" : "MISSING capability");
   notify("initialized", {});
 
-  const uri = toFileUri(path.join(work, "Pages", "Demo.tazor"));
+  const uri = toFileUri(path.join(work, "Pages", "Demo.tsazor"));
   notify("textDocument/didOpen", {
-    textDocument: { uri, languageId: "tazor", version: 1, text: "@page \"/demo\"\n<p>@c</p>\n" },
+    textDocument: { uri, languageId: "tsazor", version: 1, text: "@page \"/demo\"\n<p>@c</p>\n" },
   });
 
   const ask = async (name, uriAt, position) => {
@@ -102,9 +102,9 @@ try {
 
   const directives = await ask("@ at line start ->", uri, { line: 0, character: 0 });
   const members = await ask("@c in <p>@c ->", uri, { line: 1, character: 5 });
-  const greeterUri = toFileUri(path.join(work, "Pages", "GreeterPage.tazor"));
+  const greeterUri = toFileUri(path.join(work, "Pages", "GreeterPage.tsazor"));
   notify("textDocument/didOpen", {
-    textDocument: { uri: greeterUri, languageId: "tazor", version: 1, text: "@page \"/gp\"\n<Greeter\n    \n/>\n" },
+    textDocument: { uri: greeterUri, languageId: "tsazor", version: 1, text: "@page \"/gp\"\n<Greeter\n    \n/>\n" },
   });
   const attrs = await ask("attr position inside <Greeter tag ->", greeterUri, { line: 2, character: 4 });
 

@@ -9,12 +9,12 @@ import { RouteManifest, type RouteEntry } from "./routing/route-data";
  * Blazor's WebAssemblyHostBuilder equivalent: wires renderer, DI and
  * navigation and mounts the root component.
  */
-export interface TasorAppOptions {
+export interface TsazorAppOptions {
   /** Root component (a definition or a component class). */
   root: ComponentDefinition | (abstract new () => ComponentBase);
   /** DI registrations (Blazor's ConfigureServices analogue). */
   services?: (services: ServiceCollection) => void;
-  /** Route manifest (from `virtual:tasor-routes`); Router falls back to it. */
+  /** Route manifest (from `virtual:tsazor-routes`); Router falls back to it. */
   routes?: RouteEntry[];
   /** DOM selector for the app root (default: #app). */
   selector?: string;
@@ -22,14 +22,14 @@ export interface TasorAppOptions {
   navigationManager?: NavigationManager;
 }
 
-export interface TasorApp {
+export interface TsazorApp {
   readonly renderer: Renderer;
   readonly services: ServiceProvider;
   readonly navigationManager: NavigationManager;
   dispose(): void;
 }
 
-export function createTasorApp(options: TasorAppOptions): TasorApp {
+export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   const collection = new ServiceCollection();
   collection.registerValue(NavigationManager as unknown as Token<NavigationManager>, options.navigationManager ?? new NavigationManager());
   if (options.routes) {
@@ -40,14 +40,14 @@ export function createTasorApp(options: TasorAppOptions): TasorApp {
 
   const container = document.querySelector(options?.selector ?? "#app");
   if (!container) {
-    throw new Error(`Tasor app root element not found (selector: '${options?.selector ?? "#app"}').`);
+    throw new Error(`Tsazor app root element not found (selector: '${options?.selector ?? "#app"}').`);
   }
 
   const renderer = new Renderer(services);
   const state = renderer.renderInContainer(options.root, container);
 
-  // HMR bridge: compiled .tazor modules call this on import.meta.hot.accept.
-  (globalThis as unknown as { __tasor?: { hmrSwap(oldType: unknown, newType: unknown): void } }).__tasor = {
+  // HMR bridge: compiled .tsazor modules call this on import.meta.hot.accept.
+  (globalThis as unknown as { __tsazor?: { hmrSwap(oldType: unknown, newType: unknown): void } }).__tsazor = {
     hmrSwap: (oldType, newType) => {
       renderer.hmrSwap(oldType, newType);
     },

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dist = path.resolve(__dirname, "../tasor/dist");
+const dist = path.resolve(__dirname, "../tsazor/dist");
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
 
 const server = createServer((req, res) => {

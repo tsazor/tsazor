@@ -28,7 +28,7 @@ export interface RouteData {
 }
 
 /**
- * DI token for the app's route manifest. Registered by createTasorApp from
+ * DI token for the app's route manifest. Registered by createTsazorApp from
  * the `routes` option (Blazor's AppAssembly reflection analogue).
  */
 export class RouteManifest {

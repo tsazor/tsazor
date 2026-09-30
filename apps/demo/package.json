@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@tasor/components": "workspace:*",
-    "@tasor/runtime": "workspace:*",
-    "@tasor/vite-plugin": "workspace:*",
+    "@tsazor/components": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8"
   },
   "devDependencies": {

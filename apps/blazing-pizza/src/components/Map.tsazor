@@ -11,7 +11,7 @@
     private addedMarkers: any[] = [];
     private firstRender = true;
 
-    // Tasor IS JS: the workshop wrapped Leaflet behind a JS-interop script
+    // Tsazor IS JS: the workshop wrapped Leaflet behind a JS-interop script
     // (deliveryMap.showOrUpdate). Here we simply import Leaflet directly —
     // no interop layer needed. The CSS comes in via the dynamic import too.
     protected override async onAfterRender(firstRender: boolean): Promise<void> {

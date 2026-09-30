@@ -50,7 +50,7 @@
     }
 
     protected override async onInitialized(): Promise<void> {
-        const http = new TasorHttp();
+        const http = new TsazorHttp();
         try {
             this.specials = await http.getJson<PizzaSpecial[]>("/specials");
         } catch {

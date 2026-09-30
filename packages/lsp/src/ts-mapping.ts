@@ -1,7 +1,7 @@
-import type { SourceMapEntry } from "@tasor/compiler";
+import type { SourceMapEntry } from "@tsazor/compiler";
 
 /**
- * Position translation between a .tazor file and its generated shadow module
+ * Position translation between a .tsazor file and its generated shadow module
  * (compile()'s raw per-statement `mappings`), for the LSP type layer.
  *
  * Conventions (source of truth: packages/compiler/src/{codegen,source-map}.ts):
@@ -23,7 +23,7 @@ export interface MappedSourceSpan {
   end: MappedSourcePos;
 }
 
-export class TazorGenMap {
+export class TsazorGenMap {
   private readonly byGen: SourceMapEntry[];
   private readonly bySrc: SourceMapEntry[];
 
@@ -38,14 +38,14 @@ export class TazorGenMap {
       .sort((a, b) => a.srcLine - b.srcLine || a.srcCol - b.srcCol);
   }
 
-  /** Generated position → .tazor position (0-based), or null when the
+  /** Generated position → .tsazor position (0-based), or null when the
    *  generated line has no mapping of its own (synthetic header/plumbing). */
   genToSrc(line0: number, character0: number): MappedSourcePos | null {
     const entry = this.findGen(line0, character0);
     return entry ? { line: entry.srcLine, character: entry.srcCol + (character0 - entry.genCol) } : null;
   }
 
-  /** Generated token range → .tazor range (0-based, half-open). */
+  /** Generated token range → .tsazor range (0-based, half-open). */
   genToSpan(line0: number, start0: number, end0: number): MappedSourceSpan | null {
     const entry = this.findGen(line0, start0);
     if (!entry) return null;
@@ -55,7 +55,7 @@ export class TazorGenMap {
     };
   }
 
-  /** .tazor position → generated position (0-based), or null beyond any
+  /** .tsazor position → generated position (0-based), or null beyond any
    *  mapped region. Column offsets stay accurate inside verbatim @code lines
    *  and, thanks to the compiler's token-precise entries, inside expressions. */
   srcToGen(line0: number, character0: number): { line: number; column: number } | null {

@@ -1,10 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "Tasor",
-  "scopeName": "source.tazor",
+  "name": "Tsazor",
+  "scopeName": "source.tsazor",
   "patterns": [
     {
-      "include": "#tasor-escaped-at"
+      "include": "#tsazor-escaped-at"
     },
     {
       "include": "#code-block"
@@ -32,20 +32,20 @@
     }
   ],
   "repository": {
-    "tasor-escaped-at": {
+    "tsazor-escaped-at": {
       "comment": "Escaped @ (@@) — emits a literal @ in the output.",
       "match": "@@",
-      "name": "constant.character.escape.tazor"
+      "name": "constant.character.escape.tsazor"
     },
     "code-block": {
       "comment": "@code { ... } / @functions { ... } blocks contain TypeScript members.",
       "begin": "(@)(code|functions)\\b",
       "beginCaptures": {
         "1": {
-          "name": "punctuation.definition.tazor"
+          "name": "punctuation.definition.tsazor"
         },
         "2": {
-          "name": "keyword.control.tazor"
+          "name": "keyword.control.tsazor"
         }
       },
       "end": "(?<=\\})",
@@ -63,7 +63,7 @@
               "name": "punctuation.section.block.end.bracket.curly.ts"
             }
           },
-          "contentName": "meta.embedded.block.tazor-code.ts",
+          "contentName": "meta.embedded.block.tsazor-code.ts",
           "patterns": [
             {
               "include": "source.ts"
@@ -77,14 +77,14 @@
       "begin": "(@)(page|layout|using|inject|typeparam|attribute|inherits)\\b",
       "beginCaptures": {
         "1": {
-          "name": "punctuation.definition.tazor"
+          "name": "punctuation.definition.tsazor"
         },
         "2": {
-          "name": "keyword.control.directive.tazor"
+          "name": "keyword.control.directive.tsazor"
         }
       },
       "end": "(?=$)|(?=<)",
-      "name": "meta.directive.tazor",
+      "name": "meta.directive.tsazor",
       "patterns": [
         {
           "include": "#directive-value"
@@ -107,7 +107,7 @@
       "begin": "@\\(",
       "beginCaptures": {
         "0": {
-          "name": "punctuation.definition.tazor"
+          "name": "punctuation.definition.tsazor"
         }
       },
       "end": "\\)",
@@ -123,7 +123,7 @@
       "begin": "@\\{",
       "beginCaptures": {
         "0": {
-          "name": "punctuation.definition.tazor"
+          "name": "punctuation.definition.tsazor"
         }
       },
       "end": "\\}",
@@ -137,7 +137,7 @@
     "implicit-expression": {
       "comment": "Implicit expression: @identifier — dot chains and balanced calls until whitespace/angle bracket.",
       "match": "@[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z0-9_$]+)*(\\(([^()]|\\([^()]*\\))*\\))?",
-      "name": "meta.expression.implicit.tazor",
+      "name": "meta.expression.implicit.tsazor",
       "captures": {
         "0": {
           "patterns": [
@@ -156,7 +156,7 @@
           "name": "punctuation.definition.tag.begin.html"
         },
         "2": {
-          "name": "entity.name.tag.component.tazor entity.name.tag.html"
+          "name": "entity.name.tag.component.tsazor entity.name.tag.html"
         }
       },
       "end": "(/?>)",
@@ -165,10 +165,10 @@
           "name": "punctuation.definition.tag.end.html"
         }
       },
-      "contentName": "meta.tag.component.tazor",
+      "contentName": "meta.tag.component.tsazor",
       "patterns": [
         {
-          "include": "#tasor-escaped-at"
+          "include": "#tsazor-escaped-at"
         },
         {
           "include": "#event-attributes"
@@ -198,10 +198,10 @@
           "name": "entity.name.tag.html"
         }
       },
-      "contentName": "source.tazor",
+      "contentName": "source.tsazor",
       "patterns": [
         {
-          "include": "#tasor-escaped-at"
+          "include": "#tsazor-escaped-at"
         },
         {
           "include": "#implicit-expression"
@@ -211,13 +211,13 @@
     "event-attributes": {
       "comment": "Event handler attributes: @onclick, @onchange, … with :preventDefault/:stopPropagation modifiers.",
       "match": "(@on[a-z]+)(:[a-z]+)?",
-      "name": "meta.attribute.handler.tazor",
+      "name": "meta.attribute.handler.tsazor",
       "captures": {
         "1": {
-          "name": "entity.other.attribute-name.event.tazor"
+          "name": "entity.other.attribute-name.event.tsazor"
         },
         "2": {
-          "name": "keyword.other.tazor"
+          "name": "keyword.other.tsazor"
         }
       }
     },
@@ -226,12 +226,12 @@
         {
           "begin": "\"",
           "end": "\"",
-          "name": "string.quoted.double.tazor"
+          "name": "string.quoted.double.tsazor"
         },
         {
           "begin": "'",
           "end": "'",
-          "name": "string.quoted.single.tazor"
+          "name": "string.quoted.single.tsazor"
         }
       ]
     }

@@ -1,8 +1,8 @@
 {
-  "name": "@tasor/testing",
+  "name": "@tsazor/testing",
   "version": "0.1.0",
   "type": "module",
-  "description": "Test helpers for Tasor components: render() over happy-dom.",
+  "description": "Test helpers for Tsazor components: render() over happy-dom.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tasor/runtime": "workspace:*"
+    "@tsazor/runtime": "workspace:*"
   },
   "devDependencies": {
     "happy-dom": "^18.0.1",

@@ -28,7 +28,7 @@ let activeRenderer: Renderer | null = null;
 
 /**
  * Applies render tree frames to the real DOM (initial render and diff-based
- * updates). Blazor sends a RenderBatch over the WASM boundary; since Tasor's
+ * updates). Blazor sends a RenderBatch over the WASM boundary; since Tsazor's
  * renderer runs in the same realm, diffing and patching happen in one pass.
  */
 export class DomRenderer {
@@ -520,7 +520,7 @@ function bindCallback(element: Element, attributeName: string, callback: EventCa
 
 function reportError(error: unknown, context: string): void {
   // eslint-disable-next-line no-console
-  console.error(`[tasor] ${context}:`, error);
+  console.error(`[tsazor] ${context}:`, error);
 }
 
 /* ------------------------------------------------------------------ */
@@ -530,8 +530,8 @@ function reportError(error: unknown, context: string): void {
 const markupEnds = new WeakMap<Comment, Comment>();
 
 function insertMarkup(markup: string, ctx: FrameContext): [Comment, Comment] {
-  const start = document.createComment("bl-tasor:markup");
-  const end = document.createComment("/bl-tasor:markup");
+  const start = document.createComment("bl-tsazor:markup");
+  const end = document.createComment("/bl-tsazor:markup");
   insertNode(start, ctx);
   insertNode(end, ctx);
   const template = document.createElement("template");

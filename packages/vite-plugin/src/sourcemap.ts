@@ -4,11 +4,11 @@ import path from "node:path";
 
 /**
  * Chains two sourcemaps: `outer` maps generated JS → intermediate TS, and
- * `inner` maps the intermediate TS → the original .tazor. The result maps
- * generated JS → .tazor directly.
+ * `inner` maps the intermediate TS → the original .tsazor. The result maps
+ * generated JS → .tsazor directly.
  */
-export function chainSourceMaps(tazorMap: string, esbuildMap: string, tazorPath: string, generatedFile: string): string {
-  const inner = new TraceMap(tazorMap);
+export function chainSourceMaps(tsazorMap: string, esbuildMap: string, tsazorPath: string, generatedFile: string): string {
+  const inner = new TraceMap(tsazorMap);
   const outer = new TraceMap(esbuildMap);
   const gen = new GenMapping({ file: generatedFile });
 
@@ -19,7 +19,7 @@ export function chainSourceMaps(tazorMap: string, esbuildMap: string, tazorPath:
     addMapping(gen, {
       generated: { line: mapping.generatedLine, column: mapping.generatedColumn },
       original: { line: original.line, column: original.column },
-      source: tazorPath,
+      source: tsazorPath,
     });
   });
 
@@ -28,8 +28,8 @@ export function chainSourceMaps(tazorMap: string, esbuildMap: string, tazorPath:
     mappings: string;
     names?: string[];
   };
-  const sources = (encoded.sources.length > 0 ? encoded.sources : [tazorPath]).map((source) =>
-    path.relative(path.dirname(tazorPath), path.resolve(source ?? tazorPath)).replace(/\\/g, "/"),
+  const sources = (encoded.sources.length > 0 ? encoded.sources : [tsazorPath]).map((source) =>
+    path.relative(path.dirname(tsazorPath), path.resolve(source ?? tsazorPath)).replace(/\\/g, "/"),
   );
   return JSON.stringify({
     version: 3,

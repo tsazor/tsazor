@@ -106,7 +106,7 @@ export abstract class ComponentBase {
   }
 
   /**
-   * Builds this component's output. Components written in .tazor override
+   * Builds this component's output. Components written in .tsazor override
    * this (generated code); hand-built components override it as well.
    */
   protected buildRenderTree(builder: RenderTreeBuilder): void {}

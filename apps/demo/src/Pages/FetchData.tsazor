@@ -29,7 +29,7 @@
     private error: string | null = null;
 
     protected override async onInitialized(): Promise<void> {
-        const http = new TasorHttp();
+        const http = new TsazorHttp();
         try {
             const result = await http.getJson<Array<{ date: string; summary: string; temperatureC: number }>>("/weather.json");
             this.forecasts = result;

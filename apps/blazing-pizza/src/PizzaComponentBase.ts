@@ -4,7 +4,7 @@
  * GetFormattedTotalPrice() as a model extension; TS markup bakes bare
  * identifiers to this.*, so helpers must live on the component).
  */
-import { ComponentBase } from "@tasor/runtime";
+import { ComponentBase } from "@tsazor/runtime";
 import {
   formatLongDate,
   orderFormattedTotalPrice,

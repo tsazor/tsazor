@@ -1,11 +1,11 @@
 /**
- * @tasor/components behavioral tests: every component renders through the
- * real compiled pipeline (dist/*.js built by build.mjs from the .tazor
- * sources) and mounts via @tasor/testing's happy-dom renderer.
+ * @tsazor/components behavioral tests: every component renders through the
+ * real compiled pipeline (dist/*.js built by build.mjs from the .tsazor
+ * sources) and mounts via @tsazor/testing's happy-dom renderer.
  */
 import { beforeAll, describe, expect, it } from "vitest";
-import { renderTree } from "@tasor/testing";
-import { EventCallback, type RenderFragment } from "@tasor/runtime";
+import { renderTree } from "@tsazor/testing";
+import { EventCallback, type RenderFragment } from "@tsazor/runtime";
 import {
   Accordion,
   AccordionItem,
@@ -416,11 +416,11 @@ describe("Navbar, Spinner, Collapse", () => {
   it("renders brand and variant", async () => {
     const { container } = await renderTree((b) => {
       b.openComponent(0, Navbar);
-      b.addAttribute(1, "brand", "Tasor");
+      b.addAttribute(1, "brand", "Tsazor");
       b.addAttribute(2, "childContent", text("nav"));
       b.closeComponent();
     });
-    expect(container.querySelector(".navbar-brand")!.textContent).toBe("Tasor");
+    expect(container.querySelector(".navbar-brand")!.textContent).toBe("Tsazor");
     expect(container.querySelector(".navbar")!.className).toContain("navbar-light");
   });
 

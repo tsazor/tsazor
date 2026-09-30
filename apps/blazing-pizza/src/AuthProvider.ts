@@ -3,7 +3,7 @@
  * (cookie sessions). The original used OIDC + ASP.NET Identity via the
  * RemoteAuthenticator — the documented deviation of this port.
  */
-import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, TasorHttp, createUser } from "@tasor/runtime";
+import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, TsazorHttp, createUser } from "@tsazor/runtime";
 
 export interface UserInfo {
   userId: string;
@@ -14,7 +14,7 @@ export interface UserInfo {
 export class AuthProvider extends AuthenticationStateProvider {
   private current: AuthenticationState = ANONYMOUS;
   private user: UserInfo | null = null;
-  private readonly http = new TasorHttp();
+  private readonly http = new TsazorHttp();
 
   getState(): Promise<AuthenticationState> {
     // First call (app start / reload): re-hydrate from the session cookie.

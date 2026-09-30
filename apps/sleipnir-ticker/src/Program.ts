@@ -1,6 +1,6 @@
-import { createTasorApp } from "@tasor/runtime";
-import App from "./App.tazor";
-import routes from "virtual:tasor-routes";
+import { createTsazorApp } from "@tsazor/runtime";
+import App from "./App.tsazor";
+import routes from "virtual:tsazor-routes";
 import { SleipnirClient } from "./api";
 import TickerStore from "./TickerStore";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -11,7 +11,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 const client = new SleipnirClient(window.location.origin, { defaultTransport: "rest" });
 const store = new TickerStore(client);
 
-const app = createTasorApp({
+const app = createTsazorApp({
   root: App,
   routes,
   services: (services) => {
@@ -22,7 +22,7 @@ const app = createTasorApp({
 
 declare global {
   interface Window {
-    __tasorApp: typeof app;
+    __tsazorApp: typeof app;
   }
 }
-window.__tasorApp = app;
+window.__tsazorApp = app;

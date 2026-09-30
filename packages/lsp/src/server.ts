@@ -23,7 +23,7 @@ import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { analyzeSource, definitionAt, hoverAt, type AnalyzedFile } from "./analysis";
 import { completeAt, type CompletionKind } from "./completions";
-import { TasorTypeService, type ShadowEntry } from "./ts-service";
+import { TsazorTypeService, type ShadowEntry } from "./ts-service";
 import {
   tsCompletionDetail,
   tsCompletions,
@@ -44,7 +44,7 @@ const DIAGNOSTICS_CAP = 200;
 const PUBLISH_DEBOUNCE_MS = 100;
 
 /**
- * Tasor language server (stdio).
+ * Tsazor language server (stdio).
  *
  * v2: a single per-workspace `ts.LanguageService` over shadow modules powers
  * @code, @{…} and @-expression completions, hover, go-to-definition and
@@ -58,7 +58,7 @@ const documents = new TextDocuments(TextDocument);
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
   const root = projectRootOf(params);
-  const typeService = new TasorTypeService(root);
+  const typeService = new TsazorTypeService(root);
   // tsDiagnostics toggle; initializationOptions.tsDiagnostics: false → off.
   const init = (params.initializationOptions ?? {}) as { tsDiagnostics?: boolean };
   const tsDiagnosticsEnabled = init.tsDiagnostics !== false;
@@ -76,7 +76,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
 
   /** The shadow entry for an open document (rebuilds when the version moved). */
   const entryFor = (document: TextDocument): Promise<ShadowEntry | null> =>
-    typeService.ensureTazor(uriToPath(document.uri), document.getText());
+    typeService.ensureTsazor(uriToPath(document.uri), document.getText());
 
   /* Diagnostics publish (compiler + mapped TS, debounced) ----------------- */
 
@@ -101,7 +101,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
             end: { line: diagnostic.pos.line - 1, character: diagnostic.pos.column + 1 },
           },
           code: diagnostic.code,
-          source: "tasor",
+          source: "tsazor",
           message: diagnostic.message,
         }),
       );
@@ -117,7 +117,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
                 end: { line: diag.line, character: diag.character + 1 },
               },
               code: diag.code,
-              source: "tasor-ts",
+              source: "tsazor-ts",
               message: diag.message,
             });
           }
@@ -126,19 +126,19 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
 
       connection.sendDiagnostics({ uri: document.uri, diagnostics: dedupeAndCap(items) });
     } catch (error) {
-      connection.console.error(`tasor publish failed: ${error instanceof Error ? error.stack : String(error)}`);
+      connection.console.error(`tsazor publish failed: ${error instanceof Error ? error.stack : String(error)}`);
     }
   };
 
-  /* _Imports.tazor invalidation ------------------------------------------- */
+  /* _Imports.tsazor invalidation ------------------------------------------- */
 
   const invalidateShadows = (changedPath: string): void => {
-    // An _Imports.tazor change can alter the component/using chain of every
-    // other .tazor in its subtree — their shadows must be rebuilt. The rebuild
+    // An _Imports.tsazor change can alter the component/using chain of every
+    // other .tsazor in its subtree — their shadows must be rebuilt. The rebuild
     // happens lazily per request; here we drop the cached versions eagerly.
-    if (path.basename(changedPath) !== "_Imports.tazor") return;
+    if (path.basename(changedPath) !== "_Imports.tsazor") return;
     for (const document of documents.all()) {
-      if (path.basename(uriToPath(document.uri)) === "_Imports.tazor") continue;
+      if (path.basename(uriToPath(document.uri)) === "_Imports.tsazor") continue;
       cache.delete(document.uri);
       entryFor(document).catch(() => undefined);
     }
@@ -151,7 +151,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   });
   documents.onDidClose((event) => {
     cache.delete(event.document.uri);
-    typeService.closeTazor(uriToPath(event.document.uri));
+    typeService.closeTsazor(uriToPath(event.document.uri));
     connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
   });
 
@@ -173,7 +173,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     return { contents };
   });
 
-  /* Definition: shadow targets map onto .tazor, real files go verbatim ----- */
+  /* Definition: shadow targets map onto .tsazor, real files go verbatim ----- */
 
   connection.onDefinition(async (params: DefinitionParams): Promise<Location[] | null> => {
     const document = documents.get(params.textDocument.uri);

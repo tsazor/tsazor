@@ -23,7 +23,7 @@ export type VirtualizeItemsProvider<TItem> = (
  * using the spacer strategy — two height-allocating spacer divs around the
  * rendered slice, so the scrollbar geometry matches the full list.
  *
- * v1: the per-item template is passed via `itemTemplate` (the .tazor child
+ * v1: the per-item template is passed via `itemTemplate` (the .tsazor child
  * content sugar comes with the Vite plugin milestone).
  */
 export class Virtualize extends ComponentBase {

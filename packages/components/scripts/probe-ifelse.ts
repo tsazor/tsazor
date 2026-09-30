@@ -1,4 +1,4 @@
-import { compile } from "@tasor/compiler";
+import { compile } from "@tsazor/compiler";
 
 const src = `@page "/probe"
 <div class="host">
@@ -14,5 +14,5 @@ const src = `@page "/probe"
     private restoreAlert(): void { this.alertVisible = true; }
 }`;
 
-const r = compile(src, { className: "Probe", fileName: "probe.tazor", generateSourceMap: false });
+const r = compile(src, { className: "Probe", fileName: "probe.tsazor", generateSourceMap: false });
 console.log(r.code);

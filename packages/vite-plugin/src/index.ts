@@ -1,27 +1,27 @@
-import { compile, type ResolvedComponent, type ResolvedType } from "@tasor/compiler";
+import { compile, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
 import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import { hmrAppendix } from "./hmr";
-import { generateRoutesModule, scanRoutes, scanTazorModules } from "./routes";
+import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes";
 import { processScopedCss, scopeHashFor } from "./scoped-css";
 import { chainSourceMaps } from "./sourcemap";
-import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tasor/workspace";
+import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tsazor/workspace";
 
-const ROUTES_MODULE_ID = "virtual:tasor-routes";
-const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tasor-routes";
+const ROUTES_MODULE_ID = "virtual:tsazor-routes";
+const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
 
-export interface TasorPluginOptions {
+export interface TsazorPluginOptions {
   /** Project root; defaults to the Vite config root. */
   root?: string;
 }
 
-export function tasor(options: TasorPluginOptions = {}): Plugin {
+export function tsazor(options: TsazorPluginOptions = {}): Plugin {
   let projectRoot = options.root ?? process.cwd();
 
   return {
-    name: "tasor",
+    name: "tsazor",
     enforce: "pre",
 
     configResolved(config) {
@@ -30,9 +30,9 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
 
     configureServer(server) {
       // Eager compile: dev transforms are lazy, so @code errors would only
-      // surface when the browser requests the module. Warm every .tazor at
+      // surface when the browser requests the module. Warm every .tsazor at
       // startup — vite logs pre-transform errors to the terminal immediately.
-      void warmupTazorModules(server, projectRoot);
+      void warmupTsazorModules(server, projectRoot);
     },
 
     resolveId(id) {
@@ -53,22 +53,22 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
       }
 
       // Scoped CSS sidecar (Blazor mechanism): rewrite selectors to the scope
-      // attribute of the owning .tazor file, then hand back to Vite's CSS
+      // attribute of the owning .tsazor file, then hand back to Vite's CSS
       // pipeline (which handles dev injection, extraction and HMR).
-      if (filePath.endsWith(".tazor.css")) {
+      if (filePath.endsWith(".tsazor.css")) {
         const owner = filePath.slice(0, -".css".length);
         if (!existsSync(owner)) return null;
         const css = await processScopedCss(code, scopeHashFor(projectRoot, owner), filePath);
         return { code: css, map: null };
       }
 
-      if (!filePath.endsWith(".tazor")) {
+      if (!filePath.endsWith(".tsazor")) {
         return null;
       }
 
       const chain = await collectImports(path.dirname(filePath), projectRoot);
-      if (path.basename(filePath) === "_Imports.tazor") {
-        // _Imports.tazor contributes directives only; it is never a component.
+      if (path.basename(filePath) === "_Imports.tsazor") {
+        // _Imports.tsazor contributes directives only; it is never a component.
         return { code: "export default null;\n", map: null };
       }
       const context = createFileContext(filePath, chain);
@@ -92,7 +92,7 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
       });
       const extraImports = collectCodeImports(code, first.code, context);
 
-      // Code-behind: when a sibling X.tazor.ts exists (the compiled module's
+      // Code-behind: when a sibling X.tsazor.ts exists (the compiled module's
       // own default import), the generated class extends its default export.
       // The .ts sidecar itself is compiled by Vite's normal TS pipeline.
       const codeBehindPath = `${filePath}.ts`;
@@ -136,7 +136,7 @@ export function tasor(options: TasorPluginOptions = {}): Plugin {
         },
       });
 
-      const map = chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tasor)`);
+      const map = chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`);
       const js = transpiled.code + hmrAppendix(context.className);
       return { code: js, map };
     },
@@ -148,10 +148,10 @@ function stripQuery(id: string): string {
   return query >= 0 ? id.slice(0, query) : id;
 }
 
-async function warmupTazorModules(server: ViteDevServer, projectRoot: string): Promise<void> {
+async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): Promise<void> {
   // vite <5.1 has no warmupRequest — fall back to on-demand behavior.
   if (typeof server.warmupRequest !== "function") return;
-  for (const url of await scanTazorModules(projectRoot)) {
+  for (const url of await scanTsazorModules(projectRoot)) {
     // warmupRequest logs pre-transform errors itself; it never rejects.
     await server.warmupRequest(url);
   }
@@ -166,7 +166,7 @@ function reportDiagnostics(diagnostics: { all: readonly { code: string; message:
     if (diagnostic.severity === "warning") {
       // eslint-disable-next-line no-console
       console.warn(
-        `[tasor] warning ${diagnostic.code} (${filePath}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`,
+        `[tsazor] warning ${diagnostic.code} (${filePath}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`,
       );
     }
   }
@@ -175,7 +175,7 @@ function reportDiagnostics(diagnostics: { all: readonly { code: string; message:
   const details = errors
     .map((diagnostic) => `  ${diagnostic.code} (${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`)
     .join("\n");
-  const error = new Error(`[tasor] compile errors in ${filePath}\n${details}`);
+  const error = new Error(`[tsazor] compile errors in ${filePath}\n${details}`);
   (error as unknown as { id: string; loc: { file: string; line: number; column: number } }).id = filePath;
   (error as unknown as { loc: { file: string; line: number; column: number } }).loc = {
     file: filePath,
@@ -185,4 +185,4 @@ function reportDiagnostics(diagnostics: { all: readonly { code: string; message:
   throw error;
 }
 
-export default tasor;
+export default tsazor;

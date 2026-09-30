@@ -2,7 +2,7 @@
 
 <div class="layout">
     <nav class="nav">
-        <span class="brand">Tasor</span>
+        <span class="brand">Tsazor</span>
         <NavLink Href="/">Home</NavLink>
         <NavLink Href="/counter">Counter</NavLink>
         <NavLink Href="/form">Form</NavLink>

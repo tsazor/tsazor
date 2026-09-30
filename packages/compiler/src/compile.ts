@@ -19,14 +19,14 @@ export interface CompileResult {
   metadata: CodegenResult["metadata"];
 }
 
-/** Compiles one .tazor source file into a TS module (+ sourcemap, + diagnostics). */
+/** Compiles one .tsazor source file into a TS module (+ sourcemap, + diagnostics). */
 export function compile(source: string, options: CompileOptions): CompileResult {
   const diagnostics = new DiagnosticBag();
   const document: DocumentNode = parseDocument(source, diagnostics);
   const { code, metadata, mappings } = generateCode(document, options, diagnostics);
   const result: CompileResult = { code, diagnostics, metadata, mappings };
   if (options.generateSourceMap !== false) {
-    const sourceFile = options.fileName ?? "component.tazor";
+    const sourceFile = options.fileName ?? "component.tsazor";
     result.map = buildSourceMap(mappings, sourceFile, `${options.className}.ts`);
   }
   return result;

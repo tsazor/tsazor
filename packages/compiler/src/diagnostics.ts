@@ -1,5 +1,5 @@
 /**
- * Stable diagnostic codes (TZR001…). The compiler never fails silently:
+ * Stable diagnostic codes (TZS001…). The compiler never fails silently:
  * every parse/codegen problem lands here with a source position.
  */
 
@@ -12,7 +12,7 @@ export interface SourcePos {
 
 export type DiagnosticSeverity = "error" | "warning";
 
-export interface TzrDiagnostic {
+export interface TszDiagnostic {
   readonly code: string;
   readonly message: string;
   readonly severity: DiagnosticSeverity;
@@ -20,23 +20,23 @@ export interface TzrDiagnostic {
 }
 
 const CODES = {
-  TZR001: "Unknown directive.",
-  TZR002: "Unclosed element.",
-  TZR003: "Unbalanced braces in expression or code block.",
-  TZR004: "Invalid implicit expression.",
-  TZR005: "Unresolved component tag.",
-  TZR006: "Unclosed code block.",
-  TZR007: "Duplicate attribute.",
-  TZR008: "Unsupported directive attribute.",
-  TZR009: "Missing attribute value.",
-  TZR010: "Invalid implicit expression terminator.",
-  TZR011: "Conflicting code-behind.",
+  TZS001: "Unknown directive.",
+  TZS002: "Unclosed element.",
+  TZS003: "Unbalanced braces in expression or code block.",
+  TZS004: "Invalid implicit expression.",
+  TZS005: "Unresolved component tag.",
+  TZS006: "Unclosed code block.",
+  TZS007: "Duplicate attribute.",
+  TZS008: "Unsupported directive attribute.",
+  TZS009: "Missing attribute value.",
+  TZS010: "Invalid implicit expression terminator.",
+  TZS011: "Conflicting code-behind.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;
 
 export class DiagnosticBag {
-  private readonly items: TzrDiagnostic[] = [];
+  private readonly items: TszDiagnostic[] = [];
 
   add(code: DiagnosticCode, severity: DiagnosticSeverity, pos: SourcePos, detail?: string): void {
     const message = detail ? `${CODES[code]} ${detail}` : CODES[code];
@@ -51,11 +51,11 @@ export class DiagnosticBag {
     this.add(code, "warning", pos, detail);
   }
 
-  get all(): readonly TzrDiagnostic[] {
+  get all(): readonly TszDiagnostic[] {
     return this.items;
   }
 
-  get errors(): readonly TzrDiagnostic[] {
+  get errors(): readonly TszDiagnostic[] {
     return this.items.filter((d) => d.severity === "error");
   }
 

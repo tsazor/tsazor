@@ -1,6 +1,6 @@
-/** @tasor/testing acceptance tests: render helper over happy-dom. */
+/** @tsazor/testing acceptance tests: render helper over happy-dom. */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, type RenderTreeBuilder } from "@tasor/runtime";
+import { ComponentBase, type RenderTreeBuilder } from "@tsazor/runtime";
 import { render, renderTree } from "../src";
 
 class Greeting extends ComponentBase {
@@ -22,9 +22,9 @@ describe("render helper", () => {
     expect(result.container.querySelector("h1")?.textContent).toBe("Hello World");
     expect(result.instance).toBeInstanceOf(Greeting);
 
-    (result.instance as unknown as { name: string }).name = "Tasor";
+    (result.instance as unknown as { name: string }).name = "Tsazor";
     await result.rerender();
-    expect(result.container.querySelector("h1")?.textContent).toBe("Hello Tasor");
+    expect(result.container.querySelector("h1")?.textContent).toBe("Hello Tsazor");
 
     result.dispose();
     expect(result.container.parentNode).toBeNull();

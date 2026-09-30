@@ -1,6 +1,6 @@
 /**
  * Port of BlazingPizza.Client/OrderState.cs — the app-wide "current order"
- * state (Blazor: scoped DI service with events; Tasor: singleton service,
+ * state (Blazor: scoped DI service with events; Tsazor: singleton service,
  * components re-render because the handlers that mutate it are EventCallbacks
  * owned by those components).
  */

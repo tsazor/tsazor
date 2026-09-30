@@ -1,12 +1,12 @@
-import type { ResolvedComponent, ResolvedType } from "@tasor/compiler";
+import type { ResolvedComponent, ResolvedType } from "@tsazor/compiler";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins";
 import { candidateDirs, relativeSpecifier, type ImportsChain } from "./imports";
 
-/** Everything the transform needs to compile one .tazor file. */
+/** Everything the transform needs to compile one .tsazor file. */
 export interface FileContext {
-  /** Absolute .tazor path (query-stripped). */
+  /** Absolute .tsazor path (query-stripped). */
   filePath: string;
   fileDir: string;
   className: string;
@@ -15,7 +15,7 @@ export interface FileContext {
   resolveType: (name: string, usings: string[]) => ResolvedType | null;
   /** Absolute path of a resolvable single-name component file, if any. */
   resolveImportable: (name: string) => string | undefined;
-  /** Resolves a @layout name to an absolute .tazor path. */
+  /** Resolves a @layout name to an absolute .tsazor path. */
   resolveLayout: (layoutName: string) => string | undefined;
 }
 
@@ -27,9 +27,9 @@ export function classNameForFile(filePath: string): string {
 }
 
 /**
- * Builds the resolution context for one .tazor file: its own directory plus
+ * Builds the resolution context for one .tsazor file: its own directory plus
  * every directory named by path-like @using values in its _Imports chain.
- * Bare specifiers (`@using @tasor/runtime`) resolve lazily per type name.
+ * Bare specifiers (`@using @tsazor/runtime`) resolve lazily per type name.
  */
 export function createFileContext(filePath: string, chain: ImportsChain): FileContext {
   const resolved = path.resolve(filePath);
@@ -71,18 +71,18 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
     className: classNameForFile(resolved),
     chain,
     resolveComponent: (tagName) => {
-      const target = findInDirs(tagName, [".tazor"]);
+      const target = findInDirs(tagName, [".tsazor"]);
       if (target) return { specifier: relativeSpecifier(fileDir, target) };
       // Runtime built-ins (Blazor's Web namespace via _Imports).
       if (RUNTIME_COMPONENTS.has(tagName)) return { specifier: RUNTIME_PACKAGE, exportName: tagName };
-      // Bare-specifier usings (`@using @tasor/components`): trust the module
+      // Bare-specifier usings (`@using @tsazor/components`): trust the module
       // to export the name — the import only fails at runtime if it does not.
       const bare = context.chain.usings.find((using) => !isPathLikeUsing(using));
       if (bare) return { specifier: stripQuotes(bare), exportName: tagName };
       return null;
     },
     resolveType: (name) => {
-      const localType = findInDirs(name, [".ts", ".tazor"]);
+      const localType = findInDirs(name, [".ts", ".tsazor"]);
       if (localType) {
         return { specifier: relativeSpecifier(fileDir, localType) };
       }
@@ -101,7 +101,7 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
       if (RUNTIME_TYPES.has(name)) {
         return { specifier: RUNTIME_PACKAGE, exportName: name };
       }
-      // Bare-specifier usings (`@using @tasor/runtime`): trust the module to
+      // Bare-specifier usings (`@using @tsazor/runtime`): trust the module to
       // export the name — the import only fails at runtime if it does not.
       const bare = context.chain.usings.find((using) => !isPathLikeUsing(using));
       if (bare) {
@@ -110,10 +110,10 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
       return null;
     },
     resolveImportable: (name) => {
-      return findInDirs(name, [".tazor"]);
+      return findInDirs(name, [".tsazor"]);
     },
     resolveLayout: (layoutName) => {
-      return findInDirs(layoutName, [".tazor"]);
+      return findInDirs(layoutName, [".tsazor"]);
     },
   };
   return context;

@@ -1,5 +1,5 @@
 /**
- * End-to-end: compile a .tazor source, bundle it with esbuild against the real
+ * End-to-end: compile a .tsazor source, bundle it with esbuild against the real
  * runtime, execute it and render through the Renderer in happy-dom. This is
  * the M2 acceptance gate: markup → generated module → DOM.
  */
@@ -12,16 +12,16 @@ const RUNTIME = path.resolve(__dirname, "../../runtime/src/index.ts");
 
 async function instantiate(tsCode: string, stubs?: { name: string; contents: string }[]): Promise<Record<string, unknown>> {
   const stubPlugin = {
-    name: "tasor-test-stubs",
+    name: "tsazor-test-stubs",
     setup(build: esbuild.PluginBuild): void {
       build.onResolve({ filter: /.*/ }, (args) => {
-        if (args.path === "tasor:component" || stubs?.some((s) => s.name === args.path)) {
+        if (args.path === "tsazor:component" || stubs?.some((s) => s.name === args.path)) {
           return { path: args.path, namespace: "stub" };
         }
         return undefined;
       });
       build.onLoad({ filter: /.*/, namespace: "stub" }, (args) => {
-        if (args.path === "tasor:component") return { contents: tsCode, loader: "ts", resolveDir: process.cwd() };
+        if (args.path === "tsazor:component") return { contents: tsCode, loader: "ts", resolveDir: process.cwd() };
         const stub = stubs?.find((s) => s.name === args.path);
         return stub ? { contents: stub.contents, loader: "ts", resolveDir: process.cwd() } : undefined;
       });
@@ -30,13 +30,13 @@ async function instantiate(tsCode: string, stubs?: { name: string; contents: str
   // The wrapper imports the compiled component and re-exports the runtime,
   // so the test and the component share ONE runtime module instance — a
   // second copy would break `instanceof EventCallback` checks in the renderer.
-  const wrapper = `import Comp from "tasor:component";\nexport default Comp;\nexport * from "@tasor/runtime";\n`;
+  const wrapper = `import Comp from "tsazor:component";\nexport default Comp;\nexport * from "@tsazor/runtime";\n`;
   const result = await esbuild.build({
     stdin: { contents: wrapper, resolveDir: process.cwd(), loader: "ts", sourcefile: "wrapper.ts" },
     bundle: true,
     format: "esm",
     platform: "browser",
-    alias: { "@tasor/runtime": RUNTIME },
+    alias: { "@tsazor/runtime": RUNTIME },
     write: false,
     sourcemap: false,
     plugins: [stubPlugin],
@@ -62,7 +62,7 @@ describe("compiler end-to-end (markup → generated module → runtime DOM)", ()
   };
 }
 `;
-    const { code, diagnostics } = compile(source, { className: "Counter", fileName: "Counter.tazor", generateSourceMap: false });
+    const { code, diagnostics } = compile(source, { className: "Counter", fileName: "Counter.tsazor", generateSourceMap: false });
     expect(diagnostics.hasErrors).toBe(false);
 
     const mod = await instantiate(code);
@@ -84,7 +84,7 @@ describe("compiler end-to-end (markup → generated module → runtime DOM)", ()
 
   it("renders components, if/else and foreach with keys", async () => {
     const stubGreeter = `
-import { ComponentBase, Parameter } from "@tasor/runtime";
+import { ComponentBase, Parameter } from "@tsazor/runtime";
 export default class Greeter extends ComponentBase {
   @Parameter() name = "";
   buildRenderTree(b: any): void {
@@ -118,10 +118,10 @@ export default class Greeter extends ComponentBase {
     const { code } = compile(parentSource, {
       className: "Parent",
       generateSourceMap: false,
-      resolveComponent: (tag) => (tag === "Greeter" ? { specifier: "./Greeter.tazor" } : null),
+      resolveComponent: (tag) => (tag === "Greeter" ? { specifier: "./Greeter.tsazor" } : null),
     });
 
-    const mod = await instantiate(code, [{ name: "./Greeter.tazor", contents: stubGreeter }]);
+    const mod = await instantiate(code, [{ name: "./Greeter.tsazor", contents: stubGreeter }]);
     const Parent = mod.default as abstract new () => unknown;
     const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
     const container = document.createElement("div");
@@ -178,10 +178,10 @@ export default class Greeter extends ComponentBase {
     await renderer.waitUntilIdle();
 
     const nameInput = container.querySelector('[data-testid="name-input"]') as HTMLInputElement;
-    nameInput.value = "Tasor";
+    nameInput.value = "Tsazor";
     nameInput.dispatchEvent(new Event("change"));
     await renderer.waitUntilIdle();
-    expect(container.querySelectorAll("p")[0]?.textContent).toBe("Hello, Tasor");
+    expect(container.querySelectorAll("p")[0]?.textContent).toBe("Hello, Tsazor");
 
     const amountInput = container.querySelector('[data-testid="amount-input"]') as HTMLInputElement;
     amountInput.value = "42";
@@ -193,7 +193,7 @@ export default class Greeter extends ComponentBase {
 
   it("binds a component parameter with @bind-Value (Value + ValueChanged)", async () => {
     const stubStepper = `
-import { ComponentBase, Parameter, EventCallback, defineComponent } from "@tasor/runtime";
+import { ComponentBase, Parameter, EventCallback, defineComponent } from "@tsazor/runtime";
 export default class Stepper extends ComponentBase {
   @Parameter() value = 0;
   @Parameter() valueChanged?: EventCallback<number>;
@@ -220,10 +220,10 @@ export default class Stepper extends ComponentBase {
     const { code } = compile(source, {
       className: "BindComponent",
       generateSourceMap: false,
-      resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tazor" } : null),
+      resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tsazor" } : null),
     });
 
-    const mod = await instantiate(code, [{ name: "./Stepper.tazor", contents: stubStepper }]);
+    const mod = await instantiate(code, [{ name: "./Stepper.tsazor", contents: stubStepper }]);
     const Demo = mod.default as abstract new () => unknown;
     const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
     const container = document.createElement("div");
@@ -237,13 +237,13 @@ export default class Stepper extends ComponentBase {
     expect(container.querySelector('[data-testid="current"]')?.textContent).toBe("Current: 6");
   });
 
-  it("sourcemap maps a generated builder call back into the .tazor file", () => {
+  it("sourcemap maps a generated builder call back into the .tsazor file", () => {
     const source = "<p>@Title</p>\n";
-    const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tazor" });
+    const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tsazor" });
     expect(map).toBeDefined();
     const parsed = JSON.parse(map!);
     expect(parsed.version).toBe(3);
-    expect(parsed.sources).toContain("Smap.tazor");
+    expect(parsed.sources).toContain("Smap.tsazor");
     expect(code).toContain('b.addContent(1, this.Title);');
   });
 
@@ -252,19 +252,19 @@ export default class Stepper extends ComponentBase {
     // (verified empirically) — this test pins the round trip so later refactors
     // of the chain don't silently break the DevTools debugging story.
     const source = "<p>@Title</p>\n";
-    const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tazor" });
+    const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tsazor" });
     const genLine0 = code.split("\n").findIndex((l) => l.includes("b.addContent(1, this.Title);"));
     const { TraceMap, originalPositionFor, generatedPositionFor } = await import("@jridgewell/trace-mapping");
     const trace = new TraceMap(JSON.parse(map!));
     const orig = originalPositionFor(trace, { line: genLine0 + 1, column: 4 });
-    expect(orig.line).toBe(1);      // .tazor line 1 (trace-mapping 1-based)
+    expect(orig.line).toBe(1);      // .tsazor line 1 (trace-mapping 1-based)
     expect(orig.column).toBe(3);    // the '@'
-    const back = generatedPositionFor(trace, { source: "Smap.tazor", line: 1, column: 3 });
+    const back = generatedPositionFor(trace, { source: "Smap.tsazor", line: 1, column: 3 });
     expect(back.line).toBe(genLine0 + 1);
   });
 
   it("exposes the raw per-statement mappings for position-aware tooling (LSP)", () => {
-    const { mappings, map } = compile('<p>@Title</p>', { className: "Raw", fileName: "Raw.tazor", generateSourceMap: false });
+    const { mappings, map } = compile('<p>@Title</p>', { className: "Raw", fileName: "Raw.tsazor", generateSourceMap: false });
     expect(mappings).toBeDefined();
     expect(map).toBeUndefined();
     expect(mappings!.some((m) => m.srcLine === 0 && m.srcCol === 4)).toBe(true); // `Title` token
@@ -280,7 +280,7 @@ export default class Stepper extends ComponentBase {
 `;
     const { code, diagnostics } = compile(source, {
       className: "Scoped",
-      fileName: "Scoped.tazor",
+      fileName: "Scoped.tsazor",
       generateSourceMap: false,
       scopeHash: "b-1a2b3c4d",
     });
@@ -304,9 +304,9 @@ export default class Stepper extends ComponentBase {
 <button data-testid="inc" @onclick="increment">+</button>
 <p data-testid="double">@doubleCount</p>
 `;
-    // The sidecar is what Vite would compile from the sibling X.tazor.ts.
+    // The sidecar is what Vite would compile from the sibling X.tsazor.ts.
     const sidecar = `
-import { ComponentBase } from "@tasor/runtime";
+import { ComponentBase } from "@tsazor/runtime";
 export default class BeCode extends ComponentBase {
   count = 0;
   increment(): void { this.count++; }
@@ -315,16 +315,16 @@ export default class BeCode extends ComponentBase {
 `;
     const { code, diagnostics } = compile(source, {
       className: "Counter",
-      fileName: "Counter.tazor",
+      fileName: "Counter.tsazor",
       generateSourceMap: false,
       codeBehindClass: "CounterBase",
-      imports: ['import CounterBase from "./Counter.tazor.ts";'],
+      imports: ['import CounterBase from "./Counter.tsazor.ts";'],
     });
     expect(diagnostics.hasErrors).toBe(false);
     expect(code).toContain("export default class Counter extends CounterBase {");
     expect(code).not.toContain("extends ComponentBase");
 
-    const mod = await instantiate(code, [{ name: "./Counter.tazor.ts", contents: sidecar }]);
+    const mod = await instantiate(code, [{ name: "./Counter.tsazor.ts", contents: sidecar }]);
     const Counter = mod.default as abstract new () => unknown;
     const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
     const container = document.createElement("div");

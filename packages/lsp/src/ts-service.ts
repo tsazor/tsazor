@@ -1,5 +1,5 @@
 import { buildShadowModule, isShadowPath, shadowPathFor, type ShadowModule } from "./shadow-module";
-import { TazorGenMap } from "./ts-mapping";
+import { TsazorGenMap } from "./ts-mapping";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -8,7 +8,7 @@ import * as ts from "typescript";
 
 /**
  * The TypeScript type layer (v2): one `ts.LanguageService` per workspace over
- * shadow modules (`<dir>/<Name>.tazor.gen.ts`, virtual) plus every real file
+ * shadow modules (`<dir>/<Name>.tsazor.gen.ts`, virtual) plus every real file
  * the shadows import (code-behind sidecars, project TS, node_modules d.ts).
  *
  * The host only virtualizes shadow paths; everything else is read from disk,
@@ -20,11 +20,11 @@ export interface ShadowEntry {
   shadow: ShadowModule;
   /** Monotonic script version — bumped on every rebuild. */
   version: number;
-  /** .tazor mtime when built from disk (on-demand cache for closed files). */
+  /** .tsazor mtime when built from disk (on-demand cache for closed files). */
   mtimeMs?: number;
 }
 
-/** A single-line .tazor patch producing the completion anchor (`this.<prefix>`). */
+/** A single-line .tsazor patch producing the completion anchor (`this.<prefix>`). */
 export interface SourcePatch {
   line: number;
   start: number;
@@ -65,7 +65,7 @@ function fallbackCompilerOptions(): ts.CompilerOptions {
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"],
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
-    // The generated code imports the real sidecar as `./X.tazor.ts`.
+    // The generated code imports the real sidecar as `./X.tsazor.ts`.
     allowImportingTsExtensions: true,
     experimentalDecorators: true,
     useDefineForClassFields: false,
@@ -84,7 +84,7 @@ function fallbackCompilerOptions(): ts.CompilerOptions {
 /** Lib d.ts directory: env override → installed typescript (of this package)
  *  → shipped `lib/` next to the bundle → installed typescript fallback. */
 function resolveLibDir(): string {
-  if (process.env.TASOR_TS_LIB_DIR) return path.resolve(process.env.TASOR_TS_LIB_DIR);
+  if (process.env.TSAZOR_TS_LIB_DIR) return path.resolve(process.env.TSAZOR_TS_LIB_DIR);
   try {
     // require.resolve cannot touch .d.ts files — resolve the main module
     // instead. fileURLToPath: `__dirname` is unreliable under vitest/ESM.
@@ -126,7 +126,7 @@ function loadProjectOptions(projectRoot: string): ts.CompilerOptions {
   }
 }
 
-export class TasorTypeService {
+export class TsazorTypeService {
   private readonly projectRoot: string;
   private readonly ls: ts.LanguageService;
   private readonly entries = new Map<string, ShadowEntry>();
@@ -147,19 +147,19 @@ export class TasorTypeService {
   /* Lifecycle                                                           */
   /* ------------------------------------------------------------------ */
 
-  /** Unified entry point: builds (and caches) the shadow for a .tazor file.
+  /** Unified entry point: builds (and caches) the shadow for a .tsazor file.
    *  `source` (open document) wins over disk; without it the file is read
    *  from disk and cached by mtime. */
-  async ensureTazor(tazorPath: string, source?: string): Promise<ShadowEntry | null> {
-    const key = shadowKey(tazorPath);
+  async ensureTsazor(tsazorPath: string, source?: string): Promise<ShadowEntry | null> {
+    const key = shadowKey(tsazorPath);
     if (source !== undefined) {
       const cached = this.entries.get(key);
       if (cached?.mtimeMs === undefined && cached) return cached; // open doc wins
-      return this.openTazor(tazorPath, source);
+      return this.openTsazor(tsazorPath, source);
     }
     let mtimeMs: number | undefined;
     try {
-      mtimeMs = statSync(tazorPath).mtimeMs;
+      mtimeMs = statSync(tsazorPath).mtimeMs;
     } catch {
       return null;
     }
@@ -167,17 +167,17 @@ export class TasorTypeService {
     if (cached && cached.mtimeMs === mtimeMs) return cached;
     if (cached?.mtimeMs === undefined && cached) return cached; // open doc wins
     try {
-      const diskSource = readFileSync(tazorPath, "utf8");
-      return await this.openFromDisk(tazorPath, diskSource, mtimeMs);
+      const diskSource = readFileSync(tsazorPath, "utf8");
+      return await this.openFromDisk(tsazorPath, diskSource, mtimeMs);
     } catch {
       return null;
     }
   }
 
   /** (Re)builds the shadow from an open document's source. */
-  async openTazor(tazorPath: string, source: string): Promise<ShadowEntry | null> {
-    const key = shadowKey(tazorPath);
-    const shadow = await buildShadowModule(tazorPath, source, this.projectRoot);
+  async openTsazor(tsazorPath: string, source: string): Promise<ShadowEntry | null> {
+    const key = shadowKey(tsazorPath);
+    const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot);
     if (!shadow) {
       this.entries.delete(key);
       return null;
@@ -188,9 +188,9 @@ export class TasorTypeService {
   }
 
   /** (Re)builds the shadow from disk, remembering the mtime for the cache. */
-  private async openFromDisk(tazorPath: string, source: string, mtimeMs: number): Promise<ShadowEntry | null> {
-    const key = shadowKey(tazorPath);
-    const shadow = await buildShadowModule(tazorPath, source, this.projectRoot);
+  private async openFromDisk(tsazorPath: string, source: string, mtimeMs: number): Promise<ShadowEntry | null> {
+    const key = shadowKey(tsazorPath);
+    const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot);
     if (!shadow) {
       this.entries.delete(key);
       return null;
@@ -200,8 +200,8 @@ export class TasorTypeService {
     return entry;
   }
 
-  closeTazor(tazorPath: string): void {
-    this.entries.delete(shadowKey(tazorPath));
+  closeTsazor(tsazorPath: string): void {
+    this.entries.delete(shadowKey(tsazorPath));
   }
 
   /** The shadow/graph entry behind a generated module path. */
@@ -209,7 +209,7 @@ export class TasorTypeService {
     return this.entries.get(toKey(modulePath)) ?? this.entries.get(toKey(modulePath + ".ts"));
   }
 
-  mapOf(entry: ShadowEntry): TazorGenMap {
+  mapOf(entry: ShadowEntry): TsazorGenMap {
     return entry.shadow.map;
   }
 
@@ -263,7 +263,7 @@ export class TasorTypeService {
   }
 
   /**
-   * Builds a one-request variant shadow from a patched .tazor source and
+   * Builds a one-request variant shadow from a patched .tsazor source and
    * computes the query cursor at the end of the baked `this.<chain>` text.
    */
   async buildVariant(
@@ -360,7 +360,7 @@ export class TasorTypeService {
     const key = toKey(fileName);
     const variant = this.variants.get(key);
     if (variant) return variant.version;
-    const entry = this.entries.get(key) ?? this.entries.get(key.replace(/\.variant\.ts$/, ".tazor.gen.ts"));
+    const entry = this.entries.get(key) ?? this.entries.get(key.replace(/\.variant\.ts$/, ".tsazor.gen.ts"));
     if (entry) return entry.version;
     try {
       return statSync(fileName).mtimeMs;
@@ -393,8 +393,8 @@ export class TasorTypeService {
 
 /* Registry helpers -------------------------------------------------------- */
 
-function shadowKey(tazorPath: string): string {
-  return toKey(shadowPathFor(tazorPath));
+function shadowKey(tsazorPath: string): string {
+  return toKey(shadowPathFor(tsazorPath));
 }
 
 /** 0-based line/column → text offset inside a generated module's code. */

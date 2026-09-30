@@ -1,62 +1,62 @@
-import { compile, type ResolvedComponent, type ResolvedType } from "@tasor/compiler";
-import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES } from "@tasor/workspace";
+import { compile, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
+import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES } from "@tsazor/workspace";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { TazorGenMap } from "./ts-mapping";
+import { TsazorGenMap } from "./ts-mapping";
 
 /**
- * Shadow modules for the TypeScript type layer: the generated TS of a .tazor
+ * Shadow modules for the TypeScript type layer: the generated TS of a .tsazor
  * file (plus the imports the build pipeline would emit), living at a synthetic
  * in-memory path next to the real file so every relative import resolves
  * without rewriting. Mirrors packages/vite-plugin/src/index.ts transform()
  * (pass-1 import collection, code-behind, knownGlobals) plus two v2-specific
  * rewrites:
- *   A. imports of other .tazor components → that component's own shadow
- *      (`./Sparkline.tazor` → `./Sparkline.tazor.gen`), chaining types through
+ *   A. imports of other .tsazor components → that component's own shadow
+ *      (`./Sparkline.tsazor` → `./Sparkline.tsazor.gen`), chaining types through
  *      real component sources instead of surface d.ts.
- *   B. bare-package components (`@tasor/components`) → the component's shipped
- *      .tazor source shadow (the package's dist d.ts is deliberately `any`).
+ *   B. bare-package components (`@tsazor/components`) → the component's shipped
+ *      .tsazor source shadow (the package's dist d.ts is deliberately `any`).
  */
 
 export interface ShadowModule {
-  /** Synthetic module path: `<dir>/<Name>.tazor.gen.ts` next to the real file. */
+  /** Synthetic module path: `<dir>/<Name>.tsazor.gen.ts` next to the real file. */
   virtualPath: string;
-  /** The real .tazor file this shadow was generated from. */
+  /** The real .tsazor file this shadow was generated from. */
   realPath: string;
   /** Generated TS source (import header rewritten). */
   code: string;
   /** Raw mappings behind the generated code, for position translation. */
-  map: TazorGenMap;
+  map: TsazorGenMap;
   className: string;
 }
 
-/** Synthetic path of a shadow module: `X.tazor` → `X.tazor.gen.ts`. */
-export function shadowPathFor(tazorPath: string): string {
-  return `${path.resolve(tazorPath)}.gen.ts`;
+/** Synthetic path of a shadow module: `X.tsazor` → `X.tsazor.gen.ts`. */
+export function shadowPathFor(tsazorPath: string): string {
+  return `${path.resolve(tsazorPath)}.gen.ts`;
 }
 
 /** True when the module path is a shadow (not a real file). */
 export function isShadowPath(modulePath: string): boolean {
-  return modulePath.replace(/\\/g, "/").endsWith(".tazor.gen.ts");
+  return modulePath.replace(/\\/g, "/").endsWith(".tsazor.gen.ts");
 }
 
-/** The .tazor file behind a shadow path (or undefined for anything else). */
-export function tazorOfShadowPath(modulePath: string): string | undefined {
+/** The .tsazor file behind a shadow path (or undefined for anything else). */
+export function tsazorOfShadowPath(modulePath: string): string | undefined {
   if (!isShadowPath(modulePath)) return undefined;
   return modulePath.replace(/\\/g, "/").replace(/\.gen\.ts$/, "");
 }
 
-export async function buildShadowModule(tazorPath: string, source: string, projectRoot: string): Promise<ShadowModule | null> {
+export async function buildShadowModule(tsazorPath: string, source: string, projectRoot: string): Promise<ShadowModule | null> {
   try {
-    const filePath = path.resolve(tazorPath);
+    const filePath = path.resolve(tsazorPath);
     const fileDir = path.dirname(filePath);
     const chain = await collectImports(fileDir, projectRoot);
 
-    if (path.basename(filePath) === "_Imports.tazor") {
-      // _Imports.tazor contributes directives only; it is never a component.
+    if (path.basename(filePath) === "_Imports.tsazor") {
+      // _Imports.tsazor contributes directives only; it is never a component.
       const virtualPath = shadowPathFor(filePath);
-      return { virtualPath, realPath: filePath, code: "export default null;\n", map: new TazorGenMap([]), className: "_Imports" };
+      return { virtualPath, realPath: filePath, code: "export default null;\n", map: new TsazorGenMap([]), className: "_Imports" };
     }
 
     const context = createFileContext(filePath, chain);
@@ -107,11 +107,11 @@ export async function buildShadowModule(tazorPath: string, source: string, proje
       virtualPath: shadowPathFor(filePath),
       realPath: filePath,
       code,
-      map: new TazorGenMap(compiled.mappings ?? []),
+      map: new TsazorGenMap(compiled.mappings ?? []),
       className: context.className,
     };
   } catch {
-    // Compiler-level failures (TZRE000-style) → no type layer; the v1 layer
+    // Compiler-level failures (TSZE000-style) → no type layer; the v1 layer
     // still publishes compiler diagnostics.
     return null;
   }
@@ -128,22 +128,22 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
   const [, clause, rawSpecifier] = match;
   const specifier = rawSpecifier!.replace(/^["']|["']$/g, "");
 
-  // Rewrite A: relative specifier pointing at a sibling/library .tazor source
+  // Rewrite A: relative specifier pointing at a sibling/library .tsazor source
   // → that component's own shadow module.
   if (specifier.startsWith(".")) {
     const target = path.resolve(fileDir, specifier);
-    // relativeSpecifier strips ".ts"; a .tazor import keeps the extension.
-    const candidates = specifier.endsWith(".tazor") ? [target] : [`${target}.tazor`, `${target}.tazor.ts`];
-    const tazor = candidates.find((candidate) => existsSync(candidate));
-    if (tazor) {
+    // relativeSpecifier strips ".ts"; a .tsazor import keeps the extension.
+    const candidates = specifier.endsWith(".tsazor") ? [target] : [`${target}.tsazor`, `${target}.tsazor.ts`];
+    const tsazor = candidates.find((candidate) => existsSync(candidate));
+    if (tsazor) {
       return `import ${clause} from "${specifier}.gen";`;
     }
     return line;
   }
 
-  // Rewrite B: bare package specifier (e.g. @tasor/components) → the package's
-  // shipped .tazor sources when the named import is a component file there.
-  if (specifier.startsWith("@") && specifier !== "@tasor/runtime") {
+  // Rewrite B: bare package specifier (e.g. @tsazor/components) → the package's
+  // shipped .tsazor sources when the named import is a component file there.
+  if (specifier.startsWith("@") && specifier !== "@tsazor/runtime") {
     const exportName = clause ? namedImportsOf(clause) : [];
     if (exportName.length > 0) {
       let pkgDir: string | undefined;
@@ -153,7 +153,7 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
         return line;
       }
       for (const name of exportName) {
-        const source = path.join(pkgDir, "src", `${name}.tazor`);
+        const source = path.join(pkgDir, "src", `${name}.tsazor`);
         if (existsSync(source)) {
           return `import ${clause} from "${toPosix(shadowPathFor(source))}";`;
         }
@@ -163,7 +163,7 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
   return line;
 }
 
-/** Named bindings of an import clause: `Alert as __tasor_comp_Alert` or `{ Card }` → the exported names. */
+/** Named bindings of an import clause: `Alert as __tsazor_comp_Alert` or `{ Card }` → the exported names. */
 function namedImportsOf(clause: string): string[] {
   const named = /\{([^}]*)\}/.exec(clause);
   if (!named) return [];

@@ -1,5 +1,5 @@
 /* Global demo stylesheet — imported by Program.ts. Component-scoped CSS
-   lives in MainLayout.tazor's <style> block and is rendered by the framework. */
+   lives in MainLayout.tsazor's <style> block and is rendered by the framework. */
 
 :root {
   --bg: #f6f8fa;

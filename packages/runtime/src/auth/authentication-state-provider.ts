@@ -59,7 +59,7 @@ export function watchAuthenticationState(
     .then(apply)
     .catch((error) => {
       // eslint-disable-next-line no-console
-      console.error("[tasor] AuthenticationStateProvider.getState() failed:", error);
+      console.error("[tsazor] AuthenticationStateProvider.getState() failed:", error);
       apply(ANONYMOUS);
     });
   return unsubscribe;

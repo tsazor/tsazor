@@ -1,4 +1,4 @@
-import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, createUser } from "@tasor/runtime";
+import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, createUser } from "@tsazor/runtime";
 
 /**
  * Demo AuthenticationStateProvider: an in-memory login (no real backend).

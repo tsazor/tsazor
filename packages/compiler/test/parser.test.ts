@@ -118,7 +118,7 @@ describe("parser", () => {
 
   it("reports unclosed tags as errors", () => {
     const { diagnostics } = parse("<div><span>text</div>");
-    expect(diagnostics.all.some((d) => d.code === "TZR002" && d.severity === "error")).toBe(true);
+    expect(diagnostics.all.some((d) => d.code === "TZS002" && d.severity === "error")).toBe(true);
   });
 
   it("treats unknown @ tokens as diagnostics", () => {
@@ -151,7 +151,7 @@ describe("parser", () => {
 
   it("reports duplicate bind modifiers", () => {
     const { diagnostics } = parse('<input @bind="n" @bind:event="oninput" @bind:event="onchange" />');
-    expect(diagnostics.all.some((d) => d.code === "TZR008" && /Duplicate bind modifier/.test(d.message))).toBe(true);
+    expect(diagnostics.all.some((d) => d.code === "TZS008" && /Duplicate bind modifier/.test(d.message))).toBe(true);
   });
 
   it("keeps braces inside element content as literal text (inline CSS/JSON)", () => {
@@ -166,8 +166,8 @@ describe("parser", () => {
     expect(text).toContain("{ color: red; }");
   });
 
-  it("reports a stray '}' outside any element as TZR003", () => {
+  it("reports a stray '}' outside any element as TZS003", () => {
     const { diagnostics } = parse("a } b");
-    expect(diagnostics.all.some((d) => d.code === "TZR003")).toBe(true);
+    expect(diagnostics.all.some((d) => d.code === "TZS003")).toBe(true);
   });
 });

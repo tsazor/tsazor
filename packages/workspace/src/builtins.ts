@@ -1,9 +1,9 @@
 /**
- * Runtime built-ins: components and types exported by @tasor/runtime. Markup
+ * Runtime built-ins: components and types exported by @tsazor/runtime. Markup
  * tags resolve against this list (Blazor: _Imports with
  * Microsoft.AspNetCore.Components.Web) and @code identifiers get import lines.
  */
-export const RUNTIME_PACKAGE = "@tasor/runtime";
+export const RUNTIME_PACKAGE = "@tsazor/runtime";
 
 /** Component classes usable as markup tags. */
 export const RUNTIME_COMPONENTS: ReadonlySet<string> = new Set([
@@ -165,10 +165,10 @@ export const RUNTIME_TYPES: ReadonlySet<string> = new Set([
   "VirtualizeItemsProvider",
   "VirtualizeItemsProviderRequest",
   "VirtualizeItemsProviderResult",
-  "TasorHttp",
+  "TsazorHttp",
   "ServiceCollection",
   "ServiceProvider",
   "Token",
   "Renderer",
-  "createTasorApp",
+  "createTsazorApp",
 ]);

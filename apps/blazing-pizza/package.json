@@ -12,8 +12,8 @@
     "verify": "node scripts/verify-pizza.mjs"
   },
   "dependencies": {
-    "@tasor/runtime": "workspace:*",
-    "@tasor/vite-plugin": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8",
     "leaflet": "^1.9.4"
   },

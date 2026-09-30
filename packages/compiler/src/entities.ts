@@ -1,6 +1,6 @@
 /**
  * HTML entity decoding for markup text and static attribute values.
- * Razor decodes entities while parsing markup; the Tasor DOM renderer writes
+ * Razor decodes entities while parsing markup; the Tsazor DOM renderer writes
  * text with createTextNode (no HTML parsing), so entities must be decoded at
  * compile time — `&amp;` must render as "&", not literally.
  */

@@ -1,11 +1,11 @@
-declare module "*.tazor" {
-  import type { ComponentBase } from "@tasor/runtime";
+declare module "*.tsazor" {
+  import type { ComponentBase } from "@tsazor/runtime";
   const component: abstract new (...args: never[]) => ComponentBase;
   export default component;
 }
 
-declare module "virtual:tasor-routes" {
-  import type { RouteEntry } from "@tasor/runtime";
+declare module "virtual:tsazor-routes" {
+  import type { RouteEntry } from "@tsazor/runtime";
   const routes: RouteEntry[];
   export default routes;
 }

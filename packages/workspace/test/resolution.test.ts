@@ -12,12 +12,12 @@ let root = "";
 let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "tasor-ws-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "tsazor-ws-"));
   root = dir;
   await mkdir(path.join(dir, "Shared"), { recursive: true });
   await mkdir(path.join(dir, "Pages"), { recursive: true });
-  await writeFile(path.join(dir, "_Imports.tazor"), "@using ./Shared\n");
-  await writeFile(path.join(dir, "Shared", "Card.tazor"), "<div class='card'>@Child</div>\n");
+  await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./Shared\n");
+  await writeFile(path.join(dir, "Shared", "Card.tsazor"), "<div class='card'>@Child</div>\n");
   await writeFile(path.join(dir, "UserService.ts"), "export default class UserService {}\n");
   // Barrel-like module in an _Imports layer dir: several exported names.
   await writeFile(
@@ -40,15 +40,15 @@ describe("collectImports", () => {
 describe("createFileContext", () => {
   it("resolves components through _Imports directories (siblings visible)", async () => {
     const chain = await collectImports(path.join(root, "Pages"), root);
-    const context = createFileContext(path.join(root, "Pages", "Index.tazor"), chain);
+    const context = createFileContext(path.join(root, "Pages", "Index.tsazor"), chain);
     const resolved = context.resolveComponent("Card", []);
-    expect(resolved?.specifier).toBe("../Shared/Card.tazor");
+    expect(resolved?.specifier).toBe("../Shared/Card.tsazor");
     expect(context.resolveComponent("Nobody", [])).toBeNull();
   });
 
   it("resolves @inject types from @using paths and runtime built-ins", async () => {
     const chain = await collectImports(path.join(root, "Pages"), root);
-    const context = createFileContext(path.join(root, "Pages", "Index.tazor"), chain);
+    const context = createFileContext(path.join(root, "Pages", "Index.tsazor"), chain);
     expect(context.resolveType("UserService", [])?.specifier).toBe("../UserService");
     expect(context.resolveType("EventCallback", [])?.exportName).toBe("EventCallback");
     expect(RUNTIME_TYPES.has("EventCallback")).toBe(true);
@@ -56,7 +56,7 @@ describe("createFileContext", () => {
 
   it("resolves named exports of .ts modules in the candidate dirs (barrels)", async () => {
     const chain = await collectImports(path.join(root, "Pages"), root);
-    const context = createFileContext(path.join(root, "Pages", "Index.tazor"), chain);
+    const context = createFileContext(path.join(root, "Pages", "Index.tsazor"), chain);
     expect(context.resolveType("Address", [])).toMatchObject({ specifier: "../models", exportName: "Address" });
     expect(context.resolveType("Pizza", [])?.exportName).toBe("Pizza");
     // Unresolvable names still fall through.
@@ -65,7 +65,7 @@ describe("createFileContext", () => {
 
   it("never resolves JS globals or TS utility types to imports", async () => {
     const chain = await collectImports(path.join(root, "Pages"), root);
-    const context = createFileContext(path.join(root, "Pages", "Index.tazor"), chain);
+    const context = createFileContext(path.join(root, "Pages", "Index.tsazor"), chain);
     // These references in @code (e.g. Math.min, Record<string, T>) stay globals.
     expect(context.resolveType("Math", [])).toBeNull();
     expect(context.resolveType("Date", [])).toBeNull();
@@ -77,10 +77,10 @@ describe("createFileContext", () => {
 describe("collectCodeImports", () => {
   it("imports runtime types, local modules and named exports used in @code", async () => {
     const chain = await collectImports(path.join(root, "Pages"), root);
-    const context = createFileContext(path.join(root, "Pages", "Index.tazor"), chain);
-    const compiled = "import { ComponentBase, RenderTreeBuilder } from \"@tasor/runtime\";\n";
+    const context = createFileContext(path.join(root, "Pages", "Index.tsazor"), chain);
+    const compiled = "import { ComponentBase, RenderTreeBuilder } from \"@tsazor/runtime\";\n";
     const imports = collectCodeImports("address: Address; uses UserService and InputText", compiled, context);
-    expect(imports).toContain('import { InputText } from "@tasor/runtime";');
+    expect(imports).toContain('import { InputText } from "@tsazor/runtime";');
     // Named exports of .ts modules resolve too, so model types type-check
     // inside verbatim @code blocks (type-only usage is elided by the build).
     expect(imports).toContain('import { Address } from "../models";');

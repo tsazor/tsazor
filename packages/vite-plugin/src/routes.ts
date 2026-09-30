@@ -1,15 +1,15 @@
-import { compile } from "@tasor/compiler";
+import { compile } from "@tsazor/compiler";
 import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { collectImports, createFileContext, classNameForFile } from "@tasor/workspace";
+import { collectImports, createFileContext, classNameForFile } from "@tsazor/workspace";
 
 /** One scanned @page component. */
 export interface ScannedRoute {
   template: string;
-  /** Absolute path of the page's .tazor file. */
+  /** Absolute path of the page's .tsazor file. */
   componentPath: string;
-  /** Absolute path of the layout .tazor, when the page (or _Imports) sets one. */
+  /** Absolute path of the layout .tsazor, when the page (or _Imports) sets one. */
   layoutPath?: string;
   /** Bare @authorize directive → authentication-required route ({} → auth suffices). */
   authorize?: boolean;
@@ -17,7 +17,7 @@ export interface ScannedRoute {
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", ".vscode", ".claude"]);
 
-async function* walkTazorFiles(dir: string, root: string): AsyncGenerator<string> {
+async function* walkTsazorFiles(dir: string, root: string): AsyncGenerator<string> {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -28,8 +28,8 @@ async function* walkTazorFiles(dir: string, root: string): AsyncGenerator<string
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      yield* walkTazorFiles(full, root);
-    } else if (entry.isFile() && entry.name.endsWith(".tazor") && entry.name !== "_Imports.tazor") {
+      yield* walkTsazorFiles(full, root);
+    } else if (entry.isFile() && entry.name.endsWith(".tsazor") && entry.name !== "_Imports.tsazor") {
       yield full;
     }
   }
@@ -38,7 +38,7 @@ async function* walkTazorFiles(dir: string, root: string): AsyncGenerator<string
 /** Scans the project for @page components and their layouts. */
 export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
   const routes: ScannedRoute[] = [];
-  for await (const filePath of walkTazorFiles(path.resolve(root), path.resolve(root))) {
+  for await (const filePath of walkTsazorFiles(path.resolve(root), path.resolve(root))) {
     const source = await readFile(filePath, "utf8");
     if (!/@page\b/.test(source)) continue;
     const className = classNameForFile(filePath);
@@ -63,20 +63,20 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
 }
 
 /**
- * Root-relative dev-module URLs of all .tazor components (pages + plain
+ * Root-relative dev-module URLs of all .tsazor components (pages + plain
  * components) — the input for dev-server warmup, so compile errors inside
  * verbatim @code surface at startup instead of on the first page visit.
  */
-export async function scanTazorModules(root: string): Promise<string[]> {
+export async function scanTsazorModules(root: string): Promise<string[]> {
   const rootPath = path.resolve(root);
   const urls: string[] = [];
-  for await (const filePath of walkTazorFiles(rootPath, rootPath)) {
+  for await (const filePath of walkTsazorFiles(rootPath, rootPath)) {
     urls.push(toRootRelativeSpecifier(rootPath, filePath));
   }
   return urls;
 }
 
-/** Generates the `virtual:tasor-routes` module content (RouteEntry[] literal). */
+/** Generates the `virtual:tsazor-routes` module content (RouteEntry[] literal). */
 export function generateRoutesModule(root: string, routes: ScannedRoute[]): string {
   const rootPath = path.resolve(root);
   const lines: string[] = [];
@@ -111,7 +111,7 @@ export function generateRoutesModule(root: string, routes: ScannedRoute[]): stri
 }
 
 /**
- * Root-relative specifier (`/src/Pages/Counter.tazor`) — the virtual routes
+ * Root-relative specifier (`/src/Pages/Counter.tsazor`) — the virtual routes
  * module has no real path of its own, so imports resolve against the Vite root.
  */
 function toRootRelativeSpecifier(root: string, target: string): string {

@@ -77,12 +77,12 @@ importers:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
 
-  apps/bench/tasor:
+  apps/bench/tsazor:
     dependencies:
-      '@tasor/runtime':
+      '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../../packages/runtime
-      '@tasor/vite-plugin':
+      '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../../packages/vite-plugin
     devDependencies:
@@ -114,10 +114,10 @@ importers:
 
   apps/blazing-pizza:
     dependencies:
-      '@tasor/runtime':
+      '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
-      '@tasor/vite-plugin':
+      '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
       bootstrap:
@@ -142,13 +142,13 @@ importers:
 
   apps/demo:
     dependencies:
-      '@tasor/components':
+      '@tsazor/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@tasor/runtime':
+      '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
-      '@tasor/vite-plugin':
+      '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
       bootstrap:
@@ -167,13 +167,13 @@ importers:
 
   apps/sleipnir-ticker:
     dependencies:
-      '@tasor/components':
+      '@tsazor/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@tasor/runtime':
+      '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
-      '@tasor/vite-plugin':
+      '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
       bootstrap:
@@ -217,16 +217,16 @@ importers:
 
   packages/components:
     devDependencies:
-      '@tasor/compiler':
+      '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
-      '@tasor/runtime':
+      '@tsazor/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@tasor/testing':
+      '@tsazor/testing':
         specifier: workspace:*
         version: link:../testing
-      '@tasor/workspace':
+      '@tsazor/workspace':
         specifier: workspace:*
         version: link:../workspace
       esbuild:
@@ -241,10 +241,10 @@ importers:
 
   packages/lsp:
     dependencies:
-      '@tasor/compiler':
+      '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
-      '@tasor/workspace':
+      '@tsazor/workspace':
         specifier: workspace:*
         version: link:../workspace
       typescript:
@@ -278,7 +278,7 @@ importers:
 
   packages/testing:
     dependencies:
-      '@tasor/runtime':
+      '@tsazor/runtime':
         specifier: workspace:*
         version: link:../runtime
     devDependencies:
@@ -300,10 +300,10 @@ importers:
       '@jridgewell/trace-mapping':
         specifier: ^0.3.25
         version: 0.3.31
-      '@tasor/compiler':
+      '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
-      '@tasor/workspace':
+      '@tsazor/workspace':
         specifier: workspace:*
         version: link:../workspace
       esbuild:
@@ -334,7 +334,7 @@ importers:
 
   packages/workspace:
     dependencies:
-      '@tasor/compiler':
+      '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
     devDependencies:

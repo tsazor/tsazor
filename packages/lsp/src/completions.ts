@@ -1,5 +1,5 @@
 /**
- * Completion for .tazor files: classifies the cursor position from the raw
+ * Completion for .tsazor files: classifies the cursor position from the raw
  * source (the AST has no per-attribute-name/value spans) and returns
  * candidates for four contexts:
  *
@@ -12,8 +12,8 @@
  * Positions: LSP (0-based line/character) in, completions out. The compiler's
  * AST spans are 1-based/0-based-columns — nodeAt already handles the shift.
  */
-import { parseDocument, DiagnosticBag, type CodeBlockNode, type ElementNode, type ExpressionNode } from "@tasor/compiler";
-import { RUNTIME_COMPONENT_PARAMS, RUNTIME_PACKAGE, RUNTIME_COMPONENTS, candidateDirs } from "@tasor/workspace";
+import { parseDocument, DiagnosticBag, type CodeBlockNode, type ElementNode, type ExpressionNode } from "@tsazor/compiler";
+import { RUNTIME_COMPONENT_PARAMS, RUNTIME_PACKAGE, RUNTIME_COMPONENTS, candidateDirs } from "@tsazor/workspace";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AnalyzedFile } from "./analysis";
@@ -182,19 +182,19 @@ function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefi
   return items.filter((item) => item.label.toLowerCase().startsWith(needle));
 }
 
-/** Parameters of the component the tag resolves to (built-in table or .tazor scan). */
+/** Parameters of the component the tag resolves to (built-in table or .tsazor scan). */
 function parametersOfComponent(
   analyzed: AnalyzedFile,
   tagName: string,
 ): ReadonlyArray<{ name: string; doc?: string }> {
   const file = analyzed.context.resolveImportable(tagName);
-  const params = file ? parameterNamesOfTazorFile(file) : [];
+  const params = file ? parameterNamesOfTsazorFile(file) : [];
   if (params.length > 0) return params;
   return RUNTIME_COMPONENT_PARAMS[tagName] ?? [];
 }
 
 /** Regex extraction of @Parameter() names from a component's @code (v1 heuristic). */
-export function parameterNamesOfTazorFile(file: string): ReadonlyArray<{ name: string; doc?: string }> {
+export function parameterNamesOfTsazorFile(file: string): ReadonlyArray<{ name: string; doc?: string }> {
   let source: string;
   try {
     source = readFileSync(file, "utf8");
@@ -228,8 +228,8 @@ function componentCandidates(analyzed: AnalyzedFile, prefix: string): Completion
       continue; // directory may not exist for bare or root usings
     }
     for (const entry of entries) {
-      if (!entry.endsWith(".tazor")) continue;
-      const tag = entry.slice(0, -".tazor".length);
+      if (!entry.endsWith(".tsazor")) continue;
+      const tag = entry.slice(0, -".tsazor".length);
       if (tag === "_Imports" || !PASCAL_TAG.test(tag) || !seen.add(tag)) continue;
       items.push({ label: tag, kind: "component", detail: path.basename(dir), doc: `<${tag}> — component in ${path.basename(dir)}` });
     }
@@ -238,7 +238,7 @@ function componentCandidates(analyzed: AnalyzedFile, prefix: string): Completion
     if (!seen.add(tag)) continue;
     const params = RUNTIME_COMPONENT_PARAMS[tag];
     const names = params && params.length > 0 ? `params: ${params.map((p) => p.name).join(", ")}` : undefined;
-    items.push({ label: tag, kind: "component", detail: RUNTIME_PACKAGE, doc: `<${tag}> — ${names ?? "@tasor/runtime"}` });
+    items.push({ label: tag, kind: "component", detail: RUNTIME_PACKAGE, doc: `<${tag}> — ${names ?? "@tsazor/runtime"}` });
   }
   const needle = prefix.toLowerCase();
   return items.filter((item) => item.label.toLowerCase().startsWith(needle)).sort((a, b) => a.label.localeCompare(b.label));
@@ -332,7 +332,7 @@ function memberCodeSources(analyzed: AnalyzedFile): string[] {
     .map((n) => n.code);
 }
 
-/** The sibling X.tazor.ts code-behind source, if present. */
+/** The sibling X.tsazor.ts code-behind source, if present. */
 function codeBehindSource(analyzed: AnalyzedFile): string | null {
   try {
     return readFileSync(`${analyzed.filePath}.ts`, "utf8");

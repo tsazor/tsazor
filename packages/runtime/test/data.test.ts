@@ -1,12 +1,12 @@
 /**
  * M6 acceptance tests: Data — Virtualize (spacer strategy over 10k items,
- * ItemsProvider window) and TasorHttp (getJson/postJson + interceptors).
+ * ItemsProvider window) and TsazorHttp (getJson/postJson + interceptors).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ComponentBase,
   Renderer,
-  TasorHttp,
+  TsazorHttp,
   Virtualize,
   defineComponent,
   type RenderTreeBuilder,
@@ -136,21 +136,21 @@ describe("Virtualize", () => {
   });
 });
 
-/* TasorHttp ------------------------------------------------------------- */
+/* TsazorHttp ------------------------------------------------------------- */
 
-describe("TasorHttp", () => {
+describe("TsazorHttp", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
   it("performs getJson with baseUrl resolution and parses the response", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 7, name: "Tasor" }), { status: 200 }));
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 7, name: "Tsazor" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const http = new TasorHttp({ baseUrl: "https://api.example.com/v1" });
+    const http = new TsazorHttp({ baseUrl: "https://api.example.com/v1" });
     const result = await http.getJson<{ id: number; name: string }>("/items/7");
 
-    expect(result).toEqual({ id: 7, name: "Tasor" });
+    expect(result).toEqual({ id: 7, name: "Tsazor" });
     const [request] = fetchMock.mock.calls[0] as [Request];
     expect(request.url).toBe("https://api.example.com/v1/items/7");
     expect(request.method).toBe("GET");
@@ -161,7 +161,7 @@ describe("TasorHttp", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ created: true }), { status: 201 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const http = new TasorHttp();
+    const http = new TsazorHttp();
     const result = await http.postJson<{ created: boolean }>("/items", { name: "x" });
 
     expect(result).toEqual({ created: true });
@@ -174,7 +174,7 @@ describe("TasorHttp", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify([1, 2]), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const http = new TasorHttp();
+    const http = new TsazorHttp();
     const seenAuth: string[] = [];
     http.addRequestInterceptor((request) => {
       return new Request(request, { headers: { authorization: "Bearer t1" } });
@@ -197,8 +197,8 @@ describe("TasorHttp", () => {
       "fetch",
       vi.fn(async () => new Response("not found", { status: 404 })),
     );
-    const http = new TasorHttp();
-    await expect(http.getJson("/missing")).rejects.toThrow(/\[tasor-http\] 404/);
+    const http = new TsazorHttp();
+    await expect(http.getJson("/missing")).rejects.toThrow(/\[tsazor-http\] 404/);
   });
 });
 

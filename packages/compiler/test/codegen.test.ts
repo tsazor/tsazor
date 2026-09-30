@@ -42,7 +42,7 @@ describe("codegen", () => {
     const { code } = gen(
       '<Alert OnDismissed="@alertGone" OnClick="@poke" OnSelect="@(() => this.picked())" Variant="@variant">x</Alert>' +
         '@code { private alertGone(): void {} private poke(): void {} private picked(): void {} private variant = ""; }',
-      { resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tazor" } : null) },
+      { resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tsazor" } : null) },
     );
     expect(code).toContain('b.addAttribute(1, "OnDismissed", EventCallback.bind(this, this.alertGone));');
     expect(code).toContain('b.addAttribute(2, "OnClick", EventCallback.bind(this, this.poke));');
@@ -83,7 +83,7 @@ describe("codegen", () => {
 
   it("imports only used runtime APIs", () => {
     const { code } = gen("<p>@x</p>");
-    expect(code).toContain('import { ComponentBase, RenderTreeBuilder } from "@tasor/runtime";');
+    expect(code).toContain('import { ComponentBase, RenderTreeBuilder } from "@tsazor/runtime";');
     const { code: code2 } = gen('<button @onclick="Go">x</button>');
     expect(code2).toContain("EventCallback");
     expect(code2).toContain('b.addEventHandler(1, "onclick", EventCallback.bind(this, this.Go));');
@@ -91,10 +91,10 @@ describe("codegen", () => {
 
   it("resolves component tags to imports and emits ChildContent", () => {
     const { code } = gen("<Greeter Name='World'><p>child</p></Greeter>", {
-      resolveComponent: (tag) => (tag === "Greeter" ? { specifier: "./Greeter.tazor" } : null),
+      resolveComponent: (tag) => (tag === "Greeter" ? { specifier: "./Greeter.tsazor" } : null),
     });
-    expect(code).toContain('import __tasor_comp_Greeter from "./Greeter.tazor";');
-    expect(code).toContain("b.openComponent(0, __tasor_comp_Greeter);");
+    expect(code).toContain('import __tsazor_comp_Greeter from "./Greeter.tsazor";');
+    expect(code).toContain("b.openComponent(0, __tsazor_comp_Greeter);");
     expect(code).toContain('b.addAttribute(1, "Name", "World");');
     expect(code).toContain('b.addContent(2, (b) => {');
     expect(code).toContain('b.closeComponent();');
@@ -102,7 +102,7 @@ describe("codegen", () => {
 
   it("unresolved components fall back to elements with a warning", () => {
     const { diagnostics, code } = gen("<UnknownTag />");
-    expect(diagnostics.all.some((d) => d.code === "TZR005" && d.severity === "warning")).toBe(true);
+    expect(diagnostics.all.some((d) => d.code === "TZS005" && d.severity === "warning")).toBe(true);
     expect(code).toContain('b.openElement(0, "UnknownTag");');
     expect(code).not.toContain("openComponent");
   });
@@ -187,7 +187,7 @@ describe("codegen", () => {
     // node.pos anchor and attribute values had no token entries at all.
     const source = '<AddressEditor Address="@this.order.deliveryAddress" />';
     const { code, mappings } = gen(source, {
-      resolveComponent: (tag) => (tag === "AddressEditor" ? { specifier: "./AddressEditor.tazor" } : null),
+      resolveComponent: (tag) => (tag === "AddressEditor" ? { specifier: "./AddressEditor.tsazor" } : null),
     });
     const lineOf = (needle: string): number => {
       const idx = code.split("\n").findIndex((l) => l.includes(needle));
@@ -258,12 +258,12 @@ describe("codegen", () => {
     expect(code).toContain('b.addAttribute(1, "value", this.display);');
     expect(code).toContain("(this.store)((e.target as HTMLInputElement).value)");
     expect(code).toContain("this.done();");
-    expect(diagnostics.all.some((d) => d.code === "TZR008" && d.severity === "warning")).toBe(true);
+    expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
   });
 
   it("emits @bind-Value on components as Value + ValueChanged pair", () => {
     const { code } = gen('<Stepper @bind-Value="current" />', {
-      resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tazor" } : null),
+      resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tsazor" } : null),
     });
     expect(code).toContain('b.addAttribute(1, "Value", this.current);');
     expect(code).toContain('b.addAttribute(2, "ValueChanged", EventCallback.bind(this, (v) => { this.current = v; }));');
@@ -271,7 +271,7 @@ describe("codegen", () => {
 
   it("treats plain @bind on a component tag as Value + ValueChanged", () => {
     const { code } = gen('<InputText @bind="name" />', {
-      resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tasor/runtime", exportName: "InputText" } : null),
+      resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
     });
     expect(code).toContain('b.addAttribute(1, "Value", this.name);');
     expect(code).toContain('b.addAttribute(2, "ValueChanged", EventCallback.bind(this, (v) => { this.name = v; }));');
@@ -298,11 +298,11 @@ describe("codegen", () => {
       '<div><Alert><span>child markup</span></Alert><button>ok</button></div>',
       {
         scopeHash: "b-7f3e00aa",
-        resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tazor" } : null),
+        resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tsazor" } : null),
       },
     );
     expect(code.match(/b\.addAttribute\(\d+, "b-7f3e00aa", ""\)/g)?.length).toBe(3); // outer div, child span, button
-    expect(code).toMatch(/b\.openComponent\(\d+, __tasor_comp_Alert\);/); // component tag itself gets no scope frame
+    expect(code).toMatch(/b\.openComponent\(\d+, __tsazor_comp_Alert\);/); // component tag itself gets no scope frame
   });
 
   it("leaves emission byte-identical when scopeHash is unset (regression guard)", () => {
@@ -320,17 +320,17 @@ describe("codegen", () => {
     expect(metadata.codeBehindClass).toBe("DemoBase");
   });
 
-  it("code-behind wins over @inherits and warns (TZR011)", () => {
+  it("code-behind wins over @inherits and warns (TZS011)", () => {
     const { code, diagnostics } = gen("@inherits LayoutComponentBase\n<p>hi</p>", { codeBehindClass: "DemoBase" });
     expect(code).toContain("export default class Demo extends DemoBase {");
-    const warning = diagnostics.all.find((d) => d.code === "TZR011");
+    const warning = diagnostics.all.find((d) => d.code === "TZS011");
     expect(warning).toBeDefined();
     expect(warning!.severity).toBe("warning");
   });
 
   it("leaves emission byte-identical when codeBehindClass is unset (regression guard)", () => {
     const { code } = gen("@inherits LayoutComponentBase\n<div class=\"card\"><p>@Body</p></div>", {
-      resolveType: (name) => (name === "LayoutComponentBase" ? { specifier: "@tasor/runtime", exportName: "LayoutComponentBase" } : null),
+      resolveType: (name) => (name === "LayoutComponentBase" ? { specifier: "@tsazor/runtime", exportName: "LayoutComponentBase" } : null),
     });
     expect(code).toContain("export default class Demo extends LayoutComponentBase {");
     expect(code).not.toContain("DemoBase");

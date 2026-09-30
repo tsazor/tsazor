@@ -1,4 +1,4 @@
-/** AST for .tazor markup. Positions are 1-based line / 0-based column. */
+/** AST for .tsazor markup. Positions are 1-based line / 0-based column. */
 
 export interface SourceSpan {
   pos: { line: number; column: number };

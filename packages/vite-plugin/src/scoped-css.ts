@@ -3,9 +3,9 @@ import { relative as pathRelativeOf } from "node:path";
 import postcss, { type AtRule, type Rule } from "postcss";
 
 /**
- * Scoped CSS (Blazor mechanism): rewrites the selectors of an `X.tazor.css`
+ * Scoped CSS (Blazor mechanism): rewrites the selectors of an `X.tsazor.css`
  * sidecar so they target the `b-<hash>` scope attribute the compiler emits on
- * X.tazor's markup elements.
+ * X.tsazor's markup elements.
  *
  * Rules (Blazor parity, documented in docs/scoped-css.md):
  * - `.a > .b:hover`        → `.a[b-x] > .b[x]:hover` — attribute on the subject
@@ -19,7 +19,7 @@ import postcss, { type AtRule, type Rule } from "postcss";
 
 const COMBINATORS = new Set([">", "+", "~"]);
 
-/** Full scope attribute name for a .tazor file, e.g. "b-1a2b3c4d". */
+/** Full scope attribute name for a .tsazor file, e.g. "b-1a2b3c4d". */
 export function scopeHashFor(projectRoot: string, filePath: string): string {
   const rel = pathRelativeOf(projectRoot, filePath).replace(/\\/g, "/");
   const digest = createHash("sha1").update(rel).digest("hex");
@@ -28,7 +28,7 @@ export function scopeHashFor(projectRoot: string, filePath: string): string {
 
 export function scopedCssPostcssPlugin(scopeHash: string): PostcssPluginObject {
   return {
-    postcssPlugin: "tasor-scoped-css",
+    postcssPlugin: "tsazor-scoped-css",
     Rule(rule: Rule) {
       // Skip keyframes children (percent selectors) in all spellings.
       const parent = rule.parent;

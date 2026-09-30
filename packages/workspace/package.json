@@ -1,8 +1,8 @@
 {
-  "name": "@tasor/workspace",
+  "name": "@tsazor/workspace",
   "version": "0.1.0",
   "type": "module",
-  "description": "Shared .tazor workspace resolution: _Imports chains, component/type resolution, runtime built-ins. Used by the Vite plugin and the language server.",
+  "description": "Shared .tsazor workspace resolution: _Imports chains, component/type resolution, runtime built-ins. Used by the Vite plugin and the language server.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,7 +19,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tasor/compiler": "workspace:*"
+    "@tsazor/compiler": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

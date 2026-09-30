@@ -1,6 +1,6 @@
-# Language server (`@tasor/lsp`)
+# Language server (`@tsazor/lsp`)
 
-A stdio language server for `.tazor` files that ships with the VS Code extension
+A stdio language server for `.tsazor` files that ships with the VS Code extension
 (`packages/vscode`). One server process per workspace; launched as
 `node dist/server.js --stdio`.
 
@@ -8,9 +8,9 @@ A stdio language server for `.tazor` files that ships with the VS Code extension
 
 | Capability | What it does |
 |---|---|
-| Diagnostics | Compiler diagnostics as you type, published on open and every edit (error + warning, TZR codes, `source: "tasor"`). |
-| Hover | Component tags (resolved source, or "not resolvable → TZR005"), directives (`@page`, `@inject` with the resolved type module), not inside `@code`. |
-| Go-to-definition | Component tags → the `.tazor` file resolved through `@using`; `@inject` types → local `.ts`/`.tazor` modules. Built-ins resolve into `@tasor/runtime`, so they produce nothing (the package is not a file). |
+| Diagnostics | Compiler diagnostics as you type, published on open and every edit (error + warning, TZS codes, `source: "tsazor"`). |
+| Hover | Component tags (resolved source, or "not resolvable → TZS005"), directives (`@page`, `@inject` with the resolved type module), not inside `@code`. |
+| Go-to-definition | Component tags → the `.tsazor` file resolved through `@using`; `@inject` types → local `.ts`/`.tsazor` modules. Built-ins resolve into `@tsazor/runtime`, so they produce nothing (the package is not a file). |
 | Completion | See below. |
 
 ## Completion
@@ -23,7 +23,7 @@ from the cursor position:
 | Tag name | `<Gr` → `Greeter` | Components in `@using`-resolvable directories (directory scan) + runtime built-ins (`RUNTIME_COMPONENTS`). |
 | Attribute name | `<Greeter ` | The resolved component's `@Parameter()` names, `@bind-<param>` pairs, directive attributes (`@bind`, `@onclick`, `@onchange`, `@oninput`, `@ref`, `@key`, `@attributes`); plain elements get a small HTML list (`class`, `style`, `id`, `href`, `type`, `value`, `data-testid`). |
 | Directive | `@p` | Directive keywords with snippets (`@page "/route"`, `@code { … }`, `@if`, `@for`, `@foreach`, `@switch`, …). |
-| Expression | `Count: @co` | Members of the component's own `@code` state, the code-behind sidecar (`X.tazor.ts`), and `@inject` fields. |
+| Expression | `Count: @co` | Members of the component's own `@code` state, the code-behind sidecar (`X.tsazor.ts`), and `@inject` fields. |
 
 Directives and members are offered **together** when a line starts with `@word`
 (such a line could be either) — the editor filters by the remaining prefix.
@@ -45,7 +45,7 @@ AST node (`nodeAt`, 0-based LSP positions over the compiler's 1-based lines):
 
 ### Parameter and member sources (v1 heuristics)
 
-- **`.tazor` components:** the tag is resolved via the workspace resolver
+- **`.tsazor` components:** the tag is resolved via the workspace resolver
   (`resolveImportable`), the file's member `@code` blocks are parsed, and
   `@Parameter()`/`@CascadingParameter()` names are extracted by the same regex
   the code generator itself uses.
@@ -66,9 +66,9 @@ AST node (`nodeAt`, 0-based LSP positions over the compiler's 1-based lines):
 | `packages/lsp/src/completions.ts` | `completeAt()` — context classification + candidate generation (no state). |
 | `packages/lsp/src/server.ts` | stdio plumbing: `vscode-languageserver/node`, document sync, diagnostics publishing, handler registration. |
 | `packages/lsp/src/shadow-module.ts` | Shadow pipeline (mirror of the vite plugin) + the two component-import rewrites; `compile-throw → null` drives the v1 fallback. |
-| `packages/lsp/src/ts-mapping.ts` | `TazorGenMap` — dependency-free position translation over the compiler's raw mappings. |
-| `packages/lsp/src/ts-service.ts` | `TasorTypeService` — the per-workspace `ts.LanguageService` host, shadow registry (mtime/`on-demand` cache), variant-shadow builder. |
-| `packages/lsp/src/ts-features.ts` | Routing + translation: `classifyCodeContext`, completions/hover/definition/diagnostics back into `.tazor` coordinates. |
+| `packages/lsp/src/ts-mapping.ts` | `TsazorGenMap` — dependency-free position translation over the compiler's raw mappings. |
+| `packages/lsp/src/ts-service.ts` | `TsazorTypeService` — the per-workspace `ts.LanguageService` host, shadow registry (mtime/`on-demand` cache), variant-shadow builder. |
+| `packages/lsp/src/ts-features.ts` | Routing + translation: `classifyCodeContext`, completions/hover/definition/diagnostics back into `.tsazor` coordinates. |
 | `packages/vscode/scripts/smoke-completion.mjs` | Programmatic smoke over the bundled `dist/server.js`: initialize → didOpen → completion requests (byte-buffered Content-Length framing). |
 | `packages/vscode/scripts/smoke-ts.mjs` | Same framing, but exercising the v2 engine end-to-end: completion behind `@this.ticker.`, hover as `PricePoint[]`, definition into `TickerStore.ts`, mapped TS2322. |
 
@@ -79,19 +79,19 @@ of `@code` and the code-behind sidecar as text. It cannot follow chains
 (`@ticker.points.length`), inheritance, or imported types — v2 closes that
 with a real `ts.LanguageService` (volar-style "shadow modules"):
 
-- **One shadow module per `.tazor`** (`<dir>/<Name>.tazor.gen.ts`, virtual):
+- **One shadow module per `.tsazor`** (`<dir>/<Name>.tsazor.gen.ts`, virtual):
   the real `compile()` pipeline mirrored from the vite plugin — import
   collection, `_Imports`, code-behind sidecar import — plus two rewrites:
-  component `.tazor` imports resolve to their own shadows (typed across
-  files), bare-package components (`@tasor/components`, whose `dist` d.ts is
-  deliberately `any`) resolve to the package's shipped `src/*.tazor` source.
+  component `.tsazor` imports resolve to their own shadows (typed across
+  files), bare-package components (`@tsazor/components`, whose `dist` d.ts is
+  deliberately `any`) resolve to the package's shipped `src/*.tsazor` source.
 - **One `ts.LanguageService` per workspace**, custom host: virtual shadow
   paths are served from memory, everything else (sidecars, project TS,
   `node_modules` d.ts) read from disk. Compiler options come from the
   project's `tsconfig.json` with non-negotiable overrides
   (`experimentalDecorators`, `useDefineForClassFields: false`,
   `moduleResolution: bundler`, `skipLibCheck`, ES2022 + DOM libs).
-- **Position mapping**: `TazorGenMap` over the compiler's raw per-statement
+- **Position mapping**: `TsazorGenMap` over the compiler's raw per-statement
   mappings (genLine 1-based → 0-based on entry, `srcCol` verbatim in `@code`,
   token-precise entries inside expressions). Unmappable → `null` → v1.
 - **Completions in expressions** use two paths: the generated text already
@@ -100,7 +100,7 @@ with a real `ts.LanguageService` (volar-style "shadow modules"):
   shadow with `this.<prefix>` spliced in. The trailing dot (`@ticker.`) is a
   documented parser split — the expression ends *before* the dot, which
   becomes a separate text statement — so it gets a variant that appends a
-  placeholder identifier (`this.ticker.__tasorQuery`) and queries TS right
+  placeholder identifier (`this.ticker.__tsazorQuery`) and queries TS right
   behind the baked dot, where TS answers with the full member list.
 - **Routing/fallback contract** (`classifyCodeContext`): markup contexts stay
   v1; a cursor whose previous character sits inside an `@`-expression belongs
@@ -109,19 +109,19 @@ with a real `ts.LanguageService` (volar-style "shadow modules"):
   (v1 offers directives and members together). Every feature returns
   `null`/`[]` instead of a wrong answer — the v1 fallback renders the feature
   exactly as before, the TS layer can only add.
-- **Diagnostics** (`source: "tasor-ts"`, toggle per workspace via
+- **Diagnostics** (`source: "tsazor-ts"`, toggle per workspace via
   `initializationOptions.tsDiagnostics`): mapped semantic diagnostics only —
-  anything that does not map back onto `.tazor` source (codegen plumbing,
+  anything that does not map back onto `.tsazor` source (codegen plumbing,
   synthetic regions) is dropped, so squiggles are anchored on real source by
   construction. Capped at 200.
 - **Go-to-definition** targets shadow modules map back onto their originating
-  `.tazor` (with a real span); disk targets (`TickerStore.ts`, d.ts) are
+  `.tsazor` (with a real span); disk targets (`TickerStore.ts`, d.ts) are
   returned verbatim.
 
 Windows note: shadow registry keys are case-folded, canonical file names are
 lowercased, and the bundled VS Code server resolves TS lib d.ts from
 `dist/lib/` (copied by the packaging build) — the bundle cannot resolve the
-`typescript` package under pnpm. Env override: `TASOR_TS_LIB_DIR`.
+`typescript` package under pnpm. Env override: `TSAZOR_TS_LIB_DIR`.
 
 ### v3 backlog
 

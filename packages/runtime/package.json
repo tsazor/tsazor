@@ -1,5 +1,5 @@
 {
-  "name": "@tasor/runtime",
+  "name": "@tsazor/runtime",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,4 +1,4 @@
-# Sprach-Referenz (.tazor)
+# Sprach-Referenz (.tsazor)
 
 ## Direktiven
 
@@ -36,7 +36,7 @@
 | `<Stepper @bind-Value="current" />` | `Value` + `ValueChanged` (EventCallback) |
 | `<InputText @bind="name" />` | Komponenten-Tag ⇒ wie `@bind-Value` |
 
-`@bind:format` ist in v1 begrenzt (native Parsing für number/date) → Warnung TZR008.
+`@bind:format` ist in v1 begrenzt (native Parsing für number/date) → Warnung TZS008.
 
 ## Komponenten
 
@@ -59,7 +59,7 @@
 - Cascading: `@CascadingParameter({ type: EditContext })` (by-type) oder
   `@CascadingParameter({ name: "x" })` (by-name) — `CascadingValue`/`EditForm` liefern.
 
-## Kompatibilität .razor ↔ .tazor
+## Kompatibilität .razor ↔ .tsazor
 
 | Konstrukt | Status |
 |---|---|
@@ -69,12 +69,12 @@
 | DataAnnotations-Validierung | abweichend (funktionsbasiert: `validators: Record<string, (value, model) => string \| null>`) |
 | `@bind:format` | begrenzt v1 |
 | Benannte Child-Slots (`<Found Context>`-Stil) | Phase 2 |
-| `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
-| `@authorize` | ja (Tasor-Erweiterung, bare Direktive) |
+| `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
+| `@authorize` | ja (Tsazor-Erweiterung, bare Direktive) |
 | `@implements` | out-of-scope (TS-Interfaces sind strukturell) |
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZR001`–`TZR011` mit Quellposition
-(`TZR011` ist eine Warnung, z. B. `@inherits`-Konflikt mit Code-behind).
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS011` mit Quellposition
+(`TZS011` ist eine Warnung, z. B. `@inherits`-Konflikt mit Code-behind).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.

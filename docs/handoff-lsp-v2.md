@@ -13,7 +13,7 @@ Session-Fortsetzungsdatei für Claude Code. **Alles von heute ist committet und 
 | `6646392` | VS Code: Grammar `#component-tag` + 0.3.4 + `docs/handoff-lsp-v2.md` |
 
 **Fix-Ursachen (Kernpunkt, nicht vergessen):**
-1. **„`target` on `never`" auf `@bind`-Lambdas** (Login.tazor): `addEventHandler(…, EventCallback<never>)` war als *kontextueller* Rückgabetyp eine Inferencing-Falle — `bind<TArg>` leitete `TArg = never` her, und das generierte `(e) => …` bekam `e: never` → TS2339 auf `e.target`. Fix: `EventCallback<any>` in render-tree (Signatur + AttributeValue-Member). Die auffälligen Spalten 100/119 hinter dem Zeilenende kamen aus dem Synthetic-Region-Mapping dieser Diagnose und sind mit ihr weg.
+1. **„`target` on `never`" auf `@bind`-Lambdas** (Login.tsazor): `addEventHandler(…, EventCallback<never>)` war als *kontextueller* Rückgabetyp eine Inferencing-Falle — `bind<TArg>` leitete `TArg = never` her, und das generierte `(e) => …` bekam `e: never` → TS2339 auf `e.target`. Fix: `EventCallback<any>` in render-tree (Signatur + AttributeValue-Member). Die auffälligen Spalten 100/119 hinter dem Zeilenende kamen aus dem Synthetic-Region-Mapping dieser Diagnose und sind mit ihr weg.
 2. **Double-Wrap `EventCallback.bind`**: der Compiler umwickelt ALLE on*-Attribute mit `bind(this, …)` — hält man eine `EventCallback`-Instanz in @code (FormDemo `handleSubmit`), gab es TS2345 im Shadow **und** einen latenten RuntimeError (EventCallback-Objekt als Funktion gerufen). Fix: `bind` akzeptiert `EventCallback` als Delegate, `invokeAsync` entpackt (Blazors EventCallbackFactory).
 3. **Shadow-Falsch-Positive gefiltert** (`tsDiagnostics`): TS2307 auf statische Assets (`.css`/Fonts/Bilder — vite serviert, kein d.ts) und TS2564 für `@Parameter`-Properties (Renderer setzt Parameter vor dem ersten Render, Blazor-Semantik).
 
@@ -21,26 +21,26 @@ Gelöst in der Runde davor (ebenfalls committed): „Components sind rot" (TextM
 
 ## Verifizierung nach dem Restart (Checkliste)
 
-VSIX 0.3.4 installiert (`code --list-extensions` → `tasor.tasor-vscode@0.3.4`); node_modules-Symlink zeigt auf packages/runtime/dist, das neu gebaut ist.
+VSIX 0.3.4 installiert (`code --list-extensions` → `tsazor.tsazor-vscode@0.3.4`); node_modules-Symlink zeigt auf packages/runtime/dist, das neu gebaut ist.
 
-1. **Login.tazor** — 0 `tasor-ts`-Diagnostics (war der Ausgangspunkt: 2339 `target`/`never` @ 14:100/18:119).
-2. **FormDemo.tazor** — 0 Diagnostics (Double-Wrap TS2345 @ 10:91 weg).
-3. **EventLog.tazor / Sparkline.tazor** — TS2564 („no initializer") auf `@Parameter`-Properties weg.
-4. **Map.tazor** — TS2307 auf `leaflet/dist/leaflet.css` weg.
-5. **Checkout.tazor** — 0 Diagnostics (Regression-Check von 0.3.3).
+1. **Login.tsazor** — 0 `tsazor-ts`-Diagnostics (war der Ausgangspunkt: 2339 `target`/`never` @ 14:100/18:119).
+2. **FormDemo.tsazor** — 0 Diagnostics (Double-Wrap TS2345 @ 10:91 weg).
+3. **EventLog.tsazor / Sparkline.tsazor** — TS2564 („no initializer") auf `@Parameter`-Properties weg.
+4. **Map.tsazor** — TS2307 auf `leaflet/dist/leaflet.css` weg.
+5. **Checkout.tsazor** — 0 Diagnostics (Regression-Check von 0.3.3).
 6. **Tags blau** (Grammar, bestätigt in 0.3.3), Hover/Kompletion/Go-to-Def unverändert funktionieren.
 
 **Erwartet WEITERHIN Probleme (echte User-Code-Fehler — absichtlich nicht gefiltert):**
-- `blazing-pizza/src/App.tazor:1` — `NotFound="@notFound"`, Member existiert nicht in @code (nur `found`/`notAuthorized`).
-- `blazing-pizza/…/ConfigurePizzaDialog.tazor:13` — `@PIZZA_MINIMUM_SIZE`/`@PIZZA_MAXIMUM_SIZE` nie deklariert; Workshop nutzt dort statische `min`/`max`.
-- `demo/Pages/CodeBehindDemo.tazor:6` — `@(code)` wird als Ausdruck ausgewertet (Variable `code` existiert nicht); als Text: `@@code`.
-- `sleipnir-ticker/…/EventLog.tazor:9` — `entry.snapshot.lastPrice?: number` → `price(value: number)`; `?? 0` im Markup oder Typ entschärfen.
+- `blazing-pizza/src/App.tsazor:1` — `NotFound="@notFound"`, Member existiert nicht in @code (nur `found`/`notAuthorized`).
+- `blazing-pizza/…/ConfigurePizzaDialog.tsazor:13` — `@PIZZA_MINIMUM_SIZE`/`@PIZZA_MAXIMUM_SIZE` nie deklariert; Workshop nutzt dort statische `min`/`max`.
+- `demo/Pages/CodeBehindDemo.tsazor:6` — `@(code)` wird als Ausdruck ausgewertet (Variable `code` existiert nicht); als Text: `@@code`.
+- `sleipnir-ticker/…/EventLog.tsazor:9` — `entry.snapshot.lastPrice?: number` → `price(value: number)`; `?? 0` im Markup oder Typ entschärfen.
 
 Verifiziert vor dem Packen: Suites compiler 63 / workspace 6 / lsp 63 / runtime 51 grün, beide Smokes PASS (`node packages/vscode/scripts/smoke-*.mjs`).
 
 ## Offen / nicht committed
 
-- **`apps/demo/src/Pages/Counter.tazor`** — User-Hand-Änderung (`private currentCount : number = 0;`) bleibt uncommitted bis zur Entscheidung des Users (reindehen als Mini-Commit oder zurücknehmen).
+- **`apps/demo/src/Pages/Counter.tsazor`** — User-Hand-Änderung (`private currentCount : number = 0;`) bleibt uncommitted bis zur Entscheidung des Users (reindehen als Mini-Commit oder zurücknehmen).
 - **Dieser Handoff-Text** (die Überarbeitung nach dem Restart) ist uncommitted — bei nächster Freigabe mit einpacken.
 - v3-Backlog (docs/language-server.md): Rename, Refactors, Suggestions, Code-Actions, Auto-Imports.
 - Option für später: echte **Semantic-Tokens** im LSP (PascalCase-Tags als Token-Type „type") — könnte unresolvierte vs. aufgelöste Components unterscheiden; Grammar-Fix deckt das Red-Problem aber vollständig ab.
@@ -67,24 +67,24 @@ Verifiziert vor dem Packen: Suites compiler 63 / workspace 6 / lsp 63 / runtime 
 
 | File | Rolle |
 |---|---|
-| `packages/lsp/src/shadow-module.ts` | Shadow-Pipeline (Spiegel des vite-plugins) + Rewrites A (relative .tazor-Imports → eigene Shadows) / B (bare-Package → mitgelieferte `src/*.tazor`); `compile-throw → null` → v1-Fallback |
-| `packages/lsp/src/ts-mapping.ts` | `TazorGenMap` — dependency-freie Positionsübersetzung über die rohen Compiler-Mappings (genLine 1-basiert am Eingang, → 0-basiert) |
-| `packages/lsp/src/ts-service.ts` | `TasorTypeService` — Host + Shadow-Registry (mtime-Cache), `buildVariant` (Queries MÜSSEN den Variant-`virtualPath` adressieren, Base-Registry-Key zeigt weiterhin un-gepatcht) |
+| `packages/lsp/src/shadow-module.ts` | Shadow-Pipeline (Spiegel des vite-plugins) + Rewrites A (relative .tsazor-Imports → eigene Shadows) / B (bare-Package → mitgelieferte `src/*.tsazor`); `compile-throw → null` → v1-Fallback |
+| `packages/lsp/src/ts-mapping.ts` | `TsazorGenMap` — dependency-freie Positionsübersetzung über die rohen Compiler-Mappings (genLine 1-basiert am Eingang, → 0-basiert) |
+| `packages/lsp/src/ts-service.ts` | `TsazorTypeService` — Host + Shadow-Registry (mtime-Cache), `buildVariant` (Queries MÜSSEN den Variant-`virtualPath` adressieren, Base-Registry-Key zeigt weiterhin un-gepatcht) |
 | `packages/lsp/src/ts-features.ts` | Routing + Übersetzung: `classifyCodeContext`, `tsCompletions/tsHover/tsDefinition/tsDiagnostics` (+ `prettifyHoverDisplay`/`sanitizeDoc`, Diag-Filter 2307/2564) |
-| `packages/vscode/build.mjs` | Bundle + kopiert `typescript/lib/*.d.ts` → `dist/lib` (100 Dateien); resolveLibDir-Fallback: dirname(argv[1])/lib; env `TASOR_TS_LIB_DIR` |
-| `packages/vscode/scripts/smoke-ts.mjs`, `smoke-completion.mjs` | stdio-Smokes; gegen alternative Server mit env `TASOR_SMOKE_SERVER=<pfad>` |
+| `packages/vscode/build.mjs` | Bundle + kopiert `typescript/lib/*.d.ts` → `dist/lib` (100 Dateien); resolveLibDir-Fallback: dirname(argv[1])/lib; env `TSAZOR_TS_LIB_DIR` |
+| `packages/vscode/scripts/smoke-ts.mjs`, `smoke-completion.mjs` | stdio-Smokes; gegen alternative Server mit env `TSAZOR_SMOKE_SERVER=<pfad>` |
 
 ## Wichtigste v2-Erkenntnisse (Gotchas, nicht verlieren)
 
-1. **Trailing-Dot-Split**: `<p>@ticker.</p>` compiliert in ZWEI Statements — die Expression endet VOR dem Punkt (Punkt = eigener Text-Knoten). Completion dahinter: Variante, die einen Platzhalter-Ident anfügt (`@ticker.` → `this.ticker.__tasorQuery`), dann Query direkt hinter dem gebackenen Punkt.
-2. **`@(...)` ist KEINE Syntax des Tasor-Parsers** — compiliert als Literaltext; `@@` ist Escape.
+1. **Trailing-Dot-Split**: `<p>@ticker.</p>` compiliert in ZWEI Statements — die Expression endet VOR dem Punkt (Punkt = eigener Text-Knoten). Completion dahinter: Variante, die einen Platzhalter-Ident anfügt (`@ticker.` → `this.ticker.__tsazorQuery`), dann Query direkt hinter dem gebackenen Punkt.
+2. **`@(...)` ist KEINE Syntax des Tsazor-Parsers** — compiliert als Literaltext; `@@` ist Escape.
 3. **Klassifizierung ist end-exklusiv** vs. Cursor, und das Zeichen vor dem Cursor nach `@ticker.` liegt im Text-Knoten → `expressionPrefixBefore` (roher Text) übersteuert `classifyCodeContext`; Zeilenanfang `@word` bleibt v1-Direktiven-Kontext.
 4. **Server-Gate in `onCompletion`** darf NICHT vorab auf `classify === "code"` prüfen — `tsCompletions` routet intern.
 5. **TS-Lib-Optionen** brauchen volle Dateinamen (`lib.es2022.d.ts`, …), nie `types: []` mit expliziter lib, `libReplacement: false`.
 6. **Windows:** Shadow-Keys lowercased, `getCanonicalFileName` lowercase, `getDefaultLibLocation`/`useCaseSensitiveFileNames` hinter `as ts.LanguageServiceHost`-Cast.
-7. **Diagnostics-Policy**: nur gemappte semantische Diagnostics (nicht mappbares Plumbing fällt implizit weg), Cap 200, `source: "tasor-ts"`, Toggle `initializationOptions.tsDiagnostics`; Filter TS2307 (Assets) / TS2564 (@Parameter).
+7. **Diagnostics-Policy**: nur gemappte semantische Diagnostics (nicht mappbares Plumbing fällt implizit weg), Cap 200, `source: "tsazor-ts"`, Toggle `initializationOptions.tsDiagnostics`; Filter TS2307 (Assets) / TS2564 (@Parameter).
 8. **VSIX-Verpackung**: `npx @vscode/vsce@3.1.0 package --no-dependencies` (neuere vsce bricht an ESM-only parse5); Extension lädt Server via `context.asAbsolutePath("dist/server.js")`.
-9. **Build-Kette nach sourcnahen Änderungen**: `pnpm -r build` (topologisch: compiler → workspace → runtime → vite-plugin (esbuild!) → Components → Apps → tasor-vscode) → Smokes. Runtime-dist ist auch für den LSP relevant — der Shadow löst `@tasor/runtime` über die node_modules-Symlinks auf `packages/runtime/dist/index.d.ts` auf (nach Runtime-Änderungen IMMER `tsc -b` in runtime!)
+9. **Build-Kette nach sourcnahen Änderungen**: `pnpm -r build` (topologisch: compiler → workspace → runtime → vite-plugin (esbuild!) → Components → Apps → tsazor-vscode) → Smokes. Runtime-dist ist auch für den LSP relevant — der Shadow löst `@tsazor/runtime` über die node_modules-Symlinks auf `packages/runtime/dist/index.d.ts` auf (nach Runtime-Änderungen IMMER `tsc -b` in runtime!)
 
 ## Git-Konventionen
 

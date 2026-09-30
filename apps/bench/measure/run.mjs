@@ -1,7 +1,7 @@
 /**
  * Framework bench: identical TodoMVC + 10k-rows apps, measured identically.
  *
- * Usage:  node run.mjs [--app=tasor,react,...] [--runs=5] [--skip-build]
+ * Usage:  node run.mjs [--app=tsazor,react,...] [--runs=5] [--skip-build]
  * Writes results.json next to this file; prints a summary table.
  *
  * Methodology (identical for all frameworks):
@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /* ------------------------------------------------------------------ */
 
 const APPS = [
-  { name: "tasor",  port: 5410, todoRoute: "/todo", rowsRoute: "/rows", kind: "vite",   dir: path.resolve(__dirname, "../tasor") },
+  { name: "tsazor",  port: 5410, todoRoute: "/todo", rowsRoute: "/rows", kind: "vite",   dir: path.resolve(__dirname, "../tsazor") },
   { name: "react",  port: 5411, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../react") },
   { name: "vue",    port: 5412, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../vue") },
   { name: "svelte", port: 5413, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../svelte") },
@@ -232,7 +232,7 @@ async function timedRemove(page, index) {
  * Retained JS heap after a full rows cycle, with garbage forced to collect
  * first (CDP HeapProfiler.forceGC, fallback window.gc via --expose-gc). The
  * plain `performance.memory` reading is dominated by uncollected garbage —
- * it measured Tasor at ~70 MB where the retained live set is ~17 MB.
+ * it measured Tsazor at ~70 MB where the retained live set is ~17 MB.
  */
 async function measureForcedHeap(page) {
   try {

@@ -16,7 +16,7 @@ await build({
   outfile: "dist/extension.js",
 });
 
-// Language server: bundles @tasor/compiler + @tasor/workspace + the LSP
+// Language server: bundles @tsazor/compiler + @tsazor/workspace + the LSP
 // protocol runtime + typescript itself, so the VSIX ships a single
 // self-contained server file (~8–9 MB — whole-tsc is deliberately bundled, a
 // whole typescript *package* would be ~70 MB).

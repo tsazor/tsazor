@@ -25,7 +25,7 @@ export class Router extends ComponentBase {
 
   protected override onInitialized(): void {
     if (this.routes.length === 0) {
-      // Fall back to the app-provided manifest (createTasorApp `routes` option).
+      // Fall back to the app-provided manifest (createTsazorApp `routes` option).
       const services = this.componentServices as ServiceProvider | null;
       const manifest = services?.tryGet(RouteManifest as unknown as Token<RouteManifest>);
       if (manifest) this.routes = manifest.entries;

@@ -2,11 +2,11 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { tasor } from "../src";
+import { tsazor } from "../src";
 import { generateRoutesModule } from "../src/routes";
 import { processScopedCss, scopeHashFor, scopeSelector } from "../src/scoped-css";
 
-const COUNTER = /* tazor */ `
+const COUNTER = /* tsazor */ `
 @page "/counter"
 @inject NavigationManager Nav
 @inject CounterService CounterService
@@ -26,7 +26,7 @@ const COUNTER = /* tazor */ `
 }
 `;
 
-const FETCH_DATA = /* tazor */ `
+const FETCH_DATA = /* tsazor */ `
 @page "/fetchdata"
 @layout MainLayout
 
@@ -41,26 +41,26 @@ const FETCH_DATA = /* tazor */ `
 let root: string;
 
 beforeAll(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "tasor-plugin-"));
+  root = await mkdtemp(path.join(tmpdir(), "tsazor-plugin-"));
   await mkdir(path.join(root, "Shared"), { recursive: true });
   await mkdir(path.join(root, "Pages"), { recursive: true });
   await mkdir(path.join(root, "services"), { recursive: true });
-  await writeFile(path.join(root, "_Imports.tazor"), "@using ./Shared\n@using ./services\n");
-  await writeFile(path.join(root, "MainLayout.tazor"), "<div>@Body</div>\n");
+  await writeFile(path.join(root, "_Imports.tsazor"), "@using ./Shared\n@using ./services\n");
+  await writeFile(path.join(root, "MainLayout.tsazor"), "<div>@Body</div>\n");
   await writeFile(
-    path.join(root, "Shared", "Greeter.tazor"),
+    path.join(root, "Shared", "Greeter.tsazor"),
     "<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n}\n",
   );
   await writeFile(path.join(root, "services", "CounterService.ts"), "export class CounterService {}\n");
-  await writeFile(path.join(root, "Pages", "Counter.tazor"), COUNTER);
-  await writeFile(path.join(root, "Pages", "FetchData.tazor"), FETCH_DATA);
+  await writeFile(path.join(root, "Pages", "Counter.tsazor"), COUNTER);
+  await writeFile(path.join(root, "Pages", "FetchData.tsazor"), FETCH_DATA);
   await writeFile(
-    path.join(root, "Shared", "Greeter.tazor.css"),
+    path.join(root, "Shared", "Greeter.tsazor.css"),
     "h1 { color: red; }\n.list > .item:hover { color: blue; }\n/* .a { } */\n@keyframes spin { from { opacity: 1; } }\n",
   );
   await writeFile(
-    path.join(root, "Shared", "Greeter.tazor.ts"),
-    'import { ComponentBase, Parameter } from "@tasor/runtime";\n\nexport default class Greeter extends ComponentBase {\n    @Parameter() Name = "";\n    count = 0;\n}\n',
+    path.join(root, "Shared", "Greeter.tsazor.ts"),
+    'import { ComponentBase, Parameter } from "@tsazor/runtime";\n\nexport default class Greeter extends ComponentBase {\n    @Parameter() Name = "";\n    count = 0;\n}\n',
   );
 });
 
@@ -69,79 +69,79 @@ afterAll(async () => {
 });
 
 async function createPlugin() {
-  const { tasor } = await import("../src");
-  const plugin = tasor({ root });
+  const { tsazor } = await import("../src");
+  const plugin = tsazor({ root });
   (plugin.configResolved as unknown as (config: { root: string }) => void)({ root });
   return plugin;
 }
 
-describe("tasor vite plugin", () => {
-  it("compiles a .tazor file into JS with a runtime import and HMR appendix", async () => {
+describe("tsazor vite plugin", () => {
+  it("compiles a .tsazor file into JS with a runtime import and HMR appendix", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
     expect(result).not.toBeNull();
     expect(result!.code).toContain("class Counter");
-    expect(result!.code).toContain('from "@tasor/runtime"');
+    expect(result!.code).toContain('from "@tsazor/runtime"');
     expect(result!.code).toContain("import.meta.hot");
-    expect(result!.code).toContain("globalThis.__tasor?.hmrSwap(previous, mod.default)");
+    expect(result!.code).toContain("globalThis.__tsazor?.hmrSwap(previous, mod.default)");
     expect(result!.code).toContain("previousDefault ??= Counter");
   });
 
-  it("resolves component tags through _Imports.tazor @using directories", async () => {
+  it("resolves component tags through _Imports.tsazor @using directories", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
-    expect(result!.code).toContain('from "../Shared/Greeter.tazor"');
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
+    expect(result!.code).toContain('from "../Shared/Greeter.tsazor"');
   });
 
   it("resolves @inject types from bare and path-like usings", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
-    expect(result!.code).toContain('from "@tasor/runtime"');
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
+    expect(result!.code).toContain('from "@tsazor/runtime"');
     expect(result!.code).toContain('import CounterService from "../services/CounterService"');
   });
 
-  it("emits a chained sourcemap pointing at the .tazor file", async () => {
+  it("emits a chained sourcemap pointing at the .tsazor file", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
     const map = JSON.parse(result!.map as string) as { sources: string[]; mappings: string };
-    expect(map.sources[0]).toBe("Counter.tazor");
+    expect(map.sources[0]).toBe("Counter.tsazor");
     expect(map.mappings.length).toBeGreaterThan(10);
   });
 
-  it("compiles _Imports.tazor to an empty module", async () => {
+  it("compiles _Imports.tsazor to an empty module", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, "@using ./Shared\n", path.join(root, "_Imports.tazor"));
+    const result = await plugin.transform?.call({} as never, "@using ./Shared\n", path.join(root, "_Imports.tsazor"));
     expect(result!.code.trim()).toBe("export default null;");
   });
 
   it("throws located errors for compiler diagnostics (dev-server overlay)", async () => {
     const plugin = await createPlugin();
     await expect(
-      plugin.transform?.call({} as never, "<div>\n  <p>unclosed\n", path.join(root, "Pages", "Broken.tazor")),
-    ).rejects.toThrow(/TZR002/);
+      plugin.transform?.call({} as never, "<div>\n  <p>unclosed\n", path.join(root, "Pages", "Broken.tsazor")),
+    ).rejects.toThrow(/TZS002/);
   });
 
   it("resolves the virtual routes module id", async () => {
     const plugin = await createPlugin();
-    expect(plugin.resolveId?.call({} as never, "virtual:tasor-routes")).toBe("\0virtual:tasor-routes");
+    expect(plugin.resolveId?.call({} as never, "virtual:tsazor-routes")).toBe("\0virtual:tsazor-routes");
     expect(plugin.resolveId?.call({} as never, "./Other.ts")).toBeNull();
   });
 
   it("generates a route manifest from @page files with layouts", async () => {
     const plugin = await createPlugin();
-    const module = await plugin.load?.call({} as never, "\0virtual:tasor-routes");
+    const module = await plugin.load?.call({} as never, "\0virtual:tsazor-routes");
     expect(module).not.toBeNull();
-    expect(module).toContain('import Counter from "/Pages/Counter.tazor"');
-    expect(module).toContain('import FetchData from "/Pages/FetchData.tazor"');
-    expect(module).toContain('import FetchDataLayout from "/MainLayout.tazor"');
+    expect(module).toContain('import Counter from "/Pages/Counter.tsazor"');
+    expect(module).toContain('import FetchData from "/Pages/FetchData.tsazor"');
+    expect(module).toContain('import FetchDataLayout from "/MainLayout.tsazor"');
     expect(module).toContain('{ template: "/counter", type: Counter },');
     expect(module).toContain('{ template: "/fetchdata", type: FetchData, layout: FetchDataLayout },');
   });
 
   it("emits authorize: {} into the manifest for @authorize pages", () => {
     const module = generateRoutesModule(root, [
-      { template: "/myorders", componentPath: path.join(root, "Pages", "MyOrders.tazor"), authorize: true },
-      { template: "/", componentPath: path.join(root, "Pages", "Index.tazor") },
+      { template: "/myorders", componentPath: path.join(root, "Pages", "MyOrders.tsazor"), authorize: true },
+      { template: "/", componentPath: path.join(root, "Pages", "Index.tsazor") },
     ]);
     expect(module).toContain('{ template: "/myorders", type: MyOrders, authorize: {} },');
     expect(module).toContain('{ template: "/", type: Index },');
@@ -149,21 +149,21 @@ describe("tasor vite plugin", () => {
 
   it("emits the scoped-CSS import and scope attribute when a sidecar exists", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tazor"));
-    expect(result!.code).toContain('import "./Greeter.tazor.css";');
+    const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tsazor"));
+    expect(result!.code).toContain('import "./Greeter.tsazor.css";');
     expect(result!.code).toMatch(/b\.addAttribute\(1, "b-[0-9a-f]{8}", ""\)/);
   });
 
   it("keeps files without a sidecar free of scope emission", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
-    expect(result!.code).not.toContain(".tazor.css");
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
+    expect(result!.code).not.toContain(".tsazor.css");
     expect(result!.code).not.toMatch(/b\.addAttribute\(\d+, "b-/);
   });
 
   it("rewrites sidecar CSS selectors to the scope attribute", async () => {
     const plugin = await createPlugin();
-    const cssPath = path.join(root, "Shared", "Greeter.tazor.css");
+    const cssPath = path.join(root, "Shared", "Greeter.tsazor.css");
     const hash = scopeHashFor(root, cssPath.slice(0, -4));
     const source = "h1 { color: red; } .list > .item:hover { color: blue; }\n";
     const result = await plugin.transform?.call({} as never, source, cssPath);
@@ -173,15 +173,15 @@ describe("tasor vite plugin", () => {
 
   it("imports the .ts code-behind and makes the generated class extend it", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tazor"));
-    expect(result!.code).toContain('import GreeterBase from "./Greeter.tazor.ts";');
+    const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tsazor"));
+    expect(result!.code).toContain('import GreeterBase from "./Greeter.tsazor.ts";');
     expect(result!.code).toContain("export default class Greeter extends GreeterBase {");
     expect(result!.code).not.toContain("extends ComponentBase");
   });
 
-  it("keeps .tazor files without a .ts sidecar on ComponentBase", async () => {
+  it("keeps .tsazor files without a .ts sidecar on ComponentBase", async () => {
     const plugin = await createPlugin();
-    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tazor"));
+    const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
     expect(result!.code).toContain("export default class Counter extends ComponentBase {");
     expect(result!.code).not.toMatch(/import \w+Base from "\.\/.*\.ts";/);
   });
@@ -189,10 +189,10 @@ describe("tasor vite plugin", () => {
 
 describe("scoped-css rewriter (unit)", () => {
   it("derives a deterministic hash from the project-relative POSIX path", () => {
-    const hash = scopeHashFor("D:/proj", "D:/proj\\src\\".replace(/\\/g, "/") + "Comp.tazor");
+    const hash = scopeHashFor("D:/proj", "D:/proj\\src\\".replace(/\\/g, "/") + "Comp.tsazor");
     expect(hash).toMatch(/^b-[0-9a-f]{8}$/);
-    expect(hash).toBe(scopeHashFor("D:\\proj", "D:\\proj\\src\\Comp.tazor"));
-    expect(scopeHashFor("D:/proj", "D:/proj/src/Other.tazor")).not.toBe(hash);
+    expect(hash).toBe(scopeHashFor("D:\\proj", "D:\\proj\\src\\Comp.tsazor"));
+    expect(scopeHashFor("D:/proj", "D:/proj/src/Other.tsazor")).not.toBe(hash);
   });
 
   it("scopes compound selectors before pseudo-classes", () => {
@@ -211,14 +211,14 @@ describe("scoped-css rewriter (unit)", () => {
 
   it("traverses @media and leaves @keyframes untouched", async () => {
     const css = `@media (min-width: 600px) { h1 { color: red; } }\n@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n`;
-    const result = await processScopedCss(css, "b-1", "/tmp/Greeter.tazor.css");
+    const result = await processScopedCss(css, "b-1", "/tmp/Greeter.tsazor.css");
     expect(result).toContain("@media (min-width: 600px) { h1[b-1] { color: red; } }");
     expect(result).toContain("from { transform: rotate(0deg); }"); // NOT percent[b-1]
     expect(result).toContain("to" + " { transform: rotate(360deg); }");
   });
 
   it("ignores selector-like content in comments", async () => {
-    const result = await processScopedCss("/* .spoof:hover {} */ h1 { color: red; }", "b-1", "/tmp/Greeter.tazor.css");
+    const result = await processScopedCss("/* .spoof:hover {} */ h1 { color: red; }", "b-1", "/tmp/Greeter.tsazor.css");
     expect(result).toContain("/* .spoof:hover {} */");
     expect(result).toContain("h1[b-1] { color: red; }");
   });

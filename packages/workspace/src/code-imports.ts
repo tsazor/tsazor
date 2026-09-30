@@ -3,7 +3,7 @@ import { relativeSpecifier } from "./imports";
 import type { FileContext } from "./resolver";
 
 /**
- * Scans a .tazor source for PascalCase identifiers that reference runtime
+ * Scans a .tsazor source for PascalCase identifiers that reference runtime
  * exports or resolvable component classes, and returns the import lines that
  * make them usable inside verbatim @code blocks (and @inject/@inherits,
  * which the compiler already imports itself).

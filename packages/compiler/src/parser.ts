@@ -103,7 +103,7 @@ class Parser {
         }
         if (stop.closeTag === null || stop.closeTag === undefined) {
           this.flush(out);
-          this.diagnostics.error("TZR003", this.locator(this.i), "Unexpected '}' in markup.");
+          this.diagnostics.error("TZS003", this.locator(this.i), "Unexpected '}' in markup.");
           this.i++;
           continue;
         }
@@ -210,7 +210,7 @@ class Parser {
     if (next === "(") {
       const end = this.ts.scanBalanced(this.i + 1, "(", ")");
       if (end < 0) {
-        this.diagnostics.error("TZR003", pos, "Parenthesized expression never closes.");
+        this.diagnostics.error("TZS003", pos, "Parenthesized expression never closes.");
         this.i = src.length;
         return;
       }
@@ -232,7 +232,7 @@ class Parser {
 
     // Identifier transitions.
     if (!isIdStart(next)) {
-      this.diagnostics.error("TZR004", pos, "Unexpected character after '@'.");
+      this.diagnostics.error("TZS004", pos, "Unexpected character after '@'.");
       this.pushText(out, "@", pos);
       this.i++;
       return;
@@ -264,7 +264,7 @@ class Parser {
   private parseImplicitExpression(idStart: number, idEnd: number, pos: SourcePos, out: MarkupNode[]): void {
     const end = this.ts.scanImplicitExpression(idStart);
     if (end <= idStart) {
-      this.diagnostics.error("TZR004", pos, "Empty implicit expression.");
+      this.diagnostics.error("TZS004", pos, "Empty implicit expression.");
       this.i = idEnd;
       return;
     }
@@ -276,13 +276,13 @@ class Parser {
     const src = this.source;
     const brace = this.findChar(from, "{");
     if (brace < 0) {
-      this.diagnostics.error("TZR006", pos, member ? "@code block missing '{'." : "@{ block missing '{'.");
+      this.diagnostics.error("TZS006", pos, member ? "@code block missing '{'." : "@{ block missing '{'.");
       this.i = src.length;
       return;
     }
     const close = this.ts.scanBalanced(brace, "{", "}");
     if (close < 0) {
-      this.diagnostics.error("TZR006", pos, "Code block never closes.");
+      this.diagnostics.error("TZS006", pos, "Code block never closes.");
       this.i = src.length;
       return;
     }
@@ -362,13 +362,13 @@ class Parser {
       const code = this.parseParens(pos);
       this.skipWhitespace();
       if (this.source[this.i] !== "{") {
-        this.diagnostics.error("TZR006", pos, "@switch requires a '{' block.");
+        this.diagnostics.error("TZS006", pos, "@switch requires a '{' block.");
         this.i = this.source.length;
         return;
       }
       const close = this.ts.scanBalanced(this.i, "{", "}", false);
       if (close < 0) {
-        this.diagnostics.error("TZR006", pos, "@switch block never closes.");
+        this.diagnostics.error("TZS006", pos, "@switch block never closes.");
         this.i = this.source.length;
         return;
       }
@@ -378,7 +378,7 @@ class Parser {
       return;
     }
 
-    this.diagnostics.error("TZR001", pos, `'@${word}' outside of its control context.`);
+    this.diagnostics.error("TZS001", pos, `'@${word}' outside of its control context.`);
   }
 
   private pendingSwitchWord: string | null = null;
@@ -461,7 +461,7 @@ class Parser {
     while (this.i < src.length && /[A-Za-z0-9_.-]/.test(src[this.i]!)) this.i++;
     const tagName = src.slice(nameStart, this.i);
     if (!tagName) {
-      this.diagnostics.error("TZR002", pos, "Expected a tag name after '<'.");
+      this.diagnostics.error("TZS002", pos, "Expected a tag name after '<'.");
       this.i++;
       return;
     }
@@ -477,7 +477,7 @@ class Parser {
       this.i++;
       if (!isComponent && VOID_ELEMENTS.has(tagName.toLowerCase())) selfClosing = true;
     } else {
-      this.diagnostics.error("TZR002", pos, `Unclosed start tag '<${tagName}'.`);
+      this.diagnostics.error("TZS002", pos, `Unclosed start tag '<${tagName}'.`);
       this.i = src.length;
     }
 
@@ -521,12 +521,12 @@ class Parser {
         this.i = end;
         while (end < src.length && src[end] !== ">") end++;
         if (src[end] === ">") this.i = end + 1;
-        else this.diagnostics.error("TZR002", this.locator(end), `Missing '>' on closing tag of <${tagName}>.`);
+        else this.diagnostics.error("TZS002", this.locator(end), `Missing '>' on closing tag of <${tagName}>.`);
         return;
       }
     }
     this.i = save;
-    this.diagnostics.error("TZR002", this.locator(this.i), `Missing closing tag </${tagName}>.`);
+    this.diagnostics.error("TZS002", this.locator(this.i), `Missing closing tag </${tagName}>.`);
   }
 
   private parseTagAttributes(tagPos: SourcePos, tagName: string): AttributeNode[] {
@@ -536,7 +536,7 @@ class Parser {
       this.skipWhitespace();
       const ch = src[this.i];
       if (ch === undefined) {
-        this.diagnostics.error("TZR002", tagPos, `Start tag <${tagName} is never closed.`);
+        this.diagnostics.error("TZS002", tagPos, `Start tag <${tagName} is never closed.`);
         return attributes;
       }
       if (ch === ">" || (ch === "/" && src[this.i + 1] === ">")) return attributes;
@@ -552,7 +552,7 @@ class Parser {
           continue;
         }
         if (attr.flags !== 0) {
-          this.diagnostics.error("TZR008", attr.pos, `Modifier attribute for '@${attr.name}' has no matching handler.`);
+          this.diagnostics.error("TZS008", attr.pos, `Modifier attribute for '@${attr.name}' has no matching handler.`);
           continue;
         }
       }
@@ -568,7 +568,7 @@ class Parser {
         }) as (Extract<AttributeNode, { kind: "bind" }> & Record<string, unknown>) | undefined;
         if (host && modifier && host[modifier] !== undefined) {
           const label = attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}:${modifier}` : `@bind:${modifier}`;
-          this.diagnostics.error("TZR008", attr.pos, `Duplicate bind modifier '${label}'.`);
+          this.diagnostics.error("TZS008", attr.pos, `Duplicate bind modifier '${label}'.`);
           continue;
         }
         if (host && modifier) {
@@ -591,7 +591,7 @@ class Parser {
     while (this.i < src.length && /[A-Za-z0-9_@:.-]/.test(src[this.i]!)) this.i++;
     const name = src.slice(nameStart, this.i);
     if (!name) {
-      this.diagnostics.error("TZR009", pos, "Invalid attribute name.");
+      this.diagnostics.error("TZS009", pos, "Invalid attribute name.");
       this.i++;
       return null;
     }
@@ -654,14 +654,14 @@ class Parser {
       for (const mod of modifiers) {
         if (mod.toLowerCase() === "preventdefault") { flags |= EVENT_FLAGS.preventDefault; modifierOnly = true; }
         else if (mod.toLowerCase() === "stoppropagation") { flags |= EVENT_FLAGS.stopPropagation; modifierOnly = true; }
-        else this.diagnostics.error("TZR008", pos, `Unknown event modifier ':${mod}'.`);
+        else this.diagnostics.error("TZS008", pos, `Unknown event modifier ':${mod}'.`);
       }
       const hasValue = src[this.i] === "=";
       if (!hasValue) {
         if (modifierOnly) {
           return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
         }
-        this.diagnostics.error("TZR008", pos, `'@${base}' without a handler value.`);
+        this.diagnostics.error("TZS008", pos, `'@${base}' without a handler value.`);
         return { kind: "eventHandler", name: base!, code: "", flags, pos, endPos: this.locator(this.i) };
       }
       this.i++;
@@ -674,7 +674,7 @@ class Parser {
       return this.parseBindAttribute(body, name, pos);
     }
 
-    this.diagnostics.error("TZR001", pos, `Unknown directive attribute '@${body}'.`);
+    this.diagnostics.error("TZS001", pos, `Unknown directive attribute '@${body}'.`);
     if (src[this.i] === "=") this.i++;
     this.parseAttributeValue();
     return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
@@ -704,7 +704,7 @@ class Parser {
       const targetName = colon >= 0 ? target.slice(0, colon) : target;
       const modifier = colon >= 0 ? target.slice(colon + 1).toLowerCase() : undefined;
       if (targetName.length === 0) {
-        this.diagnostics.error("TZR008", pos, "'@bind-' requires a parameter name (e.g. '@bind-Value').");
+        this.diagnostics.error("TZS008", pos, "'@bind-' requires a parameter name (e.g. '@bind-Value').");
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
         return { kind: "bind", ...end() };
@@ -717,7 +717,7 @@ class Parser {
         const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos)?.code ?? "";
         return { kind: "bind", bindTarget: targetName, [modifier]: value, ...end() };
       }
-      this.diagnostics.error("TZR008", pos, `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
+      this.diagnostics.error("TZS008", pos, `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
       if (src[this.i] === "=") this.i++;
       this.parseAttributeValue();
       return { kind: "bind", ...end() };
@@ -728,7 +728,7 @@ class Parser {
       const modifier = rest.slice(1);
       const known = ["event", "format", "get", "set", "after"];
       if (!known.includes(modifier.toLowerCase())) {
-        this.diagnostics.error("TZR008", pos, `Unknown bind modifier '@bind:${modifier}'.`);
+        this.diagnostics.error("TZS008", pos, `Unknown bind modifier '@bind:${modifier}'.`);
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
         return { kind: "bind", ...end() };
@@ -737,7 +737,7 @@ class Parser {
       return { kind: "bind", [modifier.toLowerCase()]: value, ...end() } as AttributeNode;
     }
 
-    this.diagnostics.error("TZR008", pos, `Invalid '@${name}' attribute.`);
+    this.diagnostics.error("TZS008", pos, `Invalid '@${name}' attribute.`);
     if (src[this.i] === "=") this.i++;
     this.parseAttributeValue();
     return { kind: "bind", ...end() };
@@ -751,7 +751,7 @@ class Parser {
     if (src[this.i] === "=") this.i++;
     const value = this.parseAttributeValue();
     if (value === null) {
-      this.diagnostics.error("TZR009", pos, `Attribute '@${attrName}' requires a value.`);
+      this.diagnostics.error("TZS009", pos, `Attribute '@${attrName}' requires a value.`);
       return null;
     }
     // Directive attributes take expressions: a quoted plain value is the
@@ -762,7 +762,7 @@ class Parser {
       if (part.code !== undefined) return { code: part.code, start: part.start };
       if (part.text !== undefined) return { code: part.text, start: part.start };
     }
-    this.diagnostics.error("TZR009", pos, `Attribute '@${attrName}' requires a single expression value.`);
+    this.diagnostics.error("TZS009", pos, `Attribute '@${attrName}' requires a single expression value.`);
     return null;
   }
 
@@ -773,7 +773,7 @@ class Parser {
       const at = this.i;
       const end = this.ts.scanImplicitExpression(this.i + 1);
       if (end <= this.i + 1 && src[this.i + 1] !== "(") {
-        this.diagnostics.error("TZR009", this.locator(this.i), "Expected an expression value.");
+        this.diagnostics.error("TZS009", this.locator(this.i), "Expected an expression value.");
         return null;
       }
       const code = src.slice(this.i + 1, end);
@@ -785,7 +785,7 @@ class Parser {
     }
     const quote = src[this.i];
     if (quote !== '"' && quote !== "'") {
-      this.diagnostics.error("TZR009", this.locator(this.i), "Expected a quoted attribute value.");
+      this.diagnostics.error("TZS009", this.locator(this.i), "Expected a quoted attribute value.");
       return null;
     }
     this.i++;
@@ -810,7 +810,7 @@ class Parser {
         if (src[this.i + 1] === "(") {
           const end = this.ts.scanBalanced(this.i + 1, "(", ")");
           if (end < 0) {
-            this.diagnostics.error("TZR003", this.locator(this.i), "Parenthesized attribute expression never closes.");
+            this.diagnostics.error("TZS003", this.locator(this.i), "Parenthesized attribute expression never closes.");
             this.i = src.length;
             return null;
           }
@@ -833,7 +833,7 @@ class Parser {
       this.i++;
     }
     if (src[this.i] !== quote) {
-      this.diagnostics.error("TZR009", this.locator(this.i), "Attribute value is never closed.");
+      this.diagnostics.error("TZS009", this.locator(this.i), "Attribute value is never closed.");
       this.i = src.length;
       return null;
     }
@@ -850,13 +850,13 @@ class Parser {
   private parseParens(pos: SourcePos): string {
     this.skipWhitespace();
     if (this.source[this.i] !== "(") {
-      this.diagnostics.error("TZR003", pos, "Expected '(' after control keyword.");
+      this.diagnostics.error("TZS003", pos, "Expected '(' after control keyword.");
       this.i = this.source.length;
       return "";
     }
     const end = this.ts.scanBalanced(this.i, "(", ")");
     if (end < 0) {
-      this.diagnostics.error("TZR003", pos, "Control condition never closes.");
+      this.diagnostics.error("TZS003", pos, "Control condition never closes.");
       this.i = this.source.length;
       return "";
     }
@@ -870,7 +870,7 @@ class Parser {
     if (this.source[this.i] === "{") {
       const close = this.ts.scanBalanced(this.i, "{", "}", false);
       if (close < 0) {
-        this.diagnostics.error("TZR006", this.locator(this.i), "Control statement braces never close.");
+        this.diagnostics.error("TZS006", this.locator(this.i), "Control statement braces never close.");
         this.i = this.source.length;
         return [];
       }
@@ -887,7 +887,7 @@ class Parser {
       if (children.length > 0) return children;
     }
     this.i = save;
-    this.diagnostics.error("TZR006", this.locator(this.i), "Expected '{' after control statement.");
+    this.diagnostics.error("TZS006", this.locator(this.i), "Expected '{' after control statement.");
     this.i = this.source.length;
     return [];
   }

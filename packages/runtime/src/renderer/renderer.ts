@@ -293,5 +293,5 @@ export class Renderer {
 
 function reportError(error: unknown, context: string): void {
   // eslint-disable-next-line no-console
-  console.error(`[tasor] ${context}:`, error);
+  console.error(`[tsazor] ${context}:`, error);
 }

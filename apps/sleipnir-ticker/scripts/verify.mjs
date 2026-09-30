@@ -1,6 +1,6 @@
 /**
  * End-to-end verification for the Sleipnir-Ticker app (ASP.NET Core API +
- * Tasor frontend over Sleipnir SSE events).
+ * Tsazor frontend over Sleipnir SSE events).
  *
  * Starts the API (:5310) and the vite dev server (:5311) if they are not
  * already running, forces synthetic ticker mode for determinism, then drives

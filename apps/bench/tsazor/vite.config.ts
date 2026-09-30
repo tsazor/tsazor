@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
-import { tasor } from "@tasor/vite-plugin";
+import { tsazor } from "@tsazor/vite-plugin";
 
 export default defineConfig({
-  plugins: [tasor()],
+  plugins: [tsazor()],
 });

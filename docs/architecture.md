@@ -3,7 +3,7 @@
 ## Render-Pfad (Blazor 1:1)
 
 ```
-.tazor  ──(Vite-Plugin: @tasor/compiler)──►  TS-Modul
+.tsazor  ──(Vite-Plugin: @tsazor/compiler)──►  TS-Modul
               export default class X extends ComponentBase {
                   buildRenderTree(b: RenderTreeBuilder): void { … }
               }
@@ -31,16 +31,16 @@ TS-Ebene: `@code`-Blöcke sind wörtlich, Markup-Expressions werden minimal umge
 
 Das **Vite-Plugin** ergänzt das, was Blazors Build (Roslyn) sonst leistet:
 
-1. `_Imports.tazor`-Kette + `@using` → `resolveComponent`/`resolveType` per Dateisystem,
+1. `_Imports.tsazor`-Kette + `@using` → `resolveComponent`/`resolveType` per Dateisystem,
 2. Runtime-Built-ins als Markup-Tags (Blazors `Microsoft.AspNetCore.Components.Web`),
 3. Import-Ermittlung für PascalCase-Identifer in `@code` (z. B. `Parameter`-Dekorator,
    `EventCallback`, lokale Komponentenklassen) — zweistufig: Pass 1 listet die vom
    Compiler selbst erzeugten Imports, Pass 2 ergänzt die Restlichen,
-4. `virtual:tasor-routes`-Manifest aus allen `@page`-Dateien.
+4. `virtual:tsazor-routes`-Manifest aus allen `@page`-Dateien.
 
 ## HMR (State-Retention)
 
-Jede `.tazor`-Datei akzeptiert ihre eigenen Updates:
+Jede `.tsazor`-Datei akzeptiert ihre eigenen Updates:
 
 ```js
 if (import.meta.hot) {
@@ -48,12 +48,12 @@ if (import.meta.hot) {
   import.meta.hot.accept((mod) => {
     const previous = import.meta.hot.data.previousDefault;
     import.meta.hot.data.previousDefault = mod.default;
-    globalThis.__tasor?.hmrSwap(previous, mod.default);
+    globalThis.__tsazor?.hmrSwap(previous, mod.default);
   });
 }
 ```
 
-`Renderer.hmrSwap(oldType, newType)` (aufgerufen über `createTasorApp`):
+`Renderer.hmrSwap(oldType, newType)` (aufgerufen über `createTsazorApp`):
 
 1. findet alle ComponentStates mit dem alten Typ und setzt die neue Definition,
 2. **behält die Instanz-Objekte**: Prototyp-Swap auf die neue Klasse; Felder, die der
@@ -71,6 +71,6 @@ erfordern, fallen auf Best-Effort zurück — bei unerwartetem Zustand Seite neu
 
 ## Fehler-Overlay
 
-Compiler-Fehler (`TZR001…` mit Position) werden vom Transform-Hook als located Error
+Compiler-Fehler (`TZS001…` mit Position) werden vom Transform-Hook als located Error
 geworfen — Vites Dev-Server zeigt sie im Standard-Overlay an; Warnungen erscheinen auf
 der Konsole.

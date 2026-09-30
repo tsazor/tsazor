@@ -1,8 +1,8 @@
 {
-  "name": "@tasor/lsp",
+  "name": "@tsazor/lsp",
   "version": "0.1.0",
   "type": "module",
-  "description": "Language server for Tasor (.tazor): live compiler diagnostics, hover and go-to-definition.",
+  "description": "Language server for Tsazor (.tsazor): live compiler diagnostics, hover and go-to-definition.",
   "main": "./dist/server.js",
   "types": "./dist/server.d.ts",
   "scripts": {
@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@tasor/compiler": "workspace:*",
-    "@tasor/workspace": "workspace:*",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
     "typescript": "^5.9.2"
   },
   "devDependencies": {

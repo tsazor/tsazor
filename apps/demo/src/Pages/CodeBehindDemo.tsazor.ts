@@ -1,10 +1,10 @@
 /**
- * Code-behind for CodeBehindDemo.tazor: the generated component class
+ * Code-behind for CodeBehindDemo.tsazor: the generated component class
  * extends this class's default export (the file's own base class chain).
  * Markup renders `@count`, `@doubleCount` and `@greetingMessage` through the
- * inheritance — everything defined here, the .tazor markup can reference.
+ * inheritance — everything defined here, the .tsazor markup can reference.
  */
-import { ComponentBase } from "@tasor/runtime";
+import { ComponentBase } from "@tsazor/runtime";
 
 export default class CodeBehindDemo extends ComponentBase {
     count = 0;

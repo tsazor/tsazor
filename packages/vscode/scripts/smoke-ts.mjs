@@ -14,17 +14,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
-const serverPath = process.env.TASOR_SMOKE_SERVER ?? path.join(repoRoot, "packages", "vscode", "dist", "server.js");
+const serverPath = process.env.TSAZOR_SMOKE_SERVER ?? path.join(repoRoot, "packages", "vscode", "dist", "server.js");
 
-const work = await mkdtemp(path.join(tmpdir(), "tasor-lsp-smoke-ts-"));
+const work = await mkdtemp(path.join(tmpdir(), "tsazor-lsp-smoke-ts-"));
 await mkdir(path.join(work, "Pages"), { recursive: true });
 // Minimal runtime stub with a typed ComponentBase — the inheritance gap v2
 // exists for (v1 could never see sidecar members).
-const rt = path.join(work, "node_modules", "@tasor", "runtime");
+const rt = path.join(work, "node_modules", "@tsazor", "runtime");
 await mkdir(rt, { recursive: true });
 await writeFile(
   path.join(rt, "package.json"),
-  JSON.stringify({ name: "@tasor/runtime", version: "0.1.0", types: "./index.d.ts" }),
+  JSON.stringify({ name: "@tsazor/runtime", version: "0.1.0", types: "./index.d.ts" }),
 );
 await writeFile(
   path.join(rt, "index.d.ts"),
@@ -33,8 +33,8 @@ await writeFile(
     "export declare const Parameter: ParameterDecorator;\n",
 );
 await writeFile(
-  path.join(work, "Pages", "Ticker.tazor.ts"),
-  'import { ComponentBase } from "@tasor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class TickerBase extends ComponentBase {\n    ticker = new TickerStore();\n}\n',
+  path.join(work, "Pages", "Ticker.tsazor.ts"),
+  'import { ComponentBase } from "@tsazor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class TickerBase extends ComponentBase {\n    ticker = new TickerStore();\n}\n',
 );
 await writeFile(
   path.join(work, "Pages", "TickerStore.ts"),
@@ -42,17 +42,17 @@ await writeFile(
 );
 const tickerSource =
   '<p>@ticker.points.length</p>\n\n@code {\n    priceText = "";\n}\n';
-await writeFile(path.join(work, "Pages", "Ticker.tazor"), tickerSource);
+await writeFile(path.join(work, "Pages", "Ticker.tsazor"), tickerSource);
 // The chain doc gets its own code-behind sidecar — like any real page, the
 // member `ticker` comes from it (that inheritance is exactly what v2 covers).
 await writeFile(
-  path.join(work, "Pages", "Chain.tazor.ts"),
-  'import { ComponentBase } from "@tasor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class ChainBase extends ComponentBase {\n    ticker = new TickerStore();\n}\n',
+  path.join(work, "Pages", "Chain.tsazor.ts"),
+  'import { ComponentBase } from "@tsazor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class ChainBase extends ComponentBase {\n    ticker = new TickerStore();\n}\n',
 );
 const chainSource = "<p>@this.ticker.</p>\n";
-await writeFile(path.join(work, "Pages", "Chain.tazor"), chainSource);
+await writeFile(path.join(work, "Pages", "Chain.tsazor"), chainSource);
 const badSource = '<p>@ticker.points.length</p>\n\n@code {\n    priceText: string = 42;\n}\n';
-await writeFile(path.join(work, "Pages", "Bad.tazor"), badSource);
+await writeFile(path.join(work, "Pages", "Bad.tsazor"), badSource);
 
 const child = spawn(process.execPath, [serverPath, "--stdio"], { stdio: ["pipe", "pipe", "pipe"] });
 let stderr = "";
@@ -101,7 +101,7 @@ child.stdout.on("data", (chunk) => {
       console.error("frame parse failed:", error.message, content.toString("utf8").slice(0, 120));
       continue;
     }
-    if (message.method === "textDocument/publishDiagnostics" && message.params.uri?.endsWith("Bad.tazor")) {
+    if (message.method === "textDocument/publishDiagnostics" && message.params.uri?.endsWith("Bad.tsazor")) {
       publishes.push(message.params);
     }
     if (message.id && pending.has(message.id)) {
@@ -121,12 +121,12 @@ try {
 
   const open = (name, text) => {
     const uri = toFileUri(path.join(work, "Pages", name));
-    notify("textDocument/didOpen", { textDocument: { uri, languageId: "tazor", version: 1, text } });
+    notify("textDocument/didOpen", { textDocument: { uri, languageId: "tsazor", version: 1, text } });
     return uri;
   };
-  const tickerUri = open("Ticker.tazor", tickerSource);
-  const chainUri = open("Chain.tazor", chainSource);
-  open("Bad.tazor", badSource);
+  const tickerUri = open("Ticker.tsazor", tickerSource);
+  const chainUri = open("Chain.tsazor", chainSource);
+  open("Bad.tsazor", badSource);
 
   // 1) Completion behind the trailing dot: `<p>@this.ticker.|</p>` — col 16.
   const list = await send("textDocument/completion", {
@@ -164,15 +164,15 @@ try {
   );
   console.log("  -> definition:", defOk ? "ok" : "FAIL");
 
-  // 4) Mapped TS2322 diagnostic on the Bad.tazor @code line (debounced).
+  // 4) Mapped TS2322 diagnostic on the Bad.tsazor @code line (debounced).
   await new Promise((r) => setTimeout(r, 1500));
   const last = publishes[publishes.length - 1];
   const tsDiag = (last?.diagnostics ?? []).find(
-    (d) => d.source === "tasor-ts" && d.code === 2322,
+    (d) => d.source === "tsazor-ts" && d.code === 2322,
   );
   const diagOk = Boolean(tsDiag) && tsDiag.range.start.line === 3 && /string|number/.test(tsDiag.message);
   console.log(
-    "diagnostics Bad.tazor:",
+    "diagnostics Bad.tsazor:",
     (last?.diagnostics ?? []).map((d) => `${d.source ?? "?"}:${d.code ?? "?"}@${d.range.start.line}`).join(", ") || "(none)",
   );
   console.log("  -> diagnostics:", diagOk ? "ok" : "FAIL");

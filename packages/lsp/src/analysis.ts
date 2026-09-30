@@ -4,20 +4,20 @@ import {
   DiagnosticBag,
   type DocumentNode,
   type MarkupNode,
-  type TzrDiagnostic,
+  type TszDiagnostic,
   type DirectiveNode,
   type ElementNode,
   type IfNode,
   type SwitchNode,
   type ForNode,
   type TextTagNode,
-} from "@tasor/compiler";
-import { collectImports, createFileContext, type FileContext } from "@tasor/workspace";
+} from "@tsazor/compiler";
+import { collectImports, createFileContext, type FileContext } from "@tsazor/workspace";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
 /**
- * Analysis of one .tazor file: compiler diagnostics, the AST and the
+ * Analysis of one .tsazor file: compiler diagnostics, the AST and the
  * workspace resolution context — the pure core the server delegates to
  * (unit-testable without VS Code).
  */
@@ -30,7 +30,7 @@ export interface AnalyzedFile {
   source: string;
   document: DocumentNode;
   context: FileContext;
-  diagnostics: readonly TzrDiagnostic[];
+  diagnostics: readonly TszDiagnostic[];
   /** @inject names declared in the component (expression completions). */
   injects: ReadonlyArray<{ type: string; name: string }>;
 }
@@ -42,7 +42,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
   const chain = await collectImports(fileDir, projectRoot);
   const context = createFileContext(absolute, chain);
 
-  let diagnostics: readonly TzrDiagnostic[] = [];
+  let diagnostics: readonly TszDiagnostic[] = [];
   let injects: ReadonlyArray<{ type: string; name: string }> = [];
   let document: DocumentNode;
   try {
@@ -60,7 +60,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
     // The compiler throws for codegen-level failures; surface the message.
     document = { directives: [], body: [], codeBlocks: [] };
     diagnostics = [{
-      code: "TZRE000",
+      code: "TSZE000",
       message: error instanceof Error ? error.message : String(error),
       severity: "error",
       pos: { line: 1, column: 0 },
@@ -130,7 +130,7 @@ export function hoverAt(analyzed: AnalyzedFile, line: number, character: number)
   if (node.kind === "element" && (node as ElementNode).isComponent) {
     const element = node as ElementNode;
     const resolved = analyzed.context.resolveComponent(element.tagName, analyzed.context.chain.usings);
-    const lines = [`**\`<${element.tagName}>\`** — Tasor component`];
+    const lines = [`**\`<${element.tagName}>\`** — Tsazor component`];
     if (resolved) {
       lines.push(
         resolved.exportName
@@ -138,7 +138,7 @@ export function hoverAt(analyzed: AnalyzedFile, line: number, character: number)
           : `Source: \`${resolved.specifier}\``,
       );
     } else {
-      lines.push("_Not resolvable in this workspace (compiles as element, TZR005)._");
+      lines.push("_Not resolvable in this workspace (compiles as element, TZS005)._");
     }
     return { markdown: lines.join("\n") };
   }
@@ -201,7 +201,7 @@ function toFile(fileDir: string, specifier: string): DefinitionTarget | null {
   const value = specifier.replace(/^['"]|['"]$/g, "");
   if (!value.startsWith(".") && !path.isAbsolute(value)) return null;
   const base = path.isAbsolute(value) ? value : path.resolve(fileDir, value);
-  for (const extension of [".tazor", ".ts", ""]) {
+  for (const extension of [".tsazor", ".ts", ""]) {
     const candidate = `${base}${extension}`;
     if (existsSync(candidate)) return { file: candidate };
   }

@@ -1,11 +1,11 @@
-import { compile } from "@tasor/compiler";
+import { compile } from "@tsazor/compiler";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-/** One _Imports.tazor contribution, already resolved against its own directory. */
+/** One _Imports.tsazor contribution, already resolved against its own directory. */
 export interface ImportsLayer {
-  /** Directory containing this _Imports.tazor. */
+  /** Directory containing this _Imports.tsazor. */
   dir: string;
   /** Raw @using values from the file, in order. */
   usings: string[];
@@ -22,7 +22,7 @@ export interface ImportsChain {
   layout?: string;
 }
 
-const IMPORTS_FILE = "_Imports.tazor";
+const IMPORTS_FILE = "_Imports.tsazor";
 
 /** True for specifiers that point into the file tree (`./Shared`, `../X`, `Shared/Form`). */
 function isPathLike(using: string): boolean {
@@ -31,7 +31,7 @@ function isPathLike(using: string): boolean {
   return value.startsWith(".") || value.startsWith("/") || /[\\/]/.test(value);
 }
 
-/** Reads _Imports.tazor files from `dir` up to `root` (nearest first). */
+/** Reads _Imports.tsazor files from `dir` up to `root` (nearest first). */
 export async function collectImports(fileDir: string, root: string): Promise<ImportsChain> {
   const layers: ImportsLayer[] = [];
   let current = path.resolve(fileDir);
@@ -41,7 +41,7 @@ export async function collectImports(fileDir: string, root: string): Promise<Imp
     const importsPath = path.join(current, IMPORTS_FILE);
     if (existsSync(importsPath)) {
       const source = await readFile(importsPath, "utf8");
-      // _Imports.tazor is directive-only; compile() gives us the parsed values.
+      // _Imports.tsazor is directive-only; compile() gives us the parsed values.
       const result = compile(source, { className: "_Imports", fileName: importsPath, generateSourceMap: false });
       layers.push({
         dir: current,

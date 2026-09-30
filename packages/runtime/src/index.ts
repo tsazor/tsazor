@@ -48,7 +48,7 @@ export {
   type VirtualizeItemsProviderRequest,
   type VirtualizeItemsProviderResult,
 } from "./data/virtualize";
-export { TasorHttp, type TasorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tasor-http";
+export { TsazorHttp, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http";
 
 // Forms
 export { EditContext, type FieldIdentifier } from "./forms/edit-context";
@@ -66,4 +66,4 @@ export { CascadingAuthenticationState } from "./auth/cascading-authentication-st
 export { AuthorizeRouteView } from "./auth/authorize-route-view";
 
 // App bootstrap
-export { createTasorApp, type TasorAppOptions } from "./app";
+export { createTsazorApp, type TsazorAppOptions } from "./app";

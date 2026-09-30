@@ -1,6 +1,6 @@
-import { createTasorApp, AuthenticationStateProvider, type Token } from "@tasor/runtime";
-import App from "./App.tazor";
-import routes from "virtual:tasor-routes";
+import { createTsazorApp, AuthenticationStateProvider, type Token } from "@tsazor/runtime";
+import App from "./App.tsazor";
+import routes from "virtual:tsazor-routes";
 import { AuthProvider } from "./AuthProvider";
 import { OrderState } from "./OrderState";
 import { OrdersClient } from "./OrdersClient";
@@ -9,7 +9,7 @@ import "../wwwroot/css/site.css";
 
 const authProvider = new AuthProvider();
 
-const app = createTasorApp({
+const app = createTsazorApp({
   root: App,
   routes,
   // One instance under both tokens: the concrete class (for @inject in
@@ -25,7 +25,7 @@ const app = createTasorApp({
 
 declare global {
   interface Window {
-    __tasorApp: typeof app;
+    __tsazorApp: typeof app;
   }
 }
-window.__tasorApp = app;
+window.__tsazorApp = app;

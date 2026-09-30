@@ -1,11 +1,11 @@
 /**
- * Web Components interop probe: does Tasor treat custom elements as plain
- * elements (Direction A — custom elements inside .tazor markup), and does
+ * Web Components interop probe: does Tsazor treat custom elements as plain
+ * elements (Direction A — custom elements inside .tsazor markup), and does
  * light-DOM child content get projected into shadow-DOM slots?
  */
 import { describe, expect, it } from "vitest";
-import { renderTree } from "@tasor/testing";
-import { ComponentBase, type RenderTreeBuilder } from "@tasor/runtime";
+import { renderTree } from "@tsazor/testing";
+import { ComponentBase, type RenderTreeBuilder } from "@tsazor/runtime";
 
 class MyWidget extends HTMLElement {
   constructor() {
@@ -47,7 +47,7 @@ describe("web components interop (direction A)", () => {
     expect(widget.getAttribute("data-x")).toBe("7");
     // Child content lands in the light DOM -> the shadow slot picks it up.
     expect(widget.querySelector("span")!.textContent).toBe("Slot-Inhalt");
-    // The shadow root coexists with Tasor's patched children.
+    // The shadow root coexists with Tsazor's patched children.
     expect(widget.shadowRoot!.querySelector("i")!.textContent).toBe("widget intern");
     // The shadow root's slot markup is in place to project the light DOM.
     expect(widget.shadowRoot!.innerHTML).toContain("<slot>");

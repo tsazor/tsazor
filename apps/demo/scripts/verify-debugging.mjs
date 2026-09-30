@@ -1,16 +1,16 @@
 /**
  * Real-browser debugging verification for the demo app: the DevTools story for
- * .tazor files. Uses msedge via playwright-core + a raw CDP session (Debugger
+ * .tsazor files. Uses msedge via playwright-core + a raw CDP session (Debugger
  * domain), no Chromium download.
  *
  * Checks:
- *  1. The dev server serves Counter.tazor as a module whose inline sourcemap
+ *  1. The dev server serves Counter.tsazor as a module whose inline sourcemap
  *     maps the @code statement line back to the real source line.
- *  2. A breakpoint set on the mapped location (real .tazor coordinates)
+ *  2. A breakpoint set on the mapped location (real .tsazor coordinates)
  *     resolves and PAUSES when the button is clicked.
  *  3. Variable inspection from the pause scope: this.* members are live
  *     (this.currentCount, this.incrementCount — DevTools shows the same).
- *  4. Step-through: stepOver lands on the next mapped .tazor line, same scope.
+ *  4. Step-through: stepOver lands on the next mapped .tsazor line, same scope.
  *  5. After resume the debugged statement's effect is in the UI (count 1).
  *
  * Run from apps/demo:  node scripts/verify-debugging.mjs
@@ -40,13 +40,13 @@ const check = (name, ok, detail = "") => {
 /*    Source line 14 (1-based: `this.currentCount++`) must map into    */
 /*    the compiled code (VLQ decode).                                  */
 /* ------------------------------------------------------------------ */
-const moduleText = await (await fetch(`${BASE}/src/Pages/Counter.tazor?import`)).text();
+const moduleText = await (await fetch(`${BASE}/src/Pages/Counter.tsazor?import`)).text();
 const mapMatch = moduleText.match(/sourceMappingURL=data:application\/json[^\s"']*(?:;charset=utf-8)?;base64,([A-Za-z0-9+/=]+)/);
 check("module has an inline base64 sourcemap", mapMatch !== null);
 
 const map = JSON.parse(Buffer.from(mapMatch[1], "base64").toString("utf8"));
-check("sourcemap names the real .tazor source", (map.sources ?? []).some((s) => s.endsWith("Counter.tazor")), map.sources.join(","));
-check("sourcemap embeds the .tazor source text", (map.sourcesContent ?? []).join("").includes("@code {"));
+check("sourcemap names the real .tsazor source", (map.sources ?? []).some((s) => s.endsWith("Counter.tsazor")), map.sources.join(","));
+check("sourcemap embeds the .tsazor source text", (map.sourcesContent ?? []).join("").includes("@code {"));
 
 /* Minimal VLQ decoder — enough to locate the mapped statement. */
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -66,7 +66,7 @@ const vlq = (seg) => {
   return out;
 };
 
-const INCREMENT_LINE_0B = map.sourcesContent[map.sources.findIndex((s) => s.endsWith("Counter.tazor"))]
+const INCREMENT_LINE_0B = map.sourcesContent[map.sources.findIndex((s) => s.endsWith("Counter.tsazor"))]
   .split("\n").findIndex((l) => l.includes("this.currentCount++"));
 check("source line for this.currentCount++ found", INCREMENT_LINE_0B >= 0, `0-based line ${INCREMENT_LINE_0B}`);
 
@@ -91,7 +91,7 @@ check(`compiled position maps FROM source line ${INCREMENT_LINE_0B + 1} (1-based
   mappingToIncrement ? `→ compiled line ${mappingToIncrement.genLine} (0-based), col ${mappingToIncrement.genCol}` : "");
 
 /* ------------------------------------------------------------------ */
-/* 2. CDP: enable the debugger, find the Counter.tazor script, set a   */
+/* 2. CDP: enable the debugger, find the Counter.tsazor script, set a   */
 /*    breakpoint on the mapped location, click, catch the pause.       */
 /* ------------------------------------------------------------------ */
 const client = await context.newCDPSession(page);
@@ -105,12 +105,12 @@ const cdpSendSoft = (method, params = {}) =>
 
 let counterScriptId = null;
 client.on("Debugger.scriptParsed", (script) => {
-  if (script.url.includes("Counter.tazor")) counterScriptId = script.scriptId;
+  if (script.url.includes("Counter.tsazor")) counterScriptId = script.scriptId;
 });
 
 await page.goto(`${BASE}/counter`, { waitUntil: "networkidle" });
 for (let i = 0; i < 50 && counterScriptId === null; i++) await page.waitForTimeout(100);
-check("Debugger sees the compiled Counter.tazor script", counterScriptId !== null);
+check("Debugger sees the compiled Counter.tsazor script", counterScriptId !== null);
 
 let bp;
 check("breakpoint resolves at the mapped location",
@@ -139,7 +139,7 @@ await cdpSend("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: 
 await cdpSendSoft("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
 const pause1 = await Promise.race([pausePromise, page.waitForTimeout(10000).then(() => null)]);
 check("paused on click (breakpoint hit in event handler)", pause1 !== null && pause1.reason === "other", pause1?.reason ?? "no pause");
-check("paused inside the Counter.tazor script", pause1 !== null && pause1.callFrames[0]?.location?.scriptId === counterScriptId);
+check("paused inside the Counter.tsazor script", pause1 !== null && pause1.callFrames[0]?.location?.scriptId === counterScriptId);
 
 /* 3. Variable inspection from the pause scope. */
 const before = await cdpSend("Debugger.evaluateOnCallFrame", {
@@ -159,7 +159,7 @@ check("inspectable method typeof this.incrementCount === 'function'", kind.resul
 /* 4. Step through to the next mapped line. */
 await cdpSend("Debugger.stepOver");
 const pause2 = await Promise.race([nextPause(), page.waitForTimeout(10000).then(() => null)]);
-check("stepOver lands on the next mapped .tazor line",
+check("stepOver lands on the next mapped .tsazor line",
   pause2 !== null && pause2.callFrames[0]?.location?.scriptId === counterScriptId && pause2.callFrames[0].location.lineNumber !== bp.actualLocation.lineNumber,
   pause2 ? `line ${pause2.callFrames[0].location.lineNumber}` : "no second pause");
 

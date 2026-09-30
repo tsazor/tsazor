@@ -1,28 +1,28 @@
-# Debugging `.tazor` files in DevTools
+# Debugging `.tsazor` files in DevTools
 
-The compiler and the vite plugin produce a chained inline sourcemap per `.tazor`
+The compiler and the vite plugin produce a chained inline sourcemap per `.tsazor`
 module (compiler → esbuild), so the browser debugger works on the **real
-`.tazor` source** — breakpoints in `@code`, `this.*` state inspection and
+`.tsazor` source** — breakpoints in `@code`, `this.*` state inspection and
 step-through all behave like authored code. Verified against a real browser
 (Edge via CDP) by `apps/demo/scripts/verify-debugging.mjs` — 14/14 checks.
 
 ## DevTools walkthrough (manual)
 
 1. Open the dev server page, e.g. `http://localhost:5199/counter`, DevTools F12 → **Sources**.
-2. The module tree shows `Counter.tazor` (that's the module URL — vite serves the
+2. The module tree shows `Counter.tsazor` (that's the module URL — vite serves the
    component under its real name). Its content in the editor is the actual
-   `.tazor` source, `@code` block included — the sourcemap embeds `sourcesContent`.
+   `.tsazor` source, `@code` block included — the sourcemap embeds `sourcesContent`.
 3. Click a line inside `@code` (e.g. `this.currentCount++;`) to set a breakpoint.
 4. Click the counter button. DevTools pauses **inside the original line of the
-   `.tazor` file**, not somewhere in generated code.
+   `.tsazor` file**, not somewhere in generated code.
 5. In the **Scope** pane your members are live state: fields (`this.currentCount`),
    methods (`this.incrementCount`), getters (`this.doubleCount`, code-behind too),
    and `@inject` fields — `this` is the component instance.
-6. Step over / step into moves along the mapped `.tazor` lines; resume returns to
+6. Step over / step into moves along the mapped `.tsazor` lines; resume returns to
    a live page. State changes made at the breakpoint flow into the DOM after
    resume (the render happens after your handler returns).
 
-**Code-behind (`X.tazor.ts`)** is plain TypeScript from Vite's perspective —
+**Code-behind (`X.tsazor.ts`)** is plain TypeScript from Vite's perspective —
 breakpoints in the sidecar work natively with no extra machinery; members are
 reachable through the inheritance chain in the Scope pane. Editing the sidecar
 reloads the page (HMR v1 limit, see docs/code-behind.md), so re-arm manual
@@ -46,8 +46,8 @@ details it documents by construction:
 
 | Stage | Contribution |
 |---|---|
-| Compiler (`@tasor/compiler`) | Line-accurate mappings from the original `.tazor` into the generated component module (RenderTreeBuilder frames + `@code` as class members). |
-| Vite plugin | Chained: `import "./X.tazor.css"` etc. after the transform; the esbuild transpile keeps the compiler map and produces an inline `sourcesContent` bundle, sources named e.g. `Counter.tazor`. |
+| Compiler (`@tsazor/compiler`) | Line-accurate mappings from the original `.tsazor` into the generated component module (RenderTreeBuilder frames + `@code` as class members). |
+| Vite plugin | Chained: `import "./X.tsazor.css"` etc. after the transform; the esbuild transpile keeps the compiler map and produces an inline `sourcesContent` bundle, sources named e.g. `Counter.tsazor`. |
 | Vite dev / build | Serves the inline map with the module — no extra file, no server config. |
 
 ## Limits (v1)

@@ -13,16 +13,16 @@ let root = "";
 let cleanup: () => Promise<void>;
 
 beforeAll(async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "tasor-lsp-compl-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "tsazor-lsp-compl-"));
   root = dir;
   await mkdir(path.join(dir, "Pages"), { recursive: true });
   await mkdir(path.join(dir, "Shared"), { recursive: true });
   await writeFile(
-    path.join(dir, "Shared", "Greeter.tazor"),
+    path.join(dir, "Shared", "Greeter.tsazor"),
     '<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n    greetCount = 0;\n}\n',
   );
   // _Imports makes root + Shared resolvable for every file below root.
-  await writeFile(path.join(dir, "_Imports.tazor"), "@using ./Shared\n");
+  await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./Shared\n");
   cleanup = async () => rm(dir, { recursive: true, force: true });
 });
 
@@ -46,7 +46,7 @@ const GREETER_PAGE = [
 ].join("\n");
 
 const complete = async (source: string, line: number, character: number) => {
-  const analyzed = await analyzeSource(path.join(root, "Pages", "Demo.tazor"), source, root);
+  const analyzed = await analyzeSource(path.join(root, "Pages", "Demo.tsazor"), source, root);
   return completeAt(analyzed, line, character).map((c) => c.label);
 };
 

@@ -1,7 +1,7 @@
 /**
- * v2 feature layer: routes .tazor positions between the v1 heuristic layer
+ * v2 feature layer: routes .tsazor positions between the v1 heuristic layer
  * (markup) and the TypeScript shadow layer (@code, @{…}, @-expressions) and
- * translates TS results back into .tazor coordinates.
+ * translates TS results back into .tsazor coordinates.
  *
  * Everything here is graceful: whenever the shadow module or the mapping has
  * nothing to offer for a position (returns `null` / `[]`), the server falls
@@ -14,7 +14,7 @@ import { nodeAt } from "./analysis";
 import { readFileSync } from "node:fs";
 import {
   shadowOffsetToPos,
-  TasorTypeService,
+  TsazorTypeService,
   type ShadowEntry,
 } from "./ts-service";
 
@@ -85,7 +85,7 @@ export interface TsCompletionCandidate {
 }
 
 /**
- * TypeScript completions at a .tazor position, or `null` when the position
+ * TypeScript completions at a .tsazor position, or `null` when the position
  * maps nowhere in the shadow (→ v1 fallback).
  *
  * Mapping-first strategy: if the position maps into the shadow, the generated
@@ -94,7 +94,7 @@ export interface TsCompletionCandidate {
  * generated yet) uses the variant-patch mechanism.
  */
 export async function tsCompletions(
-  service: TasorTypeService,
+  service: TsazorTypeService,
   entry: ShadowEntry,
   analyzed: AnalyzedFile,
   line: number,
@@ -122,7 +122,7 @@ export async function tsCompletions(
       line,
       start: prefix.start,
       end: prefix.end,
-      replacement: `${prefix.text}__tasorQuery`,
+      replacement: `${prefix.text}__tsazorQuery`,
       cursorAfter: `this.${prefix.text}`,
     });
     if (variant) {
@@ -205,7 +205,7 @@ function completionCandidates(info: ts.CompletionInfo): TsCompletionCandidate[] 
 
 /** Filled-in details for one completion item (resolveProvider round-trip). */
 export function tsCompletionDetail(
-  service: TasorTypeService,
+  service: TsazorTypeService,
   entry: ShadowEntry,
   genLine: number,
   genCol: number,
@@ -233,8 +233,8 @@ export interface TsHoverInfo {
   markdown: string;
 }
 
-/** QuickInfo at a .tazor position, or null when unmapped (→ v1 fallback). */
-export function tsHover(service: TasorTypeService, entry: ShadowEntry, line: number, character: number): TsHoverInfo | null {
+/** QuickInfo at a .tsazor position, or null when unmapped (→ v1 fallback). */
+export function tsHover(service: TsazorTypeService, entry: ShadowEntry, line: number, character: number): TsHoverInfo | null {
   const gen = entry.shadow.map.srcToGen(line, character);
   if (!gen) return null;
   const info = service.quickInfoOnShadow(entry, gen.line, gen.column);
@@ -250,23 +250,23 @@ export function tsHover(service: TasorTypeService, entry: ShadowEntry, line: num
 }
 
 /**
- * Component tags resolve to an `__tasor_comp_*` import alias in the generated
+ * Component tags resolve to an `__tsazor_comp_*` import alias in the generated
  * code, so TS quick info renders compiler plumbing —"(alias) class
- * __tasor_comp_X" plus the `import …` context line. Rewrite it to the real
+ * __tsazor_comp_X" plus the `import …` context line. Rewrite it to the real
  * component name so the hover reads like the markup (`class ValidationMessage`).
  */
 export function prettifyHoverDisplay(display: string): string {
-  if (!display.includes("__tasor_comp_")) return display;
+  if (!display.includes("__tsazor_comp_")) return display;
   return display
     .replace(/^\(alias\) /, "")
     .replace(/\n\s*import [^\n]*$/, "") // TS's import-context line for the alias
-    .replace(/__tasor_comp_([A-Za-z0-9_]+)/g, (_match, name: string) => name);
+    .replace(/__tsazor_comp_([A-Za-z0-9_]+)/g, (_match, name: string) => name);
 }
 
 /**
  * Runtime docstrings double as design notes ("Blazor's NavLink: …", "v1
  * deviation: …"), but editor surfaces (hover, completion details) must read
- * Tasor-native. Sanitize to the component's own description: the "Blazor's X:"
+ * Tsazor-native. Sanitize to the component's own description: the "Blazor's X:"
  * heading is stripped to its description, lineage sentences referencing Blazor
  * and "v1 deviation" notes are dropped. The full notes stay in the source.
  */
@@ -308,12 +308,12 @@ export interface TsDefinitionTarget {
 
 /**
  * Go-to-definition for shadow-mapped positions:
- *   shadow target → mapped back onto the .tazor source
+ *   shadow target → mapped back onto the .tsazor source
  *   real .ts/.d.ts target → verbatim into that file
  * No mapped position / no targets → null (→ v1 fallback).
  */
 export function tsDefinition(
-  service: TasorTypeService,
+  service: TsazorTypeService,
   entry: ShadowEntry,
   line: number,
   character: number,
@@ -331,13 +331,13 @@ export function tsDefinition(
 
 /** One TS definition target: shadow targets map back, real files go verbatim. */
 function translateTarget(
-  service: TasorTypeService,
+  service: TsazorTypeService,
   entry: ShadowEntry,
   fileName: string,
   genStart: number,
   genLength: number,
 ): TsDefinitionTarget | null {
-  // Own or cross-shadow virtual module: map back onto the originating .tazor.
+  // Own or cross-shadow virtual module: map back onto the originating .tsazor.
   const targetEntry = service.entryOf(fileName);
   if (targetEntry) {
     const genPos = shadowOffsetToPos(targetEntry.shadow.code, genStart);
@@ -369,7 +369,7 @@ function translateTarget(
 }
 
 /** True for shadow-internal definitions (used to prefer real targets, v2). */
-export function targetIsShadowTarget(service: TasorTypeService, fileName: string): boolean {
+export function targetIsShadowTarget(service: TsazorTypeService, fileName: string): boolean {
   return service.entryOf(fileName) !== undefined;
 }
 
@@ -398,7 +398,7 @@ function isAssetModuleSpecifier(message: string): boolean {
  *  used to drop TS2564 (strictPropertyInitialization), where the renderer's
  *  parameter assignment replaces the initializer (Blazor semantics). */
 function parameterPropertySpans(code: string): Array<{ start: number; end: number }> {
-  const sourceFile = ts.createSourceFile("__tazor_shadow__.ts", code, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const sourceFile = ts.createSourceFile("__tsazor_shadow__.ts", code, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const spans: Array<{ start: number; end: number }> = [];
   const visit = (node: ts.Node): void => {
     if (
@@ -417,7 +417,7 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 }
 
 /**
- * Type diagnostics of one shadow (syntactic + semantic) mapped back to .tazor
+ * Type diagnostics of one shadow (syntactic + semantic) mapped back to .tsazor
  * coordinates: diagnostics that do not map (synthetic regions, plumbing) are
  * dropped — that leaves only squiggles anchored on real source. Capped at 200.
  *
@@ -431,7 +431,7 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
  *    renderer assigns parameters before first render (Blazor semantics), so
  *    the initializer never belongs in user code.
  */
-export function tsDiagnostics(service: TasorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
+export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
   const parameterSpans = parameterPropertySpans(entry.shadow.code);
   const results: TsDiagnostic[] = [];
   const diagnostics = [

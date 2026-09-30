@@ -2,7 +2,7 @@ import type { ComponentBase } from "./component-base";
 
 /**
  * Identifies a component type together with its static metadata. The compiler
- * emits one per .tazor file; hand-built components get one via `defineComponent`.
+ * emits one per .tsazor file; hand-built components get one via `defineComponent`.
  */
 export interface ComponentDefinition<T extends ComponentBase = ComponentBase> {
   readonly type: abstract new () => T;

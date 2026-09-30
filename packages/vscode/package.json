@@ -1,9 +1,9 @@
 {
-  "name": "tasor-vscode",
-  "displayName": "Tasor Language Support",
-  "description": "Syntax highlighting and language services (diagnostics, hover, go-to-definition) for Tasor (.tazor) files — Razor markup with TypeScript.",
-  "version": "0.3.4",
-  "publisher": "tasor",
+  "name": "tsazor-vscode",
+  "displayName": "Tsazor Language Support",
+  "description": "Syntax highlighting and language services (diagnostics, hover, go-to-definition) for Tsazor (.tsazor) files — Razor markup with TypeScript.",
+  "version": "0.4.0",
+  "publisher": "tsazor",
   "main": "./dist/extension.js",
   "engines": {
     "vscode": "^1.80.0"
@@ -14,25 +14,25 @@
   "contributes": {
     "languages": [
       {
-        "id": "tazor",
+        "id": "tsazor",
         "aliases": [
-          "Tasor",
-          "tazor"
+          "Tsazor",
+          "tsazor"
         ],
         "extensions": [
-          ".tazor"
+          ".tsazor"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "tazor",
-        "scopeName": "source.tazor",
-        "path": "./syntaxes/tazor.tmLanguage.json",
+        "language": "tsazor",
+        "scopeName": "source.tsazor",
+        "path": "./syntaxes/tsazor.tmLanguage.json",
         "embeddedLanguages": {
           "source.ts": "typescript",
-          "meta.embedded.block.tazor-code.ts": "typescript"
+          "meta.embedded.block.tsazor-code.ts": "typescript"
         }
       }
     ]

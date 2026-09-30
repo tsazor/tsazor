@@ -1,4 +1,4 @@
-import { ComponentBase, Renderer, ServiceCollection, type RenderTreeBuilder } from "@tasor/runtime";
+import { ComponentBase, Renderer, ServiceCollection, type RenderTreeBuilder } from "@tsazor/runtime";
 
 /**
  * Blazor's Bunit-style render helper: mounts a component into a detached
@@ -62,4 +62,4 @@ export function renderTree(build: (b: RenderTreeBuilder) => void): Promise<Rende
   return render(TestComponent);
 }
 
-export * from "@tasor/runtime";
+export * from "@tsazor/runtime";

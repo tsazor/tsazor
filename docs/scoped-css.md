@@ -1,7 +1,7 @@
 # Scoped CSS
 
-Tasor implements Blazor's CSS isolation mechanism 1:1. Every `.tazor` file that has a
-sidecar stylesheet `X.tazor.css` gets its markup stamped with a scope attribute
+Tsazor implements Blazor's CSS isolation mechanism 1:1. Every `.tsazor` file that has a
+sidecar stylesheet `X.tsazor.css` gets its markup stamped with a scope attribute
 `b-<hash>`, and the stylesheet's selectors are rewritten to target `[b-<hash>]`.
 The runtime needs no changes — scoping is entirely a compile-time mechanism in the
 compiler and the vite plugin.
@@ -9,18 +9,18 @@ compiler and the vite plugin.
 ## How it works
 
 ```
-Greeter.tazor        →  compiler emits  b.addAttribute(n, "b-1a2b3c4d", "")
+Greeter.tsazor        →  compiler emits  b.addAttribute(n, "b-1a2b3c4d", "")
                         on every plain DOM element
-Greeter.tazor.css    →  vite-plugin rewrites selectors via postcss
+Greeter.tsazor.css    →  vite-plugin rewrites selectors via postcss
                         h1 { color: red; }        →  h1[b-1a2b3c4d] { color: red; }
-                        injects  import "./Greeter.tazor.css"  into the compiled module
+                        injects  import "./Greeter.tsazor.css"  into the compiled module
 ```
 
-- **Opt-in, sidecar-gated.** A `.tazor` file without a `X.tazor.css` sidecar compiles
+- **Opt-in, sidecar-gated.** A `.tsazor` file without a `X.tsazor.css` sidecar compiles
   byte-identically to before (no scope frames, no CSS import). Existing apps are
   unaffected until they add a stylesheet.
 - **Hash.** `b-` + first 8 hex chars of `sha1(<project-root-relative POSIX path of the
-  .tazor file>)`. Deterministic, stable across rebuilds, unique per file. Two files
+  .tsazor file>)`. Deterministic, stable across rebuilds, unique per file. Two files
   in different directories with the same basename get different hashes — scoping is
   per *file*, not per component.
 - **Components are left alone.** Only plain DOM elements get the attribute, exactly
@@ -75,7 +75,7 @@ than the equivalent unscoped one. Design stylesheets accordingly.
 - **No build-time hash collisions** by design (sha1 over path), but renaming/moving a
   file changes its hash — global CSS that (ab)uses `b-*` selectors would break.
 - **HMR**: editing only the sidecar goes through Vite's normal CSS hot path (the
-  `.tazor` module is unchanged); adding/removing a sidecar triggers a `.tazor` module
+  `.tsazor` module is unchanged); adding/removing a sidecar triggers a `.tsazor` module
   invalidation.
 
 ## Implementation map
@@ -84,4 +84,4 @@ than the equivalent unscoped one. Design stylesheets accordingly.
 |---|---|
 | Scope-attribute emission (compiler, opt-in `scopeHash` option) | `packages/compiler/src/codegen.ts` |
 | Hash derivation + `::deep` rewriter (postcss plugin) | `packages/vite-plugin/src/scoped-css.ts` |
-| Sidecar detection, CSS import injection, `.tazor.css` transform | `packages/vite-plugin/src/index.ts` |
+| Sidecar detection, CSS import injection, `.tsazor.css` transform | `packages/vite-plugin/src/index.ts` |

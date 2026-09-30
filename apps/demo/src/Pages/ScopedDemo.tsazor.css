@@ -1,4 +1,4 @@
-/* Scoped CSS demo (X.tazor.css sidecar): every selector is rewritten to
+/* Scoped CSS demo (X.tsazor.css sidecar): every selector is rewritten to
    target the `b-<hash>` attribute the compiler stamps on this file's markup. */
 
 .demo-card {

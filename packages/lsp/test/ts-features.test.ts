@@ -11,7 +11,7 @@ import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { analyzeSource, type AnalyzedFile } from "../src/analysis";
-import { TasorTypeService, type ShadowEntry } from "../src/ts-service";
+import { TsazorTypeService, type ShadowEntry } from "../src/ts-service";
 import {
   classifyCodeContext,
   prettifyHoverDisplay,
@@ -23,24 +23,24 @@ import {
 } from "../src/ts-features";
 
 let root = "";
-let service: TasorTypeService;
+let service: TsazorTypeService;
 let tickerEntry: ShadowEntry | null = null;
 
 beforeAll(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "tasor-features-"));
+  root = await mkdtemp(path.join(tmpdir(), "tsazor-features-"));
   await mkdir(path.join(root, "Pages"), { recursive: true });
   await mkdir(path.join(root, "Shared"), { recursive: true });
-  await writeFile(path.join(root, "_Imports.tazor"), "@using ./Shared\n");
+  await writeFile(path.join(root, "_Imports.tsazor"), "@using ./Shared\n");
 
-  const rt = path.join(root, "node_modules", "@tasor", "runtime");
+  const rt = path.join(root, "node_modules", "@tsazor", "runtime");
   await mkdir(rt, { recursive: true });
   const { writeFileSync } = await import("node:fs");
   writeFileSync(
     path.join(rt, "package.json"),
-    JSON.stringify({ name: "@tasor/runtime", version: "0.1.0", types: "./index.d.ts" }),
+    JSON.stringify({ name: "@tsazor/runtime", version: "0.1.0", types: "./index.d.ts" }),
   );
   writeFileSync(
-    path.join(root, "node_modules", "@tasor", "runtime", "index.d.ts"),
+    path.join(root, "node_modules", "@tsazor", "runtime", "index.d.ts"),
     // Mirrors the real runtime signatures the generated bind/handler code
     // relies on (shaped like packages/runtime/src; addEventHandler is
     // `EventCallback<any>` — a `never` would infer lambda params to never).
@@ -51,20 +51,20 @@ beforeAll(async () => {
   );
 
   await writeFile(
-    path.join(root, "Pages", "Ticker.tazor.ts"),
-    'import { ComponentBase } from "@tasor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class TickerBase extends ComponentBase {\n    ticker = new TickerStore();\n}\n',
+    path.join(root, "Pages", "Ticker.tsazor.ts"),
+    'import { ComponentBase } from "@tsazor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class TickerBase extends ComponentBase {\n    ticker = new TickerStore();\n}\n',
   );
   await writeFile(
     path.join(root, "Pages", "TickerStore.ts"),
     "export interface PricePoint { price: number; time: number; }\n\nexport class TickerStore {\n    count = 0;\n    price = 0;\n    priceText = \"$0\";\n    lastError: string | null = null;\n    points: PricePoint[] = [];\n}\n",
   );
-  await writeFile(path.join(root, "Shared", "Alert.tazor"), '<div class="alert">@Variant</div>\n\n@code {\n    @Parameter() Variant?: string;\n}\n');
+  await writeFile(path.join(root, "Shared", "Alert.tsazor"), '<div class="alert">@Variant</div>\n\n@code {\n    @Parameter() Variant?: string;\n}\n');
   const tickerSource = '<Alert Variant="@mode" />\n<p>@ticker.points.length</p>\n\n@code {\n    priceText = "";\n    mode = "hot";\n}\n';
-  await writeFile(path.join(root, "Pages", "Ticker.tazor"), tickerSource);
+  await writeFile(path.join(root, "Pages", "Ticker.tsazor"), tickerSource);
 
-  service = new TasorTypeService(root);
-  await service.ensureTazor(path.join(root, "Shared", "Alert.tazor"));
-  tickerEntry = await service.ensureTazor(path.join(root, "Pages", "Ticker.tazor"), tickerSource);
+  service = new TsazorTypeService(root);
+  await service.ensureTsazor(path.join(root, "Shared", "Alert.tsazor"));
+  tickerEntry = await service.ensureTsazor(path.join(root, "Pages", "Ticker.tsazor"), tickerSource);
 });
 
 afterAll(async () => {
@@ -74,13 +74,13 @@ afterAll(async () => {
 
 /** Probes with a shared code-behind sidecar (inherited `ticker` member). */
 const PROBE_SIDECAR_SRC =
-  'import { ComponentBase } from "@tasor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class %NAME%Base extends ComponentBase {\n    ticker = new TickerStore();\n}\n';
+  'import { ComponentBase } from "@tsazor/runtime";\nimport { TickerStore } from "./TickerStore";\n\nexport default class %NAME%Base extends ComponentBase {\n    ticker = new TickerStore();\n}\n';
 async function ensureProbe(name: string, source: string): Promise<ShadowEntry | null> {
-  await writeFile(path.join(root, "Pages", `${name}.tazor.ts`), PROBE_SIDECAR_SRC.replace("%NAME%", name));
-  return service.ensureTazor(path.join(root, "Pages", `${name}.tazor`), source);
+  await writeFile(path.join(root, "Pages", `${name}.tsazor.ts`), PROBE_SIDECAR_SRC.replace("%NAME%", name));
+  return service.ensureTsazor(path.join(root, "Pages", `${name}.tsazor`), source);
 }
 
-async function analyzed(source: string, name = "Ticker.tazor"): Promise<AnalyzedFile> {
+async function analyzed(source: string, name = "Ticker.tsazor"): Promise<AnalyzedFile> {
   return analyzeSource(path.join(root, "Pages", name), source, root);
 }
 
@@ -152,7 +152,7 @@ describe("tsHover and tsDefinition", () => {
   it("defines `ticker` into the code-behind sidecar with a real range", () => {
     const targets = tsDefinition(service, tickerEntry!, 1, 5); // inside `ticker`
     expect(targets).not.toBeNull();
-    const target = targets!.find((t) => t.file.endsWith("Ticker.tazor.ts"));
+    const target = targets!.find((t) => t.file.endsWith("Ticker.tsazor.ts"));
     expect(target).toBeDefined();
     // The sidecar declares `ticker` on 0-based line 4 (`    ticker = new TickerStore();`,
     // after import/export blank lines) and the mapped span covers real tokens.
@@ -162,7 +162,7 @@ describe("tsHover and tsDefinition", () => {
 
   it("maps a semantic diagnostic (TS2322) back onto the @code line", async () => {
     const badSource = '<p>@ticker.points.length</p>\n\n@code {\n    priceText: string = 42;\n}\n';
-    const entry = await service.ensureTazor(path.join(root, "Pages", "Bad2.tazor"), badSource);
+    const entry = await service.ensureTsazor(path.join(root, "Pages", "Bad2.tsazor"), badSource);
     const diags = tsDiagnostics(service, entry!);
     const ts2322 = diags.find((d) => d.code === 2322);
     expect(ts2322).toBeDefined();
@@ -176,7 +176,7 @@ describe("tsHover and tsDefinition", () => {
     // `pass word` breaks the member declaration — the shadow catches it in
     // getSyntacticDiagnostics, not getSemanticDiagnostics.
     const typoSource = '<p>@ticker.points.length</p>\n\n@code {\n    private pass word = "";\n}\n';
-    const entry = await service.ensureTazor(path.join(root, "Pages", "TypoProbe.tazor"), typoSource);
+    const entry = await service.ensureTsazor(path.join(root, "Pages", "TypoProbe.tsazor"), typoSource);
     const diags = tsDiagnostics(service, entry!);
     // Without the syntactic bucket the editor would stay silent until esbuild
     // rejects the transpile at request time.
@@ -190,7 +190,7 @@ describe("tsHover and tsDefinition", () => {
     // infers to never via a contextual EventCallback<never>. Nothing on this
     // page is wrong — the mapped diagnostics must stay empty.
     const bindSource = '<input @bind="mode" />\n\n@code {\n    mode = "";\n}\n';
-    const entry = await service.ensureTazor(path.join(root, "Pages", "BindProbe.tazor"), bindSource);
+    const entry = await service.ensureTsazor(path.join(root, "Pages", "BindProbe.tsazor"), bindSource);
     const diags = tsDiagnostics(service, entry!);
     expect(diags.find((d) => d.code === 2339 || d.code === 2345)).toBeUndefined();
   });
@@ -198,7 +198,7 @@ describe("tsHover and tsDefinition", () => {
   it("drops TS2307 for static-asset imports and TS2564 for @Parameter properties", async () => {
     const source =
       '@Parameter() variant?: string;\n\n@code {\n    const css = await import("./x.css");\n    priceText: string = 42;\n}\n';
-    const entry = await service.ensureTazor(path.join(root, "Pages", "FilterProbe.tazor"), source);
+    const entry = await service.ensureTsazor(path.join(root, "Pages", "FilterProbe.tsazor"), source);
     const diags = tsDiagnostics(service, entry!);
     expect(diags.find((d) => d.code === 2307)).toBeUndefined(); // "./x.css" — vite serves it
     expect(diags.find((d) => d.code === 2564)).toBeUndefined(); // `variant` — set by the renderer
@@ -207,15 +207,15 @@ describe("tsHover and tsDefinition", () => {
   });
 
   it("prettifies component-alias quick info to the real component name", () => {
-    // What TS renders for `import { ValidationMessage as __tasor_comp_ValidationMessage } from "@tasor/runtime"`.
-    const alias = "(alias) class __tasor_comp_ValidationMessage\nimport __tasor_comp_ValidationMessage";
+    // What TS renders for `import { ValidationMessage as __tsazor_comp_ValidationMessage } from "@tsazor/runtime"`.
+    const alias = "(alias) class __tsazor_comp_ValidationMessage\nimport __tsazor_comp_ValidationMessage";
     expect(prettifyHoverDisplay(alias)).toBe("class ValidationMessage");
     // Other symbols (no compiler alias) pass through untouched.
     const plain = "(property) TickerStore.points: PricePoint[]";
     expect(prettifyHoverDisplay(plain)).toBe(plain);
   });
 
-  it("sanitizes runtime design-note docstrings to Tasor-native descriptions", () => {
+  it("sanitizes runtime design-note docstrings to Tsazor-native descriptions", () => {
     // The full ValidationMessage docstrings (runtime/src/forms/validation.ts).
     expect(sanitizeDoc(
       "Blazor's ValidationMessage<T>: shows validation messages for one field.\n" +

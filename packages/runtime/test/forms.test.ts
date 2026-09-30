@@ -113,11 +113,11 @@ describe("EditForm + Input* components", () => {
     const { renderer, page } = await render();
     const input = document.querySelector("input") as HTMLInputElement;
 
-    input.value = "hello@tasor.dev";
+    input.value = "hello@tsazor.dev";
     input.dispatchEvent(new Event("change"));
     await renderer.waitUntilIdle();
 
-    expect(page().model.email).toBe("hello@tasor.dev");
+    expect(page().model.email).toBe("hello@tsazor.dev");
   });
 
   it("shows validation messages and invalid classes after a failed edit", async () => {
@@ -133,7 +133,7 @@ describe("EditForm + Input* components", () => {
     expect(input.className).toBe("invalid");
     expect(page().model.email).toBe("not-an-email");
 
-    input.value = "me@tasor.dev";
+    input.value = "me@tsazor.dev";
     input.dispatchEvent(new Event("change"));
     await renderer.waitUntilIdle();
 
