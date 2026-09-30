@@ -1,0 +1,25 @@
+<nav class="@this.navClass" aria-label="@this.ariaLabel">
+    <ul class="fui-nav__list">
+        @for (let i = 0; i < this.links.length; i++) {
+            <li class="fui-nav__item">
+                <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@this.links[i]!.href">@this.links[i]!.label</NavLink>
+            </li>
+        }
+    </ul>
+    @this.childContent
+</nav>
+
+@code {
+    /** Sidebar entries (rendered through runtime NavLink). */
+    @Parameter() links: { href: string; label: string }[] = [];
+    /** Accessible nav name. */
+    @Parameter() ariaLabel: string = "Main navigation";
+    /** Extra content below the links (e.g. section headers). */
+    @Parameter() childContent?: RenderFragment;
+    /** Renders the compact (icon-rail) variant. */
+    @Parameter() compact: boolean = false;
+
+    private get navClass(): string {
+        return this.compact ? "fui-nav fui-nav--compact" : "fui-nav";
+    }
+}

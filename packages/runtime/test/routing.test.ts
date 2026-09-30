@@ -130,9 +130,11 @@ describe("Router + RouteView + NavLink", () => {
 
     expect(document.querySelector(".layout")).not.toBeNull();
     expect(document.querySelector("h1")?.textContent).toBe("Counter: 0");
-    // NavLink active state: /counter is active, others are not.
+    // NavLink active state: /counter is active, others are not. The active
+    // link also carries aria-current="page" for assistive tech.
     const links = [...document.querySelectorAll("a")];
     expect(links.map((a) => a.className)).toEqual(["", "active", ""]);
+    expect(links.map((a) => a.getAttribute("aria-current"))).toEqual([null, "page", null]);
   });
 
   it("passes URL parameters into the page component", async () => {

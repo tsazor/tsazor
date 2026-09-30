@@ -1,0 +1,47 @@
+@typeparam TRow
+<table class="@this.tableClass" role="table">
+    <thead class="fui-table__head">@this.headerContent</thead>
+    <tbody class="fui-table__body">
+        @if (this.items.length === 0) {
+            <tr class="fui-table__empty"><td colspan="@this.colSpan">@this.emptyText</td></tr>
+        }
+        @for (let i = 0; i < this.items.length; i++) {
+            @this.rowFor(i)
+        }
+    </tbody>
+</table>
+
+@code {
+    /** Rows to render (filter/sort/paging live in the host app). */
+    @Parameter() items: TRow[] = [];
+    /** Thead content (column headers). */
+    @Parameter() headerContent?: RenderFragment;
+    /** Builds the row fragment for one item. */
+    @Parameter() rowContent?: (item: TRow) => RenderFragment;
+    /** Zebra striping on alternate rows. */
+    @Parameter() striped: boolean = false;
+    /** Hover highlight per row. */
+    @Parameter() hover: boolean = false;
+    /** Dense row heights. */
+    @Parameter() compact: boolean = false;
+    /** Text for the empty-state row. */
+    @Parameter() emptyText: string = "No entries";
+    /** Column count for the empty-state colspan. */
+    @Parameter() colSpan: number = 1;
+
+    private get tableClass(): string {
+        let cls = "fui-table";
+        if (this.striped) cls += " fui-table--striped";
+        if (this.hover) cls += " fui-table--hover";
+        if (this.compact) cls += " fui-table--compact";
+        return cls;
+    }
+
+    /** Builds one row fragment; returns null while no rowContent was given. */
+    private rowFor(index: number): RenderFragment | undefined {
+        const render = this.rowContent;
+        const item = this.items[index];
+        if (!render || !item) return undefined;
+        return render(item);
+    }
+}

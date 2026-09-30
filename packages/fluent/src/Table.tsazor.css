@@ -1,0 +1,56 @@
+/* Table — Fluent 2 data table surface. */
+
+.fui-table-wrap,
+.fui-table {
+  width: 100%;
+}
+
+.fui-table {
+  border-collapse: collapse;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+}
+
+.fui-table__head {
+  border-bottom: 1px solid var(--fui-stroke-2);
+}
+
+.fui-table__head th {
+  padding: var(--fui-spacing-s) var(--fui-spacing-m);
+  font-size: var(--fui-font-size-caption-lg);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-1);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.fui-table tbody td {
+  padding: var(--fui-spacing-m);
+  border-bottom: 1px solid var(--fui-stroke-1);
+}
+
+.fui-table--compact tbody td,
+.fui-table--compact .fui-table__head th {
+  padding: var(--fui-spacing-xs) var(--fui-spacing-s);
+}
+
+.fui-table--hover tbody tr:hover {
+  background: var(--fui-control-fill-input-hover);
+}
+
+.fui-table--striped tbody tr:nth-child(even) {
+  background: var(--fui-background-3);
+}
+
+.fui-table tbody tr:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+.fui-table__empty td {
+  text-align: center;
+  padding: var(--fui-spacing-l);
+  color: var(--fui-foreground-3);
+  border-bottom: none;
+}

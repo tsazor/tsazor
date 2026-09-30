@@ -42,7 +42,8 @@ export class NavLink extends ComponentBase {
       b.openElement(0, "a");
       b.addAttribute(1, "href", this.href);
       b.addAttribute(2, "class", joinClasses(this.cssClass, this.activeClass));
-      b.addContent(3, this.childContent);
+      b.addAttribute(3, "aria-current", "page");
+      b.addContent(4, this.childContent);
       b.closeElement();
     } else {
       b.openElement(0, "a");
