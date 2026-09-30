@@ -64,7 +64,8 @@ Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
   (davon 155 mit erkannten stillen Fehlern), 46 mit Fehlern, 36 mit unaufgelösten Tags.
   **Verlauf:** nach A1+B1 unverändert 13 · nach A2+B2 **145/217** sauber (182 ohne Fehler, 19 mit
   stillen Fehlern — `@context` ×18, Modifier-Wert ×1; 35 mit Fehlern — v. a. TZS008 `@bind` `!.` ×139 → A5)
-  · nach A3 unverändert 145/217 (die Probe kompiliert ohne Workspace-Auflösung).
+  · nach A3 unverändert 145/217 (die Probe kompiliert ohne Workspace-Auflösung)
+  · nach A4 unverändert 145/217 (verbleibende Befunde: `@bind`-`!.`, `@context`/Slots → A5/Phase 2).
 
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
@@ -140,6 +141,7 @@ C6 „generic type arguments". FluentCMS-Probe: clean 13 → 145, Dateien mit Fe
 **Offen für A4:** `bakeMemberRefs` baked weiterhin Regex-Flags, Template-Spans, Typ-Positionen
 und Funktionsparameter in Statements (C4–C6); `const { a, b }` kollidiert mit dem Builder-
 Parameter `b` (Codegen-Hygiene: `__builder` wie Razor). Schleifen-`var` bleibt `var`.
+*(In A4 erledigt.)*
 
 ### A3 — Import-Modell (Entscheidung + Umsetzung)
 
@@ -180,7 +182,7 @@ explizite `@import`s für App-Typen/Helfer; `PizzaComponentBase` und die defensi
 `export default X` entfernt. Probe unverändert 145/217 (misst nur Markup).
 **Offen für A4:** Members aus `@code`, die wie ein Import heißen (`@Parameter() Status` +
 `@import { Status }`), bleiben frei statt `this.X` — braucht die Member-Liste aus dem
-Klassenkörper.
+Klassenkörper. *(In A4 erledigt.)*
 
 ### A4 — Rewriting über TS-AST mit Scope-Analyse
 
@@ -202,6 +204,34 @@ aus Basisklassen (`@inherits`) gilt die A3-Regel: nicht importiert, nicht lokal,
 **Gate:** alle Golden-Tests aus §1 grün außer C12/C13 (brauchen Phase 2); Pizza-E2E,
 Demo-Regression, Scoped-/Code-behind-Checks grün; Pizza-Basisklassen-Workaround
 (port-findings C) entfernbar.
+
+**Stand A4 umgesetzt** (Branch `roadmap/a4-rewrite`). `bakeMemberRefs` ist ersetzt durch
+`rewrite.ts`: Markup-Expressions, Attributwerte, Control-Header (`@for` als ganzes
+`for`-Statement), `case`-Labels und Statement-Läufe werden mit `ts.createSourceFile`
+(syntaktisch) geparst; eine Scope-Kette löst Parameter (Default-Werte im äußeren Scope),
+Destructuring, Block-Scopes, `var`-Hoisting, `catch`, Schleifen, `function`/`class`/`enum`
+und Labels auf. Property-Namen, Keys, Deklarationen und Typ-Positionen bleiben unberührt,
+Shorthand expandiert, Template-Spans werden umgeschrieben. Freie Namen: deklarierter Member
+(`@code`-Körper, Code-behind-Klasse — Plugin/LSP reichen deren Quelle durch — und
+`@inject`) ⇒ `this.X` (statisch: `Klasse.X`), sonst Import/Global ⇒ bleibt, sonst `this.X`.
+Die Global-Menge ist aus TypeScripts `lib.es*`/`lib.dom*.d.ts` generiert
+(`packages/compiler/scripts/gen-globals.mjs`, ohne `@deprecated` wie `name`/`status`/`event`;
+ein Test prüft die Aktualität). Member-Referenzen in lokalen `function`s/Objekt-Methoden
+laufen über die gefangene Komponente (`const __tsazor_this = this`). Hygiene: Builder-Parameter
+`__builder`, Runtime-APIs des erzeugten Codes als `__tsazor_*`-Aliase, Bind-Handler-Parameter
+`__event`/`__value`; Sequenznummern unverändert. `@for`-`var` ⇒ `let`; Method-Groups mit
+Receiver (`item.toggle`, auch in `On*`-Komponentenattributen) ⇒ an `item` gebunden (C18,
+Receiver einmal beim Rendern ausgewertet); gemischte Attributwerte rendern `null` leer.
+Konformität: C4 ×2, C5 ×9, C6 ×2, gemischte Attribute, Schleifen-Capture grün; „JS globals" und
+C18 kompilieren korrekt, bleiben aber `it.fails`, weil die Runtime `true`/`false` leer rendert
+(Blazor: `True`/`False`) — String-Varianten sind grün. Regression über alle 109 `.tsazor` im
+Repo: nach Abzug der Hygiene-Umbenennungen identischer Code bis auf 3 gemischte Attribute
+(`?? ""`). Probe unverändert 145/217.
+**Offen:** Boolean-Rendering der Runtime (s. o., Track B); `var` in Statement-Läufen bleibt
+`var` (JS-Semantik; nur Header-`var` wird `let`); Member von `@inherits`-Basisklassen, die wie
+ein nicht-deprecated DOM-Global heißen (`length`, `parent`, `top`, `origin`, …), bleiben
+global — deklarierte Member sind nicht betroffen; Code-behind-Änderungen invalidieren das
+`.tsazor`-Modul nicht (Phase 4.1).
 
 ### A5 — Direktiven- und Bind-Semantik
 

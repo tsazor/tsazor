@@ -5,7 +5,7 @@
 ```
 .tsazor  ──(Vite-Plugin: @tsazor/compiler)──►  TS-Modul
               export default class X extends ComponentBase {
-                  buildRenderTree(b: RenderTreeBuilder): void { … }
+                  buildRenderTree(__builder: RenderTreeBuilder): void { … }
               }
 TS      ──(esbuild)──►  JS (Sourcemap-Kette Compiler → esbuild)
 Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit-Liste ──(DomRenderer)──►  DOM
@@ -60,8 +60,12 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
 
 Pipeline: Markup-Tokens + TS-Span-Scan (balancierte Klammern, überspringt
 Strings/Templates/Kommentare/Regex) → AST → Codegen. Der Compiler bleibt „dumm“ auf
-TS-Ebene: `@code`-Blöcke sind wörtlich, Markup-Expressions werden minimal umgeschrieben
-(bare Identifier → `this.X`, C#-Konvention).
+TS-Ebene: `@code`-Blöcke sind wörtlich, Markup-Expressions, Attributwerte, Control-Header
+und Statement-Läufe werden über den TS-AST umgeschrieben (`rewrite.ts`: syntaktischer Parse,
+Scope-Kette, Member → `this.X`, C#-Konvention; Regel in
+[language-reference.md](language-reference.md#member-und-freie-namen)). Die Global-Liste ist
+aus TypeScripts `lib.es*`/`lib.dom`-Deklarationen generiert (`scripts/gen-globals.mjs`,
+ein Test hält sie synchron).
 
 Das **Vite-Plugin** ergänzt das, was Blazors Build (Roslyn) sonst leistet:
 
@@ -83,10 +87,14 @@ entweder lokal, ein JS-Global, per `@import` gebunden (eigene Datei oder `_Impor
   ungültiger Form) und emittiert ihn wörtlich (gemappt); geerbte Imports kommen als
   `inheritedImports` (nächste Ebene zuerst, bereits umgeschrieben) — die Datei überschattet
   die Kette, doppelte Bindungen/Side-Effect-Imports fallen weg. Die gebundenen Namen sind
-  freie Namen im Expression-Rewriter.
+  freie Namen im Expression-Rewriter — außer ein deklarierter Member (`@code`, Code-behind,
+  `@inject`) heißt gleich.
 - **Compiler-eigene Imports** bleiben generiert: `ComponentBase`, `RenderTreeBuilder`,
   `EventCallback`, `Parameter`/`CascadingParameter`/`inject` (wenn der Code sie braucht und
-  kein `@import` sie bindet), Komponenten aus Tags und `@inject`-/`@inherits`-Typen.
+  kein `@import` sie bindet), Komponenten aus Tags und `@inject`-/`@inherits`-Typen. Der
+  erzeugte Code selbst greift über hygienische Aliase zu (`… as __tsazor_EventCallback`,
+  Builder-Parameter `__builder` wie Razor), damit weder ein `@import type` noch ein
+  gleichnamiger Local kollidiert.
 - **Default vs. Named** kommt aus dem tatsächlichen Export der Zieldatei
   (`scanModuleExports`, syntaktisch: Named-Export gleichen Namens, sonst Default;
   `.tsazor` ⇒ Default) — nie aus dem Dateinamen.

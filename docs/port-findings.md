@@ -87,6 +87,11 @@ scannt es nur PascalCase-Identifier (Typen/Components).
 `PIZZA_MINIMUM_SIZE`/`PIZZA_MAXIMUM_SIZE`) stehen als `@import` in der `_Imports.tsazor`
 der App, `PizzaComponentBase` ist entfernt.
 
+**Stand A4 (2026-09-30):** Abschnitt obsolet. `bakeMemberRefs` ist durch Rewriting über den
+TS-AST mit Scope-Analyse ersetzt (`packages/compiler/src/rewrite.ts`); Imports, Locals und
+JS-/DOM-Globals (aus TypeScripts `lib.d.ts`) bleiben frei, deklarierte Member werden `this.X`.
+Weder Basisklassen- noch Free-Function-Workaround ist nötig.
+
 ## D. Dokumentierte Abweichungen vom Original
 
 | Original | Tsazor-Port | Begründung |

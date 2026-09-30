@@ -39,10 +39,10 @@ sie mit dem TS-Parser (syntaktisch) und emittiert sie als echten Modul-Import:
 ```
 
 - **Freie Namen:** jede importierte lokale Bindung bleibt in Markup, `@{ }` und
-  Control-Headern unverändert (`@Status.Open`, nicht `this.Status.Open`); alles andere
-  Nicht-Lokale/Nicht-Globale wird weiter zu `this.X` (die „importiert ⇒ bleibt"-Regel;
-  vollständige Scope-Analyse folgt mit A4). Ausnahme: ein `@inject`-Feld gleichen Namens
-  (`@inject NavigationManager NavigationManager`) ist ein Member.
+  Control-Headern unverändert (`@Status.Open`, nicht `this.Status.Open`) — siehe
+  [Member und freie Namen](#member-und-freie-namen). Ausnahme: ein deklarierter Member
+  gleichen Namens (`@inject NavigationManager NavigationManager`, `@Parameter() Status`)
+  ist ein Member.
 - **Vererbung:** `@import` in `_Imports.tsazor` gilt für alle Dateien darunter (wie `@using`).
   Relative Specifier sind relativ zur `_Imports.tsazor` geschrieben und werden pro Datei
   umgeschrieben (`"./utils"` in `src/` ⇒ `"../utils"` für `src/Pages/X.tsazor`); Paket-
@@ -56,6 +56,39 @@ sie mit dem TS-Parser (syntaktisch) und emittiert sie als echten Modul-Import:
 - Nicht importiert wird nur, was der Compiler selbst für den erzeugten Code braucht:
   `ComponentBase`/`RenderTreeBuilder`/`EventCallback`/`Parameter`/`inject` (sofern kein
   `@import` sie schon bindet), aufgelöste Komponenten-Tags und `@inject`-/`@inherits`-Typen.
+  Der erzeugte Code selbst benutzt hygienische Aliase (`__tsazor_EventCallback`, Builder-
+  Parameter `__builder`, …) — ein gleichnamiger Local, Member oder `@import type` kollidiert
+  nicht.
+
+## Member und freie Namen
+
+C# erlaubt Member ohne `this.`, TypeScript nicht. Der Compiler parst jede Markup-Expression,
+jeden Attributwert, jeden Control-Header und jeden Statement-Lauf in Code-Kontexten mit dem
+TS-Parser (syntaktisch, ohne Type-Checker) und entscheidet pro Bezeichner-Referenz:
+
+| Name ist … | Ergebnis |
+|---|---|
+| lokal: Parameter (auch Destructuring, Default-Werte sehen den äußeren Scope), `const`/`let`/`var`, `function`/`class`/`enum`, Schleifenvariable, `catch`-Parameter, Label | unverändert |
+| deklarierter Member: `@code`-Klassenkörper, Code-behind-Klasse (`X.tsazor.ts`), `@inject`-Feld | `this.X` (statisch: `Klasse.X`) — auch wenn ein Import oder Global gleich heißt |
+| per `@import` gebunden (eigene Datei oder `_Imports`-Kette) | unverändert |
+| JS-/DOM-Global (aus TypeScripts `lib.es*.d.ts`/`lib.dom.d.ts`, ohne `@deprecated` wie `name`/`status`/`event`) | unverändert |
+| sonst (z. B. Member einer `@inherits`-Basisklasse) | `this.X` |
+
+Nie umgeschrieben werden Property-Namen (`a.b`, `a?.b`), Objekt-Keys, Deklarationen und
+Typ-Positionen (`as T`, `<T>x`, `satisfies T`, Generics, Annotationen, `typeof x` im Typ);
+String-, Template-, Regex- und Zahl-Literale sind eigene Tokens (`${…}`-Spans werden
+umgeschrieben). Shorthand wird expandiert: `@save({ id })` ⇒ `this.save({ id: this.id })`,
+`new Foo()` ⇒ `new this.Foo()` (Member) bzw. unverändert (Import). In einer lokalen
+`function` oder einer Objekt-Methode zeigt `this` nicht auf die Komponente — dort
+verwendet der Compiler die gefangene Komponente. Unbekannte freie Namen sind kein
+Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
+
+- `@for (var i = 0; …)` ⇒ `for (let i = 0; …)`: jede Iteration hat ihre eigene Variable
+  (wie in C#) — deferred ChildContent sieht den Wert seiner Iteration.
+- Method-Groups: `@onclick="handler"` bindet an die Komponente (Re-Render danach);
+  `@onclick="item.toggle"` ruft `toggle` auf `item` auf (Receiver beim Rendern ausgewertet,
+  wie ein C#-Delegate), die Komponente rendert danach neu.
+- Gemischte Attributwerte: `class="btn @(cond ? "on" : null)"` — `null`/`undefined` wird leer.
 
 ## Expressions
 
