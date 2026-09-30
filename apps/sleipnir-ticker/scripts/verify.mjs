@@ -125,6 +125,13 @@ async function main() {
         /* --- Sparkline (populated, scoped) + event log --- */
         const polyPoints = await page.locator("svg.sparkline-svg polyline").first().getAttribute("points");
         check(polyPoints !== null && polyPoints.split(" ").length > 40, "sparkline polyline carries a populated point set");
+        // Elements created outside the SVG namespace are HTMLUnknownElement and
+        // paint nothing — assert the browser really draws the line.
+        const drawn = await page.locator("svg.sparkline-svg polyline").first().evaluate((el) => ({
+            ns: el.namespaceURI,
+            width: typeof el.getBBox === "function" ? el.getBBox().width : 0,
+        }));
+        check(drawn.ns === "http://www.w3.org/2000/svg" && drawn.width > 0, `sparkline is drawn as SVG (ns=${drawn.ns}, bbox width=${drawn.width})`);
         check((await page.locator(".list-group-item").count()) >= 2, "event log shows received ticks");
         const scopeAttr = await page.evaluate(() => {
             const box = document.querySelector(".sparkline-box");

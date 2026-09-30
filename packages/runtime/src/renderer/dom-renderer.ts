@@ -150,7 +150,7 @@ export class DomRenderer implements EventHandlerHost {
     const frame = frames[index]!;
     switch (frame.frameType) {
       case FrameType.Element: {
-        const element = document.createElement(frame.elementName!);
+        const element = createElementIn(frame.elementName!, parent);
         const end = index + getFrameSubtreeLength(frame);
         let i = index + 1;
         for (; i < end && frames[i]!.frameType === FrameType.Attribute; i++) {
@@ -220,20 +220,52 @@ function touchSelect(selects: HTMLSelectElement[] | null, parent: Node): HTMLSel
 }
 
 /* ------------------------------------------------------------------ */
+/* Namespaces                                                          */
+/* ------------------------------------------------------------------ */
+
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+
+/** Blazor's BrowserRenderer rule: SVG namespace for <svg> and for children of
+ *  SVG elements, except inside <foreignObject> (which hosts HTML again). */
+function isSvgContext(parent: Node): boolean {
+  const element = parent as Element;
+  return element.namespaceURI === SVG_NAMESPACE && element.localName !== "foreignObject";
+}
+
+function createElementIn(tagName: string, parent: Node): Element {
+  return tagName === "svg" || isSvgContext(parent)
+    ? document.createElementNS(SVG_NAMESPACE, tagName)
+    : document.createElement(tagName);
+}
+
+/* ------------------------------------------------------------------ */
 /* Markup blocks                                                       */
 /* ------------------------------------------------------------------ */
 
 /** Inserts a markup block as a logical range (markers around the parsed nodes); returns its start. */
 function insertMarkup(markup: string, parent: Node, before: Node | null, journal: DomJournal | null): Comment {
   const range = new LogicalRange("bl-tsazor:markup");
-  const template = document.createElement("template");
-  template.innerHTML = markup;
-  const content = template.content;
+  const content = parseMarkup(markup, parent);
   content.insertBefore(range.start, content.firstChild);
   content.appendChild(range.end);
   journal?.restore(range, removeRange, null);
   parent.insertBefore(content, before);
   return range.start;
+}
+
+/** Parses markup into a fragment; inside SVG it is parsed in an <svg> element
+ *  so <circle>, <path>… get the SVG namespace (Blazor's sharedSvgElemForParsing). */
+function parseMarkup(markup: string, parent: Node): DocumentFragment {
+  if (!isSvgContext(parent)) {
+    const template = document.createElement("template");
+    template.innerHTML = markup;
+    return template.content;
+  }
+  const svg = document.createElementNS(SVG_NAMESPACE, "svg");
+  svg.innerHTML = markup;
+  const fragment = document.createDocumentFragment();
+  while (svg.firstChild) fragment.appendChild(svg.firstChild);
+  return fragment;
 }
 
 function removeRange(range: LogicalRange): void {

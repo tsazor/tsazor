@@ -302,8 +302,7 @@ Symbol-Property am Element wie bei Blazor (happy-dom reicht `<select>` als Proxy
 Offen: SVG-Namespace (`createElement` statt `createElementNS`), `<input type=time>`-Trim.
 Der R4-Test „Komponente ohne Re-Render behält ihren Inhalt" hängt weiter an R5 (**B4**).
 
-**Offen aus B3 (neu, nicht im Review):** SVG-Elemente werden ohne SVG-Namespace erzeugt
-(`createElement` statt `createElementNS` — `<svg>`-Kinder rendern im Browser nicht korrekt);
+**Aus B3 (neu, nicht im Review):** ~~SVG-Elemente werden ohne SVG-Namespace erzeugt~~ — *behoben:* `createElementNS` für `<svg>` und Kinder (außer in `<foreignObject>`), Markup in SVG wird als SVG geparst; betraf Sleipnir-Sparkline und Fluent-`Icon` (im Browser unsichtbar). Offen:
 Blazors Sekunden-Kürzung für `<input type=time>` fehlt. Klein, unabhängig — vor Phase 3 erledigen.
 
 ### B4 — Lifecycle-Semantik auf Batch-Basis
