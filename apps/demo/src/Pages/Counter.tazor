@@ -8,7 +8,7 @@
 </div>
 
 @code {
-    private currentCount = 0;
+    private currentCount : number = 0;
 
     private incrementCount() {
         this.currentCount++;
