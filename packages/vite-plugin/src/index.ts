@@ -3,10 +3,10 @@ import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
-import { hmrAppendix } from "./hmr";
-import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes";
-import { processScopedCss, scopeHashFor } from "./scoped-css";
-import { chainSourceMaps } from "./sourcemap";
+import { hmrAppendix } from "./hmr.js";
+import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes.js";
+import { processScopedCss, scopeHashFor } from "./scoped-css.js";
+import { chainSourceMaps } from "./sourcemap.js";
 import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tsazor/workspace";
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";

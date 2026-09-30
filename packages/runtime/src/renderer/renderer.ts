@@ -1,14 +1,14 @@
-import type { RenderTreeFrame } from "../render-tree/render-tree";
-import { ParameterView } from "../components/parameter-view";
-import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition";
-import type { ComponentBase } from "../components/component-base";
-import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection";
-import { withServices } from "../di/service-provider";
-import { isCascadingValueSupplier } from "./cascading-value";
-import { ComponentState } from "./component-state";
-import { Dispatcher } from "./dispatcher";
-import { DomRenderer } from "./dom-renderer";
-import { EventCallback } from "../components/event-callback";
+import type { RenderTreeFrame } from "../render-tree/render-tree.js";
+import { ParameterView } from "../components/parameter-view.js";
+import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
+import type { ComponentBase } from "../components/component-base.js";
+import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
+import { withServices } from "../di/service-provider.js";
+import { isCascadingValueSupplier } from "./cascading-value.js";
+import { ComponentState } from "./component-state.js";
+import { Dispatcher } from "./dispatcher.js";
+import { DomRenderer } from "./dom-renderer.js";
+import { EventCallback } from "../components/event-callback.js";
 
 /** Component attributes matching this name pattern carry event callbacks. */
 const EVENT_PARAM_PATTERN = /^on/i;

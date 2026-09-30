@@ -1,11 +1,11 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { CascadingValueSupplier } from "../renderer/cascading-value";
-import type { ServiceProvider } from "../di/service-collection";
-import { ANONYMOUS, AuthenticationState } from "./authentication-state";
-import { watchAuthenticationState } from "./authentication-state-provider";
-import { AuthorizationService, defaultAuthorizationService, type AuthorizationRequirements } from "./authorization";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
+import type { ServiceProvider } from "../di/service-collection.js";
+import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
+import { watchAuthenticationState } from "./authentication-state-provider.js";
+import { AuthorizationService, defaultAuthorizationService, type AuthorizationRequirements } from "./authorization.js";
 
 /**
  * Blazor's AuthorizeView: renders authorized/not-authorized content based on

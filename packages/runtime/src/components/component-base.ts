@@ -1,9 +1,9 @@
-import type { ParameterMeta } from "./parameter-metadata";
-import type { ParameterView } from "./parameter-view";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { RenderHandle } from "../renderer/render-handle";
-import { findParameterMetadata } from "./parameter-metadata";
-import { getCurrentServices } from "../di/service-provider";
+import type { ParameterMeta } from "./parameter-metadata.js";
+import type { ParameterView } from "./parameter-view.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { RenderHandle } from "../renderer/render-handle.js";
+import { findParameterMetadata } from "./parameter-metadata.js";
+import { getCurrentServices } from "../di/service-provider.js";
 
 /**
  * Blazor's ComponentBase. Sync-first lifecycle: hooks may return a Promise;

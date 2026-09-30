@@ -1,5 +1,5 @@
-import type { ComponentBase } from "../components/component-base";
-import type { ServiceProvider, Token } from "./service-collection";
+import type { ComponentBase } from "../components/component-base.js";
+import type { ServiceProvider, Token } from "./service-collection.js";
 
 /**
  * DI context for component construction. Field initializers run in the

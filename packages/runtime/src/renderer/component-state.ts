@@ -1,8 +1,8 @@
-import type { ComponentBase } from "../components/component-base";
-import type { ComponentDefinition } from "../components/component-definition";
-import type { RenderTreeFrame } from "../render-tree/render-tree";
-import { RenderTreeBuilder } from "../render-tree/render-tree";
-import type { RenderHandle } from "./render-handle";
+import type { ComponentBase } from "../components/component-base.js";
+import type { ComponentDefinition } from "../components/component-definition.js";
+import type { RenderTreeFrame } from "../render-tree/render-tree.js";
+import { RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { RenderHandle } from "./render-handle.js";
 
 /**
  * Renderer-side state for one component instance (Blazor's ComponentState).

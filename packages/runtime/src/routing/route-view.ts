@@ -1,8 +1,8 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import { defineComponent } from "../components/component-definition";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { RouteData } from "./route-data";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import { defineComponent } from "../components/component-definition.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { RouteData } from "./route-data.js";
 
 /**
  * Blazor's RouteView: renders the matched page inside its layout. The layout

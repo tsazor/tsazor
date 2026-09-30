@@ -1,4 +1,4 @@
-import type { SourcePos } from "./diagnostics";
+import type { SourcePos } from "./diagnostics.js";
 
 /**
  * Mini-scanner over TS-like text spans. Razor never fully parses C#; the

@@ -12,10 +12,10 @@ import type {
   SwitchNode,
   ForNode,
   SourceSpan,
-} from "./ast";
-import { EVENT_FLAGS } from "./ast";
-import { DiagnosticBag, type SourcePos } from "./diagnostics";
-import { TSScanner } from "./scanner";
+} from "./ast.js";
+import { EVENT_FLAGS } from "./ast.js";
+import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
+import { TSScanner } from "./scanner.js";
 
 const DIRECTIVE_NAMES = new Set([
   "page", "layout", "using", "inject", "inherits", "attribute", "typeparam", "authorize",

@@ -1,10 +1,10 @@
-import { FrameType } from "../render-tree/frame-type";
-import type { RenderTreeFrame } from "../render-tree/render-tree";
-import { getFrameChildren, getFrameSubtreeLength } from "../render-tree/render-tree";
-import { attributeMap, matchChildren } from "../render-tree/diff";
-import { EventCallback } from "../components/event-callback";
-import type { ComponentState } from "./component-state";
-import type { Renderer } from "./renderer";
+import { FrameType } from "../render-tree/frame-type.js";
+import type { RenderTreeFrame } from "../render-tree/render-tree.js";
+import { getFrameChildren, getFrameSubtreeLength } from "../render-tree/render-tree.js";
+import { attributeMap, matchChildren } from "../render-tree/diff.js";
+import { EventCallback } from "../components/event-callback.js";
+import type { ComponentState } from "./component-state.js";
+import type { Renderer } from "./renderer.js";
 
 interface FrameContext {
   /** DOM node new frames render into. */

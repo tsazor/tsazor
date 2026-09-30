@@ -1,4 +1,4 @@
-import type { ComponentBase } from "./component-base";
+import type { ComponentBase } from "./component-base.js";
 
 /**
  * Blazor's EventCallback: binds a handler to its owning component. The

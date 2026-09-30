@@ -1,6 +1,6 @@
-import { InputBase } from "./input-base";
-import { Parameter } from "../components/parameter-metadata";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
+import { InputBase } from "./input-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 
 /** Blazor's InputText: single-line string input. */
 export class InputText extends InputBase<string> {

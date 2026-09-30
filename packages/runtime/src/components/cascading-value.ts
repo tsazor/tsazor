@@ -1,7 +1,7 @@
-import { ComponentBase } from "./component-base";
-import { Parameter } from "./parameter-metadata";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { CascadingValueSupplier } from "../renderer/cascading-value";
+import { ComponentBase } from "./component-base.js";
+import { Parameter } from "./parameter-metadata.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
 
 /**
  * Blazor's CascadingValue: supplies `value` to the subtree below it. Match in

@@ -1,6 +1,6 @@
-import type { RenderTreeFrame } from "./render-tree";
-import { getFrameChildren, getFrameSubtreeLength } from "./render-tree";
-import { FrameType } from "./frame-type";
+import type { RenderTreeFrame } from "./render-tree.js";
+import { getFrameChildren, getFrameSubtreeLength } from "./render-tree.js";
+import { FrameType } from "./frame-type.js";
 
 export interface FrameMatch {
   /** new frame index → matched old frame index */

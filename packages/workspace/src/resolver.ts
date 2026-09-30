@@ -1,8 +1,8 @@
 import type { ResolvedComponent, ResolvedType } from "@tsazor/compiler";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins";
-import { candidateDirs, relativeSpecifier, type ImportsChain } from "./imports";
+import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins.js";
+import { candidateDirs, relativeSpecifier, type ImportsChain } from "./imports.js";
 
 /** Everything the transform needs to compile one .tsazor file. */
 export interface FileContext {

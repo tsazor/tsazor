@@ -16,8 +16,8 @@ import { parseDocument, DiagnosticBag, type CodeBlockNode, type ElementNode, typ
 import { RUNTIME_COMPONENT_PARAMS, RUNTIME_PACKAGE, RUNTIME_COMPONENTS, candidateDirs } from "@tsazor/workspace";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { AnalyzedFile } from "./analysis";
-import { nodeAt } from "./analysis";
+import type { AnalyzedFile } from "./analysis.js";
+import { nodeAt } from "./analysis.js";
 
 export type CompletionKind = "component" | "attribute" | "directive" | "member";
 

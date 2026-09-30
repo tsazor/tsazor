@@ -17,20 +17,20 @@ import {
   Location,
   CompletionItemKind,
   type MarkupContent,
-} from "vscode-languageserver/node";
+} from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { analyzeSource, definitionAt, hoverAt, type AnalyzedFile } from "./analysis";
-import { completeAt, type CompletionKind } from "./completions";
-import { TsazorTypeService, type ShadowEntry } from "./ts-service";
+import { analyzeSource, definitionAt, hoverAt, type AnalyzedFile } from "./analysis.js";
+import { completeAt, type CompletionKind } from "./completions.js";
+import { TsazorTypeService, type ShadowEntry } from "./ts-service.js";
 import {
   tsCompletionDetail,
   tsCompletions,
   tsDefinition,
   tsDiagnostics,
   tsHover,
-} from "./ts-features";
+} from "./ts-features.js";
 
 /** Pure candidates → LSP items. */
 const COMPLETION_KINDS: Record<CompletionKind, CompletionItemKind> = {

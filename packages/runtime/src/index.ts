@@ -1,30 +1,30 @@
 // Render tree
-export { RenderTreeBuilder, type RenderTreeFrame, type RenderFragment, type AttributeValue } from "./render-tree/render-tree";
-export { FrameType, EventHandlerFlags } from "./render-tree/frame-type";
-export { matchChildren, type FrameMatch } from "./render-tree/diff";
+export { RenderTreeBuilder, type RenderTreeFrame, type RenderFragment, type AttributeValue } from "./render-tree/render-tree.js";
+export { FrameType, EventHandlerFlags } from "./render-tree/frame-type.js";
+export { matchChildren, type FrameMatch } from "./render-tree/diff.js";
 
 // Components
-export { ComponentBase } from "./components/component-base";
-export { ParameterView } from "./components/parameter-view";
-export { Parameter, CascadingParameter, type ParameterMeta } from "./components/parameter-metadata";
-export { EventCallback } from "./components/event-callback";
-export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition, type ComponentType } from "./components/component-definition";
-export { CascadingValue } from "./components/cascading-value";
+export { ComponentBase } from "./components/component-base.js";
+export { ParameterView } from "./components/parameter-view.js";
+export { Parameter, CascadingParameter, type ParameterMeta } from "./components/parameter-metadata.js";
+export { EventCallback } from "./components/event-callback.js";
+export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition, type ComponentType } from "./components/component-definition.js";
+export { CascadingValue } from "./components/cascading-value.js";
 
 // Renderer
-export { Renderer } from "./renderer/renderer";
-export { ComponentState, type CascadeEntry } from "./renderer/component-state";
-export { DomRenderer } from "./renderer/dom-renderer";
-export { Dispatcher } from "./renderer/dispatcher";
-export type { RenderHandle } from "./renderer/render-handle";
-export { isCascadingValueSupplier, type CascadingValueSupplier } from "./renderer/cascading-value";
+export { Renderer } from "./renderer/renderer.js";
+export { ComponentState, type CascadeEntry } from "./renderer/component-state.js";
+export { DomRenderer } from "./renderer/dom-renderer.js";
+export { Dispatcher } from "./renderer/dispatcher.js";
+export type { RenderHandle } from "./renderer/render-handle.js";
+export { isCascadingValueSupplier, type CascadingValueSupplier } from "./renderer/cascading-value.js";
 
 // DI
-export { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection";
-export { inject } from "./di/service-provider";
+export { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection.js";
+export { inject } from "./di/service-provider.js";
 
 // Navigation
-export { NavigationManager } from "./navigation/navigation-manager";
+export { NavigationManager } from "./navigation/navigation-manager.js";
 
 // Routing
 export {
@@ -33,13 +33,13 @@ export {
   RouteManifest,
   type RouteData,
   type RouteEntry,
-} from "./routing/route-data";
-export { LayoutComponentBase } from "./routing/layout-component-base";
-export { Router } from "./routing/router";
-export { RouteView } from "./routing/route-view";
-export { LayoutView } from "./routing/layout-view";
-export { NavLink, NavLinkMatch } from "./routing/nav-link";
-export { PageTitle } from "./routing/page-title";
+} from "./routing/route-data.js";
+export { LayoutComponentBase } from "./routing/layout-component-base.js";
+export { Router } from "./routing/router.js";
+export { RouteView } from "./routing/route-view.js";
+export { LayoutView } from "./routing/layout-view.js";
+export { NavLink, NavLinkMatch } from "./routing/nav-link.js";
+export { PageTitle } from "./routing/page-title.js";
 
 // Data
 export {
@@ -47,23 +47,23 @@ export {
   type VirtualizeItemsProvider,
   type VirtualizeItemsProviderRequest,
   type VirtualizeItemsProviderResult,
-} from "./data/virtualize";
-export { TsazorHttp, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http";
+} from "./data/virtualize.js";
+export { TsazorHttp, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http.js";
 
 // Forms
-export { EditContext, type FieldIdentifier } from "./forms/edit-context";
-export { InputBase } from "./forms/input-base";
-export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect } from "./forms/input-text";
-export { EditForm, type ModelValidator } from "./forms/edit-form";
-export { ValidationMessage, ValidationSummary } from "./forms/validation";
+export { EditContext, type FieldIdentifier } from "./forms/edit-context.js";
+export { InputBase } from "./forms/input-base.js";
+export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect } from "./forms/input-text.js";
+export { EditForm, type ModelValidator } from "./forms/edit-form.js";
+export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 
 // Auth (Blazor's Microsoft.AspNetCore.Components.Authorization analogue)
-export { ANONYMOUS, AuthenticationState, anonymousUser, createUser, type ClaimsPrincipal, type Claim } from "./auth/authentication-state";
-export { AuthenticationStateProvider, watchAuthenticationState } from "./auth/authentication-state-provider";
-export { AuthorizationService, defaultAuthorizationService, type AuthorizationPolicy, type AuthorizationRequirements } from "./auth/authorization";
-export { AuthorizeView } from "./auth/authorize-view";
-export { CascadingAuthenticationState } from "./auth/cascading-authentication-state";
-export { AuthorizeRouteView } from "./auth/authorize-route-view";
+export { ANONYMOUS, AuthenticationState, anonymousUser, createUser, type ClaimsPrincipal, type Claim } from "./auth/authentication-state.js";
+export { AuthenticationStateProvider, watchAuthenticationState } from "./auth/authentication-state-provider.js";
+export { AuthorizationService, defaultAuthorizationService, type AuthorizationPolicy, type AuthorizationRequirements } from "./auth/authorization.js";
+export { AuthorizeView } from "./auth/authorize-view.js";
+export { CascadingAuthenticationState } from "./auth/cascading-authentication-state.js";
+export { AuthorizeRouteView } from "./auth/authorize-route-view.js";
 
 // App bootstrap
-export { createTsazorApp, type TsazorAppOptions } from "./app";
+export { createTsazorApp, type TsazorAppOptions } from "./app.js";

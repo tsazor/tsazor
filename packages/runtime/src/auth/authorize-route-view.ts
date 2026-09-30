@@ -1,13 +1,13 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import { defineComponent } from "../components/component-definition";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { ServiceProvider } from "../di/service-collection";
-import { renderWithLayout } from "../routing/route-view";
-import type { RouteData } from "../routing/route-data";
-import { ANONYMOUS, AuthenticationState } from "./authentication-state";
-import { watchAuthenticationState } from "./authentication-state-provider";
-import { AuthorizationService, defaultAuthorizationService } from "./authorization";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import { defineComponent } from "../components/component-definition.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { ServiceProvider } from "../di/service-collection.js";
+import { renderWithLayout } from "../routing/route-view.js";
+import type { RouteData } from "../routing/route-data.js";
+import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
+import { watchAuthenticationState } from "./authentication-state-provider.js";
+import { AuthorizationService, defaultAuthorizationService } from "./authorization.js";
 
 /**
  * Blazor's AuthorizeRouteView: like RouteView, but the matched page only

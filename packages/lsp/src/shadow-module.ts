@@ -3,7 +3,7 @@ import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES } 
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { TsazorGenMap } from "./ts-mapping";
+import { TsazorGenMap } from "./ts-mapping.js";
 
 /**
  * Shadow modules for the TypeScript type layer: the generated TS of a .tsazor

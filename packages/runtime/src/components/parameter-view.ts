@@ -1,5 +1,5 @@
-import type { RenderFragment } from "../render-tree/render-tree";
-import type { ComponentBase } from "./component-base";
+import type { RenderFragment } from "../render-tree/render-tree.js";
+import type { ComponentBase } from "./component-base.js";
 
 /**
  * Blazor's ParameterView: the set of parameters a parent wrote into a

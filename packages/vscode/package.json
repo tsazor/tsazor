@@ -41,6 +41,7 @@
     "build": "node build.mjs"
   },
   "devDependencies": {
+    "@tsazor/lsp": "workspace:*",
     "esbuild": "^0.28.2",
     "vscode-languageclient": "^9.0.1"
   }

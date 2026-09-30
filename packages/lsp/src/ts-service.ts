@@ -1,5 +1,5 @@
-import { buildShadowModule, isShadowPath, shadowPathFor, type ShadowModule } from "./shadow-module";
-import { TsazorGenMap } from "./ts-mapping";
+import { buildShadowModule, isShadowPath, shadowPathFor, type ShadowModule } from "./shadow-module.js";
+import { TsazorGenMap } from "./ts-mapping.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";

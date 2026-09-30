@@ -1,5 +1,5 @@
-import type { Token } from "../di/service-collection";
-import { ANONYMOUS, AuthenticationState } from "./authentication-state";
+import type { Token } from "../di/service-collection.js";
+import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
 
 type AuthenticationStateChangedHandler = (state: AuthenticationState) => void;
 

@@ -1,4 +1,4 @@
-import type { ComponentBase } from "./component-base";
+import type { ComponentBase } from "./component-base.js";
 
 /**
  * Identifies a component type together with its static metadata. The compiler

@@ -1,8 +1,8 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import { inject } from "../di/service-provider";
-import { NavigationManager } from "../navigation/navigation-manager";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import { inject } from "../di/service-provider.js";
+import { NavigationManager } from "../navigation/navigation-manager.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 
 /** Blazor's NavLinkMatch: prefix matches the path start; all matches exactly. */
 export enum NavLinkMatch {

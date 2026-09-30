@@ -1,10 +1,10 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import { EventCallback } from "../components/event-callback";
-import { EventHandlerFlags } from "../render-tree/frame-type";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
-import type { CascadingValueSupplier } from "../renderer/cascading-value";
-import { EditContext } from "./edit-context";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import { EventCallback } from "../components/event-callback.js";
+import { EventHandlerFlags } from "../render-tree/frame-type.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
+import { EditContext } from "./edit-context.js";
 
 /** Function-based validator (v1 deviation from DataAnnotations). */
 export type ModelValidator = (value: unknown, model: unknown) => string | null;

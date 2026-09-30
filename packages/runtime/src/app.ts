@@ -1,9 +1,9 @@
-import { Renderer } from "./renderer/renderer";
-import { NavigationManager } from "./navigation/navigation-manager";
-import { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection";
-import type { ComponentBase } from "./components/component-base";
-import type { ComponentDefinition } from "./components/component-definition";
-import { RouteManifest, type RouteEntry } from "./routing/route-data";
+import { Renderer } from "./renderer/renderer.js";
+import { NavigationManager } from "./navigation/navigation-manager.js";
+import { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection.js";
+import type { ComponentBase } from "./components/component-base.js";
+import type { ComponentDefinition } from "./components/component-definition.js";
+import { RouteManifest, type RouteEntry } from "./routing/route-data.js";
 
 /**
  * Blazor's WebAssemblyHostBuilder equivalent: wires renderer, DI and

@@ -1,6 +1,6 @@
-import { RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins";
-import { relativeSpecifier } from "./imports";
-import type { FileContext } from "./resolver";
+import { RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins.js";
+import { relativeSpecifier } from "./imports.js";
+import type { FileContext } from "./resolver.js";
 
 /**
  * Scans a .tsazor source for PascalCase identifiers that reference runtime

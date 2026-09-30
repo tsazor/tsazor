@@ -1,6 +1,6 @@
-import type { AuthorizationRequirements } from "../auth/authorization";
-import type { RenderFragment } from "../render-tree/render-tree";
-import type { LayoutComponentBase } from "./layout-component-base";
+import type { AuthorizationRequirements } from "../auth/authorization.js";
+import type { RenderFragment } from "../render-tree/render-tree.js";
+import type { LayoutComponentBase } from "./layout-component-base.js";
 
 /**
  * Routing data model, mirroring Blazor's RouteData / route templates:

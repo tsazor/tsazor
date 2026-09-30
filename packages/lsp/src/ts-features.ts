@@ -9,14 +9,14 @@
  * worse, it only covers @code and expressions, which v1 does not.
  */
 import * as ts from "typescript";
-import type { AnalyzedFile } from "./analysis";
-import { nodeAt } from "./analysis";
+import type { AnalyzedFile } from "./analysis.js";
+import { nodeAt } from "./analysis.js";
 import { readFileSync } from "node:fs";
 import {
   shadowOffsetToPos,
   TsazorTypeService,
   type ShadowEntry,
-} from "./ts-service";
+} from "./ts-service.js";
 
 /* ------------------------------------------------------------------ */
 /* Context routing                                                     */

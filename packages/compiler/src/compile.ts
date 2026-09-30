@@ -1,8 +1,8 @@
-import type { DocumentNode } from "./ast";
-import { DiagnosticBag } from "./diagnostics";
-import { generateCode, type CodegenOptions, type CodegenResult, type MapEntry } from "./codegen";
-import { parseDocument } from "./parser";
-import { buildSourceMap } from "./source-map";
+import type { DocumentNode } from "./ast.js";
+import { DiagnosticBag } from "./diagnostics.js";
+import { generateCode, type CodegenOptions, type CodegenResult, type MapEntry } from "./codegen.js";
+import { parseDocument } from "./parser.js";
+import { buildSourceMap } from "./source-map.js";
 
 export interface CompileOptions extends CodegenOptions {
   /** Disable sourcemap generation. */

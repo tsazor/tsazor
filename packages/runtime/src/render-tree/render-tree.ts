@@ -1,6 +1,6 @@
-import { FrameType, EventHandlerFlags } from "./frame-type";
-import type { ComponentType } from "../components/component-definition";
-import type { EventCallback } from "../components/event-callback";
+import { FrameType, EventHandlerFlags } from "./frame-type.js";
+import type { ComponentType } from "../components/component-definition.js";
+import type { EventCallback } from "../components/event-callback.js";
 
 /** A fragment of render output: writes frames into a builder. Blazor's RenderFragment. */
 export type RenderFragment = (builder: RenderTreeBuilder) => void;

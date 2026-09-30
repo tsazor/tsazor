@@ -1,4 +1,4 @@
-import type { RenderFragment } from "../render-tree/render-tree";
+import type { RenderFragment } from "../render-tree/render-tree.js";
 
 /**
  * RenderHandle connects a component instance to the renderer that displays

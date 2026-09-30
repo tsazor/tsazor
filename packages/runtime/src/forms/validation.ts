@@ -1,7 +1,7 @@
-import { ComponentBase } from "../components/component-base";
-import { CascadingParameter, Parameter } from "../components/parameter-metadata";
-import type { RenderTreeBuilder } from "../render-tree/render-tree";
-import { EditContext } from "./edit-context";
+import { ComponentBase } from "../components/component-base.js";
+import { CascadingParameter, Parameter } from "../components/parameter-metadata.js";
+import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
+import { EditContext } from "./edit-context.js";
 
 /**
  * Blazor's ValidationMessage<T>: shows validation messages for one field.

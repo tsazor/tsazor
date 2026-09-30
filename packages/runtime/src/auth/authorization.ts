@@ -1,4 +1,4 @@
-import type { ClaimsPrincipal } from "./authentication-state";
+import type { ClaimsPrincipal } from "./authentication-state.js";
 
 /** A named policy check: user → access decision. Blazor's IAuthorizationPolicy analogue. */
 export type AuthorizationPolicy = (user: ClaimsPrincipal) => boolean;

@@ -1,6 +1,6 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import type { RenderTreeBuilder } from "../render-tree/render-tree";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 
 /**
  * Blazor's PageTitle: sets the document title during render. (Blazor renders

@@ -1,7 +1,7 @@
-import { ComponentBase } from "../components/component-base";
-import { Parameter } from "../components/parameter-metadata";
-import { defineComponent } from "../components/component-definition";
-import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree";
+import { ComponentBase } from "../components/component-base.js";
+import { Parameter } from "../components/parameter-metadata.js";
+import { defineComponent } from "../components/component-definition.js";
+import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 
 /**
  * Blazor's LayoutView: renders content inside an optional layout (without

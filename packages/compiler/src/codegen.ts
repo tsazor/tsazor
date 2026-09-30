@@ -4,10 +4,10 @@ import type {
   DocumentNode,
   ElementNode,
   MarkupNode,
-} from "./ast";
-import { DiagnosticBag, type SourcePos } from "./diagnostics";
-import { decodeHtmlEntities } from "./entities";
-import { TSScanner } from "./scanner";
+} from "./ast.js";
+import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
+import { decodeHtmlEntities } from "./entities.js";
+import { TSScanner } from "./scanner.js";
 
 export interface ResolvedComponent {
   specifier: string;

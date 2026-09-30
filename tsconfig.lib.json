@@ -1,0 +1,9 @@
+{
+  // Library packages: Node-loadable ESM (explicit .js extensions enforced).
+  // Apps keep tsconfig.base.json (bundler resolution via Vite).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  }
+}

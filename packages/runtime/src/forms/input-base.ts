@@ -1,8 +1,8 @@
-import { ComponentBase } from "../components/component-base";
-import { CascadingParameter, Parameter } from "../components/parameter-metadata";
-import { EventCallback } from "../components/event-callback";
-import type { RenderTreeBuilder } from "../render-tree/render-tree";
-import { EditContext } from "./edit-context";
+import { ComponentBase } from "../components/component-base.js";
+import { CascadingParameter, Parameter } from "../components/parameter-metadata.js";
+import { EventCallback } from "../components/event-callback.js";
+import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
+import { EditContext } from "./edit-context.js";
 
 /**
  * Blazor's InputBase<TValue>: the foundation of the Input* component family.
