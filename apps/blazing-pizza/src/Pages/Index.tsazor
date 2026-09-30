@@ -55,9 +55,6 @@
         } catch {
             this.specials = [];
         }
-        // Async load after the render pass → explicit re-render
-        // (original: StateHasChanged after the await).
-        this.stateHasChanged();
     }
 
     private cardStyle(special: PizzaSpecial): string {

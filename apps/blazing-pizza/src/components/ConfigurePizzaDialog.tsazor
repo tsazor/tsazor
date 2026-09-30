@@ -66,8 +66,6 @@
         } catch {
             this.toppings = [];
         }
-        // Async load after the render pass → explicit re-render.
-        this.stateHasChanged();
     }
 
     // Native range input: coerce to a number on every input event so the
