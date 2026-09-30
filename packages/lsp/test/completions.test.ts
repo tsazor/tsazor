@@ -140,6 +140,19 @@ describe("completeAt — expression members", () => {
     expect(afterC).not.toContain("name");
   });
 
+  it("offers own and inherited @import names after @", async () => {
+    const pages = path.join(root, "Pages");
+    await writeFile(path.join(pages, "_Imports.tsazor"), '@import { formatDate } from "../util"\n');
+    try {
+      const source = '@import { Status } from "../status"\n<p>@</p>\n';
+      const labels = await complete(source, 1, 4);
+      expect(labels).toContain("Status");
+      expect(labels).toContain("formatDate");
+    } finally {
+      await rm(path.join(pages, "_Imports.tsazor"));
+    }
+  });
+
   it("filters members by prefix", async () => {
     const source = "<p>@na</p>\n\n@code { name = \"x\"; count = 0; }\n";
     const labels = await complete(source, 0, 5);

@@ -1,5 +1,5 @@
-import { compile, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
-import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES } from "@tsazor/workspace";
+import { compile } from "@tsazor/compiler";
+import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -9,8 +9,8 @@ import { TsazorGenMap } from "./ts-mapping.js";
  * Shadow modules for the TypeScript type layer: the generated TS of a .tsazor
  * file (plus the imports the build pipeline would emit), living at a synthetic
  * in-memory path next to the real file so every relative import resolves
- * without rewriting. Mirrors packages/vite-plugin/src/index.ts transform()
- * (pass-1 import collection, code-behind, knownGlobals) plus two v2-specific
+ * without rewriting. Mirrors packages/vite-plugin/src/transform.ts (shared
+ * resolution incl. inherited @imports, code-behind) plus two v2-specific
  * rewrites:
  *   A. imports of other .tsazor components → that component's own shadow
  *      (`./Sparkline.tsazor` → `./Sparkline.tsazor.gen`), chaining types through
@@ -60,24 +60,7 @@ export async function buildShadowModule(tsazorPath: string, source: string, proj
     }
 
     const context = createFileContext(filePath, chain);
-
-    // Runtime enums/values referenced anywhere (e.g. NavLinkMatch.All) must
-    // not be baked to this.* — same scan as the vite plugin.
-    const knownGlobals = new Set<string>();
-    for (const match of source.matchAll(/\b[A-Z][A-Za-z0-9_$]*\b/g)) {
-      if (RUNTIME_TYPES.has(match[0])) knownGlobals.add(match[0]);
-    }
-
-    // Pass 1 without extra imports: see which bindings the compiler emitted
-    // itself, then add import lines for @code-block identifiers (pass 2).
-    const first = compile(source, {
-      className: context.className,
-      fileName: filePath,
-      resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-      resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-      generateSourceMap: false,
-    });
-    const extraImports = collectCodeImports(source, first.code, context);
+    const extraImports: string[] = [];
 
     // Code-behind sidecar: the generated class extends its default export.
     const codeBehindPath = `${filePath}.ts`;
@@ -88,11 +71,7 @@ export async function buildShadowModule(tsazorPath: string, source: string, proj
     // (Scoped-CSS sidecars are typeless side-effect imports — skipped here.)
 
     const compiled = compile(source, {
-      className: context.className,
-      fileName: filePath,
-      resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-      resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-      knownGlobals,
+      ...resolutionOptions(context),
       imports: extraImports,
       codeBehindClass,
       generateSourceMap: true,

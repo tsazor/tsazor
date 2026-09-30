@@ -1,8 +1,19 @@
-import type { ResolvedComponent, ResolvedType } from "@tsazor/compiler";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import type { CompileOptions, ImportInfo, ResolvedComponent, ResolvedType } from "@tsazor/compiler";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins.js";
-import { candidateDirs, relativeSpecifier, type ImportsChain } from "./imports.js";
+import { exportsOfFile, importKindOf, packageExports } from "./exports.js";
+import {
+  checkUsing,
+  dirsInclude,
+  enclosingDirs,
+  inheritedImports,
+  isPathLikeUsing,
+  relativeSpecifier,
+  stripQuotes,
+  usingDirs,
+  type ImportsChain,
+} from "./imports.js";
 
 /** Everything the transform needs to compile one .tsazor file. */
 export interface FileContext {
@@ -11,10 +22,16 @@ export interface FileContext {
   fileDir: string;
   className: string;
   chain: ImportsChain;
+  /** The chain's @import directives, rebased to this file (nearest layer first). */
+  inheritedImports: ImportInfo[];
+  /** Resolves a component tag; `usings` are the file's own @using values. */
   resolveComponent: (tagName: string, usings: string[]) => ResolvedComponent | null;
+  /** Resolves an @inject type / @inherits base; `usings` are the file's own @using values. */
   resolveType: (name: string, usings: string[]) => ResolvedType | null;
-  /** Absolute path of a resolvable single-name component file, if any. */
-  resolveImportable: (name: string) => string | undefined;
+  /** Checks one of the file's own @using values (TZS018 message or null). */
+  resolveUsing: (value: string) => string | null;
+  /** Absolute path of the .tsazor file a tag resolves to (not for runtime/package components). */
+  componentFile: (tagName: string, usings?: string[]) => string | undefined;
   /** Resolves a @layout name to an absolute .tsazor path. */
   resolveLayout: (layoutName: string) => string | undefined;
 }
@@ -27,42 +44,55 @@ export function classNameForFile(filePath: string): string {
 }
 
 /**
- * Builds the resolution context for one .tsazor file: its own directory plus
- * every directory named by path-like @using values in its _Imports chain.
- * Bare specifiers (`@using @tsazor/runtime`) resolve lazily per type name.
+ * Builds the resolution context for one .tsazor file. Component tags resolve
+ * like C# type names: the file's own directory and the _Imports layer
+ * directories are enclosing namespaces (nearest wins); every @using source —
+ * path directories, the runtime built-ins and bare packages (only names the
+ * package really exports) — is searched as a whole, and a tag found in more
+ * than one of them is ambiguous (TZS017).
  */
 export function createFileContext(filePath: string, chain: ImportsChain): FileContext {
   const resolved = path.resolve(filePath);
   const fileDir = path.dirname(resolved);
-  const dirs = candidateDirs(fileDir, chain);
+  const enclosing = enclosingDirs(fileDir, chain);
+  const chainUsingDirs = usingDirs(chain);
 
-  const findInDirs = (name: string, extensions: string[]): string | undefined => {
-    for (const dir of dirs) {
-      for (const extension of extensions) {
-        const candidate = path.join(dir, `${name}${extension}`);
-        if (existsSync(candidate)) return candidate;
-      }
+  /** Path directories of the chain plus the file's own path-like @usings. */
+  const usingDirsFor = (usings: readonly string[]): string[] => {
+    const dirs = [...chainUsingDirs];
+    for (const using of usings) {
+      if (!isPathLikeUsing(using)) continue;
+      const value = stripQuotes(using);
+      const dir = path.isAbsolute(value) ? value : path.resolve(fileDir, value);
+      if (!dirsInclude(dirs, dir)) dirs.push(dir);
+    }
+    return dirs.filter((dir) => !dirsInclude(enclosing, dir));
+  };
+  /** Bare-package @usings of the chain and the file, deduplicated. */
+  const packagesFor = (usings: readonly string[]): string[] => {
+    const names: string[] = [];
+    for (const using of [...usings, ...chain.usings]) {
+      if (isPathLikeUsing(using)) continue;
+      const name = stripQuotes(using);
+      if (!names.includes(name)) names.push(name);
+    }
+    return names;
+  };
+  const inDir = (dir: string, name: string, extensions: readonly string[]): string | undefined => {
+    for (const extension of extensions) {
+      const candidate = path.join(dir, `${name}${extension}`);
+      if (existsSync(candidate)) return candidate;
     }
     return undefined;
   };
+  const label = (dir: string): string => relativeSpecifier(fileDir, dir);
 
-  /** First .ts file in the candidate dirs that exports `name` (declaration or
-   *  `export {…}` list); declaration files (.d.ts) are skipped. */
-  const findExportedFrom = (name: string): string | undefined => {
-    for (const dir of dirs) {
-      let entries: string[] = [];
-      try {
-        entries = readdirSync(dir);
-      } catch {
-        continue;
-      }
-      for (const entry of entries.sort()) {
-        if (!entry.endsWith(".ts") || entry.endsWith(".d.ts")) continue;
-        const candidate = path.join(dir, entry);
-        if (existsSync(candidate) && exportsOf(candidate).has(name)) return candidate;
-      }
+  const componentFile = (tagName: string, usings: string[] = []): string | undefined => {
+    for (const dir of enclosing) {
+      const file = inDir(dir, tagName, [".tsazor"]);
+      if (file) return file;
     }
-    return undefined;
+    return usingDirsFor(usings).map((dir) => inDir(dir, tagName, [".tsazor"])).find((file) => file !== undefined);
   };
 
   const context: FileContext = {
@@ -70,53 +100,101 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
     fileDir,
     className: classNameForFile(resolved),
     chain,
-    resolveComponent: (tagName) => {
-      const target = findInDirs(tagName, [".tsazor"]);
-      if (target) return { specifier: relativeSpecifier(fileDir, target) };
+    inheritedImports: inheritedImports(fileDir, chain),
+    resolveComponent: (tagName, usings) => {
+      // Enclosing namespaces: the nearest directory wins outright.
+      for (const dir of enclosing) {
+        const file = inDir(dir, tagName, [".tsazor"]);
+        if (file) return { specifier: relativeSpecifier(fileDir, file) };
+      }
+      // @using sources: every match counts, more than one is ambiguous.
+      const matches: Array<ResolvedComponent & { source: string }> = [];
+      for (const dir of usingDirsFor(usings)) {
+        const file = inDir(dir, tagName, [".tsazor"]);
+        if (file) matches.push({ specifier: relativeSpecifier(fileDir, file), source: label(dir) });
+      }
       // Runtime built-ins (Blazor's Web namespace via _Imports).
-      if (RUNTIME_COMPONENTS.has(tagName)) return { specifier: RUNTIME_PACKAGE, exportName: tagName };
-      // Bare-specifier usings (`@using @tsazor/components`): trust the module
-      // to export the name — the import only fails at runtime if it does not.
-      const bare = context.chain.usings.find((using) => !isPathLikeUsing(using));
-      if (bare) return { specifier: stripQuotes(bare), exportName: tagName };
-      return null;
+      if (RUNTIME_COMPONENTS.has(tagName)) matches.push({ specifier: RUNTIME_PACKAGE, exportName: tagName, source: RUNTIME_PACKAGE });
+      for (const name of packagesFor(usings)) {
+        if (name === RUNTIME_PACKAGE && RUNTIME_COMPONENTS.has(tagName)) continue;
+        if (packageExports(name, fileDir)?.get(tagName) === true) {
+          matches.push({ specifier: name, exportName: tagName, source: name });
+        }
+      }
+      if (matches.length === 0) return null;
+      const [first] = matches;
+      const result: ResolvedComponent = { specifier: first!.specifier };
+      if (first!.exportName) result.exportName = first!.exportName;
+      if (matches.length > 1) result.ambiguous = matches.map((match) => match.source);
+      return result;
     },
-    resolveType: (name) => {
-      const localType = findInDirs(name, [".ts", ".tsazor"]);
-      if (localType) {
-        return { specifier: relativeSpecifier(fileDir, localType) };
+    resolveType: (name, usings) => {
+      // A file named after the type: import it the way it really exports it.
+      const dirs = [...enclosing, ...usingDirsFor(usings)];
+      for (const dir of dirs) {
+        const file = inDir(dir, name, [".ts", ".tsazor"]);
+        if (!file) continue;
+        const kind = importKindOf(file, name);
+        if (kind === "named") return { specifier: relativeSpecifier(fileDir, file), exportName: name };
+        if (kind === "default") return { specifier: relativeSpecifier(fileDir, file) };
       }
       // Named export of any .ts module in the candidate dirs (Blazor: folders
       // are namespaces; here a barrel like `models.ts` exporting `Address`).
-      const exportedFrom = findExportedFrom(name);
-      if (exportedFrom) {
-        return { specifier: relativeSpecifier(fileDir, exportedFrom), exportName: name };
-      }
+      const exportedFrom = findExportedFrom(dirs, name);
+      if (exportedFrom) return { specifier: relativeSpecifier(fileDir, exportedFrom), exportName: name };
       // JS globals (Math, Date, …) and TS utility types (Record, Pick, …)
-      // already exist in scope — the bare-package trust branch below would
-      // otherwise emit `import { Math } from "<pkg>"` for a plain global
-      // reference and break the bundle. Local files/exports above may still
-      // shadow a global intentionally.
+      // already exist in scope. Local files/exports above may still shadow a
+      // global intentionally.
       if (isJsGlobal(name)) return null;
-      if (RUNTIME_TYPES.has(name)) {
-        return { specifier: RUNTIME_PACKAGE, exportName: name };
-      }
-      // Bare-specifier usings (`@using @tsazor/runtime`): trust the module to
-      // export the name — the import only fails at runtime if it does not.
-      const bare = context.chain.usings.find((using) => !isPathLikeUsing(using));
-      if (bare) {
-        return { specifier: stripQuotes(bare), exportName: name };
+      if (RUNTIME_TYPES.has(name)) return { specifier: RUNTIME_PACKAGE, exportName: name };
+      // Bare-package usings: only names the package really exports.
+      for (const pkg of packagesFor(usings)) {
+        if (packageExports(pkg, fileDir)?.has(name)) return { specifier: pkg, exportName: name };
       }
       return null;
     },
-    resolveImportable: (name) => {
-      return findInDirs(name, [".tsazor"]);
-    },
-    resolveLayout: (layoutName) => {
-      return findInDirs(layoutName, [".tsazor"]);
-    },
+    resolveUsing: (value) => checkUsing(value, fileDir),
+    componentFile,
+    resolveLayout: (layoutName) => componentFile(layoutName),
   };
   return context;
+}
+
+/**
+ * The resolution part of the compile options for one file — shared by the
+ * Vite plugin, the library builds and the language server so all of them
+ * compile a .tsazor file identically.
+ */
+export function resolutionOptions(context: FileContext): Pick<
+  CompileOptions,
+  "className" | "fileName" | "resolveComponent" | "resolveType" | "resolveUsing" | "inheritedImports"
+> {
+  return {
+    className: context.className,
+    fileName: context.filePath,
+    resolveComponent: (tagName, usings) => context.resolveComponent(tagName, usings),
+    resolveType: (name, usings) => context.resolveType(name, usings),
+    resolveUsing: (value) => context.resolveUsing(value),
+    inheritedImports: context.inheritedImports,
+  };
+}
+
+/** First .ts file in `dirs` that exports `name` by name; declaration files (.d.ts) are skipped. */
+function findExportedFrom(dirs: readonly string[], name: string): string | undefined {
+  for (const dir of dirs) {
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const entry of entries.sort()) {
+      if (!entry.endsWith(".ts") || entry.endsWith(".d.ts")) continue;
+      const candidate = path.join(dir, entry);
+      if (exportsOfFile(candidate)?.names.has(name)) return candidate;
+    }
+  }
+  return undefined;
 }
 
 /* JS globals ------------------------------------------------------------------ */
@@ -134,51 +212,4 @@ const JS_GLOBALS: ReadonlySet<string> = new Set([
 
 function isJsGlobal(name: string): boolean {
   return JS_GLOBALS.has(name);
-}
-
-function isPathLikeUsing(using: string): boolean {
-  const value = stripQuotes(using);
-  if (value.startsWith("@")) return false; // scoped npm package
-  return value.startsWith(".") || value.startsWith("/") || /[\\/]/.test(value);
-}
-
-/* Named-export scan ---------------------------------------------------------- */
-
-const EXPORT_DECLARATION =
-  /\bexport\s+(?:default\s+)?(?:abstract\s+)?(?:declare\s+)?(?:async\s+)?(?:interface|type|enum|class|function|const|let|var)\s+([A-Za-z_$][\w$]*)/g;
-const EXPORT_LIST = /\bexport\s*\{([^}]*)\}/g;
-
-const exportCache = new Map<string, { mtimeMs: number; names: Set<string> }>();
-
-/** Named exports of one .ts file (declaration + `export {…}` lists), cached
- *  per file+mtime — the resolver runs on every compile and rebuild. */
-function exportsOf(tsFile: string): Set<string> {
-  let mtimeMs: number;
-  try {
-    mtimeMs = statSync(tsFile).mtimeMs;
-  } catch {
-    return new Set();
-  }
-  const cached = exportCache.get(tsFile);
-  if (cached && cached.mtimeMs === mtimeMs) return cached.names;
-  let source = "";
-  try {
-    source = readFileSync(tsFile, "utf8");
-  } catch {
-    return new Set();
-  }
-  const names = new Set<string>();
-  for (const match of source.matchAll(EXPORT_DECLARATION)) names.add(match[1]!);
-  for (const match of source.matchAll(EXPORT_LIST)) {
-    for (const piece of match[1]!.split(",")) {
-      const name = piece.split(/\s+as\s+/)[0]?.trim();
-      if (name) names.add(name);
-    }
-  }
-  exportCache.set(tsFile, { mtimeMs, names });
-  return names;
-}
-
-function stripQuotes(value: string): string {
-  return value.replace(/^['"]|['"]$/g, "");
 }

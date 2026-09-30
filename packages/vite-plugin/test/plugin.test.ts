@@ -45,7 +45,14 @@ beforeAll(async () => {
   await mkdir(path.join(root, "Shared"), { recursive: true });
   await mkdir(path.join(root, "Pages"), { recursive: true });
   await mkdir(path.join(root, "services"), { recursive: true });
-  await writeFile(path.join(root, "_Imports.tsazor"), "@using ./Shared\n@using ./services\n");
+  await writeFile(
+    path.join(root, "_Imports.tsazor"),
+    '@using ./Shared\n@using ./services\n@import { formatDate, Status } from "./helpers"\n',
+  );
+  await writeFile(
+    path.join(root, "helpers.ts"),
+    'export enum Status { Open = "open", Done = "done" }\nexport function formatDate(value: string): string { return "on " + value; }\n',
+  );
   await writeFile(path.join(root, "MainLayout.tsazor"), "<div>@Body</div>\n");
   await writeFile(
     path.join(root, "Shared", "Greeter.tsazor"),
@@ -98,7 +105,48 @@ describe("tsazor vite plugin", () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
     expect(result!.code).toContain('from "@tsazor/runtime"');
-    expect(result!.code).toContain('import CounterService from "../services/CounterService"');
+    // services/CounterService.ts has a named export only: the import must be named (review I3).
+    expect(result!.code).toContain('import { CounterService } from "../services/CounterService"');
+    expect(result!.code).not.toContain("import CounterService from");
+  });
+
+  it("inherits @import from _Imports.tsazor with the specifier rebased to the file", async () => {
+    const plugin = await createPlugin();
+    const source = '<p>@formatDate(day) @Status.Open</p>\n\n@code {\n    day = "monday";\n}\n';
+    const result = await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Report.tsazor"));
+    expect(result!.code).toMatch(/import \{ formatDate, Status \} from "\.\.\/helpers";/);
+    // Imported names are free names — never baked to this.X (review I2).
+    expect(result!.code).toContain("formatDate(this.day)");
+    expect(result!.code).toContain("Status.Open");
+    expect(result!.code).not.toContain("this.Status");
+    expect(result!.code).not.toContain("this.formatDate");
+  });
+
+  it("does not import a PascalCase member that shares a runtime type name (review I1)", async () => {
+    const plugin = await createPlugin();
+    const source = "<p>@Token</p>\n\n@code {\n    @Parameter() Token?: string;\n}\n";
+    const result = await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Tokened.tsazor"));
+    expect(result!.code).not.toMatch(/import \{[^}]*\bToken\b[^}]*\} from "@tsazor\/runtime"/);
+    expect(result!.code).toContain("this.Token");
+  });
+
+  it("fails the importing module for an invalid @import in _Imports.tsazor", async () => {
+    const dir = path.join(root, "BrokenImports");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "_Imports.tsazor"), '@import { formatDate from "../helpers"\n');
+    const plugin = await createPlugin();
+    await expect(plugin.transform?.call({} as never, "<p>x</p>", path.join(dir, "Page.tsazor"))).rejects.toThrow(/TZS016/);
+  });
+
+  it("rejects a tag that resolves in two @using sources (TZS017)", async () => {
+    const dir = path.join(root, "Ambiguous");
+    await mkdir(path.join(dir, "A"), { recursive: true });
+    await mkdir(path.join(dir, "B"), { recursive: true });
+    await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./A\n@using ./B\n");
+    await writeFile(path.join(dir, "A", "Chip.tsazor"), "<span>a</span>\n");
+    await writeFile(path.join(dir, "B", "Chip.tsazor"), "<span>b</span>\n");
+    const plugin = await createPlugin();
+    await expect(plugin.transform?.call({} as never, "<Chip />", path.join(dir, "Page.tsazor"))).rejects.toThrow(/TZS017/);
   });
 
   it("emits a chained sourcemap pointing at the .tsazor file", async () => {

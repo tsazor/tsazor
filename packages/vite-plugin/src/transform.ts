@@ -1,11 +1,11 @@
-import { compile, type DiagnosticBag, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
+import { compile, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
 import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { hmrAppendix } from "./hmr.js";
 import { scopeHashFor } from "./scoped-css.js";
 import { chainSourceMaps } from "./sourcemap.js";
-import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES } from "@tsazor/workspace";
+import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
 
 export interface TransformTsazorOptions {
   /** Emit a chained .tsazor → JS sourcemap (default true). */
@@ -20,13 +20,17 @@ export interface TransformTsazorResult {
   map: string | null;
   /** Diagnostics of the compile (errors are not thrown here). */
   diagnostics: DiagnosticBag;
+  /** Diagnostics of the _Imports.tsazor files in the chain, located in those files. */
+  importsDiagnostics: ReadonlyArray<{ file: string; diagnostic: TszDiagnostic }>;
 }
 
 /**
- * The plugin's .tsazor → JS pipeline, independent of Vite: `_Imports` chain,
- * component/type resolution, two-pass import inference, code-behind and
- * scoped-CSS sidecars, then esbuild. Shared by the plugin's transform hook and
- * by test harnesses, so tests exercise exactly what the dev server serves.
+ * The plugin's .tsazor → JS pipeline, independent of Vite: `_Imports` chain
+ * (inherited `@import`s rebased to the file), component/type resolution,
+ * code-behind and scoped-CSS sidecars, then esbuild. Shared by the plugin's
+ * transform hook and by test harnesses, so tests exercise exactly what the
+ * dev server serves. Nothing is imported by guessing: free names in markup
+ * and @code resolve only through explicit `@import`s.
  */
 export async function transformTsazor(
   code: string,
@@ -37,25 +41,7 @@ export async function transformTsazor(
   const sourceMap = options.sourceMap !== false;
   const chain = await collectImports(path.dirname(filePath), projectRoot);
   const context = createFileContext(filePath, chain);
-
-  // Runtime enums/values referenced in markup (e.g. NavLinkMatch.All) are
-  // imported by collectCodeImports — they must not be baked to this.*.
-  const knownGlobals = new Set<string>();
-  for (const match of code.matchAll(/\b[A-Z][A-Za-z0-9_$]*\b/g)) {
-    if (RUNTIME_TYPES.has(match[0])) knownGlobals.add(match[0]);
-  }
-
-  // Pass 1 compiles without extra imports so we can see which bindings
-  // the compiler emitted itself; the scan then adds import lines for
-  // identifiers used inside verbatim @code blocks (pass 2).
-  const first = compile(code, {
-    className: context.className,
-    fileName: filePath,
-    resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-    resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-    generateSourceMap: false,
-  });
-  const extraImports = collectCodeImports(code, first.code, context);
+  const extraImports: string[] = [];
 
   // Code-behind: when a sibling X.tsazor.ts exists (the compiled module's
   // own default import), the generated class extends its default export.
@@ -76,11 +62,8 @@ export async function transformTsazor(
   }
 
   const compiled = compile(code, {
-    className: context.className,
+    ...resolutionOptions(context),
     fileName: filePath,
-    resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-    resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-    knownGlobals,
     imports: extraImports,
     codeBehindClass,
     scopeHash,
@@ -104,5 +87,8 @@ export async function transformTsazor(
     ? chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`)
     : null;
   const hmr = options.hmr !== false ? hmrAppendix(context.className) : "";
-  return { code: transpiled.code + hmr, map, diagnostics: first.diagnostics };
+  const importsDiagnostics = chain.layers.flatMap((layer) =>
+    layer.diagnostics.map((diagnostic) => ({ file: layer.file, diagnostic })),
+  );
+  return { code: transpiled.code + hmr, map, diagnostics: compiled.diagnostics, importsDiagnostics };
 }

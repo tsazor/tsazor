@@ -1,7 +1,9 @@
 /**
  * Runtime built-ins: components and types exported by @tsazor/runtime. Markup
  * tags resolve against this list (Blazor: _Imports with
- * Microsoft.AspNetCore.Components.Web) and @code identifiers get import lines.
+ * Microsoft.AspNetCore.Components.Web); @inject/@inherits types resolve against
+ * RUNTIME_TYPES. Free names in markup/@code are never imported from here —
+ * they need an explicit @import (usually the standard set in _Imports.tsazor).
  */
 export const RUNTIME_PACKAGE = "@tsazor/runtime";
 
@@ -115,7 +117,7 @@ export const RUNTIME_COMPONENT_PARAMS: Readonly<Record<string, ReadonlyArray<{ n
   ],
 };
 
-/** Types/classes referenced from @code blocks. */
+/** Runtime types an @inject/@inherits may name without an @import (compiler-generated import). */
 export const RUNTIME_TYPES: ReadonlySet<string> = new Set([
   "ComponentBase",
   "LayoutComponentBase",
