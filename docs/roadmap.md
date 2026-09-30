@@ -337,6 +337,36 @@ Jetzt, wo es ein Batch-Ende gibt:
 
 Danach `architecture.md` und `port-findings.md` #3 korrigieren.
 
+**Stand: B4 umgesetzt** (Branch `roadmap/b4-lifecycle`). `ComponentBase.setParametersAsync` folgt
+Blazor: Parameter setzen, dann `RunInitAndSetParametersAsync`/`CallOnParametersSetAsync`. Sync
+Hooks rendern weiter genau einmal im Batch des Parents; gibt ein Hook ein Promise zurück, wird
+der Stand nach seinem synchronen Teil sofort gerendert und nach Abschluss erneut (nach async
+`onInitialized` erst `onParametersSet`) (R6). `onAfterRender(firstRender)` läuft am Batch-Ende
+(vor den `onBatchCompleted`-Listenern) für jede Komponente mit committetem Pass, einmal pro
+Batch, Kinder vor Parents (tiefste zuerst, sonst Render-Reihenfolge); async wird getrackt und
+rendert nicht nach (R7). `shouldRender` wird wie in Blazor in `stateHasChanged` gefragt, der
+erste Render findet immer statt; HMR umgeht es (R5). Disposal Parent-first (breadth-first wie
+Blazors Disposal-Queue), `disposeAsync` statt (nicht zusätzlich zu) `dispose`, getrackt (R13).
+Nicht deklarierte Parameter werfen Blazors Meldung („Object of type 'X' does not have a property
+matching the name 'Y'", Variante für Properties ohne `@Parameter`), Phase `lifecycle` (T3). Alle
+Fehler (sync/Rejection) gehen an den Error-Hook, `waitUntilIdle` deckt Lifecycle, After-Render
+und `disposeAsync` ab. **Audit T3** (Tests aller Pakete + E2E Pizza/Gallery/Sleipnir/Demo mit
+temporärer Meldung statt Fehler, dazu statischer Abgleich aller Komponenten-Tags in 116
+`.tsazor`-Dateien inkl. bench): keine App-Aufrufstelle betroffen; gefunden nur (1) der Compiler
+emittiert `ValueExpression` bei jedem Komponenten-`@bind-Value` — Razor nur, wenn die
+Komponente den Parameter deklariert; bis 2.2 verwirft die Runtime ein nicht deklariertes
+`ValueExpression` —, (2) der Fluent-Layout-Test gab `Spacer` ChildContent (Test korrigiert).
+Pizza: die `stateHasChanged()`-Workarounds nach awaits in `Index`, `MyOrders`,
+`ConfigurePizzaDialog` entfernt (Originale rufen dort keins); `OrderDetails` (Fire-and-forget-
+Poller) behält ihn. Konformität: R5, R6 ×2, R7, R13 ×2, T3 und R4 „Komponente ohne Re-Render"
+grün. Abweichungen: ein `async`-Hook ohne echtes `await` rendert einmal mehr (Promise-Status
+nicht synchron prüfbar); `onAfterRender` Kinder-zuerst und einmal pro Batch (Blazor: pro
+Render-Eintrag in Render-Reihenfolge, also Parent zuerst). **Offen:** Event-Handler rendern
+weiter nur nach Abschluss (Blazors `HandleEventAsync` rendert auch nach dem synchronen Teil);
+explizit übergebener `captureUnmatchedValues`-Parameter wird weiter ignoriert. Für **B5/B6**:
+Kinder werden bei jedem Parent-Render neu parametriert (jedes Mal `onParametersSet` + Render,
+sofern `shouldRender`); Cascades hängen weiter daran (R12 bleibt rot).
+
 ### B5 — Cascading-Subscriptions
 
 `CascadingValue` benachrichtigt Abonnenten direkt (nicht über Parameter-Re-Sets); `Name`

@@ -52,7 +52,33 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   fehlerhaften Komponente bleibt Diff-Basis. Render-Schleifen (> 100 Passes einer
   Komponente pro Batch) werden gemeldet und abgebrochen. Event-Tracking läuft pro
   Renderer (kein globaler Renderer). `EventCallback` re-rendert den Owner nach dem Handler
-  (Blazor-Semantik). Async-Lifecycle-Hooks: siehe B4 (R6).
+  (Blazor-Semantik).
+- **Lifecycle** (`ComponentBase`, Blazors `SetParametersAsync`): Parameter werden zuerst
+  gesetzt — ein nicht deklarierter Parameter (weder `@Parameter` noch `@CascadingParameter`,
+  case-insensitiv, kein `captureUnmatchedValues`) wirft Blazors „Object of type 'X' does not
+  have a property matching the name 'Y'" (Phase `lifecycle`; einzige Ausnahme bis 2.2: das
+  vom Compiler immer emittierte `ValueExpression` wird verworfen). Dann beim ersten Mal
+  `onInitialized`, danach `onParametersSet`, dann `stateHasChanged`. Synchrone Hooks laufen
+  synchron weiter und rendern genau einmal, im Batch des Parents. Gibt ein Hook ein Promise
+  zurück, wird sofort der Stand nach seinem synchronen Teil gerendert (Loading-State) und nach
+  Abschluss weitergemacht: nach async `onInitialized` folgt `onParametersSet` + Render, nach
+  async `onParametersSet` ein weiterer Render (`CallStateHasChangedOnAsyncCompletion`).
+  Abweichung: Blazor spart den Zwischen-Render, wenn der Task synchron fertig war — ein
+  JS-Promise lässt sich nicht synchron prüfen, ein `async`-Hook ohne echtes `await` rendert
+  also einmal mehr. Fehler (sync oder Rejection) gehen an den Error-Hook, `waitUntilIdle`
+  wartet auf laufende Hooks. `stateHasChanged` fordert höchstens einen Render an und fragt
+  `shouldRender()` — außer vor dem ersten Render, der immer stattfindet (R5; HMR umgeht
+  `shouldRender` wie Blazors Metadata-Update). `onAfterRender(firstRender)` läuft am
+  Batch-Ende (vor den `onBatchCompleted`-Listenern) für jede Komponente mit committetem Pass,
+  einmal pro Batch, **Kinder vor Parents** (tiefste zuerst, bei gleicher Tiefe
+  Render-Reihenfolge), im Batch disposte Komponenten nicht; `firstRender` ist genau einmal pro
+  Instanz `true`. Abweichung: Blazor ruft es pro Render-Eintrag in Render-Reihenfolge (bei
+  einem neuen Teilbaum also Parent zuerst). Ein async `onAfterRender` wird getrackt, rendert
+  danach nicht (Blazor), Fehler → Phase `afterRender`; `stateHasChanged` darin startet den
+  nächsten Batch. **Disposal** wie Blazors Disposal-Queue: Parent vor Kindern (breadth-first),
+  nach dem Pass, der sie entfernt; `disposeAsync` hat Vorrang (dann kein `dispose`, wie
+  Blazor bei `IAsyncDisposable` + `IDisposable`), ein laufendes `disposeAsync` wird getrackt,
+  Fehler → Phase `dispose`, die übrigen Disposals laufen weiter.
 - **ComponentState/RenderHandle** spiegeln Blazor; `RenderHandle.track(promise)` nimmt
   in-flight Async-Arbeit auf, damit `waitUntilIdle` sie einschließt (z. B. Virtualize-Loads).
 
