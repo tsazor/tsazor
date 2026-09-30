@@ -11,8 +11,10 @@ export interface ScannedRoute {
   componentPath: string;
   /** Absolute path of the layout .tsazor, when the page (or _Imports) sets one. */
   layoutPath?: string;
-  /** Bare @authorize directive → authentication-required route ({} → auth suffices). */
+  /** @authorize or `@attribute [Authorize]` → protected route ({} → auth suffices). */
   authorize?: boolean;
+  /** Roles/policy of `[Authorize(Roles = "…", Policy = "…")]` — the route's AuthorizationRequirements. */
+  authorizeRequirements?: { roles?: string[]; policy?: string };
 }
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".git", ".vscode", ".claude"]);
@@ -59,6 +61,7 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
         componentPath: filePath,
         layoutPath,
         authorize: result.metadata.authorize === true,
+        authorizeRequirements: result.metadata.authorizeData,
       });
     }
   }
@@ -103,7 +106,7 @@ export function generateRoutesModule(root: string, routes: ScannedRoute[]): stri
       lines.push(`import ${local} from "${componentSpec}";`);
     }
     const layoutSpec = route.layoutPath ? toRootRelativeSpecifier(rootPath, route.layoutPath) : undefined;
-    const authorizeSpec = route.authorize ? ", authorize: {}" : "";
+    const authorizeSpec = route.authorize ? `, authorize: ${JSON.stringify(route.authorizeRequirements ?? {})}` : "";
     if (layoutSpec) {
       const layoutLocal = `${local}Layout`;
       if (firstRouteOfComponent) lines.push(`import ${layoutLocal} from "${layoutSpec}";`);

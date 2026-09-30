@@ -263,12 +263,26 @@ describe("codegen", () => {
     expect(checkbox).toContain("(__event.target as HTMLInputElement).checked");
   });
 
-  it("emits @bind:get/:set/:after and warns on @bind:format", () => {
-    const { code, diagnostics } = gen('<input @bind:get="display" @bind:set="store" @bind:after="done" @bind:format="yyyy" />');
+  it("emits @bind:get/:set and @bind:after, and warns on @bind:format", () => {
+    const { code, diagnostics } = gen('<input @bind:get="display" @bind:set="store" @bind:format="yyyy" />');
     expect(code).toContain('__builder.addAttribute(1, "value", this.display);');
-    expect(code).toContain("(this.store)((__event.target as HTMLInputElement).value)");
-    expect(code).toContain("this.done();");
+    expect(code).toContain("async (__event) => { await (this.store)((__event.target as HTMLInputElement).value); }");
     expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
+    expect(diagnostics.hasErrors).toBe(false);
+
+    const after = gen('<input @bind="name" @bind:after="done" />');
+    expect(after.code).toContain("async (__event) => { this.name = (__event.target as HTMLInputElement).value; await this.done(); }");
+  });
+
+  it("enforces Blazor's @bind modifier combinations (RZ10004, RZ10015-RZ10019)", () => {
+    const errors = (source: string) => gen(source).diagnostics.errors.map((d) => d.message);
+    expect(errors('<input @bind="a" @bind:get="b" @bind:set="c" />')).toEqual([expect.stringContaining("can't be used together with '@bind:get'")]);
+    expect(errors('<input @bind:get="a" />')).toEqual([expect.stringContaining("must be used with '@bind:set'")]);
+    expect(errors('<input @bind:set="a" />')).toEqual([expect.stringContaining("no '@bind:get' was found")]);
+    expect(errors('<input @bind:get="a" @bind:set="b" @bind:after="c" />')).toEqual([expect.stringContaining("can't be used with '@bind:set'")]);
+    expect(errors('<input @bind:after="c" />')).toEqual([expect.stringContaining("no '@bind' was found")]);
+    // Attribute order does not matter.
+    expect(errors('<input @bind:after="done" @bind="name" />')).toEqual([]);
   });
 
   it("emits @bind-Value on components as Value + ValueExpression + ValueChanged", () => {
@@ -297,7 +311,7 @@ describe("codegen", () => {
     expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "name");');
   });
 
-  it("does not emit ValueExpression for custom targets or get/set binds", () => {
+  it("emits ValueExpression only for Value targets (from :get too, as Blazor)", () => {
     const { code } = gen('<Selected @bind-Selected="pick" />', {
       resolveComponent: (tag) => (tag === "Selected" ? { specifier: "./Selected.tsazor" } : null),
     });
@@ -305,7 +319,8 @@ describe("codegen", () => {
     const custom = gen('<InputText @bind:get="this.pick" @bind:set="(v) => this.pick = v" />', {
       resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
     });
-    expect(custom.code).not.toContain('"ValueExpression"');
+    expect(custom.code).toContain('__builder.addAttribute(2, "ValueExpression", "pick");');
+    expect(custom.code).toContain("async (__value) => { await ((v) => this.pick = v)(__value); }");
   });
 
   it("keeps plain @bind on elements as value + change handler", () => {

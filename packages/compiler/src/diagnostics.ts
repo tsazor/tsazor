@@ -38,6 +38,8 @@ const CODES = {
   TZS016: "Invalid @import directive.",
   TZS017: "Ambiguous component tag.",
   TZS018: "Unresolved @using directory.",
+  TZS019: "Invalid @attribute directive.",
+  TZS020: "Member conflicts with the generated component code.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

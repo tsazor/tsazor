@@ -15,7 +15,8 @@ export interface DirectiveNode extends SourceSpan {
   name: string;
   /** Raw value text after the directive keyword (trimmed). Empty when absent. */
   value: string;
-  /** Source position of `value[0]` (set for `@import`, whose value may span lines). */
+  /** Source position of `value[0]` (set for `@import`, whose value may span
+   *  lines, and `@attribute`, whose decorator is emitted mapped). */
   valueStart?: { line: number; column: number };
 }
 
@@ -205,7 +206,17 @@ export type AttributeNode =
       kind: "eventHandler";
       name: string;
       code: string;
-      flags: number;
+      codeStart?: SourceSpan["pos"];
+    })
+  /** `@onclick:preventDefault` / `@onclick:stopPropagation` — a flag of the
+   *  element's `onclick` listener, not a handler (Blazor's
+   *  `__internal_preventDefault_onclick` attribute). `code` is the flag's
+   *  bool expression; absent for the valueless form (= true). */
+  | (SourceSpan & {
+      kind: "eventModifier";
+      name: string;
+      modifier: "preventDefault" | "stopPropagation";
+      code?: string;
       codeStart?: SourceSpan["pos"];
     })
   | (SourceSpan & { kind: "key"; code: string; codeStart?: SourceSpan["pos"] })
@@ -230,9 +241,3 @@ export interface DocumentNode {
   body: MarkupNode[];
   codeBlocks: CodeBlockNode[];
 }
-
-/** Attribute flags for event handlers (mirrors runtime EventHandlerFlags). */
-export const EVENT_FLAGS = {
-  preventDefault: 1 << 0,
-  stopPropagation: 1 << 1,
-} as const;
