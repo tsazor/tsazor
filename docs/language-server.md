@@ -46,7 +46,7 @@ AST node (`nodeAt`, 0-based LSP positions over the compiler's 1-based lines):
 ### Parameter and member sources (v1 heuristics)
 
 - **`.tsazor` components:** the tag is resolved via the workspace resolver
-  (`resolveImportable`), the file's member `@code` blocks are parsed, and
+  (`componentFile`), the file's member `@code` blocks are parsed, and
   `@Parameter()`/`@CascadingParameter()` names are extracted by the same regex
   the code generator itself uses.
 - **Runtime built-ins:** hand-maintained table `RUNTIME_COMPONENT_PARAMS` in

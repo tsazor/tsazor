@@ -22,7 +22,7 @@ generated class X extends (default export of X.tsazor.ts)
 - **The sidecar declares its own base.** `export default class X extends
   ComponentBase { … }`. This is where `@inherits` chains move to — e.g.
   `extends LayoutComponentBase` when the markup has `<@Body>` projection (or a
-  Tsazor app base like `PizzaComponentBase`).
+  shared app base class).
 - **Markup stays in the .tsazor.** The sidecar holds state, methods, getters,
   decorators (`@Parameter()`, `@CascadingParameter()`) and lifecycle overrides
   (`onInitialized`, `onParametersSet`, `onAfterRender`, `shouldRender`).
