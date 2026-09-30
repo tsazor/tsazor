@@ -11,13 +11,42 @@
 | `@inject` | `@inject NavigationManager Nav` | DI: Feld-Initializer `inject(<Type>)` |
 | `@inherits` | `@inherits LayoutComponentBase` | Basisklasse (Standard: `ComponentBase`) |
 | `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | generische Typparameter (v1 deklarativ); C#-Constraint `where T : …` wird mit Warnung TZS014 ignoriert |
-| `@attribute` | `@attribute [Decorators.X]` | wörtliche Deklaration über der Klasse |
+| `@attribute` | `@attribute [Authorize(Roles = "Admin")]` / `@attribute @tracked()` | C#-Attribut bzw. TS-Decorator (siehe [@attribute](#attribute)) |
 | `@code` / `@functions` | `@code { … }` | TypeScript-Klassenmember, wörtlich |
 | `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | `@namespace App.Pages` | Blazor-only: akzeptiert und ignoriert (`@rendermode`/`@preservewhitespace` mit Warnung TZS014) |
 | `@@` | `@@` | literals `@` |
 
 Direktiven gelten nur auf Dokumentebene; innerhalb von Elementen oder Code-Blöcken ⇒ TZS013.
 Ein unbekanntes `@wort` ist keine Direktive, sondern eine implizite Expression (Razor).
+
+## @attribute
+
+C#-Attribute haben kein TypeScript-Gegenstück. Regel:
+
+| Schreibweise | Ergebnis |
+|---|---|
+| `@attribute @tracked("x")` (TS-Form: Wert beginnt mit `@`) | echter Class-Decorator, wörtlich über `export default class` (legacy `experimentalDecorators` wie `@Parameter`); Namen kommen per `@import` |
+| `@attribute [Authorize]` | wie `@authorize`: die Route verlangt Anmeldung |
+| `@attribute [Authorize(Roles = "A, B")]`, `[Authorize(Policy = "P")]`, `[Authorize("P")]` | die `AuthorizationRequirements` der Route (`{ roles: ["A", "B"] }` / `{ policy: "P" }`), geprüft von `AuthorizeRouteView` (Rollen: mindestens eine; Policy: registriert in `AuthorizationService.policies`) |
+| `@attribute [AllowAnonymous]` | hebt `[Authorize]`/`@authorize` auf (Blazor) |
+| jedes andere C#-Attribut (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`, `[Route(…)]` — dafür `@page`) | ignoriert, Warnung TZS014 |
+
+- Mehrere Listen und Einträge sind erlaubt (`[A, B(x)]`, `[A][B]`), Namespace und
+  `Attribute`-Suffix werden abgestreift (`[Microsoft.AspNetCore.Authorization.AuthorizeAttribute]`).
+- `Roles`/`Policy` müssen String-Literale sein; `AuthenticationSchemes` u. a. werden mit TZS014
+  ignoriert. Blazor verlangt, dass **jedes** `[Authorize]` erfüllt ist — zwei `[Authorize]` mit
+  `Roles` (oder zwei mit `Policy`) lassen sich in `AuthorizationRequirements` (eine Rollenliste,
+  eine Policy) nicht abbilden ⇒ Fehler TZS019 statt einer stillen Abschwächung.
+- Wie in Blazor wirkt die Anforderung nur auf Routen (`@page` + `AuthorizeRouteView`), nicht
+  auf eingebettete Komponenten. Unlesbare Formen (`@attribute Authorize`) ⇒ TZS019.
+
+## buildRenderTree ist generiert
+
+Jede `.tsazor`-Datei erzeugt `buildRenderTree` — auch eine ohne Markup, wie Razor für jede
+`.razor` `BuildRenderTree` erzeugt. Ein selbst geschriebenes `buildRenderTree` im `@code` oder
+in der Code-behind-Klasse ist deshalb ein Fehler (TZS020, Blazor: CS0111 doppelter Member),
+statt still ersetzt zu werden. Handgeschriebener Render-Code gehört in eine normale
+`.ts`-Klasse (`extends ComponentBase`), die als Komponente importiert wird.
 
 ## @import
 
@@ -101,6 +130,12 @@ Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
 - `<text>…</text>` — Markup-Ausnahmezone.
 - Attribute: `Name="@expr"`, Events `@onclick="handler"` mit Modifiern
   `@onclick:preventDefault` / `@onclick:stopPropagation`, `@key="…"`, `@ref="…"`.
+  Ein Modifier ist ein eigenes Attribut (Blazors `__internal_preventDefault_onclick`), kein
+  Handler: `@onclick:preventDefault="cond"` nimmt einen bool-Ausdruck, der bei jedem Render neu
+  ausgewertet wird (ohne Wert = `true`), und wirkt auch ohne Handler
+  (`<form @onsubmit:preventDefault>`). Auf einer Komponente ist er ein gewöhnliches Attribut,
+  das sie per `@attributes` (`captureUnmatchedValues`) auf ihr Element legt — wie in Blazor.
+  Unbekannte oder doppelte Modifier ⇒ TZS008.
   Unquoted Werte (`type=checkbox`) wie in HTML; ein wertloses Attribut (`disabled`) wird
   wie in Razor als `true` übergeben.
 
@@ -148,11 +183,27 @@ Markup beginnt nur
 | `<input type="checkbox" @bind="flag">` | `checked` + Handler |
 | `<input type="number" @bind="n">` | `Number()`-Coercion |
 | `@bind:event="oninput"` | anderes DOM-Event |
-| `@bind:get` / `@bind:set` / `@bind:after` | unabhängige get-/set-Seiten (auch ohne Basis-`@bind`) |
+| `@bind:get="v" @bind:set="store"` | get-/set-Seite statt `@bind` (nur als Paar) |
+| `@bind:after="changed"` | nach der Zuweisung aufgerufen; ein Promise wird abgewartet, dann rendert die Komponente |
 | `<Stepper @bind-Value="current" />` | `Value` + `ValueChanged` (EventCallback) |
+| `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | dieselben Modifier auf Komponenten |
+| `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-Callback-Parameter `OnPick` statt `ValueChanged` (Blazor) |
 | `<InputText @bind="name" />` | Komponenten-Tag ⇒ wie `@bind-Value` |
 
-`@bind:format` ist in v1 begrenzt (native Parsing für number/date) → Warnung TZS008.
+**Bind-Ziel:** der Ausdruck muss zuweisbar sein — geprüft auf dem TS-AST, die Zuweisung ist
+genau dieser Ausdruck (nach der Member-Regel): Felder, Member-Pfade, Non-Null-Assertions
+(`Model!.Title`, `a.b!.c`), Element-Zugriffe (`items[i].name`, `map[key]`), Klammern und
+Type-Assertions. Optional Chaining (`a?.b`) ist nie zuweisbar (TS2779) ⇒ TZS008, ebenso
+Nicht-L-Values (`f()`, `a + b`). `ValueExpression` (Feldname für `EditContext`) ist der letzte
+Member-Name des Pfads (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), auch aus `:get`.
+
+**Kombinationen** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` zusammen mit
+`:get`; `:get` ohne `:set` und umgekehrt; `:set` zusammen mit `:after` (den `:after`-Code in
+`:set` aufrufen); `:after`/`:event`/`:format` ohne `@bind` bzw. `:get`. Die Reihenfolge der
+Attribute ist egal.
+
+`@bind:format` ist in v1 begrenzt (native Parsing für number/date) → Warnung TZS008; auf
+Komponenten ignoriert Blazor es (Warnung TZS008).
 
 ## Komponenten
 
@@ -180,7 +231,9 @@ Markup beginnt nur
 | Konstrukt | Status |
 |---|---|
 | Markup, Komponenten-Tags, Attribut-Syntax | identisch |
-| `@page`, `@layout`, `@typeparam`, `@attribute`, `@bind` (+Modifier), `@onclick`-Familie, `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
+| `@page`, `@layout`, `@typeparam`, `@bind` (+Modifier), `@onclick`-Familie (+Modifier mit Wert), `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
+| `@attribute` | `[Authorize]`/`[AllowAnonymous]` wirken; andere C#-Attribute ignoriert (TZS014); TS-Decorators per `@attribute @x()` |
+| `buildRenderTree` im `@code` | Fehler TZS020 (wie CS0111) |
 | `@using` | Komponenten-Ordner/Pakete statt Namespaces; Typen/Werte für Markup und `@code` kommen per `@import` |
 | C#-Code in `@code` | abweichend (→ TypeScript — der eigentliche Punkt) |
 | Code in `@{ }` und Control-Bodies | code-first wie Razor, aber TypeScript; `using (…)`, `lock`, `@await` ⇒ Fehler |
@@ -194,11 +247,13 @@ Markup beginnt nur
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS018` mit Quellposition
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS020` mit Quellposition
 (`TZS011` und `TZS014` sind Warnungen, z. B. `@inherits`-Konflikt mit Code-behind bzw.
 ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
 TypeScript (oder nackter Text) in einem Code-Kontext. Import-Modell: `TZS016` ungültiges
 `@import`, `TZS017` mehrdeutiger Komponenten-Tag (Fehler), `TZS018` `@using`-Ordner bzw.
--Paket existiert nicht (Warnung; für `_Imports.tsazor` in dieser Datei gemeldet).
+-Paket existiert nicht (Warnung; für `_Imports.tsazor` in dieser Datei gemeldet). A5:
+`TZS019` ungültiges oder nicht abbildbares `@attribute`, `TZS020` Member kollidiert mit dem
+generierten Code (`buildRenderTree`).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.

@@ -34,7 +34,12 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   Sollwert wird nach den Optionen gesetzt und bei Optionsänderungen neu angewandt), Booleans
   als minimierte Attribute, Primitive als Attribut, Objekte an schreibbare Properties;
   Event-Listener direkt am Knoten, pro Eventname ein stabiler Listener (bewusst: Blazors
-  Delegation existiert wegen der WASM-Bridge, die hier entfällt).
+  Delegation existiert wegen der WASM-Bridge, die hier entfällt). Event-Modifier sind wie in
+  Blazor eigene Attribut-Frames (`__internal_preventDefault_onclick`,
+  `__internal_stopPropagation_onclick`, bool) und damit pro Render änderbar: sie setzen Flags
+  des Listeners dieses Events (kein DOM-Attribut); ein Flag ohne Handler hält einen eigenen
+  Listener (`@onsubmit:preventDefault`). Die statischen `EventHandlerFlags` von
+  `addEventHandler` bleiben kompatibel und werden mit den Attribut-Flags verodert.
 - **Dispatcher/Batching:** Eine Render-Queue pro Renderer (`RenderQueue`, Parent-first:
   geringste Baumtiefe zuerst, FIFO bei gleicher Tiefe). Die erste Render-Anforderung plant
   über den `Dispatcher` des Renderers einen Batch (Microtask); der Batch rendert, bis die
