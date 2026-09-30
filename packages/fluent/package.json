@@ -4,6 +4,9 @@
   "type": "module",
   "description": "Fluent 2 design system for Tsazor — token-driven, accessible components written in .tsazor. Install via npm or copy the sources: the components belong to you.",
   "main": "./dist/index.js",
+  "bin": {
+    "@tsazor/fluent": "./bin/fluent.mjs"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./fluent.css": "./dist/fluent.css"

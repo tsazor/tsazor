@@ -17,6 +17,7 @@
         <div class="field">
             <Switch @bind="this.model.beta" label="Opt in to beta features" id="settings-beta" />
         </div>
+        <Button type="submit" appearance="primary">Save</Button>
     </FluentForm>
     @if (this.saved) {
         <p class="form-done"><Badge color="success">Saved</Badge> Settings were applied.</p>

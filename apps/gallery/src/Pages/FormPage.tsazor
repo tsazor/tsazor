@@ -34,6 +34,7 @@
         <div class="field">
             <TextArea @bind="this.model.notes" label="Notes" rows="3" id="form-notes" />
         </div>
+        <Button type="submit" appearance="primary">Save</Button>
     </FluentForm>
     <p class="hint">Submit while empty → inline errors. Fill name ≥ 2 chars, age ≥ 0, topic, terms → submit succeeds.</p>
 </div>

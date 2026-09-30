@@ -271,12 +271,13 @@ describe("codegen", () => {
     expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
   });
 
-  it("emits @bind-Value on components as Value + ValueChanged pair", () => {
+  it("emits @bind-Value on components as Value + ValueExpression + ValueChanged", () => {
     const { code } = gen('<Stepper @bind-Value="current" />', {
       resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tsazor" } : null),
     });
     expect(code).toContain('b.addAttribute(1, "Value", this.current);');
-    expect(code).toContain('b.addAttribute(2, "ValueChanged", EventCallback.bind(this, (v) => { this.current = v; }));');
+    expect(code).toContain('b.addAttribute(2, "ValueExpression", "current");');
+    expect(code).toContain('b.addAttribute(3, "ValueChanged", EventCallback.bind(this, (v) => { this.current = v; }));');
   });
 
   it("treats plain @bind on a component tag as Value + ValueChanged", () => {
@@ -284,7 +285,27 @@ describe("codegen", () => {
       resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
     });
     expect(code).toContain('b.addAttribute(1, "Value", this.name);');
-    expect(code).toContain('b.addAttribute(2, "ValueChanged", EventCallback.bind(this, (v) => { this.name = v; }));');
+    expect(code).toContain('b.addAttribute(2, "ValueExpression", "name");');
+    expect(code).toContain('b.addAttribute(3, "ValueChanged", EventCallback.bind(this, (v) => { this.name = v; }));');
+  });
+
+  it("derives ValueExpression from member paths (@bind=\"this.model.name\" → \"name\")", () => {
+    const { code } = gen('<TextInput @bind="this.model.name" />', {
+      resolveComponent: (tag) => (tag === "TextInput" ? { specifier: "@tsazor/fluent", exportName: "TextInput" } : null),
+    });
+    expect(code).toContain('b.addAttribute(1, "Value", this.model.name);');
+    expect(code).toContain('b.addAttribute(2, "ValueExpression", "name");');
+  });
+
+  it("does not emit ValueExpression for custom targets or get/set binds", () => {
+    const { code } = gen('<Selected @bind-Selected="pick" />', {
+      resolveComponent: (tag) => (tag === "Selected" ? { specifier: "./Selected.tsazor" } : null),
+    });
+    expect(code).not.toContain('"ValueExpression"');
+    const custom = gen('<InputText @bind:get="this.pick" @bind:set="(v) => this.pick = v" />', {
+      resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
+    });
+    expect(custom.code).not.toContain('"ValueExpression"');
   });
 
   it("keeps plain @bind on elements as value + change handler", () => {

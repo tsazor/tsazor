@@ -19,7 +19,7 @@
 
         <div class="pager">
             <Button appearance="subtle" onClick="@(() => this.page(0))">&lt; Prev</Button>
-            <span>Page @this.pageIndex of @this.pageCount</span>
+            <span>Page @this.pageLabel of @this.pageCount</span>
             <Button appearance="subtle" onClick="@(() => this.page(1))">Next &gt;</Button>
         </div>
     </div>
@@ -65,7 +65,7 @@
 
     private rowFor = (row: { id: number; customer: string; total: number; status: string }): RenderFragment => (b) => {
         b.openElement(0, "tr");
-        b.addAttribute(1, "onclick", (e: MouseEvent) => this.openDetail(row));
+        b.addEventHandler(1, "onclick", EventCallback.bind(this, () => this.openDetail(row)));
         b.addAttribute(2, "class", "orders-row");
         b.openElement(3, "td");
         b.addContent(4, "#" + row.id);
@@ -110,13 +110,18 @@
         return Math.max(1, Math.ceil(this.filtered.length / this.pageSize));
     }
 
+    private get pageLabel(): number {
+        return Math.min(this.pageIndex, this.pageCount - 1) + 1;
+    }
+
     private get rows(): { id: number; customer: string; total: number; status: string }[] {
-        const start = this.pageIndex * this.pageSize;
+        const start = Math.min(this.pageIndex, this.pageCount - 1) * this.pageSize;
         return this.filtered.slice(start, start + this.pageSize);
     }
 
     private setSort(key: string): void {
         this.sortKey = key;
+        this.pageIndex = 0;
         this.log.push({ text: "Sorted by " + key });
         this.stateHasChanged();
     }

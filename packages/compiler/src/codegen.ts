@@ -868,6 +868,15 @@ class Codegen {
       : "";
 
     this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(target)}, ${display});`, pos);
+    // InputBase keys EditContext validation on a plain field-name string
+    // (v1 contract): derive it from the bound member path — `this.model.name`
+    // registers under "name", matching the validators map's field keys.
+    if (target === "Value" && attr.get === undefined && attr.set === undefined) {
+      const field = lastFieldIdentifier(attr.expression ?? "");
+      if (field) {
+        this.stmt(`b.addAttribute(${this.seq()}, "ValueExpression", ${JSON.stringify(field)});`, pos);
+      }
+    }
     this.stmt(
       `b.addAttribute(${this.seq()}, ${JSON.stringify(`${target}Changed`)}, EventCallback.bind(this, (v) => { ${setter}${after}; }));`,
       pos,
@@ -918,6 +927,16 @@ function bareIdentifier(code: string): boolean {
 /** Whether an emitted left-hand side can be assigned to (this.x, item.Name). */
 function isAssignableTarget(target: string): boolean {
   return /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(target);
+}
+
+/** The bound member path's field name for EditContext validation: the last
+ *  identifier of `this.model.name` → "name", `model.age` → "age". Bare
+ *  identifiers bind their own name; computed/indexed paths yield nothing. */
+function lastFieldIdentifier(code: string): string | undefined {
+  const target = code.trim();
+  if (!isAssignableTarget(target)) return undefined;
+  const last = target.split(".").pop()!;
+  return last.length > 0 ? last : undefined;
 }
 
 /** Static string value of an attribute (only literal values are resolvable). */
