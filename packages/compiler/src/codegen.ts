@@ -8,6 +8,7 @@ import type {
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { TSScanner } from "./scanner.js";
+import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 
 export interface ResolvedComponent {
   specifier: string;
@@ -76,6 +77,14 @@ interface MapEntry {
   srcCol: number;
 }
 
+/** A token-precise entry before it is placed: `outOffset` is relative to the
+ *  baked expression (or statement text, see stmt()). */
+interface PendingEntry {
+  outOffset: number;
+  srcLine: number;
+  srcCol: number;
+}
+
 /** Component attributes whose name marks them as event callbacks (On*, on*). */
 const EVENT_ATTR_PATTERN = /^on/i;
 
@@ -110,13 +119,13 @@ export function generateCode(document: DocumentNode, options: CodegenOptions, di
 }
 
 class Codegen {
-  private readonly lines: string[] = [];
-  private maps: MapEntry[] = [];
-  /** Precise (outOffset, srcOffset)-pairs for the expression currently being
-   *  emitted, registered by bakeMemberRefs and flushed by the next stmt(). They
-   *  give position-aware tooling (LSP) token-granularity mappings inside
-   *  expressions instead of the statement-start approximation. */
-  private pendingExprEntries: Array<{ outOffset: number; srcOffset: number }> = [];
+  private readonly writer = new CodeWriter();
+  /** Precise (outOffset → absolute source position) entries for the expression
+   *  currently being emitted, registered by bakeMemberRefs and flushed by the
+   *  next stmt(). They give token-granularity mappings inside expressions
+   *  (also on their continuation lines) instead of the statement-start
+   *  approximation. `srcLine` is 0-based, like SourceMapEntry. */
+  private pendingExprEntries: PendingEntry[] = [];
   private readonly runtimeImports = new Set<string>();
   private readonly componentImports = new Map<string, string>(); // tagName → local name
   private readonly componentLocalNames = new Map<string, string>(); // tagName → local
@@ -209,7 +218,7 @@ class Codegen {
     // The runtime import depends on APIs discovered during body emission
     // (e.g. EventCallback from event handlers), so its line is spliced in
     // after the body has been generated.
-    const runtimeImportLine = this.lines.length;
+    const runtimeImportLine = this.writer.lineCount;
 
     for (const [tagName, local] of this.componentImports) {
       const resolved = this.options.resolveComponent?.(tagName, this.metadata.usings) ?? null;
@@ -262,7 +271,7 @@ class Codegen {
     // @code blocks verbatim, re-indented into the class.
     for (const block of memberCode) {
       this.commentLine(`/* @code (${this.options.fileName ?? ""}:${block.pos.line}) */`);
-      this.emitCodeVerbatim(block.code, block.pos.line, 2);
+      this.emitCodeVerbatim(block.code, block.codeStart ?? { line: block.pos.line, column: 0 }, 2);
       this.line("");
     }
 
@@ -273,23 +282,20 @@ class Codegen {
     this.line("");
 
     // Splice the runtime import in at its header position, now that body
-    // emission has revealed every runtime API the module uses. Mappings
-    // recorded so far are 1-based line indices, so they shift with the insert.
-    this.maps = this.maps.map((m) => ({ ...m, genLine: m.genLine + 2 }));
-    this.lines.splice(
-      runtimeImportLine,
-      0,
+    // emission has revealed every runtime API the module uses (the writer
+    // shifts the mappings below the insert).
+    this.writer.insertLines(runtimeImportLine, [
       `import { ${[...this.runtimeImports].sort().join(", ")} } from "@tsazor/runtime";`,
       "",
-    );
+    ]);
 
-    const code = this.lines.join("\n") + "\n";
+    const code = this.writer.toString();
     return { code, mappings: this.takeMappings(), metadata: this.metadata };
   }
 
   /** Produces the mapping entries for the sourcemap stage. */
   takeMappings(): MapEntry[] {
-    return this.maps;
+    return this.writer.mappings;
   }
 
   /* ------------------------------------------------------------------ */
@@ -350,15 +356,15 @@ class Codegen {
    * parameters), TS globals and keywords pass through untouched; identifiers
    * after a `.` are property accesses and stay bare.
    */
-  private expr(code: string, srcBase?: number): string {
+  private expr(code: string, origin?: SourcePos): string {
     const trimmed = code.trim();
     if (trimmed.length === 0) return code;
-    // srcBase = column delta between the node position (the leading '@') and
-    // index 0 of the expression code (1 for `@expr`, 2 for `@(expr)`). Unset
-    // (attribute values, control headers) → no token-precise mapping.
+    // origin = absolute source position of index 0 of the expression code.
+    // Unset (control headers, @bind values) → no token-precise mapping. The
+    // trimmed leading whitespace may span lines.
     return this.bakeMemberRefs(
       trimmed,
-      srcBase === undefined ? undefined : srcBase + (code.length - code.trimStart().length),
+      origin === undefined ? undefined : advancePos(origin, code.slice(0, code.length - code.trimStart().length)),
     );
   }
 
@@ -369,17 +375,24 @@ class Codegen {
    * `.`, keywords, TS globals, enclosing locals, locals declared in the span
    * itself and arrow parameters.
    */
-  private bakeMemberRefs(code: string, preciseSrcBase?: number): string {
+  private bakeMemberRefs(code: string, origin?: SourcePos): string {
     if (!/[A-Za-z_$]/.test(code)) return code;
 
-    // Token-precise source offsets (LSP): only while the token is still on the
-    // expression's first source line (later lines have no single srcCol base).
-    const precise = preciseSrcBase !== undefined;
+    // Token-precise source positions (origin = absolute position of code[0]);
+    // tokens on continuation lines resolve through the newlines before them.
+    const precise = origin !== undefined;
     if (precise) this.pendingExprEntries = [];
+    let trackedIndex = 0;
+    let trackedPos = origin;
     const precisePush = (outOffset: number, srcIndex: number): void => {
-      if (!precise || code.slice(0, srcIndex).includes("\n")) return;
-      this.pendingExprEntries.push({ outOffset, srcOffset: preciseSrcBase! + srcIndex });
+      if (!precise) return;
+      trackedPos = advancePos(trackedPos!, code.slice(trackedIndex, srcIndex));
+      trackedIndex = srcIndex;
+      this.pendingExprEntries.push({ outOffset, srcLine: trackedPos.line - 1, srcCol: trackedPos.column });
     };
+    // A continuation line (after a newline outside strings/comments) gets an
+    // anchor at its first content — generated lines without one map nowhere.
+    let lineStartPending = false;
 
     const spanLocals = new Set<string>(this.locals);
     for (const m of code.matchAll(/(?:^|[\s(,;])(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
@@ -420,6 +433,10 @@ class Codegen {
     let i = 0;
     while (i < code.length) {
       const ch = code[i]!;
+      if (lineStartPending && !/\s/.test(ch)) {
+        precisePush(out.length, i);
+        lineStartPending = false;
+      }
       if (ch === '"' || ch === "'" || ch === "`") {
         const end = scanner.skipStringFor(i, ch);
         const stop = end > i ? end : i + 1;
@@ -456,6 +473,7 @@ class Codegen {
         i = e;
         continue;
       }
+      if (ch === "\n") lineStartPending = true;
       out += ch;
       i++;
     }
@@ -463,7 +481,7 @@ class Codegen {
   }
 
   private line(text: string): void {
-    this.lines.push(text);
+    this.writer.line(text);
   }
 
   private commentLine(text: string): void {
@@ -471,37 +489,52 @@ class Codegen {
   }
 
   private stmt(text: string, pos: SourcePos, expressionStart?: number): void {
-    this.line("    " + text);
-    this.maps.push({ genLine: this.lines.length, genCol: 4, srcLine: pos.line - 1, srcCol: pos.column });
+    const indent = "    ";
     // Token-precise entries: outOffsets are relative to the expression inside
     // the statement text, so the baked expression's own start offset applies.
-    const exprBase = expressionStart ?? 0;
-    for (const p of this.pendingExprEntries) {
-      this.maps.push({
-        genLine: this.lines.length,
-        genCol: 4 + exprBase + p.outOffset,
-        srcLine: pos.line - 1,
-        srcCol: pos.column + p.srcOffset,
-      });
-    }
+    const exprBase = indent.length + (expressionStart ?? 0);
+    this.writer.line(indent + text, [
+      { offset: indent.length, srcLine: pos.line - 1, srcCol: pos.column },
+      ...this.pendingExprEntries.map((p) => ({ offset: exprBase + p.outOffset, srcLine: p.srcLine, srcCol: p.srcCol })),
+    ]);
     this.pendingExprEntries = [];
   }
 
-  private emitCodeVerbatim(code: string, srcLine: number, indent: number): void {
-    for (const rawLine of code.split("\n")) {
-      const line = rawLine.replace(/\t/g, "  ");
-      this.line(line.length > 0 ? " ".repeat(indent) + line : "");
+  /**
+   * Emits code line by line, re-indented by `indent` spaces. `origin` is the
+   * absolute position of code[0]; every line is anchored at its first content
+   * (the first line relative to origin's column, later ones at their own
+   * column — tabs are kept, so columns stay exact). `tokens` are extra precise
+   * entries with outOffsets relative to `code` (baked identifiers).
+   */
+  private emitCodeVerbatim(code: string, origin: SourcePos, indent: number, tokens: readonly PendingEntry[] = []): void {
+    const prefix = " ".repeat(indent);
+    const anchors: WriterAnchor[] = [];
+    let text = "";
+    let lineStart = 0; // offset of the current line within `code`
+    let tokenIndex = 0;
+    const lines = code.split("\n");
+    lines.forEach((line, index) => {
+      const pad = line.length > 0 ? prefix : "";
+      // Shift from `code` offsets to `text` offsets on this line.
+      const shift = text.length + pad.length - lineStart;
       if (line.trim().length > 0) {
         const firstContent = line.length - line.trimStart().length;
-        this.maps.push({
-          genLine: this.lines.length,
-          genCol: indent + firstContent,
-          srcLine: srcLine - 1,
-          srcCol: firstContent,
+        anchors.push({
+          offset: shift + lineStart + firstContent,
+          srcLine: origin.line - 1 + index,
+          srcCol: (index === 0 ? origin.column : 0) + firstContent,
         });
       }
-      srcLine++;
-    }
+      const lineEnd = lineStart + line.length;
+      while (tokenIndex < tokens.length && tokens[tokenIndex]!.outOffset <= lineEnd) {
+        const token = tokens[tokenIndex++]!;
+        anchors.push({ offset: shift + token.outOffset, srcLine: token.srcLine, srcCol: token.srcCol });
+      }
+      text += pad + line + (index < lines.length - 1 ? "\n" : "");
+      lineStart = lineEnd + 1;
+    });
+    this.writer.line(text, anchors);
   }
 
   private emitNodes(nodes: MarkupNode[], pos: SourcePos): void {
@@ -521,17 +554,25 @@ class Codegen {
       case "directive":
         break; // handled at document level
       case "expression": {
-        // Implicit `@expr` code starts at column(pos)+1; `@(expr)` at +2
-        // (leading inner whitespace in the source gives it away).
-        const srcBase = node.code !== node.code.trimStart() ? 2 : 1;
-        const baked = this.expr(node.code, srcBase);
+        // Implicit `@expr` code starts right after the '@' and ends at endPos;
+        // `@(expr)` starts one further (after the parenthesis).
+        const implicitStart = { line: node.pos.line, column: node.pos.column + 1 };
+        const implicitEnd = advancePos(implicitStart, node.code);
+        const isImplicit = implicitEnd.line === node.endPos.line && implicitEnd.column === node.endPos.column;
+        const baked = this.expr(node.code, isImplicit ? implicitStart : { line: node.pos.line, column: node.pos.column + 2 });
         const text = `b.addContent(${this.seq()}, ${baked});`;
         this.stmt(text, node.pos, text.indexOf(baked));
         break;
       }
       case "codeBlock": {
         this.stmt(`{`, node.pos);
-        this.emitCodeVerbatim(this.bakeMemberRefs(node.code), node.pos.line, 4);
+        // Baking inserts `this.` prefixes, so its per-token entries keep the
+        // columns after each prefix exact.
+        const origin = node.codeStart ?? { line: node.pos.line, column: 0 };
+        const baked = this.bakeMemberRefs(node.code, origin);
+        const tokens = this.pendingExprEntries;
+        this.pendingExprEntries = [];
+        this.emitCodeVerbatim(baked, origin, 4, tokens);
         this.stmt(`}`, node.pos);
         break;
       }
@@ -597,7 +638,8 @@ class Codegen {
     // the string literal.
     this.pendingExprEntries.push({
       outOffset: "b.openElement(".length + String(seq).length + 2 + 1,
-      srcOffset: 1,
+      srcLine: node.pos.line - 1,
+      srcCol: node.pos.column + 1,
     });
     this.stmt(open, node.pos);
     if (this.options.scopeHash) {
@@ -625,7 +667,8 @@ class Codegen {
     if (ref.codeStart !== undefined) {
       this.pendingExprEntries.push({
         outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
-        srcOffset: ref.codeStart.column - pos.column,
+        srcLine: ref.codeStart.line - 1,
+        srcCol: ref.codeStart.column,
       });
     }
     this.stmt(text, pos);
@@ -633,7 +676,7 @@ class Codegen {
 
   /** `@key="expr"` → `b.setKey(...)`, token-precise like attribute values. */
   private emitKeyStmt(key: Extract<AttributeNode, { kind: "key" }>, pos: SourcePos): void {
-    const baked = this.expr(key.code, key.codeStart === undefined ? undefined : key.codeStart.column - pos.column);
+    const baked = this.expr(key.code, key.codeStart);
     const text = `b.setKey(${baked});`;
     this.stmt(text, pos, text.indexOf(baked));
   }
@@ -649,7 +692,11 @@ class Codegen {
     const open = `b.openComponent(${seq}, ${local});`;
     // Tag token: hovering `<AddressEditor` maps to the component local (quick
     // info / go-to-def on the component) instead of plumbing on a shared anchor.
-    this.pendingExprEntries.push({ outOffset: "b.openComponent(".length + String(seq).length + 2, srcOffset: 1 });
+    this.pendingExprEntries.push({
+      outOffset: "b.openComponent(".length + String(seq).length + 2,
+      srcLine: node.pos.line - 1,
+      srcCol: node.pos.column + 1,
+    });
     this.stmt(open, node.pos);
     if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true });
@@ -683,18 +730,15 @@ class Codegen {
 
   private emitAttribute(attr: AttributeNode, ctx?: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
     const pos = attr.pos;
-    // Token-precise source base for the attribute's value expression: offset
-    // between the statement anchor (the attribute name) and the code text.
-    const srcBase = (): number | undefined => {
-      const cs = "codeStart" in attr ? attr.codeStart : undefined;
-      return cs === undefined ? undefined : cs.column - pos.column;
-    };
+    // Token-precise origin of the attribute's value expression: the absolute
+    // position of its code text.
+    const codeStart = (): SourcePos | undefined => ("codeStart" in attr ? attr.codeStart : undefined);
     switch (attr.kind) {
       case "static":
         this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${JSON.stringify(decodeHtmlEntities(attr.value))});`, pos);
         break;
       case "expression": {
-        const baked = this.expr(attr.code, srcBase());
+        const baked = this.expr(attr.code, codeStart());
         // Razor's method-group / lambda conversion: on a component tag, an
         // on*-named attribute value is an event callback. Razor binds method
         // groups AND lambdas to the component instance via the
@@ -710,21 +754,22 @@ class Codegen {
           this.runtimeImports.add("EventCallback");
         }
         const text = `b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`;
-        this.stmt(text, pos, text.indexOf(value));
+        // Precise entries are relative to the baked expression inside the value.
+        this.stmt(text, pos, text.indexOf(value) + value.indexOf(baked));
         break;
       }
       case "mixedValue": {
         // Per-part precise entries: bakeMemberRefs only fills pendingExprEntries
         // for the part currently being baked, so capture and re-offset per part.
         // Offsets are left in stmt-text coordinates — no expressionStart pass.
-        const precise: Array<{ outOffset: number; srcOffset: number }> = [];
+        const precise: PendingEntry[] = [];
         let template = "";
         for (const part of attr.parts) {
           if (part.code !== undefined) {
             this.pendingExprEntries = [];
-            const baked = this.expr(part.code, part.codeStart === undefined ? undefined : part.codeStart.column - pos.column);
+            const baked = this.expr(part.code, part.codeStart);
             for (const entry of this.pendingExprEntries) {
-              precise.push({ outOffset: template.length + 2 + entry.outOffset, srcOffset: entry.srcOffset });
+              precise.push({ ...entry, outOffset: template.length + 2 + entry.outOffset });
             }
             template += `\${${baked}}`;
           } else {
@@ -738,19 +783,24 @@ class Codegen {
       }
       case "eventHandler": {
         const bare = bareIdentifier(attr.code);
-        const callback = bare ? `this.${attr.code}` : this.expr(attr.code, srcBase());
+        const start = codeStart();
+        const callback = bare ? `this.${attr.code}` : this.expr(attr.code, start);
         const flags = attr.flags === 0 ? "" : `, ${attr.flags}`;
         const text = `b.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, EventCallback.bind(this, ${callback})${flags});`;
-        if (bare && srcBase() !== undefined) {
+        if (bare && start !== undefined) {
           // Synthetic `this.` prefix — anchor the handler name token manually.
-          this.pendingExprEntries.push({ outOffset: text.indexOf(callback) + "this.".length, srcOffset: srcBase()! });
+          this.pendingExprEntries.push({
+            outOffset: text.indexOf(callback) + "this.".length,
+            srcLine: start.line - 1,
+            srcCol: start.column,
+          });
         }
         this.stmt(text, pos, bare ? undefined : text.indexOf(callback));
         this.runtimeImports.add("EventCallback");
         break;
       }
       case "attributes": {
-        const baked = this.expr(attr.code, srcBase());
+        const baked = this.expr(attr.code, codeStart());
         const text = `b.addMultipleAttributes(${this.seq()}, ${baked});`;
         this.stmt(text, pos, text.indexOf(baked));
         break;

@@ -8,10 +8,16 @@ export interface SourceMapEntry {
 }
 
 /**
- * Builds a standard v3 sourcemap from per-statement mappings (codegen emits
- * one entry per builder call; @code lines map to their original lines).
+ * Builds a standard v3 sourcemap from the codegen's mapping entries (one per
+ * statement, @code line and precise token). `sourceContent` (the .tsazor
+ * text) is embedded as `sourcesContent`, so consumers need no file access.
  */
-export function buildSourceMap(entries: SourceMapEntry[], sourceFile: string, generatedFile: string): string {
+export function buildSourceMap(
+  entries: SourceMapEntry[],
+  sourceFile: string,
+  generatedFile: string,
+  sourceContent?: string,
+): string {
   const map = new GenMapping({ file: generatedFile });
   for (const entry of entries) {
     // Conventions (verified empirically against @jridgewell/gen-mapping and
@@ -35,7 +41,7 @@ export function buildSourceMap(entries: SourceMapEntry[], sourceFile: string, ge
     version: 3,
     file: generatedFile,
     sources: encoded.sources.length > 0 ? encoded.sources : [sourceFile],
-    sourcesContent: null,
+    sourcesContent: sourceContent === undefined ? null : [sourceContent],
     names: encoded.names ?? [],
     mappings: encoded.mappings,
   });
