@@ -1,7 +1,7 @@
 // Render tree
 export { RenderTreeBuilder, type RenderTreeFrame, type RenderFragment, type AttributeValue } from "./render-tree/render-tree.js";
 export { FrameType, EventHandlerFlags } from "./render-tree/frame-type.js";
-export { matchChildren, type FrameMatch } from "./render-tree/diff.js";
+export { computeDiff, RenderTreeEditType, type RenderTreeEdit, type RenderTreeDiff, type DiffOptions } from "./render-tree/diff.js";
 
 // Components
 export { ComponentBase } from "./components/component-base.js";

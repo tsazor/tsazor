@@ -1,4 +1,5 @@
 import type { RenderTreeFrame } from "../render-tree/render-tree.js";
+import { attributeMap, computeDiff, type DiffOptions, type RenderTreeDiff } from "../render-tree/diff.js";
 import { ParameterView } from "../components/parameter-view.js";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
 import type { ComponentBase } from "../components/component-base.js";
@@ -63,22 +64,60 @@ export class Renderer {
     return state;
   }
 
-  /** Instantiates a child component inside the parent's DOM at the walk position. */
-  attachComponent(
-    parentState: ComponentState,
-    frame: RenderTreeFrame,
-    attributes: Map<string, { frame: RenderTreeFrame }>,
-    ctx: { parentDom: Node; boundary: Node | null; lastNode: Node | null },
-  ): ComponentState {
-    const definition = toComponentDefinition(frame.componentType as unknown as ComponentDefinition | (abstract new () => ComponentBase));
-    const child = this.createComponentState(definition, parentState, frame.sequence);
-    const reference = ctx.lastNode ? ctx.lastNode.nextSibling : ctx.parentDom.firstChild;
-    const insertRef = reference ?? ctx.boundary;
-    ctx.parentDom.insertBefore(child.startMarker, insertRef);
-    ctx.parentDom.insertBefore(child.endMarker, child.startMarker.nextSibling);
-    this.setComponentParameters(child, attributes);
-    return child;
+  /**
+   * Applies one render pass of `state`: instantiates/retains the child
+   * components the diff lists, applies the edits to the DOM, then sets child
+   * parameters (diff order) and disposes removed children — Blazor's order:
+   * the diff instantiates and updates children, disposal runs after the edits.
+   */
+  private applyDiff(state: ComponentState, oldFrames: RenderTreeFrame[], newFrames: RenderTreeFrame[], diff: RenderTreeDiff): void {
+    const { components, disposedComponents } = diff;
+    for (let i = 0; i < components.length; i += 2) {
+      const oldIndex = components[i]!;
+      const newIndex = components[i + 1]!;
+      const frame = newFrames[newIndex]!;
+      let child: ComponentState;
+      if (oldIndex < 0) {
+        const definition = toComponentDefinition(frame.componentType as unknown as ComponentDefinition | (abstract new () => ComponentBase));
+        child = this.createComponentState(definition, state, frame.sequence);
+      } else {
+        child = state.slotChildren.get(oldIndex)!;
+        const oldType = oldFrames[oldIndex]!.componentType;
+        if (oldType !== frame.componentType) {
+          // Hot-swapped module: adopt the new definition in place, keep state.
+          this.hmrSwap(oldType, frame.componentType);
+        }
+      }
+      state.newSlotChildren.set(newIndex, child);
+    }
+    const disposed: ComponentState[] = [];
+    for (const oldIndex of disposedComponents) {
+      const child = state.slotChildren.get(oldIndex);
+      if (child) disposed.push(child);
+    }
+
+    this.dom.applyEdits(state, newFrames, diff.edits);
+    this.dom.commitSlotChildren(state);
+
+    for (let i = 0; i < components.length; i += 2) {
+      const newIndex = components[i + 1]!;
+      this.setComponentParameters(state.slotChildren.get(newIndex)!, attributeMap(newFrames, newIndex));
+    }
+    // The DOM of these is already gone: removed directly or with an ancestor element.
+    for (const child of disposed) {
+      this.disposeComponent(child);
+    }
   }
+
+  /** Identity match, or a hot-swapped module reusing the same class name. */
+  private isSameComponentType(a: unknown, b: unknown): boolean {
+    if (a === b) return true;
+    const name = (a as { name?: string } | null)?.name;
+    const otherName = (b as { name?: string } | null)?.name;
+    return name !== undefined && name !== "" && name === otherName && this.wasHmrSwapped(name);
+  }
+
+  private readonly diffOptions: DiffOptions = { isSameComponentType: (a, b) => this.isSameComponentType(a, b) };
 
   /** Applies attributes (plus resolved cascading values) and runs the lifecycle. */
   setComponentParameters(state: ComponentState, attributes: Map<string, { frame: RenderTreeFrame }>): void {
@@ -202,15 +241,21 @@ export class Renderer {
       state.renderPass ^= 1;
       const builder = state.renderBuilders[state.renderPass]!;
       builder.clear();
-      state.component.renderCurrentOutput(builder);
+      let diff: RenderTreeDiff;
+      try {
+        state.component.renderCurrentOutput(builder);
+        // The initial render is a diff against the empty tree (as in Blazor),
+        // so duplicate keys are rejected there too.
+        diff = computeDiff(state.currentRenderTree, builder.getFrames(), this.diffOptions);
+      } catch (error) {
+        // Nothing was applied: keep the live tree's builder for the next pass.
+        builder.clear();
+        state.renderPass ^= 1;
+        throw error;
+      }
       const newFrames = builder.getFrames();
 
-      if (firstRender) {
-        this.dom.renderInitial(state, newFrames);
-      } else {
-        this.dom.renderUpdate(state, state.currentRenderTree, newFrames);
-      }
-      this.dom.commitSlotChildren(state);
+      this.applyDiff(state, state.currentRenderTree, newFrames, diff);
       state.currentRenderTree = newFrames;
       // The diff has consumed the previous tree: free its frames now so the
       // idle state holds only the live tree, not the pass before it.
