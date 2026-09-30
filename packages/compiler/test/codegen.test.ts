@@ -367,3 +367,93 @@ describe("codegen", () => {
     expect(code).not.toContain("DemoBase");
   });
 });
+
+describe("codegen — code-first code contexts (A2)", () => {
+  it("emits @{ } statements unwrapped so their locals reach later markup", () => {
+    const { code } = gen("@{ const g = greeting + 1; }<p>@g</p>");
+    expect(code).toContain("    const g = this.greeting + 1;\n");
+    expect(code).toContain("b.addContent(1, g);");
+    expect(code).not.toMatch(/^\s*\{\s*$/m);
+  });
+
+  it("scopes locals of control bodies to the body", () => {
+    const { code } = gen("@if (a) {\n  const inner = 2;\n  <i>@inner</i>\n}\n<b>@inner</b>");
+    expect(code).toContain("b.addContent(1, inner);");
+    expect(code).toContain("b.addContent(3, this.inner);");
+  });
+
+  it("registers catch parameters and C#-style foreach variables as locals", () => {
+    const { code } = gen(
+      "@try { <p/> } catch (err) { <p>@err</p> }\n@foreach (string s in xs) { <i>@s</i> }\n@foreach (var (k, v) in pairs) { <i>@k@v</i> }",
+    );
+    expect(code).toContain("} catch (err) {");
+    expect(code).toContain("b.addContent(2, err);");
+    expect(code).toContain("for (const s of this.xs) {");
+    expect(code).toContain("for (const [k, v] of this.pairs) {");
+    expect(code).toContain("b.addContent(6, k);");
+  });
+
+  it("emits while and do-while loops", () => {
+    const { code } = gen("@while (n < 3) { <i>@n</i> n++; }\n@do { <b/> } while (more);");
+    expect(code).toContain("while (this.n < 3) {");
+    expect(code).toContain("this.n++;");
+    expect(code).toContain("do {");
+    expect(code).toContain("} while (this.more);");
+  });
+
+  it("lets stacked switch labels fall through and adds break only when a section lacks a jump", () => {
+    const { code } = gen("@switch (k) {\n  case 1:\n  case 2:\n    <p>low</p>\n    break;\n  default:\n    <p>x</p>\n}");
+    expect(code).toContain("    case 1:\n    case 2: {\n");
+    expect(code.match(/break;/g)?.length).toBe(2);
+  });
+
+  it("emits no whitespace text frames for single-line bodies (Razor: code-context whitespace)", () => {
+    const { code } = gen("<ul>@foreach (var x in xs) { <li>@x</li> }</ul>");
+    expect(code).not.toContain('b.addContent(1, " ")');
+    // Sequence numbers stay compile-time and source-ordered.
+    expect(code).toContain('b.openElement(1, "li");');
+    expect(code).toContain("b.addContent(2, x);");
+  });
+
+  it("passes minimized attributes as true (Razor)", () => {
+    const { code } = gen("<input type=checkbox disabled>");
+    expect(code).toContain('b.addAttribute(1, "type", "checkbox");');
+    expect(code).toContain('b.addAttribute(2, "disabled", true);');
+  });
+
+  it("maps continuation lines of multi-line control headers (A1 follow-up)", () => {
+    const { code, mappings } = gen("@if (a &&\n    b) {\n    <i>x</i>\n}");
+    const genLine = code.split("\n").findIndex((l) => l.trim() === "this.b) {") + 1;
+    expect(genLine).toBeGreaterThan(0);
+    expect(mappings.some((m) => m.genLine === genLine && m.srcLine === 1 && m.srcCol === 4)).toBe(true);
+  });
+});
+
+describe("codegen — directives (A2)", () => {
+  it("collects every @page template (routeTemplates) and keeps the first as routeTemplate", () => {
+    const { code, metadata } = gen('@page "/"\n@page "/home"\n<p>x</p>');
+    expect(metadata.routeTemplate).toBe("/");
+    expect(metadata.routeTemplates).toEqual(["/", "/home"]);
+    expect(code).toContain('export const routeTemplates = ["/","/home"];');
+    expect(code).toContain("static routeTemplates = routeTemplates;");
+    // A single @page keeps its previous emission.
+    expect(gen('@page "/one"\n').code).not.toContain("routeTemplates");
+  });
+
+  it("ignores Blazor-only directives (warning only where they would change semantics)", () => {
+    const { code, diagnostics } = gen("@namespace A.B\n@implements IDisposable\n@rendermode InteractiveServer\n<p>x</p>");
+    expect(code).not.toContain("A.B");
+    expect(code).not.toContain("IDisposable");
+    expect(diagnostics.hasErrors).toBe(false);
+    expect(diagnostics.all.map((d) => d.code)).toEqual(["TZS014"]);
+  });
+
+  it("strips a C# @typeparam constraint with a warning and keeps the TS form", () => {
+    const csharp = gen("@typeparam TItem where TItem : class\n");
+    expect(csharp.code).toContain("export default class Demo<TItem> extends ComponentBase {");
+    expect(csharp.diagnostics.all.some((d) => d.code === "TZS014")).toBe(true);
+    const tsForm = gen("@typeparam T extends string\n");
+    expect(tsForm.code).toContain("export default class Demo<T extends string> extends ComponentBase {");
+    expect(tsForm.diagnostics.all).toHaveLength(0);
+  });
+});

@@ -1,4 +1,5 @@
 import {
+  childNodes,
   compile,
   parseDocument,
   DiagnosticBag,
@@ -7,10 +8,6 @@ import {
   type TszDiagnostic,
   type DirectiveNode,
   type ElementNode,
-  type IfNode,
-  type SwitchNode,
-  type ForNode,
-  type TextTagNode,
 } from "@tsazor/compiler";
 import { collectImports, createFileContext, type FileContext } from "@tsazor/workspace";
 import { existsSync } from "node:fs";
@@ -77,18 +74,8 @@ export function nodeAt(document: DocumentNode, line: number, character: number):
   const visit = (node: MarkupNode | DirectiveNode): void => {
     if (!contains(node, line, character)) return;
     best = node;
-    if (node.kind === "element" || node.kind === "textTag") {
-      for (const child of (node as ElementNode | TextTagNode).children) visit(child);
-    } else if (node.kind === "if") {
-      for (const branch of (node as IfNode).branches) {
-        for (const child of branch.children) visit(child);
-      }
-    } else if (node.kind === "for") {
-      for (const child of (node as ForNode).children) visit(child);
-    } else if (node.kind === "switch") {
-      for (const caseNode of (node as SwitchNode).cases) {
-        for (const child of caseNode.children) visit(child);
-      }
+    if (node.kind !== "directive") {
+      for (const child of childNodes(node)) visit(child);
     }
   };
   for (const node of document.body) visit(node);

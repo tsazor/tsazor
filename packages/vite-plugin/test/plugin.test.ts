@@ -54,6 +54,7 @@ beforeAll(async () => {
   await writeFile(path.join(root, "services", "CounterService.ts"), "export class CounterService {}\n");
   await writeFile(path.join(root, "Pages", "Counter.tsazor"), COUNTER);
   await writeFile(path.join(root, "Pages", "FetchData.tsazor"), FETCH_DATA);
+  await writeFile(path.join(root, "Pages", "Home.tsazor"), '@page "/"\n@page "/home"\n@layout MainLayout\n<h1>Home</h1>\n');
   await writeFile(
     path.join(root, "Shared", "Greeter.tsazor.css"),
     "h1 { color: red; }\n.list > .item:hover { color: blue; }\n/* .a { } */\n@keyframes spin { from { opacity: 1; } }\n",
@@ -137,6 +138,15 @@ describe("tsazor vite plugin", () => {
     expect(module).toContain('import FetchDataLayout from "/MainLayout.tsazor"');
     expect(module).toContain('{ template: "/counter", type: Counter },');
     expect(module).toContain('{ template: "/fetchdata", type: FetchData, layout: FetchDataLayout },');
+  });
+
+  it("registers every @page template of a page as a route (one import)", async () => {
+    const plugin = await createPlugin();
+    const module = (await plugin.load?.call({} as never, "\0virtual:tsazor-routes")) as string;
+    expect(module).toContain('{ template: "/", type: Home, layout: HomeLayout },');
+    expect(module).toContain('{ template: "/home", type: Home, layout: HomeLayout },');
+    expect(module.match(/import Home from "\/Pages\/Home.tsazor";/g)?.length).toBe(1);
+    expect(module.match(/import HomeLayout from/g)?.length).toBe(1);
   });
 
   it("emits authorize: {} into the manifest for @authorize pages", () => {

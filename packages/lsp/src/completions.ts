@@ -37,7 +37,7 @@ export function completeAt(analyzed: AnalyzedFile, line: number, character: numb
   const node = nodeAt(analyzed.document, line, character);
   const typed = source.slice(offsetOfLineStart(source, cursor), cursor);
 
-  if (node?.kind === "codeBlock") return [];
+  if (node?.kind === "codeBlock" || node?.kind === "statement") return [];
   if (node?.kind === "expression") {
     const expression = node as ExpressionNode;
     const start = offsetAt(source, expression.pos.line - 1, expression.pos.column);

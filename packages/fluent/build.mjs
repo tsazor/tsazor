@@ -19,6 +19,16 @@ await build({
   format: "esm",
   outfile: ".build/runner.mjs",
   external: ["esbuild", "node:*"],
+  // The bundled compiler pulls in TypeScript (CommonJS: require, __filename).
+  banner: {
+    js: [
+      'import { createRequire as __tsazorRequire } from "node:module";',
+      'import { fileURLToPath as __tsazorPath } from "node:url";',
+      "const require = __tsazorRequire(import.meta.url);",
+      "const __filename = __tsazorPath(import.meta.url);",
+      'const __dirname = __tsazorPath(new URL(".", import.meta.url));',
+    ].join(" "),
+  },
   logLevel: "silent",
 });
 

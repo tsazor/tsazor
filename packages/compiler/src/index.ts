@@ -5,3 +5,4 @@ export { DiagnosticBag, type TszDiagnostic, type SourcePos, type DiagnosticCode 
 export { buildSourceMap, type SourceMapEntry } from "./source-map.js";
 export { TSScanner } from "./scanner.js";
 export type * from "./ast.js";
+export { childNodes } from "./ast.js";

@@ -15,7 +15,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -b && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:vite --external:esbuild --external:postcss",
+    "build": "tsc -b && esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:vite --external:esbuild --external:postcss --external:typescript",
     "test": "vitest run"
   },
   "dependencies": {
@@ -24,13 +24,13 @@
     "@tsazor/compiler": "workspace:*",
     "@tsazor/workspace": "workspace:*",
     "esbuild": "^0.28.2",
-    "postcss": "^8.5.6"
+    "postcss": "^8.5.6",
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
     "vite": "^7.1.7",
     "vitest": "^3.2.7"
   }

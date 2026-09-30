@@ -1,5 +1,7 @@
+import ts from "typescript";
 import type {
   AttributeNode,
+  CatchClause,
   CodeBlockNode,
   ConditionalBranch,
   DirectiveNode,
@@ -12,16 +14,40 @@ import type {
   SwitchNode,
   ForNode,
   SourceSpan,
+  TryNode,
+  WhileNode,
 } from "./ast.js";
 import { EVENT_FLAGS } from "./ast.js";
+import { analyzeStatements, CodeScanner, type CodeToken } from "./code-scanner.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { TSScanner } from "./scanner.js";
 
-const DIRECTIVE_NAMES = new Set([
-  "page", "layout", "using", "inject", "inherits", "attribute", "typeparam", "authorize",
-]);
+/**
+ * Directive table. `supported` directives are handled by codegen; `ignored`
+ * ones are Blazor-only and have no Tsazor meaning (codegen may warn). All are
+ * only valid at document level. Any other `@word` is an implicit expression
+ * (Razor semantics) — whether it resolves is decided later.
+ */
+const DIRECTIVES: Record<string, "supported" | "ignored"> = {
+  page: "supported",
+  layout: "supported",
+  using: "supported",
+  inject: "supported",
+  inherits: "supported",
+  attribute: "supported",
+  typeparam: "supported",
+  authorize: "supported",
+  namespace: "ignored",
+  rendermode: "ignored",
+  preservewhitespace: "ignored",
+  implements: "ignored",
+};
 
-const CONTROL_KEYWORDS = new Set(["if", "else", "for", "foreach", "switch", "case", "default"]);
+/** Control statements parsed into their own nodes (in markup after `@`, in code bare). */
+const CONTROL_KEYWORDS = new Set(["if", "for", "foreach", "while", "do", "switch", "try"]);
+
+/** Continuation keywords that are only valid after their control statement. */
+const DANGLING_KEYWORDS = new Set(["else", "case", "default", "catch", "finally"]);
 
 const VOID_ELEMENTS = new Set([
   "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -30,15 +56,25 @@ const VOID_ELEMENTS = new Set([
 
 const isIdPart = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z0-9_$]/.test(ch);
 const isIdStart = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z_$]/.test(ch);
+const isAlnum = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z0-9]/.test(ch);
+const isTagStart = (ch: string | undefined): boolean => ch !== undefined && /[A-Za-z]/.test(ch);
 
 export function parseDocument(source: string, diagnostics: DiagnosticBag): DocumentNode {
   return new Parser(source, diagnostics).parseDocument();
 }
 
 interface ParseStop {
-  closeBrace?: boolean;
+  /** Element/`<text>` content: `}` is literal text, `</` returns to the caller. */
   closeTag?: string | null;
+  /** `@:` line: markup up to and including the line break. */
+  newline?: boolean;
 }
+
+/** How a code-context statement list ended. */
+type CodeEnd = "close" | "eof" | "case";
+
+/** Where a code-context statement list lives. `single` = braceless control body. */
+type CodeMode = "block" | "switch" | "single";
 
 /** One interpolated slice of an attribute value (`static text`, or `@(...)`
  *  / bare `@x` code), with the absolute index of its first character — for
@@ -49,13 +85,30 @@ interface ValuePart {
   start?: number;
 }
 
+/** A parsed control header `(…)`: trimmed code and its first character. */
+interface Header {
+  code: string;
+  start?: SourcePos;
+}
+
+/**
+ * Razor-model parser. Markup contexts (the document, element content, `@:`
+ * lines, `<text>`) are scanned character-wise; code contexts (`@{ }`,
+ * control-block bodies) are code-first: TypeScript scanned with the TS lexer,
+ * switching to markup at a tag in statement position, `@:` and `<text>`.
+ * `@code` blocks and `(…)` headers are balanced with the TS lexer as well.
+ */
 class Parser {
   private readonly locator: (index: number) => SourcePos;
   private readonly ts: TSScanner;
+  private readonly code: CodeScanner;
   private i = 0;
   /** Accumulated text between transitions. */
   private textStart = -1;
   private textParts: string[] = [];
+  /** Open elements and code bodies around the current position; directives
+   *  are only valid at document level (0). */
+  private nesting = 0;
 
   constructor(
     private readonly source: string,
@@ -77,6 +130,7 @@ class Parser {
       return { line: lo + 1, column: index - start };
     };
     this.ts = new TSScanner(source, this.locator);
+    this.code = new CodeScanner(source);
   }
 
   parseDocument(): DocumentNode {
@@ -87,35 +141,44 @@ class Parser {
     return { directives, body: markup, codeBlocks: [] };
   }
 
-  /** Parses markup nodes until EOF, a `}` or the given closing tag. */
-  private parseNodes(out: MarkupNode[], stop: ParseStop, switchContent = false): void {
+  /* ------------------------------------------------------------------ */
+  /* Markup context                                                      */
+  /* ------------------------------------------------------------------ */
+
+  /** Parses markup nodes until EOF, the caller's closing tag or (for `@:`) the line end. */
+  private parseNodes(out: MarkupNode[], stop: ParseStop): void {
     const src = this.source;
+    const documentLevel = stop.closeTag === undefined && !stop.newline;
     this.textStart = -1;
     while (this.i < src.length) {
       const ch = src[this.i]!;
 
-      if (ch === "}") {
-        if (stop.closeBrace) {
-          this.i++;
-          this.flush(out);
-          this.skipOwnLine();
-          return;
-        }
-        if (stop.closeTag === null || stop.closeTag === undefined) {
-          this.flush(out);
-          this.diagnostics.error("TZS003", this.locator(this.i), "Unexpected '}' in markup.");
-          this.i++;
-          continue;
-        }
-        // Inside an element's content, braces are literal text (Razor:
-        // inline CSS/JSON in markup is fine) — fall through to the text
-        // accumulation at the bottom of the loop.
+      if (stop.newline && ch === "\n") {
+        // The line break belongs to the `@:` line's text (Razor).
+        this.accumulate(ch);
+        this.flush(out);
+        return;
       }
 
+      if (ch === "}" && documentLevel) {
+        this.flush(out);
+        this.diagnostics.error("TZS003", this.locator(this.i), "Unexpected '}' in markup.");
+        this.i++;
+        continue;
+      }
+      // Inside element content and `@:` lines braces are literal text
+      // (Razor: inline CSS/JSON in markup is fine).
+
       if (ch === "<") {
-        if (src[this.i + 1] === "/") {
+        const next = src[this.i + 1];
+        if (next === "/") {
+          if (stop.closeTag !== undefined && stop.closeTag !== null) {
+            this.flush(out);
+            return; // caller matches the closing tag
+          }
           this.flush(out);
-          return; // caller matches the closing tag
+          this.strayCloseTag();
+          continue;
         }
         if (src.startsWith("<!--", this.i)) {
           this.flush(out);
@@ -123,55 +186,46 @@ class Parser {
           this.i = end < 0 ? src.length : end + 3;
           continue;
         }
-        this.flush(out);
-        this.parseNode(out);
-        continue;
-      }
-
-      if (ch === "@" && !switchContent) {
-        this.flush(out);
-        this.parseTransition(out, switchContent);
-        continue;
-      }
-      if (ch === "@" && switchContent) {
-        const wordEnd = this.i + 2;
-        let e = wordEnd;
-        while (e < src.length && /[A-Za-z0-9_]/.test(src[e]!)) e++;
-        const word = src.slice(wordEnd, e);
-        if (word === "case" || word === "default") {
+        if (next === "!") {
+          // `<!DOCTYPE …>` and other declarations carry no render content.
           this.flush(out);
-          this.pendingSwitchWord = word;
-          this.i = e;
-          return; // caller (switch body loop) picks it up
+          const end = src.indexOf(">", this.i);
+          this.i = end < 0 ? src.length : end + 1;
+          continue;
         }
-        this.flush(out);
-        this.parseTransition(out, switchContent);
-        continue;
+        if (isTagStart(next)) {
+          this.flush(out);
+          this.parseNode(out);
+          continue;
+        }
+        // `a < b`: a `<` that starts no tag is text.
       }
 
-      // Inside a switch body: bare case/default labels and break statements.
-      if (switchContent && this.textStart < 0) {
-        const m = /^\s*(case\b|default\s*:|break\s*;)/.exec(src.slice(this.i, this.i + 32));
-        if (m) {
+      if (ch === "@") {
+        if (src[this.i + 1] === "*") {
+          // Razor comment: dropped without splitting the surrounding text.
+          this.skipRazorComment();
+          continue;
+        }
+        // Email rule (Razor): `@` right after an alphanumeric text character
+        // is literal — `info@example.com`.
+        const emailLike = this.textStart >= 0 && isAlnum(src[this.i - 1]) && isIdPart(src[this.i + 1]);
+        if (!emailLike) {
           this.flush(out);
-          const token = m[1]!;
-          if (token.startsWith("case")) this.pendingSwitchWord = "case";
-          else if (token.startsWith("default")) this.pendingSwitchWord = "default";
-          else {
-            // break: silently skipped (codegen emits break automatically).
-            this.i += m[0].length;
-            continue;
-          }
-          this.i += m[0].length;
-          return;
+          this.parseTransition(out, false);
+          continue;
         }
       }
 
-      if (this.textStart < 0) this.textStart = this.i;
-      this.textParts.push(ch);
+      this.accumulate(ch);
       this.i++;
     }
     this.flush(out);
+  }
+
+  private accumulate(ch: string): void {
+    if (this.textStart < 0) this.textStart = this.i;
+    this.textParts.push(ch);
   }
 
   private flush(out: MarkupNode[]): void {
@@ -182,11 +236,32 @@ class Parser {
     this.textParts = [];
   }
 
+  /** A closing tag nothing opened (at document level, in code or on an `@:` line). */
+  private strayCloseTag(): void {
+    const pos = this.locator(this.i);
+    const end = this.source.indexOf(">", this.i);
+    const tag = this.source.slice(this.i, end < 0 ? this.source.length : end + 1);
+    this.diagnostics.error("TZS002", pos, `Unexpected closing tag '${tag}'.`);
+    this.i = end < 0 ? this.source.length : end + 1;
+  }
+
+  private skipRazorComment(): void {
+    const end = this.source.indexOf("*@", this.i + 2);
+    if (end < 0) {
+      this.diagnostics.error("TZS006", this.locator(this.i), "Razor comment '@*' never closes.");
+      this.i = this.source.length;
+      return;
+    }
+    this.i = end + 2;
+  }
+
   /* ------------------------------------------------------------------ */
   /* @-transitions                                                       */
   /* ------------------------------------------------------------------ */
 
-  private parseTransition(out: MarkupNode[], switchContent: boolean): void {
+  /** Handles the `@` at this.i, in markup (`inCode` false) or in statement
+   *  position of a code context. */
+  private parseTransition(out: MarkupNode[], inCode: boolean): void {
     const src = this.source;
     const pos = this.locator(this.i);
     const next = src[this.i + 1];
@@ -198,17 +273,21 @@ class Parser {
     }
 
     if (next === ":") {
-      // @:line — rest of the line is literal text.
+      // @:line — the rest of the line is markup (with @ transitions).
       this.i += 2;
-      const nl = src.indexOf("\n", this.i);
-      const end = nl < 0 ? src.length : nl;
-      this.pushText(out, src.slice(this.i, end), pos);
-      this.i = end;
+      this.nesting++;
+      this.parseNodes(out, { newline: true });
+      this.nesting--;
+      return;
+    }
+
+    if (next === "*") {
+      this.skipRazorComment();
       return;
     }
 
     if (next === "(") {
-      const end = this.ts.scanBalanced(this.i + 1, "(", ")");
+      const end = this.code.scanBalanced(this.i + 1);
       if (end < 0) {
         this.diagnostics.error("TZS003", pos, "Parenthesized expression never closes.");
         this.i = src.length;
@@ -226,7 +305,7 @@ class Parser {
     }
 
     if (next === "{") {
-      this.parseCodeBlock(out, pos, false);
+      this.parseInlineBlock(out, pos, inCode);
       return;
     }
 
@@ -243,16 +322,54 @@ class Parser {
     const word = src.slice(idStart, idEnd);
 
     if (word === "code" || word === "functions") {
-      this.parseCodeBlock(out, pos, true, idEnd);
+      this.parseMemberBlock(out, pos, idEnd, word);
       return;
     }
 
     if (CONTROL_KEYWORDS.has(word)) {
-      this.parseControl(word, idEnd, out);
+      this.i = idEnd;
+      this.parseControlStatement(word, pos, out, inCode);
+      if (!inCode) this.skipOwnLine();
       return;
     }
 
-    if (DIRECTIVE_NAMES.has(word)) {
+    if (DANGLING_KEYWORDS.has(word)) {
+      if (inCode) {
+        // `@case`/`@else` in code: the `@` is redundant (lenient); the
+        // statement loop takes the bare keyword.
+        this.i++;
+        return;
+      }
+      this.diagnostics.error("TZS001", pos, `'@${word}' outside of its control context.`);
+      this.i = idEnd;
+      return;
+    }
+
+    if ((word === "using" || word === "lock") && this.nextNonSpace(idEnd) === "(") {
+      this.i = idEnd;
+      this.parseUnsupportedStatement(word, pos);
+      if (!inCode) this.skipOwnLine();
+      return;
+    }
+
+    if (word === "await") {
+      this.diagnostics.error(
+        "TZS012",
+        pos,
+        "'@await' in markup is not supported: buildRenderTree is synchronous. Await in a lifecycle method (e.g. onInitializedAsync) and render the stored result.",
+      );
+      let end = idEnd;
+      while (src[end] === " " || src[end] === "\t") end++;
+      this.i = Math.max(this.ts.scanImplicitExpression(end), idEnd);
+      return;
+    }
+
+    if (DIRECTIVES[word] !== undefined) {
+      if (this.nesting > 0) {
+        this.diagnostics.error("TZS013", pos, `'@${word}' is a directive and is only allowed at document level.`);
+        this.i = this.lineEnd(idEnd);
+        return;
+      }
       this.parseDirective(word, idEnd, pos, out);
       this.skipOwnLine();
       return;
@@ -272,15 +389,16 @@ class Parser {
     this.i = end;
   }
 
-  private parseCodeBlock(out: MarkupNode[], pos: SourcePos, member: boolean, from = this.i + 1): void {
+  /** `@code { … }` / `@functions { … }`: verbatim class members. */
+  private parseMemberBlock(out: MarkupNode[], pos: SourcePos, from: number, word: string): void {
     const src = this.source;
     const brace = this.findChar(from, "{");
-    if (brace < 0) {
-      this.diagnostics.error("TZS006", pos, member ? "@code block missing '{'." : "@{ block missing '{'.");
+    if (brace >= src.length) {
+      this.diagnostics.error("TZS006", pos, "@code block missing '{'.");
       this.i = src.length;
       return;
     }
-    const close = this.ts.scanBalanced(brace, "{", "}");
+    const close = this.code.scanBalanced(brace);
     if (close < 0) {
       this.diagnostics.error("TZS006", pos, "Code block never closes.");
       this.i = src.length;
@@ -292,11 +410,204 @@ class Parser {
       pos,
       endPos: this.locator(close),
       codeStart: this.locator(brace + 1),
+      member: true,
     };
-    if (member) node.member = true;
-    out.push(node);
+    if (this.nesting > 0) {
+      this.diagnostics.error("TZS013", pos, `'@${word}' blocks are only allowed at document level.`);
+    } else {
+      out.push(node);
+    }
     this.i = close;
     this.skipOwnLine();
+  }
+
+  /** `@{ … }`: a code-first block without a scope of its own. */
+  private parseInlineBlock(out: MarkupNode[], pos: SourcePos, inCode: boolean): void {
+    const brace = this.i + 1;
+    this.i = brace + 1;
+    const children: MarkupNode[] = [];
+    this.nesting++;
+    const end = this.parseCodeStatements(children, "block", pos);
+    this.nesting--;
+    out.push({
+      kind: "codeBlock",
+      code: this.source.slice(brace + 1, end === "close" ? this.i - 1 : this.i),
+      children,
+      pos,
+      endPos: this.locator(this.i),
+      codeStart: this.locator(brace + 1),
+    });
+    if (!inCode) this.skipOwnLine();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Code context                                                        */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * Parses a code-first statement list: TypeScript statements, control
+   * statements, markup in statement position (`<tag`, `<text>`, `@:`) and
+   * `@` expressions. Consumes the closing `}` in "block"/"switch" mode;
+   * returns "case" (label unconsumed) when a switch label starts.
+   */
+  private parseCodeStatements(out: MarkupNode[], mode: CodeMode, openPos?: SourcePos): CodeEnd {
+    const src = this.source;
+    for (;;) {
+      this.skipCodeTrivia();
+      if (this.i >= src.length) {
+        if (mode !== "single") {
+          this.diagnostics.error("TZS006", openPos ?? this.locator(this.i), "Code block never closes.");
+        } else {
+          this.diagnostics.error("TZS006", openPos ?? this.locator(this.i), "Expected a statement after the control header.");
+        }
+        return "eof";
+      }
+      const ch = src[this.i]!;
+      const before = this.i;
+
+      if (ch === "}") {
+        if (mode === "single") {
+          this.diagnostics.error("TZS006", this.locator(this.i), "Expected a statement after the control header.");
+          return "close";
+        }
+        this.i++;
+        return "close";
+      }
+
+      if (ch === "<" && src.startsWith("<!--", this.i)) {
+        const end = src.indexOf("-->", this.i + 4);
+        this.i = end < 0 ? src.length : end + 3;
+        continue;
+      }
+      if (ch === "<" && src[this.i + 1] === "/") {
+        this.strayCloseTag();
+        continue;
+      }
+      if (ch === "<" && isTagStart(src[this.i + 1])) {
+        this.parseNode(out);
+      } else if (ch === "@") {
+        this.parseTransition(out, true);
+        if (this.i === before + 1 && DANGLING_KEYWORDS.has(this.sliceWord(this.i))) continue; // lenient `@case`
+      } else if (ch === "{") {
+        const pos = this.locator(this.i);
+        this.i++;
+        const children: MarkupNode[] = [];
+        this.nesting++;
+        this.parseCodeStatements(children, "block", pos);
+        this.nesting--;
+        out.push({ kind: "block", children, pos, endPos: this.locator(this.i) });
+      } else if (isIdStart(ch) && this.parseCodeKeyword(out, mode)) {
+        if (this.pendingCase) {
+          this.pendingCase = false;
+          return "case";
+        }
+      } else {
+        this.parseStatementRun(out, mode);
+      }
+      if (mode === "single") return "close";
+    }
+  }
+
+  /** Set by parseCodeKeyword when a switch label starts. */
+  private pendingCase = false;
+
+  /** Handles a keyword in statement position; false = not a keyword statement. */
+  private parseCodeKeyword(out: MarkupNode[], mode: CodeMode): boolean {
+    const word = this.sliceWord(this.i);
+    const pos = this.locator(this.i);
+    const after = this.i + word.length;
+    if (CONTROL_KEYWORDS.has(word)) {
+      this.i = after;
+      this.parseControlStatement(word, pos, out, true);
+      return true;
+    }
+    if (word === "case" || (word === "default" && this.nextNonSpace(after) === ":")) {
+      if (mode === "switch") {
+        this.pendingCase = true;
+        return true;
+      }
+      this.diagnostics.error("TZS001", pos, `'${word}' label outside of a switch.`);
+      this.i = after;
+      return true;
+    }
+    if ((word === "using" || word === "lock") && this.nextNonSpace(after) === "(") {
+      this.i = after;
+      this.parseUnsupportedStatement(word, pos);
+      return true;
+    }
+    if (word === "else" || word === "catch" || word === "finally") {
+      this.diagnostics.error("TZS001", pos, `'${word}' without a matching '${word === "else" ? "if" : "try"}'.`);
+      this.i = after;
+      return true;
+    }
+    return false;
+  }
+
+  /** A run of plain TS statements up to the next boundary (markup, control
+   *  statement, block or the closing brace). */
+  private parseStatementRun(out: MarkupNode[], mode: CodeMode): void {
+    const src = this.source;
+    const start = this.i;
+    const end = this.code.scanStatements(start, (token) => this.isStatementBoundary(token), mode === "single");
+    if (end <= start) {
+      this.diagnostics.error("TZS003", this.locator(start), `Unexpected '${src[start]}' in code.`);
+      this.i = start + 1;
+      return;
+    }
+    const code = src.slice(start, end);
+    const info = analyzeStatements(code);
+    const first = info.errors[0];
+    if (first) {
+      this.diagnostics.error(
+        "TZS015",
+        this.locator(start + first.offset),
+        `${first.message} (markup inside code must start with a tag, '@:' or '<text>').`,
+      );
+    }
+    out.push({ kind: "statement", code, declares: info.declares, pos: this.locator(start), endPos: this.locator(end) });
+    this.i = end;
+  }
+
+  /** Whether a token at statement start ends the current statement run. */
+  private isStatementBoundary(token: CodeToken): boolean {
+    const kind = token.kind;
+    if (kind === ts.SyntaxKind.AtToken || kind === ts.SyntaxKind.OpenBraceToken) return true;
+    if (kind === ts.SyntaxKind.LessThanToken) {
+      const next = this.source[token.end];
+      return isTagStart(next) || next === "/" || next === "!";
+    }
+    const text = this.source.slice(token.start, token.end);
+    if (!/^[A-Za-z_$]/.test(text)) return false;
+    if (CONTROL_KEYWORDS.has(text) || text === "case" || text === "else" || text === "catch" || text === "finally") return true;
+    if (text === "default") return this.nextNonSpace(token.end) === ":";
+    if (text === "using" || text === "lock") return this.nextNonSpace(token.end) === "(";
+    return false;
+  }
+
+  /** Skips whitespace, `//` and `/* *\/` comments and Razor comments in code. */
+  private skipCodeTrivia(): void {
+    const src = this.source;
+    while (this.i < src.length) {
+      const ch = src[this.i]!;
+      if (/\s/.test(ch)) {
+        this.i++;
+      } else if (ch === "/" && src[this.i + 1] === "/") {
+        this.i = this.lineEnd(this.i);
+      } else if (ch === "/" && src[this.i + 1] === "*") {
+        const end = src.indexOf("*/", this.i + 2);
+        this.i = end < 0 ? src.length : end + 2;
+      } else if (ch === "@" && src[this.i + 1] === "*") {
+        this.skipRazorComment();
+      } else {
+        return;
+      }
+    }
+  }
+
+  /** Gap between the parts of a control statement (`} else {`). */
+  private skipGap(inCode: boolean): void {
+    if (inCode) this.skipCodeTrivia();
+    else this.skipWhitespace();
   }
 
   /* ------------------------------------------------------------------ */
@@ -304,9 +615,9 @@ class Parser {
   /* ------------------------------------------------------------------ */
 
   private parseDirective(word: string, afterWord: number, pos: SourcePos, out: MarkupNode[]): void {
-    let end = this.lineEnd(afterWord);
+    const end = this.lineEnd(afterWord);
     const raw = this.source.slice(afterWord, end).trim();
-    out.push({ kind: "directive", name: word, value: raw.trim(), pos, endPos: this.locator(end) });
+    out.push({ kind: "directive", name: word, value: raw, pos, endPos: this.locator(end) });
     this.i = end;
   }
 
@@ -319,125 +630,201 @@ class Parser {
   /* Control structures                                                  */
   /* ------------------------------------------------------------------ */
 
-  private parseControl(word: string, afterWord: number, out: MarkupNode[]): void {
-    const pos = this.locator(this.i);
-    this.i = afterWord;
-
-    if (word === "if") {
-      const condition = this.parseParens(pos);
-      const branches: ConditionalBranch[] = [{ condition, children: this.parseBraceMarkupBlock(false) }];
-      for (;;) {
-        this.skipWhitespace();
-        // Razor: `else` follows the block without an @ transition.
-        const wordStart = this.i;
-        let w = wordStart;
-        while (isIdPart(this.source[w])) w++;
-        if (this.source.slice(wordStart, w) !== "else") break;
-        const elsePos = this.locator(this.i);
-        this.i = w;
-        this.skipWhitespace();
-        let isElseIf = false;
-        let condition2: string | null = null;
-        if (this.sliceWord(this.i) === "if") {
-          isElseIf = true;
-          this.i += 2;
-          condition2 = this.parseParens(elsePos);
+  /** Parses a control statement; this.i is right after its keyword. */
+  private parseControlStatement(word: string, pos: SourcePos, out: MarkupNode[], inCode: boolean): void {
+    switch (word) {
+      case "if":
+        out.push(this.parseIf(pos, inCode));
+        return;
+      case "for":
+      case "foreach": {
+        const header = this.parseHeader(pos, word);
+        const children = this.parseBody(pos);
+        const node: ForNode = {
+          kind: "for", code: header.code, codeStart: header.start, isForEach: word === "foreach", children, pos, endPos: this.locator(this.i),
+        };
+        out.push(node);
+        return;
+      }
+      case "while": {
+        const header = this.parseHeader(pos, word);
+        const children = this.parseBody(pos);
+        out.push({
+          kind: "while", condition: header.code, conditionStart: header.start, isDoWhile: false, children, pos, endPos: this.locator(this.i),
+        } satisfies WhileNode);
+        return;
+      }
+      case "do": {
+        const children = this.parseBody(pos);
+        this.skipGap(inCode);
+        let header: Header = { code: "" };
+        if (this.sliceWord(this.i) === "while") {
+          this.i += "while".length;
+          header = this.parseHeader(pos, "while");
+          let k = this.i;
+          while (this.source[k] === " " || this.source[k] === "\t") k++;
+          if (this.source[k] === ";") this.i = k + 1;
+        } else {
+          this.diagnostics.error("TZS003", pos, "'do' block requires a trailing 'while (…)'.");
         }
-        const children = this.parseBraceMarkupBlock(false);
-        branches.push({ condition: isElseIf ? condition2 : null, children, span: { pos: elsePos, endPos: this.locator(this.i) } });
-      }
-      const node: IfNode = { kind: "if", branches, pos, endPos: this.locator(this.i) };
-      out.push(node);
-      return;
-    }
-
-    if (word === "for" || word === "foreach") {
-      const code = this.parseParens(pos);
-      const children = this.parseBraceMarkupBlock(false);
-      const node: ForNode = { kind: "for", code, isForEach: word === "foreach", children, pos, endPos: this.locator(this.i) };
-      out.push(node);
-      return;
-    }
-
-    if (word === "switch") {
-      const code = this.parseParens(pos);
-      this.skipWhitespace();
-      if (this.source[this.i] !== "{") {
-        this.diagnostics.error("TZS006", pos, "@switch requires a '{' block.");
-        this.i = this.source.length;
+        out.push({
+          kind: "while", condition: header.code, conditionStart: header.start, isDoWhile: true, children, pos, endPos: this.locator(this.i),
+        } satisfies WhileNode);
         return;
       }
-      const close = this.ts.scanBalanced(this.i, "{", "}", false);
-      if (close < 0) {
-        this.diagnostics.error("TZS006", pos, "@switch block never closes.");
-        this.i = this.source.length;
+      case "switch":
+        this.parseSwitch(pos, out, inCode);
         return;
-      }
-      this.i++;
-      const cases = this.parseSwitchBody(pos, close);
-      out.push({ kind: "switch", code, cases, pos, endPos: this.locator(this.i) } satisfies SwitchNode);
-      return;
+      case "try":
+        out.push(this.parseTry(pos, inCode));
+        return;
     }
-
-    this.diagnostics.error("TZS001", pos, `'@${word}' outside of its control context.`);
   }
 
-  private pendingSwitchWord: string | null = null;
-
-  private parseSwitchBody(startPos: SourcePos, closeBrace: number): SwitchCase[] {
-    const cases: SwitchCase[] = [];
-    let current: SwitchCase | null = null;
-    const src = this.source;
-    while (this.i < src.length && this.i < closeBrace) {
-      const word = this.pendingSwitchWord;
-      if (word !== null) {
-        this.pendingSwitchWord = null;
-        if (word === "default") {
-          this.skipWhitespace();
-          if (src[this.i] === ":") this.i++;
-          current = { code: null, children: [], span: { pos: startPos, endPos: this.locator(this.i) } };
-          cases.push(current);
-          continue;
-        }
-        // case
-        this.skipWhitespace();
-        const code = this.parseCaseExpression();
-        this.skipWhitespace();
-        if (src[this.i] === ":") this.i++;
-        current = { code, children: [], span: { pos: startPos, endPos: this.locator(this.i) } };
-        cases.push(current);
+  private parseIf(pos: SourcePos, inCode: boolean): IfNode {
+    const header = this.parseHeader(pos, "if");
+    const branches: ConditionalBranch[] = [{ condition: header.code, conditionStart: header.start, children: this.parseBody(pos) }];
+    for (;;) {
+      const save = this.i;
+      // Razor: `else` follows the block without an @ transition.
+      this.skipGap(inCode);
+      if (this.sliceWord(this.i) !== "else") {
+        // In markup the whitespace stays consumed (it only separates blocks).
+        if (inCode) this.i = save;
+        break;
+      }
+      const elsePos = this.locator(this.i);
+      this.i += "else".length;
+      this.skipGap(inCode);
+      if (this.sliceWord(this.i) === "if") {
+        this.i += 2;
+        const elseIf = this.parseHeader(elsePos, "else if");
+        const children = this.parseBody(elsePos);
+        branches.push({ condition: elseIf.code, conditionStart: elseIf.start, children, span: { pos: elsePos, endPos: this.locator(this.i) } });
         continue;
       }
-      const children: MarkupNode[] = [];
-      this.parseNodes(children, { closeBrace: true }, true);
-      // parseNodes stopped on '}' (consumed) or a case transition; append children.
-      const meaningful = children.some((c) => c.kind !== "text" || c.content.trim().length > 0);
-      if (current) current.children.push(...children);
-      else if (meaningful) cases.push({ code: null, children, span: { pos: startPos, endPos: this.locator(this.i) } });
-      if (this.pendingSwitchWord === null) break; // closed the brace
+      const children = this.parseBody(elsePos);
+      branches.push({ condition: null, children, span: { pos: elsePos, endPos: this.locator(this.i) } });
+      if (!inCode) this.skipWhitespace();
+      break;
     }
-    return cases;
+    return { kind: "if", branches, pos, endPos: this.locator(this.i) };
   }
 
-  private parseCaseExpression(): string {
+  private parseTry(pos: SourcePos, inCode: boolean): TryNode {
+    const node: TryNode = { kind: "try", children: [], pos, endPos: pos };
+    this.skipGap(inCode);
+    if (this.source[this.i] !== "{") {
+      this.diagnostics.error("TZS006", pos, "'try' requires a '{' block.");
+    }
+    node.children = this.parseBody(pos);
+    let save = this.i;
+    this.skipGap(inCode);
+    if (this.sliceWord(this.i) === "catch") {
+      const catchPos = this.locator(this.i);
+      this.i += "catch".length;
+      this.skipGap(inCode);
+      let param: string | null = null;
+      let paramName: string | null = null;
+      if (this.source[this.i] === "(") {
+        param = this.parseHeader(catchPos, "catch").code;
+        // C# `catch (Exception e)` binds `e`; TS `catch (e)` / `catch (e: unknown)`.
+        const typed = /^[A-Za-z_$][\w$.]*\s+([A-Za-z_$][\w$]*)$/.exec(param);
+        if (typed) param = typed[1]!;
+        paramName = /^[A-Za-z_$][\w$]*/.exec(param)?.[0] ?? null;
+      }
+      const children = this.parseBody(catchPos);
+      const clause: CatchClause = { param, paramName, children, span: { pos: catchPos, endPos: this.locator(this.i) } };
+      node.catchClause = clause;
+      save = this.i;
+      this.skipGap(inCode);
+    }
+    if (this.sliceWord(this.i) === "finally") {
+      const finallyPos = this.locator(this.i);
+      this.i += "finally".length;
+      node.finallyChildren = this.parseBody(finallyPos);
+    } else {
+      if (inCode) this.i = save;
+      if (!node.catchClause) this.diagnostics.error("TZS003", pos, "'try' requires a 'catch' or 'finally' block.");
+    }
+    node.endPos = this.locator(this.i);
+    return node;
+  }
+
+  private parseSwitch(pos: SourcePos, out: MarkupNode[], inCode: boolean): void {
+    const header = this.parseHeader(pos, "switch");
+    this.skipGap(inCode);
+    if (this.source[this.i] !== "{") {
+      this.diagnostics.error("TZS006", pos, "@switch requires a '{' block.");
+      this.i = this.source.length;
+      return;
+    }
+    this.i++;
+    const cases: SwitchCase[] = [];
+    const preamble: MarkupNode[] = [];
+    this.nesting++;
+    for (;;) {
+      const target = cases.length > 0 ? cases[cases.length - 1]!.children : preamble;
+      if (this.parseCodeStatements(target, "switch", pos) !== "case") break;
+      cases.push(this.parseCaseLabel());
+    }
+    this.nesting--;
+    if (preamble.length > 0) {
+      this.diagnostics.error("TZS001", preamble[0]!.pos, "Statements in a switch must follow a 'case' or 'default' label.");
+    }
+    out.push({ kind: "switch", code: header.code, codeStart: header.start, cases, pos, endPos: this.locator(this.i) } satisfies SwitchNode);
+  }
+
+  /** `case <expr>:` or `default:` at this.i. */
+  private parseCaseLabel(): SwitchCase {
     const src = this.source;
-    const ch = src[this.i];
-    if (ch === '"' || ch === "'") {
-      const end = this.ts.skipStringFor(this.i, ch!);
-      const code = src.slice(this.i, end);
-      this.i = end;
-      return code;
+    const labelStart = this.i;
+    const labelPos = this.locator(labelStart);
+    if (this.sliceWord(this.i) === "default") {
+      this.i += "default".length;
+      this.skipWhitespace();
+      if (src[this.i] === ":") this.i++;
+      return { code: null, children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
     }
-    if (ch === "(") {
-      const end = this.ts.scanBalanced(this.i, "(", ")");
-      const code = src.slice(this.i + 1, end - 1);
-      this.i = end;
-      return code;
-    }
+    this.i += "case".length;
+    this.skipWhitespace();
     const start = this.i;
-    const end = this.ts.scanImplicitExpression(this.i);
-    this.i = Math.max(end, start + 1);
-    return src.slice(start, this.i);
+    // The label ends at the first `:` outside brackets and ternaries.
+    this.code.reset(start);
+    let ternaries = 0;
+    let colon: CodeToken | null = null;
+    for (;;) {
+      const depth = this.code.depth;
+      const token = this.code.next();
+      if (token.kind === ts.SyntaxKind.EndOfFileToken) break;
+      if (depth !== 0) continue;
+      if (token.kind === ts.SyntaxKind.QuestionToken) ternaries++;
+      else if (token.kind === ts.SyntaxKind.ColonToken) {
+        if (ternaries === 0) {
+          colon = token;
+          break;
+        }
+        ternaries--;
+      }
+    }
+    if (!colon) {
+      this.diagnostics.error("TZS003", labelPos, "'case' label without ':'.");
+      this.i = src.length;
+      return { code: src.slice(start).trim(), children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
+    }
+    const code = src.slice(start, colon.start).trim();
+    this.i = colon.end;
+    return { code, codeStart: this.locator(start), children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
+  }
+
+  /** C# statements without a TS equivalent: reported, header and body skipped. */
+  private parseUnsupportedStatement(word: string, pos: SourcePos): void {
+    const message = word === "using"
+      ? "The C# 'using (…) { }' statement has no TypeScript equivalent — use try/finally or a 'using' declaration."
+      : "The C# 'lock (…) { }' statement has no TypeScript equivalent (JavaScript is single-threaded).";
+    this.diagnostics.error("TZS012", pos, message);
+    this.parseHeader(pos, word);
+    this.parseBody(pos);
   }
 
   /* ------------------------------------------------------------------ */
@@ -452,7 +839,9 @@ class Parser {
     if (src.startsWith("text>", this.i)) {
       this.i += 5;
       const children: MarkupNode[] = [];
+      this.nesting++;
       this.parseNodes(children, { closeTag: "text" });
+      this.nesting--;
       this.expectCloseTag("text");
       out.push({ kind: "textTag", children, pos, endPos: this.locator(this.i) });
       return;
@@ -471,16 +860,22 @@ class Parser {
     const attributes = this.parseTagAttributes(pos, tagName);
 
     let selfClosing = false;
+    let isVoid = false;
     if (src[this.i] === "/" && src[this.i + 1] === ">") {
       selfClosing = true;
       this.i += 2;
     } else if (src[this.i] === ">") {
       this.i++;
-      if (!isComponent && VOID_ELEMENTS.has(tagName.toLowerCase())) selfClosing = true;
+      if (!isComponent && VOID_ELEMENTS.has(tagName.toLowerCase())) {
+        selfClosing = true;
+        isVoid = true;
+      }
     } else {
       this.diagnostics.error("TZS002", pos, `Unclosed start tag '<${tagName}'.`);
       this.i = src.length;
     }
+    // A void element may still be closed explicitly (`<input></input>`).
+    if (isVoid) this.skipVoidCloseTag(tagName);
 
     const node: ElementNode = {
       kind: "element",
@@ -496,17 +891,20 @@ class Parser {
     if (!selfClosing) {
       const stopTag = isComponent ? tagName : tagName.toLowerCase();
       const children: MarkupNode[] = [];
-      if (isComponent) {
-        this.parseNodes(children, {});
-        this.expectCloseTag(stopTag);
-      } else {
-        this.parseNodes(children, { closeTag: stopTag });
-        this.expectCloseTag(stopTag);
-      }
+      // Element and component content alike: braces are literal text.
+      this.nesting++;
+      this.parseNodes(children, { closeTag: stopTag });
+      this.nesting--;
+      this.expectCloseTag(stopTag);
       node.children = children;
     }
     node.endPos = this.locator(this.i);
     out.push(node);
+  }
+
+  private skipVoidCloseTag(tagName: string): void {
+    const match = /^\s*<\/([A-Za-z0-9_.-]+)\s*>/.exec(this.source.slice(this.i, this.i + tagName.length + 64));
+    if (match && match[1]!.toLowerCase() === tagName.toLowerCase()) this.i += match[0].length;
   }
 
   private expectCloseTag(tagName: string): void {
@@ -541,6 +939,10 @@ class Parser {
         return attributes;
       }
       if (ch === ">" || (ch === "/" && src[this.i + 1] === ">")) return attributes;
+      if (ch === "@" && src[this.i + 1] === "*") {
+        this.skipRazorComment();
+        continue;
+      }
       const attr = this.parseAttribute();
       if (!attr) continue;
       // Fold a valueless modifier attribute (@onclick:preventDefault) into the
@@ -603,7 +1005,7 @@ class Parser {
       return this.parseDirectiveAttribute(name, pos);
     }
     if (!hasValue) {
-      return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      return { kind: "static", name, value: "", minimized: true, pos, endPos: this.locator(this.i) };
     }
     this.i++; // '='
 
@@ -786,8 +1188,14 @@ class Parser {
     }
     const quote = src[this.i];
     if (quote !== '"' && quote !== "'") {
-      this.diagnostics.error("TZS009", this.locator(this.i), "Expected a quoted attribute value.");
-      return null;
+      // Unquoted value (HTML): runs up to whitespace or the end of the tag.
+      const start = this.i;
+      while (this.i < src.length && !/[\s>]/.test(src[this.i]!) && !(src[this.i] === "/" && src[this.i + 1] === ">")) this.i++;
+      if (this.i === start) {
+        this.diagnostics.error("TZS009", this.locator(this.i), "Expected an attribute value.");
+        return null;
+      }
+      return { kind: "parts", parts: [{ text: src.slice(start, this.i), start }] };
     }
     this.i++;
     const parts: ValuePart[] = [];
@@ -820,7 +1228,9 @@ class Parser {
           this.i = end;
           continue;
         }
-        if (isIdStart(src[this.i + 1])) {
+        // Email rule: `@` right after an alphanumeric text character is literal.
+        const emailLike = textPartsBuffer.length > 0 && isAlnum(src[this.i - 1]);
+        if (isIdStart(src[this.i + 1]) && !emailLike) {
           const idStart = this.i + 1;
           const end = this.ts.scanImplicitExpression(idStart);
           pushText();
@@ -848,49 +1258,46 @@ class Parser {
   /* Helpers                                                             */
   /* ------------------------------------------------------------------ */
 
-  private parseParens(pos: SourcePos): string {
+  /** Parses a control header `(…)` (TS-balanced) at the next non-space. */
+  private parseHeader(pos: SourcePos, word: string): Header {
     this.skipWhitespace();
     if (this.source[this.i] !== "(") {
-      this.diagnostics.error("TZS003", pos, "Expected '(' after control keyword.");
+      this.diagnostics.error("TZS003", pos, `Expected '(' after '${word}'.`);
       this.i = this.source.length;
-      return "";
+      return { code: "" };
     }
-    const end = this.ts.scanBalanced(this.i, "(", ")");
+    const end = this.code.scanBalanced(this.i);
     if (end < 0) {
       this.diagnostics.error("TZS003", pos, "Control condition never closes.");
       this.i = this.source.length;
-      return "";
+      return { code: "" };
     }
-    const code = this.source.slice(this.i + 1, end - 1);
+    const raw = this.source.slice(this.i + 1, end - 1);
+    const lead = raw.length - raw.trimStart().length;
+    const start = this.locator(this.i + 1 + lead);
     this.i = end;
-    return code.trim();
+    return { code: raw.trim(), start };
   }
 
-  private parseBraceMarkupBlock(switchContent: boolean): MarkupNode[] {
-    this.skipWhitespace();
-    if (this.source[this.i] === "{") {
-      const close = this.ts.scanBalanced(this.i, "{", "}", false);
-      if (close < 0) {
-        this.diagnostics.error("TZS006", this.locator(this.i), "Control statement braces never close.");
-        this.i = this.source.length;
-        return [];
-      }
-      const children: MarkupNode[] = [];
-      this.i++;
-      this.parseNodes(children, { closeBrace: true }, switchContent);
-      return children;
-    }
-    // Single-node body without braces.
-    const save = this.i;
+  /** A control body: a `{ … }` block or a single statement (both code-first). */
+  private parseBody(pos: SourcePos): MarkupNode[] {
+    this.skipCodeTrivia();
     const children: MarkupNode[] = [];
-    if (this.source[this.i] === "<") {
-      this.parseNode(children);
-      if (children.length > 0) return children;
+    this.nesting++;
+    if (this.source[this.i] === "{") {
+      this.i++;
+      this.parseCodeStatements(children, "block", pos);
+    } else {
+      this.parseCodeStatements(children, "single", pos);
     }
-    this.i = save;
-    this.diagnostics.error("TZS006", this.locator(this.i), "Expected '{' after control statement.");
-    this.i = this.source.length;
-    return [];
+    this.nesting--;
+    return children;
+  }
+
+  private nextNonSpace(from: number): string | undefined {
+    let k = from;
+    while (k < this.source.length && /\s/.test(this.source[k]!)) k++;
+    return this.source[k];
   }
 
   private skipWhitespace(): void {
@@ -915,10 +1322,6 @@ class Parser {
     let end = at;
     while (isIdPart(this.source[end])) end++;
     return this.source.slice(at, end);
-  }
-
-  private startsWithAt(from: number, needle: string): boolean {
-    return this.source.startsWith(needle, from);
   }
 
   private findChar(from: number, ch: string): number {

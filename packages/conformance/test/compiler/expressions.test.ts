@@ -81,7 +81,7 @@ describe("C6 — statements inside @{ }", () => {
     expect(m.html()).toBe("<p>42</p>");
   });
 
-  it.fails("generic type arguments", async () => {
+  it("generic type arguments", async () => {
     const m = await mount(`@{ const map = new Map<string, number>([["k", 7]]); }<p>@map.get("k")</p>`);
     expect(m.html()).toBe("<p>7</p>");
   });

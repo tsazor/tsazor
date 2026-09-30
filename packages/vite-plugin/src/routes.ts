@@ -52,12 +52,15 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
     } else if (chain.layout) {
       layoutPath = context.resolveLayout(chain.layout);
     }
-    routes.push({
-      template: result.metadata.routeTemplate,
-      componentPath: filePath,
-      layoutPath,
-      authorize: result.metadata.authorize === true,
-    });
+    // Several @page directives: one route per template (Blazor semantics).
+    for (const template of result.metadata.routeTemplates) {
+      routes.push({
+        template,
+        componentPath: filePath,
+        layoutPath,
+        authorize: result.metadata.authorize === true,
+      });
+    }
   }
   return routes;
 }
@@ -82,21 +85,28 @@ export function generateRoutesModule(root: string, routes: ScannedRoute[]): stri
   const lines: string[] = [];
   const entries: string[] = [];
   const usedLocals = new Set<string>();
+  // A page with several @page templates has several routes but one import.
+  const componentLocals = new Map<string, string>();
   routes.forEach((route, index) => {
     const className = classNameForFile(route.componentPath);
-    let local = className;
-    let suffix = index;
-    while (usedLocals.has(local)) {
-      local = `${className}${++suffix}`;
+    let local = componentLocals.get(route.componentPath);
+    const firstRouteOfComponent = local === undefined;
+    if (local === undefined) {
+      local = className;
+      let suffix = index;
+      while (usedLocals.has(local)) {
+        local = `${className}${++suffix}`;
+      }
+      usedLocals.add(local);
+      componentLocals.set(route.componentPath, local);
+      const componentSpec = toRootRelativeSpecifier(rootPath, route.componentPath);
+      lines.push(`import ${local} from "${componentSpec}";`);
     }
-    usedLocals.add(local);
-    const componentSpec = toRootRelativeSpecifier(rootPath, route.componentPath);
-    lines.push(`import ${local} from "${componentSpec}";`);
     const layoutSpec = route.layoutPath ? toRootRelativeSpecifier(rootPath, route.layoutPath) : undefined;
     const authorizeSpec = route.authorize ? ", authorize: {}" : "";
     if (layoutSpec) {
       const layoutLocal = `${local}Layout`;
-      lines.push(`import ${layoutLocal} from "${layoutSpec}";`);
+      if (firstRouteOfComponent) lines.push(`import ${layoutLocal} from "${layoutSpec}";`);
       entries.push(`  { template: ${JSON.stringify(route.template)}, type: ${local}, layout: ${layoutLocal}${authorizeSpec} },`);
     } else {
       entries.push(`  { template: ${JSON.stringify(route.template)}, type: ${local}${authorizeSpec} },`);

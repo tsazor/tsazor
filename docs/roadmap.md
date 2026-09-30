@@ -119,6 +119,25 @@ Parser liefert Code nur als Text-Spans.
 **Gate:** Golden-Tests für C1–C3, C7–C9, C11, C14, C19, C20 grün; Sequenznummern-Tests
 unverändert grün (Invariante: compile-time, quellpositionsgebunden).
 
+**Stand: A2 umgesetzt** (Branch `roadmap/a2-parser`). Code-Kontexte (`@{ }`, Control-Bodies)
+werden mit `ts.createScanner` gescannt (`code-scanner.ts`); Brace-Pre-Scan und
+Markup-Parsing von Bodies sind weg. Neue AST-Knoten: `statement` (TS-Statement-Lauf mit
+`declares`), `block`, `while` (inkl. `do … while`), `try`; `@{ }` trägt `children`;
+Header haben Quellpositionen (`conditionStart`/`codeStart`), Folgezeilen mehrzeiliger
+Header sind gemappt. Locals aus `@{ }`/Bodies/Schleifen/`catch` landen im bestehenden
+Local-Tracking (kein `this.X`). Direktiven-Tabelle: Blazor-only (`@namespace`,
+`@rendermode`, `@preservewhitespace`, `@implements`) ignoriert (TZS014-Warnung nur für
+`@rendermode`/`@preservewhitespace`); unbekanntes `@wort` bleibt implizite Expression
+(Auflösung in A4); Direktiven außerhalb der Dokumentebene ⇒ TZS013; mehrere `@page` ⇒
+`metadata.routeTemplates` + je eine Route im Manifest. `@using (…)`/`@lock`/`@await` ⇒ TZS012;
+nackter Text in Code-Kontexten ⇒ TZS015 (TS-Syntaxfehler bzw. C#-Regel CS0201).
+Konformität: C1–C3, C7–C9, C11, C14, C19 (Blazor-only-Direktiven), C20, Void-Close-Tag,
+`a < b`, `{` im ChildContent, einzeiliges `@foreach`, `@foreach`-Header-Varianten grün; nebenbei
+C6 „generic type arguments". FluentCMS-Probe: clean 13 → 145, Dateien mit Fehlern 46 → 35.
+**Offen für A4:** `bakeMemberRefs` baked weiterhin Regex-Flags, Template-Spans, Typ-Positionen
+und Funktionsparameter in Statements (C4–C6); `const { a, b }` kollidiert mit dem Builder-
+Parameter `b` (Codegen-Hygiene: `__builder` wie Razor). Schleifen-`var` bleibt `var`.
+
 ### A3 — Import-Modell (Entscheidung + Umsetzung)
 
 Heute rät das Plugin Imports per PascalCase-Regex (I1–I4). Das Rewriting in A4 braucht aber
