@@ -3,8 +3,8 @@
  * function, so each test builds exactly the frames it needs — independent of
  * the compiler.
  */
-import { ComponentBase, Parameter, Renderer, type RenderTreeBuilder } from "@tsazor/runtime";
-import { rethrowEscapedRenderErrors } from "../harness.js";
+import { ComponentBase, Parameter, type Renderer, type RenderTreeBuilder } from "@tsazor/runtime";
+import { createTestRenderer, rethrowRenderErrors } from "../harness.js";
 
 export type Build = (b: RenderTreeBuilder) => void;
 
@@ -31,13 +31,13 @@ export async function settle(renderer: Renderer): Promise<void> {
   await renderer.waitUntilIdle();
   await new Promise((resolve) => setTimeout(resolve, 0));
   await renderer.waitUntilIdle();
-  rethrowEscapedRenderErrors();
+  rethrowRenderErrors(renderer);
 }
 
 export async function host(build: Build): Promise<HostHandle> {
   const container = document.createElement("div");
   document.body.appendChild(container);
-  const renderer = new Renderer();
+  const renderer = createTestRenderer();
   const state = renderer.renderInContainer(Host, container);
   const component = state.component as Host;
   component.build = build;

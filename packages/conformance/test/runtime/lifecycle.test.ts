@@ -4,12 +4,13 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { ComponentBase, defineComponent, Renderer, type RenderTreeBuilder } from "@tsazor/runtime";
+import { createTestRenderer } from "../harness.js";
 import { host, settle } from "./host.js";
 
 function mountRoot(type: new () => ComponentBase): { container: HTMLElement; renderer: Renderer } {
   const container = document.createElement("div");
   document.body.appendChild(container);
-  const renderer = new Renderer();
+  const renderer = createTestRenderer();
   renderer.renderInContainer(type, container);
   return { container, renderer };
 }
@@ -123,7 +124,7 @@ describe("R7 — OnAfterRender", () => {
 });
 
 describe("R9 — render queue", () => {
-  it.fails("renders parents before children when both are dirty (child renders once)", async () => {
+  it("renders parents before children when both are dirty (child renders once)", async () => {
     const order: string[] = [];
     let kid!: Kid;
     class Kid extends ComponentBase {
@@ -161,7 +162,7 @@ describe("R9 — render queue", () => {
     expect(order).toEqual(["P", "K"]);
   });
 
-  it.fails("an exception in one component does not stop other components in the batch", async () => {
+  it("an exception in one component does not stop other components in the batch", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     class Bad extends ComponentBase {
       protected override buildRenderTree(): void {
