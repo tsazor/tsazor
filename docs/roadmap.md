@@ -395,6 +395,42 @@ oder String mit Validierung; Catch-all nicht re-encoden; Navigation-Lock wirksam
 `<base href>`; `app.dispose()` räumt DOM und Listener ab (R14, R15). Auth-Race im
 `AuthenticationStateProvider` beheben.
 
+**Stand: B7 umgesetzt** (Branch `roadmap/b7-router`). `RouteTable` (route-data.ts) sortiert nach
+Blazors `RouteComparison` (pro Segment von links: Literal < Parameter mit Constraint < Parameter <
+Catch-all mit Constraint < Catch-all, bei Gleichstand weniger Segmente zuerst; stabil, sonst
+Manifest-Reihenfolge) und wirft beim Aufbau (Router `onParametersSet`) Blazors „The following
+routes are ambiguous“, wenn zwei Routen gleicher Präzedenz dieselben URLs abdecken (gleiche
+Literale, gleiche Constraints — .NET-8-Regel; Parametername egal). Template-Parser mit Blazors
+Fehlern (leere Segmente, Klammern, Catch-all nicht zuletzt, Pflicht nach optional, doppelte Namen,
+optionaler Catch-all, unbekanntes Constraint). Constraints verankert/gruppiert (`^(?:…)$`):
+`int` (32 Bit), `long` (**`bigint`**, 64-Bit-Bereich), `bool` (case-insensitiv), `double`/`float`/
+`decimal` (number), `datetime` (Date, ISO), `guid` (D/N/B/P, String), `alpha`, `alphaNumeric`,
+`regex(...)`; optional `{x?}`/`{x:int?}` ⇒ `null`; Catch-all `{*p}`/`{**p}` **dekodiert** (wie
+Blazor: Segmente werden vor dem Matching dekodiert, außer `%2F` wie ab .NET 8), leer ⇒ `null`,
+Constraint pro Segment; Parameter anderer `@page`-Templates derselben Seite ⇒ `null`
+(`UnusedRouteParameterNames`). Manifest-Format (vite-plugin) unverändert.
+`NavigationManager`: `registerLocationChangingHandler` (+ `setNavigationLock`/`releaseNavigationLock`
+als Wrapper, neue Komponente `NavigationLock` mit `onBeforeInternalNavigation`/
+`confirmExternalNavigation`). `navigateTo` fragt die Handler zuerst (auch bei `forceLoad`/extern,
+wie Blazor WASM), Abbruch per `preventNavigation()`, werfender Handler oder neuere Navigation
+(`signal` abgebrochen); Link-Klicks (nur innerhalb des Base-URI-Raums, `isNavigationIntercepted`)
+gehen durch dieselben Handler; `popstate` mit Handlern: Bewegung per `history.go(-delta)`
+zurücknehmen (`_index` in `history.state`), fragen, bei Erlaubnis erneut anwenden — ein
+abgebrochenes Zurück behält die alte URL (Eintrag ohne `_index`: alte URL per `replaceState`).
+Ohne Handler bleibt alles synchron. `baseUri` aus `<base href>`, `toAbsoluteUri`/
+`toBaseRelativePath` (wirft außerhalb der Base) wie Blazor, `navigateTo(uri, forceLoad, replace)` und
+`NavigationOptions` (`replaceHistoryEntry`, `historyEntryState`). `app.dispose()`: Baum disposen,
+DOM-Range entfernen, eigenen NavigationManager (Klick + popstate) disposen, HMR-Bridge entfernen.
+Auth: `watchAuthenticationState` versieht den initialen `getState()` mit der
+Notification-Version des Providers; ein spätes Ergebnis nach einer Notification (oder nach
+Unsubscribe) wird verworfen. Konformität: R14 ×5, R15 grün, neu: Ambiguität, `long` > 2^53,
+`regex(a|b)`, Lock gegen Link-Klick und popstate, `<base href>`, `app.dispose()`, Auth-Race.
+Abweichungen: ohne `<base>`-Element ist die Base der Origin-Root (Blazor: Verzeichnis der
+Dokument-URL; Vite-Apps haben meist kein `<base>`); `regex(...)` wird verankert (ASP.NET überlässt
+das dem Pattern); `decimal` als number; `guid` bleibt String; `datetime` nur ISO; ein von außen
+übergebener NavigationManager wird von `app.dispose()` nicht disposed; `baseRelativePath` wirft
+außerhalb der Base nicht (Origin-relativer Pfad).
+
 ---
 
 ## Phase 2 — Parameter-Typ-Metadaten und Typecheck

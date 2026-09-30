@@ -4,7 +4,7 @@
 
 | Direktiv | Beispiel | Semantik |
 |---|---|---|
-| `@page` | `@page "/user/{Id:int}"` | Routen-Template (Constraints: `int`, `long`, `bool`, `guid`, `alpha`, `alphaNumeric`, `regex(...)`; Catch-all `{*Path}`). Mehrere `@page` ⇒ jedes Template ist eine Route (Blazor) |
+| `@page` | `@page "/user/{Id:int}"` | Routen-Template, siehe [Routen](#routen). Mehrere `@page` ⇒ jedes Template ist eine Route (Blazor) |
 | `@layout` | `@layout MainLayout` | Layout für diese Route (überschreibt `_Imports`) |
 | `@using` | `@using ./Shared` | Komponenten-Tags und `@inject`-/`@inherits`-Typen (siehe Getting Started) |
 | `@import` | `@import { Status, formatDate } from "./utils"` | TypeScript-Import für Markup und `@code` (siehe unten); in `_Imports.tsazor` vererbt |
@@ -18,6 +18,35 @@
 
 Direktiven gelten nur auf Dokumentebene; innerhalb von Elementen oder Code-Blöcken ⇒ TZS013.
 Ein unbekanntes `@wort` ist keine Direktive, sondern eine implizite Expression (Razor).
+
+## Routen
+
+Templates wie Blazor: Literale (case-insensitiv), `{name}`, `{name:constraint}` (mehrere: `{id:int:regex(...)}`),
+optional `{name?}`/`{id:int?}` (nur am Ende, ggf. vor einem Catch-all), Catch-all `{*path}`/`{**path}` (letztes Segment).
+Query-String und Hash zählen nicht zum Matching. Ungültige Templates und unbekannte Constraints sind Fehler (Blazors Meldungen).
+
+| Constraint | Wert im Page-Parameter | Anmerkung |
+|---|---|---|
+| `int` | `number` | 32-Bit-Bereich, Vorzeichen erlaubt |
+| `long` | `bigint` | 64-Bit-Bereich; `bigint`, damit Werte > 2^53 exakt bleiben |
+| `bool` | `boolean` | case-insensitiv (`True` ⇒ `true`) |
+| `double`, `float` | `number` | Dezimalpunkt, Exponent, Tausender-Komma (`float` via `Math.fround`) |
+| `decimal` | `number` | ohne Exponent; JS hat keinen Decimal-Typ (Double-Genauigkeit) |
+| `datetime` | `Date` | ISO `yyyy-MM-dd`, optional `THH:mm[:ss[.f]]` und `Z`/`±hh:mm`; ohne Offset lokale Zeit |
+| `guid` | `string` | Formate D, N, B, P; Wert = URL-Text |
+| `alpha`, `alphaNumeric` | `string` | |
+| `regex(...)` | `string` | als `^(?:…)$` verankert, case-insensitiv; `{{`/`}}` für geschweifte Klammern |
+
+Jedes Constraint ist verankert und gruppiert (`regex(a|b)` matcht nur `a` oder `b`). Segmente werden URL-dekodiert,
+außer `%2F` (.NET 8); ein Catch-all erhält den dekodierten Rest mit `/` verbunden, leer ⇒ `null`. Ein fehlender
+optionaler Parameter ist `null`, ebenso Parameter, die nur in einem *anderen* `@page`-Template derselben Seite vorkommen.
+Mehrere Constraints müssen alle passen; das erste typisierte bestimmt den Wert.
+
+**Präzedenz** (Blazors Route-Table): Segmente von links verglichen — Literal vor Constraint-Parameter vor Parameter vor
+Constraint-Catch-all vor Catch-all; bei Gleichstand gewinnt die Route mit weniger Segmenten. Die Reihenfolge im Manifest
+spielt keine Rolle (`/users/new` schlägt `/users/{id}`). Zwei Routen mit gleicher Präzedenz, gleichen Literalen und
+gleichen Constraints (`/a/{x}` und `/A/{y}`) ⇒ Fehler „The following routes are ambiguous“ beim Aufbau der Route-Table
+(Router-Lifecycle). Gleiche Präzedenz, aber verschiedene Constraints (`{x:int}` vs. `{x:bool}`) ⇒ Manifest-Reihenfolge.
 
 ## @import
 
