@@ -5,9 +5,9 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-brand">Tsazor Fluent</div>
-            <nav class="sidebar-nav">
-                <NavLink Href="/">Overview</NavLink>
-            </nav>
+            <div class="sidebar-nav">
+                <SidebarNav links="@this.navLinks" ariaLabel="Sections" />
+            </div>
         </aside>
         <main class="content">
             <header class="topbar">
@@ -27,6 +27,20 @@
 
 @code {
     private unsub: () => void = () => {};
+
+    /** Sidebar sections, rendered through SidebarNav + runtime NavLink. */
+    private navLinks: { href: string; label: string }[] = [
+        { href: "/", label: "Overview" },
+        { href: "/button", label: "Button" },
+        { href: "/inputs", label: "Inputs" },
+        { href: "/form", label: "Form" },
+        { href: "/tabs", label: "Tabs" },
+        { href: "/table", label: "Table" },
+        { href: "/dialog", label: "Dialog" },
+        { href: "/feedback", label: "Feedback" },
+        { href: "/theme", label: "Theme" },
+        { href: "/dashboard", label: "Dashboard" },
+    ];
 
     protected override onInitialized(): void {
         // The sidebar shows the theme toggle outcome — the layout subscribes.

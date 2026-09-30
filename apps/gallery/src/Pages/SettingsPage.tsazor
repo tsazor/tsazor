@@ -1,0 +1,80 @@
+@page "/dashboard/settings"
+
+<h1>Settings</h1>
+<p class="intro">
+    A validated form whose submit arms a confirm dialog — the destructive-style
+    flow. Save only fires after the dialog confirms; a toast acknowledges it.
+</p>
+
+<div class="card">
+    <FluentForm Model="@this.model" Validators="@this.validators" OnValidSubmit="@this.handleSubmit">
+        <div class="field">
+            <TextInput @bind="this.model.workspace" label="Workspace name" id="settings-workspace" />
+        </div>
+        <div class="field">
+            <TextInput @bind="this.model.owner" label="Owner" id="settings-owner" />
+        </div>
+        <div class="field">
+            <Switch @bind="this.model.beta" label="Opt in to beta features" id="settings-beta" />
+        </div>
+    </FluentForm>
+    @if (this.saved) {
+        <p class="form-done"><Badge color="success">Saved</Badge> Settings were applied.</p>
+    }
+</div>
+
+<Dialog isOpen="@this.confirmOpen" title="Apply settings?" id="settings-confirm" onClosed="@(() => this.cancel())" footer="@this.footerFragment">
+    This replaces the workspace configuration.
+    <ul>
+        <li>Workspace: <strong>@this.model.workspace</strong></li>
+        <li>Owner: <strong>@this.model.owner</strong></li>
+        <li>Beta: <strong>@this.betaText</strong></li>
+    </ul>
+</Dialog>
+
+@code {
+    private model = { workspace: "Tsazor HQ", owner: "", beta: false };
+    private saved = false;
+    private confirmOpen = false;
+
+    private validators: Record<string, ModelValidator> = {
+        workspace: (value) => (String(value ?? "").trim().length >= 2 ? null : "Workspace name is required."),
+        owner: (value) => (String(value ?? "").trim().length >= 2 ? null : "Owner name is required."),
+    };
+
+    /** Dialog footer: Cancel + Apply. */
+    private footerFragment: RenderFragment = (b) => {
+        b.openComponent(0, Button);
+        b.addAttribute(1, "appearance", "subtle");
+        b.addAttribute(2, "onClick", EventCallback.bind(this, () => this.cancel()));
+        b.addContent(3, "Cancel");
+        b.closeComponent();
+        b.openComponent(4, Button);
+        b.addAttribute(5, "appearance", "primary");
+        b.addAttribute(6, "onClick", EventCallback.bind(this, () => this.apply()));
+        b.addContent(7, "Apply");
+        b.closeComponent();
+    };
+
+    private get betaText(): string {
+        return this.model.beta ? "on" : "off";
+    }
+
+    /** Valid submit → open the confirm dialog. */
+    private handleSubmit = EventCallback.bind(this, () => {
+        this.confirmOpen = true;
+        this.stateHasChanged();
+    });
+
+    /** Confirm: apply + close + acknowledge. */
+    private apply(): void {
+        this.saved = true;
+        this.confirmOpen = false;
+        this.stateHasChanged();
+    }
+
+    private cancel(): void {
+        this.confirmOpen = false;
+        this.stateHasChanged();
+    }
+}

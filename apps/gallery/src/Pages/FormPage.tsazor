@@ -1,0 +1,56 @@
+@page "/form"
+
+<h1>Form &amp; validation</h1>
+<p class="intro">
+    <code>FluentForm</code> wraps the runtime's <code>EditForm</code> and adds the
+    submit button. Validation messages render inside the controls' own error rows
+    — a11y via <code>aria-describedby</code>.
+</p>
+
+@if (this.submitted) {
+    <p class="form-done">
+        Thanks, @this.model.name — the form was saved. <Badge color="success">valid</Badge>
+    </p>
+}
+
+<div class="card">
+    <FluentForm Model="@this.model" Validators="@this.validators" OnValidSubmit="@this.handleSubmit">
+        <div class="field">
+            <TextInput @bind="this.model.name" label="Name" id="form-name" />
+        </div>
+        <div class="field">
+            <NumberInput @bind="this.model.age" label="Age" id="form-age" />
+        </div>
+        <div class="field">
+            <Select @bind="this.model.topic" label="Topic" id="form-topic">
+                <option value="">Choose…</option>
+                <option value="general">General</option>
+                <option value="support">Support</option>
+            </Select>
+        </div>
+        <div class="field">
+            <Checkbox @bind="this.model.agree" label="Accept the terms" id="form-agree" />
+        </div>
+        <div class="field">
+            <TextArea @bind="this.model.notes" label="Notes" rows="3" id="form-notes" />
+        </div>
+    </FluentForm>
+    <p class="hint">Submit while empty → inline errors. Fill name ≥ 2 chars, age ≥ 0, topic, terms → submit succeeds.</p>
+</div>
+
+@code {
+    private model = { name: "", age: 0, topic: "", agree: false, notes: "" };
+    private submitted = false;
+
+    private validators: Record<string, ModelValidator> = {
+        name: (value) => (String(value ?? "").trim().length >= 2 ? null : "Name needs at least 2 characters."),
+        age: (value) => (Number(value) >= 0 ? null : "Age must not be negative."),
+        topic: (value) => (String(value ?? "").length > 0 ? null : "Choose a topic."),
+        agree: (value) => (value === true ? null : "Please accept the terms."),
+    };
+
+    private handleSubmit = EventCallback.bind(this, () => {
+        this.submitted = true;
+        this.stateHasChanged();
+    });
+}

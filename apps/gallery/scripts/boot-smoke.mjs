@@ -48,7 +48,12 @@ try {
 
     check("shell rendered", await page.locator(".app-shell").count() > 0);
     check("provider rendered", await page.locator(".fui-provider").count() > 0);
-    check("home page rendered", (await page.textContent("h1")) === "Overview");
+    check("home page rendered", (await page.textContent("h1")) === "Tsazor Fluent — Gallery");
+
+    // Client-side navigation through the sidebar reaches the dashboard.
+    await page.click("a[href='/dashboard']");
+    await page.waitForSelector(".kpi-grid");
+    check("dashboard rendered", (await page.textContent("h1")) === "Admin dashboard");
     const initialTheme = await page.getAttribute("html", "data-fluent-theme");
     check("html theme attribute set", initialTheme === "dark" || initialTheme === "light");
 

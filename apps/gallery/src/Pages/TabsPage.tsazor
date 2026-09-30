@@ -1,0 +1,40 @@
+@page "/tabs"
+
+<h1>Tabs</h1>
+<p class="intro">
+    Roving tabindex and arrow-key navigation are built in; <code>onSelected</code>
+    reports the index. Panels register themselves against the cascade.
+</p>
+
+<p class="tabs-echo">Active tab: <strong>@this.activeTitle</strong></p>
+
+<Tabs id="demo-tabs" onSelected="@this.onSelected">
+    <Tab title="Overview">
+        <Card ariaLabel="Overview card">
+            <CardHeader>Overview</CardHeader>
+            Everything about yourself in one place.
+            <CardFooter> <Badge>tab 0</Badge> </CardFooter>
+        </Card>
+    </Tab>
+    <Tab title="Activity">
+        <p>Recent activity rendered as the second panel.</p>
+    </Tab>
+    <Tab title="Settings">
+        <p><Switch label="Notifications" id="tabs-switch" /></p>
+    </Tab>
+</Tabs>
+
+@code {
+    private activeIndex = 0;
+
+    private titles = ["Overview", "Activity", "Settings"];
+
+    private get activeTitle(): string {
+        return this.titles[this.activeIndex] ?? "";
+    }
+
+    private onSelected = EventCallback.bind(this, (index: number): void => {
+        this.activeIndex = index;
+        this.stateHasChanged();
+    });
+}

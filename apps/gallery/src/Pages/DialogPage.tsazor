@@ -1,0 +1,57 @@
+@page "/dialog"
+
+<h1>Dialog</h1>
+<p class="intro">
+    In-place overlay with focus trap, Escape, backdrop dismissal, scroll lock with
+    nesting counter and focus restore. Open it and try: Tab cycling, Escape, the
+    backdrop.
+</p>
+
+<Button appearance="primary" onClick="@(() => this.openDialog())">Open dialog</Button>
+
+<p class="echo">Confirmations: <strong>@this.confirmed</strong></p>
+
+<Dialog isOpen="@this.open" title="Delete order" id="demo-dialog" onClosed="@(() => this.handleClosed())" footer="@this.footerFragment">
+    The order and its line items will be removed. This cannot be undone.
+    <p class="dialog-interactive">
+        Scroll the page behind — the body is locked while this is open.
+    </p>
+</Dialog>
+
+@code {
+    private open = false;
+    private confirmed = 0;
+
+    /** Dialog footer: Cancel + Delete, built as a fragment. */
+    private footerFragment: RenderFragment = (b) => {
+        b.openComponent(0, Button);
+        b.addAttribute(1, "appearance", "subtle");
+        b.addAttribute(2, "onClick", EventCallback.bind(this, () => this.handleClosed()));
+        b.addContent(3, "Cancel");
+        b.closeComponent();
+        b.openComponent(4, Button);
+        b.addAttribute(5, "appearance", "primary");
+        b.addAttribute(6, "onClick", EventCallback.bind(this, () => this.confirm()));
+        b.addContent(7, "Delete");
+        b.closeComponent();
+    };
+
+    private setOpenTo(value: boolean): void {
+        this.open = value;
+        this.stateHasChanged();
+    }
+
+    private openDialog(): void {
+        this.setOpenTo(true);
+    }
+
+    /** Closes without confirming (Cancel, Escape, backdrop). */
+    private handleClosed(): void {
+        this.setOpenTo(false);
+    }
+
+    private confirm(): void {
+        this.confirmed++;
+        this.setOpenTo(false);
+    }
+}

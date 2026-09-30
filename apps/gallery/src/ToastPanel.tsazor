@@ -1,0 +1,31 @@
+<div class="demo">
+    <h2>Toasts</h2>
+    <div class="demo-row">
+        <Button onClick="@(() => this.showInfo())">Info toast</Button>
+        <Button onClick="@(() => this.showSuccess())">Success toast</Button>
+        <Button onClick="@(() => this.showWarning())">Warning toast</Button>
+        <Button onClick="@(() => this.showError())">Error toast</Button>
+    </div>
+</div>
+
+@code {
+    /** The FluentToasts cascade from ToastProvider up the tree. */
+    @CascadingParameter({ name: "FluentToasts" })
+    host?: { show(options: { severity?: string }): number };
+
+    private showInfo(): void {
+        this.host?.show({ severity: "info" });
+    }
+
+    private showSuccess(): void {
+        this.host?.show({ severity: "success" });
+    }
+
+    private showWarning(): void {
+        this.host?.show({ severity: "warning" });
+    }
+
+    private showError(): void {
+        this.host?.show({ severity: "error" });
+    }
+}

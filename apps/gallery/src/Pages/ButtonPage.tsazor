@@ -1,0 +1,41 @@
+@page "/button"
+
+<h1>Button</h1>
+<p class="intro">Appearances, shapes and sizes. Fluent 2: secondary is the default appearance.</p>
+
+<section class="demo">
+    <h2>Appearance</h2>
+    <div class="demo-row">
+        <Button appearance="primary" onClick="@(() => this.bump())">Primary</Button>
+        <Button>Secondary</Button>
+        <Button appearance="subtle">Subtle</Button>
+        <Button appearance="transparent">Transparent</Button>
+    </div>
+    <p>Clicks: <strong class="click-count">@this.clicks</strong></p>
+</section>
+
+<section class="demo">
+    <h2>Shape &amp; size</h2>
+    <div class="demo-row">
+        <Button appearance="primary">Rounded</Button>
+        <Button shape="circular" appearance="primary">Circular</Button>
+        <Button size="small" appearance="primary">Small</Button>
+        <Button size="large" appearance="primary">Large</Button>
+    </div>
+</section>
+
+<section class="demo">
+    <h2>Disabled</h2>
+    <div class="demo-row">
+        <Button disabled="true">Disabled</Button>
+        <Button disabled="true" appearance="primary">Primary disabled</Button>
+    </div>
+</section>
+
+@code {
+    private clicks = 0;
+    private bump(): void {
+        this.clicks++;
+        this.stateHasChanged();
+    }
+}

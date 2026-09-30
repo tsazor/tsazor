@@ -1,0 +1,43 @@
+@page "/theme"
+@inject ThemeState Theme
+
+<h1>Theme</h1>
+<p class="intro">
+    One token set, four blocks: <code>:root</code> light, <code>[data-fluent-theme="dark"]</code>,
+    OS-preference dark behind <code>:root:not([data-fluent-theme])</code>, and a compact density.
+    The toggle in the topbar writes <code>data-fluent-theme</code> on <code>html</code> — below, the
+    <code>html</code>-attribute swatch proves it takes.
+</p>
+
+<div class="card">
+    <p>Applied theme: <span class="theme-echo">@this.Theme.theme</span></p>
+    <div class="swatches">
+        <div class="swatch" style="background: var(--fui-color-brand-1);"><span>brand-1</span></div>
+        <div class="swatch" style="background: var(--fui-color-brand-2);"><span>brand-2</span></div>
+        <div class="swatch" style="background: var(--fui-color-brand-3);"><span>brand-3</span></div>
+        <div class="swatch" style="background: var(--fui-color-green-1);"><span>green-1</span></div>
+        <div class="swatch" style="background: var(--fui-color-amber-1);"><span>amber-1</span></div>
+        <div class="swatch" style="background: var(--fui-color-red-1);"><span>red-1</span></div>
+        <div class="swatch" style="background: var(--fui-color-blue-1);"><span>blue-1</span></div>
+    </div>
+    <div class="demo">
+        <h2>Token surfaces</h2>
+        <div class="surface-stack">
+            <div class="surface surface-1">background-1</div>
+            <div class="surface surface-2">background-2</div>
+            <div class="surface surface-3">background-3</div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private unsub: () => void = () => {};
+
+    protected override onInitialized(): void {
+        this.unsub = this.Theme.subscribe(() => this.stateHasChanged());
+    }
+
+    dispose(): void {
+        this.unsub();
+    }
+}

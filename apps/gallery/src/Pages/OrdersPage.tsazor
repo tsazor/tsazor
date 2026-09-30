@@ -1,0 +1,143 @@
+@page "/dashboard/orders"
+
+<h1>Orders</h1>
+<p class="intro">
+    The real app pattern: <code>Table</code> renders rows; filter, sort and paging
+    are app state. A row click opens the detail dialog; activity log on the right
+    records what you did.
+</p>
+
+<div class="orders-layout">
+    <div class="orders-main">
+        <div class="table-toolbar">
+            <TextInput @bind="this.filter" placeholder="Filter by customer…" id="orders-filter" />
+            <Button appearance="subtle" onClick="@(() => this.setSort("customer"))">Sort customer</Button>
+            <Button appearance="subtle" onClick="@(() => this.setSort("total"))">Sort total</Button>
+        </div>
+
+        <Table items="@this.rows" headerContent="@this.header" rowContent="@this.rowFor" hover="true" colSpan="4" />
+
+        <div class="pager">
+            <Button appearance="subtle" onClick="@(() => this.page(0))">&lt; Prev</Button>
+            <span>Page @this.pageIndex of @this.pageCount</span>
+            <Button appearance="subtle" onClick="@(() => this.page(1))">Next &gt;</Button>
+        </div>
+    </div>
+
+    <aside class="activity-log">
+        <h2>Activity</h2>
+        @for (let i = 0; i < this.log.length; i++) {
+            <div class="activity-row">@this.log[i]!.text</div>
+        }
+    </aside>
+</div>
+
+<Dialog isOpen="@this.open" title="Order detail" id="order-dialog" onClosed="@(() => this.close())">
+    @if (this.selected) {
+        <p class="detail-line">Order <strong>#@this.selected.id</strong> — @this.selected.customer</p>
+        <p class="detail-line">Total: <strong>@this.selected.total</strong> (status: @this.selected.status)</p>
+    }
+</Dialog>
+
+@code {
+    private filter = "";
+    private sortKey = "customer";
+    private pageIndex = 0;
+    private pageSize = 3;
+    private open = false;
+
+    private header: RenderFragment = (b) => {
+        b.openElement(0, "tr");
+        b.openElement(1, "th");
+        b.addContent(2, "Order");
+        b.closeElement();
+        b.openElement(3, "th");
+        b.addContent(4, "Customer");
+        b.closeElement();
+        b.openElement(5, "th");
+        b.addContent(6, "Total (€)");
+        b.closeElement();
+        b.openElement(7, "th");
+        b.addContent(8, "Status");
+        b.closeElement();
+        b.closeElement();
+    };
+
+    private rowFor = (row: { id: number; customer: string; total: number; status: string }): RenderFragment => (b) => {
+        b.openElement(0, "tr");
+        b.addAttribute(1, "onclick", (e: MouseEvent) => this.openDetail(row));
+        b.addAttribute(2, "class", "orders-row");
+        b.openElement(3, "td");
+        b.addContent(4, "#" + row.id);
+        b.closeElement();
+        b.openElement(5, "td");
+        b.addContent(6, row.customer);
+        b.closeElement();
+        b.openElement(7, "td");
+        b.addContent(8, String(row.total));
+        b.closeElement();
+        b.openElement(9, "td");
+        b.addContent(10, row.status);
+        b.closeElement();
+        b.closeElement();
+    };
+
+    private selected?: { id: number; customer: string; total: number; status: string };
+
+    private log: { text: string }[] = [];
+
+    private orders = [
+        { id: 101, customer: "Alice", total: 42, status: "paid" },
+        { id: 102, customer: "Bruno", total: 17, status: "paid" },
+        { id: 103, customer: "Chiara", total: 99, status: "shipped" },
+        { id: 104, customer: "Dilan", total: 8, status: "open" },
+        { id: 105, customer: "Emil", total: 230, status: "shipped" },
+        { id: 106, customer: "Femke", total: 54, status: "open" },
+    ];
+
+    private get filtered(): { id: number; customer: string; total: number; status: string }[] {
+        const needle = this.filter.trim().toLowerCase();
+        const rows = needle
+            ? this.orders.filter((row) => row.customer.toLowerCase().includes(needle))
+            : this.orders;
+        if (this.sortKey === "total") {
+            return rows.slice().sort((a1, b1) => a1.total - b1.total);
+        }
+        return rows.slice().sort((a1, b1) => a1.customer.localeCompare(b1.customer));
+    }
+
+    private get pageCount(): number {
+        return Math.max(1, Math.ceil(this.filtered.length / this.pageSize));
+    }
+
+    private get rows(): { id: number; customer: string; total: number; status: string }[] {
+        const start = this.pageIndex * this.pageSize;
+        return this.filtered.slice(start, start + this.pageSize);
+    }
+
+    private setSort(key: string): void {
+        this.sortKey = key;
+        this.log.push({ text: "Sorted by " + key });
+        this.stateHasChanged();
+    }
+
+    private page(direction: number): void {
+        const next = this.pageIndex + direction;
+        if (next < 0 || next >= this.pageCount) return;
+        this.pageIndex = next;
+        this.log.push({ text: "Page " + (this.pageIndex + 1) });
+        this.stateHasChanged();
+    }
+
+    private openDetail(row: { id: number; customer: string; total: number; status: string }): void {
+        this.selected = row;
+        this.log.push({ text: "Detail #" + row.id });
+        this.open = true;
+        this.stateHasChanged();
+    }
+
+    private close(): void {
+        this.open = false;
+        this.stateHasChanged();
+    }
+}

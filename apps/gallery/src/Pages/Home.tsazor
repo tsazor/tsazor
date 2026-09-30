@@ -1,8 +1,21 @@
 @page "/"
 
-<h1>Overview</h1>
-<p>
-    Fluent 2 component gallery — the stability proof. Every launch component
-    gets a page with its states and props; the dashboard exercises all of them
-    together.
+<h1>Tsazor Fluent — Gallery</h1>
+<p class="intro">
+    The stability proof: a real component library, built the Blazor way but in
+    TypeScript. Fifteen launch components render on their own pages with all
+    their states; the dashboard below exercises them together — tables with
+    filter, sort and paging, a validated form, dialogs and toasts.
 </p>
+
+<div class="home-grid">
+    <a class="home-card" href="/button">Button</a>
+    <a class="home-card" href="/inputs">Inputs</a>
+    <a class="home-card" href="/form">Form</a>
+    <a class="home-card" href="/tabs">Tabs</a>
+    <a class="home-card" href="/table">Table</a>
+    <a class="home-card" href="/dialog">Dialog</a>
+    <a class="home-card" href="/feedback">Feedback</a>
+    <a class="home-card" href="/theme">Theme</a>
+    <a class="home-card home-card--accent" href="/dashboard">Dashboard →</a>
+</div>
