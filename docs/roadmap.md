@@ -190,6 +190,15 @@ berechnet statt dreimal.
 *Warum zuerst:* Alle weiteren Schritte konsumieren diese Edit-Liste. Die Disposal-Liste ist
 Voraussetzung für R3.
 
+**Stand: B1 umgesetzt** (Branch `roadmap/b1-diff`). `computeDiff` (diff.ts) liefert Blazors
+Edit-Typen + `components`/`disposedComponents`; der DomRenderer wendet sie an. Konformität:
+R1, R2, R3 (alle drei), Insert-Kosten, Fokus grün; dazu R4-Markup (Inserts bewegen nichts
+mehr, Permutationen verschieben Komponenten-/Markup-Bereiche als Einheit). Der R4-Komponenten-
+Test scheitert weiter, jetzt an R5 (`shouldRender=false` verhindert den ersten Render).
+Abweichungen: Edits referenzieren Frame-Indizes des neuen Baums statt kopierter
+Reference-Frames (B2 muss das für mehrere Renders pro Batch klären); Attribut-Diff wechselt
+bei jeder Sequenz-/Namensabweichung in den Namens-Join; `matchChildren` entfällt.
+
 ### B2 — Render-Queue mit Batches
 
 Den vorhandenen, ungenutzten `Dispatcher` zur echten Queue machen: Parent-first-Ordnung,

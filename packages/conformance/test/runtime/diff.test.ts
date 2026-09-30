@@ -33,7 +33,7 @@ describe("keyed moves", () => {
 });
 
 describe("R1 — a changed @key replaces the instance", () => {
-  it.fails("component: old instance disposed, new one initialized", async () => {
+  it("component: old instance disposed, new one initialized", async () => {
     let key = "x";
     const h = await host((b) => probe(b, 0, "L", key));
     log.length = 0;
@@ -43,7 +43,7 @@ describe("R1 — a changed @key replaces the instance", () => {
     expect(log).toContain("init:L");
   });
 
-  it.fails("element: a new DOM node is created", async () => {
+  it("element: a new DOM node is created", async () => {
     let key = 1;
     const h = await host((b) => {
       b.openElement(0, "input");
@@ -58,7 +58,7 @@ describe("R1 — a changed @key replaces the instance", () => {
 });
 
 describe("R2 — duplicate keys", () => {
-  it.fails("are reported as an error instead of merging DOM", async () => {
+  it("are reported as an error instead of merging DOM", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     let rejected = false;
     try {
@@ -80,7 +80,7 @@ describe("R2 — duplicate keys", () => {
 });
 
 describe("R3 — disposal of nested components", () => {
-  it.fails("a component inside a removed element is disposed", async () => {
+  it("a component inside a removed element is disposed", async () => {
     let show = true;
     const h = await host((b) => {
       if (show) {
@@ -95,7 +95,7 @@ describe("R3 — disposal of nested components", () => {
     expect(log).toContain("dispose:inner");
   });
 
-  it.fails("a component inside an element whose tag changes is disposed once and re-created", async () => {
+  it("a component inside an element whose tag changes is disposed once and re-created", async () => {
     let tag = "div";
     const h = await host((b) => {
       b.openElement(0, tag);
@@ -108,7 +108,7 @@ describe("R3 — disposal of nested components", () => {
     expect(h.container.querySelectorAll("i")).toHaveLength(1);
   });
 
-  it.fails("the renderer drops the disposed component state", async () => {
+  it("the renderer drops the disposed component state", async () => {
     let show = true;
     const h = await host((b) => {
       if (show) {
@@ -125,7 +125,7 @@ describe("R3 — disposal of nested components", () => {
 });
 
 describe("R4 — moving logical ranges moves their content", () => {
-  it.fails("markup content stays in order when an element is inserted before it", async () => {
+  it("markup content stays in order when an element is inserted before it", async () => {
     let withNew = false;
     const h = await host((b) => {
       if (withNew) {
@@ -140,6 +140,8 @@ describe("R4 — moving logical ranges moves their content", () => {
     expect(h.text()).toBe("NM");
   });
 
+  // Since B1 an insert moves nothing; this now fails on R5 instead (shouldRender=false
+  // also suppresses the first render, so there is no "S" to keep).
   it.fails("a component that skips re-rendering keeps its content between its markers", async () => {
     class Static extends ComponentBase {
       protected override shouldRender(): boolean {
@@ -166,7 +168,7 @@ describe("R4 — moving logical ranges moves their content", () => {
 });
 
 describe("DOM stability on insert", () => {
-  it.fails("inserting at the front does not move the following siblings", async () => {
+  it("inserting at the front does not move the following siblings", async () => {
     let items = ["b", "c", "d"];
     const h = await host((b) => {
       b.openElement(0, "ul");
@@ -186,7 +188,7 @@ describe("DOM stability on insert", () => {
     expect(insertBefore.mock.calls.length).toBeLessThanOrEqual(1);
   });
 
-  it.fails("a focused input keeps focus when content is inserted before it", async () => {
+  it("a focused input keeps focus when content is inserted before it", async () => {
     let withNew = false;
     const h = await host((b) => {
       if (withNew) {
