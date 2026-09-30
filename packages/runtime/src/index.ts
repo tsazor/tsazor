@@ -28,11 +28,14 @@ export { NavigationManager } from "./navigation/navigation-manager.js";
 
 // Routing
 export {
+  getRouteTable,
   matchRoute,
   parseRouteTemplate,
   RouteManifest,
+  RouteTable,
   type RouteData,
   type RouteEntry,
+  type RouteValue,
 } from "./routing/route-data.js";
 export { LayoutComponentBase } from "./routing/layout-component-base.js";
 export { Router } from "./routing/router.js";
