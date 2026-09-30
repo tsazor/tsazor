@@ -130,7 +130,7 @@ describe("C20 — @: line transitions", () => {
 });
 
 describe("loop variables captured by deferred child content", () => {
-  it.fails("each child content sees its own iteration value", async () => {
+  it("each child content sees its own iteration value", async () => {
     const m = await mount({
       "Test.tsazor": `
 @for (var i = 0; i < 3; i++) {
