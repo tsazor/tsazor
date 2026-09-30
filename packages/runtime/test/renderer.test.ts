@@ -191,6 +191,37 @@ describe("Renderer", () => {
     expect(container.querySelector("p")?.textContent).toBe("Hello, World!");
   });
 
+  it("skips null/undefined attribute values (Blazor conditional-attribute semantics)", async () => {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+
+    class Cond extends ComponentBase {
+      @Parameter() label: string | null = null;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "button");
+        b.addAttribute(1, "aria-label", this.label);
+        b.addContent(2, "Go");
+        b.closeElement();
+      }
+    }
+    const state = renderer.renderInContainer(Cond, container);
+    await renderer.waitUntilIdle();
+
+    const button = container.querySelector("button")!;
+    expect(button.hasAttribute("aria-label")).toBe(false);
+
+    const component = state.component as unknown as { label: string | null };
+    component.label = "Icon only";
+    component["stateHasChangedInternal"]();
+    await renderer.waitUntilIdle();
+    expect(button.getAttribute("aria-label")).toBe("Icon only");
+
+    component.label = null;
+    component["stateHasChangedInternal"]();
+    await renderer.waitUntilIdle();
+    expect(button.hasAttribute("aria-label")).toBe(false);
+  });
+
   it("re-renders children when parent parameters change", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();

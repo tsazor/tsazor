@@ -427,6 +427,13 @@ function setAttributeFrame(element: Element, frame: RenderTreeFrame, oldFrame?: 
   const name = frame.attributeName!;
   const value = frame.attributeValue;
 
+  // Blazor conditional-attribute semantics: null/undefined = absent attribute
+  // (`aria-label="@maybeUndefined"` never renders an empty attribute).
+  if (value === null || value === undefined) {
+    element.removeAttribute(name);
+    return;
+  }
+
   if (value instanceof EventCallback) {
     const existing = elementHandlers.get(element)?.get(name);
     if (existing && oldFrame && existing.callback.equals(value as unknown as EventCallback<never>)) {
