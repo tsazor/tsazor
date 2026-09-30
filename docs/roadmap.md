@@ -47,6 +47,12 @@ Track A und Track B sind **parallel bearbeitbar**: Die einzige Schnittstelle ist
 
 Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
 
+**Stand:** 0.1 und 0.2 erledigt (Branch `roadmap/phase-0`). Dabei zusätzlich behoben:
+`.tsbuildinfo` von `runtime` lag außerhalb von `dist` (Clean-Build lieferte leeres `dist`);
+Pizza-E2E (Klick verfehlte Button durch Layout-Shift der Live-Validierung seit `fa680e2`;
+Poller-Request-Sturm, siehe Review C12-Nachtrag) und Sleipnir-E2E (las Platzhalter vor den
+Daten) — beide Fehler bestanden schon vor Phase 0.
+
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
 | 0.1 | `pnpm install` / `node_modules` reparieren; `packages/vscode` Workspace-Deps (`@tsazor/lsp`, `@tsazor/workspace`) deklarieren, sodass sauberes `pnpm -r build` durchläuft | Alles Weitere braucht grüne Gates |
