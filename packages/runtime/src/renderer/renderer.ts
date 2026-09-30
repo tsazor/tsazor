@@ -1,4 +1,4 @@
-import { RenderTreeBuilder, type RenderTreeFrame } from "../render-tree/render-tree";
+import type { RenderTreeFrame } from "../render-tree/render-tree";
 import { ParameterView } from "../components/parameter-view";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition";
 import type { ComponentBase } from "../components/component-base";
@@ -195,7 +195,13 @@ export class Renderer {
       state.component.clearPendingRender();
       if (!state.component.shouldRenderInternal()) continue;
 
-      const builder = new RenderTreeBuilder();
+      // Ping-pong the state's two builders: this pass builds into one while
+      // the previous tree lives in the other (the diff source). The spent
+      // builder is cleared at the END of the pass, so the idle state holds
+      // only the live tree, not the pass before it.
+      state.renderPass ^= 1;
+      const builder = state.renderBuilders[state.renderPass]!;
+      builder.clear();
       state.component.renderCurrentOutput(builder);
       const newFrames = builder.getFrames();
 
@@ -206,6 +212,9 @@ export class Renderer {
       }
       this.dom.commitSlotChildren(state);
       state.currentRenderTree = newFrames;
+      // The diff has consumed the previous tree: free its frames now so the
+      // idle state holds only the live tree, not the pass before it.
+      state.renderBuilders[state.renderPass ^ 1]!.clear();
       state.component.markFirstRenderCompleted();
 
       this.track(

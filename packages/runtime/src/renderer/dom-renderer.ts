@@ -196,10 +196,12 @@ export class DomRenderer {
 
     const element = document.createElement(frame.elementName!);
     applyAttributes(element, frame, newFrames, newIndex);
-    insertNode(element, ctx);
     nodes[newIndex] = element;
     ctx.lastNode = element;
 
+    // Build the fresh subtree into the detached element first, then insert
+    // the completed tree in one shot: mass creates then cost one insertion
+    // per element instead of one per node (10k rows = ~3n insertBefore -> n).
     this.processRange(
       state,
       newFrames,
@@ -210,6 +212,7 @@ export class DomRenderer {
       { parentDom: element, boundary: null, lastNode: null },
       nodes,
     );
+    insertNode(element, ctx);
   }
 
   private processText(
@@ -321,6 +324,12 @@ export class DomRenderer {
     newFrames: RenderTreeFrame[],
     newIndex: number,
   ): void {
+    // Fast path: attribute runs are contiguous after the start frame, and
+    // typical updates repeat the same names in the same order. A linear
+    // pair-walk then compares them without building the two side Maps
+    // (the per-element allocation dominating diff cost on wide lists).
+    if (this.updateAttributesFastPath(node, oldFrames, oldIndex, newFrames, newIndex)) return;
+
     const oldAttrs = attributeMap(oldFrames, oldIndex);
     const newAttrs = attributeMap(newFrames, newIndex);
 
@@ -337,6 +346,29 @@ export class DomRenderer {
         removeAttributeFrame(node, name, frame);
       }
     }
+  }
+
+  /** Linear fast path; returns false when the runs differ in length/order. */
+  private updateAttributesFastPath(
+    node: Element,
+    oldFrames: RenderTreeFrame[],
+    oldIndex: number,
+    newFrames: RenderTreeFrame[],
+    newIndex: number,
+  ): boolean {
+    const newEnd = attributeRunEnd(newFrames, newIndex);
+    const oldEnd = attributeRunEnd(oldFrames, oldIndex);
+    if (newEnd - newIndex !== oldEnd - oldIndex) return false;
+    let n = newIndex + 1;
+    for (let o = oldIndex + 1; o < oldEnd; o++, n++) {
+      const newFrame = newFrames[n]!;
+      const oldFrame = oldFrames[o]!;
+      if (newFrame.attributeName !== oldFrame.attributeName) return false;
+      if (!attributeValueSame(oldFrame, newFrame)) {
+        setAttributeFrame(node, newFrame, oldFrame);
+      }
+    }
+    return true;
   }
 
   private removeOldFrame(state: ComponentState, oldFrames: RenderTreeFrame[], oldIndex: number): void {
@@ -434,6 +466,14 @@ function removeAttributeFrame(element: Element, name: string, frame: RenderTreeF
     return;
   }
   element.removeAttribute(name);
+}
+
+/** End (exclusive) of the contiguous attribute run after a start frame. */
+function attributeRunEnd(frames: RenderTreeFrame[], startIndex: number): number {
+  const end = startIndex + getFrameSubtreeLength(frames[startIndex]!);
+  let i = startIndex + 1;
+  while (i < end && frames[i]!.frameType === FrameType.Attribute) i++;
+  return i;
 }
 
 function applyAttributes(element: Element, startFrame: RenderTreeFrame, frames: RenderTreeFrame[], startIndex: number): void {

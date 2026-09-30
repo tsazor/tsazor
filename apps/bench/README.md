@@ -68,23 +68,27 @@ Median of 5 cold loads / 5 op cycles each, Edge (headless) via `measure/run.mjs`
 
 | App | App+FW JS (gz KB) | .NET runtime (gz KB) | CSS (gz KB) | Ready (ms) | create 10k (ms) | append 1k (ms) | upd every 10th (ms) | swap (ms) | select (ms) | remove (ms) | JS heap (MB) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Tasor | **14.0** | – | 0.8 | 24.2 | 447 | 188 | 163 | 231 | 92 | 406 | **16.5** |
-| Svelte 5 | 15.1 | – | 0.8 | **23.5** | 576 | 78 | 131 | **180** | 12 | **211** | 23.8 |
-| Vue 3 | 26.3 | – | 0.8 | 24.3 | 422 | 123 | 99 | 200 | 38 | 212 | 18.8 |
-| React 19 | 69.2 | – | 0.8 | 42.7 | 538 | 121 | 92 | 185 | 26 | 223 | 25.1 |
-| Blazor WASM | 3,314.9 | 6,382.3 | 1.0 | 441.7 | 565 | 184 | 112 | 212 | 101 | 266 | 19.8 |
+| Tasor | **14.1** | – | 0.8 | **23.5** | **450** | 178 | 156 | 220 | 85 | 406 | **16.5** |
+| Svelte 5 | 15.1 | – | 0.8 | 23.7 | 570 | **77** | 130 | 180 | **10** | **208** | 23.8 |
+| Vue 3 | 26.3 | – | 0.8 | 24.2 | 425 | 124 | 99 | 198 | 37 | 222 | 18.8 |
+| React 19 | 69.2 | – | 0.8 | 40.1 | 551 | 121 | **92** | **180** | 26 | 218 | 25.2 |
+| Blazor WASM | 3,314.9 | 6,465.6 | 1.0 | 436.6 | 559 | 185 | 113 | 215 | 103 | 271 | 19.9 |
 
 Reading notes:
 
-- **Runtime cost**: Tasor ships in Svelte territory (14 KB gz, ~24 ms to interactive),
-  ~5× smaller than Vue, ~5× faster to load than React, ~175× smaller than Blazor WASM's
-  own code (Blazor additionally ships the 6.4 MB gz .NET runtime).
-- **DOM ops** are in one league for the four JS frameworks — React's low select/remove
-  numbers and Svelte's append all live under a quarter second; Tasor sits with them
-  (worst case create/remove ~400–430 ms for the full 10k-row render).
-- **Load**: FCP is unavailable in this headless setup; `ready` is the app's own
-  "first view rendered" marker. Blazor's 435 ms is pure WASM start cost before .NET
-  is on the hook; the JS frameworks are all ~23–53 ms.
+- **Runtime cost**: Tasor ships in Svelte territory (14 KB gz, ~24 ms to
+  interactive), ~5× smaller than Vue, ~2× faster to load than React, ~235×
+  smaller than Blazor WASM's own code (Blazor additionally ships the 6.4 MB
+  gz .NET runtime).
+- **DOM ops** are in one league for the four JS frameworks — every median is
+  under half a second. The wins are situational: Vue the 10k mount, Svelte
+  append/select/remove, React the surgical updates; Tasor's diff-based path
+  pays for the volumetric ones (create/remove build and diff the full 10k
+  frame tree, ~400–450 ms).
+- **Load**: FCP is only sporadically reported in this headless setup (60 ms
+  for Blazor in the current run, absent everywhere else); `ready` is the
+  app's own "first view rendered" marker, ~23–24 ms for Tasor/Vue/Svelte,
+  40 ms React, 437 ms WASM start for Blazor.
 - **Heap** (retained live set after one full rows cycle, all apps measured with
   forced GC): at 11k rows Tasor's flat frame trees retain the least JS memory of
   the four JS frameworks (16.5 MB vs 18.8–25 MB); Blazor's number barely moves

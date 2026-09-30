@@ -1,6 +1,7 @@
 import type { ComponentBase } from "../components/component-base";
 import type { ComponentDefinition } from "../components/component-definition";
 import type { RenderTreeFrame } from "../render-tree/render-tree";
+import { RenderTreeBuilder } from "../render-tree/render-tree";
 import type { RenderHandle } from "./render-handle";
 
 /**
@@ -19,6 +20,12 @@ export class ComponentState {
    *  indices are dense integers, so this halves the lookup/retention cost. */
   renderedNodes: Node[] = [];
   currentRenderTree: RenderTreeFrame[] = [];
+  /** Two alternating builders: while one holds the previous tree (the diff
+   *  source), the other builds the next pass - no builder or frame-array
+   *  allocation per render pass (the frames themselves stay per-render). */
+  readonly renderBuilders = [new RenderTreeBuilder(), new RenderTreeBuilder()] as const;
+  /** Index of the builder for the NEXT pass (toggles per flush). */
+  renderPass = 0;
   disposed = false;
   /** Mutable so HMR can replace the definition in place. */
   definition: ComponentDefinition;
