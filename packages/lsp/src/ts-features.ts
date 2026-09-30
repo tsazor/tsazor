@@ -32,7 +32,7 @@ export type CodeContext = "code" | "markup";
 export function classifyCodeContext(analyzed: AnalyzedFile, line: number, character: number): CodeContext {
   if (line < 0) return "markup";
   const node = nodeAt(analyzed.document, line, character);
-  if (node?.kind === "codeBlock" || node?.kind === "expression") return "code";
+  if (node?.kind === "codeBlock" || node?.kind === "statement" || node?.kind === "expression") return "code";
   // Member completions fire one past an expression's end (`@ticker.` with the
   // cursor after the dot is end-exclusive in the AST): the boundary belongs to
   // the TS layer when the previous character sits inside an expression.
