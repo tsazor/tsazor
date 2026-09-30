@@ -261,6 +261,33 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
+  packages/conformance:
+    devDependencies:
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.25
+        version: 0.3.31
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@tsazor/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      happy-dom:
+        specifier: ^18.0.1
+        version: 18.0.1
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
+
   packages/fluent:
     devDependencies:
       '@tsazor/compiler':
@@ -371,6 +398,9 @@ importers:
 
   packages/vscode:
     devDependencies:
+      '@tsazor/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2

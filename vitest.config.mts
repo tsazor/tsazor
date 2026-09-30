@@ -23,6 +23,7 @@ export default defineConfig({
       "packages/vite-plugin",
       "packages/fluent",
       "packages/components",
+      "packages/conformance",
     ],
   },
 });

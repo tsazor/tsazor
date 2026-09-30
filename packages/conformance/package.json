@@ -1,0 +1,20 @@
+{
+  "name": "@tsazor/conformance",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Blazor-conformance suites for the compiler (render-based golden tests) and the runtime (lifecycle/diff semantics). Runs against package sources, no build needed.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^18.0.1",
+    "vitest": "^3.2.7"
+  }
+}

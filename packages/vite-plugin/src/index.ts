@@ -1,13 +1,11 @@
-import { compile, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
-import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
-import { hmrAppendix } from "./hmr.js";
 import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes.js";
 import { processScopedCss, scopeHashFor } from "./scoped-css.js";
-import { chainSourceMaps } from "./sourcemap.js";
-import { collectCodeImports, collectImports, createFileContext, RUNTIME_TYPES, RUNTIME_PACKAGE } from "@tsazor/workspace";
+import { transformTsazor } from "./transform.js";
+
+export { transformTsazor, type TransformTsazorOptions, type TransformTsazorResult } from "./transform.js";
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
@@ -66,79 +64,13 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         return null;
       }
 
-      const chain = await collectImports(path.dirname(filePath), projectRoot);
       if (path.basename(filePath) === "_Imports.tsazor") {
         // _Imports.tsazor contributes directives only; it is never a component.
         return { code: "export default null;\n", map: null };
       }
-      const context = createFileContext(filePath, chain);
-
-      // Runtime enums/values referenced in markup (e.g. NavLinkMatch.All) are
-      // imported by collectCodeImports — they must not be baked to this.*.
-      const knownGlobals = new Set<string>();
-      for (const match of code.matchAll(/\b[A-Z][A-Za-z0-9_$]*\b/g)) {
-        if (RUNTIME_TYPES.has(match[0])) knownGlobals.add(match[0]);
-      }
-
-      // Pass 1 compiles without extra imports so we can see which bindings
-      // the compiler emitted itself; the scan then adds import lines for
-      // identifiers used inside verbatim @code blocks (pass 2).
-      const first = compile(code, {
-        className: context.className,
-        fileName: filePath,
-        resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-        resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-        generateSourceMap: false,
-      });
-      const extraImports = collectCodeImports(code, first.code, context);
-
-      // Code-behind: when a sibling X.tsazor.ts exists (the compiled module's
-      // own default import), the generated class extends its default export.
-      // The .ts sidecar itself is compiled by Vite's normal TS pipeline.
-      const codeBehindPath = `${filePath}.ts`;
-      const codeBehindClass = existsSync(codeBehindPath) ? `${context.className}Base` : undefined;
-      if (codeBehindClass) {
-        extraImports.push(`import ${codeBehindClass} from "./${path.basename(codeBehindPath)}";`);
-      }
-
-      // Scoped CSS: when a sidecar exists, emit its import into the module
-      // and let the compiler stamp the scope attribute on this file's markup.
-      const sidecarPath = `${filePath}.css`;
-      const sidecar = existsSync(sidecarPath);
-      const scopeHash = sidecar ? scopeHashFor(projectRoot, filePath) : undefined;
-      if (sidecar) {
-        extraImports.push(`import "./${path.basename(sidecarPath)}";`);
-      }
-
-      const compiled = compile(code, {
-        className: context.className,
-        fileName: filePath,
-        resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-        resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-        knownGlobals,
-        imports: extraImports,
-        codeBehindClass,
-        scopeHash,
-        generateSourceMap: true,
-      });
-      reportDiagnostics(first.diagnostics, filePath);
-
-      const transpiled = transformSync(compiled.code, {
-        loader: "ts",
-        sourcemap: true,
-        sourcefile: `${filePath}.ts`,
-        tsconfigRaw: {
-          compilerOptions: {
-            experimentalDecorators: true,
-            useDefineForClassFields: false,
-            target: "es2022",
-          },
-        },
-      });
-
-      const map = chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`);
-      const js = transpiled.code + hmrAppendix(context.className);
-      return { code: js, map };
+      const result = await transformTsazor(code, filePath, projectRoot);
+      reportDiagnostics(result.diagnostics, filePath);
+      return { code: result.code, map: result.map };
     },
   };
 }
