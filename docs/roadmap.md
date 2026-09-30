@@ -47,11 +47,21 @@ Track A und Track B sind **parallel bearbeitbar**: Die einzige Schnittstelle ist
 
 Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
 
-**Stand:** 0.1 und 0.2 erledigt (Branch `roadmap/phase-0`). Dabei zusätzlich behoben:
-`.tsbuildinfo` von `runtime` lag außerhalb von `dist` (Clean-Build lieferte leeres `dist`);
-Pizza-E2E (Klick verfehlte Button durch Layout-Shift der Live-Validierung seit `fa680e2`;
-Poller-Request-Sturm, siehe Review C12-Nachtrag) und Sleipnir-E2E (las Platzhalter vor den
-Daten) — beide Fehler bestanden schon vor Phase 0.
+**Stand: Phase 0 abgeschlossen** (Branch `roadmap/phase-0`).
+
+- 0.1/0.2: Dabei zusätzlich behoben: `.tsbuildinfo` von `runtime` lag außerhalb von `dist`
+  (Clean-Build lieferte leeres `dist`); Pizza-E2E (Klick verfehlte Button durch Layout-Shift
+  der Live-Validierung seit `fa680e2`; Poller-Request-Sturm, siehe Review C12-Nachtrag; OSM-
+  Kachel-Check wartete fest 1 s) und Sleipnir-E2E (las Platzhalter vor den Daten) — alle
+  bestanden schon vor Phase 0.
+- 0.3/0.4: `packages/conformance` — 113 Tests (17 grün als Regressionsschutz, 96 `it.fails`,
+  je verifiziert, dass sie aus dem genannten Grund scheitern). Läuft gegen die Paket-Quellen
+  im Root-`pnpm test`. Compiler-Tests prüfen gerendertes DOM + Diagnostics über die echte
+  Plugin-Pipeline (`transformTsazor`, aus dem Plugin extrahiert), nie generierten Code.
+  Korrektur ans Review: generisches `@inherits` funktioniert in der echten Pipeline.
+- 0.5: `node scripts/probe-razor-corpus.mjs` (braucht `compiler/dist`; Korpus-Cache in
+  `.probe/`, gitignored). **Baseline FluentCMS@c63d49c: 13/217 sauber**, 171 ohne Fehler
+  (davon 155 mit erkannten stillen Fehlern), 46 mit Fehlern, 36 mit unaufgelösten Tags.
 
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
@@ -59,7 +69,7 @@ Daten) — beide Fehler bestanden schon vor Phase 0.
 | 0.2 | ESM-Ausgabe Node-ladbar machen: `module: NodeNext` + `.js`-Endungen (oder Bundling pro Paket); fehlende Deps (`@jridgewell/gen-mapping` im compiler) | `tsazor check`-CLI (2.4), Test-Skripte und `@tsazor/testing` laufen in Node — nicht erst beim Publishing relevant |
 | 0.3 | **Compiler-Golden-Tests:** alle Repros aus §1 des Reviews als Snapshot-Tests (Eingabe → erwartete Ausgabe bzw. Diagnostic), zunächst als `it.fails` markiert | Zielbild des Umbaus A; jeder Fix kippt einen Test von „fails" auf grün |
 | 0.4 | **Runtime-Konformitätssuite:** Blazor-Semantik festschreiben — Lifecycle-Reihenfolge, Loading-Render bei async `onInitialized`, `OnAfterRender` nach Batch, `@key`-Neuanlage, Duplicate-Key-Fehler, Disposal verschachtelter Komponenten, Moves, `ShouldRender` beim ersten Render, Parent-first. Repros R1–R15, als `it.fails` | Zielbild von Track B; ohne sie ist „Blazor 1:1" nicht überprüfbar |
-| 0.5 | **FluentCMS-Probe als Messskript** ins Repo (`scripts/probe-razor-corpus.mjs`): klont Upstream, kompiliert alle `.razor`, zählt Diagnostics und stille Fehler. Upstream wird nicht eingecheckt | Fortschrittsmetrik über alle Phasen (Ausgangswert: 17/217 korrekt) |
+| 0.5 | **FluentCMS-Probe als Messskript** ins Repo (`scripts/probe-razor-corpus.mjs`): klont Upstream, kompiliert alle `.razor`, zählt Diagnostics und stille Fehler. Upstream wird nicht eingecheckt | Fortschrittsmetrik über alle Phasen |
 
 **Gate:** Build grün, alle bestehenden Tests grün, neue Suiten laufen (erwartet rot).
 

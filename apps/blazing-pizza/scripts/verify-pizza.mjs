@@ -133,8 +133,12 @@ async function main() {
     /* --- Order details: map + Poller status progression --- */
     check((await text(".track-order-title p")) === "Status: Preparing", "initial status is Preparing");
     check((await page.locator(".delivery-map").count()) === 1, "delivery map present");
-    await page.waitForTimeout(1000);
-    check((await page.locator(".leaflet-tile-loaded").count()) > 0, "leaflet tiles loaded");
+    // Tiles come from the public OSM servers: wait for the first one instead of
+    // a fixed delay (a 1 s sleep made this check flaky on slow responses).
+    const tilesLoaded = await page
+      .waitForSelector(".leaflet-tile-loaded", { timeout: 10_000 })
+      .then(() => true, () => false);
+    check(tilesLoaded, "leaflet tiles loaded");
     check((await page.locator(".leaflet-popup-content").allTextContents()).includes("You"), "'You' marker popup open");
     const wait = PREPARATION_MS - (Date.now() % 1000) + 3000;
     await page.waitForTimeout(wait);
