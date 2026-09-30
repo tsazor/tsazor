@@ -21,6 +21,3 @@ export class DemoAuthProvider extends AuthenticationStateProvider {
     this.notifyAuthenticationStateChanged(this.current);
   }
 }
-
-// Local @inject services are imported as default (codegen convention).
-export default DemoAuthProvider;

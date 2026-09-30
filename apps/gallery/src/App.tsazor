@@ -1,3 +1,4 @@
+@import MainLayout from "./MainLayout.tsazor"
 @inject ThemeState Theme
 
 <Router Found="@found" NotFound="@notFound" />

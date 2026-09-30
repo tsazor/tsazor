@@ -1,3 +1,4 @@
+@import type AccordionItem from "./AccordionItem.tsazor"
 <div class="accordion">@childContent</div>
 
 @code {

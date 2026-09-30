@@ -90,6 +90,3 @@ export class AuthProvider extends AuthenticationStateProvider {
     this.notifyAuthenticationStateChanged(this.current);
   }
 }
-
-// @inject services are imported as default (codegen convention).
-export default AuthProvider;

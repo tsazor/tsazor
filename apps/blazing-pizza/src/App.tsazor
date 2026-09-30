@@ -1,3 +1,4 @@
+@import MainLayout from "./MainLayout.tsazor"
 <Router Found="@found" NotFound="@notFound" />
 
 @code {

@@ -38,7 +38,7 @@ for (let i = 0; i < argv.length; i++) {
 }
 
 function sourceFiles() {
-    return readdirSync(FLUENT_SRC).filter((name) => name.endsWith(".tsazor"));
+    return readdirSync(FLUENT_SRC).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor");
 }
 
 function availableComponents() {

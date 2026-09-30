@@ -31,6 +31,3 @@ export class OrdersClient {
     return this.http.putJson("/notifications/subscribe", subscription);
   }
 }
-
-// @inject services are imported as default (codegen convention).
-export default OrdersClient;

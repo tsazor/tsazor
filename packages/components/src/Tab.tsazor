@@ -1,3 +1,4 @@
+@import type Tabs from "./Tabs.tsazor"
 @if (isActive) {
     <div class="tab-pane fade show active">@childContent</div>
 }

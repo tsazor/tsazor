@@ -1,3 +1,11 @@
 @layout MainLayout
 @using "./components"
 @using @tsazor/components
+@* Standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). Unused imports are dropped by the build. *@
+@import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, RenderTreeBuilder, inject } from "@tsazor/runtime"
+@import { NavigationManager, Router, RouteView, AuthorizeRouteView, LayoutView, NavLink, NavLinkMatch } from "@tsazor/runtime"
+@import { EditContext, AuthenticationState, AuthenticationStateProvider, TsazorHttp } from "@tsazor/runtime"
+@import type { RenderFragment, RouteData, ModelValidator } from "@tsazor/runtime"
+@* App types (Blazor: @using SleipnirTicker.*). *@
+@import type { PricePoint } from "./api"
+@import type { TickerLogEntry } from "./TickerStore"

@@ -1,3 +1,4 @@
+@import type Tab from "./Tab.tsazor"
 <ul class="nav nav-tabs" role="tablist">
     @for (let i = 0; i < this.tabs.length; i++) {
         <li class="nav-item" role="presentation">

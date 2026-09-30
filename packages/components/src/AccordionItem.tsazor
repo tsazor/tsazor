@@ -1,3 +1,4 @@
+@import type Accordion from "./Accordion.tsazor"
 <div class="accordion-item">
     <h2 class="accordion-header">
         <button class="@buttonClass" type="button" aria-expanded="@isOpen" @onclick="toggle">@title</button>
