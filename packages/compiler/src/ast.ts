@@ -34,13 +34,37 @@ export interface ExpressionNode extends SourceSpan {
 
 export interface CodeBlockNode extends SourceSpan {
   kind: "codeBlock";
-  /** Verbatim TS statements. */
+  /** Verbatim TS source between the braces. */
   code: string;
   /** True for @code/@functions blocks (class members); false for inline @{…}. */
   member?: boolean;
   /** Absolute position of the code's first character (right after the `{`),
    *  for exact source-map columns. */
   codeStart?: SourceSpan["pos"];
+  /** Inline @{…} only: the block parsed code-first (statements + markup).
+   *  Razor semantics: the block opens no scope — its locals stay visible to
+   *  the markup that follows. */
+  children?: MarkupNode[];
+}
+
+/**
+ * A run of TypeScript statements in a code context (`@{ }`, control-block
+ * bodies) — Razor's C# code span. Control statements and markup in statement
+ * position are separate nodes; everything else is verbatim code.
+ */
+export interface StatementNode extends SourceSpan {
+  kind: "statement";
+  code: string;
+  /** Names the run binds in its enclosing scope (const/let/var incl.
+   *  destructuring, function, class, enum) — later markup expressions in the
+   *  same scope must not rewrite them to `this.X`. */
+  declares: string[];
+}
+
+/** A plain `{ … }` block statement in a code context (opens a scope). */
+export interface BlockNode extends SourceSpan {
+  kind: "block";
+  children: MarkupNode[];
 }
 
 export interface TextTagNode extends SourceSpan {
@@ -50,6 +74,8 @@ export interface TextTagNode extends SourceSpan {
 
 export interface ConditionalBranch {
   condition: string | null; // null for @else
+  /** Absolute position of the condition's first character. */
+  conditionStart?: SourceSpan["pos"];
   children: MarkupNode[];
   span?: SourceSpan;
 }
@@ -63,20 +89,53 @@ export interface ForNode extends SourceSpan {
   kind: "for";
   /** Contents of @for (…) or @foreach (…), verbatim. */
   code: string;
+  /** Absolute position of the header code's first character. */
+  codeStart?: SourceSpan["pos"];
   isForEach: boolean;
   children: MarkupNode[];
+}
+
+/** `while (…) { }` and `do { } while (…);`. */
+export interface WhileNode extends SourceSpan {
+  kind: "while";
+  condition: string;
+  conditionStart?: SourceSpan["pos"];
+  /** True for `do { } while (…);` (body runs before the first test). */
+  isDoWhile: boolean;
+  children: MarkupNode[];
+}
+
+export interface CatchClause {
+  /** Catch binding as written (`e`, `e: unknown`), null for `catch { }`. */
+  param: string | null;
+  /** The bound name (`e`), registered as a local of the catch body. */
+  paramName: string | null;
+  children: MarkupNode[];
+  span: SourceSpan;
+}
+
+export interface TryNode extends SourceSpan {
+  kind: "try";
+  children: MarkupNode[];
+  catchClause?: CatchClause;
+  finallyChildren?: MarkupNode[];
 }
 
 export interface SwitchCase {
   /** Case expression code (null for @default). */
   code: string | null;
+  codeStart?: SourceSpan["pos"];
+  /** Statements and markup of the section; empty for a stacked label
+   *  (`case 1:\ncase 2:` falls through, as in C# and TS). */
   children: MarkupNode[];
+  /** The label (`case X:` / `default:`). */
   span: SourceSpan;
 }
 
 export interface SwitchNode extends SourceSpan {
   kind: "switch";
   code: string;
+  codeStart?: SourceSpan["pos"];
   cases: SwitchCase[];
 }
 
@@ -86,13 +145,46 @@ export type MarkupNode =
   | ElementNode
   | ExpressionNode
   | CodeBlockNode
+  | StatementNode
+  | BlockNode
   | TextTagNode
   | IfNode
   | ForNode
+  | WhileNode
+  | TryNode
   | SwitchNode;
 
+/** Direct child nodes of a node in source order (all bodies, branches and
+ *  cases) — for tree walks that do not care about the statement structure. */
+export function childNodes(node: MarkupNode): MarkupNode[] {
+  switch (node.kind) {
+    case "element":
+    case "textTag":
+    case "block":
+    case "for":
+    case "while":
+      return node.children;
+    case "codeBlock":
+      return node.children ?? [];
+    case "if":
+      return node.branches.flatMap((branch) => branch.children);
+    case "switch":
+      return node.cases.flatMap((c) => c.children);
+    case "try":
+      return [...node.children, ...(node.catchClause?.children ?? []), ...(node.finallyChildren ?? [])];
+    default:
+      return [];
+  }
+}
+
 export type AttributeNode =
-  | (SourceSpan & { kind: "static"; name: string; value: string })
+  | (SourceSpan & {
+      kind: "static";
+      name: string;
+      value: string;
+      /** Bare attribute without a value (`<input disabled>`): Razor passes `true`. */
+      minimized?: boolean;
+    })
   | (SourceSpan & {
       kind: "expression";
       name: string;

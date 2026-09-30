@@ -31,6 +31,10 @@ const CODES = {
   TZS009: "Missing attribute value.",
   TZS010: "Invalid implicit expression terminator.",
   TZS011: "Conflicting code-behind.",
+  TZS012: "Unsupported C# construct.",
+  TZS013: "Directive not allowed here.",
+  TZS014: "Ignored directive or clause.",
+  TZS015: "Invalid TypeScript in code block.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

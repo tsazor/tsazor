@@ -4,7 +4,9 @@ import type {
   DocumentNode,
   ElementNode,
   MarkupNode,
+  StatementNode,
 } from "./ast.js";
+import { childNodes } from "./ast.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { TSScanner } from "./scanner.js";
@@ -55,7 +57,10 @@ export interface CodegenResult {
   code: string;
   mappings: Array<{ genLine: number; genCol: number; srcLine: number; srcCol: number }>;
   metadata: {
+    /** First @page template (compatibility; see routeTemplates). */
     routeTemplate?: string;
+    /** Every @page template in source order — Blazor registers each as a route. */
+    routeTemplates: string[];
     layout?: string;
     /** Bare @authorize directive on a @page → authentication-required route. */
     authorize?: boolean;
@@ -134,7 +139,7 @@ class Codegen {
   private readonly seqStack: SeqScope[] = [{ next: 0 }];
   /** Locals declared by loops / inline code — emitted without a `this.` prefix. */
   private readonly locals = new Set<string>();
-  private readonly metadata: CodegenResult["metadata"] = { usings: [], injects: [], typeParams: [] };
+  private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], injects: [], typeParams: [] };
   private inheritsBase = "ComponentBase";
 
   constructor(
@@ -148,7 +153,9 @@ class Codegen {
     for (const d of directives) {
       switch (d.name) {
         case "page":
-          this.metadata.routeTemplate = unquote(d.value);
+          // Multiple @page directives: every template is a route (Blazor).
+          this.metadata.routeTemplates.push(unquote(d.value));
+          this.metadata.routeTemplate ??= unquote(d.value);
           break;
         case "layout":
           this.metadata.layout = d.value.trim();
@@ -174,8 +181,23 @@ class Codegen {
         case "inherits":
           this.metadata.inherits = d.value.trim();
           break;
-        case "typeparam":
-          this.metadata.typeParams.push(d.value.trim());
+        case "typeparam": {
+          // A C# constraint clause (`where T : class`) has no TS meaning; the
+          // TS form `@typeparam T extends X` passes through.
+          const where = /\s+where\s[\s\S]*$/.exec(d.value);
+          if (where) {
+            this.diagnostics.warning("TZS014", d.pos, `C# constraint '${where[0].trim()}' ignored — use '@typeparam T extends X'.`);
+          }
+          this.metadata.typeParams.push(d.value.slice(0, where ? where.index : undefined).trim());
+          break;
+        }
+        case "namespace":
+        case "implements":
+          // Blazor-only: modules replace namespaces, TS interfaces are structural.
+          break;
+        case "rendermode":
+        case "preservewhitespace":
+          this.diagnostics.warning("TZS014", d.pos, `'@${d.name}' is Blazor-only and has no effect in Tsazor.`);
           break;
         default:
           this.diagnostics.error("TZS001", d.pos, `Unknown directive '@${d.name}'.`);
@@ -248,6 +270,9 @@ class Codegen {
 
     if (this.metadata.routeTemplate) {
       this.line(`export const routeTemplate = ${JSON.stringify(this.metadata.routeTemplate)};`);
+      if (this.metadata.routeTemplates.length > 1) {
+        this.line(`export const routeTemplates = ${JSON.stringify(this.metadata.routeTemplates)};`);
+      }
       if (this.metadata.authorize) this.line(`export const routeAuthorize = true;`);
       this.line("");
     }
@@ -260,6 +285,7 @@ class Codegen {
     this.line(`export default class ${this.options.className}${typeDecl} extends ${this.inheritsBase} {`);
     if (this.metadata.routeTemplate) {
       this.line("  static routeTemplate = routeTemplate;");
+      if (this.metadata.routeTemplates.length > 1) this.line("  static routeTemplates = routeTemplates;");
       if (this.metadata.authorize) this.line("  static routeAuthorize = routeAuthorize;");
       this.line("");
     }
@@ -305,13 +331,7 @@ class Codegen {
       if (node.kind === "element" && node.isComponent) {
         this.localForComponent(node.tagName, usings, node.pos);
       }
-      const nested =
-        node.kind === "element" ? node.children
-        : node.kind === "textTag" ? node.children
-        : node.kind === "if" ? node.branches.flatMap((br) => br.children)
-        : node.kind === "for" ? node.children
-        : node.kind === "switch" ? node.cases.flatMap((c) => c.children)
-        : [];
+      const nested = childNodes(node);
       if (nested.length > 0) this.preResolve(nested, usings);
     }
   }
@@ -564,18 +584,51 @@ class Codegen {
         this.stmt(text, node.pos, text.indexOf(baked));
         break;
       }
-      case "codeBlock": {
+      case "codeBlock":
+        // Inline @{ … } opens no scope (Razor): its statements and locals
+        // belong to the enclosing render code.
+        this.emitNodes(node.children ?? [], node.pos);
+        break;
+      case "statement":
+        this.emitStatement(node);
+        break;
+      case "block":
         this.stmt(`{`, node.pos);
-        // Baking inserts `this.` prefixes, so its per-token entries keep the
-        // columns after each prefix exact.
-        const origin = node.codeStart ?? { line: node.pos.line, column: 0 };
-        const baked = this.bakeMemberRefs(node.code, origin);
-        const tokens = this.pendingExprEntries;
-        this.pendingExprEntries = [];
-        this.emitCodeVerbatim(baked, origin, 4, tokens);
+        this.withScope(() => this.emitNodes(node.children, node.pos));
         this.stmt(`}`, node.pos);
         break;
-      }
+      case "while":
+        if (node.isDoWhile) {
+          this.stmt(`do {`, node.pos);
+          this.withScope(() => this.emitNodes(node.children, node.pos));
+          const condition = this.headerExpr(node.condition, node.conditionStart);
+          const text = `} while (${condition});`;
+          this.stmt(text, node.pos, text.indexOf(condition));
+        } else {
+          const condition = this.headerExpr(node.condition, node.conditionStart);
+          const text = `while (${condition}) {`;
+          this.stmt(text, node.pos, text.indexOf(condition));
+          this.withScope(() => this.emitNodes(node.children, node.pos));
+          this.stmt(`}`, node.pos);
+        }
+        break;
+      case "try":
+        this.stmt(`try {`, node.pos);
+        this.withScope(() => this.emitNodes(node.children, node.pos));
+        if (node.catchClause) {
+          const clause = node.catchClause;
+          this.stmt(clause.param === null ? `} catch {` : `} catch (${clause.param}) {`, clause.span.pos);
+          this.withScope(() => {
+            if (clause.paramName) this.locals.add(clause.paramName);
+            this.emitNodes(clause.children, clause.span.pos);
+          });
+        }
+        if (node.finallyChildren) {
+          this.stmt(`} finally {`, node.pos);
+          this.withScope(() => this.emitNodes(node.finallyChildren!, node.pos));
+        }
+        this.stmt(`}`, node.pos);
+        break;
       case "textTag":
         this.emitNodes(node.children, node.pos);
         break;
@@ -595,14 +648,19 @@ class Codegen {
         break;
       case "for": {
         if (node.isForEach) {
-          // C#-style @foreach (var item in items) → for (const item of this.items).
-          const match = /^\s*(?:var|let|const)?\s*([A-Za-z_$][A-Za-z0-9_$]*)\s+in\s+([\s\S]+)$/.exec(node.code);
-          if (match) {
-            const [, name, iterable] = match;
-            this.stmt(`for (const ${name} of ${this.expr(iterable!)}) {`, node.pos);
-            this.locals.add(name!);
-            for (const child of node.children) this.emitNode(child, node.pos);
-            this.locals.delete(name!);
+          const header = parseForEachHeader(node.code);
+          if (header) {
+            // C#-style @foreach (var item in items) → for (const item of this.items);
+            // `var (k, v) in pairs` destructures → for (const [k, v] of this.pairs).
+            const iterableStart = node.codeStart === undefined ? undefined : advancePos(node.codeStart, node.code.slice(0, header.iterableOffset));
+            const iterable = this.headerExpr(header.iterable, iterableStart);
+            const binding = header.names.length === 1 && !header.destructure ? header.names[0]! : `[${header.names.join(", ")}]`;
+            const text = `for (const ${binding} of ${iterable}) {`;
+            this.stmt(text, node.pos, text.lastIndexOf(iterable));
+            this.withScope(() => {
+              for (const name of header.names) this.locals.add(name);
+              for (const child of node.children) this.emitNode(child, node.pos);
+            });
             this.stmt(`}`, node.pos);
             break;
           }
@@ -611,10 +669,13 @@ class Codegen {
         // Plain @for: register declared loop variables so their bodies resolve.
         const init = node.code.split(";")[0] ?? "";
         const declared = [...init.matchAll(/(?:^|[\s(,])(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g)].map((m) => m[1]!);
-        for (const name of declared) this.locals.add(name);
-        this.stmt(`for (${this.bakeMemberRefs(node.code)}) {`, node.pos);
-        for (const child of node.children) this.emitNode(child, node.pos);
-        for (const name of declared) this.locals.delete(name);
+        this.withScope(() => {
+          for (const name of declared) this.locals.add(name);
+          const header = this.headerExpr(node.code, node.codeStart);
+          const text = `for (${header}) {`;
+          this.stmt(text, node.pos, text.indexOf(header));
+          for (const child of node.children) this.emitNode(child, node.pos);
+        });
         this.stmt(`}`, node.pos);
         break;
       }
@@ -711,7 +772,9 @@ class Codegen {
     if (hasChildren) {
       this.stmt(`b.addContent(${this.seq()}, (b) => {`, node.pos);
       this.enterScope();
-      for (const child of node.children) this.emitNode(child, node.pos);
+      this.withScope(() => {
+        for (const child of node.children) this.emitNode(child, node.pos);
+      });
       this.leaveScope();
       this.stmt(`});`, node.pos);
     }
@@ -734,9 +797,14 @@ class Codegen {
     // position of its code text.
     const codeStart = (): SourcePos | undefined => ("codeStart" in attr ? attr.codeStart : undefined);
     switch (attr.kind) {
-      case "static":
-        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${JSON.stringify(decodeHtmlEntities(attr.value))});`, pos);
+      case "static": {
+        // A minimized attribute is `true` (Razor) — the DOM applier then sets
+        // the attribute, also where a same-named DOM property exists
+        // (`disabled = ""` would be false).
+        const value = attr.minimized ? "true" : JSON.stringify(decodeHtmlEntities(attr.value));
+        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`, pos);
         break;
+      }
       case "expression": {
         const baked = this.expr(attr.code, codeStart());
         // Razor's method-group / lambda conversion: on a component tag, an
@@ -940,27 +1008,121 @@ class Codegen {
       if (prefix === "else") {
         this.stmt(`else {`, branch.span?.pos ?? node.pos);
       } else {
-        this.stmt(`${prefix} (${this.expr(branch.condition!)}) {`, branch.span?.pos ?? node.pos);
+        const condition = this.headerExpr(branch.condition!, branch.conditionStart);
+        const text = `${prefix} (${condition}) {`;
+        this.stmt(text, branch.span?.pos ?? node.pos, text.indexOf(condition));
       }
-      for (const child of branch.children) this.emitNode(child, node.pos);
+      this.withScope(() => {
+        for (const child of branch.children) this.emitNode(child, node.pos);
+      });
       this.stmt(`}`, node.pos);
     });
   }
 
+  /**
+   * Emits a switch with TS semantics (= C# for stacked labels): an empty
+   * section falls through to the next label; a section's statements get a
+   * block of their own, and a `break;` when they do not end in a jump (the
+   * pre-code-first switch added it implicitly — kept for compatibility).
+   */
   private emitSwitch(node: Extract<MarkupNode, { kind: "switch" }>): void {
-    this.stmt(`switch (${this.expr(node.code)}) {`, node.pos);
+    const header = this.headerExpr(node.code, node.codeStart);
+    const text = `switch (${header}) {`;
+    this.stmt(text, node.pos, text.indexOf(header));
     for (const c of node.cases) {
-      if (c.code === null) {
-        this.stmt(`default: {`, c.span?.pos ?? node.pos);
-      } else {
-        this.stmt(`case ${this.bakeMemberRefs(c.code)}: {`, c.span?.pos ?? node.pos);
+      const label = c.code === null ? "default:" : `case ${this.bakeMemberRefs(c.code)}:`;
+      if (c.children.length === 0) {
+        this.stmt(label, c.span.pos);
+        continue;
       }
-      for (const child of c.children) this.emitNode(child, node.pos);
-      this.stmt(`break;`, c.span?.pos ?? node.pos);
-      this.stmt(`}`, c.span?.pos ?? node.pos);
+      this.stmt(`${label} {`, c.span.pos);
+      this.withScope(() => {
+        for (const child of c.children) this.emitNode(child, node.pos);
+      });
+      if (!endsWithJump(c.children)) this.stmt(`break;`, c.span.pos);
+      this.stmt(`}`, c.span.pos);
     }
     this.stmt(`}`, node.pos);
   }
+
+  /** A statement run in a code context: verbatim TS (members baked), its
+   *  declarations registered as locals for the rest of the enclosing scope. */
+  private emitStatement(node: StatementNode): void {
+    // Registered first: destructuring/function names inside the run itself
+    // must stay bare too.
+    for (const name of node.declares) this.locals.add(name);
+    // Baking inserts `this.` prefixes, so its per-token entries keep the
+    // columns after each prefix exact.
+    const baked = this.bakeMemberRefs(node.code, node.pos);
+    const tokens = this.pendingExprEntries;
+    this.pendingExprEntries = [];
+    this.emitCodeVerbatim(baked, node.pos, 4, tokens);
+  }
+
+  /** Runs `emit` in a nested local scope: locals it declares vanish after. */
+  private withScope(emit: () => void): void {
+    const saved = [...this.locals];
+    emit();
+    this.locals.clear();
+    for (const name of saved) this.locals.add(name);
+  }
+
+  /**
+   * Bakes a control header (`if`/`for`/`while`/`switch` condition). Headers
+   * stay at statement granularity (no token entries), but a multi-line header
+   * anchors each continuation line at its first content — registered as
+   * pending entries for the next stmt(), relative to the baked text.
+   */
+  private headerExpr(code: string, start: SourcePos | undefined): string {
+    const baked = this.expr(code);
+    if (start === undefined || !code.includes("\n")) return baked;
+    const rawLines = code.split("\n");
+    let outOffset = 0;
+    baked.split("\n").forEach((line, index) => {
+      if (index > 0) {
+        const raw = rawLines[index] ?? "";
+        const bakedLead = line.length - line.trimStart().length;
+        if (line.trim().length > 0) {
+          this.pendingExprEntries.push({
+            outOffset: outOffset + bakedLead,
+            srcLine: start.line - 1 + index,
+            srcCol: raw.length - raw.trimStart().length,
+          });
+        }
+      }
+      outOffset += line.length + 1;
+    });
+    return baked;
+  }
+}
+
+/** Whether a switch section ends in a jump (`break`, `return`, `continue`, `throw`). */
+function endsWithJump(children: MarkupNode[]): boolean {
+  const last = children[children.length - 1];
+  if (last?.kind !== "statement") return false;
+  const code = last.code.replace(/\/\/[^\n]*$/gm, "").trim();
+  const lastLine = code.split(/[;\n]\s*(?=\S)/).pop() ?? "";
+  return /^(break|continue|return|throw)\b/.test(lastLine.trim());
+}
+
+/**
+ * C#-style @foreach headers: `var x in xs`, `string s in xs` (typed C#
+ * variable), `let x in xs`, and deconstruction `var (k, v) in pairs`.
+ * `iterableOffset` = offset of the iterable within `code`.
+ */
+function parseForEachHeader(code: string): { names: string[]; destructure: boolean; iterable: string; iterableOffset: number } | null {
+  const tuple = /^\s*(?:var\s*)?\(\s*([^)]*)\)\s+in\s+/.exec(code);
+  if (tuple) {
+    // `(k, v)` or typed `(string k, int v)` → the names.
+    const names = tuple[1]!.split(",").map((part) => part.trim().split(/\s+/).pop() ?? "");
+    if (names.length === 0 || !names.every((n) => /^[A-Za-z_$][\w$]*$/.test(n))) return null;
+    return { names, destructure: true, iterable: code.slice(tuple[0].length).trim(), iterableOffset: tuple[0].length };
+  }
+  const single = /^\s*(?:(?:var|let|const)\s+|[A-Za-z_$][\w$.]*(?:<[^()]*>)?(?:\[\])*\??\s+)?([A-Za-z_$][\w$]*)\s+in\s+/.exec(code);
+  if (!single) return null;
+  const iterable = code.slice(single[0].length);
+  if (iterable.trim().length === 0) return null;
+  return { names: [single[1]!], destructure: false, iterable: iterable.trim(), iterableOffset: single[0].length };
 }
 
 /** Attribute frames come first: emit them before children. */
