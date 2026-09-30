@@ -45,9 +45,17 @@ export class EventCallback<TArg = unknown> {
     // Call with the receiver as `this` (Blazor's Factory.Bind semantics): the
     // compiler passes method references like `this.incrementCount`, which are
     // not bound — without this, `this.state` inside the handler is undefined.
-    await this.delegate.call(this.receiver, arg);
-    // Blazor semantics: the owning component re-renders after its handler ran.
+    const result = this.delegate.call(this.receiver, arg);
+    // Blazor's ComponentBase.HandleEventAsync: the owning component re-renders
+    // after the handler's synchronous part — so `busy = true; await …` shows
+    // its intermediate state — and, for an async handler, again once it
+    // completes (CallStateHasChangedOnAsyncCompletion). A failed async handler
+    // does not re-render a second time; its error propagates.
     this.receiver?.stateHasChangedInternal();
+    if (result instanceof Promise) {
+      await result;
+      this.receiver?.stateHasChangedInternal();
+    }
   }
 
   get hasDelegate(): boolean {

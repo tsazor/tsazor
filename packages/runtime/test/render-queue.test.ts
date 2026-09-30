@@ -340,8 +340,12 @@ describe("error isolation", () => {
     await renderer.waitUntilIdle();
     container.querySelector("button")!.click();
     await renderer.waitUntilIdle();
+    // The async click handler re-renders after its synchronous part (Blazor's
+    // HandleEventAsync), so onAfterRender fails once more before the handler's
+    // own rejection arrives; the failed handler causes no second re-render.
     expect(errors.map((e) => [String(e.error), e.component, e.phase])).toEqual([
       ["Error: init", faulty, "lifecycle"],
+      ["Error: after", faulty, "afterRender"],
       ["Error: after", faulty, "afterRender"],
       ["Error: click", faulty, "event"],
     ]);

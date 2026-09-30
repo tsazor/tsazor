@@ -391,9 +391,7 @@ Pizza: die `stateHasChanged()`-Workarounds nach awaits in `Index`, `MyOrders`,
 Poller) behält ihn. Konformität: R5, R6 ×2, R7, R13 ×2, T3 und R4 „Komponente ohne Re-Render"
 grün. Abweichungen: ein `async`-Hook ohne echtes `await` rendert einmal mehr (Promise-Status
 nicht synchron prüfbar); `onAfterRender` Kinder-zuerst und einmal pro Batch (Blazor: pro
-Render-Eintrag in Render-Reihenfolge, also Parent zuerst). **Offen:** Event-Handler rendern
-weiter nur nach Abschluss (Blazors `HandleEventAsync` rendert auch nach dem synchronen Teil);
-explizit übergebener `captureUnmatchedValues`-Parameter wird weiter ignoriert. Für **B5/B6**:
+Render-Eintrag in Render-Reihenfolge, also Parent zuerst). ~~Offen: Event-Handler rendern nur nach Abschluss; explizit übergebener `captureUnmatchedValues`-Parameter wird ignoriert.~~ *Beides nachgezogen:* Event-Handler rendern wie `HandleEventAsync` nach dem synchronen Teil und nach Abschluss; `captureUnmatchedValues` wird pro Parametersatz neu gebaut (explizit + ungebunden ⇒ Blazor-Fehler). Für **B5/B6**:
 Kinder werden bei jedem Parent-Render neu parametriert (jedes Mal `onParametersSet` + Render,
 sofern `shouldRender`); Cascades hängen weiter daran (R12 bleibt rot).
 
