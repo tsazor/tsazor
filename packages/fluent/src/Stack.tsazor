@@ -1,0 +1,30 @@
+<div class="@this.stackClass" style="@this.stackStyle">@childContent</div>
+
+@code {
+    /** Layout axis: horizontal (default) | vertical. */
+    @Parameter() direction: string = "horizontal";
+    /** Gap between children: xs | s | m (default) | l | xl. */
+    @Parameter() gap?: string;
+    /** flex align-items (start | center | end | stretch | baseline). */
+    @Parameter() align?: string;
+    /** flex justify-content (start | center | end | space-between | space-between…). */
+    @Parameter() justify?: string;
+    /** Wraps on overflow. */
+    @Parameter() wrap: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+
+    private get stackClass(): string {
+        let cls = `fui-stack fui-stack--${this.direction === "vertical" ? "vertical" : "horizontal"}`;
+        if (this.wrap) cls += " fui-stack--wrap";
+        return cls;
+    }
+
+    /** Dynamic flex values ride inline; everything visual lives in the tokens. */
+    private get stackStyle(): string | null {
+        const parts: string[] = [];
+        if (this.gap) parts.push(`gap: var(--fui-spacing-${this.gap})`);
+        if (this.align) parts.push(`align-items: ${this.align}`);
+        if (this.justify) parts.push(`justify-content: ${this.justify}`);
+        return parts.length > 0 ? parts.join("; ") : null;
+    }
+}

@@ -1,0 +1,7 @@
+<nav class="fui-breadcrumb" aria-label="breadcrumb">
+    <ol class="fui-breadcrumb__list">@childContent</ol>
+</nav>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+}

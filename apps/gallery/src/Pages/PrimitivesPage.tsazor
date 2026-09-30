@@ -1,0 +1,103 @@
+@page "/primitives"
+
+<h1>Layout &amp; Primitives</h1>
+<p class="intro">
+    The W1 components: layout primitives driven purely by <code>--fui-*</code> tokens,
+    the inline SVG icon set, status chips, alerts, breadcrumb and a controlled pagination.
+</p>
+
+<div class="demo">
+    <h2>Stack</h2>
+    <Stack gap="m" align="center">
+        <Button appearance="primary">One</Button>
+        <Button appearance="subtle">Two</Button>
+        <Badge color="success">Live</Badge>
+    </Stack>
+</div>
+
+<div class="demo">
+    <h2>Grid (responsive via minmax tracks)</h2>
+    <Grid gap="m" minChildWidth="200px">
+        <Card><CardHeader>Alpha</CardHeader>Fixed min-width tracks flow around the viewport.</Card>
+        <Card><CardHeader>Beta</CardHeader>No JS, pure CSS grid + tokens.</Card>
+        <Card><CardHeader>Gamma</CardHeader>Same copy-in story as the other components.</Card>
+    </Grid>
+</div>
+
+<div class="demo">
+    <h2>Typography &amp; Spacer</h2>
+    <Typography variant="h1">Display heading</Typography>
+    <Spacer size="s" />
+    <Typography variant="h3">Subtitle level</Typography>
+    <Spacer size="m" />
+    <Typography variant="body">Body copy at the 14px token size.</Typography>
+    <Spacer size="s" />
+    <Typography variant="caption" weight="semibold">Caption in semibold</Typography>
+</div>
+
+<div class="demo">
+    <h2>Icons (inline SVG set)</h2>
+    <div class="demo-row">
+        <Icon name="search" size="20" />
+        <Icon name="check" size="20" />
+        <Icon name="close" size="20" />
+        <Icon name="add" size="20" />
+        <Icon name="chevron-left" size="20" />
+        <Icon name="chevron-right" size="20" />
+        <Icon name="arrow-left" size="20" />
+        <Icon name="arrow-right" size="20" />
+    </div>
+</div>
+
+<div class="demo">
+    <h2>Indicators</h2>
+    <Stack direction="vertical" gap="s">
+        <Indicator color="success">Operational</Indicator>
+        <Indicator color="danger">Incident</Indicator>
+        <Indicator color="warning">Degraded</Indicator>
+        <Indicator visible="@false" color="neutral">Never rendered</Indicator>
+    </Stack>
+</div>
+
+<div class="demo">
+    <h2>Alerts</h2>
+    <Stack direction="vertical" gap="s">
+        <Alert variant="success" dismissible="true" onDismissed="@this.dismissed">Saved successfully.</Alert>
+        <Alert variant="warning" dismissible="true" onDismissed="@this.dismissed">Careful with this setting.</Alert>
+        <Alert variant="info" dismissible="true" onDismissed="@this.dismissed">Release notes are available.</Alert>
+    </Stack>
+</div>
+
+<div class="demo">
+    <h2>Breadcrumb</h2>
+    <Breadcrumb>
+        <BreadcrumbItem href="/primitives" childContent="Home" />
+        <BreadcrumbItem href="/primitives" childContent="Layout" />
+        <BreadcrumbItem active="true" childContent="Detail" />
+    </Breadcrumb>
+</div>
+
+<div class="demo">
+    <h2>Pagination (controlled)</h2>
+    <Pagination page="@this.page" totalPages="12" onPageChange="@((p: number) => this.setPage(p))" />
+    <Spacer size="s" />
+    <Typography variant="caption">Page @this.page of 12</Typography>
+    <Stack gap="m">
+        <Button appearance="subtle" onClick="@(() => this.setPage(this.page - 1))">Back</Button>
+        <Button appearance="primary" onClick="@(() => this.setPage(this.page + 1))">Forward</Button>
+    </Stack>
+</div>
+
+@code {
+    private page: number = 3;
+
+    /** Alerts self-dismiss; an async method (not a field lambda) keeps the
+     * EventCallback method-group conversion working. */
+    private async dismissed(): Promise<void> {}
+
+    private async setPage(next: number): Promise<void> {
+        if (next < 1 || next > 12 || next === this.page) return;
+        this.page = next;
+        this.stateHasChangedInternal();
+    }
+}

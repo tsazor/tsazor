@@ -1,0 +1,43 @@
+<svg class="fui-icon" width="@this.size" height="@this.size" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+     aria-hidden="@this.hiddenValue" aria-label="@this.ariaLabel" role="@this.role" focusable="false">
+    <path d="@this.path" />
+</svg>
+
+@code {
+    /** Icon name from the built-in set: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove. */
+    @Parameter() name?: string;
+    /** Pixel size (width/height); defaults to the 16px body icon size. */
+    @Parameter() size: number = 16;
+    /** Accessible label — hides the icon from AT unless a label is given. */
+    @Parameter() ariaLabel?: string;
+
+    private get path(): string {
+        return Icon.paths[this.name ?? ""] ?? Icon.paths["check"] as string;
+    }
+
+    /** aria-hidden takes string semantics (booleans render as empty attributes). */
+    private get hiddenValue(): string {
+        return this.ariaLabel === undefined ? "true" : "false";
+    }
+
+    private get role(): string | null {
+        return this.ariaLabel === undefined ? null : "img";
+    }
+
+    /** Inline-SVG technique (pre-clarified local decision): single-path strokes, no sprite, no icon package. */
+
+    private static paths: Record<string, string> = {
+        "chevron-left": "M12 3L5 10l7 7",
+        "chevron-right": "M8 3l7 7-7 7",
+        "close": "M3 3l14 14M17 3L3 17",
+        "check": "M3 11l5 5L17 6",
+        "arrow-left": "M17 10H3m0 0l6-6m-6 6l6 6",
+        "arrow-right": "M3 10h14m0 0l-6-6m6 6l-6 6",
+        "arrow-up": "M10 17V3m0 0L4 9m6-6l6 6",
+        "arrow-down": "M10 3v14m0 0l6-6m-6 6l-6-6",
+        "search": "M9 3a6 6 0 100 12A6 6 0 009 3zm9 15l-4.3-4.3",
+        "add": "M10 3v14M3 10h14",
+        "remove": "M3 10h14",
+    };
+}

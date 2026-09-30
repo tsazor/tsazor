@@ -1,0 +1,36 @@
+.fui-typography {
+    margin: 0;
+    color: var(--fui-foreground-1);
+    font-family: inherit;
+}
+.fui-typography--caption {
+    font-size: var(--fui-font-size-caption);
+    line-height: var(--fui-font-line-height-16);
+    color: var(--fui-foreground-2);
+}
+.fui-typography--body {
+    font-size: var(--fui-font-size-body);
+    line-height: var(--fui-font-line-height-20);
+}
+/* Headings inherit the browser ramp (token line-heights 16/20 are body-scale;
+   scaling them up would clip display sizes — documented token gap). */
+.fui-typography--h1 {
+    font-size: var(--fui-font-size-title);
+    font-weight: var(--fui-font-weight-semibold);
+}
+.fui-typography--h2 {
+    font-size: calc(var(--fui-font-size-title) * 0.7143);
+    font-weight: var(--fui-font-weight-semibold);
+}
+.fui-typography--h3 {
+    font-size: var(--fui-font-size-subtitle);
+    font-weight: var(--fui-font-weight-semibold);
+}
+.fui-typography--h4 {
+    font-size: var(--fui-font-size-body-lg);
+    font-weight: var(--fui-font-weight-semibold);
+}
+.fui-typography--h5 {
+    font-size: var(--fui-font-size-body);
+    font-weight: var(--fui-font-weight-semibold);
+}

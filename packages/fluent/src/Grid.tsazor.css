@@ -1,0 +1,4 @@
+.fui-grid {
+    display: grid;
+    min-width: 0;
+}

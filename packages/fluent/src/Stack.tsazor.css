@@ -1,0 +1,13 @@
+.fui-stack {
+    display: flex;
+    min-width: 0;
+}
+.fui-stack--horizontal {
+    flex-direction: row;
+}
+.fui-stack--vertical {
+    flex-direction: column;
+}
+.fui-stack--wrap {
+    flex-wrap: wrap;
+}

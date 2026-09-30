@@ -1,0 +1,29 @@
+.fui-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+    border-radius: var(--fui-radius-circular);
+    font-size: var(--fui-font-size-caption);
+}
+.fui-indicator__dot {
+    width: var(--fui-spacing-s);
+    height: var(--fui-spacing-s);
+    border-radius: var(--fui-radius-circular);
+    background: var(--fui-neutral-30);
+}
+.fui-indicator--success .fui-indicator__dot {
+    background: var(--fui-color-green-1);
+}
+.fui-indicator--danger .fui-indicator__dot {
+    background: var(--fui-color-red-1);
+}
+.fui-indicator--warning .fui-indicator__dot {
+    background: var(--fui-color-amber-1);
+}
+.fui-indicator--info .fui-indicator__dot {
+    background: var(--fui-color-blue-1);
+}
+.fui-indicator__label {
+    color: var(--fui-foreground-2);
+    line-height: var(--fui-font-line-height-16);
+}

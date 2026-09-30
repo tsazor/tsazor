@@ -1,0 +1,24 @@
+@if (this.variant === "h1") { <h1 class="@this.textClass" style="@this.textStyle">@childContent</h1> }
+else if (this.variant === "h2") { <h2 class="@this.textClass" style="@this.textStyle">@childContent</h2> }
+else if (this.variant === "h3") { <h3 class="@this.textClass" style="@this.textStyle">@childContent</h3> }
+else if (this.variant === "h4") { <h4 class="@this.textClass" style="@this.textStyle">@childContent</h4> }
+else if (this.variant === "h5") { <h5 class="@this.textClass" style="@this.textStyle">@childContent</h5> }
+else if (this.variant === "caption") { <span class="@this.textClass" style="@this.textStyle">@childContent</span> }
+else { <p class="@this.textClass" style="@this.textStyle">@childContent</p> }
+
+@code {
+    /** Semantic variant: h1 | h2 | h3 | h4 | h5 | body (default) | caption — also picks the element tag. */
+    @Parameter() variant: string = "body";
+    /** Optional weight alias: semibold | bold. */
+    @Parameter() weight?: string;
+    @Parameter() childContent?: RenderFragment;
+
+    private get textClass(): string {
+        return `fui-typography fui-typography--${this.variant}`;
+    }
+
+    /** Overridable weight through the token weights; size/ramp live in the sidecar. */
+    private get textStyle(): string | null {
+        return this.weight ? `font-weight: var(--fui-font-weight-${this.weight})` : null;
+    }
+}

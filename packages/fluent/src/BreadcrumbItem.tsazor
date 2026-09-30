@@ -1,0 +1,12 @@
+<li class="fui-breadcrumb__item">
+    @if (this.active) { <span class="fui-breadcrumb__current" aria-current="page">@childContent</span> }
+    else { <a class="fui-breadcrumb__link" href="@href">@childContent</a> }
+</li>
+
+@code {
+    /** Link target; ignored for the active item (rendered without a link per the port source). */
+    @Parameter() href: string = "#";
+    /** Active item renders plain content without a link. */
+    @Parameter() active: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+}

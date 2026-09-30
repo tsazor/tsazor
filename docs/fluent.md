@@ -61,12 +61,35 @@ override model.
 
 ## Components (launch set)
 
-Provider + 15: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,
+Provider + 24: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,
 `Divider`, `Badge`, `Spinner`, `TextInput`, `TextArea`, `NumberInput`,
 `Checkbox`, `Switch`, `Select`, `FluentForm`, `Tabs`/`Tab`, `Dialog`,
-`Toast` + `ToastProvider`, `Table`, `SidebarNav`.
+`Toast` + `ToastProvider`, `Table`, `SidebarNav`,
+plus the W1 fill: `Stack`, `Grid`, `Spacer`, `Typography`, `Icon`, `Indicator`,
+`Alert`, `Breadcrumb` + `BreadcrumbItem`, `Pagination`.
 
 Notes on the important ones:
+
+- **Layout primitives**: `Stack` (flex axis + token gap), `Grid` (fixed
+  `columns` or responsive `minChildWidth` minmax tracks — CSS grid, no JS),
+  `Spacer` (token spacing scale, axis-aware). Dynamic flex/grid values ride
+  inline styles; everything visual stays in `--fui-*`.
+- **Typography**: `variant` picks both the semantic element (`h1…h5`, `body`,
+  `caption`) and the token type class; `weight` is a token alias
+  (`--fui-font-weight-*`).
+- **Icon**: a small inline-SVG path set (`chevron-*, close, check, arrow-*,
+  search, add, remove`), no icon package. `aria-hidden="true"` by default;
+  pass `ariaLabel` for `role="img"`.
+- **Indicator**: semantic dot or status chip (`color` success/danger/warning/
+  info/neutral); `visible` is false-or-nothing semantics.
+- **Alert** (ported from `@tsazor/components`): `variant`, `dismissible`,
+  `onDismissed`, `role="alert"`; legacy Bootstrap variant names map onto the
+  Fluent severities, no Bootstrap classes carry through.
+- **Breadcrumb/BreadcrumbItem**: item slots, `aria-label="breadcrumb"`,
+  items with `active` render linkless with `aria-current="page"`.
+- **Pagination**: controlled — `page` + `totalPages` + `onPageChange`, the
+  component keeps no page state. First/Prev/Next/Last + a ±2 number window
+  with edge ellipses; all buttons carry `aria-label`s.
 
 - **Inputs** extend the runtime's `InputBase`: `@bind`, `fieldClass` and the
   EditContext validation messages come from core; only the Fluent chrome is
@@ -93,8 +116,14 @@ Menu/Popup, grid virtualization, custom listbox (v1 `Select` is a native).
 
 ## Verification
 
-- `packages/fluent/test/*.test.ts` — 38 unit tests against the compiled dist.
-- `apps/gallery` — the 12-route gallery + admin dashboard; `node scripts/verify.mjs`
+- `packages/fluent/test/*.test.ts` — 57 unit tests against the compiled dist
+  (all 9 W1 components covered, ≥2 each).
+- `apps/gallery` — the 13-route gallery + admin dashboard (`/primitives`
+  showcases the W1 components); `node scripts/verify.mjs`
   drives the live app (tokens light/dark, bind round-trip, form submit flow,
   tabs keyboard nav, dialog trap/escape/scroll-lock, orders filter/sort/paging,
   toast lifecycle, aria-current, zero console errors).
+- Root `pnpm test` runs every package project (runtime, compiler, workspace,
+  lsp, testing, vite-plugin, fluent, components) — 289/289 green; the
+  deprecated `vitest.workspace.ts` migrated to `test.projects` in
+  `vitest.config.mts`.

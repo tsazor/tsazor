@@ -1,0 +1,19 @@
+@if (this.visible) {
+<span class="@this.indicatorClass" role="status">
+    <span class="fui-indicator__dot" aria-hidden="true"></span>
+    @if (this.childContent !== undefined) { <span class="fui-indicator__label">@childContent</span> }
+</span>
+}
+
+@code {
+    /** Semantic color: success | danger | warning | info | neutral (default). */
+    @Parameter() color: string = "neutral";
+    /** Renders nothing when false. */
+    @Parameter() visible: boolean = true;
+    /** Optional label — turns the dot into a status chip. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get indicatorClass(): string {
+        return `fui-indicator fui-indicator--${this.color}`;
+    }
+}

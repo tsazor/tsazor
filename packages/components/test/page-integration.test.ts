@@ -12,10 +12,14 @@ import { collectCodeImports, collectImports, createFileContext } from "@tsazor/w
 import { transformSync } from "esbuild";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Renderer } from "@tsazor/runtime";
 
-const pagePath = path.resolve("../../apps/demo/src/Pages/ComponentsDemo.tsazor");
-const root = path.resolve("../../apps/demo");
+/* Anchor on this test file, not on CWD: the root vitest projects config runs
+ * packages from the repo root, so relative paths would resolve there. */
+const here = path.dirname(fileURLToPath(new URL(import.meta.url)));
+const pagePath = path.resolve(here, "../../../apps/demo/src/Pages/ComponentsDemo.tsazor");
+const root = path.resolve(here, "../../../apps/demo");
 
 /** Same pipeline as the vite plugin / library build: 2-pass compile + esbuild. */
 async function compilePage(): Promise<string> {
@@ -36,8 +40,8 @@ async function compilePage(): Promise<string> {
     sourcefile: pagePath,
     tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false, target: "es2022" } },
   }).code;
-  await mkdir(".build", { recursive: true });
-  const out = path.resolve(".build/ComponentsDemo.page.mjs");
+  await mkdir(path.resolve(here, ".build"), { recursive: true });
+  const out = path.resolve(here, ".build/ComponentsDemo.page.mjs");
   await writeFile(out, js);
   return out;
 }

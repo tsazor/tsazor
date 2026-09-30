@@ -38,6 +38,7 @@
         { href: "/table", label: "Table" },
         { href: "/dialog", label: "Dialog" },
         { href: "/feedback", label: "Feedback" },
+        { href: "/primitives", label: "Layout" },
         { href: "/theme", label: "Theme" },
         { href: "/dashboard", label: "Dashboard" },
     ];

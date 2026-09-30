@@ -1,0 +1,14 @@
+<span class="fui-spacer" style="@this.spacerStyle"></span>
+
+@code {
+    /** Axis the fixed thickness applies to: vertical (default) | horizontal. */
+    @Parameter() direction: string = "vertical";
+    /** Thickness from the token spacing scale: xs | s | m | l | xl. */
+    @Parameter() size: string = "m";
+
+    /** Axis-dependent: vertical stacks stretch across, so only the height is fixed. */
+    private get spacerStyle(): string {
+        const axis = this.direction === "horizontal" ? "width" : "height";
+        return `${axis}: var(--fui-spacing-${this.size})`;
+    }
+}
