@@ -95,29 +95,33 @@ export abstract class ComponentBase {
   applyParameterValues(parameters: ParameterView): void {
     // Cached per class (B6); Blazor matches attribute names case-insensitively.
     const { all: metadata, caseFolded, captureUnmatchedProperty: captureProperty } = this.getParameterInfo();
-    // Blazor's [Parameter(CaptureUnmatchedValues = true)]: a dictionary
-    // property that collects every attribute without a matching parameter.
-    let captureTarget: Record<string, unknown> | null = null;
-    if (captureProperty !== null) {
-      const current = (this as unknown as Record<string, unknown>)[captureProperty];
-      captureTarget = typeof current === "object" && current !== null ? { ...(current as Record<string, unknown>) } : {};
-    }
+    // Blazor's [Parameter(CaptureUnmatchedValues = true)] (ComponentProperties.
+    // SetProperties): the unmatched attributes of THIS parameter set form a
+    // fresh dictionary — attributes the parent stopped passing disappear. With
+    // no unmatched attribute the property is left as is (Blazor quirk, kept).
+    // Passing the capture property explicitly AND unmatched attributes throws.
+    let unmatched: Record<string, unknown> | null = null;
+    let captureSetExplicitly = false;
     for (const [name, value] of parameters.entries()) {
       const propertyName = metadata.has(name) ? name : caseFolded.get(name.toLowerCase());
       const meta = propertyName ? metadata.get(propertyName) : undefined;
-      if (meta && !meta.captureUnmatchedValues) {
+      if (meta) {
+        if (meta.captureUnmatchedValues) captureSetExplicitly = true;
         (this as unknown as Record<string, unknown>)[meta.propertyName] = value;
-      } else if (!meta) {
-        // Unmatched attribute → the capture dictionary (Blazor semantics).
-        if (captureProperty !== null) {
-          captureTarget![name] = value;
-        } else if (name !== BIND_VALUE_EXPRESSION) {
-          throw unknownParameterError(this, name);
-        }
+      } else if (captureProperty !== null) {
+        (unmatched ??= {})[name] = value;
+      } else if (name !== BIND_VALUE_EXPRESSION) {
+        throw unknownParameterError(this, name);
       }
     }
-    if (captureProperty !== null) {
-      (this as unknown as Record<string, unknown>)[captureProperty] = captureTarget!;
+    if (unmatched !== null) {
+      if (captureSetExplicitly) {
+        throw new Error(
+          `The property '${captureProperty}' on component type '${this.constructor.name}' cannot be set explicitly when ` +
+            `also used to capture unmatched values. Unmatched values:\n${Object.keys(unmatched).join("\n")}`,
+        );
+      }
+      (this as unknown as Record<string, unknown>)[captureProperty!] = unmatched;
     }
   }
 
