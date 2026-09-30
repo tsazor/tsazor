@@ -35,6 +35,9 @@ const CODES = {
   TZS013: "Directive not allowed here.",
   TZS014: "Ignored directive or clause.",
   TZS015: "Invalid TypeScript in code block.",
+  TZS016: "Invalid @import directive.",
+  TZS017: "Ambiguous component tag.",
+  TZS018: "Unresolved @using directory.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

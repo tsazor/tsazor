@@ -32,6 +32,7 @@ const DIRECTIVES: Record<string, "supported" | "ignored"> = {
   page: "supported",
   layout: "supported",
   using: "supported",
+  import: "supported",
   inject: "supported",
   inherits: "supported",
   attribute: "supported",
@@ -615,10 +616,62 @@ class Parser {
   /* ------------------------------------------------------------------ */
 
   private parseDirective(word: string, afterWord: number, pos: SourcePos, out: MarkupNode[]): void {
+    if (word === "import") {
+      const end = this.importDirectiveEnd(afterWord);
+      const slice = this.source.slice(afterWord, end);
+      const lead = slice.length - slice.trimStart().length;
+      out.push({
+        kind: "directive",
+        name: word,
+        value: slice.trim(),
+        valueStart: this.locator(afterWord + lead),
+        pos,
+        endPos: this.locator(end),
+      });
+      this.i = end;
+      return;
+    }
     const end = this.lineEnd(afterWord);
     const raw = this.source.slice(afterWord, end).trim();
     out.push({ kind: "directive", name: word, value: raw, pos, endPos: this.locator(end) });
     this.i = end;
+  }
+
+  /**
+   * End of an `@import` value. TS import-declaration syntax may span lines
+   * (`@import {⏎ A,⏎ B⏎} from "./x"`), so the value runs to the module
+   * specifier string, plus an optional `with { … }` clause and `;`. A line
+   * break outside braces ends the value — codegen reports invalid forms.
+   */
+  private importDirectiveEnd(from: number): number {
+    const SK = ts.SyntaxKind;
+    const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.Standard, this.source);
+    scanner.resetTokenState(from);
+    let depth = 0;
+    let end = this.lineEnd(from);
+    let afterSpecifier = false;
+    for (;;) {
+      const kind = scanner.scan();
+      if (kind === SK.EndOfFileToken) return end;
+      if (kind === SK.WhitespaceTrivia || kind === SK.SingleLineCommentTrivia || kind === SK.MultiLineCommentTrivia) continue;
+      if (kind === SK.NewLineTrivia) {
+        if (depth === 0) return end;
+        continue;
+      }
+      if (afterSpecifier && depth === 0 && kind !== SK.WithKeyword && kind !== SK.AssertKeyword && kind !== SK.SemicolonToken) {
+        // Only an import-attributes clause or `;` may follow; anything else on
+        // the line stays in the value so codegen reports it.
+        return Math.max(end, this.lineEnd(scanner.getTokenStart()));
+      }
+      if (kind === SK.OpenBraceToken) {
+        depth++;
+      } else if (kind === SK.CloseBraceToken) {
+        depth = Math.max(0, depth - 1);
+      } else if (kind === SK.StringLiteral && depth === 0 && !afterSpecifier) {
+        afterSpecifier = true;
+      }
+      end = Math.max(end, scanner.getTokenEnd());
+    }
   }
 
   private lineEnd(from: number): number {

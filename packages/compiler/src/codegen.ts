@@ -1,6 +1,7 @@
 import type {
   AttributeNode,
   CodeBlockNode,
+  DirectiveNode,
   DocumentNode,
   ElementNode,
   MarkupNode,
@@ -9,6 +10,7 @@ import type {
 import { childNodes } from "./ast.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
+import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import { TSScanner } from "./scanner.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 
@@ -16,6 +18,8 @@ export interface ResolvedComponent {
   specifier: string;
   /** Exported name; undefined = default export. */
   exportName?: string;
+  /** Every source the tag resolves in, when more than one (⇒ TZS017). */
+  ambiguous?: string[];
 }
 
 export interface ResolvedType {
@@ -29,12 +33,18 @@ export interface CodegenOptions {
   resolveComponent?: (tagName: string, usings: string[]) => ResolvedComponent | null;
   /** Resolves an identifier (@inject type, @inherits base) to its module. */
   resolveType?: (name: string, usings: string[]) => ResolvedType | null;
-  /** Extra import lines (e.g. composed from _Imports.tsazor). */
+  /** Extra import lines (code-behind, scoped-CSS sidecar). */
   imports?: string[];
+  /**
+   * `@import` directives inherited from the _Imports.tsazor chain, nearest
+   * first, relative specifiers already rebased to this file. A binding the
+   * file itself (or a nearer layer) already declares is dropped.
+   */
+  inheritedImports?: readonly ImportInfo[];
+  /** Checks one of the file's `@using` values; a returned message becomes a TZS018 warning. */
+  resolveUsing?: (value: string) => string | null;
   /** Map of usings to emit as plain module imports (namespace → specifier). */
   usingSpecifiers?: Record<string, string>;
-  /** Extra module-level identifiers (imported enums/values) that must not be baked to this.*. */
-  knownGlobals?: ReadonlySet<string>;
   /** Source file name used in the sourcemap. */
   fileName?: string;
   /**
@@ -65,6 +75,8 @@ export interface CodegenResult {
     /** Bare @authorize directive on a @page → authentication-required route. */
     authorize?: boolean;
     usings: string[];
+    /** The file's own `@import` directives, parsed (invalid ones are dropped). */
+    imports: ImportInfo[];
     injects: Array<{ type: string; name: string }>;
     typeParams: string[];
     inherits?: string;
@@ -139,7 +151,14 @@ class Codegen {
   private readonly seqStack: SeqScope[] = [{ next: 0 }];
   /** Locals declared by loops / inline code — emitted without a `this.` prefix. */
   private readonly locals = new Set<string>();
-  private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], injects: [], typeParams: [] };
+  private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [] };
+  /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
+  private readonly importedNames = new Set<string>();
+  /** The subset of importedNames bound to runtime values (usable as component tags). */
+  private readonly importedValues = new Set<string>();
+  /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
+  private readonly ownImportDirectives: Array<{ value: string; pos: SourcePos; valueStart: SourcePos }> = [];
+  private readonly inheritedImportLines: string[] = [];
   private inheritsBase = "ComponentBase";
 
   constructor(
@@ -150,8 +169,13 @@ class Codegen {
   run(document: DocumentNode): CodegenResult {
     if (this.options.scopeHash) this.metadata.scopeHash = this.options.scopeHash;
     const directives = document.directives;
+    // Imports first: @inject/@inherits types and tags consult the bound names.
+    this.collectImports(directives);
     for (const d of directives) {
       switch (d.name) {
+        case "import":
+          break; // collectImports
+
         case "page":
           // Multiple @page directives: every template is a route (Blazor).
           this.metadata.routeTemplates.push(unquote(d.value));
@@ -163,9 +187,12 @@ class Codegen {
         case "authorize":
           this.metadata.authorize = true;
           break;
-        case "using":
+        case "using": {
           this.metadata.usings.push(d.value.trim());
+          const problem = this.options.resolveUsing?.(d.value.trim()) ?? null;
+          if (problem) this.diagnostics.warning("TZS018", d.pos, problem);
           break;
+        }
         case "inject": {
           const parts = d.value.trim().split(/\s+/);
           if (parts.length < 2) {
@@ -261,6 +288,12 @@ class Codegen {
     }
     if (this.typeImports.size > 0) this.line("");
 
+    // @import directives: the file's own verbatim (mapped for the LSP), then
+    // the inherited ones that no nearer declaration shadows.
+    for (const directive of this.ownImportDirectives) this.emitImportDirective(directive);
+    for (const imp of this.inheritedImportLines) this.line(imp);
+    if (this.ownImportDirectives.length + this.inheritedImportLines.length > 0) this.line("");
+
     for (const imp of this.options.imports ?? []) this.line(imp);
     if ((this.options.imports ?? []).length > 0) this.line("");
 
@@ -310,10 +343,11 @@ class Codegen {
     // Splice the runtime import in at its header position, now that body
     // emission has revealed every runtime API the module uses (the writer
     // shifts the mappings below the insert).
-    this.writer.insertLines(runtimeImportLine, [
-      `import { ${[...this.runtimeImports].sort().join(", ")} } from "@tsazor/runtime";`,
-      "",
-    ]);
+    // Names an @import already binds are not imported twice.
+    const runtimeNames = [...this.runtimeImports].filter((name) => !this.importedNames.has(name)).sort();
+    if (runtimeNames.length > 0) {
+      this.writer.insertLines(runtimeImportLine, [`import { ${runtimeNames.join(", ")} } from "@tsazor/runtime";`, ""]);
+    }
 
     const code = this.writer.toString();
     return { code, mappings: this.takeMappings(), metadata: this.metadata };
@@ -336,14 +370,83 @@ class Codegen {
     }
   }
 
+  /**
+   * Parses the own `@import` directives (TZS016 for invalid forms) and merges
+   * the inherited ones: the file's bindings win, then the nearest layer; a
+   * shadowed binding is dropped, a repeated side-effect import emitted once.
+   */
+  private collectImports(directives: readonly DirectiveNode[]): void {
+    const sideEffects = new Set<string>();
+    const bind = (info: ImportInfo): void => {
+      for (const binding of info.bindings) {
+        this.importedNames.add(binding.local);
+        if (!binding.typeOnly) this.importedValues.add(binding.local);
+      }
+    };
+    for (const d of directives) {
+      if (d.name !== "import") continue;
+      const parsed = parseImportDirective(d.value);
+      if (!parsed.ok) {
+        this.diagnostics.error("TZS016", d.pos, parsed.message);
+        continue;
+      }
+      this.metadata.imports.push(parsed.info);
+      this.ownImportDirectives.push({ value: d.value, pos: d.pos, valueStart: d.valueStart ?? d.pos });
+      if (parsed.info.bindings.length === 0) sideEffects.add(parsed.info.specifier);
+      bind(parsed.info);
+    }
+    for (const inherited of this.options.inheritedImports ?? []) {
+      if (inherited.bindings.length === 0) {
+        if (sideEffects.has(inherited.specifier)) continue;
+        sideEffects.add(inherited.specifier);
+        this.inheritedImportLines.push(...importStatements(inherited));
+        continue;
+      }
+      const bindings = inherited.bindings.filter((binding) => !this.importedNames.has(binding.local));
+      if (bindings.length === 0) continue;
+      const info = { ...inherited, bindings };
+      bind(info);
+      this.inheritedImportLines.push(...importStatements(info));
+    }
+  }
+
+  /** Emits an own `@import` verbatim; every line maps back onto the directive value. */
+  private emitImportDirective(directive: { value: string; pos: SourcePos; valueStart: SourcePos }): void {
+    const prefix = "import ";
+    const text = `${prefix}${directive.value}${directive.value.endsWith(";") ? "" : ";"}`;
+    const anchors: WriterAnchor[] = [{ offset: 0, srcLine: directive.pos.line - 1, srcCol: directive.pos.column }];
+    let offset = prefix.length;
+    directive.value.split("\n").forEach((part, index) => {
+      anchors.push({
+        offset,
+        srcLine: directive.valueStart.line - 1 + index,
+        srcCol: index === 0 ? directive.valueStart.column : 0,
+      });
+      offset += part.length + 1;
+    });
+    this.writer.line(text, anchors);
+  }
+
   private localForComponent(tagName: string, usings: string[], pos: SourcePos): string | null {
     const existing = this.componentLocalNames.get(tagName);
     if (existing !== undefined) return existing;
+    // An explicitly imported component class is used as-is.
+    if (this.importedValues.has(tagName)) {
+      this.componentLocalNames.set(tagName, tagName);
+      return tagName;
+    }
     const resolved = this.options.resolveComponent?.(tagName, usings) ?? null;
     if (!resolved) {
       this.diagnostics.warning("TZS005", pos, `Component '<${tagName}>' could not be resolved; it will be emitted as an element.`);
       this.componentLocalNames.set(tagName, "__tsazor_unresolved");
       return null;
+    }
+    if (resolved.ambiguous && resolved.ambiguous.length > 1) {
+      this.diagnostics.error(
+        "TZS017",
+        pos,
+        `Component '<${tagName}>' is ambiguous: it resolves in ${resolved.ambiguous.map((source) => `'${source}'`).join(" and ")}. Remove one of the @using directives or @import the component explicitly.`,
+      );
     }
     const local = `__tsazor_comp_${tagName.replace(/[^A-Za-z0-9_]/g, "_")}`;
     this.componentLocalNames.set(tagName, local);
@@ -352,9 +455,13 @@ class Codegen {
   }
 
   private resolveType(name: string): string {
-    if (this.typeImports.has(name)) return name;
-    const resolved = this.options.resolveType?.(name, this.metadata.usings) ?? null;
-    if (resolved) this.typeImports.set(name, name);
+    // A generic reference (`Base<number>`) imports its root identifier.
+    const root = /^[A-Za-z_$][\w$]*/.exec(name)?.[0] ?? name;
+    if (this.typeImports.has(root)) return name;
+    // Explicitly imported (e.g. `@import { CounterService } from …`): already bound.
+    if (this.importedNames.has(root)) return name;
+    const resolved = this.options.resolveType?.(root, this.metadata.usings) ?? null;
+    if (resolved) this.typeImports.set(root, root);
     return name;
   }
 
@@ -484,7 +591,7 @@ class Codegen {
         const name = code.slice(i, e);
         const afterDot = i > 0 && code[i - 1] === ".";
         const skipBake =
-          afterDot || spanLocals.has(name) || KNOWN_GLOBALS.has(name) || this.options.knownGlobals?.has(name) || JS_KEYWORDS.has(name);
+          afterDot || spanLocals.has(name) || KNOWN_GLOBALS.has(name) || this.isFreeImport(name) || JS_KEYWORDS.has(name);
         // Token-precise mapping anchors the identifier's own generated token
         // (after a baked `this.` prefix — the prefix itself is synthetic and
         // carries no source position).
@@ -498,6 +605,15 @@ class Codegen {
       i++;
     }
     return out;
+  }
+
+  /**
+   * An @import binding stays a free name (the "imported ⇒ stays" part of the
+   * A4 rule) — unless an @inject field of the same name is a member
+   * (Blazor idiom `@inject NavigationManager NavigationManager`).
+   */
+  private isFreeImport(name: string): boolean {
+    return this.importedNames.has(name) && !this.metadata.injects.some((inject) => inject.name === name);
   }
 
   private line(text: string): void {

@@ -15,6 +15,8 @@ export interface DirectiveNode extends SourceSpan {
   name: string;
   /** Raw value text after the directive keyword (trimmed). Empty when absent. */
   value: string;
+  /** Source position of `value[0]` (set for `@import`, whose value may span lines). */
+  valueStart?: { line: number; column: number };
 }
 
 export interface ElementNode extends SourceSpan {
