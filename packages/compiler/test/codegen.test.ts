@@ -17,7 +17,7 @@ describe("codegen", () => {
     // The loop iterable resolves to the component member…
     expect(code).toContain("for (const forecast of this.forecasts) {");
     // …while the loop-local stays bare.
-    expect(code).toContain("b.addContent(");
+    expect(code).toContain("__builder.addContent(");
     expect(code).toContain("forecast.date");
     // Condition on the right side of && also bakes.
     expect(code).toContain("if (this.loading && this.forecasts.length > 0) {");
@@ -40,7 +40,7 @@ describe("codegen", () => {
     // a keyword position inside a markup expression — but it is a very common
     // property name. Skipping it rendered a bare `type` (runtime ReferenceError).
     const { code } = gen('<button type="@type">x</button>');
-    expect(code).toContain('b.addAttribute(1, "type", this.type);');
+    expect(code).toContain('__builder.addAttribute(1, "type", this.type);');
   });
 
   it("converts event-parameter values to bound EventCallbacks on component tags (Razor method-group/lambda semantics)", () => {
@@ -54,16 +54,16 @@ describe("codegen", () => {
         '@code { private alertGone(): void {} private poke(): void {} private picked(): void {} private variant = ""; }',
       { resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tsazor" } : null) },
     );
-    expect(code).toContain('b.addAttribute(1, "OnDismissed", EventCallback.bind(this, this.alertGone));');
-    expect(code).toContain('b.addAttribute(2, "OnClick", EventCallback.bind(this, this.poke));');
-    expect(code).toContain('b.addAttribute(3, "OnSelect", EventCallback.bind(this, () => this.picked()));');
+    expect(code).toContain('__builder.addAttribute(1, "OnDismissed", __tsazor_EventCallback.bind(this, this.alertGone));');
+    expect(code).toContain('__builder.addAttribute(2, "OnClick", __tsazor_EventCallback.bind(this, this.poke));');
+    expect(code).toContain('__builder.addAttribute(3, "OnSelect", __tsazor_EventCallback.bind(this, () => this.picked()));');
     // Non-event attribute values stay plain (e.g. string/number fields).
-    expect(code).toContain('b.addAttribute(4, "Variant", this.variant);');
+    expect(code).toContain('__builder.addAttribute(4, "Variant", this.variant);');
   });
 
   it("leaves element attribute expressions unwrapped (only component tags get the EventCallback conversion)", () => {
     const { code } = gen('<a href="@target" data-on="x">y</a>@code { private target = "/"; }');
-    expect(code).toContain('b.addAttribute(1, "href", this.target);');
+    expect(code).toContain('__builder.addAttribute(1, "href", this.target);');
   });
 
   it("decodes HTML entities in text, static attributes and mixed attribute values (Razor parse-time decoding)", () => {
@@ -71,32 +71,32 @@ describe("codegen", () => {
       '<h2>Tabs &amp; Accordion</h2><div title="A &amp; B" data-note="&#8212;">&notanentity;</div>' +
         '<span title="Zählen &amp; @expr">y</span>@code { private expr = 1; }',
     );
-    expect(code).toContain('b.addContent(1, "Tabs & Accordion");');
-    expect(code).toContain('b.addContent(1, "Tabs & Accordion");');
-    expect(code).toContain('b.addAttribute(3, "title", "A & B");');
-    expect(code).toContain('b.addAttribute(4, "data-note", "—");');
+    expect(code).toContain('__builder.addContent(1, "Tabs & Accordion");');
+    expect(code).toContain('__builder.addContent(1, "Tabs & Accordion");');
+    expect(code).toContain('__builder.addAttribute(3, "title", "A & B");');
+    expect(code).toContain('__builder.addAttribute(4, "data-note", "—");');
     // Unknown entities stay literal, matching HTML parsing.
-    expect(code).toContain('b.addContent(5, "&notanentity;");');
+    expect(code).toContain('__builder.addContent(5, "&notanentity;");');
     // Mixed attribute value: literal parts decode, expression parts untouched.
-    expect(code).toContain("`Zählen & ${this.expr}`");
+    expect(code).toContain('`Zählen & ${(this.expr) ?? ""}`');
   });
 
   it("emits builder calls with monotone sequences", () => {
     const { code } = gen("<h1>@Title</h1><button class='btn'>Go</button>");
-    expect(code).toContain('b.openElement(0, "h1");');
-    expect(code).toContain("b.addContent(1, this.Title);");
-    expect(code).toContain('b.openElement(2, "button");');
-    expect(code).toContain('b.addAttribute(3, "class", "btn");');
-    expect(code).toContain("b.closeElement();");
-    expect(code).toContain("export default class Demo extends ComponentBase {");
+    expect(code).toContain('__builder.openElement(0, "h1");');
+    expect(code).toContain("__builder.addContent(1, this.Title);");
+    expect(code).toContain('__builder.openElement(2, "button");');
+    expect(code).toContain('__builder.addAttribute(3, "class", "btn");');
+    expect(code).toContain("__builder.closeElement();");
+    expect(code).toContain("export default class Demo extends __tsazor_ComponentBase {");
   });
 
   it("imports only used runtime APIs", () => {
     const { code } = gen("<p>@x</p>");
-    expect(code).toContain('import { ComponentBase, RenderTreeBuilder } from "@tsazor/runtime";');
+    expect(code).toContain('import { ComponentBase, RenderTreeBuilder, ComponentBase as __tsazor_ComponentBase, RenderTreeBuilder as __tsazor_RenderTreeBuilder } from "@tsazor/runtime";');
     const { code: code2 } = gen('<button @onclick="Go">x</button>');
     expect(code2).toContain("EventCallback");
-    expect(code2).toContain('b.addEventHandler(1, "onclick", EventCallback.bind(this, this.Go));');
+    expect(code2).toContain('__builder.addEventHandler(1, "onclick", __tsazor_EventCallback.bind(this, this.Go));');
   });
 
   it("resolves component tags to imports and emits ChildContent", () => {
@@ -104,16 +104,16 @@ describe("codegen", () => {
       resolveComponent: (tag) => (tag === "Greeter" ? { specifier: "./Greeter.tsazor" } : null),
     });
     expect(code).toContain('import __tsazor_comp_Greeter from "./Greeter.tsazor";');
-    expect(code).toContain("b.openComponent(0, __tsazor_comp_Greeter);");
-    expect(code).toContain('b.addAttribute(1, "Name", "World");');
-    expect(code).toContain('b.addContent(2, (b) => {');
-    expect(code).toContain('b.closeComponent();');
+    expect(code).toContain("__builder.openComponent(0, __tsazor_comp_Greeter);");
+    expect(code).toContain('__builder.addAttribute(1, "Name", "World");');
+    expect(code).toContain('__builder.addContent(2, (__builder) => {');
+    expect(code).toContain('__builder.closeComponent();');
   });
 
   it("unresolved components fall back to elements with a warning", () => {
     const { diagnostics, code } = gen("<UnknownTag />");
     expect(diagnostics.all.some((d) => d.code === "TZS005" && d.severity === "warning")).toBe(true);
-    expect(code).toContain('b.openElement(0, "UnknownTag");');
+    expect(code).toContain('__builder.openElement(0, "UnknownTag");');
     expect(code).not.toContain("openComponent");
   });
 
@@ -123,7 +123,7 @@ describe("codegen", () => {
     });
     expect(code).toContain('export const routeTemplate = "/users";');
     expect(code).toContain("static routeTemplate = routeTemplate;");
-    expect(code).toContain("private readonly Users = inject(UserService);");
+    expect(code).toContain("private readonly Users = __tsazor_inject(UserService);");
     expect(code).toContain('import UserService from "./services";');
     expect(metadata.routeTemplate).toBe("/users");
     expect(metadata.injects).toEqual([{ type: "UserService", name: "Users" }]);
@@ -141,8 +141,8 @@ describe("codegen", () => {
 
   it("emits setKey and element reference captures", () => {
     const { code } = gen('<li @key="item.Id" @ref="listItem">x</li>');
-    expect(code).toContain("b.setKey(this.item.Id);");
-    expect(code).toContain("b.addElementReferenceCapture(1, (el) => { this.listItem = el; });");
+    expect(code).toContain("__builder.setKey(this.item.Id);");
+    expect(code).toContain("__builder.addElementReferenceCapture(1, (el) => { this.listItem = el; });");
   });
 
   it("emits if/else chains inside buildRenderTree", () => {
@@ -177,10 +177,10 @@ describe("codegen", () => {
     const { mappings } = gen('<p>@Title.name</p>');
     const onLine0 = mappings.filter((m) => m.srcLine === 0);
     expect(onLine0.some((m) => m.genCol === 4 && m.srcCol === 3)).toBe(true);  // statement start (@)
-    // Baked expression starts at statement-text offset 16 (`    b.addContent(1, `);
+    // Baked expression starts at statement-text offset 24 (`    __builder.addContent(1, `);
     // entries are anchored in statement text coordinates + token landing offset.
-    expect(onLine0.some((m) => m.genCol === 25 && m.srcCol === 4)).toBe(true);  // `Title` (position inside this.Title)
-    expect(onLine0.some((m) => m.genCol === 31 && m.srcCol === 10)).toBe(true); // `name` (11 after "this.Title.")
+    expect(onLine0.some((m) => m.genCol === 33 && m.srcCol === 4)).toBe(true);  // `Title` (position inside this.Title)
+    expect(onLine0.some((m) => m.genCol === 39 && m.srcCol === 10)).toBe(true); // `name` (11 after "this.Title.")
   });
 
   it("maps parenthesized expressions with inner-whitespace padding", () => {
@@ -206,28 +206,28 @@ describe("codegen", () => {
     };
 
     // Open-tag line: statement anchor at `<` + precise tag-token entry (srcCol 1).
-    const openMaps = mappings.filter((m) => m.genLine === lineOf("b.openComponent("));
+    const openMaps = mappings.filter((m) => m.genLine === lineOf("__builder.openComponent("));
     expect(openMaps.some((m) => m.genCol === 4 && m.srcCol === 0)).toBe(true);
     expect(openMaps.some((m) => m.genCol > 4 && m.srcCol === 1)).toBe(true);
 
     // Attribute line: anchor at the attribute name + precise expression tokens
     // (`@this.order.deliveryAddress` → cols 10 / 15 / 21 relative to the name).
-    const attrMaps = mappings.filter((m) => m.genLine === lineOf("b.addAttribute(1,"));
+    const attrMaps = mappings.filter((m) => m.genLine === lineOf("__builder.addAttribute(1,"));
     expect(attrMaps.some((m) => m.genCol === 4 && m.srcCol === 15)).toBe(true);
     expect(attrMaps.some((m) => m.srcCol === 25)).toBe(true); // `this`
     expect(attrMaps.some((m) => m.srcCol === 30)).toBe(true); // `order`
     expect(attrMaps.some((m) => m.srcCol === 36)).toBe(true); // `deliveryAddress`
 
     // closeComponent: unmapped plumbing — lookups from source can never land on it.
-    expect(mappings.filter((m) => m.genLine === lineOf("b.closeComponent();")).length).toBe(0);
+    expect(mappings.filter((m) => m.genLine === lineOf("__builder.closeComponent();")).length).toBe(0);
   });
 
   it("anchors element tags and leaves closeElement unmapped", () => {
     const { code, mappings } = gen("<div class=\"x\">y</div>");
-    const openMaps = mappings.filter((m) => m.genLine === code.split("\n").findIndex((l) => l.includes('b.openElement(')) + 1);
+    const openMaps = mappings.filter((m) => m.genLine === code.split("\n").findIndex((l) => l.includes('__builder.openElement(')) + 1);
     expect(openMaps.some((m) => m.genCol === 4 && m.srcCol === 0)).toBe(true);
     expect(openMaps.some((m) => m.genCol > 4 && m.srcCol === 1)).toBe(true); // tag name inside the literal
-    expect(mappings.filter((m) => m.genLine === code.split("\n").findIndex((l) => l.includes("b.closeElement();")) + 1).length).toBe(0);
+    expect(mappings.filter((m) => m.genLine === code.split("\n").findIndex((l) => l.includes("__builder.closeElement();")) + 1).length).toBe(0);
   });
 
   it("keeps control headers at statement-level granularity (no token entries)", () => {
@@ -242,31 +242,31 @@ describe("codegen", () => {
   it("wraps @code members and re-emits verbatim", () => {
     const { code } = gen("@code {\n  count = 0;\n}");
     expect(code).toContain("  count = 0;");
-    expect(code).toContain("export default class Demo extends ComponentBase {");
+    expect(code).toContain("export default class Demo extends __tsazor_ComponentBase {");
   });
 
   it("emits @bind as value attribute + change handler", () => {
     const { code } = gen('<input @bind="name" />');
-    expect(code).toContain('b.addAttribute(1, "value", this.name);');
+    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
     expect(code).toContain(
-      'b.addEventHandler(2, "onchange", EventCallback.bind(this, (e) => { this.name = (e.target as HTMLInputElement).value; }));',
+      '__builder.addEventHandler(2, "onchange", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__event.target as HTMLInputElement).value; }));',
     );
   });
 
   it("honors @bind:event and input-type extraction", () => {
     const { code } = gen('<input @bind="count" @bind:event="oninput" type="number" />');
-    expect(code).toContain('b.addEventHandler(2, "oninput", EventCallback.bind(this, (e) => {');
-    expect(code).toContain("Number((e.target as HTMLInputElement).value)");
+    expect(code).toContain('__builder.addEventHandler(2, "oninput", __tsazor_EventCallback.bind(this, (__event) => {');
+    expect(code).toContain("Number((__event.target as HTMLInputElement).value)");
 
     const { code: checkbox } = gen('<input @bind="enabled" type="checkbox" />');
-    expect(checkbox).toContain('b.addAttribute(1, "checked", this.enabled);');
-    expect(checkbox).toContain("(e.target as HTMLInputElement).checked");
+    expect(checkbox).toContain('__builder.addAttribute(1, "checked", this.enabled);');
+    expect(checkbox).toContain("(__event.target as HTMLInputElement).checked");
   });
 
   it("emits @bind:get/:set/:after and warns on @bind:format", () => {
     const { code, diagnostics } = gen('<input @bind:get="display" @bind:set="store" @bind:after="done" @bind:format="yyyy" />');
-    expect(code).toContain('b.addAttribute(1, "value", this.display);');
-    expect(code).toContain("(this.store)((e.target as HTMLInputElement).value)");
+    expect(code).toContain('__builder.addAttribute(1, "value", this.display);');
+    expect(code).toContain("(this.store)((__event.target as HTMLInputElement).value)");
     expect(code).toContain("this.done();");
     expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
   });
@@ -275,26 +275,26 @@ describe("codegen", () => {
     const { code } = gen('<Stepper @bind-Value="current" />', {
       resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tsazor" } : null),
     });
-    expect(code).toContain('b.addAttribute(1, "Value", this.current);');
-    expect(code).toContain('b.addAttribute(2, "ValueExpression", "current");');
-    expect(code).toContain('b.addAttribute(3, "ValueChanged", EventCallback.bind(this, (v) => { this.current = v; }));');
+    expect(code).toContain('__builder.addAttribute(1, "Value", this.current);');
+    expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "current");');
+    expect(code).toContain('__builder.addAttribute(3, "ValueChanged", __tsazor_EventCallback.bind(this, (__value) => { this.current = __value; }));');
   });
 
   it("treats plain @bind on a component tag as Value + ValueChanged", () => {
     const { code } = gen('<InputText @bind="name" />', {
       resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
     });
-    expect(code).toContain('b.addAttribute(1, "Value", this.name);');
-    expect(code).toContain('b.addAttribute(2, "ValueExpression", "name");');
-    expect(code).toContain('b.addAttribute(3, "ValueChanged", EventCallback.bind(this, (v) => { this.name = v; }));');
+    expect(code).toContain('__builder.addAttribute(1, "Value", this.name);');
+    expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "name");');
+    expect(code).toContain('__builder.addAttribute(3, "ValueChanged", __tsazor_EventCallback.bind(this, (__value) => { this.name = __value; }));');
   });
 
   it("derives ValueExpression from member paths (@bind=\"this.model.name\" → \"name\")", () => {
     const { code } = gen('<TextInput @bind="this.model.name" />', {
       resolveComponent: (tag) => (tag === "TextInput" ? { specifier: "@tsazor/fluent", exportName: "TextInput" } : null),
     });
-    expect(code).toContain('b.addAttribute(1, "Value", this.model.name);');
-    expect(code).toContain('b.addAttribute(2, "ValueExpression", "name");');
+    expect(code).toContain('__builder.addAttribute(1, "Value", this.model.name);');
+    expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "name");');
   });
 
   it("does not emit ValueExpression for custom targets or get/set binds", () => {
@@ -310,7 +310,7 @@ describe("codegen", () => {
 
   it("keeps plain @bind on elements as value + change handler", () => {
     const { code } = gen('<input @bind="name" />');
-    expect(code).toContain('b.addAttribute(1, "value", this.name);');
+    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
     expect(code).toContain("addEventHandler");
     expect(code).not.toContain('"ValueChanged"');
   });
@@ -318,9 +318,9 @@ describe("codegen", () => {
   it("emits the scope attribute first on plain elements when scopeHash is set", () => {
     const { code: scoped, metadata } = gen('<input @bind="name" />', { scopeHash: "b-1a2b3c4d" });
     // The scope attribute is the first frame after openElement...
-    expect(scoped).toContain('b.addAttribute(1, "b-1a2b3c4d", "");');
+    expect(scoped).toContain('__builder.addAttribute(1, "b-1a2b3c4d", "");');
     // ...and subsequent frames shift by one sequence number.
-    expect(scoped).toContain('b.addAttribute(2, "value", this.name);');
+    expect(scoped).toContain('__builder.addAttribute(2, "value", this.name);');
     expect(metadata.scopeHash).toBe("b-1a2b3c4d");
   });
 
@@ -332,16 +332,16 @@ describe("codegen", () => {
         resolveComponent: (tag) => (tag === "Alert" ? { specifier: "./Alert.tsazor" } : null),
       },
     );
-    expect(code.match(/b\.addAttribute\(\d+, "b-7f3e00aa", ""\)/g)?.length).toBe(3); // outer div, child span, button
-    expect(code).toMatch(/b\.openComponent\(\d+, __tsazor_comp_Alert\);/); // component tag itself gets no scope frame
+    expect(code.match(/__builder\.addAttribute\(\d+, "b-7f3e00aa", ""\)/g)?.length).toBe(3); // outer div, child span, button
+    expect(code).toMatch(/__builder\.openComponent\(\d+, __tsazor_comp_Alert\);/); // component tag itself gets no scope frame
   });
 
   it("leaves emission byte-identical when scopeHash is unset (regression guard)", () => {
     // Without the option, no scope frames and unchanged sequence numbers —
     // this is what keeps the existing hard-coded-sequence tests stable.
     const { code } = gen('<input @bind="name" />');
-    expect(code).toContain('b.addAttribute(1, "value", this.name);');
-    expect(code).not.toContain('b.addAttribute(1, "b-');
+    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
+    expect(code).not.toContain('__builder.addAttribute(1, "b-');
   });
 
   it("extends the code-behind class instead of ComponentBase when codeBehindClass is set", () => {
@@ -372,14 +372,14 @@ describe("codegen — code-first code contexts (A2)", () => {
   it("emits @{ } statements unwrapped so their locals reach later markup", () => {
     const { code } = gen("@{ const g = greeting + 1; }<p>@g</p>");
     expect(code).toContain("    const g = this.greeting + 1;\n");
-    expect(code).toContain("b.addContent(1, g);");
+    expect(code).toContain("__builder.addContent(1, g);");
     expect(code).not.toMatch(/^\s*\{\s*$/m);
   });
 
   it("scopes locals of control bodies to the body", () => {
     const { code } = gen("@if (a) {\n  const inner = 2;\n  <i>@inner</i>\n}\n<b>@inner</b>");
-    expect(code).toContain("b.addContent(1, inner);");
-    expect(code).toContain("b.addContent(3, this.inner);");
+    expect(code).toContain("__builder.addContent(1, inner);");
+    expect(code).toContain("__builder.addContent(3, this.inner);");
   });
 
   it("registers catch parameters and C#-style foreach variables as locals", () => {
@@ -387,10 +387,10 @@ describe("codegen — code-first code contexts (A2)", () => {
       "@try { <p/> } catch (err) { <p>@err</p> }\n@foreach (string s in xs) { <i>@s</i> }\n@foreach (var (k, v) in pairs) { <i>@k@v</i> }",
     );
     expect(code).toContain("} catch (err) {");
-    expect(code).toContain("b.addContent(2, err);");
+    expect(code).toContain("__builder.addContent(2, err);");
     expect(code).toContain("for (const s of this.xs) {");
     expect(code).toContain("for (const [k, v] of this.pairs) {");
-    expect(code).toContain("b.addContent(6, k);");
+    expect(code).toContain("__builder.addContent(6, k);");
   });
 
   it("emits while and do-while loops", () => {
@@ -409,16 +409,16 @@ describe("codegen — code-first code contexts (A2)", () => {
 
   it("emits no whitespace text frames for single-line bodies (Razor: code-context whitespace)", () => {
     const { code } = gen("<ul>@foreach (var x in xs) { <li>@x</li> }</ul>");
-    expect(code).not.toContain('b.addContent(1, " ")');
+    expect(code).not.toContain('__builder.addContent(1, " ")');
     // Sequence numbers stay compile-time and source-ordered.
-    expect(code).toContain('b.openElement(1, "li");');
-    expect(code).toContain("b.addContent(2, x);");
+    expect(code).toContain('__builder.openElement(1, "li");');
+    expect(code).toContain("__builder.addContent(2, x);");
   });
 
   it("passes minimized attributes as true (Razor)", () => {
     const { code } = gen("<input type=checkbox disabled>");
-    expect(code).toContain('b.addAttribute(1, "type", "checkbox");');
-    expect(code).toContain('b.addAttribute(2, "disabled", true);');
+    expect(code).toContain('__builder.addAttribute(1, "type", "checkbox");');
+    expect(code).toContain('__builder.addAttribute(2, "disabled", true);');
   });
 
   it("maps continuation lines of multi-line control headers (A1 follow-up)", () => {
@@ -450,10 +450,10 @@ describe("codegen — directives (A2)", () => {
 
   it("strips a C# @typeparam constraint with a warning and keeps the TS form", () => {
     const csharp = gen("@typeparam TItem where TItem : class\n");
-    expect(csharp.code).toContain("export default class Demo<TItem> extends ComponentBase {");
+    expect(csharp.code).toContain("export default class Demo<TItem> extends __tsazor_ComponentBase {");
     expect(csharp.diagnostics.all.some((d) => d.code === "TZS014")).toBe(true);
     const tsForm = gen("@typeparam T extends string\n");
-    expect(tsForm.code).toContain("export default class Demo<T extends string> extends ComponentBase {");
+    expect(tsForm.code).toContain("export default class Demo<T extends string> extends __tsazor_ComponentBase {");
     expect(tsForm.diagnostics.all).toHaveLength(0);
   });
 });
@@ -533,8 +533,11 @@ describe("codegen — @import (A3)", () => {
       { className: "Demo", resolveComponent: () => ({ specifier: "./Child.tsazor" }) },
     );
     expect(code).toContain('import { ComponentBase, EventCallback, Parameter } from "@tsazor/runtime";');
-    expect(code).toContain('import { RenderTreeBuilder } from "@tsazor/runtime";');
-    expect(code).toContain("EventCallback.bind(this");
+    // The generated code's own uses go through hygienic aliases.
+    expect(code).toContain(
+      'import { RenderTreeBuilder, ComponentBase as __tsazor_ComponentBase, EventCallback as __tsazor_EventCallback, RenderTreeBuilder as __tsazor_RenderTreeBuilder } from "@tsazor/runtime";',
+    );
+    expect(code).toContain("__tsazor_EventCallback.bind(this");
   });
 
   it("uses an imported component class for its tag and skips resolution", () => {
@@ -547,7 +550,7 @@ describe("codegen — @import (A3)", () => {
       },
     });
     expect(resolved).toEqual([]);
-    expect(code).toContain("b.openComponent(0, Fancy);");
+    expect(code).toContain("__builder.openComponent(0, Fancy);");
   });
 
   it("reports ambiguous tags (TZS017) and unresolved @using values (TZS018)", () => {
@@ -572,7 +575,7 @@ describe("codegen — @import (A3)", () => {
     const { code } = gen(
       '@import { NavigationManager } from "@tsazor/runtime"\n@inject NavigationManager NavigationManager\n<p>@NavigationManager.uri</p>',
     );
-    expect(code).toContain("private readonly NavigationManager = inject(NavigationManager);");
+    expect(code).toContain("private readonly NavigationManager = __tsazor_inject(NavigationManager);");
     expect(code).toContain("this.NavigationManager.uri");
   });
 });

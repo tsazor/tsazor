@@ -1,6 +1,6 @@
 import { compile } from "@tsazor/compiler";
 import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { TsazorGenMap } from "./ts-mapping.js";
@@ -74,6 +74,7 @@ export async function buildShadowModule(tsazorPath: string, source: string, proj
       ...resolutionOptions(context),
       imports: extraImports,
       codeBehindClass,
+      codeBehindSource: codeBehindClass ? readFileSync(codeBehindPath, "utf8") : undefined,
       generateSourceMap: true,
     });
 

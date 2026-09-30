@@ -10,8 +10,17 @@ import type {
 import { childNodes } from "./ast.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
+import { LIB_GLOBALS } from "./globals.generated.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
-import { TSScanner } from "./scanner.js";
+import {
+  collectBodyMembers,
+  collectDefaultClassMembers,
+  emptyMembers,
+  rewriteSnippet,
+  type NameResolver,
+  type RewriteResult,
+  type SnippetKind,
+} from "./rewrite.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 
 export interface ResolvedComponent {
@@ -61,6 +70,12 @@ export interface CodegenOptions {
    * byte-identical emission as before.
    */
   codeBehindClass?: string;
+  /**
+   * Source of the code-behind `X.tsazor.ts`: the members of its default
+   * class are component members for the expression rewriter (`this.X`) even
+   * where an `@import` or a global has the same name.
+   */
+  codeBehindSource?: string;
 }
 
 export interface CodegenResult {
@@ -110,26 +125,16 @@ interface SeqScope {
   next: number;
 }
 
-/** TS globals (and keywords) that must not be turned into member references. */
-const KNOWN_GLOBALS = new Set([
-  "this", "Math", "JSON", "Date", "Number", "String", "Boolean", "Array", "Object", "Promise",
-  "Map", "Set", "Symbol", "WeakMap", "WeakSet", "Intl", "Reflect", "Proxy", "RegExp", "Error",
-  "console", "window", "document", "location", "navigator", "undefined", "NaN", "Infinity",
-  "super", "globalThis", "arguments", "crypto", "URL", "fetch", "structuredClone",
-]);
-
-/** JS keywords that must never be treated as member references. */
-// Note: "type" is deliberately NOT in this list. It is only a contextual
-// keyword (type aliases) and can never appear as a keyword inside a markup
-// expression — but it is an extremely common property name, and skipping it
-// broke `@type` (rendered bare `type` instead of `this.type` at runtime).
-const JS_KEYWORDS = new Set([
-  "if", "else", "for", "while", "do", "switch", "case", "default", "break", "continue",
-  "return", "throw", "try", "catch", "finally", "new", "delete", "typeof", "void",
-  "instanceof", "in", "of", "await", "async", "yield", "const", "let", "var", "function",
-  "class", "extends", "implements", "interface", "enum", "import", "export",
-  "from", "as", "get", "set", "null", "true", "false", "constructor",
-]);
+/**
+ * Hygienic names of the generated code (Razor: `__builder`): the builder
+ * parameter, the generated handler parameters, the runtime APIs only the
+ * generated code uses and the captured component — none can collide with a
+ * user local, member or `@import` of the same plain name.
+ */
+const BUILDER = "__builder";
+const THIS_ALIAS = "__tsazor_this";
+const BIND_METHOD = "__tsazor_bindMethod";
+const alias = (name: string): string => `__tsazor_${name}`;
 
 export function generateCode(document: DocumentNode, options: CodegenOptions, diagnostics: DiagnosticBag): CodegenResult {
   return new Codegen(options, diagnostics).run(document);
@@ -138,12 +143,21 @@ export function generateCode(document: DocumentNode, options: CodegenOptions, di
 class Codegen {
   private readonly writer = new CodeWriter();
   /** Precise (outOffset → absolute source position) entries for the expression
-   *  currently being emitted, registered by bakeMemberRefs and flushed by the
+   *  currently being emitted, registered by rewrite() and flushed by the
    *  next stmt(). They give token-granularity mappings inside expressions
    *  (also on their continuation lines) instead of the statement-start
    *  approximation. `srcLine` is 0-based, like SourceMapEntry. */
   private pendingExprEntries: PendingEntry[] = [];
+  /** Runtime APIs user code may reference by their plain name (imported unless an `@import` binds them). */
   private readonly runtimeImports = new Set<string>();
+  /** Runtime APIs of the generated code, imported under hygienic aliases. */
+  private readonly runtimeAliases = new Set<string>();
+  /** Component members, syntactically: `@code`, code-behind, `@inject` fields. */
+  private readonly members = emptyMembers();
+  /** A member reference sits in a non-arrow function: buildRenderTree captures `this`. */
+  private needsThisAlias = false;
+  /** A method group with receiver was bound (C18): the module gets the bind helper. */
+  private needsBindMethod = false;
   private readonly componentImports = new Map<string, string>(); // tagName → local name
   private readonly componentLocalNames = new Map<string, string>(); // tagName → local
   private readonly typeImports = new Map<string, string>(); // typeName → local
@@ -255,6 +269,13 @@ class Codegen {
     if (/@Parameter\s*\(/.test(memberSource)) this.runtimeImports.add("Parameter");
     if (/@CascadingParameter\s*\(/.test(memberSource)) this.runtimeImports.add("CascadingParameter");
     if (this.metadata.injects.length > 0 || /\binject\s*\(/.test(memberSource)) this.runtimeImports.add("inject");
+    if (this.metadata.injects.length > 0) this.runtimeAliases.add("inject");
+
+    // Members come syntactically from the class body, the code-behind class
+    // and the @inject fields; base-class members fall under "otherwise ⇒ this.X".
+    for (const block of memberCode) collectBodyMembers(block.code, this.members);
+    if (this.options.codeBehindSource !== undefined) collectDefaultClassMembers(this.options.codeBehindSource, this.members);
+    for (const inject of this.metadata.injects) this.members.instance.add(inject.name);
 
     // Pre-resolve component tags so imports come out once, before the class.
     this.preResolve(document.body, this.metadata.usings);
@@ -262,6 +283,11 @@ class Codegen {
     // --- Emit the module -------------------------------------------------
     this.runtimeImports.add("ComponentBase");
     this.runtimeImports.add("RenderTreeBuilder");
+    this.runtimeAliases.add("RenderTreeBuilder");
+    if (this.metadata.inherits === undefined && this.options.codeBehindClass === undefined) {
+      this.runtimeAliases.add("ComponentBase");
+      this.inheritsBase = alias("ComponentBase");
+    }
     this.line(`/* Generated by @tsazor/compiler from ${this.options.fileName ?? "component"} — do not edit. */`);
     this.line("");
     // The runtime import depends on APIs discovered during body emission
@@ -323,7 +349,7 @@ class Codegen {
       this.line("");
     }
     for (const inject of this.metadata.injects) {
-      this.line(`  private readonly ${inject.name} = inject(${inject.type});`);
+      this.line(`  private readonly ${inject.name} = ${alias("inject")}(${inject.type});`);
     }
     if (this.metadata.injects.length > 0) this.line("");
 
@@ -334,17 +360,32 @@ class Codegen {
       this.line("");
     }
 
-    this.line("  protected override buildRenderTree(b: RenderTreeBuilder): void {");
+    this.line(`  protected override buildRenderTree(${BUILDER}: ${alias("RenderTreeBuilder")}): void {`);
+    const bodyStart = this.writer.lineCount;
     this.emitNodes(renderBody, { line: 0, column: 0 });
     this.line("  }");
     this.line("}");
     this.line("");
+    if (this.needsBindMethod) {
+      // C18: a method group keeps its receiver (`item.toggle` runs on item).
+      this.line(`function ${BIND_METHOD}<T>(receiver: unknown, method: T): T {`);
+      this.line(`  return typeof method === "function" ? method.bind(receiver) : method;`);
+      this.line("}");
+      this.line("");
+    }
+    // Member references inside non-arrow functions of the render code use
+    // the captured component (`this` is rebound there).
+    if (this.needsThisAlias) this.writer.insertLines(bodyStart, [`    const ${THIS_ALIAS} = this;`]);
 
     // Splice the runtime import in at its header position, now that body
     // emission has revealed every runtime API the module uses (the writer
     // shifts the mappings below the insert).
-    // Names an @import already binds are not imported twice.
-    const runtimeNames = [...this.runtimeImports].filter((name) => !this.importedNames.has(name)).sort();
+    // Plain names an @import already binds are not imported twice; the
+    // generated code's own uses go through hygienic aliases.
+    const runtimeNames = [
+      ...[...this.runtimeImports].filter((name) => !this.importedNames.has(name)).sort(),
+      ...[...this.runtimeAliases].sort().map((name) => `${name} as ${alias(name)}`),
+    ];
     if (runtimeNames.length > 0) {
       this.writer.insertLines(runtimeImportLine, [`import { ${runtimeNames.join(", ")} } from "@tsazor/runtime";`, ""]);
     }
@@ -479,141 +520,108 @@ class Codegen {
 
   /**
    * Rewrites an expression's bare member references to `this.X` (C# allows
-   * bare member references; TS does not). Locals (loop variables, arrow
-   * parameters), TS globals and keywords pass through untouched; identifiers
-   * after a `.` are property accesses and stay bare.
+   * bare member references; TS does not) — see rewrite.ts for the scope rules.
    */
   private expr(code: string, origin?: SourcePos): string {
+    return this.exprRewrite(code, origin)?.text ?? code;
+  }
+
+  /** expr() with the full rewrite result (method group info); null for empty code. */
+  private exprRewrite(code: string, origin?: SourcePos): RewriteResult | null {
     const trimmed = code.trim();
-    if (trimmed.length === 0) return code;
+    if (trimmed.length === 0) return null;
     // origin = absolute source position of index 0 of the expression code.
     // Unset (control headers, @bind values) → no token-precise mapping. The
     // trimmed leading whitespace may span lines.
-    return this.bakeMemberRefs(
+    return this.rewrite(
       trimmed,
+      "expression",
       origin === undefined ? undefined : advancePos(origin, code.slice(0, code.length - code.trimStart().length)),
     );
   }
 
+  /** The A4 rule for names no scope of the snippet binds. */
+  private readonly resolver: NameResolver = {
+    isOuterLocal: (name) => this.locals.has(name),
+    prefixFor: (name, thisRebound) => {
+      // Statics are reached through the class (C# allows them bare, too).
+      if (this.members.statics.has(name) && !this.members.instance.has(name)) return `${this.options.className}.`;
+      const receiver = (): string => {
+        if (!thisRebound) return "this.";
+        this.needsThisAlias = true;
+        return `${THIS_ALIAS}.`;
+      };
+      // A declared member wins over an import or a global of the same name.
+      if (this.members.instance.has(name)) return receiver();
+      if (this.importedNames.has(name) || LIB_GLOBALS.has(name)) return null;
+      return receiver();
+    },
+  };
+
   /**
-   * Rewrites every bare identifier to `this.name` across the whole expression
-   * (not just the leading one — `@for (const x of items)` and conditions like
-   * `a && b` need this too). Skips strings, comments, property accesses after
-   * `.`, keywords, TS globals, enclosing locals, locals declared in the span
-   * itself and arrow parameters.
+   * Rewrites one snippet. With `origin` (absolute position of code[0]) its
+   * word tokens become token-precise pending entries for the next stmt().
    */
-  private bakeMemberRefs(code: string, origin?: SourcePos): string {
-    if (!/[A-Za-z_$]/.test(code)) return code;
-
-    // Token-precise source positions (origin = absolute position of code[0]);
-    // tokens on continuation lines resolve through the newlines before them.
-    const precise = origin !== undefined;
-    if (precise) this.pendingExprEntries = [];
-    let trackedIndex = 0;
-    let trackedPos = origin;
-    const precisePush = (outOffset: number, srcIndex: number): void => {
-      if (!precise) return;
-      trackedPos = advancePos(trackedPos!, code.slice(trackedIndex, srcIndex));
-      trackedIndex = srcIndex;
-      this.pendingExprEntries.push({ outOffset, srcLine: trackedPos.line - 1, srcCol: trackedPos.column });
-    };
-    // A continuation line (after a newline outside strings/comments) gets an
-    // anchor at its first content — generated lines without one map nowhere.
-    let lineStartPending = false;
-
-    const spanLocals = new Set<string>(this.locals);
-    for (const m of code.matchAll(/(?:^|[\s(,;])(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
-      spanLocals.add(m[1]!);
-    }
-    // Arrow parameters: `(a, b) =>` or `x =>` — their names are locals too.
-    for (const m of code.matchAll(/=>/g)) {
-      const arrowAt = m.index ?? 0;
-      let j = arrowAt - 1;
-      while (j >= 0 && /\s/.test(code[j]!)) j--;
-      if (j >= 0 && code[j] === ")") {
-        let depth = 0;
-        let k = j;
-        while (k >= 0) {
-          const c = code[k];
-          if (c === ")") depth++;
-          else if (c === "(") {
-            depth--;
-            if (depth === 0) break;
-          }
-          k--;
-        }
-        if (k >= 0) {
-          for (const part of code.slice(k + 1, j).split(",")) {
-            for (const idm of part.matchAll(/[A-Za-z_$][\w$]*/g)) spanLocals.add(idm[0]);
-          }
-        }
-      } else if (j >= 0) {
-        let k = j;
-        while (k >= 0 && /[\w$]/.test(code[k]!)) k--;
-        const name = code.slice(k + 1, j + 1);
-        if (/^[A-Za-z_$]/.test(name)) spanLocals.add(name);
+  private rewrite(code: string, kind: SnippetKind, origin?: SourcePos): RewriteResult {
+    const result = rewriteSnippet(code, kind, this.resolver);
+    if (origin !== undefined) {
+      this.pendingExprEntries = [];
+      let index = 0;
+      let pos = origin;
+      for (const token of result.tokens) {
+        pos = advancePos(pos, code.slice(index, token.srcOffset));
+        index = token.srcOffset;
+        this.pendingExprEntries.push({ outOffset: token.outOffset, srcLine: pos.line - 1, srcCol: pos.column });
       }
     }
+    return result;
+  }
 
-    const scanner = new TSScanner(code, () => ({ line: 0, column: 0 }));
-    let out = "";
-    let i = 0;
-    while (i < code.length) {
-      const ch = code[i]!;
-      if (lineStartPending && !/\s/.test(ch)) {
-        precisePush(out.length, i);
-        lineStartPending = false;
-      }
-      if (ch === '"' || ch === "'" || ch === "`") {
-        const end = scanner.skipStringFor(i, ch);
-        const stop = end > i ? end : i + 1;
-        out += code.slice(i, stop);
-        i = stop;
-        continue;
-      }
-      if (ch === "/" && code[i + 1] === "/") {
-        const end = code.indexOf("\n", i);
-        const stop = end < 0 ? code.length : end;
-        out += code.slice(i, stop);
-        i = stop;
-        continue;
-      }
-      if (ch === "/" && code[i + 1] === "*") {
-        const end = code.indexOf("*/", i + 2);
-        const stop = end < 0 ? code.length : end + 2;
-        out += code.slice(i, stop);
-        i = stop;
-        continue;
-      }
-      if (/[A-Za-z_$]/.test(ch)) {
-        let e = i;
-        while (e < code.length && /[\w$]/.test(code[e]!)) e++;
-        const name = code.slice(i, e);
-        const afterDot = i > 0 && code[i - 1] === ".";
-        const skipBake =
-          afterDot || spanLocals.has(name) || KNOWN_GLOBALS.has(name) || this.isFreeImport(name) || JS_KEYWORDS.has(name);
-        // Token-precise mapping anchors the identifier's own generated token
-        // (after a baked `this.` prefix — the prefix itself is synthetic and
-        // carries no source position).
-        precisePush(skipBake ? out.length : out.length + "this.".length, i);
-        out += skipBake ? name : `this.${name}`;
-        i = e;
-        continue;
-      }
-      if (ch === "\n") lineStartPending = true;
-      out += ch;
-      i++;
-    }
-    return out;
+  /** Marks EventCallback as used: the generated code binds through its alias. */
+  private eventCallback(): string {
+    this.runtimeImports.add("EventCallback");
+    this.runtimeAliases.add("EventCallback");
+    return alias("EventCallback");
   }
 
   /**
-   * An @import binding stays a free name (the "imported ⇒ stays" part of the
-   * A4 rule) — unless an @inject field of the same name is a member
-   * (Blazor idiom `@inject NavigationManager NavigationManager`).
+   * An event callback value `EventCallback.bind(this, <handler>)`: the
+   * component is the callback's receiver (re-render after the handler,
+   * Blazor), and a method group with another receiver (`item.toggle`) keeps
+   * that receiver as the handler's `this` (C18) — bound when rendered, like
+   * a C# delegate. Pending entries are re-based to the returned text.
    */
-  private isFreeImport(name: string): boolean {
-    return this.importedNames.has(name) && !this.metadata.injects.some((inject) => inject.name === name);
+  private callbackValue(code: string, start?: SourcePos): string {
+    const rewritten = this.exprRewrite(code, start);
+    const baked = rewritten?.text ?? code.trim();
+    const head = `${this.eventCallback()}.bind(this, `;
+    const group = rewritten?.methodGroup;
+    if (!group) {
+      this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + head.length }));
+      return `${head}${baked})`;
+    }
+    this.needsBindMethod = true;
+    if (group.simpleReceiver) {
+      // The receiver is re-evaluated (unmapped); the handler keeps its tokens.
+      const pre = `${BIND_METHOD}(${group.receiver}, `;
+      this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + head.length + pre.length }));
+      return `${head}${pre}${baked}))`;
+    }
+    // A receiver with effects is evaluated once: ((r) => bind(r, r.name))(receiver).
+    const r = "__tsazor_receiver";
+    const pre = `((${r}) => ${BIND_METHOD}(${r}, ${r}.`;
+    const name = baked.slice(group.nameOffset, group.nameEnd);
+    const mid = `${name}))(`;
+    this.pendingExprEntries = this.pendingExprEntries.flatMap((e) => {
+      if (e.outOffset >= group.nameOffset && e.outOffset < group.nameEnd) {
+        return [{ ...e, outOffset: head.length + pre.length + e.outOffset - group.nameOffset }];
+      }
+      if (e.outOffset >= group.receiverOffset && e.outOffset < group.receiverOffset + group.receiver.length) {
+        return [{ ...e, outOffset: head.length + pre.length + mid.length + e.outOffset - group.receiverOffset }];
+      }
+      return [];
+    });
+    return `${head}${pre}${mid}${group.receiver}))`;
   }
 
   private line(text: string): void {
@@ -684,7 +692,7 @@ class Codegen {
         // Whitespace-only text that spans lines separates block-level nodes —
         // Razor treats it as insignificant and so do we.
         if (/^\s+$/.test(node.content) && node.content.includes("\n")) return;
-        this.stmt(`b.addContent(${this.seq()}, ${JSON.stringify(decodeHtmlEntities(node.content))});`, node.pos);
+        this.stmt(`${BUILDER}.addContent(${this.seq()}, ${JSON.stringify(decodeHtmlEntities(node.content))});`, node.pos);
         break;
       }
       case "directive":
@@ -696,7 +704,7 @@ class Codegen {
         const implicitEnd = advancePos(implicitStart, node.code);
         const isImplicit = implicitEnd.line === node.endPos.line && implicitEnd.column === node.endPos.column;
         const baked = this.expr(node.code, isImplicit ? implicitStart : { line: node.pos.line, column: node.pos.column + 2 });
-        const text = `b.addContent(${this.seq()}, ${baked});`;
+        const text = `${BUILDER}.addContent(${this.seq()}, ${baked});`;
         this.stmt(text, node.pos, text.indexOf(baked));
         break;
       }
@@ -782,12 +790,13 @@ class Codegen {
           }
           this.diagnostics.warning("TZS001", node.pos, "@foreach expects '(variable in iterable)'; falling back to verbatim for-header.");
         }
-        // Plain @for: register declared loop variables so their bodies resolve.
-        const init = node.code.split(";")[0] ?? "";
-        const declared = [...init.matchAll(/(?:^|[\s(,])(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)/g)].map((m) => m[1]!);
+        // Plain @for: `var` becomes `let` (a binding per iteration, as C#'s
+        // loop variable — deferred child content captures its own value);
+        // the declared loop variables are locals of the body.
         this.withScope(() => {
-          for (const name of declared) this.locals.add(name);
-          const header = this.headerExpr(node.code, node.codeStart);
+          const rewritten = this.rewrite(node.code, "forHeader");
+          const header = this.headerLines(node.code, rewritten.text, node.codeStart);
+          for (const name of rewritten.declares) this.locals.add(name);
           const text = `for (${header}) {`;
           this.stmt(text, node.pos, text.indexOf(header));
           for (const child of node.children) this.emitNode(child, node.pos);
@@ -809,18 +818,18 @@ class Codegen {
 
     const seq = this.seq();
     const raw = JSON.stringify(name);
-    const open = `b.openElement(${seq}, ${raw});`;
+    const open = `${BUILDER}.openElement(${seq}, ${raw});`;
     // Tag token: hovering `<div` maps to the generated tag literal instead of
     // plumbing on a shared anchor (see plumbingStmt); +1 puts the offset inside
     // the string literal.
     this.pendingExprEntries.push({
-      outOffset: "b.openElement(".length + String(seq).length + 2 + 1,
+      outOffset: `${BUILDER}.openElement(`.length + String(seq).length + 2 + 1,
       srcLine: node.pos.line - 1,
       srcCol: node.pos.column + 1,
     });
     this.stmt(open, node.pos);
     if (this.options.scopeHash) {
-      this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(this.options.scopeHash)}, "");`, node.pos);
+      this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(this.options.scopeHash)}, "");`, node.pos);
     }
     if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: name, attributes: regular });
@@ -833,14 +842,14 @@ class Codegen {
       this.emitRefStmt(ref, node.pos);
     }
     this.emitNodes(node.children, node.pos);
-    this.plumbingStmt(`b.closeElement();`);
+    this.plumbingStmt(`${BUILDER}.closeElement();`);
   }
 
   /** `@ref="name"` → synthetic `this.name` member capture, token-anchored so
    *  hover/go-to-def on the ref name resolves the captured property. */
   private emitRefStmt(ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos): void {
     const seq = this.seq();
-    const text = `b.addElementReferenceCapture(${seq}, (el) => { this.${ref.code} = el; });`;
+    const text = `${BUILDER}.addElementReferenceCapture(${seq}, (el) => { this.${ref.code} = el; });`;
     if (ref.codeStart !== undefined) {
       this.pendingExprEntries.push({
         outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
@@ -851,10 +860,10 @@ class Codegen {
     this.stmt(text, pos);
   }
 
-  /** `@key="expr"` → `b.setKey(...)`, token-precise like attribute values. */
+  /** `@key="expr"` → `__builder.setKey(...)`, token-precise like attribute values. */
   private emitKeyStmt(key: Extract<AttributeNode, { kind: "key" }>, pos: SourcePos): void {
     const baked = this.expr(key.code, key.codeStart);
-    const text = `b.setKey(${baked});`;
+    const text = `${BUILDER}.setKey(${baked});`;
     this.stmt(text, pos, text.indexOf(baked));
   }
 
@@ -866,11 +875,11 @@ class Codegen {
     const hasChildren = node.children.length > 0;
 
     const seq = this.seq();
-    const open = `b.openComponent(${seq}, ${local});`;
+    const open = `${BUILDER}.openComponent(${seq}, ${local});`;
     // Tag token: hovering `<AddressEditor` maps to the component local (quick
     // info / go-to-def on the component) instead of plumbing on a shared anchor.
     this.pendingExprEntries.push({
-      outOffset: "b.openComponent(".length + String(seq).length + 2,
+      outOffset: `${BUILDER}.openComponent(`.length + String(seq).length + 2,
       srcLine: node.pos.line - 1,
       srcCol: node.pos.column + 1,
     });
@@ -886,7 +895,7 @@ class Codegen {
       this.emitRefStmt(ref, node.pos);
     }
     if (hasChildren) {
-      this.stmt(`b.addContent(${this.seq()}, (b) => {`, node.pos);
+      this.stmt(`${BUILDER}.addContent(${this.seq()}, (${BUILDER}) => {`, node.pos);
       this.enterScope();
       this.withScope(() => {
         for (const child of node.children) this.emitNode(child, node.pos);
@@ -894,7 +903,7 @@ class Codegen {
       this.leaveScope();
       this.stmt(`});`, node.pos);
     }
-    this.plumbingStmt(`b.closeComponent();`);
+    this.plumbingStmt(`${BUILDER}.closeComponent();`);
   }
 
   /** Emits a statement whose generated text has NO source mapping: plumbing
@@ -918,11 +927,10 @@ class Codegen {
         // the attribute, also where a same-named DOM property exists
         // (`disabled = ""` would be false).
         const value = attr.minimized ? "true" : JSON.stringify(decodeHtmlEntities(attr.value));
-        this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`, pos);
+        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`, pos);
         break;
       }
       case "expression": {
-        const baked = this.expr(attr.code, codeStart());
         // Razor's method-group / lambda conversion: on a component tag, an
         // on*-named attribute value is an event callback. Razor binds method
         // groups AND lambdas to the component instance via the
@@ -932,20 +940,19 @@ class Codegen {
         // the owning page would never re-render). So the compiler binds every
         // on*-named component attribute value to `this` up front: the handler
         // runs on the authoring component and its StateHasChanged fires.
-        let value = baked;
-        if (ctx?.isComponent && EVENT_ATTR_PATTERN.test(attr.name)) {
-          value = `EventCallback.bind(this, ${baked})`;
-          this.runtimeImports.add("EventCallback");
-        }
-        const text = `b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`;
-        // Precise entries are relative to the baked expression inside the value.
-        this.stmt(text, pos, text.indexOf(value) + value.indexOf(baked));
+        const value = ctx?.isComponent && EVENT_ATTR_PATTERN.test(attr.name)
+          ? this.callbackValue(attr.code, codeStart())
+          : this.expr(attr.code, codeStart());
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`;
+        // Precise entries are relative to the value.
+        this.stmt(text, pos, text.lastIndexOf(value));
         break;
       }
       case "mixedValue": {
-        // Per-part precise entries: bakeMemberRefs only fills pendingExprEntries
-        // for the part currently being baked, so capture and re-offset per part.
-        // Offsets are left in stmt-text coordinates — no expressionStart pass.
+        // Per-part precise entries: rewrite() only fills pendingExprEntries
+        // for the part currently being rewritten, so capture and re-offset per
+        // part. Offsets are left in stmt-text coordinates — no expressionStart
+        // pass. A part that is null/undefined renders empty (Blazor), not "null".
         const precise: PendingEntry[] = [];
         let template = "";
         for (const part of attr.parts) {
@@ -953,39 +960,28 @@ class Codegen {
             this.pendingExprEntries = [];
             const baked = this.expr(part.code, part.codeStart);
             for (const entry of this.pendingExprEntries) {
-              precise.push({ ...entry, outOffset: template.length + 2 + entry.outOffset });
+              precise.push({ ...entry, outOffset: template.length + 3 + entry.outOffset });
             }
-            template += `\${${baked}}`;
+            template += `\${(${baked}) ?? ""}`;
           } else {
             template += escapeTemplate(decodeHtmlEntities(part.text ?? ""));
           }
         }
         this.pendingExprEntries = precise;
-        const text = `b.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, \`${template}\`);`;
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, \`${template}\`);`;
         this.stmt(text, pos);
         break;
       }
       case "eventHandler": {
-        const bare = bareIdentifier(attr.code);
-        const start = codeStart();
-        const callback = bare ? `this.${attr.code}` : this.expr(attr.code, start);
+        const callback = this.callbackValue(attr.code, codeStart());
         const flags = attr.flags === 0 ? "" : `, ${attr.flags}`;
-        const text = `b.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, EventCallback.bind(this, ${callback})${flags});`;
-        if (bare && start !== undefined) {
-          // Synthetic `this.` prefix — anchor the handler name token manually.
-          this.pendingExprEntries.push({
-            outOffset: text.indexOf(callback) + "this.".length,
-            srcLine: start.line - 1,
-            srcCol: start.column,
-          });
-        }
-        this.stmt(text, pos, bare ? undefined : text.indexOf(callback));
-        this.runtimeImports.add("EventCallback");
+        const text = `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, ${callback}${flags});`;
+        this.stmt(text, pos, text.indexOf(callback));
         break;
       }
       case "attributes": {
         const baked = this.expr(attr.code, codeStart());
-        const text = `b.addMultipleAttributes(${this.seq()}, ${baked});`;
+        const text = `${BUILDER}.addMultipleAttributes(${this.seq()}, ${baked});`;
         this.stmt(text, pos, text.indexOf(baked));
         break;
       }
@@ -1034,10 +1030,10 @@ class Codegen {
     }
 
     // Extraction of the DOM value inside the change handler.
-    let extract = "(e.target as HTMLInputElement).value";
-    if (isCheckbox) extract = "(e.target as HTMLInputElement).checked";
-    else if (isNumber) extract = "Number((e.target as HTMLInputElement).value)";
-    else if (isDate) extract = "new Date((e.target as HTMLInputElement).value)";
+    let extract = "(__event.target as HTMLInputElement).value";
+    if (isCheckbox) extract = "(__event.target as HTMLInputElement).checked";
+    else if (isNumber) extract = "Number((__event.target as HTMLInputElement).value)";
+    else if (isDate) extract = "new Date((__event.target as HTMLInputElement).value)";
 
     const handlerBody = () => {
       const parts: string[] = [];
@@ -1050,7 +1046,7 @@ class Codegen {
         } else if (isCheckbox) {
           parts.push(`${assignmentTarget} = ${extract}`);
         } else if (isNumber) {
-          parts.push(`${assignmentTarget} = Number.isNaN(Number((e.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
+          parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
         } else if (isDate) {
           parts.push(`${assignmentTarget} = ${extract}`);
         } else {
@@ -1058,18 +1054,17 @@ class Codegen {
         }
       }
       if (attr.after !== undefined) {
-        const after = bareIdentifier(attr.after) ? `this.${attr.after}()` : `(${this.expr(attr.after)})()`;
+        const after = bareIdentifier(attr.after) ? `${this.expr(attr.after)}()` : `(${this.expr(attr.after)})()`;
         parts.push(after);
       }
       return parts.join("; ");
     };
 
-    this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
+    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
     this.stmt(
-      `b.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, EventCallback.bind(this, (e) => { ${handlerBody()}; }));`,
+      `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, (__event) => { ${handlerBody()}; }));`,
       pos,
     );
-    this.runtimeImports.add("EventCallback");
   }
 
   /**
@@ -1088,34 +1083,33 @@ class Codegen {
 
     let setter: string;
     if (attr.set !== undefined) {
-      setter = `(${this.expr(attr.set)})(v)`;
+      setter = `(${this.expr(attr.set)})(__value)`;
     } else {
       const assignmentTarget = this.expr(attr.expression ?? "");
       if (!isAssignableTarget(assignmentTarget)) {
         this.diagnostics.error("TZS008", pos, `${label} requires a settable member expression.`);
         return;
       }
-      setter = `${assignmentTarget} = v`;
+      setter = `${assignmentTarget} = __value`;
     }
     const after = attr.after !== undefined
-      ? (bareIdentifier(attr.after) ? `; this.${attr.after}()` : `; (${this.expr(attr.after)})()`)
+      ? (bareIdentifier(attr.after) ? `; ${this.expr(attr.after)}()` : `; (${this.expr(attr.after)})()`)
       : "";
 
-    this.stmt(`b.addAttribute(${this.seq()}, ${JSON.stringify(target)}, ${display});`, pos);
+    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(target)}, ${display});`, pos);
     // InputBase keys EditContext validation on a plain field-name string
     // (v1 contract): derive it from the bound member path — `this.model.name`
     // registers under "name", matching the validators map's field keys.
     if (target === "Value" && attr.get === undefined && attr.set === undefined) {
       const field = lastFieldIdentifier(attr.expression ?? "");
       if (field) {
-        this.stmt(`b.addAttribute(${this.seq()}, "ValueExpression", ${JSON.stringify(field)});`, pos);
+        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, "ValueExpression", ${JSON.stringify(field)});`, pos);
       }
     }
     this.stmt(
-      `b.addAttribute(${this.seq()}, ${JSON.stringify(`${target}Changed`)}, EventCallback.bind(this, (v) => { ${setter}${after}; }));`,
+      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(`${target}Changed`)}, ${this.eventCallback()}.bind(this, (__value) => { ${setter}${after}; }));`,
       pos,
     );
-    this.runtimeImports.add("EventCallback");
   }
 
   private emitIf(node: Extract<MarkupNode, { kind: "if" }>): void {
@@ -1146,7 +1140,7 @@ class Codegen {
     const text = `switch (${header}) {`;
     this.stmt(text, node.pos, text.indexOf(header));
     for (const c of node.cases) {
-      const label = c.code === null ? "default:" : `case ${this.bakeMemberRefs(c.code)}:`;
+      const label = c.code === null ? "default:" : `case ${this.expr(c.code)}:`;
       if (c.children.length === 0) {
         this.stmt(label, c.span.pos);
         continue;
@@ -1167,9 +1161,9 @@ class Codegen {
     // Registered first: destructuring/function names inside the run itself
     // must stay bare too.
     for (const name of node.declares) this.locals.add(name);
-    // Baking inserts `this.` prefixes, so its per-token entries keep the
+    // Rewriting inserts `this.` prefixes, so its per-token entries keep the
     // columns after each prefix exact.
-    const baked = this.bakeMemberRefs(node.code, node.pos);
+    const baked = this.rewrite(node.code, "statements", node.pos).text;
     const tokens = this.pendingExprEntries;
     this.pendingExprEntries = [];
     this.emitCodeVerbatim(baked, node.pos, 4, tokens);
@@ -1190,7 +1184,11 @@ class Codegen {
    * pending entries for the next stmt(), relative to the baked text.
    */
   private headerExpr(code: string, start: SourcePos | undefined): string {
-    const baked = this.expr(code);
+    return this.headerLines(code, this.expr(code), start);
+  }
+
+  /** Continuation-line anchors of a rewritten header (see headerExpr). */
+  private headerLines(code: string, baked: string, start: SourcePos | undefined): string {
     if (start === undefined || !code.includes("\n")) return baked;
     const rawLines = code.split("\n");
     let outOffset = 0;
