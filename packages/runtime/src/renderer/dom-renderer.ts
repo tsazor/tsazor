@@ -2,49 +2,34 @@ import { FrameType } from "../render-tree/frame-type.js";
 import type { RenderTreeFrame } from "../render-tree/render-tree.js";
 import { getFrameSubtreeLength } from "../render-tree/render-tree.js";
 import { RenderTreeEditType, type RenderTreeEdit } from "../render-tree/diff.js";
-import { EventCallback } from "../components/event-callback.js";
+import type { EventCallback } from "../components/event-callback.js";
 import type { ComponentState } from "./component-state.js";
+import { selectOf, setAttributeValue, syncSelectValue, type EventHandlerHost } from "./dom-attributes.js";
+import { DomJournal } from "./dom-journal.js";
+import { LogicalChildren, LogicalRange, removeLogicalChild } from "./logical-range.js";
 import type { Renderer } from "./renderer.js";
-
-/**
- * One level of the edit walk (Blazor's "current depth"): the logical children
- * of a component's root (between its markers) or of an element.
- */
-interface Level {
-  parent: Node;
-  /** Node right before the first logical child (a component's start marker), or null: starts at parent.firstChild. */
-  anchor: Node | null;
-  /** Exclusive end of the level (a component's end marker), or null. */
-  boundary: Node | null;
-  /** Cursor: a logical child index and its first DOM node (the boundary when index = child count). */
-  index: number;
-  node: Node | null;
-}
-
-interface EventHandlerRecord {
-  callback: EventCallback<never>;
-  flags: number;
-  listener: (event: Event) => void;
-}
-
-const elementHandlers = new WeakMap<Element, Map<string, EventHandlerRecord>>();
-
-const COMMENT_NODE = 8;
-
-/**
- * Start comment → end comment of logical children spanning several DOM nodes:
- * a child component's output (between its markers) and a markup block.
- * Everything else is one node per logical child.
- */
-const logicalRangeEnds = new WeakMap<Node, Node>();
 
 /**
  * Applies a diff's edit list to the real DOM (Blazor's BrowserRenderer). The
  * diff itself never touches the DOM; this walks the edits once, resolving
  * sibling indices against the live DOM with a forward cursor per level
- * (edits within a level are ordered by ascending sibling index).
+ * (edits within a level are ordered by ascending sibling index). A level is
+ * the logical children (see LogicalRange) of the component's own range or of
+ * an element; child components and markup blocks are ranges and move or
+ * disappear as a unit.
+ *
+ * Application is transactional: every mutation of DOM that existed before
+ * the pass is journaled (DomJournal), and a pass that throws part-way is
+ * rolled back before the error propagates — the DOM then again shows the
+ * component's retained live tree, which stays the diff base of its next
+ * pass. Limits: side effects outside the DOM tree are not undone (element
+ * reference captures and custom-element callbacks that already ran, focus
+ * or selection lost by moving a node, caret position after a value reset).
  */
-export class DomRenderer {
+export class DomRenderer implements EventHandlerHost {
+  private readonly journal = new DomJournal();
+  private applying = false;
+
   constructor(private readonly renderer: Renderer) {}
 
   /**
@@ -59,68 +44,92 @@ export class DomRenderer {
     this.renderer.track(invocation);
   }
 
-  /** Applies the edits of one render pass of `state`; `frames` is its new render tree. */
+  /**
+   * Applies the edits of one render pass of `state`; `frames` is its new
+   * render tree. All or nothing: throws after rolling back what it applied.
+   */
   applyEdits(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[]): void {
-    const stack: Level[] = [];
-    let level: Level = {
-      parent: state.startMarker.parentNode!,
-      anchor: state.startMarker,
-      boundary: state.endMarker,
-      index: 0,
-      node: state.startMarker.nextSibling,
-    };
+    // Passes never nest (renders requested meanwhile only queue); a fresh
+    // journal keeps a nested call safe anyway.
+    const nested = this.applying;
+    const journal = nested ? new DomJournal() : this.journal;
+    this.applying = true;
+    try {
+      this.applyEditsJournaled(state, frames, edits, journal);
+      journal.clear();
+    } catch (error) {
+      journal.rollback();
+      throw error;
+    } finally {
+      this.applying = nested;
+    }
+  }
+
+  private applyEditsJournaled(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[], journal: DomJournal): void {
+    const stack: LogicalChildren[] = [];
+    let level = new LogicalChildren(state.range);
+    /** Selects whose options this pass changed: their value is re-synced at the end. */
+    let selects: HTMLSelectElement[] | null = null;
 
     for (let i = 0; i < edits.length; i++) {
       const edit = edits[i]!;
       switch (edit.type) {
         case RenderTreeEditType.PrependFrame: {
-          const before = childAt(level, edit.siblingIndex);
-          level.node = this.insertFrame(state, frames, edit.referenceFrameIndex, level.parent, before);
+          const before = level.at(edit.siblingIndex);
+          level.seek(edit.siblingIndex, this.insertFrame(state, frames, edit.referenceFrameIndex, level.parent, before, journal));
+          selects = touchSelect(selects, level.parent);
           break;
         }
-        case RenderTreeEditType.RemoveFrame: {
-          const node = childAt(level, edit.siblingIndex)!;
-          const last = lastNodeOf(node);
-          level.node = last.nextSibling;
-          removeRange(node, last);
+        case RenderTreeEditType.RemoveFrame:
+          level.seek(edit.siblingIndex, removeLogicalChild(level.at(edit.siblingIndex)!, journal));
+          selects = touchSelect(selects, level.parent);
+          break;
+        case RenderTreeEditType.SetAttribute: {
+          const frame = frames[edit.referenceFrameIndex]!;
+          const element = level.at(edit.siblingIndex) as Element;
+          setAttributeValue(this, state, element, frame.attributeName!, frame.attributeValue, frame.eventHandlerFlags ?? 0, journal);
           break;
         }
-        case RenderTreeEditType.SetAttribute:
-          setAttributeFrame(this, state, childAt(level, edit.siblingIndex) as Element, frames[edit.referenceFrameIndex]!);
-          break;
         case RenderTreeEditType.RemoveAttribute:
-          removeAttributeByName(childAt(level, edit.siblingIndex) as Element, edit.removedAttributeName!);
+          setAttributeValue(this, state, level.at(edit.siblingIndex) as Element, edit.removedAttributeName!, null, 0, journal);
           break;
-        case RenderTreeEditType.UpdateText:
-          childAt(level, edit.siblingIndex)!.nodeValue = String(frames[edit.referenceFrameIndex]!.textContent);
+        case RenderTreeEditType.UpdateText: {
+          const node = level.at(edit.siblingIndex)!;
+          const text = String(frames[edit.referenceFrameIndex]!.textContent);
+          journal.property(node, "nodeValue");
+          node.nodeValue = text;
           break;
+        }
         case RenderTreeEditType.UpdateMarkup: {
-          const node = childAt(level, edit.siblingIndex)!;
-          const last = lastNodeOf(node);
-          const before = last.nextSibling;
-          removeRange(node, last);
-          level.node = insertMarkup(frames[edit.referenceFrameIndex]!.markupContent!, level.parent, before);
+          const before = removeLogicalChild(level.at(edit.siblingIndex)!, journal);
+          level.seek(edit.siblingIndex, insertMarkup(frames[edit.referenceFrameIndex]!.markupContent!, level.parent, before, journal));
+          selects = touchSelect(selects, level.parent);
           break;
         }
         case RenderTreeEditType.StepIn: {
-          const element = childAt(level, edit.siblingIndex)!;
+          const element = level.at(edit.siblingIndex) as Element;
           stack.push(level);
-          level = { parent: element, anchor: null, boundary: null, index: 0, node: element.firstChild };
+          level = new LogicalChildren(element);
           break;
         }
         case RenderTreeEditType.StepOut:
           level = stack.pop()!;
           break;
         case RenderTreeEditType.PermutationListEntry: {
-          let end = i;
-          while (edits[end]!.type !== RenderTreeEditType.PermutationListEnd) end++;
-          permuteLogicalChildren(level, edits, i, end);
-          i = end;
+          const moves: Array<{ from: number; to: number }> = [];
+          for (; edits[i]!.type !== RenderTreeEditType.PermutationListEnd; i++) {
+            moves.push({ from: edits[i]!.siblingIndex, to: edits[i]!.moveToSiblingIndex });
+          }
+          level.permute(moves, journal);
+          selects = touchSelect(selects, level.parent);
           break;
         }
         default:
           break;
       }
+    }
+    if (selects !== null) {
+      for (const select of selects) syncSelectValue(select, journal);
     }
   }
 
@@ -133,34 +142,44 @@ export class DomRenderer {
     state.newSlotChildren.clear();
   }
 
-  /** Inserts frame `index` (with its whole subtree) before `before`; returns its first DOM node. */
-  private insertFrame(state: ComponentState, frames: RenderTreeFrame[], index: number, parent: Node, before: Node | null): Node {
+  /**
+   * Inserts frame `index` (with its whole subtree) before `before`; returns
+   * its first DOM node. `journal` is null while building a detached subtree.
+   */
+  private insertFrame(state: ComponentState, frames: RenderTreeFrame[], index: number, parent: Node, before: Node | null, journal: DomJournal | null): Node {
     const frame = frames[index]!;
     switch (frame.frameType) {
       case FrameType.Element: {
         const element = document.createElement(frame.elementName!);
-        applyAttributes(this, state, element, frame, frames, index);
+        const end = index + getFrameSubtreeLength(frame);
+        let i = index + 1;
+        for (; i < end && frames[i]!.frameType === FrameType.Attribute; i++) {
+          const attribute = frames[i]!;
+          setAttributeValue(this, state, element, attribute.attributeName!, attribute.attributeValue, attribute.eventHandlerFlags ?? 0, null);
+        }
         // Build the fresh subtree into the detached element first, then insert
         // the completed tree in one shot: mass creates then cost one insertion
         // per element instead of one per node (10k rows = ~3n insertBefore -> n).
-        this.insertChildFrames(state, frames, attributeRunEnd(frames, index), index + getFrameSubtreeLength(frame), element);
+        this.insertChildFrames(state, frames, i, end, element);
+        // Blazor's deferred select value: the options exist only now.
+        if (element.tagName === "SELECT") syncSelectValue(element as HTMLSelectElement, null);
+        journal?.position(element);
         parent.insertBefore(element, before);
         return element;
       }
       case FrameType.Text: {
         const text = document.createTextNode(String(frame.textContent));
+        journal?.position(text);
         parent.insertBefore(text, before);
         return text;
       }
       case FrameType.Markup:
-        return insertMarkup(frame.markupContent!, parent, before);
+        return insertMarkup(frame.markupContent!, parent, before, journal);
       case FrameType.Component: {
         // Instantiated by the renderer from the diff's component list before the edits run.
         const child = state.newSlotChildren.get(index)!;
-        parent.insertBefore(child.startMarker, before);
-        parent.insertBefore(child.endMarker, before);
-        logicalRangeEnds.set(child.startMarker, child.endMarker);
-        return child.startMarker;
+        child.range.insertBefore(parent, before, journal);
+        return child.range.start;
       }
       default:
         throw new Error(`Unexpected frame type ${frame.frameType as number} in PrependFrame.`);
@@ -183,7 +202,7 @@ export class DomRenderer {
           frame.elementReferenceCaptureAction?.(parent);
           break;
         default:
-          this.insertFrame(state, frames, i, parent, null);
+          this.insertFrame(state, frames, i, parent, null, null);
           break;
       }
       i += getFrameSubtreeLength(frame);
@@ -191,189 +210,32 @@ export class DomRenderer {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Logical children                                                    */
-/* ------------------------------------------------------------------ */
-
-/** Last DOM node of the logical child starting at `node`. */
-function lastNodeOf(node: Node): Node {
-  return node.nodeType === COMMENT_NODE ? (logicalRangeEnds.get(node) ?? node) : node;
-}
-
-function firstChildOf(level: Level): Node | null {
-  return level.anchor !== null ? level.anchor.nextSibling : level.parent.firstChild;
-}
-
-/** First DOM node of logical child `siblingIndex` (the boundary when past the end); moves the cursor. */
-function childAt(level: Level, siblingIndex: number): Node | null {
-  let index = level.index;
-  let node = level.node;
-  if (siblingIndex < index) {
-    index = 0;
-    node = firstChildOf(level);
-  }
-  while (index < siblingIndex) {
-    node = lastNodeOf(node!).nextSibling;
-    index++;
-  }
-  level.index = index;
-  level.node = node;
-  return node;
-}
-
-/** Removes the DOM nodes first..last (inclusive siblings). */
-function removeRange(first: Node, last: Node): void {
-  const parent = first.parentNode!;
-  let current: Node = first;
-  for (;;) {
-    const next = current.nextSibling;
-    parent.removeChild(current);
-    if (current === last || next === null) break;
-    current = next;
-  }
-}
-
-/**
- * Applies a permutation list (entries [start, end) of `edits`) to a level —
- * Blazor's permuteLogicalChildren: resolve all moved ranges and their target
- * positions first (placeholder comments), then move each range as a unit.
- */
-function permuteLogicalChildren(level: Level, edits: RenderTreeEdit[], start: number, end: number): void {
-  const siblings: Node[] = [];
-  for (let node = firstChildOf(level); node !== null && node !== level.boundary; node = lastNodeOf(node).nextSibling) {
-    siblings.push(node);
-  }
-  const moves: Array<{ first: Node; last: Node; marker: Comment }> = [];
-  for (let i = start; i < end; i++) {
-    const first = siblings[edits[i]!.siblingIndex]!;
-    moves.push({ first, last: lastNodeOf(first), marker: document.createComment("") });
-  }
-  for (let i = start; i < end; i++) {
-    const before = siblings[edits[i]!.moveToSiblingIndex + 1] ?? level.boundary;
-    level.parent.insertBefore(moves[i - start]!.marker, before);
-  }
-  for (const { first, last, marker } of moves) {
-    let current: Node = first;
-    for (;;) {
-      const next = current.nextSibling;
-      level.parent.insertBefore(current, marker);
-      if (current === last || next === null) break;
-      current = next;
-    }
-    level.parent.removeChild(marker);
-  }
-  level.index = 0;
-  level.node = firstChildOf(level);
+/** Adds the select owning the options under `parent` (if any) to the pass's re-sync list. */
+function touchSelect(selects: HTMLSelectElement[] | null, parent: Node): HTMLSelectElement[] | null {
+  const select = selectOf(parent);
+  if (select === null) return selects;
+  if (selects === null) return [select];
+  if (!selects.includes(select)) selects.push(select);
+  return selects;
 }
 
 /* ------------------------------------------------------------------ */
-/* Attribute application                                               */
+/* Markup blocks                                                       */
 /* ------------------------------------------------------------------ */
 
-/** Sets a newly added or changed attribute (the diff filtered unchanged values). */
-function setAttributeFrame(dom: DomRenderer, state: ComponentState, element: Element, frame: RenderTreeFrame): void {
-  const name = frame.attributeName!;
-  const value = frame.attributeValue;
-
-  // Blazor conditional-attribute semantics: null/undefined = absent attribute
-  // (`aria-label="@maybeUndefined"` never renders an empty attribute).
-  if (value === null || value === undefined) {
-    element.removeAttribute(name);
-    return;
-  }
-
-  if (value instanceof EventCallback) {
-    bindCallback(dom, state, element, name, value as unknown as EventCallback<never>, frame.eventHandlerFlags ?? 0);
-    return;
-  }
-  if (typeof value === "function") {
-    // Unbound handler: no owning component, so no automatic re-render.
-    const callback = EventCallback.unbound(value as (arg: never) => void | Promise<void>);
-    bindCallback(dom, state, element, name, callback, frame.eventHandlerFlags ?? 0);
-    return;
-  }
-  if (typeof value === "boolean") {
-    if (value) element.setAttribute(name, "");
-    else element.removeAttribute(name);
-    return;
-  }
-  if (name in element) {
-    (element as unknown as Record<string, unknown>)[name] = value;
-  } else {
-    element.setAttribute(name, value === null || value === undefined ? "" : String(value));
-  }
-}
-
-/** Removes an attribute that is gone from the new tree (or the listener bound under its name). */
-function removeAttributeByName(element: Element, name: string): void {
-  const eventName = toDomEventName(name);
-  const record = elementHandlers.get(element)?.get(eventName);
-  if (record) {
-    element.removeEventListener(eventName, record.listener);
-    elementHandlers.get(element)?.delete(eventName);
-    return;
-  }
-  element.removeAttribute(name);
-}
-
-/** End (exclusive) of the contiguous attribute run after a start frame. */
-function attributeRunEnd(frames: RenderTreeFrame[], startIndex: number): number {
-  const end = startIndex + getFrameSubtreeLength(frames[startIndex]!);
-  let i = startIndex + 1;
-  while (i < end && frames[i]!.frameType === FrameType.Attribute) i++;
-  return i;
-}
-
-function applyAttributes(dom: DomRenderer, state: ComponentState, element: Element, startFrame: RenderTreeFrame, frames: RenderTreeFrame[], startIndex: number): void {
-  const end = startIndex + getFrameSubtreeLength(startFrame);
-  for (let i = startIndex + 1; i < end; i++) {
-    const frame = frames[i]!;
-    if (frame.frameType === FrameType.Attribute) {
-      setAttributeFrame(dom, state, element, frame);
-    } else {
-      break;
-    }
-  }
-}
-
-/** Maps a markup attribute name (@onclick) to the DOM event name (click). */
-function toDomEventName(attributeName: string): string {
-  return attributeName.toLowerCase().startsWith("on") ? attributeName.slice(2).toLowerCase() : attributeName;
-}
-
-function bindCallback(dom: DomRenderer, state: ComponentState, element: Element, attributeName: string, callback: EventCallback<never>, flags: number): void {
-  const eventName = toDomEventName(attributeName);
-  let map = elementHandlers.get(element);
-  if (!map) {
-    map = new Map<string, EventHandlerRecord>();
-    elementHandlers.set(element, map);
-  }
-  const existing = map.get(eventName);
-  if (existing) {
-    element.removeEventListener(eventName, existing.listener);
-  }
-  const listener = (event: Event): void => {
-    if (flags & 1) event.preventDefault(); // PreventDefault
-    if (flags & 2) event.stopPropagation(); // StopPropagation
-    dom.invokeEventHandler(state, callback, event);
-  };
-  element.addEventListener(eventName, listener);
-  map.set(eventName, { callback, flags, listener });
-}
-
-/* ------------------------------------------------------------------ */
-/* Markup helpers                                                      */
-/* ------------------------------------------------------------------ */
-
-/** Inserts a markup block as start comment + parsed nodes + end comment; returns the start. */
-function insertMarkup(markup: string, parent: Node, before: Node | null): Comment {
-  const start = document.createComment("bl-tsazor:markup");
-  const end = document.createComment("/bl-tsazor:markup");
+/** Inserts a markup block as a logical range (markers around the parsed nodes); returns its start. */
+function insertMarkup(markup: string, parent: Node, before: Node | null, journal: DomJournal | null): Comment {
+  const range = new LogicalRange("bl-tsazor:markup");
   const template = document.createElement("template");
   template.innerHTML = markup;
-  parent.insertBefore(start, before);
-  parent.insertBefore(template.content, before);
-  parent.insertBefore(end, before);
-  logicalRangeEnds.set(start, end);
-  return start;
+  const content = template.content;
+  content.insertBefore(range.start, content.firstChild);
+  content.appendChild(range.end);
+  journal?.restore(range, removeRange, null);
+  parent.insertBefore(content, before);
+  return range.start;
+}
+
+function removeRange(range: LogicalRange): void {
+  range.remove();
 }

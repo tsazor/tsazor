@@ -2,15 +2,15 @@ import type { ComponentBase } from "../components/component-base.js";
 import type { ComponentDefinition } from "../components/component-definition.js";
 import type { RenderTreeFrame } from "../render-tree/render-tree.js";
 import { RenderTreeBuilder } from "../render-tree/render-tree.js";
+import { LogicalRange } from "./logical-range.js";
 import type { RenderHandle } from "./render-handle.js";
 
 /**
  * Renderer-side state for one component instance (Blazor's ComponentState).
  */
 export class ComponentState {
-  /** Delimits this component's output inside the parent DOM. */
-  readonly startMarker: Comment;
-  readonly endMarker: Comment;
+  /** Delimits this component's output inside the parent DOM (moved and removed as a unit). */
+  readonly range: LogicalRange;
   /** Direct child component states, keyed by the frame index in the current tree. */
   readonly slotChildren = new Map<number, ComponentState>();
   /** Slot children of the render pass currently being processed. */
@@ -36,6 +36,14 @@ export class ComponentState {
 
   readonly renderHandle: RenderHandle;
 
+  get startMarker(): Comment {
+    return this.range.start;
+  }
+
+  get endMarker(): Comment {
+    return this.range.end;
+  }
+
   constructor(
     readonly id: number,
     readonly component: ComponentBase,
@@ -44,8 +52,7 @@ export class ComponentState {
   ) {
     this.definition = definition;
     this.depth = parent === null ? 0 : parent.depth + 1;
-    this.startMarker = document.createComment(`bl-tsazor:${id}`);
-    this.endMarker = document.createComment(`/bl-tsazor:${id}`);
+    this.range = new LogicalRange(`bl-tsazor:${id}`);
     this.renderHandle = {
       render: () => {
         /* set by the renderer to avoid a circular field initialization */
