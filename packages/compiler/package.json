@@ -20,11 +20,11 @@
   },
   "dependencies": {
     "@jridgewell/gen-mapping": "^0.3.8",
-    "@jridgewell/trace-mapping": "^0.3.25"
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "typescript": "^5.9.2"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
-    "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
 }
