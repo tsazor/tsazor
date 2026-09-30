@@ -27,7 +27,7 @@ export function compile(source: string, options: CompileOptions): CompileResult 
   const result: CompileResult = { code, diagnostics, metadata, mappings };
   if (options.generateSourceMap !== false) {
     const sourceFile = options.fileName ?? "component.tsazor";
-    result.map = buildSourceMap(mappings, sourceFile, `${options.className}.ts`);
+    result.map = buildSourceMap(mappings, sourceFile, `${options.className}.ts`, source);
   }
   return result;
 }

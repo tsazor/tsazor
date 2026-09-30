@@ -24,19 +24,19 @@ describe("C10 — mappings after multi-line constructs", () => {
     expect(originOf(source, "this.marker").line).toBe(5);
   });
 
-  it.fails("after a multi-line @if condition", () => {
+  it("after a multi-line @if condition", () => {
     const source = `@if (a &&\n    b) {\n    <i>@x</i>\n}\n@code { private a = true; private b = true; private x = 1; }`;
     expect(originOf(source, "this.x").line).toBe(3);
   });
 });
 
 describe("@code columns", () => {
-  it.fails("tab-indented members keep their column", () => {
+  it("tab-indented members keep their column", () => {
     const source = `@code {\n\tprivate tabbed = 1;\n}`;
     expect(originOf(source, "private tabbed")).toEqual({ line: 2, column: 1 });
   });
 
-  it.fails("single-line @code maps to the member, not the block start", () => {
+  it("single-line @code maps to the member, not the block start", () => {
     const source = `@code { private y = 2; }`;
     expect(originOf(source, "private y")).toEqual({ line: 1, column: 8 });
   });

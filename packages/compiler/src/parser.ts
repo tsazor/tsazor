@@ -291,6 +291,7 @@ class Parser {
       code: src.slice(brace + 1, close - 1),
       pos,
       endPos: this.locator(close),
+      codeStart: this.locator(brace + 1),
     };
     if (member) node.member = true;
     out.push(node);

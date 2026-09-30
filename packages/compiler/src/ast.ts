@@ -38,6 +38,9 @@ export interface CodeBlockNode extends SourceSpan {
   code: string;
   /** True for @code/@functions blocks (class members); false for inline @{…}. */
   member?: boolean;
+  /** Absolute position of the code's first character (right after the `{`),
+   *  for exact source-map columns. */
+  codeStart?: SourceSpan["pos"];
 }
 
 export interface TextTagNode extends SourceSpan {
