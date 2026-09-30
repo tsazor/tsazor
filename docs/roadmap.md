@@ -377,7 +377,7 @@ sauberer Paketierung (5.1). Als Referenzfälle dienen FluentCMS (OpenAPI) und Sl
 
 | Wann | Frage | Empfehlung |
 |---|---|---|
-| vor A3 | Syntax für explizite Imports in `.tsazor` | `@import …` als Direktive (Razor-Stil, in `_Imports` vererbbar) |
+| vor A3 | Syntax für explizite Imports in `.tsazor` | **Entschieden (2026-09-30):** `@import { X } from "./y"` als Direktive (Razor-Stil, über `_Imports.tsazor` vererbbar) |
 | vor B4 | Unbekannte Parameter: Fehler wie Blazor oder nur Warnung? | Fehler (Blazor-Semantik); Compiler meldet sie ab 2.2 ohnehin statisch |
 | vor 3.6 | Validierung: Decorators (DataAnnotations-nah) oder Funktions-Map? | Decorators — ermöglicht 5.2 (Schema ⇒ Validatoren) |
 | vor 4.2 | Fluent auf PascalCase umstellen? | Ja, einmalig, gemeinsam mit den Slot-Umstellungen |
