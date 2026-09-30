@@ -1,0 +1,40 @@
+@using @tsazor/runtime
+<div class="@this.toastClass" role="@this.liveRole" aria-live="polite" aria-atomic="true">
+    <div class="fui-toast__content">
+        @if (this.title) {
+            <div class="fui-toast__title">@this.title</div>
+        }
+        @if (this.childContent) {
+            <div class="fui-toast__message">@this.childContent</div>
+        }
+    </div>
+    @if (this.dismissible) {
+        <button type="button" class="fui-toast__close" aria-label="Close" @onclick="this.close">&times;</button>
+    }
+</div>
+
+@code {
+    /** Severity: info (default) | success | warning | error. */
+    @Parameter() severity: string = "info";
+    /** Optional headline. */
+    @Parameter() title?: string;
+    /** Message body. */
+    @Parameter() childContent?: RenderFragment;
+    /** Shows the close button (toasts inside ToastProvider are dismissible by default). */
+    @Parameter() dismissible: boolean = true;
+    /** Fired when the user closes the toast. */
+    @Parameter() onDismissed?: EventCallback<MouseEvent>;
+
+    /** role=alert for error (assertive), otherwise status. */
+    private get liveRole(): string {
+        return this.severity === "error" ? "alert" : "status";
+    }
+
+    private get toastClass(): string {
+        return `fui-toast fui-toast--${this.severity}`;
+    }
+
+    private close(e: MouseEvent): void {
+        this.onDismissed?.invokeAsync(e);
+    }
+}

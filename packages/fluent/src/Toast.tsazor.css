@@ -1,0 +1,113 @@
+/* Toast — Fluent 2 notifications: positioned stack (ToastProvider) + toast. */
+
+.fui-toasts {
+  position: fixed;
+  right: var(--fui-spacing-l);
+  bottom: var(--fui-spacing-l);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-gap-sm);
+  z-index: var(--fui-z-toast);
+  max-width: min(420px, calc(100vw - 2 * var(--fui-spacing-l)));
+}
+
+.fui-toasts--top {
+  top: var(--fui-spacing-l);
+  bottom: auto;
+}
+
+.fui-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fui-gap-sm);
+  padding: var(--fui-spacing-m);
+  background: var(--fui-background-3);
+  border: 1px solid var(--fui-stroke-1);
+  border-start-start-radius: var(--fui-radius-md);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-8);
+  font-family: var(--fui-font-family);
+  animation: fui-toast-enter var(--fui-duration-gentle) var(--fui-ease-standard);
+}
+
+.fui-toast__title {
+  font-size: var(--fui-font-size-body);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-1);
+}
+
+.fui-toast__message {
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+}
+
+.fui-toast__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+  min-width: 0;
+  flex: 1;
+}
+
+.fui-toast__close {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  color: var(--fui-foreground-2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fui-toast__close:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-toast__close:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+}
+
+/* Severity accents: the icon-side bar. */
+.fui-toast--info {
+  border-start-start-color: var(--fui-color-blue-1);
+  border-start-start-width: 4px;
+}
+
+.fui-toast--success {
+  border-start-start-color: var(--fui-color-green-1);
+  border-start-start-width: 4px;
+}
+
+.fui-toast--warning {
+  border-start-start-color: var(--fui-color-amber-1);
+  border-start-start-width: 4px;
+}
+
+.fui-toast--error {
+  border-start-start-color: var(--fui-color-red-1);
+  border-start-start-width: 4px;
+}
+
+@keyframes fui-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-toast {
+    animation: none;
+  }
+}
