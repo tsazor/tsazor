@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RenderTreeBuilder, FrameType, getFrameChildren, getFrameSubtreeLength } from "../src/render-tree/render-tree";
+import { ComponentBase, Renderer } from "../src/index";
 
 describe("RenderTreeBuilder", () => {
   it("builds a flat tree with resolved subtree lengths", () => {
@@ -71,5 +72,26 @@ describe("RenderTreeBuilder", () => {
     const frame = b.getFrames()[0]!;
     expect(frame.elementKey).toBe("item-1");
     expect(getFrameSubtreeLength(frame)).toBe(2); // li + text
+  });
+});
+describe("addContent value rendering (Blazor: value?.ToString())", () => {
+  it("renders booleans and bigints as text, null/undefined as nothing", async () => {
+    class Values extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, true);
+        b.addContent(1, "|");
+        b.addContent(2, false);
+        b.addContent(3, "|");
+        b.addContent(4, 2n ** 60n);
+        b.addContent(5, null);
+        b.addContent(6, undefined);
+        b.addContent(7, 0);
+      }
+    }
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(Values, container);
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe(`true|false|${2n ** 60n}0`);
   });
 });

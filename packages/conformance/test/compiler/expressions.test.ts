@@ -59,9 +59,7 @@ describe("C5 — expression forms", () => {
     expect(m.html()).toBe("<p>Ada</p>");
   });
 
-  // Compiles correctly since A4 (globals stay free); still fails because the
-  // runtime renders a boolean as nothing, where Blazor renders "True".
-  it.fails("JS globals are not members", async () => {
+  it("JS globals are not members", async () => {
     const m = await mount(`<p>@parseInt("42")|@encodeURIComponent("a b")|@isNaN(Number("x"))</p>`);
     expect(m.html()).toBe("<p>42|a%20b|true</p>");
   });
@@ -95,9 +93,7 @@ describe("C6 — statements inside @{ }", () => {
 });
 
 describe("C18 — method groups keep their receiver", () => {
-  // Compiles correctly since A4 (the handler runs on `item`); still fails
-  // because the runtime renders a boolean as nothing (Blazor: "True").
-  it.fails("@onclick=\"item.toggle\" calls toggle on item", async () => {
+  it("@onclick=\"item.toggle\" calls toggle on item", async () => {
     const m = await mount(`
 <button @onclick="item.toggle">t</button><p>@item.on</p>
 @code {

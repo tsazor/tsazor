@@ -22,7 +22,7 @@ export interface RenderTreeFrame {
   readonly elementKey?: string | number | null;
   readonly elementSubtreeLength?: number;
   /** Text frames */
-  readonly textContent?: string | number;
+  readonly textContent?: string | number | boolean | bigint;
   /** Attribute frames */
   readonly attributeName?: string;
   readonly attributeValue?: unknown;
@@ -145,7 +145,7 @@ export class RenderTreeBuilder {
     }
   }
 
-  addContent(sequence: number, textOrFragment: string | number | boolean | null | undefined | RenderFragment): void {
+  addContent(sequence: number, textOrFragment: string | number | boolean | bigint | null | undefined | RenderFragment): void {
     // Blazor's builder: content written inside a component frame becomes the
     // component's ChildContent parameter instead of a renderable subtree.
     const parentIndex = this.openFrameStack[this.openFrameStack.length - 1];
@@ -171,11 +171,12 @@ export class RenderTreeBuilder {
       this.openRegion(sequence);
       textOrFragment(this);
       this.closeRegion();
-    } else if (textOrFragment === null || textOrFragment === undefined || textOrFragment === false) {
-      // Skip empty content (Blazor renders nothing for falsy expressions).
-    } else if (typeof textOrFragment === "boolean") {
-      // true renders nothing.
+    } else if (textOrFragment === null || textOrFragment === undefined) {
+      // Blazor's AddContent(object?) renders value?.ToString(): null is nothing.
     } else {
+      // Every other value renders as its string — booleans included ("true"/
+      // "false", the TS analogue of Blazor's "True"/"False"); there is no
+      // React-style "false renders nothing".
       this.frames.push({ frameType: FrameType.Text, sequence, textContent: textOrFragment });
     }
   }
