@@ -1,6 +1,6 @@
 import { compile, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
 import { transformSync } from "esbuild";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { hmrAppendix } from "./hmr.js";
 import { scopeHashFor } from "./scoped-css.js";
@@ -66,6 +66,7 @@ export async function transformTsazor(
     fileName: filePath,
     imports: extraImports,
     codeBehindClass,
+    codeBehindSource: codeBehindClass ? readFileSync(codeBehindPath, "utf8") : undefined,
     scopeHash,
     generateSourceMap: sourceMap,
   });

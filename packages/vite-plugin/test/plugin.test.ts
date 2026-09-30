@@ -210,14 +210,14 @@ describe("tsazor vite plugin", () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, "<p>Hello, @Name!</p>", path.join(root, "Shared", "Greeter.tsazor"));
     expect(result!.code).toContain('import "./Greeter.tsazor.css";');
-    expect(result!.code).toMatch(/b\.addAttribute\(1, "b-[0-9a-f]{8}", ""\)/);
+    expect(result!.code).toMatch(/__builder\.addAttribute\(1, "b-[0-9a-f]{8}", ""\)/);
   });
 
   it("keeps files without a sidecar free of scope emission", async () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
     expect(result!.code).not.toContain(".tsazor.css");
-    expect(result!.code).not.toMatch(/b\.addAttribute\(\d+, "b-/);
+    expect(result!.code).not.toMatch(/__builder\.addAttribute\(\d+, "b-/);
   });
 
   it("rewrites sidecar CSS selectors to the scope attribute", async () => {
@@ -241,7 +241,7 @@ describe("tsazor vite plugin", () => {
   it("keeps .tsazor files without a .ts sidecar on ComponentBase", async () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
-    expect(result!.code).toContain("export default class Counter extends ComponentBase {");
+    expect(result!.code).toContain("export default class Counter extends __tsazor_ComponentBase {");
     expect(result!.code).not.toMatch(/import \w+Base from "\.\/.*\.ts";/);
   });
 });

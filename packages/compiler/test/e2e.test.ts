@@ -148,7 +148,7 @@ export default class Greeter extends ComponentBase {
       resolveType: (name) => (name === "ClockService" ? { specifier: "./clock" } : null),
     });
     expect(diagnostics.hasErrors).toBe(false);
-    expect(code).toContain("private readonly Clock = inject(ClockService);");
+    expect(code).toContain("private readonly Clock = __tsazor_inject(ClockService);");
     expect(code).toContain('import ClockService from "./clock";');
   });
 
@@ -244,7 +244,7 @@ export default class Stepper extends ComponentBase {
     const parsed = JSON.parse(map!);
     expect(parsed.version).toBe(3);
     expect(parsed.sources).toContain("Smap.tsazor");
-    expect(code).toContain('b.addContent(1, this.Title);');
+    expect(code).toContain('__builder.addContent(1, this.Title);');
   });
 
   it("sourcemap decodes 1-based via trace-mapping on both sides (convention pin)", async () => {
@@ -253,7 +253,7 @@ export default class Stepper extends ComponentBase {
     // of the chain don't silently break the DevTools debugging story.
     const source = "<p>@Title</p>\n";
     const { code, map } = compile(source, { className: "Smap", fileName: "Smap.tsazor" });
-    const genLine0 = code.split("\n").findIndex((l) => l.includes("b.addContent(1, this.Title);"));
+    const genLine0 = code.split("\n").findIndex((l) => l.includes("__builder.addContent(1, this.Title);"));
     const { TraceMap, originalPositionFor, generatedPositionFor } = await import("@jridgewell/trace-mapping");
     const trace = new TraceMap(JSON.parse(map!));
     const orig = originalPositionFor(trace, { line: genLine0 + 1, column: 4 });
