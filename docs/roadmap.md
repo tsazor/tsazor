@@ -62,6 +62,8 @@ Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
 - 0.5: `node scripts/probe-razor-corpus.mjs` (braucht `compiler/dist`; Korpus-Cache in
   `.probe/`, gitignored). **Baseline FluentCMS@c63d49c: 13/217 sauber**, 171 ohne Fehler
   (davon 155 mit erkannten stillen Fehlern), 46 mit Fehlern, 36 mit unaufgelösten Tags.
+  **Verlauf:** nach A1+B1 unverändert 13 · nach A2+B2 **145/217** sauber (182 ohne Fehler, 19 mit
+  stillen Fehlern — `@context` ×18, Modifier-Wert ×1; 35 mit Fehlern — v. a. TZS008 `@bind` `!.` ×139 → A5).
 
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
