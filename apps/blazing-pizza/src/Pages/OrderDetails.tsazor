@@ -1,6 +1,5 @@
 @page "/myorders/{orderId:int}"
 @authorize
-@inherits PizzaComponentBase
 @inject OrdersClient OrdersClient
 
 <div class="main">

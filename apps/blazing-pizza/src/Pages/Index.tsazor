@@ -1,5 +1,4 @@
 @page "/"
-@inherits PizzaComponentBase
 @inject OrderState OrderState
 
 <div class="main">

@@ -1,6 +1,6 @@
 /**
  * End-to-end integration: compiles a real demo page (.tsazor) through the same
- * 2-pass pipeline as the vite plugin, evaluates the module and mounts it in
+ * resolution as the vite plugin, evaluates the module and mounts it in
  * happy-dom. Guards the full compiler → runtime → DOM path against
  * regressions that hand-built render trees cannot catch (e.g. the Razor
  * method-group conversion for event parameters — a bare `this.handler` used
@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { compile } from "@tsazor/compiler";
-import { collectCodeImports, collectImports, createFileContext } from "@tsazor/workspace";
+import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
@@ -21,20 +21,12 @@ const here = path.dirname(fileURLToPath(new URL(import.meta.url)));
 const pagePath = path.resolve(here, "../../../apps/demo/src/Pages/ComponentsDemo.tsazor");
 const root = path.resolve(here, "../../../apps/demo");
 
-/** Same pipeline as the vite plugin / library build: 2-pass compile + esbuild. */
+/** Same pipeline as the vite plugin / library build: shared resolution + esbuild. */
 async function compilePage(): Promise<string> {
   const source = await readFile(pagePath, "utf8");
   const chain = await collectImports(path.dirname(pagePath), root);
   const context = createFileContext(pagePath, chain);
-  const options = {
-    className: "ComponentsDemo",
-    fileName: pagePath,
-    resolveComponent: (tag: string) => context.resolveComponent(tag, []),
-    resolveType: (name: string) => context.resolveType(name, []),
-    generateSourceMap: false,
-  };
-  const extra = collectCodeImports(source, compile(source, options).code, context);
-  const compiled = compile(source, { ...options, imports: extra });
+  const compiled = compile(source, { ...resolutionOptions(context), generateSourceMap: false });
   const js = transformSync(compiled.code, {
     loader: "ts",
     sourcefile: pagePath,

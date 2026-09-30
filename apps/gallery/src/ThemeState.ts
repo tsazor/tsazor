@@ -35,7 +35,3 @@ export class ThemeState {
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 }
-
-// @inject resolves services as default exports of a file named exactly like
-// the type (Blazor: file name = type name).
-export default ThemeState;

@@ -36,6 +36,9 @@ Compile-Zeit nicht erkennbar ist, was später per `collectCodeImports` importier
 vite-plugin-Transform prescannt den Quelltext nach `RUNTIME_TYPES`-Identifiern
 und übergibt sie. Regressionsgetestet (vite-plugin).
 
+**Stand A3 (2026-09-30):** `knownGlobals` und der Prescan sind entfernt; `NavLinkMatch`
+kommt per `@import` aus dem Standard-Set in `_Imports.tsazor` und bleibt dadurch frei.
+
 ### 3. Async-Lifecycle-Hooks rendern nicht nach dem `await` — **Workaround nötig**
 
 `onInitialized`/`onParametersSet` laufen innerhalb des Render-Passes. Ein
@@ -79,6 +82,10 @@ Helper als `protected readonly` Member bindet; alle Seiten/Components mit
 **Offene Frage fürs Framework:** Sollte `collectCodeImports` auch freie
 Funktionen aus `.ts`-Dateien erkennen und `knownGlobals` füttern? Aktuell
 scannt es nur PascalCase-Identifier (Typen/Components).
+
+**Stand A3 (2026-09-30):** beantwortet durch explizite Imports — die Helfer (und
+`PIZZA_MINIMUM_SIZE`/`PIZZA_MAXIMUM_SIZE`) stehen als `@import` in der `_Imports.tsazor`
+der App, `PizzaComponentBase` ist entfernt.
 
 ## D. Dokumentierte Abweichungen vom Original
 

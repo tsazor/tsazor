@@ -22,7 +22,7 @@ my-app/
 ├── vite.config.ts           # plugins: [tsazor()]
 └── src/
     ├── Program.ts           # createTsazorApp({ root: App, routes })
-    ├── _Imports.tsazor       # projektweite Direktiven (z. B. @layout MainLayout)
+    ├── _Imports.tsazor       # projektweite Direktiven (@layout, @using, Standard-@imports)
     ├── App.tsazor            # Wurzelkomponente (Router)
     ├── MainLayout.tsazor     # Layout (@inherits LayoutComponentBase, @Body)
     ├── MainLayout.tsazor.css # (optional) scoped CSS, nur für MainLayout
@@ -51,24 +51,55 @@ createTsazorApp({ root: App, routes });
 - `createTsazorApp` baut DI-Container + NavigationManager, rendert die Wurzel in `#app`
   und registriert den HMR-Hook (`globalThis.__tsazor`).
 
+## _Imports.tsazor
+
+Das Pendant zu Blazors `_Imports.razor`: Direktiven darin gelten für alle `.tsazor`-Dateien
+im selben Ordner und darunter. Wo Blazor `@using Microsoft.AspNetCore.Components` schreibt,
+steht in Tsazor das **Standard-Runtime-Set** als `@import` (ungenutzte Imports entfernt der
+Build):
+
+```razor
+@layout MainLayout
+@using ./Shared
+@* Standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). *@
+@import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, RenderTreeBuilder, inject } from "@tsazor/runtime"
+@import { NavigationManager, Router, RouteView, AuthorizeRouteView, LayoutView, NavLink, NavLinkMatch } from "@tsazor/runtime"
+@import { EditContext, AuthenticationState, AuthenticationStateProvider, TsazorHttp } from "@tsazor/runtime"
+@import type { RenderFragment, RouteData, ModelValidator } from "@tsazor/runtime"
+@* App-eigene Typen/Helfer (Blazor: @using MyApp.Models) *@
+@import type { Order, Pizza } from "./models"
+@import { formatDate } from "./format"
+```
+
+Namen, die Markup oder `@code` verwenden, müssen importiert sein — es gibt **keine**
+Import-Inferenz aus Bezeichnern. Eine Komponentenklasse, die `@code` als Wert braucht
+(z. B. `DefaultLayout` im Router), wird explizit importiert:
+`@import MainLayout from "./MainLayout.tsazor"`. Siehe [`@import`](language-reference.md#import).
+
 ## Component-Resolution
 
-Tags mit Großbuchstaben am Anfang sind Komponenten. Aufgelöst wird — wie in Blazor
-über `_Imports.tsazor`:
+Tags mit Großbuchstaben am Anfang sind Komponenten. Aufgelöst wird — wie C#-Typnamen
+über Namespaces und `@using`:
 
-1. **Eigene Verzeichnis** der Datei (`<Tag>.tsazor` als Geschwisterdatei),
-2. **`_Imports.tsazor`-Kette** von der Datei bis zur Wurzel; jede `_Imports`-Ebene
-   macht ihre eigenen Geschwister sichtbar und bringt ihre `@using`-Verzeichnisse ein,
-3. **Runtime-Built-ins** (`Router`, `NavLink`, `EditForm`, `InputText`, `Virtualize`, …
-   aus `@tsazor/runtime`).
+1. **Explizit importiert** (`@import X from "./X.tsazor"`) ⇒ genau diese Klasse.
+2. **Umschließende Ordner:** das eigene Verzeichnis der Datei, dann die Verzeichnisse der
+   `_Imports.tsazor`-Kette (Geschwister sind sichtbar); der nächste Treffer gewinnt.
+3. **`@using`-Quellen** als Ganzes: `@using`-Ordner (aus der Datei und der `_Imports`-Kette),
+   die Runtime-Built-ins (`Router`, `NavLink`, `EditForm`, `InputText`, `Virtualize`, …) und
+   Bare-Paket-`@using`s — ein Paket liefert nur Namen, die sein Entry-Modul wirklich
+   exportiert. Findet sich ein Tag in **mehr als einer** Quelle ⇒ Fehler TZS017 (mehrdeutig);
+   in keiner ⇒ Warnung TZS005 (wird als Element ausgegeben).
 
 `@using`-Formen:
 
 | Schreibweise | Bedeutung |
 |---|---|
-| `@using ./Shared` | Verzeichnis mit Komponenten, relativ zur `_Imports.tsazor` |
-| `@using @tsazor/runtime` | Modul-Specifier; Typen daraus werden per Name aufgelöst |
-| `@using MainLayout` | (Tsazor-Erweiterung) macht eine Komponentenklasse in `@code` nutzbar |
+| `@using ./Shared` | Verzeichnis mit Komponenten (und `@inject`-Typen), relativ zur Datei bzw. `_Imports.tsazor` |
+| `@using @tsazor/fluent` | npm-Paket; Tags/Typen nur aus seiner Export-Liste |
+
+Ein `@using`-Ordner oder -Paket, das nicht existiert, ist eine Warnung (TZS018).
+`@inject`-/`@inherits`-Typen werden über dieselben Quellen aufgelöst; ob Default- oder
+Named-Import, entscheidet der **tatsächliche** Export der Zieldatei (`.tsazor` ⇒ Default).
 
 ## Tests
 

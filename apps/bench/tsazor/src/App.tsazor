@@ -1,3 +1,4 @@
+@import BenchLayout from "./BenchLayout.tsazor"
 <Router Found="@found" NotFound="@notFound" />
 
 @code {

@@ -67,10 +67,38 @@ Das **Vite-Plugin** ergänzt das, was Blazors Build (Roslyn) sonst leistet:
 
 1. `_Imports.tsazor`-Kette + `@using` → `resolveComponent`/`resolveType` per Dateisystem,
 2. Runtime-Built-ins als Markup-Tags (Blazors `Microsoft.AspNetCore.Components.Web`),
-3. Import-Ermittlung für PascalCase-Identifer in `@code` (z. B. `Parameter`-Dekorator,
-   `EventCallback`, lokale Komponentenklassen) — zweistufig: Pass 1 listet die vom
-   Compiler selbst erzeugten Imports, Pass 2 ergänzt die Restlichen,
+3. geerbte `@import`s der `_Imports`-Kette, relative Specifier auf die Datei umgeschrieben,
 4. `virtual:tsazor-routes`-Manifest aus allen `@page`-Dateien.
+
+### Import-Modell und Auflösung (A3)
+
+Es gibt keine Import-Inferenz aus Bezeichnern. Ein freier Name in Markup/`@code` ist
+entweder lokal, ein JS-Global, per `@import` gebunden (eigene Datei oder `_Imports`-Kette)
+— oder ein Member (`this.X`). Die Auflösung lebt in `@tsazor/workspace`
+(`createFileContext` + `resolutionOptions`) und wird identisch vom Vite-Plugin
+(`transformTsazor`), den Library-Builds (`components`, `fluent`) und dem Language Server
+(Shadow-Module, Diagnostics, Hover, Completions) benutzt:
+
+- **`@import`**: der Compiler parst den Wert syntaktisch mit dem TS-Parser (TZS016 bei
+  ungültiger Form) und emittiert ihn wörtlich (gemappt); geerbte Imports kommen als
+  `inheritedImports` (nächste Ebene zuerst, bereits umgeschrieben) — die Datei überschattet
+  die Kette, doppelte Bindungen/Side-Effect-Imports fallen weg. Die gebundenen Namen sind
+  freie Namen im Expression-Rewriter.
+- **Compiler-eigene Imports** bleiben generiert: `ComponentBase`, `RenderTreeBuilder`,
+  `EventCallback`, `Parameter`/`CascadingParameter`/`inject` (wenn der Code sie braucht und
+  kein `@import` sie bindet), Komponenten aus Tags und `@inject`-/`@inherits`-Typen.
+- **Default vs. Named** kommt aus dem tatsächlichen Export der Zieldatei
+  (`scanModuleExports`, syntaktisch: Named-Export gleichen Namens, sonst Default;
+  `.tsazor` ⇒ Default) — nie aus dem Dateinamen.
+- **Tags**: explizit importiert ⇒ direkt; sonst umschließende Ordner (Datei, `_Imports`-Ebenen;
+  nächster gewinnt), sonst alle `@using`-Quellen gemeinsam — Ordner, Runtime-Built-ins,
+  Bare-Pakete. Ein Bare-Paket liefert nur Namen seiner **Export-Liste**: das Entry-Modul aus
+  `package.json` (`exports["."]` → `module` → `main` → `types`) wird syntaktisch gelesen,
+  relative `export *` werden verfolgt (kein separates Manifest nötig, die Library-Builds
+  erzeugen ohnehin `dist/index.js` mit `export { default as X }`). Mehr als eine Quelle ⇒
+  TZS017, keine ⇒ TZS005, fehlender `@using`-Ordner/-Paket ⇒ TZS018 (Warnung).
+- Diagnostics einer `_Imports.tsazor` hängen an ihrer Ebene (`ImportsLayer.diagnostics`);
+  das Plugin wirft ihre Fehler beim importierenden Modul und meldet Warnungen einmal.
 
 ## HMR (State-Retention)
 

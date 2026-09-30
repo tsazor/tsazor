@@ -1,6 +1,7 @@
 /**
  * Shadow-module tests over a temp workspace: pipeline parity with the vite
- * plugin (imports, code-behind, knownGlobals) plus the v2 import rewrites.
+ * plugin (shared resolution, inherited @imports, code-behind) plus the v2
+ * import rewrites.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { writeFileSync } from "node:fs";
@@ -43,7 +44,9 @@ beforeAll(async () => {
   // @tsazor/components) — the v2 rewrite must shadow from source.
   const pkg = path.join(root, "node_modules", "@fake", "ui");
   await mkdir(path.join(pkg, "src"), { recursive: true });
-  writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0" }));
+  // Its entry exports Badge — bare-package tags resolve only against the export list.
+  writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0", main: "./index.js" }));
+  writeFileSync(path.join(pkg, "index.js"), 'export { default as Badge } from "./dist/Badge.js";\n');
   writeFileSync(path.join(pkg, "src", "Badge.tsazor"), '<span class="badge">@Text</span>\n\n@code {\n    @Parameter() Text?: string;\n}\n');
   cleanup = async () => rm(root, { recursive: true, force: true });
 });
@@ -54,7 +57,7 @@ const build = () => buildShadowModule(path.join(root, "Pages", "Demo.tsazor"), d
 const demoSource = ["<Alert Variant=\"@size\" />", "", "@code {", "    count = 3;", "}"].join("\n");
 
 describe("buildShadowModule", () => {
-  it("mirrors the build pipeline: runtime imports, code-behind import, knownGlobals", async () => {
+  it("mirrors the build pipeline: runtime imports, code-behind import, runtime tags", async () => {
     const shadow = await buildShadowModule(
       path.join(root, "Pages", "Demo.tsazor"),
       [
@@ -73,14 +76,14 @@ describe("buildShadowModule", () => {
     expect(shadow!.code).toContain('import DemoBase from "./Demo.tsazor.ts";');
     expect(shadow!.code).toContain("extends DemoBase");
     expect(shadow!.code).toContain("export default class Demo extends DemoBase {");
-    // NavLink is a runtime component: collectCodeImports imports it.
-    expect(shadow!.code).toContain("NavLink");
+    // NavLink is a runtime component tag: the compiler imports it itself.
+    expect(shadow!.code).toContain('import { NavLink as __tsazor_comp_NavLink } from "@tsazor/runtime";');
   });
 
   it("rewrites sibling .tsazor component imports to their shadow", async () => {
     const shadow = await build();
     // Demo (Pages/) imports Alert (Shared/) → "../Shared/Alert.tsazor.gen".
-    expect(shadow!.code).toContain('import Alert from "../Shared/Alert.tsazor.gen";');
+    expect(shadow!.code).toContain('import __tsazor_comp_Alert from "../Shared/Alert.tsazor.gen";');
     expect(shadow!.code).not.toContain('from "../Shared/Alert.tsazor";');
   });
 

@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import type { TszDiagnostic } from "@tsazor/compiler";
 import type { Plugin, ViteDevServer } from "vite";
 import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes.js";
 import { processScopedCss, scopeHashFor } from "./scoped-css.js";
@@ -69,6 +70,7 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         return { code: "export default null;\n", map: null };
       }
       const result = await transformTsazor(code, filePath, projectRoot);
+      reportImportsDiagnostics(result.importsDiagnostics);
       reportDiagnostics(result.diagnostics, filePath);
       return { code: result.code, map: result.map };
     },
@@ -87,6 +89,39 @@ async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): 
     // warmupRequest logs pre-transform errors itself; it never rejects.
     await server.warmupRequest(url);
   }
+}
+
+/** _Imports warnings already printed (every file in the folder shares them). */
+const reportedImportsWarnings = new Set<string>();
+
+/**
+ * _Imports.tsazor is never transformed itself, so its diagnostics surface
+ * through the files that inherit it: errors (e.g. an invalid @import) fail
+ * the importing module, warnings are printed once per location.
+ */
+function reportImportsDiagnostics(entries: ReadonlyArray<{ file: string; diagnostic: TszDiagnostic }>): void {
+  const errors = entries.filter((entry) => entry.diagnostic.severity === "error");
+  for (const { file, diagnostic } of entries) {
+    if (diagnostic.severity !== "warning") continue;
+    const key = `${file}:${diagnostic.pos.line}:${diagnostic.pos.column}:${diagnostic.message}`;
+    if (reportedImportsWarnings.has(key)) continue;
+    reportedImportsWarnings.add(key);
+    // eslint-disable-next-line no-console
+    console.warn(`[tsazor] warning ${diagnostic.code} (${file}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`);
+  }
+  if (errors.length === 0) return;
+  const first = errors[0]!;
+  const details = errors
+    .map(({ file, diagnostic }) => `  ${diagnostic.code} (${file}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`)
+    .join("\n");
+  const error = new Error(`[tsazor] compile errors in ${first.file}\n${details}`);
+  (error as unknown as { id: string }).id = first.file;
+  (error as unknown as { loc: { file: string; line: number; column: number } }).loc = {
+    file: first.file,
+    line: first.diagnostic.pos.line,
+    column: first.diagnostic.pos.column,
+  };
+  throw error;
 }
 
 /**

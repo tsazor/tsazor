@@ -9,7 +9,7 @@ import {
   type DirectiveNode,
   type ElementNode,
 } from "@tsazor/compiler";
-import { collectImports, createFileContext, type FileContext } from "@tsazor/workspace";
+import { collectImports, createFileContext, resolutionOptions, type FileContext } from "@tsazor/workspace";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
@@ -30,6 +30,8 @@ export interface AnalyzedFile {
   diagnostics: readonly TszDiagnostic[];
   /** @inject names declared in the component (expression completions). */
   injects: ReadonlyArray<{ type: string; name: string }>;
+  /** Local names bound by the file's own and inherited @imports (expression completions). */
+  imports: ReadonlyArray<{ name: string; specifier: string }>;
 }
 
 /** Parses the AST and compiles once, sharing the workspace resolution with the build. */
@@ -41,18 +43,22 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
 
   let diagnostics: readonly TszDiagnostic[] = [];
   let injects: ReadonlyArray<{ type: string; name: string }> = [];
+  let imports: Array<{ name: string; specifier: string }> = [];
   let document: DocumentNode;
   try {
     document = parseDocument(source, new DiagnosticBag());
-    const compiled = compile(source, {
-      className: context.className,
-      fileName: absolute,
-      resolveComponent: context.resolveComponent,
-      resolveType: context.resolveType,
-      generateSourceMap: false,
-    });
+    const compiled = compile(source, { ...resolutionOptions(context), generateSourceMap: false });
     diagnostics = compiled.diagnostics.all;
     injects = compiled.metadata.injects;
+    // Own @imports shadow inherited ones (the compiler's merge rule).
+    const seen = new Set<string>();
+    for (const info of [...compiled.metadata.imports, ...context.inheritedImports]) {
+      for (const binding of info.bindings) {
+        if (seen.has(binding.local)) continue;
+        seen.add(binding.local);
+        imports.push({ name: binding.local, specifier: info.specifier });
+      }
+    }
   } catch (error) {
     // The compiler throws for codegen-level failures; surface the message.
     document = { directives: [], body: [], codeBlocks: [] };
@@ -63,7 +69,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
       pos: { line: 1, column: 0 },
     }];
   }
-  return { filePath: absolute, fileDir, className: context.className, source, document, context, diagnostics, injects };
+  return { filePath: absolute, fileDir, className: context.className, source, document, context, diagnostics, injects, imports };
 }
 
 /* Node lookup --------------------------------------------------------------- */
@@ -104,7 +110,8 @@ const DIRECTIVE_DOCS: Record<string, string> = {
   page: "`@page` — declares the route template of this component (generates `routeTemplate`).",
   layout: "`@layout` — layout component wrapping this page.",
   inject: "`@inject` — resolves a DI service and binds it to a field.",
-  using: "`@using` — imports a module for markup and @code resolution.",
+  using: "`@using` — makes a component folder or package visible for tag and @inject resolution.",
+  import: "`@import` — a TypeScript import for markup and @code (inherited from _Imports.tsazor).",
   inherits: "`@inherits` — changes the base class of the generated component.",
   typeparam: "`@typeparam` — declares a generic type parameter.",
 };
@@ -116,9 +123,14 @@ export function hoverAt(analyzed: AnalyzedFile, line: number, character: number)
 
   if (node.kind === "element" && (node as ElementNode).isComponent) {
     const element = node as ElementNode;
-    const resolved = analyzed.context.resolveComponent(element.tagName, analyzed.context.chain.usings);
+    const imported = analyzed.imports.find((entry) => entry.name === element.tagName);
+    const resolved = imported ? null : analyzed.context.resolveComponent(element.tagName, analyzed.context.chain.usings);
     const lines = [`**\`<${element.tagName}>\`** — Tsazor component`];
-    if (resolved) {
+    if (imported) {
+      lines.push(`Source: \`${imported.specifier}\` (@import)`);
+    } else if (resolved?.ambiguous) {
+      lines.push(`_Ambiguous (TZS017): ${resolved.ambiguous.map((source) => `\`${source}\``).join(", ")}._`);
+    } else if (resolved) {
       lines.push(
         resolved.exportName
           ? `Source: \`${resolved.specifier}\` (exports \`${resolved.exportName}\`)`
@@ -171,6 +183,8 @@ export function definitionAt(analyzed: AnalyzedFile, line: number, character: nu
   if (!node) return null;
 
   if (node.kind === "element" && (node as ElementNode).isComponent) {
+    const imported = analyzed.imports.find((entry) => entry.name === (node as ElementNode).tagName);
+    if (imported) return toFile(analyzed.fileDir, imported.specifier);
     const resolved = analyzed.context.resolveComponent((node as ElementNode).tagName, analyzed.context.chain.usings);
     if (!resolved || resolved.exportName) return null; // built-ins live in the runtime package
     return toFile(analyzed.fileDir, resolved.specifier);

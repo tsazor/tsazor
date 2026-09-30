@@ -3,17 +3,25 @@
  * source (the AST has no per-attribute-name/value spans) and returns
  * candidates for four contexts:
  *
- *   <Gr                    → component tags (from @using dirs + runtime built-ins)
+ *   <Gr                    → component tags (@using dirs, package exports, runtime built-ins)
  *   <Greeter …             → the resolved component's @Parameter() attributes,
  *                            plus directive attributes (@bind, @onclick, …)
  *   @                      → directives (top level) or expression members
- *   Count: @co             → members of @code state, the code-behind class and @inject fields
+ *   Count: @co             → members of @code state, the code-behind class, @inject fields
+ *                            and @import names (own + inherited from _Imports.tsazor)
  *
  * Positions: LSP (0-based line/character) in, completions out. The compiler's
  * AST spans are 1-based/0-based-columns — nodeAt already handles the shift.
  */
 import { parseDocument, DiagnosticBag, type CodeBlockNode, type ElementNode, type ExpressionNode } from "@tsazor/compiler";
-import { RUNTIME_COMPONENT_PARAMS, RUNTIME_PACKAGE, RUNTIME_COMPONENTS, candidateDirs } from "@tsazor/workspace";
+import {
+  RUNTIME_COMPONENT_PARAMS,
+  RUNTIME_PACKAGE,
+  RUNTIME_COMPONENTS,
+  candidateDirs,
+  isPathLikeUsing,
+  packageExports,
+} from "@tsazor/workspace";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AnalyzedFile } from "./analysis.js";
@@ -187,7 +195,7 @@ function parametersOfComponent(
   analyzed: AnalyzedFile,
   tagName: string,
 ): ReadonlyArray<{ name: string; doc?: string }> {
-  const file = analyzed.context.resolveImportable(tagName);
+  const file = analyzed.context.componentFile(tagName);
   const params = file ? parameterNamesOfTsazorFile(file) : [];
   if (params.length > 0) return params;
   return RUNTIME_COMPONENT_PARAMS[tagName] ?? [];
@@ -232,6 +240,16 @@ function componentCandidates(analyzed: AnalyzedFile, prefix: string): Completion
       const tag = entry.slice(0, -".tsazor".length);
       if (tag === "_Imports" || !PASCAL_TAG.test(tag) || !seen.add(tag)) continue;
       items.push({ label: tag, kind: "component", detail: path.basename(dir), doc: `<${tag}> — component in ${path.basename(dir)}` });
+    }
+  }
+  // Bare-package @usings: exactly the names the package exports (same list the build resolves against).
+  for (const using of analyzed.context.chain.usings) {
+    if (isPathLikeUsing(using)) continue;
+    const name = using.replace(/^['"]|['"]$/g, "");
+    if (name === RUNTIME_PACKAGE) continue;
+    for (const [tag, isValue] of packageExports(name, analyzed.fileDir) ?? []) {
+      if (!isValue || !PASCAL_TAG.test(tag) || !seen.add(tag)) continue;
+      items.push({ label: tag, kind: "component", detail: name, doc: `<${tag}> — exported by ${name}` });
     }
   }
   for (const tag of RUNTIME_COMPONENTS) {
@@ -320,6 +338,11 @@ function memberCandidates(analyzed: AnalyzedFile, prefix: string): CompletionCan
   }
   for (const inject of analyzed.injects) {
     if (!members.has(inject.name)) members.set(inject.name, { label: inject.name, kind: "member", detail: `@inject ${inject.type}` });
+  }
+  for (const imported of analyzed.imports) {
+    if (!members.has(imported.name)) {
+      members.set(imported.name, { label: imported.name, kind: "member", detail: `@import from "${imported.specifier}"` });
+    }
   }
 
   const needle = prefix.toLowerCase();

@@ -34,7 +34,9 @@ npx @tsazor/fluent add Dialog
 Copies real `.tsazor` sources (component + sidecar CSS + needed siblings) into
 `src/components/` and the tokens once into `src/styles/`. `--print` is the
 dry-run. The copied sources compile through your own vite-plugin pipeline —
-they are yours to edit.
+they are yours to edit. They expect the standard runtime `@import` set in your
+`_Imports.tsazor` (see `docs/getting-started.md`), like `src/_Imports.tsazor`
+in this package.
 
 ## Docs
 

@@ -6,7 +6,8 @@
 |---|---|---|
 | `@page` | `@page "/user/{Id:int}"` | Routen-Template (Constraints: `int`, `long`, `bool`, `guid`, `alpha`, `alphaNumeric`, `regex(...)`; Catch-all `{*Path}`). Mehrere `@page` ⇒ jedes Template ist eine Route (Blazor) |
 | `@layout` | `@layout MainLayout` | Layout für diese Route (überschreibt `_Imports`) |
-| `@using` | `@using ./Shared` | Komponenten-/Typ-Auflösung (siehe Getting Started) |
+| `@using` | `@using ./Shared` | Komponenten-Tags und `@inject`-/`@inherits`-Typen (siehe Getting Started) |
+| `@import` | `@import { Status, formatDate } from "./utils"` | TypeScript-Import für Markup und `@code` (siehe unten); in `_Imports.tsazor` vererbt |
 | `@inject` | `@inject NavigationManager Nav` | DI: Feld-Initializer `inject(<Type>)` |
 | `@inherits` | `@inherits LayoutComponentBase` | Basisklasse (Standard: `ComponentBase`) |
 | `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | generische Typparameter (v1 deklarativ); C#-Constraint `where T : …` wird mit Warnung TZS014 ignoriert |
@@ -17,6 +18,44 @@
 
 Direktiven gelten nur auf Dokumentebene; innerhalb von Elementen oder Code-Blöcken ⇒ TZS013.
 Ein unbekanntes `@wort` ist keine Direktive, sondern eine implizite Expression (Razor).
+
+## @import
+
+Nach `@import` steht die Syntax einer TypeScript-Import-Deklaration — der Compiler parst
+sie mit dem TS-Parser (syntaktisch) und emittiert sie als echten Modul-Import:
+
+```razor
+@import { Status, formatDate as fmt } from "./utils"
+@import Api, { MAX_ITEMS } from "./api"
+@import * as icons from "./icons"
+@import type { Order } from "./models"
+@import "./print.css"
+@import {
+    PIZZA_MINIMUM_SIZE,
+    PIZZA_MAXIMUM_SIZE,
+} from "./models"
+
+<p>@Status.Open · @fmt(order.date) · max @MAX_ITEMS</p>
+```
+
+- **Freie Namen:** jede importierte lokale Bindung bleibt in Markup, `@{ }` und
+  Control-Headern unverändert (`@Status.Open`, nicht `this.Status.Open`); alles andere
+  Nicht-Lokale/Nicht-Globale wird weiter zu `this.X` (die „importiert ⇒ bleibt"-Regel;
+  vollständige Scope-Analyse folgt mit A4). Ausnahme: ein `@inject`-Feld gleichen Namens
+  (`@inject NavigationManager NavigationManager`) ist ein Member.
+- **Vererbung:** `@import` in `_Imports.tsazor` gilt für alle Dateien darunter (wie `@using`).
+  Relative Specifier sind relativ zur `_Imports.tsazor` geschrieben und werden pro Datei
+  umgeschrieben (`"./utils"` in `src/` ⇒ `"../utils"` für `src/Pages/X.tsazor`); Paket-
+  und absolute Specifier bleiben. Eine Bindung der Datei selbst überschattet eine geerbte,
+  eine nähere `_Imports`-Ebene eine entferntere.
+- **Komponenten:** ein importierter Wert kann direkt als Tag dienen
+  (`@import Badge from "./widgets/Badge.tsazor"` ⇒ `<Badge />`), ohne `@using`.
+- Ungenutzte Imports entfernt der Build (esbuild); ein Standard-Set in `_Imports.tsazor`
+  kostet nichts. Ungültige Formen (`@import X`, `@import x = require(…)`, fehlende Klammer, …)
+  ⇒ Fehler TZS016.
+- Nicht importiert wird nur, was der Compiler selbst für den erzeugten Code braucht:
+  `ComponentBase`/`RenderTreeBuilder`/`EventCallback`/`Parameter`/`inject` (sofern kein
+  `@import` sie schon bindet), aufgelöste Komponenten-Tags und `@inject`-/`@inherits`-Typen.
 
 ## Expressions
 
@@ -108,7 +147,8 @@ Markup beginnt nur
 | Konstrukt | Status |
 |---|---|
 | Markup, Komponenten-Tags, Attribut-Syntax | identisch |
-| `@page`, `@layout`, `@using`, `@typeparam`, `@attribute`, `@bind` (+Modifier), `@onclick`-Familie, `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
+| `@page`, `@layout`, `@typeparam`, `@attribute`, `@bind` (+Modifier), `@onclick`-Familie, `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
+| `@using` | Komponenten-Ordner/Pakete statt Namespaces; Typen/Werte für Markup und `@code` kommen per `@import` |
 | C#-Code in `@code` | abweichend (→ TypeScript — der eigentliche Punkt) |
 | Code in `@{ }` und Control-Bodies | code-first wie Razor, aber TypeScript; `using (…)`, `lock`, `@await` ⇒ Fehler |
 | `@namespace`, `@rendermode`, `@preservewhitespace` | akzeptiert, ignoriert |
@@ -121,9 +161,11 @@ Markup beginnt nur
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS015` mit Quellposition
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS018` mit Quellposition
 (`TZS011` und `TZS014` sind Warnungen, z. B. `@inherits`-Konflikt mit Code-behind bzw.
 ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
-TypeScript (oder nackter Text) in einem Code-Kontext.
+TypeScript (oder nackter Text) in einem Code-Kontext. Import-Modell: `TZS016` ungültiges
+`@import`, `TZS017` mehrdeutiger Komponenten-Tag (Fehler), `TZS018` `@using`-Ordner bzw.
+-Paket existiert nicht (Warnung; für `_Imports.tsazor` in dieser Datei gemeldet).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.

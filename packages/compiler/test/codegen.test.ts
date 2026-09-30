@@ -457,3 +457,122 @@ describe("codegen — directives (A2)", () => {
     expect(tsForm.diagnostics.all).toHaveLength(0);
   });
 });
+
+describe("codegen — @import (A3)", () => {
+  it("emits every TS import form verbatim and treats the bindings as free names", () => {
+    const { code, diagnostics, metadata } = gen(
+      [
+        '@import { Status, formatDate as fmt } from "./utils"',
+        '@import Api, { MAX_ITEMS } from "./api"',
+        '@import * as icons from "./icons"',
+        '@import type { Order } from "./models"',
+        '@import "./theme.css"',
+        "<p>@Status.Open @fmt(when) @MAX_ITEMS @icons.star @Api.base @count</p>",
+      ].join("\n"),
+    );
+    expect(diagnostics.all).toHaveLength(0);
+    expect(code).toContain('import { Status, formatDate as fmt } from "./utils";');
+    expect(code).toContain('import Api, { MAX_ITEMS } from "./api";');
+    expect(code).toContain('import * as icons from "./icons";');
+    expect(code).toContain('import type { Order } from "./models";');
+    expect(code).toContain('import "./theme.css";');
+    // Imported names stay bare, members are still baked (I2).
+    expect(code).toContain("Status.Open");
+    expect(code).not.toContain("this.Status");
+    expect(code).toContain("fmt(this.when)");
+    expect(code).not.toContain("this.MAX_ITEMS");
+    expect(code).not.toContain("this.icons");
+    expect(code).not.toContain("this.Api");
+    expect(code).toContain("this.count");
+    expect(metadata.imports.map((info) => info.specifier)).toEqual(["./utils", "./api", "./icons", "./models", "./theme.css"]);
+    expect(metadata.imports[3]!.bindings).toEqual([{ local: "Order", imported: "Order", typeOnly: true }]);
+  });
+
+  it("parses multi-line @import values and maps them back onto the directive", () => {
+    const source = '@import {\n    Status,\n    formatDate,\n} from "./utils"\n<p>@formatDate(Status.Open)</p>';
+    const { code, mappings, diagnostics } = gen(source);
+    expect(diagnostics.all).toHaveLength(0);
+    expect(code).toContain('import {\n    Status,\n    formatDate,\n} from "./utils";');
+    expect(code).toContain("formatDate(Status.Open)");
+    const genLine = code.split("\n").findIndex((line) => line === "    Status,") + 1;
+    expect(mappings.some((m) => m.genLine === genLine && m.srcLine === 1)).toBe(true);
+  });
+
+  it("reports invalid @import forms (TZS016)", () => {
+    for (const bad of ['@import { X from "./x"', "@import X", '@import x = require("y")', "@import", '@import { X } from "./x"; const y = 1']) {
+      const { diagnostics } = gen(`${bad}\n<p>x</p>`);
+      expect(diagnostics.all.map((d) => d.code), bad).toContain("TZS016");
+    }
+  });
+
+  it("merges inherited imports: own bindings win, repeats are dropped", () => {
+    const { code } = gen('@import { fmt } from "./local"\n<p>@fmt(1) @Status.Open</p>', {
+      className: "Demo",
+      inheritedImports: [
+        {
+          specifier: "../util",
+          bindings: [
+            { local: "fmt", imported: "fmt", typeOnly: false },
+            { local: "Status", imported: "Status", typeOnly: false },
+          ],
+        },
+        { specifier: "../theme.css", bindings: [] },
+        { specifier: "../../util", bindings: [{ local: "Status", imported: "Status", typeOnly: false }] },
+      ],
+    });
+    expect(code).toContain('import { fmt } from "./local";');
+    expect(code).toContain('import { Status } from "../util";');
+    expect(code).toContain('import "../theme.css";');
+    expect(code).not.toContain('"../../util"');
+    expect(code).not.toContain("this.Status");
+  });
+
+  it("does not import runtime APIs twice when an @import already binds them", () => {
+    const { code } = gen(
+      '@import { ComponentBase, EventCallback, Parameter } from "@tsazor/runtime"\n<Child OnClick="@go" />\n@code { @Parameter() Value = 1; go() {} }',
+      { className: "Demo", resolveComponent: () => ({ specifier: "./Child.tsazor" }) },
+    );
+    expect(code).toContain('import { ComponentBase, EventCallback, Parameter } from "@tsazor/runtime";');
+    expect(code).toContain('import { RenderTreeBuilder } from "@tsazor/runtime";');
+    expect(code).toContain("EventCallback.bind(this");
+  });
+
+  it("uses an imported component class for its tag and skips resolution", () => {
+    const resolved: string[] = [];
+    const { code } = gen('@import Fancy from "./widgets/Fancy.tsazor"\n<Fancy />', {
+      className: "Demo",
+      resolveComponent: (tag) => {
+        resolved.push(tag);
+        return null;
+      },
+    });
+    expect(resolved).toEqual([]);
+    expect(code).toContain("b.openComponent(0, Fancy);");
+  });
+
+  it("reports ambiguous tags (TZS017) and unresolved @using values (TZS018)", () => {
+    const { diagnostics } = gen("@using ./Nowhere\n<Card />", {
+      className: "Demo",
+      resolveComponent: () => ({ specifier: "../Shared/Card.tsazor", ambiguous: ["../Shared", "@tsazor/fluent"] }),
+      resolveUsing: (value) => (value === "./Nowhere" ? "missing" : null),
+    });
+    expect(diagnostics.all.map((d) => `${d.severity}:${d.code}`)).toEqual(["warning:TZS018", "error:TZS017"]);
+  });
+
+  it("does not import an @inject type the file already imports", () => {
+    const { code } = gen('@import { CounterService } from "./services"\n@inject CounterService Counter\n<p>@Counter.count</p>', {
+      className: "Demo",
+      resolveType: () => ({ specifier: "./CounterService" }),
+    });
+    expect(code).not.toContain('"./CounterService"');
+    expect(code).toContain("inject(CounterService)");
+  });
+
+  it("keeps an @inject field named like an imported type a member (Blazor idiom)", () => {
+    const { code } = gen(
+      '@import { NavigationManager } from "@tsazor/runtime"\n@inject NavigationManager NavigationManager\n<p>@NavigationManager.uri</p>',
+    );
+    expect(code).toContain("private readonly NavigationManager = inject(NavigationManager);");
+    expect(code).toContain("this.NavigationManager.uri");
+  });
+});

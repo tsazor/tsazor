@@ -46,6 +46,3 @@ export class OrderState {
     this.order = order;
   }
 }
-
-// @inject services are imported as default (codegen convention).
-export default OrderState;

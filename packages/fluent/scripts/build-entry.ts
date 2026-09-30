@@ -1,5 +1,5 @@
-import { compile, type ResolvedComponent, type ResolvedType } from "@tsazor/compiler";
-import { collectCodeImports, collectImports, createFileContext } from "@tsazor/workspace";
+import { compile } from "@tsazor/compiler";
+import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -43,27 +43,14 @@ for (const file of files) {
     const chain = await collectImports(srcDir, packageDir);
     const context = createFileContext(filePath, chain);
 
-    // Pass 1 compiles without extra imports so the code-import scan can see
-    // which bindings the compiler emitted itself (same as the Vite plugin).
-    const first = compile(source, {
-      className: context.className,
-      fileName: filePath,
-      resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-      resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-      generateSourceMap: false,
-    });
-    const extraImports = collectCodeImports(source, first.code, context);
+    // Same resolution as the Vite plugin: explicit @imports (own + inherited
+    // from _Imports.tsazor), tags and @inject types resolved strictly.
+    const compiled = compile(source, { ...resolutionOptions(context), generateSourceMap: false });
+    const layerErrors = chain.layers.flatMap((layer) =>
+      layer.diagnostics.filter((d) => d.severity === "error").map((d) => ({ ...d, message: `${layer.file}: ${d.message}` })),
+    );
 
-    const compiled = compile(source, {
-      className: context.className,
-      fileName: filePath,
-      resolveComponent: (tagName, usings): ResolvedComponent | null => context.resolveComponent(tagName, usings),
-      resolveType: (name, usings): ResolvedType | null => context.resolveType(name, usings),
-      imports: extraImports,
-      generateSourceMap: false,
-    });
-
-    const diagnostics = compiled.diagnostics.all.filter((d) => d.severity === "error");
+    const diagnostics = [...layerErrors, ...compiled.diagnostics.all.filter((d) => d.severity === "error")];
     if (diagnostics.length > 0) {
       errors.push({
         file,

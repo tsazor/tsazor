@@ -1,5 +1,5 @@
-import { compile } from "@tsazor/compiler";
-import { existsSync } from "node:fs";
+import { compile, type ImportInfo, type TszDiagnostic } from "@tsazor/compiler";
+import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -7,10 +7,16 @@ import path from "node:path";
 export interface ImportsLayer {
   /** Directory containing this _Imports.tsazor. */
   dir: string;
+  /** Absolute path of the _Imports.tsazor file. */
+  file: string;
   /** Raw @using values from the file, in order. */
   usings: string[];
+  /** Parsed @import directives, specifiers as written (relative to `dir`). */
+  imports: ImportInfo[];
   /** @layout from the file, if any. */
   layout?: string;
+  /** Diagnostics of the _Imports file itself (invalid @import, missing @using dir, …). */
+  diagnostics: readonly TszDiagnostic[];
 }
 
 export interface ImportsChain {
@@ -25,10 +31,14 @@ export interface ImportsChain {
 const IMPORTS_FILE = "_Imports.tsazor";
 
 /** True for specifiers that point into the file tree (`./Shared`, `../X`, `Shared/Form`). */
-function isPathLike(using: string): boolean {
-  const value = using.replace(/^['"]|['"]$/g, "");
+export function isPathLikeUsing(using: string): boolean {
+  const value = stripQuotes(using);
   if (value.startsWith("@")) return false; // scoped npm package
   return value.startsWith(".") || value.startsWith("/") || /[\\/]/.test(value);
+}
+
+export function stripQuotes(value: string): string {
+  return value.replace(/^['"]|['"]$/g, "");
 }
 
 /** Reads _Imports.tsazor files from `dir` up to `root` (nearest first). */
@@ -41,12 +51,22 @@ export async function collectImports(fileDir: string, root: string): Promise<Imp
     const importsPath = path.join(current, IMPORTS_FILE);
     if (existsSync(importsPath)) {
       const source = await readFile(importsPath, "utf8");
-      // _Imports.tsazor is directive-only; compile() gives us the parsed values.
-      const result = compile(source, { className: "_Imports", fileName: importsPath, generateSourceMap: false });
+      const dir = current;
+      // _Imports.tsazor is directive-only; compile() gives us the parsed values
+      // (and diagnoses invalid @import forms / missing @using directories).
+      const result = compile(source, {
+        className: "_Imports",
+        fileName: importsPath,
+        generateSourceMap: false,
+        resolveUsing: (value) => checkUsing(value, dir),
+      });
       layers.push({
-        dir: current,
+        dir,
+        file: importsPath,
         usings: result.metadata.usings,
+        imports: result.metadata.imports,
         layout: result.metadata.layout,
+        diagnostics: result.diagnostics.all,
       });
     }
     if (current === stop || !current.startsWith(stop)) break;
@@ -69,17 +89,95 @@ export async function collectImports(fileDir: string, root: string): Promise<Imp
 }
 
 /**
+ * The chain's @import directives as seen from a file in `fileDir`, nearest
+ * layer first. Relative specifiers are written relative to their _Imports
+ * file and are rebased here (`@import { fmt } from "./util"` in src/ becomes
+ * `"../util"` for src/Pages/X.tsazor); bare and absolute ones pass through.
+ */
+export function inheritedImports(fileDir: string, chain: ImportsChain): ImportInfo[] {
+  const imports: ImportInfo[] = [];
+  for (const layer of chain.layers) {
+    for (const info of layer.imports) {
+      imports.push({ ...info, specifier: rebaseSpecifier(info.specifier, layer.dir, fileDir) });
+    }
+  }
+  return imports;
+}
+
+/** Rewrites a `./`/`../` specifier written in `fromDir` so it resolves the same from `toDir`. */
+export function rebaseSpecifier(specifier: string, fromDir: string, toDir: string): string {
+  if (!specifier.startsWith("./") && !specifier.startsWith("../")) return specifier;
+  if (path.resolve(fromDir) === path.resolve(toDir)) return specifier;
+  const relative = path.relative(path.resolve(toDir), path.resolve(fromDir, specifier)).replace(/\\/g, "/");
+  return relative.startsWith("../") ? relative : `./${relative}`;
+}
+
+/**
+ * Checks one @using value written in `dir`: a path-like using must name an
+ * existing directory, a bare one an installed package. Returns the TZS018
+ * warning message, or null.
+ */
+export function checkUsing(using: string, dir: string): string | null {
+  const value = stripQuotes(using);
+  if (isPathLikeUsing(using)) {
+    const resolved = path.isAbsolute(value) ? value : path.resolve(dir, value);
+    if (isDirectory(resolved)) return null;
+    return `'@using ${value}': directory '${resolved}' does not exist — no components or types resolve through it.`;
+  }
+  if (findPackageDir(value, dir)) return null;
+  return `'@using ${value}': package '${value}' is not installed (no node_modules/${value}/package.json above '${dir}').`;
+}
+
+/** Nearest `node_modules/<name>` directory above `fromDir`. */
+export function findPackageDir(name: string, fromDir: string): string | undefined {
+  let current = path.resolve(fromDir);
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const candidate = path.join(current, "node_modules", name);
+    if (existsSync(path.join(candidate, "package.json"))) return candidate;
+    const parent = path.dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+function isDirectory(target: string): boolean {
+  try {
+    return statSync(target).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Directories a tag/type may resolve against, in priority order: the file's
  * own directory first, then each _Imports layer's directory (siblings are
  * visible, like Blazor), then every @using path directory from the chain.
  */
 export function candidateDirs(fileDir: string, chain: ImportsChain): string[] {
+  const dirs = enclosingDirs(fileDir, chain);
+  for (const dir of usingDirs(chain)) {
+    if (!dirsInclude(dirs, dir)) dirs.push(dir);
+  }
+  return dirs;
+}
+
+/** The file's own directory plus every _Imports layer directory (Blazor: enclosing namespaces). */
+export function enclosingDirs(fileDir: string, chain: ImportsChain): string[] {
   const dirs = [path.resolve(fileDir)];
   for (const layer of chain.layers) {
     if (!dirsInclude(dirs, layer.dir)) dirs.push(path.resolve(layer.dir));
+  }
+  return dirs;
+}
+
+/** Directories named by path-like @using values of the chain, nearest layer first. */
+export function usingDirs(chain: ImportsChain): string[] {
+  const dirs: string[] = [];
+  for (const layer of chain.layers) {
     for (const using of layer.usings) {
-      if (!isPathLike(using)) continue;
-      const value = using.replace(/^['"]|['"]$/g, "");
+      if (!isPathLikeUsing(using)) continue;
+      const value = stripQuotes(using);
       const resolved = path.isAbsolute(value) ? value : path.resolve(layer.dir, value);
       if (!dirsInclude(dirs, resolved)) dirs.push(resolved);
     }
@@ -87,7 +185,7 @@ export function candidateDirs(fileDir: string, chain: ImportsChain): string[] {
   return dirs;
 }
 
-function dirsInclude(dirs: string[], candidate: string): boolean {
+export function dirsInclude(dirs: string[], candidate: string): boolean {
   const normalized = path.resolve(candidate).toLowerCase();
   return dirs.some((dir) => path.resolve(dir).toLowerCase() === normalized);
 }

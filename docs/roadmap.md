@@ -63,7 +63,8 @@ Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
   `.probe/`, gitignored). **Baseline FluentCMS@c63d49c: 13/217 sauber**, 171 ohne Fehler
   (davon 155 mit erkannten stillen Fehlern), 46 mit Fehlern, 36 mit unaufgelösten Tags.
   **Verlauf:** nach A1+B1 unverändert 13 · nach A2+B2 **145/217** sauber (182 ohne Fehler, 19 mit
-  stillen Fehlern — `@context` ×18, Modifier-Wert ×1; 35 mit Fehlern — v. a. TZS008 `@bind` `!.` ×139 → A5).
+  stillen Fehlern — `@context` ×18, Modifier-Wert ×1; 35 mit Fehlern — v. a. TZS008 `@bind` `!.` ×139 → A5)
+  · nach A3 unverändert 145/217 (die Probe kompiliert ohne Workspace-Auflösung).
 
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
@@ -162,6 +163,24 @@ Umsetzung:
 
 *Warum vor A4:* A4 implementiert genau diese Regel. *Warum nicht später:* A4 ohne A3 hieße,
 die Heuristik ein zweites Mal nachzubauen.
+
+**Stand: A3 umgesetzt** (Branch `roadmap/a3-imports`). `@import <TS-Import-Klausel>` als
+Direktive (alle Formen inkl. `type`, Namespace, Side-Effect, mehrzeilig; syntaktischer
+TS-Parse, TZS016), in `_Imports.tsazor` vererbt, relative Specifier pro Datei umgeschrieben;
+die Datei überschattet die Kette. Importierte Bindungen sind freie Namen im Rewriter
+(`knownGlobals` entfällt; `@inject`-Felder gleichen Namens bleiben Member) und können direkt als
+Tag dienen. `knownGlobals`-Prescan (I1) und `collectCodeImports` (I3) sind entfernt; Default vs.
+Named für `@inject`/`@inherits` aus dem tatsächlichen Export der Zieldatei. Tags: umschließende
+Ordner gewinnen, sonst alle `@using`-Quellen gemeinsam (Ordner, Runtime-Built-ins, Bare-Pakete
+über die syntaktisch gelesene Export-Liste ihres Entry-Moduls) — Mehrdeutigkeit ⇒ TZS017,
+fehlender Ordner/Paket ⇒ TZS018 (Warnung). Eine Auflösung (`resolutionOptions`) für Plugin,
+Library-Builds und LSP (Shadow, Diagnostics, Hover, Completions inkl. `@import`-Namen).
+Migration: Standard-Runtime-Set in jeder `_Imports.tsazor` (Apps + `components`/`fluent`),
+explizite `@import`s für App-Typen/Helfer; `PizzaComponentBase` und die defensiven
+`export default X` entfernt. Probe unverändert 145/217 (misst nur Markup).
+**Offen für A4:** Members aus `@code`, die wie ein Import heißen (`@Parameter() Status` +
+`@import { Status }`), bleiben frei statt `this.X` — braucht die Member-Liste aus dem
+Klassenkörper.
 
 ### A4 — Rewriting über TS-AST mit Scope-Analyse
 
