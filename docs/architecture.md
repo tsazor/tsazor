@@ -27,8 +27,24 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   werden). Direkte DOM-Patches (keine Zwischen-VDOM), Property-first
   für `value`/`checked`, Event-Listener direkt am Knoten (bewusst: Blazors Delegation
   existiert wegen der WASM-Bridge, die hier entfällt).
-- **Dispatcher/Batching:** Microtask-Flush; `EventCallback` re-rendert den Owner nach
-  dem Handler (Blazor-Semantik). Async-Lifecycle-Hooks rendern nach jedem await-Abschnitt.
+- **Dispatcher/Batching:** Eine Render-Queue pro Renderer (`RenderQueue`, Parent-first:
+  geringste Baumtiefe zuerst, FIFO bei gleicher Tiefe). Die erste Render-Anforderung plant
+  über den `Dispatcher` des Renderers einen Batch (Microtask); der Batch rendert, bis die
+  Queue leer ist — Anforderungen *während* des Batches (`stateHasChanged` im Render oder in
+  synchronen Lifecycle-Hooks, vom Diff instanziierte Kinder) laufen im selben Batch. Ein
+  synchroner Lifecycle fordert seinen Render synchron an (Blazors
+  `RunInitAndSetParametersAsync`), nur zurückgegebene Promises werden awaited. Batch-Ende
+  ist ein definierter Punkt (`renderer.onBatchCompleted`, liefert die Render-Passes des
+  Batches in Reihenfolge). Jeder Render-Pass wendet seine Edits sofort an; die Edits
+  referenzieren Frames des neuen Baums per Index, der nächste Pass derselben Komponente
+  diffed gegen den committeten Baum — ein Batch-Ende-Applier (B3) müsste die Frames
+  kopieren. Fehler (Render, Diff, DOM, Lifecycle, OnAfterRender, Events, Dispose) sind pro
+  Komponente isoliert und gehen an `renderer.errorHandler` (`{ error, component, phase }`,
+  Default `console.error`); der Rest des Batches läuft weiter, der Live-Baum der
+  fehlerhaften Komponente bleibt Diff-Basis. Render-Schleifen (> 100 Passes einer
+  Komponente pro Batch) werden gemeldet und abgebrochen. Event-Tracking läuft pro
+  Renderer (kein globaler Renderer). `EventCallback` re-rendert den Owner nach dem Handler
+  (Blazor-Semantik). Async-Lifecycle-Hooks: siehe B4 (R6).
 - **ComponentState/RenderHandle** spiegeln Blazor; `RenderHandle.track(promise)` nimmt
   in-flight Async-Arbeit auf, damit `waitUntilIdle` sie einschließt (z. B. Virtualize-Loads).
 
