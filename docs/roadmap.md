@@ -272,6 +272,36 @@ Im Applier gleich richtig machen (R10):
 - getter-only-Properties nicht zuweisen (Attribut-Fallback),
 - `value` beim Entfernen leeren.
 
+**Stand: B3 umgesetzt** (Branch `roadmap/b3-applier`). `LogicalRange` (logical-range.ts):
+Start-/End-Kommentar, Einfügen/Verschieben/Entfernen als Einheit, Aufzählung der logischen
+Kinder, Verschachtelung; `LogicalChildren` ist der Cursor pro Ebene (Element oder Range) samt
+`permute` (Blazors `permuteLogicalChildren`). Komponenten (`ComponentState.range`) und
+Markup-Blöcke sind Ranges; Disposal kommt weiter aus der Disposal-Liste des Diffs, nach dem
+Commit. **Batch-Anwendung — entschieden: pro Pass** (wie B2). Blazor wendet den Batch am
+Stück an, weil jede Anwendung die WASM→JS-Grenze kreuzt; hier ist der Applier ein direkter
+Aufruf, der Batch läuft synchron (kein Paint, kein Beobachter zwischen Passes), ein
+Batch-Ende-Applier brächte nur Frame-Kopien bzw. länger gehaltene Builder. Stattdessen ist
+die Anwendung **transaktional**: `DomJournal` protokolliert jede Mutation vorher bestehenden
+DOMs (Positionen, Attribute, Properties, Listener, Select-Wert), ein scheiternder Pass wird
+vor dem Weiterreichen des Fehlers rückwärts zurückgerollt — das DOM entspricht wieder dem
+Live-Baum (B2-Punkt „teilweise angewandte Edits" erledigt). Grenzen: Seiteneffekte außerhalb
+des Baums (bereits gelaufene Ref-Captures, Custom-Element-Callbacks, durch Verschieben
+verlorener Fokus, Caret nach Value-Reset) bleiben. R10 (dom-attributes.ts): `value`
+(input/textarea/select), `checked` (input), `selected` (option) als Property, bei
+`checked`/`selected` zusätzlich das Attribut als Default; Entfernen von `value` leert (Checkbox/
+Radio fallen auf „on" zurück); `<select value>` merkt sich den Sollwert und setzt ihn nach dem
+Aufbau, bei neuen/geänderten Optionen (auch aus Kind-Komponenten) erneut; `true` ⇒ Attribut
+`""`, `false`/`null`/`undefined` ⇒ entfernt; Handler-Map pro Eventname mit stabilem Listener
+(Callback-Wechsel tauscht nur den Handler), Nicht-Handler-Wert oder Entfernen löst den Listener.
+Konformität: R10-Gruppe (5) grün. Abweichungen: Primitive gehen wie in Blazor als Attribut
+(vorher Property, wenn `name in element` — brach `hidden=""`, `width="100%"`, `form`/`list`);
+Objekte gehen an eine *schreibbare* Property (Custom Elements), sonst als Attribut — Blazor kennt
+nur Strings; der Select-Sollwert bleibt für die Lebensdauer des Elements erhalten (Blazor
+vergisst ihn nach dem ersten Treffer). Zustand pro Element (Handler, Select-Sollwert) liegt als
+Symbol-Property am Element wie bei Blazor (happy-dom reicht `<select>` als Proxy heraus).
+Offen: SVG-Namespace (`createElement` statt `createElementNS`), `<input type=time>`-Trim.
+Der R4-Test „Komponente ohne Re-Render behält ihren Inhalt" hängt weiter an R5 (**B4**).
+
 ### B4 — Lifecycle-Semantik auf Batch-Basis
 
 Jetzt, wo es ein Batch-Ende gibt:
