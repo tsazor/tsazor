@@ -181,6 +181,8 @@ describe("async lifecycle (Blazor's RunInitAndSetParametersAsync)", () => {
 describe("OnAfterRender (Blazor's InvokeRenderCompletedCalls)", () => {
   class Leaf extends ComponentBase {
     @Parameter() name = "";
+    /** Changes with every parent render, so the leaves re-render with it (B6). */
+    @Parameter() generation = 0;
     protected override buildRenderTree(b: RenderTreeBuilder): void {
       log.push(`${this.name}.render`);
       b.addContent(0, this.name);
@@ -193,11 +195,14 @@ describe("OnAfterRender (Blazor's InvokeRenderCompletedCalls)", () => {
     renders = 0;
     protected override buildRenderTree(b: RenderTreeBuilder): void {
       log.push("P.render");
+      this.renders++;
       b.openComponent(0, defineComponent(Leaf));
       b.addAttribute(1, "name", "A");
+      b.addAttribute(2, "generation", this.renders);
       b.closeComponent();
-      b.openComponent(2, defineComponent(Leaf));
-      b.addAttribute(3, "name", "B");
+      b.openComponent(3, defineComponent(Leaf));
+      b.addAttribute(4, "name", "B");
+      b.addAttribute(5, "generation", this.renders);
       b.closeComponent();
     }
     protected override onAfterRender(firstRender: boolean): void {

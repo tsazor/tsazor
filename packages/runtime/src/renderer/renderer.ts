@@ -1,4 +1,5 @@
-import type { RenderTreeFrame } from "../render-tree/render-tree.js";
+import { getFrameSubtreeLength, type RenderTreeFrame } from "../render-tree/render-tree.js";
+import { FrameType } from "../render-tree/frame-type.js";
 import { attributeMap, computeDiff, type DiffOptions, type RenderTreeDiff } from "../render-tree/diff.js";
 import { ParameterView } from "../components/parameter-view.js";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
@@ -24,6 +25,35 @@ const EVENT_PARAM_PATTERN = /^on/i;
 const MAX_RENDERS_PER_BATCH = 100;
 
 const EMPTY_PARAMETERS: ReadonlyMap<string, unknown> = new Map();
+
+/**
+ * Blazor's ParameterView.DefinitelyEquals over the attribute frames of a
+ * retained component frame: true only when both have the same attribute
+ * names in the same order (reorderings count as changes, as in Blazor) and
+ * no value may have changed (mayHaveChanged). A plain function on an
+ * on*-named parameter becomes an EventCallback bound to the same parent in
+ * setComponentParameters, so the same function counts as the same
+ * EventCallback (Blazor compares the converted EventCallbacks).
+ */
+function parametersDefinitelyEqual(oldFrames: RenderTreeFrame[], oldIndex: number, newFrames: RenderTreeFrame[], newIndex: number): boolean {
+  const oldEnd = oldIndex + getFrameSubtreeLength(oldFrames[oldIndex]!);
+  const newEnd = newIndex + getFrameSubtreeLength(newFrames[newIndex]!);
+  for (;;) {
+    oldIndex++;
+    newIndex++;
+    const oldFrame = oldIndex < oldEnd ? oldFrames[oldIndex]! : undefined;
+    const newFrame = newIndex < newEnd ? newFrames[newIndex]! : undefined;
+    const oldFinished = oldFrame === undefined || oldFrame.frameType !== FrameType.Attribute;
+    const newFinished = newFrame === undefined || newFrame.frameType !== FrameType.Attribute;
+    if (oldFinished || newFinished) return oldFinished === newFinished;
+    const name = newFrame.attributeName!;
+    if (oldFrame.attributeName !== name) return false;
+    const oldValue = oldFrame.attributeValue;
+    const newValue = newFrame.attributeValue;
+    if (oldValue === newValue && typeof newValue === "function" && EVENT_PARAM_PATTERN.test(name)) continue;
+    if (mayHaveChanged(oldValue, newValue)) return false;
+  }
+}
 
 /** Where a component error surfaced (the stage of Blazor's pipeline). */
 export type RenderErrorPhase =
@@ -169,11 +199,22 @@ export class Renderer {
    * Completes a committed render pass of `state`: sets child parameters (diff
    * order) and disposes removed children — Blazor's order: the diff
    * instantiates and updates children, disposal runs after the edits.
+   * A retained child only gets its parameters set when one may have changed
+   * (Blazor's UpdateRetainedChildComponent + ParameterView.DefinitelyEquals);
+   * cascading values reach it through its subscription instead.
    */
-  private updateChildren(state: ComponentState, newFrames: RenderTreeFrame[], diff: RenderTreeDiff, disposed: ComponentState[]): void {
+  private updateChildren(state: ComponentState, oldFrames: RenderTreeFrame[], newFrames: RenderTreeFrame[], diff: RenderTreeDiff, disposed: ComponentState[]): void {
     const { components } = diff;
     for (let i = 0; i < components.length; i += 2) {
+      const oldIndex = components[i]!;
       const newIndex = components[i + 1]!;
+      if (
+        oldIndex >= 0 &&
+        oldFrames[oldIndex]!.componentType === newFrames[newIndex]!.componentType &&
+        parametersDefinitelyEqual(oldFrames, oldIndex, newFrames, newIndex)
+      ) {
+        continue;
+      }
       this.setComponentParameters(state.slotChildren.get(newIndex)!, attributeMap(newFrames, newIndex));
     }
     // The DOM of these is already gone: removed directly or with an ancestor element.
@@ -254,22 +295,18 @@ export class Renderer {
   private readonly inFlight = new Set<Promise<unknown>>();
 
   private buildParameterView(state: ComponentState, direct: ReadonlyMap<string, unknown>): ParameterView {
-    const metadata = state.component.getAllParameterMetadata();
-    let values: Map<string, unknown> | null = null;
-    let subscriptions: ComponentState[] | null = null;
-    for (const [propertyName, meta] of metadata) {
-      if (!meta.cascading) continue;
-      values ??= new Map(direct);
-      subscriptions ??= [];
+    const { cascading } = state.component.getParameterInfo();
+    if (cascading.length === 0) return ParameterView.fromAttributes(direct.entries());
+    const values = new Map(direct);
+    const subscriptions: ComponentState[] = [];
+    for (const meta of cascading) {
       const supplier = this.resolveCascade(state, meta, subscriptions);
-      if (supplier !== null) values.set(propertyName, supplier.cascadeValue);
+      if (supplier !== null) values.set(meta.propertyName, supplier.cascadeValue);
     }
-    if (subscriptions !== null) {
-      // Only components with cascading parameters keep the snapshot (Blazor).
-      state.directParameters = direct;
-      this.updateCascadingSubscriptions(state, subscriptions);
-    }
-    return ParameterView.fromAttributes((values ?? direct).entries());
+    // Only components with cascading parameters keep the snapshot (Blazor).
+    state.directParameters = direct;
+    this.updateCascadingSubscriptions(state, subscriptions);
+    return ParameterView.fromAttributes(values.entries());
   }
 
   /**
@@ -508,11 +545,15 @@ export class Renderer {
     }
     this.dom.commitSlotChildren(state);
     state.currentRenderTree = newFrames;
-    // The diff has consumed the previous tree: free its frames now so the
-    // idle state holds only the live tree, not the pass before it.
-    state.renderBuilders[state.renderPass ^ 1]!.clear();
     component.markFirstRenderCompleted();
-    this.updateChildren(state, newFrames, diff, disposed);
+    try {
+      // Change detection compares against the previous tree's frames.
+      this.updateChildren(state, oldFrames, newFrames, diff, disposed);
+    } finally {
+      // The diff and change detection have consumed the previous tree: free
+      // its frames now so the idle state holds only the live tree.
+      state.renderBuilders[state.renderPass ^ 1]!.clear();
+    }
     return true;
   }
 

@@ -407,6 +407,31 @@ Blazors `MayHaveChanged`: unveränderte Primitive/Immutables ⇒ kein `setParame
 *Warum erst hier:* R8 kaschiert heute R4 und R12. Vorher eingebaut, würden Moves und
 Cascades sichtbar brechen.
 
+**Stand: B6 umgesetzt** (Branch `roadmap/b5-b6`). `updateChildren` setzt einem behaltenen Kind
+nur dann Parameter, wenn einer sich geändert haben kann — Port von `ParameterView.DefinitelyEquals`
+(`parametersDefinitelyEqual`, renderer.ts): gleiche Attributnamen in gleicher Reihenfolge
+(Umordnung zählt wie in Blazor als Änderung), kein Wert `mayHaveChanged`, gleicher
+Komponententyp (HMR). Cascades kommen über die B5-Subscription, nicht über den Parent-Render.
+**Gleichheitsregeln** (`mayHaveChanged`, components/change-detection.ts): bekannt immutable und
+per `Object.is` verglichen sind string, number, boolean, bigint, symbol (TS-Enums sind
+number/string); `null`/`undefined` sind nur sich selbst gleich; `EventCallback` gleich bei
+gleichem Receiver + Delegate (Blazor zählt `EventCallback` seit .NET 7 zu den immutablen Typen;
+ein weitergereichter, pro Render neu gebundener Callback vergleicht den inneren). Alles andere —
+Objekte, Arrays, Funktionen (also jedes `ChildContent`/`RenderFragment`), **Date** — gilt als
+möglicherweise geändert. Abweichungen: `Date` ist in JS eine veränderliche Referenz (Blazors
+`DateTime` ein Werttyp) und zählt daher nicht als immutable; `0`/`-0` gelten als verschieden
+(`Object.is`); eine Arrow-Funktion ist pro Render neu, ein `@onclick="() => …"`-EventCallback also
+immer geändert — C# vergleicht Delegates über Target + Methode, dort ist ein nur `this`
+fangendes Lambda gleich. Eine rohe Funktion auf einem `on*`-Parameter gilt bei gleicher Referenz
+als unverändert (sie wird zum `EventCallback` mit demselben Parent gebunden). **Metadaten-Cache:**
+`getParameterInfo` baut pro Klasse einmal alle Parameter inkl. geerbter, die case-gefaltete
+Namenstabelle, das Capture-Property und die Cascading-Liste; jede Decorator-Registrierung
+invalidiert (Versionszähler). `attributeValueEquals` (toter Code) entfernt. **Maskierte Bugs:**
+keine in Apps/Paketen gefunden — alle Tests + E2E grün; angepasst wurden nur drei Runtime-Tests,
+die das alte Verhalten festschrieben (render-queue ×2 „until B6", lifecycle After-Render-Test
+bekommt einen sich ändernden Parameter). Konformität: R8 grün; die Runtime-Suite ist grün bis auf
+fremd verantwortete Punkte (`/^on/i` → B8, EditForm-Submit ×2 → 3.5, Router ×6 → B7).
+
 **Gate für B1–B6:** Konformitätssuite (0.4) vollständig grün; Pizza-/Sleipnir-E2E grün;
 Benchmark (`apps/bench`) nicht schlechter.
 

@@ -165,8 +165,8 @@ describe("batch end", () => {
     instances.get("c")!.poke();
     instances.get("p")!.poke();
     await renderer.waitUntilIdle();
-    // g re-renders too: every parent render re-sets child parameters (until B6).
-    expect(seen).toEqual([["p", "c", "g"]]);
+    // g does not: c re-renders with unchanged primitive parameters for g (B6).
+    expect(seen).toEqual([["p", "c"]]);
   });
 
   it("renders requested by a batch-end listener start the next batch; unsubscribe works", async () => {
@@ -185,7 +185,8 @@ describe("batch end", () => {
     unsubscribe();
     instances.get("g")!.poke();
     await renderer.waitUntilIdle();
-    expect(seen).toEqual([["p", "c", "g"], ["g"], ["g"]]);
+    // p's children keep their (primitive) parameters, so only p renders (B6).
+    expect(seen).toEqual([["p"], ["g"], ["g"]]);
   });
 
   it("routes a failing listener to the error handler", async () => {

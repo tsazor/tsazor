@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("R8 — parameter change detection", () => {
-  it.fails("a child with unchanged primitive parameters is not re-rendered", async () => {
+  it("a child with unchanged primitive parameters is not re-rendered", async () => {
     const h = await host((b) => {
       b.openComponent(0, defineComponent(Probe));
       b.addAttribute(1, "label", "same");
