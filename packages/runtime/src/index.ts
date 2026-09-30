@@ -12,7 +12,7 @@ export { defineComponent, toComponentDefinition, isComponentDefinition, type Com
 export { CascadingValue } from "./components/cascading-value.js";
 
 // Renderer
-export { Renderer } from "./renderer/renderer.js";
+export { Renderer, type RenderBatch, type RenderError, type RenderErrorHandler, type RenderErrorPhase } from "./renderer/renderer.js";
 export { ComponentState, type CascadeEntry } from "./renderer/component-state.js";
 export { DomRenderer } from "./renderer/dom-renderer.js";
 export { Dispatcher } from "./renderer/dispatcher.js";

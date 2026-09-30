@@ -12,7 +12,6 @@ import { fileURLToPath } from "node:url";
 import { Renderer, type ComponentBase } from "@tsazor/runtime";
 import type { TszDiagnostic } from "@tsazor/compiler";
 import { transformTsazor } from "../../vite-plugin/src/transform.js";
-import { takeEscapedRenderErrors } from "./setup.js";
 
 const here = path.dirname(fileURLToPath(new URL(import.meta.url)));
 let caseCounter = 0;
@@ -96,7 +95,7 @@ export async function mount<T extends ComponentBase = ComponentBase>(
   if (errors.length > 0) throw new Error(`compile errors:\n${errors.join("\n")}`);
 
   const { default: Component } = await import(/* @vite-ignore */ compiled.modules[entry]!);
-  const renderer = new Renderer();
+  const renderer = createTestRenderer();
   const container = document.createElement("div");
   document.body.appendChild(container);
   const state = renderer.renderInContainer(Component, container);
@@ -104,7 +103,7 @@ export async function mount<T extends ComponentBase = ComponentBase>(
     await renderer.waitUntilIdle();
     await new Promise((resolve) => setTimeout(resolve, 0));
     await renderer.waitUntilIdle();
-    rethrowEscapedRenderErrors();
+    rethrowRenderErrors(renderer);
   };
   await settle();
   const instance = state.component as T & Record<string, unknown>;
@@ -123,9 +122,26 @@ export async function mount<T extends ComponentBase = ComponentBase>(
   };
 }
 
-/** Surfaces render exceptions (see setup.ts) as a failure of the current test. */
-export function rethrowEscapedRenderErrors(): void {
-  const errors = takeEscapedRenderErrors();
+const collectedErrors = new WeakMap<Renderer, unknown[]>();
+
+/**
+ * A Renderer whose component failures (render, diff, DOM, lifecycle, events)
+ * are collected through its error handler instead of logged; `settle()`
+ * re-throws them via rethrowRenderErrors, so a render failure fails exactly
+ * the test that caused it. Tests asserting that nothing escapes use a plain
+ * `new Renderer()` (default handler: console.error).
+ */
+export function createTestRenderer(): Renderer {
+  const renderer = new Renderer();
+  const errors: unknown[] = [];
+  collectedErrors.set(renderer, errors);
+  renderer.errorHandler = ({ error }) => errors.push(error);
+  return renderer;
+}
+
+/** Throws (and clears) the failures collected by a createTestRenderer renderer. */
+export function rethrowRenderErrors(renderer: Renderer): void {
+  const errors = collectedErrors.get(renderer)?.splice(0) ?? [];
   if (errors.length === 1) throw errors[0];
   if (errors.length > 1) throw new AggregateError(errors, `${errors.length} render errors`);
 }

@@ -34,15 +34,32 @@ export abstract class ComponentBase {
       this.initialized = true;
     }
     this.applyParameterValues(parameters);
-    return this.runLifecycleAsync(!wasInitialized);
+    return this.runLifecycle(!wasInitialized);
   }
 
-  private async runLifecycleAsync(runInitialize: boolean): Promise<void> {
+  /**
+   * Blazor's RunInitAndSetParametersAsync: hooks that complete synchronously
+   * continue synchronously, so a sync lifecycle requests its render while the
+   * caller (the parent's render pass) runs — the child renders in the same
+   * batch. Only a returned Promise is awaited (then renders once at the end).
+   */
+  private runLifecycle(runInitialize: boolean): Promise<void> {
     if (runInitialize) {
-      await this.onInitialized();
+      const initialized = this.onInitialized();
+      if (isPromiseLike(initialized)) {
+        return Promise.resolve(initialized).then(() => this.runParametersSet());
+      }
     }
-    await this.onParametersSet();
+    return this.runParametersSet();
+  }
+
+  private runParametersSet(): Promise<void> {
+    const parametersSet = this.onParametersSet();
+    if (isPromiseLike(parametersSet)) {
+      return Promise.resolve(parametersSet).then(() => this.stateHasChanged());
+    }
     this.stateHasChanged();
+    return Promise.resolve();
   }
 
   /** Writes decorated parameter properties (normal + resolved cascading ones). */
@@ -180,4 +197,8 @@ export abstract class ComponentBase {
     }
     return provider.get(token);
   }
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<void> {
+  return typeof (value as PromiseLike<void> | null | undefined)?.then === "function";
 }

@@ -217,6 +217,28 @@ entfernen (pro Renderer tracken).
 
 *Warum nach B1:* Ein Batch sammelt Edit-Listen mehrerer Komponenten — die gibt es erst ab B1.
 
+**Stand: B2 umgesetzt** (Branch `roadmap/b2-queue`). `RenderQueue` (render-queue.ts, Heap
+nach Baumtiefe) pro Renderer, Batches über den `Dispatcher`; ein Batch läuft, bis die Queue
+leer ist (Renders aus Render/Lifecycle/neuen Kindern im selben Batch). Dafür fordert ein
+synchroner Lifecycle seinen Render jetzt synchron an (vorher immer nach einem `await`);
+async Hooks unverändert (R6 bleibt B4). Batch-Ende: `renderer.onBatchCompleted(listener)`
+mit `renderedComponents` (ein Eintrag pro Pass). Fehler-Hook: `renderer.errorHandler`
+(`{ error, component, phase }`), zentral über `handleComponentError` — dort setzt die
+ErrorBoundary-Suche entlang der Parent-Kette (Phase 3) an. Ein Pass, der in Render/Diff/DOM
+scheitert, wird verworfen (Builder und Slot-Map des Live-Baums bleiben, neu instanziierte
+Kinder werden disposed; bereits angewandte DOM-Edits werden nicht zurückgerollt).
+`activeRenderer` entfernt; `isRenderingInProgress` spiegelt den Batch. Frame-Referenzen:
+Edits werden weiter pro Pass sofort angewandt, daher gefahrlos bei mehreren Passes pro
+Batch — **B3** (Applier am Batch-Ende) muss die referenzierten Frames in den Batch kopieren
+(Blazors Reference-Frames) oder die Builder bis Batch-Ende halten. Konformität: R9
+„parents before children" und „exception in one component" grün; `setup.ts`
+(`queueMicrotask`-Wrapper) entfällt, die Harness sammelt Fehler über den Error-Hook.
+Abweichungen: Blazors `ComponentRenderQueue` ist FIFO (dort rendert ein vor dem Parent
+dirty gewordenes Kind zweimal) — Parent-first ist hier gewollt; Batches starten per
+Microtask statt synchron außerhalb eines Batches; Render-Schleifen-Schutz (100 Passes pro
+Komponente und Batch). Offen für **B4**: `onAfterRender` läuft weiter direkt nach dem Pass
+(R7) — gehört an `onBatchCompleted`.
+
 ### B3 — DOM-Applier mit Logical Ranges
 
 Applier wendet einen ganzen Batch an. Komponenten und Markup-Blöcke sind **logische Bereiche**
