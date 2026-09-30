@@ -8,7 +8,7 @@ import { host } from "./host.js";
 class Receiver extends ComponentBase {}
 
 describe("R10 — event handlers", () => {
-  it.fails("setting a handler to null removes the listener", async () => {
+  it("setting a handler to null removes the listener", async () => {
     const calls: string[] = [];
     let handler: (() => void) | null = () => calls.push("clicked");
     const h = await host((b) => {
@@ -46,7 +46,7 @@ describe("R10 — event handlers", () => {
 });
 
 describe("R10 — form element properties", () => {
-  it.fails("checked is synced as a property after user interaction", async () => {
+  it("checked is synced as a property after user interaction", async () => {
     let checked = true;
     const h = await host((b) => {
       b.openElement(0, "input");
@@ -64,7 +64,7 @@ describe("R10 — form element properties", () => {
     expect(input.checked).toBe(true);
   });
 
-  it.fails("select value is applied after its options exist", async () => {
+  it("select value is applied after its options exist", async () => {
     const h = await host((b) => {
       b.openElement(0, "select");
       b.addAttribute(1, "value", "b");
@@ -79,7 +79,7 @@ describe("R10 — form element properties", () => {
     expect(h.container.querySelector("select")!.value).toBe("b");
   });
 
-  it.fails("getter-only properties (button.form, input.list) are set as attributes", async () => {
+  it("getter-only properties (button.form, input.list) are set as attributes", async () => {
     const h = await host((b) => {
       b.openElement(0, "button");
       b.addAttribute(1, "form", "f1");
@@ -92,7 +92,7 @@ describe("R10 — form element properties", () => {
     expect(h.container.querySelector("input")!.getAttribute("list")).toBe("dl");
   });
 
-  it.fails("removing the value attribute clears input.value", async () => {
+  it("removing the value attribute clears input.value", async () => {
     let has = true;
     const h = await host((b) => {
       b.openElement(0, "input");

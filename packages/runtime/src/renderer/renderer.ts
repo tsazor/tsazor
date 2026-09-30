@@ -44,7 +44,7 @@ export interface RenderError {
 /** Receives component failures; the batch continues after it returns. */
 export type RenderErrorHandler = (error: RenderError) => void;
 
-/** One completed render batch (the unit B3's applier and B4's OnAfterRender work on). */
+/** One completed render batch (the unit B4's OnAfterRender works on). */
 export interface RenderBatch {
   /** One entry per render pass of the batch, in render order (a component may appear repeatedly). */
   readonly renderedComponents: readonly ComponentState[];
@@ -64,12 +64,18 @@ export interface RenderBatch {
  * `errorHandler`; the rest of the batch still renders.
  *
  * Each render pass applies its edits to the DOM right away, before any other
- * pass runs. The edits reference frames of the component's new tree by index
- * (B1), and the diff of a repeat render in the same batch reads the tree the
- * previous pass committed — so no pass's edits can outlive the builder that
- * holds their frames. (A batch-end applier (B3) would have to copy the
- * referenced frames into the batch instead, as Blazor's reference-frame
- * array does.)
+ * pass runs (decided in B3, deliberately unlike Blazor's one-shot batch
+ * application). The edits reference frames of the component's new tree by
+ * index (B1), and the diff of a repeat render in the same batch reads the
+ * tree the previous pass committed — so no pass's edits can outlive the
+ * builder that holds their frames. Blazor ships the whole batch at once
+ * because every application crosses the WASM→JS boundary; here the applier
+ * is a direct call, and the batch runs synchronously (nothing paints or
+ * observes the DOM between passes), so deferring would only cost copying the
+ * referenced frames (or keeping builders alive) with no observable gain.
+ * Per-pass application also keeps failures per component: a pass's DOM
+ * application is all-or-nothing (rolled back on error) before the pass is
+ * committed, so the next pass never sees half-applied DOM.
  */
 export class Renderer {
   readonly dispatcher = new Dispatcher();
@@ -109,8 +115,7 @@ export class Renderer {
   renderInContainer(component: ComponentDefinition | (abstract new () => ComponentBase), container: Element): ComponentState {
     const definition = toComponentDefinition(component);
     const state = this.createComponentState(definition, null, -1);
-    container.appendChild(state.startMarker);
-    container.appendChild(state.endMarker);
+    state.range.insertBefore(container, null);
     this.setComponentParameters(state, new Map());
     return state;
   }
@@ -176,15 +181,15 @@ export class Renderer {
 
   /**
    * Undoes the bookkeeping of a pass that failed before it was committed:
-   * children it created are disposed (their markers removed), the slot map
-   * stays that of the live tree. DOM edits already applied by a failed
-   * application are not rolled back.
+   * children it created are disposed, the slot map stays that of the live
+   * tree. The DOM needs nothing here: a failed application has already
+   * rolled back its edits (DomRenderer.applyEdits), which also takes out the
+   * new children's (still empty) ranges.
    */
   private abortPass(state: ComponentState, created: ComponentState[]): void {
     state.newSlotChildren.clear();
     for (const child of created) {
-      child.startMarker.remove();
-      child.endMarker.remove();
+      child.range.remove();
       this.disposeComponent(child);
     }
   }
@@ -409,8 +414,8 @@ export class Renderer {
 
   /**
    * @internal The defined batch end: `listener` runs after every batch, once
-   * its queue is empty (B3's batch applier and B4's OnAfterRender hook in
-   * here). Returns an unsubscribe function.
+   * its queue is empty (B4's OnAfterRender hooks in here). Returns an
+   * unsubscribe function.
    */
   onBatchCompleted(listener: (batch: RenderBatch) => void): () => void {
     this.batchCompletedListeners.add(listener);

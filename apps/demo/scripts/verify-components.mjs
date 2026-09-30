@@ -34,12 +34,14 @@ await page.waitForTimeout(200);
 const badge = await page.locator(".badge.rounded-pill").textContent();
 check("button click updates badge", badge === "1", `badge=${badge}`);
 
-// 3. Progress updates via diff (style attribute)
-const before = await page.locator(".progress-bar").getAttribute("style");
+// 3. Progress updates via diff (style attribute; compared as parsed CSS, since
+//    the literal attribute text is whatever the markup wrote — Blazor semantics)
+const barWidth = () => page.locator(".progress-bar").evaluate((el) => el.style.width);
+const before = await barWidth();
 await page.locator("button", { hasText: "+10 %" }).click();
 await page.waitForTimeout(200);
-const after = await page.locator(".progress-bar").getAttribute("style");
-check("progress bar re-rendered via diff", before === "width: 40%;" && after === "width: 50%;", `${before} -> ${after}`);
+const after = await barWidth();
+check("progress bar re-rendered via diff", before === "40%" && after === "50%", `${before} -> ${after}`);
 
 // 4. Alert dismiss + restore
 await page.locator(".btn-close").click();

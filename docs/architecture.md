@@ -22,11 +22,19 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   (auch verschachtelt in entfernten Elementen). Der erste Render ist ein Diff gegen den
   leeren Baum.
 - **Renderer/DomRenderer:** Renderer instanziiert/disposed laut Diff, der DomRenderer wendet
-  die Edits an (Sibling-Index → DOM-Knoten per Vorwärts-Cursor; Komponenten- und
-  Markup-Ausgaben sind Kommentar-begrenzte Bereiche, die als Einheit verschoben/entfernt
-  werden). Direkte DOM-Patches (keine Zwischen-VDOM), Property-first
-  für `value`/`checked`, Event-Listener direkt am Knoten (bewusst: Blazors Delegation
-  existiert wegen der WASM-Bridge, die hier entfällt).
+  die Edits an: Sibling-Index → DOM-Knoten per Vorwärts-Cursor (`LogicalChildren`) über die
+  logischen Kinder eines Elements oder einer `LogicalRange` (logical-range.ts, Blazors
+  „logical elements"). Komponenten-Ausgaben (`ComponentState.range`) und Markup-Blöcke sind
+  Ranges aus Start-/End-Kommentar; sie zählen als ein Kind, werden als Einheit eingefügt,
+  permutiert und entfernt und verschachteln sich. Die Anwendung ist transaktional: ein
+  `DomJournal` protokolliert jede Mutation vorher bestehenden DOMs, ein scheiternder Pass wird
+  zurückgerollt, das DOM zeigt wieder den Live-Baum (Grenzen: Ref-Captures,
+  Custom-Element-Callbacks, Fokus/Caret). Frische Teilbäume werden detached gebaut und einmal
+  eingefügt. Attribute (dom-attributes.ts): `value`/`checked`/`selected` als Property (Select-
+  Sollwert wird nach den Optionen gesetzt und bei Optionsänderungen neu angewandt), Booleans
+  als minimierte Attribute, Primitive als Attribut, Objekte an schreibbare Properties;
+  Event-Listener direkt am Knoten, pro Eventname ein stabiler Listener (bewusst: Blazors
+  Delegation existiert wegen der WASM-Bridge, die hier entfällt).
 - **Dispatcher/Batching:** Eine Render-Queue pro Renderer (`RenderQueue`, Parent-first:
   geringste Baumtiefe zuerst, FIFO bei gleicher Tiefe). Die erste Render-Anforderung plant
   über den `Dispatcher` des Renderers einen Batch (Microtask); der Batch rendert, bis die
@@ -35,10 +43,10 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   synchroner Lifecycle fordert seinen Render synchron an (Blazors
   `RunInitAndSetParametersAsync`), nur zurückgegebene Promises werden awaited. Batch-Ende
   ist ein definierter Punkt (`renderer.onBatchCompleted`, liefert die Render-Passes des
-  Batches in Reihenfolge). Jeder Render-Pass wendet seine Edits sofort an; die Edits
-  referenzieren Frames des neuen Baums per Index, der nächste Pass derselben Komponente
-  diffed gegen den committeten Baum — ein Batch-Ende-Applier (B3) müsste die Frames
-  kopieren. Fehler (Render, Diff, DOM, Lifecycle, OnAfterRender, Events, Dispose) sind pro
+  Batches in Reihenfolge). Jeder Render-Pass wendet seine Edits sofort an (B3-Entscheidung:
+  Blazors Batch-am-Stück dient der WASM→JS-Grenze; hier läuft der Batch synchron, ein
+  Batch-Ende-Applier müsste nur die per Index referenzierten Frames kopieren); der nächste
+  Pass derselben Komponente diffed gegen den committeten Baum. Fehler (Render, Diff, DOM, Lifecycle, OnAfterRender, Events, Dispose) sind pro
   Komponente isoliert und gehen an `renderer.errorHandler` (`{ error, component, phase }`,
   Default `console.error`); der Rest des Batches läuft weiter, der Live-Baum der
   fehlerhaften Komponente bleibt Diff-Basis. Render-Schleifen (> 100 Passes einer
