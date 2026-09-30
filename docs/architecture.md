@@ -79,6 +79,24 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   nach dem Pass, der sie entfernt; `disposeAsync` hat Vorrang (dann kein `dispose`, wie
   Blazor bei `IAsyncDisposable` + `IDisposable`), ein laufendes `disposeAsync` wird getrackt,
   Fehler → Phase `dispose`, die übrigen Disposals laufen weiter.
+- **Cascading Values** (Blazors `CascadingParameterState`): ein Supplier ist jede Komponente
+  mit `isCascadingValueSupplier` (`CascadingValue`, EditForm, CascadingAuthenticationState,
+  Tabs, …). Matching wie `CanSupplyValue`: ohne Namen auf beiden Seiten by-type (statischer
+  `cascadeType` oder Laufzeitwert), sonst by-name case-insensitiv; der nächste Supplier gewinnt.
+  Cascades werden bei jedem Parameter-Set frisch aufgelöst; der Consumer abonniert jeden
+  nicht-fixen Supplier, auf den er auflöst (`IsFixed` ⇒ kein Abo), und behält seinen letzten
+  direkten Parameter-Snapshot. Vor jedem Render-Pass eines Suppliers prüft der Renderer
+  `mayHaveChanged(vorheriger, aktueller cascadeValue)`; bei möglicher Änderung setzt er die
+  Parameter aller Abonnenten direkt neu (Snapshot + frische Cascades) — Zwischenkomponenten
+  mit `shouldRender() === false` halten das Update nicht auf. Dispose meldet ab.
+- **Parameter-Change-Detection** (Blazors `ParameterView.DefinitelyEquals`): rendert ein
+  Parent neu, bekommt ein behaltenes Kind nur dann `setParametersAsync`, wenn sich ein Parameter
+  geändert haben kann — andere Namen/Reihenfolge oder ein Wert mit `mayHaveChanged` (Blazors
+  `ChangeDetection`). Unverändert gelten nur gleiche Primitive (string, number, boolean, bigint,
+  symbol; `Object.is`), `null`/`undefined` und `EventCallback`s mit gleichem Receiver + Delegate;
+  Objekte, Arrays, Funktionen (jedes `ChildContent`) und `Date` gelten immer als geändert.
+  Cascading-Werte laufen über die Subscription. Parameter-Metadaten (inkl. geerbter,
+  case-gefalteter Namen, Capture-Property, Cascading-Liste) werden pro Klasse gecacht.
 - **ComponentState/RenderHandle** spiegeln Blazor; `RenderHandle.track(promise)` nimmt
   in-flight Async-Arbeit auf, damit `waitUntilIdle` sie einschließt (z. B. Virtualize-Loads).
 

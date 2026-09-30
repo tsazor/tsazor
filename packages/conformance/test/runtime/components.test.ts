@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("R8 — parameter change detection", () => {
-  it.fails("a child with unchanged primitive parameters is not re-rendered", async () => {
+  it("a child with unchanged primitive parameters is not re-rendered", async () => {
     const h = await host((b) => {
       b.openComponent(0, defineComponent(Probe));
       b.addAttribute(1, "label", "same");
@@ -52,7 +52,7 @@ class Consumer extends ComponentBase {
 CascadingParameter({ name: "Theme" })(Consumer.prototype, "theme");
 
 describe("R11 — named cascading values", () => {
-  it.fails("CascadingValue Name matches CascadingParameter({ name })", async () => {
+  it("CascadingValue Name matches CascadingParameter({ name })", async () => {
     const h = await host((b) => {
       b.openComponent(0, defineComponent(CascadingValue));
       b.addAttribute(1, "Name", "Theme");
@@ -68,7 +68,7 @@ describe("R11 — named cascading values", () => {
 });
 
 describe("R12 — cascading updates reach subscribers directly", () => {
-  it.fails("through an intermediate component that does not re-render", async () => {
+  it("through an intermediate component that does not re-render", async () => {
     class Wall extends ComponentBase {
       childContent?: (b: RenderTreeBuilder) => void;
       private rendered = false;

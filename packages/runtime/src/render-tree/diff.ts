@@ -624,11 +624,3 @@ export function attributeMap(frames: RenderTreeFrame[], startIndex: number): Map
   }
   return result;
 }
-
-/** Structural equality for parameter values (identity-based, like Blazor's fast path). */
-export function attributeValueEquals(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  // NaN-safe primitive comparison plus date-like structural check is out of
-  // scope for v1; identity comparison matches Blazor's default behavior.
-  return false;
-}

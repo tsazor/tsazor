@@ -29,6 +29,8 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
   readonly isCascadingValueSupplier = true;
   /** Blazor's IsFixed: false — the EditContext is recreated when the model changes. */
   readonly isFixed = false;
+  /** Cascades by type, unnamed (Blazor's CascadingValue<EditContext>). */
+  readonly cascadeType = EditContext;
 
   /** The cascaded EditContext (Blazor's EditForm cascades by type). */
   editContext?: EditContext;

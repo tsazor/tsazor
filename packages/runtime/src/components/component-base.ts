@@ -1,8 +1,8 @@
-import type { ParameterMeta } from "./parameter-metadata.js";
+import type { ParameterInfo, ParameterMeta } from "./parameter-metadata.js";
 import type { ParameterView } from "./parameter-view.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import type { RenderHandle } from "../renderer/render-handle.js";
-import { findParameterMetadata } from "./parameter-metadata.js";
+import { findParameterMetadata, getParameterInfo } from "./parameter-metadata.js";
 import { getCurrentServices } from "../di/service-provider.js";
 
 /**
@@ -93,23 +93,14 @@ export abstract class ComponentBase {
    * ParameterView.SetParameterProperties when there is none.
    */
   applyParameterValues(parameters: ParameterView): void {
-    const metadata = this.getAllParameterMetadata();
-    // Blazor matches attribute names to parameters case-insensitively.
-    const caseFolded = new Map<string, string>();
-    for (const key of metadata.keys()) {
-      caseFolded.set(key.toLowerCase(), key);
-    }
+    // Cached per class (B6); Blazor matches attribute names case-insensitively.
+    const { all: metadata, caseFolded, captureUnmatchedProperty: captureProperty } = this.getParameterInfo();
     // Blazor's [Parameter(CaptureUnmatchedValues = true)]: a dictionary
     // property that collects every attribute without a matching parameter.
     let captureTarget: Record<string, unknown> | null = null;
-    let captureProperty: string | null = null;
-    for (const [propertyName, meta] of metadata) {
-      if (meta.captureUnmatchedValues) {
-        captureProperty = propertyName;
-        const current = (this as unknown as Record<string, unknown>)[propertyName];
-        captureTarget = typeof current === "object" && current !== null ? { ...(current as Record<string, unknown>) } : {};
-        break;
-      }
+    if (captureProperty !== null) {
+      const current = (this as unknown as Record<string, unknown>)[captureProperty];
+      captureTarget = typeof current === "object" && current !== null ? { ...(current as Record<string, unknown>) } : {};
     }
     for (const [name, value] of parameters.entries()) {
       const propertyName = metadata.has(name) ? name : caseFolded.get(name.toLowerCase());
@@ -231,9 +222,14 @@ export abstract class ComponentBase {
     this.firstRenderDone = true;
   }
 
-  /** All parameter metadata including inherited members (own class wins). */
+  /** All parameter metadata including inherited members (own class wins); cached per class, do not mutate. */
   getAllParameterMetadata(): Map<string, ParameterMeta> {
     return findParameterMetadata(Object.getPrototypeOf(this).constructor as abstract new () => unknown);
+  }
+
+  /** @internal The cached per-class parameter lookup (see getParameterInfo). */
+  getParameterInfo(): ParameterInfo {
+    return getParameterInfo(Object.getPrototypeOf(this).constructor as abstract new () => unknown);
   }
 
   /** Renders a fragment that is not part of buildRenderTree (e.g. a child content wrapper). */
