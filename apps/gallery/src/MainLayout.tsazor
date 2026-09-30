@@ -14,9 +14,9 @@
                 <span class="topbar-title">@this.Theme.theme</span>
                 <button class="theme-toggle" type="button" @onclick="() => this.Theme.toggle()">
                     @if (this.Theme.theme === "dark") {
-                        Light
+                        <text>Light</text>
                     } else {
-                        Dark
+                        <text>Dark</text>
                     }
                 </button>
             </header>
