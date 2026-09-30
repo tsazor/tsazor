@@ -39,21 +39,21 @@ und übergibt sie. Regressionsgetestet (vite-plugin).
 **Stand A3 (2026-09-30):** `knownGlobals` und der Prescan sind entfernt; `NavLinkMatch`
 kommt per `@import` aus dem Standard-Set in `_Imports.tsazor` und bleibt dadurch frei.
 
-### 3. Async-Lifecycle-Hooks rendern nicht nach dem `await` — **Workaround nötig**
+### 3. Async-Lifecycle-Hooks rendern nicht nach dem `await` — **behoben (B4), Workaround entfernt**
 
-`onInitialized`/`onParametersSet` laufen innerhalb des Render-Passes. Ein
-`await` + Feldzuweisung danach triggert **kein** Re-Render — die Seite bleibt
-im Loading-State (Blazor verhält sich identisch, das Original ruft dort
-explizit `StateHasChanged` auf). Tsazor verhält sich also korrekt
-Blazor-ähnlich, aber der Port zeigte, dass jede async-ladende Page das
-braucht — drei Pages/Components hatten den Bug latent (sie rendernten nur
-zufällig korrekt, weil ein Auth-Probe-Re-Render hinterherkam).
+*Korrektur:* Die ursprüngliche Beschreibung war in beiden Punkten falsch. Tsazor awaitete
+async `onInitialized`/`onParametersSet` und renderte **einmal am Ende** — ohne
+Loading-State (Review R6). Und Blazor verhält sich **nicht** so: `ComponentBase` rendert,
+solange der Task des Hooks läuft (nach seinem synchronen Teil), und erneut nach Abschluss
+(`RunInitAndSetParametersAsync` / `CallStateHasChangedOnAsyncCompletion`); die Originale
+von `Index`, `MyOrders` und `ConfigurePizzaDialog` rufen dort kein `StateHasChanged`. Das
+„hängt im Loading"-Symptom stammte vermutlich von Arbeit außerhalb des Hook-Tasks (Fire-and-forget), die
+auch in Blazor ein explizites `StateHasChanged` braucht.
 
-**Workaround (in der App):** Nach dem `await` in `onInitialized`/`onParametersSet`
-explizit `this.stateHasChanged()` aufrufen — exakt wie im Blazor-Original.
-**Offene Frage fürs Framework:** Sollte Tsazor hier komfortabler sein als
-Blazor (z. B. async Lifecycle-Hooks automatisch nach-awaiten und re-rendern)?
-Blazor-Kompatibilität sagt nein, DX sagt ja. Entscheidung offen.
+**Stand (B4):** Tsazor rendert wie Blazor (Loading-State + Render nach Abschluss). Die
+`stateHasChanged()`-Aufrufe nach den awaits in `Index`, `MyOrders` und
+`ConfigurePizzaDialog` sind entfernt; `OrderDetails` behält ihn — dessen Poller läuft
+fire-and-forget aus `onParametersSet`, wie im Original (`PollForUpdates` + `StateHasChanged`).
 
 ## B. Syntax-Regeln, die der Port bestätigt hat (Fallerinnerung, kein Fix nötig)
 

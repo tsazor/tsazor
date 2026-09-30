@@ -16,7 +16,7 @@ function mountRoot(type: new () => ComponentBase): { container: HTMLElement; ren
 }
 
 describe("R6 — async lifecycle methods", () => {
-  it.fails("async onInitialized renders while pending (loading state) and again after completion", async () => {
+  it("async onInitialized renders while pending (loading state) and again after completion", async () => {
     let resolve!: () => void;
     const renders: string[] = [];
     class Loader extends ComponentBase {
@@ -42,7 +42,7 @@ describe("R6 — async lifecycle methods", () => {
     });
   });
 
-  it.fails("async onParametersSet renders while pending and again after completion", async () => {
+  it("async onParametersSet renders while pending and again after completion", async () => {
     let resolve!: () => void;
     const renders: string[] = [];
     class Loader extends ComponentBase {
@@ -80,7 +80,7 @@ describe("R6 — async lifecycle methods", () => {
 });
 
 describe("R5 — ShouldRender", () => {
-  it.fails("the first render happens even when shouldRender() returns false", async () => {
+  it("the first render happens even when shouldRender() returns false", async () => {
     class Never extends ComponentBase {
       protected override shouldRender(): boolean {
         return false;
@@ -96,7 +96,7 @@ describe("R5 — ShouldRender", () => {
 });
 
 describe("R7 — OnAfterRender", () => {
-  it.fails("runs after the whole batch: children render (and after-render) before the parent's callback", async () => {
+  it("runs after the whole batch: children render (and after-render) before the parent's callback", async () => {
     const order: string[] = [];
     class Kid extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
@@ -207,7 +207,7 @@ describe("R9 — render queue", () => {
 });
 
 describe("R13 — disposal", () => {
-  it.fails("disposeAsync is awaited on removal", async () => {
+  it("disposeAsync is awaited on removal", async () => {
     let called = false;
     class AsyncDisposable extends ComponentBase {
       async disposeAsync(): Promise<void> {
@@ -229,7 +229,7 @@ describe("R13 — disposal", () => {
     expect(called).toBe(true);
   });
 
-  it.fails("a parent is disposed before its children", async () => {
+  it("a parent is disposed before its children", async () => {
     const order: string[] = [];
     class Kid extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {

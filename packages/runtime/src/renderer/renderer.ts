@@ -2,7 +2,7 @@ import type { RenderTreeFrame } from "../render-tree/render-tree.js";
 import { attributeMap, computeDiff, type DiffOptions, type RenderTreeDiff } from "../render-tree/diff.js";
 import { ParameterView } from "../components/parameter-view.js";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
-import type { ComponentBase } from "../components/component-base.js";
+import { completedLifecycle, isPromiseLike, type ComponentBase } from "../components/component-base.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
 import { isCascadingValueSupplier } from "./cascading-value.js";
@@ -24,13 +24,13 @@ const MAX_RENDERS_PER_BATCH = 100;
 
 /** Where a component error surfaced (the stage of Blazor's pipeline). */
 export type RenderErrorPhase =
-  | "render" // buildRenderTree / shouldRender
+  | "render" // buildRenderTree
   | "diff" // computeDiff (e.g. duplicate keys), child instantiation
   | "apply" // DOM application of the edits
-  | "lifecycle" // setParametersAsync / onInitialized / onParametersSet
+  | "lifecycle" // setParametersAsync (incl. unknown parameters) / onInitialized / onParametersSet / shouldRender
   | "afterRender"
   | "event" // DOM event handler
-  | "dispose"
+  | "dispose" // dispose / disposeAsync
   | "batch"; // batch-completed listeners and renderer internals
 
 /** A failure routed to the renderer's error handler. */
@@ -44,7 +44,7 @@ export interface RenderError {
 /** Receives component failures; the batch continues after it returns. */
 export type RenderErrorHandler = (error: RenderError) => void;
 
-/** One completed render batch (the unit B4's OnAfterRender works on). */
+/** One completed render batch (the unit OnAfterRender works on). */
 export interface RenderBatch {
   /** One entry per render pass of the batch, in render order (a component may appear repeatedly). */
   readonly renderedComponents: readonly ComponentState[];
@@ -216,6 +216,7 @@ export class Renderer {
       this.handleComponentError(error, state, "lifecycle");
       return;
     }
+    if (lifecycle === completedLifecycle) return;
     this.track(lifecycle.catch((error) => this.handleComponentError(error, state, "lifecycle")));
   }
 
@@ -277,21 +278,42 @@ export class Renderer {
     return undefined;
   }
 
-  /** Removes a component (recursively) and its DOM output. */
-  disposeComponent(state: ComponentState): void {
-    if (state.disposed) return;
-    state.disposed = true;
-    for (const child of state.slotChildren.values()) {
-      this.disposeComponent(child);
-    }
-    this.states.delete(state.id);
-    const disposable = state.component as unknown as { dispose?: () => void };
-    if (typeof disposable.dispose === "function") {
-      try {
-        disposable.dispose();
-      } catch (error) {
-        this.handleComponentError(error, state, "dispose");
+  /**
+   * Disposes a component and its descendants (their DOM is already gone or
+   * goes with it). Blazor's disposal queue: a component is disposed before
+   * the components in its render tree — parent first, breadth-first. Each
+   * instance gets disposeAsync (IAsyncDisposable) if it has one, otherwise
+   * dispose — as in Blazor, never both. A pending disposeAsync is tracked
+   * (waitUntilIdle); failures of either go to the error handler and do not
+   * stop the remaining disposals.
+   */
+  disposeComponent(root: ComponentState): void {
+    if (root.disposed) return;
+    const queue = [root];
+    for (let i = 0; i < queue.length; i++) {
+      const state = queue[i]!;
+      state.disposed = true;
+      this.states.delete(state.id);
+      this.disposeInstance(state);
+      for (const child of state.slotChildren.values()) {
+        if (!child.disposed) queue.push(child);
       }
+    }
+  }
+
+  private disposeInstance(state: ComponentState): void {
+    const component = state.component as unknown as { dispose?: () => void; disposeAsync?: () => unknown };
+    try {
+      if (typeof component.disposeAsync === "function") {
+        const pending = component.disposeAsync();
+        if (isPromiseLike(pending)) {
+          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "dispose")));
+        }
+      } else if (typeof component.dispose === "function") {
+        component.dispose();
+      }
+    } catch (error) {
+      this.handleComponentError(error, state, "dispose");
     }
   }
 
@@ -327,9 +349,43 @@ export class Renderer {
       for (const state of this.batchStates) state.batchRenderCount = 0;
       this.batchStates.length = 0;
     }
-    // After the batch flag is cleared: renders requested by listeners start
-    // the next batch.
+    // After the batch flag is cleared: renders requested by after-render
+    // hooks or listeners start the next batch.
+    this.invokeAfterRender(rendered);
     this.notifyBatchCompleted({ renderedComponents: rendered });
+  }
+
+  /**
+   * Blazor's InvokeRenderCompletedCalls: once the whole batch is rendered
+   * and applied, every component with a committed render pass in it gets
+   * onAfterRender — once per batch, children before parents (deepest first,
+   * render order among equal depths), skipping components the batch
+   * disposed. Deviation: Blazor calls it once per render entry in render
+   * order, i.e. parents first for a new subtree; children-first lets a
+   * parent's callback rely on its children's after-render work. A pending
+   * (async) callback is tracked for waitUntilIdle and does not render
+   * afterwards; failures go to the error handler.
+   */
+  private invokeAfterRender(rendered: readonly ComponentState[]): void {
+    if (rendered.length === 0) return;
+    let states: ComponentState[];
+    if (rendered.length === 1) {
+      states = [rendered[0]!];
+    } else {
+      states = [...new Set(rendered)];
+      states.sort((a, b) => b.depth - a.depth);
+    }
+    for (const state of states) {
+      if (state.disposed) continue;
+      try {
+        const pending = state.component.notifyAfterRender();
+        if (isPromiseLike(pending)) {
+          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "afterRender")));
+        }
+      } catch (error) {
+        this.handleComponentError(error, state, "afterRender");
+      }
+    }
   }
 
   /**
@@ -341,15 +397,10 @@ export class Renderer {
   private renderComponent(state: ComponentState): boolean {
     if (state.disposed) return false;
     const component = state.component;
-    const firstRender = !component.firstRenderCompleted;
-    if (!firstRender && !component.pendingRender) return false;
+    // shouldRender was consulted when the render was requested
+    // (stateHasChanged, Blazor semantics); the first render always happens.
+    if (component.firstRenderCompleted && !component.pendingRender) return false;
     component.clearPendingRender();
-    try {
-      if (!component.shouldRenderInternal()) return false;
-    } catch (error) {
-      this.handleComponentError(error, state, "render");
-      return false;
-    }
     if (state.batchRenderCount++ === 0) this.batchStates.push(state);
     if (state.batchRenderCount > MAX_RENDERS_PER_BATCH) {
       this.handleComponentError(
@@ -403,18 +454,12 @@ export class Renderer {
     state.renderBuilders[state.renderPass ^ 1]!.clear();
     component.markFirstRenderCompleted();
     this.updateChildren(state, newFrames, diff, disposed);
-
-    this.track(
-      Promise.resolve(component.notifyAfterRender(firstRender)).catch((error) =>
-        this.handleComponentError(error, state, "afterRender"),
-      ),
-    );
     return true;
   }
 
   /**
    * @internal The defined batch end: `listener` runs after every batch, once
-   * its queue is empty (B4's OnAfterRender hooks in here). Returns an
+   * its queue is empty, after the components' onAfterRender calls. Returns an
    * unsubscribe function.
    */
   onBatchCompleted(listener: (batch: RenderBatch) => void): () => void {
@@ -449,7 +494,8 @@ export class Renderer {
 
   /**
    * Resolves once this renderer is idle: no batch scheduled and no tracked
-   * async work (lifecycle hooks, after-render, event handlers) in flight.
+   * async work (lifecycle hooks, after-render, event handlers, disposeAsync)
+   * in flight.
    */
   async waitUntilIdle(): Promise<void> {
     let guard = 0;
@@ -509,7 +555,7 @@ export class Renderer {
         (component as unknown as Record<string, unknown>)[key] = value;
       }
     }
-    component.stateHasChangedInternal();
+    component.forceRenderInternal();
   }
 
   // #endregion

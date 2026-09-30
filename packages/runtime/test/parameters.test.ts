@@ -129,7 +129,7 @@ describe("CaptureUnmatchedValues", () => {
 });
 
 describe("async lifecycle orchestration", () => {
-  it("delays the first render until async onInitialized completes", async () => {
+  it("renders the result of an async onInitialized once it completes", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();
     let initialized = false;
