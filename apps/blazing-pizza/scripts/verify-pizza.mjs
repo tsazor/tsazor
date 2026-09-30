@@ -114,6 +114,18 @@ async function main() {
     await fields.nth(3).fill("London");
     await fields.nth(4).fill("Greater London");
     await fields.nth(5).fill("NW1 6XE");
+    // Leave the field before clicking: its change event (on blur) re-validates
+    // and removes the last validation message, which shifts the button ~24px
+    // between mousedown and mouseup — the click would miss (same in Blazor).
+    await fields.nth(5).blur();
+    await page.waitForTimeout(200);
+    // Count order-status polls: the Poller ticks every 4 s, so a runaway
+    // interval (e.g. a non-numeric Interval → 0 ms) shows up as a request storm.
+    let orderPolls = 0;
+    const pollStart = Date.now();
+    page.on("request", (r) => {
+      if (r.method() === "GET" && /\/orders\/\d+$/.test(new URL(r.url()).pathname)) orderPolls++;
+    });
     await page.locator(".checkout-button").click();
     await page.waitForTimeout(1500);
     check(/\/myorders\/\d+$/.test(page.url()), "valid submit navigates to order details");
@@ -128,6 +140,8 @@ async function main() {
     await page.waitForTimeout(wait);
     check((await text(".track-order-title p")) === "Status: Out for delivery", "Poller advances status to Out for delivery");
     check((await page.locator(".leaflet-marker-icon").count()) === 2, "driver marker appears next to 'You'");
+    const maxPolls = Math.ceil((Date.now() - pollStart) / 4000) + 3; // initial load + one tick per 4 s + slack
+    check(orderPolls <= maxPolls, `order polling stays at the 4 s interval (${orderPolls} requests, max ${maxPolls})`);
 
     /* --- MyOrders --- */
     await page.goto(`${APP}/myorders`, { waitUntil: "networkidle" });

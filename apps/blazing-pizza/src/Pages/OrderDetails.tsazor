@@ -30,7 +30,7 @@
         </div>
 
         @if (this.orderWithStatus.statusText !== "Delivered") {
-            <Poller Interval="@4000" OnTick="@this.refreshOrder" />
+            <Poller Interval="@(4000)" OnTick="@this.refreshOrder" />
         }
     }
 </div>

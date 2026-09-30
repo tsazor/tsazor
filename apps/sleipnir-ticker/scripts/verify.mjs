@@ -94,6 +94,9 @@ async function main() {
         /* --- Initial render --- */
         await page.goto(`${APP}/`, { waitUntil: "load" });
         await page.waitForSelector(".ticker-price .price", { timeout: 15_000 });
+        // The first render shows the "—" placeholder (loading state) until the
+        // snapshot call resolves — wait for a real price before sampling.
+        await page.waitForFunction(() => /\d/.test(document.querySelector(".ticker-price .price")?.textContent ?? ""), null, { timeout: 15_000 });
         const readPrice = async () => {
             const t = (await text(".ticker-price .price")).replace(/^\$/, "").replace(/,/g, "");
             return Number(t);
