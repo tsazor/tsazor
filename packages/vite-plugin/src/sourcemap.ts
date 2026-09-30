@@ -35,7 +35,8 @@ export function chainSourceMaps(tsazorMap: string, esbuildMap: string, tsazorPat
     version: 3,
     file: generatedFile,
     sources,
-    sourcesContent: null,
+    // The .tsazor text travels with the compiler's map (single source).
+    sourcesContent: inner.sourcesContent?.[0] != null ? [inner.sourcesContent[0]] : null,
     names: encoded.names ?? [],
     mappings: encoded.mappings,
   });

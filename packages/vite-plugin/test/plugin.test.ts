@@ -103,8 +103,9 @@ describe("tsazor vite plugin", () => {
   it("emits a chained sourcemap pointing at the .tsazor file", async () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
-    const map = JSON.parse(result!.map as string) as { sources: string[]; mappings: string };
+    const map = JSON.parse(result!.map as string) as { sources: string[]; sourcesContent: string[] | null; mappings: string };
     expect(map.sources[0]).toBe("Counter.tsazor");
+    expect(map.sourcesContent).toEqual([COUNTER]);
     expect(map.mappings.length).toBeGreaterThan(10);
   });
 
