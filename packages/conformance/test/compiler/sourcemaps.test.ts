@@ -19,9 +19,9 @@ function originOf(source: string, needle: string): { line: number | null; column
 }
 
 describe("C10 — mappings after multi-line constructs", () => {
-  it.fails("after a multi-line attribute expression", () => {
+  it("after a multi-line attribute expression", () => {
     const source = `<p title="@(\n    first +\n    second)">x</p>\n<span>@marker</span>\n@code { private first = ""; private second = ""; private marker = 1; }`;
-    expect(originOf(source, "this.marker").line).toBe(5);
+    expect(originOf(source, "this.marker").line).toBe(4);
   });
 
   it("after a multi-line @if condition", () => {
