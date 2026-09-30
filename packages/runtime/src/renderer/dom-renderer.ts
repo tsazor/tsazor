@@ -29,9 +29,6 @@ interface EventHandlerRecord {
 
 const elementHandlers = new WeakMap<Element, Map<string, EventHandlerRecord>>();
 
-/** Renderer of the most recently constructed DomRenderer; used for event tracking. */
-let activeRenderer: Renderer | null = null;
-
 const COMMENT_NODE = 8;
 
 /**
@@ -48,8 +45,18 @@ const logicalRangeEnds = new WeakMap<Node, Node>();
  * (edits within a level are ordered by ascending sibling index).
  */
 export class DomRenderer {
-  constructor(renderer: Renderer) {
-    activeRenderer = renderer;
+  constructor(private readonly renderer: Renderer) {}
+
+  /**
+   * @internal Runs a DOM event's handler for a listener bound while
+   * rendering `state`: the invocation is tracked by this DomRenderer's own
+   * renderer (waitUntilIdle), failures go to its error handler.
+   */
+  invokeEventHandler(state: ComponentState, callback: EventCallback<never>, event: Event): void {
+    const invocation = callback
+      .invokeAsync(event as never)
+      .catch((error) => this.renderer.handleComponentError(error, state, "event"));
+    this.renderer.track(invocation);
   }
 
   /** Applies the edits of one render pass of `state`; `frames` is its new render tree. */
@@ -79,7 +86,7 @@ export class DomRenderer {
           break;
         }
         case RenderTreeEditType.SetAttribute:
-          setAttributeFrame(childAt(level, edit.siblingIndex) as Element, frames[edit.referenceFrameIndex]!);
+          setAttributeFrame(this, state, childAt(level, edit.siblingIndex) as Element, frames[edit.referenceFrameIndex]!);
           break;
         case RenderTreeEditType.RemoveAttribute:
           removeAttributeByName(childAt(level, edit.siblingIndex) as Element, edit.removedAttributeName!);
@@ -132,7 +139,7 @@ export class DomRenderer {
     switch (frame.frameType) {
       case FrameType.Element: {
         const element = document.createElement(frame.elementName!);
-        applyAttributes(element, frame, frames, index);
+        applyAttributes(this, state, element, frame, frames, index);
         // Build the fresh subtree into the detached element first, then insert
         // the completed tree in one shot: mass creates then cost one insertion
         // per element instead of one per node (10k rows = ~3n insertBefore -> n).
@@ -264,7 +271,7 @@ function permuteLogicalChildren(level: Level, edits: RenderTreeEdit[], start: nu
 /* ------------------------------------------------------------------ */
 
 /** Sets a newly added or changed attribute (the diff filtered unchanged values). */
-function setAttributeFrame(element: Element, frame: RenderTreeFrame): void {
+function setAttributeFrame(dom: DomRenderer, state: ComponentState, element: Element, frame: RenderTreeFrame): void {
   const name = frame.attributeName!;
   const value = frame.attributeValue;
 
@@ -276,13 +283,13 @@ function setAttributeFrame(element: Element, frame: RenderTreeFrame): void {
   }
 
   if (value instanceof EventCallback) {
-    bindCallback(element, name, value as unknown as EventCallback<never>, frame.eventHandlerFlags ?? 0);
+    bindCallback(dom, state, element, name, value as unknown as EventCallback<never>, frame.eventHandlerFlags ?? 0);
     return;
   }
   if (typeof value === "function") {
     // Unbound handler: no owning component, so no automatic re-render.
     const callback = EventCallback.unbound(value as (arg: never) => void | Promise<void>);
-    bindCallback(element, name, callback, frame.eventHandlerFlags ?? 0);
+    bindCallback(dom, state, element, name, callback, frame.eventHandlerFlags ?? 0);
     return;
   }
   if (typeof value === "boolean") {
@@ -317,12 +324,12 @@ function attributeRunEnd(frames: RenderTreeFrame[], startIndex: number): number 
   return i;
 }
 
-function applyAttributes(element: Element, startFrame: RenderTreeFrame, frames: RenderTreeFrame[], startIndex: number): void {
+function applyAttributes(dom: DomRenderer, state: ComponentState, element: Element, startFrame: RenderTreeFrame, frames: RenderTreeFrame[], startIndex: number): void {
   const end = startIndex + getFrameSubtreeLength(startFrame);
   for (let i = startIndex + 1; i < end; i++) {
     const frame = frames[i]!;
     if (frame.frameType === FrameType.Attribute) {
-      setAttributeFrame(element, frame);
+      setAttributeFrame(dom, state, element, frame);
     } else {
       break;
     }
@@ -334,7 +341,7 @@ function toDomEventName(attributeName: string): string {
   return attributeName.toLowerCase().startsWith("on") ? attributeName.slice(2).toLowerCase() : attributeName;
 }
 
-function bindCallback(element: Element, attributeName: string, callback: EventCallback<never>, flags: number): void {
+function bindCallback(dom: DomRenderer, state: ComponentState, element: Element, attributeName: string, callback: EventCallback<never>, flags: number): void {
   const eventName = toDomEventName(attributeName);
   let map = elementHandlers.get(element);
   if (!map) {
@@ -348,20 +355,10 @@ function bindCallback(element: Element, attributeName: string, callback: EventCa
   const listener = (event: Event): void => {
     if (flags & 1) event.preventDefault(); // PreventDefault
     if (flags & 2) event.stopPropagation(); // StopPropagation
-    const invocation = callback
-      .invokeAsync(event as never)
-      .catch((error) => reportError(error, `Event handler '${eventName}' failed`));
-    if (activeRenderer) {
-      activeRenderer.track(invocation);
-    }
+    dom.invokeEventHandler(state, callback, event);
   };
   element.addEventListener(eventName, listener);
   map.set(eventName, { callback, flags, listener });
-}
-
-function reportError(error: unknown, context: string): void {
-  // eslint-disable-next-line no-console
-  console.error(`[tsazor] ${context}:`, error);
 }
 
 /* ------------------------------------------------------------------ */

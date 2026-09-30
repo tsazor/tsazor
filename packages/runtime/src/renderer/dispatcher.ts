@@ -1,6 +1,8 @@
 /**
  * Blazor's SynchronizationContext equivalent: serializes component work and
- * batches DOM patches into a single microtask cycle.
+ * batches DOM patches into a single microtask cycle. Each Renderer owns one;
+ * the renderer schedules its render batches through it (one invocation per
+ * batch, covering every render requested until the queue is empty).
  */
 export class Dispatcher {
   private queue: Array<() => void | Promise<void>> = [];

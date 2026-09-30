@@ -23,6 +23,14 @@ export class ComponentState {
   /** Index of the builder for the NEXT pass (toggles per flush). */
   renderPass = 0;
   disposed = false;
+  /** Distance from the root component: the render queue's parent-first order. */
+  readonly depth: number;
+  /** @internal Render-queue bookkeeping (see RenderQueue). */
+  renderQueued = false;
+  /** @internal */
+  renderQueueOrder = 0;
+  /** @internal Render passes in the current batch (render-loop guard). */
+  batchRenderCount = 0;
   /** Mutable so HMR can replace the definition in place. */
   definition: ComponentDefinition;
 
@@ -35,6 +43,7 @@ export class ComponentState {
     readonly parent: ComponentState | null,
   ) {
     this.definition = definition;
+    this.depth = parent === null ? 0 : parent.depth + 1;
     this.startMarker = document.createComment(`bl-tsazor:${id}`);
     this.endMarker = document.createComment(`/bl-tsazor:${id}`);
     this.renderHandle = {

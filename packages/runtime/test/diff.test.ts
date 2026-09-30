@@ -4,7 +4,7 @@
  * DOM-level checks of the applier.
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, Parameter, RenderTreeBuilder, Renderer, computeDiff, defineComponent, type RenderTreeDiff, type RenderTreeFrame } from "../src/index";
+import { ComponentBase, Parameter, RenderTreeBuilder, Renderer, computeDiff, defineComponent, type RenderError, type RenderTreeDiff, type RenderTreeFrame } from "../src/index";
 import { RenderTreeEditType } from "../src/render-tree/diff";
 
 type Build = (b: RenderTreeBuilder) => void;
@@ -365,23 +365,14 @@ describe("DomRenderer — applying edits", () => {
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("12");
 
-    const errors: unknown[] = [];
-    const original = globalThis.queueMicrotask;
-    globalThis.queueMicrotask = (cb) => original(() => {
-      try {
-        cb();
-      } catch (error) {
-        errors.push(error);
-      }
-    });
-    try {
-      dup = true;
-      state.component.stateHasChangedInternal();
-      await renderer.waitUntilIdle();
-    } finally {
-      globalThis.queueMicrotask = original;
-    }
-    expect(String(errors[0])).toMatch(/same key value/);
+    const errors: RenderError[] = [];
+    renderer.errorHandler = (error) => errors.push(error);
+    dup = true;
+    state.component.stateHasChangedInternal();
+    await renderer.waitUntilIdle();
+    expect(errors.map((e) => [String(e.error), e.component, e.phase])).toEqual([
+      [expect.stringMatching(/same key value/), state, "diff"],
+    ]);
     expect(container.textContent).toBe("12");
 
     dup = false;
