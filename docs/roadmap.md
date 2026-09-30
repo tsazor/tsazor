@@ -7,6 +7,46 @@ Ein Schritt kommt erst, wenn das, worauf er aufbaut, korrekt ist — sonst wird 
 gebaut. Quick Wins werden deshalb nicht vorgezogen, sondern dort erledigt, wo sie im neuen
 Code ohnehin entstehen (viele verschwinden durch den Umbau von selbst).
 
+## Stand vor Phase 2 (2026-09-30)
+
+**Erledigt:** Phase 0, Track A (A1–A5), Track B (B1–B7), dazu nachgezogen: SVG-Namespace,
+`captureUnmatchedValues` pro Parametersatz, Event-Handler-Render nach dem synchronen Teil
+(`HandleEventAsync`), Booleans/`bigint` als Text, `<input type=time|datetime-local>`-Sekunden.
+Alles auf `roadmap/phase-0`, nicht gepusht, `main` unverändert.
+
+**Gates auf dem Gesamtstand:** 739/739 Tests (Konformitätssuite: alle Compiler-Befunde außer
+C12/C13 und alle Runtime-Befunde grün), LSP-Smokes, Pizza 20/20, Gallery, Sleipnir, Demo
+(components 31, scoped 10, code-behind 5, debugging 14).
+
+**FluentCMS-Probe:** 13 → 145 (A2) → **178/217** sauber (A5); 216 ohne Fehler. Rest:
+`@context` ×18 und 36 unaufgelöste Tags (Slots — Phase 2.3; `DynamicComponent`,
+`HeadContent`, `InputFile`, `ErrorBoundary`, `DataAnnotationsValidator` — Phase 3), 12 × C#
+`$"…"` als unquoted Attributwert (kein TS-Gegenstück).
+
+**Benchmark A/B** (ruhiger Rechner, abwechselnd je 2 × 10 Läufe, `0abdc98` → jetzt): ready
+66–75 → 73–78 ms (keine Ausreißer; die ~940-ms-Werte der Agent-Läufe waren Rechnerlast),
+append1k 118 → 74, upd10th 110 → 62, swap 191 → 142, select 66 → 17, remove 343 → 305 ms,
+heap 16,5 → 15,7 MB. **Bundle 14,1 → 22,7 KB gz (+61 %)** — vor Phase 5 prüfen
+(Kandidaten: Router/Navigation-Rewrite, DOM-Journal, Error-/Batch-Code, generierte Helfer).
+
+**Bewusste Abweichungen von Blazor** (dokumentiert, getestet): Render-Queue parent-first
+(Blazor: FIFO); `onAfterRender` Kinder zuerst, einmal pro Batch (Blazor: Render-Reihenfolge);
+DOM-Anwendung pro Pass + Journal-Rollback (Blazor: pro Batch); ohne `<base>` ist die Basis die
+Origin-Root; `regex(...)`-Constraints immer verankert; `Date` gilt als veränderlich (B6).
+
+**Gesammelte offene Punkte** (nicht blockierend für Phase 2, Zuordnung in Klammern):
+- `ValueExpression` nur, wenn die Zielkomponente es deklariert; `/^on/i`-EventCallback-Heuristik
+  entfernen (2.2 / Sync-Punkt B8).
+- `@inherits`-Basis-Member mit DOM-Global-Namen (`length`, `top`) bleiben global (2.1/2.4).
+- `@bind-value` (klein) auf *Elementen* wird als Komponenten-Bind emittiert; `@bind` auf eine
+  `@foreach`-Variable scheitert erst zur Laufzeit (C#: CS1656) (A-Nachtrag vor 2.2).
+- Syntaxfehler in Markup-Ausdrücken ohne eigene TZS-Diagnose; `var` in Statement-Runs bleibt
+  `var` (Closure-Capture) (A-Nachtrag).
+- Code-behind-/`_Imports`-Änderungen invalidieren abhängige Module nicht (4.1).
+- `NavLink` vergleicht base-relative statt absolute URIs (klein, vor Phase 3).
+- EditForm `OnInvalidSubmit` / awaited `OnValidSubmit` (3.5).
+- Verwaister Worktree `.claude/worktrees/agent-aec7aae20bd23db40` (Prozess 43448 hält Port 5199).
+
 ## Abhängigkeitsgraph
 
 ```
