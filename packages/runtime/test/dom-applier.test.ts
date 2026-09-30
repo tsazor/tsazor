@@ -1,0 +1,507 @@
+/**
+ * DOM applier (roadmap B3): the logical-range abstraction (insert, move,
+ * remove, nesting, permutations), transactional application (a failed pass
+ * leaves the DOM of the retained live tree) and the attribute/property rules
+ * (review R10).
+ */
+import { describe, expect, it } from "vitest";
+import { ComponentBase, EventCallback, Parameter, Renderer, defineComponent, type RenderError, type RenderTreeBuilder } from "../src/index";
+import type { ComponentState } from "../src/renderer/component-state";
+import { LogicalChildren, LogicalRange, lastNodeOf, removeLogicalChild } from "../src/renderer/logical-range";
+import { DomJournal } from "../src/renderer/dom-journal";
+
+type Build = (b: RenderTreeBuilder) => void;
+
+/** Renders whatever its `build` function writes. */
+class Fn extends ComponentBase {
+  build: Build = () => {};
+  protected override buildRenderTree(b: RenderTreeBuilder): void {
+    this.build(b);
+  }
+}
+
+/** Renders `<i>label</i>` plus a markup block; logs its disposal. */
+const disposed: string[] = [];
+class Item extends ComponentBase {
+  @Parameter() label = "";
+  protected override buildRenderTree(b: RenderTreeBuilder): void {
+    b.openElement(0, "i");
+    b.addContent(1, this.label);
+    b.closeElement();
+    b.addMarkupContent(2, `<b>${this.label}</b>`);
+  }
+  dispose(): void {
+    disposed.push(this.label);
+  }
+}
+
+/** Renders a nested Item inside its own output: ranges within ranges. */
+class Wrapper extends ComponentBase {
+  @Parameter() label = "";
+  protected override buildRenderTree(b: RenderTreeBuilder): void {
+    b.addContent(0, "[");
+    b.openComponent(1, defineComponent(Item));
+    b.addAttribute(2, "label", this.label);
+    b.closeComponent();
+    b.addContent(3, "]");
+  }
+}
+
+async function mount(build: Build): Promise<{ container: HTMLElement; renderer: Renderer; state: ComponentState; errors: RenderError[]; update(next?: Build): Promise<void> }> {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const renderer = new Renderer();
+  const errors: RenderError[] = [];
+  renderer.errorHandler = (error) => errors.push(error);
+  const state = renderer.renderInContainer(Fn, container);
+  const component = state.component as Fn;
+  component.build = build;
+  component.stateHasChangedInternal();
+  await renderer.waitUntilIdle();
+  return {
+    container,
+    renderer,
+    state,
+    errors,
+    async update(next?: Build) {
+      if (next) component.build = next;
+      component.stateHasChangedInternal();
+      await renderer.waitUntilIdle();
+    },
+  };
+}
+
+const item = (b: RenderTreeBuilder, seq: number, label: string, key?: string): void => {
+  b.openComponent(seq, defineComponent(Item));
+  if (key !== undefined) b.setKey(key);
+  b.addAttribute(seq + 1, "label", label);
+  b.closeComponent();
+};
+
+/** Serializes a container including comments, so stray markers show up. */
+function dump(node: Node): string {
+  let out = "";
+  node.childNodes.forEach((child) => {
+    if (child.nodeType === 8) out += `<!--${child.nodeValue}-->`;
+    else if (child.nodeType === 3) out += child.nodeValue;
+    else {
+      const element = child as Element;
+      const attributes = [...element.attributes].map((a) => ` ${a.name}="${a.value}"`).join("");
+      out += `<${element.localName}${attributes}>${dump(element)}</${element.localName}>`;
+    }
+  });
+  return out;
+}
+
+describe("LogicalRange", () => {
+  function text(value: string): Text {
+    return document.createTextNode(value);
+  }
+
+  it("inserts its markers, then its content moves and disappears with it", () => {
+    const parent = document.createElement("div");
+    parent.append(text("a"), text("z"));
+    const range = new LogicalRange("r");
+    range.insertBefore(parent, parent.lastChild);
+    expect(range.parentNode).toBe(parent);
+    expect(range.firstChild).toBeNull();
+    parent.insertBefore(text("1"), range.end);
+    parent.insertBefore(text("2"), range.end);
+    expect(parent.textContent).toBe("a12z");
+    expect(range.children().map((n) => (n as Node).textContent)).toEqual(["1", "2"]);
+    expect(range.nodes()).toHaveLength(4);
+
+    // Move as a unit to the end.
+    range.insertBefore(parent, null);
+    expect(parent.textContent).toBe("az12");
+    expect(parent.lastChild).toBe(range.end);
+
+    // Remove as a unit: nothing stays behind.
+    const after = range.remove();
+    expect(after).toBeNull();
+    expect(dump(parent)).toBe("az");
+    expect(range.parentNode).toBeNull();
+  });
+
+  it("nests: an inner range is one logical child of the outer one", () => {
+    const parent = document.createElement("div");
+    const outer = new LogicalRange("o");
+    outer.insertBefore(parent, null);
+    const inner = new LogicalRange("i");
+    inner.insertBefore(parent, outer.end);
+    parent.insertBefore(text("x"), inner.end);
+    parent.insertBefore(text("y"), outer.end);
+
+    expect(outer.children()).toEqual([inner, parent.childNodes[4]]);
+    expect(LogicalRange.startingAt(inner.start)).toBe(inner);
+    expect(lastNodeOf(inner.start)).toBe(inner.end);
+    expect(new LogicalChildren(outer).list()).toEqual([inner.start, parent.childNodes[4]]);
+
+    // Removing the inner range as a logical child takes its content along.
+    expect(removeLogicalChild(inner.start, null)?.textContent).toBe("y");
+    expect(dump(parent)).toBe("<!--o-->y<!--/o-->");
+  });
+
+  it("permutes node and range children as units", () => {
+    const parent = document.createElement("div");
+    const a = new LogicalRange("a");
+    a.insertBefore(parent, null);
+    parent.insertBefore(text("a1"), a.end);
+    parent.insertBefore(text("a2"), a.end);
+    parent.append(text("B"));
+    const c = new LogicalRange("c");
+    c.insertBefore(parent, null);
+    parent.insertBefore(text("c1"), c.end);
+
+    // [a, B, c] -> [c, a, B]
+    new LogicalChildren(parent).permute([{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 0 }], null);
+    expect(dump(parent)).toBe("<!--c-->c1<!--/c--><!--a-->a1a2<!--/a-->B");
+  });
+
+  it("journals structural changes so a rollback restores the exact DOM", () => {
+    const parent = document.createElement("div");
+    const range = new LogicalRange("r");
+    range.insertBefore(parent, null);
+    parent.insertBefore(text("1"), range.end);
+    parent.append(text("B"));
+    const nodes = [...parent.childNodes];
+    const before = dump(parent);
+
+    const journal = new DomJournal();
+    new LogicalChildren(parent).permute([{ from: 0, to: 1 }, { from: 1, to: 0 }], journal);
+    range.remove(journal);
+    journal.property(parent.firstChild!, "nodeValue");
+    parent.firstChild!.nodeValue = "changed";
+    journal.attribute(parent, "title");
+    parent.setAttribute("title", "t");
+    expect(dump(parent)).not.toBe(before);
+
+    journal.rollback();
+    expect(dump(parent)).toBe(before);
+    expect([...parent.childNodes]).toEqual(nodes);
+    expect(parent.hasAttribute("title")).toBe(false);
+  });
+});
+
+describe("applier — ranges in render passes", () => {
+  it("keyed moves carry nested ranges (components in components, markup) as units", async () => {
+    let order = ["a", "b", "c"];
+    const h = await mount((b) => {
+      for (const key of order) {
+        b.openComponent(0, defineComponent(Wrapper));
+        b.setKey(key);
+        b.addAttribute(1, "label", key);
+        b.closeComponent();
+      }
+    });
+    expect(h.container.textContent).toBe("[aa][bb][cc]");
+    order = ["c", "a", "b"];
+    await h.update();
+    expect(h.container.textContent).toBe("[cc][aa][bb]");
+    order = ["b", "c"];
+    await h.update();
+    expect(h.container.textContent).toBe("[bb][cc]");
+    // The removed wrapper took its nested item's range along: no stray markers.
+    expect(h.container.querySelectorAll("i")).toHaveLength(2);
+    expect(disposed).toContain("a");
+    const comments = [...h.container.childNodes].filter((n) => n.nodeType === 8).length;
+    // Ranges are flat siblings: the host's, plus per wrapper its own, its item's and the markup's.
+    expect(comments).toBe(2 + 2 * 6);
+  });
+
+  it("removing a component range leaves no nodes behind and disposes it", async () => {
+    let show = true;
+    const h = await mount((b) => {
+      b.addContent(0, "<");
+      if (show) item(b, 1, "x");
+      b.addContent(3, ">");
+    });
+    const initial = dump(h.container);
+    expect(h.container.textContent).toBe("<xx>");
+    show = false;
+    disposed.length = 0;
+    await h.update();
+    expect(dump(h.container)).toBe(initial.replace(/<!--bl-tsazor:2-->.*<!--\/bl-tsazor:2-->/, ""));
+    expect(disposed).toEqual(["x"]);
+  });
+});
+
+describe("applier — a failed pass leaves the DOM of the live tree", () => {
+  it("rolls back removals, text/attribute updates, moves and inserts, keeps child components alive", async () => {
+    let step = 0;
+    let clicks = 0;
+    const h = await mount((b) => {
+      b.openElement(0, "p");
+      b.addAttribute(1, "title", step === 0 ? "t0" : "t1");
+      b.addAttribute(2, "onclick", step === 0 ? () => clicks++ : null);
+      b.addContent(3, step === 0 ? "text0" : "text1");
+      b.closeElement();
+      for (const key of step === 0 ? ["a", "b", "c"] : ["c", "a"]) item(b, 4, key, key);
+      b.addMarkupContent(6, step === 0 ? "<u>m0</u>" : "<u>m1</u>");
+      if (step === 1) {
+        // Inserted last: its capture throws after every other edit applied.
+        b.openElement(7, "div");
+        b.addElementReferenceCapture(8, () => {
+          throw new Error("capture failed");
+        });
+        b.closeElement();
+      }
+    });
+    const before = dump(h.container);
+    const nodes = [...h.container.querySelectorAll("*")];
+    const children = [...h.state.slotChildren.values()];
+    disposed.length = 0;
+
+    step = 1;
+    await h.update();
+    expect(h.errors.map((e) => [String(e.error), e.phase])).toEqual([["Error: capture failed", "apply"]]);
+    expect(dump(h.container)).toBe(before);
+    expect([...h.container.querySelectorAll("*")]).toEqual(nodes);
+    expect([...h.state.slotChildren.values()]).toEqual(children);
+    expect(disposed).toEqual([]);
+
+    // The listener the failed pass detached is attached again.
+    const p = h.container.querySelector("p")!;
+    p.dispatchEvent(new Event("click"));
+    await h.renderer.waitUntilIdle();
+    expect(clicks).toBe(1);
+
+    // And the retained tree stays the diff base: back to step 0 is a no-op apart from the handler.
+    step = 0;
+    await h.update();
+    expect(dump(h.container)).toBe(before);
+    expect(h.container.querySelector("p")).toBe(p);
+    p.dispatchEvent(new Event("click"));
+    await h.renderer.waitUntilIdle();
+    expect(clicks).toBe(2);
+  });
+
+  it("the next pass diffs against the retained tree and applies cleanly", async () => {
+    let fail = false;
+    let label = "a";
+    const h = await mount((b) => {
+      b.openElement(0, "span");
+      b.addContent(1, label);
+      b.closeElement();
+      if (fail) {
+        b.openElement(2, "em");
+        b.addElementReferenceCapture(3, () => {
+          throw new Error("nope");
+        });
+        b.closeElement();
+      }
+    });
+    fail = true;
+    label = "b";
+    await h.update();
+    expect(h.container.textContent).toBe("a");
+    fail = false;
+    label = "c";
+    await h.update();
+    expect(h.container.textContent).toBe("c");
+    expect(h.container.querySelectorAll("em")).toHaveLength(0);
+  });
+});
+
+describe("applier — attributes and properties (R10)", () => {
+  it("checked / selected follow the render as properties, with the attribute as default", async () => {
+    let on = true;
+    const h = await mount((b) => {
+      b.openElement(0, "input");
+      b.addAttribute(1, "type", "checkbox");
+      b.addAttribute(2, "checked", on);
+      b.closeElement();
+      b.openElement(3, "select");
+      for (const v of ["x", "y"]) {
+        b.openElement(4, "option");
+        b.addAttribute(5, "selected", v === "y" ? on : !on);
+        b.addContent(6, v);
+        b.closeElement();
+      }
+      b.closeElement();
+    });
+    const input = h.container.querySelector("input")!;
+    const select = h.container.querySelector("select")!;
+    expect(input.checked).toBe(true);
+    expect(input.hasAttribute("checked")).toBe(true);
+    expect(select.value).toBe("y");
+
+    input.click();
+    select.value = "x";
+    on = false;
+    await h.update();
+    expect(input.checked).toBe(false);
+    expect(input.hasAttribute("checked")).toBe(false);
+    expect(select.value).toBe("x");
+    on = true;
+    await h.update();
+    expect(input.checked).toBe(true);
+    expect(select.value).toBe("y");
+  });
+
+  it("select value waits for its options: rendered by a child component, loaded later, changed afterwards", async () => {
+    class Options extends ComponentBase {
+      @Parameter() values: string[] = [];
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        for (const v of this.values) {
+          b.openElement(0, "option");
+          b.setKey(v);
+          b.addAttribute(1, "value", v);
+          b.addContent(2, v.toUpperCase());
+          b.closeElement();
+        }
+      }
+    }
+    let values: string[] = [];
+    const h = await mount((b) => {
+      b.openElement(0, "select");
+      b.addAttribute(1, "value", "b");
+      b.openComponent(2, defineComponent(Options));
+      b.addAttribute(3, "values", values);
+      b.closeComponent();
+      b.closeElement();
+    });
+    const select = h.container.querySelector("select")!;
+    values = ["a", "b"];
+    await h.update();
+    expect(select.value).toBe("b");
+
+    // The selected option is replaced (removed, re-added): the value is re-applied.
+    values = ["c", "a"];
+    await h.update();
+    values = ["c", "b", "a"];
+    await h.update();
+    expect(select.value).toBe("b");
+  });
+
+  it("an option whose value changes to the select's value becomes selected", async () => {
+    let second = "q";
+    const h = await mount((b) => {
+      b.openElement(0, "select");
+      b.addAttribute(1, "value", "b");
+      for (const v of ["a", second]) {
+        b.openElement(2, "option");
+        b.addAttribute(3, "value", v);
+        b.closeElement();
+      }
+      b.closeElement();
+    });
+    const select = h.container.querySelector("select")!;
+    expect(select.value).not.toBe("b");
+    second = "b";
+    await h.update();
+    expect(select.value).toBe("b");
+  });
+
+  it("removing value clears inputs and textareas; a checkbox falls back to its default", async () => {
+    let has = true;
+    const h = await mount((b) => {
+      for (const [seq, tag, type] of [[0, "input", "text"], [3, "textarea", null], [6, "input", "checkbox"]] as const) {
+        b.openElement(seq, tag);
+        if (type !== null) b.addAttribute(seq + 1, "type", type);
+        if (has) b.addAttribute(seq + 2, "value", "v");
+        b.closeElement();
+      }
+    });
+    const [text, checkbox] = [...h.container.querySelectorAll("input")];
+    const area = h.container.querySelector("textarea")!;
+    expect([text!.value, area.value, checkbox!.value]).toEqual(["v", "v", "v"]);
+    has = false;
+    await h.update();
+    expect([text!.value, area.value, checkbox!.value]).toEqual(["", "", "on"]);
+  });
+
+  it("booleans are minimized attributes; strings keep attribute semantics", async () => {
+    let flag: boolean | null = true;
+    const h = await mount((b) => {
+      b.openElement(0, "button");
+      b.addAttribute(1, "disabled", flag);
+      b.addAttribute(2, "hidden", "");
+      b.addAttribute(3, "form", "f1");
+      b.closeElement();
+      b.openElement(4, "img");
+      b.addAttribute(5, "width", "100%");
+      b.closeElement();
+    });
+    const button = h.container.querySelector("button")!;
+    expect(button.getAttribute("disabled")).toBe("");
+    expect(button.hidden).toBe(true);
+    expect(button.getAttribute("form")).toBe("f1");
+    expect(h.container.querySelector("img")!.getAttribute("width")).toBe("100%");
+    flag = false;
+    await h.update();
+    expect(button.hasAttribute("disabled")).toBe(false);
+    flag = true;
+    await h.update();
+    flag = null;
+    await h.update();
+    expect(button.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("objects go to writable properties, never to getter-only ones", async () => {
+    const payload = { rows: [1, 2] };
+    const h = await mount((b) => {
+      b.openElement(0, "div");
+      b.addAttribute(1, "customData", payload);
+      b.closeElement();
+      b.openElement(2, "button");
+      b.addAttribute(3, "form", { toString: () => "f2" });
+      b.closeElement();
+    });
+    const div = h.container.querySelector("div")!;
+    Object.defineProperty(div, "customData", { value: undefined, writable: true, configurable: true });
+    await h.update((b) => {
+      b.openElement(0, "div");
+      b.addAttribute(1, "customData", { rows: [3] });
+      b.closeElement();
+      b.openElement(2, "button");
+      b.addAttribute(3, "form", { toString: () => "f3" });
+      b.closeElement();
+    });
+    expect((div as unknown as { customData: unknown }).customData).toEqual({ rows: [3] });
+    expect(h.container.querySelector("button")!.getAttribute("form")).toBe("f3");
+    expect(h.errors).toEqual([]);
+  });
+
+  it("a changed handler reuses the DOM listener; null, a string or removal detaches it", async () => {
+    const calls: string[] = [];
+    let handler: unknown = () => calls.push("first");
+    const h = await mount((b) => {
+      b.openElement(0, "button");
+      if (handler !== undefined) b.addAttribute(1, "onClick", handler as never);
+      b.closeElement();
+    });
+    const button = h.container.querySelector("button")!;
+    let adds = 0;
+    let removes = 0;
+    const add = button.addEventListener.bind(button);
+    const remove = button.removeEventListener.bind(button);
+    button.addEventListener = ((...args: Parameters<typeof add>) => {
+      adds++;
+      add(...args);
+    }) as typeof add;
+    button.removeEventListener = ((...args: Parameters<typeof remove>) => {
+      removes++;
+      remove(...args);
+    }) as typeof remove;
+
+    const receiver = new Fn();
+    handler = EventCallback.bind(receiver, () => calls.push("second"));
+    await h.update();
+    button.dispatchEvent(new Event("click"));
+    await h.renderer.waitUntilIdle();
+    expect(calls).toEqual(["second"]);
+    expect([adds, removes]).toEqual([0, 0]);
+
+    for (const next of [null, () => calls.push("third"), "void 0", () => calls.push("fourth"), undefined]) {
+      handler = next;
+      await h.update();
+      button.dispatchEvent(new Event("click"));
+      await h.renderer.waitUntilIdle();
+    }
+    expect(calls).toEqual(["second", "third", "fourth"]);
+    expect(button.hasAttribute("onClick")).toBe(false);
+    // Detached for null, the string and the removal; attached for the two functions.
+    expect([adds, removes]).toEqual([2, 3]);
+  });
+});
