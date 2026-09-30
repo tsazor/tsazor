@@ -31,7 +31,10 @@ export interface TsazorApp {
 
 export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   const collection = new ServiceCollection();
-  collection.registerValue(NavigationManager as unknown as Token<NavigationManager>, options.navigationManager ?? new NavigationManager());
+  // An app-created NavigationManager is owned (and disposed) by the app; a
+  // shared one passed in stays with its owner.
+  const ownedNavigation = options.navigationManager ? null : new NavigationManager();
+  collection.registerValue(NavigationManager as unknown as Token<NavigationManager>, options.navigationManager ?? ownedNavigation!);
   if (options.routes) {
     collection.registerValue(RouteManifest as unknown as Token<RouteManifest>, new RouteManifest(options.routes));
   }
@@ -47,18 +50,32 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   const state = renderer.renderInContainer(options.root, container);
 
   // HMR bridge: compiled .tsazor modules call this on import.meta.hot.accept.
-  (globalThis as unknown as { __tsazor?: { hmrSwap(oldType: unknown, newType: unknown): void } }).__tsazor = {
-    hmrSwap: (oldType, newType) => {
+  const globals = globalThis as unknown as { __tsazor?: { hmrSwap(oldType: unknown, newType: unknown): void } };
+  const hmrBridge = {
+    hmrSwap: (oldType: unknown, newType: unknown) => {
       renderer.hmrSwap(oldType, newType);
     },
   };
+  globals.__tsazor = hmrBridge;
+  let disposed = false;
 
   return {
     renderer,
     services,
     navigationManager: services.get(NavigationManager as unknown as Token<NavigationManager>),
+    /**
+     * Disposes the component tree (parent first), removes the rendered DOM
+     * from the container, and removes the global listeners the app installed:
+     * link interception and popstate (via its own NavigationManager) and the
+     * HMR bridge.
+     */
     dispose() {
+      if (disposed) return;
+      disposed = true;
       renderer.disposeComponent(state);
+      state.range.remove();
+      ownedNavigation?.dispose();
+      if (globals.__tsazor === hmrBridge) delete globals.__tsazor;
     },
   };
 }
