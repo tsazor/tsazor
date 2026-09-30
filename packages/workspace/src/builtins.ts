@@ -15,6 +15,7 @@ export const RUNTIME_COMPONENTS: ReadonlySet<string> = new Set([
   "NavLink",
   "LayoutView",
   "PageTitle",
+  "NavigationLock",
   "CascadingValue",
   "AuthorizeView",
   "CascadingAuthenticationState",
@@ -72,6 +73,10 @@ export const RUNTIME_COMPONENT_PARAMS: Readonly<Record<string, ReadonlyArray<{ n
     { name: "childContent", doc: "Content to project into the layout's Body." },
   ],
   PageTitle: [{ name: "childContent", doc: "The title text." }],
+  NavigationLock: [
+    { name: "onBeforeInternalNavigation", doc: "Runs before internal navigations; may call context.preventNavigation()." },
+    { name: "confirmExternalNavigation", doc: "Ask the browser to confirm leaving the app (beforeunload)." },
+  ],
   CascadingValue: [
     { name: "value", doc: "The value to cascade." },
     { name: "name", doc: "Optional name for @bind:by-name style cascading." },
@@ -137,6 +142,7 @@ export const RUNTIME_TYPES: ReadonlySet<string> = new Set([
   "NavLinkMatch",
   "LayoutView",
   "PageTitle",
+  "NavigationLock",
   "AuthorizeRouteView",
   "AuthorizeView",
   "CascadingAuthenticationState",

@@ -52,6 +52,7 @@ type EditableFrame = { -readonly [K in keyof RenderTreeFrame]: RenderTreeFrame[K
 export type AttributeValue =
   | string
   | number
+  | bigint
   | boolean
   | null
   | undefined

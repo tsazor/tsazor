@@ -4,7 +4,7 @@ import { inject } from "../di/service-provider.js";
 import type { ServiceProvider, Token } from "../di/service-collection.js";
 import { NavigationManager } from "../navigation/navigation-manager.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
-import { matchRoute, RouteManifest, type RouteData, type RouteEntry } from "./route-data.js";
+import { getRouteTable, RouteManifest, type RouteData, type RouteEntry, type RouteTable } from "./route-data.js";
 
 /**
  * Blazor's Router: matches the current location against the route manifest
@@ -22,6 +22,7 @@ export class Router extends ComponentBase {
 
   private readonly navigation = this.inject(NavigationManager);
   private unsubscribe?: () => void;
+  private routeTable?: RouteTable;
 
   protected override onInitialized(): void {
     if (this.routes.length === 0) {
@@ -36,8 +37,14 @@ export class Router extends ComponentBase {
     this.navigation.enableNavigationInterception();
   }
 
+  protected override onParametersSet(): void {
+    // Blazor's RefreshRouteTable: sorts by precedence and throws for
+    // ambiguous routes here (lifecycle), not on the first render.
+    this.routeTable = getRouteTable(this.routes);
+  }
+
   protected override buildRenderTree(b: RenderTreeBuilder): void {
-    const matched = matchRoute(this.routes, this.navigation.baseRelativePath);
+    const matched = (this.routeTable ?? getRouteTable(this.routes)).match(this.navigation.baseRelativePath);
     if (matched) {
       const fragment = this.found?.(matched);
       if (fragment) {

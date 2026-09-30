@@ -20,8 +20,20 @@ export abstract class AuthenticationStateProvider {
     return this.cachedState;
   }
 
+  /**
+   * Bumped by every notification. watchAuthenticationState compares it
+   * before and after its getState() request: a result that arrives after a
+   * newer notification is stale and dropped.
+   */
+  get notificationVersion(): number {
+    return this.version;
+  }
+
+  private version = 0;
+
   /** Blazor's NotifyAuthenticationStateChanged (login/logout happened). */
   protected notifyAuthenticationStateChanged(state: AuthenticationState): void {
+    this.version++;
     this.cachedState = state;
     for (const subscriber of [...this.subscribers]) {
       subscriber(state);
@@ -53,16 +65,27 @@ export function watchAuthenticationState(
     apply(ANONYMOUS);
     return () => undefined;
   }
+  let active = true;
   const unsubscribe = provider.subscribe(apply);
-  void provider
-    .getState()
-    .then(apply)
-    .catch((error) => {
+  // The initial request is tokened with the notification version: if a
+  // login/logout notification arrives while getState() is pending, the late
+  // result (or failure) must not overwrite the newer state.
+  const requestVersion = provider.notificationVersion;
+  const isCurrent = () => active && provider.notificationVersion === requestVersion;
+  void provider.getState().then(
+    (state) => {
+      if (isCurrent()) apply(state);
+    },
+    (error) => {
       // eslint-disable-next-line no-console
       console.error("[tsazor] AuthenticationStateProvider.getState() failed:", error);
-      apply(ANONYMOUS);
-    });
-  return unsubscribe;
+      if (isCurrent()) apply(ANONYMOUS);
+    },
+  );
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 }
 
 /** Structural subset of ServiceProvider the watcher needs (avoids a DI import cycle). */

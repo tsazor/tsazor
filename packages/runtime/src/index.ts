@@ -24,15 +24,24 @@ export { ServiceCollection, ServiceProvider, type Token } from "./di/service-col
 export { inject } from "./di/service-provider.js";
 
 // Navigation
-export { NavigationManager } from "./navigation/navigation-manager.js";
+export {
+  NavigationManager,
+  type LocationChangedEventArgs,
+  type LocationChangingContext,
+  type LocationChangingHandler,
+  type NavigationOptions,
+} from "./navigation/navigation-manager.js";
 
 // Routing
 export {
+  getRouteTable,
   matchRoute,
   parseRouteTemplate,
   RouteManifest,
+  RouteTable,
   type RouteData,
   type RouteEntry,
+  type RouteValue,
 } from "./routing/route-data.js";
 export { LayoutComponentBase } from "./routing/layout-component-base.js";
 export { Router } from "./routing/router.js";
@@ -40,6 +49,7 @@ export { RouteView } from "./routing/route-view.js";
 export { LayoutView } from "./routing/layout-view.js";
 export { NavLink, NavLinkMatch } from "./routing/nav-link.js";
 export { PageTitle } from "./routing/page-title.js";
+export { NavigationLock } from "./routing/navigation-lock.js";
 
 // Data
 export {
