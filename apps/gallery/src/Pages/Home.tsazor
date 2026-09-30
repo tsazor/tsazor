@@ -1,0 +1,8 @@
+@page "/"
+
+<h1>Overview</h1>
+<p>
+    Fluent 2 component gallery — the stability proof. Every launch component
+    gets a page with its states and props; the dashboard exercises all of them
+    together.
+</p>

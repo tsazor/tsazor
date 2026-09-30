@@ -1,0 +1,95 @@
+/* Gallery app shell — deliberately minimal: the visual layer comes from
+ * @tsazor/fluent tokens + components, not from any CSS framework. */
+
+html {
+  background: var(--fui-background-2);
+  color: var(--fui-foreground-1);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  line-height: var(--fui-line-height);
+}
+
+body { margin: 0; }
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--fui-background-3);
+}
+
+.sidebar {
+  width: 240px;
+  flex: none;
+  background: var(--fui-background-1);
+  border-right: 1px solid var(--fui-stroke-2);
+  padding: var(--fui-spacing-l);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-l);
+}
+
+.sidebar-brand {
+  font-weight: var(--fui-font-weight-semibold);
+  font-size: var(--fui-font-size-body-lg);
+  color: var(--fui-foreground-1);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+}
+
+.sidebar-nav a {
+  color: var(--fui-foreground-2);
+  text-decoration: none;
+  padding: var(--fui-spacing-xs) var(--fui-spacing-s);
+  border-radius: var(--fui-radius-md);
+}
+
+.sidebar-nav a:hover {
+  background: var(--fui-background-4);
+}
+
+.sidebar-nav a.active {
+  background: var(--fui-background-4);
+  color: var(--fui-foreground-1);
+  font-weight: var(--fui-font-weight-semibold);
+  position: relative;
+}
+
+.content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  height: var(--fui-height-l);
+  padding: 0 var(--fui-spacing-l);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--fui-background-1);
+  border-bottom: 1px solid var(--fui-stroke-2);
+}
+
+.topbar-title {
+  font-size: var(--fui-font-size-caption);
+  color: var(--fui-foreground-3);
+}
+
+.theme-toggle {
+  height: 28px;
+  padding: 0 var(--fui-spacing-m);
+  border: 1px solid var(--fui-control-stroke);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-control-fill);
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.theme-toggle:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.page { padding: var(--fui-spacing-l); }
+
+.not-found { color: var(--fui-color-red-1); }

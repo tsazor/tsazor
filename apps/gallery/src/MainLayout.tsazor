@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+@inject ThemeState Theme
+
+<FluentProvider theme="@this.Theme.theme">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">Tsazor Fluent</div>
+            <nav class="sidebar-nav">
+                <NavLink Href="/">Overview</NavLink>
+            </nav>
+        </aside>
+        <main class="content">
+            <header class="topbar">
+                <span class="topbar-title">@this.Theme.theme</span>
+                <button class="theme-toggle" type="button" @onclick="() => this.Theme.toggle()">
+                    @if (this.Theme.theme === "dark") {
+                        Light
+                    } else {
+                        Dark
+                    }
+                </button>
+            </header>
+            <div class="page">@Body</div>
+        </main>
+    </div>
+</FluentProvider>
+
+@code {
+    private unsub: () => void = () => {};
+
+    protected override onInitialized(): void {
+        // The sidebar shows the theme toggle outcome — the layout subscribes.
+        this.unsub = this.Theme.subscribe(() => this.stateHasChanged());
+    }
+
+    dispose(): void {
+        this.unsub();
+    }
+}

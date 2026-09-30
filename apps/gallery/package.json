@@ -1,0 +1,23 @@
+{
+  "name": "gallery",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test test/",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@tsazor/fluent": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  }
+}
