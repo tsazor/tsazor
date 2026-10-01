@@ -6,7 +6,7 @@ export { computeDiff, RenderTreeEditType, type RenderTreeEdit, type RenderTreeDi
 // Components
 export { ComponentBase } from "./components/component-base.js";
 export { ParameterView } from "./components/parameter-view.js";
-export { Parameter, CascadingParameter, type ParameterMeta } from "./components/parameter-metadata.js";
+export { Parameter, CascadingParameter, defineParameter, type ParameterMeta } from "./components/parameter-metadata.js";
 export { EventCallback } from "./components/event-callback.js";
 export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition, type ComponentType } from "./components/component-definition.js";
 export { CascadingValue } from "./components/cascading-value.js";
