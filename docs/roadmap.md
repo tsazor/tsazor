@@ -1303,21 +1303,75 @@ alle vier Apps nachgezogen (nur die Gallery nutzt `@tsazor/fluent`):
 
 ### 5.1 — Paketierung
 
-Exports/`types` für alle Pakete, `license`-Felder, vite-plugin-Deps bereinigen (gebündelt ⇒
-keine Laufzeit-Deps), externer Smoke-Test (Tarball-Install + `vite build` + Vitest +
-`tsazor check`) als CI-Gate. Getting-Started gegen das echte Ergebnis prüfen.
+**Stand: umgesetzt** (2026-10-01, Branch `roadmap/p5-packaging`).
+
+- **`exports`/`types`/`license` in allen Paketen.** Jedes Paket (`runtime` bis `fluent`,
+  neu `dotnet`) hat ein vollständiges `exports`-Mapping (`types` + `default`), `license: MIT`
+  und ein sauber gefasstes `files` (nur `dist` + README); der vite-plugin-Build bündelt seine
+  Abhängigkeiten, es gibt keine Laufzeit-Deps mehr. `pnpm-lock.yaml` und `pnpm-workspace.yaml`
+  entsprechend.
+- **Tarball-Smoke-Gate** (`scripts/tarball-smoke.mjs`, CI-Gate): packt jedes liefernde Paket
+  (`pnpm pack`), installiert die Tarballs in ein Scratch-Projekt mit **eigenem node_modules**
+  (keine Workspace-Verlinkung — exakt die externe Auflösung) und fährt pro Kombination die
+  Gates: `vite build` über ein minimales .tsazor-Projekt, Vitest-Render-Test über
+  `@tsazor/testing`, `tsazor check` über die installierte CLI-Bin — dazu seit 5.2 die drei
+  `@tsazor/dotnet`-Schritte (beide Einstiege importiert, CLI-Generierung aus dem Tarball,
+  tsc-Typcheck des generierten Outputs). Zwei dadurch gefundene Bugs (falsch gelieferte
+  Einträge) sind im Gate-Commit gefixt.
+- **Getting-Started gegen den Realität geprüft**: npm-Konsumenten-Sektion entspricht den
+  Smoke-Schritten; der Test-Schnipsel braucht `renderer.waitUntilIdle()` vor der Assertion
+  (das Fehlen war eine Dokulüge — Reihenfolge wie im echt laufenden Gate).
 
 ### 5.2 — `@tsazor/dotnet` (Arbeitstitel)
 
-Ein offizieller Weg statt drei App-eigener:
-- OpenAPI ⇒ typisierter TS-Client mit korrekter Nullability,
-- ProblemDetails / Envelope-Fehler als typisierte Ergebnisse (`TsazorHttp` darf bei `!ok`
-  nicht werfen, bevor der Body lesbar ist),
-- DataAnnotations aus dem OpenAPI-Schema ⇒ Validatoren im Modell aus 3.6,
-- Auth-Anbindung (JWT/Cookie) an `AuthenticationStateProvider`.
+**Stand: umgesetzt** (2026-10-01, Branch `roadmap/p5-packaging`). Neue CLI `tsazor-dotnet`
+(`--version`/`--help`, exit 0/1/2 wie `tsazor`).
 
-*Warum zuletzt:* Hängt am Validierungsmodell (3.6), an typisierten Komponenten (2.4) und an
-sauberer Paketierung (5.1). Als Referenzfälle dienen FluentCMS (OpenAPI) und Sleipnir.
+- **OpenAPI ⇒ typisierter TS-Client** (`packages/dotnet`): `tsazor-dotnet generate
+  <openapi.json|https://…> --out <dir>` schreibt `models.ts` (DTO-**Klassen** mit
+  3.6-Decorators, so EditContext/DataAnnotationsValidator die Regeln finden) und
+  `<name>Client.ts` (`extends OpenApiClient`, `this.call(...)`). Pfad-Parameter werden als
+  `encodeURIComponent`-Template interpoliert, Query-Parameter als `XQuery`-Typ-Alias
+  (benötigt für `Record<...>`-Ziel), erstes 2xx-JSON-Schema ist der Resultat-Typ,
+  204/ohne Schema ⇒ `HttpResult<void>`. Einstiege: `.` ist der browser-safe Teil (Client,
+  HttpResult, Auth — keine Node-Module), `@tsazor/dotnet/generator` der Node-Teil (OpenAPI
+  lesen, generieren, CLI).
+- **Nullability** nach den vier Regeln (required/optional · nullable/nicht-nullable):
+  `T` mit .NET-Default, `T | null = null`, `?: T`, `?: T | null`. Dokumentierte Teilmenge:
+  `integer`/`int64`/`float` ⇒ `number` (dieselbe Präzisionsgrenze wie `openapi-typescript`),
+  `Range` nur mit beiden Grenzen, Inline-Objekte ohne `$ref` ⇒ `Record<string, unknown>` mit
+  Generator-Warnung, `@Required()` nur an Strings und Objekt-Referenzen, lokale `$ref`s +
+  `allOf`-Flattening, JSON (keine YAML).
+- **ProblemDetails/Envelope als Wert**: `HttpResult<T>` ist die Union
+  `{ ok: true, body: T, headers, response } | { ok: false, status, body, problem:
+  ProblemDetails | null, validationErrors?, headers, response }`. Der Hook: `TsazorHttp.send()`
+  wirft bei `!ok` **nicht** — `sendForResult` liest den Körper, erkennt RFC-9457-ProblemDetails
+  (inkl. `ValidationProblemDetails.errors`, normalisiert auf `Record<string, string[]>`) und
+  entpackt den FluentCMS-Envelope (`super(http, { envelope: { data, errors } })`; ein
+  nicht-leerer Envelope-Fehler macht aus einem 2xx ein `ok:false` mit synthetischem
+  ProblemDetails). Zusätzlich trägt das neue `TsazorHttpError` (aus
+  `getJson`/`postJson`/…) Status, StatusText, gelesenen Körper und Response.
+- **Schema ⇒ DataAnnotations**: `minLength`/`maxLength`/`minimum`/`maximum`/`format: email`/
+  `pattern` werden zu `@MinLength`/`@MaxLength`/`@StringLength(max, { minimumLength })`/
+  `@Range`/`@EmailAddress`/`@RegularExpression` am generierten Feld — EditContext +
+  `DataAnnotationsValidator` validieren die DTOs sofort.
+- **Auth-Integration** auf dem Runtime-`AuthenticationStateProvider`:
+  `CookieAuthenticationStateProvider` (Session-Endpunkt `/auth/user`, jeder Fehler ⇒ ANONYMOUS),
+  `JwtAuthenticationStateProvider` (lokale Base64URL-Payload-Dekodierung mit
+  Microsoft-Claim-URIs, `setToken`/`logout` notifizieren; kein Signatur-Check — das macht das
+  Backend), `attachJwtAuth` setzt den `Authorization: Bearer`-Interceptor.
+- **Testen ohne .NET-Backend**: gecheckte OpenAPI-Probe (ASP.NET-Korpus-Stil), kleiner
+  `node:http`-Server für ProblemDetails/Envelope-Flows, handgebaute JWTs, Stub-Fetch für
+  Cookie-Auth — und ein echter `tsc`-Durchlauf des generierten Outputs gegen die Paket-Typen.
+- **Migration**: **Pizza** läuft auf die Brücke um (gecheckter Contract `src/api/openapi.json`,
+  generierter `PizzaApiClient`, `HttpResult` in Index/ConfigurePizzaDialog/Checkout/MyOrders/
+  OrderDetails, AuthProvider.register/login über die Brücke), Pizza-E2E 20/20 grün.
+  **Sleipnir nicht migriert** — es spricht weder REST noch ProblemDetails: sein
+  `sleipnir-client` ist ein Batch-/WebSocket-/SSE-Protokoll mit eigenem Vertrag; eine Brücke
+  über OpenAPI wäre eine Fassade auf dem falschen Protokoll, keine Migration. **FluentCMS**
+  (Envelop-Referenz) existiert als Port noch nicht im Repo (der Nutzer-Port
+  `apps/fluentcms-admin` ist lokales Vorhaben) — der Envelope-Pfad ist über die gecheckte
+  Probe abgedeckt (`--envelope data,errors`).
 
 ---
 

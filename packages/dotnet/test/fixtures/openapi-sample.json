@@ -1,0 +1,145 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Contoso Orders API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/orders": {
+      "get": {
+        "operationId": "ListOrders",
+        "summary": "Bestellungen listen",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/OrderStatus" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+          { "name": "tags", "in": "query", "schema": { "type": "array", "items": { "type": "string" } } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seite der Bestellungen",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/OrderDto" } } } }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CreateOrder",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOrderDto" } } }
+        },
+        "responses": {
+          "201": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } },
+          "400": {
+            "description": "Validierung fehlgeschlagen",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ValidationProblemDetails" } } }
+          }
+        }
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "operationId": "GetOrder",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }],
+        "responses": {
+          "200": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } },
+          "404": {
+            "description": "Nicht gefunden",
+            "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "DeleteOrder",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }],
+        "responses": { "204": { "description": "Gelöscht" } }
+      }
+    },
+    "/api/customers/{name}": {
+      "get": {
+        "operationId": "GetCustomer",
+        "parameters": [{ "name": "name", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CustomerDetailsDto" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "OrderStatus": { "enum": ["Pending", "Paid", "Shipped", "Cancelled"] },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "nullable": true },
+          "title": { "type": "string", "nullable": true },
+          "status": { "type": "integer", "nullable": true },
+          "detail": { "type": "string", "nullable": true },
+          "traceId": { "type": "string", "nullable": true }
+        }
+      },
+      "ValidationProblemDetails": {
+        "type": "object",
+        "allOf": [{ "$ref": "#/components/schemas/ProblemDetails" }],
+        "properties": {
+          "errors": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } }
+        }
+      },
+      "OrderDto": {
+        "type": "object",
+        "required": ["id", "customerName", "email", "orderCode", "description", "tag", "discount", "items", "note", "status", "createdAt"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "customerName": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "orderCode": { "type": "string", "pattern": "^[A-Z]{3}-\\d{4}$" },
+          "description": { "type": "string", "minLength": 5, "maxLength": 100 },
+          "tag": { "type": "string", "minLength": 1 },
+          "discount": { "type": "number", "minimum": 0, "maximum": 100 },
+          "note": { "type": "string", "nullable": true },
+          "status": { "$ref": "#/components/schemas/OrderStatus" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItemDto" } },
+          "metadata": { "type": "object", "properties": { "hint": { "type": "string" } } }
+        }
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "required": ["customerName", "email", "items"],
+        "properties": {
+          "customerName": { "type": "string", "minLength": 3, "maxLength": 80 },
+          "email": { "type": "string", "format": "email" },
+          "comment": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrderItemDto" } }
+        }
+      },
+      "OrderItemDto": {
+        "type": "object",
+        "required": ["productId", "quantity", "productName"],
+        "properties": {
+          "productId": { "type": "integer", "format": "int64" },
+          "quantity": { "type": "integer", "minimum": 1, "maximum": 99 },
+          "productName": { "type": "string", "maxLength": 60 },
+          "note": { "type": "string" }
+        }
+      },
+      "BasePerson": {
+        "type": "object",
+        "required": ["id"],
+        "properties": { "id": { "type": "integer", "format": "int64" } }
+      },
+      "CustomerDetailsDto": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BasePerson" },
+          {
+            "type": "object",
+            "required": ["displayName"],
+            "properties": {
+              "displayName": { "type": "string", "minLength": 2 },
+              "email": { "type": "string", "format": "email" }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

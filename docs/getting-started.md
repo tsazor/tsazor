@@ -14,6 +14,31 @@ Die Demo (`apps/demo`) zeigt: Counter (@onclick + State), Routing mit Layout und
 NavLink, ein Formular mit Validierung (`@bind` + EditForm), Virtualize über 10.000
 Items und FetchData über `TsazorHttp`.
 
+### Externe Nutzung (npm)
+
+Die Pakete sind als `@tsazor/*` lieferfähig (Tarball-Gate: `node scripts/tarball-smoke.mjs`
+probiert exakt diese Form in einem isolierten Projekt):
+
+```bash
+pnpm add @tsazor/runtime @tsazor/vite-plugin @tsazor/cli
+pnpm add -D typescript vite
+```
+
+```ts
+// vite.config.ts — exakt die Form aus dem Gate
+import { defineConfig } from "vite";
+import { tsazor } from "@tsazor/vite-plugin";
+
+export default defineConfig({
+    plugins: [tsazor()],
+});
+```
+
+Die CLI läuft auch als installierter Tarball: `npx tsazor check` bzw.
+`node node_modules/@tsazor/cli/dist/bin.js check .`. Für Component-Tests zusätzlich
+`@tsazor/testing` (Vitest-Config braucht denselben Plugin-Aufruf, damit die `.tsazor`-Importe
+im Test durchgeladen werden — Form oben im [Tests](#tests)-Abschnitt).
+
 ## Projektstruktur
 
 ```
@@ -132,11 +157,39 @@ import { render } from "@tsazor/testing";
 import Counter from "./Pages/Counter.tsazor";
 
 test("increments", async () => {
-    const { container, instance } = await render(Counter as never);
+    const { container, renderer } = await render(Counter as never);
     container.querySelector("button")!.click();
+    // Events renderen asynchron (Diff-Queue) — erst abwarten, dann zusichern:
+    await renderer.waitUntilIdle();
     expect(container.querySelector("strong")?.textContent).toBe("1");
 });
 ```
+
+## Backend anbinden (`@tsazor/dotnet`)
+
+Für ein .NET-Backend (ASP.NET Core, Swashbuckle/NSwag-OpenAPI) ist [`@tsazor/dotnet`](https://www.npmjs.com/package/@tsazor/dotnet)
+die eine Brücke statt App-eigener HTTP-Helfer (Details und Abweichungen: [README](../packages/dotnet/README.md)):
+
+```bash
+npx tsazor-dotnet generate https://meine.app/swagger/v1/swagger.json --out src/api
+```
+
+```ts
+import { PizzaApiClient } from "./api/pizza-api";
+
+const client = new PizzaApiClient(new TsazorHttp());
+const result = await client.getOrders();
+if (result.ok) {
+    // result.body ist der DTO-Typ aus dem Schema
+} else {
+    // result.problem: ProblemDetails | null, result.validationErrors?: Record<string, string[]>
+    console.error(problemMessage(result));
+}
+```
+
+Fehler sind `HttpResult`-Werte (ProblemDetails, Envelope) — geworfen wird nur bei nicht
+erreichbarem Backend; die generierten DTO-Klassen tragen die DataAnnotations-Decorators aus
+dem Schema und validieren sofort mit EditContext + `DataAnnotationsValidator`.
 
 ## VS Code
 

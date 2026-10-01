@@ -7,6 +7,7 @@ import {
   ComponentBase,
   Renderer,
   TsazorHttp,
+  TsazorHttpError,
   Virtualize,
   defineComponent,
   type RenderTreeBuilder,
@@ -192,13 +193,39 @@ describe("TsazorHttp", () => {
     expect(request.headers.get("authorization")).toBe("Bearer t1");
   });
 
-  it("throws with status details on error responses", async () => {
+  it("throws TsazorHttpError with status and readable body on error responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ title: "Not found", status: 404 }), { status: 404 })),
+    );
+    const http = new TsazorHttp();
+    const error = await http.getJson("/missing").catch((e: TsazorHttpError) => e);
+    expect(error).toBeInstanceOf(TsazorHttpError);
+    expect(error.status).toBe(404);
+    expect(error.body).toEqual({ title: "Not found", status: 404 });
+    expect(error.message).toContain("[tsazor-http] 404");
+  });
+
+  it("falls back to raw body text when the error body is not JSON", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response("not found", { status: 404 })),
     );
     const http = new TsazorHttp();
-    await expect(http.getJson("/missing")).rejects.toThrow(/\[tsazor-http\] 404/);
+    const error = await http.getJson("/missing").catch((e: TsazorHttpError) => e);
+    expect(error.body).toBe("not found");
+  });
+
+  it("keeps send() non-throwing on error responses (result plumbing for @tsazor/dotnet)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("boom", { status: 500 })),
+    );
+    const http = new TsazorHttp();
+    const response = await http.send(new Request("https://api.example.com/x"));
+    expect(response.ok).toBe(false);
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe("boom");
   });
 });
 

@@ -114,6 +114,9 @@ importers:
 
   apps/blazing-pizza:
     dependencies:
+      '@tsazor/dotnet':
+        specifier: workspace:*
+        version: link:../../packages/dotnet
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -313,6 +316,19 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
+  packages/dotnet:
+    dependencies:
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+    devDependencies:
+      '@types/node':
+        specifier: ^20.17.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
   packages/fluent:
     devDependencies:
       '@tsazor/compiler':
@@ -395,21 +411,9 @@ importers:
 
   packages/vite-plugin:
     dependencies:
-      '@jridgewell/gen-mapping':
-        specifier: ^0.3.8
-        version: 0.3.13
-      '@jridgewell/trace-mapping':
-        specifier: ^0.3.25
-        version: 0.3.31
-      '@tsazor/compiler':
-        specifier: workspace:*
-        version: link:../compiler
       '@tsazor/lsp':
         specifier: workspace:*
         version: link:../lsp
-      '@tsazor/workspace':
-        specifier: workspace:*
-        version: link:../workspace
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -420,6 +424,18 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
     devDependencies:
+      '@jridgewell/gen-mapping':
+        specifier: ^0.3.8
+        version: 0.3.13
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.25
+        version: 0.3.31
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
       vite:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)

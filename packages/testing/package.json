@@ -1,6 +1,7 @@
 {
   "name": "@tsazor/testing",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Test helpers for Tsazor components: render() over happy-dom.",
   "main": "./dist/index.js",

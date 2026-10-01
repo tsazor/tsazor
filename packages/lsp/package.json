@@ -1,6 +1,7 @@
 {
   "name": "@tsazor/lsp",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Language server for Tsazor (.tsazor): live compiler diagnostics, hover and go-to-definition.",
   "main": "./dist/index.js",

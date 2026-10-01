@@ -1,0 +1,344 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "BlazingPizzaApi",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/specials": {
+      "get": {
+        "operationId": "getSpecials",
+        "summary": "Alle Specials für die Startseite.",
+        "responses": {
+          "200": {
+            "description": "Die Specials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PizzaSpecial" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/toppings": {
+      "get": {
+        "operationId": "getToppings",
+        "summary": "Alle Toppings, sortiert nach Name.",
+        "responses": {
+          "200": {
+            "description": "Die Toppings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Topping" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "operationId": "getOrders",
+        "summary": "Die abgeschlossenen Bestellungen des aktuellen Users.",
+        "responses": {
+          "200": {
+            "description": "Die Bestellungen mit Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/OrderWithStatus" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "placeOrder",
+        "summary": "Speichert eine neue Bestellung und liefert deren Id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Order" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Die Id der neuen Bestellung",
+            "content": {
+              "application/json": {
+                "schema": { "type": "integer", "format": "int64" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "Eine Bestellung mit Status und Live-Standorten (Poller-Futter).",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "description": "Die Id der Bestellung",
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Die Bestellung mit Status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrderWithStatus" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/subscribe": {
+      "put": {
+        "operationId": "subscribeToNotifications",
+        "summary": "Registriert die Push-Subscription des Browsers (doppelte Rolle: SSE-Proxy).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "additionalProperties": true }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Die gespeicherte Subscription",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "additionalProperties": true }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Startet die Cookie-Session; 401 bei falschen Zugangsdaten.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Der eingeloggte User",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserInfo" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "register",
+        "summary": "Registriert den User (400 mit { error } bei Validierungsproblemen).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Der registrierte User",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserInfo" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Beendet die Cookie-Session.",
+        "responses": {
+          "204": { "description": "Ausgeloggt" }
+        }
+      }
+    },
+    "/auth/user": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "summary": "Der aktuelle User als RemoteAuthenticator-Form ({ user: null } wenn anonym).",
+        "responses": {
+          "200": {
+            "description": "Der User-Envelope",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserEnvelope" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PizzaSpecial": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "basePrice": { "type": "number" },
+          "description": { "type": "string" },
+          "imageUrl": { "type": "string" }
+        },
+        "required": ["id", "name", "basePrice", "description", "imageUrl"]
+      },
+      "Topping": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "price": { "type": "number" }
+        },
+        "required": ["id", "name", "price"]
+      },
+      "PizzaTopping": {
+        "type": "object",
+        "properties": {
+          "topping": { "$ref": "#/components/schemas/Topping" },
+          "toppingId": { "type": "integer" },
+          "pizzaId": { "type": "integer" }
+        },
+        "required": ["topping"]
+      },
+      "Pizza": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "orderId": { "type": "integer" },
+          "special": { "$ref": "#/components/schemas/PizzaSpecial" },
+          "specialId": { "type": "integer" },
+          "size": { "type": "number" },
+          "toppings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PizzaTopping" }
+          }
+        },
+        "required": ["special", "specialId", "size", "toppings"]
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "line1": { "type": "string" },
+          "line2": { "type": "string" },
+          "city": { "type": "string" },
+          "region": { "type": "string" },
+          "postalCode": { "type": "string" }
+        },
+        "required": ["name", "line1", "line2", "city", "region", "postalCode"]
+      },
+      "LatLong": {
+        "type": "object",
+        "properties": {
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" }
+        },
+        "required": ["latitude", "longitude"]
+      },
+      "Marker": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "showPopup": { "type": "boolean" }
+        },
+        "required": ["description", "x", "y"]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "orderId": { "type": "integer" },
+          "userId": { "type": "string" },
+          "createdTime": { "type": "number", "description": "Epoch-Millisekunden (new Date(...).getTime())" },
+          "deliveryAddress": { "$ref": "#/components/schemas/Address" },
+          "deliveryLocation": { "$ref": "#/components/schemas/LatLong" },
+          "pizzas": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Pizza" }
+          }
+        },
+        "required": ["deliveryAddress", "pizzas"]
+      },
+      "OrderWithStatus": {
+        "type": "object",
+        "properties": {
+          "order": { "$ref": "#/components/schemas/Order" },
+          "statusText": { "type": "string" },
+          "mapMarkers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Marker" }
+          }
+        },
+        "required": ["order", "statusText", "mapMarkers"]
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" }
+        },
+        "required": ["userId", "name", "email"]
+      },
+      "UserEnvelope": {
+        "type": "object",
+        "properties": {
+          "user": { "nullable": true, "$ref": "#/components/schemas/UserInfo" }
+        },
+        "required": ["user"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        },
+        "required": ["email", "password"]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        },
+        "required": ["name", "email", "password"]
+      }
+    }
+  }
+}

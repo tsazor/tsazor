@@ -61,11 +61,8 @@
     private toppings: Topping[] | null = null;
 
     protected override async onInitialized(): Promise<void> {
-        try {
-            this.toppings = await this.OrdersClient.getToppings();
-        } catch {
-            this.toppings = [];
-        }
+        const result = await this.OrdersClient.getToppings();
+        this.toppings = result.ok ? result.body : [];
     }
 
     // Native range input: coerce to a number on every input event so the

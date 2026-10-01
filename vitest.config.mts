@@ -25,6 +25,7 @@ export default defineConfig({
       "packages/fluent",
       "packages/components",
       "packages/conformance",
+      "packages/dotnet",
     ],
   },
 });

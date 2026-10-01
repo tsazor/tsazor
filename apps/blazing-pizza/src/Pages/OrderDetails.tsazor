@@ -48,12 +48,13 @@
     // is this page, so it re-renders after each tick (original: manual
     // CancellationTokenSource + StateHasChanged).
     private refreshOrder = async (): Promise<void> => {
-        try {
-            this.orderWithStatus = await this.OrdersClient.getOrder(this.orderId);
+        const result = await this.OrdersClient.getOrder(this.orderId);
+        if (result.ok) {
+            this.orderWithStatus = result.body;
             this.invalidOrder = false;
-        } catch (err) {
+        } else {
             this.invalidOrder = true;
-            console.error(err);
+            console.error(problemMessage(result));
         }
         // Called directly from onParametersSet (not via an EventCallback), so
         // the async result needs an explicit re-render (original:

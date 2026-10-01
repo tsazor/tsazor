@@ -1,11 +1,16 @@
 {
   "name": "@tsazor/components",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Bootstrap 5 UI component library for Tsazor — written in .tsazor (dogfooding the compiler and runtime).",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./tsazor-components.json": "./dist/tsazor-components.json"
   },
   "tsazor": {

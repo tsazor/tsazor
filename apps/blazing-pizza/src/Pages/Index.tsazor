@@ -1,5 +1,6 @@
 @page "/"
 @inject OrderState OrderState
+@inject OrdersClient OrdersClient
 
 <div class="main">
     <ul class="pizza-cards">
@@ -49,12 +50,8 @@
     }
 
     protected override async onInitialized(): Promise<void> {
-        const http = new TsazorHttp();
-        try {
-            this.specials = await http.getJson<PizzaSpecial[]>("/specials");
-        } catch {
-            this.specials = [];
-        }
+        const result = await this.OrdersClient.getSpecials();
+        this.specials = result.ok ? result.body : [];
     }
 
     private cardStyle(special: PizzaSpecial): string {

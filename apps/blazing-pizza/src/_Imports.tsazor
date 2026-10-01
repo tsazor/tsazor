@@ -3,7 +3,7 @@
 @* Standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). Unused imports are dropped by the build. *@
 @import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, RenderTreeBuilder, inject } from "@tsazor/runtime"
 @import { NavigationManager, Router, RouteView, AuthorizeRouteView, LayoutView, NavLink, NavLinkMatch } from "@tsazor/runtime"
-@import { EditContext, AuthenticationState, AuthenticationStateProvider, TsazorHttp } from "@tsazor/runtime"
+@import { EditContext, AuthenticationState, AuthenticationStateProvider } from "@tsazor/runtime"
 @import type { RenderFragment, RouteData, ModelValidator } from "@tsazor/runtime"
 @* App model (Blazor: @using BlazingPizza): types plus the formatting helpers markup calls. *@
 @import type { Address, Marker, Order, OrderWithStatus, Pizza, PizzaSpecial, Topping } from "./models"
@@ -16,3 +16,6 @@
     specialFormattedBasePrice,
     toppingFormattedPrice,
 } from "./models"
+@* Die Dotnet-Brücke: HttpResult + problemMessage für die generierten Clients. *@
+@import { problemMessage } from "@tsazor/dotnet"
+@import type { HttpResult } from "@tsazor/dotnet"

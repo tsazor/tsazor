@@ -1,6 +1,7 @@
 {
   "name": "@tsazor/vite-plugin",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Vite plugin for Tsazor (.tsazor): compile, route manifest, HMR.",
   "main": "./dist/index.js",
@@ -21,11 +22,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@jridgewell/gen-mapping": "^0.3.8",
-    "@jridgewell/trace-mapping": "^0.3.25",
-    "@tsazor/compiler": "workspace:*",
     "@tsazor/lsp": "workspace:*",
-    "@tsazor/workspace": "workspace:*",
     "esbuild": "^0.28.2",
     "postcss": "^8.5.6",
     "typescript": "^5.9.2"
@@ -34,6 +31,10 @@
     "vite": "^5.0.0 || ^6.0.0 || ^7.0.0"
   },
   "devDependencies": {
+    "@jridgewell/gen-mapping": "^0.3.8",
+    "@jridgewell/trace-mapping": "^0.3.25",
+    "@tsazor/compiler": "workspace:*",
+    "@tsazor/workspace": "workspace:*",
     "vite": "^7.1.7",
     "vitest": "^3.2.7"
   }
