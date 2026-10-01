@@ -3,8 +3,8 @@
 <h1>Table</h1>
 <p class="intro">
     Generic <code>Table</code> chrome around your rows — filter, sort and paging
-    belong to the app. Rows arrive through <code>rowContent</code>, headers through
-    <code>headerContent</code>; the dashboard page shows the full pattern.
+    belong to the app. Rows arrive through the <code>RowContent</code> template, headers through
+    <code>HeaderContent</code>; the dashboard page shows the full pattern.
 </p>
 
 <section class="demo">
@@ -12,7 +12,14 @@
         <TextInput @bind="this.filter" placeholder="Filter by customer…" id="table-filter" />
         <Button onClick="@(() => this.reset())" appearance="subtle">Reset rows</Button>
     </div>
-    <Table items="@this.rows" headerContent="@this.header" rowContent="@this.rowFor" striped="true" hover="true" colSpan="2" />
+    <Table items="@this.rows" striped="true" hover="true" colSpan="2">
+        <HeaderContent>
+            <tr><th>Customer</th><th>Total (€)</th></tr>
+        </HeaderContent>
+        <RowContent Context="row">
+            <tr><td>@row.customer</td><td>@row.total</td></tr>
+        </RowContent>
+    </Table>
     <p class="echo">Showing @this.rows.length of @this.pool.length rows.</p>
 </section>
 
@@ -31,28 +38,6 @@
         if (!needle) return this.pool;
         return this.pool.filter((row) => row.customer.toLowerCase().includes(needle));
     }
-
-    private header: RenderFragment = (b) => {
-        b.openElement(0, "tr");
-        b.openElement(1, "th");
-        b.addContent(2, "Customer");
-        b.closeElement();
-        b.openElement(3, "th");
-        b.addContent(4, "Total (€)");
-        b.closeElement();
-        b.closeElement();
-    };
-
-    private rowFor = (row: { customer: string; total: number }): RenderFragment => (b) => {
-        b.openElement(0, "tr");
-        b.openElement(1, "td");
-        b.addContent(2, row.customer);
-        b.closeElement();
-        b.openElement(3, "td");
-        b.addContent(4, String(row.total));
-        b.closeElement();
-        b.closeElement();
-    };
 
     private reset(): void {
         this.filter = "";

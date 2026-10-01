@@ -453,7 +453,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "file": "src/data/virtualize.ts"
             }
           ],
-          "doc": "Async slice provider (Blazor's ItemsProvider)."
+          "doc": "Async slice provider (Blazor's ItemsProvider).",
+          "delegate": true
         },
         {
           "name": "itemSize",

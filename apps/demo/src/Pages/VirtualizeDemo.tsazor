@@ -4,23 +4,13 @@
 <p>10,000 items — only the visible window is rendered.</p>
 
 <div class="virtual-list">
-    <Virtualize Items="@items" ItemSize="32" Overscan="5" ItemTemplate="@renderItem" />
+    <Virtualize Items="@items" ItemSize="32" Overscan="5">
+        <ItemTemplate Context="entry">
+            <div class="virtual-item"><span>@entry.name</span><span class="muted">#@entry.index</span></div>
+        </ItemTemplate>
+    </Virtualize>
 </div>
 
 @code {
     private items = Array.from({ length: 10_000 }, (_, i) => ({ index: i, name: `Item ${i}` }));
-
-    private renderItem = (item: unknown): RenderFragment => (b: RenderTreeBuilder) => {
-        const entry = item as { index: number; name: string };
-        b.openElement(0, "div");
-        b.addAttribute(1, "class", "virtual-item");
-        b.openElement(2, "span");
-        b.addContent(3, entry.name);
-        b.closeElement();
-        b.openElement(4, "span");
-        b.addAttribute(5, "class", "muted");
-        b.addContent(6, `#${entry.index}`);
-        b.closeElement();
-        b.closeElement();
-    };
 }

@@ -27,7 +27,14 @@
 </div>
 
 <h2>Recent orders</h2>
-<Table items="@this.rows" headerContent="@this.header" rowContent="@this.rowFor" striped="true" hover="true" colSpan="4" />
+<Table items="@this.rows" striped="true" hover="true" colSpan="4">
+    <HeaderContent>
+        <tr><th>Order</th><th>Customer</th><th>Total (€)</th><th>Status</th></tr>
+    </HeaderContent>
+    <RowContent Context="row">
+        <tr><td>#@row.id</td><td>@row.customer</td><td>@row.total</td><td>@row.status</td></tr>
+    </RowContent>
+</Table>
 
 @code {
     private kpiOrders = "128";
@@ -47,38 +54,4 @@
     private get rows(): { id: number; customer: string; total: number; status: string }[] {
         return this.orders.slice(this.orders.length - 3);
     }
-
-    private header: RenderFragment = (b) => {
-        b.openElement(0, "tr");
-        b.openElement(1, "th");
-        b.addContent(2, "Order");
-        b.closeElement();
-        b.openElement(3, "th");
-        b.addContent(4, "Customer");
-        b.closeElement();
-        b.openElement(5, "th");
-        b.addContent(6, "Total (€)");
-        b.closeElement();
-        b.openElement(7, "th");
-        b.addContent(8, "Status");
-        b.closeElement();
-        b.closeElement();
-    };
-
-    private rowFor = (row: { id: number; customer: string; total: number; status: string }): RenderFragment => (b) => {
-        b.openElement(0, "tr");
-        b.openElement(1, "td");
-        b.addContent(2, "#" + row.id);
-        b.closeElement();
-        b.openElement(3, "td");
-        b.addContent(4, row.customer);
-        b.closeElement();
-        b.openElement(5, "td");
-        b.addContent(6, String(row.total));
-        b.closeElement();
-        b.openElement(7, "td");
-        b.addContent(8, row.status);
-        b.closeElement();
-        b.closeElement();
-    };
 }

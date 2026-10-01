@@ -267,7 +267,7 @@ describe("codegen integration (A4)", () => {
     });
     expect(code).toContain('__builder.addEventHandler(1, "onclick", __tsazor_EventCallback.bind(this, __tsazor_bindMethod(this.item, this.item.toggle)));');
     expect(code).toContain('__builder.addAttribute(4, "OnClick", __tsazor_EventCallback.bind(this, __tsazor_bindMethod(this.item, this.item.toggle)));');
-    expect(code).toContain("function __tsazor_bindMethod<T>(receiver: unknown, method: T): T {");
+    expect(code).toContain("bindMethod as __tsazor_bindMethod");
   });
 
   it("emits @for loop variables as written (var keeps its TS meaning)", () => {

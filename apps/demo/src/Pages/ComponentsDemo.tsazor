@@ -50,8 +50,13 @@
             <CardHeader>Modal</CardHeader>
             <CardBody>
                 <Button Variant="primary" OnClick="@openModal">Modal öffnen</Button>
-                <Modal IsOpen="@modalOpen" Title="Bestätigen" Footer="@modalFooter">
-                    Inhalt des Modals — der Tsazor-Renderer patcht das DOM ohne VDOM.
+                <Modal IsOpen="@modalOpen" Title="Bestätigen">
+                    <ChildContent>
+                        Inhalt des Modals — der Tsazor-Renderer patcht das DOM ohne VDOM.
+                    </ChildContent>
+                    <Footer>
+                        <button type="button" class="btn btn-secondary" @onclick="closeModal">Schließen</button>
+                    </Footer>
                 </Modal>
             </CardBody>
         </Card>
@@ -148,15 +153,6 @@
         { n: 2, name: "Alert", variant: "warning" },
         { n: 3, name: "Modal", variant: "secondary" },
     ];
-
-    private modalFooter: RenderFragment = (b) => {
-        b.openElement(0, "button");
-        b.addAttribute(1, "type", "button");
-        b.addAttribute(2, "class", "btn btn-secondary");
-        b.addAttribute(3, "onclick", EventCallback.bind(this, () => this.closeModal()));
-        b.addContent(4, "Schließen");
-        b.closeElement();
-    };
 
     private poke(): void {
         this.clicks++;

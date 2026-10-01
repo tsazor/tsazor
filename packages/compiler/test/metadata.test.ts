@@ -137,6 +137,13 @@ export default class C<TItem> extends ComponentBase {
     expect(param(metadata, name).category).toBe(category);
   });
 
+  it("marks function-typed value parameters as delegates (method groups get bound)", () => {
+    expect(param(metadata, "onPlain").delegate).toBe(true);
+    for (const name of ["count", "items", "onClick", "onEither", "rowTemplate", "childContent", "opaque"]) {
+      expect(param(metadata, name).delegate).toBeUndefined();
+    }
+  });
+
   it("records type arguments, source types and literal-initializer types", () => {
     expect(param(metadata, "onPick").typeArgument).toBe("TItem");
     expect(param(metadata, "onRenamed").typeArgument).toBe("string");

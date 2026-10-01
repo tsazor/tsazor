@@ -98,6 +98,23 @@ describe("2.2 — component attributes by parameter type", () => {
     expect(m.text()).toBe("2,3");
   });
 
+  it("a method group on a delegate parameter keeps `this`, with a stable identity across renders", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Filter onlyIf="isVisible" /><Filter onlyIf="rules.strict" />
+@code { private threshold = 1; private rules = { min: 2, strict(n: number) { return n > this.min; } };
+    isVisible(n: number) { return n > this.threshold; } }`,
+      "Filter.tsazor": `<span>@([1, 2, 3].filter((n) => onlyIf!(n)).join(","))|@seen.size|@renders;</span>
+@code { @Parameter() onlyIf?: (n: number) => boolean; private seen = new Set<unknown>(); private renders = 0;
+    protected override onParametersSet() { this.seen.add(this.onlyIf); this.renders++; } }`,
+    });
+    expect(m.text()).toBe("2,3|1|1;3|1|1;");
+    await m.rerender();
+    await m.rerender();
+    // Same bound function every render; the child still re-renders, as Blazor
+    // does for delegate parameters (not known-immutable types).
+    expect(m.text()).toBe("2,3|1|3;3|1|3;");
+  });
+
   it("an unknown parameter is a compile error with a suggestion (TZS025)", async () => {
     const diagnostics = await diagnosticsOf(`<Probe Titel="x" />`, { "Probe.tsazor": `@code { @Parameter() Title = ""; }` });
     expect(errorCodes(diagnostics)).toEqual(["TZS025"]);
@@ -125,7 +142,7 @@ describe("C13 — templated components", () => {
     @Parameter() RowTemplate!: RenderFragment<string>;
 }`;
 
-  it.fails("named RenderFragment<T> slot with @context", async () => {
+  it("named RenderFragment<T> slot with @context", async () => {
     const m = await mount({
       "Test.tsazor": `<Grid Items="@items"><RowTemplate><td>@context</td></RowTemplate></Grid>\n@code { private items = ["a", "b"]; }`,
       "Grid.tsazor": grid,
@@ -133,7 +150,7 @@ describe("C13 — templated components", () => {
     expect(m.html()).toBe("<tr><td>a</td></tr><tr><td>b</td></tr>");
   });
 
-  it.fails("Context=\"row\" renames the context parameter", async () => {
+  it("Context=\"row\" renames the context parameter", async () => {
     const m = await mount({
       "Test.tsazor": `<Grid Items="@items"><RowTemplate Context="row"><td>@row</td></RowTemplate></Grid>\n@code { private items = ["a"]; }`,
       "Grid.tsazor": grid,
@@ -141,7 +158,7 @@ describe("C13 — templated components", () => {
     expect(m.html()).toBe("<tr><td>a</td></tr>");
   });
 
-  it.fails("named non-generic slots next to each other", async () => {
+  it("named non-generic slots next to each other", async () => {
     const m = await mount({
       "Test.tsazor": `<Panel><Header><h1>H</h1></Header><Body><p>B</p></Body></Panel>`,
       "Panel.tsazor": `<section>@Header@Body</section>\n@code { @Parameter() Header?: RenderFragment; @Parameter() Body?: RenderFragment; }`,
