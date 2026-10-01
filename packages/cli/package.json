@@ -1,8 +1,8 @@
 {
   "name": "@tsazor/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Tsazor CLI (2.4): `tsazor check` — typed component-usage checks as a gate (nonzero exit).",
+  "description": "Tsazor CLI: `tsazor check` (2.4, typed component-usage gate) and `tsazor codemod` (2.5, .razor → .tsazor).",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -19,9 +19,10 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "echo \"tests live in @tsazor/lsp\" && exit 0"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@tsazor/compiler": "workspace:*",
     "@tsazor/lsp": "workspace:*"
   },
   "devDependencies": {

@@ -6,5 +6,5 @@
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
   "include": ["src"],
-  "references": [{ "path": "../lsp" }]
+  "references": [{ "path": "../compiler" }, { "path": "../lsp" }]
 }

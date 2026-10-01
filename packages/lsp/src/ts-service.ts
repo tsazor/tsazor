@@ -23,6 +23,8 @@ export interface ShadowEntry {
   version: number;
   /** .tsazor mtime when built from disk (on-demand cache for closed files). */
   mtimeMs?: number;
+  /** .tsazor files this shadow imports (shadow graph edges for dependents). */
+  importedTsazor?: readonly string[];
 }
 
 /** A single-line .tsazor patch producing the completion anchor (`this.<prefix>`). */
@@ -53,6 +55,29 @@ interface VariantModule {
 }
 
 const toKey = (modulePath: string): string => modulePath.replace(/\\/g, "/").toLowerCase();
+
+/** Case-insensitive containment test: is `child` `parent` or below it? */
+export function pathWithin(child: string, parent: string): boolean {
+  const c = toKey(path.resolve(child));
+  const p = toKey(path.resolve(parent));
+  return c === p || c.startsWith(`${p}/`);
+}
+
+/** The `tsconfig.json` nearest above `dir`, walking up to (and including)
+ *  `bound` — per-app options for a file, instead of one config for the whole
+ *  workspace folder. */
+export function findNearestTsconfig(dir: string, bound: string): string | undefined {
+  let current = path.resolve(dir);
+  const limit = path.resolve(bound);
+  for (;;) {
+    const candidate = path.join(current, "tsconfig.json");
+    if (existsSync(candidate)) return candidate;
+    if (toKey(current) === toKey(limit)) return undefined;
+    const parent = path.dirname(current);
+    if (parent === current || !pathWithin(parent, limit)) return undefined;
+    current = parent;
+  }
+}
 
 function fallbackCompilerOptions(): ts.CompilerOptions {
   return {
@@ -105,14 +130,14 @@ function resolveLibDir(): string {
   }
 }
 
-function loadProjectOptions(projectRoot: string): ts.CompilerOptions {
+function loadProjectOptions(projectRoot: string, configPath?: string): ts.CompilerOptions {
   const fallback = fallbackCompilerOptions();
   try {
-    const configPath = ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
-    if (!configPath) return fallback;
-    const parsed = ts.readConfigFile(configPath, ts.sys.readFile);
+    const config = configPath ?? ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+    if (!config) return fallback;
+    const parsed = ts.readConfigFile(config, ts.sys.readFile);
     if (parsed.error) return fallback;
-    const cmd = ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(configPath));
+    const cmd = ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(config));
     return {
       ...fallback,
       ...cmd.options,
@@ -131,6 +156,17 @@ function loadProjectOptions(projectRoot: string): ts.CompilerOptions {
   }
 }
 
+/**
+ * A peer lookup the host consults for shadow paths it does not own — with
+ * per-app projects (2.5), a shadow imports another project's shadow
+ * (`@tsazor/fluent` sources under a different tsconfig), and the language
+ * service of *this* project must still see its content. The ProjectRegistry
+ * provides the hook (over all its services).
+ */
+export interface ShadowLookup {
+  entryOf(fileName: string): ShadowEntry | undefined;
+}
+
 export class TsazorTypeService {
   private readonly projectRoot: string;
   private readonly ls: ts.LanguageService;
@@ -139,10 +175,12 @@ export class TsazorTypeService {
   private nextVersion = 1;
   /** `.tsazor` keys currently building — cycle guard for the shadow cascade. */
   private readonly building = new Set<string>();
+  private readonly lookup?: ShadowLookup;
 
-  constructor(projectRoot: string) {
+  constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup) {
     this.projectRoot = path.resolve(projectRoot);
-    const options = loadProjectOptions(this.projectRoot);
+    this.lookup = lookup;
+    const options = loadProjectOptions(this.projectRoot, configPath);
     this.ls = ts.createLanguageService(this.createHost(options));
   }
 
@@ -155,15 +193,12 @@ export class TsazorTypeService {
   /* ------------------------------------------------------------------ */
 
   /** Unified entry point: builds (and caches) the shadow for a .tsazor file.
-   *  `source` (open document) wins over disk; without it the file is read
-   *  from disk and cached by mtime. */
+   *  `source` (open document) wins over disk and always rebuilds — stale
+   *  open-document shadows would freeze diagnostics at the first version;
+   *  without it the file is read from disk and cached by mtime. */
   async ensureTsazor(tsazorPath: string, source?: string): Promise<ShadowEntry | null> {
     const key = shadowKey(tsazorPath);
-    if (source !== undefined) {
-      const cached = this.entries.get(key);
-      if (cached?.mtimeMs === undefined && cached) return cached; // open doc wins
-      return this.openTsazor(tsazorPath, source);
-    }
+    if (source !== undefined) return this.openTsazor(tsazorPath, source);
     let mtimeMs: number | undefined;
     try {
       mtimeMs = statSync(tsazorPath).mtimeMs;
@@ -172,7 +207,6 @@ export class TsazorTypeService {
     }
     const cached = this.entries.get(key);
     if (cached && cached.mtimeMs === mtimeMs) return cached;
-    if (cached?.mtimeMs === undefined && cached) return cached; // open doc wins
     try {
       const diskSource = readFileSync(tsazorPath, "utf8");
       return await this.openFromDisk(tsazorPath, diskSource, mtimeMs);
@@ -222,6 +256,8 @@ export class TsazorTypeService {
       // 2.4: shadows the graph reaches outside the project root (rewrite B —
       // bare-package components like `@tsazor/fluent`) must exist too, or the
       // consumer reports TS2307 for the package's `.tsazor.gen` shadow path.
+      // (With per-app projects, the registry routes those to *their* project
+      // and consults this entry's imported-tsazor edges.)
       if (entry) await this.ensureImportedShadows(entry);
       return entry;
     } finally {
@@ -231,17 +267,12 @@ export class TsazorTypeService {
 
   /** Ensures shadows for every `.tsazor` component source the shadow imports
    *  by absolute or relative shadow path (`X.tsazor.gen`) — recursion stops
-   *  at files already being built (cycles) or already registered. */
+   *  at files already being built (cycles) or already registered. The edges
+   *  stay on the entry (`importedTsazor`) for dependent re-checks (2.5). */
   private async ensureImportedShadows(entry: ShadowEntry): Promise<void> {
-    const fileDir = path.dirname(entry.shadow.virtualPath);
-    const imported = new Set<string>();
-    for (const match of entry.shadow.code.matchAll(/from\s*["']([^"']+)["']/g)) {
-      const specifier = match[1];
-      if (specifier === undefined) continue;
-      const resolved = path.resolve(fileDir, specifier);
-      if (/\.tsazor\.gen(\.ts)?$/.test(resolved)) imported.add(resolved.replace(/\.gen(\.ts)?$/, ""));
-    }
-    await Promise.all([...imported].map((candidate) => (existsSync(candidate) ? this.ensureTsazor(candidate) : Promise.resolve())));
+    const imported = importedTsazorOf(entry.shadow.code, entry.shadow.virtualPath);
+    entry.importedTsazor = imported;
+    await Promise.all(imported.map((candidate) => (existsSync(candidate) ? this.ensureTsazor(candidate) : Promise.resolve())));
   }
 
   /** Merges newly inferred tag type arguments into `previous` (later values win). */
@@ -311,8 +342,24 @@ export class TsazorTypeService {
     this.entries.delete(shadowKey(tsazorPath));
   }
 
-  /** The shadow/graph entry behind a generated module path. */
+  /** Every currently registered entry (the registry walks these for
+   *  dependent re-checks). */
+  allEntries(): Array<{ file: string; entry: ShadowEntry }> {
+    return [...this.entries.values()].map((entry) => ({ file: entry.shadow.realPath, entry }));
+  }
+
+  /** The shadow/graph entry behind a generated module path. Falls back to the
+   *  registry lookup (2.5: cross-project shadow imports map their targets too). */
   entryOf(modulePath: string): ShadowEntry | undefined {
+    return (
+      this.entries.get(toKey(modulePath)) ??
+      this.entries.get(toKey(modulePath + ".ts")) ??
+      this.lookup?.entryOf(modulePath)
+    );
+  }
+
+  /** Own entries only (the registry's lookup uses this to avoid cycles). */
+  ownEntryOf(modulePath: string): ShadowEntry | undefined {
     return this.entries.get(toKey(modulePath)) ?? this.entries.get(toKey(modulePath + ".ts"));
   }
 
@@ -469,6 +516,9 @@ export class TsazorTypeService {
     if (variant) return variant.version;
     const entry = this.entries.get(key) ?? this.entries.get(key.replace(/\.variant\.ts$/, ".tsazor.gen.ts"));
     if (entry) return entry.version;
+    // A peer project's shadow: its mtime stands (the registry keeps entries
+    // current, the program rebuilds when the stamp moves).
+    if (isShadowPath(fileName) && this.lookup?.entryOf(fileName)) return this.lookup.entryOf(fileName)!.version;
     try {
       return statSync(fileName).mtimeMs;
     } catch {
@@ -479,6 +529,7 @@ export class TsazorTypeService {
   private exists(fileName: string): boolean {
     const key = toKey(fileName);
     if (this.variants.has(key) || this.entries.has(key)) return true;
+    if (isShadowPath(fileName)) return this.lookup?.entryOf(fileName) !== undefined;
     return existsSync(fileName);
   }
 
@@ -489,7 +540,10 @@ export class TsazorTypeService {
     if (variant) return variant.code;
     const entry = this.entries.get(key);
     if (entry) return entry.shadow.code;
-    if (isShadowPath(fileName)) return undefined;
+    if (isShadowPath(fileName)) {
+      const peer = this.lookup?.entryOf(fileName);
+      return peer?.shadow.code;
+    }
     try {
       return readFileSync(fileName, "utf8");
     } catch {
@@ -499,6 +553,22 @@ export class TsazorTypeService {
 }
 
 /* Registry helpers -------------------------------------------------------- */
+
+/** The .tsazor files a shadow imports (specifier → absolute .tsazor path):
+ *  relative `./X.tsazor.gen` specifiers resolve next to the shadow module,
+ *  absolute ones (rewrite B, package shadows) pass through as written. */
+export function importedTsazorOf(shadowCode: string, virtualPath: string): string[] {
+  const fileDir = path.dirname(virtualPath);
+  const imported = new Set<string>();
+  for (const match of shadowCode.matchAll(/from\s*["']([^"']+)["']/g)) {
+    const specifier = match[1];
+    if (specifier === undefined) continue;
+    // Windows path.resolve turns "D:/a/x.tsazor.gen" and "./x.tsazor.gen" alike.
+    const resolved = path.resolve(fileDir, specifier.replace(/\\/g, "/"));
+    if (/\.tsazor\.gen(\.ts)?$/.test(resolved)) imported.add(resolved.replace(/\.gen(\.ts)?$/, ""));
+  }
+  return [...imported];
+}
 
 /** Every `.tsazor` under `root` in source-tree order (node_modules, .git,
  *  dist/bin/obj excluded) — the T4 project scan and `tsazor check` share it. */

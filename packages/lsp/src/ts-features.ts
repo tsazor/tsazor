@@ -380,6 +380,9 @@ export function targetIsShadowTarget(service: TsazorTypeService, fileName: strin
 export interface TsDiagnostic {
   line: number; // 0-based
   character: number;
+  /** Exclusive end of the failing token/expression in .tsazor coordinates. */
+  endLine: number; // 0-based
+  endCharacter: number;
   code: number;
   message: string;
 }
@@ -443,12 +446,23 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
     // Shadow-false positives (see docstring above) — match before mapping.
     if (diag.code === 2307 && isAssetModuleSpecifier(ts.flattenDiagnosticMessageText(diag.messageText, " "))) continue;
     if (diag.code === 2564 && parameterSpans.some((span) => diag.start! >= span.start && diag.start! < span.end)) continue;
+    const length = diag.length ?? 1;
     const genPos = shadowOffsetToPos(entry.shadow.code, diag.start);
     const src = entry.shadow.map.genToSrc(genPos.line, genPos.column);
     if (!src) continue;
+    // The failing token/expression's end maps like the start; when the end
+    // does not map (plumbing after the token) or precedes the start, the
+    // range stays one character wide so the editor still underlines it.
+    const genEnd = shadowOffsetToPos(entry.shadow.code, diag.start + length);
+    const srcEnd = entry.shadow.map.genToSrc(genEnd.line, genEnd.column);
+    const endLine = srcEnd && (srcEnd.line > src.line || srcEnd.character > src.character) ? srcEnd.line : src.line;
+    const endCharacter =
+      srcEnd && (srcEnd.line > src.line || srcEnd.character > src.character) ? srcEnd.character + 1 : src.character + 1;
     results.push({
       line: src.line,
       character: src.character,
+      endLine,
+      endCharacter,
       code: diag.code,
       message: ts.flattenDiagnosticMessageText(diag.messageText, " "),
     });

@@ -13,6 +13,7 @@ import { DiagnosticBag, type DiagnosticFix, type SourcePos, type SourceRange, ty
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
 import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
+import { firstInterpolatedSpan, interpolatedStringFix } from "./interpolated.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
@@ -871,12 +872,21 @@ class Codegen {
     return result;
   }
 
-  /** The first syntax error of a rewritten snippet (later ones usually follow from it). */
+  /** The first syntax error of a rewritten snippet (later ones usually follow
+   *  from it). A C# interpolated/verbatim string is the common cause — TZS024
+   *  gets its mechanical rewrite (template literal) as an A7 fix. */
   private reportSyntax(code: "TZS015" | "TZS024", result: RewriteResult, text: string, start: SourcePos): void {
     const first = result.syntaxErrors[0];
     if (!first) return;
     const at = advancePos(start, text.slice(0, first.offset));
-    this.diagnostics.error(code, textRange(at, text.slice(first.offset, first.offset + first.length)), first.message);
+    const range = textRange(at, text.slice(first.offset, first.offset + first.length));
+    const fix = interpolatedStringFix(text, start);
+    if (fix === undefined) {
+      this.diagnostics.error(code, range, first.message);
+      return;
+    }
+    const quoted = firstInterpolatedSpan(text)!;
+    this.diagnostics.error(code, range, `${quoted.startsWith("$") ? "C# interpolated string" : "C# verbatim string"} ${quoted} — use a template literal. (${first.message})`, fix);
   }
 
   /** The A4 rule for names no scope of the snippet binds. */

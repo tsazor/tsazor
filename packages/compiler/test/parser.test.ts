@@ -297,6 +297,16 @@ describe("parser — markup fidelity (A2)", () => {
     ]);
   });
 
+  it("parses an unquoted parenthesized expression value (Blazor: href=@(\"…\"))", () => {
+    const { doc, diagnostics } = parse('<link href=@("a" + b.Id)/>');
+    expect(diagnostics.all).toHaveLength(0);
+    const el = doc.body[0]!;
+    if (el.kind !== "element") throw new Error("expected element");
+    const attr = el.attributes[0]!;
+    expect(attr.kind).toBe("expression");
+    expect(attr).toMatchObject({ name: "href", code: '"a" + b.Id' });
+  });
+
   it("accepts void close tags, bare '<' in text and braces in component content", () => {
     const { doc, diagnostics } = parse("<input></input><p>a < b</p><Card>{ json }</Card>");
     expect(diagnostics.all).toHaveLength(0);

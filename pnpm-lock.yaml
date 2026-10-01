@@ -232,6 +232,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@tsazor/lsp':
         specifier: workspace:*
         version: link:../lsp

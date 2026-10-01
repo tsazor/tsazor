@@ -20,6 +20,20 @@ beforeAll(async () => {
     path.join(dir, "Greeter.tsazor"),
     '<h1>@Name</h1>\n@code { private Name: string = ""; }\n',
   );
+  // Templated component (2.3): fragment parameters — the hover speaks of the
+  // slot and its context (2.5).
+  await writeFile(
+    path.join(dir, "Cards.tsazor"),
+    [
+      "<table></table>",
+      "",
+      "@code {",
+      "    @Parameter() Header?: RenderFragment;",
+      "    @Parameter() Row?: RenderFragment<RowData>;",
+      "}",
+      "",
+    ].join("\n"),
+  );
   await writeFile(path.join(dir, "services", "UserService.ts"), "export default class UserService {}\n");
   // _Imports makes root + services resolvable for every file below root.
   await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./services\n");
@@ -90,6 +104,34 @@ describe("hoverAt", () => {
     const filePath = path.join(root, "Pages", "Plain.tsazor");
     const analyzed = await analyzeSource(filePath, "<p>hello</p>\n", root);
     expect(hoverAt(analyzed, 0, 10)).toBeNull();
+  });
+
+  it("describes a named slot with its parent, category and context (2.5)", async () => {
+    const filePath = path.join(root, "Pages", "UsesCards.tsazor");
+    const analyzed = await analyzeSource(filePath, "<Cards>\n    <Row Context=\"routeData\">\n        <p>x</p>\n    </Row>\n</Cards>\n", root);
+    // Hover anywhere inside "<Row": the slot classification goes through the
+    // direct parent (<Cards>), the context naming through the attribute.
+    const info = hoverAt(analyzed, 1, 6);
+    expect(info?.markdown).toContain("named slot of `<Cards>`");
+    expect(info?.markdown).toContain("RenderFragment<T>");
+    expect(info?.markdown).toContain("Context: `routeData` · RowData");
+  });
+
+  it("a plain fragment slot hovers without a context line", async () => {
+    const filePath = path.join(root, "Pages", "UsesCardsHeader.tsazor");
+    const analyzed = await analyzeSource(filePath, "<Cards>\n    <Header />\n</Cards>\n", root);
+    const info = hoverAt(analyzed, 1, 7);
+    expect(info?.markdown).toContain("named slot of `<Cards>`");
+    expect(info?.markdown).toContain("`Header` · RenderFragment");
+    expect(info?.markdown).not.toContain("Context:");
+  });
+
+  it("a nested component that is no slot keeps the component hover", async () => {
+    const filePath = path.join(root, "Pages", "Nested.tsazor");
+    const analyzed = await analyzeSource(filePath, "<Cards>\n    <Greeter />\n</Cards>\n", root);
+    // <Greeter> has a real component behind it — even as the direct child of a
+    // templated component, hover stays the component's.
+    expect(hoverAt(analyzed, 1, 5)?.markdown).toContain("Tsazor component");
   });
 });
 

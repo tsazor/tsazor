@@ -1,4 +1,5 @@
 export { compile, type CompileOptions, type CompileResult } from "./compile.js";
+export { codemodSource, applyTextEdits, blankCodeBlocks, apiFormEdits, type CodemodResult } from "./codemod.js";
 export { parseDocument } from "./parser.js";
 export { generateCode, type CodegenOptions, type CodegenResult, type ResolvedComponent, type ResolvedType, type MapEntry, type TypedTagInferenceRequest } from "./codegen.js";
 export {

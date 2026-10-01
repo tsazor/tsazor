@@ -12,6 +12,7 @@ import {
   type ImportInfo,
 } from "@tsazor/compiler";
 import { collectImports, createFileContext, resolutionOptions, type FileContext } from "@tsazor/workspace";
+import { chainAt, contextNameOf, enclosingElementOf, slotParameterOf } from "./slots.js";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
@@ -185,6 +186,18 @@ export function hoverAt(analyzed: AnalyzedFile, line: number, character: number)
 
   if (node.kind === "element" && (node as ElementNode).isComponent) {
     const element = node as ElementNode;
+    // A slot tag names a fragment parameter of the enclosing component — its
+    // hover speaks of the slot, not of a component of the same name (2.5).
+    const chain = chainAt(analyzed, line, character);
+    const slot = slotParameterOf(analyzed, chain, element);
+    const parent = enclosingElementOf(chain, element);
+    if (parent !== null && slot !== null) {
+      const slotLines = [`**\`<${element.tagName}>\`** — named slot of \`<${parent.tagName}>\``, `Parameter: \`${slot.name}\` · ${slot.category}`];
+      if (slot.category === "RenderFragment<T>") {
+        slotLines.push(`Context: \`${contextNameOf(element) ?? contextNameOf(parent) ?? "context"}\` · ${slot.typeArgument ?? "unknown"}`);
+      }
+      return { markdown: slotLines.join("\n") };
+    }
     const imported = analyzed.imports.find((entry) => entry.name === element.tagName);
     const resolved = imported ? null : analyzed.context.resolveComponent(element.tagName, analyzed.context.chain.usings);
     const lines = [`**\`<${element.tagName}>\`** — Tsazor component`];

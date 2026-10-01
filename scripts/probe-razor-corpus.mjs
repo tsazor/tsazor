@@ -63,7 +63,7 @@ const files = [];
     if (entry === ".git" || entry === "bin" || entry === "obj" || entry === "node_modules") continue;
     const full = path.join(dir, entry);
     if (statSync(full).isDirectory()) walk(full);
-    else if (entry.endsWith(".razor")) files.push(full);
+    else if (entry.endsWith(".razor") || entry.endsWith(".tsazor")) files.push(full);
   }
 })(corpusDir);
 
@@ -75,7 +75,7 @@ const BUILTINS = [
   "EditForm", "InputText", "InputTextArea", "InputNumber", "InputCheckbox", "InputDate", "InputSelect",
   "ValidationMessage", "ValidationSummary", "AuthorizeView", "CascadingAuthenticationState", "AuthorizeRouteView",
 ];
-const known = new Set([...files.map((f) => path.basename(f, ".razor")), ...BUILTINS]);
+const known = new Set([...files.map((f) => path.basename(f).replace(/\.(razor|tsazor)$/, "")), ...BUILTINS]);
 
 // ---------- helpers ----------
 const BACKSLASH = String.fromCharCode(92);

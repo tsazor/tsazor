@@ -122,9 +122,23 @@ describe("diagnostic ranges (A7)", () => {
 describe("syntax errors in markup expressions (A7, TZS024)", () => {
   const errors = (source: string) => compileDiagnostics(source).filter((d) => d.severity === "error");
 
+  it("a C# interpolated string reports its template-literal fix (TZS024)", () => {
+    const source = '<p>@($"Hi {name}, {count:C}")</p>';
+    const found = errors(source);
+    expect(found.map((d) => d.code)).toEqual(["TZS024"]);
+    const fix = found[0]!.fix!;
+    expect(fix.title).toContain("Use a template literal");
+    expect(fix.edits).toEqual([
+      {
+        pos: { line: 1, column: 5 },
+        endPos: { line: 1, column: 28 },
+        text: "`Hi ${name}, ${count}`",
+      },
+    ]);
+  });
+
   it.each([
     ["explicit @(…)", "<p>@(count +)</p>", "+", "Expression expected."],
-    ["explicit @(…) with a C# string", '<p>@($"Hi {name}")</p>', '"Hi {name}"', "')' expected."],
     ["attribute expression", '<div class="@(a b)"></div>', "b", "')' expected."],
     ["implicit expression", "<p>@format(a b)</p>", "b", "',' expected."],
     ["implicit expression in an attribute", '<div title="@format(a b)"></div>', "b", "',' expected."],

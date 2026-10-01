@@ -5,8 +5,9 @@
  * gate form of the same pipeline the language server runs live.
  */
 import { analyzeSource } from "./analysis.js";
+import { ProjectRegistry } from "./projects.js";
 import { tsDiagnostics } from "./ts-features.js";
-import { findTsazorFiles, TsazorTypeService } from "./ts-service.js";
+import { findTsazorFiles } from "./ts-service.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -29,18 +30,20 @@ export interface CheckResult {
 }
 
 /** Checks every .tsazor under `root`. `tsDiagnostics: false` limits the run
- *  to the compiler layer (the type layer needs a tsconfig/lib set). */
+ *  to the compiler layer (the type layer needs a tsconfig/lib set). Files are
+ *  routed to their nearest-tsconfig project (2.5): each app of a monorepo
+ *  root checks against its own compiler options. */
 export async function checkProject(root: string, options?: { tsDiagnostics?: boolean }): Promise<CheckResult> {
   const projectRoot = path.resolve(root);
   const files = findTsazorFiles(projectRoot);
   const diagnostics: CheckDiagnostic[] = [];
-  const service = new TsazorTypeService(projectRoot);
+  const registry = new ProjectRegistry([projectRoot]);
   try {
     // Pass 1 (compiler layer) + shadow build for every file — the type layer
     // only starts once the whole shadow graph is registered: a consumer
     // shadow importing a sibling component's shadow (`.tsazor.gen`) must not
     // report TS2307 because the sibling had not been ensured yet.
-    const entries = new Map<string, Awaited<ReturnType<TsazorTypeService["ensureTsazor"]>>>();
+    const entries = new Map<string, Awaited<ReturnType<ProjectRegistry["ensureTsazor"]>>>();
     for (const file of files) {
       let source: string;
       try {
@@ -61,13 +64,13 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
         });
       }
       if (options?.tsDiagnostics === false) continue;
-      entries.set(file, await service.ensureTsazor(file, source));
+      entries.set(file, await registry.ensureTsazor(file, source));
     }
     if (options?.tsDiagnostics !== false) {
       // Pass 2: the type layer over the complete graph.
       for (const [file, entry] of entries) {
         if (!entry) continue;
-        for (const diagnostic of tsDiagnostics(service, entry, 200)) {
+        for (const diagnostic of tsDiagnostics(registry.projectFor(file).service, entry, 200)) {
           diagnostics.push({
             file,
             // TS diagnostics arrive 0-based (LSP coordinates) — display adds 1.
@@ -81,7 +84,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
       }
     }
   } finally {
-    service.dispose();
+    registry.dispose();
   }
   return { files: files.length, diagnostics };
 }
