@@ -30,7 +30,7 @@ export type { RenderHandle } from "./renderer/render-handle.js";
 export { isCascadingValueSupplier, type CascadingValueSupplier } from "./renderer/cascading-value.js";
 
 // DI
-export { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection.js";
+export { ServiceCollection, ServiceProvider, type ServiceLifetime, type Token } from "./di/service-collection.js";
 export { inject } from "./di/service-provider.js";
 
 // Navigation

@@ -287,6 +287,37 @@ mit einem an — Strings tragen keins; auf Komponenten ignoriert Blazor es), der
 Round-Trip bleibt bestehen. `@bind:culture` (auf Element und Komponente) ist Fehler TZS008
 — invariant culture only (A5/B7).
 
+## DI — ServiceCollection und Lifetimes (3.8)
+
+`@inject NavigationManager Nav` ist das Markup-Pendant des Feld-Initializers
+`inject(NavigationManager)` — aufgelöst zur Konstruktorzeit der Komponente (der Renderer
+aktiviert den Provider um die Instanziierung herum, siehe `withServices`). Token sind
+Klassen (identitätsbasiert — TS statt Interfaces):
+
+| Registrierung | Lifetime |
+|---|---|
+| `register(Foo, (services) => new Foo(services.get(Bar)))` | singleton (Default) — Instanz am Root-Provider, über alle Scopes geteilt |
+| `…, { lifetime: "scoped" }` | scoped — eine Instanz je Service-Scope (`createScope()`), Blazors `AddScoped` |
+| `…, { lifetime: "transient" }` bzw. `{ singleton: false }` (alte Form) | transient — neu je Auflösung |
+| `registerType(Foo, options?)` | Factory `new Foo(services)` mit der Option-Lifetime |
+| `registerValue(Foo, instance)` | Konstante — disposed nicht der Provider, sondern ihr Besitzer |
+
+- **Scopes** (Blazors `CreateScope`): `provider.createScope()` leitet einen Scope ab, der die
+  Registrierungen teilt, aber seine scoped Services selbst cached; Singletons fallen an den
+  Root-Provider durch (eine Instanz app-weit). Scopes mit Scopes bilden die Kette zum selben
+  Root ab.
+- **Dispose:** der Provider gibt die Instanzen frei, die er über eine Factory erzeugt hat — in
+  umgekehrter Erzeugungsreihenfolge (eine Instanz mit `dispose()`), Blazors
+  `ServiceProvider`-Engine-Verhalten. `registerValue`-Konstanten bleiben ihrem Besitzer (die
+  App disposed z. B. ihren NavigationManager selbst — der Container würde sie doppelt
+  freigeben). Der Root-Provider disposed seine Singletons mit, ein Scope.Dispose nur seine
+  scoped und die direkt aufgelösten transients; `get` auf einem disposeten Provider wirft
+  .NETs `Cannot access a disposed object.`.
+- **Zykluserkennung:** eine Factory, die denselben Token erneut anfordert, wirft .NETs exakte
+  Meldung `A circular dependency was detected for the service of type 'X'.` (Guard pro
+  synchroner Auflösungskette — Selbstreferenz und gegenseitige Abhängigkeiten alike).
+- **Nicht registriert:** `get` wirft `Service not registered: X`, `tryGet` gibt `undefined`.
+
 ## Komponenten
 
 ```razor

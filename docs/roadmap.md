@@ -938,6 +938,10 @@ Attributen, native `File` statt `IBrowserFile`), `SupplyParameterFromQuery` (Bla
 QueryParameterValueSupplier-Parität; `type`-Option statt TS-typloser Erkennung, `multiple` statt
 Array-Erkennung) und `@bind:format` (BindConverter-Subset, invariant culture; Klartext-Werte
 sind String-Literale, `:culture` TZS008, String-/Komponenten-Binds Warnung).
+3.8 umgesetzt — DI-Lifetimes (singleton/scoped/transient mit Blazors AddScoped-Semantik),
+`createScope()`-Service-Scopes (Singletons am Root), Dispose in umgekehrter
+Erzeugungsreihenfolge ohne `registerValue`-Konstanten und Zykluserkennung mit .NETs exakter
+Meldung.
 
 | Schritt | Inhalt | Abhängig von | Stand |
 |---|---|---|---|
@@ -948,7 +952,7 @@ sind String-Literale, `:culture` TZS008, String-/Komponenten-Binds Warnung).
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | umgesetzt |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 | umgesetzt |
 | 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 | umgesetzt |
-| 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — | offen |
+| 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — | umgesetzt |
 
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
 PluginForm, Slots und `@bind` in Masse).
@@ -1187,6 +1191,38 @@ Cascade wirft Blazors Meldung, Adapter-Koexistenz).
   `apps/demo/scripts/verify-3-7.mjs` (16 Checks incl. .NET-Exakttexte „The name field is
   required.", Format-Roundtrip 1234.50 → 99.5 → „99.50", setInputFiles-Liste, Query-Supply und
   Uppercase-Key) — grün gegen die neu gebaute Demo.
+
+### 3.8 — DI: Scoped-Lifetime, Zyklus-Erkennung
+
+**Stand: umgesetzt** (2026-10-01). `packages/runtime/src/di/service-collection.ts`:
+
+- **Lifetimes** (Blazors ServiceLifetime): `register(token, factory, { lifetime:
+  "singleton" | "scoped" | "transient" })`; die alte `{ singleton?: boolean }`-Option bleibt
+  (true ⇒ singleton — der bisherige Default, false ⇒ transient), `{ lifetime }` ist die
+  explizite Form und fügt „scoped" hinzu. `registerValue` markiert Konstanten-Registrierungen
+  (`constant`), `registerType` reicht die Optionen durch die Factory.
+- **Scopes** (Blazors `CreateScope`): `ServiceProvider.createScope()` leitet einen
+  Service-Scope ab, der die Registrierungen teilt, seine scoped Services aber selbst cached;
+  Singletons fallen an den (transitiven) Root durch — eine Instanz app-weit, auch wenn zuerst
+  ein Scope sie anfordert. Transients entstehen je Auflösung gegen den anfordernden Provider
+  (die Factory sieht den Scope, nicht den Root).
+- **Dispose** (Blazors Engine): eine Instanz wird genau dort getrackt, wo sie gecached ist;
+  `dispose()` gibt sie in umgekehrter Erzeugungsreihenfolge frei (Instanz-`dispose()` falls
+  vorhanden) — ein Scope nur seine scoped bzw. direkt aufgelösten transients, der Root auch
+  seine Singletons. `registerValue`-Konstanten sind ausgenommen (Abweichung zu .NET — der
+  Besitzer disposed, sonst würde die App z. B. ihren NavigationManager doppelt freigeben);
+  `get` auf einem disposeten Provider wirft .NETs „Cannot access a disposed object.".
+- **Zykluserkennung** (.NETs `CircularDependencyException`): ein Guard-Set über die
+  synchrone Auflösungskette; Re-Eintritt in denselben Token wirft .NETs exakte Meldung —
+  `A circular dependency was detected for the service of type 'X'.` (Selbstreferenz,
+  Zwei-Service-Zyklus, auch quer über Scopes).
+- Übriges Verhalten unverändert: „Service not registered: X" bei `get`, `undefined` bei
+  `tryGet`; Renderer/App/nutzen dieselbe Oberfläche weiter (keine Aufrufstelle verändert).
+
+Konformität: 9 Tests in `packages/runtime/test/di.test.ts` (Lifetimes über Scopes, alte
+Option-Formen, Zwei-Service-Zyklus mit exakter Meldung, Selbstreferenz durch einen Scope,
+Dispose-Reihenfolge, Konstanten-Ausnahme mit idempotentem Dispose, Singleton-Ownership
+Root vs. Scope).
 
 ---
 
