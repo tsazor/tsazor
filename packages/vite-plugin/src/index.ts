@@ -1,13 +1,17 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { TszDiagnostic } from "@tsazor/compiler";
-import type { Plugin, ViteDevServer } from "vite";
-import { generateRoutesModule, scanRoutes, scanTsazorModules } from "./routes.js";
+import { compile, type TszDiagnostic } from "@tsazor/compiler";
+import type { EnvironmentModuleNode, ModuleNode, Plugin, ViteDevServer } from "vite";
+import { isImportsFile, TransformRegistry } from "./invalidate.js";
+import { tsazorHotUpdate } from "./hot-update.js";
+import { generateRoutesModule, listTsazorFilesUnder, scanRoutes, scanRootOf, scanTsazorModules } from "./routes.js";
 import { processScopedCss, scopeHashFor } from "./scoped-css.js";
 import { transformTsazor } from "./transform.js";
 
 export { transformTsazor, type TransformTsazorOptions, type TransformTsazorResult } from "./transform.js";
 export { formatCheckDiagnostic, runBuildCheck } from "./check-hook.js";
+export { isImportsFile, normalizeFileKey, planInvalidation, TransformRegistry, type InvalidationPlan } from "./invalidate.js";
+export { tsazorHotUpdate } from "./hot-update.js";
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
@@ -22,8 +26,10 @@ export interface TsazorPluginOptions {
 
 export function tsazor(options: TsazorPluginOptions = {}): Plugin {
   let projectRoot = options.root ?? process.cwd();
+  /** 4.1: per-file dependency edges recorded by transform, consumed by the hot-update handler. */
+  const registry = new TransformRegistry();
 
-  return {
+  const plugin: Plugin = {
     name: "tsazor",
     enforce: "pre",
 
@@ -45,6 +51,34 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
       // surface when the browser requests the module. Warm every .tsazor at
       // startup — vite logs pre-transform errors to the terminal immediately.
       void warmupTsazorModules(server, projectRoot);
+      // 4.1: watch every .tsazor (plus sidecars) explicitly so create/delete
+      // events reach the hot-update handler even before the file is imported.
+      void (async () => {
+        try {
+          server.watcher.add(await listTsazorFilesUnder(scanRootOf(projectRoot)));
+        } catch {
+          // The default watch set covers the project; explicit adds are best-effort.
+        }
+      })();
+    },
+
+    // Vite ≥ 6 prefers hotUpdate; Vite 5 only knows handleHotUpdate (the
+    // legacy path below). One shared handler, both signatures.
+    async hotUpdate(options): Promise<EnvironmentModuleNode[] | undefined> {
+      if ((this.environment?.name ?? "client") !== "client") return undefined;
+      return tsazorHotUpdate(
+        { event: options.type, file: options.file, read: options.read, server: options.server, registry, projectRoot },
+        options.modules,
+      ) as Promise<EnvironmentModuleNode[] | undefined>;
+    },
+
+    async handleHotUpdate(ctx): Promise<ModuleNode[] | undefined> {
+      // Vite 5's hook has no event type; add/unlink of watched files surface
+      // as plain updates there (Vite 7 users get the proper hotUpdate path).
+      return tsazorHotUpdate(
+        { event: "update", file: ctx.file, read: ctx.read, server: ctx.server, registry, projectRoot },
+        ctx.modules,
+      ) as Promise<ModuleNode[] | undefined>;
     },
 
     async closeBundle() {
@@ -92,21 +126,32 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         return null;
       }
 
-      if (path.basename(filePath) === "_Imports.tsazor") {
+      if (isImportsFile(filePath)) {
         // _Imports.tsazor contributes directives only; it is never a component.
+        // Its @layout feeds route-manifest invalidation (4.1) — recording is
+        // best-effort: the file keeps compiling to an empty module on errors.
+        try {
+          const compiled = compile(code, { className: "_Imports", fileName: filePath, generateSourceMap: false });
+          registry.recordDynamic(filePath, compiled.metadata, true);
+        } catch {
+          // The importing modules throw the real diagnostics; nothing to record.
+        }
         return { code: "export default null;\n", map: null };
       }
       const result = await transformTsazor(code, filePath, projectRoot);
+      registry.recordTransform(filePath, result.metadata, result.componentFiles);
       reportImportsDiagnostics(result.importsDiagnostics);
       reportDiagnostics(result.diagnostics, filePath);
       return { code: result.code, map: result.map };
     },
   };
-}
 
-function stripQuery(id: string): string {
-  const query = id.indexOf("?");
-  return query >= 0 ? id.slice(0, query) : id;
+  function stripQuery(id: string): string {
+    const query = id.indexOf("?");
+    return query >= 0 ? id.slice(0, query) : id;
+  }
+
+  return plugin;
 }
 
 async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): Promise<void> {

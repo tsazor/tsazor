@@ -1,16 +1,24 @@
-<span class="@badgeClass">@childContent</span>
+@import { withAttributes } from "./attributes"
+
+<span @attributes="@this.badgeAttributes">@childContent</span>
 
 @code {
-    /** Fills the badge pill: filled | subtle (Fluent 2 appearances). */
-    @Parameter() appearance: string = "filled";
-    /** Semantic color: brand | success | warning | error. */
-    @Parameter() color: string = "brand";
-    /** small | medium. */
-    @Parameter() size: string = "medium";
+    /** Fills the badge pill: filled (default) | subtle. */
+    @Parameter() appearance: "filled" | "subtle" = "filled";
+    /** Semantic color: brand (default) | success | warning | error. */
+    @Parameter() color: "brand" | "success" | "warning" | "error" = "brand";
+    /** small | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
 
     private get badgeClass(): string {
         return `fui-badge fui-badge--${this.appearance} fui-badge--${this.color}` +
             (this.size === "small" ? " fui-badge--small" : "");
+    }
+
+    private get badgeAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.badgeClass }, this.additionalAttributes);
     }
 }

@@ -67,9 +67,14 @@ for (const file of files) {
       tsconfigRaw: { compilerOptions: { target: "es2022" } },
     });
 
-    // Sibling component imports point at .tsazor sources; the built library
-    // ships compiled .js siblings, so rewrite the specifiers.
-    const js = transpiled.code.replace(/(from\s*")(\.\.?\/[^"]*)\.tsazor(")/g, "$1$2.js$3");
+    // Shared imports point at module sources (components, plain .ts helpers);
+    // the built library ships compiled .js siblings, so rewrite the specifiers:
+    // `./Alert.tsazor` -> `./Alert.js`, `./ids` -> `./ids.js`, `./x.ts` -> `./x.js`.
+    const js = transpiled.code.replace(/(from\s*")(\.\.?\/[^"]*)(")/g, (_, from: string, spec: string, quote: string) => {
+      if (spec.endsWith(".tsazor")) return `${from}${spec.slice(0, -".tsazor".length)}.js${quote}`;
+      if (spec.endsWith(".ts")) return `${from}${spec.slice(0, -".ts".length)}.js${quote}`;
+      return `${from}${spec}.js${quote}`;
+    });
     await writeFile(path.join(distDir, `${className}.js`), js);
     exports.push(`export { default as ${className} } from "./${className}.js";`);
   } catch (error) {
@@ -82,6 +87,19 @@ if (errors.length > 0) {
     console.error(`[tsazor/fluent] compile errors in ${error.file}\n${error.details}`);
   }
   process.exit(1);
+}
+
+// Shared plain-TS helpers (attributes/ids/form-state/datagrid) that compiled
+// components import: transpile them beside the components so the dist imports
+// ("./ids") resolve without the sources.
+for (const name of (await readdir(srcDir)).filter((name) => name.endsWith(".ts")).sort()) {
+  const source = await readFile(path.join(srcDir, name), "utf8");
+  const transpiled = transformSync(source, {
+    loader: "ts",
+    sourcefile: path.join(srcDir, name),
+    tsconfigRaw: { compilerOptions: { target: "es2022" } },
+  });
+  await writeFile(path.join(distDir, `${name.slice(0, -".ts".length)}.js`), transpiled.code);
 }
 
 // Parameter metadata of every component (roadmap 2.1): consumers (tag

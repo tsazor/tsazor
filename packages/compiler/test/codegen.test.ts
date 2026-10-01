@@ -291,17 +291,20 @@ describe("codegen", () => {
   it("emits @bind:format on number/date inputs as formatValue/parseValue (3.7)", () => {
     const { code } = gen('<input type="number" @bind="amount" @bind:format="0.00" />');
     expect(code).toContain('__builder.addAttribute(2, "value", __tsazor_formatValue(this.amount, "0.00"));');
+    // The direct-assign path casts like the :set path (`as never`) — the parsed
+    // change value is `string | number | Date`, the model field need not be
+    // (4.2 regression: demo FormatDemo failed its tsazor check without it).
     expect(code).toContain(
-      '__builder.addEventHandler(3, "onchange", __tsazor_EventCallback.bind(this, (__event) => { this.amount = __tsazor_parseValue((__event.target as HTMLInputElement).value, "0.00") ?? this.amount; }));',
+      '__builder.addEventHandler(3, "onchange", __tsazor_EventCallback.bind(this, (__event) => { this.amount = (__tsazor_parseValue((__event.target as HTMLInputElement).value, "0.00") ?? this.amount) as never; }));',
     );
 
     const { code: date } = gen('<input type="date" @bind="day" @bind:format="yyyy-MM-dd" />');
     expect(date).toContain('__builder.addAttribute(2, "value", __tsazor_formatValue(this.day, "yyyy-MM-dd"));');
-    expect(date).toContain('__tsazor_parseValue((__event.target as HTMLInputElement).value, "yyyy-MM-dd") ?? this.day;');
+    expect(date).toContain('__tsazor_parseValue((__event.target as HTMLInputElement).value, "yyyy-MM-dd") ?? this.day) as never;');
 
     // The F/N fixed/grouped and digit-mask formats all take the parse path.
     expect(gen('<input type="number" @bind="amount" @bind:format="N2" />').code).toContain(
-      '__tsazor_parseValue((__event.target as HTMLInputElement).value, "N2") ?? this.amount;',
+      '__tsazor_parseValue((__event.target as HTMLInputElement).value, "N2") ?? this.amount) as never;',
     );
     // A plain format value is a string literal only; an @expression stays a member reference.
     expect(gen('<input type="date" @bind="day" @bind:format="@fmt" />').code).toContain('__tsazor_formatValue(this.day, this.fmt));');

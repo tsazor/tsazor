@@ -36,6 +36,7 @@
         { href: "/form", label: "Form" },
         { href: "/tabs", label: "Tabs" },
         { href: "/table", label: "Table" },
+        { href: "/datagrid", label: "DataGrid" },
         { href: "/dialog", label: "Dialog" },
         { href: "/feedback", label: "Feedback" },
         { href: "/primitives", label: "Layout" },

@@ -1,18 +1,23 @@
-<button type="@type" class="@buttonClass" disabled="@disabled" @onclick="handleClick">@childContent</button>
+@import { withAttributes } from "./attributes"
+
+<button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</button>
 
 @code {
-    /** Fluent 2 appearance: primary | secondary | subtle | transparent. */
-    @Parameter() appearance: string = "secondary";
+    /** Fluent 2 appearance: primary | secondary (default) | subtle | transparent. */
+    @Parameter() appearance: "primary" | "secondary" | "subtle" | "transparent" = "secondary";
     /** rounded (default) | circular. */
-    @Parameter() shape: string = "rounded";
-    /** small | medium | large. */
-    @Parameter() size: string = "medium";
+    @Parameter() shape: "rounded" | "circular" = "rounded";
+    /** small | medium (default) | large. */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
     @Parameter() disabled: boolean = false;
-    @Parameter() type: string = "button";
-    /** Accessible label for icon-only buttons. */
+    /** Native button role in a form: button (default) | submit | reset. */
+    @Parameter() type: "button" | "submit" | "reset" = "button";
+    /** Accessible label for icon-only buttons (rendered as aria-label). */
     @Parameter() ariaLabel?: string;
-    /** Associates the button with an id-list for screen readers. */
+    /** Associates the button with an id-list for screen readers (rendered as aria-describedby). */
     @Parameter() ariaDescribedBy?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() onClick?: EventCallback<MouseEvent>;
     @Parameter() childContent?: RenderFragment;
 
@@ -23,6 +28,15 @@
         else if (this.size === "large") cls += " fui-button--large";
         if (this.disabled) cls += " fui-button--disabled";
         return cls;
+    }
+
+    /** Fluent classes + ARIA + `@attributes` pass-through. */
+    private get buttonAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.buttonClass,
+            "aria-label": this.ariaLabel,
+            "aria-describedby": this.ariaDescribedBy,
+        }, this.additionalAttributes);
     }
 
     private handleClick(e: MouseEvent): void {

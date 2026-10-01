@@ -61,14 +61,27 @@ override model.
 
 ## Components (launch set)
 
-Provider + 24: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,
+Provider + 25: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,
 `Divider`, `Badge`, `Spinner`, `TextInput`, `TextArea`, `NumberInput`,
 `Checkbox`, `Switch`, `Select`, `FluentForm`, `Tabs`/`Tab`, `Dialog`,
-`Toast` + `ToastProvider`, `Table`, `SidebarNav`,
+`Toast` + `ToastProvider`, `Table`, `DataGrid`, `SidebarNav`,
 plus the W1 fill: `Stack`, `Grid`, `Spacer`, `Typography`, `Icon`, `Indicator`,
 `Alert`, `Breadcrumb` + `BreadcrumbItem`, `Pagination`.
 
+Every component takes `additionalAttributes` (`@attributes` /
+`captureUnmatchedValues`) — anything the library does not declare is forwarded
+to the root element (the `withAttributes` merge: `class` appends, the rest
+overwrites; `aria-*` and `data-*` land where they belong). All enum-like
+parameters are string-literal unions with one fluent-wide vocabulary: sizes
+`"small" | "medium" | "large"`, Spacing `"xs" | "s" | "m" | "l" | "xl"`, the
+semantic colors for `Badge`/`Indicator`, severities for `Alert`/`Toast`.
+Members stay camelCase; markup may write PascalCase attributes — the compiler
+matches case-insensitively (the PascalCase decision, roadmap 4.2).
+
 Notes on the important ones:
+
+- **Button**: renders `aria-label`/`aria-describedby` (`ariaLabel`,
+  `ariaDescribedBy` parameters) onto the native button.
 
 - **Layout primitives**: `Stack` (flex axis + token gap), `Grid` (fixed
   `columns` or responsive `minChildWidth` minmax tracks — CSS grid, no JS),
@@ -82,21 +95,29 @@ Notes on the important ones:
   pass `ariaLabel` for `role="img"`.
 - **Indicator**: semantic dot or status chip (`color` success/danger/warning/
   info/neutral); `visible` is false-or-nothing semantics.
-- **Alert** (ported from `@tsazor/components`): `variant`, `dismissible`,
-  `onDismissed`, `role="alert"`; legacy Bootstrap variant names map onto the
-  Fluent severities, no Bootstrap classes carry through.
+- **Alert** (ported from `@tsazor/components`): `variant` in the fluent
+  vocabulary `"info" | "success" | "danger" | "warning" | "neutral"`
+  (4.2 dropped the legacy Bootstrap names — an API break, tests live),
+  `dismissible`, `onDismissed`, `role="alert"`.
 - **Breadcrumb/BreadcrumbItem**: item slots, `aria-label="breadcrumb"`,
   items with `active` render linkless with `aria-current="page"`.
 - **Pagination**: controlled — `page` + `totalPages` + `onPageChange`, the
   component keeps no page state. First/Prev/Next/Last + a ±2 number window
-  with edge ellipses; all buttons carry `aria-label`s.
+  with edge ellipses; all buttons carry `aria-label`s, the `nav` landmark
+  takes `ariaLabel` (default `"Pagination"`).
 
 - **Inputs** extend the runtime's `InputBase`: `@bind`, `fieldClass` and the
   EditContext validation messages come from core; only the Fluent chrome is
-  here. Labels are forwarded to `label[for]`, errors to
-  `aria-invalid` + `aria-describedby` and a `role="alert"` message row.
+  here. Every input generates a unique `id` when the app gives none
+  (`fui-input-3` …), so `label[for]` and `aria-describedby` always connect
+  without the author wiring `id` strings. `aria-invalid` and
+  `aria-describedby` render as soon as there is a message; the
+  `role="alert"` message row appears with the first submit attempt only
+  (documented deviation from Blazor, whose field classes go live immediately —
+  the fluent `--invalid` classes still track every edit live).
 - **FluentForm** wraps the runtime `EditForm` (`Model`, `Validators`,
-  `OnValidSubmit`) and renders `class="fui-form"`; put a
+  `onValidSubmit` + `onInvalidSubmit` — fluent marks the submit attempt so the
+  field rows know) and renders `class="fui-form"`; put a
   `<Button type="submit" appearance="primary">` inside.
 - **Tabs/Tab**: `Tab` panels self-register against the `FluentTabs` cascade;
   roving tabindex, Arrow/Home/End keyboard nav, `onSelected`.
@@ -107,7 +128,15 @@ Notes on the important ones:
   severity, timeout })`. Error toasts announce as `role="alert"`, others as
   `role="status"`, inside an `aria-live="polite"` region.
 - **Table**: generic via `@typeparam TRow`; you own filter/sort/paging and pass
-  `items` + `headerContent` + `rowContent` (see the gallery's orders page).
+  `items` + `headerContent` + `rowContent`
+  (`(row: TRow) => RenderFragment` — the 2.4 templated-component standard; see
+  the gallery's orders page).
+- **DataGrid** (4.2): the opinionated sibling — you own the columns, the grid
+  builds the table. `columns: DataGridColumn<TRow>[]` (`field`, optional
+  `title`, `format` for the cell text, `align` `"start" | "center" | "end"`)
+  produce header and body; per-cell escape hatch via `cellContent`
+  (`(row, column) => RenderFragment`, e.g. link rows). `striped`, `hover`,
+  `compact`, `emptyText`. A column without `title` shows the field name.
 - **SidebarNav**: wraps runtime `NavLink` (`aria-current="page"` on the active
   link for free from the router).
 
@@ -116,12 +145,14 @@ Menu/Popup, grid virtualization, custom listbox (v1 `Select` is a native).
 
 ## Verification
 
-- `packages/fluent/test/*.test.ts` — 57 unit tests against the compiled dist
-  (all 9 W1 components covered, ≥2 each).
-- `apps/gallery` — the 13-route gallery + admin dashboard (`/primitives`
-  showcases the W1 components); `node scripts/verify.mjs`
-  drives the live app (tokens light/dark, bind round-trip, form submit flow,
-  tabs keyboard nav, dialog trap/escape/scroll-lock, orders filter/sort/paging,
+- `packages/fluent/test/*.test.ts` — 65 unit tests against the compiled dist
+  (all 10 W1 files covered, ≥2 each; datagrid tests build header, align,
+  cell template, empty state and capture through the compiled dist).
+- `apps/gallery` — the 14-route gallery + admin dashboard (`/primitives`
+  showcases the W1 components; `/datagrid` the 4.2 DataGrid);
+  `node scripts/verify.mjs` drives the live app (tokens light/dark,
+  bind round-trip, form submit flow, tabs keyboard nav, dialog trap/escape/
+  scroll-lock, orders filter/sort/paging, datagrid from the column list,
   toast lifecycle, aria-current, zero console errors).
 - Root `pnpm test` runs every package project (runtime, compiler, workspace,
   lsp, testing, vite-plugin, fluent, components) — 289/289 green; the

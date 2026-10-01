@@ -1,5 +1,8 @@
+@import { withAttributes } from "./attributes"
+
 @typeparam TRow
-<table class="@this.tableClass" role="table">
+
+<table role="table" @attributes="@this.tableAttributes">
     <thead class="fui-table__head">@this.headerContent</thead>
     <tbody class="fui-table__body">
         @if (this.items.length === 0) {
@@ -16,7 +19,7 @@
     @Parameter() items: TRow[] = [];
     /** Thead content (column headers). */
     @Parameter() headerContent?: RenderFragment;
-    /** Builds the row fragment for one item. */
+    /** Builds the row fragment for one item — the row template (`RenderFragment<TRow>`; 2.3/2.4). */
     @Parameter() rowContent?: (item: TRow) => RenderFragment;
     /** Zebra striping on alternate rows. */
     @Parameter() striped: boolean = false;
@@ -28,6 +31,8 @@
     @Parameter() emptyText: string = "No entries";
     /** Column count for the empty-state colspan. */
     @Parameter() colSpan: number = 1;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get tableClass(): string {
         let cls = "fui-table";
@@ -35,6 +40,10 @@
         if (this.hover) cls += " fui-table--hover";
         if (this.compact) cls += " fui-table--compact";
         return cls;
+    }
+
+    private get tableAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.tableClass }, this.additionalAttributes);
     }
 
     /** Builds one row fragment; returns null while no rowContent was given. */

@@ -1,17 +1,25 @@
-<div class="@this.gridClass" style="@this.gridStyle">@childContent</div>
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.gridAttributes">@childContent</div>
 
 @code {
     /** Column count when no minChildWidth is given. */
     @Parameter() columns: number = 3;
     /** Gap between tracks: xs | s | m (default) | l | xl. */
-    @Parameter() gap?: string;
+    @Parameter() gap?: "xs" | "s" | "m" | "l" | "xl";
     /** Responsive min column width (CSS length, e.g. "240px"); switches to auto-fill/minmax. */
     @Parameter() minChildWidth?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
 
     /** minChildWidth > columns: responsive via CSS grid tracks, no JS. */
     private get gridClass(): string {
         return this.minChildWidth ? "fui-grid fui-grid--minmax" : "fui-grid";
+    }
+
+    private get gridAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.gridClass, style: this.gridStyle }, this.additionalAttributes);
     }
 
     private get gridStyle(): string | null {

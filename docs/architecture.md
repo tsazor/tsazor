@@ -508,8 +508,34 @@ Der Diff toleriert Hot-Swaps auch bei Parent-Re-Renders: Frames mit gleichem
 Klassennamen, dessen Modul gehot-swapped wurde (`wasHmrSwapped`), werden statt neu
 gemountet **in place** übernommen.
 
-**Dokumentierte Grenzen:** Neue/entfernte `@page`-Routen brauchen ein Reload des
-Route-Manifests (Dev-Server-Reload); Parameter-Additionen, die eine Neu-Instantiierung
+**Invalidierung (4.1):** Der Dev-Server-Hook (`hotUpdate` in Vite ≥ 6,
+`handleHotUpdate`-Kompatibilität in Vite 5) reicht über reine Import-Kanten hinaus:
+`_Imports.tsazor` ist kein Modul, unaufgelöste Tags (TZS005, jetzt in
+`metadata.unresolvedTags`) embedden keinen Import, und das Codegen der Verbraucher
+hängt an den Parameter-Metadaten des Ziels (2.1/2.2). Das Plugin hält diese drei
+Kantenarten pro transformierter Datei fest (`TransformRegistry`,
+`packages/vite-plugin/src/invalidate.ts`) und rechnet jede Watch-Änderung in einen
+semantischen Plan (`planInvalidation`): neue Komponente ⇒ Dateien mit vorher
+unaufgelöstem Tag neu transformieren; `_Imports.tsazor`-Änderung ⇒ alle Dateien
+darunter; Sidecars (`.tsazor.css`/`.tsazor.ts`) ⇒ Besitzer (±Verbraucher);
+`@page`/`@layout` neu oder weg ⇒ Routen-Manifest-Modul (`virtual:tsazor-routes`,
+dessen Kette bis `index.html` reicht und den Reload auslöst). Pfade werden
+Windows-gerecht case-insensitive normalisiert (`normalizeFileKey`); der Scan bleibt
+auf `src` begrenzt. Auf dem Modul-Graph gilt: Vite ≥ 6 invalidiert nur
+Environment-Module — der Hook greift deshalb `server.environments.client.moduleGraph`
+(die Legacy-`server.moduleGraph`-Wrapper werfen beim Invalidieren), Vite 5 kommt über
+den compat-Pfad. Voller Reload nur, wo HMR nicht lügen kann: bei Manifest-Änderungen
+(automatisch über die Modulkette) und beim Entfernen eines CSS-Sidecars (der
+injizierte `<style>` überlebt kein HMR). Beim Entfernen einer geladenen Datei läuft
+Vites Client einmal gegen das verschwundene Modul (404 / „Failed to reload"), bevor
+der Swap der Verbraucher landet — begrenztes, dokumentiertes Rauschen. Live-Verify:
+`apps/demo/scripts/verify-hmr.mjs` fährt die Szenarien (a) Seite neu, (b) Komponente
+für vorher unaufgelöstes Tag, (c) Edit-Swap mit State-Retention, (d) `_Imports`-Import,
+(e/f) CSS-Sidecar dazu/weg, (g) Komponente weg gegen einen echten Server.
+
+**Dokumentierte Grenzen:** Routen-Anzeige (Layout-Wechsel, Autorisierung) hängt am
+Routen-Manifest — jede `@page`/`@layout`-Änderung verursacht einen vollen Reload; nur
+Markup-/Code-Änderungen hotten. Parameter-Additionen, die eine Neu-Instantiierung
 erfordern, fallen auf Best-Effort zurück — bei unerwartetem Zustand Seite neu laden.
 
 ## Fehler-Overlay

@@ -1,6 +1,6 @@
-<svg class="fui-icon" width="@this.size" height="@this.size" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-     aria-hidden="@this.hiddenValue" aria-label="@this.ariaLabel" role="@this.role" focusable="false">
+@import { withAttributes } from "./attributes"
+
+<svg @attributes="@this.iconAttributes">
     <path d="@this.path" />
 </svg>
 
@@ -11,6 +11,8 @@
     @Parameter() size: number = 16;
     /** Accessible label — hides the icon from AT unless a label is given. */
     @Parameter() ariaLabel?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get path(): string {
         return Icon.paths[this.name ?? ""] ?? Icon.paths["check"] as string;
@@ -23,6 +25,24 @@
 
     private get role(): string | null {
         return this.ariaLabel === undefined ? null : "img";
+    }
+
+    private get iconAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: "fui-icon",
+            width: this.size,
+            height: this.size,
+            viewBox: "0 0 20 20",
+            fill: "none",
+            stroke: "currentColor",
+            "stroke-width": 1.5,
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+            "aria-hidden": this.hiddenValue,
+            "aria-label": this.ariaLabel,
+            role: this.role,
+            focusable: "false",
+        }, this.additionalAttributes);
     }
 
     /** Inline-SVG technique (pre-clarified local decision): single-path strokes, no sprite, no icon package. */

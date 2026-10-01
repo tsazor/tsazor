@@ -1,6 +1,9 @@
 @using @tsazor/runtime
 @import type { EditContext } from "@tsazor/runtime"
-<EditForm class="fui-form" Model="@model" Validators="@validators" OnValidSubmit="@handleSubmit" Context="formContext">@childContent(formContext)</EditForm>
+@import { withAttributes } from "./attributes"
+@import { markSubmitAttempt } from "./form-state"
+
+<EditForm @attributes="@this.formAttributes" Model="@model" Validators="@validators" OnValidSubmit="@this.handleSubmit" OnInvalidSubmit="@this.handleInvalidSubmit" Context="formContext">@childContent(formContext)</EditForm>
 
 @code {
     /** Model to edit and validate (passed to the inner EditForm). */
@@ -9,10 +12,25 @@
     @Parameter() validators?: Record<string, unknown>;
     /** Invoked after a successful submit (receives the EditContext, like EditForm itself). */
     @Parameter() onValidSubmit?: EventCallback<EditContext>;
+    /** Invoked after a failed validation (receives the EditContext). */
+    @Parameter() onInvalidSubmit?: EventCallback<EditContext>;
+    /** `@attributes` pass-through to the form element (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Form contents (the fluent inputs + submit Button); receives the EditContext. */
     @Parameter() childContent?: (context: EditContext) => RenderFragment;
 
+    private get formAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-form" }, this.additionalAttributes);
+    }
+
     private handleSubmit = EventCallback.bind(this, (context: EditContext) => {
+        // Ab hier zeigen die Inputs ihre error rows (role="alert", 4.2).
+        markSubmitAttempt(context);
         this.onValidSubmit?.invokeAsync(context);
+    });
+
+    private handleInvalidSubmit = EventCallback.bind(this, (context: EditContext) => {
+        markSubmitAttempt(context);
+        this.onInvalidSubmit?.invokeAsync(context);
     });
 }

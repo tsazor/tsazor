@@ -1,5 +1,13 @@
-<header class="fui-card-header">@childContent</header>
+@import { withAttributes } from "./attributes"
+
+<header @attributes="@this.headerAttributes">@childContent</header>
 
 @code {
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
+
+    private get headerAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-card-header" }, this.additionalAttributes);
+    }
 }
