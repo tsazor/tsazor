@@ -957,6 +957,17 @@ Meldung.
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
 PluginForm, Slots und `@bind` in Masse).
 
+*Messgröße (Probe, FluentCMS@c63d49c, 217 Dateien; nach 3.7/3.8 — 2026-10-01):* die
+Phase-2-Baseline gilt unverändert (149/217 sauber, 164/217 nach Codemod). Diesmal zählt die
+Probe die Built-ins aus dem generierten Runtime-Manifest statt einer handschriftlichen Liste:
+**157/217** sauber (+8), **182/217** nach Codemod (+16), Dateien mit unaufgelösten Tags
+36 → 17, TZS005 57 → 31 — `DataAnnotationsValidator` ×9, `InputFile` ×3, `DynamicComponent` ×7
+und `HeadContent` ×4 sind damit aufgelöst. Compiler-fehlerfrei bleibt 164/217; übrig bleiben
+TZS024 ×35 (`(MarkupString)`-Casts …), die benannten Slots als TZS005 (<ChildContent>,
+<ActionsFragment>, <Found>, <Head>, <Body>, <SubtitleFragment>) und die bekannten stillen
+`@context`-Befunde. Die erste portierte FluentCMS-Admin-Seite ist noch offen (der User hält
+seine lokale `apps/fluentcms-admin`-Arbeit außerhalb dieser Messung).
+
 ### 3.1 — ErrorBoundary
 
 **Stand: umgesetzt** (2026-10-01, Branch `roadmap/p3-builtins`). Neue
