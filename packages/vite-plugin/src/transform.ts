@@ -71,22 +71,30 @@ export async function transformTsazor(
     generateSourceMap: sourceMap,
   });
 
-  const transpiled = transformSync(compiled.code, {
-    loader: "ts",
-    sourcemap: sourceMap,
-    sourcefile: `${filePath}.ts`,
-    // Standard (TC39) decorators and [[Define]] class fields (TS's ES2022
-    // default); no engine runs decorators natively yet, so esbuild lowers them.
-    supported: { decorators: false },
-    tsconfigRaw: { compilerOptions: { target: "es2022" } },
-  });
+  const importsDiagnostics = chain.layers.flatMap((layer) =>
+    layer.diagnostics.map((diagnostic) => ({ file: layer.file, diagnostic })),
+  );
+  let transpiled: ReturnType<typeof transformSync>;
+  try {
+    transpiled = transformSync(compiled.code, {
+      loader: "ts",
+      sourcemap: sourceMap,
+      sourcefile: `${filePath}.ts`,
+      // Standard (TC39) decorators and [[Define]] class fields (TS's ES2022
+      // default); no engine runs decorators natively yet, so esbuild lowers them.
+      supported: { decorators: false },
+      tsconfigRaw: { compilerOptions: { target: "es2022" } },
+    });
+  } catch (error) {
+    // Generated code from erroneous source may not parse (a TZS024 syntax
+    // error): the located compiler diagnostics explain it, not esbuild.
+    if (compiled.diagnostics.hasErrors) return { code: "", map: null, diagnostics: compiled.diagnostics, importsDiagnostics };
+    throw error;
+  }
 
   const map = sourceMap
     ? chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`)
     : null;
   const hmr = options.hmr !== false ? hmrAppendix(context.className) : "";
-  const importsDiagnostics = chain.layers.flatMap((layer) =>
-    layer.diagnostics.map((diagnostic) => ({ file: layer.file, diagnostic })),
-  );
   return { code: transpiled.code + hmr, map, diagnostics: compiled.diagnostics, importsDiagnostics };
 }

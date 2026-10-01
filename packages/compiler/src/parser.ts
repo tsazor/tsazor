@@ -1079,6 +1079,7 @@ class Parser {
         if (host && modifier) {
           host[modifier] = attr[modifier];
           host.modifierSpans = { ...host.modifierSpans, ...attr.modifierSpans };
+          host.codeStarts = { ...host.codeStarts, ...attr.codeStarts };
           continue;
         }
         // No host (or unknown modifier): keep the node; codegen reports a
@@ -1093,6 +1094,7 @@ class Parser {
         if (latent && latent.kind === "bind") {
           // The joined bind reports on the base attribute; the modifiers keep their own spans.
           latent.expression = attr.expression;
+          latent.codeStarts = { ...latent.codeStarts, ...attr.codeStarts };
           latent.pos = attr.pos;
           latent.endPos = attr.endPos;
           continue;
@@ -1213,11 +1215,14 @@ class Parser {
     const src = this.source;
     const rest = body.slice(4); // after "bind"
     const end = (): SourceSpan => ({ pos, endPos: this.locator(this.i) });
+    // Where a bind's code starts (syntax errors are reported there).
+    const codeStarts = (key: string, value: { start?: number } | null) =>
+      (value?.start === undefined ? {} : { codeStarts: { [key]: this.locator(value.start) } });
 
     // @bind="expr"
     if (rest === "") {
       const expression = this.parseRequiredExpression("bind", pos);
-      return { kind: "bind", expression: expression?.code ?? "", ...end() };
+      return { kind: "bind", expression: expression?.code ?? "", ...codeStarts("expression", expression), ...end() };
     }
 
     // @bind-<Target>[:event|:format|:get|:set|:after] — a component parameter,
@@ -1235,11 +1240,13 @@ class Parser {
       }
       if (modifier === undefined) {
         const expression = this.parseRequiredExpression(`bind-${targetName}`, pos);
-        return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...end() };
+        return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...codeStarts("expression", expression), ...end() };
       }
       if (modifier === "event" || modifier === "format" || modifier === "get" || modifier === "set" || modifier === "after") {
-        const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos)?.code ?? "";
-        return { kind: "bind", bindTarget: targetName, [modifier]: value, modifierSpans: { [modifier]: end() }, ...end() };
+        const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos);
+        return {
+          kind: "bind", bindTarget: targetName, [modifier]: value?.code ?? "", modifierSpans: { [modifier]: end() }, ...codeStarts(modifier, value), ...end(),
+        };
       }
       if (src[this.i] === "=") this.i++;
       this.parseAttributeValue();
@@ -1257,9 +1264,9 @@ class Parser {
         this.diagnostics.error("TZS008", end(), `Unknown bind modifier '@bind:${modifier}'.`);
         return { kind: "bind", ...end() };
       }
-      const value = this.parseRequiredExpression(`bind:${modifier}`, pos)?.code ?? "";
+      const value = this.parseRequiredExpression(`bind:${modifier}`, pos);
       const key = modifier.toLowerCase();
-      return { kind: "bind", [key]: value, modifierSpans: { [key]: end() }, ...end() } as AttributeNode;
+      return { kind: "bind", [key]: value?.code ?? "", modifierSpans: { [key]: end() }, ...codeStarts(key, value), ...end() } as AttributeNode;
     }
 
     if (src[this.i] === "=") this.i++;

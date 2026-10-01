@@ -241,6 +241,8 @@ export type AttributeNode =
       after?: string;
       /** Source spans of the modifier attributes folded into this bind (diagnostic ranges). */
       modifierSpans?: Partial<Record<BindModifier, SourceSpan>>;
+      /** Where the code of the bound expression and of each modifier starts (syntax diagnostics). */
+      codeStarts?: Partial<Record<"expression" | BindModifier, SourceSpan["pos"]>>;
     });
 
 export type BindModifier = "event" | "format" | "get" | "set" | "after";

@@ -71,6 +71,7 @@ const CODES = {
   TZS021: "C# form — use the TypeScript form.",
   TZS022: "'var' declaration — use 'let' or 'const'.",
   TZS023: "Switch case falls through.",
+  TZS024: "Invalid TypeScript expression.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

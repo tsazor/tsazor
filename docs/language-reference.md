@@ -299,7 +299,7 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS023` mit Quellposition
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS024` mit Quellbereich
 (`TZS011`, `TZS014`, `TZS022` und `TZS023` sind Warnungen, z. B. `@inherits`-Konflikt mit
 Code-behind bzw. ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
@@ -311,7 +311,11 @@ generierten Code (`buildRenderTree`). A6: `TZS021` C#-Form mit mechanischem TS-G
 (Fehler; die Meldung nennt die TS-Form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
 `where T : …`; Kandidaten für Codemod/Quick-Fix in Phase 2.5), `TZS022` `var` in Render-Code
 (Warnung), `TZS023` `@switch`-Section fällt durch (Warnung). Unterschied zu `TZS012`: dort gibt
-es kein TS-Gegenstück (`using (…)`, `lock`).
+es kein TS-Gegenstück (`using (…)`, `lock`). A7: `TZS024` ungültiges TypeScript in einem
+Markup-Ausdruck — `@x`/`@(…)`, Attributwerte (auch gemischte, Event-Handler, `@key`,
+`@attributes`), `@bind`-Wert/`:get`/`:set`/`:after`, `@if`/`@while`/`@switch`-Bedingungen und
+`case`-Labels; gemeldet wird der erste Syntaxfehler des TS-Parsers auf seinem Token (statt eines
+späteren esbuild-Fehlers). Ein ungültiger `@for`-Zählkopf ist `TZS015` wie Statement-Läufe.
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
 
 **Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte

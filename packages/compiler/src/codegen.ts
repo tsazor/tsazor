@@ -638,22 +638,33 @@ class Codegen {
    * Rewrites an expression's bare member references to `this.X` (C# allows
    * bare member references; TS does not) — see rewrite.ts for the scope rules.
    */
-  private expr(code: string, origin?: SourcePos): string {
-    return this.exprRewrite(code, origin)?.text ?? code;
+  private expr(code: string, origin?: SourcePos, syntaxAt: SourcePos | undefined = origin): string {
+    return this.exprRewrite(code, origin, syntaxAt)?.text ?? code;
   }
 
-  /** expr() with the full rewrite result (method group info); null for empty code. */
-  private exprRewrite(code: string, origin?: SourcePos): RewriteResult | null {
+  /**
+   * expr() with the full rewrite result (method group info); null for empty
+   * code. `syntaxAt` (default: origin) is where the code starts for its
+   * syntax errors (TZS024) — also set where the mapping stays coarse.
+   */
+  private exprRewrite(code: string, origin?: SourcePos, syntaxAt: SourcePos | undefined = origin): RewriteResult | null {
     const trimmed = code.trim();
     if (trimmed.length === 0) return null;
     // origin = absolute source position of index 0 of the expression code.
     // Unset (control headers, @bind values) → no token-precise mapping. The
     // trimmed leading whitespace may span lines.
-    return this.rewrite(
-      trimmed,
-      "expression",
-      origin === undefined ? undefined : advancePos(origin, code.slice(0, code.length - code.trimStart().length)),
-    );
+    const lead = code.slice(0, code.length - code.trimStart().length);
+    const result = this.rewrite(trimmed, "expression", origin === undefined ? undefined : advancePos(origin, lead));
+    if (syntaxAt !== undefined) this.reportSyntax("TZS024", result, trimmed, advancePos(syntaxAt, lead));
+    return result;
+  }
+
+  /** The first syntax error of a rewritten snippet (later ones usually follow from it). */
+  private reportSyntax(code: "TZS015" | "TZS024", result: RewriteResult, text: string, start: SourcePos): void {
+    const first = result.syntaxErrors[0];
+    if (!first) return;
+    const at = advancePos(start, text.slice(0, first.offset));
+    this.diagnostics.error(code, textRange(at, text.slice(first.offset, first.offset + first.length)), first.message);
   }
 
   /** The A4 rule for names no scope of the snippet binds. */
@@ -915,6 +926,8 @@ class Codegen {
         let declares: string[] = [];
         this.withScope(() => {
           const rewritten = this.rewrite(node.code, "forHeader");
+          // An invalid @foreach header is TZS015 already (checkForEachHeader).
+          if (!node.isForEach) this.reportSyntax("TZS015", rewritten, node.code, node.codeStart ?? node.pos);
           this.warnVar(rewritten, node.code, node.codeStart ?? node.pos);
           const header = this.headerLines(node.code, rewritten.text, node.codeStart);
           declares = rewritten.declares;
@@ -1173,7 +1186,7 @@ class Codegen {
     const event = attr.event ?? "onchange";
 
     // Value side: @bind or @bind:get.
-    const display = this.expr(attr.get ?? attr.expression ?? "");
+    const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
     if (display.length === 0) {
       this.diagnostics.error("TZS009", attr, `'${label}' requires an expression.`);
       return;
@@ -1190,9 +1203,9 @@ class Codegen {
     const parts: string[] = [];
     if (attr.set !== undefined) {
       // Blazor awaits an async setter (and :after) before re-rendering.
-      parts.push(`await (${this.expr(attr.set)})(${extract})`);
+      parts.push(`await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
     } else {
-      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr);
+      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
       if (isNumber) {
         parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
@@ -1200,7 +1213,7 @@ class Codegen {
         parts.push(`${assignmentTarget} = ${extract}`);
       }
     }
-    if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after)}`);
+    if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after, attr.codeStarts?.after)}`);
     const async = attr.set !== undefined || attr.after !== undefined ? "async " : "";
 
     this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
@@ -1238,11 +1251,12 @@ class Codegen {
 
   /** The rewritten assignment target of a two-way bind; null (TZS008) when
    *  the expression cannot be assigned to (checked on the TS AST). */
-  private bindAssignmentTarget(expression: string, label: string, range: SourceRange): string | null {
+  private bindAssignmentTarget(expression: string, label: string, range: SourceRange, located: boolean): string | null {
     const code = expression.trim();
     const target = checkBindTarget(code);
     if (!target.ok) {
-      this.diagnostics.error("TZS008", range, `'${label}' target '${code}' ${target.reason}.`);
+      // Invalid TS is TZS024, reported where the value side was baked (when its start is known).
+      if (!target.syntax || !located) this.diagnostics.error("TZS008", range, `'${label}' target '${code}' ${target.reason}.`);
       return null;
     }
     const readonly = target.identifier === undefined ? null : this.readonlyLocal(target.identifier);
@@ -1282,8 +1296,9 @@ class Codegen {
   }
 
   /** Invocation of an `:after` value: a method group or a lambda. */
-  private afterCall(after: string): string {
-    return bareIdentifier(after.trim()) ? `${this.expr(after)}()` : `(${this.expr(after)})()`;
+  private afterCall(after: string, start?: SourcePos): string {
+    const baked = this.expr(after, undefined, start);
+    return bareIdentifier(after.trim()) ? `${baked}()` : `(${baked})()`;
   }
 
   /**
@@ -1293,7 +1308,7 @@ class Codegen {
    * by `:after`; async ones are awaited, Blazor's InvokeAsynchronousDelegate).
    */
   private emitComponentBind(attr: Extract<AttributeNode, { kind: "bind" }>, target: string, label: string, pos: SourcePos): void {
-    const display = this.expr(attr.get ?? attr.expression ?? "");
+    const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
     if (display.length === 0) {
       this.diagnostics.error("TZS009", attr, `${label} requires an expression.`);
       return;
@@ -1308,12 +1323,12 @@ class Codegen {
 
     let handler: string;
     if (attr.set !== undefined) {
-      handler = `async (__value) => { await (${this.expr(attr.set)})(__value); }`;
+      handler = `async (__value) => { await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__value); }`;
     } else {
-      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr);
+      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
       handler = attr.after !== undefined
-        ? `async (__value) => { ${assignmentTarget} = __value; await ${this.afterCall(attr.after)}; }`
+        ? `async (__value) => { ${assignmentTarget} = __value; await ${this.afterCall(attr.after, attr.codeStarts?.after)}; }`
         : `(__value) => { ${assignmentTarget} = __value; }`;
     }
 
@@ -1364,7 +1379,7 @@ class Codegen {
     this.stmt(text, node.pos, text.indexOf(header));
     this.withScope(() => {
       node.cases.forEach((c, index) => {
-        const label = c.code === null ? "default:" : `case ${this.expr(c.code)}:`;
+        const label = c.code === null ? "default:" : `case ${this.expr(c.code, undefined, c.codeStart)}:`;
         this.stmt(label, c.span.pos);
         for (const child of c.children) this.emitNode(child, node.pos);
         if (c.children.length > 0 && index < node.cases.length - 1 && !endsWithJump(c.children)) {
@@ -1449,7 +1464,7 @@ class Codegen {
    * pending entries for the next stmt(), relative to the baked text.
    */
   private headerExpr(code: string, start: SourcePos | undefined): string {
-    return this.headerLines(code, this.expr(code), start);
+    return this.headerLines(code, this.expr(code, undefined, start), start);
   }
 
   /** Continuation-line anchors of a rewritten header (see headerExpr). */

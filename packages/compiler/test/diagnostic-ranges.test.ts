@@ -119,6 +119,45 @@ describe("diagnostic ranges (A7)", () => {
   });
 });
 
+describe("syntax errors in markup expressions (A7, TZS024)", () => {
+  const errors = (source: string) => compileDiagnostics(source).filter((d) => d.severity === "error");
+
+  it.each([
+    ["explicit @(…)", "<p>@(count +)</p>", "+", "Expression expected."],
+    ["explicit @(…) with a C# string", '<p>@($"Hi {name}")</p>', '"Hi {name}"', "')' expected."],
+    ["attribute expression", '<div class="@(a b)"></div>', "b", "')' expected."],
+    ["implicit expression", "<p>@format(a b)</p>", "b", "',' expected."],
+    ["implicit expression in an attribute", '<div title="@format(a b)"></div>', "b", "',' expected."],
+    // An error past the end of the code lands on its last character.
+    ["mixed attribute value", '<div class="x @(on ? "a" :)"></div>', ":", "Expression expected."],
+    ["event handler", '<button @onclick="() => save(">b</button>', "(", "')' expected."],
+    ["@key", '<li @key="item."></li>', ".", "Identifier expected."],
+    ["@bind value side", '<input @bind="a." />', ".", "Identifier expected."],
+    ["@bind:after", '<input @bind="a" @bind:after="() =>" />', ">", "Expression expected."],
+    ["@if condition", "@if (a && ) { <p/> }", "&", "Expression expected."],
+    ["@switch case label", "@switch (x) {\n  case 1 +:\n    break;\n}", "+", "Expression expected."],
+  ])("%s", (_, source, text, message) => {
+    const found = errors(source);
+    expect(found.map((d) => d.code)).toEqual(["TZS024"]);
+    expect(found[0]!.message).toBe(`Invalid TypeScript expression. ${message}`);
+    expect(textOf(source, found[0]!)).toBe(text);
+  });
+
+  it("a counting @for header with invalid TS is TZS015 on the error token", () => {
+    const source = "@for (let i = 0; i < 3 i++) { <i/> }";
+    const found = errors(source);
+    expect(found.map((d) => d.code)).toEqual(["TZS015"]);
+    expect(textOf(source, found[0]!)).toBe("i");
+  });
+
+  it("valid expressions stay silent (arrows, generics, satisfies, templates, regex)", () => {
+    expect(errors(
+      '<p>@(items.map((x) => x * 2).join(", "))</p><p>@(value as Map<string, number>)</p><p>@(`${a}-${b}`)</p>' +
+        '<button @onclick="async () => { await save(); }">s</button><p>@(/a+/.test(s))</p><p>@({ a: 1 } satisfies object)</p>',
+    )).toEqual([]);
+  });
+});
+
 describe("diagnostic fixes (A7)", () => {
   it("TZS021 @foreach: the range is the whole header, the fix rewrites the code inside the parentheses", () => {
     const source = "@foreach (var item in items) {\n  <li>@item</li>\n}";
