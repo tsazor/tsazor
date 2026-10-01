@@ -9,16 +9,16 @@ Code ohnehin entstehen (viele verschwinden durch den Umbau von selbst).
 
 ## Stand vor Phase 2 (2026-09-30)
 
-**Erledigt:** Phase 0, Track A (A1–A5), Track B (B1–B7), dazu nachgezogen: SVG-Namespace,
+**Erledigt:** Phase 0, Track A (A1–A6), Track B (B1–B7), dazu nachgezogen: SVG-Namespace,
 `captureUnmatchedValues` pro Parametersatz, Event-Handler-Render nach dem synchronen Teil
 (`HandleEventAsync`), Booleans/`bigint` als Text, `<input type=time|datetime-local>`-Sekunden.
 Alles auf `roadmap/phase-0`, nicht gepusht, `main` unverändert.
 
-**Gates auf dem Gesamtstand:** 739/739 Tests (Konformitätssuite: alle Compiler-Befunde außer
+**Gates auf dem Gesamtstand (nach A6):** 773/773 Tests (Konformitätssuite: alle Compiler-Befunde außer
 C12/C13 und alle Runtime-Befunde grün), LSP-Smokes, Pizza 20/20, Gallery, Sleipnir, Demo
-(components 31, scoped 10, code-behind 5, debugging 14).
+(components 31, scoped 10, code-behind 5, debugging 14, counter-state 8).
 
-**FluentCMS-Probe:** 13 → 145 (A2) → **178/217** sauber (A5); 216 ohne Fehler. Rest:
+**FluentCMS-Probe:** 13 → 145 (A2) → 178 (A5) → seit A6 **160/217** sauber bzw. **178/217 nach den Codemod-Formen** (TZS021: 35 × `foreach … in`, 1 × `[CascadingTypeParameter]`); echte Fehler: 1 Datei. Rest:
 `@context` ×18 und 36 unaufgelöste Tags (Slots — Phase 2.3; `DynamicComponent`,
 `HeadContent`, `InputFile`, `ErrorBoundary`, `DataAnnotationsValidator` — Phase 3), 12 × C#
 `$"…"` als unquoted Attributwert (kein TS-Gegenstück).
@@ -26,7 +26,7 @@ C12/C13 und alle Runtime-Befunde grün), LSP-Smokes, Pizza 20/20, Gallery, Sleip
 **Benchmark A/B** (ruhiger Rechner, abwechselnd je 2 × 10 Läufe, `0abdc98` → jetzt): ready
 66–75 → 73–78 ms (keine Ausreißer; die ~940-ms-Werte der Agent-Läufe waren Rechnerlast),
 append1k 118 → 74, upd10th 110 → 62, swap 191 → 142, select 66 → 17, remove 343 → 305 ms,
-heap 16,5 → 15,7 MB. **Bundle 14,1 → 22,7 KB gz (+61 %)** — vor Phase 5 prüfen
+heap 16,5 → 15,7 MB. **Bundle 14,1 → 22,7 KB gz (+61 %)**, nach A6b (Standard-Decorators + `sideEffects` im Runtime-Paket) **20,4 KB gz** — vor Phase 5 weiter prüfen
 (Kandidaten: Router/Navigation-Rewrite, DOM-Journal, Error-/Batch-Code, generierte Helfer).
 
 **Bewusste Abweichungen von Blazor** (dokumentiert, getestet): Render-Queue parent-first
