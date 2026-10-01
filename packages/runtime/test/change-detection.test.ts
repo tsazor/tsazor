@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ComponentBase, EventCallback, Parameter, Renderer, defineComponent, type RenderFragment, type RenderTreeBuilder } from "../src/index";
 import { mayHaveChanged } from "../src/components/change-detection";
-import { findParameterMetadata, getParameterInfo } from "../src/components/parameter-metadata";
+import { defineParameter, findParameterMetadata, getParameterInfo } from "../src/components/parameter-metadata";
 
 describe("mayHaveChanged", () => {
   it("known immutable values compare by Object.is", () => {
@@ -194,7 +194,7 @@ describe("parameter metadata cache", () => {
     const before = getParameterInfo(Derived);
     expect([...before.all.keys()]).toEqual(["shared", "rest"]);
     expect(before.captureUnmatchedProperty).toBe("rest");
-    Parameter()(Base.prototype, "late");
+    defineParameter(Base, "late");
     const after = getParameterInfo(Derived);
     expect(after).not.toBe(before);
     expect([...after.all.keys()]).toEqual(["shared", "late", "rest"]);

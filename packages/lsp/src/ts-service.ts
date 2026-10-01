@@ -67,8 +67,10 @@ function fallbackCompilerOptions(): ts.CompilerOptions {
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     // The generated code imports the real sidecar as `./X.tsazor.ts`.
     allowImportingTsExtensions: true,
-    experimentalDecorators: true,
-    useDefineForClassFields: false,
+    // Same emit as the Vite plugin: standard (TC39) decorators, [[Define]]
+    // class fields.
+    experimentalDecorators: false,
+    useDefineForClassFields: true,
     allowJs: true,
     skipLibCheck: true,
     // NOTE: do not set `types: []` here — combined with an explicit `lib` it
@@ -113,9 +115,11 @@ function loadProjectOptions(projectRoot: string): ts.CompilerOptions {
     return {
       ...fallback,
       ...cmd.options,
-      // Non-negotiable for shadow modules and LSP responsiveness:
-      experimentalDecorators: true,
-      useDefineForClassFields: false,
+      // Non-negotiable for shadow modules and LSP responsiveness (the
+      // runtime's decorators are standard ones; a legacy setting in the
+      // project would type-check every @Parameter() as an error):
+      experimentalDecorators: false,
+      useDefineForClassFields: true,
       allowImportingTsExtensions: true,
       libReplacement: false,
       skipLibCheck: true,

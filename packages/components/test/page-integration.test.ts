@@ -30,7 +30,8 @@ async function compilePage(): Promise<string> {
   const js = transformSync(compiled.code, {
     loader: "ts",
     sourcefile: pagePath,
-    tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false, target: "es2022" } },
+    supported: { decorators: false },
+    tsconfigRaw: { compilerOptions: { target: "es2022" } },
   }).code;
   await mkdir(path.resolve(here, ".build"), { recursive: true });
   const out = path.resolve(here, ".build/ComponentsDemo.page.mjs");

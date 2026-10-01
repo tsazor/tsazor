@@ -41,8 +41,10 @@ async function instantiate(tsCode: string, stubs?: { name: string; contents: str
     sourcemap: false,
     plugins: [stubPlugin],
     // stdin input does not trigger esbuild's tsconfig discovery — pass the
-    // repo-wide settings explicitly so experimental decorators are transpiled.
-    tsconfigRaw: JSON.stringify({ compilerOptions: { experimentalDecorators: true } }),
+    // repo-wide settings explicitly; standard decorators are lowered (Node
+    // does not run them natively).
+    supported: { decorators: false },
+    tsconfigRaw: JSON.stringify({ compilerOptions: { target: "es2022" } }),
   });
   const js = result.outputFiles[0]!.text;
   const url = `data:text/javascript;base64,${Buffer.from(js, "utf8").toString("base64")}`;

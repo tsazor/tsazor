@@ -17,9 +17,9 @@ export default defineConfig({
     },
   },
   esbuild: {
-    tsconfigRaw: {
-      compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false, target: "es2022" },
-    },
+    // Standard decorators: Node does not run them natively, esbuild lowers them.
+    supported: { decorators: false },
+    tsconfigRaw: { compilerOptions: { target: "es2022" } },
   },
   test: {
     environment: "happy-dom",

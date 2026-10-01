@@ -23,6 +23,15 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
     name: "tsazor",
     enforce: "pre",
 
+    config(userConfig) {
+      // The app's own .ts files (code-behind, hand-written components) use
+      // the runtime's standard decorators too. Vite's dev transform targets
+      // esnext, which leaves decorators as written — no engine runs them
+      // natively yet, so have esbuild lower them (dev and build).
+      if (userConfig.esbuild === false) return;
+      return { esbuild: { supported: { decorators: false } } };
+    },
+
     configResolved(config) {
       projectRoot = path.resolve(options.root ?? config.root);
     },
