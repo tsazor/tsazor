@@ -909,8 +909,10 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 - Gates: Build, **1055/1055** Tests (75 Dateien), LSP-Smokes (Completion + TS-Engine), Pizza,
   Gallery, Sleipnir und Demo-E2E (components 31, scoped, code-behind, debugging, counter-state)
   grün; `tsazor check` auf allen vier Apps ohne Befunde.
-- **VSIX:** ein 0.5.0-Repack ist jetzt möglich (`packages/vscode/package.json` Version bumpen,
-  Build, `npx @vscode/vsce@3.1.0 package --no-dependencies`, install, VS Code reload).
+- **VSIX 0.5.0 gepackt und installiert** (2026-10-01): Version bump, `vsce@3.1.0 package
+  --no-dependencies` (109 Dateien, 2,29 MB), `code --install-extension` — `code --list-extensions`
+  verifiziert `tsazor.tsazor-vscode@0.5.0`; VS-Code-Reload durch den User auszulösen. Läuft damit
+  auf dem Phase-2-Stand (2.5 inkl. LSP projektweit, Slots-Completion/Hover, Codemod).
 
 ---
 

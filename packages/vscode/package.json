@@ -2,7 +2,7 @@
   "name": "tsazor-vscode",
   "displayName": "Tsazor Language Support",
   "description": "Syntax highlighting and language services (diagnostics, hover, go-to-definition) for Tsazor (.tsazor) files — Razor markup with TypeScript.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "tsazor",
   "main": "./dist/extension.js",
   "engines": {
