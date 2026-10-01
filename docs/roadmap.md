@@ -602,7 +602,7 @@ akzeptierte C#-Formen werden Diagnosen mit dem TS-Gegenstück (Quick-Fix kommt m
 Migration der Repo-Apps/-Libraries im selben Schritt; die FluentCMS-Probe misst danach, was ein
 Codemod übernehmen muss.
 
-**Stand: A6a umgesetzt** (Branch `roadmap/a6a-ts-forms`; A6b — Standard-Decorators — separat).
+**Stand: A6a umgesetzt** (gemergt).
 Neue Codes: **TZS021** (Fehler) C#-Form mit mechanischem TS-Gegenstück, die Meldung nennt die
 TS-Form; **TZS022** (Warnung) `var` in Render-Code; **TZS023** (Warnung) durchfallende
 `@switch`-Section. Regeln: `@foreach`-Köpfe sind TS (`const`/`let`, Destructuring; `for…in`
@@ -627,6 +627,21 @@ Demo (components 31, scoped, code-behind, debugging, counter-state) grün.
 `[StreamRendering]` entfernen, `where` ⇒ `extends`, `var` ⇒ `let`/`const` (4×); die Meldungen
 liefern die Ziel-Texte, eine Quick-Fix-Range (Header-Span) fehlt noch (Diagnosen tragen nur
 eine Startposition).
+
+**Stand A6b (Standard-Decorators, erledigt):** `@Parameter`/`@CascadingParameter` sind
+TC39-Field-Decorators (auch `accessor`/Setter), Metadaten pro Klasse in
+`Klasse[Symbol.metadata]` (privater Schlüssel, eigene Map pro Klasse, Lesen über die
+Klassenkette, B6-Cache bleibt; `defineParameter` für Decorator-freie Komponenten).
+`Symbol.metadata`-Polyfill im Blatt-Modul `parameter-metadata.ts` (ESM-Reihenfolge vor jeder
+dekorierten Klasse). `experimentalDecorators`/`useDefineForClassFields: false` aus allen
+tsconfigs, esbuild-/Vitest-Configs, Build-Skripten und dem LSP entfernt; esbuild senkt
+Decorators (`supported: { decorators: false }`), das Vite-Plugin auch für die `.ts`-Dateien der
+App. `[[Define]]`-Felder: Runtime war schon so kompiliert (tsc, ES2022); neu ist der generierte
+Code — kein Feld der generierten Klasse überschattet Code-behind-Member (nur `@inject`/`@code`),
+HMR entfernt Felder, die zum Accessor wurden. Bundle (Bench): Standard-Lowering kostet
++3,6 KB gz, `"sideEffects"` im Runtime-Paket (nur das Polyfill-Modul) lässt ungenutzte
+Built-ins fallen ⇒ netto **22,7 → 20,4 KB gz**. Für 2.1: die Laufzeit-Metadaten sind pro Klasse
+und vererbungsrichtig lesbar; Typen/Kategorien liefert 2.1 statisch aus dem AST.
 
 ---
 

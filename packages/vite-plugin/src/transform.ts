@@ -75,13 +75,10 @@ export async function transformTsazor(
     loader: "ts",
     sourcemap: sourceMap,
     sourcefile: `${filePath}.ts`,
-    tsconfigRaw: {
-      compilerOptions: {
-        experimentalDecorators: true,
-        useDefineForClassFields: false,
-        target: "es2022",
-      },
-    },
+    // Standard (TC39) decorators and [[Define]] class fields (TS's ES2022
+    // default); no engine runs decorators natively yet, so esbuild lowers them.
+    supported: { decorators: false },
+    tsconfigRaw: { compilerOptions: { target: "es2022" } },
   });
 
   const map = sourceMap

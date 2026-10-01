@@ -30,7 +30,7 @@ await writeFile(
   path.join(rt, "index.d.ts"),
   "export declare interface RenderTreeBuilder { openElement(seq: number, tag: string): void; closeElement(): void; addAttribute(seq: number, name: string, value?: unknown): void; addContent(seq: number, value: unknown): void; }\n" +
     "export declare class ComponentBase { protected buildRenderTree(b: RenderTreeBuilder): void {} }\n" +
-    "export declare const Parameter: ParameterDecorator;\n",
+    "export declare function Parameter(options?: { captureUnmatchedValues?: boolean }): (value: unknown, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext) => void;\n",
 );
 await writeFile(
   path.join(work, "Pages", "Ticker.tsazor.ts"),

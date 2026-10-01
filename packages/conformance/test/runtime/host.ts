@@ -61,7 +61,7 @@ export const log: string[] = [];
 
 /** Child that logs its lifecycle and renders <i>label</i>. */
 export class Probe extends ComponentBase {
-  label = "";
+  @Parameter() label = "";
   protected override onInitialized(): void {
     log.push(`init:${this.label}`);
   }
@@ -78,4 +78,3 @@ export class Probe extends ComponentBase {
     log.push(`dispose:${this.label}`);
   }
 }
-Parameter()(Probe.prototype, "label");

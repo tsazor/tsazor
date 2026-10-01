@@ -47,7 +47,7 @@ beforeAll(async () => {
     "export declare interface RenderTreeBuilder { openElement(seq: number, tag: string): void; closeElement(): void; addAttribute(seq: number, name: string, value?: unknown): void; addEventHandler(seq: number, name: string, callback: EventCallback<any>, flags?: number): void; addContent(seq: number, value: unknown): void; }\n" +
       "export declare class ComponentBase { protected buildRenderTree(b: RenderTreeBuilder): void {} }\n" +
       "export declare class EventCallback<TArg = unknown> { static bind<TArg>(receiver: ComponentBase, delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg>): EventCallback<TArg>; }\n" +
-      "export declare const Parameter: ParameterDecorator;\n",
+      "export declare function Parameter(options?: { captureUnmatchedValues?: boolean }): (value: unknown, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext) => void;\n",
   );
 
   await writeFile(

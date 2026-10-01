@@ -36,6 +36,30 @@ Optional zu jeder `X.tsazor`-Datei: ein Sidecar-Stylesheet `X.tsazor.css` (CSS I
 [Scoped CSS](scoped-css.md)) und eine Code-behind-Klasse `X.tsazor.ts`
 ([Code-behind](code-behind.md)).
 
+## tsconfig
+
+Tsazor nutzt **Standard-Decorators** (TC39, TS 5.2+) und Standard-Klassenfelder. Die App
+braucht dafür nichts Besonderes — nur **kein** `experimentalDecorators` (damit würde jedes
+`@Parameter()` als Legacy-Decorator geprüft und zur Laufzeit abgelehnt):
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true
+  }
+}
+```
+
+- `target` ES2022 oder neuer ⇒ `useDefineForClassFields` ist `true` (TS-Default), wie im
+  generierten Code. Eine reine Typ-Neudeklaration eines geerbten Felds heißt `declare x: T`.
+- Decorators senkt esbuild (Vite-Plugin, auch für die `.ts`-Dateien der App); kein Browser
+  führt sie bisher nativ aus. `Symbol.metadata` polyfillt die Runtime.
+- Handgeschriebene Komponenten ohne Decorator-Syntax (Plain JS, Tests) deklarieren Parameter
+  mit `defineParameter(Klasse, "name", options?)` aus `@tsazor/runtime`.
+
 ## Bootstrap
 
 ```ts

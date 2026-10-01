@@ -48,13 +48,9 @@ for (const file of files) {
     const transpiled = transformSync(compiled.code, {
       loader: "ts",
       sourcefile: filePath,
-      tsconfigRaw: {
-        compilerOptions: {
-          experimentalDecorators: true,
-          useDefineForClassFields: false,
-          target: "es2022",
-        },
-      },
+      // Same emit as the Vite plugin: standard decorators, lowered.
+      supported: { decorators: false },
+      tsconfigRaw: { compilerOptions: { target: "es2022" } },
     });
 
     // Sibling component imports point at .tsazor sources; the built library

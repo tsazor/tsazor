@@ -89,7 +89,7 @@ with a real `ts.LanguageService` (volar-style "shadow modules"):
   paths are served from memory, everything else (sidecars, project TS,
   `node_modules` d.ts) read from disk. Compiler options come from the
   project's `tsconfig.json` with non-negotiable overrides
-  (`experimentalDecorators`, `useDefineForClassFields: false`,
+  (Standard-Decorators — `experimentalDecorators: false` —, `useDefineForClassFields: true`,
   `moduleResolution: bundler`, `skipLibCheck`, ES2022 + DOM libs).
 - **Position mapping**: `TsazorGenMap` over the compiler's raw per-statement
   mappings (genLine 1-based → 0-based on entry, `srcCol` verbatim in `@code`,

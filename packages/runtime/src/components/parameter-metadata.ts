@@ -1,6 +1,12 @@
 /**
  * Parameter metadata, filled by the @Parameter / @CascadingParameter
  * decorators. Mirrors Blazor's [Parameter] / [CascadingParameter] attributes.
+ *
+ * Standard (TC39) decorators: each decorator records its member in the
+ * class's decorator metadata (`context.metadata`, published by the language
+ * as `Class[Symbol.metadata]`), under a private key, own entries per class.
+ * Readers walk the class chain, so base-class parameters are included and a
+ * derived re-declaration wins.
  */
 export interface ParameterMeta {
   /** Property name the parameter is written to. */
@@ -15,26 +21,73 @@ export interface ParameterMeta {
   readonly captureUnmatchedValues?: boolean;
 }
 
-const metadataRegistry = new WeakMap<abstract new () => unknown, Map<string, ParameterMeta>>();
+// `Symbol.metadata` polyfill (TS 5.2+ decorator metadata; not every browser
+// has it yet). tsc's decorator emit only creates `context.metadata` when
+// `Symbol.metadata` exists at class-definition time, so it must be installed
+// before any decorated class is evaluated. Every decorated class imports
+// this module (for the decorators), and it imports nothing itself, so ESM
+// evaluation order runs it first. `Symbol.for("Symbol.metadata")` is the
+// symbol esbuild's decorator helpers fall back to — both emits agree.
+const symbolWithMetadata = Symbol as unknown as { metadata?: symbol };
+symbolWithMetadata.metadata ??= Symbol.for("Symbol.metadata");
+const METADATA: symbol = symbolWithMetadata.metadata;
+
+/** Key of the own parameter map inside a class's decorator metadata object. */
+const PARAMETERS = Symbol("tsazor.parameters");
+
+type ComponentClass = abstract new () => unknown;
+type MetadataObject = Record<PropertyKey, unknown>;
+
+/** The members a parameter decorator may sit on (a plain field is the norm). */
+type ParameterDecoratorContext = ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext;
 
 /**
- * Bumped by every decorator registration: cached per-class lookups built
- * before it (e.g. a decorator applied by hand after a first render) are
- * rebuilt instead of going stale.
+ * Bumped by `defineParameter` (a registration after the class definition):
+ * cached per-class lookups built before it are rebuilt instead of going
+ * stale. Decorators need no bump — they run while the class is defined,
+ * before anything can read its metadata.
  */
 let registryVersion = 0;
 
-/** Gets (creating if needed) the parameter metadata map for a component class. */
-export function getParameterMetadata(
-  type: abstract new () => unknown,
-): Map<string, ParameterMeta> {
-  registryVersion++;
-  let map = metadataRegistry.get(type);
-  if (!map) {
-    map = new Map<string, ParameterMeta>();
-    metadataRegistry.set(type, map);
-  }
+/** The own parameter map in a decorator metadata object (created on first use). */
+function ownParameterMap(metadata: MetadataObject): Map<string, ParameterMeta> {
+  if (Object.hasOwn(metadata, PARAMETERS)) return metadata[PARAMETERS] as Map<string, ParameterMeta>;
+  const map = new Map<string, ParameterMeta>();
+  metadata[PARAMETERS] = map;
   return map;
+}
+
+/** The parameters a class declares itself (not inherited), or undefined. */
+export function getOwnParameterMetadata(type: ComponentClass): ReadonlyMap<string, ParameterMeta> | undefined {
+  if (!Object.hasOwn(type, METADATA)) return undefined;
+  const metadata = (type as unknown as Record<symbol, MetadataObject | null | undefined>)[METADATA];
+  return metadata != null && Object.hasOwn(metadata, PARAMETERS)
+    ? (metadata[PARAMETERS] as ReadonlyMap<string, ParameterMeta>)
+    : undefined;
+}
+
+/**
+ * Declares a parameter without decorator syntax — for hand-written
+ * components that add one after the class definition (tests, plain JS).
+ * Equivalent to `@Parameter()` / `@CascadingParameter()` on the property:
+ * the entry goes into the class's own decorator metadata.
+ */
+export function defineParameter(
+  type: ComponentClass,
+  propertyName: string,
+  options: Omit<ParameterMeta, "propertyName"> = {},
+): void {
+  let metadata = Object.hasOwn(type, METADATA)
+    ? (type as unknown as Record<symbol, MetadataObject | undefined>)[METADATA]
+    : undefined;
+  if (metadata == null) {
+    // Same shape the decorator emit produces: inherits the base's metadata.
+    const base = Object.getPrototypeOf(type) as Record<symbol, MetadataObject | undefined> | null;
+    metadata = Object.create(base?.[METADATA] ?? null) as MetadataObject;
+    Object.defineProperty(type, METADATA, { value: metadata, enumerable: true, configurable: true, writable: true });
+  }
+  ownParameterMap(metadata).set(propertyName, { propertyName, ...options });
+  registryVersion++;
 }
 
 /**
@@ -53,10 +106,10 @@ export interface ParameterInfo {
   readonly cascading: readonly ParameterMeta[];
 }
 
-const infoCache = new WeakMap<abstract new () => unknown, { version: number; info: ParameterInfo }>();
+const infoCache = new WeakMap<ComponentClass, { version: number; info: ParameterInfo }>();
 
 /** The cached ParameterInfo of a component class. */
-export function getParameterInfo(type: abstract new () => unknown): ParameterInfo {
+export function getParameterInfo(type: ComponentClass): ParameterInfo {
   const cached = infoCache.get(type);
   if (cached !== undefined && cached.version === registryVersion) return cached.info;
   const all = collectParameterMetadata(type);
@@ -74,25 +127,20 @@ export function getParameterInfo(type: abstract new () => unknown): ParameterInf
 }
 
 /** Looks up inherited parameter metadata (own class wins over base class); cached per class, do not mutate. */
-export function findParameterMetadata(
-  type: abstract new () => unknown,
-): Map<string, ParameterMeta> {
+export function findParameterMetadata(type: ComponentClass): Map<string, ParameterMeta> {
   return getParameterInfo(type).all as Map<string, ParameterMeta>;
 }
 
-function collectParameterMetadata(
-  type: abstract new () => unknown,
-): Map<string, ParameterMeta> {
+function collectParameterMetadata(type: ComponentClass): Map<string, ParameterMeta> {
   const result = new Map<string, ParameterMeta>();
-  const chain: Array<abstract new () => unknown> = [];
+  const chain: ComponentClass[] = [];
   let current: unknown = type;
-  while (typeof current === "function" && current !== Object) {
-    chain.unshift(current as abstract new () => unknown);
-    const proto = Object.getPrototypeOf(current);
-    current = proto;
+  while (typeof current === "function" && current !== Object && current !== Function.prototype) {
+    chain.unshift(current as ComponentClass);
+    current = Object.getPrototypeOf(current);
   }
   for (const cls of chain) {
-    const own = metadataRegistry.get(cls);
+    const own = getOwnParameterMetadata(cls);
     if (own) {
       for (const [key, value] of own) {
         result.set(key, value);
@@ -102,29 +150,38 @@ function collectParameterMetadata(
   return result;
 }
 
-/** [Parameter]-equivalent property decorator. */
-export function Parameter(options?: { captureUnmatchedValues?: boolean }): PropertyDecorator {
-  return (target: object, propertyKey: string | symbol) => {
-    const ctor = target.constructor as abstract new () => unknown;
-    const map = getParameterMetadata(ctor);
-    map.set(String(propertyKey), {
-      propertyName: String(propertyKey),
-      captureUnmatchedValues: options?.captureUnmatchedValues,
-    });
+/** Records a decorated member in its class's decorator metadata. */
+function register(context: ParameterDecoratorContext, decorator: string, meta: Omit<ParameterMeta, "propertyName">): void {
+  if (typeof context !== "object" || context === null) {
+    // A legacy call `(prototype, "name")`: compiled with experimentalDecorators.
+    throw new Error(`${decorator} is a standard (TC39) decorator — remove "experimentalDecorators" from the tsconfig (or call defineParameter() by hand).`);
+  }
+  if (context.static || context.private || typeof context.name !== "string") {
+    throw new Error(`${decorator} applies to public instance members, not to '${String(context.name)}'.`);
+  }
+  if (context.metadata == null) {
+    throw new Error(`${decorator}: decorator metadata is unavailable (Symbol.metadata was not installed before the class was defined).`);
+  }
+  ownParameterMap(context.metadata).set(context.name, { propertyName: context.name, ...meta });
+}
+
+/** [Parameter]-equivalent field decorator (`@Parameter() title = "";`). */
+export function Parameter(options?: {
+  captureUnmatchedValues?: boolean;
+}): (value: unknown, context: ParameterDecoratorContext) => void {
+  return (_value, context) => {
+    register(context, "@Parameter()", { captureUnmatchedValues: options?.captureUnmatchedValues });
   };
 }
 
-/** [CascadingParameter]-equivalent property decorator. */
+/** [CascadingParameter]-equivalent field decorator. */
 export function CascadingParameter(options?: {
   name?: string;
   /** Type token for by-type matching (TS has no property type metadata). */
   type?: abstract new (...args: never[]) => unknown;
-}): PropertyDecorator {
-  return (target: object, propertyKey: string | symbol) => {
-    const ctor = target.constructor as abstract new () => unknown;
-    const map = getParameterMetadata(ctor);
-    map.set(String(propertyKey), {
-      propertyName: String(propertyKey),
+}): (value: unknown, context: ParameterDecoratorContext) => void {
+  return (_value, context) => {
+    register(context, "@CascadingParameter()", {
       cascading: true,
       cascadingName: options?.name,
       cascadingType: options?.type,

@@ -58,7 +58,7 @@ und `@attribute @decorator(…)` (echter Class-Decorator):
 |---|---|
 | `@authorize` | die Route verlangt Anmeldung |
 | `@authorize({ roles: ["A", "B"], policy: "P" })` | die `AuthorizationRequirements` der Route (`{ roles: [...] }` / `{ policy: "P" }`), geprüft von `AuthorizeRouteView` (Rollen: mindestens eine; Policy: registriert in `AuthorizationService.policies`) |
-| `@attribute @tracked("x")` | echter Class-Decorator, wörtlich über `export default class` (legacy `experimentalDecorators` wie `@Parameter`); Namen kommen per `@import` |
+| `@attribute @tracked("x")` (TS-Form: Wert beginnt mit `@`) | echter Class-Decorator, wörtlich über `export default class` (Standard-Decorator, TC39, wie `@Parameter`: `(value, context: ClassDecoratorContext)`); Namen kommen per `@import` |
 | `@attribute [Authorize]`, `[Authorize(Roles = "A, B", Policy = "P")]`, `[Authorize("P")]` | Fehler TZS021 mit der TS-Form (`@authorize`, `@authorize({ roles: ["A", "B"], policy: "P" })`) |
 | `@attribute [AllowAnonymous]` | Fehler TZS021: entfernen — eine Seite ist anonym, solange sie kein `@authorize` deklariert |
 | jedes andere C#-Attribut (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Fehler TZS021: entfernen oder als TS-Decorator schreiben |

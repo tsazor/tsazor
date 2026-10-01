@@ -278,7 +278,7 @@ describe("computeDiff — attributes", () => {
 
 describe("DomRenderer — applying edits", () => {
   class Label extends ComponentBase {
-    label = "";
+    @Parameter() label = "";
     renders = 0;
     protected override shouldRender(): boolean {
       return this.renders === 0; // renders once: later parent renders do not refresh the content
@@ -291,7 +291,6 @@ describe("DomRenderer — applying edits", () => {
       b.addMarkupContent(2, `<b>${this.label}</b>`);
     }
   }
-  Parameter()(Label.prototype, "label");
 
   class Host extends ComponentBase {
     order = ["a", "b", "c"];

@@ -44,12 +44,11 @@ describe("R8 — parameter change detection", () => {
 });
 
 class Consumer extends ComponentBase {
-  theme?: string;
+  @CascadingParameter({ name: "Theme" }) theme?: string;
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     b.addContent(0, this.theme ?? "none");
   }
 }
-CascadingParameter({ name: "Theme" })(Consumer.prototype, "theme");
 
 describe("R11 — named cascading values", () => {
   it("CascadingValue Name matches CascadingParameter({ name })", async () => {
@@ -70,7 +69,7 @@ describe("R11 — named cascading values", () => {
 describe("R12 — cascading updates reach subscribers directly", () => {
   it("through an intermediate component that does not re-render", async () => {
     class Wall extends ComponentBase {
-      childContent?: (b: RenderTreeBuilder) => void;
+      @Parameter() childContent?: (b: RenderTreeBuilder) => void;
       private rendered = false;
       protected override shouldRender(): boolean {
         return !this.rendered;
@@ -80,18 +79,16 @@ describe("R12 — cascading updates reach subscribers directly", () => {
         this.childContent?.(b);
       }
     }
-    Parameter()(Wall.prototype, "childContent");
     // By-type cascade (not by name) so this test measures R12 only, not R11.
     class Box {
       constructor(readonly n: number) {}
     }
     class NumberConsumer extends ComponentBase {
-      box?: Box;
+      @CascadingParameter({ type: Box }) box?: Box;
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.addContent(0, String(this.box?.n));
       }
     }
-    CascadingParameter({ type: Box })(NumberConsumer.prototype, "box");
 
     let n = 1;
     const h = await host((b) => {
@@ -134,12 +131,11 @@ describe("parameters", () => {
 
   it.fails("a function parameter whose name starts with 'on' is passed through unchanged", async () => {
     class Filter extends ComponentBase {
-      onlyIf?: (n: number) => boolean;
+      @Parameter() onlyIf?: (n: number) => boolean;
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.addContent(0, `${typeof this.onlyIf}:${this.onlyIf instanceof EventCallback}`);
       }
     }
-    Parameter()(Filter.prototype, "onlyIf");
     const h = await host((b) => {
       b.openComponent(0, defineComponent(Filter));
       b.addAttribute(1, "onlyIf", ((n: number) => n > 1) as never);

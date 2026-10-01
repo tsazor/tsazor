@@ -655,10 +655,28 @@ export class Renderer {
         (component as unknown as Record<string, unknown>)[key] = value;
       }
     }
+    // [[Define]] class fields are own properties of every instance (also
+    // those without an initializer): a field the new version turned into an
+    // accessor would shadow it. Drop own data properties the new class no
+    // longer defines as a field when its prototype chain has an accessor.
+    for (const key of Object.keys(component)) {
+      if (!Object.hasOwn(probe, key) && hasAccessor(newDefinition.type.prototype, key)) {
+        delete (component as unknown as Record<string, unknown>)[key];
+      }
+    }
     component.forceRenderInternal();
   }
 
   // #endregion
+}
+
+/** Whether `key` is a getter/setter somewhere on the prototype chain from `proto`. */
+function hasAccessor(proto: object | null, key: string): boolean {
+  for (; proto !== null; proto = Object.getPrototypeOf(proto) as object | null) {
+    const descriptor = Object.getOwnPropertyDescriptor(proto, key);
+    if (descriptor) return descriptor.get !== undefined || descriptor.set !== undefined;
+  }
+  return false;
 }
 
 const PHASE_LABELS: Record<RenderErrorPhase, string> = {
