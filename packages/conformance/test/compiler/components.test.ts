@@ -8,7 +8,7 @@ import { diagnosticsOf, errorCodes, mount } from "../harness.js";
 const probe = `<span>@(typeof Value):@(String(Value))</span>\n@code { @Parameter() Value: unknown; }`;
 
 describe("C12 — attribute values on non-string parameters are expressions", () => {
-  it.fails('Value="5" on a number parameter passes 5', async () => {
+  it('Value="5" on a number parameter passes 5', async () => {
     const m = await mount({
       "Test.tsazor": `<Probe Value="5" />`,
       "Probe.tsazor": `<span>@(typeof Value):@(String(Value))</span>\n@code { @Parameter() Value = 0; }`,
@@ -16,7 +16,7 @@ describe("C12 — attribute values on non-string parameters are expressions", ()
     expect(m.text()).toBe("number:5");
   });
 
-  it.fails('Value="true" on a boolean parameter passes true', async () => {
+  it('Value="true" on a boolean parameter passes true', async () => {
     const m = await mount({
       "Test.tsazor": `<Probe Value="true" />`,
       "Probe.tsazor": `<span>@(typeof Value):@(String(Value))</span>\n@code { @Parameter() Value = false; }`,
@@ -24,12 +24,12 @@ describe("C12 — attribute values on non-string parameters are expressions", ()
     expect(m.text()).toBe("boolean:true");
   });
 
-  it.fails('Value="@4000" is the number 4000, never the string "@4000"', async () => {
+  it('Value="@4000" is the number 4000, never the string "@4000"', async () => {
     const m = await mount({ "Test.tsazor": `<Probe Value="@4000" />`, "Probe.tsazor": probe });
     expect(m.text()).toBe("number:4000");
   });
 
-  it.fails("On* parameters accept a bare method group", async () => {
+  it("On* parameters accept a bare method group", async () => {
     const m = await mount({
       "Test.tsazor": `<Clicker OnClick="handle" /><p>@count</p>\n@code { private count = 0; private handle() { this.count++; } }`,
       "Clicker.tsazor": `<button @onclick="() => OnClick.invokeAsync()">c</button>\n@code { @Parameter() OnClick!: EventCallback; }`,
@@ -37,6 +37,81 @@ describe("C12 — attribute values on non-string parameters are expressions", ()
     m.container.querySelector("button")!.click();
     await m.settle();
     expect(m.text()).toBe("c1");
+  });
+});
+
+describe("2.2 — component attributes by parameter type", () => {
+  const clicker = `<button @onclick="() => OnClick.invokeAsync()">c</button>\n@code { @Parameter() OnClick!: EventCallback; }`;
+
+  it("a plain value on a non-string parameter is an expression over the component's members", async () => {
+    const m = await mount({
+      "Test.tsazor": `<List Items="people" Max="people.length - 1" />\n@code { private people = ["a", "b", "c"]; }`,
+      "List.tsazor": `<span>@Items.slice(0, Max).join(",")</span>\n@code { @Parameter() Items: string[] = []; @Parameter() Max = 0; }`,
+    });
+    expect(m.text()).toBe("a,b");
+  });
+
+  it("a minimized attribute on a boolean parameter is true; a string parameter keeps text", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Probe Enabled Title="5" />`,
+      "Probe.tsazor": `<span>@(typeof Enabled):@(typeof Title)</span>\n@code { @Parameter() Enabled = false; @Parameter() Title = ""; }`,
+    });
+    expect(m.text()).toBe("boolean:string");
+  });
+
+  it("a lambda on an EventCallback parameter re-renders the authoring component", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Clicker OnClick="() => count++" /><p>@count</p>\n@code { private count = 0; }`,
+      "Clicker.tsazor": clicker,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.text()).toBe("c1");
+  });
+
+  it("a method group with a receiver runs on that receiver", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Clicker OnClick="item.bump" /><p>@item.n</p>\n@code { private item = { n: 0, bump() { this.n++; } }; }`,
+      "Clicker.tsazor": clicker,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.text()).toBe("c1");
+  });
+
+  it("a forwarded EventCallback passes through and keeps its receiver", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Middle OnClick="handle" /><p>@count</p>\n@code { private count = 0; private handle() { this.count++; } }`,
+      "Middle.tsazor": `<Clicker OnClick="OnClick" />\n@code { @Parameter() OnClick!: EventCallback; }`,
+      "Clicker.tsazor": clicker,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.text()).toBe("c1");
+  });
+
+  it("a function on a value parameter is passed as a plain value, whatever its name", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Filter onlyIf="(n) => n > 1" />`,
+      "Filter.tsazor": `<span>@([1, 2, 3].filter((n) => onlyIf!(n)).join(","))</span>\n@code { @Parameter() onlyIf?: (n: number) => boolean; }`,
+    });
+    expect(m.text()).toBe("2,3");
+  });
+
+  it("an unknown parameter is a compile error with a suggestion (TZS025)", async () => {
+    const diagnostics = await diagnosticsOf(`<Probe Titel="x" />`, { "Probe.tsazor": `@code { @Parameter() Title = ""; }` });
+    expect(errorCodes(diagnostics)).toEqual(["TZS025"]);
+    expect(diagnostics[0]!.message).toContain("Component 'Probe' does not have a parameter 'Titel'. Did you mean 'Title'?");
+  });
+
+  it("@bind-Value passes ValueExpression only where the component declares it", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Stepper @bind-Value="v" /><p>@v</p>\n@code { private v = 1; }`,
+      "Stepper.tsazor": `<button @onclick="() => ValueChanged.invokeAsync(Value + 1)">+</button>\n@code { @Parameter() Value = 0; @Parameter() ValueChanged!: EventCallback<number>; }`,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.text()).toBe("+2");
   });
 });
 

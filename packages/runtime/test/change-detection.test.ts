@@ -163,11 +163,11 @@ describe("B6 — retained children only get parameters that may have changed", (
     expect(log).toEqual(["pset", "render"]);
   });
 
-  it("a plain function on an on*-parameter compares like the EventCallback it becomes", async () => {
+  it("a plain function is a value, also on an on*-named parameter: it may have changed (B8)", async () => {
     const handler = () => {};
     const h = await mountChild(() => [["onPick", handler]]);
     await h.rerender();
-    expect(log).toEqual([]);
+    expect(log).toEqual(["pset", "render"]);
   });
 });
 

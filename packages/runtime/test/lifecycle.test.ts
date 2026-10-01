@@ -620,9 +620,9 @@ describe("unknown parameters (Blazor's SetParameterProperties)", () => {
     expect({ text: container.textContent, errors }).toEqual({ text: '{"data-x":1}', errors: [] });
   });
 
-  it("drops the compiler's ValueExpression when the component does not declare it", async () => {
-    const { renderer, container, errors } = mount(hostWith("ValueExpression", "field"));
+  it("an undeclared ValueExpression is an unknown parameter like any other (the compiler emits it only when declared)", async () => {
+    const { renderer, errors } = mount(hostWith("ValueExpression", "field"));
     await renderer.waitUntilIdle();
-    expect({ text: container.textContent, errors }).toEqual({ text: "", errors: [] });
+    expect((errors[0]?.error as Error).message).toBe("Object of type 'Named' does not have a property matching the name 'ValueExpression'.");
   });
 });
