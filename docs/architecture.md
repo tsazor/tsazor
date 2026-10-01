@@ -365,6 +365,29 @@ Blazors Sektionen und Head-Verwaltung:
   kein `blazor-focus-on-navigate`-Custom-Element (Tsazor ist immer interaktiv),
   `isDefaultContent` als normaler Parameter (kein `IComponent.Attach` in Tsazor).
 
+### EditForm (3.5)
+
+forms/edit-form.ts nach Blazors `EditForm.cs` portiert:
+
+- **Kontext-Verwaltung in onParametersSet** (wie Blazor dort): `Model` XOR `EditContext`
+  (Fehlermeldungen wortgleich), Kontext-Erzeugung bei neuem `Model`, Validators erst
+  anwenden, wenn der Kontext steht. Der `EditContext`-Parameter setzt den Kontext
+  fremd-verantwortlich; eine Neuerzeugung findet dann nicht mehr statt.
+- **Region je Kontext-Identität:** der ganze Form-Subtree liegt in einer Region, deren
+  Sequence Blazors `_editContext.GetHashCode()` ist — portiert als Zähler in einer
+  `WeakMap<EditContext, number>` (GetHashCode nicht portierbar, Zweck bleibt: stabile
+  Identität je Kontext-Instanz). Neuer Kontext ⇒ andere Region-Sequence ⇒ der Diff
+  ersetzt die Region komplett (Input-Zustand resetted).
+- **Fixer Cascade:** EditForm ist `CascadingValueSupplier` mit `IsFixed=true` — sicher,
+  weil die Region den Subtree bei Kontext-Wechsel errichtet, bevor Kinder ihn lesen
+  (Blazors gleiche Begründung im Quelltext-Kommentar).
+- **Submit:** der `onsubmit`-Handler ist `EventCallback.bind(this, () => this.handleSubmit())`
+  (`PreventDefault`); `handleSubmit` awaitet `onSubmit` bzw. leitet nach `validate()` an
+  `onValidSubmit`/`onInvalidSubmit` weiter — das Await liegt im getrackten Event-Handler,
+  `/renderer.waitUntilIdle()` deckt async Submit-Callbacks ab.
+- `authorize-view.ts`/`authorize-route-view.ts`: `notAuthorized` ist wie Blazor
+  `RenderFragment<AuthenticationState>` — Slot-Kontext `@context` in `<NotAuthorized>`.
+
 ### Templated Components (2.3)
 
 Slot vs. Komponente wird **vor** der Tag-Auflösung aus den Metadaten des

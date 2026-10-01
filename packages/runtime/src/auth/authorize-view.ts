@@ -23,8 +23,9 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   @Parameter() childContent?: RenderFragment;
   /** Authorized content receiving the AuthenticationState (Razor's <Authorized>). */
   @Parameter() authorized?: (state: AuthenticationState) => RenderFragment;
-  /** Rendered when access is denied (Razor's <NotAuthorized>). */
-  @Parameter() notAuthorized?: RenderFragment;
+  /** Rendered when access is denied; receives the AuthenticationState
+   *  (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>). */
+  @Parameter() notAuthorized?: (state: AuthenticationState) => RenderFragment;
   /** Rendered while the state is still resolving (Razor's <Authorizing>). */
   @Parameter() authorizing?: RenderFragment;
 
@@ -69,7 +70,7 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
         b.addContent(1, this.childContent);
       }
     } else if (this.notAuthorized) {
-      b.addContent(2, this.notAuthorized);
+      b.addContent(2, this.notAuthorized(state));
     }
   }
 

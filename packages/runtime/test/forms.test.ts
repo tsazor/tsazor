@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   ComponentBase,
+  EditContext,
   EditForm,
   EventCallback,
   InputCheckbox,
@@ -43,7 +44,7 @@ class ContactFormPage extends ComponentBase {
         this.submitted = true;
       }),
     );
-    b.addContent(4, (inner: RenderTreeBuilder) => {
+    b.addContent(4, (_context: EditContext) => (inner: RenderTreeBuilder) => {
       inner.openComponent(0, defineComponent(InputText));
       inner.addAttribute(1, "Value", this.model.email);
       inner.addAttribute(

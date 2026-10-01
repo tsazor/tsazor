@@ -920,13 +920,17 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 
 **Voraussetzung:** B2 (Fehlerisolation), B3/B4 (Disposal, Lifecycle), 2.3 (Slots).
 
-**Stand (2026-10-01):** 3.1–3.4 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
+**Stand (2026-10-01):** 3.1–3.5 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
 Renderer-Routing per Parent-Kette (Blazors `HandleExceptionViaErrorBoundary`), erzwungene
 Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal;
 `DynamicComponent` mit `Type`/`Parameters`, Blazors Unknown-Parameter-Fehler und Reference-Capture;
 `MarkupString` als Markup-Frame (Compiler erkennt `new MarkupString(...)`/`… as MarkupString`);
 Sections (`SectionRegistry` pro Renderer, `SectionContent`/`SectionOutlet`) mit HeadOutlet als
 zweitem App-Root im `<head>`, `PageTitle` als Title-Sektion, `FocusOnNavigate`.
+EditForm mit Blazors `OnSubmit`/`OnValidSubmit`/`OnInvalidSubmit` (`EventCallback<EditContext>`,
+Submit-Await im getrackten Handler), `EditContext`-Parameter und fixer Cascade, Model-Wechsel
+errichtet den Form-Subtree neu (Region je Kontext-Identität);
+`<NotAuthorized>` von `AuthorizeView`/`AuthorizeRouteView` empfängt den `AuthenticationState`.
 Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
 
 | Schritt | Inhalt | Abhängig von | Stand |
@@ -935,7 +939,7 @@ Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Bu
 | 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | umgesetzt |
 | 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | umgesetzt |
 | 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate`, Sections (`SectionContent`/`SectionOutlet`), `PageTitle` als Sektion | B3 (Logical Ranges außerhalb des Roots) | umgesetzt |
-| 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | — |
+| 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | umgesetzt |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
 | 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 |
 | 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — |
@@ -1050,6 +1054,37 @@ Subscriber-Fehler, Identifikator-Fehler, Unsubscribe bei Disposal, Markup), 4 in
 `packages/conformance/test/runtime/head.test.ts` (HeadContent im Head, PageTitle +
 Default-Titel-Capture/Fallback, createTsazorApp-Head-Root mit Dispose), 4 in
 `packages/conformance/test/runtime/focus-on-navigate.test.ts`.
+
+### 3.5 — EditForm
+
+**Stand: umgesetzt** (2026-10-01). `packages/runtime/src/forms/edit-form.ts` nach Blazors
+`EditForm.cs` neu geschrieben; `authorize-view.ts`/`authorize-route-view.ts`:
+`notAuthorized` ist `RenderFragment<AuthenticationState>`.
+
+- **Parameter:** `Model` oder `EditContext` (beides zugleich bzw. keins wirft Blazors
+  OnParametersSet-Fehlermeldungen wortgleich); `onSubmit` ersetzt die Validierung
+  (Kombination mit `OnValidSubmit`/`OnInvalidSubmit` wirft Blazors Meldung), sonst validiert
+  der `EditContext` und es geht an `onValidSubmit`/`onInvalidSubmit`. Alle drei Callbacks sind
+  `EventCallback<EditContext>`; ChildContent ist `(context: EditContext) => RenderFragment`
+  (Tsazors Schreibung von Blazors `RenderFragment<EditContext>`) — der Markup-Slot-Kontext
+  `@context` ist der EditContext (2.4-Mechanik gegen die Framework-Metadaten).
+- **Await-Tracking:** `handleSubmit` awaitet den Callback innerhalb des getrackten
+  `onsubmit`-Event-Handlers, deshalb deckt `waitUntilIdle` ein async `OnValidSubmit`/`OnSubmit`
+  ab (Blazor: `HandleSubmitAsync` im Delegate).
+- **Fixer Cascade + Region-Trick:** wie in Blazor — `IsFixed=true`; der ganze Form-Subtree liegt
+  in einer Region, deren Sequence die Kontext-Identität ist (Blazors
+  `OpenRegion(_editContext.GetHashCode())`; Port: `WeakMap<EditContext, number>`-Zähler, da
+  GetHashCode nicht portierbar). Ein neu erzeugter Kontext (neues `Model`, neuer
+  `EditContext`-Parameter) ersetzt die Region komplett — Input-Zustand wird resettet.
+- **NotAuthorized** (Blazor `RenderFragment<AuthenticationState>`) empfängt den
+  `AuthenticationState` als Slot-Kontext; Markup-Slots ändern sich nicht.
+- Abweichung dokumentiert: `DataAnnotationsValidator`/`ClientValidationData` (SSR-Mapping)
+  entfallen — Validierung bleibt die funktionsbasierte `Validators`-Map (3.6 entscheidet
+  das Validierungsmodell).
+
+Konformität: 7 Tests in `packages/conformance/test/runtime/forms.test.ts` (gültig/ungültig
+Routing, OnSubmit-ohne-Validierung, async-Await vor Renderer-Idle, drei Blazor-Fehlermeldungen,
+Cascade des EditContext in den Slot-Kontext, Region-Rebuild bei Model-Wechsel).
 
 ---
 

@@ -74,6 +74,8 @@ und `@attribute @decorator(…)` (echter Class-Decorator):
   (Warnung TZS014). Deshalb braucht es auch kein Opt-out (Blazors `[AllowAnonymous]`).
 - Wie in Blazor wirkt die Anforderung nur auf Routen (`@page` + `AuthorizeRouteView`), nicht
   auf eingebettete Komponenten. Unlesbare `@attribute`-Werte (`@attribute Authorize`) ⇒ TZS019.
+- `<NotAuthorized>` empfängt wie Blazors `RenderFragment<AuthenticationState>` den
+  `AuthenticationState` als Slot-Kontext (`@context.user.name`, 3.5).
 
 ## buildRenderTree ist generiert
 
@@ -328,6 +330,21 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   RouteData="@routeData" Selector="h1" />` (im Router-Kontext; `RouteData` kommt vom Router)
   fokussiert das Element bei Seitenwechsel — ohne `tabindex` bekommt es `tabIndex = -1`,
   mit Fokus `preventScroll`.
+
+- `EditForm` (3.5) — Blazors `EditForm.cs`: `Model`**oder** `EditContext` (beides zugleich
+  bzw. keins wirft Blazors Fehlermeldung), `OnSubmit` hat Vorrang vor der Validierung und
+  ersetzt sie (zusammen mit `OnValidSubmit`/`OnInvalidSubmit` ist der Kombinations-Fehler
+ Blazors Meldung), sonst validiert der `EditContext` und es geht an `OnValidSubmit` bzw.
+  `OnInvalidSubmit`. Alle drei Callbacks empfangen den `EditContext`
+  (`EventCallback<EditContext>`), und das Await des Callbacks liegt im getrackten
+  Submit-Handler — `waitUntilIdle` deckt ein asynchrones `OnValidSubmit` ab. Der `EditContext`
+  wird als fixer Cascade-Wert geliefert (`IsFixed=true`); bei einem neuen `Model` wird der
+  Kontext neu erzeugt und die Blazor-Region (`OpenRegion(_editContext.GetHashCode())` — hier:
+  Kontext-Identität aus einem WeakMap-Zähler) errichtet den ganzen Form-Subtree neu. Das
+  `<EditForm>`-Kind empfangt den Kontext als Slot-Kontext (`@context` — ChildContent ist
+  `(context: EditContext) => RenderFragment`). Abweichung: `DataAnnotationsValidator` /
+  `ClientValidationData` (SSR-Mapping) gibt es nicht — Validierung ist die funktionsbasierte
+  `Validators`-Map.
 
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut

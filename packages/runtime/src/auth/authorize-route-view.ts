@@ -22,8 +22,9 @@ export class AuthorizeRouteView extends ComponentBase {
   @Parameter() defaultLayout?: abstract new (...args: never[]) => ComponentBase;
   /** Renders the page when access is granted (Razor's <Authorized>). */
   @Parameter() authorized?: (state: AuthenticationState) => RenderFragment;
-  /** Rendered when access is denied (Razor's <NotAuthorized>). */
-  @Parameter() notAuthorized?: RenderFragment;
+  /** Rendered when access is denied; receives the AuthenticationState
+   *  (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>). */
+  @Parameter() notAuthorized?: (state: AuthenticationState) => RenderFragment;
   /** Rendered while the state is still resolving (Razor's <Authorizing>). */
   @Parameter() authorizing?: RenderFragment;
 
@@ -54,7 +55,7 @@ export class AuthorizeRouteView extends ComponentBase {
     const requirements = this.routeData.route.authorize;
     // No requirements on the entry → public page (render for anyone).
     if (requirements && !this.authorizationService().isAuthorized(state.user, requirements)) {
-      if (this.notAuthorized) b.addContent(0, this.notAuthorized);
+      if (this.notAuthorized) b.addContent(0, this.notAuthorized(state));
       return;
     }
     if (this.authorized) {

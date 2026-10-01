@@ -1553,12 +1553,29 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         {
           "name": "model",
           "category": "value",
-          "optional": false,
+          "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "EditForm",
           "type": "object",
-          "doc": "The model object to edit and validate."
+          "doc": "The model object to edit and validate (Blazor's Model parameter)."
+        },
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "EditForm",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "doc": "The context to use instead of one created around `model`."
         },
         {
           "name": "validators",
@@ -1582,13 +1599,13 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Field name → validator; registered on the EditContext."
         },
         {
-          "name": "onValidSubmit",
+          "name": "onSubmit",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "EditForm",
-          "type": "EventCallback<Event>",
+          "type": "EventCallback<EditContext>",
           "references": [
             {
               "name": "EventCallback",
@@ -1596,29 +1613,82 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "imported": "EventCallback"
             },
             {
-              "name": "Event",
-              "kind": "global"
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
             }
           ],
-          "doc": "Invoked after a successful submit (validation passed).",
-          "typeArgument": "Event"
+          "doc": "Invoked after form submit (no automatic validation).",
+          "typeArgument": "EditContext"
         },
         {
-          "name": "childContent",
-          "category": "RenderFragment",
+          "name": "onValidSubmit",
+          "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "EditForm",
-          "type": "RenderFragment",
+          "type": "EventCallback<EditContext>",
           "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "doc": "Invoked after a successful submit (validation passed).",
+          "typeArgument": "EditContext"
+        },
+        {
+          "name": "onInvalidSubmit",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "EditForm",
+          "type": "EventCallback<EditContext>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "doc": "Invoked after a failed submit (validation failed).",
+          "typeArgument": "EditContext"
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "EditForm",
+          "type": "(context: EditContext) => RenderFragment",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Form contents (the inputs)."
+          "doc": "Form contents (the inputs); receives the cascaded EditContext. Blazor's\n RenderFragment<EditContext> — Tsazor's spelling is the function type.",
+          "typeArgument": "EditContext"
         },
         {
           "name": "additionalAttributes",
@@ -1813,20 +1883,26 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         },
         {
           "name": "notAuthorized",
-          "category": "RenderFragment",
+          "category": "RenderFragment<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "AuthorizeView",
-          "type": "RenderFragment",
+          "type": "(state: AuthenticationState) => RenderFragment",
           "references": [
+            {
+              "name": "AuthenticationState",
+              "kind": "runtime",
+              "imported": "AuthenticationState"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Rendered when access is denied (Razor's <NotAuthorized>)."
+          "doc": "Rendered when access is denied; receives the AuthenticationState\n (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>).",
+          "typeArgument": "AuthenticationState"
         },
         {
           "name": "authorizing",
@@ -1945,20 +2021,26 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         },
         {
           "name": "notAuthorized",
-          "category": "RenderFragment",
+          "category": "RenderFragment<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "AuthorizeRouteView",
-          "type": "RenderFragment",
+          "type": "(state: AuthenticationState) => RenderFragment",
           "references": [
+            {
+              "name": "AuthenticationState",
+              "kind": "runtime",
+              "imported": "AuthenticationState"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Rendered when access is denied (Razor's <NotAuthorized>)."
+          "doc": "Rendered when access is denied; receives the AuthenticationState\n (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>).",
+          "typeArgument": "AuthenticationState"
         },
         {
           "name": "authorizing",
