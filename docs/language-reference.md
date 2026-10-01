@@ -378,8 +378,9 @@ nicht mehr als `ChildContent` oder als Komponente gerendert:
   Kontext aller ihrer `RenderFragment<T>`-Child-Contents (Komponente, Slot und
   generisches `ChildContent`), **`Context="y"` auf dem Slot** überschreibt es
   für genau diesen. Der Wert muss literal sein — ein TypeScript-Bezeichner
-  (anders als Razor, das den Kontexttyp kennt, ist er hier `any`, bis 2.4
-  typisierte Shadows ihn prüfen). Geschachtelte Templates mit demselben
+  (der Kontexttyp stammt aus dem `typeArgument`; siehe
+  [Typisierte Shadows](#typisierte-shadows-und-tsazor-check-24), der
+  Runtime-Platzhalter `unknown` bleibt `any`). Geschachtelte Templates mit demselben
   Kontextnamen ⇒ TZS029 in der inneren (Razors Vorschlag: `Context="another_name"`).
 - **Typargument-Attribute** einer generischen Komponente (`TItem="Person"`, ein
   Attribut pro `@typeparam`) sind Schablonen-Syntax — kein Attribut zur Laufzeit:
@@ -397,6 +398,50 @@ nicht mehr als `ChildContent` oder als Komponente gerendert:
   deren `ChildContent` — ist dieser ein `RenderFragment<T>`, nimmt er den
   Kontext (`Context=`, sonst `context`) und wird als Template emittiert; ein
   eine Komponente ohne `ChildContent`-Parameter duldet keinen Element-Inhalt (TZS025).
+
+## Typisierte Shadows und tsazor check (2.4)
+
+Der Typ-Layer baut für jede `.tsazor` ein **Shadow-Modul** (`<dir>/<Name>.tsazor.gen.ts`,
+virtuell — es liegt nie auf der Platte): der generierte TS-Code plus Typ-Hilfen, das
+Sprachserver und `tsazor check` dagegen diagnostizieren. Seit 2.4 ist der Shadow
+typisiert:
+
+- **Prop-Prüfungen pro Komponenten-Tag.** Jedes Attribut einer Komponente mit
+  Metadaten wird als `satisfies`-Check-Objekt emittiert — eigene Parameter
+  (`declaredBy === name`) mit ihrem deklarierten Typ, Fremd-Parameter ohne. Nur die
+  Kategorien `value` und `string` werden geprüft; `mixedValue`-Werte,
+  EventCallback- und RenderFragment-Attribute bleiben untypisiert (wie Razor, wo
+  Attribut-Werte als Strings über den Renderer laufen). Diagnostik erscheint auf der
+  Quellzeile der `.tsazor`.
+- **Typisierte Slot-Kontexte.** Ein Slot-Body eines `RenderFragment<T>`-Parameters
+  bekommt `context` (bzw. `Context=...`) mit dem `typeArgument` als Typ —
+  `context: Person` statt `any` (schließt den 2.3-Hinweis „bis 2.4" ein, auch die
+  `TItem`-Inferenz über die Typschicht: exakt oder via `TItem[]`). Steht der
+  Runtime-Platzhalter `typeArgument === "unknown"` (untypisierter Delegat, z. B.
+  Virtualize `itemTemplate`), bleibt der Kontext absichtlich `any`.
+- **Typisierte `@ref`.** Element-`@ref`s kommen per Cast über die
+  `HTML`-/`SVGElementTagNameMap` an ihren Tag-Typ (TS2740-False-Positive weg),
+  Komponenten-`@ref`s über die Component-Reference-Capture — mit Import-Anpassung
+  (`rebaseTypeImport`) für importierte Typen. Runtime-Kurz-refs (`Element`-Familie)
+  erhalten hygienische lokale Namen. Shadows re-exportieren die Komponentenklasse
+  per Name (`export { X }`), damit Rewrite-B-named-Imports gegen die Schatten
+  auflösen; Schatten importierter Fremdpaket-Komponenten werden automatisch
+  mitgebaut (Cascade über Paketgrenzen).
+- **`tsazor check`** (`tsazor check [project-root]`, Exit 1 bei Fehlern) prüft in
+  zwei Durchläufen: Compiler-Diagnosen + Shadow-Bau aller Projekt-`.tsazor`
+  (auch ungeschriebene Dateien), danach TS-Diagnosen über den kompletten
+  Schatten-Graphen. Ausgabe `datei(zeile,spalte) code message` (posix, 1-basiert).
+  Das Vite-Plugin kann dasselbe als `check: true` ans Build-Ende hängen — Fehler
+  brechen den Build.
+- **Echtes `.d.ts` je Komponente.** Aus dem Package-Manifest baut
+  `componentTypeDeclarations` pro exportierter Komponente
+  `dist/<Name>.d.ts`: eigene Parameter mit Doc-Kommentar und deren Typ
+  (Runtime-Typen via `@tsazor/runtime`), generisches `@inherits` als
+  Klassen-Generikum (`export default class TextInput extends InputBase<string> { … }`) —
+  der permissive `export const X: any`-Index ist weg.
+- **Ambient-Typen.** `*.tsazor` (Default-Komponente) und `virtual:tsazor-routes`
+  sind als `@tsazor/vite-plugin/client` deklariert — Apps tragen das in
+  `compilerOptions.types` ein statt `types.d.ts` zu kopieren.
 
 ## Kompatibilität .razor ↔ .tsazor
 

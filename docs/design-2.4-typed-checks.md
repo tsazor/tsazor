@@ -72,3 +72,28 @@ typisierten Parametern (aus dem Manifest) statt `export const X: any`. Ambient-
 Typen für `*.tsazor` und `virtual:tsazor-routes` ziehen in
 `@tsazor/vite-plugin/client` — die kopierten `types.d.ts` der Apps entfallen.
 `tsazor check` kommt in die Gate-Scripts jeder App.
+
+## 7. Stand (implementiert, Branch `roadmap/p2-4-typed-checks`)
+
+Umgesetzt wie in §1–§6, mit diesen Deltas:
+
+- **Slot-Kontexte:** der Runtime-Platzhalter `typeArgument === "unknown"`
+  (untypisierter Delegat, z. B. Virtualize `itemTemplate`) lässt den Kontext
+  **absichtlich** `any` — das Design sagte nur „unauflösbar ⇒ any"; hier ist
+  der Unterschied, dass er *auflösbar* ist, aber kein echter Typ dahintersteht.
+- **Schatten re-exportieren die Komponentenklasse per Name** (`export { X }`) —
+  nicht im Entwurf, aber nötig, weil Apps Paket-Komponenten als named imports
+  (Rewrite B importieren) und die Schatten sonst TS2614 werfen.
+- **Cross-Package-Cascade:** Schatten importierter Fremdpaket-`.tsazor` (Rewrite-B-
+  Ziele außerhalb des Projektroots) baut der TypeService beim `buildEntry`
+  automatisch mit — cycle-guarded über ein `building`-Set. Der Entwurf hatte den
+  T4-Scan nur für Dateien *innerhalb* des Roots vorgesehen (TS2307 in der Gallery).
+- **`checkProject` ist Two-Pass:** Pass 1 Compiler-Diagnosen + Shadow-Bau aller
+  Dateien, erst dann Pass 2 TS-Diagnosen über den kompletten Graphen — sonst
+  meldet der Typschicht-Import eines Schatten den noch nicht gebauten
+  Nachbar-Schatten als TS2307.
+- **Akzeptanz-Meßpunkt:** die Fixture `packages/lsp/test/check.test.ts` pinnt beide
+  `RedirectToLogin`-Bugs — `this.nav` auf injiziertem `Nav` als TS2551/TS2339
+  (TS gibt bei Nah-Treffer „Did you mean?" statt 2339) und `buildRenderTree` in
+  `@code` als TZS020; der korrigierte Port prüft clean. `tsazor check` gegen das
+  ungetrackte `apps/fluentcms-admin` (read-only): `RedirectToLogin.tsazor` 0 Befunde.

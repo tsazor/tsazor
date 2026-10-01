@@ -811,6 +811,49 @@ LSP-Completion/Hover für Slots (2.5).
 - `tsazor check` in die Gates aller Apps aufnehmen. **Messpunkt:** die zwei
   `RedirectToLogin`-Bugs müssen gemeldet werden.
 
+**Stand: 2.4 umgesetzt** (Branch `roadmap/p2-4-typed-checks`; Details in
+[design-2.4-typed-checks.md](design-2.4-typed-checks.md), Regeln in
+[language-reference.md](language-reference.md#typisierte-shadows-und-tsazor-check-24)).
+Der Compiler akzeptiert `typedShadow: true` und emittiert dann in jede Shadow pro
+Komponenten-Tag ein `satisfies`-Check-Objekt mit den eigenen Parametern — Kategorie
+`value`/`string` typisiert, `mixedValue`/EventCallback/RenderFragment bewusst untypisiert
+(wie Razor, wo Attribut-Werte als Strings über den Renderer laufen). Slot-Kontexte kommen
+aus `RenderFragment<T>`-`typeArgument` (`context: Person` statt `any`); der Runtime-Platzhalter
+des untypisierten Delegaten (`typeArgument === "unknown"`, z. B. Virtualize `itemTemplate`)
+lässt `any` stehen — Absicht, nicht Lücke. `@ref`: Elemente per
+`HTML/SVGElementTagNameMap` gecastet (TS2740-False-Positive weg), Komponenten-`@ref` über
+`ComponentReferenceCapture`; Runtime-Kind-refs laufen jetzt über hygienische `alias()`-Namen,
+Import-Typen über den `rebaseTypeImport`-Hook (`shadowTypeImports`-Header). `TItem`-Inferenz
+läuft durch die Typschicht: `typedInference`-Requests (je Tag-Position), Unify exakt oder
+über `TItem[]` (4-Pass, `buildEntry`-Schleife statt 2). Shadows exportieren die
+Komponentenklasse zusätzlich per Name (`export { X }`), damit Rewrite-B-named-Imports gegen
+die Schatten auflösen. Der TypeService stellt Schatten für importierte Fremdpaket-.tsazor
+automatisch sicher (Cascade, cycle-guarded) — Gallery-Fehler TS2307 weg.
+
+Check: `checkProject` (Two-Pass — Pass 1 Compiler-Diagnosen + Shadow-Bau **aller** Dateien
+[T4], Pass 2 TS-Diagnosen über den kompletten Graphen) in `@tsazor/lsp`, CLI-Paket
+`@tsazor/cli` (`tsazor check [root]`, Exit 1 bei Fehlern), optionaler Vite-Hook
+`check: true` (am Build-Ende, Fehler brechen den Build). Ein echtes `dist/<Name>.d.ts` je
+Komponente baut `componentTypeDeclarations` aus dem Package-Manifest (eigene Parameter mit
+Doc-Kommentar, generisches `@inherits` als Klassen-Generikum, Runtime-refs via
+`@tsazor/runtime`-Import); die `build-entry`-Skripte von fluent/components schreiben das statt
+des permissive `export const X: any`-Index. Ambient-Typen für `*.tsazor` und
+`virtual:tsazor-routes` liegen in `@tsazor/vite-plugin/client` — die kopierten
+`types.d.ts` sind gelöscht (blazing-pizza hat jetzt überhaupt ein tsconfig). Jede App hat
+`check`-Script und `tsazor check &&` vor den Build.
+
+Messpunkt erfüllt: die Zwei-Bugs-Acceptance-Fixture (`packages/lsp/test/check.test.ts`) pinnt,
+dass `this.nav` gegen injiziertes `Nav` als TS2551/TS2339 auf der Quellzeile
+(„Did you mean 'Nav'?") und ein `buildRenderTree` in `@code` als TZS020 gemeldet werden — der
+korrigierte Port (wie committed) prüft clean. `tsazor check` gegen das ungetrackte
+`apps/fluentcms-admin` des Users (read-only, nichts geändert): `RedirectToLogin.tsazor`
+0 Befunde; weitere 3 Befunde betreffen reales in-progress-Scaffolding (fehlendes
+`MainLayout.tsazor`, `@using ./fields`/`./ui` ohne Verzeichnisse). Gates: 1018/1018 Tests
+(72 Dateien), LSP-Smokes passieren, Pizza/Gallery/Sleipnir/Demo-E2E
+(components 31, scoped 10, code-behind 5, debugging 14, counter-state 8) grün; alle vier
+Apps `tsazor check: 0 error(s)`. FluentCMS-Probe unverändert 149/164. **Offen:** LSP
+projektweit (2.5) — Multi-Root/tsconfig-Auswahl nutzt den hier gebauten Service.
+
 ### 2.5 — LSP projektweit
 
 Multi-Root und pro App die richtige tsconfig (statt `workspaceFolders[0]`),
