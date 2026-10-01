@@ -8,6 +8,11 @@ TypeScript: für .NET-Entwickler (geringer Migrationsaufwand von Blazor, Brücke
 **und** für Frontend-Entwickler außerhalb des Microsoft-Umfelds, die dieses Modell in idiomatischem
 TypeScript nutzen wollen. Beide Zielgruppen sind gleichrangig.
 
+Kurz: **Blazor, mit C# durch TypeScript ersetzt.** Dasselbe Entwicklungsmodell, dieselben
+Razor-Templates, dasselbe CSS (Scoped CSS als `X.tsazor.css` mit `::deep`, wie `X.razor.css`) —
+und TypeScript ist TypeScript. Keine Mischform aus C# und TS: Sie verwirrt beide Zielgruppen.
+Portierungsaufwand wird an anderer Stelle gelöst, größtenteils automatisiert (Codemod).
+
 ## Markup ist Razor, Code ist TypeScript, die Brücke ist Werkzeug
 
 1. **Markup und Direktiven: 1:1 Blazor.** Tags, Attribute, `@bind`, `@onclick`, `@page`,
