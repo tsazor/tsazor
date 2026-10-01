@@ -1,4 +1,4 @@
-import { compile, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
+import { compile, type CompileOptions, type CompileResult, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
 import { transformSync } from "esbuild";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -22,6 +22,10 @@ export interface TransformTsazorResult {
   diagnostics: DiagnosticBag;
   /** Diagnostics of the _Imports.tsazor files in the chain, located in those files. */
   importsDiagnostics: ReadonlyArray<{ file: string; diagnostic: TszDiagnostic }>;
+  /** 4.1: absolute component files the tags of this file resolved to (metadata edges). */
+  componentFiles: string[];
+  /** 4.1: compile metadata of the file (routes, unresolved tags, layout). */
+  metadata: CompileResult["metadata"];
 }
 
 /**
@@ -42,6 +46,13 @@ export async function transformTsazor(
   const chain = await collectImports(path.dirname(filePath), projectRoot);
   const context = createFileContext(filePath, chain);
   const extraImports: string[] = [];
+  /** Which local component files the tags resolve to — HMR invalidation edges (4.1). */
+  const componentFiles = new Set<string>();
+  const resolveComponentMetadata: NonNullable<CompileOptions["resolveComponentMetadata"]> = (tagName, usings, imports) => {
+    const metadata = context.resolveComponentMetadata(tagName, usings, imports);
+    if (metadata?.file !== undefined && path.isAbsolute(metadata.file)) componentFiles.add(metadata.file);
+    return metadata;
+  };
 
   // Code-behind: when a sibling X.tsazor.ts exists (the compiled module's
   // own default import), the generated class extends its default export.
@@ -63,6 +74,7 @@ export async function transformTsazor(
 
   const compiled = compile(code, {
     ...resolutionOptions(context),
+    resolveComponentMetadata,
     fileName: filePath,
     imports: extraImports,
     codeBehindClass,
@@ -88,7 +100,7 @@ export async function transformTsazor(
   } catch (error) {
     // Generated code from erroneous source may not parse (a TZS024 syntax
     // error): the located compiler diagnostics explain it, not esbuild.
-    if (compiled.diagnostics.hasErrors) return { code: "", map: null, diagnostics: compiled.diagnostics, importsDiagnostics };
+    if (compiled.diagnostics.hasErrors) return { code: "", map: null, diagnostics: compiled.diagnostics, importsDiagnostics, componentFiles: [...componentFiles], metadata: compiled.metadata };
     throw error;
   }
 
@@ -96,5 +108,5 @@ export async function transformTsazor(
     ? chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`)
     : null;
   const hmr = options.hmr !== false ? hmrAppendix(context.className) : "";
-  return { code: transpiled.code + hmr, map, diagnostics: compiled.diagnostics, importsDiagnostics };
+  return { code: transpiled.code + hmr, map, diagnostics: compiled.diagnostics, importsDiagnostics, componentFiles: [...componentFiles], metadata: compiled.metadata };
 }

@@ -157,6 +157,9 @@ export interface CodegenResult {
     injects: Array<{ type: string; name: string }>;
     typeParams: string[];
     inherits?: string;
+    /** Uppercase tags that resolved to nothing (TZS005) — HMR: when such a
+     *  tag's component file appears, dependents re-transform (4.1). */
+    unresolvedTags: string[];
     /** Echo of options.scopeHash (scoped-CSS attribute name), when set. */
     scopeHash?: string;
     /** Echo of options.codeBehindClass (sibling X.tsazor.ts base class), when set. */
@@ -268,7 +271,7 @@ class Codegen {
   /** Locals declared by loops / inline code — emitted without a `this.` prefix —
    *  and how they were declared (a `@bind` cannot target the read-only ones). */
   private readonly locals = new Map<string, LocalKind>();
-  private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [] };
+  private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [], unresolvedTags: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
   private readonly importedNames = new Set<string>();
   /** `@import`-ed names bound to @tsazor/runtime — local name → exported name
@@ -817,6 +820,7 @@ class Codegen {
     const resolved = this.options.resolveComponent?.(tagName, usings) ?? null;
     if (!resolved) {
       this.diagnostics.warning("TZS005", pos, `Component '<${tagName}>' could not be resolved; it will be emitted as an element.`);
+      this.metadata.unresolvedTags.push(tagName);
       this.componentLocalNames.set(tagName, "__tsazor_unresolved");
       return null;
     }

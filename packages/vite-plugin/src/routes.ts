@@ -37,10 +37,30 @@ async function* walkTsazorFiles(dir: string, root: string): AsyncGenerator<strin
   }
 }
 
-/** Scans the project for @page components and their layouts. */
+/**
+ * The directory a scan bounds itself to (4.1): `<root>/src` when it exists —
+ * sources live there in every repo app — so tests, scripts and tooling files
+ * outside never enter the route manifest or the warmup. Without a `src` the
+ * project root itself is the bound.
+ */
+export function scanRootOf(root: string): string {
+  const srcDir = path.join(path.resolve(root), "src");
+  return existsSync(srcDir) ? srcDir : path.resolve(root);
+}
+
+/** All .tsazor component files under `dir` (excluding _Imports), absolute. */
+export async function listTsazorFilesUnder(dir: string): Promise<string[]> {
+  const result: string[] = [];
+  for await (const filePath of walkTsazorFiles(path.resolve(dir), path.resolve(dir))) {
+    result.push(filePath);
+  }
+  return result;
+}
+
+/** Scans the project for @page components and their layouts (bounded by scanRootOf). */
 export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
   const routes: ScannedRoute[] = [];
-  for await (const filePath of walkTsazorFiles(path.resolve(root), path.resolve(root))) {
+  for await (const filePath of walkTsazorFiles(scanRootOf(root), path.resolve(root))) {
     const source = await readFile(filePath, "utf8");
     if (!/@page\b/.test(source)) continue;
     const className = classNameForFile(filePath);
@@ -72,12 +92,12 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
  * Root-relative dev-module URLs of all .tsazor components (pages + plain
  * components) — the input for dev-server warmup, so compile errors inside
  * verbatim @code surface at startup instead of on the first page visit.
+ * Bounded by scanRootOf (4.1).
  */
 export async function scanTsazorModules(root: string): Promise<string[]> {
-  const rootPath = path.resolve(root);
   const urls: string[] = [];
-  for await (const filePath of walkTsazorFiles(rootPath, rootPath)) {
-    urls.push(toRootRelativeSpecifier(rootPath, filePath));
+  for await (const filePath of walkTsazorFiles(scanRootOf(root), path.resolve(root))) {
+    urls.push(toRootRelativeSpecifier(root, filePath));
   }
   return urls;
 }
@@ -127,7 +147,7 @@ export function generateRoutesModule(root: string, routes: ScannedRoute[]): stri
  * Root-relative specifier (`/src/Pages/Counter.tsazor`) — the virtual routes
  * module has no real path of its own, so imports resolve against the Vite root.
  */
-function toRootRelativeSpecifier(root: string, target: string): string {
-  const relative = path.relative(root, path.resolve(target)).replace(/\\/g, "/");
+export function toRootRelativeSpecifier(root: string, target: string): string {
+  const relative = path.relative(path.resolve(root), path.resolve(target)).replace(/\\/g, "/");
   return `/${relative}`;
 }
