@@ -142,7 +142,7 @@ describe("C13 — templated components", () => {
     @Parameter() RowTemplate!: RenderFragment<string>;
 }`;
 
-  it.fails("named RenderFragment<T> slot with @context", async () => {
+  it("named RenderFragment<T> slot with @context", async () => {
     const m = await mount({
       "Test.tsazor": `<Grid Items="@items"><RowTemplate><td>@context</td></RowTemplate></Grid>\n@code { private items = ["a", "b"]; }`,
       "Grid.tsazor": grid,
@@ -150,7 +150,7 @@ describe("C13 — templated components", () => {
     expect(m.html()).toBe("<tr><td>a</td></tr><tr><td>b</td></tr>");
   });
 
-  it.fails("Context=\"row\" renames the context parameter", async () => {
+  it("Context=\"row\" renames the context parameter", async () => {
     const m = await mount({
       "Test.tsazor": `<Grid Items="@items"><RowTemplate Context="row"><td>@row</td></RowTemplate></Grid>\n@code { private items = ["a"]; }`,
       "Grid.tsazor": grid,
@@ -158,7 +158,7 @@ describe("C13 — templated components", () => {
     expect(m.html()).toBe("<tr><td>a</td></tr>");
   });
 
-  it.fails("named non-generic slots next to each other", async () => {
+  it("named non-generic slots next to each other", async () => {
     const m = await mount({
       "Test.tsazor": `<Panel><Header><h1>H</h1></Header><Body><p>B</p></Body></Panel>`,
       "Panel.tsazor": `<section>@Header@Body</section>\n@code { @Parameter() Header?: RenderFragment; @Parameter() Body?: RenderFragment; }`,
