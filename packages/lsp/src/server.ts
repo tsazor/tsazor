@@ -44,6 +44,7 @@ const COMPLETION_KINDS: Record<CompletionKind, CompletionItemKind> = {
   attribute: CompletionItemKind.Property,
   directive: CompletionItemKind.Keyword,
   member: CompletionItemKind.Value,
+  slot: CompletionItemKind.Interface,
 };
 
 const DIAGNOSTICS_CAP = 200;

@@ -1,20 +1,25 @@
 /**
  * Completion for .tsazor files: classifies the cursor position from the raw
  * source (the AST has no per-attribute-name/value spans) and returns
- * candidates for four contexts:
+ * candidates for five contexts:
  *
  *   <Gr                    → component tags (@using dirs, package exports, runtime built-ins)
+ *                                and, inside a component's content, its named slots
+ *                                (`<Found>` — the RenderFragment parameters of the
+ *                                direct parent, 2.5)
  *   <Greeter …             → the resolved component's parameters (2.1 metadata,
  *                            incl. inherited; @bind-X where XChanged is an
  *                            EventCallback), plus directive attributes (@bind, @onclick, …)
- *   @                      → directives (top level) or expression members
+ *   @                      → directives (top level) or expression members — members
+ *                            include the fragment's context variable inside a slot body
  *   Count: @co             → members of @code state, the code-behind class, @inject fields
  *                            and @import names (own + inherited from _Imports.tsazor)
+ *   <Found …               → of a slot: the Context attribute (RenderFragment<T> only)
  *
  * Positions: LSP (0-based line/character) in, completions out. The compiler's
  * AST spans are 1-based/0-based-columns — nodeAt already handles the shift.
  */
-import type { CodeBlockNode, ComponentParameter, ElementNode, ExpressionNode } from "@tsazor/compiler";
+import type { CodeBlockNode, ComponentParameter, ElementNode, ExpressionNode, MarkupNode } from "@tsazor/compiler";
 import {
   RUNTIME_MANIFEST,
   RUNTIME_PACKAGE,
@@ -27,8 +32,18 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
+import {
+  chainAt,
+  contextNameOf,
+  elementMetadata,
+  enclosingElementOf,
+  fragmentParametersOfParent,
+  fragmentContextAt,
+  innermostElementOf,
+  slotParameterOf,
+} from "./slots.js";
 
-export type CompletionKind = "component" | "attribute" | "directive" | "member";
+export type CompletionKind = "component" | "attribute" | "directive" | "member" | "slot";
 
 export interface CompletionCandidate {
   label: string;
@@ -51,12 +66,13 @@ export function completeAt(analyzed: AnalyzedFile, line: number, character: numb
     const expression = node as ExpressionNode;
     const start = offsetAt(source, expression.pos.line - 1, expression.pos.column);
     const prefix = source.slice(start, cursor).replace(/^@/, "");
+    const context = slotContextCandidates(analyzed, chainAt(analyzed, line, character));
     if (directiveShapedLine(typed)) {
       // Line so far is only "@word": could be a directive or an expression —
       // offer both (VS Code filters by the remaining prefix either way).
-      return [...directiveCandidates(prefix), ...memberCandidates(analyzed, prefix)];
+      return [...directiveCandidates(prefix), ...memberCandidates(analyzed, prefix, context)];
     }
-    return memberCandidates(analyzed, prefix);
+    return memberCandidates(analyzed, prefix, context);
   }
 
   if (node?.kind === "directive") {
@@ -66,16 +82,51 @@ export function completeAt(analyzed: AnalyzedFile, line: number, character: numb
   if (node?.kind === "element") {
     const element = node as ElementNode;
     const region = classifyTagRegion(analyzed, element, cursor);
-    if (region.state === "past") return plainFallback(analyzed, typed); // cursor in the element's content
+    const chain = chainAt(analyzed, line, character);
+    if (region.state === "past") return contentCandidates(analyzed, typed, chain); // cursor in the element's content
     if (region.state === "value") return [];
     if (region.state === "tagName") {
-      if (/^[A-Za-z]/.test(region.prefix) || region.prefix === "") return componentCandidates(analyzed, region.prefix);
+      if (/^[A-Za-z]/.test(region.prefix) || region.prefix === "") {
+        const fragments = fragmentParametersOfParent(analyzed, chain, true);
+        return [...tagCandidates(analyzed, chain, true, region.prefix), ...componentCandidates(analyzed, region.prefix).filter(notSlotTag(fragments))];
+      }
       return [];
     }
-    return attributeCandidates(analyzed, element, region.prefix);
+    return attributeCandidates(analyzed, element, region.prefix, chain);
   }
 
+  const context = slotContextCandidates(analyzed, chainAt(analyzed, line, character));
+  if (context.length > 0) {
+    const tags = plainFallback(analyzed, typed);
+    return tags.length > 0 ? tags : context;
+  }
   return plainFallback(analyzed, typed);
+}
+
+/**
+ * Content region of the innermost element: a tag being typed — slot and
+ * component candidates of the host; an expression — members with the
+ * fragment's context variable.
+ */
+function contentCandidates(analyzed: AnalyzedFile, typed: string, chain: readonly MarkupNode[]): CompletionCandidate[] {
+  const tagTyped = typed.match(/<(?:([A-Za-z][\w.\-]*))?$/);
+  if (tagTyped !== null) {
+    const fragments = fragmentParametersOfParent(analyzed, chain, false);
+    return [
+      ...tagCandidates(analyzed, chain, false, tagTyped[1] ?? ""),
+      ...componentCandidates(analyzed, tagTyped[1] ?? "").filter(notSlotTag(fragments)),
+    ];
+  }
+  const expressionTyped = typed.match(/@([\w$]*)$/);
+  if (expressionTyped !== null) {
+    const word = expressionTyped[1] ?? "";
+    const context = slotContextCandidates(analyzed, chain);
+    if (directiveShapedLine(typed)) {
+      return [...directiveCandidates(word), ...memberCandidates(analyzed, word, context)];
+    }
+    return memberCandidates(analyzed, word, context);
+  }
+  return [];
 }
 
 /** Text-level fallback: a freshly typed `<tag` or `@…` outside any AST span. */
@@ -165,7 +216,7 @@ const ELEMENT_ATTRS: ReadonlyArray<{ label: string; doc?: string }> = [
   { label: "data-testid", doc: "Test hook attribute." },
 ];
 
-function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefix: string): CompletionCandidate[] {
+function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefix: string, chain?: readonly MarkupNode[]): CompletionCandidate[] {
   const items: CompletionCandidate[] = [];
   const push = (candidate: CompletionCandidate): void => {
     if (!items.some((i) => i.label === candidate.label)) items.push(candidate);
@@ -185,6 +236,20 @@ function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefi
         kind: "attribute",
         detail: "two-way binding",
         doc: `Binds ${param.name} and ${changed.name} (like Blazor's @bind-Value).`,
+      });
+    }
+    // Context (2.5): renames the context variable of a RenderFragment<T> child
+    // content — on a slot element (its own context) or on the component (its
+    // generic ChildContent's context).
+    const slot = chain === undefined ? null : slotParameterOf(analyzed, chain, element);
+    const generic = slot !== null && slot.category === "RenderFragment<T>";
+    const childContentGeneric = contextNameCandidateOf(analyzed, element, slot !== null);
+    if (generic || childContentGeneric) {
+      push({
+        label: "Context",
+        kind: "attribute",
+        detail: generic ? `slot context name (RenderFragment<${slot!.typeArgument ?? "unknown"}>)` : "context name of the generic ChildContent body",
+        doc: 'Renames the context variable of the RenderFragment<T> body (default: `context`).',
       });
     }
   }
@@ -212,6 +277,14 @@ function parametersOfComponent(analyzed: AnalyzedFile, tagName: string): readonl
 function parameterDetail(tagName: string, parameter: ComponentParameter): string {
   const type = parameter.type ?? parameter.inferredType;
   return `${tagName} · ${parameter.category}${type ? ` · ${type}` : ""}`;
+}
+
+/** True when the element is a component (not itself a slot) with a generic
+ *  ChildContent parameter — its Context attribute renames the body's context. */
+function contextNameCandidateOf(analyzed: AnalyzedFile, element: ElementNode, isSlot: boolean): boolean {
+  if (isSlot) return false;
+  const child = elementMetadata(analyzed, element.tagName)?.parameters.find((p) => p.name === "ChildContent");
+  return child !== undefined && child.category === "RenderFragment<T>";
 }
 
 /* Component tag candidates ----------------------------------------------------- */
@@ -253,6 +326,56 @@ function componentCandidates(analyzed: AnalyzedFile, prefix: string): Completion
   }
   const needle = prefix.toLowerCase();
   return items.filter((item) => item.label.toLowerCase().startsWith(needle)).sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/* Slot candidates --------------------------------------------------------------- */
+
+/**
+ * Tag candidates of the component whose content hosts the cursor (2.5
+ * slots): each RenderFragment / RenderFragment<T> parameter is set by a child
+ * content element naming it. `notSlotTag` removes those labels from the
+ * component list — a shadowing component may exist, but as a direct child of
+ * the parent the slot binds first (how the compiler resolves it, TZS025's
+ * rename rule). The direct parent only (TZS027): inside a slot's fragment
+ * body or nested in markup no slot applies.
+ */
+function tagCandidates(analyzed: AnalyzedFile, chain: readonly MarkupNode[], tagNameRegion: boolean, prefix: string): CompletionCandidate[] {
+  const innermost = innermostElementOf(chain);
+  const parent = tagNameRegion ? (innermost === null ? null : enclosingElementOf(chain, innermost)) : innermost;
+  if (parent === null || !parent.isComponent) return [];
+  const parameters = fragmentParametersOfParent(analyzed, chain, tagNameRegion);
+  const needle = prefix.toLowerCase();
+  return parameters
+    .filter((parameter) => parameter.name.toLowerCase().startsWith(needle))
+    .map((parameter) => ({
+    label: parameter.name,
+    kind: "slot" as const,
+    detail: `slot of <${parent.tagName}> · ${parameter.category}`,
+    doc:
+      parameter.category === "RenderFragment<T>"
+        ? `\`<${parameter.name}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\`. RenderFragment<${parameter.typeArgument ?? "unknown"}> — \`${contextNameOf(parent) ?? "context"}\` is the body's context (own \`Context="…"\` renames it).`
+        : `\`<${parameter.name}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\` (RenderFragment).`,
+    snippet: parameterTagSnippet(parameter),
+  }));
+}
+
+const parameterTagSnippet = (parameter: ComponentParameter): string => {
+  const generic = parameter.category === "RenderFragment<T>";
+  const context = generic && /^[A-Za-z_$][\w$]*$/.test(parameter.typeArgument ?? "") ? ` Context="${parameter.typeArgument}"` : "";
+  return `${parameter.name}${context}>\n\t$0\n</${parameter.name}>`;
+};
+
+/** Component list minus the labels the host's fragment parameters covered. */
+function notSlotTag(parameters: readonly ComponentParameter[]): (candidate: { label: string }) => boolean {
+  const tags = new Set(parameters.map((parameter) => parameter.name));
+  return (candidate) => !tags.has(candidate.label);
+}
+
+/** The fragment's context variable as an extra member candidate (2.5). */
+function slotContextCandidates(analyzed: AnalyzedFile, chain: readonly MarkupNode[]): CompletionCandidate[] {
+  const context = fragmentContextAt(analyzed, chain);
+  if (context === null) return [];
+  return [{ label: context.name, kind: "member", detail: `slot context · ${context.type}` }];
 }
 
 /* Directive candidates ---------------------------------------------------------- */
@@ -316,8 +439,9 @@ export function memberNamesOf(source: string, origin: string): CompletionCandida
   return [...items.values()];
 }
 
-function memberCandidates(analyzed: AnalyzedFile, prefix: string): CompletionCandidate[] {
+function memberCandidates(analyzed: AnalyzedFile, prefix: string, extra: readonly CompletionCandidate[] = []): CompletionCandidate[] {
   const members = new Map<string, CompletionCandidate>();
+  for (const candidate of extra) members.set(candidate.label, candidate); // e.g. the slot context — not a class member
   const sources: Array<[string, string]> = [
     ...memberCodeSources(analyzed).map((code, i) => [`@code #${i + 1}`, code] as [string, string]),
   ];

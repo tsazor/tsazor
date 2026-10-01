@@ -28,6 +28,23 @@ beforeAll(async () => {
     'import { ComponentBase, Parameter } from "@tsazor/runtime";\nexport default class Fancy extends ComponentBase {\n    @Parameter() behind?: string;\n}\n',
   );
   await writeFile(path.join(dir, "Shared", "TextBox.tsazor"), "@inherits InputBase<string>\n<input />\n");
+  // Templated component (2.3 metadata): Header/Footer are plain fragments, Row
+  // is generic — its body receives the context variable.
+  await writeFile(
+    path.join(dir, "Shared", "Cards.tsazor"),
+    [
+      "<table></table>",
+      "",
+      "@code {",
+      "    @Parameter() Title?: string;",
+      "    @Parameter() Header?: RenderFragment;",
+      "    @Parameter() Row?: RenderFragment<RowData>;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  // A component whose loose content IS a generic ChildContent (context var).
+  await writeFile(path.join(dir, "Shared", "Looper.tsazor"), "<div></div>\n\n@code {\n    @Parameter() ChildContent?: RenderFragment<string>;\n}\n");
   // _Imports makes root + Shared resolvable for every file below root.
   await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./Shared\n");
   cleanup = async () => rm(dir, { recursive: true, force: true });
@@ -185,6 +202,68 @@ describe("completeAt — expression members", () => {
     const source = "<p>@na</p>\n\n@code { name = \"x\"; count = 0; }\n";
     const labels = await complete(source, 0, 5);
     expect(labels).toEqual(["name"]);
+  });
+});
+
+describe("completeAt — slots (2.5)", () => {
+  const CARDS_PAGE = "<Cards>\n    <Row\n</Cards>\n";
+
+  it("offers the fragment parameters of the enclosing component as slot tags", async () => {
+    const labels = await complete(CARDS_PAGE, 1, 6); // after "<Ro"
+    expect(labels).toEqual(["Row", "Router", "RouteView"]); // slot first, runtime components matching the prefix
+  });
+
+  it("a component with the slot's name is shadowed by the slot in the parent's content", async () => {
+    await writeFile(path.join(root, "Pages", "Header.tsazor"), "<hr />\n");
+    try {
+      const labels = await complete("<Cards>\n    <Head\n</Cards>\n", 1, 8); // after "<Head"
+      expect(labels).toEqual(["Header"]); // the slot binds first (TZS025's rename rule says the same)
+    } finally {
+      await rm(path.join(root, "Pages", "Header.tsazor"));
+    }
+  });
+
+  it("still offers components that are no slots", async () => {
+    const labels = await complete("<Cards>\n    <Loo\n</Cards>\n", 1, 7); // after "<Loo"
+    expect(labels).toEqual(["Looper"]);
+  });
+
+  it("offers no slots inside a slot's fragment body (TZS027 nesting)", async () => {
+    const labels = await complete("<Cards>\n    <Row>\n        <He\n    </Row>\n</Cards>\n", 2, 12); // after "<He"
+    expect(labels).not.toContain("Header");
+    expect(labels).not.toContain("Row");
+  });
+
+  it("offers Context on a generic slot element", async () => {
+    const labels = await complete("<Cards>\n    <Row />\n</Cards>\n", 1, 9); // attribute-name position (the space before "/>")
+    expect(labels).toContain("Context");
+  });
+
+  it("offers no Context on non-generic parameters", async () => {
+    const labels = await complete(GREETER_PAGE, 3, 4);
+    expect(labels).not.toContain("Context");
+  });
+
+  it("offers the context variable in a slot body (default name)", async () => {
+    const labels = await complete("<Cards>\n    <Row>\n        <p>@co</p>\n    </Row>\n</Cards>\n", 2, 14); // after "@co"
+    expect(labels).toContain("context");
+  });
+
+  it("offers the renamed context variable (Context=\"user\")", async () => {
+    const labels = await complete("<Cards>\n    <Row Context=\"user\">\n        <p>@us</p>\n    </Row>\n</Cards>\n", 2, 14); // after "@us"
+    expect(labels).toContain("user");
+    expect(labels).not.toContain("context");
+  });
+
+  it("offers the context variable in a component's loose content (generic ChildContent)", async () => {
+    const labels = await complete("<Looper>\n    @co\n</Looper>\n", 1, 6); // after "@co"
+    expect(labels).toContain("context");
+  });
+
+  it("describes the context variable's type from the RenderFragment<T> argument", async () => {
+    const analyzed = await analyzeSource(path.join(root, "Pages", "Demo.tsazor"), "<Cards>\n    <Row>\n        <p>@</p>\n    </Row>\n</Cards>\n", root);
+    const context = completeAt(analyzed, 2, 12); // right after "@"
+    expect(context.find((c) => c.label === "context")?.detail).toBe("slot context · RowData");
   });
 });
 
