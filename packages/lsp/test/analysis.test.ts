@@ -6,7 +6,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { analyzeSource, definitionAt, hoverAt } from "../src/analysis";
+import { analyzeSource, definitionAt, hoverAt, lspRange, quickFixesAt } from "../src/analysis";
 
 let root = "";
 let cleanup: () => Promise<void>;
@@ -41,6 +41,22 @@ describe("analyzeSource", () => {
     const analyzed = await analyzeSource(filePath, "<NotHere />\n", root);
     const warning = analyzed.diagnostics.find((d) => d.code === "TZS005");
     expect(warning?.severity).toBe("warning");
+  });
+
+  it("publishes the range of the whole construct and its quick fix (A7)", async () => {
+    const filePath = path.join(root, "Loop.tsazor");
+    const analyzed = await analyzeSource(filePath, "<ul>\n  @foreach (var item in items) { <li>@item</li> }\n</ul>\n", root);
+    const diagnostic = analyzed.diagnostics.find((d) => d.code === "TZS021")!;
+    // `@foreach (var item in items)` on line 1 (0-based), columns 2…30.
+    expect(lspRange(diagnostic)).toEqual({ start: { line: 1, character: 2 }, end: { line: 1, character: 30 } });
+    const fixes = quickFixesAt(analyzed, { start: { line: 1, character: 5 }, end: { line: 1, character: 5 } });
+    expect(fixes.map((fix) => [fix.title, fix.edits])).toEqual([[
+      "Use '@foreach (const item of items)'",
+      [{ range: { start: { line: 1, character: 12 }, end: { line: 1, character: 29 } }, newText: "const item of items" }],
+    ]]);
+    // Outside the diagnostic: no fix; an empty compiler range still underlines one character.
+    expect(quickFixesAt(analyzed, { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } })).toEqual([]);
+    expect(lspRange({ pos: { line: 1, column: 0 }, endPos: { line: 1, column: 0 } })).toEqual({ start: { line: 0, character: 0 }, end: { line: 0, character: 1 } });
   });
 });
 

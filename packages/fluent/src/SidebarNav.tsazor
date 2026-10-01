@@ -2,7 +2,7 @@
     <ul class="fui-nav__list">
         @for (let i = 0; i < this.links.length; i++) {
             <li class="fui-nav__item">
-                <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@this.links[i]!.href">@this.links[i]!.label</NavLink>
+                <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@this.links[i]!.href" match="@(this.links[i]!.match ?? NavLinkMatch.Prefix)">@this.links[i]!.label</NavLink>
             </li>
         }
     </ul>
@@ -10,8 +10,8 @@
 </nav>
 
 @code {
-    /** Sidebar entries (rendered through runtime NavLink). */
-    @Parameter() links: { href: string; label: string }[] = [];
+    /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link). */
+    @Parameter() links: { href: string; label: string; match?: NavLinkMatch }[] = [];
     /** Accessible nav name. */
     @Parameter() ariaLabel: string = "Main navigation";
     /** Extra content below the links (e.g. section headers). */

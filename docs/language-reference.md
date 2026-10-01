@@ -230,6 +230,7 @@ Markup beginnt nur
 | `@bind:event="oninput"` | anderes DOM-Event |
 | `@bind:get="v" @bind:set="store"` | get-/set-Seite statt `@bind` (nur als Paar) |
 | `@bind:after="changed"` | nach der Zuweisung aufgerufen; ein Promise wird abgewartet, dann rendert die Komponente |
+| `<input @bind-value="name">`, `@bind-value:event="oninput"` | auf einem *Element* bindet `@bind-<attr>` das Attribut `<attr>` (Razor: `@bind-value` = `@bind` ausgeschrieben) mit `onchange`; Modifier und `number`/`date`-Coercion wie bei `@bind`, der Wert kommt aus dem Change-Event (`checked` bei Checkboxen, sonst `value`) |
 | `<Stepper @bind-Value="current" />` | `Value` + `ValueChanged` (EventCallback) |
 | `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | dieselben Modifier auf Komponenten |
 | `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-Callback-Parameter `OnPick` statt `ValueChanged` (Blazor) |
@@ -239,7 +240,12 @@ Markup beginnt nur
 genau dieser Ausdruck (nach der Member-Regel): Felder, Member-Pfade, Non-Null-Assertions
 (`Model!.Title`, `a.b!.c`), Element-Zugriffe (`items[i].name`, `map[key]`), Klammern und
 Type-Assertions. Optional Chaining (`a?.b`) ist nie zuweisbar (TS2779) ⇒ TZS008, ebenso
-Nicht-L-Values (`f()`, `a + b`). `ValueExpression` (Feldname für `EditContext`) ist der letzte
+Nicht-L-Values (`f()`, `a + b`). Ebenso TZS008 (zur Compile-Zeit statt erst zur Laufzeit): ein
+Bind auf einen nicht zuweisbaren Local — `const` (TS2588), `function`/`class`/`enum`, einen
+`@import` (TS2632, sofern kein Member gleich heißt) — und auf die Variable einer
+`for…of`/`for…in`-Schleife (C#: CS1656; auch mit `let`: die Zuweisung träfe nur die Kopie dieser
+Iteration und ginge beim nächsten Render verloren). Gebunden wird an einen Member (`item.name`)
+oder über einen Index (`@for (let i = 0; …)` + `items[i]`). `ValueExpression` (Feldname für `EditContext`) ist der letzte
 Member-Name des Pfads (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), auch aus `:get`.
 
 **Kombinationen** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` zusammen mit
@@ -266,6 +272,14 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 <Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
 ```
 
+- `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
+  aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
+  `http://…`) und case-insensitiv mit der aktuellen URI verglichen. `NavLinkMatch.All`: exakt
+  (Href darf zusätzlich auf `/` enden; Query und Fragment der aktuellen URI zählen nicht);
+  `Prefix` (Standard): zusätzlich alles darunter, an einem Trenner (`/abc` deckt `/abc/def` und
+  `/abc?x`, nicht `/abcdef`). Ein `Prefix`-Link auf die Basis (`Href=""`, ohne `<base>` auch
+  `Href="/"`) ist deshalb überall aktiv — der Home-Link nimmt `Match="@NavLinkMatch.All"`.
+- Ein leerer Attributwert (`href=""`) ist der leere String (Element-Attribut wie Parameter).
 - Element-Inhalt einer Komponente → `ChildContent`-Parameter.
 - Unbekannte Attribute → Parameter mit `captureUnmatchedValues` (`additionalAttributes`).
 - Cascading: `@CascadingParameter({ type: EditContext })` (by-type) oder
@@ -293,7 +307,7 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS023` mit Quellposition
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS024` mit Quellbereich
 (`TZS011`, `TZS014`, `TZS022` und `TZS023` sind Warnungen, z. B. `@inherits`-Konflikt mit
 Code-behind bzw. ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
@@ -305,5 +319,25 @@ generierten Code (`buildRenderTree`). A6: `TZS021` C#-Form mit mechanischem TS-G
 (Fehler; die Meldung nennt die TS-Form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
 `where T : …`; Kandidaten für Codemod/Quick-Fix in Phase 2.5), `TZS022` `var` in Render-Code
 (Warnung), `TZS023` `@switch`-Section fällt durch (Warnung). Unterschied zu `TZS012`: dort gibt
-es kein TS-Gegenstück (`using (…)`, `lock`).
+es kein TS-Gegenstück (`using (…)`, `lock`). A7: `TZS024` ungültiges TypeScript in einem
+Markup-Ausdruck — `@x`/`@(…)`, Attributwerte (auch gemischte, Event-Handler, `@key`,
+`@attributes`), `@bind`-Wert/`:get`/`:set`/`:after`, `@if`/`@while`/`@switch`-Bedingungen und
+`case`-Labels; gemeldet wird der erste Syntaxfehler des TS-Parsers auf seinem Token (statt eines
+späteren esbuild-Fehlers). Ein ungültiger `@for`-Zählkopf ist `TZS015` wie Statement-Läufe.
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
+
+**Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte
+Zeile / 0-basierte Spalte) ein exklusives `endPos` — den Bereich des fehlerhaften Konstrukts:
+den ganzen `@foreach (…)`-Kopf, die Direktive (ohne Zeilenende), das Attribut (`@bind="a?.b"`,
+ein gefalteter Modifier wie `@bind:format="…"` mit eigenem Bereich), den Tag-Namen
+(`TZS005`/`TZS017`), den Ausdruck bzw. das Token eines Syntaxfehlers, den Öffner eines nie
+geschlossenen Blocks (`@{`, `{`, `@(`, `<div`). Der LSP veröffentlicht diese Bereiche.
+Diagnosen mit mechanischem TS-Gegenstück tragen zusätzlich `fix: { title, edits: [{ pos, endPos,
+text }] }`, im LSP als Quick-Fix (Code Action):
+
+| Code | Fix |
+|---|---|
+| `TZS021` `@foreach (var x in xs)` / `(string s in xs)` / `(var (k, v) in pairs)` | Kopf-Code ⇒ `const x of xs` / `const [k, v] of pairs` |
+| `TZS021` `@typeparam T where T : IItem` | Klausel ⇒ `extends IItem` (keiner für `struct`/`class`/`new` …) |
+| `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Direktive ⇒ `@authorize…` / `@page "…"` / Zeile entfernen (nur bei einem Attribut pro Liste, nur literale Werte) |
+| `TZS022` `var` | ⇒ `let` |

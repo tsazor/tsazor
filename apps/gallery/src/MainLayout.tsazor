@@ -29,8 +29,8 @@
     private unsub: () => void = () => {};
 
     /** Sidebar sections, rendered through SidebarNav + runtime NavLink. */
-    private navLinks: { href: string; label: string }[] = [
-        { href: "/", label: "Overview" },
+    private navLinks: { href: string; label: string; match?: NavLinkMatch }[] = [
+        { href: "/", label: "Overview", match: NavLinkMatch.All },
         { href: "/button", label: "Button" },
         { href: "/inputs", label: "Inputs" },
         { href: "/form", label: "Form" },

@@ -33,7 +33,14 @@ describe("checkBindTarget (C17)", () => {
     ["(model as any).name", "name"],
     ["getModel().name", "name"],
   ])("accepts %s", (code, field) => {
-    expect(checkBindTarget(code)).toEqual({ ok: true, field });
+    const { identifier: _, ...target } = checkBindTarget(code) as { identifier?: string };
+    expect(target).toEqual({ ok: true, field });
+  });
+
+  it("names a bare identifier target (A7: read-only locals are checked by codegen)", () => {
+    expect(checkBindTarget("item")).toEqual({ ok: true, field: "item", identifier: "item" });
+    expect(checkBindTarget("(item!)")).toMatchObject({ identifier: "item" });
+    expect(checkBindTarget("item.name")).toEqual({ ok: true, field: "name" });
   });
 
   it.each(["a?.b", "a?.b.c", "a.b?.[0]", "f?.().x", "a?.b!.c"])("rejects optional chaining: %s", (code) => {
@@ -92,6 +99,50 @@ describe("@bind codegen (C16, C17)", () => {
       .toContain("'@bind-Value:after' can't be used with '@bind-Value:set'");
     expect(gen('<Field @bind-Value="v" @bind-Value:get="g" @bind-Value:set="s" />', component).diagnostics.errors[0]!.message)
       .toContain("'@bind-Value' can't be used together with '@bind-Value:get'");
+  });
+
+  it("A7: @bind-<attr> on an element binds that attribute (Razor), not a component parameter", () => {
+    const { code, diagnostics } = gen('<input @bind-value="name" @bind-value:event="oninput" /><input type="checkbox" @bind-checked="done" />');
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
+    expect(code).toContain('__builder.addEventHandler(2, "oninput", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__event.target as HTMLInputElement).value; }));');
+    expect(code).toContain('__builder.addAttribute(5, "checked", this.done);');
+    expect(code).toContain("this.done = (__event.target as HTMLInputElement).checked;");
+    expect(code).not.toContain("ValueChanged");
+    expect(code).not.toContain('"valueChanged"');
+  });
+
+  it("A7: @bind on a loop variable or another read-only local is a compile error (C#: CS1656)", () => {
+    const errorsOf = (source: string): string[] => gen(source, component).diagnostics.errors.map((d) => d.message);
+    expect(errorsOf("@foreach (const item of items) { <input @bind=\"item\" /> }")).toEqual([
+      "Unsupported directive attribute. '@bind' cannot bind to the const loop variable 'item' — bind to a member like 'item.name', or loop over indices and bind the element ('xs[i]').",
+    ]);
+    expect(errorsOf("@foreach (let item of items) { <Field @bind-Value=\"item\" /> }")[0]).toContain("'@bind-Value' cannot bind to the loop variable 'item'");
+    expect(errorsOf("@foreach (var x in xs) { <input @bind=\"x\" /> }").filter((m) => m.includes("cannot bind"))).toHaveLength(1);
+    expect(errorsOf("@{ const label = \"a\"; }\n<input @bind=\"label\" />")[0]).toContain("cannot bind to the const local 'label'");
+    expect(errorsOf("@{ function f() {} }\n<input @bind=\"f\" />")[0]).toContain("cannot bind to the function declaration 'f'");
+    expect(errorsOf("@import { shared } from \"./state\"\n<input @bind=\"shared\" />")[0]).toContain("cannot bind to the import 'shared'");
+  });
+
+  it("A7: assignable targets stay accepted (members, member paths of loop variables, let/catch locals, counting loops)", () => {
+    for (const source of [
+      "@foreach (const item of items) { <input @bind=\"item.name\" /> }",
+      "@for (let i = 0; i < items.length; i++) { <input @bind=\"items[i].name\" /> }",
+      "@for (let i = 0; i < 3; i++) { <input @bind=\"i\" /> }",
+      "@{ let draft = \"\"; }\n<input @bind=\"draft\" />",
+      "@foreach (const item of items) { }\n<input @bind=\"item\" />",
+      "@import { shared } from \"./state\"\n<input @bind=\"shared\" />\n@code { shared = \"\"; }",
+    ]) {
+      expect(gen(source).diagnostics.errors, source).toEqual([]);
+    }
+  });
+
+  it("A7: element @bind-value keeps the number coercion and the modifier rules; the label names the attribute", () => {
+    const { code } = gen('<input type="number" @bind-Value="count" />');
+    expect(code).toContain('"value", this.count');
+    expect(code).toContain("Number((__event.target as HTMLInputElement).value)");
+    expect(gen('<input @bind-value:after="f" />').diagnostics.errors[0]!.message).toContain("'@bind-value:after' was used but no '@bind-value' was found");
+    expect(gen('<input @bind-value="a?.b" />').diagnostics.errors[0]!.message).toContain("'@bind-value' target 'a?.b'");
   });
 });
 

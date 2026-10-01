@@ -9,10 +9,10 @@ import type {
   StatementNode,
 } from "./ast.js";
 import { childNodes } from "./ast.js";
-import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
+import { DiagnosticBag, type DiagnosticFix, type SourcePos, type SourceRange } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
-import { parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
+import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import type { ComponentMetadata } from "./metadata.js";
 import {
@@ -179,8 +179,9 @@ class Codegen {
   private readonly typeImports = new Map<string, string>(); // typeName → local
   private readonly plainImports: string[] = [];
   private readonly seqStack: SeqScope[] = [{ next: 0 }];
-  /** Locals declared by loops / inline code — emitted without a `this.` prefix. */
-  private readonly locals = new Set<string>();
+  /** Locals declared by loops / inline code — emitted without a `this.` prefix —
+   *  and how they were declared (a `@bind` cannot target the read-only ones). */
+  private readonly locals = new Map<string, LocalKind>();
   private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
   private readonly importedNames = new Set<string>();
@@ -193,7 +194,7 @@ class Codegen {
   /** `@attribute @decorator(…)` directives, emitted on the class. */
   private readonly decorators: DirectiveNode[] = [];
   /** Requirements of each `@authorize` (all must pass, like Blazor's several `[Authorize]`). */
-  private readonly authorizeRequirements: Array<AuthorizeRequirement & { pos: SourcePos }> = [];
+  private readonly authorizeRequirements: Array<AuthorizeRequirement & { range: SourceRange }> = [];
 
   constructor(
     private readonly options: CodegenOptions,
@@ -227,13 +228,13 @@ class Codegen {
         case "using": {
           this.metadata.usings.push(d.value.trim());
           const problem = this.options.resolveUsing?.(d.value.trim()) ?? null;
-          if (problem) this.diagnostics.warning("TZS018", d.pos, problem);
+          if (problem) this.diagnostics.warning("TZS018", directiveRange(d), problem);
           break;
         }
         case "inject": {
           const parts = d.value.trim().split(/\s+/);
           if (parts.length < 2) {
-            this.diagnostics.error("TZS001", d.pos, "Usage: @inject <Type> <Name>.");
+            this.diagnostics.error("TZS001", directiveRange(d), "Usage: @inject <Type> <Name>.");
             break;
           }
           const name = parts[parts.length - 1]!;
@@ -252,10 +253,15 @@ class Codegen {
           if (where) {
             const name = d.value.slice(0, where.index).trim();
             const constraint = /^where\s+[A-Za-z_]\w*\s*:\s*([A-Za-z_][\w.]*(?:<[^>]*>)?)\s*$/.exec(where[0].trim())?.[1];
-            const form = constraint !== undefined && !["class", "struct", "notnull", "unmanaged", "new"].includes(constraint)
-              ? `'@typeparam ${name} extends ${constraint}'`
-              : `'@typeparam ${name} extends X' (TypeScript constraints are types)`;
-            this.diagnostics.error("TZS021", d.pos, `C# constraint '${where[0].trim()}' — use ${form}.`);
+            const typed = constraint !== undefined && !["class", "struct", "notnull", "unmanaged", "new"].includes(constraint);
+            const form = typed ? `'@typeparam ${name} extends ${constraint}'` : `'@typeparam ${name} extends X' (TypeScript constraints are types)`;
+            // The range is the clause itself (`where T : IItem`).
+            const clauseOffset = where.index + where[0].length - where[0].trimStart().length;
+            const clause = textRange(advancePos(d.valueStart ?? d.pos, d.value.slice(0, clauseOffset)), where[0].trim());
+            const fix: DiagnosticFix | undefined = typed
+              ? { title: `Use 'extends ${constraint}'`, edits: [{ ...clause, text: `extends ${constraint}` }] }
+              : undefined;
+            this.diagnostics.error("TZS021", clause, `C# constraint '${where[0].trim()}' — use ${form}.`, fix);
           }
           this.metadata.typeParams.push(d.value.slice(0, where ? where.index : undefined).trim());
           break;
@@ -266,10 +272,10 @@ class Codegen {
           break;
         case "rendermode":
         case "preservewhitespace":
-          this.diagnostics.warning("TZS014", d.pos, `'@${d.name}' is Blazor-only and has no effect in Tsazor.`);
+          this.diagnostics.warning("TZS014", directiveRange(d), `'@${d.name}' is Blazor-only and has no effect in Tsazor.`);
           break;
         default:
-          this.diagnostics.error("TZS001", d.pos, `Unknown directive '@${d.name}'.`);
+          this.diagnostics.error("TZS001", directiveRange(d), `Unknown directive '@${d.name}'.`);
       }
     }
     this.resolveAuthorization();
@@ -282,7 +288,7 @@ class Codegen {
       if (this.metadata.inherits) {
         this.diagnostics.warning(
           "TZS011",
-          document.directives.find((d) => d.name === "inherits")!.pos,
+          directiveRange(document.directives.find((d) => d.name === "inherits")!),
           "… the code-behind file's own base class (X.tsazor.ts) wins — remove the '@inherits' directive.",
         );
       }
@@ -440,11 +446,20 @@ class Codegen {
     }
     const attributes = parseAttributeLists(value);
     if (attributes === null) {
-      this.diagnostics.error("TZS019", d.pos, "Expected a TS class decorator ('@attribute @decorator(…)').");
+      this.diagnostics.error("TZS019", directiveValueRange(d), "Expected a TS class decorator ('@attribute @decorator(…)').");
       return;
     }
+    const range = directiveRange(d);
     for (const attribute of attributes) {
-      this.diagnostics.error("TZS021", d.pos, `C# attribute '[${attribute.written}]' — use ${typescriptFormOf(attribute)}.`);
+      // A single attribute with a mechanical TS form replaces the whole
+      // directive (a removal takes its line break along).
+      const replacement = attributes.length === 1 ? directiveReplacementOf(attribute) : null;
+      const fix: DiagnosticFix | undefined = replacement === null
+        ? undefined
+        : replacement === ""
+          ? { title: `Remove '@attribute [${attribute.written}]'`, edits: [{ pos: d.pos, endPos: { line: d.pos.line + 1, column: 0 }, text: "" }] }
+          : { title: `Use '${replacement}'`, edits: [{ ...range, text: replacement }] };
+      this.diagnostics.error("TZS021", range, `C# attribute '[${attribute.written}]' — use ${typescriptFormOf(attribute)}.`, fix);
     }
   }
 
@@ -452,10 +467,10 @@ class Codegen {
   private authorizeDirective(d: DirectiveNode): void {
     const requirement = parseAuthorizeArgument(d.value);
     if (typeof requirement === "string") {
-      this.diagnostics.error("TZS019", d.valueStart ?? d.pos, `Invalid @authorize: ${requirement}.`);
+      this.diagnostics.error("TZS019", directiveValueRange(d), `Invalid @authorize: ${requirement}.`);
       return;
     }
-    this.authorizeRequirements.push({ ...requirement, pos: d.pos });
+    this.authorizeRequirements.push({ ...requirement, range: directiveRange(d) });
   }
 
   /**
@@ -471,13 +486,14 @@ class Codegen {
       const offset = bodyMemberOffset(block.code, "buildRenderTree");
       if (offset === undefined) continue;
       const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, offset)) : block.pos;
-      this.diagnostics.error("TZS020", pos, `'buildRenderTree' in @code duplicates the generated member. ${hint}`);
+      this.diagnostics.error("TZS020", textRange(pos, "buildRenderTree"), `'buildRenderTree' in @code duplicates the generated member. ${hint}`);
     }
     if (this.options.codeBehindSource !== undefined) {
       const codeBehind = emptyMembers();
       collectDefaultClassMembers(this.options.codeBehindSource, codeBehind);
       if (codeBehind.instance.has("buildRenderTree")) {
-        this.diagnostics.error("TZS020", { line: 1, column: 0 }, `'buildRenderTree' in the code-behind class would be replaced by the generated member. ${hint}`);
+        // The member lives in the code-behind file: reported at the start of this one.
+        this.diagnostics.error("TZS020", textRange({ line: 1, column: 0 }, ""), `'buildRenderTree' in the code-behind class would be replaced by the generated member. ${hint}`);
       }
     }
   }
@@ -493,7 +509,7 @@ class Codegen {
     // second of either cannot be represented — refused instead of weakening
     // the check.
     for (const extra of [...withRoles.slice(1), ...withPolicy.slice(1)]) {
-      this.diagnostics.error("TZS019", extra.pos, "Several @authorize with roles (or with a policy) cannot be combined — use one role list and one policy.");
+      this.diagnostics.error("TZS019", extra.range, "Several @authorize with roles (or with a policy) cannot be combined — use one role list and one policy.");
     }
     const roles = withRoles[0]?.roles;
     const policy = withPolicy[0]?.policy;
@@ -512,7 +528,7 @@ class Codegen {
   private preResolve(nodes: MarkupNode[], usings: string[]): void {
     for (const node of nodes) {
       if (node.kind === "element" && node.isComponent) {
-        this.localForComponent(node.tagName, usings, node.pos);
+        this.localForComponent(node.tagName, usings, tagNameRange(node));
       }
       const nested = childNodes(node);
       if (nested.length > 0) this.preResolve(nested, usings);
@@ -536,7 +552,7 @@ class Codegen {
       if (d.name !== "import") continue;
       const parsed = parseImportDirective(d.value);
       if (!parsed.ok) {
-        this.diagnostics.error("TZS016", d.pos, parsed.message);
+        this.diagnostics.error("TZS016", directiveRange(d), parsed.message);
         continue;
       }
       this.metadata.imports.push(parsed.info);
@@ -576,7 +592,7 @@ class Codegen {
     this.writer.line(text, anchors);
   }
 
-  private localForComponent(tagName: string, usings: string[], pos: SourcePos): string | null {
+  private localForComponent(tagName: string, usings: string[], pos: SourceRange): string | null {
     const existing = this.componentLocalNames.get(tagName);
     if (existing !== undefined) return existing;
     // An explicitly imported component class is used as-is.
@@ -630,22 +646,33 @@ class Codegen {
    * Rewrites an expression's bare member references to `this.X` (C# allows
    * bare member references; TS does not) — see rewrite.ts for the scope rules.
    */
-  private expr(code: string, origin?: SourcePos): string {
-    return this.exprRewrite(code, origin)?.text ?? code;
+  private expr(code: string, origin?: SourcePos, syntaxAt: SourcePos | undefined = origin): string {
+    return this.exprRewrite(code, origin, syntaxAt)?.text ?? code;
   }
 
-  /** expr() with the full rewrite result (method group info); null for empty code. */
-  private exprRewrite(code: string, origin?: SourcePos): RewriteResult | null {
+  /**
+   * expr() with the full rewrite result (method group info); null for empty
+   * code. `syntaxAt` (default: origin) is where the code starts for its
+   * syntax errors (TZS024) — also set where the mapping stays coarse.
+   */
+  private exprRewrite(code: string, origin?: SourcePos, syntaxAt: SourcePos | undefined = origin): RewriteResult | null {
     const trimmed = code.trim();
     if (trimmed.length === 0) return null;
     // origin = absolute source position of index 0 of the expression code.
     // Unset (control headers, @bind values) → no token-precise mapping. The
     // trimmed leading whitespace may span lines.
-    return this.rewrite(
-      trimmed,
-      "expression",
-      origin === undefined ? undefined : advancePos(origin, code.slice(0, code.length - code.trimStart().length)),
-    );
+    const lead = code.slice(0, code.length - code.trimStart().length);
+    const result = this.rewrite(trimmed, "expression", origin === undefined ? undefined : advancePos(origin, lead));
+    if (syntaxAt !== undefined) this.reportSyntax("TZS024", result, trimmed, advancePos(syntaxAt, lead));
+    return result;
+  }
+
+  /** The first syntax error of a rewritten snippet (later ones usually follow from it). */
+  private reportSyntax(code: "TZS015" | "TZS024", result: RewriteResult, text: string, start: SourcePos): void {
+    const first = result.syntaxErrors[0];
+    if (!first) return;
+    const at = advancePos(start, text.slice(0, first.offset));
+    this.diagnostics.error(code, textRange(at, text.slice(first.offset, first.offset + first.length)), first.message);
   }
 
   /** The A4 rule for names no scope of the snippet binds. */
@@ -851,7 +878,7 @@ class Codegen {
           const clause = node.catchClause;
           this.stmt(clause.param === null ? `} catch {` : `} catch (${clause.param}) {`, clause.span.pos);
           this.withScope(() => {
-            if (clause.paramName) this.locals.add(clause.paramName);
+            if (clause.paramName) this.locals.set(clause.paramName, "assignable");
             this.emitNodes(clause.children, clause.span.pos);
           });
         }
@@ -888,7 +915,7 @@ class Codegen {
           const text = `for (const ${csharp.binding} of ${iterable}) {`;
           this.stmt(text, node.pos, text.lastIndexOf(iterable));
           this.withScope(() => {
-            for (const name of csharp.names) this.locals.add(name);
+            for (const name of csharp.names) this.locals.set(name, "constLoop");
             for (const child of node.children) this.emitNode(child, node.pos);
           });
           this.stmt(`}`, node.pos);
@@ -899,18 +926,25 @@ class Codegen {
         // child content captures its own value — while `var` keeps its TS
         // meaning (one function-scoped binding, TZS022). The declared loop
         // variables are locals of the body; a `var` stays one after the loop.
+        // A for…of/for…in variable is the iteration's element (C#: CS1656 —
+        // a bind to it is an error); a counting `let i` is assignable.
+        const iterates = forHeaderKind(node.code) !== "for";
+        const isConst = /^\s*const\b/.test(node.code);
+        const kind: LocalKind = iterates ? (isConst ? "constLoop" : "loop") : isConst ? "const" : "assignable";
         let declares: string[] = [];
         this.withScope(() => {
           const rewritten = this.rewrite(node.code, "forHeader");
+          // An invalid @foreach header is TZS015 already (checkForEachHeader).
+          if (!node.isForEach) this.reportSyntax("TZS015", rewritten, node.code, node.codeStart ?? node.pos);
           this.warnVar(rewritten, node.code, node.codeStart ?? node.pos);
           const header = this.headerLines(node.code, rewritten.text, node.codeStart);
           declares = rewritten.declares;
-          for (const name of declares) this.locals.add(name);
+          for (const name of declares) this.locals.set(name, kind);
           const text = `for (${header}) {`;
           this.stmt(text, node.pos, text.indexOf(header));
           for (const child of node.children) this.emitNode(child, node.pos);
         });
-        if (/^\s*var\b/.test(node.code)) for (const name of declares) this.locals.add(name);
+        if (/^\s*var\b/.test(node.code)) for (const name of declares) this.locals.set(name, "assignable");
         this.stmt(`}`, node.pos);
         break;
       }
@@ -946,7 +980,7 @@ class Codegen {
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
       if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
-        this.diagnostics.error("TZS008", node.pos, "@ref requires a bare property name.");
+        this.diagnostics.error("TZS008", ref, "@ref requires a bare property name.");
         continue;
       }
       this.emitRefStmt(ref, node.pos);
@@ -978,7 +1012,7 @@ class Codegen {
   }
 
   private emitComponent(node: ElementNode): void {
-    const local = this.localForComponent(node.tagName, this.metadata.usings, node.pos)!;
+    const local = this.localForComponent(node.tagName, this.metadata.usings, tagNameRange(node))!;
     const key = node.attributes.find((a) => a.kind === "key");
     const refs = node.attributes.filter((a) => a.kind === "ref");
     const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
@@ -999,7 +1033,7 @@ class Codegen {
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
       if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
-        this.diagnostics.error("TZS008", node.pos, "@ref on components requires a bare property name.");
+        this.diagnostics.error("TZS008", ref, "@ref on components requires a bare property name.");
         continue;
       }
       this.emitRefStmt(ref, node.pos);
@@ -1095,7 +1129,7 @@ class Codegen {
         // capturing unmatched values splats it onto its element.
         const value = attr.code === undefined ? "true" : this.expr(attr.code, codeStart());
         if (value.length === 0) {
-          this.diagnostics.error("TZS009", pos, `'@${attr.name}:${attr.modifier}' requires a bool expression (or no value).`);
+          this.diagnostics.error("TZS009", attr, `'@${attr.name}:${attr.modifier}' requires a bool expression (or no value).`);
           break;
         }
         const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(`__internal_${attr.modifier}_${attr.name}`)}, ${value});`;
@@ -1121,19 +1155,23 @@ class Codegen {
    *  Value + ValueChanged for component parameter targets. */
   private emitBind(attr: Extract<AttributeNode, { kind: "bind" }>, ctx: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
     const pos = attr.pos;
-    // Component parameter binding: @bind-Target or @bind on a component tag
-    // → Target + TargetChanged / Value + ValueChanged parameter pair.
-    const isComponentBind = attr.bindTarget !== undefined || ctx.isComponent === true;
+    // Component parameter binding: @bind or @bind-Target on a component tag
+    // → Target + TargetChanged / Value + ValueChanged parameter pair. On an
+    // element, `@bind-<attr>` binds that attribute (Razor: `@bind-value` is
+    // `@bind` spelled out); an unresolved component tag keeps component form.
+    const elementTag = ctx.tag !== "" && !/^[A-Z]/.test(ctx.tag) && !ctx.tag.includes(".");
+    const isComponentBind = ctx.isComponent === true || (attr.bindTarget !== undefined && !elementTag);
     const label = attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}` : "@bind";
     if (!this.checkBindShape(attr, label)) return;
 
     if (attr.format !== undefined) {
+      const format = attr.modifierSpans?.format ?? attr;
       if (isComponentBind) {
-        this.diagnostics.warning("TZS008", pos, `'${label}:format' has no effect on a component (Blazor ignores it).`);
+        this.diagnostics.warning("TZS008", format, `'${label}:format' has no effect on a component (Blazor ignores it).`);
       } else {
         // v1: native input display formatting applies; a custom format string is
         // accepted but only affects parsing of number/date inputs.
-        this.diagnostics.warning("TZS008", pos, "'@bind:format' has limited v1 support: number and date inputs use native parsing.");
+        this.diagnostics.warning("TZS008", format, `'${label}:format' has limited v1 support: number and date inputs use native parsing.`);
       }
     }
 
@@ -1142,23 +1180,29 @@ class Codegen {
       return;
     }
 
-    // Element binding: @bind / @bind:get + @bind:set / @bind:after / @bind:event.
+    // Element binding: @bind / @bind-<attr> / :get + :set / :after / :event.
     const tag = ctx.tag.toLowerCase();
     const inputType = staticAttributeValue(ctx.attributes, "type")?.toLowerCase();
     const isCheckbox = tag === "input" && inputType === "checkbox";
-    const isNumber = tag === "input" && inputType === "number";
-    const isDate = tag === "input" && inputType === "date";
-    const valueAttribute = isCheckbox ? "checked" : "value";
+    // `@bind` picks the attribute from the input type; `@bind-<attr>` names it
+    // (HTML attribute names are case-insensitive: `@bind-Value` = `value`).
+    const valueAttribute = attr.bindTarget !== undefined ? attr.bindTarget.toLowerCase() : isCheckbox ? "checked" : "value";
+    // Number/date coercion applies to the value attribute (Razor's typed
+    // `BindInputElement` entries cover `@bind` and `@bind-value` alike).
+    const isNumber = tag === "input" && inputType === "number" && valueAttribute === "value";
+    const isDate = tag === "input" && inputType === "date" && valueAttribute === "value";
     const event = attr.event ?? "onchange";
 
     // Value side: @bind or @bind:get.
-    const display = this.expr(attr.get ?? attr.expression ?? "");
+    const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
     if (display.length === 0) {
-      this.diagnostics.error("TZS009", pos, "'@bind' requires an expression.");
+      this.diagnostics.error("TZS009", attr, `'${label}' requires an expression.`);
       return;
     }
 
-    // Extraction of the DOM value inside the change handler.
+    // Extraction of the DOM value inside the change handler: Blazor's change
+    // event value — `checked` for a checkbox, `value` otherwise, whatever
+    // attribute is bound.
     let extract = "(__event.target as HTMLInputElement).value";
     if (isCheckbox) extract = "(__event.target as HTMLInputElement).checked";
     else if (isNumber) extract = "Number((__event.target as HTMLInputElement).value)";
@@ -1167,9 +1211,9 @@ class Codegen {
     const parts: string[] = [];
     if (attr.set !== undefined) {
       // Blazor awaits an async setter (and :after) before re-rendering.
-      parts.push(`await (${this.expr(attr.set)})(${extract})`);
+      parts.push(`await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
     } else {
-      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, pos);
+      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
       if (isNumber) {
         parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
@@ -1177,7 +1221,7 @@ class Codegen {
         parts.push(`${assignmentTarget} = ${extract}`);
       }
     }
-    if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after)}`);
+    if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after, attr.codeStarts?.after)}`);
     const async = attr.set !== undefined || attr.after !== undefined ? "async " : "";
 
     this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
@@ -1195,7 +1239,7 @@ class Codegen {
    */
   private checkBindShape(attr: Extract<AttributeNode, { kind: "bind" }>, label: string): boolean {
     const error = (message: string): false => {
-      this.diagnostics.error("TZS008", attr.pos, message);
+      this.diagnostics.error("TZS008", attr, message);
       return false;
     };
     const base = attr.expression !== undefined;
@@ -1215,19 +1259,54 @@ class Codegen {
 
   /** The rewritten assignment target of a two-way bind; null (TZS008) when
    *  the expression cannot be assigned to (checked on the TS AST). */
-  private bindAssignmentTarget(expression: string, label: string, pos: SourcePos): string | null {
+  private bindAssignmentTarget(expression: string, label: string, range: SourceRange, located: boolean): string | null {
     const code = expression.trim();
     const target = checkBindTarget(code);
     if (!target.ok) {
-      this.diagnostics.error("TZS008", pos, `'${label}' target '${code}' ${target.reason}.`);
+      // Invalid TS is TZS024, reported where the value side was baked (when its start is known).
+      if (!target.syntax || !located) this.diagnostics.error("TZS008", range, `'${label}' target '${code}' ${target.reason}.`);
+      return null;
+    }
+    const readonly = target.identifier === undefined ? null : this.readonlyLocal(target.identifier);
+    if (readonly !== null) {
+      this.diagnostics.error("TZS008", range, `'${label}' cannot bind to ${readonly}.`);
       return null;
     }
     return this.expr(code);
   }
 
+  /**
+   * Why a bare name cannot be a bind target, or null: a read-only local (TS
+   * TS2588/TS2630 — the handler would throw), an iteration variable (C#
+   * CS1656 — the write only changes this iteration's copy and the next
+   * render resets it) or an import (TS2632). Members win over imports.
+   */
+  private readonlyLocal(name: string): string | null {
+    const loopHint = `— bind to a member like '${name}.name', or loop over indices and bind the element ('xs[i]')`;
+    switch (this.locals.get(name)) {
+      case "constLoop":
+        return `the const loop variable '${name}' ${loopHint}`;
+      case "loop":
+        return `the loop variable '${name}': the write would only change this iteration's copy ${loopHint}`;
+      case "const":
+        return `the const local '${name}' — bind to a component member (or a member of '${name}')`;
+      case "function":
+      case "class":
+      case "enum":
+        return `the ${this.locals.get(name)} declaration '${name}'`;
+      case "assignable":
+        return null;
+    }
+    if (!this.members.instance.has(name) && !this.members.statics.has(name) && this.importedNames.has(name)) {
+      return `the import '${name}' (imports are read-only) — bind to a component member`;
+    }
+    return null;
+  }
+
   /** Invocation of an `:after` value: a method group or a lambda. */
-  private afterCall(after: string): string {
-    return bareIdentifier(after.trim()) ? `${this.expr(after)}()` : `(${this.expr(after)})()`;
+  private afterCall(after: string, start?: SourcePos): string {
+    const baked = this.expr(after, undefined, start);
+    return bareIdentifier(after.trim()) ? `${baked}()` : `(${baked})()`;
   }
 
   /**
@@ -1237,27 +1316,27 @@ class Codegen {
    * by `:after`; async ones are awaited, Blazor's InvokeAsynchronousDelegate).
    */
   private emitComponentBind(attr: Extract<AttributeNode, { kind: "bind" }>, target: string, label: string, pos: SourcePos): void {
-    const display = this.expr(attr.get ?? attr.expression ?? "");
+    const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
     if (display.length === 0) {
-      this.diagnostics.error("TZS009", pos, `${label} requires an expression.`);
+      this.diagnostics.error("TZS009", attr, `${label} requires an expression.`);
       return;
     }
 
     // On a component `:event` names the change callback parameter (Blazor).
     const changed = attr.event !== undefined ? attr.event.trim() : `${target}Changed`;
     if (!bareIdentifier(changed)) {
-      this.diagnostics.error("TZS008", pos, `'${label}:event' on a component names its change callback parameter (e.g. '${target}Changed'), got '${changed}'.`);
+      this.diagnostics.error("TZS008", attr.modifierSpans?.event ?? attr, `'${label}:event' on a component names its change callback parameter (e.g. '${target}Changed'), got '${changed}'.`);
       return;
     }
 
     let handler: string;
     if (attr.set !== undefined) {
-      handler = `async (__value) => { await (${this.expr(attr.set)})(__value); }`;
+      handler = `async (__value) => { await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__value); }`;
     } else {
-      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, pos);
+      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
       handler = attr.after !== undefined
-        ? `async (__value) => { ${assignmentTarget} = __value; await ${this.afterCall(attr.after)}; }`
+        ? `async (__value) => { ${assignmentTarget} = __value; await ${this.afterCall(attr.after, attr.codeStarts?.after)}; }`
         : `(__value) => { ${assignmentTarget} = __value; }`;
     }
 
@@ -1308,12 +1387,12 @@ class Codegen {
     this.stmt(text, node.pos, text.indexOf(header));
     this.withScope(() => {
       node.cases.forEach((c, index) => {
-        const label = c.code === null ? "default:" : `case ${this.expr(c.code)}:`;
+        const label = c.code === null ? "default:" : `case ${this.expr(c.code, undefined, c.codeStart)}:`;
         this.stmt(label, c.span.pos);
         for (const child of c.children) this.emitNode(child, node.pos);
         if (c.children.length > 0 && index < node.cases.length - 1 && !endsWithJump(c.children)) {
           const written = c.code === null ? "default" : `case ${c.code}`;
-          this.diagnostics.warning("TZS023", c.span.pos, `'${written}:' falls through to the next case (TypeScript has no implicit break) — end it with 'break;'.`);
+          this.diagnostics.warning("TZS023", c.span, `'${written}:' falls through to the next case (TypeScript has no implicit break) — end it with 'break;'.`);
         }
       });
     });
@@ -1325,7 +1404,7 @@ class Codegen {
   private emitStatement(node: StatementNode): void {
     // Registered first: destructuring/function names inside the run itself
     // must stay bare too.
-    for (const name of node.declares) this.locals.add(name);
+    for (const name of node.declares) this.locals.set(name, node.readonly?.[name] ?? "assignable");
     // Rewriting inserts `this.` prefixes, so its per-token entries keep the
     // columns after each prefix exact.
     const rewritten = this.rewrite(node.code, "statements", node.pos);
@@ -1344,29 +1423,36 @@ class Codegen {
    * form is returned for recovery. Any other header is TZS015.
    */
   private checkForEachHeader(node: ForNode): CSharpForEach | null {
-    const pos = node.codeStart ?? node.pos;
+    // The whole `@foreach (…)` header; the fix replaces the code inside the parentheses.
+    const range: SourceRange = { pos: node.pos, endPos: node.headerEnd ?? node.endPos };
     const csharp = csharpForEachHeader(node.code);
     if (csharp) {
+      const header = `const ${csharp.binding} of ${csharp.iterable}`;
       const form = `@foreach (const ${csharp.binding} of ${csharp.iterable.replace(/\s+/g, " ")})`;
-      this.diagnostics.error("TZS021", pos, `Use '${form}' — in TypeScript, for…in iterates keys.`);
+      const fix: DiagnosticFix | undefined = node.codeStart === undefined
+        ? undefined
+        : { title: `Use '${form}'`, edits: [{ ...textRange(node.codeStart, node.code), text: header }] };
+      this.diagnostics.error("TZS021", range, `Use '${form}' — in TypeScript, for…in iterates keys.`, fix);
       return csharp;
     }
     const kind = forHeaderKind(node.code);
     if (kind === "for") {
-      this.diagnostics.error("TZS015", pos, "@foreach takes a for…of header ('const x of xs') — use @for for a counting loop.");
+      this.diagnostics.error("TZS015", range, "@foreach takes a for…of header ('const x of xs') — use @for for a counting loop.");
     } else if (kind === null) {
-      this.diagnostics.error("TZS015", pos, "Invalid @foreach header — expected '(const x of xs)'.");
+      this.diagnostics.error("TZS015", range, "Invalid @foreach header — expected '(const x of xs)'.");
     }
     return null;
   }
 
-  /** TZS022 for each `var` declaration of render code; it keeps its TS meaning. */
+  /** TZS022 for each `var` declaration of render code; it keeps its TS meaning. Fix: `let`. */
   private warnVar(rewritten: RewriteResult, code: string, start: SourcePos): void {
     for (const offset of rewritten.varKeywords) {
+      const keyword = textRange(advancePos(start, code.slice(0, offset)), "var");
       this.diagnostics.warning(
         "TZS022",
-        advancePos(start, code.slice(0, offset)),
+        keyword,
         "'var' is function-scoped in TypeScript: one binding for the whole render method, shared by every loop iteration and deferred child content.",
+        { title: "Use 'let'", edits: [{ ...keyword, text: "let" }] },
       );
     }
   }
@@ -1376,7 +1462,7 @@ class Codegen {
     const saved = [...this.locals];
     emit();
     this.locals.clear();
-    for (const name of saved) this.locals.add(name);
+    for (const [name, kind] of saved) this.locals.set(name, kind);
   }
 
   /**
@@ -1386,7 +1472,7 @@ class Codegen {
    * pending entries for the next stmt(), relative to the baked text.
    */
   private headerExpr(code: string, start: SourcePos | undefined): string {
-    return this.headerLines(code, this.expr(code), start);
+    return this.headerLines(code, this.expr(code, undefined, start), start);
   }
 
   /** Continuation-line anchors of a rewritten header (see headerExpr). */
@@ -1429,6 +1515,13 @@ function endsWithJump(children: MarkupNode[]): boolean {
   return /^(break|continue|return|throw)\b/.test(lastLine.trim());
 }
 
+/**
+ * How a render-code local was declared: `assignable` (let/var, catch
+ * parameter, counting-loop variable), `const`, an iteration variable of a
+ * for…of/for…in (`constLoop`/`loop`), or a function/class/enum declaration.
+ */
+type LocalKind = "assignable" | "const" | "constLoop" | "loop" | "function" | "class" | "enum";
+
 /** A C# `@foreach` header and its TS form (`binding` of `const <binding> of <iterable>`). */
 interface CSharpForEach {
   names: string[];
@@ -1456,6 +1549,31 @@ function csharpForEachHeader(code: string): CSharpForEach | null {
   const iterable = code.slice(single[0].length);
   if (iterable.trim().length === 0) return null;
   return { names: [single[1]!], binding: single[1]!, iterable: iterable.trim(), iterableOffset: single[0].length };
+}
+
+/* Diagnostic ranges ------------------------------------------------------- */
+
+/** A directive without its trailing whitespace: `@name value`. */
+function directiveRange(d: DirectiveNode): SourceRange {
+  if (d.value.length > 0 && d.valueStart) return { pos: d.pos, endPos: advancePos(d.valueStart, d.value) };
+  return { pos: d.pos, endPos: { line: d.pos.line, column: d.pos.column + 1 + d.name.length } };
+}
+
+/** A directive's value (the whole directive when it has none). */
+function directiveValueRange(d: DirectiveNode): SourceRange {
+  if (d.value.length > 0 && d.valueStart) return { pos: d.valueStart, endPos: advancePos(d.valueStart, d.value) };
+  return directiveRange(d);
+}
+
+/** The name of an element's start tag (`Foo` of `<Foo …>`). */
+function tagNameRange(node: { pos: SourcePos; tagName: string }): SourceRange {
+  const pos = { line: node.pos.line, column: node.pos.column + 1 };
+  return { pos, endPos: { line: pos.line, column: pos.column + node.tagName.length } };
+}
+
+/** `text` placed at `start`, as a range. */
+function textRange(start: SourcePos, text: string): SourceRange {
+  return { pos: start, endPos: advancePos(start, text) };
 }
 
 /** Attribute frames come first: emit them before children. */

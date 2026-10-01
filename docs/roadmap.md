@@ -38,13 +38,38 @@ Origin-Root; `regex(...)`-Constraints immer verankert; `Date` gilt als veränder
 - `ValueExpression` nur, wenn die Zielkomponente es deklariert; `/^on/i`-EventCallback-Heuristik
   entfernen (2.2 / Sync-Punkt B8).
 - `@inherits`-Basis-Member mit DOM-Global-Namen (`length`, `top`) bleiben global (2.1/2.4).
-- `@bind-value` (klein) auf *Elementen* wird als Komponenten-Bind emittiert; `@bind` auf eine
-  `@foreach`-Variable scheitert erst zur Laufzeit (C#: CS1656) (A-Nachtrag vor 2.2).
-- Syntaxfehler in Markup-Ausdrücken ohne eigene TZS-Diagnose (A-Nachtrag); `var` in
-  Statement-Runs bleibt `var` — seit A6a mit Warnung TZS022 (TS-Semantik).
+- ~~`@bind-value` (klein) auf *Elementen* wird als Komponenten-Bind emittiert; `@bind` auf eine
+  `@foreach`-Variable scheitert erst zur Laufzeit (C#: CS1656)~~ — **erledigt (A7)**.
+- ~~Syntaxfehler in Markup-Ausdrücken ohne eigene TZS-Diagnose~~ — **erledigt (A7, TZS024)**;
+  `var` in Statement-Runs bleibt `var` — seit A6a mit Warnung TZS022 (TS-Semantik), seit A7 mit
+  Fix `let`.
 - Code-behind-/`_Imports`-Änderungen invalidieren abhängige Module nicht (4.1).
-- `NavLink` vergleicht base-relative statt absolute URIs (klein, vor Phase 3).
+- ~~`NavLink` vergleicht base-relative statt absolute URIs~~ — **erledigt (A7)**.
 - EditForm `OnInvalidSubmit` / awaited `OnValidSubmit` (3.5).
+
+**Stand A7 (Nachträge vor Phase 2, Branch `roadmap/a7-followups`):**
+- *Diagnose-Bereiche:* jede `TszDiagnostic` hat `endPos` (exklusiv) neben `pos` (Start, unverändert
+  Bedeutung „Anfang") — `@foreach (…)`-Kopf, Direktive, Attribut (gefaltete `@bind`-Modifier mit
+  eigenem Bereich), Tag-Name, Fehler-Token, Öffner offener Blöcke. Einzige Positions-Änderung:
+  TZS021 für `@foreach` beginnt jetzt am `@` (vorher am Kopf-Code). Mechanische Fixes als
+  `fix: { title, edits: [{ pos, endPos, text }] }`: TZS021 (`foreach … in`, `where T : X`,
+  einzelnes literales `[Authorize]`/`[Route]`/`[AllowAnonymous]`), TZS022 (`var` ⇒ `let`). Der LSP
+  veröffentlicht die Bereiche und bietet die Fixes als Quick-Fix-Code-Actions an.
+- *`@bind-<attr>` auf Elementen* bindet das Attribut (Razor), Komponenten-`@bind-Value` unverändert.
+- *`@bind` auf Schleifenvariable* (`for…of`/`for…in`, auch `let`), `const`-Local,
+  `function`/`class`/`enum` oder Import ⇒ TZS008 zur Compile-Zeit.
+- *TZS024* für Syntaxfehler in Markup-Ausdrücken (erster TS-Parser-Fehler, auf seinem Token);
+  ungültiger `@for`-Zählkopf ⇒ TZS015. `transformTsazor` lässt die TZS-Diagnosen vor dem
+  esbuild-Folgefehler gewinnen.
+- *NavLink* nach Blazor .NET 8 (`ShouldMatch` über absolute URIs). Folge: ein `Prefix`-Link auf
+  die Basis ist überall aktiv — Home-Links in Demo, Sleipnir und Gallery-Sidebar nehmen
+  `NavLinkMatch.All` (wie Blazor-Templates; `SidebarNav`-Links haben optional `match`).
+  Nebenbei: `href=""` war ein leerer Ausdruck (`undefined`), jetzt der leere String.
+- *FluentCMS-Probe:* 160 → **149/217** sauber, 178 → **164/217** nach Codemod-Formen, Dateien mit
+  echten Fehlern 1 → 25 — TZS024 ×34 macht bisher stille C#-Reste sichtbar (esbuild wäre daran
+  gescheitert): `(MarkupString)x`-Casts ×9, `$"…"` in `@(…)`/Attributen ×10, anonyme Objekte
+  `new { id = … }` ×10, `is (not) null` ×2, `out var` ×1, `File.Exists($"…")` ×1, `default` ×1 —
+  Kandidaten für Codemod (2.5) bzw. Phase-3-Built-ins (`MarkupString`).
 
 ## Abhängigkeitsgraph
 
@@ -625,8 +650,8 @@ Demo (components 31, scoped, code-behind, debugging, counter-state) grün.
 **Offen für den Codemod (2.5):** `foreach … in` ⇒ `const … of` (35× in FluentCMS),
 `[Authorize(…)]` ⇒ `@authorize({…})`, `[AllowAnonymous]`/`[CascadingTypeParameter]`/
 `[StreamRendering]` entfernen, `where` ⇒ `extends`, `var` ⇒ `let`/`const` (4×); die Meldungen
-liefern die Ziel-Texte, eine Quick-Fix-Range (Header-Span) fehlt noch (Diagnosen tragen nur
-eine Startposition).
+liefern die Ziel-Texte. ~~Eine Quick-Fix-Range fehlt noch~~ — seit A7 tragen alle Diagnosen
+einen Bereich, die mechanischen Formen ein `fix` (Ersatzbereich + Text; LSP-Code-Action).
 
 **Stand A6b (Standard-Decorators, erledigt):** `@Parameter`/`@CascadingParameter` sind
 TC39-Field-Decorators (auch `accessor`/Setter), Metadaten pro Klasse in

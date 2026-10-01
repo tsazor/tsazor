@@ -4,7 +4,7 @@
  * literals stay untouched. Review §1: C4, C5, C6, C18, null in mixed attributes.
  */
 import { describe, expect, it } from "vitest";
-import { mount } from "../harness.js";
+import { diagnosticsOf, mount } from "../harness.js";
 
 describe("C4 — template literals", () => {
   it("rewrites members inside ${} spans", async () => {
@@ -144,5 +144,12 @@ describe("mixed attribute values", () => {
   it("null renders as empty, not the string \"null\"", async () => {
     const m = await mount(`<a class="btn @(active ? "on" : null)">x</a>\n@code { private active = false; }`);
     expect(m.container.querySelector("a")!.getAttribute("class")).not.toContain("null");
+  });
+});
+
+describe("A7 — syntax errors in markup expressions", () => {
+  it("are TZS024 diagnostics through the real pipeline, not esbuild errors", async () => {
+    const diagnostics = await diagnosticsOf(`<p>@(count +)</p><button @onclick="() => save(">b</button>\n@code { count = 0; save() {} }`);
+    expect(diagnostics.map((d) => [d.code, d.pos.line])).toEqual([["TZS024", 1], ["TZS024", 1]]);
   });
 });

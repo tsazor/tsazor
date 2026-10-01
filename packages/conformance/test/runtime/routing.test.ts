@@ -2,6 +2,7 @@
  * Route matching and navigation vs. Blazor. Review §3: R14, R15, auth race.
  */
 import { afterEach, describe, expect, it } from "vitest";
+import { compileFiles } from "../harness.js";
 import {
   ANONYMOUS,
   AuthenticationState,
@@ -12,8 +13,10 @@ import {
   defineComponent,
   matchRoute,
   NavigationManager,
+  Renderer,
   Router,
   RouteView,
+  ServiceCollection,
   watchAuthenticationState,
   type RenderTreeBuilder,
   type RouteData,
@@ -261,6 +264,60 @@ describe("R15 — <base href>", () => {
     expect(location.pathname).toBe("/app/counter");
     expect(clickPreventedByApp(inside)).toBe(true);
     expect(location.pathname).toBe("/app/orders");
+  });
+});
+
+describe("A7 — NavLink compares absolute URIs (Blazor)", () => {
+  const links = `@import { NavLink, NavLinkMatch } from "@tsazor/runtime"
+<NavLink Href="" Match="@NavLinkMatch.All">Home</NavLink>
+<NavLink Href="">Prefix home</NavLink>
+<NavLink Href="orders">Relative</NavLink>
+<NavLink Href="/app/orders">Root-relative</NavLink>
+<NavLink Href="@absolute">Absolute</NavLink>
+<NavLink Href="/orders">Outside the base</NavLink>
+<NavLink Href="orders" Match="@NavLinkMatch.All">All</NavLink>
+@code { absolute = location.origin + "/APP/Orders/"; }`;
+  const active = (container: HTMLElement): string[] =>
+    [...container.querySelectorAll("a")].filter((a) => a.classList.contains("active")).map((a) => a.textContent!);
+  /** Compiles the links and renders them with a NavigationManager for the current location. */
+  const mount = async (source: string): Promise<{ container: HTMLElement }> => {
+    const compiled = await compileFiles({ "Test.tsazor": source });
+    expect(compiled.diagnostics["Test.tsazor"]!.filter((d) => d.severity === "error")).toEqual([]);
+    const { default: Component } = await import(/* @vite-ignore */ compiled.modules["Test.tsazor"]!);
+    const services = new ServiceCollection();
+    services.registerValue(NavigationManager as never, track(new NavigationManager()));
+    const renderer = new Renderer(services.build());
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    renderer.renderInContainer(Component, container);
+    await renderer.waitUntilIdle();
+    return { container };
+  };
+
+  it("relative, root-relative and absolute hrefs under a non-root <base href>", async () => {
+    const base = document.createElement("base");
+    base.setAttribute("href", "/app/");
+    document.head.appendChild(base);
+    history.replaceState(null, "", "/app/orders/5?tab=1");
+    const m = await mount(links);
+    // Prefix: the base covers everything; /app/orders covers /app/orders/5.
+    // The absolute href differs in case and has a trailing slash; /orders is outside the base.
+    expect(active(m.container)).toEqual(["Prefix home", "Relative", "Root-relative", "Absolute"]);
+  });
+
+  it("All matches exactly, ignoring the current query and fragment, with a trailing slash on the href", async () => {
+    const base = document.createElement("base");
+    base.setAttribute("href", "/app/");
+    document.head.appendChild(base);
+    history.replaceState(null, "", "/app/orders?tab=1#top");
+    const m = await mount(links);
+    // The trailing-slash href (`…/Orders/`) is no prefix of `…/orders?tab=1` — as in Blazor.
+    expect(active(m.container)).toEqual(["Prefix home", "Relative", "Root-relative", "All"]);
+
+    history.replaceState(null, "", "/app");
+    const root = await mount(links);
+    // http://host/app is the base URI http://host/app/ without its slash.
+    expect(active(root.container)).toEqual(["Home", "Prefix home"]);
   });
 });
 

@@ -120,21 +120,8 @@ export function parseAttributeLists(text: string): CSharpAttribute[] | null {
 export function typescriptFormOf(attribute: CSharpAttribute): string {
   switch (attribute.name) {
     case "Authorize": {
-      const requirement: AuthorizeRequirement = {};
-      let literal = true;
-      attribute.args.forEach((arg, index) => {
-        const key = arg.name ?? (index === 0 ? "Policy" : undefined);
-        const text = csharpString(arg.value);
-        if (key === "Roles" && text !== null) requirement.roles = text.split(",").map((role) => role.trim()).filter((role) => role.length > 0);
-        else if (key === "Policy" && text !== null) requirement.policy = text;
-        else if (key === "Roles" || key === "Policy") literal = false;
-      });
-      if (!literal) return "'@authorize({ roles: [\"…\"], policy: \"…\" })' with string literals";
-      const parts = [
-        ...(requirement.roles !== undefined ? [`roles: [${requirement.roles.map((role) => JSON.stringify(role)).join(", ")}]`] : []),
-        ...(requirement.policy !== undefined ? [`policy: ${JSON.stringify(requirement.policy)}`] : []),
-      ];
-      return parts.length > 0 ? `'@authorize({ ${parts.join(", ")} })'` : "'@authorize'";
+      const form = authorizeDirectiveOf(attribute);
+      return form === null ? "'@authorize({ roles: [\"…\"], policy: \"…\" })' with string literals" : `'${form}'`;
     }
     case "AllowAnonymous":
       return "no directive — a page is anonymous unless it declares @authorize (which is not inherited)";
@@ -143,6 +130,46 @@ export function typescriptFormOf(attribute: CSharpAttribute): string {
     default:
       return "a TS class decorator ('@attribute @decorator(…)'), or remove it";
   }
+}
+
+/**
+ * The directive that mechanically replaces `@attribute [<attribute>]` (the
+ * TZS021 fix): `@authorize…` for a literal `[Authorize]`, `@page "…"` for a
+ * literal `[Route("…")]`, "" (remove) for `[AllowAnonymous]`; null when the
+ * replacement needs a decision (decorator or removal, non-literal values).
+ */
+export function directiveReplacementOf(attribute: CSharpAttribute): string | null {
+  switch (attribute.name) {
+    case "Authorize":
+      return authorizeDirectiveOf(attribute);
+    case "AllowAnonymous":
+      return attribute.args.length === 0 ? "" : null;
+    case "Route": {
+      const template = attribute.args.length === 1 && attribute.args[0]!.name === undefined ? csharpString(attribute.args[0]!.value) : null;
+      return template === null ? null : `@page ${JSON.stringify(template)}`;
+    }
+    default:
+      return null;
+  }
+}
+
+/** `@authorize` / `@authorize({ roles: […], policy: "…" })` for `[Authorize(…)]` with literal values, else null. */
+function authorizeDirectiveOf(attribute: CSharpAttribute): string | null {
+  const requirement: AuthorizeRequirement = {};
+  let literal = true;
+  attribute.args.forEach((arg, index) => {
+    const key = arg.name ?? (index === 0 ? "Policy" : undefined);
+    const text = csharpString(arg.value);
+    if (key === "Roles" && text !== null) requirement.roles = text.split(",").map((role) => role.trim()).filter((role) => role.length > 0);
+    else if (key === "Policy" && text !== null) requirement.policy = text;
+    else if (key === "Roles" || key === "Policy") literal = false;
+  });
+  if (!literal) return null;
+  const parts = [
+    ...(requirement.roles !== undefined ? [`roles: [${requirement.roles.map((role) => JSON.stringify(role)).join(", ")}]`] : []),
+    ...(requirement.policy !== undefined ? [`policy: ${JSON.stringify(requirement.policy)}`] : []),
+  ];
+  return parts.length > 0 ? `@authorize({ ${parts.join(", ")} })` : "@authorize";
 }
 
 /** The value of a C# string literal (`"a\"b"`, verbatim `@"a""b"`), or null. */

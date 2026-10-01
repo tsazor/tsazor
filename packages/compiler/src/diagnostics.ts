@@ -1,6 +1,7 @@
 /**
  * Stable diagnostic codes (TZS001…). The compiler never fails silently:
- * every parse/codegen problem lands here with a source position.
+ * every parse/codegen problem lands here with the source range of the
+ * offending construct.
  */
 
 export interface SourcePos {
@@ -10,13 +11,40 @@ export interface SourcePos {
   readonly column: number;
 }
 
+/** A source range: `pos` inclusive, `endPos` exclusive (AST spans have the same shape). */
+export interface SourceRange {
+  readonly pos: SourcePos;
+  readonly endPos: SourcePos;
+}
+
+/** Replaces the text of a source range (empty `text` = delete). */
+export interface TextEdit extends SourceRange {
+  readonly text: string;
+}
+
+/**
+ * A mechanical fix of a diagnostic (C# form ⇒ TS form, `var` ⇒ `let`): the
+ * edits turn the source into the form the message names — for LSP code
+ * actions and the `.razor` → `.tsazor` codemod.
+ */
+export interface DiagnosticFix {
+  /** Short description (`Use 'const x of xs'`). */
+  readonly title: string;
+  readonly edits: readonly TextEdit[];
+}
+
 export type DiagnosticSeverity = "error" | "warning";
 
-export interface TszDiagnostic {
+/**
+ * One diagnostic. `pos` is the start (kept for every consumer that only
+ * needs a location), `endPos` the exclusive end of the construct — the whole
+ * `@foreach (…)` header, the directive, the attribute, the expression.
+ */
+export interface TszDiagnostic extends SourceRange {
   readonly code: string;
   readonly message: string;
   readonly severity: DiagnosticSeverity;
-  readonly pos: SourcePos;
+  readonly fix?: DiagnosticFix;
 }
 
 const CODES = {
@@ -43,6 +71,7 @@ const CODES = {
   TZS021: "C# form — use the TypeScript form.",
   TZS022: "'var' declaration — use 'let' or 'const'.",
   TZS023: "Switch case falls through.",
+  TZS024: "Invalid TypeScript expression.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;
@@ -50,17 +79,23 @@ export type DiagnosticCode = keyof typeof CODES;
 export class DiagnosticBag {
   private readonly items: TszDiagnostic[] = [];
 
-  add(code: DiagnosticCode, severity: DiagnosticSeverity, pos: SourcePos, detail?: string): void {
+  add(code: DiagnosticCode, severity: DiagnosticSeverity, range: SourceRange, detail?: string, fix?: DiagnosticFix): void {
     const message = detail ? `${CODES[code]} ${detail}` : CODES[code];
-    this.items.push({ code, message, severity, pos });
+    const { pos, endPos } = range;
+    // The same finding reached twice (an expression baked for display and
+    // for assignment) is reported once.
+    const duplicate = this.items.some((d) =>
+      d.code === code && d.message === message && d.pos.line === pos.line && d.pos.column === pos.column);
+    if (duplicate) return;
+    this.items.push({ code, message, severity, pos, endPos, ...(fix ? { fix } : {}) });
   }
 
-  error(code: DiagnosticCode, pos: SourcePos, detail?: string): void {
-    this.add(code, "error", pos, detail);
+  error(code: DiagnosticCode, range: SourceRange, detail?: string, fix?: DiagnosticFix): void {
+    this.add(code, "error", range, detail, fix);
   }
 
-  warning(code: DiagnosticCode, pos: SourcePos, detail?: string): void {
-    this.add(code, "warning", pos, detail);
+  warning(code: DiagnosticCode, range: SourceRange, detail?: string, fix?: DiagnosticFix): void {
+    this.add(code, "warning", range, detail, fix);
   }
 
   get all(): readonly TszDiagnostic[] {

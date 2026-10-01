@@ -15,8 +15,9 @@ export interface DirectiveNode extends SourceSpan {
   name: string;
   /** Raw value text after the directive keyword (trimmed). Empty when absent. */
   value: string;
-  /** Source position of `value[0]` (set for `@import`, whose value may span
-   *  lines, and `@attribute`, whose decorator is emitted mapped). */
+  /** Source position of `value[0]` — `@import` values may span lines,
+   *  `@attribute` decorators are emitted mapped, diagnostics cover the value.
+   *  Set by the parser for every directive. */
   valueStart?: { line: number; column: number };
 }
 
@@ -62,6 +63,8 @@ export interface StatementNode extends SourceSpan {
    *  destructuring, function, class, enum) — later markup expressions in the
    *  same scope must not rewrite them to `this.X`. */
   declares: string[];
+  /** The subset of `declares` that cannot be assigned to — a `@bind` on one is an error. */
+  readonly?: Record<string, "const" | "function" | "class" | "enum">;
 }
 
 /** A plain `{ … }` block statement in a code context (opens a scope). */
@@ -94,6 +97,8 @@ export interface ForNode extends SourceSpan {
   code: string;
   /** Absolute position of the header code's first character. */
   codeStart?: SourceSpan["pos"];
+  /** Position right after the header's closing `)` (`pos`…`headerEnd` = `@foreach (…)`). */
+  headerEnd?: SourceSpan["pos"];
   isForEach: boolean;
   children: MarkupNode[];
 }
@@ -227,14 +232,20 @@ export type AttributeNode =
       kind: "bind";
       /** Two-way expression (from @bind, @bind:get is stored separately). */
       expression?: string;
-      /** Component parameter target of @bind-Value (e.g. "Value"). */
+      /** Target of @bind-Value: a component parameter ("Value"), on an element the bound attribute ("value"). */
       bindTarget?: string;
       event?: string;
       format?: string;
       get?: string;
       set?: string;
       after?: string;
+      /** Source spans of the modifier attributes folded into this bind (diagnostic ranges). */
+      modifierSpans?: Partial<Record<BindModifier, SourceSpan>>;
+      /** Where the code of the bound expression and of each modifier starts (syntax diagnostics). */
+      codeStarts?: Partial<Record<"expression" | BindModifier, SourceSpan["pos"]>>;
     });
+
+export type BindModifier = "event" | "format" | "get" | "set" | "after";
 
 export interface DocumentNode {
   directives: DirectiveNode[];

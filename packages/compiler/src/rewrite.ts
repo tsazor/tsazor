@@ -66,6 +66,15 @@ export interface RewriteResult {
   varKeywords: number[];
   /** expression: a member access `recv.name` (a method group with receiver, C18). */
   methodGroup?: MethodGroup;
+  /** The TS parser's syntax errors, located in the input code (A7: TZS024/TZS015). */
+  syntaxErrors: SnippetSyntaxError[];
+}
+
+/** A syntax error of a snippet: `offset`/`length` within the input code (length ≥ 1 unless the code is empty). */
+export interface SnippetSyntaxError {
+  offset: number;
+  length: number;
+  message: string;
 }
 
 interface Edit {
@@ -230,7 +239,13 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
   visit(file, new Scope(undefined, false));
 
   const result = applyEdits(code, edits);
-  const rewrite: RewriteResult = { text: result.text, tokens: wordTokens(code, result.mapOut), declares, varKeywords };
+  const rewrite: RewriteResult = {
+    text: result.text,
+    tokens: wordTokens(code, result.mapOut),
+    declares,
+    varKeywords,
+    syntaxErrors: syntaxErrorsOf(file, base, code.length),
+  };
   if (kind === "expression") {
     const group = methodGroupOf(file);
     if (group) {
@@ -248,6 +263,24 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
     }
   }
   return rewrite;
+}
+
+/**
+ * The parse diagnostics of a wrapped snippet, moved into the input code: an
+ * error in the wrapper (`')' expected` after the code) lands on the code's
+ * last character, an empty one widens to one character.
+ */
+function syntaxErrorsOf(file: ts.SourceFile, base: number, length: number): SnippetSyntaxError[] {
+  const diagnostics = (file as unknown as { parseDiagnostics?: readonly ts.DiagnosticWithLocation[] }).parseDiagnostics ?? [];
+  return diagnostics.map((d) => {
+    let start = Math.min(Math.max(d.start - base, 0), length);
+    let end = Math.min(Math.max(d.start - base + d.length, start), length);
+    if (end === start) {
+      end = Math.min(start + 1, length);
+      start = Math.max(0, end - 1);
+    }
+    return { offset: start, length: end - start, message: ts.flattenDiagnosticMessageText(d.messageText, " ") };
+  });
 }
 
 /* Loop headers ---------------------------------------------------------------- */
@@ -270,9 +303,11 @@ export function forHeaderKind(code: string): "for" | "forOf" | "forIn" | null {
 /* Bind targets --------------------------------------------------------------- */
 
 export type BindTarget =
-  /** `field`: the last member name of the path (EditContext field key), if it has one. */
-  | { ok: true; field?: string }
-  | { ok: false; reason: string };
+  /** `field`: the last member name of the path (EditContext field key), if it has one;
+   *  `identifier`: the target is this bare name (`x`, `(x)`, `x!`), not a member path. */
+  | { ok: true; field?: string; identifier?: string }
+  /** `syntax`: the code is not valid TS at all (reported as a syntax error, TZS024). */
+  | { ok: false; reason: string; syntax?: boolean };
 
 /**
  * Checks that a `@bind` expression is an assignment target, syntactically —
@@ -286,7 +321,7 @@ export function checkBindTarget(code: string): BindTarget {
   const statement = file.statements[0];
   const syntaxErrors = (file as unknown as { parseDiagnostics?: readonly unknown[] }).parseDiagnostics ?? [];
   if (file.statements.length !== 1 || !statement || !ts.isExpressionStatement(statement) || syntaxErrors.length > 0) {
-    return { ok: false, reason: "is not a single expression" };
+    return { ok: false, reason: "is not a single expression", ...(syntaxErrors.length > 0 ? { syntax: true } : {}) };
   }
   let target = statement.expression;
   // The wrapping parentheses of the snippet itself.
@@ -312,7 +347,7 @@ export function checkBindTarget(code: string): BindTarget {
     }
     break;
   }
-  if (ts.isIdentifier(outer)) return { ok: true, field: outer.text };
+  if (ts.isIdentifier(outer)) return { ok: true, field: outer.text, identifier: outer.text };
   if (ts.isPropertyAccessExpression(outer)) return { ok: true, field: outer.name.text };
   if (ts.isElementAccessExpression(outer)) {
     const argument = outer.argumentExpression;

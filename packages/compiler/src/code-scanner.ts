@@ -194,9 +194,13 @@ export class CodeScanner {
 /** Names a run of statements binds in its own scope, plus TS parse errors. */
 export interface StatementInfo {
   declares: string[];
-  /** Parse errors: offset relative to the code, message. */
-  errors: Array<{ offset: number; message: string }>;
+  /** The declared names that cannot be assigned to (`const`, function, class, enum) — `@bind` targets them in error. */
+  readonly: Record<string, ReadonlyDeclaration>;
+  /** Parse errors: offset relative to the code, length (≥ 1), message. */
+  errors: Array<{ offset: number; length: number; message: string }>;
 }
+
+export type ReadonlyDeclaration = "const" | "function" | "class" | "enum";
 
 /** Parses statement code with the TS parser (syntax only) to collect its
  *  top-level declarations (const/let/var incl. destructuring, function,
@@ -204,9 +208,13 @@ export interface StatementInfo {
 export function analyzeStatements(code: string): StatementInfo {
   const file = ts.createSourceFile("statement.ts", code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
   const declares: string[] = [];
+  const readonly: StatementInfo["readonly"] = {};
+  let kind: ReadonlyDeclaration | null = null;
   const addBinding = (name: ts.BindingName): void => {
     if (ts.isIdentifier(name)) {
       declares.push(name.text);
+      if (kind) readonly[name.text] = kind;
+      else delete readonly[name.text];
       return;
     }
     for (const element of name.elements) {
@@ -221,22 +229,26 @@ export function analyzeStatements(code: string): StatementInfo {
       // markup text the author forgot to mark — valid TS, so say it here.
       errors.push({
         offset: statement.getStart(file),
+        length: statement.getEnd() - statement.getStart(file),
         message: `'${statement.getText(file)}' is not a statement`,
       });
     }
     if (ts.isVariableStatement(statement)) {
+      kind = (statement.declarationList.flags & ts.NodeFlags.Const) !== 0 ? "const" : null;
       for (const declaration of statement.declarationList.declarations) addBinding(declaration.name);
     } else if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement) || ts.isEnumDeclaration(statement)) && statement.name) {
       declares.push(statement.name.text);
+      readonly[statement.name.text] = ts.isFunctionDeclaration(statement) ? "function" : ts.isClassDeclaration(statement) ? "class" : "enum";
     }
   }
   const parseDiagnostics = (file as unknown as { parseDiagnostics?: readonly ts.DiagnosticWithLocation[] }).parseDiagnostics ?? [];
   const syntax = parseDiagnostics.map((d) => ({
     offset: d.start,
+    length: Math.max(1, d.length),
     message: ts.flattenDiagnosticMessageText(d.messageText, " "),
   }));
   // Syntax errors first: they explain a following non-statement.
-  return { declares, errors: [...syntax, ...errors] };
+  return { declares, readonly, errors: [...syntax, ...errors] };
 }
 
 /** Expressions that may stand alone as a statement (C#'s CS0201 set). */

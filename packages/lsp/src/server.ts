@@ -17,11 +17,14 @@ import {
   Location,
   CompletionItemKind,
   type MarkupContent,
+  type CodeAction,
+  type CodeActionParams,
+  CodeActionKind,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { analyzeSource, definitionAt, hoverAt, type AnalyzedFile } from "./analysis.js";
+import { analyzeSource, definitionAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
 import { completeAt, type CompletionKind } from "./completions.js";
 import { TsazorTypeService, type ShadowEntry } from "./ts-service.js";
 import {
@@ -96,10 +99,8 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       const items: Diagnostic[] = diagnostics.map(
         (diagnostic): Diagnostic => ({
           severity: diagnostic.severity === "error" ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
-          range: {
-            start: { line: diagnostic.pos.line - 1, character: diagnostic.pos.column },
-            end: { line: diagnostic.pos.line - 1, character: diagnostic.pos.column + 1 },
-          },
+          // The construct the diagnostic covers (header, directive, attribute, expression).
+          range: lspRange(diagnostic),
           code: diagnostic.code,
           source: "tsazor",
           message: diagnostic.message,
@@ -271,11 +272,27 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     return item;
   });
 
+  /* Code actions: the mechanical fixes the compiler attaches (TZS021, TZS022) */
+
+  connection.onCodeAction(async (params: CodeActionParams): Promise<CodeAction[]> => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+    const current = await analyzed(document);
+    return quickFixesAt(current, params.range).map((fix): CodeAction => ({
+      title: fix.title,
+      kind: CodeActionKind.QuickFix,
+      isPreferred: true,
+      diagnostics: params.context.diagnostics.filter((d) => d.code === fix.diagnostic.code && d.message === fix.diagnostic.message),
+      edit: { changes: { [document.uri]: fix.edits } },
+    }));
+  });
+
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       hoverProvider: true,
       definitionProvider: true,
+      codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix] },
       completionProvider: { triggerCharacters: ["<", "@", " ", "."], resolveProvider: true },
     },
   };
