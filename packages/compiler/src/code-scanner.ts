@@ -194,8 +194,8 @@ export class CodeScanner {
 /** Names a run of statements binds in its own scope, plus TS parse errors. */
 export interface StatementInfo {
   declares: string[];
-  /** Parse errors: offset relative to the code, message. */
-  errors: Array<{ offset: number; message: string }>;
+  /** Parse errors: offset relative to the code, length (≥ 1), message. */
+  errors: Array<{ offset: number; length: number; message: string }>;
 }
 
 /** Parses statement code with the TS parser (syntax only) to collect its
@@ -221,6 +221,7 @@ export function analyzeStatements(code: string): StatementInfo {
       // markup text the author forgot to mark — valid TS, so say it here.
       errors.push({
         offset: statement.getStart(file),
+        length: statement.getEnd() - statement.getStart(file),
         message: `'${statement.getText(file)}' is not a statement`,
       });
     }
@@ -233,6 +234,7 @@ export function analyzeStatements(code: string): StatementInfo {
   const parseDiagnostics = (file as unknown as { parseDiagnostics?: readonly ts.DiagnosticWithLocation[] }).parseDiagnostics ?? [];
   const syntax = parseDiagnostics.map((d) => ({
     offset: d.start,
+    length: Math.max(1, d.length),
     message: ts.flattenDiagnosticMessageText(d.messageText, " "),
   }));
   // Syntax errors first: they explain a following non-statement.

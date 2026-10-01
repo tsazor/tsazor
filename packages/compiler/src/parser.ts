@@ -18,7 +18,7 @@ import type {
   WhileNode,
 } from "./ast.js";
 import { analyzeStatements, CodeScanner, type CodeToken } from "./code-scanner.js";
-import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
+import { DiagnosticBag, type SourcePos, type SourceRange } from "./diagnostics.js";
 import { TSScanner } from "./scanner.js";
 
 /**
@@ -85,10 +85,12 @@ interface ValuePart {
   start?: number;
 }
 
-/** A parsed control header `(…)`: trimmed code and its first character. */
+/** A parsed control header `(…)`: trimmed code, its first character and the
+ *  position after the closing parenthesis. */
 interface Header {
   code: string;
   start?: SourcePos;
+  end?: SourcePos;
 }
 
 /**
@@ -133,6 +135,23 @@ class Parser {
     this.code = new CodeScanner(source);
   }
 
+  /** The source range [from, to) of a diagnostic. */
+  private range(from: number, to: number): SourceRange {
+    return { pos: this.locator(from), endPos: this.locator(Math.max(from, to)) };
+  }
+
+  /** From an already located start to the absolute index `to`. */
+  private rangeFrom(pos: SourcePos, to: number): SourceRange {
+    return { pos, endPos: this.locator(to) };
+  }
+
+  /** `to`, moved left over trailing whitespace down to `from` (a directive line without its `\r`). */
+  private trimmedEnd(from: number, to: number): number {
+    let end = to;
+    while (end > from && /\s/.test(this.source[end - 1]!)) end--;
+    return end;
+  }
+
   parseDocument(): DocumentNode {
     const body: MarkupNode[] = [];
     this.parseNodes(body, {});
@@ -162,7 +181,7 @@ class Parser {
 
       if (ch === "}" && documentLevel) {
         this.flush(out);
-        this.diagnostics.error("TZS003", this.locator(this.i), "Unexpected '}' in markup.");
+        this.diagnostics.error("TZS003", this.range(this.i, this.i + 1), "Unexpected '}' in markup.");
         this.i++;
         continue;
       }
@@ -241,14 +260,14 @@ class Parser {
     const pos = this.locator(this.i);
     const end = this.source.indexOf(">", this.i);
     const tag = this.source.slice(this.i, end < 0 ? this.source.length : end + 1);
-    this.diagnostics.error("TZS002", pos, `Unexpected closing tag '${tag}'.`);
+    this.diagnostics.error("TZS002", this.rangeFrom(pos, this.i + tag.length), `Unexpected closing tag '${tag}'.`);
     this.i = end < 0 ? this.source.length : end + 1;
   }
 
   private skipRazorComment(): void {
     const end = this.source.indexOf("*@", this.i + 2);
     if (end < 0) {
-      this.diagnostics.error("TZS006", this.locator(this.i), "Razor comment '@*' never closes.");
+      this.diagnostics.error("TZS006", this.range(this.i, this.i + 2), "Razor comment '@*' never closes.");
       this.i = this.source.length;
       return;
     }
@@ -289,7 +308,7 @@ class Parser {
     if (next === "(") {
       const end = this.code.scanBalanced(this.i + 1);
       if (end < 0) {
-        this.diagnostics.error("TZS003", pos, "Parenthesized expression never closes.");
+        this.diagnostics.error("TZS003", this.rangeFrom(pos, this.i + 2), "Parenthesized expression never closes.");
         this.i = src.length;
         return;
       }
@@ -311,7 +330,7 @@ class Parser {
 
     // Identifier transitions.
     if (!isIdStart(next)) {
-      this.diagnostics.error("TZS004", pos, "Unexpected character after '@'.");
+      this.diagnostics.error("TZS004", this.rangeFrom(pos, Math.min(this.i + 2, src.length)), "Unexpected character after '@'.");
       this.pushText(out, "@", pos);
       this.i++;
       return;
@@ -340,7 +359,7 @@ class Parser {
         this.i++;
         return;
       }
-      this.diagnostics.error("TZS001", pos, `'@${word}' outside of its control context.`);
+      this.diagnostics.error("TZS001", this.rangeFrom(pos, idEnd), `'@${word}' outside of its control context.`);
       this.i = idEnd;
       return;
     }
@@ -353,21 +372,21 @@ class Parser {
     }
 
     if (word === "await") {
-      this.diagnostics.error(
-        "TZS012",
-        pos,
-        "'@await' in markup is not supported: buildRenderTree is synchronous. Await in a lifecycle method (e.g. onInitializedAsync) and render the stored result.",
-      );
       let end = idEnd;
       while (src[end] === " " || src[end] === "\t") end++;
       this.i = Math.max(this.ts.scanImplicitExpression(end), idEnd);
+      this.diagnostics.error(
+        "TZS012",
+        this.rangeFrom(pos, this.i),
+        "'@await' in markup is not supported: buildRenderTree is synchronous. Await in a lifecycle method (e.g. onInitializedAsync) and render the stored result.",
+      );
       return;
     }
 
     if (DIRECTIVES[word] !== undefined) {
       if (this.nesting > 0) {
-        this.diagnostics.error("TZS013", pos, `'@${word}' is a directive and is only allowed at document level.`);
         this.i = this.lineEnd(idEnd);
+        this.diagnostics.error("TZS013", this.rangeFrom(pos, this.trimmedEnd(idEnd, this.i)), `'@${word}' is a directive and is only allowed at document level.`);
         return;
       }
       this.parseDirective(word, idEnd, pos, out);
@@ -381,7 +400,7 @@ class Parser {
   private parseImplicitExpression(idStart: number, idEnd: number, pos: SourcePos, out: MarkupNode[]): void {
     const end = this.ts.scanImplicitExpression(idStart);
     if (end <= idStart) {
-      this.diagnostics.error("TZS004", pos, "Empty implicit expression.");
+      this.diagnostics.error("TZS004", this.rangeFrom(pos, idEnd), "Empty implicit expression.");
       this.i = idEnd;
       return;
     }
@@ -394,13 +413,13 @@ class Parser {
     const src = this.source;
     const brace = this.findChar(from, "{");
     if (brace >= src.length) {
-      this.diagnostics.error("TZS006", pos, "@code block missing '{'.");
+      this.diagnostics.error("TZS006", this.rangeFrom(pos, from), "@code block missing '{'.");
       this.i = src.length;
       return;
     }
     const close = this.code.scanBalanced(brace);
     if (close < 0) {
-      this.diagnostics.error("TZS006", pos, "Code block never closes.");
+      this.diagnostics.error("TZS006", this.rangeFrom(pos, brace + 1), "Code block never closes.");
       this.i = src.length;
       return;
     }
@@ -413,7 +432,7 @@ class Parser {
       member: true,
     };
     if (this.nesting > 0) {
-      this.diagnostics.error("TZS013", pos, `'@${word}' blocks are only allowed at document level.`);
+      this.diagnostics.error("TZS013", this.rangeFrom(pos, close), `'@${word}' blocks are only allowed at document level.`);
     } else {
       out.push(node);
     }
@@ -427,7 +446,7 @@ class Parser {
     this.i = brace + 1;
     const children: MarkupNode[] = [];
     this.nesting++;
-    const end = this.parseCodeStatements(children, "block", pos);
+    const end = this.parseCodeStatements(children, "block", this.rangeFrom(pos, brace + 1));
     this.nesting--;
     out.push({
       kind: "codeBlock",
@@ -448,17 +467,19 @@ class Parser {
    * Parses a code-first statement list: TypeScript statements, control
    * statements, markup in statement position (`<tag`, `<text>`, `@:`) and
    * `@` expressions. Consumes the closing `}` in "block"/"switch" mode;
-   * returns "case" (label unconsumed) when a switch label starts.
+   * returns "case" (label unconsumed) when a switch label starts. `opener`
+   * is the construct an unclosed list is reported on (`{`, `@{`, the header).
    */
-  private parseCodeStatements(out: MarkupNode[], mode: CodeMode, openPos?: SourcePos): CodeEnd {
+  private parseCodeStatements(out: MarkupNode[], mode: CodeMode, opener?: SourceRange): CodeEnd {
     const src = this.source;
     for (;;) {
       this.skipCodeTrivia();
       if (this.i >= src.length) {
+        const at = opener ?? this.range(this.i, this.i);
         if (mode !== "single") {
-          this.diagnostics.error("TZS006", openPos ?? this.locator(this.i), "Code block never closes.");
+          this.diagnostics.error("TZS006", at, "Code block never closes.");
         } else {
-          this.diagnostics.error("TZS006", openPos ?? this.locator(this.i), "Expected a statement after the control header.");
+          this.diagnostics.error("TZS006", at, "Expected a statement after the control header.");
         }
         return "eof";
       }
@@ -467,7 +488,7 @@ class Parser {
 
       if (ch === "}") {
         if (mode === "single") {
-          this.diagnostics.error("TZS006", this.locator(this.i), "Expected a statement after the control header.");
+          this.diagnostics.error("TZS006", this.range(this.i, this.i + 1), "Expected a statement after the control header.");
           return "close";
         }
         this.i++;
@@ -493,7 +514,7 @@ class Parser {
         this.i++;
         const children: MarkupNode[] = [];
         this.nesting++;
-        this.parseCodeStatements(children, "block", pos);
+        this.parseCodeStatements(children, "block", this.rangeFrom(pos, this.i));
         this.nesting--;
         out.push({ kind: "block", children, pos, endPos: this.locator(this.i) });
       } else if (isIdStart(ch) && this.parseCodeKeyword(out, mode)) {
@@ -526,7 +547,7 @@ class Parser {
         this.pendingCase = true;
         return true;
       }
-      this.diagnostics.error("TZS001", pos, `'${word}' label outside of a switch.`);
+      this.diagnostics.error("TZS001", this.rangeFrom(pos, after), `'${word}' label outside of a switch.`);
       this.i = after;
       return true;
     }
@@ -536,7 +557,7 @@ class Parser {
       return true;
     }
     if (word === "else" || word === "catch" || word === "finally") {
-      this.diagnostics.error("TZS001", pos, `'${word}' without a matching '${word === "else" ? "if" : "try"}'.`);
+      this.diagnostics.error("TZS001", this.rangeFrom(pos, after), `'${word}' without a matching '${word === "else" ? "if" : "try"}'.`);
       this.i = after;
       return true;
     }
@@ -550,7 +571,7 @@ class Parser {
     const start = this.i;
     const end = this.code.scanStatements(start, (token) => this.isStatementBoundary(token), mode === "single");
     if (end <= start) {
-      this.diagnostics.error("TZS003", this.locator(start), `Unexpected '${src[start]}' in code.`);
+      this.diagnostics.error("TZS003", this.range(start, start + 1), `Unexpected '${src[start]}' in code.`);
       this.i = start + 1;
       return;
     }
@@ -560,7 +581,7 @@ class Parser {
     if (first) {
       this.diagnostics.error(
         "TZS015",
-        this.locator(start + first.offset),
+        this.range(start + first.offset, start + first.offset + first.length),
         `${first.message} (markup inside code must start with a tag, '@:' or '<text>').`,
       );
     }
@@ -634,7 +655,7 @@ class Parser {
     const end = word === "authorize" ? this.parenDirectiveEnd(afterWord) : this.lineEnd(afterWord);
     const slice = this.source.slice(afterWord, end);
     const raw = slice.trim();
-    const valueStart = word === "attribute" || word === "authorize" ? this.locator(afterWord + slice.length - slice.trimStart().length) : undefined;
+    const valueStart = this.locator(afterWord + slice.length - slice.trimStart().length);
     out.push({ kind: "directive", name: word, value: raw, valueStart, pos, endPos: this.locator(end) });
     this.i = end;
   }
@@ -707,6 +728,7 @@ class Parser {
 
   /** Parses a control statement; this.i is right after its keyword. */
   private parseControlStatement(word: string, pos: SourcePos, out: MarkupNode[], inCode: boolean): void {
+    const keyword = this.rangeFrom(pos, this.i);
     switch (word) {
       case "if":
         out.push(this.parseIf(pos, inCode));
@@ -716,7 +738,7 @@ class Parser {
         const header = this.parseHeader(pos, word);
         const children = this.parseBody(pos);
         const node: ForNode = {
-          kind: "for", code: header.code, codeStart: header.start, isForEach: word === "foreach", children, pos, endPos: this.locator(this.i),
+          kind: "for", code: header.code, codeStart: header.start, headerEnd: header.end, isForEach: word === "foreach", children, pos, endPos: this.locator(this.i),
         };
         out.push(node);
         return;
@@ -740,7 +762,7 @@ class Parser {
           while (this.source[k] === " " || this.source[k] === "\t") k++;
           if (this.source[k] === ";") this.i = k + 1;
         } else {
-          this.diagnostics.error("TZS003", pos, "'do' block requires a trailing 'while (…)'.");
+          this.diagnostics.error("TZS003", keyword, "'do' block requires a trailing 'while (…)'.");
         }
         out.push({
           kind: "while", condition: header.code, conditionStart: header.start, isDoWhile: true, children, pos, endPos: this.locator(this.i),
@@ -751,7 +773,7 @@ class Parser {
         this.parseSwitch(pos, out, inCode);
         return;
       case "try":
-        out.push(this.parseTry(pos, inCode));
+        out.push(this.parseTry(pos, keyword, inCode));
         return;
     }
   }
@@ -786,11 +808,11 @@ class Parser {
     return { kind: "if", branches, pos, endPos: this.locator(this.i) };
   }
 
-  private parseTry(pos: SourcePos, inCode: boolean): TryNode {
+  private parseTry(pos: SourcePos, keyword: SourceRange, inCode: boolean): TryNode {
     const node: TryNode = { kind: "try", children: [], pos, endPos: pos };
     this.skipGap(inCode);
     if (this.source[this.i] !== "{") {
-      this.diagnostics.error("TZS006", pos, "'try' requires a '{' block.");
+      this.diagnostics.error("TZS006", keyword, "'try' requires a '{' block.");
     }
     node.children = this.parseBody(pos);
     let save = this.i;
@@ -820,7 +842,7 @@ class Parser {
       node.finallyChildren = this.parseBody(finallyPos);
     } else {
       if (inCode) this.i = save;
-      if (!node.catchClause) this.diagnostics.error("TZS003", pos, "'try' requires a 'catch' or 'finally' block.");
+      if (!node.catchClause) this.diagnostics.error("TZS003", keyword, "'try' requires a 'catch' or 'finally' block.");
     }
     node.endPos = this.locator(this.i);
     return node;
@@ -828,24 +850,27 @@ class Parser {
 
   private parseSwitch(pos: SourcePos, out: MarkupNode[], inCode: boolean): void {
     const header = this.parseHeader(pos, "switch");
+    const headerRange = this.rangeFrom(pos, this.i);
     this.skipGap(inCode);
     if (this.source[this.i] !== "{") {
-      this.diagnostics.error("TZS006", pos, "@switch requires a '{' block.");
+      this.diagnostics.error("TZS006", headerRange, "@switch requires a '{' block.");
       this.i = this.source.length;
       return;
     }
+    const brace = this.range(this.i, this.i + 1);
     this.i++;
     const cases: SwitchCase[] = [];
     const preamble: MarkupNode[] = [];
     this.nesting++;
     for (;;) {
       const target = cases.length > 0 ? cases[cases.length - 1]!.children : preamble;
-      if (this.parseCodeStatements(target, "switch", pos) !== "case") break;
+      if (this.parseCodeStatements(target, "switch", brace) !== "case") break;
       cases.push(this.parseCaseLabel());
     }
     this.nesting--;
     if (preamble.length > 0) {
-      this.diagnostics.error("TZS001", preamble[0]!.pos, "Statements in a switch must follow a 'case' or 'default' label.");
+      const range = { pos: preamble[0]!.pos, endPos: preamble[preamble.length - 1]!.endPos };
+      this.diagnostics.error("TZS001", range, "Statements in a switch must follow a 'case' or 'default' label.");
     }
     out.push({ kind: "switch", code: header.code, codeStart: header.start, cases, pos, endPos: this.locator(this.i) } satisfies SwitchNode);
   }
@@ -883,7 +908,7 @@ class Parser {
       }
     }
     if (!colon) {
-      this.diagnostics.error("TZS003", labelPos, "'case' label without ':'.");
+      this.diagnostics.error("TZS003", this.range(labelStart, labelStart + "case".length), "'case' label without ':'.");
       this.i = src.length;
       return { code: src.slice(start).trim(), children: [], span: { pos: labelPos, endPos: this.locator(this.i) } };
     }
@@ -897,8 +922,9 @@ class Parser {
     const message = word === "using"
       ? "The C# 'using (…) { }' statement has no TypeScript equivalent — use try/finally or a 'using' declaration."
       : "The C# 'lock (…) { }' statement has no TypeScript equivalent (JavaScript is single-threaded).";
-    this.diagnostics.error("TZS012", pos, message);
+    const keywordEnd = this.i;
     this.parseHeader(pos, word);
+    this.diagnostics.error("TZS012", this.rangeFrom(pos, this.i < this.source.length ? this.i : keywordEnd), message);
     this.parseBody(pos);
   }
 
@@ -913,11 +939,12 @@ class Parser {
 
     if (src.startsWith("text>", this.i)) {
       this.i += 5;
+      const startTag = this.rangeFrom(pos, this.i);
       const children: MarkupNode[] = [];
       this.nesting++;
       this.parseNodes(children, { closeTag: "text" });
       this.nesting--;
-      this.expectCloseTag("text");
+      this.expectCloseTag("text", startTag);
       out.push({ kind: "textTag", children, pos, endPos: this.locator(this.i) });
       return;
     }
@@ -926,13 +953,15 @@ class Parser {
     while (this.i < src.length && /[A-Za-z0-9_.-]/.test(src[this.i]!)) this.i++;
     const tagName = src.slice(nameStart, this.i);
     if (!tagName) {
-      this.diagnostics.error("TZS002", pos, "Expected a tag name after '<'.");
+      this.diagnostics.error("TZS002", this.rangeFrom(pos, this.i), "Expected a tag name after '<'.");
       this.i++;
       return;
     }
+    // `<tagName`: unclosed-tag diagnostics cover the start tag's name.
+    const startTag = this.rangeFrom(pos, this.i);
 
     const isComponent = /^[A-Z]/.test(tagName) || tagName.includes(".");
-    const attributes = this.parseTagAttributes(pos, tagName);
+    const attributes = this.parseTagAttributes(startTag, tagName);
 
     let selfClosing = false;
     let isVoid = false;
@@ -946,7 +975,7 @@ class Parser {
         isVoid = true;
       }
     } else {
-      this.diagnostics.error("TZS002", pos, `Unclosed start tag '<${tagName}'.`);
+      this.diagnostics.error("TZS002", startTag, `Unclosed start tag '<${tagName}'.`);
       this.i = src.length;
     }
     // A void element may still be closed explicitly (`<input></input>`).
@@ -970,7 +999,7 @@ class Parser {
       this.nesting++;
       this.parseNodes(children, { closeTag: stopTag });
       this.nesting--;
-      this.expectCloseTag(stopTag);
+      this.expectCloseTag(stopTag, startTag);
       node.children = children;
     }
     node.endPos = this.locator(this.i);
@@ -982,7 +1011,8 @@ class Parser {
     if (match && match[1]!.toLowerCase() === tagName.toLowerCase()) this.i += match[0].length;
   }
 
-  private expectCloseTag(tagName: string): void {
+  /** Consumes `</tagName>`; a missing one is reported on the start tag. */
+  private expectCloseTag(tagName: string, startTag: SourceRange): void {
     const src = this.source;
     const save = this.i;
     this.skipWhitespace();
@@ -992,25 +1022,26 @@ class Parser {
       while (end < src.length && /[A-Za-z0-9_.-]/.test(src[end]!)) end++;
       const closeName = src.slice(after, end);
       if (closeName.toLowerCase() === tagName.toLowerCase()) {
+        const closeStart = this.i;
         this.i = end;
         while (end < src.length && src[end] !== ">") end++;
         if (src[end] === ">") this.i = end + 1;
-        else this.diagnostics.error("TZS002", this.locator(end), `Missing '>' on closing tag of <${tagName}>.`);
+        else this.diagnostics.error("TZS002", this.range(closeStart, after + closeName.length), `Missing '>' on closing tag of <${tagName}>.`);
         return;
       }
     }
     this.i = save;
-    this.diagnostics.error("TZS002", this.locator(this.i), `Missing closing tag </${tagName}>.`);
+    this.diagnostics.error("TZS002", startTag, `Missing closing tag </${tagName}>.`);
   }
 
-  private parseTagAttributes(tagPos: SourcePos, tagName: string): AttributeNode[] {
+  private parseTagAttributes(startTag: SourceRange, tagName: string): AttributeNode[] {
     const src = this.source;
     const attributes: AttributeNode[] = [];
     for (;;) {
       this.skipWhitespace();
       const ch = src[this.i];
       if (ch === undefined) {
-        this.diagnostics.error("TZS002", tagPos, `Start tag <${tagName} is never closed.`);
+        this.diagnostics.error("TZS002", startTag, `Start tag <${tagName} is never closed.`);
         return attributes;
       }
       if (ch === ">" || (ch === "/" && src[this.i + 1] === ">")) return attributes;
@@ -1026,7 +1057,7 @@ class Parser {
         const duplicate = attributes.some((a) =>
           a.kind === "eventModifier" && a.modifier === attr.modifier && a.name.toLowerCase() === attr.name.toLowerCase());
         if (duplicate) {
-          this.diagnostics.error("TZS008", attr.pos, `Duplicate modifier '@${attr.name}:${attr.modifier}'.`);
+          this.diagnostics.error("TZS008", attr, `Duplicate modifier '@${attr.name}:${attr.modifier}'.`);
           continue;
         }
       }
@@ -1042,11 +1073,12 @@ class Parser {
         }) as (Extract<AttributeNode, { kind: "bind" }> & Record<string, unknown>) | undefined;
         if (host && modifier && host[modifier] !== undefined) {
           const label = attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}:${modifier}` : `@bind:${modifier}`;
-          this.diagnostics.error("TZS008", attr.pos, `Duplicate bind modifier '${label}'.`);
+          this.diagnostics.error("TZS008", attr, `Duplicate bind modifier '${label}'.`);
           continue;
         }
         if (host && modifier) {
           host[modifier] = attr[modifier];
+          host.modifierSpans = { ...host.modifierSpans, ...attr.modifierSpans };
           continue;
         }
         // No host (or unknown modifier): keep the node; codegen reports a
@@ -1059,7 +1091,10 @@ class Parser {
       if (attr.kind === "bind") {
         const latent = attributes.find((a) => a.kind === "bind" && a.expression === undefined && a.bindTarget === attr.bindTarget);
         if (latent && latent.kind === "bind") {
+          // The joined bind reports on the base attribute; the modifiers keep their own spans.
           latent.expression = attr.expression;
+          latent.pos = attr.pos;
+          latent.endPos = attr.endPos;
           continue;
         }
       }
@@ -1074,7 +1109,7 @@ class Parser {
     while (this.i < src.length && /[A-Za-z0-9_@:.-]/.test(src[this.i]!)) this.i++;
     const name = src.slice(nameStart, this.i);
     if (!name) {
-      this.diagnostics.error("TZS009", pos, "Invalid attribute name.");
+      this.diagnostics.error("TZS009", this.range(this.i, this.i + 1), "Invalid attribute name.");
       this.i++;
       return null;
     }
@@ -1138,8 +1173,8 @@ class Parser {
         const lower = modifiers.join(":").toLowerCase();
         const modifier = lower === "preventdefault" ? "preventDefault" : lower === "stoppropagation" ? "stopPropagation" : null;
         if (modifier === null) {
-          this.diagnostics.error("TZS008", pos, `Unknown event modifier ':${modifiers.join(":")}' (expected ':preventDefault' or ':stopPropagation').`);
           if (hasValue) this.parseRequiredExpression(body, pos);
+          this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), `Unknown event modifier ':${modifiers.join(":")}' (expected ':preventDefault' or ':stopPropagation').`);
           return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
         }
         // Valueless form = true (Blazor).
@@ -1150,7 +1185,7 @@ class Parser {
         return { kind: "eventModifier", name: base!, modifier, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
       }
       if (!hasValue) {
-        this.diagnostics.error("TZS008", pos, `'@${base}' without a handler value.`);
+        this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), `'@${base}' without a handler value.`);
         return { kind: "eventHandler", name: base!, code: "", pos, endPos: this.locator(this.i) };
       }
       const code = this.parseRequiredExpression(base!, pos);
@@ -1162,9 +1197,9 @@ class Parser {
       return this.parseBindAttribute(body, name, pos);
     }
 
-    this.diagnostics.error("TZS001", pos, `Unknown directive attribute '@${body}'.`);
     if (src[this.i] === "=") this.i++;
     this.parseAttributeValue();
+    this.diagnostics.error("TZS001", this.rangeFrom(pos, this.i), `Unknown directive attribute '@${body}'.`);
     return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
   }
 
@@ -1192,9 +1227,9 @@ class Parser {
       const targetName = colon >= 0 ? target.slice(0, colon) : target;
       const modifier = colon >= 0 ? target.slice(colon + 1).toLowerCase() : undefined;
       if (targetName.length === 0) {
-        this.diagnostics.error("TZS008", pos, "'@bind-' requires a parameter name (e.g. '@bind-Value').");
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
+        this.diagnostics.error("TZS008", end(), "'@bind-' requires a parameter name (e.g. '@bind-Value').");
         return { kind: "bind", ...end() };
       }
       if (modifier === undefined) {
@@ -1203,11 +1238,11 @@ class Parser {
       }
       if (modifier === "event" || modifier === "format" || modifier === "get" || modifier === "set" || modifier === "after") {
         const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos)?.code ?? "";
-        return { kind: "bind", bindTarget: targetName, [modifier]: value, ...end() };
+        return { kind: "bind", bindTarget: targetName, [modifier]: value, modifierSpans: { [modifier]: end() }, ...end() };
       }
-      this.diagnostics.error("TZS008", pos, `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
       if (src[this.i] === "=") this.i++;
       this.parseAttributeValue();
+      this.diagnostics.error("TZS008", end(), `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
       return { kind: "bind", ...end() };
     }
 
@@ -1216,18 +1251,19 @@ class Parser {
       const modifier = rest.slice(1);
       const known = ["event", "format", "get", "set", "after"];
       if (!known.includes(modifier.toLowerCase())) {
-        this.diagnostics.error("TZS008", pos, `Unknown bind modifier '@bind:${modifier}'.`);
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
+        this.diagnostics.error("TZS008", end(), `Unknown bind modifier '@bind:${modifier}'.`);
         return { kind: "bind", ...end() };
       }
       const value = this.parseRequiredExpression(`bind:${modifier}`, pos)?.code ?? "";
-      return { kind: "bind", [modifier.toLowerCase()]: value, ...end() } as AttributeNode;
+      const key = modifier.toLowerCase();
+      return { kind: "bind", [key]: value, modifierSpans: { [key]: end() }, ...end() } as AttributeNode;
     }
 
-    this.diagnostics.error("TZS008", pos, `Invalid '@${name}' attribute.`);
     if (src[this.i] === "=") this.i++;
     this.parseAttributeValue();
+    this.diagnostics.error("TZS008", end(), `Invalid '@${name}' attribute.`);
     return { kind: "bind", ...end() };
   }
 
@@ -1236,10 +1272,10 @@ class Parser {
    *  that double as expression source — `@onclick="Increment"`). */
   private parseRequiredExpression(attrName: string, pos: SourcePos): { code: string; start?: number } | null {
     const src = this.source;
-    if (src[this.i] === "=") this.i++;
-    const value = this.parseAttributeValue();
+    // Without '=' there is no value to parse (reported once, on the attribute).
+    const value = src[this.i] === "=" ? (this.i++, this.parseAttributeValue()) : null;
     if (value === null) {
-      this.diagnostics.error("TZS009", pos, `Attribute '@${attrName}' requires a value.`);
+      this.diagnostics.error("TZS009", this.rangeFrom(pos, this.i), `Attribute '@${attrName}' requires a value.`);
       return null;
     }
     // Directive attributes take expressions: a quoted plain value is the
@@ -1250,7 +1286,7 @@ class Parser {
       if (part.code !== undefined) return { code: part.code, start: part.start };
       if (part.text !== undefined) return { code: part.text, start: part.start };
     }
-    this.diagnostics.error("TZS009", pos, `Attribute '@${attrName}' requires a single expression value.`);
+    this.diagnostics.error("TZS009", this.rangeFrom(pos, this.i), `Attribute '@${attrName}' requires a single expression value.`);
     return null;
   }
 
@@ -1261,7 +1297,7 @@ class Parser {
       const at = this.i;
       const end = this.ts.scanImplicitExpression(this.i + 1);
       if (end <= this.i + 1 && src[this.i + 1] !== "(") {
-        this.diagnostics.error("TZS009", this.locator(this.i), "Expected an expression value.");
+        this.diagnostics.error("TZS009", this.range(this.i, Math.max(end, this.i + 1)), "Expected an expression value.");
         return null;
       }
       const code = src.slice(this.i + 1, end);
@@ -1277,11 +1313,14 @@ class Parser {
       const start = this.i;
       while (this.i < src.length && !/[\s>]/.test(src[this.i]!) && !(src[this.i] === "/" && src[this.i + 1] === ">")) this.i++;
       if (this.i === start) {
-        this.diagnostics.error("TZS009", this.locator(this.i), "Expected an attribute value.");
+        // On the `=` that announced the value (or where it was expected).
+        const at = src[this.i - 1] === "=" ? this.i - 1 : this.i;
+        this.diagnostics.error("TZS009", this.range(at, at + 1), "Expected an attribute value.");
         return null;
       }
       return { kind: "parts", parts: [{ text: src.slice(start, this.i), start }] };
     }
+    const quoteAt = this.i;
     this.i++;
     const parts: ValuePart[] = [];
     let textBuf = "";
@@ -1304,7 +1343,7 @@ class Parser {
         if (src[this.i + 1] === "(") {
           const end = this.ts.scanBalanced(this.i + 1, "(", ")");
           if (end < 0) {
-            this.diagnostics.error("TZS003", this.locator(this.i), "Parenthesized attribute expression never closes.");
+            this.diagnostics.error("TZS003", this.range(this.i, this.i + 2), "Parenthesized attribute expression never closes.");
             this.i = src.length;
             return null;
           }
@@ -1329,7 +1368,7 @@ class Parser {
       this.i++;
     }
     if (src[this.i] !== quote) {
-      this.diagnostics.error("TZS009", this.locator(this.i), "Attribute value is never closed.");
+      this.diagnostics.error("TZS009", this.range(quoteAt, quoteAt + 1), "Attribute value is never closed.");
       this.i = src.length;
       return null;
     }
@@ -1345,15 +1384,16 @@ class Parser {
 
   /** Parses a control header `(…)` (TS-balanced) at the next non-space. */
   private parseHeader(pos: SourcePos, word: string): Header {
+    const keywordEnd = this.i;
     this.skipWhitespace();
     if (this.source[this.i] !== "(") {
-      this.diagnostics.error("TZS003", pos, `Expected '(' after '${word}'.`);
+      this.diagnostics.error("TZS003", this.rangeFrom(pos, keywordEnd), `Expected '(' after '${word}'.`);
       this.i = this.source.length;
       return { code: "" };
     }
     const end = this.code.scanBalanced(this.i);
     if (end < 0) {
-      this.diagnostics.error("TZS003", pos, "Control condition never closes.");
+      this.diagnostics.error("TZS003", this.rangeFrom(pos, this.i + 1), "Control condition never closes.");
       this.i = this.source.length;
       return { code: "" };
     }
@@ -1361,19 +1401,21 @@ class Parser {
     const lead = raw.length - raw.trimStart().length;
     const start = this.locator(this.i + 1 + lead);
     this.i = end;
-    return { code: raw.trim(), start };
+    return { code: raw.trim(), start, end: this.locator(end) };
   }
 
   /** A control body: a `{ … }` block or a single statement (both code-first). */
   private parseBody(pos: SourcePos): MarkupNode[] {
+    // A missing statement is reported on the keyword and header before it.
+    const header = this.rangeFrom(pos, this.i);
     this.skipCodeTrivia();
     const children: MarkupNode[] = [];
     this.nesting++;
     if (this.source[this.i] === "{") {
       this.i++;
-      this.parseCodeStatements(children, "block", pos);
+      this.parseCodeStatements(children, "block", this.range(this.i - 1, this.i));
     } else {
-      this.parseCodeStatements(children, "single", pos);
+      this.parseCodeStatements(children, "single", header);
     }
     this.nesting--;
     return children;

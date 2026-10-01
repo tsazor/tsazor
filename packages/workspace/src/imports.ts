@@ -63,12 +63,15 @@ export async function collectImports(fileDir: string, root: string): Promise<Imp
       // @authorize is per page (route metadata), never inherited — said
       // instead of dropped silently; a page is anonymous unless it declares one.
       const authorizeAt = result.metadata.authorize ? /^[ \t]*@authorize\b/m.exec(source) : null;
+      const authorizeLine = authorizeAt ? source.slice(0, authorizeAt.index).split("\n").length : 0;
+      const authorizeColumn = authorizeAt ? authorizeAt[0].indexOf("@") : 0;
       const inheritance: TszDiagnostic[] = authorizeAt
         ? [{
             code: "TZS014",
             severity: "warning",
             message: "Ignored directive or clause. @authorize in _Imports.tsazor is not inherited — declare it on each page that requires it.",
-            pos: { line: source.slice(0, authorizeAt.index).split("\n").length, column: authorizeAt[0].indexOf("@") },
+            pos: { line: authorizeLine, column: authorizeColumn },
+            endPos: { line: authorizeLine, column: authorizeColumn + "@authorize".length },
           }]
         : [];
       layers.push({

@@ -307,3 +307,19 @@ generierten Code (`buildRenderTree`). A6: `TZS021` C#-Form mit mechanischem TS-G
 (Warnung), `TZS023` `@switch`-Section fällt durch (Warnung). Unterschied zu `TZS012`: dort gibt
 es kein TS-Gegenstück (`using (…)`, `lock`).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
+
+**Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte
+Zeile / 0-basierte Spalte) ein exklusives `endPos` — den Bereich des fehlerhaften Konstrukts:
+den ganzen `@foreach (…)`-Kopf, die Direktive (ohne Zeilenende), das Attribut (`@bind="a?.b"`,
+ein gefalteter Modifier wie `@bind:format="…"` mit eigenem Bereich), den Tag-Namen
+(`TZS005`/`TZS017`), den Ausdruck bzw. das Token eines Syntaxfehlers, den Öffner eines nie
+geschlossenen Blocks (`@{`, `{`, `@(`, `<div`). Der LSP veröffentlicht diese Bereiche.
+Diagnosen mit mechanischem TS-Gegenstück tragen zusätzlich `fix: { title, edits: [{ pos, endPos,
+text }] }`, im LSP als Quick-Fix (Code Action):
+
+| Code | Fix |
+|---|---|
+| `TZS021` `@foreach (var x in xs)` / `(string s in xs)` / `(var (k, v) in pairs)` | Kopf-Code ⇒ `const x of xs` / `const [k, v] of pairs` |
+| `TZS021` `@typeparam T where T : IItem` | Klausel ⇒ `extends IItem` (keiner für `struct`/`class`/`new` …) |
+| `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Direktive ⇒ `@authorize…` / `@page "…"` / Zeile entfernen (nur bei einem Attribut pro Liste, nur literale Werte) |
+| `TZS022` `var` | ⇒ `let` |

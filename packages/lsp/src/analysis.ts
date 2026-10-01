@@ -6,6 +6,7 @@ import {
   type DocumentNode,
   type MarkupNode,
   type TszDiagnostic,
+  type SourceRange,
   type DirectiveNode,
   type ElementNode,
 } from "@tsazor/compiler";
@@ -67,9 +68,62 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
       message: error instanceof Error ? error.message : String(error),
       severity: "error",
       pos: { line: 1, column: 0 },
+      endPos: { line: 1, column: 0 },
     }];
   }
   return { filePath: absolute, fileDir, className: context.className, source, document, context, diagnostics, injects, imports };
+}
+
+/* Diagnostics → LSP ----------------------------------------------------------- */
+
+export interface LspRange {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+}
+
+/**
+ * The LSP range (0-based lines) of a compiler range — the construct the
+ * diagnostic covers. An empty range widens to one character so editors
+ * still underline it.
+ */
+export function lspRange(range: SourceRange): LspRange {
+  const start = { line: range.pos.line - 1, character: range.pos.column };
+  const end = { line: range.endPos.line - 1, character: range.endPos.column };
+  if (end.line < start.line || (end.line === start.line && end.character <= start.character)) {
+    return { start, end: { line: start.line, character: start.character + 1 } };
+  }
+  return { start, end };
+}
+
+export interface QuickFix {
+  title: string;
+  diagnostic: TszDiagnostic;
+  edits: Array<{ range: LspRange; newText: string }>;
+}
+
+/** The mechanical fixes (TZS021, TZS022) of the diagnostics touching the LSP range. */
+export function quickFixesAt(file: AnalyzedFile, range: LspRange): QuickFix[] {
+  const before = (a: { line: number; character: number }, b: { line: number; character: number }): boolean =>
+    a.line < b.line || (a.line === b.line && a.character < b.character);
+  const fixes: QuickFix[] = [];
+  for (const diagnostic of file.diagnostics) {
+    if (!diagnostic.fix) continue;
+    const at = lspRange(diagnostic);
+    if (before(at.end, range.start) || before(range.end, at.start)) continue;
+    fixes.push({
+      title: diagnostic.fix.title,
+      diagnostic,
+      // Edits keep their exact (possibly empty) ranges.
+      edits: diagnostic.fix.edits.map((edit) => ({
+        range: {
+          start: { line: edit.pos.line - 1, character: edit.pos.column },
+          end: { line: edit.endPos.line - 1, character: edit.endPos.column },
+        },
+        newText: edit.text,
+      })),
+    });
+  }
+  return fixes;
 }
 
 /* Node lookup --------------------------------------------------------------- */

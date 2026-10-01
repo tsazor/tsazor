@@ -415,10 +415,11 @@ describe("codegen — code-first code contexts (A2)", () => {
     const { code, diagnostics } = gen(
       "@foreach (var x in xs) { <i>@x</i> }\n@foreach (string s in names) { <i>@s</i> }\n@foreach (var (k, v) in pairs) { <i>@k@v</i> }",
     );
+    // The range is the whole `@foreach (…)` header (A7).
     expect(diagnostics.all.map((d) => [d.code, d.severity, d.pos])).toEqual([
-      ["TZS021", "error", { line: 1, column: 10 }],
-      ["TZS021", "error", { line: 2, column: 10 }],
-      ["TZS021", "error", { line: 3, column: 10 }],
+      ["TZS021", "error", { line: 1, column: 0 }],
+      ["TZS021", "error", { line: 2, column: 0 }],
+      ["TZS021", "error", { line: 3, column: 0 }],
     ]);
     expect(diagnostics.all.map((d) => d.message.replace("C# form — use the TypeScript form. ", ""))).toEqual([
       "Use '@foreach (const x of xs)' — in TypeScript, for…in iterates keys.",

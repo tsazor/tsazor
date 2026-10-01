@@ -15,8 +15,9 @@ export interface DirectiveNode extends SourceSpan {
   name: string;
   /** Raw value text after the directive keyword (trimmed). Empty when absent. */
   value: string;
-  /** Source position of `value[0]` (set for `@import`, whose value may span
-   *  lines, and `@attribute`, whose decorator is emitted mapped). */
+  /** Source position of `value[0]` — `@import` values may span lines,
+   *  `@attribute` decorators are emitted mapped, diagnostics cover the value.
+   *  Set by the parser for every directive. */
   valueStart?: { line: number; column: number };
 }
 
@@ -94,6 +95,8 @@ export interface ForNode extends SourceSpan {
   code: string;
   /** Absolute position of the header code's first character. */
   codeStart?: SourceSpan["pos"];
+  /** Position right after the header's closing `)` (`pos`…`headerEnd` = `@foreach (…)`). */
+  headerEnd?: SourceSpan["pos"];
   isForEach: boolean;
   children: MarkupNode[];
 }
@@ -234,7 +237,11 @@ export type AttributeNode =
       get?: string;
       set?: string;
       after?: string;
+      /** Source spans of the modifier attributes folded into this bind (diagnostic ranges). */
+      modifierSpans?: Partial<Record<BindModifier, SourceSpan>>;
     });
+
+export type BindModifier = "event" | "format" | "get" | "set" | "after";
 
 export interface DocumentNode {
   directives: DirectiveNode[];
