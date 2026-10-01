@@ -114,6 +114,9 @@ importers:
 
   apps/blazing-pizza:
     dependencies:
+      '@tsazor/dotnet':
+        specifier: workspace:*
+        version: link:../../packages/dotnet
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime

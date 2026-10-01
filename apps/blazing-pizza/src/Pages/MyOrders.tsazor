@@ -41,10 +41,11 @@
     private error: string | null = null;
 
     protected override async onParametersSet(): Promise<void> {
-        try {
-            this.ordersWithStatus = await this.OrdersClient.getOrders();
-        } catch (err) {
-            this.error = err instanceof Error ? err.message : String(err);
+        const result = await this.OrdersClient.getOrders();
+        if (result.ok) {
+            this.ordersWithStatus = result.body;
+        } else {
+            this.error = problemMessage(result);
         }
     }
 }

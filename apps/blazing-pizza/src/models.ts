@@ -4,72 +4,23 @@
  * Property casing matches the server contract (camelCase).
  */
 
-export interface PizzaSpecial {
-  id: number;
-  name: string;
-  basePrice: number;
-  description: string;
-  imageUrl: string;
-}
-
-export interface Topping {
-  id: number;
-  name: string;
-  price: number;
-}
-
-export interface PizzaTopping {
-  topping: Topping;
-  toppingId?: number;
-  pizzaId?: number;
-}
-
-export interface Pizza {
-  id?: number;
-  orderId?: number;
-  special: PizzaSpecial;
-  specialId: number;
-  size: number;
-  toppings: PizzaTopping[];
-}
-
-export interface Address {
-  id?: number;
-  name: string;
-  line1: string;
-  line2: string;
-  city: string;
-  region: string;
-  postalCode: string;
-}
-
-export interface LatLong {
-  latitude: number;
-  longitude: number;
-}
-
-/** Marker for the delivery map (ComponentsLibrary/Map/Marker.cs). */
-export interface Marker {
-  description: string;
-  x: number;
-  y: number;
-  showPopup?: boolean;
-}
-
-export interface Order {
-  orderId?: number;
-  userId?: string;
-  createdTime?: number;
-  deliveryAddress: Address;
-  deliveryLocation?: LatLong;
-  pizzas: Pizza[];
-}
-
-export interface OrderWithStatus {
-  order: Order;
-  statusText: string;
-  mapMarkers: Marker[];
-}
+/**
+ * Die Wire-Shapes sind DTO-Klassen aus dem OpenAPI-Contract
+ * (api/openapi.json, generiert mit tsazor-dotnet): ein Contract, ein Typ statt
+ * doppelter Interfaces. Hier werden sie unter den Domain-Namen re-exportiert;
+ * die Helfer darunter arbeiten mit denselben Typen.
+ */
+export type {
+  Address,
+  LatLong,
+  Marker,
+  Order,
+  OrderWithStatus,
+  Pizza,
+  PizzaSpecial,
+  PizzaTopping,
+  Topping,
+} from "./api/models.js";
 
 export const PIZZA_DEFAULT_SIZE = 12;
 export const PIZZA_MINIMUM_SIZE = 9;

@@ -13,6 +13,7 @@
     "verify": "node scripts/verify-pizza.mjs"
   },
   "dependencies": {
+    "@tsazor/dotnet": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8",
