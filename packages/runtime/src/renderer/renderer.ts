@@ -173,6 +173,10 @@ export class Renderer {
       if (oldIndex < 0) {
         const definition = toComponentDefinition(frame.componentType as unknown as ComponentDefinition | (abstract new () => ComponentBase));
         child = this.createComponentState(definition, state, frame.sequence);
+        // 2.4: `@ref` on a component tag captures the child's instance —
+        // Blazor's ComponentReferenceCapture, fired like the element variant
+        // at creation time (element captures fire when the DOM inserts).
+        this.fireComponentCaptures(newFrames, newIndex, child.component);
         created.push(child);
       } else {
         child = state.slotChildren.get(oldIndex)!;
@@ -183,6 +187,20 @@ export class Renderer {
         }
       }
       state.newSlotChildren.set(newIndex, child);
+    }
+  }
+
+  /** Fires the component reference captures in a freshly created component
+   *  frame's own child range (Blazor's ComponentReferenceCapture). Content
+   *  regions and nested subtrees are skipped: their captures belong to the
+   *  inner component's own tree or to DOM insertion. */
+  private fireComponentCaptures(frames: RenderTreeFrame[], componentIndex: number, component: ComponentBase): void {
+    const end = componentIndex + getFrameSubtreeLength(frames[componentIndex]!);
+    for (let i = componentIndex + 1; i < end; i++) {
+      const frame = frames[i]!;
+      if (frame.frameType === FrameType.ComponentReferenceCapture) {
+        frame.componentReferenceCaptureAction?.(component);
+      }
     }
   }
 

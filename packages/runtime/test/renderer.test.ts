@@ -352,6 +352,48 @@ describe("Renderer", () => {
     expect(captured).toBe(container.querySelector("section"));
   });
 
+  it("fires component reference captures with the child's instance", async () => {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    let captured: ComponentBase | null = null;
+    let otherCaptured: ComponentBase | null = null;
+
+    class Child extends ComponentBase {
+      @Parameter() message = "";
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "p");
+        b.addContent(1, this.message);
+        b.closeElement();
+      }
+    }
+    class WithComponentRef extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Child));
+        b.addAttribute(1, "message", "hi");
+        b.addComponentReferenceCapture(2, (c) => {
+          captured = c;
+        });
+        b.closeComponent();
+        b.openComponent(3, defineComponent(Child));
+        b.addComponentReferenceCapture(4, (c) => {
+          otherCaptured = c;
+        });
+        b.addContent(5, "ignored content");
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(WithComponentRef, container);
+    await renderer.waitUntilIdle();
+
+    expect(container.querySelectorAll("p")).toHaveLength(2);
+    // Each capture receives its own child instance, not the parent.
+    expect(captured).not.toBeNull();
+    expect(captured).not.toBe(otherCaptured);
+    expect((captured as Child).message).toBe("hi");
+    expect(captured instanceof Child).toBe(true);
+    expect(otherCaptured instanceof Child).toBe(true);
+  });
+
   it("applies preventDefault and stopPropagation flags", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();

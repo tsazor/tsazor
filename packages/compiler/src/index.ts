@@ -1,6 +1,6 @@
 export { compile, type CompileOptions, type CompileResult } from "./compile.js";
 export { parseDocument } from "./parser.js";
-export { generateCode, type CodegenOptions, type CodegenResult, type ResolvedComponent, type ResolvedType, type MapEntry } from "./codegen.js";
+export { generateCode, type CodegenOptions, type CodegenResult, type ResolvedComponent, type ResolvedType, type MapEntry, type TypedTagInferenceRequest } from "./codegen.js";
 export {
   DiagnosticBag,
   type TszDiagnostic,

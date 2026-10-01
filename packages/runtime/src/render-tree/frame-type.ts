@@ -19,6 +19,8 @@ export const enum FrameType {
   Markup = 7,
   /** Named event handler attribute payload. */
   EventHandler = 8,
+  /** Captures a reference to the child component instance (Blazor's ComponentReferenceCapture). */
+  ComponentReferenceCapture = 9,
 }
 
 /** Flags carried on attribute frames for event handler directives. */

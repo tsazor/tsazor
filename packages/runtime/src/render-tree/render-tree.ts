@@ -1,6 +1,7 @@
 import { FrameType, EventHandlerFlags } from "./frame-type.js";
 import type { ComponentType } from "../components/component-definition.js";
 import type { EventCallback } from "../components/event-callback.js";
+import type { ComponentBase } from "../components/component-base.js";
 
 /** A fragment of render output: writes frames into a builder. Blazor's RenderFragment. */
 export type RenderFragment = (builder: RenderTreeBuilder) => void;
@@ -37,6 +38,8 @@ export interface RenderTreeFrame {
   readonly regionSubtreeLength?: number;
   /** Element reference captures */
   readonly elementReferenceCaptureAction?: (element: Element) => void;
+  /** Component reference captures (2.4): the freshly instantiated child's instance. */
+  readonly componentReferenceCaptureAction?: (component: ComponentBase) => void;
   /** Markup frames */
   readonly markupContent?: string;
 }
@@ -188,6 +191,12 @@ export class RenderTreeBuilder {
 
   addElementReferenceCapture(sequence: number, action: (element: Element) => void): void {
     this.frames.push({ frameType: FrameType.ElementReferenceCapture, sequence, elementReferenceCaptureAction: action });
+  }
+
+  /** Captures the child component instance built into the enclosing component
+   *  frame (`@ref` on a component tag, 2.4) — Blazor's ComponentReferenceCapture. */
+  addComponentReferenceCapture(sequence: number, action: (component: ComponentBase) => void): void {
+    this.frames.push({ frameType: FrameType.ComponentReferenceCapture, sequence, componentReferenceCaptureAction: action });
   }
 
   /** Clears the builder for reuse. */
