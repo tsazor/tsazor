@@ -10,8 +10,9 @@
 | `@import` | `@import { Status, formatDate } from "./utils"` | TypeScript-Import für Markup und `@code` (siehe unten); in `_Imports.tsazor` vererbt |
 | `@inject` | `@inject NavigationManager Nav` | DI: Feld-Initializer `inject(<Type>)` |
 | `@inherits` | `@inherits LayoutComponentBase` | Basisklasse (Standard: `ComponentBase`) |
-| `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | generische Typparameter (v1 deklarativ); C#-Constraint `where T : …` wird mit Warnung TZS014 ignoriert |
-| `@attribute` | `@attribute [Authorize(Roles = "Admin")]` / `@attribute @tracked()` | C#-Attribut bzw. TS-Decorator (siehe [@attribute](#attribute)) |
+| `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | generische Typparameter (v1 deklarativ); C#-Constraint `where T : …` ⇒ Fehler TZS021 mit Hinweis auf `extends` |
+| `@authorize` | `@authorize` / `@authorize({ roles: ["Admin"], policy: "P" })` | die Route verlangt Anmeldung (und Rollen/Policy) — siehe [@authorize und @attribute](#authorize-und-attribute) |
+| `@attribute` | `@attribute @tracked()` | TS-Class-Decorator; C#-Attribute (`[Authorize]`) ⇒ Fehler TZS021 mit TS-Form |
 | `@code` / `@functions` | `@code { … }` | TypeScript-Klassenmember, wörtlich |
 | `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | `@namespace App.Pages` | Blazor-only: akzeptiert und ignoriert (`@rendermode`/`@preservewhitespace` mit Warnung TZS014) |
 | `@@` | `@@` | literals `@` |
@@ -48,26 +49,31 @@ spielt keine Rolle (`/users/new` schlägt `/users/{id}`). Zwei Routen mit gleich
 gleichen Constraints (`/a/{x}` und `/A/{y}`) ⇒ Fehler „The following routes are ambiguous“ beim Aufbau der Route-Table
 (Router-Lifecycle). Gleiche Präzedenz, aber verschiedene Constraints (`{x:int}` vs. `{x:bool}`) ⇒ Manifest-Reihenfolge.
 
-## @attribute
+## @authorize und @attribute
 
-C#-Attribute haben kein TypeScript-Gegenstück. Regel:
+C#-Attribute haben kein TypeScript-Gegenstück; die TS-Formen sind `@authorize` (Route-Metadaten)
+und `@attribute @decorator(…)` (echter Class-Decorator):
 
 | Schreibweise | Ergebnis |
 |---|---|
-| `@attribute @tracked("x")` (TS-Form: Wert beginnt mit `@`) | echter Class-Decorator, wörtlich über `export default class` (legacy `experimentalDecorators` wie `@Parameter`); Namen kommen per `@import` |
-| `@attribute [Authorize]` | wie `@authorize`: die Route verlangt Anmeldung |
-| `@attribute [Authorize(Roles = "A, B")]`, `[Authorize(Policy = "P")]`, `[Authorize("P")]` | die `AuthorizationRequirements` der Route (`{ roles: ["A", "B"] }` / `{ policy: "P" }`), geprüft von `AuthorizeRouteView` (Rollen: mindestens eine; Policy: registriert in `AuthorizationService.policies`) |
-| `@attribute [AllowAnonymous]` | hebt `[Authorize]`/`@authorize` auf (Blazor) |
-| jedes andere C#-Attribut (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`, `[Route(…)]` — dafür `@page`) | ignoriert, Warnung TZS014 |
+| `@authorize` | die Route verlangt Anmeldung |
+| `@authorize({ roles: ["A", "B"], policy: "P" })` | die `AuthorizationRequirements` der Route (`{ roles: [...] }` / `{ policy: "P" }`), geprüft von `AuthorizeRouteView` (Rollen: mindestens eine; Policy: registriert in `AuthorizationService.policies`) |
+| `@attribute @tracked("x")` | echter Class-Decorator, wörtlich über `export default class` (legacy `experimentalDecorators` wie `@Parameter`); Namen kommen per `@import` |
+| `@attribute [Authorize]`, `[Authorize(Roles = "A, B", Policy = "P")]`, `[Authorize("P")]` | Fehler TZS021 mit der TS-Form (`@authorize`, `@authorize({ roles: ["A", "B"], policy: "P" })`) |
+| `@attribute [AllowAnonymous]` | Fehler TZS021: entfernen — eine Seite ist anonym, solange sie kein `@authorize` deklariert |
+| jedes andere C#-Attribut (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Fehler TZS021: entfernen oder als TS-Decorator schreiben |
 
-- Mehrere Listen und Einträge sind erlaubt (`[A, B(x)]`, `[A][B]`), Namespace und
-  `Attribute`-Suffix werden abgestreift (`[Microsoft.AspNetCore.Authorization.AuthorizeAttribute]`).
-- `Roles`/`Policy` müssen String-Literale sein; `AuthenticationSchemes` u. a. werden mit TZS014
-  ignoriert. Blazor verlangt, dass **jedes** `[Authorize]` erfüllt ist — zwei `[Authorize]` mit
-  `Roles` (oder zwei mit `Policy`) lassen sich in `AuthorizationRequirements` (eine Rollenliste,
+- Das Argument von `@authorize` ist ein TS-Objektliteral (mit dem TS-Parser gelesen, darf über
+  mehrere Zeilen gehen) mit nur `roles` (Array von String-Literalen) und `policy`
+  (String-Literal) — die Anforderung ist statische Route-Metadatum. Andere Werte, Keys oder
+  Formen ⇒ TZS019.
+- Mehrere `@authorize` müssen alle erfüllt sein (wie mehrere `[Authorize]` in Blazor). Zwei mit
+  `roles` (oder zwei mit `policy`) lassen sich in `AuthorizationRequirements` (eine Rollenliste,
   eine Policy) nicht abbilden ⇒ Fehler TZS019 statt einer stillen Abschwächung.
+- **Keine Vererbung:** `@authorize` gilt pro Seite; in `_Imports.tsazor` wirkt es nicht
+  (Warnung TZS014). Deshalb braucht es auch kein Opt-out (Blazors `[AllowAnonymous]`).
 - Wie in Blazor wirkt die Anforderung nur auf Routen (`@page` + `AuthorizeRouteView`), nicht
-  auf eingebettete Komponenten. Unlesbare Formen (`@attribute Authorize`) ⇒ TZS019.
+  auf eingebettete Komponenten. Unlesbare `@attribute`-Werte (`@attribute Authorize`) ⇒ TZS019.
 
 ## buildRenderTree ist generiert
 
@@ -141,8 +147,10 @@ umgeschrieben). Shorthand wird expandiert: `@save({ id })` ⇒ `this.save({ id: 
 verwendet der Compiler die gefangene Komponente. Unbekannte freie Namen sind kein
 Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
 
-- `@for (var i = 0; …)` ⇒ `for (let i = 0; …)`: jede Iteration hat ihre eigene Variable
-  (wie in C#) — deferred ChildContent sieht den Wert seiner Iteration.
+- Schleifenköpfe werden wie geschrieben emittiert: mit `let`/`const` hat jede Iteration
+  ihre eigene Variable — deferred ChildContent sieht den Wert seiner Iteration. `var` behält
+  seine TS-Bedeutung (eine function-scoped Variable für die ganze Render-Methode, alle
+  ChildContents sehen den Endwert) ⇒ Warnung TZS022.
 - Method-Groups: `@onclick="handler"` bindet an die Komponente (Re-Render danach);
   `@onclick="item.toggle"` ruft `toggle` auf `item` auf (Receiver beim Rendern ausgewertet,
   wie ein C#-Delegate), die Komponente rendert danach neu.
@@ -181,7 +189,7 @@ Markup beginnt nur
 - bei `@expr` / `@(expr)` (Ausgabe).
 
 ```razor
-@foreach (var item in items) {
+@foreach (const item of items) {
     const label = item.name.toUpperCase();
     if (item.active) {
         <li>@label</li>
@@ -197,10 +205,18 @@ Markup beginnt nur
 - Whitespace in Code-Kontexten wird nicht gerendert (`@foreach (…) { <li/> }` erzeugt keine
   Leerzeichen-Textframes).
 - Nackter Text in einem Code-Kontext ist ein Fehler (TZS015), kein stiller Text.
-- `@switch`: gestapelte Labels (`case 1:\ncase 2:`) fallen durch; eine Section ohne
-  abschließendes `break`/`return`/`throw`/`continue` bekommt ein implizites `break`.
-- `@foreach`-Header: `var x in xs`, typisiert `string s in xs`, Dekonstruktion
-  `var (k, v) in pairs` (⇒ `for (const [k, v] of …)`).
+- `@foreach`-Header sind TypeScript: `const x of xs` (auch `let`, Destructuring
+  `const [k, v] of pairs`, `const { a } of rows`; ohne Typannotation, wie in TS) und
+  `const k in obj` — `for…in` iteriert wie in TS die **Schlüssel**. C#-Köpfe ⇒ Fehler TZS021
+  mit der TS-Form: `var x in xs` / `string s in xs` ⇒ `const x of xs`, `var (k, v) in pairs` ⇒
+  `const [k, v] of pairs`. Ein Zählkopf (`let i = 0; …`) gehört zu `@for` (TZS015).
+- `@for (…; …; …)`, `@while`, `@do` sind reines TS; `var` in Schleifenköpfen und
+  Statements ⇒ Warnung TZS022 (siehe oben), emittiert wird es wie geschrieben.
+- `@switch` hat TS-Semantik: alle Sections teilen den Case-Block (ein lexikalischer Scope),
+  eine Section ohne abschließendes `break`/`return`/`throw`/`continue` fällt in die nächste
+  durch — kein implizites `break`. Eine nicht-leere Section, die durchfällt, ⇒ Warnung TZS023
+  (wie TS' `noFallthroughCasesInSwitch`); gestapelte leere Labels (`case 1:\ncase 2:`) und die
+  letzte Section bleiben still. Ein eigener Block (`case 1: { … break; }`) ist normales TS.
 - C#-Konstrukte ohne TS-Entsprechung — `@using (…) { }`, `lock (…)`, `@await` im Markup —
   sind Fehler (TZS012).
 
@@ -261,7 +277,8 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 |---|---|
 | Markup, Komponenten-Tags, Attribut-Syntax | identisch |
 | `@page`, `@layout`, `@typeparam`, `@bind` (+Modifier), `@onclick`-Familie (+Modifier mit Wert), `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
-| `@attribute` | `[Authorize]`/`[AllowAnonymous]` wirken; andere C#-Attribute ignoriert (TZS014); TS-Decorators per `@attribute @x()` |
+| `@attribute [C#-Attribut]` | Fehler TZS021 mit TS-Form (`@authorize`/`@authorize({ roles, policy })`, TS-Decorator per `@attribute @x()`) |
+| `@foreach (var x in xs)`, `where T : …`, `var`, `@switch` ohne `break` | C#-Köpfe/-Constraints ⇒ TZS021 (Codemod, Phase 2.5); `var` und Fallthrough mit TS-Semantik + Warnung (TZS022/TZS023) |
 | `buildRenderTree` im `@code` | Fehler TZS020 (wie CS0111) |
 | `@using` | Komponenten-Ordner/Pakete statt Namespaces; Typen/Werte für Markup und `@code` kommen per `@import` |
 | C#-Code in `@code` | abweichend (→ TypeScript — der eigentliche Punkt) |
@@ -271,18 +288,22 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 | `@bind:format` | begrenzt v1 |
 | Benannte Child-Slots (`<Found Context>`-Stil) | Phase 2 |
 | `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
-| `@authorize` | ja (Tsazor-Erweiterung, bare Direktive) |
+| `@authorize` | ja (Tsazor-Erweiterung für `[Authorize]`; bare oder mit `{ roles, policy }`; nicht über `_Imports` vererbt) |
 | `@implements` | akzeptiert, ignoriert (TS-Interfaces sind strukturell) |
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS020` mit Quellposition
-(`TZS011` und `TZS014` sind Warnungen, z. B. `@inherits`-Konflikt mit Code-behind bzw.
-ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS023` mit Quellposition
+(`TZS011`, `TZS014`, `TZS022` und `TZS023` sind Warnungen, z. B. `@inherits`-Konflikt mit
+Code-behind bzw. ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
 TypeScript (oder nackter Text) in einem Code-Kontext. Import-Modell: `TZS016` ungültiges
 `@import`, `TZS017` mehrdeutiger Komponenten-Tag (Fehler), `TZS018` `@using`-Ordner bzw.
 -Paket existiert nicht (Warnung; für `_Imports.tsazor` in dieser Datei gemeldet). A5:
 `TZS019` ungültiges oder nicht abbildbares `@attribute`, `TZS020` Member kollidiert mit dem
-generierten Code (`buildRenderTree`).
+generierten Code (`buildRenderTree`). A6: `TZS021` C#-Form mit mechanischem TS-Gegenstück
+(Fehler; die Meldung nennt die TS-Form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
+`where T : …`; Kandidaten für Codemod/Quick-Fix in Phase 2.5), `TZS022` `var` in Render-Code
+(Warnung), `TZS023` `@switch`-Section fällt durch (Warnung). Unterschied zu `TZS012`: dort gibt
+es kein TS-Gegenstück (`using (…)`, `lock`).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
