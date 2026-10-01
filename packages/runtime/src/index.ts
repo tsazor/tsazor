@@ -57,6 +57,7 @@ export { LayoutComponentBase } from "./routing/layout-component-base.js";
 export { Router } from "./routing/router.js";
 export { RouteView } from "./routing/route-view.js";
 export { LayoutView } from "./routing/layout-view.js";
+export { SupplyParameterFromQuery, queryParametersOf, type QueryParameterType, type QueryParameterMeta } from "./routing/supply-parameter-from-query.js";
 export { NavLink, NavLinkMatch } from "./routing/nav-link.js";
 export { PageTitle } from "./routing/page-title.js";
 export { FocusOnNavigate } from "./routing/focus-on-navigate.js";
@@ -80,6 +81,8 @@ export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";
 export { enableDataAnnotationsValidation } from "./forms/edit-context.js";
+export { InputFile, InputFileChangeEventArgs } from "./forms/input-file.js";
+export { formatValue, parseValue } from "./forms/bind-format.js";
 export {
   Required,
   MinLength,

@@ -238,6 +238,8 @@ export type AttributeNode =
       bindTarget?: string;
       event?: string;
       format?: string;
+      /** The @bind:format value was plain attribute text (Razor: a string literal, e.g. "yyyy-MM-dd"); an @expression carries none. */
+      formatLiteral?: boolean;
       get?: string;
       set?: string;
       after?: string;

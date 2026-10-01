@@ -930,8 +930,14 @@ zweitem App-Root im `<head>`, `PageTitle` als Title-Sektion, `FocusOnNavigate`.
 EditForm mit Blazors `OnSubmit`/`OnValidSubmit`/`OnInvalidSubmit` (`EventCallback<EditContext>`,
 Submit-Await im getrackten Handler), `EditContext`-Parameter und fixer Cascade, Model-Wechsel
 errichtet den Form-Subtree neu (Region je Kontext-Identität);
-`<NotAuthorized>` von `AuthorizeView`/`AuthorizeRouteView` empfängt den `AuthenticationState`.
+`<NotAuthorized>` von `AuthorizeView`/`AuthorizeRouteView` empfängt den
+`AuthenticationState`.
 Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
+3.7 umgesetzt — `InputFile` (Blazors Frame-Reihenfolge inkl. Reference-Capture zwischen den
+Attributen, native `File` statt `IBrowserFile`), `SupplyParameterFromQuery` (Blazors
+QueryParameterValueSupplier-Parität; `type`-Option statt TS-typloser Erkennung, `multiple` statt
+Array-Erkennung) und `@bind:format` (BindConverter-Subset, invariant culture; Klartext-Werte
+sind String-Literale, `:culture` TZS008, String-/Komponenten-Binds Warnung).
 
 | Schritt | Inhalt | Abhängig von | Stand |
 |---|---|---|---|
@@ -941,7 +947,7 @@ Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Bu
 | 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate`, Sections (`SectionContent`/`SectionOutlet`), `PageTitle` als Sektion | B3 (Logical Ranges außerhalb des Roots) | umgesetzt |
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | umgesetzt |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 | umgesetzt |
-| 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 | offen |
+| 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 | umgesetzt |
 | 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — | offen |
 
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
@@ -1125,6 +1131,62 @@ Konformität: 9 Tests in `packages/conformance/test/runtime/data-annotations.tes
 (whitespace/allowEmptyStrings/nicht-String), Deklarationsreihenfolge, EditForm-Submit
 (OnInvalidSubmit + ValidationMessage), Recovery nach fehlschlagendem Submit, fehlende
 Cascade wirft Blazors Meldung, Adapter-Koexistenz).
+
+### 3.7 — InputFile, SupplyParameterFromQuery, @bind:format
+
+**Stand: umgesetzt** (2026-10-01).
+
+- **`InputFile`** (`packages/runtime/src/components/input-file.ts`, Port von Blazors
+  `InputFile.cs`): `<InputFile OnChange="@handle" multiple accept="…">` — `multiple`/`accept`
+  laufen als Element-Attribute mit, `OnChange` ist `EventCallback<InputFileChangeEventArgs>`
+  (`GetMultipleFiles(max)` mit Blazors Default-10-Limit, `FileCount`, `File`). Dateien sind
+  native `File`-Objekte statt `IBrowserFile` (Abweichung: `name`/`size`/`type` deckt sich,
+  `OpenReadStream`/`ReadBuffer` gibt es nicht — `file.text()`/`arrayBuffer()`). Die
+  Implementierung offenbarte einen echten Diff-Fehler: Blazors InputFile rendert
+  `multipleAttributes, type="file", ReferenceCapture, OnChange` — der Reference-Capture gehört
+  in den Attribut-Bereich des Elements, vorher brach er aber die Attribut-Fahne und schattierte
+  den nachfolgenden `onchange`-Handler. Fix in beiden Pfaden (`render-tree/diff.ts`
+  `attributesEndIndexExclusive` + slow path, `dom-renderer.ts` `insertFrame`-Präambel): Frames
+  Attribute/EventHandler **und** ElementReferenceCapture zählen zum eigenen Attribut-Bereich;
+  die Capture-Action feuert nur bei der frischen Element-Insertion (nie per Diff neu), was Blazor
+  entspricht. Pinned in `packages/conformance/test/runtime/input-file.test.ts` (5 Tests, auch
+  über Re-Renders).
+- **`SupplyParameterFromQuery`**
+  (`packages/runtime/src/routing/supply-parameter-from-query.ts`): Decorator-Form
+  `@SupplyParameterFromQuery({ type?, multiple? })` mit `@Parameter`-Pflicht (Blazors Meldung,
+  wenn beides fehlt). Blazor liest den Zieltyp aus dem Parameter-Typ — TS kennt den
+  Laufzeittyp nicht, deshalb `{ type: "int" | "long" | "bool" | … }` (dieselben Konvertierungen
+  wie die Routen-Constraints; Default `string`) und
+  `{ multiple: true }` statt Blazors Array-Erkennung (Abweichung; semantisch wie Blazors
+  Array-Parameter-Verhalten: je Wiederholung des Keys ein konvertierter Wert, alle anderen
+  Parameter nehmen `values[0]`). Übrige Parität verifiziert: Key = Feldname, case-insensitiv,
+  abwesend ⇒ `null` (`default(T)`), ein gescheiterter Parse wirft Blazors exakten Text
+  („Cannot parse the value 'X' as type 'T' for 'Y.'"), ein nicht unterstützter Typ
+  „Querystring values cannot be parsed as type 'X'.", Route-Werte schlagen Query-Werte für
+  dasselbe Feld. RouteView (`route-view.ts`) liest beim Parameter-Set die Query-Parameter aus
+  dem `NavigationManager` (jetzt über `tryGet`, damit RouteViews eigene Meldung greift, wenn
+  der Service fehlt) und subscribt Navigation-Wechsel — Parameter werden bei jeder Navigation
+  neu versorgt. Konformität: `packages/conformance/test/runtime/supply-parameter-from-query.test.ts`
+  (10 Tests, u. a. `long` > 2^53 exakt, Route-über-Query, Navigation re-supply in der echten App).
+- **`@bind:format`** (Compiler `ast.ts`/`parser.ts`/`codegen.ts`, Runtime
+  `forms/bind-format.ts`): Blazors BindConverter-Subset als eigene `formatValue`/`parseValue`
+  — Zahlen `F<n>`, `N<n>` (Gruppierung), Ziffernmasken (`0.00`, `#,##0.0`); Datum-Tokens
+  `yyyy/yy/MM/dd/HH/mm/ss/M/d/H/m/s` plus Literale; Parse über Format-Regex (Overflow ⇒ `null` ⇒
+  Modellwert bleibt wie Blazors NaN-Guard; leerer Text parst nie als 0). Razor-Semantik der
+  Werte: `@bind:format="0.00"` ist ein String-Literal (neues `formatLiteral`-Flag,
+  Codegen quotet), `@bind:format="@fmt"` ein Ausdruck. Invariant culture per A5/B7:
+  `@bind:culture` Fehler TZS008; `:format` auf String-/Komponenten-Binds ist Warnung TZS008
+  (Blazors BindConverter wendet Formate nur auf Typen mit einem an) und der native Round-Trip
+  bleibt. Nicht implementiert: ganzzahlige Null-Auffüllung (`D5`-Padding) — dokumentierte
+  Abweichung. Konformität: `packages/conformance/test/runtime/bind-format.test.ts` (14 Tests)
+  plus 4 Compiler-Tests in `packages/compiler/test/codegen.test.ts`.
+- **Demo/E2E** (`apps/demo`): vier neue Seiten — `/validation` (EditForm +
+  DataAnnotationsValidator mit Profil-Modell), `/format` (`0.00`- und `yyyy-MM-dd`-Binds +
+  `formatValue` im Markup), `/upload` (InputFile mit `multiple`), `/query`
+  (SupplyParameterFromQuery int/bool/multiple, case-insensitiver Key per Link). E2E
+  `apps/demo/scripts/verify-3-7.mjs` (16 Checks incl. .NET-Exakttexte „The name field is
+  required.", Format-Roundtrip 1234.50 → 99.5 → „99.50", setInputFiles-Liste, Query-Supply und
+  Uppercase-Key) — grün gegen die neu gebaute Demo.
 
 ---
 

@@ -265,8 +265,27 @@ Member-Name des Pfads (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), auch
 `:set` aufrufen); `:after`/`:event`/`:format` ohne `@bind` bzw. `:get`. Die Reihenfolge der
 Attribute ist egal.
 
-`@bind:format` ist in v1 begrenzt (native Parsing für number/date) → Warnung TZS008; auf
-Komponenten ignoriert Blazor es (Warnung TZS008).
+**`@bind:format` (3.7)** rendert und parst number-/date-Binds über eine eigene
+`formatValue`/`parseValue`-Implementierung (Blazors `BindConverter`-Subset, invariant culture
+nach A5/B7 — TS kennt keine CultureInfo). Der Wert ist Razor-getreu: `@bind:format="0.00"`
+ist ein String-Literal (Klartext im Attribut), `@bind:format="@fmt"` ein Ausdruck. Unterstützte
+Formate — Teilmenge, dokumentierte Abweichung vom vollen .NET-Grammatikumfang:
+
+- Zahlen: `F<n>` (feste Stellen), `N<n>` (Tausender-Gruppierung) und die Ziffernmasken
+  `0`, `0.00`, `#,##0.0` (Stellenanzahl aus der Maske, Gruppierung sobald `,` drinsteht).
+  Alles andere formatiert wie `String(value)` und parst tolerant (`Number` ohne `,`/Leerzeichen).
+- Datumsangaben: die Tokens `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`, `ss`, `M`, `d`, `H`, `m`,
+  `s`; jedes andere Zeichen ist Literaltext (`dd.MM.yyyy`). Geparse wird über eine aus dem
+  Format gebaute Regex; ein Out-of-Range-Wert (`31.02.2024`) gibt `null` — der Handler behält
+  den bisherigen Modellwert wie beim NaN-Guard des nativen Number-Binds.
+- Leerer Text parst nie als 0 (`.NET TryParse("")` scheitert).
+
+Nicht implementiert: ganzzahlige Null-Auffüllung (`D5`/`00000#`-Padding) — Abweichung, in der
+Roadmap vermerkt. Andere Binds behalten Blazors Verhalten: `:format` auf einem String-Bind und
+einem Komponenten-Bind ist eine Warnung TZS008 (der `BindConverter` wendet Formate nur auf Typen
+mit einem an — Strings tragen keins; auf Komponenten ignoriert Blazor es), der native
+Round-Trip bleibt bestehen. `@bind:culture` (auf Element und Komponente) ist Fehler TZS008
+— invariant culture only (A5/B7).
 
 ## Komponenten
 
@@ -368,6 +387,35 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   Menge ist die oben genannte Teilmenge — weitere Attribute (z. B. `[Range(typeof(...))]`,
   `CustomValidationAttribute`) über `validators` oder eigene Decorators mit der
   `FieldRuleDecorator`-Signatur.
+
+- `InputFile` und `SupplyParameterFromQuery` (3.7) — Blazors Web-Pendants mit denselben
+  Abweichungen wie überall hier: Browser-Objekte statt .NET-Abstraktionen.
+
+  - `<InputFile OnChange="@handle" />` öffnet den Dateidialog; `multiple` und `accept` laufen
+    als Element-Attribute mit. Das Event empfängt ein `InputFileChangeEventArgs`:
+    `FileCount`, `GetMultipleFiles(max)` (Default `10`, Blazors Limit), `File` (die erste
+    Datei, `null` ohne Auswahl). Die Dateien sind native `File`-Objekte statt Blazors
+    `IBrowserFile` — `name`/`size`/`type` gleichen sich, `OpenReadStream`/`ReadBuffer` gibt es
+    nicht (Inhalt per `file.text()`/`arrayBuffer()` lesen). Die Frame-Reihenfolge ist wie
+    Blazors InputFile: Attribute, `type="file"` und Reference-Capture vor dem Handler — ein
+    `@ref` zwischen ihnen schattiert die nachfolgenden Handler nicht (Diff und Renderer
+    fassen Attribute, Handler und Captures als den Preamble-Bereich des Elements auf; Captures
+    feuern nur bei der frischen Element-Insertion).
+
+  - `[SupplyParameterFromQuery]` (Decorator-Form `@SupplyParameterFromQuery()`) liefert den
+    Wert einer Route-/Page-Komponente aus dem Query-String — nur mit `@Parameter` deklariert
+    (Blazors Meldung für fehlendes `[Parameter]`). Blazor liest den Zieldatentyp aus dem
+    Parameter-Typ; TypeScript kennt den Laufzeittyp nicht, daher die Option: `{ type: "int" |
+    "long" | "bool" | "double" | "float" | "decimal" | "datetime" | "guid" }` (Default
+    `string`, dieselben Konvertierungen wie die Routen-Constraints) und `{ multiple: true }`
+    (Abweichung statt der Array-Erkennung: das Feld ist ein Array (`string[] | T[]`) und
+    bekommt je Wiederholung des Keys einen konvertierten Wert — Blazors
+    `SupplyParameterFromQuery`-Verhalten für Array-Parameter). Wie Blazor: der Key ist der
+    Feldname (case-insensitiv), abwesend ⇒ `null`, mehrere Werte ⇒ der erste, Route-Werte
+    schlagen Query-Werte für dasselbe Feld, eine gescheiterte Konvertierung ist Blazors
+    Fehler `Cannot parse the value 'X' as type 'T' for 'Y'.`, ein nicht unterstützter Typ
+    `Querystring values cannot be parsed as type 'X'.`. RouteView versorgt die Parameter bei
+    jedem Navigation-Wechsel neu (NavigationManager-Subscription wie Blazor).
 
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
@@ -554,7 +602,9 @@ typisiert:
 | Code in `@{ }` und Control-Bodies | code-first wie Razor, aber TypeScript; `using (…)`, `lock`, `@await` ⇒ Fehler |
 | `@namespace`, `@rendermode`, `@preservewhitespace` | akzeptiert, ignoriert |
 | DataAnnotations-Validierung | Decorators als Pendant (`@Required()`, `@MaxLength(n)`, … am Modell + `DataAnnotationsValidator`); `validators`-Map bleibt als Adapter; Teilmenge der Attribute (3.6) |
-| `@bind:format` | begrenzt v1 |
+| `@bind:format` | Teilmenge (3.7) — Zahlenmasken `F<n>`/`N<n>`/`0.00`, Datums-Tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); Klartext-Wert ist String-Literal, `@expr` Ausdruck; auf String-/Komponenten-Binds Warnung TZS008 (Blazors BindConverter-Verhalten), `@bind:culture` Fehler TZS008 |
+| `<InputFile>` | ja (3.7) — `InputFileChangeEventArgs` mit nativen `File`-Objekten statt `IBrowserFile` (`OpenReadStream` gibt es nicht) |
+| `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` statt Blazors Datentyp-Erkennung; nur mit `@Parameter() deklariert`; Key = Feldname (case-insensitiv), abwesend ⇒ `null`, `multiple` sammelt Wiederholungen (3.7) |
 | Benannte Child-Slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identisch (2.3 — siehe [Templated Components](#templated-components-benannte-slots-und-template-kontexte-23)) |
 | `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
 | `@authorize` | ja (Tsazor-Erweiterung für `[Authorize]`; bare oder mit `{ roles, policy }`; nicht über `_Imports` vererbt) |

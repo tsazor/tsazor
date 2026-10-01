@@ -7,6 +7,10 @@
         <NavLink Href="/counter">Counter</NavLink>
         <NavLink Href="/counter-persistent">Persistent counter</NavLink>
         <NavLink Href="/form">Form</NavLink>
+        <NavLink Href="/validation">Validation</NavLink>
+        <NavLink Href="/format">Format</NavLink>
+        <NavLink Href="/upload">Upload</NavLink>
+        <NavLink Href="/query">Query</NavLink>
         <NavLink Href="/virtualize">Virtualize</NavLink>
         <NavLink Href="/fetchdata">FetchData</NavLink>
         <NavLink Href="/auth">Auth</NavLink>

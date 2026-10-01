@@ -1847,6 +1847,57 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
+    "InputFile": {
+      "name": "InputFile",
+      "file": "src/forms/input-file.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "onChange",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputFile",
+          "type": "EventCallback<InputFileChangeEventArgs>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "InputFileChangeEventArgs",
+              "kind": "local",
+              "file": "src/forms/input-file.ts"
+            }
+          ],
+          "doc": "The change event of the input element.",
+          "typeArgument": "InputFileChangeEventArgs"
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputFile",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Pass-through attributes (accept, multiple, class, …)."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
     "AuthorizeView": {
       "name": "AuthorizeView",
       "file": "src/auth/authorize-view.ts",

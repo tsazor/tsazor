@@ -153,8 +153,15 @@ export class DomRenderer implements EventHandlerHost {
         const element = createElementIn(frame.elementName!, parent);
         const end = index + getFrameSubtreeLength(frame);
         let i = index + 1;
-        for (; i < end && frames[i]!.frameType === FrameType.Attribute; i++) {
+        // The element's own preamble: attributes, event handlers and reference
+        // captures (Blazor's InputFile order) — children start after it. The
+        // capture action fires here, on the fresh element.
+        for (; i < end && (frames[i]!.frameType === FrameType.Attribute || frames[i]!.frameType === FrameType.ElementReferenceCapture); i++) {
           const attribute = frames[i]!;
+          if (attribute.frameType === FrameType.ElementReferenceCapture) {
+            attribute.elementReferenceCaptureAction?.(element);
+            continue;
+          }
           setAttributeValue(this, state, element, attribute.attributeName!, attribute.attributeValue, attribute.eventHandlerFlags ?? 0, null);
         }
         // Build the fresh subtree into the detached element first, then insert

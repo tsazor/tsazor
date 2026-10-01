@@ -1,0 +1,39 @@
+@page "/query"
+@import { SupplyParameterFromQuery } from "@tsazor/runtime"
+
+<h1>SupplyParameterFromQuery</h1>
+
+<p>Page parameters supplied from the current URL's query string — refreshed on every navigation (roadmap 3.7). The <code>page</code> field converts as int, <code>tags</code> collects every repeated <code>tag=</code> value (<code>multiple</code>), keys match case-insensitively like in Blazor.</p>
+
+<div class="card">
+    <p>page: <strong>@(page === null ? "null" : page)</strong></p>
+    <p>verbose: <strong>@(verbose === null ? "null" : verbose ? "on" : "off")</strong></p>
+</div>
+
+<p class="log">tags: @tagsText · size: @pageSize · doubled: @doubled</p>
+
+<nav class="pager">
+    <NavLink Href="/query?page=1&tags=alpha&tags=beta">page 1, alpha+beta</NavLink>
+    <NavLink Href="/query?page=2&tags=gamma">page 2, gamma</NavLink>
+    <NavLink Href="/query?PAGE=3">page 3 (uppercase key)</NavLink>
+    <NavLink Href="/query?page=4&verbose=true">page 4, verbose</NavLink>
+    <NavLink Href="/query">none</NavLink>
+</nav>
+
+@code {
+    @Parameter() @SupplyParameterFromQuery({ type: "int" }) page: number | null = null;
+    @Parameter() @SupplyParameterFromQuery({ multiple: true }) tags: string[] | null = null;
+    @Parameter() @SupplyParameterFromQuery({ type: "bool" }) verbose: boolean | null = null;
+
+    private get tagsText(): string {
+        return this.tags === null ? "null" : "[" + this.tags.join(", ") + "]";
+    }
+
+    private get pageSize(): string {
+        return String(this.page);
+    }
+
+    private get doubled(): string {
+        return this.page === null ? "-" : String(this.page * 2);
+    }
+}

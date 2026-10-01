@@ -1078,6 +1078,7 @@ class Parser {
         }
         if (host && modifier) {
           host[modifier] = attr[modifier];
+          if (attr.formatLiteral) host.formatLiteral = true;
           host.modifierSpans = { ...host.modifierSpans, ...attr.modifierSpans };
           host.codeStarts = { ...host.codeStarts, ...attr.codeStarts };
           continue;
@@ -1256,9 +1257,18 @@ class Parser {
       }
       if (modifier === "event" || modifier === "format" || modifier === "get" || modifier === "set" || modifier === "after") {
         const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos);
+        // A plain-text :format value is a string literal (Razor: @bind:format="yyyy-MM-dd"); @expressions are code.
+        const formatLiteral = modifier === "format" && value?.isText === true ? true : undefined;
         return {
-          kind: "bind", bindTarget: targetName, [modifier]: value?.code ?? "", modifierSpans: { [modifier]: end() }, ...codeStarts(modifier, value), ...end(),
+          kind: "bind", bindTarget: targetName, [modifier]: value?.code ?? "", modifierSpans: { [modifier]: end() }, ...codeStarts(modifier, value), formatLiteral, ...end(),
         };
+      }
+      if (modifier === "culture") {
+        // The culture policy (A5/B7): Tsazor formats and parses invariant only.
+        if (src[this.i] === "=") this.i++;
+        this.parseAttributeValue();
+        this.diagnostics.error("TZS008", end(), `Tsazor formats and parses bind values with invariant culture only — '@bind-${targetName}:culture' is not supported; remove the modifier.`);
+        return { kind: "bind", ...end() };
       }
       if (src[this.i] === "=") this.i++;
       this.parseAttributeValue();
@@ -1270,6 +1280,13 @@ class Parser {
     if (rest.startsWith(":")) {
       const modifier = rest.slice(1);
       const known = ["event", "format", "get", "set", "after"];
+      if (modifier.toLowerCase() === "culture") {
+        // The culture policy (A5/B7): Tsazor formats and parses invariant only.
+        if (src[this.i] === "=") this.i++;
+        this.parseAttributeValue();
+        this.diagnostics.error("TZS008", end(), `Tsazor formats and parses bind values with invariant culture only — '@bind:${modifier}' is not supported; remove the modifier.`);
+        return { kind: "bind", ...end() };
+      }
       if (!known.includes(modifier.toLowerCase())) {
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();
@@ -1278,7 +1295,9 @@ class Parser {
       }
       const value = this.parseRequiredExpression(`bind:${modifier}`, pos);
       const key = modifier.toLowerCase();
-      return { kind: "bind", [key]: value?.code ?? "", modifierSpans: { [key]: end() }, ...codeStarts(key, value), ...end() } as AttributeNode;
+      // A plain-text :format value is a string literal (Razor: @bind:format="yyyy-MM-dd"); @expressions are code.
+      const formatLiteral = key === "format" && value?.isText === true ? true : undefined;
+      return { kind: "bind", [key]: value?.code ?? "", modifierSpans: { [key]: end() }, ...codeStarts(key, value), formatLiteral, ...end() } as AttributeNode;
     }
 
     if (src[this.i] === "=") this.i++;
@@ -1290,7 +1309,7 @@ class Parser {
   /** Parses an attribute's required expression value. `start` is the absolute
    *  index of the code's first character (undefined for quoted plain values
    *  that double as expression source — `@onclick="Increment"`). */
-  private parseRequiredExpression(attrName: string, pos: SourcePos): { code: string; start?: number } | null {
+  private parseRequiredExpression(attrName: string, pos: SourcePos): { code: string; start?: number; isText?: boolean } | null {
     const src = this.source;
     // Without '=' there is no value to parse (reported once, on the attribute).
     const value = src[this.i] === "=" ? (this.i++, this.parseAttributeValue()) : null;
@@ -1304,7 +1323,7 @@ class Parser {
     if (value.kind === "parts" && value.parts.length === 1) {
       const part = value.parts[0]!;
       if (part.code !== undefined) return { code: part.code, start: part.start };
-      if (part.text !== undefined) return { code: part.text, start: part.start };
+      if (part.text !== undefined) return { code: part.text, start: part.start, isText: true };
     }
     this.diagnostics.error("TZS009", this.rangeFrom(pos, this.i), `Attribute '@${attrName}' requires a single expression value.`);
     return null;

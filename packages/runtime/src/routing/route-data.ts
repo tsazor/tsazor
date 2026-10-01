@@ -142,6 +142,23 @@ const CONSTRAINT_FACTORIES: Record<string, (text: string) => RouteConstraint> = 
 const CONSTRAINT_NAMES = new Map(Object.keys(CONSTRAINT_FACTORIES).map((name) => [name.toLowerCase(), name]));
 
 /**
+ * Converts one raw value with a constraint's converter (the SupplyParameterFromQuery
+ * `type` option; `{id:int}` routes use the same machinery). Returns null when
+ * the raw value does not convert; throws for an unknown constraint name —
+ * like an invalid template.
+ */
+export function convertRouteRawValue(raw: string, constraint: string): RouteValue | null {
+  const name = CONSTRAINT_NAMES.get(constraint.toLowerCase());
+  if (!name) {
+    throw new Error(
+      `Unsupported constraint '${constraint}' (use one of: int, long, bool, double, float, decimal, datetime, guid, alpha, alphaNumeric).`,
+    );
+  }
+  const value = CONSTRAINT_FACTORIES[name]!(constraint).match(raw);
+  return value === NO_MATCH ? null : value;
+}
+
+/**
  * ISO 8601 date / date-time (DateTime.TryParse with InvariantCulture, the
  * subset a URL segment can carry). Without an offset the value is local time,
  * like an unspecified-kind DateTime.
