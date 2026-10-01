@@ -63,7 +63,10 @@ function compileBlanked(source: string, fileName: string): CompileAttempt {
 
 /** Rewrites `source` by applying fix payloads and the API forms until a pass
  *  changes nothing. Diagnostics without a fix stay and come back in
- *  `remaining`. */
+ *  `remaining`. Both edit sets are computed on the same text of a pass and
+ *  applied together — applying one before the other shifts offsets, so where
+ *  an API form overlaps a diagnostic fix (`.ToLower()` inside a rewritten
+ *  `@foreach` header) the fix wins and the API form happens one pass later. */
 export function codemodSource(source: string, fileName = "input.tsazor"): CodemodResult {
   let text = source;
   const applied: TszDiagnostic[] = [];
@@ -76,17 +79,15 @@ export function codemodSource(source: string, fileName = "input.tsazor"): Codemo
       return { text: source, applied, apiReplacements, remaining: [], crash, passes: lastPass };
     }
     const fixable = diagnostics.filter((d) => d.fix !== undefined).sort(cmpDiagnosticPositions);
-    const selected = nonOverlapping(fixable);
     const api = apiFormEdits(text);
-    if (selected.length === 0 && api.length === 0) break;
-    if (api.length > 0) {
-      text = applyTextEdits(text, api.map((a) => a.edit));
-      apiReplacements.push(...api.map((a) => ({ name: a.name, pos: a.edit.pos })));
-    }
-    if (selected.length > 0) {
-      text = applyTextEdits(text, selected.flatMap((d) => d.fix!.edits));
-      applied.push(...selected);
-    }
+    if (fixable.length === 0 && api.length === 0) break;
+    const selected = nonOverlapping(fixable);
+    const fixEdits = selected.flatMap((d) => d.fix!.edits);
+    const apiEdits = api.filter((a) => !fixEdits.some((f) => rangesOverlap(f, a.edit)));
+    if (fixEdits.length === 0 && apiEdits.length === 0) break;
+    text = applyTextEdits(text, [...fixEdits, ...apiEdits.map((a) => a.edit)]);
+    if (selected.length > 0) applied.push(...selected);
+    if (apiEdits.length > 0) apiReplacements.push(...apiEdits.map((a) => ({ name: a.name, pos: a.edit.pos })));
   }
   return finish(text, fileName, applied, apiReplacements, lastPass);
 }

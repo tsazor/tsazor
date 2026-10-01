@@ -57,6 +57,18 @@ describe("codemodSource", () => {
     expect(result.apiReplacements.map((a) => a.name).sort()).toEqual(["Length", "ToString"]);
   });
 
+  it("rewrites a foreach header containing API forms (offsets of one pass stay aligned)", () => {
+    // Regression: the API forms were applied before the diagnostic fixes of
+    // the same compile — the shifted fix mangled the header.
+    const source = '@foreach (var Plugin in Items.Where(x => x.Name.ToLower() == Name.ToLower()))\n{\n    <li>@Plugin</li>\n}';
+    const result = codemodSource(source);
+    expect(result.text).toBe(
+      '@foreach (const Plugin of Items.Where(x => x.Name.toLowerCase() == Name.toLowerCase()))\n{\n    <li>@Plugin</li>\n}',
+    );
+    expect(result.applied.map((d) => d.code)).toEqual(["TZS021"]);
+    expect(result.apiReplacements.map((a) => a.name)).toEqual(["ToLower", "ToLower"]);
+  });
+
   it("leaves diagnostics without a fix in remaining (TZS005 unresolved)", () => {
     const source = "<NotAComponent />\n@foreach (var item in Items) { <li/> }";
     const result = codemodSource(source);
