@@ -33,7 +33,7 @@
             </div>
 
             <div class="toppings">
-                @foreach (var pt in this.pizza.toppings) {
+                @foreach (const pt of this.pizza.toppings) {
                     <div class="topping">
                         @pt.topping.name
                         <span class="topping-price">@toppingFormattedPrice(pt.topping)</span>

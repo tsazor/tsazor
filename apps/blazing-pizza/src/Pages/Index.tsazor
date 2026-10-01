@@ -3,7 +3,7 @@
 
 <div class="main">
     <ul class="pizza-cards">
-        @foreach (var special in this.specials) {
+        @foreach (const special of this.specials) {
             <li style="@this.cardStyle(special)" @onclick="@(() => this.OrderState.showConfigurePizzaDialog(special))">
                 <div class="pizza-info">
                     <span class="title">@special.name</span>
@@ -20,7 +20,7 @@
         <div class="order-contents">
             <h2>Your order</h2>
 
-            @foreach (var configuredPizza in this.order.pizzas) {
+            @foreach (const configuredPizza of this.order.pizzas) {
                 <ConfiguredPizzaItem Pizza="@configuredPizza" OnRemoved="@(() => this.removePizza(configuredPizza))" />
             }
         </div>

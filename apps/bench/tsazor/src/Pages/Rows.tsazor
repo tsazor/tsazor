@@ -10,7 +10,7 @@
     <p class="rows-linecount" role="status" aria-live="polite">@this.rows.length lines</p>
     <table class="rows-table">
         <tbody>
-            @foreach (var row in this.rows) {
+            @foreach (const row of this.rows) {
                 <tr class="@this.rowClass(row)">
                     <td class="col-id">@row.id</td>
                     <td class="col-title" @onclick="@(e => this.select(e, row))">@row.label</td>

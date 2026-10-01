@@ -13,7 +13,7 @@
         <a class="btn btn-success" href="/">Order some pizza</a>
     } else {
         <div class="list-group orders-list">
-            @foreach (var item in this.ordersWithStatus) {
+            @foreach (const item of this.ordersWithStatus) {
                 <div class="list-group-item">
                     <div class="col">
                         <h5>@formatLongDate(item.order.createdTime)</h5>
