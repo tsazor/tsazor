@@ -424,6 +424,18 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
     devDependencies:
+      '@jridgewell/gen-mapping':
+        specifier: ^0.3.8
+        version: 0.3.13
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.25
+        version: 0.3.31
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
       vite:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
