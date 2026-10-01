@@ -1,5 +1,6 @@
-@using @tsazor/runtime
-<div class="@this.toastClass" role="@this.liveRole" aria-live="polite" aria-atomic="true">
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.toastAttributes">
     <div class="fui-toast__content">
         @if (this.title) {
             <div class="fui-toast__title">@this.title</div>
@@ -15,13 +16,15 @@
 
 @code {
     /** Severity: info (default) | success | warning | error. */
-    @Parameter() severity: string = "info";
+    @Parameter() severity: "info" | "success" | "warning" | "error" = "info";
     /** Optional headline. */
     @Parameter() title?: string;
     /** Message body. */
     @Parameter() childContent?: RenderFragment;
     /** Shows the close button (toasts inside ToastProvider are dismissible by default). */
     @Parameter() dismissible: boolean = true;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Fired when the user closes the toast. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
 
@@ -32,6 +35,15 @@
 
     private get toastClass(): string {
         return `fui-toast fui-toast--${this.severity}`;
+    }
+
+    private get toastAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.toastClass,
+            role: this.liveRole,
+            "aria-live": "polite",
+            "aria-atomic": "true",
+        }, this.additionalAttributes);
     }
 
     private close(e: MouseEvent): void {

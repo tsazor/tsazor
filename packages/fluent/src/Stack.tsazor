@@ -1,22 +1,33 @@
-<div class="@this.stackClass" style="@this.stackStyle">@childContent</div>
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.stackAttributes">@childContent</div>
 
 @code {
     /** Layout axis: horizontal (default) | vertical. */
-    @Parameter() direction: string = "horizontal";
+    @Parameter() direction: "horizontal" | "vertical" = "horizontal";
     /** Gap between children: xs | s | m (default) | l | xl. */
-    @Parameter() gap?: string;
-    /** flex align-items (start | center | end | stretch | baseline). */
-    @Parameter() align?: string;
-    /** flex justify-content (start | center | end | space-between | space-between…). */
-    @Parameter() justify?: string;
+    @Parameter() gap?: "xs" | "s" | "m" | "l" | "xl";
+    /** flex align-items. */
+    @Parameter() align?: "start" | "center" | "end" | "stretch" | "baseline";
+    /** flex justify-content. */
+    @Parameter() justify?: "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly";
     /** Wraps on overflow. */
     @Parameter() wrap: boolean = false;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
 
     private get stackClass(): string {
         let cls = `fui-stack fui-stack--${this.direction === "vertical" ? "vertical" : "horizontal"}`;
         if (this.wrap) cls += " fui-stack--wrap";
         return cls;
+    }
+
+    private get stackAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.stackClass,
+            style: this.stackStyle,
+        }, this.additionalAttributes);
     }
 
     /** Dynamic flex values ride inline; everything visual lives in the tokens. */

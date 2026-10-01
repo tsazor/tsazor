@@ -1,4 +1,6 @@
-<nav class="@this.navClass" aria-label="@this.ariaLabel">
+@import { withAttributes } from "./attributes"
+
+<nav aria-label="@this.ariaLabel" @attributes="@this.navAttributes">
     <ul class="fui-nav__list">
         @for (let i = 0; i < this.links.length; i++) {
             <li class="fui-nav__item">
@@ -14,12 +16,18 @@
     @Parameter() links: { href: string; label: string; match?: NavLinkMatch }[] = [];
     /** Accessible nav name. */
     @Parameter() ariaLabel: string = "Main navigation";
-    /** Extra content below the links (e.g. section headers). */
-    @Parameter() childContent?: RenderFragment;
     /** Renders the compact (icon-rail) variant. */
     @Parameter() compact: boolean = false;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Extra content below the links (e.g. section headers). */
+    @Parameter() childContent?: RenderFragment;
 
     private get navClass(): string {
         return this.compact ? "fui-nav fui-nav--compact" : "fui-nav";
+    }
+
+    private get navAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.navClass }, this.additionalAttributes);
     }
 }

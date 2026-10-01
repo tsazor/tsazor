@@ -99,7 +99,7 @@ describe("TextInput inside FluentForm", () => {
     expect(input.className).toBe("fui-input");
   });
 
-  it("binds, validates, and restores through the EditContext", async () => {
+  it("binds, validates, and restores through the EditContext — the error row waits for the submit", async () => {
     const model = emptyModel();
     const { container, renderer } = await renderForm(model, b => {
       b.openComponent(0, TextInput);
@@ -111,15 +111,26 @@ describe("TextInput inside FluentForm", () => {
     });
     const wrapper = container.querySelector(".fui-input-wrapper")!;
     const input = wrapper.querySelector("input")! as HTMLInputElement;
+    const form = container.querySelector("form")!;
 
-    // Invalid edit: blank string violates the name validator.
+    // Invalid edit: the field marks itself, but the message row waits for a submit.
     input.value = "  ";
     input.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
 
-    expect(wrapper.querySelector(".fui-input__message")!.textContent).toBe("Name is required.");
+    expect(wrapper.querySelector(".fui-input__message")).toBeNull();
     expect(wrapper.className).toContain("fui-input-wrapper--invalid");
     expect(input.className).toContain("fui-input--invalid");
+    expect(input.getAttribute("aria-invalid")).toBeNull();
+    expect(input.getAttribute("aria-describedby")).toBeNull();
+
+    // Submit: now the alert row appears (aria-describedby points at it, role="alert").
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    const row = wrapper.querySelector(".fui-input__message")!;
+    expect(row.textContent).toBe("Name is required.");
+    expect(row.getAttribute("role")).toBe("alert");
+    expect(row.id).toBe("name-input-message");
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.getAttribute("aria-describedby")).toBe("name-input-message");
 
@@ -128,8 +139,23 @@ describe("TextInput inside FluentForm", () => {
     input.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
     expect(wrapper.querySelector(".fui-input__message")).toBeNull();
+    expect(input.getAttribute("aria-invalid")).toBeNull();
     expect(input.className).toBe("fui-input fui-input--valid");
     expect(model.name).toBe("Holger");
+  });
+
+  it("generates a stable id when the app gives none (label + message association)", async () => {
+    const model = emptyModel();
+    const { container } = await renderForm(model, b => {
+      b.openComponent(0, TextInput);
+      b.addAttribute(1, "label", "Street");
+      b.addAttribute(4, "valueExpression", "name");
+      b.closeComponent();
+    });
+    const wrapper = container.querySelector(".fui-input-wrapper")!;
+    const input = wrapper.querySelector("input")!;
+    expect(input.id).toMatch(/^fui-input-\d+/);
+    expect(wrapper.querySelector(".fui-input__label")!.getAttribute("for")).toBe(input.id);
   });
 });
 

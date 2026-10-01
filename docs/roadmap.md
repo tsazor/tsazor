@@ -1250,6 +1250,20 @@ Routen-Scan auf `src` begrenzen. Tests für Invalidierung und Windows-Pfade.
 *Warum erst hier:* Der Graph hängt vollständig am Import-Modell (A3) und an den Metadaten (2.1);
 vorher gebaut, müsste er neu geschrieben werden.
 
+**Stand: 4.1 umgesetzt (2026-10-01).** `hotUpdate` (Vite ≥ 6) plus
+`handleHotUpdate`-Kompatibilität in `packages/vite-plugin`; die eigentliche
+Planung liegt in `invalidate.ts` (`planInvalidation`) — reine Import-Kanten aus
+A3, `_Imports.tsazor`-Vererbung, vorher unaufgelöste Tags (TZS005 aus den
+2.1-Metadaten), Sidecar-Kanten (`.tsazor.css`/`.tsazor.ts` an/ab), und
+`@page`/`@layout`-Änderungen ⇒ Routen-Manifest
+(`virtual:tsazor-routes` ⇒ Kettenaktualisierung bis `index.html`).
+Pfadvergleich case-insensitive normalisiert (Windows), Routen-Scan auf `src`
+begrenzt. Klare Full-Reload-Politik: Routen-Manifest-Änderungen und entfernte
+CSS-Sidecars reloaden komplett — @page/@layout sind Routing, kein Hot-Pfad.
+Live nachgewiesen über `apps/demo/scripts/verify-hmr.mjs` (19/19 Szenarien
+a)–g)); dazu 49 Plugin-Tests inkl. Windows-Pfadfälle (siehe
+[architecture.md](architecture.md), Abschnitt HMR).
+
 ### 4.2 — Fluent-Überarbeitung
 
 Nach 2.3 (Slots) und 2.4 (Typen), weil sich die API ohnehin ändert:
@@ -1258,6 +1272,30 @@ Nach 2.3 (Slots) und 2.4 (Typen), weil sich die API ohnehin ändert:
 - `@attributes`-Weitergabe überall, `aria-*` rendern (Button),
 - automatisch eindeutige IDs für Label/Message-Zuordnung, `role="alert"` nur bei Submit-Fehlern,
 - Templated-Komponenten (DataGrid, Table mit `RenderFragment<T>`) nachziehen.
+
+**Stand: 4.2 umgesetzt (2026-10-01).** API-Bruch wie geplant, im selben Commit
+alle vier Apps nachgezogen (nur die Gallery nutzt `@tsazor/fluent`):
+- Vokabular als Unions in allen Komponenten (`appearance`, `size`, `variant`,
+  `severity`, `align`, Spacing `"xs"…"xl"`, …) — die Legacy-Namen von `Alert`
+  (primary/secondary/error/caution) fielen ersatzlos weg; `Icon.name` bleibt
+  `string` (offene Menge, dynamische Nutzung, dokumentiert).
+- `additionalAttributes` (`@attributes`) überall — Inputs erben ihn über
+  `InputBase`; ein gemeinsamer Merge-Helfer (`withAttributes`: `class` appendet,
+  Rest überschreibt) hält die Komponenten-Laufwerke identisch.
+- A11y: Button rendert `aria-label`/`aria-describedby`, Pagination bekommt
+  `ariaLabel`; jeder Input generiert bei fehlender ID eine eindeutige
+  (`fui-input-3` …) und verdrahtet `label[for]` + `aria-describedby` damit;
+  `role="alert"` erscheint erst mit Submit-Versuch (`markSubmitAttempt` über
+  den EditContext) — dokumentierte Abweichung: die `--invalid`-Klassen
+  bleiben live pro Edit.
+- DataGrid neu (`DataGridColumn<TRow>` in `src/datagrid-columns.ts`, Spalten
+  bauen Kopf + Body, `format`/`align`/`cellContent`-Template, eigenes CSS);
+  Table `rowContent` bleibt `(row) => RenderFragment` nach 2.4-Standard; ein
+  Gallery-Page (`/datagrid`) zeigt ihn, der E2E-Verify prüft live.
+- Beigefundene Bugfixes: `componentTypeDeclaration` in `packages/workspace`
+  erzeugte d.ts ohne Typ-Importe (`collectReferences` war nie aufgerufen —
+  tot seit 2.4); der fluent-Build kollidiert auf Windows bei gleichnamigen
+  Helfern (`datagrid.ts` überschrieb `DataGrid.js`) — Helfer umbenannt.
 
 ---
 

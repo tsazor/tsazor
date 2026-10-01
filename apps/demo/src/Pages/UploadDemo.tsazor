@@ -19,7 +19,7 @@
 </div>
 
 @code {
-    private files: File[] = [];
+    private files: readonly File[] = [];
 
     private handleFiles = EventCallback.bind(this, (args: InputFileChangeEventArgs) => {
         this.files = args.getMultipleFiles();

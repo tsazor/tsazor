@@ -1,6 +1,9 @@
+@import { withAttributes } from "./attributes"
+@import { nextFieldId } from "./ids"
+
 @if (this.isOpen) {
     <div class="fui-dialog-overlay" tabindex="-1" @onclick="this.handleBackdrop" @onkeydown="this.handleKeydown" @ref="overlayElement">
-        <div class="fui-dialog" role="dialog" aria-modal="true" aria-label="@this.ariaLabel" aria-labelledby="@this.labelledBy">
+        <div role="dialog" aria-modal="true" @attributes="@this.dialogAttributes">
             @if (this.title) {
                 <div class="fui-dialog__header">
                     <h2 class="fui-dialog__title" id="@this.labelledBy">@this.title</h2>
@@ -22,8 +25,10 @@
     @Parameter() title?: string;
     /** Overrides the dialog's accessible name (when unheaded). */
     @Parameter() ariaLabel?: string;
-    /** Element id; the title element becomes `${id}-title`. */
+    /** Element id (the title's id for aria-labelledby); generated automatically when omitted. */
     @Parameter() id?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Closes when the backdrop itself is clicked (not the dialog). */
     @Parameter() closeOnBackdrop: boolean = true;
     /** Closes when the user presses Escape. */
@@ -39,14 +44,28 @@
     private static scrollLocks = 0;
     private static scrollLockRestore = "";
 
+    private generatedId?: string;
+
+    private get elementId(): string {
+        return this.id ?? (this.generatedId ??= nextFieldId("fui-dialog"));
+    }
+
+    private get labelledBy(): string | null {
+        return this.title ? `${this.elementId}-title` : null;
+    }
+
+    private get dialogAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: "fui-dialog",
+            "aria-label": this.ariaLabel,
+            "aria-labelledby": this.labelledBy,
+        }, this.additionalAttributes);
+    }
+
     private overlayElement?: HTMLElement;
     private restoreFocusTo: HTMLElement | null = null;
     private wasOpen = false;
     private escapeHandler?: (e: KeyboardEvent) => void;
-
-    private get labelledBy(): string | null {
-        return this.id && this.title ? `${this.id}-title` : null;
-    }
 
     protected override onAfterRender(firstRender: boolean): void {
         if (this.isOpen && !this.wasOpen) {

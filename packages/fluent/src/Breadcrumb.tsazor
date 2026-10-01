@@ -1,7 +1,15 @@
-<nav class="fui-breadcrumb" aria-label="breadcrumb">
+@import { withAttributes } from "./attributes"
+
+<nav aria-label="breadcrumb" @attributes="@this.breadcrumbAttributes">
     <ol class="fui-breadcrumb__list">@childContent</ol>
 </nav>
 
 @code {
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
+
+    private get breadcrumbAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-breadcrumb", "aria-label": "breadcrumb" }, this.additionalAttributes);
+    }
 }

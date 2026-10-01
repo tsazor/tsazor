@@ -1,0 +1,89 @@
+@import type { DataGridColumn } from "./datagrid-columns"
+@import { withAttributes } from "./attributes"
+
+@typeparam TRow
+
+<table role="table" @attributes="@this.gridAttributes">
+    <thead class="fui-table__head">
+        <tr>
+            @for (let j = 0; j < this.columns.length; j++) {
+            <th scope="col" class="@this.headClassFor(this.columns[j]!)">@this.headText(this.columns[j]!)</th>
+            }
+        </tr>
+    </thead>
+    <tbody class="fui-table__body">
+        @if (this.items.length === 0) {
+            <tr class="fui-table__empty"><td colspan="@this.columns.length">@this.emptyText</td></tr>
+        }
+        @for (let i = 0; i < this.items.length; i++) {
+            <tr>
+                @for (let j = 0; j < this.columns.length; j++) {
+                <td class="@this.cellClassFor(this.columns[j]!)">@this.cellFor(this.items[i]!, this.columns[j]!)</td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    /** Rows to render (filter/sort/paging live in the host app). */
+    @Parameter() items: TRow[] = [];
+    /** Column list; the row property `field` fills a cell unless `cellContent` overrides it. */
+    @Parameter() columns: DataGridColumn<TRow>[] = [];
+    /** Custom cell template — one fragment per (row, column) pair. */
+    @Parameter() cellContent?: (row: TRow, column: DataGridColumn<TRow>) => RenderFragment;
+    /** Zebra striping on alternate rows (Table surface, 2.3). */
+    @Parameter() striped: boolean = false;
+    /** Hover highlight per row. */
+    @Parameter() hover: boolean = false;
+    /** Dense row heights. */
+    @Parameter() compact: boolean = false;
+    /** Text for the empty-state row. */
+    @Parameter() emptyText: string = "No entries";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The Table surface carries the classes; the DataGrid only adds its own scope. */
+    private get gridClass(): string {
+        let cls = "fui-table fui-datagrid";
+        if (this.striped) cls += " fui-table--striped";
+        if (this.hover) cls += " fui-table--hover";
+        if (this.compact) cls += " fui-table--compact";
+        return cls;
+    }
+
+    private get gridAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.gridClass }, this.additionalAttributes);
+    }
+
+    private headText(column: DataGridColumn<TRow>): string {
+        return column.title ?? column.field;
+    }
+
+    /** Alignment rides a modifier class (DataGrid.tsazor.css). */
+    private headClassFor(column: DataGridColumn<TRow>): string | undefined {
+        return column.align === undefined ? undefined : `fui-datagrid__head--${column.align}`;
+    }
+
+    private cellClassFor(column: DataGridColumn<TRow>): string | undefined {
+        return column.align === undefined ? undefined : `fui-datagrid__cell--${column.align}`;
+    }
+
+    /** The cell fragment: the custom template, else `format(row)` or String(row[field]). */
+    private cellFor(row: TRow, column: DataGridColumn<TRow>): RenderFragment {
+        const render = this.cellContent;
+        return (b) => {
+            if (render !== undefined) {
+                render(row, column)(b);
+                return;
+            }
+            b.addContent(0, this.cellText(row, column));
+        };
+    }
+
+    private cellText(row: TRow, column: DataGridColumn<TRow>): string {
+        if (column.format) return column.format(row);
+        const value = (row as Record<string, unknown>)[column.field];
+        return value === undefined || value === null ? "" : String(value);
+    }
+}

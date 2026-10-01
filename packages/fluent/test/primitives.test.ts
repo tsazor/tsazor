@@ -70,6 +70,31 @@ describe("Button", () => {
     });
     expect(container.querySelector("button")!.hasAttribute("aria-label")).toBe(false);
   });
+
+  it("renders aria-label and aria-describedby where the app supplies them (4.2)", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Button);
+      b.addAttribute(1, "ariaLabel", "Delete row");
+      b.addAttribute(2, "ariaDescribedBy", "delete-hint");
+      b.closeComponent();
+    });
+    const button = container.querySelector("button")!;
+    expect(button.getAttribute("aria-label")).toBe("Delete row");
+    expect(button.getAttribute("aria-describedby")).toBe("delete-hint");
+  });
+
+  it("captures unmatched @attributes and appends the user class (4.2)", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Button);
+      b.addAttribute(1, "class", "cta cta--tight");
+      b.addAttribute(2, "data-testid", "save");
+      b.addAttribute(3, "childContent", text("Save"));
+      b.closeComponent();
+    });
+    const button = container.querySelector("button")!;
+    expect(button.className).toBe("fui-button fui-button--secondary cta cta--tight");
+    expect(button.getAttribute("data-testid")).toBe("save");
+  });
 });
 
 describe("Badge", () => {

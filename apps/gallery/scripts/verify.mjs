@@ -194,7 +194,22 @@ async function main() {
     const firstRow = (await page.textContent(".orders-row")).trim();
     check(firstRow.includes("#104"), "sorting by total puts Dilan (>8) first (asc)");
 
-    /* 9 — row click opens the detail dialog */
+    /* 8b — datagrid: the column list builds header and body (4.2) */
+    await page.click("a[href='/datagrid']");
+    await page.waitForSelector(".fui-datagrid");
+    const gridHeads = await page.locator(".fui-datagrid thead th").allTextContents();
+    check(JSON.stringify(gridHeads) === JSON.stringify(["Customer", "Placed", "Total (€)"]),
+        "datagrid headers come from the columns");
+    check((await page.textContent(".fui-datagrid tbody tr")).includes("42.50"),
+        "datagrid format() shapes the cell text");
+    check((await page.locator(".fui-datagrid td.fui-datagrid__cell--end").count()) === 4,
+        "datagrid aligns the money column right");
+
+    /* 9 — row click opens the detail dialog (back from the datagrid page) */
+    await page.click("a[href='/dashboard']");
+    await page.waitForSelector(".kpi-grid");
+    await page.click("a[href='/dashboard/orders']");
+    await page.waitForSelector(".orders-row");
     await page.locator(".orders-row").first().click();
     await page.waitForSelector(".fui-dialog");
     const detail = (await page.textContent(".fui-dialog")).trim();

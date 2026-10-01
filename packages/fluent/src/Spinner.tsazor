@@ -1,10 +1,14 @@
-<span class="@spinnerClass" role="status" aria-label="@ariaLabel">@childContent</span>
+@import { withAttributes } from "./attributes"
+
+<span role="status" @attributes="@this.spinnerAttributes">@childContent</span>
 
 @code {
-    /** small | medium | large (24/32/40 px on the control grid). */
-    @Parameter() size: string = "medium";
+    /** small | medium (default) | large (24/32/40 px on the control grid). */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
     /** Accessible label announcing the busy state (defaults to "Loading…"). */
     @Parameter() ariaLabel: string | null = "Loading…";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Optional slot next to the spinner (e.g. a text line). */
     @Parameter() childContent?: RenderFragment;
 
@@ -13,5 +17,12 @@
         if (this.size === "small") return `${base} fui-spinner--small`;
         if (this.size === "large") return `${base} fui-spinner--large`;
         return base;
+    }
+
+    private get spinnerAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.spinnerClass,
+            "aria-label": this.ariaLabel ?? undefined,
+        }, this.additionalAttributes);
     }
 }

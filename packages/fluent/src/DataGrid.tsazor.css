@@ -1,0 +1,12 @@
+/* DataGrid — reuses the Table surface (see Table.tsazor.css); only the
+   column alignment adds its own classes here. */
+
+.fui-datagrid__head--center,
+.fui-datagrid__cell--center {
+  text-align: center;
+}
+
+.fui-datagrid__head--end,
+.fui-datagrid__cell--end {
+  text-align: end;
+}

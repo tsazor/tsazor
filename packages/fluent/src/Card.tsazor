@@ -1,13 +1,24 @@
-<section class="@cardClass" aria-label="@ariaLabel">@childContent</section>
+@import { withAttributes } from "./attributes"
+
+<section @attributes="@this.cardAttributes">@childContent</section>
 
 @code {
     /** Surface: standard (default) or filled (subtly elevated background). */
-    @Parameter() appearance: string = "standard";
+    @Parameter() appearance: "standard" | "filled" = "standard";
     /** Accessible name when the card stands alone. */
     @Parameter() ariaLabel: string | null = null;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
 
     private get cardClass(): string {
         return this.appearance === "filled" ? "fui-card fui-card--filled" : "fui-card";
+    }
+
+    private get cardAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.cardClass,
+            "aria-label": this.ariaLabel ?? undefined,
+        }, this.additionalAttributes);
     }
 }

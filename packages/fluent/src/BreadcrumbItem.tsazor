@@ -1,4 +1,6 @@
-<li class="fui-breadcrumb__item">
+@import { withAttributes } from "./attributes"
+
+<li @attributes="@this.itemAttributes">
     @if (this.active) { <span class="fui-breadcrumb__current" aria-current="page">@childContent</span> }
     else { <a class="fui-breadcrumb__link" href="@href">@childContent</a> }
 </li>
@@ -8,5 +10,11 @@
     @Parameter() href: string = "#";
     /** Active item renders plain content without a link. */
     @Parameter() active: boolean = false;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
+
+    private get itemAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-breadcrumb__item" }, this.additionalAttributes);
+    }
 }

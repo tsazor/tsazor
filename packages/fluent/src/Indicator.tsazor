@@ -1,5 +1,7 @@
+@import { withAttributes } from "./attributes"
+
 @if (this.visible) {
-<span class="@this.indicatorClass" role="status">
+<span role="status" @attributes="@this.indicatorAttributes">
     <span class="fui-indicator__dot" aria-hidden="true"></span>
     @if (this.childContent !== undefined) { <span class="fui-indicator__label">@childContent</span> }
 </span>
@@ -7,13 +9,19 @@
 
 @code {
     /** Semantic color: success | danger | warning | info | neutral (default). */
-    @Parameter() color: string = "neutral";
+    @Parameter() color: "success" | "danger" | "warning" | "info" | "neutral" = "neutral";
     /** Renders nothing when false. */
     @Parameter() visible: boolean = true;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Optional label — turns the dot into a status chip. */
     @Parameter() childContent?: RenderFragment;
 
     private get indicatorClass(): string {
         return `fui-indicator fui-indicator--${this.color}`;
+    }
+
+    private get indicatorAttributes(): Record<string, unknown> {
+        return withAttributes({ class: this.indicatorClass }, this.additionalAttributes);
     }
 }

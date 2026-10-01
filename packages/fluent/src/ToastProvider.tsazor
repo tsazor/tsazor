@@ -1,4 +1,6 @@
-<div class="@this.regionClass" aria-live="polite">
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.regionAttributes">
     @for (let i = 0; i < this.items.length; i++) {
         <Toast severity="@this.items[i]!.severity" title="@this.items[i]!.title" childContent="@this.items[i]!.message" onDismissed="@(() => this.dismiss(this.items[i]!.id))" />
     }
@@ -8,6 +10,11 @@
 @code {
     /** Toast consumers (resolve the FluentToasts cascade). */
     @Parameter() childContent?: RenderFragment;
+    /** Region position: bottom-right (default) or top-right. */
+    @Parameter() position: "bottom-right" | "top-right" = "bottom-right";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
     readonly isCascadingValueSupplier = true;
     /** The toast list changes as toasts show and expire. */
     readonly isFixed = false;
@@ -18,18 +25,23 @@
     }
 
     private items: { id: number; title?: string; message?: string; severity: string; timer?: ReturnType<typeof setTimeout> }[] = [];
-    private nextId = 0;
-
-    /** Region position: bottom-right (default) or top-right. */
-    @Parameter() position: string = "bottom-right";
 
     /** The positioned stack keeps one class hook for the region. */
     private get regionClass(): string {
         return this.position === "top-right" ? "fui-toasts fui-toasts--top" : "fui-toasts";
     }
 
+    private get regionAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: this.regionClass,
+            "aria-live": "polite",
+        }, this.additionalAttributes);
+    }
+
+    private nextId = 0;
+
     /** Shows a toast; auto-dismisses after `timeout` ms (0 = sticky). */
-    show(options: { title?: string; message?: string; severity?: string; timeout?: number }): number {
+    show(options: { title?: string; message?: string; severity?: "info" | "success" | "warning" | "error"; timeout?: number }): number {
         const id = this.nextId;
         this.nextId = id + 1;
         const timeout = options.timeout ?? 4000;

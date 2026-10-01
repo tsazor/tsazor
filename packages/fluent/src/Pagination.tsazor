@@ -1,4 +1,6 @@
-<nav class="fui-pagination" aria-label="Pagination">
+@import { withAttributes } from "./attributes"
+
+<nav aria-label="@this.ariaLabel" @attributes="@this.paginationAttributes">
     <button type="button" class="fui-pagination__button" aria-label="First page" title="First page"
             disabled="@this.atFirst" @onclick="() => this.go(1)">«</button>
     <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page"
@@ -24,7 +26,15 @@
     @Parameter() page: number = 1;
     /** Total number of pages. */
     @Parameter() totalPages: number = 1;
+    /** Accessible nav name. */
+    @Parameter() ariaLabel: string = "Pagination";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() onPageChange?: EventCallback<number>;
+
+    private get paginationAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-pagination" }, this.additionalAttributes);
+    }
 
     private get atFirst(): boolean {
         return this.page <= 1;

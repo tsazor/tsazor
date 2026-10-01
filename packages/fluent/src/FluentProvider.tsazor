@@ -1,14 +1,18 @@
-<div class="fui-provider" data-fluent-theme="@theme" style="@overridesStyle">@childContent</div>
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.providerAttributes">@childContent</div>
 
 @code {
     /** Controls the subtree's token palette: "light" (default) or "dark". Mirrored
      * to the data-fluent-theme attribute so the provider can scope a theme
      * without touching <html>; apps that re-theme the whole document set the
      * attribute on <html> instead and leave this light. */
-    @Parameter() theme: string = "light";
+    @Parameter() theme: "light" | "dark" = "light";
     /** MudBlazor-style TokenOverrides: inline `--fui-*` custom-property values
      * layered on top of the shipped token sheet. */
     @Parameter() tokenOverrides?: Record<string, string>;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     @Parameter() childContent?: RenderFragment;
 
     readonly isCascadingValueSupplier = true;
@@ -18,6 +22,14 @@
     readonly cascadeName = "FluentTheme";
     get cascadeValue(): unknown {
         return { theme: this.theme, tokenOverrides: this.tokenOverrides };
+    }
+
+    private get providerAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: "fui-provider",
+            "data-fluent-theme": this.theme,
+            style: this.overridesStyle,
+        }, this.additionalAttributes);
     }
 
     private get overridesStyle(): string {

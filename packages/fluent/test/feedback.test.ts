@@ -95,14 +95,20 @@ describe("Indicator", () => {
 });
 
 describe("Alert", () => {
-  it("maps legacy variant names onto Fluent severities", async () => {
-    const primary = await renderOne(Alert, (b) => b.addAttribute(1, "variant", "primary"));
-    expect(primary.container.querySelector(".fui-alert")!.className).toContain("fui-alert--info");
-
-    const danger = await renderOne(Alert, (b) => b.addAttribute(1, "variant", "danger"));
-    expect(danger.container.querySelector(".fui-alert")!.className).toContain("fui-alert--danger");
-    primary.dispose();
-    danger.dispose();
+  it("renders the union vocabulary as severity classes (4.2: legacy names dropped)", async () => {
+    const rendered: string[] = [];
+    for (const variant of ["info", "success", "danger", "warning", "neutral"]) {
+      const result = await renderOne(Alert, (b) => b.addAttribute(1, "variant", variant));
+      rendered.push(result.container.querySelector(".fui-alert")!.className);
+      result.dispose();
+    }
+    expect(rendered).toEqual([
+      "fui-alert fui-alert--info",
+      "fui-alert fui-alert--success",
+      "fui-alert fui-alert--danger",
+      "fui-alert fui-alert--warning",
+      "fui-alert fui-alert--neutral",
+    ]);
   });
 
   it("keeps role=alert and dismisses through the close button + callback", async () => {
