@@ -127,6 +127,9 @@ importers:
         specifier: ^1.9.4
         version: 1.9.4
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/leaflet':
         specifier: ^1.9.12
         version: 1.9.22
@@ -155,6 +158,9 @@ importers:
         specifier: ^5.3.8
         version: 5.3.8(@popperjs/core@2.11.8)
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       playwright-core:
         specifier: ^1.63.0
         version: 1.63.0
@@ -177,6 +183,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vite-plugin
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       playwright-core:
         specifier: ^1.63.0
         version: 1.63.0
@@ -205,6 +214,9 @@ importers:
         specifier: ^1.4.3
         version: 1.4.3
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       playwright-core:
         specifier: ^1.63.0
         version: 1.63.0
@@ -389,6 +401,9 @@ importers:
       '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
+      '@tsazor/lsp':
+        specifier: workspace:*
+        version: link:../lsp
       '@tsazor/workspace':
         specifier: workspace:*
         version: link:../workspace

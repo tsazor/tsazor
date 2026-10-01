@@ -24,7 +24,10 @@
 
     private markersEqual(a: Marker[] | null, b: Marker[] | undefined): boolean {
         if (!a || !b || a.length !== b.length) return false;
-        return a.every((m, i) => m.x === b[i].x && m.y === b[i].y && m.description === b[i].description);
+        return a.every((m, i) => {
+            const other = b[i];
+            return other !== undefined && m.x === other.x && m.y === other.y && m.description === other.description;
+        });
     }
 
     private async showOrUpdate(): Promise<void> {
