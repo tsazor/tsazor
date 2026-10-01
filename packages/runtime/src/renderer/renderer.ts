@@ -12,10 +12,6 @@ import { ComponentState } from "./component-state.js";
 import { Dispatcher } from "./dispatcher.js";
 import { DomRenderer } from "./dom-renderer.js";
 import { RenderQueue } from "./render-queue.js";
-import { EventCallback } from "../components/event-callback.js";
-
-/** Component attributes matching this name pattern carry event callbacks. */
-const EVENT_PARAM_PATTERN = /^on/i;
 
 /**
  * Render passes one component may run within a single batch before the
@@ -30,10 +26,9 @@ const EMPTY_PARAMETERS: ReadonlyMap<string, unknown> = new Map();
  * Blazor's ParameterView.DefinitelyEquals over the attribute frames of a
  * retained component frame: true only when both have the same attribute
  * names in the same order (reorderings count as changes, as in Blazor) and
- * no value may have changed (mayHaveChanged). A plain function on an
- * on*-named parameter becomes an EventCallback bound to the same parent in
- * setComponentParameters, so the same function counts as the same
- * EventCallback (Blazor compares the converted EventCallbacks).
+ * no value may have changed (mayHaveChanged). A plain function is a value
+ * like any other (Blazor: a delegate may have changed); the EventCallbacks of
+ * EventCallback parameters come from the compiler (2.2, B8).
  */
 function parametersDefinitelyEqual(oldFrames: RenderTreeFrame[], oldIndex: number, newFrames: RenderTreeFrame[], newIndex: number): boolean {
   const oldEnd = oldIndex + getFrameSubtreeLength(oldFrames[oldIndex]!);
@@ -46,12 +41,8 @@ function parametersDefinitelyEqual(oldFrames: RenderTreeFrame[], oldIndex: numbe
     const oldFinished = oldFrame === undefined || oldFrame.frameType !== FrameType.Attribute;
     const newFinished = newFrame === undefined || newFrame.frameType !== FrameType.Attribute;
     if (oldFinished || newFinished) return oldFinished === newFinished;
-    const name = newFrame.attributeName!;
-    if (oldFrame.attributeName !== name) return false;
-    const oldValue = oldFrame.attributeValue;
-    const newValue = newFrame.attributeValue;
-    if (oldValue === newValue && typeof newValue === "function" && EVENT_PARAM_PATTERN.test(name)) continue;
-    if (mayHaveChanged(oldValue, newValue)) return false;
+    if (oldFrame.attributeName !== newFrame.attributeName) return false;
+    if (mayHaveChanged(oldFrame.attributeValue, newFrame.attributeValue)) return false;
   }
 }
 
@@ -251,17 +242,11 @@ export class Renderer {
   /** Applies attributes (plus resolved cascading values) and runs the lifecycle. */
   setComponentParameters(state: ComponentState, attributes: Map<string, { frame: RenderTreeFrame }>): void {
     const direct = new Map<string, unknown>();
-    for (const [name, { frame }] of attributes) {
-      let value = frame.attributeValue;
-      // Blazor's EventCallbackFactory conversion: a plain function passed to
-      // an on*-named event parameter is bound to the declaring component so
-      // the parent re-renders after the handler ran. Already-bound callbacks
-      // pass through untouched.
-      if (EVENT_PARAM_PATTERN.test(name) && typeof value === "function" && !(value instanceof EventCallback)) {
-        value = EventCallback.bind(state.parent?.component ?? state.component, value as never);
-      }
-      direct.set(name, value);
-    }
+    // Values pass through as given (B8): Blazor's EventCallbackFactory
+    // conversion happens at compile time — the compiler creates the
+    // EventCallbacks of EventCallback parameters; a plain function is a plain
+    // value, whatever its parameter's name.
+    for (const [name, { frame }] of attributes) direct.set(name, frame.attributeValue);
     this.supplyParameters(state, direct);
   }
 
