@@ -1310,13 +1310,35 @@ class Parser {
     return null;
   }
 
+  /** One parenthesized expression value `@(...)`: `code` is the text between
+   *  the parens, `start` its absolute index. `at` is on the `@`. Unbalanced
+   *  parens are TZS003, parsing resumes at the end of the file. */
+  private parseParenthesizedValue(at: number): { kind: "code"; code: string; start: number } | null {
+    const src = this.source;
+    const end = this.ts.scanBalanced(at + 1, "(", ")");
+    if (end < 0) {
+      this.diagnostics.error("TZS003", this.range(at, at + 2), "Parenthesized attribute expression never closes.");
+      this.i = src.length;
+      return null;
+    }
+    const code = src.slice(at + 2, end - 1);
+    this.i = end;
+    return { kind: "code", code, start: at + 2 };
+  }
+
   private parseAttributeValue(): { kind: "code"; code: string; start?: number } | { kind: "parts"; parts: ValuePart[] } | null {
     const src = this.source;
     if (src[this.i] === "@") {
+      // Unquoted expression value, directly parenthesized `@(...)`: the value is
+      // one parenthesized TS expression (Roslyn binds `@(` regardless of markup;
+      // the string scan must skip literals, which scanBalanced does).
+      if (src[this.i + 1] === "(") {
+        return this.parseParenthesizedValue(this.i);
+      }
       // Unquoted expression value.
       const at = this.i;
       const end = this.ts.scanImplicitExpression(this.i + 1);
-      if (end <= this.i + 1 && src[this.i + 1] !== "(") {
+      if (end <= this.i + 1) {
         this.diagnostics.error("TZS009", this.range(this.i, Math.max(end, this.i + 1)), "Expected an expression value.");
         return null;
       }
@@ -1361,15 +1383,10 @@ class Parser {
           continue;
         }
         if (src[this.i + 1] === "(") {
-          const end = this.ts.scanBalanced(this.i + 1, "(", ")");
-          if (end < 0) {
-            this.diagnostics.error("TZS003", this.range(this.i, this.i + 2), "Parenthesized attribute expression never closes.");
-            this.i = src.length;
-            return null;
-          }
           pushText();
-          parts.push({ code: src.slice(this.i + 2, end - 1), start: this.i + 2 });
-          this.i = end;
+          const value = this.parseParenthesizedValue(this.i);
+          if (value === null) return null;
+          parts.push({ code: value.code, start: value.start ?? this.i + 2 });
           continue;
         }
         // Email rule: `@` right after an alphanumeric text character is literal.
