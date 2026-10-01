@@ -9,7 +9,7 @@ import type {
   StatementNode,
 } from "./ast.js";
 import { childNodes } from "./ast.js";
-import { DiagnosticBag, type DiagnosticFix, type SourcePos, type SourceRange } from "./diagnostics.js";
+import { DiagnosticBag, type DiagnosticFix, type SourcePos, type SourceRange, type TextEdit } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
 import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
@@ -24,6 +24,7 @@ import {
   emptyMembers,
   forHeaderKind,
   rewriteSnippet,
+  typeSyntaxError,
   type NameResolver,
   type RewriteResult,
   type SnippetKind,
@@ -203,6 +204,17 @@ class Codegen {
   private readonly componentLocalNames = new Map<string, string>(); // tagName → local
   /** Parameter metadata per component tag (2.2), and the tags already warned about missing metadata. */
   private readonly componentTargets = new Map<string, ComponentTarget>();
+  /**
+   * Child content elements (2.3, C13): a direct child of a component whose
+   * tag names one of its RenderFragment / RenderFragment<T> parameters —
+   * decided by the parent's metadata before any tag resolution (Razor:
+   * child content tag helpers win over components of the same name).
+   */
+  private readonly slotElements = new Map<ElementNode, ComponentParameter>();
+  /** Uppercase tags already reported as misplaced or unknown child content (no TZS005 on top). */
+  private readonly diagnosedTags = new Set<ElementNode>();
+  /** Template contexts of the enclosing RenderFragment<T> bodies (RZ9999: no reuse of a name). */
+  private readonly contextStack: Array<{ name: string; element: string; component: string }> = [];
   private readonly unavailableWarned = new Set<string>();
   private readonly typeImports = new Map<string, string>(); // typeName → local
   private readonly plainImports: string[] = [];
@@ -342,6 +354,7 @@ class Codegen {
     this.checkRenderMethodConflict(memberCode);
 
     // Pre-resolve component tags so imports come out once, before the class.
+    this.classifyChildContent(document.body);
     this.preResolve(document.body, this.metadata.usings);
 
     // --- Emit the module -------------------------------------------------
@@ -549,9 +562,109 @@ class Codegen {
 
   /* ------------------------------------------------------------------ */
 
+  /**
+   * Slot vs. component (2.3, C13), decided by metadata: a direct child of a
+   * component whose tag names a RenderFragment / RenderFragment<T> parameter
+   * of that component is a child content element — even where a component
+   * of the same name exists (Razor's ComponentLoweringPass rewrites a
+   * ChildContent tag helper at its parent before the component fallback
+   * runs). Elsewhere a tag is a component (or an element). Unresolvable
+   * uppercase tags that look like child content are reported here: a known
+   * slot name in the wrong place (TZS027), a misspelled slot under a
+   * component with complete metadata (TZS025), a non-fragment parameter
+   * written as an element (TZS028). Without metadata nothing changes.
+   */
+  private classifyChildContent(body: MarkupNode[]): void {
+    const usings = this.metadata.usings;
+    const resolvable = (tag: string): boolean => this.importedValues.has(tag) || (this.options.resolveComponent?.(tag, usings) ?? null) !== null;
+    // Every fragment parameter of the components this file uses: a slot
+    // name written outside its component is recognizable as one.
+    const slotOwners = new Map<string, string>();
+    const collect = (nodes: MarkupNode[]): void => {
+      for (const node of nodes) {
+        if (node.kind === "element" && node.isComponent && resolvable(node.tagName)) {
+          for (const parameter of this.componentTargetFor(node.tagName).metadata?.parameters ?? []) {
+            if (isFragment(parameter) && !slotOwners.has(parameter.name.toLowerCase())) slotOwners.set(parameter.name.toLowerCase(), node.tagName);
+          }
+        }
+        collect(childNodes(node));
+      }
+    };
+    collect(body);
+
+    const walk = (nodes: MarkupNode[], parent: ComponentTarget | null, ancestors: readonly ComponentTarget[]): void => {
+      for (const node of nodes) {
+        if (node.kind !== "element") {
+          walk(childNodes(node), null, ancestors);
+          continue;
+        }
+        if (!node.isComponent) {
+          walk(node.children, null, ancestors);
+          continue;
+        }
+        const declared = parent?.metadata ? findParameter(parent.metadata, node.tagName) : undefined;
+        if (declared && isFragment(declared)) {
+          this.slotElements.set(node, declared);
+          walk(node.children, null, ancestors);
+          continue;
+        }
+        if (resolvable(node.tagName)) {
+          const target = this.componentTargetFor(node.tagName);
+          walk(node.children, target, [...ancestors, target]);
+          continue;
+        }
+        this.diagnoseUnresolvedChild(node, parent, ancestors, declared, slotOwners);
+        walk(node.children, null, ancestors);
+      }
+    };
+    walk(body, null, []);
+  }
+
+  /** An unresolvable uppercase tag that names child content of another component (see classifyChildContent). */
+  private diagnoseUnresolvedChild(
+    node: ElementNode,
+    parent: ComponentTarget | null,
+    ancestors: readonly ComponentTarget[],
+    declared: ComponentParameter | undefined,
+    slotOwners: ReadonlyMap<string, string>,
+  ): void {
+    const range = tagNameRange(node);
+    const tag = node.tagName;
+    const report = (code: "TZS025" | "TZS027" | "TZS028", message: string, fix?: DiagnosticFix): void => {
+      this.diagnostics.error(code, range, message, fix);
+      this.diagnosedTags.add(node);
+    };
+    if (declared && parent) {
+      report("TZS028", `'${declared.name}' is a ${declared.category} parameter of '<${parent.tag}>': only RenderFragment parameters are set by child content elements — set it as an attribute ('${tag}="…"').`);
+      return;
+    }
+    const owner = [...ancestors].reverse().find((a) => a.metadata && findParameter(a.metadata, tag) && isFragment(findParameter(a.metadata, tag)!));
+    if (owner) {
+      report("TZS027", `'<${tag}>' is child content of '<${owner.tag}>' and must be its direct child (not nested in markup or a code block).`);
+      return;
+    }
+    if (parent?.metadata && parent.complete) {
+      const fragments = parent.metadata.parameters.filter(isFragment);
+      if (fragments.length > 0) {
+        const suggestion = suggestParameter({ ...parent.metadata, parameters: fragments }, tag);
+        const fix: DiagnosticFix | undefined = suggestion
+          ? { title: `Rename to '${suggestion}'`, edits: elementNameEdits(node, suggestion) }
+          : undefined;
+        report(
+          "TZS025",
+          `Component '${parent.tag}' does not have a child content parameter '${tag}' (and no component '${tag}' resolves).${suggestion ? ` Did you mean '${suggestion}'?` : ` It accepts: ${fragments.map((p) => `'${p.name}'`).join(", ")}.`}`,
+          fix,
+        );
+        return;
+      }
+    }
+    const declaredBy = slotOwners.get(tag.toLowerCase());
+    if (declaredBy) report("TZS027", `'<${tag}>' is child content of '<${declaredBy}>' and can only be used as its direct child.`);
+  }
+
   private preResolve(nodes: MarkupNode[], usings: string[]): void {
     for (const node of nodes) {
-      if (node.kind === "element" && node.isComponent) {
+      if (node.kind === "element" && node.isComponent && !this.slotElements.has(node) && !this.diagnosedTags.has(node)) {
         this.localForComponent(node.tagName, usings, tagNameRange(node));
       }
       const nested = childNodes(node);
@@ -948,7 +1061,7 @@ class Codegen {
         break;
       case "element":
         if (node.isComponent) {
-          if (this.componentLocalNames.get(node.tagName) === "__tsazor_unresolved") {
+          if (this.diagnosedTags.has(node) || this.componentLocalNames.get(node.tagName) === "__tsazor_unresolved") {
             this.emitElement(node);
           } else {
             this.emitComponent(node);
@@ -1070,8 +1183,12 @@ class Codegen {
     const local = this.localForComponent(node.tagName, this.metadata.usings, tagNameRange(node))!;
     const key = node.attributes.find((a) => a.kind === "key");
     const refs = node.attributes.filter((a) => a.kind === "ref");
-    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
-    const hasChildren = node.children.length > 0;
+    const component = this.componentTargetFor(node.tagName);
+    const template = this.templateAttributes(node, component);
+    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref" && !template.consumed.has(a));
+    const slots = node.children.filter((child): child is ElementNode => child.kind === "element" && this.slotElements.has(child));
+    // With explicit child content elements, whitespace between them is not content (Razor).
+    const loose = slots.length > 0 ? node.children.filter((child) => !slots.includes(child as ElementNode) && !isWhitespaceText(child)) : node.children;
 
     const seq = this.seq();
     const open = `${BUILDER}.openComponent(${seq}, ${local});`;
@@ -1084,7 +1201,6 @@ class Codegen {
     });
     this.stmt(open, node.pos);
     if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
-    const component = this.componentTargetFor(node.tagName);
     for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true, component });
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
@@ -1094,16 +1210,197 @@ class Codegen {
       }
       this.emitRefStmt(ref, node.pos);
     }
-    if (hasChildren) {
-      this.stmt(`${BUILDER}.addContent(${this.seq()}, (${BUILDER}) => {`, node.pos);
-      this.enterScope();
-      this.withScope(() => {
-        for (const child of node.children) this.emitNode(child, node.pos);
-      });
-      this.leaveScope();
-      this.stmt(`});`, node.pos);
+    const setByAttribute = (parameter: ComponentParameter): AttributeNode | undefined =>
+      regular.find((a) => "name" in a && a.kind !== "eventHandler" && a.kind !== "eventModifier" && component.metadata && findParameter(component.metadata, a.name) === parameter);
+    // Explicit child content elements (named slots), in source order.
+    const emitted = new Set<ComponentParameter>();
+    for (const slot of slots) {
+      const parameter = this.slotElements.get(slot)!;
+      if (emitted.has(parameter)) {
+        this.diagnostics.error("TZS028", tagNameRange(slot), `The child content element '${slot.tagName}' of component '${node.tagName}' is used more than once — '${parameter.name}' can be set only once.`);
+        continue;
+      }
+      emitted.add(parameter);
+      this.checkSlotAttributes(slot, parameter);
+      if (setByAttribute(parameter)) {
+        // Razor RZ9995.
+        this.diagnostics.error("TZS028", tagNameRange(slot), `The child content property '${parameter.name}' of '<${node.tagName}>' is set by both the attribute and the element contents.`);
+        continue;
+      }
+      const contextName = parameter.category === "RenderFragment<T>" ? this.slotContextName(slot, template.context) : null;
+      this.emitFragment(parameter.name, contextName, slot.children, slot, node.tagName, slot.tagName);
+    }
+    if (slots.length > 0 && loose.length > 0) {
+      // Razor RZ9996: explicit child content elements and loose content do not mix.
+      const first = loose[0]!;
+      const accepted = slots.map((s) => `'${s.tagName}'`).filter((name, index, all) => all.indexOf(name) === index).join(", ");
+      this.diagnostics.error("TZS027", { pos: first.pos, endPos: first.endPos }, `Unrecognized child content inside component '${node.tagName}'. With explicit child content elements (${accepted}), all content must be inside one — wrap the rest in '<ChildContent>…</ChildContent>'.`);
+    } else if (loose.length > 0) {
+      this.emitImplicitChildContent(node, component, loose, template.context, setByAttribute);
     }
     this.plumbingStmt(`${BUILDER}.closeComponent();`);
+  }
+
+  /**
+   * The element content of a component without explicit child content
+   * elements: its `ChildContent`. A `RenderFragment<T>` ChildContent takes
+   * the context (`Context="x"` on the component, default `context`); without
+   * metadata — or for a plain RenderFragment — it is emitted as before
+   * (`addContent` in the component frame).
+   */
+  private emitImplicitChildContent(
+    node: ElementNode,
+    component: ComponentTarget,
+    children: MarkupNode[],
+    context: string | undefined,
+    setByAttribute: (parameter: ComponentParameter) => AttributeNode | undefined,
+  ): void {
+    const metadata = component.metadata;
+    const parameter = metadata ? findParameter(metadata, "ChildContent") : undefined;
+    // A misplaced child content element is reported already (classifyChildContent).
+    const content = children.some((child) => !isWhitespaceText(child) && !(child.kind === "element" && this.diagnosedTags.has(child)));
+    if (metadata && content) {
+      if (parameter && setByAttribute(parameter)) {
+        this.diagnostics.error("TZS028", tagNameRange(node), `The child content property '${parameter.name}' of '<${node.tagName}>' is set by both the attribute and the element contents.`);
+        return;
+      }
+      if (!parameter && component.complete && !component.capture) {
+        const fragments = metadata.parameters.filter(isFragment);
+        this.diagnostics.error(
+          "TZS025",
+          tagNameRange(node),
+          `Component '${node.tagName}' does not have a parameter 'ChildContent': it takes no element content${fragments.length > 0 ? ` — use its child content elements (${fragments.map((p) => `'${p.name}'`).join(", ")})` : ""}.`,
+        );
+        return;
+      }
+    }
+    if (parameter?.category === "RenderFragment<T>") {
+      this.emitFragment(parameter.name, context ?? "context", children, node, node.tagName, "ChildContent");
+      return;
+    }
+    this.stmt(`${BUILDER}.addContent(${this.seq()}, (${BUILDER}) => {`, node.pos);
+    this.enterScope();
+    this.withScope(() => {
+      for (const child of children) this.emitNode(child, node.pos);
+    });
+    this.leaveScope();
+    this.stmt(`});`, node.pos);
+  }
+
+  /**
+   * One child content parameter: a RenderFragment `(__builder) => { … }`, or
+   * for RenderFragment<T> `(context) => (__builder) => { … }` with the
+   * context as a local of the body. The body has its own sequence scope.
+   * The context is typed `any` in the generated TS until typed shadows (2.4).
+   */
+  private emitFragment(name: string, context: string | null, children: MarkupNode[], at: ElementNode, component: string, element: string): void {
+    if (context !== null) {
+      const enclosing = this.contextStack.find((c) => c.name === context);
+      if (enclosing) {
+        // Razor RZ9999 — an inner `context` would hide the outer one.
+        this.diagnostics.error(
+          "TZS029",
+          tagNameRange(at),
+          `The child content element '${element}' of component '${component}' uses the same parameter name ('${context}') as enclosing child content element '${enclosing.element}' of component '${enclosing.component}'. Specify the parameter name like: '<${element} Context="another_name">' to resolve the ambiguity.`,
+        );
+      }
+    }
+    const head = context === null
+      ? `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${BUILDER}) => {`
+      : `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${context}: any) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
+    this.stmt(head, at.pos);
+    this.enterScope();
+    if (context !== null) this.contextStack.push({ name: context, element, component });
+    this.withScope(() => {
+      if (context !== null) this.locals.set(context, "context");
+      for (const child of children) this.emitNode(child, at.pos);
+    });
+    if (context !== null) this.contextStack.pop();
+    this.leaveScope();
+    this.stmt(`});`, at.pos);
+  }
+
+  /**
+   * Attributes of a component tag that are template syntax, not parameters
+   * (never emitted): `Context="x"` — the context name of all its child
+   * content (Razor: "Specifies the parameter name for all child content
+   * expressions"), when the component has a RenderFragment<T> parameter and
+   * no parameter named Context — and type arguments of a generic component
+   * (`TItem="Person"`, one per `@typeparam`). A type argument has no runtime
+   * meaning in TypeScript; its value must be a TS type (TZS024), typed
+   * shadows (2.4) consume it.
+   */
+  private templateAttributes(node: ElementNode, component: ComponentTarget): { consumed: Set<AttributeNode>; context?: string } {
+    const consumed = new Set<AttributeNode>();
+    const metadata = component.metadata;
+    if (!metadata) return { consumed };
+    let context: string | undefined;
+    const generic = metadata.parameters.some((p) => p.category === "RenderFragment<T>");
+    for (const attr of node.attributes) {
+      if (attr.kind !== "static" && attr.kind !== "expression" && attr.kind !== "mixedValue") continue;
+      if (findParameter(metadata, attr.name)) continue;
+      if (generic && attr.name.toLowerCase() === "context") {
+        consumed.add(attr);
+        context = this.contextAttributeValue(attr, `component '${node.tagName}'`);
+        continue;
+      }
+      const typeParameter = metadata.typeParameters.find((t) => t.name === attr.name) ?? metadata.typeParameters.find((t) => t.name.toLowerCase() === attr.name.toLowerCase());
+      if (typeParameter) {
+        consumed.add(attr);
+        this.checkTypeArgument(attr, typeParameter.name, node.tagName);
+      }
+    }
+    return { consumed, ...(context !== undefined ? { context } : {}) };
+  }
+
+  /** The context name of a RenderFragment<T> child content element: its own `Context`, else the component's, else `context`. */
+  private slotContextName(slot: ElementNode, componentContext: string | undefined): string {
+    let own: string | undefined;
+    for (const attr of slot.attributes) {
+      if ((attr.kind === "static" || attr.kind === "expression" || attr.kind === "mixedValue") && attr.name.toLowerCase() === "context") {
+        own = this.contextAttributeValue(attr, `child content element '${slot.tagName}'`);
+      }
+    }
+    return own ?? componentContext ?? "context";
+  }
+
+  /** Razor RZ9998 (child content element) / RZ10002 (component): the context name is literal text — here a TS identifier. */
+  private contextAttributeValue(attr: ValueAttribute, owner: string): string | undefined {
+    const value = attr.kind === "static" && !attr.minimized ? attr.value.trim() : undefined;
+    if (value === undefined || !/^[A-Za-z_$][\w$]*$/.test(value)) {
+      this.diagnostics.error("TZS028", attr, `Invalid parameter name. The parameter name attribute 'Context' on ${owner} can only include literal text — a TypeScript identifier ('Context="item"').`);
+      return undefined;
+    }
+    return value;
+  }
+
+  /** A type argument attribute (`TItem="Person"`): the value must parse as a TS type. */
+  private checkTypeArgument(attr: ValueAttribute, typeParameter: string, tag: string): void {
+    const text = attr.kind === "static" ? (attr.minimized ? "" : attr.raw?.text ?? attr.value) : attr.kind === "expression" ? attr.code : "";
+    const start = attr.kind === "static" ? attr.raw?.start : attr.kind === "expression" ? attr.codeStart : undefined;
+    if (text.trim().length === 0 || attr.kind === "mixedValue") {
+      this.diagnostics.error("TZS009", attr, `'${attr.name}' is the type argument '${typeParameter}' of '<${tag}>' and needs a type ('${attr.name}="Person"').`);
+      return;
+    }
+    const error = typeSyntaxError(text);
+    if (error === null) return;
+    const at = start ? advancePos(start, text.slice(0, error.offset)) : attr.pos;
+    this.diagnostics.error("TZS024", start ? textRange(at, text.slice(error.offset, error.offset + Math.max(error.length, 1))) : attr, `'${attr.name}' takes a TypeScript type: ${error.message}`);
+  }
+
+  /**
+   * Validates the attributes of a child content element (Razor RZ9997: only
+   * `Context`, and only on a RenderFragment<T>). Called before emission.
+   */
+  private checkSlotAttributes(slot: ElementNode, parameter: ComponentParameter): void {
+    for (const attr of slot.attributes) {
+      const name = "name" in attr
+        ? (attr.kind === "eventHandler" || attr.kind === "eventModifier" ? `@${attr.name}` : attr.name)
+        : attr.kind === "bind" ? (attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}` : "@bind") : `@${attr.kind}`;
+      if ((attr.kind === "static" || attr.kind === "expression" || attr.kind === "mixedValue") && name.toLowerCase() === "context" && parameter.category === "RenderFragment<T>") continue;
+      const hint = name.toLowerCase() === "context" ? ` — '${parameter.name}' is a RenderFragment without a context parameter` : "";
+      this.diagnostics.error("TZS028", attr, `Unrecognized attribute '${name}' on child content element '${slot.tagName}'${hint}.`);
+    }
   }
 
   /** Emits a statement whose generated text has NO source mapping: plumbing
@@ -1485,6 +1782,8 @@ class Codegen {
         return `the loop variable '${name}': the write would only change this iteration's copy ${loopHint}`;
       case "const":
         return `the const local '${name}' — bind to a component member (or a member of '${name}')`;
+      case "context":
+        return `the template context '${name}': the write would only change this render's parameter — bind to a member like '${name}.name'`;
       case "function":
       case "class":
       case "enum":
@@ -1741,7 +2040,28 @@ function endsWithJump(children: MarkupNode[]): boolean {
  * parameter, counting-loop variable), `const`, an iteration variable of a
  * for…of/for…in (`constLoop`/`loop`), or a function/class/enum declaration.
  */
-type LocalKind = "assignable" | "const" | "constLoop" | "loop" | "function" | "class" | "enum";
+type LocalKind = "assignable" | "const" | "constLoop" | "loop" | "function" | "class" | "enum" | "context";
+
+/** A RenderFragment / RenderFragment<T> parameter: settable by a child content element. */
+function isFragment(parameter: ComponentParameter): boolean {
+  return parameter.category === "RenderFragment" || parameter.category === "RenderFragment<T>";
+}
+
+/** Whitespace-only text (insignificant between child content elements). */
+function isWhitespaceText(node: MarkupNode): boolean {
+  return node.kind === "text" && node.content.trim().length === 0;
+}
+
+/** Renames an element: its start tag name and, when it has one on the same line, its end tag name. */
+function elementNameEdits(node: ElementNode, name: string): TextEdit[] {
+  const edits: TextEdit[] = [{ ...tagNameRange(node), text: name }];
+  const close = `</${node.tagName}>`;
+  if (!node.selfClosing && node.endPos.column >= close.length) {
+    const pos = { line: node.endPos.line, column: node.endPos.column - close.length + 2 };
+    edits.push({ pos, endPos: { line: pos.line, column: pos.column + node.tagName.length }, text: name });
+  }
+  return edits;
+}
 
 /** A C# `@foreach` header and its TS form (`binding` of `const <binding> of <iterable>`). */
 interface CSharpForEach {

@@ -283,6 +283,19 @@ function syntaxErrorsOf(file: ts.SourceFile, base: number, length: number): Snip
   });
 }
 
+/**
+ * The first syntax error of a TypeScript type (a type argument attribute,
+ * `TItem="Person"`), located in `text`; null when it parses as one type.
+ */
+export function typeSyntaxError(text: string): SnippetSyntaxError | null {
+  const prefix = "type __tsazor_T = ";
+  const file = ts.createSourceFile("type.ts", `${prefix}${text}\n;`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const errors = syntaxErrorsOf(file, prefix.length, text.length);
+  if (errors[0]) return errors[0];
+  if (file.statements.length !== 1) return { offset: 0, length: Math.max(text.length, 1), message: "Expected a single type." };
+  return null;
+}
+
 /* Loop headers ---------------------------------------------------------------- */
 
 /**

@@ -74,6 +74,9 @@ const CODES = {
   TZS024: "Invalid TypeScript expression.",
   TZS025: "Unknown component parameter.",
   TZS026: "Component parameter type unknown.",
+  TZS027: "Unrecognized child content.",
+  TZS028: "Invalid child content element.",
+  TZS029: "Template context name conflict.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;
