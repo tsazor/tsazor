@@ -17,6 +17,31 @@ export type RequestInterceptor = (request: Request) => Request | Promise<Request
 /** Transforms (or replaces) the response before JSON parsing. */
 export type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
 
+/**
+ * Error thrown by the getJson/postJson/putJson/deleteJson helpers on non-2xx
+ * responses. Carries the parsed body (JSON object when parseable, raw text
+ * otherwise) so ProblemDetails/Envelope payloads stay readable — 5.2: the
+ * bridge's `HttpResult` builds on this instead of losing the body.
+ */
+export class TsazorHttpError extends Error {
+  readonly status: number;
+  readonly statusText: string;
+  /** Parsed JSON body when possible, else the raw body text, else null. */
+  readonly body: unknown;
+  /** The failing response (body may already be consumed). */
+  readonly response: Response;
+
+  constructor(response: Response, body: unknown) {
+    const summary = typeof body === "string" ? body : body === null ? "<no body>" : JSON.stringify(body);
+    super(`[tsazor-http] ${response.status} ${response.statusText}: ${summary}`);
+    this.name = "TsazorHttpError";
+    this.status = response.status;
+    this.statusText = response.statusText;
+    this.body = body;
+    this.response = response;
+  }
+}
+
 export class TsazorHttp {
   private readonly requestInterceptors: RequestInterceptor[] = [];
   private readonly responseInterceptors: ResponseInterceptor[] = [];
@@ -98,17 +123,24 @@ export class TsazorHttp {
 
   private async parse(response: Response): Promise<unknown> {
     if (!response.ok) {
-      throw new Error(`[tsazor-http] ${response.status} ${response.statusText}: ${await safeText(response)}`);
+      throw new TsazorHttpError(response, await safeBody(response));
     }
     const text = await response.text();
     return text.length === 0 ? null : JSON.parse(text);
   }
 }
 
-async function safeText(response: Response): Promise<string> {
+/** Reads the error body: parsed JSON when parseable, raw text otherwise, null when unreadable. */
+async function safeBody(response: Response): Promise<unknown> {
   try {
-    return await response.text();
+    const text = await response.text();
+    if (text.length === 0) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
   } catch {
-    return "<unreadable body>";
+    return null;
   }
 }

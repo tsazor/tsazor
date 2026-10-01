@@ -70,7 +70,7 @@ export {
   type VirtualizeItemsProviderRequest,
   type VirtualizeItemsProviderResult,
 } from "./data/virtualize.js";
-export { TsazorHttp, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http.js";
+export { TsazorHttp, TsazorHttpError, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http.js";
 
 // Forms
 export { EditContext, ValidationMessageStore, type FieldIdentifier, type DataAnnotationsValidationSubscription } from "./forms/edit-context.js";
