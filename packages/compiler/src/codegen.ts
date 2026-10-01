@@ -17,7 +17,7 @@ import { firstInterpolatedSpan, interpolatedStringFix } from "./interpolated.js"
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
-import { replaceIdentifiers } from "./metadata.js";
+import { RUNTIME_MODULE, replaceIdentifiers } from "./metadata.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -269,6 +269,11 @@ class Codegen {
   private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
   private readonly importedNames = new Set<string>();
+  /** `@import`-ed names bound to @tsazor/runtime — local name → exported name
+   *  — the module the markup rewrites recognize against (MarkupString, 3.3).
+   *  Bindings shadowing a runtime name from another module (a local class
+   *  `MarkupString`?) are not rewritten. */
+  private readonly runtimeBoundNames = new Map<string, string>();
   /* Typed shadows (2.4) — shadow-layer state, only under options.typedShadow. */
   /** The resolved type arguments of the component tag being emitted. */
   private tagTypeArgs?: ReadonlyMap<string, string>;
@@ -751,6 +756,8 @@ class Codegen {
       for (const binding of info.bindings) {
         this.importedNames.add(binding.local);
         if (!binding.typeOnly) this.importedValues.add(binding.local);
+        if (info.specifier === RUNTIME_MODULE) this.runtimeBoundNames.set(binding.local, binding.imported ?? binding.local);
+        else this.runtimeBoundNames.delete(binding.local);
       }
     };
     for (const d of directives) {
@@ -926,6 +933,46 @@ class Codegen {
     return result;
   }
 
+  /**
+   * 3.3 MarkupString: recognizes markup content that renders unescaped —
+   * `new MarkupString(inner)` and `inner as MarkupString` (the analogue of
+   * C# `(MarkupString)s`) — and returns the inner expression with the position
+   * it starts at, so the emitted `addMarkupContent` keeps the source anchors.
+   * null when the expression is not a MarkupString form or the name is not
+   * bound to @tsazor/runtime via `@import` (a same-named local type is never
+   * rewritten).
+   */
+  private markupStringContent(code: string, origin: SourcePos): { inner: string; origin: SourcePos } | null {
+    const runtimeMarkupBound = [...this.runtimeBoundNames.entries()].some(([, exported]) => exported === "MarkupString");
+    if (!runtimeMarkupBound) return null;
+    const source = ts.createSourceFile("markup.tsazor.expr", code, ts.ScriptTarget.Latest, false);
+    if (source.statements.length !== 1 || !ts.isExpressionStatement(source.statements[0]!)) return null;
+    const expression = source.statements[0]!.expression;
+    const isRuntimeMarkup = (name: string): boolean => this.runtimeBoundNames.get(name) === "MarkupString";
+    const markupCtor = (e: ts.Expression): e is ts.NewExpression =>
+      ts.isNewExpression(e) && ts.isIdentifier(e.expression) && isRuntimeMarkup(e.expression.text) &&
+      e.arguments !== undefined && e.arguments.length > 0;
+    /** A plain type name (no generic arguments). */
+    const typeNameOf = (type: ts.TypeNode): string | undefined =>
+      ts.isTypeReferenceNode(type) && ts.isIdentifier(type.typeName) ? type.typeName.text : undefined;
+    let inner: ts.Expression | undefined;
+    if (markupCtor(expression)) {
+      inner = expression.arguments![0]!;
+    } else if (ts.isAsExpression(expression) && isRuntimeMarkup(typeNameOf(expression.type) ?? "")) {
+      const target = expression.expression;
+      if (markupCtor(target)) inner = target.arguments![0]!;
+      else inner = target;
+    }
+    if (inner === undefined) return null;
+    const start = inner.getStart(source);
+    const slice = code.slice(start, inner.getEnd());
+    const innerCode = slice.trim();
+    return {
+      inner: innerCode,
+      origin: advancePos(origin, code.slice(0, start) + slice.slice(0, slice.length - innerCode.length)),
+    };
+  }
+
   /** Marks EventCallback as used: the generated code binds through its alias. */
   private eventCallback(): string {
     this.runtimeImports.add("EventCallback");
@@ -1083,7 +1130,18 @@ class Codegen {
         const implicitStart = { line: node.pos.line, column: node.pos.column + 1 };
         const implicitEnd = advancePos(implicitStart, node.code);
         const isImplicit = implicitEnd.line === node.endPos.line && implicitEnd.column === node.endPos.column;
-        const baked = this.expr(node.code, isImplicit ? implicitStart : { line: node.pos.line, column: node.pos.column + 2 });
+        const origin = isImplicit ? implicitStart : { line: node.pos.line, column: node.pos.column + 2 };
+        // 3.3 MarkupString: `new MarkupString(inner)` and `inner as MarkupString`
+        // (the analogue of C# `(MarkupString)s`) render unescaped — the inner
+        // expression is baked straight into a Markup frame.
+        const markup = this.markupStringContent(node.code, origin);
+        if (markup !== null) {
+          const baked = this.expr(markup.inner, markup.origin);
+          const text = `${BUILDER}.addMarkupContent(${this.seq()}, ${baked});`;
+          this.stmt(text, node.pos, text.indexOf(baked));
+          break;
+        }
+        const baked = this.expr(node.code, origin);
         const text = `${BUILDER}.addContent(${this.seq()}, ${baked});`;
         this.stmt(text, node.pos, text.indexOf(baked));
         break;

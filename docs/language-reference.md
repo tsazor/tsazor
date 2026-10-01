@@ -161,6 +161,13 @@ Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
 - `@expression` — implizit: Identifier + Dot-Chains + balancierte Aufrufe; endet konservativ
   bei Whitespace/`<`/`>`. Bei Mehrdeutigkeit `@(...)` verwenden.
 - `@(expression)` — explizit.
+- `MarkupString` (3.3) — rohes HTML: `@(new MarkupString(html))` und `@(html as MarkupString)`
+  (das Pendant zu C#s `(MarkupString)s`) werden vom Compiler direkt in eine Markup-Frame-Emisierung
+  (`addMarkupContent`) gebacken — der Inhalt rendert **unescaped**; normale `@`-Ausdrücke bleiben
+  escaped (Blazor-Semantik). Voraussetzung: `@import { MarkupString } from "@tsazor/runtime"`
+  (Alias erlaubt); derselbe Name aus einem anderen Modul wird nicht umgeschrieben. Handgebaute
+  Bäume geben `MarkupString`-Instanzen an `addContent` — die Runtime entpackt sie in Markup-Frames
+  (dynamische Werte, Diff vergleicht den Markup-Text), `toString()` liefert den Wert.
 - E-Mail-Regel: `@` direkt nach einem alphanumerischen Textzeichen ist literal
   (`info@example.com`, auch in Attributwerten).
 - `@* … *@` — Razor-Kommentar (überall, mehrzeilig, darf Markup und `@` enthalten).

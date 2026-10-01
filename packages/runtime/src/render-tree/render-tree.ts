@@ -2,6 +2,7 @@ import { FrameType, EventHandlerFlags } from "./frame-type.js";
 import type { ComponentType } from "../components/component-definition.js";
 import type { EventCallback } from "../components/event-callback.js";
 import type { ComponentBase } from "../components/component-base.js";
+import { MarkupString } from "../components/markup-string.js";
 
 /** A fragment of render output: writes frames into a builder. Blazor's RenderFragment. */
 export type RenderFragment = (builder: RenderTreeBuilder) => void;
@@ -148,7 +149,18 @@ export class RenderTreeBuilder {
     }
   }
 
-  addContent(sequence: number, textOrFragment: string | number | boolean | bigint | null | undefined | RenderFragment): void {
+  addContent(
+    sequence: number,
+    textOrFragment:
+      | string
+      | number
+      | boolean
+      | bigint
+      | null
+      | undefined
+      | RenderFragment
+      | MarkupString,
+  ): void {
     // Blazor's builder: content written inside a component frame becomes the
     // component's ChildContent parameter instead of a renderable subtree.
     const parentIndex = this.openFrameStack[this.openFrameStack.length - 1];
@@ -176,6 +188,9 @@ export class RenderTreeBuilder {
       this.closeRegion();
     } else if (textOrFragment === null || textOrFragment === undefined) {
       // Blazor's AddContent(object?) renders value?.ToString(): null is nothing.
+    } else if (textOrFragment instanceof MarkupString) {
+      // Blazor: a MarkupString content value yields an unescaped Markup frame.
+      this.frames.push({ frameType: FrameType.Markup, sequence, markupContent: textOrFragment.value });
     } else {
       // Every other value renders as its string — booleans included ("true"/
       // "false", the TS analogue of Blazor's "True"/"False"); there is no

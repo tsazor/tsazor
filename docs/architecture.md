@@ -315,6 +315,19 @@ abhängigen Einträge neu auf. Für 4.1 (HMR) liegen die Kanten offen:
 `invalidate(file)`. Grenze: eine neu angelegte `_Imports.tsazor` oberhalb
 invalidiert nicht von selbst (4.1 ruft `invalidate`).
 
+### MarkupString (3.3)
+
+Blazors `MarkupString` (rohes HTML): die Runtime-Klasse `MarkupString` (`value`, `toString`) —
+`RenderTreeBuilder.addContent` entpackt Instanzen in Markup-Frames (Blazors
+`AddContent(MarkupString)`), der Diff vergleicht den `markupContent`-Text wie Blazor. Im
+Compiler erkennt der Markup-Expression-Knoten (`markupStringContent`) `new MarkupString(inner)`
+und `inner as MarkupString` (Pendant zu C#s `(MarkupString)s`) per TS-Parser und emittiert
+direkt `addMarkupContent(seq, inner)` — kein Instanz-Objekt, der gebackene Ausdruck ist der
+Wert. Die Erkennung bindet an `collectImports` (neu: `runtimeBoundNames`, local → exportierter
+Name je Modul-Specifier), damit nur der Name der `@tsazor/runtime` umgeschrieben wird —
+ Umbenennungen (`as Raw`) zählen mit, ein gleichnamiger lokaler Typ niemals.
+Gewöhnliche `@`-Ausdrücke bleiben escaped (Blazor).
+
 ### Templated Components (2.3)
 
 Slot vs. Komponente wird **vor** der Tag-Auflösung aus den Metadaten des

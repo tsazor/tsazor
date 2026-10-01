@@ -920,17 +920,18 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 
 **Voraussetzung:** B2 (Fehlerisolation), B3/B4 (Disposal, Lifecycle), 2.3 (Slots).
 
-**Stand (2026-10-01):** 3.1 und 3.2 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
+**Stand (2026-10-01):** 3.1–3.3 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
 Renderer-Routing per Parent-Kette (Blazors `HandleExceptionViaErrorBoundary`), erzwungene
 Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal;
-`DynamicComponent` mit `Type`/`Parameters`, Blazors Unknown-Parameter-Fehler und Reference-Capture.
+`DynamicComponent` mit `Type`/`Parameters`, Blazors Unknown-Parameter-Fehler und Reference-Capture;
+`MarkupString` als Markup-Frame (Compiler erkennt `new MarkupString(...)`/`… as MarkupString`).
 Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
 
 | Schritt | Inhalt | Abhängig von | Stand |
 |---|---|---|---|
 | 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 | umgesetzt |
 | 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | umgesetzt |
-| 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | — |
+| 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | umgesetzt |
 | 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate` | B3 (Logical Ranges außerhalb des Roots) | — |
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | — |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
@@ -981,6 +982,23 @@ jeder andere Markup-Parameter wirft Blazors
 Extra-Parameter wird zuerst gemeldet). Im Markup (2.1-Metadaten) fängt der Compiler den
 unbekannten Parameter bereits als TZS025. Konformität: 10 Runtime-/Markup-Tests in
 `packages/conformance/test/runtime/dynamic-component.test.ts`.
+
+### 3.3 — MarkupString
+
+**Stand: umgesetzt** (2026-10-01). Runtime: `packages/runtime/src/components/markup-string.ts`
+(Blazors `MarkupString`-Struct als Klasse, `value` + `toString`); `addContent` entpackt
+`MarkupString`-Instanzen in Markup-Frames (Blazors `AddContent(MarkupString)` → unescaped;
+der Diff vergleicht `markupContent`). Compiler (`codegen.ts`): Markup-Expressions
+`new MarkupString(inner)` und `inner as MarkupString` — das Pendant zu C#s `(MarkupString)s` —
+werden über `markupStringContent()` erkannt (TS-Parser statt Regex: Strings/Template-Literals
+im `inner` sind sicher) und **direkt** als `addMarkupContent(seq, inner)` emittiert — kein
+Instanz-Objekt, der Wert ist der gebackene Ausdruck. Erkennung nur, wenn der Name über
+`@import` an `@tsazor/runtime` gebunden ist (neu: `runtimeBoundNames` in `collectImports`
+verfolgt den Modul-Specifier je Name; Umbenennungen wie `MarkupString as Raw` zählen, ein
+gleichnamiger lokaler Typ nie). Normale `@`-Ausdrücke bleiben escaped. Konformität: 10 Tests
+in `packages/conformance/test/runtime/markup-string.test.ts` (Raw/escaped, Cast-Form, Diff
+eines dynamischen Feldes, Alias, Shadowing, Slot-Kontext, Runtime-Entpackung inkl.
+ChildContent).
 
 ---
 
