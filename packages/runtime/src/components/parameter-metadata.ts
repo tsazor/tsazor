@@ -35,6 +35,17 @@ const METADATA: symbol = symbolWithMetadata.metadata;
 /** Key of the own parameter map inside a class's decorator metadata object. */
 const PARAMETERS = Symbol("tsazor.parameters");
 
+/**
+ * Installs (once) and returns the `Symbol.metadata` symbol. Modules that add
+ * their own decorator metadata (validation rules) import this instead of
+ * duplicating the polyfill: every decorated class imports paramater-metadata
+ * transitively, so the symbol exists before any decorated class is evaluated.
+ */
+export function ensureDecoratorMetadata(): symbol {
+  const symbolWithMetadata = Symbol as unknown as { metadata?: symbol };
+  return (symbolWithMetadata.metadata ??= Symbol.for("Symbol.metadata"));
+}
+
 type ComponentClass = abstract new () => unknown;
 type MetadataObject = Record<PropertyKey, unknown>;
 

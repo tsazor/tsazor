@@ -1,0 +1,56 @@
+@page "/validation"
+@import { DataAnnotationsValidator, Required, MaxLength, Range, EmailAddress, Compare } from "@tsazor/runtime"
+@import { Profile } from "./Profile.ts"
+
+<h1>Decorator validation</h1>
+
+<p>The model's fields carry the DataAnnotations pendant rules (roadmap 3.6); <code>&lt;DataAnnotationsValidator /&gt;</code> validates them through the form's EditContext — with .NET's exact message texts.</p>
+
+@if (validSubmits > 0) {
+    <p class="success">Saved for @model.name — @validSubmits time(s).</p>
+}
+
+<div class="card">
+    <EditForm Model="@model" OnValidSubmit="@handleValid" OnInvalidSubmit="@handleInvalid">
+        <DataAnnotationsValidator />
+        <div class="field">
+            <label>Name</label>
+            <InputText @bind="model.name" />
+            <ValidationMessage For="name" />
+        </div>
+        <div class="field">
+            <label>Email</label>
+            <InputText @bind="model.email" />
+            <ValidationMessage For="email" />
+        </div>
+        <div class="field">
+            <label>Confirm email</label>
+            <InputText @bind="model.confirmEmail" />
+            <ValidationMessage For="confirmEmail" />
+        </div>
+        <div class="field">
+            <label>Age (18–99)</label>
+            <InputNumber @bind="model.age" />
+            <ValidationMessage For="age" />
+        </div>
+        <button type="submit" class="btn">Save</button>
+        <ValidationSummary />
+    </EditForm>
+</div>
+
+<p class="log">@status</p>
+
+@code {
+    private model = new Profile();
+    private validSubmits = 0;
+    private status = "no submit yet";
+
+    private handleValid = EventCallback.bind(this, () => {
+        this.validSubmits++;
+        this.status = "OnValidSubmit fired";
+    });
+
+    private handleInvalid = EventCallback.bind(this, () => {
+        this.status = "OnInvalidSubmit fired";
+    });
+}

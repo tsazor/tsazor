@@ -30,7 +30,7 @@ export type { RenderHandle } from "./renderer/render-handle.js";
 export { isCascadingValueSupplier, type CascadingValueSupplier } from "./renderer/cascading-value.js";
 
 // DI
-export { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection.js";
+export { ServiceCollection, ServiceProvider, type ServiceLifetime, type Token } from "./di/service-collection.js";
 export { inject } from "./di/service-provider.js";
 
 // Navigation
@@ -57,6 +57,7 @@ export { LayoutComponentBase } from "./routing/layout-component-base.js";
 export { Router } from "./routing/router.js";
 export { RouteView } from "./routing/route-view.js";
 export { LayoutView } from "./routing/layout-view.js";
+export { SupplyParameterFromQuery, queryParametersOf, type QueryParameterType, type QueryParameterMeta } from "./routing/supply-parameter-from-query.js";
 export { NavLink, NavLinkMatch } from "./routing/nav-link.js";
 export { PageTitle } from "./routing/page-title.js";
 export { FocusOnNavigate } from "./routing/focus-on-navigate.js";
@@ -72,11 +73,28 @@ export {
 export { TsazorHttp, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http.js";
 
 // Forms
-export { EditContext, type FieldIdentifier } from "./forms/edit-context.js";
+export { EditContext, ValidationMessageStore, type FieldIdentifier, type DataAnnotationsValidationSubscription } from "./forms/edit-context.js";
+export type { ModelValidator } from "./forms/edit-form.js";
 export { InputBase } from "./forms/input-base.js";
 export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect } from "./forms/input-text.js";
-export { EditForm, type ModelValidator } from "./forms/edit-form.js";
+export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
+export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";
+export { enableDataAnnotationsValidation } from "./forms/edit-context.js";
+export { InputFile, InputFileChangeEventArgs } from "./forms/input-file.js";
+export { formatValue, parseValue } from "./forms/bind-format.js";
+export {
+  Required,
+  MinLength,
+  MaxLength,
+  StringLength,
+  Range,
+  EmailAddress,
+  RegularExpression,
+  Compare,
+  type ValidationRule,
+  validationRulesOf,
+} from "./forms/validation-attributes.js";
 
 // Auth (Blazor's Microsoft.AspNetCore.Components.Authorization analogue)
 export { ANONYMOUS, AuthenticationState, anonymousUser, createUser, type ClaimsPrincipal, type Claim } from "./auth/authentication-state.js";

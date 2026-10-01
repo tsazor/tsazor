@@ -930,8 +930,18 @@ zweitem App-Root im `<head>`, `PageTitle` als Title-Sektion, `FocusOnNavigate`.
 EditForm mit Blazors `OnSubmit`/`OnValidSubmit`/`OnInvalidSubmit` (`EventCallback<EditContext>`,
 Submit-Await im getrackten Handler), `EditContext`-Parameter und fixer Cascade, Model-Wechsel
 errichtet den Form-Subtree neu (Region je Kontext-Identität);
-`<NotAuthorized>` von `AuthorizeView`/`AuthorizeRouteView` empfängt den `AuthenticationState`.
+`<NotAuthorized>` von `AuthorizeView`/`AuthorizeRouteView` empfängt den
+`AuthenticationState`.
 Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
+3.7 umgesetzt — `InputFile` (Blazors Frame-Reihenfolge inkl. Reference-Capture zwischen den
+Attributen, native `File` statt `IBrowserFile`), `SupplyParameterFromQuery` (Blazors
+QueryParameterValueSupplier-Parität; `type`-Option statt TS-typloser Erkennung, `multiple` statt
+Array-Erkennung) und `@bind:format` (BindConverter-Subset, invariant culture; Klartext-Werte
+sind String-Literale, `:culture` TZS008, String-/Komponenten-Binds Warnung).
+3.8 umgesetzt — DI-Lifetimes (singleton/scoped/transient mit Blazors AddScoped-Semantik),
+`createScope()`-Service-Scopes (Singletons am Root), Dispose in umgekehrter
+Erzeugungsreihenfolge ohne `registerValue`-Konstanten und Zykluserkennung mit .NETs exakter
+Meldung.
 
 | Schritt | Inhalt | Abhängig von | Stand |
 |---|---|---|---|
@@ -940,12 +950,23 @@ Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Bu
 | 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | umgesetzt |
 | 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate`, Sections (`SectionContent`/`SectionOutlet`), `PageTitle` als Sektion | B3 (Logical Ranges außerhalb des Roots) | umgesetzt |
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | umgesetzt |
-| 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
-| 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 |
-| 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — |
+| 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 | umgesetzt |
+| 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 | umgesetzt |
+| 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — | umgesetzt |
 
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
 PluginForm, Slots und `@bind` in Masse).
+
+*Messgröße (Probe, FluentCMS@c63d49c, 217 Dateien; nach 3.7/3.8 — 2026-10-01):* die
+Phase-2-Baseline gilt unverändert (149/217 sauber, 164/217 nach Codemod). Diesmal zählt die
+Probe die Built-ins aus dem generierten Runtime-Manifest statt einer handschriftlichen Liste:
+**157/217** sauber (+8), **182/217** nach Codemod (+16), Dateien mit unaufgelösten Tags
+36 → 17, TZS005 57 → 31 — `DataAnnotationsValidator` ×9, `InputFile` ×3, `DynamicComponent` ×7
+und `HeadContent` ×4 sind damit aufgelöst. Compiler-fehlerfrei bleibt 164/217; übrig bleiben
+TZS024 ×35 (`(MarkupString)`-Casts …), die benannten Slots als TZS005 (<ChildContent>,
+<ActionsFragment>, <Found>, <Head>, <Body>, <SubtitleFragment>) und die bekannten stillen
+`@context`-Befunde. Die erste portierte FluentCMS-Admin-Seite ist noch offen (der User hält
+seine lokale `apps/fluentcms-admin`-Arbeit außerhalb dieser Messung).
 
 ### 3.1 — ErrorBoundary
 
@@ -1078,13 +1099,141 @@ Default-Titel-Capture/Fallback, createTsazorApp-Head-Root mit Dispose), 4 in
   `EditContext`-Parameter) ersetzt die Region komplett — Input-Zustand wird resettet.
 - **NotAuthorized** (Blazor `RenderFragment<AuthenticationState>`) empfängt den
   `AuthenticationState` als Slot-Kontext; Markup-Slots ändern sich nicht.
-- Abweichung dokumentiert: `DataAnnotationsValidator`/`ClientValidationData` (SSR-Mapping)
-  entfallen — Validierung bleibt die funktionsbasierte `Validators`-Map (3.6 entscheidet
-  das Validierungsmodell).
+- Abweichungen dokumentiert: `ClientValidationData` (SSR-Mapping) entfallen; das
+  Validierungsmodell entscheidet 3.6 — Decorators plus `DataAnnotationsValidator`
+  (siehe dort), die `Validators`-Map bleibt als Adapter.
 
 Konformität: 7 Tests in `packages/conformance/test/runtime/forms.test.ts` (gültig/ungültig
 Routing, OnSubmit-ohne-Validierung, async-Await vor Renderer-Idle, drei Blazor-Fehlermeldungen,
 Cascade des EditContext in den Slot-Kontext, Region-Rebuild bei Model-Wechsel).
+
+### 3.6 — Validierungsmodell (Decorators + DataAnnotationsValidator)
+
+**Stand: umgesetzt** (2026-10-01).
+
+- **Entscheidung:** die vorherige Empfehlung „Decorators — ermöglicht 5.2 (Schema ⇒
+  Validatoren)“ ist umgesetzt. Validierungsregeln sind TC39-Feld-Decorators auf dem Modell
+  — Pendants zu den DataAnnotations-Attributen mit Blazors exakten Fehlertexten:
+  `packages/runtime/src/forms/validation-attributes.ts` exportiert `Required`
+  (`{ allowEmptyStrings }`), `MinLength`, `MaxLength`, `StringLength(max,
+  { minimumLength })`, `Range(min, max)`, `EmailAddress`, `RegularExpression(pattern)`,
+  `Compare(otherField)` und die Reader `validationRulesOf(modelType)`/`rulesForField`.
+  Die Decorators recorden Regel-Listen in `Symbol.metadata` (derselbe Mechanismus wie
+  `@Parameter`), pro Feld in Deklarationsreihenfolge gelesen (TC39 ruft bottom-up auf —
+  der Lesezugriff kehrt die Reihenfolge um); Legacy-Signaturen (`experimentalDecorators`,
+  static/private) werfen die etablierte Fehlermeldung bzw. TZS021-nah.
+- **`DataAnnotationsValidator`** (`packages/runtime/src/forms/data-annotations-validator.ts`,
+  Port von Blazors `DataAnnotationsValidator.cs`) aktiviert die Regeln auf dem gecascadeten
+  `EditContext` (Blazors `EditContext.EnableDataAnnotationsValidation` in
+  `edit-context.ts`, `enableDataAnnotationsValidation(context)` mit eigenem
+  `ValidationMessageStore`); ohne Cascade wirft es Blazors Fehlermeldung, ein dynamischer
+  Kontextwechsel in `onParametersSet` ebenfalls. Neu als Built-in-Tag (Manifest regeneriert).
+- **EditContext ist Blazors Architektur**: `FieldState` pro Feld (isModified) + mehrere
+  `ValidationMessageStore`-Provider, deren Meldungen pro Feld aggregiert gelesen werden;
+  Events `onFieldChanged` (Feldwechsel revalidiert genau dieses Feld),
+  `onValidationRequested` (validate() → alle Felder), `onValidationStateChanged` (Inputs
+  re-rendern). Die alte Funktions-Map (`validators` am EditForm) bleibt als Adapter — sie
+  schreibt in den Built-in-Store der `setValidator`-Registrierung, ihre Meldungen koexistieren
+  pro Feld mit den Decorator-Meldungen. Legacy-Surface (`subscribe`, `markAsUnmodified`,
+  `isValid(field?)`, `getInvalidFields`) blieb erhalten, alle 7 Forms-Tests grün.
+- Abweichungen dokumentiert (language-reference.md): kein `[Display]`-Port (Feldname als
+  Displayname), keine `AddAsyncValidator`/SSR-Mapping, Attribut-Menge ist die obere Teilmenge
+  (.NET-Texte aus Strings.resx verifiziert), `String/Range` urteilen nur über passende Typen
+  statt zu werfen.
+
+Konformität: 9 Tests in `packages/conformance/test/runtime/data-annotations.test.ts`
+(exakte Texte aller Regeln, Valid-Modell, Feldwechsel-Revalidierung, Required-Semantik
+(whitespace/allowEmptyStrings/nicht-String), Deklarationsreihenfolge, EditForm-Submit
+(OnInvalidSubmit + ValidationMessage), Recovery nach fehlschlagendem Submit, fehlende
+Cascade wirft Blazors Meldung, Adapter-Koexistenz).
+
+### 3.7 — InputFile, SupplyParameterFromQuery, @bind:format
+
+**Stand: umgesetzt** (2026-10-01).
+
+- **`InputFile`** (`packages/runtime/src/components/input-file.ts`, Port von Blazors
+  `InputFile.cs`): `<InputFile OnChange="@handle" multiple accept="…">` — `multiple`/`accept`
+  laufen als Element-Attribute mit, `OnChange` ist `EventCallback<InputFileChangeEventArgs>`
+  (`GetMultipleFiles(max)` mit Blazors Default-10-Limit, `FileCount`, `File`). Dateien sind
+  native `File`-Objekte statt `IBrowserFile` (Abweichung: `name`/`size`/`type` deckt sich,
+  `OpenReadStream`/`ReadBuffer` gibt es nicht — `file.text()`/`arrayBuffer()`). Die
+  Implementierung offenbarte einen echten Diff-Fehler: Blazors InputFile rendert
+  `multipleAttributes, type="file", ReferenceCapture, OnChange` — der Reference-Capture gehört
+  in den Attribut-Bereich des Elements, vorher brach er aber die Attribut-Fahne und schattierte
+  den nachfolgenden `onchange`-Handler. Fix in beiden Pfaden (`render-tree/diff.ts`
+  `attributesEndIndexExclusive` + slow path, `dom-renderer.ts` `insertFrame`-Präambel): Frames
+  Attribute/EventHandler **und** ElementReferenceCapture zählen zum eigenen Attribut-Bereich;
+  die Capture-Action feuert nur bei der frischen Element-Insertion (nie per Diff neu), was Blazor
+  entspricht. Pinned in `packages/conformance/test/runtime/input-file.test.ts` (5 Tests, auch
+  über Re-Renders).
+- **`SupplyParameterFromQuery`**
+  (`packages/runtime/src/routing/supply-parameter-from-query.ts`): Decorator-Form
+  `@SupplyParameterFromQuery({ type?, multiple? })` mit `@Parameter`-Pflicht (Blazors Meldung,
+  wenn beides fehlt). Blazor liest den Zieltyp aus dem Parameter-Typ — TS kennt den
+  Laufzeittyp nicht, deshalb `{ type: "int" | "long" | "bool" | … }` (dieselben Konvertierungen
+  wie die Routen-Constraints; Default `string`) und
+  `{ multiple: true }` statt Blazors Array-Erkennung (Abweichung; semantisch wie Blazors
+  Array-Parameter-Verhalten: je Wiederholung des Keys ein konvertierter Wert, alle anderen
+  Parameter nehmen `values[0]`). Übrige Parität verifiziert: Key = Feldname, case-insensitiv,
+  abwesend ⇒ `null` (`default(T)`), ein gescheiterter Parse wirft Blazors exakten Text
+  („Cannot parse the value 'X' as type 'T' for 'Y.'"), ein nicht unterstützter Typ
+  „Querystring values cannot be parsed as type 'X'.", Route-Werte schlagen Query-Werte für
+  dasselbe Feld. RouteView (`route-view.ts`) liest beim Parameter-Set die Query-Parameter aus
+  dem `NavigationManager` (jetzt über `tryGet`, damit RouteViews eigene Meldung greift, wenn
+  der Service fehlt) und subscribt Navigation-Wechsel — Parameter werden bei jeder Navigation
+  neu versorgt. Konformität: `packages/conformance/test/runtime/supply-parameter-from-query.test.ts`
+  (10 Tests, u. a. `long` > 2^53 exakt, Route-über-Query, Navigation re-supply in der echten App).
+- **`@bind:format`** (Compiler `ast.ts`/`parser.ts`/`codegen.ts`, Runtime
+  `forms/bind-format.ts`): Blazors BindConverter-Subset als eigene `formatValue`/`parseValue`
+  — Zahlen `F<n>`, `N<n>` (Gruppierung), Ziffernmasken (`0.00`, `#,##0.0`); Datum-Tokens
+  `yyyy/yy/MM/dd/HH/mm/ss/M/d/H/m/s` plus Literale; Parse über Format-Regex (Overflow ⇒ `null` ⇒
+  Modellwert bleibt wie Blazors NaN-Guard; leerer Text parst nie als 0). Razor-Semantik der
+  Werte: `@bind:format="0.00"` ist ein String-Literal (neues `formatLiteral`-Flag,
+  Codegen quotet), `@bind:format="@fmt"` ein Ausdruck. Invariant culture per A5/B7:
+  `@bind:culture` Fehler TZS008; `:format` auf String-/Komponenten-Binds ist Warnung TZS008
+  (Blazors BindConverter wendet Formate nur auf Typen mit einem an) und der native Round-Trip
+  bleibt. Nicht implementiert: ganzzahlige Null-Auffüllung (`D5`-Padding) — dokumentierte
+  Abweichung. Konformität: `packages/conformance/test/runtime/bind-format.test.ts` (14 Tests)
+  plus 4 Compiler-Tests in `packages/compiler/test/codegen.test.ts`.
+- **Demo/E2E** (`apps/demo`): vier neue Seiten — `/validation` (EditForm +
+  DataAnnotationsValidator mit Profil-Modell), `/format` (`0.00`- und `yyyy-MM-dd`-Binds +
+  `formatValue` im Markup), `/upload` (InputFile mit `multiple`), `/query`
+  (SupplyParameterFromQuery int/bool/multiple, case-insensitiver Key per Link). E2E
+  `apps/demo/scripts/verify-3-7.mjs` (16 Checks incl. .NET-Exakttexte „The name field is
+  required.", Format-Roundtrip 1234.50 → 99.5 → „99.50", setInputFiles-Liste, Query-Supply und
+  Uppercase-Key) — grün gegen die neu gebaute Demo.
+
+### 3.8 — DI: Scoped-Lifetime, Zyklus-Erkennung
+
+**Stand: umgesetzt** (2026-10-01). `packages/runtime/src/di/service-collection.ts`:
+
+- **Lifetimes** (Blazors ServiceLifetime): `register(token, factory, { lifetime:
+  "singleton" | "scoped" | "transient" })`; die alte `{ singleton?: boolean }`-Option bleibt
+  (true ⇒ singleton — der bisherige Default, false ⇒ transient), `{ lifetime }` ist die
+  explizite Form und fügt „scoped" hinzu. `registerValue` markiert Konstanten-Registrierungen
+  (`constant`), `registerType` reicht die Optionen durch die Factory.
+- **Scopes** (Blazors `CreateScope`): `ServiceProvider.createScope()` leitet einen
+  Service-Scope ab, der die Registrierungen teilt, seine scoped Services aber selbst cached;
+  Singletons fallen an den (transitiven) Root durch — eine Instanz app-weit, auch wenn zuerst
+  ein Scope sie anfordert. Transients entstehen je Auflösung gegen den anfordernden Provider
+  (die Factory sieht den Scope, nicht den Root).
+- **Dispose** (Blazors Engine): eine Instanz wird genau dort getrackt, wo sie gecached ist;
+  `dispose()` gibt sie in umgekehrter Erzeugungsreihenfolge frei (Instanz-`dispose()` falls
+  vorhanden) — ein Scope nur seine scoped bzw. direkt aufgelösten transients, der Root auch
+  seine Singletons. `registerValue`-Konstanten sind ausgenommen (Abweichung zu .NET — der
+  Besitzer disposed, sonst würde die App z. B. ihren NavigationManager doppelt freigeben);
+  `get` auf einem disposeten Provider wirft .NETs „Cannot access a disposed object.".
+- **Zykluserkennung** (.NETs `CircularDependencyException`): ein Guard-Set über die
+  synchrone Auflösungskette; Re-Eintritt in denselben Token wirft .NETs exakte Meldung —
+  `A circular dependency was detected for the service of type 'X'.` (Selbstreferenz,
+  Zwei-Service-Zyklus, auch quer über Scopes).
+- Übriges Verhalten unverändert: „Service not registered: X" bei `get`, `undefined` bei
+  `tryGet`; Renderer/App/nutzen dieselbe Oberfläche weiter (keine Aufrufstelle verändert).
+
+Konformität: 9 Tests in `packages/runtime/test/di.test.ts` (Lifetimes über Scopes, alte
+Option-Formen, Zwei-Service-Zyklus mit exakter Meldung, Selbstreferenz durch einen Scope,
+Dispose-Reihenfolge, Konstanten-Ausnahme mit idempotentem Dispose, Singleton-Ownership
+Root vs. Scope).
 
 ---
 
@@ -1140,7 +1289,7 @@ sauberer Paketierung (5.1). Als Referenzfälle dienen FluentCMS (OpenAPI) und Sl
 |---|---|---|
 | vor A3 | Syntax für explizite Imports in `.tsazor` | **Entschieden (2026-09-30):** `@import { X } from "./y"` als Direktive (Razor-Stil, über `_Imports.tsazor` vererbbar) |
 | vor B4 | Unbekannte Parameter: Fehler wie Blazor oder nur Warnung? | **Entschieden (2026-09-30):** Fehler wie Blazor (Laufzeit ab B4; statisch zusätzlich ab 2.2) |
-| vor 3.6 | Validierung: Decorators (DataAnnotations-nah) oder Funktions-Map? | Decorators — ermöglicht 5.2 (Schema ⇒ Validatoren) |
+| vor 3.6 | Validierung: Decorators (DataAnnotations-nah) oder Funktions-Map? | **Entschieden (2026-10-01): Decorators** — TC39-Feld-Decorators als DataAnnotations-Pendant mit .NET-Fehlertexten, `DataAnnotationsValidator` als Built-in; `validators`-Map bleibt als Adapter (ermöglicht 5.2: Schema ⇒ Validatoren) |
 | vor 4.2 | Fluent auf PascalCase umstellen? | **Entschieden (2026-10-01): nein** — Members bleiben camelCase, PascalCase-Markup ordnet case-insensitiv zu (Design-Prinzipien) |
 
 ## Begleitend in jeder Phase

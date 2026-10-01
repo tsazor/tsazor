@@ -556,9 +556,18 @@ function appendAttributeDiffEntriesForRangeSlow(ctx: DiffContext, oldStartIndex:
   const oldTree = ctx.oldTree;
   const newTree = ctx.newTree;
   const newByName = new Map<string, number>();
-  for (let i = newStartIndex; i < newEndIndexExcl; i++) newByName.set(newTree[i]!.attributeName!, i);
+  for (let i = newStartIndex; i < newEndIndexExcl; i++) {
+    // ElementReferenceCapture frames carry no name: they stay out of the join
+    // (their action runs only on new element insertion, so a diff never
+    // re-fires them — the same attribute range includes them).
+    if (newTree[i]!.frameType === FrameType.ElementReferenceCapture) continue;
+    newByName.set(newTree[i]!.attributeName!, i);
+  }
   const oldByName = new Map<string, number>();
-  for (let i = oldStartIndex; i < oldEndIndexExcl; i++) oldByName.set(oldTree[i]!.attributeName!, i);
+  for (let i = oldStartIndex; i < oldEndIndexExcl; i++) {
+    if (oldTree[i]!.frameType === FrameType.ElementReferenceCapture) continue;
+    oldByName.set(oldTree[i]!.attributeName!, i);
+  }
 
   for (const [name, oldIndex] of oldByName) {
     const newIndex = newByName.get(name);
@@ -590,7 +599,10 @@ export function attributeValueSame(oldFrame: RenderTreeFrame, newFrame: RenderTr
 export function attributesEndIndexExclusive(frames: RenderTreeFrame[], startIndex: number): number {
   const end = startIndex + getFrameSubtreeLength(frames[startIndex]!);
   let i = startIndex + 1;
-  while (i < end && frames[i]!.frameType === FrameType.Attribute) i++;
+  // An element's own frames: attributes, event handlers and reference
+  // captures (Blazor's element frame order, e.g. InputFile) — children start
+  // after them.
+  while (i < end && (isAttribute(frames[i]!) || frames[i]!.frameType === FrameType.ElementReferenceCapture)) i++;
   return i;
 }
 

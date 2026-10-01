@@ -288,6 +288,54 @@ describe("codegen", () => {
     expect(errors('<input @bind:after="done" @bind="name" />')).toEqual([]);
   });
 
+  it("emits @bind:format on number/date inputs as formatValue/parseValue (3.7)", () => {
+    const { code } = gen('<input type="number" @bind="amount" @bind:format="0.00" />');
+    expect(code).toContain('__builder.addAttribute(2, "value", __tsazor_formatValue(this.amount, "0.00"));');
+    expect(code).toContain(
+      '__builder.addEventHandler(3, "onchange", __tsazor_EventCallback.bind(this, (__event) => { this.amount = __tsazor_parseValue((__event.target as HTMLInputElement).value, "0.00") ?? this.amount; }));',
+    );
+
+    const { code: date } = gen('<input type="date" @bind="day" @bind:format="yyyy-MM-dd" />');
+    expect(date).toContain('__builder.addAttribute(2, "value", __tsazor_formatValue(this.day, "yyyy-MM-dd"));');
+    expect(date).toContain('__tsazor_parseValue((__event.target as HTMLInputElement).value, "yyyy-MM-dd") ?? this.day;');
+
+    // The F/N fixed/grouped and digit-mask formats all take the parse path.
+    expect(gen('<input type="number" @bind="amount" @bind:format="N2" />').code).toContain(
+      '__tsazor_parseValue((__event.target as HTMLInputElement).value, "N2") ?? this.amount;',
+    );
+    // A plain format value is a string literal only; an @expression stays a member reference.
+    expect(gen('<input type="date" @bind="day" @bind:format="@fmt" />').code).toContain('__tsazor_formatValue(this.day, this.fmt));');
+  });
+
+  it("routes a formatted @bind:get/:set through parseValue with Blazor's TryParse skip", () => {
+    const { code, diagnostics } = gen('<input type="date" @bind:get="display" @bind:set="store" @bind:format="yyyy" />');
+    expect(code).toContain('__builder.addAttribute(2, "value", __tsazor_formatValue(this.display, "yyyy"));');
+    expect(code).toContain("await ((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (this.store)(__tsazor_parsed as never) : undefined)(__tsazor_parseValue((__event.target as HTMLInputElement).value, \"yyyy\"));");
+    // A date input with a format is in the supported subset: no warning.
+    expect(diagnostics.all.some((d) => d.code === "TZS008")).toBe(false);
+  });
+
+  it("keeps the native round trip for binds without a supported type and warns (3.7)", () => {
+    const { code, diagnostics } = gen('<input @bind="name" @bind:format="0.00" />');
+    // String binds carry no format (Blazor's BindConverter) — plain emission.
+    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
+    expect(code).toContain('this.name = (__event.target as HTMLInputElement).value;');
+    expect(code).not.toContain("formatValue");
+    expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
+    expect(diagnostics.hasErrors).toBe(false);
+
+    // Unformatted number/date binds keep the existing native coercion.
+    const { code: number } = gen('<input type="number" @bind="amount" />');
+    expect(number).toContain("Number((__event.target as HTMLInputElement).value)");
+  });
+
+  it("rejects @bind:culture with the invariant-culture decision (TZS008 error)", () => {
+    const errors = (source: string) => gen(source).diagnostics.errors.map((d) => d.message);
+    expect(errors('<input type="date" @bind="day" @bind:culture="de-DE" />')).toEqual([expect.stringContaining("invariant culture only")]);
+    expect(errors('<input @bind-value="x" @bind-value:culture="fr-FR" />')).toEqual([expect.stringContaining("invariant culture only")]);
+    expect(errors('<Stepper @bind-Value="v" @bind-Value:culture="de" />')).toEqual([expect.stringContaining("invariant culture only")]);
+  });
+
   /** A bindable input component that declares ValueExpression (like InputBase). */
   const input = (name: string) => metadataOf(name, { Value: "value", ValueChanged: "EventCallback<T>", ValueExpression: "string" });
 

@@ -1596,7 +1596,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "file": "src/forms/edit-form.ts"
             }
           ],
-          "doc": "Field name → validator; registered on the EditContext."
+          "doc": "Field name → validator function (the adapter for logic a decorator rule cannot express)."
         },
         {
           "name": "onSubmit",
@@ -1808,6 +1808,89 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "cascading": {
             "type": "EditContext"
           }
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "DataAnnotationsValidator": {
+      "name": "DataAnnotationsValidator",
+      "file": "src/forms/data-annotations-validator.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataAnnotationsValidator",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "cascading": {
+            "type": "EditContext"
+          },
+          "doc": "Blazor's [CascadingParameter] EditContext CurrentEditContext (by type)."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "InputFile": {
+      "name": "InputFile",
+      "file": "src/forms/input-file.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "onChange",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputFile",
+          "type": "EventCallback<InputFileChangeEventArgs>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "InputFileChangeEventArgs",
+              "kind": "local",
+              "file": "src/forms/input-file.ts"
+            }
+          ],
+          "doc": "The change event of the input element.",
+          "typeArgument": "InputFileChangeEventArgs"
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputFile",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Pass-through attributes (accept, multiple, class, …)."
         }
       ],
       "base": {

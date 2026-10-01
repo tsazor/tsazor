@@ -221,6 +221,8 @@ const BUILDER = "__builder";
 const THIS_ALIAS = "__tsazor_this";
 const alias = (name: string): string => `__tsazor_${name}`;
 const BIND_METHOD = alias("bindMethod");
+const FORMAT_VALUE = alias("formatValue");
+const FORMAT_PARSE = alias("parseValue");
 
 export function generateCode(document: DocumentNode, options: CodegenOptions, diagnostics: DiagnosticBag): CodegenResult {
   return new Codegen(options, diagnostics).run(document);
@@ -2033,11 +2035,10 @@ class Codegen {
       const format = attr.modifierSpans?.format ?? attr;
       if (isComponentBind) {
         this.diagnostics.warning("TZS008", format, `'${label}:format' has no effect on a component (Blazor ignores it).`);
-      } else {
-        // v1: native input display formatting applies; a custom format string is
-        // accepted but only affects parsing of number/date inputs.
-        this.diagnostics.warning("TZS008", format, `'${label}:format' has limited v1 support: number and date inputs use native parsing.`);
       }
+      // For date/number inputs the format applies (3.7 — BindConverter subset);
+      // only the other element binds keep the warning: their native round trip
+      // carries no format, like .NET's string binds.
     }
 
     if (isComponentBind) {
@@ -2057,6 +2058,22 @@ class Codegen {
     const isNumber = tag === "input" && inputType === "number" && valueAttribute === "value";
     const isDate = tag === "input" && inputType === "date" && valueAttribute === "value";
     const event = attr.event ?? "onchange";
+    // @bind:format on a number/date input formats the display value and parses
+    // the change value (BindConverter subset, invariant culture, 3.7). Other
+    // element binds keep the native round trip — a string carries no format,
+    // like .NET's BindConverter — so the format warns as inert there.
+    if (attr.format !== undefined && !isNumber && !isDate) {
+      this.diagnostics.warning("TZS008", attr.modifierSpans?.format ?? attr, `'${label}:format' applies to date and number values only (Blazor: the BindConverter applies formats to the values that have one) — this bind keeps its native round trip.`);
+    }
+    const format = attr.format === undefined || (!isNumber && !isDate) ? undefined : attr.format.trim();
+    // A plain-text format is a string literal (Razor: @bind:format="yyyy-MM-dd");
+    // an @expression (e.g. @bind:format="@fmt") is the member reference.
+    const formatEmit =
+      format === undefined
+        ? undefined
+        : attr.formatLiteral === true
+          ? JSON.stringify(format)
+          : this.expr(attr.format!, undefined, attr.codeStarts?.format);
 
     // Value side: @bind or @bind:get.
     const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
@@ -2065,22 +2082,37 @@ class Codegen {
       return;
     }
 
+    // A formatting bind: the display side renders through formatValue, the
+    // change value parses with parseValue (both take the format expression —
+    // it may be a variable — and keep the model's value when unparseable).
+    if (format !== undefined) this.runtimeAliases.add("formatValue");
+    if (format !== undefined) this.runtimeAliases.add("parseValue");
+
     // Extraction of the DOM value inside the change handler: Blazor's change
     // event value — `checked` for a checkbox, `value` otherwise, whatever
     // attribute is bound.
     let extract = "(__event.target as HTMLInputElement).value";
     if (isCheckbox) extract = "(__event.target as HTMLInputElement).checked";
-    else if (isNumber) extract = "Number((__event.target as HTMLInputElement).value)";
-    else if (isDate) extract = "new Date((__event.target as HTMLInputElement).value)";
+    else if (isNumber) extract = format !== undefined ? "(__event.target as HTMLInputElement).value" : "Number((__event.target as HTMLInputElement).value)";
+    else if (isDate) extract = format !== undefined ? "(__event.target as HTMLInputElement).value" : "new Date((__event.target as HTMLInputElement).value)";
 
     const parts: string[] = [];
     if (attr.set !== undefined) {
       // Blazor awaits an async setter (and :after) before re-rendering.
-      parts.push(`await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
+      if (format !== undefined && (isNumber || isDate)) {
+        // A parse failure skips the setter (Blazor: TryParse false → no write).
+        parts.push(
+          `await ((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${FORMAT_PARSE}(${extract}, ${formatEmit}))`,
+        );
+      } else {
+        parts.push(`await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
+      }
     } else {
       const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
-      if (isNumber) {
+      if (format !== undefined && (isNumber || isDate)) {
+        parts.push(`${assignmentTarget} = ${FORMAT_PARSE}(${extract}, ${formatEmit}) ?? ${assignmentTarget}`);
+      } else if (isNumber) {
         parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
       } else {
         parts.push(`${assignmentTarget} = ${extract}`);
@@ -2089,7 +2121,10 @@ class Codegen {
     if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after, attr.codeStarts?.after)}`);
     const async = attr.set !== undefined || attr.after !== undefined ? "async " : "";
 
-    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${display});`, pos);
+    this.stmt(
+      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${format !== undefined ? `${FORMAT_VALUE}(${display}, ${formatEmit})` : display});`,
+      pos,
+    );
     this.stmt(
       `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, ${async}(__event) => { ${parts.join("; ")}; }));`,
       pos,

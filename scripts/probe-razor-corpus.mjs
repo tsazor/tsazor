@@ -68,13 +68,23 @@ const files = [];
 })(corpusDir);
 
 // Component names the resolver accepts: every .razor in the corpus plus the
-// Blazor built-ins Tsazor ships. Anything else surfaces as unresolved (TZS005)
-// — which is how named slots (<ChildContent>, <Found>) show up today.
-const BUILTINS = [
-  "CascadingValue", "Router", "RouteView", "LayoutView", "NavLink", "PageTitle", "Virtualize",
-  "EditForm", "InputText", "InputTextArea", "InputNumber", "InputCheckbox", "InputDate", "InputSelect",
-  "ValidationMessage", "ValidationSummary", "AuthorizeView", "CascadingAuthenticationState", "AuthorizeRouteView",
-];
+// runtime's built-in tags, read from the workspace package's generated
+// manifest (@tsazor/runtime export) — so new built-ins stop needing a list
+// edit here. Anything else surfaces as unresolved (TZS005) — which is how
+// named slots (<ChildContent>, <Found>) show up today.
+const BUILTINS = await (async () => {
+  const workspaceEntry = path.join(repoRoot, "packages/workspace/dist/index.js");
+  try {
+    const { RUNTIME_COMPONENTS } = await import(pathToFileURL(workspaceEntry).href);
+    return [...RUNTIME_COMPONENTS];
+  } catch {
+    return [
+      "CascadingValue", "Router", "RouteView", "LayoutView", "NavLink", "PageTitle", "Virtualize",
+      "EditForm", "InputText", "InputTextArea", "InputNumber", "InputCheckbox", "InputDate", "InputSelect",
+      "ValidationMessage", "ValidationSummary", "AuthorizeView", "CascadingAuthenticationState", "AuthorizeRouteView",
+    ];
+  }
+})();
 const known = new Set([...files.map((f) => path.basename(f).replace(/\.(razor|tsazor)$/, "")), ...BUILTINS]);
 
 // ---------- helpers ----------

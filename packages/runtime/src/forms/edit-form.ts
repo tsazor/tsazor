@@ -6,7 +6,7 @@ import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tr
 import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
 import { EditContext } from "./edit-context.js";
 
-/** Function-based validator (v1 deviation from DataAnnotations). */
+/** Function-based validator (the adapter; rules come from the field decorators). */
 export type ModelValidator = (value: unknown, model: unknown) => string | null;
 
 /**
@@ -35,8 +35,10 @@ function regionSequenceFor(context: EditContext): number {
  * EditContext around the model and cascades it to the Input* components in its
  * child content. Submit routes through `onsubmit`; with `onSubmit` the delegate
  * decides everything itself, otherwise the EditContext validates first and the
- * result routes to `onValidSubmit`/`onInvalidSubmit`. Validation is
- * function-based: `validators` maps field names to validator functions.
+ * result routes to `onValidSubmit`/`onInvalidSubmit`. Validation providers are
+ * two-fold (roadmap 3.6): `validators` maps field names to validator functions
+ * (the adapter), and the DataAnnotationsValidator built-in enables the model's
+ * field-rule decorators (`@Required()`, …) on the context.
  *
  * The cascaded context is fixed (Blazor: CascadingValue.IsFixed=true) — safe
  * because the region keyed by the context's identity tears the whole subtree
@@ -47,7 +49,7 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
   @Parameter() model?: object;
   /** The context to use instead of one created around `model`. */
   @Parameter() editContext?: EditContext;
-  /** Field name → validator; registered on the EditContext. */
+  /** Field name → validator function (the adapter for logic a decorator rule cannot express). */
   @Parameter() validators?: Record<string, ModelValidator>;
   /** Invoked after form submit (no automatic validation). */
   @Parameter() onSubmit?: EventCallback<EditContext>;
