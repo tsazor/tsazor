@@ -2,6 +2,7 @@ import { createTsazorApp, AuthenticationStateProvider, type Token } from "@tsazo
 import App from "./App.tsazor";
 import routes from "virtual:tsazor-routes";
 import { DemoAuthProvider } from "./DemoAuthProvider";
+import { CounterState } from "./CounterState";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./app.css";
 
@@ -16,6 +17,8 @@ const app = createTsazorApp({
   services: (services) => {
     services.registerValue(DemoAuthProvider, authProvider);
     services.registerValue(AuthenticationStateProvider as Token<AuthenticationStateProvider>, authProvider);
+    // App-wide state that outlives page navigation (/counter-persistent).
+    services.registerValue(CounterState, new CounterState());
   },
 });
 

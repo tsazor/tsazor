@@ -5,6 +5,7 @@
         <span class="brand">Tsazor</span>
         <NavLink Href="/">Home</NavLink>
         <NavLink Href="/counter">Counter</NavLink>
+        <NavLink Href="/counter-persistent">Persistent counter</NavLink>
         <NavLink Href="/form">Form</NavLink>
         <NavLink Href="/virtualize">Virtualize</NavLink>
         <NavLink Href="/fetchdata">FetchData</NavLink>

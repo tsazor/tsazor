@@ -111,10 +111,10 @@ await page.waitForTimeout(200);
 check("listgroup click counted", (await page.locator(".list-group-item", { hasText: "Klickbarer Eintrag" }).textContent())?.includes("(1)") === true);
 
 // 12. SPA intact: navigate via NavLink to /counter and back
-await page.locator("nav.nav a", { hasText: "Counter" }).click();
+await page.getByRole("link", { name: "Counter", exact: true }).click();
 await page.waitForTimeout(300);
 check("spa navigation to counter", (await page.locator("h1").textContent()) === "Counter");
-await page.locator("nav.nav a", { hasText: "Components" }).click();
+await page.getByRole("link", { name: "Components", exact: true }).click();
 await page.waitForTimeout(300);
 check("spa navigation back", (await page.locator("h1").textContent())?.includes("Komponenten-POC") === true);
 

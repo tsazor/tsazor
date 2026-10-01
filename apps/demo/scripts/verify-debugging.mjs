@@ -45,7 +45,9 @@ const mapMatch = moduleText.match(/sourceMappingURL=data:application\/json[^\s"'
 check("module has an inline base64 sourcemap", mapMatch !== null);
 
 const map = JSON.parse(Buffer.from(mapMatch[1], "base64").toString("utf8"));
-check("sourcemap names the real .tsazor source", (map.sources ?? []).some((s) => s.endsWith("Counter.tsazor")), map.sources.join(","));
+/** Counter.tsazor exactly — not PersistentCounter.tsazor (sources may be bare names or paths). */
+const isCounterSource = (s) => s === "Counter.tsazor" || /[\\/]Counter\.tsazor$/.test(s);
+check("sourcemap names the real .tsazor source", (map.sources ?? []).some(isCounterSource), map.sources.join(","));
 check("sourcemap embeds the .tsazor source text", (map.sourcesContent ?? []).join("").includes("@code {"));
 
 /* Minimal VLQ decoder — enough to locate the mapped statement. */
@@ -66,7 +68,7 @@ const vlq = (seg) => {
   return out;
 };
 
-const INCREMENT_LINE_0B = map.sourcesContent[map.sources.findIndex((s) => s.endsWith("Counter.tsazor"))]
+const INCREMENT_LINE_0B = map.sourcesContent[map.sources.findIndex(isCounterSource)]
   .split("\n").findIndex((l) => l.includes("this.currentCount++"));
 check("source line for this.currentCount++ found", INCREMENT_LINE_0B >= 0, `0-based line ${INCREMENT_LINE_0B}`);
 
@@ -105,7 +107,8 @@ const cdpSendSoft = (method, params = {}) =>
 
 let counterScriptId = null;
 client.on("Debugger.scriptParsed", (script) => {
-  if (script.url.includes("Counter.tsazor")) counterScriptId = script.scriptId;
+  // Exact file match: PersistentCounter.tsazor also contains "Counter.tsazor".
+  if (isCounterSource(script.url.split("?")[0])) counterScriptId = script.scriptId;
 });
 
 await page.goto(`${BASE}/counter`, { waitUntil: "networkidle" });

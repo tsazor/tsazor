@@ -45,7 +45,6 @@ Origin-Root; `regex(...)`-Constraints immer verankert; `Date` gilt als veränder
 - Code-behind-/`_Imports`-Änderungen invalidieren abhängige Module nicht (4.1).
 - `NavLink` vergleicht base-relative statt absolute URIs (klein, vor Phase 3).
 - EditForm `OnInvalidSubmit` / awaited `OnValidSubmit` (3.5).
-- Verwaister Worktree `.claude/worktrees/agent-aec7aae20bd23db40` (Prozess 43448 hält Port 5199).
 
 ## Abhängigkeitsgraph
 
