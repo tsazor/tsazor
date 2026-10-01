@@ -152,14 +152,16 @@ describe("codegen", () => {
   });
 
   it("emits foreach as for-of with fragment-safe sequences", () => {
-    const { code } = gen("@foreach (var item in items) { <li>@item</li> }");
+    const { code, diagnostics } = gen("@foreach (const item of items) { <li>@item</li> }");
+    expect(diagnostics.all).toEqual([]);
     expect(code).toContain("for (const item of this.items) {");
   });
 
-  it("emits switch with auto break", () => {
-    const { code } = gen('@switch (v) { case "a": <p>a</p> break; default: <p>d</p> break; }');
-    expect(code).toContain('case "a": {');
-    expect(code).toContain("default: {");
+  it("emits switch sections flat, with their own breaks", () => {
+    const { code, diagnostics } = gen('@switch (v) { case "a": <p>a</p> break; default: <p>d</p> break; }');
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toContain('case "a":\n');
+    expect(code).toContain("default:\n");
     expect(code.match(/break;/g)?.length).toBe(2);
   });
 
@@ -397,15 +399,53 @@ describe("codegen — code-first code contexts (A2)", () => {
     expect(code).toContain("__builder.addContent(3, this.inner);");
   });
 
-  it("registers catch parameters and C#-style foreach variables as locals", () => {
-    const { code } = gen(
-      "@try { <p/> } catch (err) { <p>@err</p> }\n@foreach (string s in xs) { <i>@s</i> }\n@foreach (var (k, v) in pairs) { <i>@k@v</i> }",
+  it("registers catch parameters and foreach variables (also destructured) as locals", () => {
+    const { code, diagnostics } = gen(
+      "@try { <p/> } catch (err) { <p>@err</p> }\n@foreach (const s of xs) { <i>@s</i> }\n@foreach (const [k, v] of pairs) { <i>@k@v</i> }",
     );
+    expect(diagnostics.all).toEqual([]);
     expect(code).toContain("} catch (err) {");
     expect(code).toContain("__builder.addContent(2, err);");
     expect(code).toContain("for (const s of this.xs) {");
     expect(code).toContain("for (const [k, v] of this.pairs) {");
     expect(code).toContain("__builder.addContent(6, k);");
+  });
+
+  it("C# foreach headers are TZS021 naming the TS form, compiled as that form for recovery", () => {
+    const { code, diagnostics } = gen(
+      "@foreach (var x in xs) { <i>@x</i> }\n@foreach (string s in names) { <i>@s</i> }\n@foreach (var (k, v) in pairs) { <i>@k@v</i> }",
+    );
+    expect(diagnostics.all.map((d) => [d.code, d.severity, d.pos])).toEqual([
+      ["TZS021", "error", { line: 1, column: 10 }],
+      ["TZS021", "error", { line: 2, column: 10 }],
+      ["TZS021", "error", { line: 3, column: 10 }],
+    ]);
+    expect(diagnostics.all.map((d) => d.message.replace("C# form — use the TypeScript form. ", ""))).toEqual([
+      "Use '@foreach (const x of xs)' — in TypeScript, for…in iterates keys.",
+      "Use '@foreach (const s of names)' — in TypeScript, for…in iterates keys.",
+      "Use '@foreach (const [k, v] of pairs)' — in TypeScript, for…in iterates keys.",
+    ]);
+    expect(code).toContain("for (const x of this.xs) {");
+    expect(code).toContain("for (const [k, v] of this.pairs) {");
+    expect(code).toContain("__builder.addContent(5, k);");
+  });
+
+  it("@foreach takes TS for…in (keys) and let/destructuring heads as written", () => {
+    const { code, diagnostics } = gen(
+      "@foreach (const key in obj) { <i>@key</i> }\n@foreach (let { a, b } of rows) { <i>@a@b</i> }",
+    );
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toContain("for (const key in this.obj) {");
+    expect(code).toContain("__builder.addContent(1, key);");
+    expect(code).toContain("for (let { a, b } of this.rows) {");
+    expect(code).toContain("__builder.addContent(3, a);");
+  });
+
+  it("reports a counting or invalid @foreach header (TZS015)", () => {
+    expect(gen("@foreach (let i = 0; i < 3; i++) { <i/> }").diagnostics.errors.map((d) => [d.code, d.message])).toEqual([
+      ["TZS015", "Invalid TypeScript in code block. @foreach takes a for…of header ('const x of xs') — use @for for a counting loop."],
+    ]);
+    expect(gen("@foreach (items) { <i/> }").diagnostics.errors.map((d) => d.code)).toEqual(["TZS015"]);
   });
 
   it("emits while and do-while loops", () => {
@@ -416,14 +456,38 @@ describe("codegen — code-first code contexts (A2)", () => {
     expect(code).toContain("} while (this.more);");
   });
 
-  it("lets stacked switch labels fall through and adds break only when a section lacks a jump", () => {
-    const { code } = gen("@switch (k) {\n  case 1:\n  case 2:\n    <p>low</p>\n    break;\n  default:\n    <p>x</p>\n}");
-    expect(code).toContain("    case 1:\n    case 2: {\n");
-    expect(code.match(/break;/g)?.length).toBe(2);
+  it("lets stacked switch labels fall through and adds no implicit break", () => {
+    const { code, diagnostics } = gen("@switch (k) {\n  case 1:\n  case 2:\n    <p>low</p>\n    break;\n  default:\n    <p>x</p>\n}");
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toContain("    case 1:\n    case 2:\n");
+    expect(code.match(/break;/g)?.length).toBe(1);
+  });
+
+  it("warns (TZS023) about a non-empty section that falls through, as noFallthroughCasesInSwitch", () => {
+    const { code, diagnostics } = gen("@switch (k) {\n  case 1:\n    <p>one</p>\n  case 2:\n    <p>two</p>\n    break;\n  default:\n    <p>x</p>\n}");
+    expect(diagnostics.all.map((d) => [d.code, d.severity, d.pos, d.message])).toEqual([
+      ["TZS023", "warning", { line: 2, column: 2 }, "Switch case falls through. 'case 1:' falls through to the next case (TypeScript has no implicit break) — end it with 'break;'."],
+    ]);
+    expect(code.match(/break;/g)?.length).toBe(1);
+    // A jump in a trailing block or in every if/else branch ends the section.
+    expect(gen("@switch (k) {\n  case 1: {\n    <p/>\n    break;\n  }\n  case 2:\n    if (a) { return; } else { throw e; }\n  default:\n    <p/>\n}").diagnostics.all).toEqual([]);
+    expect(gen("@switch (k) {\n  case 1:\n    if (a) { break; }\n  default:\n    <p/>\n}").diagnostics.all.map((d) => d.code)).toEqual(["TZS023"]);
+  });
+
+  it("warns (TZS022) about var in render code and keeps it as written", () => {
+    const { code, diagnostics } = gen("@{ var a = 1; }\n@for (var i = 0; i < n; i++) { <p>@i</p> }\n<b>@i</b>");
+    expect(diagnostics.all.map((d) => [d.code, d.severity, d.pos])).toEqual([
+      ["TZS022", "warning", { line: 1, column: 3 }],
+      ["TZS022", "warning", { line: 2, column: 6 }],
+    ]);
+    expect(code).toContain("var a = 1;");
+    expect(code).toContain("for (var i = 0; i < this.n; i++) {");
+    // Function-scoped: the loop variable is still a local after the loop.
+    expect(code).toContain("__builder.addContent(3, i);");
   });
 
   it("emits no whitespace text frames for single-line bodies (Razor: code-context whitespace)", () => {
-    const { code } = gen("<ul>@foreach (var x in xs) { <li>@x</li> }</ul>");
+    const { code } = gen("<ul>@foreach (const x of xs) { <li>@x</li> }</ul>");
     expect(code).not.toContain('__builder.addContent(1, " ")');
     // Sequence numbers stay compile-time and source-ordered.
     expect(code).toContain('__builder.openElement(1, "li");');
@@ -463,10 +527,13 @@ describe("codegen — directives (A2)", () => {
     expect(diagnostics.all.map((d) => d.code)).toEqual(["TZS014"]);
   });
 
-  it("strips a C# @typeparam constraint with a warning and keeps the TS form", () => {
+  it("reports a C# @typeparam constraint (TZS021) and keeps the TS form", () => {
     const csharp = gen("@typeparam TItem where TItem : class\n");
     expect(csharp.code).toContain("export default class Demo<TItem> extends __tsazor_ComponentBase {");
-    expect(csharp.diagnostics.all.some((d) => d.code === "TZS014")).toBe(true);
+    expect(csharp.diagnostics.all.map((d) => [d.code, d.severity, d.message])).toEqual([
+      ["TZS021", "error", "C# form — use the TypeScript form. C# constraint 'where TItem : class' — use '@typeparam TItem extends X' (TypeScript constraints are types)."],
+    ]);
+    expect(gen("@typeparam TItem where TItem : IItem\n").diagnostics.errors[0]!.message).toContain("use '@typeparam TItem extends IItem'");
     const tsForm = gen("@typeparam T extends string\n");
     expect(tsForm.code).toContain("export default class Demo<T extends string> extends __tsazor_ComponentBase {");
     expect(tsForm.diagnostics.all).toHaveLength(0);

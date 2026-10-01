@@ -630,10 +630,11 @@ class Parser {
       this.i = end;
       return;
     }
-    const end = this.lineEnd(afterWord);
+    // `@authorize({ … })` may span lines: its value runs to the closing parenthesis.
+    const end = word === "authorize" ? this.parenDirectiveEnd(afterWord) : this.lineEnd(afterWord);
     const slice = this.source.slice(afterWord, end);
     const raw = slice.trim();
-    const valueStart = word === "attribute" ? this.locator(afterWord + slice.length - slice.trimStart().length) : undefined;
+    const valueStart = word === "attribute" || word === "authorize" ? this.locator(afterWord + slice.length - slice.trimStart().length) : undefined;
     out.push({ kind: "directive", name: word, value: raw, valueStart, pos, endPos: this.locator(end) });
     this.i = end;
   }
@@ -672,6 +673,26 @@ class Parser {
         afterSpecifier = true;
       }
       end = Math.max(end, scanner.getTokenEnd());
+    }
+  }
+
+  /**
+   * End of a directive value that may be a parenthesized TS argument
+   * (`@authorize({⏎ roles: […]⏎})`): the line, extended to the parenthesis
+   * closing one that opens it. Unbalanced ⇒ the line (codegen reports it).
+   */
+  private parenDirectiveEnd(from: number): number {
+    const SK = ts.SyntaxKind;
+    const lineEnd = this.lineEnd(from);
+    const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, this.source);
+    scanner.resetTokenState(from);
+    if (scanner.scan() !== SK.OpenParenToken || scanner.getTokenStart() >= lineEnd) return lineEnd;
+    let depth = 1;
+    for (;;) {
+      const kind = scanner.scan();
+      if (kind === SK.EndOfFileToken) return lineEnd;
+      if (kind === SK.OpenParenToken) depth++;
+      else if (kind === SK.CloseParenToken && --depth === 0) return Math.max(lineEnd, scanner.getTokenEnd());
     }
   }
 

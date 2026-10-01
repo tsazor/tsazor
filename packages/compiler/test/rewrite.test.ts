@@ -170,10 +170,13 @@ describe("rewrite — statements", () => {
 });
 
 describe("rewrite — @for headers", () => {
-  it("turns var into let and reports the loop variables", () => {
+  it("keeps var as written, reports its keyword and the loop variables", () => {
     const result = rewriteSnippet("var i = 0, n = items.length; i < n; i++", "forHeader", resolver());
-    expect(result.text).toBe("let i = 0, n = this.items.length; i < n; i++");
+    expect(result.text).toBe("var i = 0, n = this.items.length; i < n; i++");
     expect(result.declares).toEqual(["i", "n"]);
+    expect(result.varKeywords).toEqual([0]);
+    expect(rewriteSnippet("let i = 0; i < 3; i++", "forHeader", resolver()).varKeywords).toEqual([]);
+    expect(rewriteSnippet("const f = () => { var x = 1; }; f();", "statements", resolver()).varKeywords).toEqual([18]);
     const forOf = rewriteSnippet("const [k, v] of pairs", "forHeader", resolver());
     expect(forOf.text).toBe("const [k, v] of this.pairs");
     expect(forOf.declares).toEqual(["k", "v"]);
@@ -254,7 +257,7 @@ describe("codegen integration (A4)", () => {
   });
 
   it("resolves a bare event handler like any expression (a local stays local)", () => {
-    const code = gen("@foreach (var h in handlers) { <button @onclick=\"h\">x</button> }");
+    const code = gen("@foreach (const h of handlers) { <button @onclick=\"h\">x</button> }");
     expect(code).toContain("__tsazor_EventCallback.bind(this, h)");
   });
 
@@ -267,8 +270,9 @@ describe("codegen integration (A4)", () => {
     expect(code).toContain("function __tsazor_bindMethod<T>(receiver: unknown, method: T): T {");
   });
 
-  it("emits @for var loop variables as let", () => {
-    expect(gen("@for (var i = 0; i < n; i++) { <p>@i</p> }")).toContain("for (let i = 0; i < this.n; i++) {");
+  it("emits @for loop variables as written (var keeps its TS meaning)", () => {
+    expect(gen("@for (let i = 0; i < n; i++) { <p>@i</p> }")).toContain("for (let i = 0; i < this.n; i++) {");
+    expect(gen("@for (var i = 0; i < n; i++) { <p>@i</p> }")).toContain("for (var i = 0; i < this.n; i++) {");
   });
 
   it("renders null/undefined mixed attribute parts as empty", () => {

@@ -23,8 +23,8 @@ export type SnippetKind =
   | "expression"
   /** A run of statements in a code context (`@{ }`, control bodies). */
   | "statements"
-  /** The header of a `@for (…)`: its `var` declarations become `let`
-   *  (per-iteration bindings for deferred child-content closures). */
+  /** The header of a `@for (…)`/`@foreach (…)` (C-style, `for…of`, `for…in`),
+   *  emitted as written — `var` keeps its TS (function-scoped) meaning. */
   | "forHeader";
 
 export interface NameResolver {
@@ -62,6 +62,8 @@ export interface RewriteResult {
   tokens: RewriteToken[];
   /** forHeader: names the header's own declarations bind for the body. */
   declares: string[];
+  /** Offsets (in the input code) of every `var` keyword of a declaration (TZS022). */
+  varKeywords: number[];
   /** expression: a member access `recv.name` (a method group with receiver, C18). */
   methodGroup?: MethodGroup;
 }
@@ -105,6 +107,7 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
   const file = ts.createSourceFile("snippet.ts", prefix + code + suffix, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const edits: Edit[] = [];
   const declares: string[] = [];
+  const varKeywords: number[] = [];
 
   const offsetOf = (node: ts.Node): number => node.getStart(file) - base;
   const inCode = (offset: number): boolean => offset >= 0 && offset < code.length;
@@ -121,6 +124,10 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
   };
 
   const visit = (node: ts.Node, scope: Scope): void => {
+    if (ts.isVariableDeclarationList(node) && (node.flags & ts.NodeFlags.BlockScoped) === 0) {
+      const at = node.getStart(file) - base;
+      if (inCode(at) && code.startsWith("var", at)) varKeywords.push(at);
+    }
     if (ts.isIdentifier(node)) {
       if (isReference(node)) reference(node, scope);
       return;
@@ -160,11 +167,7 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
         // The @for header's own declarations: loop variables of the body.
         const own = kind === "forHeader" && node === file.statements[0];
         if (!isVar || own) for (const declaration of init.declarations) addBindingNames(declaration.name, loop.names);
-        if (own) {
-          for (const declaration of init.declarations) addBindingNames(declaration.name, declares);
-          const at = init.getStart(file) - base;
-          if (isVar && inCode(at) && code.startsWith("var", at)) edits.push({ pos: at, remove: 3, insert: "let" });
-        }
+        if (own) for (const declaration of init.declarations) addBindingNames(declaration.name, declares);
       }
       ts.forEachChild(node, (child) => visit(child, loop));
       return;
@@ -227,7 +230,7 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
   visit(file, new Scope(undefined, false));
 
   const result = applyEdits(code, edits);
-  const rewrite: RewriteResult = { text: result.text, tokens: wordTokens(code, result.mapOut), declares };
+  const rewrite: RewriteResult = { text: result.text, tokens: wordTokens(code, result.mapOut), declares, varKeywords };
   if (kind === "expression") {
     const group = methodGroupOf(file);
     if (group) {
@@ -245,6 +248,23 @@ export function rewriteSnippet(code: string, kind: SnippetKind, resolver: NameRe
     }
   }
   return rewrite;
+}
+
+/* Loop headers ---------------------------------------------------------------- */
+
+/**
+ * The loop form of a `@for`/`@foreach` header, parsed as TS
+ * (`for (<code>) {}`): counting `for`, `for…of` or `for…in`; null when the
+ * header is not valid TypeScript.
+ */
+export function forHeaderKind(code: string): "for" | "forOf" | "forIn" | null {
+  const file = ts.createSourceFile("header.ts", `for (${code}\n) {}`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const statement = file.statements[0];
+  const syntaxErrors = (file as unknown as { parseDiagnostics?: readonly unknown[] }).parseDiagnostics ?? [];
+  if (file.statements.length !== 1 || !statement || syntaxErrors.length > 0) return null;
+  if (ts.isForOfStatement(statement)) return "forOf";
+  if (ts.isForInStatement(statement)) return "forIn";
+  return ts.isForStatement(statement) ? "for" : null;
 }
 
 /* Bind targets --------------------------------------------------------------- */

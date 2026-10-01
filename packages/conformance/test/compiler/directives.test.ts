@@ -56,10 +56,10 @@ describe("C19 — directives only at document level", () => {
 });
 
 describe("C19 — @typeparam", () => {
-  it("accepts a C# constraint clause with a warning", async () => {
-    const diagnostics = await diagnosticsOf(`@typeparam TItem where TItem : class\n<p>x</p>`);
-    expect(errorCodes(diagnostics)).toEqual([]);
-    expect(diagnostics.some((d) => d.code === "TZS014" && d.severity === "warning")).toBe(true);
+  it("a C# constraint clause is TZS021 naming the TS form", async () => {
+    const diagnostics = await diagnosticsOf(`@typeparam TItem where TItem : IItem\n<p>x</p>`);
+    expect(errorCodes(diagnostics)).toEqual(["TZS021"]);
+    expect(diagnostics[0]!.message).toContain("use '@typeparam TItem extends IItem'");
   });
 
   it("supports the TS constraint form", async () => {
@@ -82,15 +82,18 @@ describe("C7 — C# constructs without a TS equivalent are errors", () => {
 });
 
 describe("C19 — @attribute", () => {
-  it("the documented form compiles", async () => {
-    const diagnostics = await diagnosticsOf(`@attribute [Marker]\n<p>x</p>\n@code { }`);
-    expect(errorCodes(diagnostics)).toEqual([]);
-  });
-
-  it("a C# attribute without TS meaning is ignored with a TZS014 warning", async () => {
-    const m = await mount(`@attribute [CascadingTypeParameter(nameof(TItem))]\n@attribute [StreamRendering]\n<p>x</p>`);
-    expect(m.diagnostics.map((d) => [d.code, d.severity])).toEqual([["TZS014", "warning"], ["TZS014", "warning"]]);
-    expect(m.html()).toBe("<p>x</p>");
+  it("a C# attribute list is TZS021 naming the TS form", async () => {
+    const diagnostics = await diagnosticsOf(
+      `@attribute [Authorize(Roles = "A, B")]\n@attribute [AllowAnonymous]\n@attribute [StreamRendering]\n<p>x</p>\n@code { }`,
+    );
+    expect(diagnostics.map((d) => [d.code, d.severity, d.pos.line])).toEqual([
+      ["TZS021", "error", 1],
+      ["TZS021", "error", 2],
+      ["TZS021", "error", 3],
+    ]);
+    expect(diagnostics[0]!.message).toContain(`use '@authorize({ roles: ["A", "B"] })'`);
+    expect(diagnostics[1]!.message).toContain("a page is anonymous unless it declares @authorize");
+    expect(diagnostics[2]!.message).toContain("use a TS class decorator ('@attribute @decorator(…)'), or remove it");
   });
 
   it("the TS form @attribute @decorator(…) decorates the class", async () => {
@@ -102,10 +105,10 @@ describe("C19 — @attribute", () => {
     expect(m.html()).toBe("<p>decorated</p>");
   });
 
-  it("[Authorize(Roles = …)] protects the route (through AuthorizeRouteView)", async () => {
+  it("@authorize({ roles }) protects the route (through AuthorizeRouteView)", async () => {
     const compiled = await compileFiles({
-      "Admin.tsazor": `@page "/admin"\n@attribute [Authorize(Roles = "admin")]\n<h1>admin</h1>`,
-      "Open.tsazor": `@page "/open"\n@attribute [Authorize]\n@attribute [AllowAnonymous]\n<h1>open</h1>`,
+      "Admin.tsazor": `@page "/admin"\n@authorize({ roles: ["admin"] })\n<h1>admin</h1>`,
+      "Open.tsazor": `@page "/open"\n<h1>open</h1>`,
     });
     expect(errorCodes(compiled.diagnostics["Admin.tsazor"]!)).toEqual([]);
     const routes = await scanRoutes(compiled.dir);

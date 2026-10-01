@@ -138,36 +138,60 @@ describe("@attribute (C19)", () => {
     expect(csharpString("Roles.Admin")).toBeNull();
   });
 
-  it("[Authorize] is @authorize", () => {
-    const { code, metadata, diagnostics } = gen('@page "/x"\n@attribute [Authorize]\n<p>x</p>');
+  it("bare @authorize protects the route", () => {
+    const { code, metadata, diagnostics } = gen('@page "/x"\n@authorize\n<p>x</p>');
     expect(diagnostics.all).toEqual([]);
     expect(metadata.authorize).toBe(true);
     expect(metadata.authorizeData).toBeUndefined();
     expect(code).toContain("export const routeAuthorize = true;");
   });
 
-  it("[Authorize(Roles = …, Policy = …)] become the route's requirements", () => {
-    const { code, metadata } = gen('@page "/x"\n@attribute [Authorize(Roles = "Admin, Editor", Policy = "CanEdit")]\n<p>x</p>');
+  it("@authorize({ roles, policy }) becomes the route's requirements", () => {
+    const { code, metadata, diagnostics } = gen('@page "/x"\n@authorize({ roles: ["Admin", "Editor"], policy: "CanEdit" })\n<p>x</p>');
+    expect(diagnostics.all).toEqual([]);
     expect(metadata.authorizeData).toEqual({ roles: ["Admin", "Editor"], policy: "CanEdit" });
     expect(code).toContain('export const routeAuthorize = {"roles":["Admin","Editor"],"policy":"CanEdit"};');
-    expect(gen('@page "/x"\n@attribute [Authorize("CanEdit")]\n<p>x</p>').metadata.authorizeData).toEqual({ policy: "CanEdit" });
+    expect(gen('@page "/x"\n@authorize({ policy: "CanEdit" })\n<p>x</p>').metadata.authorizeData).toEqual({ policy: "CanEdit" });
+    // An empty object (or no argument) is authentication only.
+    const empty = gen('@page "/x"\n@authorize({})\n<p>x</p>').metadata;
+    expect([empty.authorize, empty.authorizeData]).toEqual([true, undefined]);
   });
 
-  it("[AllowAnonymous] wins over [Authorize]", () => {
-    const { metadata, code } = gen('@page "/x"\n@authorize\n@attribute [AllowAnonymous]\n<p>x</p>');
+  it("@authorize's object literal may span lines", () => {
+    const { metadata, diagnostics, code } = gen('@page "/x"\n@authorize({\n    roles: ["A",\n        "B"],\n})\n<p>x</p>');
+    expect(diagnostics.all).toEqual([]);
+    expect(metadata.authorizeData).toEqual({ roles: ["A", "B"] });
+    expect(code).toContain('addContent(1, "x")');
+    expect(code).not.toContain("roles: [");
+  });
+
+  it("refuses requirements it cannot combine and non-literal values", () => {
+    const codes = (source: string) => gen(source).diagnostics.errors.map((d) => d.code);
+    expect(codes('@authorize({ roles: ["A"] })\n@authorize({ roles: ["B"] })\n<p/>')).toEqual(["TZS019"]);
+    expect(codes("@authorize({ roles: [RoleNames.Admin] })\n<p/>")).toEqual(["TZS019"]);
+    expect(codes('@authorize({ roles: "A, B" })\n<p/>')).toEqual(["TZS019"]);
+    expect(codes('@authorize({ schemes: ["x"] })\n<p/>')).toEqual(["TZS019"]);
+    expect(codes('@authorize("P")\n<p/>')).toEqual(["TZS019"]);
+    expect(codes("@authorize({ roles: [\"A\"] \n<p/>")).toEqual(["TZS019"]);
+  });
+
+  it("a C# attribute list is TZS021 naming the TS form", () => {
+    const messages = (source: string) => gen(source).diagnostics.all.map((d) => [d.code, d.severity, d.message]);
+    expect(messages('@page "/x"\n@attribute [Authorize]\n<p/>')).toEqual([
+      ["TZS021", "error", "C# form — use the TypeScript form. C# attribute '[Authorize]' — use '@authorize'."],
+    ]);
+    expect(messages('@attribute [Authorize(Roles = "Admin, Editor", Policy = "CanEdit")]\n<p/>')[0]![2]).toContain(
+      `use '@authorize({ roles: ["Admin", "Editor"], policy: "CanEdit" })'`,
+    );
+    expect(messages('@attribute [Authorize("CanEdit")]\n<p/>')[0]![2]).toContain(`use '@authorize({ policy: "CanEdit" })'`);
+    expect(messages("@attribute [Authorize(Roles = RoleNames.Admin)]\n<p/>")[0]![2]).toContain("with string literals");
+    expect(messages("@attribute [AllowAnonymous]\n<p/>")[0]![2]).toContain("a page is anonymous unless it declares @authorize");
+    expect(messages('@attribute [Route("/x")]\n<p/>')[0]![2]).toContain(`use '@page "…"'`);
+    // One error per attribute of a list; nothing reaches the route metadata.
+    const { diagnostics, metadata, code } = gen('@page "/x"\n@attribute [CascadingTypeParameter(nameof(TItem)), Microsoft.AspNetCore.Authorization.AuthorizeAttribute]\n<p/>');
+    expect(diagnostics.errors.map((d) => d.code)).toEqual(["TZS021", "TZS021"]);
+    expect(diagnostics.errors[0]!.message).toContain("'[CascadingTypeParameter]' — use a TS class decorator");
     expect(metadata.authorize).toBeUndefined();
-    expect(code).not.toContain("routeAuthorize");
-  });
-
-  it("refuses requirements it cannot combine and non-literal roles", () => {
-    expect(gen('@attribute [Authorize(Roles = "A")]\n@attribute [Authorize(Roles = "B")]\n<p/>').diagnostics.errors.map((d) => d.code)).toEqual(["TZS019"]);
-    expect(gen("@attribute [Authorize(Roles = RoleNames.Admin)]\n<p/>").diagnostics.errors.map((d) => d.code)).toEqual(["TZS019"]);
-  });
-
-  it("ignores other C# attributes with TZS014", () => {
-    const { code, diagnostics } = gen("@attribute [CascadingTypeParameter(nameof(TItem))]\n<p/>");
-    expect(diagnostics.errors).toEqual([]);
-    expect(diagnostics.all.map((d) => [d.code, d.severity])).toEqual([["TZS014", "warning"]]);
     expect(code).not.toContain("CascadingTypeParameter");
   });
 

@@ -99,6 +99,15 @@ describe("collectImports", () => {
     const codes = chain.layers[0]!.diagnostics.map((d) => `${d.severity}:${d.code}`);
     expect(codes).toEqual(["error:TZS016", "warning:TZS018", "warning:TZS018"]);
   });
+
+  it("says that @authorize in an _Imports file is not inherited (TZS014)", async () => {
+    const dir = path.join(root, "Guarded");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./x\n@authorize\n");
+    const diagnostics = (await collectImports(dir, dir)).layers[0]!.diagnostics.filter((d) => d.code === "TZS014");
+    expect(diagnostics.map((d) => [d.severity, d.pos])).toEqual([["warning", { line: 2, column: 0 }]]);
+    expect(diagnostics[0]!.message).toContain("not inherited");
+  });
 });
 
 describe("createFileContext", () => {

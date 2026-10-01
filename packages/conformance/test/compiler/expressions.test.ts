@@ -117,7 +117,7 @@ describe("C18 — method groups keep their receiver", () => {
 
   it("a method group with a computed receiver evaluates it once, at render", async () => {
     const m = await mount(`
-@foreach (var item in items) {
+@foreach (const item of items) {
     <button @onclick="pick(item).toggle">t</button>
 }
 <p>@picks|@String(items[1]!.on)</p>

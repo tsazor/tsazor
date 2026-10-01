@@ -19,7 +19,7 @@ describe("C1 — statements inside control-block bodies", () => {
 
   it("nests a plain if (no @) inside @foreach", async () => {
     const m = await mount(`
-@foreach (var n in nums) {
+@foreach (const n of nums) {
     if (n > 1) {
         <b>@n</b>
     }
@@ -116,6 +116,35 @@ describe("C11 — @switch", () => {
 @code { private k = 1; }`);
     expect(m.html()).toBe("<p>low</p>");
   });
+
+  it("a section without break falls through (TS semantics) with a TZS023 warning", async () => {
+    const m = await mount(`
+@switch (k) {
+    case 1:
+        <p>one</p>
+    case 2:
+        <p>two</p>
+        break;
+    default:
+        <p>other</p>
+}
+@code { private k = 1; }`);
+    expect(m.html()).toBe("<p>one</p><p>two</p>");
+    expect(m.diagnostics.map((d) => [d.code, d.severity, d.pos.line])).toEqual([["TZS023", "warning", 3]]);
+  });
+
+  it("sections share one lexical scope, as in TS", async () => {
+    const m = await mount(`
+@switch (k) {
+    case 1:
+        const label = "shared";
+    case 2:
+        <p>@label</p>
+        break;
+}
+@code { private k = 1; }`);
+    expect(m.html()).toBe("<p>shared</p>");
+  });
 });
 
 describe("C20 — @: line transitions", () => {
@@ -133,11 +162,24 @@ describe("loop variables captured by deferred child content", () => {
   it("each child content sees its own iteration value", async () => {
     const m = await mount({
       "Test.tsazor": `
+@for (let i = 0; i < 3; i++) {
+    <Wrap>@i</Wrap>
+}`,
+      "Wrap.tsazor": `<span>@ChildContent</span>\n@code { @Parameter() ChildContent?: RenderFragment; }`,
+    });
+    expect(m.diagnostics).toEqual([]);
+    expect(m.text()).toBe("012");
+  });
+
+  it("var keeps its TS meaning (one shared binding) and warns with TZS022", async () => {
+    const m = await mount({
+      "Test.tsazor": `
 @for (var i = 0; i < 3; i++) {
     <Wrap>@i</Wrap>
 }`,
       "Wrap.tsazor": `<span>@ChildContent</span>\n@code { @Parameter() ChildContent?: RenderFragment; }`,
     });
-    expect(m.text()).toBe("012");
+    expect(m.diagnostics.map((d) => [d.code, d.severity, d.pos])).toEqual([["TZS022", "warning", { line: 2, column: 6 }]]);
+    expect(m.text()).toBe("333");
   });
 });

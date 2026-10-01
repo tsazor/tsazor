@@ -81,12 +81,12 @@ describe("parser", () => {
     expect(node.isForEach).toBe(false);
     expect(node.code).toBe("let i = 0; i < 3; i++");
 
-    const { doc: doc2 } = parse("@foreach (var item in items) { <li>@item</li> }");
+    const { doc: doc2 } = parse("@foreach (const item of items) { <li>@item</li> }");
     const node2 = doc2.body[0]!;
     expect(node2.kind).toBe("for");
     if (node2.kind !== "for") return;
     expect(node2.isForEach).toBe(true);
-    expect(node2.code).toBe("var item in items");
+    expect(node2.code).toBe("const item of items");
   });
 
   it("parses switch with cases and skips break statements", () => {
