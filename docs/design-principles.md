@@ -35,6 +35,12 @@ Konventionen der Razor-*Templatesprache* — nicht von C# — bleiben:
 - **Nackter Text in einem Code-Kontext ist ein Fehler** — das folgt aus Razors Markup/Code-Grenze,
   nicht aus C#.
 
+## Im Zweifel TypeScript
+
+Bei strittigen Fällen gilt die **TypeScript-Konvention, nicht die von Blazor**. Blazor-Treue
+betrifft Markup, Direktiven und die Semantik des Komponentenmodells; wo sie mit idiomatischem
+TypeScript kollidiert (Namensgebung, Typen, Syntax, Sprach-Features), gewinnt TypeScript.
+
 ## Prüffrage für neue Features
 
 Würde ein TypeScript-Entwickler ohne .NET-Hintergrund das natürlich finden — und bleibt ein
