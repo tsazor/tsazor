@@ -9,7 +9,9 @@ betrieben jeweils eigene HTTP-Helfer).
 - **OpenAPI ⇒ typisierter TS-Client.** Lokale Generierung aus einem
   ASP.NET-Core-OpenAPI-Dokument (Swashbuckle/NSwag, JSON — 3.0/3.1):
   `tsazor-dotnet generate <openapi.json|url> --out <dir>` schreibt
-  `models.ts` und `<Name>Client.ts`.
+  `models.ts` und `<Name>Client.ts`. Einstiege: `.` ist browser-safe
+  (Client/HttpResult/Auth, keine Node-Module), `@tsazor/dotnet/generator`
+  ist der Node-seitige Teil (OpenAPI-Lesen, Generierung, CLI).
 - **`HttpResult<T>` statt throw.** Der Client wirft bei `!ok` nicht, bevor der
   Körper lesbar ist: RFC-9457-ProblemDetails und ValidationProblemDetails
   (`errors: Record<string, string[]>`) sind Werte auf dem Resultat.

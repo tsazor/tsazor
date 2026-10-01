@@ -1,10 +1,12 @@
 /**
  * @tsazor/dotnet — die offizielle Brücke zu .NET-Backends (Roadmap 5.2):
- *  - OpenAPI ⇒ typisierter TS-Client (lokale Generierung, CLI `tsazor-dotnet`),
  *  - ProblemDetails/Envelope-Fehler als `HttpResult` (niemals ein throw
  *    vor lesbarern Körper),
- *  - Schema-Constraints ⇒ DataAnnotations-Decorators am generierten Modell,
+ *  - der Basisklient `OpenApiClient` für die generierten Clients,
  *  - Auth-Integration (JWT/Cookie) auf `AuthenticationStateProvider`.
+ *
+ * Browser-safe: dieser Einstieg zieht KEINE Node-Module (node:fs/fetch) an —
+ * die OpenAPI-Generierung lebt hinter dem Untereinstieg `@tsazor/dotnet/generator`.
  */
 export {
   OpenApiClient,
@@ -29,23 +31,6 @@ export {
   type ValidationProblemDetails,
   type EnvelopeOptions,
 } from "./http-result.js";
-export {
-  loadOpenApiDocument,
-  resolveSchemaRef,
-  resolveSchemaLike,
-  flattenAllOf,
-  schemaNullable,
-  schemaType,
-  type OpenApiDocument,
-  type OpenApiOperation,
-  type OpenApiParameter,
-  type OpenApiRequestBody,
-  type OpenApiResponse,
-  type OpenApiSchema,
-  type OpenApiMethod,
-} from "./openapi.js";
-export { generateClient, type GenerateOptions, type GeneratedFile, type Generation } from "./generate.js";
-export { main } from "./cli.js";
 export {
   CookieAuthenticationStateProvider,
   JwtAuthenticationStateProvider,

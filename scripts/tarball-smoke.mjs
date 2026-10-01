@@ -38,6 +38,7 @@ const SHIPPED = [
   "testing",
   "components",
   "fluent",
+  "dotnet",
 ];
 
 const keep = process.argv.includes("--keep");
@@ -96,7 +97,7 @@ for (const pkg of SHIPPED) {
 
 const tarballOf = (name) => tarballByPkg.get(name) ?? (() => { throw new Error(`Tarball für ${name} fehlt`); })();
 const deps = {};
-for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/components", "@tsazor/fluent"]) {
+for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/components", "@tsazor/fluent", "@tsazor/dotnet"]) {
   deps[name] = tarballOf(name);
 }
 const overrides = {};
@@ -233,6 +234,52 @@ describe("tarball smoke", () => {
 });
 `);
 
+// Der @tsazor/dotnet-Smoke: ein Mini-OpenAPI-Dokument ...
+writeFileSync(join(app, "dotnet-openapi.json"), JSON.stringify({
+  openapi: "3.0.1",
+  info: { title: "SmokeApi", version: "1.0.0" },
+  paths: {
+    "/api/things/{id}": {
+      get: {
+        operationId: "getThing",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: {
+          "200": {
+            description: "Das Ding",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { id: { type: "integer" }, name: { type: "string", minLength: 1 } },
+                  required: ["id", "name"],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  components: { schemas: {} },
+}, null, 2) + "\n");
+
+// ... die Prüfung beider Paket-Einstiege (Browser-„." ohne node:*,
+// Generator-Einstieg mit dem CLI-Code) ...
+writeFileSync(join(app, "dotnet-entries.mjs"), `const runtime = await import("@tsazor/dotnet");
+const generator = await import("@tsazor/dotnet/generator");
+for (const missing of [
+    typeof runtime.OpenApiClient !== "function" && "OpenApiClient",
+    typeof runtime.problemMessage !== "function" && "problemMessage",
+    typeof generator.generateClient !== "function" && "generateClient",
+].filter(Boolean)) {
+    console.error(\`@tsazor/dotnet: \${missing} fehlt\`);
+    process.exit(1);
+}
+`);
+
+// ... und die CLI-Generierung aus dem installierten Tarball heraus.
+mkdirSync(join(app, "src", "dotnet-api"), { recursive: true });
+
 // 3. Install ------------------------------------------------------------------
 
 step("pnpm install (Scratch-Projekt, isoliertes node_modules)");
@@ -247,6 +294,9 @@ const check = ["node", ["node_modules/@tsazor/cli/dist/bin.js", "check", "."], a
 await gate("vite build", vite);
 await gate("vitest", vitest);
 await gate("tsazor check", check);
+await gate("dotnet-Einstiege", ["node", ["dotnet-entries.mjs"], app]);
+await gate("tsazor-dotnet generate", ["node", ["node_modules/@tsazor/dotnet/dist/bin.js", "generate", "dotnet-openapi.json", "--out", "src/dotnet-api", "--name", "SmokeApi"], app]);
+await gate("dotnet-Output-Typcheck", ["node", ["node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--moduleResolution", "bundler", "--module", "ESNext", "src/dotnet-api/models.ts", "src/dotnet-api/smoke-api.ts"], app]);
 
 async function gate(name, [cmd, args, cwd]) {
   step(name);
