@@ -238,6 +238,42 @@ describe("tsazor vite plugin", () => {
     expect(result!.code).not.toContain("extends ComponentBase");
   });
 
+  it("lowers the standard decorators of the generated module", async () => {
+    const plugin = await createPlugin();
+    const source = "<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n}\n";
+    const result = await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Hello.tsazor"));
+    expect(result!.code).not.toContain("@Parameter()");
+    expect(result!.code).toMatch(/__decorateElement\(\w+, 5, "Name", \w+, Hello\)/);
+  });
+
+  it("makes Vite lower standard decorators in the app's own .ts files (dev targets esnext)", async () => {
+    const { createServer } = await import("vite");
+    // An app tsconfig with an ES2022 target (as in the repo apps): without the
+    // plugin, Vite would serve the decorator as written.
+    await mkdir(path.join(root, "app-ts"), { recursive: true });
+    await writeFile(path.join(root, "app-ts", "tsconfig.json"), JSON.stringify({ compilerOptions: { target: "ES2022" } }));
+    await writeFile(
+      path.join(root, "app-ts", "Decorated.ts"),
+      "function tag() { return (_value: unknown, _context: ClassFieldDecoratorContext) => {}; }\nexport class Decorated { @tag() field = 1; }\n",
+    );
+    const server = await createServer({
+      root,
+      configFile: false,
+      logLevel: "silent",
+      appType: "custom",
+      server: { middlewareMode: true, hmr: false, watch: null },
+      optimizeDeps: { noDiscovery: true, include: [] },
+      plugins: [tsazor({ root })],
+    });
+    try {
+      const result = await server.transformRequest("/app-ts/Decorated.ts");
+      expect(result!.code).not.toContain("@tag()");
+      expect(result!.code).toContain("__decorateElement");
+    } finally {
+      await server.close();
+    }
+  });
+
   it("keeps .tsazor files without a .ts sidecar on ComponentBase", async () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));
