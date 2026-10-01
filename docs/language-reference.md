@@ -54,7 +54,7 @@ C#-Attribute haben kein TypeScript-Gegenstück. Regel:
 
 | Schreibweise | Ergebnis |
 |---|---|
-| `@attribute @tracked("x")` (TS-Form: Wert beginnt mit `@`) | echter Class-Decorator, wörtlich über `export default class` (legacy `experimentalDecorators` wie `@Parameter`); Namen kommen per `@import` |
+| `@attribute @tracked("x")` (TS-Form: Wert beginnt mit `@`) | echter Class-Decorator, wörtlich über `export default class` (Standard-Decorator, TC39, wie `@Parameter`: `(value, context: ClassDecoratorContext)`); Namen kommen per `@import` |
 | `@attribute [Authorize]` | wie `@authorize`: die Route verlangt Anmeldung |
 | `@attribute [Authorize(Roles = "A, B")]`, `[Authorize(Policy = "P")]`, `[Authorize("P")]` | die `AuthorizationRequirements` der Route (`{ roles: ["A", "B"] }` / `{ policy: "P" }`), geprüft von `AuthorizeRouteView` (Rollen: mindestens eine; Policy: registriert in `AuthorizationService.policies`) |
 | `@attribute [AllowAnonymous]` | hebt `[Authorize]`/`@authorize` auf (Blazor) |

@@ -7,7 +7,7 @@
               export default class X extends ComponentBase {
                   buildRenderTree(__builder: RenderTreeBuilder): void { … }
               }
-TS      ──(esbuild)──►  JS (Sourcemap-Kette Compiler → esbuild)
+TS      ──(esbuild)──►  JS (Sourcemap-Kette Compiler → esbuild; Standard-Decorators gesenkt)
 Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit-Liste ──(DomRenderer)──►  DOM
 ```
 
@@ -102,6 +102,35 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   Objekte, Arrays, Funktionen (jedes `ChildContent`) und `Date` gelten immer als geändert.
   Cascading-Werte laufen über die Subscription. Parameter-Metadaten (inkl. geerbter,
   case-gefalteter Namen, Capture-Property, Cascading-Liste) werden pro Klasse gecacht.
+- **Parameter-Metadaten (Standard-Decorators, TC39):** `@Parameter(options?)` und
+  `@CascadingParameter(options?)` sind Field-Decorators (auch auf `accessor`-Feldern und
+  Settern; `static`/`#private` ⇒ Fehler). Sie tragen den Member in die Decorator-Metadaten
+  der Klasse ein (`context.metadata`, von der Sprache als `Klasse[Symbol.metadata]`
+  veröffentlicht) — unter einem privaten Schlüssel, **eine eigene Map pro Klasse**; die
+  Metadaten-Objekte erben prototypisch wie die Klassen, geschrieben wird nur in die eigene.
+  Gelesen wird über die Klassenkette (`getParameterInfo`: Basis zuerst, eine Neudeklaration in
+  der abgeleiteten Klasse gewinnt; `getOwnParameterMetadata` liefert nur die eigenen), das
+  Ergebnis wird pro Klasse gecacht (B6). Decorators laufen während der Klassendefinition, also
+  bevor irgendetwas die Metadaten lesen kann — sie invalidieren den Cache nicht; nur
+  `defineParameter(Klasse, name, options)` (handgeschriebene Komponenten ohne
+  Decorator-Syntax, Tests) tut das. **Polyfill:** `Symbol.metadata` fehlt in Browsern noch;
+  `parameter-metadata.ts` setzt es auf `Symbol.for("Symbol.metadata")` (das Symbol, auf das
+  auch esbuilds Decorator-Helfer zurückfallen). tscs Emit legt `context.metadata` nur an, wenn
+  `Symbol.metadata` bei der Klassendefinition existiert — die Reihenfolge garantiert ESM: jede
+  dekorierte Klasse importiert die Decorators aus diesem Modul, und es importiert selbst nichts
+  (Blatt, kein Zyklus möglich), wird also vorher ausgewertet. Es ist das einzige Modul mit
+  Seiteneffekt (`"sideEffects"` im Runtime-Paket), ungenutzte Built-ins fallen im Bundle weg.
+  Ein Legacy-Aufruf (`experimentalDecorators`) wirft mit Hinweis.
+- **Klassenfelder (`[[Define]]`, TS-Default ab ES2022):** jedes deklarierte Feld wird per
+  `defineProperty` auf der Instanz angelegt, auch ohne Initializer (dann `undefined`).
+  Folgen, auf die Runtime und Compiler achten: Feld-Initializer laufen im Konstruktor
+  (`inject()` löst daher aus dem Service-Kontext auf, den der Renderer um die Instanziierung
+  aktiviert — `withServices`); ein Feld in einer abgeleiteten Klasse überschattet einen
+  Accessor gleichen Namens der Basis (statt wie bei `[[Set]]` den Setter zu rufen) und ein
+  Feld ohne Initializer setzt den Basiswert auf `undefined` — eine reine Typ-Neudeklaration
+  schreibt man `declare x: T` (TS meldet sonst TS2612/TS2610 im Editor). Die generierte Klasse
+  deklariert selbst nur `@inject`-Felder und die `@code`-Member, nie Felder der
+  Code-behind-Klasse.
 - **ComponentState/RenderHandle** spiegeln Blazor; `RenderHandle.track(promise)` nimmt
   in-flight Async-Arbeit auf, damit `waitUntilIdle` sie einschließt (z. B. Virtualize-Loads).
 
@@ -177,7 +206,11 @@ if (import.meta.hot) {
 1. findet alle ComponentStates mit dem alten Typ und setzt die neue Definition,
 2. **behält die Instanz-Objekte**: Prototyp-Swap auf die neue Klasse; Felder, die der
    neue Konstruktor initialisiert und die alte Instanz nicht hat, werden von einer
-   frischen Probe-Instanz übernommen (State-Retention),
+   frischen Probe-Instanz übernommen (State-Retention). Mit `[[Define]]`-Feldern ist jedes
+   deklarierte Feld eine eigene Property — auch ohne Initializer; ein Feld, das die neue
+   Version zum Getter/Setter gemacht hat, wird deshalb von der Instanz entfernt (sonst
+   überschattete es den Accessor). Die Parameter-Metadaten kommen nach dem Swap aus der
+   neuen Klasse,
 3. triggert `stateHasChanged` — der neue `buildRenderTree` diffed das bestehende DOM.
 
 Der Diff toleriert Hot-Swaps auch bei Parent-Re-Renders: Frames mit gleichem
