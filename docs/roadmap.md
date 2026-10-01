@@ -767,6 +767,38 @@ fluentcms-Port und gallery-Table ohne handgeschriebenen `RenderTreeBuilder`-Code
 *Warum hier und nicht in Phase 3:* Ohne 2.1 nicht unterscheidbar, ob `<Found>` ein Slot oder
 eine Komponente ist; und 2.4 soll Slots bereits typisiert prüfen.
 
+**Stand: 2.3 umgesetzt** (Branch `roadmap/p2-3-templates`; Regeln in
+[language-reference.md](language-reference.md#templated-components-benannte-slots-und-template-kontexte-23)).
+Slot vs. Komponente entscheidet das Elternteil anhand seiner Parameter-Metadaten (C13): ein
+direktes Kind, das einen `RenderFragment`-/`RenderFragment<T>`-Parameter benennt, ist
+Child-Content-Element — auch wenn eine gleichnamige Komponente existiert (wie Razor, wo
+Child-Content-Tag-Helper vor Komponenten binden); ohne Eltern-Metadaten bleibt alles
+2.2-Verhalten. Emittiert wird unter dem kanonischen Parameternamen;
+`RenderFragment<T>` als `(context) => (__builder) => {…}` mit dem Kontext als Body-lokal
+(Standard `context`; `Context="x"` auf der Komponente benennt den Kontext aller ihrer
+Templates, `Context="y"` auf dem Slot überschreibt für diesen; literal, TS-Bezeichner,
+typisiert `any` — typisierte Kontexte 2.4). Der Element-Inhalt einer Komponente ohne
+Child-Content-Elemente bleibt ihr `ChildContent` — ein `RenderFragment<T>`-ChildContent
+(generisch, per `@typeparam`) wird auch ohne `<ChildContent>`-Element zum Template;
+Whitespace zwischen Slots ist kein Content. Typargument-Attribute der `@typeparam`s
+(`TItem="Person"`) sind Schablonen-Syntax (kein Laufzeit-Attribut, Wert muss einen
+TS-Typ parsen). Diagnosen: TZS027 (unerkannter Child-Content), TZS028 (ungültiges
+Child-Content-Element — doppelt, auch per Attribut gesetzt, unbekanntes Slot-Attribut,
+nicht-literaler `Context`, Nicht-Fragment-Parameter als Element), TZS029
+(Kontextnamen-Konflikt geschachtelter Templates); TZS025 jetzt auch für unbekannte Slots
+(mit Umbenennungs-Fix inkl. End-Tag) und Element-Inhalt auf `ChildContent`-losen
+Komponenten; TZS024/TZS009 für ungültige/leere Typargument-Werte. App-Konvertierung: keine
+handgeschriebenen Render-Trees mehr — `<Router><Found Context="routeData">` in den vier
+Apps (bench, demo, gallery, sleipnir), Pizza LoginDisplay/MainLayout, Demo
+AuthDemo/VirtualizeDemo/ComponentsDemo (Dialog-Footer), Gallery Table-/Dashboard-/
+Orders-Seiten und Dialog-Footer. Gates: 990/990 Tests, LSP-Smokes (completion + ts),
+Pizza 20/20, Gallery, Sleipnir, Demo (components 31, scoped 10, code-behind 5,
+debugging 14, counter-state 8) grün; FluentCMS-Probe unverändert 149/164 — die 18
+verbliebenen stillen `@context`-Befunde stehen in Dateien, deren Slots unaufgelöste
+Built-ins von Phase 3 sind. **Offen:** `TItem`-Inferenz (Attribute nur explizit;
+Inferenz aus dem Typparameter-Use macht 2.4 über Typen), typisierte Kontexte (2.4),
+LSP-Completion/Hover für Slots (2.5).
+
 ### 2.4 — Typisierte Shadows und `tsazor check`
 
 - Shadow emittiert Prop-Prüfungen pro Komponenten-Tag (z. B. `satisfies Partial<ParamsOf<T>>`),

@@ -280,6 +280,28 @@ abhängigen Einträge neu auf. Für 4.1 (HMR) liegen die Kanten offen:
 `invalidate(file)`. Grenze: eine neu angelegte `_Imports.tsazor` oberhalb
 invalidiert nicht von selbst (4.1 ruft `invalidate`).
 
+### Templated Components (2.3)
+
+Slot vs. Komponente wird **vor** der Tag-Auflösung aus den Metadaten des
+Elternteils entschieden (`classifyChildContent` in codegen.ts): ein direktes
+Kind, das einen `RenderFragment`-/`RenderFragment<T>`-Parameter der
+übergeordneten Komponente benennt, ist ein Child-Content-Element (`slotElements`),
+auch wenn eine gleichnamige Komponente existiert — Razor rewrites einen
+`ChildContent`-Tag-Helper am Elternteil (`ComponentLoweringPass`) vor dem
+Component-Fallback. Ohne Eltern-Metadaten bleibt alles 2.2-Verhalten; unaufgelöste
+Großbuchstaben-Tags, die wie Slots aussehen, bekommen hier TZS025/TZS027/TZS028
+(wobei TZS005 entfällt). Die Emission (`emitComponent`/`emitFragment`) setzt jeden
+Slot per `addAttribute` unter dem kanonischen Parameternamen;
+`RenderFragment<T>` wird zu `(context) => (__builder) => {…}` — der Kontextname
+kommt vom Slot-`Context`, sonst vom Komponenten-`Context` (Schablonen-Attribut,
+wie Razor RZ10002 konsumiert), sonst `context` — und als Body-lokal registriert;
+der `@context`-Bind-Schutz kennt die Art `context`. Typargument-Attribute der
+`@typeparam`s (`TItem="Person"`) werden konsumiert und ihr Wert per
+`typeSyntaxError` (rewrite.ts) auf einen TS-Typ geprüft. Whitespace zwischen Slots
+ist kein Content; lose Inhalte neben Slots, doppelte Slots, unbekannte
+Slot-Attribute und Nicht-Fragment-Parameter als Element sind TZS027/TZS028 —
+Meldungstexte folgen Razors ComponentDiagnosticFactory (RZ9995–RZ9999/RZ10002).
+
 ## HMR (State-Retention)
 
 Jede `.tsazor`-Datei akzeptiert ihre eigenen Updates:

@@ -280,7 +280,9 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   `/abc?x`, nicht `/abcdef`). Ein `Prefix`-Link auf die Basis (`Href=""`, ohne `<base>` auch
   `Href="/"`) ist deshalb überall aktiv — der Home-Link nimmt `Match="@NavLinkMatch.All"`.
 - Ein leerer Attributwert (`href=""`) ist der leere String (Element-Attribut wie Parameter).
-- Element-Inhalt einer Komponente → `ChildContent`-Parameter.
+- Element-Inhalt einer Komponente → `ChildContent`-Parameter; Elemente, die
+  `RenderFragment`-Parameter benennen (benannte Slots), setzen genau diesen
+  Parameter (`<Found Context="routeData">…` — siehe unten).
 - Unbekannte Attribute → Parameter mit `captureUnmatchedValues` (`additionalAttributes`);
   ohne einen solchen ⇒ Fehler TZS025 (siehe unten).
 
@@ -334,6 +336,68 @@ ist — TypeScript:
 - Cascading: `@CascadingParameter({ type: EditContext })` (by-type) oder
   `@CascadingParameter({ name: "x" })` (by-name) — `CascadingValue`/`EditForm` liefern.
 
+### Templated Components: benannte Slots und Template-Kontexte (2.3)
+
+Ein Element als **direktes** Kind einer Komponente, dessen Tag einen
+`RenderFragment`-/`RenderFragment<T>`-Parameter der Komponente benennt, ist ein
+Child-Content-Element (Blazor-Templates) und wird als dieser Parameter gesetzt —
+nicht mehr als `ChildContent` oder als Komponente gerendert:
+
+```razor
+<Router>
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@MainLayout" />
+    </Found>
+    <NotFound>
+        <p class="not-found">Page not found.</p>
+    </NotFound>
+</Router>
+
+<Table items="@this.rows">
+    <HeaderContent>
+        <tr><th>Customer</th><th>Total (€)</th></tr>
+    </HeaderContent>
+    <RowContent Context="row">
+        <tr class="orders-row" @onclick="() => this.openDetail(row)">
+            <td>#@row.id</td>
+        </tr>
+    </RowContent>
+</Table>
+```
+
+- **Slot vs. Komponente** entscheidet das Elternteil: die Metadaten der
+  übergeordneten Komponente kennen den Parameter — wie Razor, wo Child-Content-
+  Tag-Helper vor Komponenten binden. `<Header>` innerhalb einer Komponente mit
+  `Header`-Fragment-Parameter ist deren Slot, auch wenn eine Komponente `Header`
+  existiert; außerhalb (oder unterhalb, in Markup verschachtelt) bleibt `<Header>`
+  jene Komponente bzw. ist dort TZS027, wenn sie nur als Slot bekannt ist. Ohne
+  Metadaten des Elternteils bleibt ein Tag Komponente/Element (2.2-Verhalten).
+- `RenderFragment<T>`: der Kontext heißt standardmäßig `context` und ist eine
+  lokale Variable des Slot-Bodys (außerhalb eines Templates bleibt `@context`
+  das Member `this.context`). **`Context="x"` auf der Komponente** benennt den
+  Kontext aller ihrer `RenderFragment<T>`-Child-Contents (Komponente, Slot und
+  generisches `ChildContent`), **`Context="y"` auf dem Slot** überschreibt es
+  für genau diesen. Der Wert muss literal sein — ein TypeScript-Bezeichner
+  (anders als Razor, das den Kontexttyp kennt, ist er hier `any`, bis 2.4
+  typisierte Shadows ihn prüfen). Geschachtelte Templates mit demselben
+  Kontextnamen ⇒ TZS029 in der inneren (Razors Vorschlag: `Context="another_name"`).
+- **Typargument-Attribute** einer generischen Komponente (`TItem="Person"`, ein
+  Attribut pro `@typeparam`) sind Schablonen-Syntax — kein Attribut zur Laufzeit:
+  der Wert muss ein TypeScript-Typ sein (sonst TZS024; leer oder Mixed TZS009)
+  und wird gegen die `@typeparam`s der Komponente zugeordnet.
+- Lose Inhalte, die neben Child-Content-Elementen stehen (Whitespace zwischen
+  ihnen zählt nicht), ⇒ TZS027; ein zweimal gesetzter bzw. auch per Attribut
+  gesetzter Slot ⇒ TZS028; Attribute auf dem Slot außer `Context` (und nur auf
+  einem `RenderFragment<T>`) ⇒ TZS028; ein Tag, das keinen Fragment-Parameter
+  benennt, als Child-Content-Element geschrieben ⇒ TZS028 (Wert-Parameter
+  gehört ins Attribut); unbekanntes Slot-Namenskürzel bei vollständigen
+  Metadaten ⇒ TZS025 mit Umbenennungs-Fix (auch für End-Tags); ein Slot als
+  direkes Kind der falschen Komponente bzw. verschachtelt ⇒ TZS027.
+- Der Element-Inhalt einer Komponente **ohne** Child-Content-Elemente bleibt
+  deren `ChildContent` — ist dieser ein `RenderFragment<T>`, nimmt er den
+  Kontext (`Context=`, sonst `context`) und wird als Template emittiert; ein
+  eine Komponente ohne `ChildContent`-Parameter duldet keinen Element-Inhalt (TZS025).
+
 ## Kompatibilität .razor ↔ .tsazor
 
 | Konstrukt | Status |
@@ -349,14 +413,14 @@ ist — TypeScript:
 | `@namespace`, `@rendermode`, `@preservewhitespace` | akzeptiert, ignoriert |
 | DataAnnotations-Validierung | abweichend (funktionsbasiert: `validators: Record<string, (value, model) => string \| null>`) |
 | `@bind:format` | begrenzt v1 |
-| Benannte Child-Slots (`<Found Context>`-Stil) | Phase 2 |
+| Benannte Child-Slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identisch (2.3 — siehe [Templated Components](#templated-components-benannte-slots-und-template-kontexte-23)) |
 | `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
 | `@authorize` | ja (Tsazor-Erweiterung für `[Authorize]`; bare oder mit `{ roles, policy }`; nicht über `_Imports` vererbt) |
 | `@implements` | akzeptiert, ignoriert (TS-Interfaces sind strukturell) |
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS026` mit Quellbereich
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS030` mit Quellbereich
 (`TZS011`, `TZS014`, `TZS022`, `TZS023` und `TZS026` sind Warnungen, z. B. `@inherits`-Konflikt mit
 Code-behind bzw. ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
@@ -375,7 +439,17 @@ Markup-Ausdruck — `@x`/`@(…)`, Attributwerte (auch gemischte, Event-Handler,
 späteren esbuild-Fehlers). Ein ungültiger `@for`-Zählkopf ist `TZS015` wie Statement-Läufe.
 2.2 ([Komponenten-Attribute](#komponenten-attribute-nach-parametertyp)): `TZS025` unbekannter
 Komponenten-Parameter (Fehler, mit „Did you mean"-Fix), `TZS026` Parametertyp bzw. Parameter der
-Komponente unbekannt (Warnung; der Wert wird wie geschrieben übergeben).
+Komponente unbekannt (Warnung; der Wert wird wie geschrieben übergeben). 2.3
+([Templated Components](#templated-components-benannte-slots-und-template-kontexte-23)):
+`TZS027` unerkannter Child-Content (Fehler — lose Inhalte neben Child-Content-Elementen;
+ein Slot außerhalb seiner Komponente oder nicht direkt darunter), `TZS028` ungültiges
+Child-Content-Element (Fehler — doppelt gesetzt, auch per Attribut gesetzt, unbekanntes
+Attribut auf dem Slot, nicht-literaler `Context`, ein nicht-Fragment-Parameter als Element
+geschrieben), `TZS029` Namenskonflikt des Template-Kontexts (Fehler — geschachtelte Templates
+mit gleichem Kontextnamen; die Meldung nennt `Context="another_name"`). Auch 2.3: ein
+unbekanntes Slot-Kürzel bei vollständigen Metadaten ist `TZS025` (jetzt auch mit Fix für
+Element- und End-Tag-Namen), und ein leerer bzw. ungültiger `TItem`-Typargumentwert ist
+`TZS009` bzw. `TZS024`.
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
 
 **Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte
@@ -393,4 +467,4 @@ text }] }`, im LSP als Quick-Fix (Code Action):
 | `TZS021` `@typeparam T where T : IItem` | Klausel ⇒ `extends IItem` (keiner für `struct`/`class`/`new` …) |
 | `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Direktive ⇒ `@authorize…` / `@page "…"` / Zeile entfernen (nur bei einem Attribut pro Liste, nur literale Werte) |
 | `TZS022` `var` | ⇒ `let` |
-| `TZS025` unbekannter Komponenten-Parameter mit naher Entsprechung | Attributname ⇒ Vorschlag (`Lable` ⇒ `Label`) |
+| `TZS025` unbekannter Komponenten-Parameter mit naher Entsprechung | Attribut- bzw. Elementname ⇒ Vorschlag (`Lable` ⇒ `Label`, `<RowTemplat>` ⇒ `<RowTemplate>` inkl. End-Tag) |
