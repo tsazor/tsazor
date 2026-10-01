@@ -1,4 +1,3 @@
-import type { RenderFragment } from "../render-tree/render-tree.js";
 
 /**
  * Blazor's EditContext: change tracking and validation state for a model
@@ -94,5 +93,3 @@ export interface FieldIdentifier {
   readonly model: unknown;
 }
 
-/** Renders an EditContext-cascading subtree; used by EditForm. */
-export type EditFormFragment = RenderFragment;

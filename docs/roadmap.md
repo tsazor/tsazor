@@ -392,8 +392,8 @@ leer ist (Renders aus Render/Lifecycle/neuen Kindern im selben Batch). Dafür fo
 synchroner Lifecycle seinen Render jetzt synchron an (vorher immer nach einem `await`);
 async Hooks unverändert (R6 bleibt B4). Batch-Ende: `renderer.onBatchCompleted(listener)`
 mit `renderedComponents` (ein Eintrag pro Pass). Fehler-Hook: `renderer.errorHandler`
-(`{ error, component, phase }`), zentral über `handleComponentError` — dort setzt die
-ErrorBoundary-Suche entlang der Parent-Kette (Phase 3) an. Ein Pass, der in Render/Diff/DOM
+(`{ error, component, phase }`), zentral über `handleComponentError` — dort sitzt seit 3.1
+die ErrorBoundary-Suche entlang der Parent-Kette. Ein Pass, der in Render/Diff/DOM
 scheitert, wird verworfen (Builder und Slot-Map des Live-Baums bleiben, neu instanziierte
 Kinder werden disposed; bereits angewandte DOM-Edits werden nicht zurückgerollt).
 `activeRenderer` entfernt; `isRenderingInProgress` spiegelt den Batch. Frame-Referenzen:
@@ -920,19 +920,171 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 
 **Voraussetzung:** B2 (Fehlerisolation), B3/B4 (Disposal, Lifecycle), 2.3 (Slots).
 
-| Schritt | Inhalt | Abhängig von |
-|---|---|---|
-| 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 |
-| 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) |
-| 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 |
-| 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate` | B3 (Logical Ranges außerhalb des Roots) |
-| 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 |
+**Stand (2026-10-01):** 3.1–3.5 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
+Renderer-Routing per Parent-Kette (Blazors `HandleExceptionViaErrorBoundary`), erzwungene
+Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal;
+`DynamicComponent` mit `Type`/`Parameters`, Blazors Unknown-Parameter-Fehler und Reference-Capture;
+`MarkupString` als Markup-Frame (Compiler erkennt `new MarkupString(...)`/`… as MarkupString`);
+Sections (`SectionRegistry` pro Renderer, `SectionContent`/`SectionOutlet`) mit HeadOutlet als
+zweitem App-Root im `<head>`, `PageTitle` als Title-Sektion, `FocusOnNavigate`.
+EditForm mit Blazors `OnSubmit`/`OnValidSubmit`/`OnInvalidSubmit` (`EventCallback<EditContext>`,
+Submit-Await im getrackten Handler), `EditContext`-Parameter und fixer Cascade, Model-Wechsel
+errichtet den Form-Subtree neu (Region je Kontext-Identität);
+`<NotAuthorized>` von `AuthorizeView`/`AuthorizeRouteView` empfängt den `AuthenticationState`.
+Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
+
+| Schritt | Inhalt | Abhängig von | Stand |
+|---|---|---|---|
+| 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 | umgesetzt |
+| 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | umgesetzt |
+| 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | umgesetzt |
+| 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate`, Sections (`SectionContent`/`SectionOutlet`), `PageTitle` als Sektion | B3 (Logical Ranges außerhalb des Roots) | umgesetzt |
+| 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | umgesetzt |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
 | 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 |
 | 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — |
 
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
 PluginForm, Slots und `@bind` in Masse).
+
+### 3.1 — ErrorBoundary
+
+**Stand: umgesetzt** (2026-10-01, Branch `roadmap/p3-builtins`). Neue
+`packages/runtime/src/components/error-boundary.ts`: `ErrorBoundaryBase` (Port von Blazors
+`ErrorBoundaryBase.cs`) mit `childContent`, `errorContent: (error: unknown) => RenderFragment`
+(Blazor: `RenderFragment<Exception>` — TS-Abweichung `unknown`), `maximumErrorCount` (Default
+100), `recover()` (nur im Fehlerzustand, Zähler-Reset wie Blazors `Recover`) und dem
+Logging-Hook `onError` (Default `console.error`); `ErrorBoundary` als Tag-Component.
+`IErrorBoundary` ist das Marker-Protokoll (`isErrorBoundary === true`,
+`isIErrorBoundary(component)`) — jeder Komponente erlaubt, wie Blazors Interface `IErrorBoundary`.
+
+Routing in `renderer.ts` (`handleComponentError` → `routeToErrorBoundary`): alle Phasen außer
+`dispose` und `batch` (Blazor: nur dort) und nur mit identifizierbarer Komponente; die Parent-
+Kette inkl. Quelle selbst — der eigene ErrorContent wirft ⇒ die Boundary fängt wieder, und der
+Fehlerzähler begrenzt die Schleife. Vor `handleException` rendert der Renderer den nächsten
+Pass der Boundary als leeren Baum (`state.forcedRenderFragment` — Port von Blazors
+`AddToRenderQueue(boundary, empty)`; diff/dispose baut den fehlgeschlagenen Subtree ab, auch
+wenn eine Unterkasse ohne Unterschied rendert), danach wieder der eigene Output (ErrorContent).
+Über `maximumErrorCount`: fatal an `renderer.errorHandler` (Blazor rethrowt;
+`ExceptionDispatchInfo` n/a). Konformität: 16 Runtime-/Markup-Tests in
+`packages/conformance/test/runtime/error-boundary.test.ts` (nearest-wins, Recover, count-Reset,
+default UI, sync/async Event-, Lifecycle-, AfterRender-Fehler, Subtree-Unmount, Dispose fatal,
+Loop-Guard).
+
+### 3.2 — DynamicComponent
+
+**Stand: umgesetzt** (2026-10-01). Neue `packages/runtime/src/components/dynamic-component.ts`
+(Port von Blazors `DynamicComponent.cs`): `type` (Komponenten-Klasse oder
+`ComponentDefinition` — Blazor `Type`), `parameters` als Dictionary
+(Blazor `IDictionary<string, object>`; bewusst KEIN `captureUnmatchedValues`, wie Blazor
+kommentiert), `instance` per Component-Reference-Capture (Blazor `Instance`). Diff-Parität:
+`defineComponent`-Cache hält die Definition identisch über Renders — gleicher Type aktualisiert
+die Kind-Instanz, Type-Wechsel ersetzt (Dispose + neu), Dictionary-Änderung erreicht das Kind
+über Parameter-Neusetzung. Nur `Type`/`Parameters` (case-insensitive) werden akzeptiert —
+jeder andere Markup-Parameter wirft Blazors
+`"DynamicComponent does not accept a parameter with the name 'X'. To pass parameters …"` in
+`applyParameterValues` (vor der Zuweisung); fehlender Type wirft Blazors
+`"…requires a non-null value for the parameter Type."` (nach der Zuweisung — ein ungültiger
+Extra-Parameter wird zuerst gemeldet). Im Markup (2.1-Metadaten) fängt der Compiler den
+unbekannten Parameter bereits als TZS025. Konformität: 10 Runtime-/Markup-Tests in
+`packages/conformance/test/runtime/dynamic-component.test.ts`.
+
+### 3.3 — MarkupString
+
+**Stand: umgesetzt** (2026-10-01). Runtime: `packages/runtime/src/components/markup-string.ts`
+(Blazors `MarkupString`-Struct als Klasse, `value` + `toString`); `addContent` entpackt
+`MarkupString`-Instanzen in Markup-Frames (Blazors `AddContent(MarkupString)` → unescaped;
+der Diff vergleicht `markupContent`). Compiler (`codegen.ts`): Markup-Expressions
+`new MarkupString(inner)` und `inner as MarkupString` — das Pendant zu C#s `(MarkupString)s` —
+werden über `markupStringContent()` erkannt (TS-Parser statt Regex: Strings/Template-Literals
+im `inner` sind sicher) und **direkt** als `addMarkupContent(seq, inner)` emittiert — kein
+Instanz-Objekt, der Wert ist der gebackene Ausdruck. Erkennung nur, wenn der Name über
+`@import` an `@tsazor/runtime` gebunden ist (neu: `runtimeBoundNames` in `collectImports`
+verfolgt den Modul-Specifier je Name; Umbenennungen wie `MarkupString as Raw` zählen, ein
+gleichnamiger lokaler Typ nie). Normale `@`-Ausdrücke bleiben escaped. Konformität: 10 Tests
+in `packages/conformance/test/runtime/markup-string.test.ts` (Raw/escaped, Cast-Form, Diff
+eines dynamischen Feldes, Alias, Shadowing, Slot-Kontext, Runtime-Entpackung inkl.
+ChildContent).
+
+### 3.4 — Sections, HeadOutlet, FocusOnNavigate
+
+**Stand: umgesetzt** (2026-10-01). Neue Dateien: `packages/runtime/src/sections/`
+(`section-registry.ts`, `section-content.ts`, `section-outlet.ts`),
+`packages/runtime/src/head/` (`head-content.ts`, `head-outlet.ts`),
+`packages/runtime/src/routing/focus-on-navigate.ts`, `packages/runtime/src/navigation/dom-wrapper.ts`.
+
+- **SectionRegistry** (Port von Blazors `SectionRegistry.cs`): Provider-Liste je Identifikator
+  (`SectionName`-String oder `SectionId`-Objekt; beide gesetzt oder keiner wirft Blazors
+  Fehlermeldungen), „last added wins“, Default-Content bleibt vorn und verliert, Entfernen des
+  letzten Providers fällt auf den vorherigen zurück (inkl. Default-Content), Entfernen eines
+  Nicht-letzten benachrichtigt nicht, genau **ein** Subscriber (`SectionOutlet`) je
+  Identifikator — zweiter wirft Blazors Fehler. Abweichung: Blazors
+  Render-Mode-Mismatch-Erkennung entfällt (Tsazor hat keine Render-Modes).
+- **Registry-Verdrahtung** wie in Blazor über den RenderHandle: `renderer.sectionRegistry`
+  (eine Instanz pro Renderer), `renderHandle.sectionRegistry` auf jedem ComponentState —
+  keine Global-Variable.
+- **SectionOutlet**: rendert den Inhalt über eine eigene Komponente
+  (`SectionOutletContentRenderer`), **keyed per Content-Fragment** (`b.setKey(fragment)` —
+  Blazors `SetKey(RenderFragment)`, Port: `componentKey`/`setKey` nehmen jetzt beliebige
+  Objekte als Keys). Wechselndes Content ⇒ neue Renderer-Instanz (Cascades/Errors werden
+  neu bewertet), gleiches Content ⇒ Instanzen bleiben.
+- **SectionContent** als Provider; `isDefaultContent` ist hier Parameter statt Blazors
+  interner Eigenschaft — als dokumentierte Abweichung, weil Tsazor kein `IComponent.Attach`
+  hat; HeadOutlet setzt es programmatisch (Markup-Nutzung nicht vorgesehen).
+- **HeadOutlet** (Port von `HeadOutlet.cs`): rendert die Title- und Head-Sektion; als zweiter
+  Root wird er von `createTsazorApp` in `document.head` gemountet (Blazors
+  WebAssembly-Host-Parität) und von `app.dispose()` zuerst entsorgt. Blazors JS
+  `PageTitle.getAndRemoveExistingTitle` ist als `getAndRemoveExistingTitle()` portiert: der
+  erste statische (Prerender-) `<title>` wird beim ersten After-Render erfasst und entfernt;
+  Tsazor-eigene Title-Elemente (vorangegangener Range-Marker-Kommentar) bleiben unberührt
+  (Abweichung: Blazor prüft den Logical-Element-Map-Eintrag, Tsazor den Marker-Kommentartext).
+- **PageTitle** auf Sektion umgebaut: statt direkten `document.title`-Schreibens rendert es
+  ein `SectionContent` unter `HeadOutlet.TitleSectionId`; Entfernen fällt auf den statischen
+  Default-Titel zurück.
+- **FocusOnNavigate** (Port von `FocusOnNavigate.cs` + `DomWrapper.focusBySelector`): bei
+  Seitenwechsel (Vergleich über `routeData.route.type`, Sentinel-Klasse wie Blazors
+  `NonMatchingPageType`) fokussiert nach dem Render; ohne `tabindex` wird `tabIndex = -1`
+  gesetzt, `focus({ preventScroll: true })`. Renders nichts (Abweichung dokumentiert: Blazors
+  nicht-interaktiver Pfad rendert ein Custom-Element für die JS-Brücke — Tsazor ist immer
+  interaktiv). Fehler-Texte wie Blazor.
+
+Konformität: 22 Tests — 14 in `packages/conformance/test/runtime/sections.test.ts`
+(Last-wins, Fallback, Default-Content, Non-Last-Notify-Stille, Keyed-Renderer-Subtree,
+Subscriber-Fehler, Identifikator-Fehler, Unsubscribe bei Disposal, Markup), 4 in
+`packages/conformance/test/runtime/head.test.ts` (HeadContent im Head, PageTitle +
+Default-Titel-Capture/Fallback, createTsazorApp-Head-Root mit Dispose), 4 in
+`packages/conformance/test/runtime/focus-on-navigate.test.ts`.
+
+### 3.5 — EditForm
+
+**Stand: umgesetzt** (2026-10-01). `packages/runtime/src/forms/edit-form.ts` nach Blazors
+`EditForm.cs` neu geschrieben; `authorize-view.ts`/`authorize-route-view.ts`:
+`notAuthorized` ist `RenderFragment<AuthenticationState>`.
+
+- **Parameter:** `Model` oder `EditContext` (beides zugleich bzw. keins wirft Blazors
+  OnParametersSet-Fehlermeldungen wortgleich); `onSubmit` ersetzt die Validierung
+  (Kombination mit `OnValidSubmit`/`OnInvalidSubmit` wirft Blazors Meldung), sonst validiert
+  der `EditContext` und es geht an `onValidSubmit`/`onInvalidSubmit`. Alle drei Callbacks sind
+  `EventCallback<EditContext>`; ChildContent ist `(context: EditContext) => RenderFragment`
+  (Tsazors Schreibung von Blazors `RenderFragment<EditContext>`) — der Markup-Slot-Kontext
+  `@context` ist der EditContext (2.4-Mechanik gegen die Framework-Metadaten).
+- **Await-Tracking:** `handleSubmit` awaitet den Callback innerhalb des getrackten
+  `onsubmit`-Event-Handlers, deshalb deckt `waitUntilIdle` ein async `OnValidSubmit`/`OnSubmit`
+  ab (Blazor: `HandleSubmitAsync` im Delegate).
+- **Fixer Cascade + Region-Trick:** wie in Blazor — `IsFixed=true`; der ganze Form-Subtree liegt
+  in einer Region, deren Sequence die Kontext-Identität ist (Blazors
+  `OpenRegion(_editContext.GetHashCode())`; Port: `WeakMap<EditContext, number>`-Zähler, da
+  GetHashCode nicht portierbar). Ein neu erzeugter Kontext (neues `Model`, neuer
+  `EditContext`-Parameter) ersetzt die Region komplett — Input-Zustand wird resettet.
+- **NotAuthorized** (Blazor `RenderFragment<AuthenticationState>`) empfängt den
+  `AuthenticationState` als Slot-Kontext; Markup-Slots ändern sich nicht.
+- Abweichung dokumentiert: `DataAnnotationsValidator`/`ClientValidationData` (SSR-Mapping)
+  entfallen — Validierung bleibt die funktionsbasierte `Validators`-Map (3.6 entscheidet
+  das Validierungsmodell).
+
+Konformität: 7 Tests in `packages/conformance/test/runtime/forms.test.ts` (gültig/ungültig
+Routing, OnSubmit-ohne-Validierung, async-Await vor Renderer-Idle, drei Blazor-Fehlermeldungen,
+Cascade des EditContext in den Slot-Kontext, Region-Rebuild bei Model-Wechsel).
 
 ---
 

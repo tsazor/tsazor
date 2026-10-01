@@ -2,6 +2,7 @@ import { FrameType, EventHandlerFlags } from "./frame-type.js";
 import type { ComponentType } from "../components/component-definition.js";
 import type { EventCallback } from "../components/event-callback.js";
 import type { ComponentBase } from "../components/component-base.js";
+import { MarkupString } from "../components/markup-string.js";
 
 /** A fragment of render output: writes frames into a builder. Blazor's RenderFragment. */
 export type RenderFragment = (builder: RenderTreeBuilder) => void;
@@ -20,7 +21,7 @@ export interface RenderTreeFrame {
   readonly sequence: number;
   /** Element frames */
   readonly elementName?: string;
-  readonly elementKey?: string | number | null;
+  readonly elementKey?: string | number | object | null;
   readonly elementSubtreeLength?: number;
   /** Text frames */
   readonly textContent?: string | number | boolean | bigint;
@@ -32,7 +33,10 @@ export interface RenderTreeFrame {
   /** Component frames */
   readonly componentType?: ComponentType;
   readonly componentId?: number;
-  readonly componentKey?: string | number | null;
+  /** Component @key: string | number from markup (`@key="…"`), any object from
+   *  programmatic builds — SectionOutlet keys its nested renderer by the
+   *  fragment (Blazor's SetKey(RenderFragment), object identity). */
+  readonly componentKey?: string | number | object | null;
   readonly componentSubtreeLength?: number;
   /** Region frames */
   readonly regionSubtreeLength?: number;
@@ -62,7 +66,8 @@ export type AttributeValue =
   | EventCallback<any>
   | RenderFragment
   | Record<string, unknown>
-  | object;
+  | object
+  | symbol;
 
 /**
  * Builds a flat render tree, mirroring Blazor's RenderTreeBuilder.
@@ -108,7 +113,7 @@ export class RenderTreeBuilder {
     this.closeOpenFrame();
   }
 
-  setKey(key: string | number | null | undefined): void {
+  setKey(key: string | number | null | undefined | object): void {
     const index = this.openFrameStack[this.openFrameStack.length - 1];
     if (index === undefined) {
       throw new Error("setKey may only be called inside an open element or component.");
@@ -148,7 +153,18 @@ export class RenderTreeBuilder {
     }
   }
 
-  addContent(sequence: number, textOrFragment: string | number | boolean | bigint | null | undefined | RenderFragment): void {
+  addContent(
+    sequence: number,
+    textOrFragment:
+      | string
+      | number
+      | boolean
+      | bigint
+      | null
+      | undefined
+      | RenderFragment
+      | MarkupString,
+  ): void {
     // Blazor's builder: content written inside a component frame becomes the
     // component's ChildContent parameter instead of a renderable subtree.
     const parentIndex = this.openFrameStack[this.openFrameStack.length - 1];
@@ -176,6 +192,9 @@ export class RenderTreeBuilder {
       this.closeRegion();
     } else if (textOrFragment === null || textOrFragment === undefined) {
       // Blazor's AddContent(object?) renders value?.ToString(): null is nothing.
+    } else if (textOrFragment instanceof MarkupString) {
+      // Blazor: a MarkupString content value yields an unescaped Markup frame.
+      this.frames.push({ frameType: FrameType.Markup, sequence, markupContent: textOrFragment.value });
     } else {
       // Every other value renders as its string — booleans included ("true"/
       // "false", the TS analogue of Blazor's "True"/"False"); there is no

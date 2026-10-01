@@ -32,6 +32,13 @@ export class ComponentState {
   /** @internal Render passes in the current batch (render-loop guard). */
   batchRenderCount = 0;
   /**
+   * @internal Blazor's AddToRenderQueue(boundary, empty): a one-shot fragment
+   * the component's NEXT render pass builds instead of its own output. Set by
+   * the error-boundary routing (handleComponentError), consumed by
+   * renderComponent — the error-state render is queued after it.
+   */
+  forcedRenderFragment: ((builder: RenderTreeBuilder) => void) | null = null;
+  /**
    * @internal Cascading subscriptions (Blazor's CascadingParameterState):
    * the non-fixed suppliers this component's cascading parameters resolved
    * to (plus "pending" by-type candidates), null when there are none.

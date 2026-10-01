@@ -108,6 +108,12 @@ function fragment(text: string): RenderFragment {
   };
 }
 
+function stateFragment(text: string): (state: AuthenticationState) => RenderFragment {
+  return (_state) => (b: RenderTreeBuilder) => {
+    b.addContent(0, text);
+  };
+}
+
 describe("AuthorizeView", () => {
   it("renders authorized content for the authenticated user and cascades the state", async () => {
     const provider = new TestAuthProvider();
@@ -123,7 +129,7 @@ describe("AuthorizeView", () => {
             inner.closeComponent();
           };
         });
-        b.addAttribute(3, "NotAuthorized", fragment("denied"));
+        b.addAttribute(3, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -142,7 +148,7 @@ describe("AuthorizeView", () => {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
         b.addAttribute(1, "ChildContent", fragment("secret"));
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -169,7 +175,7 @@ describe("AuthorizeView", () => {
             b.addAttribute(sequence++, name, value as never);
           }
           b.addAttribute(sequence, "ChildContent", fragment("granted"));
-          b.addAttribute(sequence + 1, "NotAuthorized", fragment("denied"));
+          b.addAttribute(sequence + 1, "NotAuthorized", stateFragment("denied"));
           b.closeComponent();
         }
       }
@@ -205,7 +211,7 @@ describe("AuthorizeView", () => {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
         b.addAttribute(1, "ChildContent", fragment("secret"));
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -292,7 +298,7 @@ describe("AuthorizeRouteView", () => {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeRouteView));
         b.addAttribute(1, "RouteData", this.routeData as never);
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }
@@ -320,7 +326,7 @@ describe("AuthorizeRouteView", () => {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeRouteView));
         b.addAttribute(1, "RouteData", this.routeData as never);
-        b.addAttribute(2, "NotAuthorized", fragment("denied"));
+        b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
     }

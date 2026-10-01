@@ -74,6 +74,8 @@ und `@attribute @decorator(…)` (echter Class-Decorator):
   (Warnung TZS014). Deshalb braucht es auch kein Opt-out (Blazors `[AllowAnonymous]`).
 - Wie in Blazor wirkt die Anforderung nur auf Routen (`@page` + `AuthorizeRouteView`), nicht
   auf eingebettete Komponenten. Unlesbare `@attribute`-Werte (`@attribute Authorize`) ⇒ TZS019.
+- `<NotAuthorized>` empfängt wie Blazors `RenderFragment<AuthenticationState>` den
+  `AuthenticationState` als Slot-Kontext (`@context.user.name`, 3.5).
 
 ## buildRenderTree ist generiert
 
@@ -161,6 +163,13 @@ Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
 - `@expression` — implizit: Identifier + Dot-Chains + balancierte Aufrufe; endet konservativ
   bei Whitespace/`<`/`>`. Bei Mehrdeutigkeit `@(...)` verwenden.
 - `@(expression)` — explizit.
+- `MarkupString` (3.3) — rohes HTML: `@(new MarkupString(html))` und `@(html as MarkupString)`
+  (das Pendant zu C#s `(MarkupString)s`) werden vom Compiler direkt in eine Markup-Frame-Emisierung
+  (`addMarkupContent`) gebacken — der Inhalt rendert **unescaped**; normale `@`-Ausdrücke bleiben
+  escaped (Blazor-Semantik). Voraussetzung: `@import { MarkupString } from "@tsazor/runtime"`
+  (Alias erlaubt); derselbe Name aus einem anderen Modul wird nicht umgeschrieben. Handgebaute
+  Bäume geben `MarkupString`-Instanzen an `addContent` — die Runtime entpackt sie in Markup-Frames
+  (dynamische Werte, Diff vergleicht den Markup-Text), `toString()` liefert den Wert.
 - E-Mail-Regel: `@` direkt nach einem alphanumerischen Textzeichen ist literal
   (`info@example.com`, auch in Attributwerten).
 - `@* … *@` — Razor-Kommentar (überall, mehrzeilig, darf Markup und `@` enthalten).
@@ -274,6 +283,68 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 
 <Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
 ```
+
+- `ErrorBoundary` (3.1) fängt Fehler des eigenen Subtrees — Render, Diff, DOM-Anwendung,
+  Lifecycle, synchrones und async `@onclick`-Handling, `onAfterRender` (Blazors
+  `HandleExceptionViaErrorBoundary`; Dispose- und Batch-Fehler bleiben wie dort fatal). Gesund
+  rendert `ChildContent`, fehlerhaft `ErrorContent` — das als `RenderFragment<unknown>`
+  typisiert ist (Abweichung: Blazor `RenderFragment<Exception>`); ohne Slot das Default-UI
+  `<div class="blazor-error-boundary">` (CSS-Styling wie im Blazor-Template). Der
+  Slot-Kontext heißt Default `context`:
+  `<ErrorContent Context="error">…@error.message…</ErrorContent>`. `maximumErrorCount`
+  (Default 100 wie Blazor) zählt Fehler zwischen zwei `recover()`-Aufrufen; darüber hinaus
+  ist der Fehler fatal und erreicht `renderer.errorHandler`. Eigene Boundaries erben von
+  `ErrorBoundaryBase` (oder implementieren `IErrorBoundary`: `isErrorBoundary = true` +
+  `handleException`); das `onError`-Hook loggt Default per Konsole (Blazor loggt über den
+  injizierten `IErrorBoundaryLogger` — Tsazor hat diesen Service nicht).
+
+- `DynamicComponent` (3.2) rendert eine zur Laufzeit gewählte Komponente (Blazor
+  `DynamicComponent.cs`): `Type` ist die Komponenten-Klasse (einer der Tags, importiert oder
+  aus dem Markup bekannt), `Parameters` ist ein Dictionary `{ name: value }`, das unverändert
+  an das gerenderte Kind gereicht wird:
+
+  ```razor
+  <DynamicComponent Type="@picked" Parameters="@({ label: "x" })" />
+  ```
+
+  Gleicher `Type` aktualisiert die Kind-Instanz (kein Neu-Render), ein `Type`-Wechsel ersetzt
+  sie (Dispose + Initialisierung — Blazor-Diffing). `Instance` nimmt die gerenderte
+  Kind-Instanz per Reference-Capture auf. Nur `Type`/`Parameters` werden als direkte Parameter
+  akzeptiert, alles andere ist TZS025 (im Markup) bzw. Blazors Laufzeit-Fehler
+  `DynamicComponent does not accept a parameter with the name 'X'. To pass parameters …`
+  (in handgebauten Bäumen). Fehlt `Type` (null), wirft die Komponente Blazors
+  `DynamicComponent requires a non-null value for the parameter Type.`
+
+- Sections (3.4) — Blazor-Parität: `<SectionContent SectionName="x">…</SectionContent>` ist ein
+  Provider, `<SectionOutlet SectionName="x" />` rendert den Inhalt desselben Identifikators
+  (`SectionId` mit einem Objekt statt `SectionName` geht auch; beides zugleich oder keins ist
+  ein Laufzeitfehler). „Last added wins“ — der zuletzt gerenderte Provider überschreibt (ein
+  Provider rendert an seiner eigenen Stelle nichts, ohne Outlet auch nichts); wird der letzte
+  Provider entfernt, fällt der Outlet auf den vorherigen zurück. Genau ein Outlet je
+  Identifikator — der zweite wirft Blazors Fehler.
+- `HeadContent`/`HeadOutlet`/`PageTitle`/`FocusOnNavigate` (3.4) — Blazor-Web-Pendants: die
+  Runtime mountet (createTsazorApp) als zweiten Root einen `HeadOutlet` in `document.head`;
+  `<HeadContent>`-Inhalt landet dort, `<PageTitle>` setzt als Title-Sektion `document.title`
+  (ein statischer Prerender-`<title>` wird beim ersten Render erfasst, als Fallback-Default
+  übernommen und aus dem Head entfernt — wie in Blazor). `<FocusOnNavigate
+  RouteData="@routeData" Selector="h1" />` (im Router-Kontext; `RouteData` kommt vom Router)
+  fokussiert das Element bei Seitenwechsel — ohne `tabindex` bekommt es `tabIndex = -1`,
+  mit Fokus `preventScroll`.
+
+- `EditForm` (3.5) — Blazors `EditForm.cs`: `Model`**oder** `EditContext` (beides zugleich
+  bzw. keins wirft Blazors Fehlermeldung), `OnSubmit` hat Vorrang vor der Validierung und
+  ersetzt sie (zusammen mit `OnValidSubmit`/`OnInvalidSubmit` ist der Kombinations-Fehler
+ Blazors Meldung), sonst validiert der `EditContext` und es geht an `OnValidSubmit` bzw.
+  `OnInvalidSubmit`. Alle drei Callbacks empfangen den `EditContext`
+  (`EventCallback<EditContext>`), und das Await des Callbacks liegt im getrackten
+  Submit-Handler — `waitUntilIdle` deckt ein asynchrones `OnValidSubmit` ab. Der `EditContext`
+  wird als fixer Cascade-Wert geliefert (`IsFixed=true`); bei einem neuen `Model` wird der
+  Kontext neu erzeugt und die Blazor-Region (`OpenRegion(_editContext.GetHashCode())` — hier:
+  Kontext-Identität aus einem WeakMap-Zähler) errichtet den ganzen Form-Subtree neu. Das
+  `<EditForm>`-Kind empfangt den Kontext als Slot-Kontext (`@context` — ChildContent ist
+  `(context: EditContext) => RenderFragment`). Abweichung: `DataAnnotationsValidator` /
+  `ClientValidationData` (SSR-Mapping) gibt es nicht — Validierung ist die funktionsbasierte
+  `Validators`-Map.
 
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut

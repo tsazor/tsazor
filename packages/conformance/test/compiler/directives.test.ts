@@ -132,7 +132,7 @@ describe("C19 — @attribute", () => {
         protected override buildRenderTree(b: RenderTreeBuilder): void {
           b.openComponent(0, defineComponent(AuthorizeRouteView));
           b.addAttribute(1, "RouteData", routeData as never);
-          b.addAttribute(2, "NotAuthorized", ((inner: RenderTreeBuilder) => inner.addContent(0, "denied")) as never);
+          b.addAttribute(2, "NotAuthorized", ((_state: AuthenticationState) => (inner: RenderTreeBuilder) => inner.addContent(0, "denied")) as never);
           b.closeComponent();
         }
       }

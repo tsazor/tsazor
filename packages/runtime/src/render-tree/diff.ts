@@ -77,7 +77,7 @@ export interface DiffOptions {
   isSameComponentType?: (oldType: unknown, newType: unknown) => boolean;
 }
 
-type Key = string | number;
+type Key = string | number | object;
 
 /** Blazor's KeyedItemInfo: where a key sits in the old/new sibling ranges. */
 interface KeyedItemInfo {

@@ -5,7 +5,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { EventCallback, type EditContext, type RenderTreeBuilder } from "@tsazor/runtime";
 import {
   Checkbox,
   FluentForm,
@@ -65,7 +65,7 @@ async function renderForm(
     if (onValidSubmit) {
       b.addAttribute(3, "onValidSubmit", EventCallback.unbound(onValidSubmit));
     }
-    b.addAttribute(4, "childContent", child);
+    b.addAttribute(4, "childContent", ((ctx: EditContext) => (b: RenderTreeBuilder) => child(b)) as never);
     b.closeComponent();
   });
   await settle(renderer);

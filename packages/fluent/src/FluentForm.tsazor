@@ -1,17 +1,18 @@
 @using @tsazor/runtime
-<EditForm class="fui-form" Model="@model" Validators="@validators" OnValidSubmit="@handleSubmit">@childContent</EditForm>
+@import type { EditContext } from "@tsazor/runtime"
+<EditForm class="fui-form" Model="@model" Validators="@validators" OnValidSubmit="@handleSubmit" Context="formContext">@childContent(formContext)</EditForm>
 
 @code {
     /** Model to edit and validate (passed to the inner EditForm). */
     @Parameter() model!: object;
     /** Field validators (passed to the inner EditForm). */
     @Parameter() validators?: Record<string, unknown>;
-    /** Invoked after a successful submit. */
-    @Parameter() onValidSubmit?: EventCallback<Event>;
-    /** Form contents (the fluent inputs + submit Button). */
-    @Parameter() childContent?: RenderFragment;
+    /** Invoked after a successful submit (receives the EditContext, like EditForm itself). */
+    @Parameter() onValidSubmit?: EventCallback<EditContext>;
+    /** Form contents (the fluent inputs + submit Button); receives the EditContext. */
+    @Parameter() childContent?: (context: EditContext) => RenderFragment;
 
-    private handleSubmit = EventCallback.bind(this, (e: Event) => {
-        this.onValidSubmit?.invokeAsync(e);
+    private handleSubmit = EventCallback.bind(this, (context: EditContext) => {
+        this.onValidSubmit?.invokeAsync(context);
     });
 }

@@ -87,6 +87,325 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
+    "DynamicComponent": {
+      "name": "DynamicComponent",
+      "file": "src/components/dynamic-component.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "type",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DynamicComponent",
+          "type": "ComponentType | null",
+          "references": [
+            {
+              "name": "ComponentType",
+              "kind": "runtime",
+              "imported": "ComponentType"
+            }
+          ],
+          "doc": "The component type to render. Must not be null when parameters are set."
+        },
+        {
+          "name": "parameters",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DynamicComponent",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Parameters handed to the dynamically rendered component."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "ErrorBoundaryBase": {
+      "name": "ErrorBoundaryBase",
+      "file": "src/components/error-boundary.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered while there is no error."
+        },
+        {
+          "name": "errorContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "(error: unknown) => RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered with the handled error. Deviation from Blazor's\n`RenderFragment<Exception?>`: exceptions are `unknown` in TypeScript.",
+          "typeArgument": "unknown"
+        },
+        {
+          "name": "maximumErrorCount",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "number",
+          "doc": "The maximum number of errors handled between two recoveries; further\nerrors are fatal (Blazor's default)."
+        }
+      ],
+      "abstract": true,
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "ErrorBoundary": {
+      "name": "ErrorBoundary",
+      "file": "src/components/error-boundary.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered while there is no error."
+        },
+        {
+          "name": "errorContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "(error: unknown) => RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered with the handled error. Deviation from Blazor's\n`RenderFragment<Exception?>`: exceptions are `unknown` in TypeScript.",
+          "typeArgument": "unknown"
+        },
+        {
+          "name": "maximumErrorCount",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "number",
+          "doc": "The maximum number of errors handled between two recoveries; further\nerrors are fatal (Blazor's default)."
+        }
+      ],
+      "base": {
+        "name": "ErrorBoundaryBase",
+        "resolved": true
+      }
+    },
+    "SectionOutlet": {
+      "name": "SectionOutlet",
+      "file": "src/sections/section-outlet.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "sectionName",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionOutlet",
+          "type": "string",
+          "doc": "The section to render the content of (by name)."
+        },
+        {
+          "name": "sectionId",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionOutlet",
+          "type": "unknown",
+          "doc": "The section to render the content of (by identifier object)."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "SectionOutletContentRenderer": {
+      "name": "SectionOutletContentRenderer",
+      "file": "src/sections/section-outlet.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "content",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionOutletContentRenderer",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ]
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "SectionContent": {
+      "name": "SectionContent",
+      "file": "src/sections/section-content.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "sectionName",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "type": "string",
+          "doc": "The section to provide content for (by name)."
+        },
+        {
+          "name": "sectionId",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "type": "unknown",
+          "doc": "The section to provide content for (by identifier object)."
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered in the corresponding SectionOutlet."
+        },
+        {
+          "name": "isDefaultContent",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "inferredType": "boolean",
+          "doc": "Blazor's internal IsDefaultContent. Parameter here only so the runtime's\nHeadOutlet can pass it through its render tree — Tsazor has no\nIComponent.Attach construction (documented deviation)."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "HeadContent": {
+      "name": "HeadContent",
+      "file": "src/head/head-content.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "HeadContent",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered into the document head."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "HeadOutlet": {
+      "name": "HeadOutlet",
+      "file": "src/head/head-outlet.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
     "LayoutComponentBase": {
       "name": "LayoutComponentBase",
       "file": "src/routing/layout-component-base.ts",
@@ -362,12 +681,59 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "parameters": [
         {
           "name": "childContent",
-          "category": "string",
+          "category": "RenderFragment",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "PageTitle",
-          "type": "string"
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered as the document title."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "FocusOnNavigate": {
+      "name": "FocusOnNavigate",
+      "file": "src/routing/focus-on-navigate.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "routeData",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "FocusOnNavigate",
+          "type": "RouteData",
+          "references": [
+            {
+              "name": "RouteData",
+              "kind": "runtime",
+              "imported": "RouteData"
+            }
+          ],
+          "doc": "The route data of an enclosing Router."
+        },
+        {
+          "name": "selector",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "FocusOnNavigate",
+          "type": "string",
+          "doc": "CSS selector of the element to focus after page changes."
         }
       ],
       "base": {
@@ -1187,12 +1553,29 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         {
           "name": "model",
           "category": "value",
-          "optional": false,
+          "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "EditForm",
           "type": "object",
-          "doc": "The model object to edit and validate."
+          "doc": "The model object to edit and validate (Blazor's Model parameter)."
+        },
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "EditForm",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "doc": "The context to use instead of one created around `model`."
         },
         {
           "name": "validators",
@@ -1216,13 +1599,13 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Field name → validator; registered on the EditContext."
         },
         {
-          "name": "onValidSubmit",
+          "name": "onSubmit",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "EditForm",
-          "type": "EventCallback<Event>",
+          "type": "EventCallback<EditContext>",
           "references": [
             {
               "name": "EventCallback",
@@ -1230,29 +1613,82 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "imported": "EventCallback"
             },
             {
-              "name": "Event",
-              "kind": "global"
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
             }
           ],
-          "doc": "Invoked after a successful submit (validation passed).",
-          "typeArgument": "Event"
+          "doc": "Invoked after form submit (no automatic validation).",
+          "typeArgument": "EditContext"
         },
         {
-          "name": "childContent",
-          "category": "RenderFragment",
+          "name": "onValidSubmit",
+          "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "EditForm",
-          "type": "RenderFragment",
+          "type": "EventCallback<EditContext>",
           "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "doc": "Invoked after a successful submit (validation passed).",
+          "typeArgument": "EditContext"
+        },
+        {
+          "name": "onInvalidSubmit",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "EditForm",
+          "type": "EventCallback<EditContext>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "doc": "Invoked after a failed submit (validation failed).",
+          "typeArgument": "EditContext"
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "EditForm",
+          "type": "(context: EditContext) => RenderFragment",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Form contents (the inputs)."
+          "doc": "Form contents (the inputs); receives the cascaded EditContext. Blazor's\n RenderFragment<EditContext> — Tsazor's spelling is the function type.",
+          "typeArgument": "EditContext"
         },
         {
           "name": "additionalAttributes",
@@ -1447,20 +1883,26 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         },
         {
           "name": "notAuthorized",
-          "category": "RenderFragment",
+          "category": "RenderFragment<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "AuthorizeView",
-          "type": "RenderFragment",
+          "type": "(state: AuthenticationState) => RenderFragment",
           "references": [
+            {
+              "name": "AuthenticationState",
+              "kind": "runtime",
+              "imported": "AuthenticationState"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Rendered when access is denied (Razor's <NotAuthorized>)."
+          "doc": "Rendered when access is denied; receives the AuthenticationState\n (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>).",
+          "typeArgument": "AuthenticationState"
         },
         {
           "name": "authorizing",
@@ -1579,20 +2021,26 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         },
         {
           "name": "notAuthorized",
-          "category": "RenderFragment",
+          "category": "RenderFragment<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "AuthorizeRouteView",
-          "type": "RenderFragment",
+          "type": "(state: AuthenticationState) => RenderFragment",
           "references": [
+            {
+              "name": "AuthenticationState",
+              "kind": "runtime",
+              "imported": "AuthenticationState"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Rendered when access is denied (Razor's <NotAuthorized>)."
+          "doc": "Rendered when access is denied; receives the AuthenticationState\n (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>).",
+          "typeArgument": "AuthenticationState"
         },
         {
           "name": "authorizing",

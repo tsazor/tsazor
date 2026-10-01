@@ -183,9 +183,13 @@ describe("runtime manifest", () => {
   it("RUNTIME_COMPONENTS are the manifest's concrete components", () => {
     expect([...RUNTIME_COMPONENTS].sort()).toEqual(
       [
-        "AuthorizeRouteView", "AuthorizeView", "CascadingAuthenticationState", "CascadingValue", "EditForm",
+        "AuthorizeRouteView", "AuthorizeView", "CascadingAuthenticationState", "CascadingValue", "DynamicComponent", "EditForm",
+        "ErrorBoundary",
+        "FocusOnNavigate",
+        "HeadContent", "HeadOutlet",
         "InputCheckbox", "InputDate", "InputNumber", "InputSelect", "InputText", "InputTextArea", "LayoutView",
-        "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "ValidationMessage", "ValidationSummary", "Virtualize",
+        "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "SectionContent", "SectionOutlet", "SectionOutletContentRenderer",
+        "ValidationMessage", "ValidationSummary", "Virtualize",
       ].sort(),
     );
     for (const name of ["ComponentBase", "InputBase", "LayoutComponentBase"]) expect(RUNTIME_MANIFEST.components[name]?.abstract).toBe(true);
