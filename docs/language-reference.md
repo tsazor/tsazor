@@ -281,7 +281,44 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   `Href="/"`) ist deshalb überall aktiv — der Home-Link nimmt `Match="@NavLinkMatch.All"`.
 - Ein leerer Attributwert (`href=""`) ist der leere String (Element-Attribut wie Parameter).
 - Element-Inhalt einer Komponente → `ChildContent`-Parameter.
-- Unbekannte Attribute → Parameter mit `captureUnmatchedValues` (`additionalAttributes`).
+- Unbekannte Attribute → Parameter mit `captureUnmatchedValues` (`additionalAttributes`);
+  ohne einen solchen ⇒ Fehler TZS025 (siehe unten).
+
+### Komponenten-Attribute nach Parametertyp
+
+Wie Razor senkt der Compiler ein Komponenten-Attribut nach dem Typ des Ziel-Parameters ab
+(Parameter-Metadaten, Phase 2.1; der Name wird case-insensitiv zugeordnet, emittiert wird der
+Member-Name: `Appearance="…"` setzt `appearance`). Markup bleibt Razor, der Wert ist — wo er Code
+ist — TypeScript:
+
+| Parameter-Typ (Kategorie) | Attribut | Wert |
+|---|---|---|
+| `string` (auch Unions mit `string`, Literal-Typen) | `Title="5"`, `Title="@x"`, `Title="n: @x"` | `"5"`, `this.x`, Template-String — wie auf Elementen |
+| sonstiger Wert (`number`, `boolean`, Objekte, Arrays, Funktionstypen, `RenderFragment`) | `Count="5"`, `Enabled="true"`, `Items="people"`, `Interval="@4000"`, `Max="@a + 1"`, `<X Enabled />` | TS-Ausdruck mit oder ohne `@`: `5`, `true`, `this.people`, `4000`, `this.a + 1`, `true` |
+| `EventCallback` / `EventCallback<T>` | `OnClick="handle"`, `OnClick="item.toggle"`, `OnClick="() => n++"`, `OnClick="@OnClick"` | `EventCallback`, gebunden an die Komponente (Re-Render danach); eine Method-Group mit Receiver behält ihn (wie `@onclick`); ein bereits gebundener `EventCallback` (weitergereicht) bleibt unverändert |
+| `captureUnmatchedValues` / nicht deklariert, aber eine Capture-Property existiert | beliebig | wie geschrieben (Text als String) |
+
+- Ein Funktionstyp, der kein `EventCallback` ist (`onlyIf?: (n: number) => boolean`), ist ein
+  gewöhnlicher Wert — unabhängig vom Namen; die Runtime wandelt nichts mehr um (seit 2.2). Eine
+  Method-Group wird dort wie in TS **nicht** gebunden (`Filter="isVisible"` ⇒ `this.isVisible`);
+  `this` im Handler braucht eine Arrow-Function oder ein Arrow-Feld.
+- Ein leerer Wert auf einem Nicht-String-Parameter (`Count=""`) bzw. ein wertloses Attribut auf
+  einem `EventCallback` ⇒ TZS009; Syntaxfehler im Wert ⇒ TZS024.
+- `@bind-Value` übergibt `ValueExpression` (allgemein `<Target>Expression`) nur, wenn die Komponente
+  den Parameter deklariert (wie Razor); `Value`/`ValueChanged` bzw. `:event` müssen existieren.
+- **Unbekannter Parameter ⇒ Fehler TZS025** („Component 'X' does not have a parameter 'Y'"), das
+  statische Gegenstück zum Laufzeitfehler (B4) — sofern die Metadaten vollständig sind und die
+  Komponente keinen `captureUnmatchedValues`-Parameter hat. Mit naher Entsprechung (Edit-Distanz,
+  case-insensitiv, fehlendes `On`-Präfix) „Did you mean 'Label'?" plus Fix (Umbenennen). Ebenso
+  für `@onclick` auf einer Komponente und Event-Modifier (`@onclick:preventDefault` braucht dort
+  einen Capture-Parameter).
+- **Typ unbekannt ⇒ Warnung TZS026**, der Wert wird wie bisher übergeben (Text als String,
+  `@expr` als Ausdruck, `On*`-Werte als `EventCallback`): wenn ein Parameter `uncertain` ist (Typ
+  aus einem Paket ohne Manifest, nicht verfolgbarer Import, keine Annotation und kein Literal-
+  Initializer — die Meldung nennt den Grund; eine Typannotation behebt es), wenn kein Manifest /
+  keine Quelldatei die Komponente beschreibt, oder wenn ihre Basisklasse nicht auflösbar ist
+  (dann nur für nicht zugeordnete Attribute, einmal pro Tag). Ohne Metadaten entfällt auch
+  `<Target>Expression`.
 - Cascading: `@CascadingParameter({ type: EditContext })` (by-type) oder
   `@CascadingParameter({ name: "x" })` (by-name) — `CascadingValue`/`EditForm` liefern.
 
@@ -307,8 +344,8 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS024` mit Quellbereich
-(`TZS011`, `TZS014`, `TZS022` und `TZS023` sind Warnungen, z. B. `@inherits`-Konflikt mit
+Der Compiler scheitert nie still — Codes `TZS001`–`TZS026` mit Quellbereich
+(`TZS011`, `TZS014`, `TZS022`, `TZS023` und `TZS026` sind Warnungen, z. B. `@inherits`-Konflikt mit
 Code-behind bzw. ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
 TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
 TypeScript (oder nackter Text) in einem Code-Kontext. Import-Modell: `TZS016` ungültiges
@@ -324,6 +361,9 @@ Markup-Ausdruck — `@x`/`@(…)`, Attributwerte (auch gemischte, Event-Handler,
 `@attributes`), `@bind`-Wert/`:get`/`:set`/`:after`, `@if`/`@while`/`@switch`-Bedingungen und
 `case`-Labels; gemeldet wird der erste Syntaxfehler des TS-Parsers auf seinem Token (statt eines
 späteren esbuild-Fehlers). Ein ungültiger `@for`-Zählkopf ist `TZS015` wie Statement-Läufe.
+2.2 ([Komponenten-Attribute](#komponenten-attribute-nach-parametertyp)): `TZS025` unbekannter
+Komponenten-Parameter (Fehler, mit „Did you mean"-Fix), `TZS026` Parametertyp bzw. Parameter der
+Komponente unbekannt (Warnung; der Wert wird wie geschrieben übergeben).
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
 
 **Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte
@@ -341,3 +381,4 @@ text }] }`, im LSP als Quick-Fix (Code Action):
 | `TZS021` `@typeparam T where T : IItem` | Klausel ⇒ `extends IItem` (keiner für `struct`/`class`/`new` …) |
 | `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Direktive ⇒ `@authorize…` / `@page "…"` / Zeile entfernen (nur bei einem Attribut pro Liste, nur literale Werte) |
 | `TZS022` `var` | ⇒ `let` |
+| `TZS025` unbekannter Komponenten-Parameter mit naher Entsprechung | Attributname ⇒ Vorschlag (`Lable` ⇒ `Label`) |

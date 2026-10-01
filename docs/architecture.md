@@ -61,8 +61,8 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
 - **Lifecycle** (`ComponentBase`, Blazors `SetParametersAsync`): Parameter werden zuerst
   gesetzt — ein nicht deklarierter Parameter (weder `@Parameter` noch `@CascadingParameter`,
   case-insensitiv, kein `captureUnmatchedValues`) wirft Blazors „Object of type 'X' does not
-  have a property matching the name 'Y'" (Phase `lifecycle`; einzige Ausnahme bis 2.2: das
-  vom Compiler immer emittierte `ValueExpression` wird verworfen). Dann beim ersten Mal
+  have a property matching the name 'Y'" (Phase `lifecycle`; der Compiler meldet ihn seit 2.2
+  schon statisch, TZS025, und emittiert `ValueExpression` nur, wenn deklariert). Dann beim ersten Mal
   `onInitialized`, danach `onParametersSet`, dann `stateHasChanged`. Synchrone Hooks laufen
   synchron weiter und rendern genau einmal, im Batch des Parents. Gibt ein Hook ein Promise
   zurück, wird sofort der Stand nach seinem synchronen Teil gerendert (Loading-State) und nach
@@ -250,8 +250,8 @@ imports?)` liefert die Metadaten der Zielkomponente — dieselbe Auflösung wie
 `resolveComponent` (`@import`-Bindung zuerst, dann Ordner, `@using`-Quellen,
 Runtime-Built-ins, Pakete); `resolutionOptions` reicht sie als
 `CompileOptions.resolveComponentMetadata` an Compiler, Plugin, Library-Builds und
-LSP. Die Codegen liest sie in 2.1 noch nicht (Ausgabe byte-identisch, 2.2 baut
-darauf auf).
+LSP. Seit 2.2 senkt die Codegen Komponenten-Attribute danach ab (Kategorie des
+Parameters, TZS025/TZS026 — [language-reference.md](language-reference.md#komponenten-attribute-nach-parametertyp)).
 
 **Manifeste:** `@tsazor/runtime`, `@tsazor/components` und `@tsazor/fluent`
 erzeugen beim Build `dist/tsazor-components.json` (`{ tsazorComponentManifest: 1,

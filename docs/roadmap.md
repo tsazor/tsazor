@@ -35,8 +35,8 @@ DOM-Anwendung pro Pass + Journal-Rollback (Blazor: pro Batch); ohne `<base>` ist
 Origin-Root; `regex(...)`-Constraints immer verankert; `Date` gilt als veränderlich (B6).
 
 **Gesammelte offene Punkte** (nicht blockierend für Phase 2, Zuordnung in Klammern):
-- `ValueExpression` nur, wenn die Zielkomponente es deklariert; `/^on/i`-EventCallback-Heuristik
-  entfernen (2.2 / Sync-Punkt B8).
+- ~~`ValueExpression` nur, wenn die Zielkomponente es deklariert; `/^on/i`-EventCallback-Heuristik
+  entfernen (2.2 / Sync-Punkt B8).~~ — **erledigt (2.2)**.
 - `@inherits`-Basis-Member mit DOM-Global-Namen (`length`, `top`) bleiben global (2.1/2.4).
 - ~~`@bind-value` (klein) auf *Elementen* wird als Komponenten-Bind emittiert; `@bind` auf eine
   `@foreach`-Variable scheitert erst zur Laufzeit (C#: CS1656)~~ — **erledigt (A7)**.
@@ -723,6 +723,34 @@ Typen aus Fremd-Paketen ohne Manifest bleiben `uncertain`; eine neu angelegte
   **Sync-Punkt B8:** Runtime-Heuristik `/^on/i` (renderer.ts:14, 108) entfernen, falscher
   Receiver entfällt,
 - Unbekannte Parameter ⇒ Compile-Fehler (statisches Pendant zu T3).
+
+**Stand: 2.2 umgesetzt** (Branch `roadmap/p2-2-codegen`; Regeln in
+[language-reference.md](language-reference.md#komponenten-attribute-nach-parametertyp)).
+Komponenten-Attribute nach `category` des Ziel-Parameters: `string` wie bisher; sonstige
+Werte und `RenderFragment` als TS-Ausdruck auch ohne `@` (`Count="5"` ⇒ `5`, `Items="people"`
+⇒ `this.people`, `Interval="@4000"` ⇒ `4000`, wertlos ⇒ `true`); `EventCallback(<T>)` ⇒
+`EventCallback.bind(this, …)` mit A4-Receiver-Semantik, ein übergebener `EventCallback` geht
+unverändert durch (`EventCallback.bind` gibt ihn zurück, wie `EventCallbackFactory.Create`).
+Kanonische Member-Namen im generierten Code. TZS025 (unbekannter Parameter, Fehler, „Did you
+mean"-Fix) bei vollständigen Metadaten ohne Capture-Parameter, auch für `@bind-X`/`XChanged`,
+`@onclick` und Event-Modifier auf Komponenten; TZS026 (Warnung) für `uncertain`-Parameter
+(mit Grund), fehlende Metadaten und unvollständige Basisklassen-Ketten — dort bleibt die
+bisherige Absenkung. `<Target>Expression` nur, wenn deklariert (ohne Metadaten gar nicht); das
+Verwerfen eines undeklarierten `ValueExpression` in der Runtime (B4) ist entfernt.
+**Sync-Punkt B8:** `/^on/i`-Umwandlung in `setComponentParameters` und die Sonderregel in
+`parametersDefinitelyEqual` entfernt; eine Funktion ist ein gewöhnlicher Wert. Audit mit
+temporärer Runtime-Meldung (alle Tests + E2E aller Apps): betroffen nur handgebaute
+Render-Trees in Tests (components ×7, fluent ×2, runtime `parameters`) — auf explizite
+`EventCallback.bind`/`unbound` umgestellt; App-Aufrufstellen keine. Regressionslauf (110
+Repo-`.tsazor` alt/neu): stille String-Bugs behoben (`size="20"`, `rows="3"`,
+`colSpan="4"`, `zoom="13"`, `ItemSize="32"`, `Overscan="5"`, `striped`/`hover`/`dismissible`/
+`disabled="true"` u. a. kamen als Strings an); eine Aufrufstelle korrigiert (Gallery
+`<BreadcrumbItem childContent="Home" />` ⇒ Element-Inhalt). Gates: 944/944 Tests, LSP-Smokes,
+Pizza, Gallery, Sleipnir, Demo (31/10/5/14/8) grün; FluentCMS-Probe unverändert 149/164 (die
+Probe hat keine Metadaten). **Offen:** Method-Groups auf Funktions-Parametern (kein
+`EventCallback`) bleiben ungebunden (TS-Semantik, Blazor bindet Delegates) — Entscheidung
+offen; Typprüfung der Ausdrücke gegen den Parametertyp (2.4); Slots/`RenderFragment<T>`-Inhalt
+(2.3).
 
 ### 2.3 — Templated Components
 
