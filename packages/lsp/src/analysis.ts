@@ -8,6 +8,7 @@ import {
   type TszDiagnostic,
   type DirectiveNode,
   type ElementNode,
+  type ImportInfo,
 } from "@tsazor/compiler";
 import { collectImports, createFileContext, resolutionOptions, type FileContext } from "@tsazor/workspace";
 import { existsSync } from "node:fs";
@@ -32,6 +33,9 @@ export interface AnalyzedFile {
   injects: ReadonlyArray<{ type: string; name: string }>;
   /** Local names bound by the file's own and inherited @imports (expression completions). */
   imports: ReadonlyArray<{ name: string; specifier: string }>;
+  /** The file's own @using values and parsed @imports (tag metadata lookup). */
+  usings: readonly string[];
+  ownImports: readonly ImportInfo[];
 }
 
 /** Parses the AST and compiles once, sharing the workspace resolution with the build. */
@@ -44,12 +48,16 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
   let diagnostics: readonly TszDiagnostic[] = [];
   let injects: ReadonlyArray<{ type: string; name: string }> = [];
   let imports: Array<{ name: string; specifier: string }> = [];
+  let usings: string[] = [];
+  let ownImports: ImportInfo[] = [];
   let document: DocumentNode;
   try {
     document = parseDocument(source, new DiagnosticBag());
     const compiled = compile(source, { ...resolutionOptions(context), generateSourceMap: false });
     diagnostics = compiled.diagnostics.all;
     injects = compiled.metadata.injects;
+    usings = compiled.metadata.usings;
+    ownImports = compiled.metadata.imports;
     // Own @imports shadow inherited ones (the compiler's merge rule).
     const seen = new Set<string>();
     for (const info of [...compiled.metadata.imports, ...context.inheritedImports]) {
@@ -69,7 +77,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
       pos: { line: 1, column: 0 },
     }];
   }
-  return { filePath: absolute, fileDir, className: context.className, source, document, context, diagnostics, injects, imports };
+  return { filePath: absolute, fileDir, className: context.className, source, document, context, diagnostics, injects, imports, usings, ownImports };
 }
 
 /* Node lookup --------------------------------------------------------------- */
