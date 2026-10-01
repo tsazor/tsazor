@@ -913,6 +913,9 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
   --no-dependencies` (109 Dateien, 2,29 MB), `code --install-extension` — `code --list-extensions`
   verifiziert `tsazor.tsazor-vscode@0.5.0`; VS-Code-Reload durch den User auszulösen. Läuft damit
   auf dem Phase-2-Stand (2.5 inkl. LSP projektweit, Slots-Completion/Hover, Codemod).
+- **VSIX 0.6.0 gepackt und installiert** (2026-10-01, nach Phase 5): läuft auf dem
+  Phasen-2–5-Gesamtstand (3.x Built-ins/Formulare, 4.x HMR/Fluent, 5.x Paketierung/dotnet);
+  gleiches Verfahren.
 
 ---
 
