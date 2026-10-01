@@ -8,10 +8,10 @@ export function hmrAppendix(className: string): string {
   return [
     "",
     `if (import.meta.hot) {`,
-    `  import.meta.hot.data.previousDefault ??= ${className};`,
+    `  if (import.meta.hot.data) import.meta.hot.data.previousDefault ??= ${className};`,
     `  import.meta.hot.accept((mod) => {`,
-    `    const previous = import.meta.hot.data.previousDefault;`,
-    `    import.meta.hot.data.previousDefault = mod.default;`,
+    `    const previous = import.meta.hot.data?.previousDefault;`,
+    `    if (import.meta.hot.data) import.meta.hot.data.previousDefault = mod.default;`,
     `    globalThis.__tsazor?.hmrSwap(previous, mod.default);`,
     `  });`,
     `}`,

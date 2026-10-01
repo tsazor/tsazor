@@ -150,36 +150,62 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
 
   // Rewrite B: bare package specifier (e.g. @tsazor/components) → the package's
   // shipped .tsazor sources when the named import is a component file there.
+  // Names can come from DIFFERENT component files (e.g. Accordion + AccordionItem
+  // in one @import) — each name whose source exists is rebound to its own shadow;
+  // names without component source stay on the package module (types from the
+  // shipped d.ts), so an import spreads into at most two statements.
   if (specifier.startsWith("@") && specifier !== "@tsazor/runtime") {
-    const exportName = clause ? namedImportsOf(clause) : [];
-    if (exportName.length > 0) {
+    const bindings = namedBindingsOf(clause ?? "");
+    if (bindings.length > 0) {
       let pkgDir: string | undefined;
       try {
         pkgDir = path.dirname(createRequire(path.join(projectRoot, "package.json")).resolve(path.join(specifier, "package.json")));
       } catch {
         return line;
       }
-      for (const name of exportName) {
-        const source = path.join(pkgDir, "src", `${name}.tsazor`);
+      const rebased: { binding: NamedBinding; shadow: string }[] = [];
+      const plain: NamedBinding[] = [];
+      for (const binding of bindings) {
+        const source = path.join(pkgDir, "src", `${binding.imported}.tsazor`);
         if (existsSync(source)) {
-          return `import ${clause} from "${toPosix(shadowPathFor(source))}";`;
+          rebased.push({ binding, shadow: toPosix(shadowPathFor(source)) });
+        } else {
+          plain.push(binding);
         }
       }
+      if (rebased.length === 0) return line;
+      const prefix = /^\s*type\b/.test(clause ?? "") ? "import type" : "import";
+      const bindingText = (binding: NamedBinding) =>
+        binding.local === binding.imported ? binding.imported : `${binding.imported} as ${binding.local}`;
+      const lines = rebased.map((r) => `${prefix} { ${bindingText(r.binding)} } from "${r.shadow}";`);
+      if (plain.length > 0) {
+        lines.push(`${prefix} { ${plain.map(bindingText).join(", ")} } from "${specifier}";`);
+      }
+      return lines.join("\n");
     }
   }
   return line;
 }
 
-/** Named bindings of an import clause: `Alert as __tsazor_comp_Alert` or `{ Card }` → the exported names. */
-function namedImportsOf(clause: string): string[] {
+/** One named import binding: imported name and (aliased) local name. */
+interface NamedBinding {
+  imported: string;
+  local: string;
+}
+
+/** Named bindings of an import clause (`{ Card, Button as B }`); default/namespace clauses yield nothing. */
+function namedBindingsOf(clause: string): NamedBinding[] {
   const named = /\{([^}]*)\}/.exec(clause);
   if (!named) return [];
-  const names: string[] = [];
+  const bindings: NamedBinding[] = [];
   for (const piece of named[1]!.split(",")) {
-    const binding = piece.split(/\s+as\s+/)[0]?.trim();
-    if (binding) names.push(binding);
+    const [importedPart, aliasPart] = piece.split(/\s+as\s+/).map((part) => part?.trim());
+    const imported = importedPart ?? "";
+    if (!/^[\w$.]+$/.test(imported)) continue;
+    const local = aliasPart || imported;
+    bindings.push({ imported, local });
   }
-  return names;
+  return bindings;
 }
 
 function toPosix(value: string): string {

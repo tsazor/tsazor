@@ -46,8 +46,9 @@ beforeAll(async () => {
   await mkdir(path.join(pkg, "src"), { recursive: true });
   // Its entry exports Badge — bare-package tags resolve only against the export list.
   writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0", main: "./index.js" }));
-  writeFileSync(path.join(pkg, "index.js"), 'export { default as Badge } from "./dist/Badge.js";\n');
+  writeFileSync(path.join(pkg, "index.js"), 'export { default as Badge } from "./dist/Badge.js";\nexport { default as Chip } from "./dist/Chip.js";\n');
   writeFileSync(path.join(pkg, "src", "Badge.tsazor"), '<span class="badge">@Text</span>\n\n@code {\n    @Parameter() Text?: string;\n}\n');
+  writeFileSync(path.join(pkg, "src", "Chip.tsazor"), '<i class="chip">@Text</i>\n\n@code {\n    @Parameter() Text?: string;\n}\n');
   cleanup = async () => rm(root, { recursive: true, force: true });
 });
 
@@ -99,6 +100,27 @@ describe("buildShadowModule", () => {
     expect(badgeImport).toBeDefined();
     expect(badgeImport!).toContain("node_modules");
     expect(badgeImport!).toContain(path.join("src", "Badge.tsazor.gen.ts").replace(/\\/g, "/"));
+  });
+
+  it("splits a multi-name package import into per-component shadows (found by the tarball gate)", async () => {
+    // `{ Badge, Chip }` binds names from two different component files — the
+    // earlier single-shadow rebinding made the second name a TS2724.
+    const pkgRoot = path.join(root, "badge-ws");
+    await writeFile(path.join(pkgRoot, "_Imports.tsazor"), "@using @fake/ui\n");
+    await writeFile(path.join(pkgRoot, "Pages", "C.tsazor"), "");
+    const shadow = await buildShadowModule(
+      path.join(pkgRoot, "Pages", "C.tsazor"),
+      '<Badge Text="hi" />\n<Chip Text="yo" />\n',
+      root,
+    );
+    const code = shadow!.code;
+    expect(code).toContain("import { Badge as __tsazor_comp_Badge }");
+    expect(code).toContain("import { Chip as __tsazor_comp_Chip }");
+    // Each name lands on its own component shadow…
+    expect(code).toContain(path.join("src", "Badge.tsazor.gen.ts").replace(/\\/g, "/"));
+    expect(code).toContain(path.join("src", "Chip.tsazor.gen.ts").replace(/\\/g, "/"));
+    // …and nothing is imported from the package itself any more.
+    expect(code).not.toContain('from "@fake/ui"');
   });
 
   it("keeps the real sidecar .ts import untouched (resolves to the real file)", async () => {
