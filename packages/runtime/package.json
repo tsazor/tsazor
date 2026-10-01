@@ -8,15 +8,20 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./tsazor-components.json": "./dist/tsazor-components.json"
   },
   "files": ["dist"],
   "sideEffects": ["./dist/components/parameter-metadata.js"],
+  "tsazor": {
+    "components": "./dist/tsazor-components.json"
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/build-manifest.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@tsazor/workspace": "workspace:*",
     "happy-dom": "^18.0.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.7"

@@ -1,5 +1,5 @@
 import { compile } from "@tsazor/compiler";
-import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
+import { buildPackageManifest, collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -83,6 +83,16 @@ if (errors.length > 0) {
   }
   process.exit(1);
 }
+
+// Parameter metadata of every component (roadmap 2.1): consumers (tag
+// completion, codegen) read it instead of re-parsing the sources —
+// package.json `tsazor.components` points here.
+const manifest = buildPackageManifest({
+  packageDir,
+  packageName: "@tsazor/fluent",
+  entries: files.map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+});
+await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 await writeFile(path.join(distDir, "index.js"), index);

@@ -1,8 +1,9 @@
-import type { CompileOptions, ImportInfo, ResolvedComponent, ResolvedType } from "@tsazor/compiler";
+import type { CompileOptions, ComponentMetadata, ImportInfo, ResolvedComponent, ResolvedType } from "@tsazor/compiler";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins.js";
 import { exportsOfFile, importKindOf, packageExports } from "./exports.js";
+import { componentMetadataForTag } from "./metadata.js";
 import {
   checkUsing,
   dirsInclude,
@@ -26,6 +27,12 @@ export interface FileContext {
   inheritedImports: ImportInfo[];
   /** Resolves a component tag; `usings` are the file's own @using values. */
   resolveComponent: (tagName: string, usings: string[]) => ResolvedComponent | null;
+  /**
+   * Parameter metadata of the component a tag resolves to (same resolution as
+   * resolveComponent; `imports` are the file's own @imports, which bind tags
+   * directly). Null for unresolved tags and packages without a manifest.
+   */
+  resolveComponentMetadata: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
   /** Resolves an @inject type / @inherits base; `usings` are the file's own @using values. */
   resolveType: (name: string, usings: string[]) => ResolvedType | null;
   /** Checks one of the file's own @using values (TZS018 message or null). */
@@ -153,6 +160,7 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
       }
       return null;
     },
+    resolveComponentMetadata: (tagName, usings, imports) => componentMetadataForTag(context, tagName, usings, imports),
     resolveUsing: (value) => checkUsing(value, fileDir),
     componentFile,
     resolveLayout: (layoutName) => componentFile(layoutName),
@@ -167,12 +175,13 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
  */
 export function resolutionOptions(context: FileContext): Pick<
   CompileOptions,
-  "className" | "fileName" | "resolveComponent" | "resolveType" | "resolveUsing" | "inheritedImports"
+  "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports"
 > {
   return {
     className: context.className,
     fileName: context.filePath,
     resolveComponent: (tagName, usings) => context.resolveComponent(tagName, usings),
+    resolveComponentMetadata: (tagName, usings, imports) => context.resolveComponentMetadata(tagName, usings, imports),
     resolveType: (name, usings) => context.resolveType(name, usings),
     resolveUsing: (value) => context.resolveUsing(value),
     inheritedImports: context.inheritedImports,

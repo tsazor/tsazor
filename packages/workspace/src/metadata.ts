@@ -1,0 +1,403 @@
+import {
+  extractModuleMetadata,
+  extractTsazorMetadata,
+  resolveComponentMetadata,
+  RUNTIME_MODULE,
+  type ComponentManifest,
+  type ComponentMetadata,
+  type ImportInfo,
+  type MetadataHost,
+  type ModuleMetadata,
+  type TypeReference,
+} from "@tsazor/compiler";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
+import { collectImportsSync, findPackageDir } from "./imports.js";
+import { classNameForFile, createFileContext, type FileContext } from "./resolver.js";
+import { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";
+
+/**
+ * Component parameter metadata over the file system (roadmap 2.1): the
+ * compiler's syntactic extractor and resolver (`@tsazor/compiler`
+ * metadata.ts) plus a host that reads files, follows relative imports,
+ * code-behinds and `_Imports` chains, and reads package manifests.
+ *
+ * Cache: per-file module metadata and per-component resolved metadata, each
+ * entry stamped with the mtime+size of every file it was built from (a
+ * .tsazor: itself, its X.tsazor.ts — also while absent — and its _Imports
+ * layers; a resolved component: all of that for every class in its base
+ * chain, plus package manifests). An entry is reused while every stamp still
+ * matches, so editing a component, its code-behind or a base invalidates
+ * exactly what depends on it. `dependenciesOf`/`dependentsOf`/`invalidate`
+ * expose the edges for HMR (4.1).
+ */
+
+type Stamps = Map<string, string>;
+
+interface ModuleEntry {
+  stamps: Stamps;
+  value: ModuleMetadata | undefined;
+}
+
+interface ComponentEntry {
+  /** Source file of the component (the reverse-edge target). */
+  file: string;
+  stamps: Stamps;
+  value: ComponentMetadata | undefined;
+}
+
+export interface MetadataCacheOptions {
+  /**
+   * Directory of @tsazor/runtime's own package: modules below it are
+   * runtime-internal (their relative imports are runtime names) — used when
+   * generating the runtime manifest.
+   */
+  runtimeDir?: string;
+}
+
+const MODULE_EXTENSIONS = [".ts", ".tsx", ".mts", ".tsazor", "/index.ts"];
+
+function stampOf(file: string): string {
+  try {
+    const stat = statSync(file);
+    return `${stat.mtimeMs}:${stat.size}`;
+  } catch {
+    return "missing";
+  }
+}
+
+function stillValid(stamps: Stamps): boolean {
+  for (const [file, stamp] of stamps) if (stampOf(file) !== stamp) return false;
+  return true;
+}
+
+const normalize = (file: string): string => path.resolve(file);
+
+export class MetadataCache {
+  private readonly modules = new Map<string, ModuleEntry>();
+  private readonly components = new Map<string, ComponentEntry>();
+  private readonly manifests = new Map<string, { stamp: string; manifest: ComponentManifest | undefined }>();
+  private readonly roots = new Map<string, string>();
+  private readonly runtimeDir: string | undefined;
+
+  constructor(options: MetadataCacheOptions = {}) {
+    this.runtimeDir = options.runtimeDir === undefined ? undefined : normalize(options.runtimeDir);
+  }
+
+  /** Syntactic metadata of one module (.tsazor or .ts), cached per file. */
+  moduleAt(file: string): ModuleMetadata | undefined {
+    return this.moduleEntry(normalize(file)).value;
+  }
+
+  /** Resolved metadata of the component a file declares: its default export, or the named `exportName` (.ts). */
+  componentOfFile(file: string, exportName?: string): ComponentMetadata | undefined {
+    const absolute = normalize(file);
+    const key = `${absolute}#${exportName ?? "default"}`;
+    const cached = this.components.get(key);
+    if (cached && stillValid(cached.stamps)) return cached.value;
+    const stamps: Stamps = new Map();
+    const host = this.recordingHost(stamps);
+    const module = host.moduleAt(absolute);
+    const local = module?.exports.get(exportName ?? "default");
+    const value = module && local !== undefined ? resolveComponentMetadata(module, local, host) : undefined;
+    this.components.set(key, { file: absolute, stamps, value });
+    return value;
+  }
+
+  /** A component from a package manifest: `@tsazor/runtime` (embedded) or a bare package above `fromFile`. */
+  packageComponent(specifier: string, exportName: string, fromFile: string): ComponentMetadata | undefined {
+    return this.packageManifest(specifier, path.dirname(fromFile))?.manifest.components[exportName];
+  }
+
+  /** The manifest of a package (the embedded runtime manifest for `@tsazor/runtime`). */
+  packageManifest(name: string, fromDir: string): { manifest: ComponentManifest; file?: string } | undefined {
+    if (name === RUNTIME_MODULE) return { manifest: RUNTIME_MANIFEST };
+    const packageDir = findPackageDir(name, fromDir);
+    if (!packageDir) return undefined;
+    const file = manifestFileOf(packageDir);
+    if (!file) return undefined;
+    const stamp = stampOf(file);
+    const cached = this.manifests.get(file);
+    if (cached && cached.stamp === stamp) return cached.manifest ? { manifest: cached.manifest, file } : undefined;
+    let manifest: ComponentManifest | undefined;
+    try {
+      manifest = absolutizeManifest(JSON.parse(readFileSync(file, "utf8")) as ComponentManifest, packageDir);
+    } catch {
+      manifest = undefined;
+    }
+    this.manifests.set(file, { stamp, manifest });
+    return manifest ? { manifest, file } : undefined;
+  }
+
+  /** Files the component's metadata was built from (itself first). Empty until it was resolved. */
+  dependenciesOf(file: string, exportName?: string): string[] {
+    const entry = this.components.get(`${normalize(file)}#${exportName ?? "default"}`);
+    return entry ? [...entry.stamps.keys()] : [];
+  }
+
+  /** Component files whose cached metadata depends on `file` (HMR: re-check these). */
+  dependentsOf(file: string): string[] {
+    const target = normalize(file).toLowerCase();
+    const result = new Set<string>();
+    for (const entry of this.components.values()) {
+      for (const dependency of entry.stamps.keys()) {
+        if (dependency.toLowerCase() === target) result.add(entry.file);
+      }
+    }
+    return [...result];
+  }
+
+  /** Drops everything built from `file`; returns the affected component files. */
+  invalidate(file: string): string[] {
+    const target = normalize(file).toLowerCase();
+    const affected = new Set<string>();
+    for (const [key, entry] of this.modules) {
+      if ([...entry.stamps.keys()].some((dependency) => dependency.toLowerCase() === target)) this.modules.delete(key);
+    }
+    for (const [key, entry] of this.components) {
+      if ([...entry.stamps.keys()].some((dependency) => dependency.toLowerCase() === target)) {
+        affected.add(entry.file);
+        this.components.delete(key);
+      }
+    }
+    return [...affected];
+  }
+
+  /** Resolves a relative module specifier imported by `fromFile` to a source file. */
+  resolveFile(specifier: string, fromFile: string): string | undefined {
+    if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) return undefined;
+    const base = path.resolve(path.dirname(fromFile), specifier);
+    const candidates = [base, ...MODULE_EXTENSIONS.map((extension) => base + extension)];
+    // tsc-style `./x.js` specifiers point at `./x.ts` sources.
+    if (/\.js$/.test(base)) candidates.splice(1, 0, base.replace(/\.js$/, ".ts"));
+    return candidates.find((candidate) => /\.(tsazor|[mc]?tsx?)$/.test(candidate) && !candidate.endsWith(".d.ts") && isFile(candidate));
+  }
+
+  private moduleEntry(file: string): ModuleEntry {
+    const cached = this.modules.get(file);
+    if (cached && stillValid(cached.stamps)) return cached;
+    const stamps: Stamps = new Map([[file, stampOf(file)]]);
+    let value: ModuleMetadata | undefined;
+    let source: string | undefined;
+    try {
+      source = readFileSync(file, "utf8");
+    } catch {
+      source = undefined;
+    }
+    if (source !== undefined) {
+      const runtimeInternal = this.isRuntimeInternal(file);
+      if (file.endsWith(".tsazor")) {
+        const codeBehind = `${file}.ts`;
+        stamps.set(codeBehind, stampOf(codeBehind));
+        const chain = collectImportsSync(path.dirname(file), this.projectRootOf(file));
+        for (const layer of chain.layers) stamps.set(normalize(layer.file), stampOf(layer.file));
+        const context = createFileContext(file, chain);
+        value = extractTsazorMetadata(source, file, {
+          className: classNameForFile(file),
+          inheritedImports: context.inheritedImports,
+          codeBehind: existsSync(codeBehind),
+          resolveType: (name, usings) => context.resolveType(name, usings),
+          runtimeInternal,
+        });
+      } else {
+        value = extractModuleMetadata(source, file, { runtimeInternal });
+      }
+    }
+    const entry: ModuleEntry = { stamps, value };
+    this.modules.set(file, entry);
+    return entry;
+  }
+
+  /** A host that records the stamps of every file the resolution reads. */
+  private recordingHost(stamps: Stamps): MetadataHost {
+    const record = (file: string): ModuleMetadata | undefined => {
+      const entry = this.moduleEntry(normalize(file));
+      for (const [dependency, stamp] of entry.stamps) stamps.set(dependency, stamp);
+      return entry.value;
+    };
+    return {
+      moduleAt: (file) => record(file),
+      resolveModule: (specifier, fromFile) => {
+        const file = this.resolveFile(specifier, fromFile);
+        return file ? record(file) : undefined;
+      },
+      packageComponent: (specifier, exportName, fromFile) => {
+        const found = this.packageManifest(specifier, path.dirname(fromFile));
+        if (found?.file) stamps.set(found.file, stampOf(found.file));
+        return found?.manifest.components[exportName];
+      },
+    };
+  }
+
+  private isRuntimeInternal(file: string): boolean {
+    if (this.runtimeDir === undefined) return false;
+    const relative = path.relative(this.runtimeDir, file);
+    return !relative.startsWith("..") && !path.isAbsolute(relative);
+  }
+
+  /** Upper bound of a .tsazor's _Imports chain: the nearest directory with a package.json. */
+  private projectRootOf(file: string): string {
+    const dir = path.dirname(file);
+    const cached = this.roots.get(dir);
+    if (cached) return cached;
+    let current = dir;
+    while (!existsSync(path.join(current, "package.json"))) {
+      const parent = path.dirname(current);
+      if (parent === current) {
+        current = dir;
+        break;
+      }
+      current = parent;
+    }
+    this.roots.set(dir, current);
+    return current;
+  }
+}
+
+/** The cache the resolver, the Vite plugin and the language server share. */
+export const defaultMetadataCache = new MetadataCache();
+
+function isFile(file: string): boolean {
+  try {
+    return statSync(file).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/** package.json `tsazor.components` (the generated manifest), if the package ships one. */
+function manifestFileOf(packageDir: string): string | undefined {
+  try {
+    const manifest = JSON.parse(readFileSync(path.join(packageDir, "package.json"), "utf8")) as { tsazor?: { components?: unknown } };
+    const relative = manifest.tsazor?.components;
+    if (typeof relative !== "string") return undefined;
+    const file = path.resolve(packageDir, relative);
+    return isFile(file) ? file : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/* Tag lookup ------------------------------------------------------------------- */
+
+/**
+ * Metadata of the component a markup tag resolves to — the same resolution
+ * as `resolveComponent` (explicit `@import` binding first, then enclosing
+ * folders, `@using` sources, runtime built-ins, package exports).
+ */
+export function componentMetadataForTag(
+  context: FileContext,
+  tagName: string,
+  usings: string[],
+  imports: readonly ImportInfo[] = [],
+  cache: MetadataCache = defaultMetadataCache,
+): ComponentMetadata | null {
+  for (const info of [...imports, ...context.inheritedImports]) {
+    const binding = info.bindings.find((candidate) => candidate.local === tagName && !candidate.typeOnly);
+    if (!binding || binding.imported === "*") continue;
+    return importedComponent(info.specifier, binding.imported, context.filePath, cache) ?? null;
+  }
+  const resolved = context.resolveComponent(tagName, usings);
+  if (!resolved) return null;
+  if (resolved.exportName) return cache.packageComponent(resolved.specifier, resolved.exportName, context.filePath) ?? null;
+  return cache.componentOfFile(path.resolve(context.fileDir, resolved.specifier)) ?? null;
+}
+
+function importedComponent(specifier: string, imported: string, fromFile: string, cache: MetadataCache): ComponentMetadata | undefined {
+  if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) return cache.packageComponent(specifier, imported, fromFile);
+  const file = cache.resolveFile(specifier, fromFile);
+  if (!file) return undefined;
+  return cache.componentOfFile(file, file.endsWith(".tsazor") || imported === "default" ? undefined : imported);
+}
+
+/* Manifests --------------------------------------------------------------------- */
+
+export interface ManifestEntry {
+  /** Export name of the component (the tag). */
+  exportName: string;
+  /** Declaring file. */
+  file: string;
+  /** Export of `file` the class is (default: `exportName`; ignored for .tsazor). */
+  localExport?: string;
+}
+
+/**
+ * Builds a package manifest: every entry resolved (inheritance flattened),
+ * paths relative to the package directory (POSIX). Entries that are not
+ * components (chain does not reach ComponentBase) are skipped.
+ */
+export function buildPackageManifest(options: {
+  packageDir: string;
+  packageName?: string;
+  entries: readonly ManifestEntry[];
+  runtimeInternal?: boolean;
+}): ComponentManifest {
+  const packageDir = normalize(options.packageDir);
+  const cache = new MetadataCache(options.runtimeInternal ? { runtimeDir: packageDir } : {});
+  const manifest: ComponentManifest = { tsazorComponentManifest: 1, components: {} };
+  if (options.packageName) manifest.package = options.packageName;
+  for (const entry of options.entries) {
+    const file = normalize(entry.file);
+    const metadata = cache.componentOfFile(file, file.endsWith(".tsazor") ? undefined : (entry.localExport ?? entry.exportName));
+    if (!metadata?.isComponent) continue;
+    manifest.components[entry.exportName] = relativizeComponent({ ...metadata, name: entry.exportName }, packageDir);
+  }
+  return manifest;
+}
+
+/** Manifest entries of a TS package entry module: its `export { X } from "./x.js"` re-exports. */
+export function manifestEntriesOfModule(entryFile: string): ManifestEntry[] {
+  const cache = new MetadataCache();
+  const module = cache.moduleAt(entryFile);
+  const entries: ManifestEntry[] = [];
+  for (const reexport of module?.reexports ?? []) {
+    if (!reexport.names) continue;
+    const file = cache.resolveFile(reexport.specifier, entryFile);
+    if (!file) continue;
+    for (const [exported, imported] of reexport.names) entries.push({ exportName: exported, file, localExport: imported });
+  }
+  return entries;
+}
+
+/** The runtime's manifest, built from its sources (`<runtimeDir>/src/index.ts`). */
+export function buildRuntimeManifest(runtimeDir: string): ComponentManifest {
+  return buildPackageManifest({
+    packageDir: runtimeDir,
+    packageName: RUNTIME_MODULE,
+    entries: manifestEntriesOfModule(path.join(runtimeDir, "src", "index.ts")),
+    runtimeInternal: true,
+  });
+}
+
+const toPosix = (value: string): string => value.replace(/\\/g, "/");
+
+function relativizeComponent(metadata: ComponentMetadata, packageDir: string): ComponentMetadata {
+  const relative = (file: string | undefined): string | undefined =>
+    file === undefined ? undefined : path.isAbsolute(file) ? toPosix(path.relative(packageDir, file)) : file;
+  const result: ComponentMetadata = { ...metadata, parameters: metadata.parameters.map((parameter) => {
+    if (!parameter.references) return parameter;
+    return { ...parameter, references: parameter.references.map((ref) => mapFile(ref, relative)) };
+  }) };
+  if (metadata.file !== undefined) result.file = relative(metadata.file);
+  return result;
+}
+
+function absolutizeManifest(manifest: ComponentManifest, packageDir: string): ComponentManifest {
+  const absolute = (file: string | undefined): string | undefined => (file === undefined || path.isAbsolute(file) ? file : path.resolve(packageDir, file));
+  const components: Record<string, ComponentMetadata> = {};
+  for (const [name, metadata] of Object.entries(manifest.components ?? {})) {
+    components[name] = {
+      ...metadata,
+      file: absolute(metadata.file),
+      parameters: metadata.parameters.map((parameter) =>
+        parameter.references ? { ...parameter, references: parameter.references.map((ref) => mapFile(ref, absolute)) } : parameter,
+      ),
+    };
+  }
+  return { ...manifest, components };
+}
+
+function mapFile(ref: TypeReference, map: (file: string | undefined) => string | undefined): TypeReference {
+  if (ref.file === undefined) return ref;
+  return { ...ref, file: map(ref.file) };
+}

@@ -339,6 +339,9 @@ importers:
 
   packages/runtime:
     devDependencies:
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
       happy-dom:
         specifier: ^18.0.1
         version: 18.0.1
