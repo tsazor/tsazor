@@ -581,6 +581,26 @@ außerhalb der Base nicht (Origin-relativer Pfad).
 
 ---
 
+### A6 — TS-Bereinigung (vor Phase 2)
+
+Nach [design-principles.md](design-principles.md): Code ist sauberes TypeScript. Bisher still
+akzeptierte C#-Formen werden Diagnosen mit dem TS-Gegenstück (Quick-Fix kommt mit 2.5):
+- `@foreach (var x in xs)` / `(string s in xs)` / `(var (k, v) in xs)` ⇒ Fehler, TS-Form
+  `@foreach (const x of xs)` (in TS bedeutet `for…in` Schlüssel-Iteration),
+- `var` in `@for`-Köpfen wird nicht mehr still zu `let` — wie geschrieben emittieren + Warnung,
+- `@switch`-Sektion ohne `break` ⇒ TS-Fallthrough + Warnung (statt implizitem `break`),
+- `@attribute [C#-Attribut]` ⇒ Fehler mit Hinweis; kanonisch `@authorize`/`@authorize({ roles, policy })`
+  und `@attribute @decorator(…)`,
+- `@typeparam T where T : …` ⇒ Fehler mit Hinweis auf `extends`,
+- **Standard-Decorators** (TC39) statt `experimentalDecorators`/`useDefineForClassFields: false`
+  für `@Parameter`, `@CascadingParameter` u. a. — vor 2.1, weil 2.1 die Parameter-Metadaten
+  ohnehin neu ausliest.
+
+Migration der Repo-Apps/-Libraries im selben Schritt; die FluentCMS-Probe misst danach, was ein
+Codemod übernehmen muss.
+
+---
+
 ## Phase 2 — Parameter-Typ-Metadaten und Typecheck
 
 **Voraussetzung:** Track A fertig (Metadaten werden aus dem neuen AST gewonnen; Shadows sind
@@ -631,6 +651,11 @@ Multi-Root und pro App die richtige tsconfig (statt `workspaceFolders[0]`),
 `didChangeWatchedFiles`, Re-Check abhängiger Dokumente, korrekte Diagnostic-Ranges,
 Completion aus den Metadaten (2.1) statt v1-Regex.
 
+**Codemod `.razor` → `.tsazor`** (neu, Prinzip 4): mechanische Übersetzung der C#-Reste —
+`foreach … in`, `$"…"` ⇒ Template-Literal, `[Attribute]` ⇒ `@authorize`/Decorator, `where` ⇒
+`extends`, PascalCase-API-Aufrufe ⇒ camelCase, DataAnnotations ⇒ Validierungsmodell (3.6). Dieselben
+Regeln als LSP-Quick-Fixes. Messgröße: Handarbeit nach Codemod auf der FluentCMS-Probe.
+
 ---
 
 ## Phase 3 — Parität: Built-ins und Formulare
@@ -669,7 +694,7 @@ vorher gebaut, müsste er neu geschrieben werden.
 ### 4.2 — Fluent-Überarbeitung
 
 Nach 2.3 (Slots) und 2.4 (Typen), weil sich die API ohnehin ändert:
-- Parameter auf PascalCase (Blazor-/FluentUI-Blazor-Konvention) — **Breaking**, einmalig,
+- ~~Parameter auf PascalCase~~ — *entschieden: nein* (camelCase-Member, Markup ordnet case-insensitiv zu; [design-principles.md](design-principles.md)),
 - Enum-artige Parameter als Union-Typen, einheitliches Vokabular,
 - `@attributes`-Weitergabe überall, `aria-*` rendern (Button),
 - automatisch eindeutige IDs für Label/Message-Zuordnung, `role="alert"` nur bei Submit-Fehlern,
@@ -706,7 +731,7 @@ sauberer Paketierung (5.1). Als Referenzfälle dienen FluentCMS (OpenAPI) und Sl
 | vor A3 | Syntax für explizite Imports in `.tsazor` | **Entschieden (2026-09-30):** `@import { X } from "./y"` als Direktive (Razor-Stil, über `_Imports.tsazor` vererbbar) |
 | vor B4 | Unbekannte Parameter: Fehler wie Blazor oder nur Warnung? | **Entschieden (2026-09-30):** Fehler wie Blazor (Laufzeit ab B4; statisch zusätzlich ab 2.2) |
 | vor 3.6 | Validierung: Decorators (DataAnnotations-nah) oder Funktions-Map? | Decorators — ermöglicht 5.2 (Schema ⇒ Validatoren) |
-| vor 4.2 | Fluent auf PascalCase umstellen? | Ja, einmalig, gemeinsam mit den Slot-Umstellungen |
+| vor 4.2 | Fluent auf PascalCase umstellen? | **Entschieden (2026-10-01): nein** — Members bleiben camelCase, PascalCase-Markup ordnet case-insensitiv zu (Design-Prinzipien) |
 
 ## Begleitend in jeder Phase
 

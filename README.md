@@ -26,6 +26,9 @@ TypeScript; abgesehen davon sind die Markups weitgehend austauschbar mit Blazors
 }
 ```
 
+**Leitprinzip:** Markup ist Razor (1:1 Blazor), Code ist sauberes TypeScript — siehe
+[docs/design-principles.md](docs/design-principles.md).
+
 ## Feature-Überblick
 
 - **Blazor-Architektur 1:1:** RenderTree, Renderer/Diff, Komponenten-Lifecycle, Parameter
