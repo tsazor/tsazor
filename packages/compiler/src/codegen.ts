@@ -2115,7 +2115,8 @@ class Codegen {
       const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
       if (format !== undefined && (isNumber || isDate)) {
-        parts.push(`${assignmentTarget} = ${FORMAT_PARSE}(${extract}, ${formatEmit}) ?? ${assignmentTarget}`);
+        // A parse failure skips the setter (Blazor: TryParse false → no write).
+        parts.push(`${assignmentTarget} = (${FORMAT_PARSE}(${extract}, ${formatEmit}) ?? ${assignmentTarget}) as never`);
       } else if (isNumber) {
         parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
       } else {

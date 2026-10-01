@@ -460,6 +460,10 @@ export function componentTypeDeclaration(
   };
 
   const base = entry.base;
+  for (const parameter of entry.parameters) {
+    if (parameter.declaredBy !== ownName) continue;
+    collectReferences(parameter.references, true);
+  }
   if (base !== undefined && base.resolved) {
     // For these library builds the base is a runtime class (`@inherits InputBase<string>`);
     // a code-behind base is part of the consuming project and not importable here.
