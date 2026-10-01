@@ -247,6 +247,165 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
+    "SectionOutlet": {
+      "name": "SectionOutlet",
+      "file": "src/sections/section-outlet.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "sectionName",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionOutlet",
+          "type": "string",
+          "doc": "The section to render the content of (by name)."
+        },
+        {
+          "name": "sectionId",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionOutlet",
+          "type": "unknown",
+          "doc": "The section to render the content of (by identifier object)."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "SectionOutletContentRenderer": {
+      "name": "SectionOutletContentRenderer",
+      "file": "src/sections/section-outlet.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "content",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionOutletContentRenderer",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ]
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "SectionContent": {
+      "name": "SectionContent",
+      "file": "src/sections/section-content.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "sectionName",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "type": "string",
+          "doc": "The section to provide content for (by name)."
+        },
+        {
+          "name": "sectionId",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "type": "unknown",
+          "doc": "The section to provide content for (by identifier object)."
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered in the corresponding SectionOutlet."
+        },
+        {
+          "name": "isDefaultContent",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "SectionContent",
+          "inferredType": "boolean",
+          "doc": "Blazor's internal IsDefaultContent. Parameter here only so the runtime's\nHeadOutlet can pass it through its render tree — Tsazor has no\nIComponent.Attach construction (documented deviation)."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "HeadContent": {
+      "name": "HeadContent",
+      "file": "src/head/head-content.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "HeadContent",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered into the document head."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "HeadOutlet": {
+      "name": "HeadOutlet",
+      "file": "src/head/head-outlet.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
     "LayoutComponentBase": {
       "name": "LayoutComponentBase",
       "file": "src/routing/layout-component-base.ts",
@@ -522,12 +681,59 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "parameters": [
         {
           "name": "childContent",
-          "category": "string",
+          "category": "RenderFragment",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "PageTitle",
-          "type": "string"
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered as the document title."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "FocusOnNavigate": {
+      "name": "FocusOnNavigate",
+      "file": "src/routing/focus-on-navigate.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "routeData",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "FocusOnNavigate",
+          "type": "RouteData",
+          "references": [
+            {
+              "name": "RouteData",
+              "kind": "runtime",
+              "imported": "RouteData"
+            }
+          ],
+          "doc": "The route data of an enclosing Router."
+        },
+        {
+          "name": "selector",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "FocusOnNavigate",
+          "type": "string",
+          "doc": "CSS selector of the element to focus after page changes."
         }
       ],
       "base": {

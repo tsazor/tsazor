@@ -328,6 +328,43 @@ Name je Modul-Specifier), damit nur der Name der `@tsazor/runtime` umgeschrieben
  Umbenennungen (`as Raw`) zählen mit, ein gleichnamiger lokaler Typ niemals.
 Gewöhnliche `@`-Ausdrücke bleiben escaped (Blazor).
 
+### Sections, HeadOutlet und FocusOnNavigate (3.4)
+
+Blazors Sektionen und Head-Verwaltung:
+
+- `SectionRegistry` (sections/section-registry.ts, Port von Blazors gleichnamiger Datei):
+  Provider-Liste je Identifikator (`SectionName`-String oder Objekt-`SectionId`,
+  `resolveSectionIdentifier` mit Blazors Fehlertexten), „last added wins“ (Default-Content
+  bleibt vorne und verliert), Entfernen des letzten Providers fällt auf den vorherigen
+  zurück, Entfernen eines Nicht-letzten benachrichtigt nicht, genau ein Subscriber je
+  Identifikator (Blazors Fehler beim zweiten). **Verdrahtung über den RenderHandle** wie in
+  Blazor (keine Global-Variable): der Renderer besitzt `renderer.sectionRegistry` (eine
+  Instanz pro Renderer) und legt sie in `createComponentState` auf
+  `renderHandle.sectionRegistry`; `SectionOutlet`/`SectionContent` lesen sie von dort —
+  je Renderer eine Registrierung, Tests rendern Head- und Body-Root über denselben Renderer.
+- `SectionOutlet` rendert den Provider-Inhalt über eine Nested-Component
+  (`SectionOutletContentRenderer`), **gekeyt per Fragment** (`b.setKey(fragment)` — Blazors
+  `SetKey(RenderFragment)`, Port: `componentKey`/`setKey` nehmen beliebige Objekte und der
+  Diff vergleicht Objekt-Identität). Wechselnder Provider ⇒ frische Renderer-Instanz
+  (Cascades/Error-Boundaries für neuen Inhalt), gleicher Inhalt ⇒ Instanzen bleiben.
+- `HeadOutlet` (head/head-outlet.ts) als zweiter App-Root: `createTsazorApp` rendert ihn in
+  `document.head` (Blazor-WASM-Host-Parität; Head-Root wird bei `dispose()` zuerst
+  abgebaut). Port von Blazors JS `PageTitle.getAndRemoveExistingTitle`: beim ersten
+  After-Render wird der statische (Prerender-) `<title>` erfasst und entfernt —
+  tsazor-gesetzte (Range-Marker davor, Blazor: Logical-Element-Map) bleiben unberührt — als
+  Default-Content der Title-Sektion; mit PageTitle-Provider gewinnt dieser, nach dessen
+  Entfernen fällt der statische Titel zurück.
+- `PageTitle` (routing/page-title.ts) rendert kein `document.title` mehr direkt, sondern ein
+  `SectionContent` unter `HeadOutlet.TitleSectionId` (Blazor 1:1); Head-Content geht über
+  `HeadContent` → `SectionContent(headSectionId)`.
+- `FocusOnNavigate` (routing/focus-on-navigate.ts, Port von `FocusOnNavigate.cs` +
+  `DomWrapper.focusBySelector`): Seitenwechsel wird über `routeData.route.type` erkannt
+  (Sentinel-Klasse wie Blazors `NonMatchingPageType`), der Fokus läuft im OnAfterRender über
+  `focusBySelector` (ohne `tabindex`: `tabIndex = -1`, `focus({ preventScroll: true })`).
+  Abweichungen dokumentiert: kein Render-Mode-Mismatch-Check (keine Render-Modes),
+  kein `blazor-focus-on-navigate`-Custom-Element (Tsazor ist immer interaktiv),
+  `isDefaultContent` als normaler Parameter (kein `IComponent.Attach` in Tsazor).
+
 ### Templated Components (2.3)
 
 Slot vs. Komponente wird **vor** der Tag-Auflösung aus den Metadaten des

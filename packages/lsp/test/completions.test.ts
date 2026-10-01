@@ -217,7 +217,9 @@ describe("completeAt — slots (2.5)", () => {
     await writeFile(path.join(root, "Pages", "Header.tsazor"), "<hr />\n");
     try {
       const labels = await complete("<Cards>\n    <Head\n</Cards>\n", 1, 8); // after "<Head"
-      expect(labels).toEqual(["Header"]); // the slot binds first (TZS025's rename rule says the same)
+      // The slot binds first (TZS025's rename rule says the same); 3.4 added
+      // the Head* runtime components, which match the prefix as usual.
+      expect(labels).toEqual(["Header", "HeadContent", "HeadOutlet"]);
     } finally {
       await rm(path.join(root, "Pages", "Header.tsazor"));
     }

@@ -21,7 +21,7 @@ export interface RenderTreeFrame {
   readonly sequence: number;
   /** Element frames */
   readonly elementName?: string;
-  readonly elementKey?: string | number | null;
+  readonly elementKey?: string | number | object | null;
   readonly elementSubtreeLength?: number;
   /** Text frames */
   readonly textContent?: string | number | boolean | bigint;
@@ -33,7 +33,10 @@ export interface RenderTreeFrame {
   /** Component frames */
   readonly componentType?: ComponentType;
   readonly componentId?: number;
-  readonly componentKey?: string | number | null;
+  /** Component @key: string | number from markup (`@key="…"`), any object from
+   *  programmatic builds — SectionOutlet keys its nested renderer by the
+   *  fragment (Blazor's SetKey(RenderFragment), object identity). */
+  readonly componentKey?: string | number | object | null;
   readonly componentSubtreeLength?: number;
   /** Region frames */
   readonly regionSubtreeLength?: number;
@@ -63,7 +66,8 @@ export type AttributeValue =
   | EventCallback<any>
   | RenderFragment
   | Record<string, unknown>
-  | object;
+  | object
+  | symbol;
 
 /**
  * Builds a flat render tree, mirroring Blazor's RenderTreeBuilder.
@@ -109,7 +113,7 @@ export class RenderTreeBuilder {
     this.closeOpenFrame();
   }
 
-  setKey(key: string | number | null | undefined): void {
+  setKey(key: string | number | null | undefined | object): void {
     const index = this.openFrameStack[this.openFrameStack.length - 1];
     if (index === undefined) {
       throw new Error("setKey may only be called inside an open element or component.");

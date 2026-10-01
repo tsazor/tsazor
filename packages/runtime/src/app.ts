@@ -4,6 +4,7 @@ import { ServiceCollection, ServiceProvider, type Token } from "./di/service-col
 import type { ComponentBase } from "./components/component-base.js";
 import type { ComponentDefinition } from "./components/component-definition.js";
 import { RouteManifest, type RouteEntry } from "./routing/route-data.js";
+import { HeadOutlet } from "./head/head-outlet.js";
 
 /**
  * Blazor's WebAssemblyHostBuilder equivalent: wires renderer, DI and
@@ -47,6 +48,10 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   }
 
   const renderer = new Renderer(services);
+  // Blazor's WebAssembly host renders <HeadOutlet> as a second root component
+  // in the document's <head>: HeadContent/PageTitle content lands there. The
+  // head root is tracked and disposed with the app.
+  const headState = renderer.renderInContainer(HeadOutlet, document.head);
   const state = renderer.renderInContainer(options.root, container);
 
   // HMR bridge: compiled .tsazor modules call this on import.meta.hot.accept.
@@ -72,6 +77,10 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
     dispose() {
       if (disposed) return;
       disposed = true;
+      // The head root first (it has no content providers of its own; the main
+      // tree's PageTitle/HeadContent unregister with their own components).
+      renderer.disposeComponent(headState);
+      headState.range.remove();
       renderer.disposeComponent(state);
       state.range.remove();
       ownedNavigation?.dispose();

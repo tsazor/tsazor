@@ -5,6 +5,7 @@ import { ParameterView } from "../components/parameter-view.js";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
 import { completedLifecycle, isPromiseLike, type ComponentBase } from "../components/component-base.js";
 import { isIErrorBoundary } from "../components/error-boundary.js";
+import { SectionRegistry } from "../sections/section-registry.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
 import { mayHaveChanged } from "../components/change-detection.js";
@@ -118,6 +119,8 @@ export class Renderer {
   private readonly batchStates: ComponentState[] = [];
   private readonly batchCompletedListeners = new Set<(batch: RenderBatch) => void>();
   private readonly services: ServiceProvider;
+  /** Blazor's Renderer.SectionRegistry (3.4): one per renderer. */
+  readonly sectionRegistry = new SectionRegistry();
 
   /**
    * Receives every component failure (render, diff, DOM application,
@@ -156,6 +159,7 @@ export class Renderer {
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);
     (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.track(promise);
+    (state.renderHandle as { sectionRegistry?: unknown }).sectionRegistry = this.sectionRegistry;
     Object.defineProperty(state.renderHandle, "isRenderingInProgress", { get: () => this.batchInProgress });
     component.renderHandle = state.renderHandle;
     this.states.set(id, state);

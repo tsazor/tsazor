@@ -313,6 +313,22 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   (in handgebauten Bäumen). Fehlt `Type` (null), wirft die Komponente Blazors
   `DynamicComponent requires a non-null value for the parameter Type.`
 
+- Sections (3.4) — Blazor-Parität: `<SectionContent SectionName="x">…</SectionContent>` ist ein
+  Provider, `<SectionOutlet SectionName="x" />` rendert den Inhalt desselben Identifikators
+  (`SectionId` mit einem Objekt statt `SectionName` geht auch; beides zugleich oder keins ist
+  ein Laufzeitfehler). „Last added wins“ — der zuletzt gerenderte Provider überschreibt (ein
+  Provider rendert an seiner eigenen Stelle nichts, ohne Outlet auch nichts); wird der letzte
+  Provider entfernt, fällt der Outlet auf den vorherigen zurück. Genau ein Outlet je
+  Identifikator — der zweite wirft Blazors Fehler.
+- `HeadContent`/`HeadOutlet`/`PageTitle`/`FocusOnNavigate` (3.4) — Blazor-Web-Pendants: die
+  Runtime mountet (createTsazorApp) als zweiten Root einen `HeadOutlet` in `document.head`;
+  `<HeadContent>`-Inhalt landet dort, `<PageTitle>` setzt als Title-Sektion `document.title`
+  (ein statischer Prerender-`<title>` wird beim ersten Render erfasst, als Fallback-Default
+  übernommen und aus dem Head entfernt — wie in Blazor). `<FocusOnNavigate
+  RouteData="@routeData" Selector="h1" />` (im Router-Kontext; `RouteData` kommt vom Router)
+  fokussiert das Element bei Seitenwechsel — ohne `tabindex` bekommt es `tabIndex = -1`,
+  mit Fokus `preventScroll`.
+
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
   `http://…`) und case-insensitiv mit der aktuellen URI verglichen. `NavLinkMatch.All`: exakt

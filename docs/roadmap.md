@@ -920,11 +920,13 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 
 **Voraussetzung:** B2 (Fehlerisolation), B3/B4 (Disposal, Lifecycle), 2.3 (Slots).
 
-**Stand (2026-10-01):** 3.1–3.3 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
+**Stand (2026-10-01):** 3.1–3.4 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
 Renderer-Routing per Parent-Kette (Blazors `HandleExceptionViaErrorBoundary`), erzwungene
 Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal;
 `DynamicComponent` mit `Type`/`Parameters`, Blazors Unknown-Parameter-Fehler und Reference-Capture;
-`MarkupString` als Markup-Frame (Compiler erkennt `new MarkupString(...)`/`… as MarkupString`).
+`MarkupString` als Markup-Frame (Compiler erkennt `new MarkupString(...)`/`… as MarkupString`);
+Sections (`SectionRegistry` pro Renderer, `SectionContent`/`SectionOutlet`) mit HeadOutlet als
+zweitem App-Root im `<head>`, `PageTitle` als Title-Sektion, `FocusOnNavigate`.
 Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
 
 | Schritt | Inhalt | Abhängig von | Stand |
@@ -932,7 +934,7 @@ Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Bu
 | 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 | umgesetzt |
 | 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | umgesetzt |
 | 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | umgesetzt |
-| 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate` | B3 (Logical Ranges außerhalb des Roots) | — |
+| 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate`, Sections (`SectionContent`/`SectionOutlet`), `PageTitle` als Sektion | B3 (Logical Ranges außerhalb des Roots) | umgesetzt |
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | — |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
 | 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 |
@@ -999,6 +1001,55 @@ gleichnamiger lokaler Typ nie). Normale `@`-Ausdrücke bleiben escaped. Konformi
 in `packages/conformance/test/runtime/markup-string.test.ts` (Raw/escaped, Cast-Form, Diff
 eines dynamischen Feldes, Alias, Shadowing, Slot-Kontext, Runtime-Entpackung inkl.
 ChildContent).
+
+### 3.4 — Sections, HeadOutlet, FocusOnNavigate
+
+**Stand: umgesetzt** (2026-10-01). Neue Dateien: `packages/runtime/src/sections/`
+(`section-registry.ts`, `section-content.ts`, `section-outlet.ts`),
+`packages/runtime/src/head/` (`head-content.ts`, `head-outlet.ts`),
+`packages/runtime/src/routing/focus-on-navigate.ts`, `packages/runtime/src/navigation/dom-wrapper.ts`.
+
+- **SectionRegistry** (Port von Blazors `SectionRegistry.cs`): Provider-Liste je Identifikator
+  (`SectionName`-String oder `SectionId`-Objekt; beide gesetzt oder keiner wirft Blazors
+  Fehlermeldungen), „last added wins“, Default-Content bleibt vorn und verliert, Entfernen des
+  letzten Providers fällt auf den vorherigen zurück (inkl. Default-Content), Entfernen eines
+  Nicht-letzten benachrichtigt nicht, genau **ein** Subscriber (`SectionOutlet`) je
+  Identifikator — zweiter wirft Blazors Fehler. Abweichung: Blazors
+  Render-Mode-Mismatch-Erkennung entfällt (Tsazor hat keine Render-Modes).
+- **Registry-Verdrahtung** wie in Blazor über den RenderHandle: `renderer.sectionRegistry`
+  (eine Instanz pro Renderer), `renderHandle.sectionRegistry` auf jedem ComponentState —
+  keine Global-Variable.
+- **SectionOutlet**: rendert den Inhalt über eine eigene Komponente
+  (`SectionOutletContentRenderer`), **keyed per Content-Fragment** (`b.setKey(fragment)` —
+  Blazors `SetKey(RenderFragment)`, Port: `componentKey`/`setKey` nehmen jetzt beliebige
+  Objekte als Keys). Wechselndes Content ⇒ neue Renderer-Instanz (Cascades/Errors werden
+  neu bewertet), gleiches Content ⇒ Instanzen bleiben.
+- **SectionContent** als Provider; `isDefaultContent` ist hier Parameter statt Blazors
+  interner Eigenschaft — als dokumentierte Abweichung, weil Tsazor kein `IComponent.Attach`
+  hat; HeadOutlet setzt es programmatisch (Markup-Nutzung nicht vorgesehen).
+- **HeadOutlet** (Port von `HeadOutlet.cs`): rendert die Title- und Head-Sektion; als zweiter
+  Root wird er von `createTsazorApp` in `document.head` gemountet (Blazors
+  WebAssembly-Host-Parität) und von `app.dispose()` zuerst entsorgt. Blazors JS
+  `PageTitle.getAndRemoveExistingTitle` ist als `getAndRemoveExistingTitle()` portiert: der
+  erste statische (Prerender-) `<title>` wird beim ersten After-Render erfasst und entfernt;
+  Tsazor-eigene Title-Elemente (vorangegangener Range-Marker-Kommentar) bleiben unberührt
+  (Abweichung: Blazor prüft den Logical-Element-Map-Eintrag, Tsazor den Marker-Kommentartext).
+- **PageTitle** auf Sektion umgebaut: statt direkten `document.title`-Schreibens rendert es
+  ein `SectionContent` unter `HeadOutlet.TitleSectionId`; Entfernen fällt auf den statischen
+  Default-Titel zurück.
+- **FocusOnNavigate** (Port von `FocusOnNavigate.cs` + `DomWrapper.focusBySelector`): bei
+  Seitenwechsel (Vergleich über `routeData.route.type`, Sentinel-Klasse wie Blazors
+  `NonMatchingPageType`) fokussiert nach dem Render; ohne `tabindex` wird `tabIndex = -1`
+  gesetzt, `focus({ preventScroll: true })`. Renders nichts (Abweichung dokumentiert: Blazors
+  nicht-interaktiver Pfad rendert ein Custom-Element für die JS-Brücke — Tsazor ist immer
+  interaktiv). Fehler-Texte wie Blazor.
+
+Konformität: 22 Tests — 14 in `packages/conformance/test/runtime/sections.test.ts`
+(Last-wins, Fallback, Default-Content, Non-Last-Notify-Stille, Keyed-Renderer-Subtree,
+Subscriber-Fehler, Identifikator-Fehler, Unsubscribe bei Disposal, Markup), 4 in
+`packages/conformance/test/runtime/head.test.ts` (HeadContent im Head, PageTitle +
+Default-Titel-Capture/Fallback, createTsazorApp-Head-Root mit Dispose), 4 in
+`packages/conformance/test/runtime/focus-on-navigate.test.ts`.
 
 ---
 

@@ -14,6 +14,12 @@ export { CascadingValue } from "./components/cascading-value.js";
 export { DynamicComponent } from "./components/dynamic-component.js";
 export { MarkupString } from "./components/markup-string.js";
 export { ErrorBoundaryBase, ErrorBoundary, isIErrorBoundary, type IErrorBoundary } from "./components/error-boundary.js";
+export { SectionRegistry, resolveSectionIdentifier, type SectionContentLike, type SectionOutletLike } from "./sections/section-registry.js";
+export { SectionOutlet, SectionOutletContentRenderer } from "./sections/section-outlet.js";
+export { SectionContent } from "./sections/section-content.js";
+export { HeadContent, headSectionId, titleSectionId } from "./head/head-content.js";
+export { HeadOutlet } from "./head/head-outlet.js";
+export { focusBySelector } from "./navigation/dom-wrapper.js";
 
 // Renderer
 export { Renderer, type RenderBatch, type RenderError, type RenderErrorHandler, type RenderErrorPhase } from "./renderer/renderer.js";
@@ -53,6 +59,7 @@ export { RouteView } from "./routing/route-view.js";
 export { LayoutView } from "./routing/layout-view.js";
 export { NavLink, NavLinkMatch } from "./routing/nav-link.js";
 export { PageTitle } from "./routing/page-title.js";
+export { FocusOnNavigate } from "./routing/focus-on-navigate.js";
 export { NavigationLock } from "./routing/navigation-lock.js";
 
 // Data

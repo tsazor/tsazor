@@ -185,8 +185,11 @@ describe("runtime manifest", () => {
       [
         "AuthorizeRouteView", "AuthorizeView", "CascadingAuthenticationState", "CascadingValue", "DynamicComponent", "EditForm",
         "ErrorBoundary",
+        "FocusOnNavigate",
+        "HeadContent", "HeadOutlet",
         "InputCheckbox", "InputDate", "InputNumber", "InputSelect", "InputText", "InputTextArea", "LayoutView",
-        "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "ValidationMessage", "ValidationSummary", "Virtualize",
+        "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "SectionContent", "SectionOutlet", "SectionOutletContentRenderer",
+        "ValidationMessage", "ValidationSummary", "Virtualize",
       ].sort(),
     );
     for (const name of ["ComponentBase", "InputBase", "LayoutComponentBase"]) expect(RUNTIME_MANIFEST.components[name]?.abstract).toBe(true);
