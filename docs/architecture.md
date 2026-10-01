@@ -302,6 +302,34 @@ ist kein Content; lose Inhalte neben Slots, doppelte Slots, unbekannte
 Slot-Attribute und Nicht-Fragment-Parameter als Element sind TZS027/TZS028 —
 Meldungstexte folgen Razors ComponentDiagnosticFactory (RZ9995–RZ9999/RZ10002).
 
+### Typisierte Shadows, Type-Service und tsazor check (2.4)
+
+Der Type-Service (`@tsazor/lsp`, ts-service.ts) kompiliert jede `.tsazor` zu einem
+**Shadow-Modul** `<dir>/<Name>.tsazor.gen.ts` — virtuell (In-Memory-Programm, nie auf
+der Platte). Der Shadow ist der generierte TS-Code plus Typ-Emission: `satisfies`-
+Prop-Prüfungen je Komponenten-Tag (Value/`string`-Kategorien, Metadaten aus dem
+Package-Manifest), typisierte Slot-Kontexte aus `RenderFragment<T>`-`typeArgument`,
+Element-`@ref` per `HTML/SVGElementTagNameMap`-Cast und Komponenten-`@ref` per
+`ComponentReferenceCapture`, Runtime-Kurz-refs über hygienische
+`alias()`-Namen, Import-Typen über den `rebaseTypeImport`-Hook. `TItem`-Inferenz
+läuft über die Typschicht (4-Pass-`buildEntry`: erst kompilieren, dann `typedInference`-
+Requests je Tag-Position unify-en, exakt oder via `TItem[]`). Shadows einer Komponente
+exportieren die Klasse zusätzlich per Name — Rewrite-B-named-Imports
+(`@tsazor/fluent`) lösen gegen die Schatten auf; Schatten von
+Paket-`.tsazor`-Abhängigen stellt der Service automatisch sicher (Cascade über
+Paketgrenzen, cycle-guarded).
+
+Der Check (`check.ts` in `@tsazor/lsp`) läuft in zwei Durchläufen: Pass 1
+Compiler-Diagnosen + Shadow-Bau **aller** `.tsazor` unter dem Projektroot (T4 — auch
+nicht geöffnete Dateien), Pass 2 TypeScript-Diagnosen über den kompletten
+Schatten-Graphen. `@tsazor/cli` packt das als `tsazor check [root]` (Exit 1 bei
+Fehlern), das Vite-Plugin als `check: true` ans Build-Ende. Pro Komponente schreibt
+`componentTypeDeclarations` (workspace/metadata.ts) aus dem Package-Manifest ein echtes
+`dist/<Name>.d.ts` (eigene Parameter mit Doc-Kommentar, generisches `@inherits` als
+Klassen-Generikum, Runtime-Typen via `@tsazor/runtime`-Import); Ambient-Deklarationen
+für `*.tsazor` und `virtual:tsazor-routes` liefert `@tsazor/vite-plugin/client`. Details:
+[design-2.4-typed-checks.md](design-2.4-typed-checks.md).
+
 ## HMR (State-Retention)
 
 Jede `.tsazor`-Datei akzeptiert ihre eigenen Updates:

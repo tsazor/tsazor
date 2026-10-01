@@ -1,4 +1,4 @@
-@inherits InputBase
+@inherits InputBase<boolean>
 <div class="@this.wrapperClass">
     <input id="@this.id" type="checkbox" checked="@this.isChecked" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
     @if (this.label) {

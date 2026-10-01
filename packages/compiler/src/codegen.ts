@@ -14,8 +14,9 @@ import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
 import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
-import type { ComponentMetadata, ComponentParameter, ParameterCategory } from "./metadata.js";
+import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
+import { replaceIdentifiers } from "./metadata.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -30,6 +31,7 @@ import {
   type SnippetKind,
 } from "./rewrite.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
+import * as ts from "typescript";
 
 export interface ResolvedComponent {
   specifier: string;
@@ -95,6 +97,43 @@ export interface CodegenOptions {
    * as EventCallbacks — with a TZS026 warning when the resolver ran.
    */
   resolveComponentMetadata?: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
+  /**
+   * Shadow-layer emission (2.4): typed slot contexts, `satisfies`-checks on
+   * attribute values and `import type` lines for the parameter types. Never
+   * set for real builds — their output stays byte-identical (except @ref on a
+   * component tag, which lowers to the component capture in both modes).
+   */
+  typedShadow?: {
+    /**
+     * Resolved type arguments of a generic component tag (`TItem` → type
+     * text), keyed by the tag's source position `"line:column"` — provided
+     * by the type-service inference pass (2.4).
+     */
+    typeArguments?: ReadonlyMap<string, ReadonlyMap<string, string>>;
+    /**
+     * Rebases a parameter type's import reference (declared in another
+     * module) to a specifier the consuming shadow module can resolve;
+     * undefined drops the check for that parameter.
+     */
+    rebaseTypeImport?: (reference: TypeReference) => string | undefined;
+  };
+}
+
+/** 2.4: one `TItem` inference request of the shadow layer — the type-service
+ *  resolves the parameter's used type against the attribute value's real type
+ *  and recompiles the shadow with the substitution. */
+export interface TypedTagInferenceRequest {
+  /** Stable id of the tag instance: `${line}:${column}` (1-based `<Tag` position). */
+  tagId: string;
+  tagName: string;
+  /** The type parameter this request infers. */
+  typeParameter: string;
+  /** The parameter the inference anchors on (its declared type uses the type parameter). */
+  parameterName: string;
+  /** The parameter's declared type text, as written. */
+  parameterType: string;
+  /** Where the attribute's value expression starts in the source. */
+  value: SourcePos;
 }
 
 export interface CodegenResult {
@@ -122,6 +161,8 @@ export interface CodegenResult {
     /** Echo of options.codeBehindClass (sibling X.tsazor.ts base class), when set. */
     codeBehindClass?: string;
   };
+  /** 2.4: the tag-level TItem inference requests (shadow layer only). */
+  typedInference?: readonly TypedTagInferenceRequest[];
 }
 
 interface MapEntry {
@@ -160,6 +201,8 @@ interface AttributeContext {
   isComponent?: boolean;
   component?: ComponentTarget;
   category?: ParameterCategory;
+  /** 2.4: the typed shadow's `satisfies`-type for the value (component string parameters). */
+  checkType?: string;
 }
 
 /** Emission context: tracks sequence numbers per fragment scope. */
@@ -225,6 +268,14 @@ class Codegen {
   private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
   private readonly importedNames = new Set<string>();
+  /* Typed shadows (2.4) — shadow-layer state, only under options.typedShadow. */
+  /** The resolved type arguments of the component tag being emitted. */
+  private tagTypeArgs?: ReadonlyMap<string, string>;
+  /** The component's type-parameter order (for `Local<A, B>` suffixes). */
+  private tagTypeArgsOrder: readonly string[] | undefined;
+  /** `import type` lines the shadow module needs for the parameter types. */
+  private readonly shadowTypeImports = new Map<string, { specifier: string; imported?: string }>();
+  private readonly inferenceRequests: TypedTagInferenceRequest[] = [];
   /** The subset of importedNames bound to runtime values (usable as component tags). */
   private readonly importedValues = new Set<string>();
   /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
@@ -465,8 +516,24 @@ class Codegen {
       this.writer.insertLines(runtimeImportLine, [`import { ${runtimeNames.join(", ")} } from "@tsazor/runtime";`, ""]);
     }
 
+    // 2.4: the typed checks referenced types the shadow module must import
+    // from other modules (the `rebaseTypeImport` lookup collected them) —
+    // they join the runtime import's spliced header position.
+    if (this.shadowTypeImports.size > 0) {
+      const lines = [...this.shadowTypeImports.entries()].map(([name, imp]) =>
+        imp.imported !== undefined
+          ? `import type { ${imp.imported} as ${name} } from "${imp.specifier}";`
+          : `import type ${name} from "${imp.specifier}";`);
+      this.writer.insertLines(runtimeImportLine, [...lines, ""]);
+    }
+
     const code = this.writer.toString();
-    return { code, mappings: this.takeMappings(), metadata: this.metadata };
+    return {
+      code,
+      mappings: this.takeMappings(),
+      metadata: this.metadata,
+      ...(this.options.typedShadow !== undefined && this.inferenceRequests.length > 0 ? { typedInference: this.inferenceRequests } : {}),
+    };
   }
 
   /**
@@ -1151,17 +1218,23 @@ class Codegen {
         this.diagnostics.error("TZS008", ref, "@ref requires a bare property name.");
         continue;
       }
-      this.emitRefStmt(ref, node.pos);
+      this.emitRefStmt(ref, node.pos, name);
     }
     this.emitNodes(node.children, node.pos);
     this.plumbingStmt(`${BUILDER}.closeElement();`);
   }
 
   /** `@ref="name"` → synthetic `this.name` member capture, token-anchored so
-   *  hover/go-to-def on the ref name resolves the captured property. */
-  private emitRefStmt(ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos): void {
+   *  hover/go-to-def on the ref name resolves the captured property. Typed
+   *  shadows (2.4) cast to the element's interface — `HTMLElementTagNameMap[tag]`
+   *  / `SVGElementTagNameMap[tag]`, unknown tags without a cast — so the usual
+   *  `@ref` field type (`input`) typechecks (the TS2740 false positive). Real
+   *  builds stay untyped (`el`); their output is byte-identical. */
+  private emitRefStmt(ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos, elementName?: string): void {
     const seq = this.seq();
-    const text = `${BUILDER}.addElementReferenceCapture(${seq}, (el) => { this.${ref.code} = el; });`;
+    const cast = elementName !== undefined && this.options.typedShadow !== undefined ? elementRefCastTag(elementName) : undefined;
+    const value = `el${cast !== undefined ? ` as ${cast}` : ""}`;
+    const text = `${BUILDER}.addElementReferenceCapture(${seq}, (el) => { this.${ref.code} = ${value}; });`;
     if (ref.codeStart !== undefined) {
       this.pendingExprEntries.push({
         outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
@@ -1179,6 +1252,186 @@ class Codegen {
     this.stmt(text, pos, text.indexOf(baked));
   }
 
+  /* Typed shadows (2.4) ------------------------------------------------------ */
+
+  /** The resolved type arguments of the tag: explicit `TItem="…"` attributes
+   *  plus the inferred ones of the type layer, as substitution texts. The
+   *  inference requests for still-unresolved parameters are collected here. */
+  private tagTypeArguments(node: ElementNode, component: ComponentTarget, template: ReturnType<Codegen["templateAttributes"]>): ReadonlyMap<string, string> | undefined {
+    if (this.options.typedShadow === undefined) return undefined;
+    const metadata = component.metadata;
+    if (!metadata || metadata.typeParameters.length === 0) return undefined;
+
+    const args = new Map<string, string>();
+    const resolveTypeText = (text: string): string | undefined => this.resolveTypeArgumentText(text);
+    for (const [name, text] of template.typeArguments ?? []) {
+      const resolved = resolveTypeText(text);
+      if (resolved === undefined) return undefined;
+      args.set(name, resolved);
+    }
+    const inferred = this.options.typedShadow!.typeArguments?.get(`${node.pos.line}:${node.pos.column}`);
+    if (inferred) {
+      for (const [name, text] of inferred) {
+        const resolved = resolveTypeText(text);
+        if (resolved === undefined) return undefined;
+        args.set(name, resolved);
+      }
+    }
+
+    // 2.4 inference: an unresolved type parameter anchors on the attribute
+    // whose declared type uses it (`Items: TItem[]` ← `Items="this.people"`).
+    for (const typeParameter of metadata.typeParameters) {
+      if (args.has(typeParameter.name)) continue;
+      const parameter = metadata.parameters.find((p) => p.category === "value" && !p.uncertain && (p.references ?? []).some((ref) => ref.kind === "typeParameter" && ref.name === typeParameter.name) && (p.type !== undefined || p.inferredType !== undefined));
+      if (!parameter) continue;
+      const attr = regularAttributeFor(parameter.name);
+      const value = attr !== undefined ? this.expressionValue(attr) : null;
+      if (attr === undefined || value === null || value.start === undefined) continue;
+      this.inferenceRequests.push({
+        tagId: `${node.pos.line}:${node.pos.column}`,
+        tagName: node.tagName,
+        typeParameter: typeParameter.name,
+        parameterName: parameter.name,
+        parameterType: parameter.type ?? parameter.inferredType!,
+        value: value.start,
+      });
+    }
+
+    return args;
+
+    /** The tag's attribute setting this parameter (source order). */
+    function regularAttributeFor(parameterName: string): ValueAttribute | undefined {
+      return node.attributes.find((a): a is ValueAttribute =>
+        (a.kind === "static" || a.kind === "expression" || a.kind === "mixedValue") && a.name.toLowerCase() === parameterName.toLowerCase());
+    }
+  }
+
+  /**
+   * A type-argument text as the consumer's module writes it: its root
+   * identifiers resolve through the file's own perspective (`@import`s,
+   * `@using` dirs, runtime types) so the shadow module can import them.
+   */
+  private resolveTypeArgumentText(text: string): string | undefined {
+    // The type text uses the plain name (as written); `resolveType` collects
+    // the module import each root identifier needs for the shadow module.
+    const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, text);
+    let previous = ts.SyntaxKind.Unknown;
+    for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
+      if (token === ts.SyntaxKind.Identifier && previous !== ts.SyntaxKind.DotToken) {
+        this.resolveType(scanner.getTokenText());
+      }
+      previous = token;
+    }
+    return text.trim().length === 0 ? undefined : text;
+  }
+
+  /**
+   * The `satisfies`-type of the value the attribute sets (2.4): the
+   * parameter's declared type, its type parameters replaced by the tag's
+   * resolved arguments, undefined merged for optional parameters — or
+   * undefined when the type cannot be expressed from this module (an import
+   * the shadow cannot rebase, a local type of the declaring module). Side
+   * effect: registers the parameter type's `import type` / runtime-alias
+   * requirements.
+   */
+  private shadowParamType(parameter: ComponentParameter): string | undefined {
+    if (this.options.typedShadow === undefined || parameter.uncertain || parameter.category === "captureUnmatchedValues") return undefined;
+    const raw = parameter.type ?? parameter.inferredType;
+    if (raw === undefined) return undefined;
+
+    const substitution = new Map<string, { text: string }>();
+    for (const ref of parameter.references ?? []) {
+      switch (ref.kind) {
+        case "typeParameter": {
+          const arg = this.tagTypeArgs?.get(ref.name);
+          if (arg === undefined) return undefined; // unresolved type argument: no check
+          substitution.set(ref.name, { text: arg });
+          break;
+        }
+        case "runtime": {
+          // A runtime type: through the hygienic alias (shadow builds only,
+          // so the extra alias never reaches a real build's import header).
+          const runtimeName = ref.imported === undefined || ref.imported === "*" ? ref.name : ref.imported;
+          this.runtimeAliases.add(runtimeName);
+          substitution.set(ref.name, { text: alias(runtimeName) });
+          break;
+        }
+        case "import": {
+          if (this.importedNames.has(ref.name) || this.typeImports.has(ref.name)) break; // already bound in this module
+          const specifier = this.options.typedShadow!.rebaseTypeImport?.(ref);
+          if (specifier === undefined) return undefined;
+          this.shadowTypeImports.set(ref.name, { specifier, imported: ref.imported });
+          break;
+        }
+        case "local": {
+          // Declared in the parameter's own module and not re-exported: not
+          // expressible from this module — no check (no import to fake it).
+          return undefined;
+        }
+        // "global": Math, Record, … — already in scope.
+      }
+    }
+    let text = substitution.size > 0 ? replaceIdentifiers(raw, substitution) : raw;
+    if (parameter.optional) text = `${text} | undefined`;
+    return text;
+  }
+
+  /** The type of a RenderFragment<T> child content context (2.4): the
+   *  parameter's `typeArgument`, resolved like a parameter type — the
+   *  parameter's references bind its names, the tag's arguments substitute
+   *  its type parameters. The runtime's untyped delegate placeholder
+   *  (`unknown` — e.g. Virtualize's itemTemplate, which the runtime class
+   *  cannot make generic yet) keeps `any`: a context of `unknown` would
+   *  error every member use and tell the consumer nothing a `TItem` on the
+   *  component could not. */
+  private shadowContextType(parameter: ComponentParameter): string | undefined {
+    const typeArgument = parameter.typeArgument;
+    if (this.options.typedShadow === undefined || typeArgument === undefined) return undefined;
+    if (typeArgument.trim() === "unknown") return undefined;
+    return this.shadowParamType({
+      ...parameter,
+      optional: false,
+      type: typeArgument,
+      references: (parameter.references ?? []).filter((ref) => typeArgument.includes(ref.name)),
+    });
+  }
+
+  /**
+   * `@ref="name"` on a component (2.4): the capture receives the child's
+   * instance (Blazor's ComponentReferenceCapture); the assignment casts to the
+   * component type — with the tag's resolved type arguments, otherwise
+   * `never` (the ref then accepts any field type; a generic reference without
+   * arguments cannot be written as a type).
+   */
+  private emitComponentRefStmt(
+    ref: Extract<AttributeNode, { kind: "ref" }>,
+    pos: SourcePos,
+    local: string,
+    cast: "instance" | "never",
+  ): void {
+    const seq = this.seq();
+    const referenceText = cast === "instance"
+      ? `comp as ${local}${this.typeArgumentSuffix()}`
+      : "comp as unknown as never";
+    const text = `${BUILDER}.addComponentReferenceCapture(${seq}, (comp) => { this.${ref.code} = ${referenceText}; });`;
+    if (ref.codeStart !== undefined) {
+      this.pendingExprEntries.push({
+        outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
+        srcLine: ref.codeStart.line - 1,
+        srcCol: ref.codeStart.column,
+      });
+    }
+    this.stmt(text, pos);
+  }
+
+  /** `<>…` of the current tag's resolved type arguments, in the component's type-parameter order ("" without type parameters). */
+  private typeArgumentSuffix(): string {
+    const args = this.tagTypeArgs;
+    const order = this.tagTypeArgsOrder ?? [];
+    if (args === undefined || order.length === 0) return "";
+    return `<${order.map((name) => args.get(name)!).filter((text) => text !== undefined).join(", ")}>`;
+  }
+
   private emitComponent(node: ElementNode): void {
     const local = this.localForComponent(node.tagName, this.metadata.usings, tagNameRange(node))!;
     const key = node.attributes.find((a) => a.kind === "key");
@@ -1189,6 +1442,14 @@ class Codegen {
     const slots = node.children.filter((child): child is ElementNode => child.kind === "element" && this.slotElements.has(child));
     // With explicit child content elements, whitespace between them is not content (Razor).
     const loose = slots.length > 0 ? node.children.filter((child) => !slots.includes(child as ElementNode) && !isWhitespaceText(child)) : node.children;
+
+    // 2.4: the tag's type arguments (explicit `TItem="…"`, plus the inferred
+    // ones from the type layer) drive the typed checks and slot contexts.
+    const tagTypeArgs = this.tagTypeArguments(node, component, template);
+    const previousTagArgs = this.tagTypeArgs;
+    const previousOrder = this.tagTypeArgsOrder;
+    this.tagTypeArgs = tagTypeArgs;
+    this.tagTypeArgsOrder = component.metadata?.typeParameters.map((t) => t.name);
 
     const seq = this.seq();
     const open = `${BUILDER}.openComponent(${seq}, ${local});`;
@@ -1208,7 +1469,12 @@ class Codegen {
         this.diagnostics.error("TZS008", ref, "@ref on components requires a bare property name.");
         continue;
       }
-      this.emitRefStmt(ref, node.pos);
+      this.emitComponentRefStmt(
+        ref,
+        node.pos,
+        local,
+        (component.metadata?.typeParameters.length ?? 0) === 0 || (tagTypeArgs?.size ?? 0) === (component.metadata?.typeParameters.length ?? 0) ? "instance" : "never",
+      );
     }
     const setByAttribute = (parameter: ComponentParameter): AttributeNode | undefined =>
       regular.find((a) => "name" in a && a.kind !== "eventHandler" && a.kind !== "eventModifier" && component.metadata && findParameter(component.metadata, a.name) === parameter);
@@ -1228,7 +1494,7 @@ class Codegen {
         continue;
       }
       const contextName = parameter.category === "RenderFragment<T>" ? this.slotContextName(slot, template.context) : null;
-      this.emitFragment(parameter.name, contextName, slot.children, slot, node.tagName, slot.tagName);
+      this.emitFragment(parameter.name, contextName, slot.children, slot, node.tagName, slot.tagName, parameter);
     }
     if (slots.length > 0 && loose.length > 0) {
       // Razor RZ9996: explicit child content elements and loose content do not mix.
@@ -1239,6 +1505,8 @@ class Codegen {
       this.emitImplicitChildContent(node, component, loose, template.context, setByAttribute);
     }
     this.plumbingStmt(`${BUILDER}.closeComponent();`);
+    this.tagTypeArgs = previousTagArgs;
+    this.tagTypeArgsOrder = previousOrder;
   }
 
   /**
@@ -1275,7 +1543,7 @@ class Codegen {
       }
     }
     if (parameter?.category === "RenderFragment<T>") {
-      this.emitFragment(parameter.name, context ?? "context", children, node, node.tagName, "ChildContent");
+      this.emitFragment(parameter.name, context ?? "context", children, node, node.tagName, "ChildContent", parameter);
       return;
     }
     this.stmt(`${BUILDER}.addContent(${this.seq()}, (${BUILDER}) => {`, node.pos);
@@ -1291,9 +1559,11 @@ class Codegen {
    * One child content parameter: a RenderFragment `(__builder) => { … }`, or
    * for RenderFragment<T> `(context) => (__builder) => { … }` with the
    * context as a local of the body. The body has its own sequence scope.
-   * The context is typed `any` in the generated TS until typed shadows (2.4).
+   * Typed shadows (2.4) type the context from the parameter's `typeArgument`
+   * (substituted by the tag's type arguments); without one (or in a real
+   * build) it stays `any`.
    */
-  private emitFragment(name: string, context: string | null, children: MarkupNode[], at: ElementNode, component: string, element: string): void {
+  private emitFragment(name: string, context: string | null, children: MarkupNode[], at: ElementNode, component: string, element: string, parameter?: ComponentParameter): void {
     if (context !== null) {
       const enclosing = this.contextStack.find((c) => c.name === context);
       if (enclosing) {
@@ -1305,9 +1575,10 @@ class Codegen {
         );
       }
     }
+    const contextType = context !== null && parameter !== undefined ? this.shadowContextType(parameter) : undefined;
     const head = context === null
       ? `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${BUILDER}) => {`
-      : `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${context}: any) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
+      : `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${context}: ${contextType ?? "any"}) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
     this.stmt(head, at.pos);
     this.enterScope();
     if (context !== null) this.contextStack.push({ name: context, element, component });
@@ -1327,14 +1598,20 @@ class Codegen {
    * expressions"), when the component has a RenderFragment<T> parameter and
    * no parameter named Context — and type arguments of a generic component
    * (`TItem="Person"`, one per `@typeparam`). A type argument has no runtime
-   * meaning in TypeScript; its value must be a TS type (TZS024), typed
-   * shadows (2.4) consume it.
+   * meaning in TypeScript; typed shadows (2.4) consume it. The raw type-arg
+   * texts travel with the template for the typed shadow layer.
    */
-  private templateAttributes(node: ElementNode, component: ComponentTarget): { consumed: Set<AttributeNode>; context?: string } {
+  private templateAttributes(node: ElementNode, component: ComponentTarget): {
+    consumed: Set<AttributeNode>;
+    context?: string;
+    /** Raw type-argument texts of the tag (`TItem` → type text, as written). */
+    typeArguments?: ReadonlyMap<string, string>;
+  } {
     const consumed = new Set<AttributeNode>();
     const metadata = component.metadata;
     if (!metadata) return { consumed };
     let context: string | undefined;
+    let typeArguments: Map<string, string> | undefined;
     const generic = metadata.parameters.some((p) => p.category === "RenderFragment<T>");
     for (const attr of node.attributes) {
       if (attr.kind !== "static" && attr.kind !== "expression" && attr.kind !== "mixedValue") continue;
@@ -1347,10 +1624,13 @@ class Codegen {
       const typeParameter = metadata.typeParameters.find((t) => t.name === attr.name) ?? metadata.typeParameters.find((t) => t.name.toLowerCase() === attr.name.toLowerCase());
       if (typeParameter) {
         consumed.add(attr);
-        this.checkTypeArgument(attr, typeParameter.name, node.tagName);
+        const text = this.checkTypeArgument(attr, typeParameter.name, node.tagName);
+        if (text !== undefined) {
+          (typeArguments ??= new Map()).set(typeParameter.name, text);
+        }
       }
     }
-    return { consumed, ...(context !== undefined ? { context } : {}) };
+    return { consumed, ...(context !== undefined ? { context } : {}), ...(typeArguments ? { typeArguments } : {}) };
   }
 
   /** The context name of a RenderFragment<T> child content element: its own `Context`, else the component's, else `context`. */
@@ -1374,18 +1654,19 @@ class Codegen {
     return value;
   }
 
-  /** A type argument attribute (`TItem="Person"`): the value must parse as a TS type. */
-  private checkTypeArgument(attr: ValueAttribute, typeParameter: string, tag: string): void {
+  /** A type argument attribute (`TItem="Person"`): the value must parse as a TS type; the raw text travels to the typed shadows. */
+  private checkTypeArgument(attr: ValueAttribute, typeParameter: string, tag: string): string | undefined {
     const text = attr.kind === "static" ? (attr.minimized ? "" : attr.raw?.text ?? attr.value) : attr.kind === "expression" ? attr.code : "";
     const start = attr.kind === "static" ? attr.raw?.start : attr.kind === "expression" ? attr.codeStart : undefined;
     if (text.trim().length === 0 || attr.kind === "mixedValue") {
       this.diagnostics.error("TZS009", attr, `'${attr.name}' is the type argument '${typeParameter}' of '<${tag}>' and needs a type ('${attr.name}="Person"').`);
-      return;
+      return undefined;
     }
     const error = typeSyntaxError(text);
-    if (error === null) return;
+    if (error === null) return text;
     const at = start ? advancePos(start, text.slice(0, error.offset)) : attr.pos;
     this.diagnostics.error("TZS024", start ? textRange(at, text.slice(error.offset, error.offset + Math.max(error.length, 1))) : attr, `'${attr.name}' takes a TypeScript type: ${error.message}`);
+    return undefined;
   }
 
   /**
@@ -1431,7 +1712,8 @@ class Codegen {
         // A minimized attribute is `true` (Razor) — the DOM applier then sets
         // the attribute, also where a same-named DOM property exists
         // (`disabled = ""` would be false).
-        const value = attr.minimized ? "true" : JSON.stringify(decodeHtmlEntities(attr.value));
+        const raw = attr.minimized ? "true" : JSON.stringify(decodeHtmlEntities(attr.value));
+        const value = ctx?.checkType !== undefined ? `(${raw}) satisfies ${ctx.checkType}` : raw;
         this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`, pos);
         break;
       }
@@ -1449,9 +1731,10 @@ class Codegen {
         const value = ctx?.isComponent && ctx.category === undefined && EVENT_ATTR_PATTERN.test(attr.name)
           ? this.callbackValue(attr.code, codeStart())
           : this.expr(attr.code, codeStart());
-        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`;
+        const checked = ctx?.checkType !== undefined ? `(${value}) satisfies ${ctx.checkType}` : value;
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${checked});`;
         // Precise entries are relative to the value.
-        this.stmt(text, pos, text.lastIndexOf(value));
+        this.stmt(text, pos, text.lastIndexOf(checked));
         break;
       }
       case "mixedValue": {
@@ -1546,7 +1829,10 @@ class Codegen {
     const category = parameter && !parameter.uncertain ? parameter.category : undefined;
     const name = parameter?.name ?? attr.name;
     if (category === undefined || category === "string") {
-      this.emitAttribute(attr, { ...ctx, component: undefined, ...(category ? { category } : {}) }, name);
+      // 2.4: a string parameter's value — plain text, `@expr` or mixed — is
+      // checked against the declared type in the shadow module.
+      const checkType = category === "string" && parameter !== undefined ? this.shadowParamType(parameter) : undefined;
+      this.emitAttribute(attr, { ...ctx, component: undefined, ...(category ? { category } : {}), ...(checkType !== undefined ? { checkType } : {}) }, name);
       return;
     }
     const source = this.expressionValue(attr);
@@ -1564,8 +1850,27 @@ class Codegen {
       : parameter!.delegate
         ? this.delegateValue(source.code, source.start)
         : this.expr(source.code, source.start);
-    const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`;
-    this.stmt(text, attr.pos, text.lastIndexOf(value));
+    // 2.4: the shadow layer checks the value against the parameter's type.
+    const checked = this.optionallyCheckedValue(value, target.metadata ? parameter! : undefined);
+    const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${checked});`;
+    this.stmt(text, attr.pos, text.lastIndexOf(checked));
+  }
+
+  /**
+   * The value with the typed shadow's `satisfies <type>` (2.4): the real
+   * emission is byte-identical (the wrap exists only under
+   * `options.typedShadow`); TS checks the value type through the shadow and
+   * the diagnostic maps back to the attribute value. No check for callbacks,
+   * delegating parameters and unresolved types.
+   */
+  private optionallyCheckedValue(value: string, parameter: ComponentParameter | undefined): string {
+    if (parameter === undefined) return value;
+    const category = parameter.category;
+    if (category === "value" || category === "string") {
+      const type = this.shadowParamType(parameter);
+      if (type !== undefined) return `(${value}) satisfies ${type}`;
+    }
+    return value;
   }
 
   /**
@@ -2093,6 +2398,19 @@ function csharpForEachHeader(code: string): CSharpForEach | null {
 }
 
 /* Diagnostic ranges ------------------------------------------------------- */
+
+/* Typed shadows (2.4): the `@ref` cast's type text for an element tag —
+ * `HTMLElementTagNameMap[tag]` / `SVGElementTagNameMap[tag]` for known tags
+ * (the lib.dom index gives the tag's precise interface), undefined for
+ * unknown/custom elements (the capture keeps `el`: plain `Element`). */
+const HTML_REF_TAGS = new Set("a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr i iframe img input ins kbd label legend li link main map mark menu meter nav noscript object ol optgroup option output p picture pre progress q rp rt ruby s samp script search section select slot small source span strong style sub summary sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr".split(" "));
+const SVG_REF_TAGS = new Set("svg circle ellipse g line path polygon polyline rect text tspan defs use symbol marker clipPath mask pattern foreignObject linearGradient radialGradient stop image filter title desc".split(" "));
+
+function elementRefCastTag(tagName: string): string | undefined {
+  if (HTML_REF_TAGS.has(tagName)) return `HTMLElementTagNameMap["${tagName}"]`;
+  if (SVG_REF_TAGS.has(tagName)) return `SVGElementTagNameMap["${tagName}"]`;
+  return undefined;
+}
 
 /** A directive without its trailing whitespace: `@name value`. */
 function directiveRange(d: DirectiveNode): SourceRange {

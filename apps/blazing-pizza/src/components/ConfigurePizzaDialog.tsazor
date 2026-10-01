@@ -26,7 +26,7 @@
                     <select class="custom-select" @onchange="toppingSelected">
                         <option value="-1" disabled selected>(select)</option>
                         @for (let i = 0; i < this.toppings.length; i++) {
-                            <option value="@i">@this.toppings[i].name - (£@toppingFormattedPrice(this.toppings[i]))</option>
+                            <option value="@i">@this.toppings[i]!.name - (£@toppingFormattedPrice(this.toppings[i]!))</option>
                         }
                     </select>
                 }

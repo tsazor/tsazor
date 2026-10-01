@@ -12,7 +12,7 @@ import {
 } from "@tsazor/compiler";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { collectImportsSync, findPackageDir } from "./imports.js";
+import { collectImportsSync, findPackageDir, rebaseSpecifier } from "./imports.js";
 import { classNameForFile, createFileContext, type FileContext } from "./resolver.js";
 import { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";
 
@@ -400,4 +400,113 @@ function absolutizeManifest(manifest: ComponentManifest, packageDir: string): Co
 function mapFile(ref: TypeReference, map: (file: string | undefined) => string | undefined): TypeReference {
   if (ref.file === undefined) return ref;
   return { ...ref, file: map(ref.file) };
+}
+
+/* Consumer type declarations (2.4) -------------------------------------------- */
+
+/**
+ * Real per-component type declarations from a package manifest: one class per
+ * component with its own typed (and documented) parameters and the resolved
+ * base class — the consumer-facing counterpart of the permissive `export const
+ * X: any` stubs the library builds emitted before 2.4.
+ *
+ * The typed layer itself (editor LSP, `tsazor check`) does not use these: it
+ * checks through the component libraries' own .tsazor shadow modules.
+ *
+ * Options: `declarationDir` — where the `.d.ts` files land (default: the
+ * declaring component's directory, e.g. `src/` when emitting into `dist/`
+ * pass `distDir`); `runtimeTypes` — the module runtime parameter types import
+ * from. `import`-kind parameter references are rebased from the declaring
+ * file's directory to the declaration directory.
+ */
+export function componentTypeDeclaration(
+  entry: ComponentMetadata,
+  exportName: string = entry.name,
+  options?: { packageDir?: string; declarationDir?: string; runtimeTypes?: string },
+): string {
+  const runtimeTypes = options?.runtimeTypes ?? "@tsazor/runtime";
+  const ownName = entry.name;
+  const runtimeNames = new Set<string>();
+  /** type imports keyed by rebased specifier → names */
+  const typeImports = new Map<string, Set<string>>();
+
+  const declaringDirOf = (file: string | undefined): string | undefined => {
+    if (file === undefined || options?.packageDir === undefined) return undefined;
+    const relative = path.isAbsolute(file) ? path.relative(options.packageDir, file) : file;
+    if (relative.startsWith("..")) return undefined;
+    return path.resolve(options.packageDir, path.dirname(toPosixPath(relative)));
+  };
+
+  const collectReferences = (references: readonly TypeReference[] | undefined, own: boolean): void => {
+    for (const reference of references ?? []) {
+      if (!own) continue; // inherited members come through the base class chain
+      if (reference.kind === "runtime" && reference.imported !== "*") {
+        runtimeNames.add(reference.imported ?? reference.name);
+      } else if (reference.kind === "import" && reference.specifier !== undefined && reference.file !== undefined) {
+        const fromDir = declaringDirOf(reference.file);
+        const declarationDir = options?.declarationDir;
+        const specifier =
+          fromDir !== undefined && isPathLike(reference.specifier)
+            ? rebaseSpecifier(reference.specifier, fromDir, declarationDir ?? fromDir)
+            : reference.specifier;
+        const names = typeImports.get(specifier) ?? new Set<string>();
+        names.add(reference.imported ?? reference.name);
+        typeImports.set(specifier, names);
+      }
+      // `local` types are not importable from the manifest — the type stays
+      // written as-is; `global` types need no import; `typeParameter`s are
+      // declared by the emitted class itself.
+    }
+  };
+
+  const base = entry.base;
+  if (base !== undefined && base.resolved) {
+    // For these library builds the base is a runtime class (`@inherits InputBase<string>`);
+    // a code-behind base is part of the consuming project and not importable here.
+    if (!base.codeBehind) runtimeNames.add(base.name);
+  }
+  if (runtimeNames.size === 0 && (base === undefined || !base.resolved)) runtimeNames.add("ComponentBase");
+
+  const typeParams = entry.typeParameters.map((tp) => tp.name + (tp.constraint ? ` extends ${tp.constraint}` : "") + (tp.default ? ` = ${tp.default}` : ""));
+  const typeDecl = typeParams.length > 0 ? `<${typeParams.join(", ")}>` : "";
+  const baseName = base !== undefined && base.resolved && !base.codeBehind ? base.name : "ComponentBase";
+  const baseArgs = base !== undefined && base.resolved && !base.codeBehind && base.typeArguments && base.typeArguments.length > 0 ? `<${base.typeArguments.join(", ")}>` : "";
+
+  const lines: string[] = [];
+  if (runtimeNames.size > 0) {
+    lines.push(`import type { ${[...runtimeNames].sort().join(", ")} } from "${runtimeTypes}";`);
+  }
+  for (const [specifier, names] of [...typeImports].sort(([a], [b]) => a.localeCompare(b))) {
+    lines.push(`import type { ${[...names].sort().join(", ")} } from "${specifier}";`);
+  }
+  if (lines.length > 0) lines.push("");
+
+  lines.push(`export default class ${exportName}${typeDecl} extends ${baseName}${baseArgs} {`);
+  for (const parameter of entry.parameters) {
+    if (parameter.declaredBy !== ownName) continue;
+    if (parameter.doc) lines.push(`  /** ${parameter.doc.replace(/\n/g, " ")} */`);
+    lines.push(`  ${parameter.name}${parameter.optional ? "?" : ""}: ${parameter.type};`);
+  }
+  lines.push("}");
+  return `${lines.join("\n")}\n`;
+}
+
+/** d.ts text of every component in a manifest, keyed by export name. */
+export function componentTypeDeclarations(
+  manifest: ComponentManifest,
+  options?: { packageDir?: string; declarationDir?: string; runtimeTypes?: string },
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [exportName, entry] of Object.entries(manifest.components)) {
+    result[exportName] = componentTypeDeclaration(entry, exportName, options);
+  }
+  return result;
+}
+
+function isPathLike(specifier: string): boolean {
+  return specifier.startsWith(".") || path.isAbsolute(specifier);
+}
+
+function toPosixPath(value: string): string {
+  return value.replace(/\\/g, "/");
 }

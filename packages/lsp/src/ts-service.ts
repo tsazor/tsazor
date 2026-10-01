@@ -1,10 +1,11 @@
 import { buildShadowModule, isShadowPath, shadowPathFor, type ShadowModule } from "./shadow-module.js";
 import { TsazorGenMap } from "./ts-mapping.js";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as ts from "typescript";
+import type { TypedTagInferenceRequest } from "@tsazor/compiler";
 
 /**
  * The TypeScript type layer (v2): one `ts.LanguageService` per workspace over
@@ -136,6 +137,8 @@ export class TsazorTypeService {
   private readonly entries = new Map<string, ShadowEntry>();
   private readonly variants = new Map<string, VariantModule & { path: string }>();
   private nextVersion = 1;
+  /** `.tsazor` keys currently building — cycle guard for the shadow cascade. */
+  private readonly building = new Set<string>();
 
   constructor(projectRoot: string) {
     this.projectRoot = path.resolve(projectRoot);
@@ -180,28 +183,128 @@ export class TsazorTypeService {
 
   /** (Re)builds the shadow from an open document's source. */
   async openTsazor(tsazorPath: string, source: string): Promise<ShadowEntry | null> {
-    const key = shadowKey(tsazorPath);
-    const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot);
-    if (!shadow) {
-      this.entries.delete(key);
-      return null;
-    }
-    const entry: ShadowEntry = { shadow, version: this.nextVersion++ };
-    this.entries.set(key, entry);
-    return entry;
+    return this.buildEntry(tsazorPath, source);
   }
 
   /** (Re)builds the shadow from disk, remembering the mtime for the cache. */
   private async openFromDisk(tsazorPath: string, source: string, mtimeMs: number): Promise<ShadowEntry | null> {
+    return this.buildEntry(tsazorPath, source, mtimeMs);
+  }
+
+  /** Builds the shadow entry, running the `TItem` inference passes (2.4):
+   *  pass one without resolved type arguments; per still-unresolved type
+   *  parameter the attribute value's real type is queried from the shadow
+   *  program and the shadow recompiled with the substitution (until no new
+   *  tags resolve). The entry is registered provisionally on every pass —
+   *  the program query needs the module in the registry. */
+  private async buildEntry(tsazorPath: string, source: string, mtimeMs?: number): Promise<ShadowEntry | null> {
     const key = shadowKey(tsazorPath);
-    const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot);
-    if (!shadow) {
-      this.entries.delete(key);
-      return null;
+    if (this.building.has(key)) return this.entries.get(key) ?? null;
+    this.building.add(key);
+    try {
+      let typeArguments: ReadonlyMap<string, ReadonlyMap<string, string>> | undefined;
+      let entry: ShadowEntry | null = null;
+      for (let pass = 0; pass < 4; pass++) {
+        const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot, typeArguments);
+        if (!shadow) {
+          this.entries.delete(key);
+          return null;
+        }
+        entry = { shadow, version: this.nextVersion++, ...(mtimeMs !== undefined ? { mtimeMs } : {}) };
+        this.entries.set(key, entry);
+        const requests = shadow.typedInference ?? [];
+        if (requests.length === 0) break;
+        const resolved = this.inferTypeArguments(entry, requests);
+        const fresh = [...resolved].filter(([tagId]) => typeArguments?.get(tagId) === undefined);
+        if (fresh.length === 0) break;
+        typeArguments = this.mergeTypeArguments(typeArguments, resolved);
+      }
+      // 2.4: shadows the graph reaches outside the project root (rewrite B —
+      // bare-package components like `@tsazor/fluent`) must exist too, or the
+      // consumer reports TS2307 for the package's `.tsazor.gen` shadow path.
+      if (entry) await this.ensureImportedShadows(entry);
+      return entry;
+    } finally {
+      this.building.delete(key);
     }
-    const entry: ShadowEntry = { shadow, version: this.nextVersion++, mtimeMs };
-    this.entries.set(key, entry);
-    return entry;
+  }
+
+  /** Ensures shadows for every `.tsazor` component source the shadow imports
+   *  by absolute or relative shadow path (`X.tsazor.gen`) — recursion stops
+   *  at files already being built (cycles) or already registered. */
+  private async ensureImportedShadows(entry: ShadowEntry): Promise<void> {
+    const fileDir = path.dirname(entry.shadow.virtualPath);
+    const imported = new Set<string>();
+    for (const match of entry.shadow.code.matchAll(/from\s*["']([^"']+)["']/g)) {
+      const specifier = match[1];
+      if (specifier === undefined) continue;
+      const resolved = path.resolve(fileDir, specifier);
+      if (/\.tsazor\.gen(\.ts)?$/.test(resolved)) imported.add(resolved.replace(/\.gen(\.ts)?$/, ""));
+    }
+    await Promise.all([...imported].map((candidate) => (existsSync(candidate) ? this.ensureTsazor(candidate) : Promise.resolve())));
+  }
+
+  /** Merges newly inferred tag type arguments into `previous` (later values win). */
+  private mergeTypeArguments(
+    previous: ReadonlyMap<string, ReadonlyMap<string, string>> | undefined,
+    additions: ReadonlyMap<string, ReadonlyMap<string, string>>,
+  ): ReadonlyMap<string, ReadonlyMap<string, string>> {
+    if (previous === undefined) return additions;
+    const merged = new Map(previous);
+    for (const [tagId, args] of additions) merged.set(tagId, new Map([...(merged.get(tagId) ?? []), ...args]));
+    return merged;
+  }
+
+  /** Resolves the requested type parameters from the shadow program: the
+   *  attribute value's real type, unifying against the parameter's declared
+   *  type — exactly (`Items: TItem`) or through the array element (`Items:
+   *  TItem[]` ← `Person[]`). Unresolvable requests stay absent. */
+  private inferTypeArguments(entry: ShadowEntry, requests: readonly TypedTagInferenceRequest[]): Map<string, Map<string, string>> {
+    const result = new Map<string, Map<string, string>>();
+    const program = this.ls.getProgram();
+    if (!program) return result;
+    const sourceFile = program.getSourceFile(entry.shadow.virtualPath);
+    if (!sourceFile) return result;
+    const checker = program.getTypeChecker();
+
+    for (const request of requests) {
+      const gen = entry.shadow.map.srcToGen(request.value.line - 1, request.value.column);
+      if (!gen) continue;
+      const offset = offsetIn(entry.shadow.code, gen.line, gen.column);
+      if (offset >= sourceFile.text.length) continue;
+      // The outermost expression starting at the value's position is the
+      // attribute value (`this.people` from the `this` token).
+      let node: ts.Node = descendTo(sourceFile, offset);
+      while (node.parent !== undefined && ts.isExpression(node.parent) && node.parent.getStart(sourceFile) === node.getStart(sourceFile)) {
+        node = node.parent;
+      }
+      const type = checker.getTypeAtLocation(node);
+      const declared = request.parameterType.trim();
+      let argument: string | undefined;
+      if (declared === request.typeParameter) {
+        argument = checker.typeToString(type, node, ts.TypeFormatFlags.NoTruncation);
+      } else {
+        const element = declared.slice(0, -2).trim();
+        if (declared.endsWith("[]") && element === request.typeParameter && checker.isArrayType(type)) {
+          const [item] = checker.getTypeArguments(type as ts.TypeReference);
+          if (item !== undefined) argument = checker.typeToString(item, node, ts.TypeFormatFlags.NoTruncation);
+        }
+      }
+      if (argument === undefined || argument.trim().length === 0) continue;
+      const args = result.get(request.tagId) ?? new Map<string, string>();
+      args.set(request.typeParameter, argument);
+      result.set(request.tagId, args);
+    }
+    return result;
+  }
+
+  /** Scans the project for every `.tsazor` file (T4) and builds its shadow
+   *  — so types flow across files not currently open too. Returns the
+   *  scanned file count. */
+  async scanProject(): Promise<number> {
+    const files = findTsazorFiles(this.projectRoot);
+    for (const file of files) void this.ensureTsazor(file);
+    return files.length;
   }
 
   closeTsazor(tsazorPath: string): void {
@@ -396,6 +499,48 @@ export class TsazorTypeService {
 }
 
 /* Registry helpers -------------------------------------------------------- */
+
+/** Every `.tsazor` under `root` in source-tree order (node_modules, .git,
+ *  dist/bin/obj excluded) — the T4 project scan and `tsazor check` share it. */
+export function findTsazorFiles(root: string): string[] {
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    let names: string[];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return;
+    }
+    names.sort();
+    for (const name of names) {
+      if (name === "node_modules" || name === ".git" || name === "dist" || name === "bin" || name === "obj") continue;
+      const entry = path.join(dir, name);
+      let stat;
+      try {
+        stat = statSync(entry);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) walk(entry);
+      else if (name.endsWith(".tsazor")) files.push(entry);
+    }
+  };
+  walk(path.resolve(root));
+  return files;
+}
+
+/** The deepest node covering `offset` (public-API stand-in for the internal
+ *  getTokenAtPosition — the checker needs the value's token, not a range). */
+function descendTo(sourceFile: ts.SourceFile, offset: number): ts.Node {
+  let current: ts.Node = sourceFile;
+  for (;;) {
+    const next = current.getChildren(sourceFile).find(
+      (child) => child.getStart(sourceFile) <= offset && offset < child.getEnd(),
+    );
+    if (next === undefined) return current;
+    current = next;
+  }
+}
 
 function shadowKey(tsazorPath: string): string {
   return toKey(shadowPathFor(tsazorPath));

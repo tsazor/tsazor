@@ -7,6 +7,7 @@ import { processScopedCss, scopeHashFor } from "./scoped-css.js";
 import { transformTsazor } from "./transform.js";
 
 export { transformTsazor, type TransformTsazorOptions, type TransformTsazorResult } from "./transform.js";
+export { formatCheckDiagnostic, runBuildCheck } from "./check-hook.js";
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
@@ -14,6 +15,9 @@ const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
 export interface TsazorPluginOptions {
   /** Project root; defaults to the Vite config root. */
   root?: string;
+  /** Runs `tsazor check` over the build root at build end (2.4): compiler
+   *  diagnostics plus the typed shadow checks; errors fail the build. */
+  check?: boolean;
 }
 
 export function tsazor(options: TsazorPluginOptions = {}): Plugin {
@@ -41,6 +45,20 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
       // surface when the browser requests the module. Warm every .tsazor at
       // startup — vite logs pre-transform errors to the terminal immediately.
       void warmupTsazorModules(server, projectRoot);
+    },
+
+    async closeBundle() {
+      // 2.4: the optional gate — build end (after write) so the produced
+      // output exists; the check runs lazily (@tsazor/lsp is loaded only on
+      // builds that opt in).
+      if (options.check !== true) return;
+      const { runBuildCheck } = await import("./check-hook.js");
+      const diagnostics = await runBuildCheck(projectRoot, (line) =>
+        // eslint-disable-next-line no-console
+        console.warn(`[tsazor] ${line}`),
+      );
+      const errors = diagnostics.filter((d) => d.severity === "error").length;
+      if (errors > 0) this.error(`tsazor check failed: ${errors} error(s)`);
     },
 
     resolveId(id) {

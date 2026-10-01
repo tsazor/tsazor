@@ -1,5 +1,5 @@
-import { compile } from "@tsazor/compiler";
-import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
+import { compile, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -29,6 +29,9 @@ export interface ShadowModule {
   /** Raw mappings behind the generated code, for position translation. */
   map: TsazorGenMap;
   className: string;
+  /** 2.4: the tag-level `TItem` inference requests when the shadow was built
+   *  without resolved type arguments for all generic tags. */
+  typedInference?: readonly TypedTagInferenceRequest[];
 }
 
 /** Synthetic path of a shadow module: `X.tsazor` → `X.tsazor.gen.ts`. */
@@ -47,7 +50,15 @@ export function tsazorOfShadowPath(modulePath: string): string | undefined {
   return modulePath.replace(/\\/g, "/").replace(/\.gen\.ts$/, "");
 }
 
-export async function buildShadowModule(tsazorPath: string, source: string, projectRoot: string): Promise<ShadowModule | null> {
+/** Compiles one .tsazor to its shadow. `typeArguments` injects the inference
+ *  pass's resolved type arguments (keyed by tag `"line:column"`, 2.4) and is
+ *  set on the second pass of a generic tag. */
+export async function buildShadowModule(
+  tsazorPath: string,
+  source: string,
+  projectRoot: string,
+  typeArguments?: ReadonlyMap<string, ReadonlyMap<string, string>>,
+): Promise<ShadowModule | null> {
   try {
     const filePath = path.resolve(tsazorPath);
     const fileDir = path.dirname(filePath);
@@ -76,6 +87,18 @@ export async function buildShadowModule(tsazorPath: string, source: string, proj
       codeBehindClass,
       codeBehindSource: codeBehindClass ? readFileSync(codeBehindPath, "utf8") : undefined,
       generateSourceMap: true,
+      // 2.4 typed checks — shadow-only emission: `satisfies` on attribute
+      // values, typed slot contexts, rebased type imports, typed `@ref`.
+      typedShadow: {
+        ...(typeArguments !== undefined ? { typeArguments } : {}),
+        rebaseTypeImport: (reference) => {
+          // Reference types bind through the shadow graph: an import the
+          // declaring module resolved relatively is rebased to the consuming
+          // shadow's directory; bare package specifiers resolve anywhere.
+          if (reference.specifier === undefined || reference.file === undefined) return undefined;
+          return rebaseSpecifier(reference.specifier, path.dirname(path.resolve(reference.file)), fileDir);
+        },
+      },
     });
 
     const code = compiled.code
@@ -86,9 +109,13 @@ export async function buildShadowModule(tsazorPath: string, source: string, proj
     return {
       virtualPath: shadowPathFor(filePath),
       realPath: filePath,
-      code,
+      // The component class ships as `export default class`; keep it importable
+      // by name too — apps import package components as named imports
+      // (`import { Button } from "@tsazor/fluent"` → rewrite B → shadow).
+      code: `${code.trimEnd()}\nexport { ${context.className} };\n`,
       map: new TsazorGenMap(compiled.mappings ?? []),
       className: context.className,
+      ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),
     };
   } catch {
     // Compiler-level failures (TSZE000-style) → no type layer; the v1 layer

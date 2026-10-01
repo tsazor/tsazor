@@ -698,7 +698,7 @@ function substituteParameter(
  * texts — parenthesized where an operator binds tighter than a union would
  * (`T[]`, `T & X`, `keyof T`).
  */
-function replaceIdentifiers(text: string, substitution: ReadonlyMap<string, { text: string }>): string {
+export function replaceIdentifiers(text: string, substitution: ReadonlyMap<string, { text: string }>): string {
   const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, text);
   let output = "";
   let last = 0;

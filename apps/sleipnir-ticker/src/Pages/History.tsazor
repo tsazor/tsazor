@@ -36,12 +36,12 @@
         this.reversed = [...this.Store.points].reverse().slice(0, 120);
     }
 
-    private cellTime(t: number): string {
-        return new Date(t).toTimeString().slice(0, 8);
+    private cellTime(t: number | undefined): string {
+        return t === undefined ? "—" : new Date(t).toTimeString().slice(0, 8);
     }
 
-    private cellPrice(price: number): string {
-        return price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    private cellPrice(price: number | undefined): string {
+        return price === undefined ? "—" : price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     dispose(): void {

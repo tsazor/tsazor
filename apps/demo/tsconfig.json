@@ -7,7 +7,13 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
-    "types": ["vite/client"]
+    "types": [
+      "vite/client",
+      "@tsazor/vite-plugin/client"
+    ]
   },
-  "include": ["src", "vite.config.ts"]
+  "include": [
+    "src",
+    "vite.config.ts"
+  ]
 }

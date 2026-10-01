@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "server": "node server/server.mjs",
+    "build": "tsazor check && vite build",
+    "check": "tsazor check",
     "dev": "vite",
-    "build": "vite build",
     "preview": "vite preview",
+    "server": "node server/server.mjs",
     "test": "node --test test/",
     "verify": "node scripts/verify-pizza.mjs"
   },
@@ -18,6 +19,8 @@
     "leaflet": "^1.9.4"
   },
   "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
     "@types/leaflet": "^1.9.12",
     "playwright-core": "^1.63.0",
     "typescript": "^5.9.2",

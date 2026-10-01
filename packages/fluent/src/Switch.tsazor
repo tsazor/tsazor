@@ -1,4 +1,4 @@
-@inherits InputBase
+@inherits InputBase<boolean>
 <label class="@this.wrapperClass" for="@this.labelFor">
     <input id="@this.id" type="checkbox" checked="@this.isChecked" role="switch" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
     <span class="fui-switch__track" aria-hidden="true"></span>
