@@ -38,7 +38,7 @@
 </div>
 
 @if (this.OrderState.showingConfigureDialog) {
-    <ConfigurePizzaDialog Pizza="@this.OrderState.configuringPizza" OnCancel="@(() => this.OrderState.cancelConfigurePizzaDialog())" OnConfirm="@(() => this.OrderState.confirmConfigurePizzaDialog())" />
+    <ConfigurePizzaDialog Pizza="@this.OrderState.configuringPizza!" OnCancel="@(() => this.OrderState.cancelConfigurePizzaDialog())" OnConfirm="@(() => this.OrderState.confirmConfigurePizzaDialog())" />
 }
 
 @code {

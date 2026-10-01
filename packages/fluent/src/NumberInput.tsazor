@@ -1,4 +1,4 @@
-@inherits InputBase
+@inherits InputBase<number>
 <div class="@this.wrapperClass">
     @if (this.label) {
         <label class="fui-input__label" for="@this.labelFor">@this.label</label>
