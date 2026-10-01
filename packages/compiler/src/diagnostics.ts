@@ -72,6 +72,8 @@ const CODES = {
   TZS022: "'var' declaration — use 'let' or 'const'.",
   TZS023: "Switch case falls through.",
   TZS024: "Invalid TypeScript expression.",
+  TZS025: "Unknown component parameter.",
+  TZS026: "Component parameter type unknown.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

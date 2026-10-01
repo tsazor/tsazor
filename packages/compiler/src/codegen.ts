@@ -14,7 +14,8 @@ import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
 import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
-import type { ComponentMetadata } from "./metadata.js";
+import type { ComponentMetadata, ComponentParameter, ParameterCategory } from "./metadata.js";
+import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -85,8 +86,12 @@ export interface CodegenOptions {
   /**
    * Parameter metadata of the component a tag resolves to (2.1; the
    * workspace resolver provides it). `imports` are the file's own `@import`s
-   * (an imported tag binds directly). Not consulted by the code generator
-   * yet — metadata-driven codegen is 2.2.
+   * (an imported tag binds directly). Drives the lowering of component
+   * attributes (2.2): by the target parameter's category, unknown parameters
+   * are errors (TZS025), and `<X>Expression` of a component bind is passed
+   * only when declared. Without metadata (or for an `uncertain` parameter)
+   * attributes are lowered as written — plain text as a string, `On*` values
+   * as EventCallbacks — with a TZS026 warning when the resolver ran.
    */
   resolveComponentMetadata?: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
 }
@@ -133,8 +138,28 @@ interface PendingEntry {
   srcCol: number;
 }
 
-/** Component attributes whose name marks them as event callbacks (On*, on*). */
+/**
+ * Component attributes whose name marks them as event callbacks (On*, on*) —
+ * only where the target parameter's category is unknown (no metadata, or an
+ * `uncertain` type); otherwise the category decides (2.2).
+ */
 const EVENT_ATTR_PATTERN = /^on/i;
+
+/** The attribute kinds a component lowers by its parameter's category. */
+type ValueAttribute = Extract<AttributeNode, { kind: "static" | "expression" | "mixedValue" }>;
+
+/**
+ * Where an attribute is emitted: the tag, its attributes, for a component tag
+ * its target — and, once the attribute is matched, its parameter's category
+ * (absent: unknown, the value is lowered as written).
+ */
+interface AttributeContext {
+  tag: string;
+  attributes: AttributeNode[];
+  isComponent?: boolean;
+  component?: ComponentTarget;
+  category?: ParameterCategory;
+}
 
 /** Emission context: tracks sequence numbers per fragment scope. */
 interface SeqScope {
@@ -176,6 +201,9 @@ class Codegen {
   private needsBindMethod = false;
   private readonly componentImports = new Map<string, string>(); // tagName → local name
   private readonly componentLocalNames = new Map<string, string>(); // tagName → local
+  /** Parameter metadata per component tag (2.2), and the tags already warned about missing metadata. */
+  private readonly componentTargets = new Map<string, ComponentTarget>();
+  private readonly unavailableWarned = new Set<string>();
   private readonly typeImports = new Map<string, string>(); // typeName → local
   private readonly plainImports: string[] = [];
   private readonly seqStack: SeqScope[] = [{ next: 0 }];
@@ -1029,7 +1057,8 @@ class Codegen {
     });
     this.stmt(open, node.pos);
     if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
-    for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true });
+    const component = this.componentTargetFor(node.tagName);
+    for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true, component });
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
       if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
@@ -1060,34 +1089,43 @@ class Codegen {
     this.line("    " + text);
   }
 
-  private emitAttribute(attr: AttributeNode, ctx?: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
+  /**
+   * Emits one attribute. `name` is the emitted name — on a component the
+   * canonical parameter name (`Appearance` sets `appearance`).
+   */
+  private emitAttribute(attr: AttributeNode, ctx?: AttributeContext, name: string = "name" in attr ? attr.name : ""): void {
     const pos = attr.pos;
     // Token-precise origin of the attribute's value expression: the absolute
     // position of its code text.
     const codeStart = (): SourcePos | undefined => ("codeStart" in attr ? attr.codeStart : undefined);
+    if (ctx?.component && (attr.kind === "static" || attr.kind === "expression" || attr.kind === "mixedValue")) {
+      this.emitComponentAttribute(attr, ctx, ctx.component);
+      return;
+    }
     switch (attr.kind) {
       case "static": {
         // A minimized attribute is `true` (Razor) — the DOM applier then sets
         // the attribute, also where a same-named DOM property exists
         // (`disabled = ""` would be false).
         const value = attr.minimized ? "true" : JSON.stringify(decodeHtmlEntities(attr.value));
-        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`, pos);
+        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`, pos);
         break;
       }
       case "expression": {
-        // Razor's method-group / lambda conversion: on a component tag, an
-        // on*-named attribute value is an event callback. Razor binds method
+        // Razor's method-group / lambda conversion, where the target
+        // parameter's category is unknown: on a component tag, an on*-named
+        // attribute value is taken as an event callback. Razor binds method
         // groups AND lambdas to the component instance via the
         // EventCallbackFactory; in TS a bare `this.handler` loses `this`, and
-        // an arrow passed as a plain function is bound by the renderer to the
-        // nearest component (wrong receiver inside child-content fragments —
-        // the owning page would never re-render). So the compiler binds every
-        // on*-named component attribute value to `this` up front: the handler
-        // runs on the authoring component and its StateHasChanged fires.
-        const value = ctx?.isComponent && EVENT_ATTR_PATTERN.test(attr.name)
+        // an arrow passed as a plain function would run without re-rendering
+        // the owning page. So the compiler binds the value to `this` up
+        // front: the handler runs on the authoring component and its
+        // StateHasChanged fires. With metadata, EventCallback parameters get
+        // the same binding by category (emitComponentAttribute).
+        const value = ctx?.isComponent && ctx.category === undefined && EVENT_ATTR_PATTERN.test(attr.name)
           ? this.callbackValue(attr.code, codeStart())
           : this.expr(attr.code, codeStart());
-        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, ${value});`;
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`;
         // Precise entries are relative to the value.
         this.stmt(text, pos, text.lastIndexOf(value));
         break;
@@ -1112,13 +1150,15 @@ class Codegen {
           }
         }
         this.pendingExprEntries = precise;
-        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(attr.name)}, \`${template}\`);`;
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, \`${template}\`);`;
         this.stmt(text, pos);
         break;
       }
       case "eventHandler": {
+        // On a component `@onclick` sets the parameter of that name (Blazor).
+        const parameter = ctx?.component ? this.componentParameter(ctx.component, attr.name, attr, { line: pos.line, column: pos.column + 1 }) : undefined;
         const callback = this.callbackValue(attr.code, codeStart());
-        const text = `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(attr.name)}, ${callback});`;
+        const text = `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(parameter?.name ?? attr.name)}, ${callback});`;
         this.stmt(text, pos, text.indexOf(callback));
         break;
       }
@@ -1132,7 +1172,11 @@ class Codegen {
           this.diagnostics.error("TZS009", attr, `'@${attr.name}:${attr.modifier}' requires a bool expression (or no value).`);
           break;
         }
-        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(`__internal_${attr.modifier}_${attr.name}`)}, ${value});`;
+        const internal = `__internal_${attr.modifier}_${attr.name}`;
+        if (ctx?.component) {
+          this.componentParameter(ctx.component, internal, attr, undefined, `'@${attr.name}:${attr.modifier}' on a component is an attribute it has to capture (captureUnmatchedValues)`);
+        }
+        const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(internal)}, ${value});`;
         this.stmt(text, pos, text.lastIndexOf(value));
         break;
       }
@@ -1151,9 +1195,129 @@ class Codegen {
     }
   }
 
+  /** Parameter metadata of the component a tag resolves to (2.2), looked up once per tag. */
+  private componentTargetFor(tagName: string): ComponentTarget {
+    const cached = this.componentTargets.get(tagName);
+    if (cached) return cached;
+    const resolve = this.options.resolveComponentMetadata;
+    const metadata = resolve?.(tagName, this.metadata.usings, this.metadata.imports) ?? null;
+    const target = componentTarget(tagName, metadata, resolve !== undefined);
+    this.componentTargets.set(tagName, target);
+    return target;
+  }
+
+  /**
+   * Razor's component attribute lowering, by the target parameter's category
+   * (2.2). `string`: as written (plain text is a string, `@expr` and mixed
+   * text as on elements). Any other category: the value is a TypeScript
+   * expression with or without `@` (`Count="5"` ⇒ `5`, `Items="people"` ⇒
+   * `this.people`, `Interval="@4000"` ⇒ `4000`, a minimized attribute ⇒
+   * `true`); for `EventCallback`/`EventCallback<T>` it becomes an
+   * EventCallback bound to this component (method groups keep their
+   * receiver, an EventCallback passes through). An unknown category (no
+   * metadata, unmatched, `uncertain`) lowers the value as written.
+   */
+  private emitComponentAttribute(attr: ValueAttribute, ctx: AttributeContext, target: ComponentTarget): void {
+    const parameter = this.componentParameter(target, attr.name, attr, attr.pos);
+    const category = parameter && !parameter.uncertain ? parameter.category : undefined;
+    const name = parameter?.name ?? attr.name;
+    if (category === undefined || category === "string") {
+      this.emitAttribute(attr, { ...ctx, component: undefined, ...(category ? { category } : {}) }, name);
+      return;
+    }
+    const source = this.expressionValue(attr);
+    if (source === null) {
+      this.diagnostics.error("TZS009", attr, `'${attr.name}' sets the ${category} parameter '${name}' of '<${target.tag}>': its value is a TypeScript expression, not empty text.`);
+      return;
+    }
+    const isCallback = category === "EventCallback" || category === "EventCallback<T>";
+    if (isCallback && source.code === "true" && source.start === undefined) {
+      this.diagnostics.error("TZS009", attr, `'${attr.name}' sets the ${category} parameter '${name}' of '<${target.tag}>' and needs a handler value.`);
+      return;
+    }
+    const value = isCallback ? this.callbackValue(source.code, source.start) : this.expr(source.code, source.start);
+    const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`;
+    this.stmt(text, attr.pos, text.lastIndexOf(value));
+  }
+
+  /**
+   * An attribute value as a TS expression: the code of `@expr`/`@(expr)`, the
+   * text as written otherwise — one leading `@` is Razor's optional
+   * transition (`@4000`, `@a + 1`). A minimized attribute is `true`; null
+   * for an empty value.
+   */
+  private expressionValue(attr: ValueAttribute): { code: string; start?: SourcePos } | null {
+    if (attr.kind === "expression") return { code: attr.code, ...(attr.codeStart ? { start: attr.codeStart } : {}) };
+    if (attr.kind === "static" && attr.minimized) return { code: "true" };
+    const raw = attr.raw;
+    if (raw === undefined || raw.text.trim().length === 0) return null;
+    if (raw.text.startsWith("@") && !raw.text.startsWith("@@")) {
+      return { code: raw.text.slice(1), start: { line: raw.start.line, column: raw.start.column + 1 } };
+    }
+    return { code: raw.text, start: raw.start };
+  }
+
+  /**
+   * The parameter an attribute name sets (exact, else case-insensitive). An
+   * attribute matching none on a target with complete metadata and no
+   * capture parameter is TZS025 — the static counterpart of the runtime's
+   * unknown-parameter error — with a "did you mean" fix renaming the name at
+   * `namePos`; `unmatchedMessage` replaces the message (no suggestion). Where
+   * metadata cannot decide (none, incomplete, an `uncertain` type) TZS026
+   * warns and the value is lowered as written.
+   */
+  private componentParameter(target: ComponentTarget, name: string, range: SourceRange, namePos?: SourcePos, unmatchedMessage?: string): ComponentParameter | undefined {
+    const metadata = target.metadata;
+    if (!metadata) {
+      this.warnUnavailable(target, range);
+      return undefined;
+    }
+    const parameter = findParameter(metadata, name);
+    if (parameter) {
+      if (parameter.uncertain) {
+        this.diagnostics.warning(
+          "TZS026",
+          range,
+          `The type of parameter '${parameter.name}' of '<${target.tag}>' is unknown: ${uncertainReason(parameter)}. Its value is passed as written (plain text as a string); annotate the parameter with a type the compiler can follow.`,
+        );
+      }
+      return parameter;
+    }
+    if (target.capture) return undefined;
+    if (!target.complete) {
+      this.warnUnavailable(target, range);
+      return undefined;
+    }
+    if (unmatchedMessage !== undefined) {
+      this.diagnostics.error("TZS025", range, `${unmatchedMessage}; '<${target.tag}>' has none.`);
+      return undefined;
+    }
+    const suggestion = suggestParameter(metadata, name);
+    const nameRange = namePos ? textRange(namePos, name) : undefined;
+    const fix: DiagnosticFix | undefined = suggestion && nameRange ? { title: `Rename to '${suggestion}'`, edits: [{ ...nameRange, text: suggestion }] } : undefined;
+    this.diagnostics.error(
+      "TZS025",
+      range,
+      `Component '${target.tag}' does not have a parameter '${name}'.${suggestion ? ` Did you mean '${suggestion}'?` : ""}`,
+      fix,
+    );
+    return undefined;
+  }
+
+  /** TZS026 once per tag: the component's parameters are unknown or incomplete. */
+  private warnUnavailable(target: ComponentTarget, range: SourceRange): void {
+    if (target.unavailable === undefined || this.unavailableWarned.has(target.tag)) return;
+    this.unavailableWarned.add(target.tag);
+    this.diagnostics.warning(
+      "TZS026",
+      range,
+      `The parameters of '<${target.tag}>' are ${target.metadata ? "incomplete" : "unknown"}: ${target.unavailable}. Its attributes are passed as written (plain text as a string, On* values as EventCallbacks; no '<Target>Expression' for a component bind).`,
+    );
+  }
+
   /** Emits Blazor's @bind family: value + change handler, get/set/after, or
    *  Value + ValueChanged for component parameter targets. */
-  private emitBind(attr: Extract<AttributeNode, { kind: "bind" }>, ctx: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
+  private emitBind(attr: Extract<AttributeNode, { kind: "bind" }>, ctx: AttributeContext): void {
     const pos = attr.pos;
     // Component parameter binding: @bind or @bind-Target on a component tag
     // → Target + TargetChanged / Value + ValueChanged parameter pair. On an
@@ -1176,7 +1340,7 @@ class Codegen {
     }
 
     if (isComponentBind) {
-      this.emitComponentBind(attr, attr.bindTarget ?? "Value", label, pos);
+      this.emitComponentBind(attr, attr.bindTarget ?? "Value", label, pos, ctx.component);
       return;
     }
 
@@ -1315,7 +1479,13 @@ class Codegen {
    * as an EventCallback that writes back (`:set`, or an assignment followed
    * by `:after`; async ones are awaited, Blazor's InvokeAsynchronousDelegate).
    */
-  private emitComponentBind(attr: Extract<AttributeNode, { kind: "bind" }>, target: string, label: string, pos: SourcePos): void {
+  private emitComponentBind(
+    attr: Extract<AttributeNode, { kind: "bind" }>,
+    target: string,
+    label: string,
+    pos: SourcePos,
+    component?: ComponentTarget,
+  ): void {
     const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
     if (display.length === 0) {
       this.diagnostics.error("TZS009", attr, `${label} requires an expression.`);
@@ -1340,21 +1510,41 @@ class Codegen {
         : `(__value) => { ${assignmentTarget} = __value; }`;
     }
 
-    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(target)}, ${display});`, pos);
+    // Both parameters must exist (TZS025 otherwise); emitted under their
+    // canonical names. The bind's name starts after `@bind-`.
+    const targetParameter = component
+      ? this.componentParameter(component, target, attr, attr.bindTarget !== undefined ? { line: pos.line, column: pos.column + "@bind-".length } : undefined)
+      : undefined;
+    const changedParameter = component ? this.componentParameter(component, changed, attr.modifierSpans?.event ?? attr) : undefined;
+    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(targetParameter?.name ?? target)}, ${display});`, pos);
     // InputBase keys EditContext validation on a plain field-name string
     // (v1 contract): derive it from the bound member path — `this.model.name`
     // and `Model!.name` register under "name", matching the validators map's
-    // field keys. Blazor emits ValueExpression for `:get` too.
-    if (target === "Value") {
+    // field keys. Blazor emits ValueExpression for `:get` too — and only when
+    // the component declares `<Target>Expression`; without metadata for the
+    // target, `ValueExpression` is emitted as before (2.2).
+    const expressionName = this.bindExpressionParameter(target, component);
+    if (expressionName !== undefined) {
       const bound = checkBindTarget((attr.get ?? attr.expression ?? "").trim());
       if (bound.ok && bound.field) {
-        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, "ValueExpression", ${JSON.stringify(bound.field)});`, pos);
+        this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(expressionName)}, ${JSON.stringify(bound.field)});`, pos);
       }
     }
     this.stmt(
-      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(changed)}, ${this.eventCallback()}.bind(this, ${handler}));`,
+      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(changedParameter?.name ?? changed)}, ${this.eventCallback()}.bind(this, ${handler}));`,
       pos,
     );
+  }
+
+  /**
+   * The `<Target>Expression` parameter a component bind passes: its canonical
+   * name when the target declares it (Razor emits it only then — an
+   * undeclared one would be an unknown parameter at runtime). Not emitted
+   * when the target's parameters are unknown.
+   */
+  private bindExpressionParameter(target: string, component: ComponentTarget | undefined): string | undefined {
+    const metadata = component?.metadata;
+    return metadata ? findParameter(metadata, `${target}Expression`)?.name : undefined;
   }
 
   private emitIf(node: Extract<MarkupNode, { kind: "if" }>): void {

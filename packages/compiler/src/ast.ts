@@ -192,6 +192,7 @@ export type AttributeNode =
       value: string;
       /** Bare attribute without a value (`<input disabled>`): Razor passes `true`. */
       minimized?: boolean;
+      raw?: RawAttributeValue;
     })
   | (SourceSpan & {
       kind: "expression";
@@ -206,6 +207,7 @@ export type AttributeNode =
       kind: "mixedValue";
       name: string;
       parts: Array<{ text?: string; code?: string; /** Abs. code first char, like codeStart. */ codeStart?: SourceSpan["pos"] }>;
+      raw?: RawAttributeValue;
     })
   | (SourceSpan & {
       kind: "eventHandler";
@@ -244,6 +246,16 @@ export type AttributeNode =
       /** Where the code of the bound expression and of each modifier starts (syntax diagnostics). */
       codeStarts?: Partial<Record<"expression" | BindModifier, SourceSpan["pos"]>>;
     });
+
+/**
+ * An attribute value as written (between the quotes; `@@` and entities not
+ * decoded) and where it starts: on a non-string component parameter the value
+ * is a TypeScript expression (Razor's component attribute lowering, 2.2).
+ */
+export interface RawAttributeValue {
+  text: string;
+  start: SourceSpan["pos"];
+}
 
 export type BindModifier = "event" | "format" | "get" | "set" | "after";
 
