@@ -183,7 +183,7 @@ describe("runtime manifest", () => {
   it("RUNTIME_COMPONENTS are the manifest's concrete components", () => {
     expect([...RUNTIME_COMPONENTS].sort()).toEqual(
       [
-        "AuthorizeRouteView", "AuthorizeView", "CascadingAuthenticationState", "CascadingValue", "DynamicComponent", "EditForm",
+        "AuthorizeRouteView", "AuthorizeView", "CascadingAuthenticationState", "CascadingValue", "DataAnnotationsValidator", "DynamicComponent", "EditForm",
         "ErrorBoundary",
         "FocusOnNavigate",
         "HeadContent", "HeadOutlet",

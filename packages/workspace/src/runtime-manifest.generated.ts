@@ -1596,7 +1596,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "file": "src/forms/edit-form.ts"
             }
           ],
-          "doc": "Field name → validator; registered on the EditContext."
+          "doc": "Field name → validator function (the adapter for logic a decorator rule cannot express)."
         },
         {
           "name": "onSubmit",
@@ -1808,6 +1808,38 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "cascading": {
             "type": "EditContext"
           }
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "DataAnnotationsValidator": {
+      "name": "DataAnnotationsValidator",
+      "file": "src/forms/data-annotations-validator.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataAnnotationsValidator",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "cascading": {
+            "type": "EditContext"
+          },
+          "doc": "Blazor's [CascadingParameter] EditContext CurrentEditContext (by type)."
         }
       ],
       "base": {

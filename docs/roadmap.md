@@ -940,9 +940,9 @@ Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Bu
 | 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | umgesetzt |
 | 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate`, Sections (`SectionContent`/`SectionOutlet`), `PageTitle` als Sektion | B3 (Logical Ranges außerhalb des Roots) | umgesetzt |
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | umgesetzt |
-| 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
-| 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 |
-| 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — |
+| 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 | umgesetzt |
+| 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 | offen |
+| 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — | offen |
 
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
 PluginForm, Slots und `@bind` in Masse).
@@ -1078,13 +1078,53 @@ Default-Titel-Capture/Fallback, createTsazorApp-Head-Root mit Dispose), 4 in
   `EditContext`-Parameter) ersetzt die Region komplett — Input-Zustand wird resettet.
 - **NotAuthorized** (Blazor `RenderFragment<AuthenticationState>`) empfängt den
   `AuthenticationState` als Slot-Kontext; Markup-Slots ändern sich nicht.
-- Abweichung dokumentiert: `DataAnnotationsValidator`/`ClientValidationData` (SSR-Mapping)
-  entfallen — Validierung bleibt die funktionsbasierte `Validators`-Map (3.6 entscheidet
-  das Validierungsmodell).
+- Abweichungen dokumentiert: `ClientValidationData` (SSR-Mapping) entfallen; das
+  Validierungsmodell entscheidet 3.6 — Decorators plus `DataAnnotationsValidator`
+  (siehe dort), die `Validators`-Map bleibt als Adapter.
 
 Konformität: 7 Tests in `packages/conformance/test/runtime/forms.test.ts` (gültig/ungültig
 Routing, OnSubmit-ohne-Validierung, async-Await vor Renderer-Idle, drei Blazor-Fehlermeldungen,
 Cascade des EditContext in den Slot-Kontext, Region-Rebuild bei Model-Wechsel).
+
+### 3.6 — Validierungsmodell (Decorators + DataAnnotationsValidator)
+
+**Stand: umgesetzt** (2026-10-01).
+
+- **Entscheidung:** die vorherige Empfehlung „Decorators — ermöglicht 5.2 (Schema ⇒
+  Validatoren)“ ist umgesetzt. Validierungsregeln sind TC39-Feld-Decorators auf dem Modell
+  — Pendants zu den DataAnnotations-Attributen mit Blazors exakten Fehlertexten:
+  `packages/runtime/src/forms/validation-attributes.ts` exportiert `Required`
+  (`{ allowEmptyStrings }`), `MinLength`, `MaxLength`, `StringLength(max,
+  { minimumLength })`, `Range(min, max)`, `EmailAddress`, `RegularExpression(pattern)`,
+  `Compare(otherField)` und die Reader `validationRulesOf(modelType)`/`rulesForField`.
+  Die Decorators recorden Regel-Listen in `Symbol.metadata` (derselbe Mechanismus wie
+  `@Parameter`), pro Feld in Deklarationsreihenfolge gelesen (TC39 ruft bottom-up auf —
+  der Lesezugriff kehrt die Reihenfolge um); Legacy-Signaturen (`experimentalDecorators`,
+  static/private) werfen die etablierte Fehlermeldung bzw. TZS021-nah.
+- **`DataAnnotationsValidator`** (`packages/runtime/src/forms/data-annotations-validator.ts`,
+  Port von Blazors `DataAnnotationsValidator.cs`) aktiviert die Regeln auf dem gecascadeten
+  `EditContext` (Blazors `EditContext.EnableDataAnnotationsValidation` in
+  `edit-context.ts`, `enableDataAnnotationsValidation(context)` mit eigenem
+  `ValidationMessageStore`); ohne Cascade wirft es Blazors Fehlermeldung, ein dynamischer
+  Kontextwechsel in `onParametersSet` ebenfalls. Neu als Built-in-Tag (Manifest regeneriert).
+- **EditContext ist Blazors Architektur**: `FieldState` pro Feld (isModified) + mehrere
+  `ValidationMessageStore`-Provider, deren Meldungen pro Feld aggregiert gelesen werden;
+  Events `onFieldChanged` (Feldwechsel revalidiert genau dieses Feld),
+  `onValidationRequested` (validate() → alle Felder), `onValidationStateChanged` (Inputs
+  re-rendern). Die alte Funktions-Map (`validators` am EditForm) bleibt als Adapter — sie
+  schreibt in den Built-in-Store der `setValidator`-Registrierung, ihre Meldungen koexistieren
+  pro Feld mit den Decorator-Meldungen. Legacy-Surface (`subscribe`, `markAsUnmodified`,
+  `isValid(field?)`, `getInvalidFields`) blieb erhalten, alle 7 Forms-Tests grün.
+- Abweichungen dokumentiert (language-reference.md): kein `[Display]`-Port (Feldname als
+  Displayname), keine `AddAsyncValidator`/SSR-Mapping, Attribut-Menge ist die obere Teilmenge
+  (.NET-Texte aus Strings.resx verifiziert), `String/Range` urteilen nur über passende Typen
+  statt zu werfen.
+
+Konformität: 9 Tests in `packages/conformance/test/runtime/data-annotations.test.ts`
+(exakte Texte aller Regeln, Valid-Modell, Feldwechsel-Revalidierung, Required-Semantik
+(whitespace/allowEmptyStrings/nicht-String), Deklarationsreihenfolge, EditForm-Submit
+(OnInvalidSubmit + ValidationMessage), Recovery nach fehlschlagendem Submit, fehlende
+Cascade wirft Blazors Meldung, Adapter-Koexistenz).
 
 ---
 
@@ -1140,7 +1180,7 @@ sauberer Paketierung (5.1). Als Referenzfälle dienen FluentCMS (OpenAPI) und Sl
 |---|---|---|
 | vor A3 | Syntax für explizite Imports in `.tsazor` | **Entschieden (2026-09-30):** `@import { X } from "./y"` als Direktive (Razor-Stil, über `_Imports.tsazor` vererbbar) |
 | vor B4 | Unbekannte Parameter: Fehler wie Blazor oder nur Warnung? | **Entschieden (2026-09-30):** Fehler wie Blazor (Laufzeit ab B4; statisch zusätzlich ab 2.2) |
-| vor 3.6 | Validierung: Decorators (DataAnnotations-nah) oder Funktions-Map? | Decorators — ermöglicht 5.2 (Schema ⇒ Validatoren) |
+| vor 3.6 | Validierung: Decorators (DataAnnotations-nah) oder Funktions-Map? | **Entschieden (2026-10-01): Decorators** — TC39-Feld-Decorators als DataAnnotations-Pendant mit .NET-Fehlertexten, `DataAnnotationsValidator` als Built-in; `validators`-Map bleibt als Adapter (ermöglicht 5.2: Schema ⇒ Validatoren) |
 | vor 4.2 | Fluent auf PascalCase umstellen? | **Entschieden (2026-10-01): nein** — Members bleiben camelCase, PascalCase-Markup ordnet case-insensitiv zu (Design-Prinzipien) |
 
 ## Begleitend in jeder Phase

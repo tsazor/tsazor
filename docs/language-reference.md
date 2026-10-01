@@ -342,9 +342,32 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   Kontext neu erzeugt und die Blazor-Region (`OpenRegion(_editContext.GetHashCode())` — hier:
   Kontext-Identität aus einem WeakMap-Zähler) errichtet den ganzen Form-Subtree neu. Das
   `<EditForm>`-Kind empfangt den Kontext als Slot-Kontext (`@context` — ChildContent ist
-  `(context: EditContext) => RenderFragment`). Abweichung: `DataAnnotationsValidator` /
-  `ClientValidationData` (SSR-Mapping) gibt es nicht — Validierung ist die funktionsbasierte
-  `Validators`-Map.
+  `(context: EditContext) => RenderFragment`).
+
+- Datenannotierte Validierung (3.6) — Blazors `DataAnnotationsValidator` + das
+  Validierungsmodell dahinter. Entschieden per Roadmap-Empfehlung „Decorators“ (ermöglicht
+  5.2 Schema ⇒ Validatoren): die Regeln deklariert das Modell mit TC39-Feld-Decorators —
+  `@Required()`, `@MinLength(n)`, `@MaxLength(n)`, `@StringLength(max, { minimumLength })`,
+  `@Range(min, max)`, `@EmailAddress()`, `@RegularExpression(pattern)`,
+  `@Compare("otherField")` — als Pendant zu den DataAnnotations-Attributen. `<EditForm …><DataAnnotationsValidator />`
+  aktiviert sie auf dem Kontext (Blazors `EditContext.EnableDataAnnotationsValidation`);
+  ohne einen gecascadeten `EditContext` wirft es Blazors Fehlermeldung, ein dynamischer
+  Kontextwechsel ebenfalls. Fehlermeldungen sind die exakten .NET-Texte
+  („The name field is required.“, „The field age must be between 18 and 99.“, …), mit dem
+  Feldnamen als Displayname. Timing wie Blazor: eine Feldänderung validiert genau dieses
+  Feld (OnFieldChanged), der Submit (validate()) validiert alle annotierten Felder
+  (OnValidationRequested). Mehrere Regeln an einem Feld hängen ihre Meldungen in
+  Deklarationsreihenfolge an (TC39 ruft bottom-up auf — der Lesezugriff kehrt die Reihenfolge
+  um, .NET: GetCustomAttributes-Reihenfolge). Die alte funktionsbasierte `Validators`-Map
+  (`validators: Record<string, (value, model) => string | null>` am `<EditForm>`) bleibt als
+  Adapter für Logik, die ein Schema nicht ausdrücken kann; ihre Meldungen und die
+  Decorator-Meldungen koexistieren pro Feld (Blazors ValidationMessageStore-Modell — jeder
+  Provider hat einen eigenen Store). Abweichungen: kein `[Display]`-Port (Displayname ist der
+  Feldname), keine `AddAsyncValidator`-API (asynchrone Validierung wartet im
+  `OnValidSubmit`-Callback), kein `DisableClientValidation`/SSR-Mapping, und die Attribut-*
+  Menge ist die oben genannte Teilmenge — weitere Attribute (z. B. `[Range(typeof(...))]`,
+  `CustomValidationAttribute`) über `validators` oder eigene Decorators mit der
+  `FieldRuleDecorator`-Signatur.
 
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
@@ -530,7 +553,7 @@ typisiert:
 | C#-Code in `@code` | abweichend (→ TypeScript — der eigentliche Punkt) |
 | Code in `@{ }` und Control-Bodies | code-first wie Razor, aber TypeScript; `using (…)`, `lock`, `@await` ⇒ Fehler |
 | `@namespace`, `@rendermode`, `@preservewhitespace` | akzeptiert, ignoriert |
-| DataAnnotations-Validierung | abweichend (funktionsbasiert: `validators: Record<string, (value, model) => string \| null>`) |
+| DataAnnotations-Validierung | Decorators als Pendant (`@Required()`, `@MaxLength(n)`, … am Modell + `DataAnnotationsValidator`); `validators`-Map bleibt als Adapter; Teilmenge der Attribute (3.6) |
 | `@bind:format` | begrenzt v1 |
 | Benannte Child-Slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identisch (2.3 — siehe [Templated Components](#templated-components-benannte-slots-und-template-kontexte-23)) |
 | `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
