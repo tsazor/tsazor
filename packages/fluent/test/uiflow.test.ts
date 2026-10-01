@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { render, renderTree } from "@tsazor/testing";
-import { ComponentBase, NavigationManager, type RenderTreeBuilder } from "@tsazor/runtime";
+import { ComponentBase, NavigationManager, NavLinkMatch, type RenderTreeBuilder } from "@tsazor/runtime";
 import { SidebarNav, Table } from "../dist/index.js";
 
 /** Waits out the microtask render queue plus the settle timer. */
@@ -82,7 +82,8 @@ class NavHost extends ComponentBase {
       2,
       "links",
       [
-        { href: "/", label: "Overview" },
+        // Root link matches exactly (Blazor: a Prefix link to the base is active everywhere).
+        { href: "/", label: "Overview", match: NavLinkMatch.All },
         { href: "/orders", label: "Orders" },
         { href: "/settings", label: "Settings" },
       ],

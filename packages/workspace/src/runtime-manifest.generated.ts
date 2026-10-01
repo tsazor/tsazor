@@ -292,7 +292,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "member": "field",
           "declaredBy": "NavLink",
           "inferredType": "string",
-          "doc": "Target href, base-relative (\"/counter\")."
+          "doc": "Target href: relative to the base URI (\"counter\"), root-relative (\"/app/counter\") or absolute."
         },
         {
           "name": "match",
