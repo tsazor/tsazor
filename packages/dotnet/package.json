@@ -1,0 +1,33 @@
+{
+  "name": "@tsazor/dotnet",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Tsazor's .NET-Backend-Brücke: OpenAPI ⇒ typisierter TS-Client mit korrekter Nullability, ProblemDetails/Envelope als HttpResult, Schema ⇒ DataAnnotations-Validatoren, JWT-/Cookie-Auth.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "tsazor-dotnet": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tsazor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.9.2"
+  }
+}
