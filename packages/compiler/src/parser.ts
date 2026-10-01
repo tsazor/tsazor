@@ -585,7 +585,7 @@ class Parser {
         `${first.message} (markup inside code must start with a tag, '@:' or '<text>').`,
       );
     }
-    out.push({ kind: "statement", code, declares: info.declares, pos: this.locator(start), endPos: this.locator(end) });
+    out.push({ kind: "statement", code, declares: info.declares, readonly: info.readonly, pos: this.locator(start), endPos: this.locator(end) });
     this.i = end;
   }
 

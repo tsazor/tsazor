@@ -270,8 +270,9 @@ export function forHeaderKind(code: string): "for" | "forOf" | "forIn" | null {
 /* Bind targets --------------------------------------------------------------- */
 
 export type BindTarget =
-  /** `field`: the last member name of the path (EditContext field key), if it has one. */
-  | { ok: true; field?: string }
+  /** `field`: the last member name of the path (EditContext field key), if it has one;
+   *  `identifier`: the target is this bare name (`x`, `(x)`, `x!`), not a member path. */
+  | { ok: true; field?: string; identifier?: string }
   | { ok: false; reason: string };
 
 /**
@@ -312,7 +313,7 @@ export function checkBindTarget(code: string): BindTarget {
     }
     break;
   }
-  if (ts.isIdentifier(outer)) return { ok: true, field: outer.text };
+  if (ts.isIdentifier(outer)) return { ok: true, field: outer.text, identifier: outer.text };
   if (ts.isPropertyAccessExpression(outer)) return { ok: true, field: outer.name.text };
   if (ts.isElementAccessExpression(outer)) {
     const argument = outer.argumentExpression;

@@ -200,6 +200,20 @@ describe("C17 — @bind targets", () => {
     expect(errorCodes(diagnostics)).toEqual(["TZS008"]);
     expect(diagnostics.find((d) => d.code === "TZS008")!.message).toMatch(/optional chaining/);
   });
+
+  it("A7: rejects a bind to the loop variable at compile time (C#: CS1656), accepts its members", async () => {
+    const diagnostics = await diagnosticsOf(`@foreach (const item of items) { <input @bind="item" /> }
+@code { private items = ["a"]; }`);
+    expect(errorCodes(diagnostics)).toEqual(["TZS008"]);
+    expect(diagnostics[0]!.message).toMatch(/cannot bind to the const loop variable 'item'/);
+    const m = await mount(`@foreach (const item of items) { <input @bind="item.name" /> }<p>@items[0]!.name</p>
+@code { private items = [{ name: "a" }]; }`);
+    const input = m.container.querySelector("input")!;
+    input.value = "b";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await m.settle();
+    expect(m.container.querySelector("p")!.textContent).toBe("b");
+  });
 });
 
 describe("A7 — @bind-<attr> on elements (Razor element semantics)", () => {

@@ -171,8 +171,9 @@ class Codegen {
   private readonly typeImports = new Map<string, string>(); // typeName → local
   private readonly plainImports: string[] = [];
   private readonly seqStack: SeqScope[] = [{ next: 0 }];
-  /** Locals declared by loops / inline code — emitted without a `this.` prefix. */
-  private readonly locals = new Set<string>();
+  /** Locals declared by loops / inline code — emitted without a `this.` prefix —
+   *  and how they were declared (a `@bind` cannot target the read-only ones). */
+  private readonly locals = new Map<string, LocalKind>();
   private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
   private readonly importedNames = new Set<string>();
@@ -858,7 +859,7 @@ class Codegen {
           const clause = node.catchClause;
           this.stmt(clause.param === null ? `} catch {` : `} catch (${clause.param}) {`, clause.span.pos);
           this.withScope(() => {
-            if (clause.paramName) this.locals.add(clause.paramName);
+            if (clause.paramName) this.locals.set(clause.paramName, "assignable");
             this.emitNodes(clause.children, clause.span.pos);
           });
         }
@@ -895,7 +896,7 @@ class Codegen {
           const text = `for (const ${csharp.binding} of ${iterable}) {`;
           this.stmt(text, node.pos, text.lastIndexOf(iterable));
           this.withScope(() => {
-            for (const name of csharp.names) this.locals.add(name);
+            for (const name of csharp.names) this.locals.set(name, "constLoop");
             for (const child of node.children) this.emitNode(child, node.pos);
           });
           this.stmt(`}`, node.pos);
@@ -906,18 +907,23 @@ class Codegen {
         // child content captures its own value — while `var` keeps its TS
         // meaning (one function-scoped binding, TZS022). The declared loop
         // variables are locals of the body; a `var` stays one after the loop.
+        // A for…of/for…in variable is the iteration's element (C#: CS1656 —
+        // a bind to it is an error); a counting `let i` is assignable.
+        const iterates = forHeaderKind(node.code) !== "for";
+        const isConst = /^\s*const\b/.test(node.code);
+        const kind: LocalKind = iterates ? (isConst ? "constLoop" : "loop") : isConst ? "const" : "assignable";
         let declares: string[] = [];
         this.withScope(() => {
           const rewritten = this.rewrite(node.code, "forHeader");
           this.warnVar(rewritten, node.code, node.codeStart ?? node.pos);
           const header = this.headerLines(node.code, rewritten.text, node.codeStart);
           declares = rewritten.declares;
-          for (const name of declares) this.locals.add(name);
+          for (const name of declares) this.locals.set(name, kind);
           const text = `for (${header}) {`;
           this.stmt(text, node.pos, text.indexOf(header));
           for (const child of node.children) this.emitNode(child, node.pos);
         });
-        if (/^\s*var\b/.test(node.code)) for (const name of declares) this.locals.add(name);
+        if (/^\s*var\b/.test(node.code)) for (const name of declares) this.locals.set(name, "assignable");
         this.stmt(`}`, node.pos);
         break;
       }
@@ -1239,7 +1245,40 @@ class Codegen {
       this.diagnostics.error("TZS008", range, `'${label}' target '${code}' ${target.reason}.`);
       return null;
     }
+    const readonly = target.identifier === undefined ? null : this.readonlyLocal(target.identifier);
+    if (readonly !== null) {
+      this.diagnostics.error("TZS008", range, `'${label}' cannot bind to ${readonly}.`);
+      return null;
+    }
     return this.expr(code);
+  }
+
+  /**
+   * Why a bare name cannot be a bind target, or null: a read-only local (TS
+   * TS2588/TS2630 — the handler would throw), an iteration variable (C#
+   * CS1656 — the write only changes this iteration's copy and the next
+   * render resets it) or an import (TS2632). Members win over imports.
+   */
+  private readonlyLocal(name: string): string | null {
+    const loopHint = `— bind to a member like '${name}.name', or loop over indices and bind the element ('xs[i]')`;
+    switch (this.locals.get(name)) {
+      case "constLoop":
+        return `the const loop variable '${name}' ${loopHint}`;
+      case "loop":
+        return `the loop variable '${name}': the write would only change this iteration's copy ${loopHint}`;
+      case "const":
+        return `the const local '${name}' — bind to a component member (or a member of '${name}')`;
+      case "function":
+      case "class":
+      case "enum":
+        return `the ${this.locals.get(name)} declaration '${name}'`;
+      case "assignable":
+        return null;
+    }
+    if (!this.members.instance.has(name) && !this.members.statics.has(name) && this.importedNames.has(name)) {
+      return `the import '${name}' (imports are read-only) — bind to a component member`;
+    }
+    return null;
   }
 
   /** Invocation of an `:after` value: a method group or a lambda. */
@@ -1342,7 +1381,7 @@ class Codegen {
   private emitStatement(node: StatementNode): void {
     // Registered first: destructuring/function names inside the run itself
     // must stay bare too.
-    for (const name of node.declares) this.locals.add(name);
+    for (const name of node.declares) this.locals.set(name, node.readonly?.[name] ?? "assignable");
     // Rewriting inserts `this.` prefixes, so its per-token entries keep the
     // columns after each prefix exact.
     const rewritten = this.rewrite(node.code, "statements", node.pos);
@@ -1400,7 +1439,7 @@ class Codegen {
     const saved = [...this.locals];
     emit();
     this.locals.clear();
-    for (const name of saved) this.locals.add(name);
+    for (const [name, kind] of saved) this.locals.set(name, kind);
   }
 
   /**
@@ -1452,6 +1491,13 @@ function endsWithJump(children: MarkupNode[]): boolean {
   const lastLine = code.split(/[;\n]\s*(?=\S)/).pop() ?? "";
   return /^(break|continue|return|throw)\b/.test(lastLine.trim());
 }
+
+/**
+ * How a render-code local was declared: `assignable` (let/var, catch
+ * parameter, counting-loop variable), `const`, an iteration variable of a
+ * for…of/for…in (`constLoop`/`loop`), or a function/class/enum declaration.
+ */
+type LocalKind = "assignable" | "const" | "constLoop" | "loop" | "function" | "class" | "enum";
 
 /** A C# `@foreach` header and its TS form (`binding` of `const <binding> of <iterable>`). */
 interface CSharpForEach {

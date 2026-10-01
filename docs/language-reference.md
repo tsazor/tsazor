@@ -240,7 +240,12 @@ Markup beginnt nur
 genau dieser Ausdruck (nach der Member-Regel): Felder, Member-Pfade, Non-Null-Assertions
 (`Model!.Title`, `a.b!.c`), Element-Zugriffe (`items[i].name`, `map[key]`), Klammern und
 Type-Assertions. Optional Chaining (`a?.b`) ist nie zuweisbar (TS2779) ⇒ TZS008, ebenso
-Nicht-L-Values (`f()`, `a + b`). `ValueExpression` (Feldname für `EditContext`) ist der letzte
+Nicht-L-Values (`f()`, `a + b`). Ebenso TZS008 (zur Compile-Zeit statt erst zur Laufzeit): ein
+Bind auf einen nicht zuweisbaren Local — `const` (TS2588), `function`/`class`/`enum`, einen
+`@import` (TS2632, sofern kein Member gleich heißt) — und auf die Variable einer
+`for…of`/`for…in`-Schleife (C#: CS1656; auch mit `let`: die Zuweisung träfe nur die Kopie dieser
+Iteration und ginge beim nächsten Render verloren). Gebunden wird an einen Member (`item.name`)
+oder über einen Index (`@for (let i = 0; …)` + `items[i]`). `ValueExpression` (Feldname für `EditContext`) ist der letzte
 Member-Name des Pfads (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), auch aus `:get`.
 
 **Kombinationen** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` zusammen mit

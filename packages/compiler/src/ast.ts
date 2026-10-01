@@ -63,6 +63,8 @@ export interface StatementNode extends SourceSpan {
    *  destructuring, function, class, enum) — later markup expressions in the
    *  same scope must not rewrite them to `this.X`. */
   declares: string[];
+  /** The subset of `declares` that cannot be assigned to — a `@bind` on one is an error. */
+  readonly?: Record<string, "const" | "function" | "class" | "enum">;
 }
 
 /** A plain `{ … }` block statement in a code context (opens a scope). */
