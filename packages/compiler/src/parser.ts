@@ -1142,6 +1142,10 @@ class Parser {
       }
       return { kind: "mixedValue", name, parts, pos, endPos: this.locator(this.i) };
     }
+    // An empty quoted value (`href=""`) is the empty string, not an empty expression.
+    if (value.code === "" && value.start === undefined) {
+      return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+    }
     return { kind: "expression", name, code: value.code, codeStart: codePos(value.start), pos, endPos: this.locator(this.i) };
   }
 

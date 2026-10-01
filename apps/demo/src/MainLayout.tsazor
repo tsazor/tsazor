@@ -3,7 +3,7 @@
 <div class="layout">
     <nav class="nav">
         <span class="brand">Tsazor</span>
-        <NavLink Href="/">Home</NavLink>
+        <NavLink Href="/" Match="@NavLinkMatch.All">Home</NavLink>
         <NavLink Href="/counter">Counter</NavLink>
         <NavLink Href="/counter-persistent">Persistent counter</NavLink>
         <NavLink Href="/form">Form</NavLink>

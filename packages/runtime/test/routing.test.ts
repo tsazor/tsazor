@@ -17,6 +17,7 @@ import {
   matchRoute,
 } from "../src/index";
 import { defineComponent } from "../src/index";
+import { navLinkMatches } from "../src/routing/nav-link";
 import type { RenderFragment, RenderTreeBuilder } from "../src/index";
 
 /* Layout ------------------------------------------------------------------ */
@@ -102,6 +103,34 @@ describe("route matching", () => {
     expect(matchedUser?.values.Id).toBe(42); // coerced by the :int constraint
     expect(matchRoute(routes, "/user/notanumber")).toBeNull();
     expect(matchRoute(routes, "/missing")).toBeNull();
+  });
+});
+
+describe("NavLink matching over absolute URIs (Blazor .NET 8, A7)", () => {
+  const h = "http://host";
+  it.each([
+    // href (absolute), current, match, active
+    [`${h}/app/counter`, `${h}/app/counter`, NavLinkMatch.All, true],
+    [`${h}/app/counter`, `${h}/APP/Counter`, NavLinkMatch.All, true], // case-insensitive
+    [`${h}/app/counter/`, `${h}/app/counter`, NavLinkMatch.All, true], // trailing slash on the href only
+    [`${h}/app/counter`, `${h}/app/counter/`, NavLinkMatch.All, false],
+    [`${h}/app/counter`, `${h}/app/counter?x=1`, NavLinkMatch.All, true], // query ignored
+    [`${h}/app/counter`, `${h}/app/counter#top`, NavLinkMatch.All, true], // fragment ignored
+    [`${h}/app/counter?x=1`, `${h}/app/counter?x=1`, NavLinkMatch.All, true],
+    [`${h}/app/counter?x=1`, `${h}/app/counter`, NavLinkMatch.All, false],
+    [`${h}/app/counter`, `${h}/app/counter/5`, NavLinkMatch.All, false],
+    [`${h}/app/counter`, `${h}/app/counter/5`, NavLinkMatch.Prefix, true],
+    [`${h}/app/counter`, `${h}/app/counter?x=1`, NavLinkMatch.Prefix, true],
+    [`${h}/app/counter`, `${h}/app/counters`, NavLinkMatch.Prefix, false], // no separator
+    [`${h}/app/counter`, `${h}/app/counter-2`, NavLinkMatch.Prefix, false], // '-' is unreserved
+    [`${h}/app/counter/`, `${h}/app/counter/5`, NavLinkMatch.Prefix, true],
+    [`${h}/app/`, `${h}/app/anything`, NavLinkMatch.Prefix, true], // the base covers the app
+    [`${h}/app/`, `${h}/app`, NavLinkMatch.All, true],
+    [`${h}/app/`, `${h}/app/anything`, NavLinkMatch.All, false],
+    [`${h}/app/x`, `${h}/other/x`, NavLinkMatch.Prefix, false],
+    [`${h}/app/x`, `http://elsewhere/app/x`, NavLinkMatch.All, false],
+  ])("%s at %s (match %s) → %s", (href, current, match, expected) => {
+    expect(navLinkMatches(href, current, match)).toBe(expected);
   });
 });
 

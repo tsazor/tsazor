@@ -272,6 +272,14 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 <Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
 ```
 
+- `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
+  aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
+  `http://…`) und case-insensitiv mit der aktuellen URI verglichen. `NavLinkMatch.All`: exakt
+  (Href darf zusätzlich auf `/` enden; Query und Fragment der aktuellen URI zählen nicht);
+  `Prefix` (Standard): zusätzlich alles darunter, an einem Trenner (`/abc` deckt `/abc/def` und
+  `/abc?x`, nicht `/abcdef`). Ein `Prefix`-Link auf die Basis (`Href=""`, ohne `<base>` auch
+  `Href="/"`) ist deshalb überall aktiv — der Home-Link nimmt `Match="@NavLinkMatch.All"`.
+- Ein leerer Attributwert (`href=""`) ist der leere String (Element-Attribut wie Parameter).
 - Element-Inhalt einer Komponente → `ChildContent`-Parameter.
 - Unbekannte Attribute → Parameter mit `captureUnmatchedValues` (`additionalAttributes`).
 - Cascading: `@CascadingParameter({ type: EditContext })` (by-type) oder

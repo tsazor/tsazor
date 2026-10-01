@@ -662,3 +662,11 @@ describe("codegen — @import (A3)", () => {
     expect(code).toContain("this.NavigationManager.uri");
   });
 });
+
+describe("empty attribute values (A7)", () => {
+  it("an empty quoted value is the empty string on elements and components (Blazor's href=\"\")", () => {
+    const { code } = gen('<a class="">x</a><Link Href="" />', { resolveComponent: () => ({ specifier: "./Link.tsazor" }) });
+    expect(code).toContain('__builder.addAttribute(1, "class", "");');
+    expect(code).toContain('__builder.addAttribute(4, "Href", "");');
+  });
+});
