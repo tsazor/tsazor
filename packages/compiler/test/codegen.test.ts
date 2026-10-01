@@ -3,6 +3,7 @@ import { compile } from "../src/compile";
 import { DiagnosticBag } from "../src/diagnostics";
 import { generateCode } from "../src/codegen";
 import { parseDocument } from "../src/parser";
+import { metadataOf, withComponents } from "./component-metadata";
 
 function gen(source: string, options?: Parameters<typeof generateCode>[1]) {
   const diagnostics = new DiagnosticBag();
@@ -287,10 +288,11 @@ describe("codegen", () => {
     expect(errors('<input @bind:after="done" @bind="name" />')).toEqual([]);
   });
 
+  /** A bindable input component that declares ValueExpression (like InputBase). */
+  const input = (name: string) => metadataOf(name, { Value: "value", ValueChanged: "EventCallback<T>", ValueExpression: "string" });
+
   it("emits @bind-Value on components as Value + ValueExpression + ValueChanged", () => {
-    const { code } = gen('<Stepper @bind-Value="current" />', {
-      resolveComponent: (tag) => (tag === "Stepper" ? { specifier: "./Stepper.tsazor" } : null),
-    });
+    const { code } = gen('<Stepper @bind-Value="current" />', withComponents({ Stepper: input("Stepper") }));
     expect(code).toContain('__builder.addAttribute(1, "Value", this.current);');
     expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "current");');
     expect(code).toContain('__builder.addAttribute(3, "ValueChanged", __tsazor_EventCallback.bind(this, (__value) => { this.current = __value; }));');
@@ -299,6 +301,7 @@ describe("codegen", () => {
   it("treats plain @bind on a component tag as Value + ValueChanged", () => {
     const { code } = gen('<InputText @bind="name" />', {
       resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
+      resolveComponentMetadata: () => input("InputText"),
     });
     expect(code).toContain('__builder.addAttribute(1, "Value", this.name);');
     expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "name");');
@@ -308,18 +311,25 @@ describe("codegen", () => {
   it("derives ValueExpression from member paths (@bind=\"this.model.name\" → \"name\")", () => {
     const { code } = gen('<TextInput @bind="this.model.name" />', {
       resolveComponent: (tag) => (tag === "TextInput" ? { specifier: "@tsazor/fluent", exportName: "TextInput" } : null),
+      resolveComponentMetadata: () => input("TextInput"),
     });
     expect(code).toContain('__builder.addAttribute(1, "Value", this.model.name);');
     expect(code).toContain('__builder.addAttribute(2, "ValueExpression", "name");');
   });
 
-  it("emits ValueExpression only for Value targets (from :get too, as Blazor)", () => {
-    const { code } = gen('<Selected @bind-Selected="pick" />', {
-      resolveComponent: (tag) => (tag === "Selected" ? { specifier: "./Selected.tsazor" } : null),
-    });
-    expect(code).not.toContain('"ValueExpression"');
+  it("emits <Target>Expression only when the component declares it (from :get too, as Blazor)", () => {
+    const { code } = gen('<Selected @bind-Selected="pick" />', withComponents({ Selected: metadataOf("Selected", { Selected: "value", SelectedChanged: "EventCallback<T>" }) }));
+    expect(code).not.toContain("Expression");
+    const declared = gen('<Selected @bind-Selected="pick" />', withComponents({ Selected: metadataOf("Selected", { selected: "value", selectedChanged: "EventCallback<T>", selectedExpression: "string" }) }));
+    expect(declared.code).toContain('__builder.addAttribute(2, "selectedExpression", "pick");');
+    // Undeclared: not emitted (it would be an unknown parameter at runtime).
+    const stepper = gen('<Stepper @bind-Value="v" />', withComponents({ Stepper: metadataOf("Stepper", { Value: "value", ValueChanged: "EventCallback<T>" }) }));
+    expect(stepper.code).not.toContain("ValueExpression");
+    // Unknown parameters (no metadata): not emitted either.
+    expect(gen('<Stepper @bind-Value="v" />', withComponents({ Stepper: null })).code).not.toContain("ValueExpression");
     const custom = gen('<InputText @bind:get="this.pick" @bind:set="(v) => this.pick = v" />', {
       resolveComponent: (tag) => (tag === "InputText" ? { specifier: "@tsazor/runtime", exportName: "InputText" } : null),
+      resolveComponentMetadata: () => input("InputText"),
     });
     expect(custom.code).toContain('__builder.addAttribute(2, "ValueExpression", "pick");');
     expect(custom.code).toContain("async (__value) => { await ((v) => this.pick = v)(__value); }");

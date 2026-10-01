@@ -1126,6 +1126,7 @@ class Parser {
     }
     this.i++; // '='
 
+    const valueAt = this.i;
     const value = this.parseAttributeValue();
     if (value === null) return null;
 
@@ -1133,14 +1134,21 @@ class Parser {
       start === undefined ? undefined : this.locator(start);
 
     if (value.kind === "parts") {
+      // The value as written (quotes stripped): a TS expression where the
+      // target is a non-string component parameter (2.2).
+      const quoted = src[valueAt] === '"' || src[valueAt] === "'";
+      const raw = {
+        text: quoted ? src.slice(valueAt + 1, this.i - 1) : src.slice(valueAt, this.i),
+        start: this.locator(quoted ? valueAt + 1 : valueAt),
+      };
       const parts = value.parts.map((p) => (p.code !== undefined ? { code: p.code, codeStart: codePos(p.start) } : { text: p.text }));
       if (parts.length === 1 && parts[0]!.code !== undefined) {
         return { kind: "expression", name, code: parts[0]!.code!, codeStart: parts[0]!.codeStart, pos, endPos: this.locator(this.i) };
       }
       if (parts.length === 1 && parts[0]!.text !== undefined) {
-        return { kind: "static", name, value: parts[0]!.text!, pos, endPos: this.locator(this.i) };
+        return { kind: "static", name, value: parts[0]!.text!, raw, pos, endPos: this.locator(this.i) };
       }
-      return { kind: "mixedValue", name, parts, pos, endPos: this.locator(this.i) };
+      return { kind: "mixedValue", name, parts, raw, pos, endPos: this.locator(this.i) };
     }
     // An empty quoted value (`href=""`) is the empty string, not an empty expression.
     if (value.code === "" && value.start === undefined) {

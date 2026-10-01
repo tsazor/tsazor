@@ -9,6 +9,7 @@ import { DiagnosticBag } from "../src/diagnostics";
 import { generateCode } from "../src/codegen";
 import { parseDocument } from "../src/parser";
 import { checkBindTarget } from "../src/rewrite";
+import { metadataOf, withComponents } from "./component-metadata";
 
 function gen(source: string, options?: Partial<Parameters<typeof generateCode>[1]>) {
   const diagnostics = new DiagnosticBag();
@@ -17,7 +18,7 @@ function gen(source: string, options?: Partial<Parameters<typeof generateCode>[1
   return { code: result.code, metadata: result.metadata, diagnostics };
 }
 
-const component = { resolveComponent: (tag: string) => (tag === "Field" ? { specifier: "./Field.tsazor" } : null) };
+const component = withComponents({ Field: metadataOf("Field", { Value: "value", ValueChanged: "EventCallback<T>", ValueExpression: "string" }) });
 
 describe("checkBindTarget (C17)", () => {
   it.each([
@@ -164,9 +165,15 @@ describe("event modifiers (C15)", () => {
   });
 
   it("passes modifiers on a component as attributes (splatted by the component, as in Blazor)", () => {
-    const { code, diagnostics } = gen('<Field @onclick:stopPropagation="true" />', component);
+    const capturing = withComponents({ Field: metadataOf("Field", { attributes: "captureUnmatchedValues" }) });
+    const { code, diagnostics } = gen('<Field @onclick:stopPropagation="true" />', capturing);
     expect(diagnostics.hasErrors).toBe(false);
     expect(code).toContain('__builder.addAttribute(1, "__internal_stopPropagation_onclick", true);');
+    // Without a capture parameter the component cannot take it (2.2).
+    const rejected = gen('<Field @onclick:stopPropagation="true" />', component).diagnostics.errors;
+    expect(rejected.map((d) => [d.code, d.message])).toEqual([
+      ["TZS025", "Unknown component parameter. '@onclick:stopPropagation' on a component is an attribute it has to capture (captureUnmatchedValues); '<Field>' has none."],
+    ]);
   });
 
   it("reports unknown and duplicate modifiers", () => {

@@ -129,7 +129,7 @@ describe("parameters", () => {
     expect(reported).toBe(true);
   });
 
-  it.fails("a function parameter whose name starts with 'on' is passed through unchanged", async () => {
+  it("a function parameter whose name starts with 'on' is passed through unchanged", async () => {
     class Filter extends ComponentBase {
       @Parameter() onlyIf?: (n: number) => boolean;
       protected override buildRenderTree(b: RenderTreeBuilder): void {

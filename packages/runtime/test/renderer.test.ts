@@ -161,7 +161,9 @@ describe("Renderer", () => {
     expect(container.querySelector("span")?.textContent).toBe("1");
   });
 
-  it("unwraps a re-wrapped (already-bound) callback on invocation", async () => {
+  it("passes an already-bound callback through bind (Blazor's EventCallbackFactory.Create(receiver, callback))", async () => {
+    const other = new PreboundCounter();
+    expect(EventCallback.bind(other, other.handleClick)).toBe(other.handleClick);
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(PreboundCounter, container);

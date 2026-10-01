@@ -13,13 +13,6 @@ import { getCurrentServices } from "../di/service-provider.js";
 export const completedLifecycle: Promise<void> = Promise.resolve();
 
 /**
- * The compiler emits `ValueExpression` for every component `@bind-Value`;
- * Razor only does so when the component declares that parameter, which needs
- * parameter metadata (roadmap 2.2). Until then an undeclared one is dropped
- * instead of being an unknown-parameter error.
- */
-const BIND_VALUE_EXPRESSION = "ValueExpression";
-/**
  * Blazor's ComponentBase. Sync-first lifecycle: hooks may return a Promise;
  * when they do, the component renders around the awaits exactly like
  * Blazor's async lifecycle orchestration (see setParametersAsync).
@@ -110,7 +103,7 @@ export abstract class ComponentBase {
         (this as unknown as Record<string, unknown>)[meta.propertyName] = value;
       } else if (captureProperty !== null) {
         (unmatched ??= {})[name] = value;
-      } else if (name !== BIND_VALUE_EXPRESSION) {
+      } else {
         throw unknownParameterError(this, name);
       }
     }
