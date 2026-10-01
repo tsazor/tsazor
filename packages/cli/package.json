@@ -1,6 +1,7 @@
 {
   "name": "@tsazor/cli",
   "version": "0.2.0",
+  "license": "MIT",
   "type": "module",
   "description": "Tsazor CLI: `tsazor check` (2.4, typed component-usage gate) and `tsazor codemod` (2.5, .razor → .tsazor).",
   "main": "./dist/index.js",

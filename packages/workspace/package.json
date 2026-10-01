@@ -1,6 +1,7 @@
 {
   "name": "@tsazor/workspace",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Shared .tsazor workspace resolution: _Imports chains, component/type resolution, runtime built-ins. Used by the Vite plugin and the language server.",
   "main": "./dist/index.js",

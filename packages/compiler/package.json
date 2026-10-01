@@ -1,6 +1,7 @@
 {
   "name": "@tsazor/compiler",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Tsazor (.tsazor) compiler: Razor-compatible markup + TypeScript code blocks.",
   "main": "./dist/index.js",
