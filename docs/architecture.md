@@ -82,6 +82,17 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   `console.error` statt über einen injizierten `IErrorBoundaryLogger`, und ein fehlgeschlagenes
   async `onError` wird als unbehandelte Promise-Ablehnung sichtbar statt Blazors
   Exception-in-RenderFragment-Kaskade.
+- **DynamicComponent (3.2):** Port von Blazors `DynamicComponent.cs` (Komponente, kein
+  Renderer-Hook): `type`/`parameters` als Parameter, das Kind wird in `buildRenderTree` per
+  `openComponent(0, toComponentDefinition(type))` geöffnet. Der `defineComponent`-Cache macht
+  gleiche Typen zu identischen Definitionsobjekten, also normales Komponenten-Diffing: gleicher
+  `Type` aktualisiert das Kind per Parameter-Neusetzung, ein `Type`-Wechsel ersetzt es (Dispose
+  + neu). `instance` wird über den Component-Reference-Capture gesetzt (Blazor `Instance` —
+  kein Parameter). Nur `Type`/`Parameters` werden akzeptiert; jeder andere Parameter wirft
+  Blazors „does not accept a parameter with the name
+  'X'" in `applyParameterValues` (vor der Zuweisung), ein null-`Type` Blazors „requires a
+  non-null value for the parameter Type." (nach ihr — Blazors Reihenfolge). Im Markup fängt
+  TZS025 (2.1-Metadaten) den Fall statisch.
 - **Lifecycle** (`ComponentBase`, Blazors `SetParametersAsync`): Parameter werden zuerst
   gesetzt — ein nicht deklarierter Parameter (weder `@Parameter` noch `@CascadingParameter`,
   case-insensitiv, kein `captureUnmatchedValues`) wirft Blazors „Object of type 'X' does not

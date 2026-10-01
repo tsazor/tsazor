@@ -48,6 +48,7 @@ export const RUNTIME_TYPES: ReadonlySet<string> = new Set([
   "AuthorizeView",
   "CascadingAuthenticationState",
   "CascadingValue",
+  "DynamicComponent",
   "ErrorBoundary",
   "ErrorBoundaryBase",
   "IErrorBoundary",

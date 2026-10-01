@@ -920,15 +920,16 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 
 **Voraussetzung:** B2 (Fehlerisolation), B3/B4 (Disposal, Lifecycle), 2.3 (Slots).
 
-**Stand (2026-10-01):** 3.1 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
+**Stand (2026-10-01):** 3.1 und 3.2 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
 Renderer-Routing per Parent-Kette (Blazors `HandleExceptionViaErrorBoundary`), erzwungene
-Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal.
+Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal;
+`DynamicComponent` mit `Type`/`Parameters`, Blazors Unknown-Parameter-Fehler und Reference-Capture.
 Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
 
 | Schritt | Inhalt | Abhängig von | Stand |
 |---|---|---|---|
 | 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 | umgesetzt |
-| 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | — |
+| 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | umgesetzt |
 | 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | — |
 | 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate` | B3 (Logical Ranges außerhalb des Roots) | — |
 | 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | — |
@@ -962,6 +963,24 @@ wenn eine Unterkasse ohne Unterschied rendert), danach wieder der eigene Output 
 `packages/conformance/test/runtime/error-boundary.test.ts` (nearest-wins, Recover, count-Reset,
 default UI, sync/async Event-, Lifecycle-, AfterRender-Fehler, Subtree-Unmount, Dispose fatal,
 Loop-Guard).
+
+### 3.2 — DynamicComponent
+
+**Stand: umgesetzt** (2026-10-01). Neue `packages/runtime/src/components/dynamic-component.ts`
+(Port von Blazors `DynamicComponent.cs`): `type` (Komponenten-Klasse oder
+`ComponentDefinition` — Blazor `Type`), `parameters` als Dictionary
+(Blazor `IDictionary<string, object>`; bewusst KEIN `captureUnmatchedValues`, wie Blazor
+kommentiert), `instance` per Component-Reference-Capture (Blazor `Instance`). Diff-Parität:
+`defineComponent`-Cache hält die Definition identisch über Renders — gleicher Type aktualisiert
+die Kind-Instanz, Type-Wechsel ersetzt (Dispose + neu), Dictionary-Änderung erreicht das Kind
+über Parameter-Neusetzung. Nur `Type`/`Parameters` (case-insensitive) werden akzeptiert —
+jeder andere Markup-Parameter wirft Blazors
+`"DynamicComponent does not accept a parameter with the name 'X'. To pass parameters …"` in
+`applyParameterValues` (vor der Zuweisung); fehlender Type wirft Blazors
+`"…requires a non-null value for the parameter Type."` (nach der Zuweisung — ein ungültiger
+Extra-Parameter wird zuerst gemeldet). Im Markup (2.1-Metadaten) fängt der Compiler den
+unbekannten Parameter bereits als TZS025. Konformität: 10 Runtime-/Markup-Tests in
+`packages/conformance/test/runtime/dynamic-component.test.ts`.
 
 ---
 

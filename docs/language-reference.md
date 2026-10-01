@@ -289,6 +289,23 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
   `handleException`); das `onError`-Hook loggt Default per Konsole (Blazor loggt über den
   injizierten `IErrorBoundaryLogger` — Tsazor hat diesen Service nicht).
 
+- `DynamicComponent` (3.2) rendert eine zur Laufzeit gewählte Komponente (Blazor
+  `DynamicComponent.cs`): `Type` ist die Komponenten-Klasse (einer der Tags, importiert oder
+  aus dem Markup bekannt), `Parameters` ist ein Dictionary `{ name: value }`, das unverändert
+  an das gerenderte Kind gereicht wird:
+
+  ```razor
+  <DynamicComponent Type="@picked" Parameters="@({ label: "x" })" />
+  ```
+
+  Gleicher `Type` aktualisiert die Kind-Instanz (kein Neu-Render), ein `Type`-Wechsel ersetzt
+  sie (Dispose + Initialisierung — Blazor-Diffing). `Instance` nimmt die gerenderte
+  Kind-Instanz per Reference-Capture auf. Nur `Type`/`Parameters` werden als direkte Parameter
+  akzeptiert, alles andere ist TZS025 (im Markup) bzw. Blazors Laufzeit-Fehler
+  `DynamicComponent does not accept a parameter with the name 'X'. To pass parameters …`
+  (in handgebauten Bäumen). Fehlt `Type` (null), wirft die Komponente Blazors
+  `DynamicComponent requires a non-null value for the parameter Type.`
+
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
   `http://…`) und case-insensitiv mit der aktuellen URI verglichen. `NavLinkMatch.All`: exakt

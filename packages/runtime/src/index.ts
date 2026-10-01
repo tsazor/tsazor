@@ -11,6 +11,7 @@ export { EventCallback } from "./components/event-callback.js";
 export { bindMethod } from "./components/bind-method.js";
 export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition, type ComponentType } from "./components/component-definition.js";
 export { CascadingValue } from "./components/cascading-value.js";
+export { DynamicComponent } from "./components/dynamic-component.js";
 export { ErrorBoundaryBase, ErrorBoundary, isIErrorBoundary, type IErrorBoundary } from "./components/error-boundary.js";
 
 // Renderer

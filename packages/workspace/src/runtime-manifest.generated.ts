@@ -87,6 +87,51 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
+    "DynamicComponent": {
+      "name": "DynamicComponent",
+      "file": "src/components/dynamic-component.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "type",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DynamicComponent",
+          "type": "ComponentType | null",
+          "references": [
+            {
+              "name": "ComponentType",
+              "kind": "runtime",
+              "imported": "ComponentType"
+            }
+          ],
+          "doc": "The component type to render. Must not be null when parameters are set."
+        },
+        {
+          "name": "parameters",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DynamicComponent",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Parameters handed to the dynamically rendered component."
+        }
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
     "ErrorBoundaryBase": {
       "name": "ErrorBoundaryBase",
       "file": "src/components/error-boundary.ts",
