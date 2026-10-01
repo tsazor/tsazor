@@ -87,6 +87,121 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
+    "ErrorBoundaryBase": {
+      "name": "ErrorBoundaryBase",
+      "file": "src/components/error-boundary.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered while there is no error."
+        },
+        {
+          "name": "errorContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "(error: unknown) => RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered with the handled error. Deviation from Blazor's\n`RenderFragment<Exception?>`: exceptions are `unknown` in TypeScript.",
+          "typeArgument": "unknown"
+        },
+        {
+          "name": "maximumErrorCount",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "number",
+          "doc": "The maximum number of errors handled between two recoveries; further\nerrors are fatal (Blazor's default)."
+        }
+      ],
+      "abstract": true,
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "ErrorBoundary": {
+      "name": "ErrorBoundary",
+      "file": "src/components/error-boundary.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered while there is no error."
+        },
+        {
+          "name": "errorContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "(error: unknown) => RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The content rendered with the handled error. Deviation from Blazor's\n`RenderFragment<Exception?>`: exceptions are `unknown` in TypeScript.",
+          "typeArgument": "unknown"
+        },
+        {
+          "name": "maximumErrorCount",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "ErrorBoundaryBase",
+          "type": "number",
+          "doc": "The maximum number of errors handled between two recoveries; further\nerrors are fatal (Blazor's default)."
+        }
+      ],
+      "base": {
+        "name": "ErrorBoundaryBase",
+        "resolved": true
+      }
+    },
     "LayoutComponentBase": {
       "name": "LayoutComponentBase",
       "file": "src/routing/layout-component-base.ts",

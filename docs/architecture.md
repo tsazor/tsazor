@@ -51,13 +51,37 @@ Browser ──(Renderer)──►  RenderTree-Frames ──(Diff)──►  Edit
   Batches in Reihenfolge). Jeder Render-Pass wendet seine Edits sofort an (B3-Entscheidung:
   Blazors Batch-am-Stück dient der WASM→JS-Grenze; hier läuft der Batch synchron, ein
   Batch-Ende-Applier müsste nur die per Index referenzierten Frames kopieren); der nächste
-  Pass derselben Komponente diffed gegen den committeten Baum. Fehler (Render, Diff, DOM, Lifecycle, OnAfterRender, Events, Dispose) sind pro
-  Komponente isoliert und gehen an `renderer.errorHandler` (`{ error, component, phase }`,
-  Default `console.error`); der Rest des Batches läuft weiter, der Live-Baum der
-  fehlerhaften Komponente bleibt Diff-Basis. Render-Schleifen (> 100 Passes einer
+  Pass derselben Komponente diffed gegen den committeten Baum. Fehler sind pro
+  Komponente isoliert (Phasen `render|diff|apply|lifecycle|afterRender|event|dispose|batch`):
+  alles außer Dispose und Batch-internen Fehlern wird zuerst der nächsten Error-Boundary
+  am logischen Parent-Kreis angeboten (siehe unten, **ErrorBoundary (3.1)**); ohne eine geht
+  es an `renderer.errorHandler` (`{ error, component, phase }`, Default `console.error`); der
+  Rest des Batches läuft weiter, der
+  Live-Baum der fehlerhaften Komponente bleibt Diff-Basis. Render-Schleifen (> 100 Passes einer
   Komponente pro Batch) werden gemeldet und abgebrochen. Event-Tracking läuft pro
   Renderer (kein globaler Renderer). `EventCallback` re-rendert den Owner nach dem Handler
   (Blazor-Semantik).
+- **ErrorBoundary (3.1):** die `ErrorBoundary`/`ErrorBoundaryBase`-Komponenten und das
+  Renderer-Routing sind der Port von Blazors `HandleExceptionViaErrorBoundary`
+  (Renderer.cs) + `ErrorBoundaryBase.cs` (Semantik Stand dotnet/aspnetcore main, Stand
+  2026-10-01). `handleComponentError` geht alle Phasen außer `dispose` und `batch` (und ohne
+  identifizierbare Komponente) entlang `state.parent` inkl. der Quelle selbst — ein Fehler im
+  eigenen ErrorContent wird also wieder von der Boundary gefangen, begrenzt durch
+  `maximumErrorCount`. Die erste gefundene Komponente mit `isErrorBoundary === true`
+  (Tsazors IErrorBoundary-Marker, `isIErrorBoundary`) erhält den Fehler; vorher rendert der
+  Renderer ihren nächsten Pass als leeren Baum (`state.forcedRenderFragment`, Blazors
+  `AddToRenderQueue(boundary, empty)`) — der fehlgeschlagene Subtree wird dadurch diff- und
+  dispose-technisch abgebaut, auch wenn eine eigene Unterkasse keinen Unterschied rendert —
+  und danach wieder als eigener Output (ErrorContent). `handleException` zählt Fehler zwischen
+  zwei Recoveries (`maximumErrorCount`, Default 100, Blazor); darüber hinaus wird der Fehler
+  auf der Boundary-Stelle als fatal an den Error-Handler geroutet (Blazor rethrowt in
+  `HandleException`, was in `HandleExceptionViaErrorBoundary` landet). `Recover()` wirkt nur
+  im Fehlerzustand (Zähler-Reset + Rerender). Abweichungen (alle dokumentiert): kein
+  `NavigationException` (nexist. in TS; Navigation ist synchron, kein Redirect-Ausnahme-Pfad),
+  `ErrorContent`-Kontext ist `unknown` statt `Exception`, das `onError`-Logging-Hook loggt per
+  `console.error` statt über einen injizierten `IErrorBoundaryLogger`, und ein fehlgeschlagenes
+  async `onError` wird als unbehandelte Promise-Ablehnung sichtbar statt Blazors
+  Exception-in-RenderFragment-Kaskade.
 - **Lifecycle** (`ComponentBase`, Blazors `SetParametersAsync`): Parameter werden zuerst
   gesetzt — ein nicht deklarierter Parameter (weder `@Parameter` noch `@CascadingParameter`,
   case-insensitiv, kein `captureUnmatchedValues`) wirft Blazors „Object of type 'X' does not

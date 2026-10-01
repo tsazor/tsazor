@@ -184,6 +184,7 @@ describe("runtime manifest", () => {
     expect([...RUNTIME_COMPONENTS].sort()).toEqual(
       [
         "AuthorizeRouteView", "AuthorizeView", "CascadingAuthenticationState", "CascadingValue", "EditForm",
+        "ErrorBoundary",
         "InputCheckbox", "InputDate", "InputNumber", "InputSelect", "InputText", "InputTextArea", "LayoutView",
         "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "ValidationMessage", "ValidationSummary", "Virtualize",
       ].sort(),

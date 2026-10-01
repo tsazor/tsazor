@@ -275,6 +275,20 @@ Komponenten ignoriert Blazor es (Warnung TZS008).
 <Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
 ```
 
+- `ErrorBoundary` (3.1) fängt Fehler des eigenen Subtrees — Render, Diff, DOM-Anwendung,
+  Lifecycle, synchrones und async `@onclick`-Handling, `onAfterRender` (Blazors
+  `HandleExceptionViaErrorBoundary`; Dispose- und Batch-Fehler bleiben wie dort fatal). Gesund
+  rendert `ChildContent`, fehlerhaft `ErrorContent` — das als `RenderFragment<unknown>`
+  typisiert ist (Abweichung: Blazor `RenderFragment<Exception>`); ohne Slot das Default-UI
+  `<div class="blazor-error-boundary">` (CSS-Styling wie im Blazor-Template). Der
+  Slot-Kontext heißt Default `context`:
+  `<ErrorContent Context="error">…@error.message…</ErrorContent>`. `maximumErrorCount`
+  (Default 100 wie Blazor) zählt Fehler zwischen zwei `recover()`-Aufrufen; darüber hinaus
+  ist der Fehler fatal und erreicht `renderer.errorHandler`. Eigene Boundaries erben von
+  `ErrorBoundaryBase` (oder implementieren `IErrorBoundary`: `isErrorBoundary = true` +
+  `handleException`); das `onError`-Hook loggt Default per Konsole (Blazor loggt über den
+  injizierten `IErrorBoundaryLogger` — Tsazor hat diesen Service nicht).
+
 - `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
   aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
   `http://…`) und case-insensitiv mit der aktuellen URI verglichen. `NavLinkMatch.All`: exakt

@@ -1,9 +1,10 @@
-import { getFrameSubtreeLength, type RenderTreeFrame } from "../render-tree/render-tree.js";
+import { getFrameSubtreeLength, type RenderFragment, type RenderTreeFrame } from "../render-tree/render-tree.js";
 import { FrameType } from "../render-tree/frame-type.js";
 import { attributeMap, computeDiff, type DiffOptions, type RenderTreeDiff } from "../render-tree/diff.js";
 import { ParameterView } from "../components/parameter-view.js";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
 import { completedLifecycle, isPromiseLike, type ComponentBase } from "../components/component-base.js";
+import { isIErrorBoundary } from "../components/error-boundary.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
 import { mayHaveChanged } from "../components/change-detection.js";
@@ -21,6 +22,9 @@ import { RenderQueue } from "./render-queue.js";
 const MAX_RENDERS_PER_BATCH = 100;
 
 const EMPTY_PARAMETERS: ReadonlyMap<string, unknown> = new Map();
+
+/** Blazor's AddToRenderQueue(boundary, empty) — an empty render tree. */
+const emptyRenderFragment: RenderFragment = () => {};
 
 /**
  * Blazor's ParameterView.DefinitelyEquals over the attribute frames of a
@@ -521,9 +525,17 @@ export class Renderer {
     let phase: RenderErrorPhase = "render";
     let diff: RenderTreeDiff;
     const oldFrames = state.currentRenderTree;
+    // Blazor's error-boundary empty render: this pass builds the forced
+    // fragment instead of the component's output.
+    const forcedFragment = state.forcedRenderFragment;
+    state.forcedRenderFragment = null;
     let newFrames: RenderTreeFrame[];
     try {
-      component.renderCurrentOutput(builder);
+      if (forcedFragment !== null) {
+        forcedFragment(builder);
+      } else {
+        component.renderCurrentOutput(builder);
+      }
       newFrames = builder.getFrames();
       phase = "diff";
       // The initial render is a diff against the empty tree (as in Blazor),
@@ -557,6 +569,12 @@ export class Renderer {
       // its frames now so the idle state holds only the live tree.
       state.renderBuilders[state.renderPass ^ 1]!.clear();
     }
+    if (forcedFragment !== null) {
+      // The forced pass was Blazor's separate queue entry; the error content
+      // (the component's own output) renders again, as in Blazor's next
+      // StateHasChanged entry.
+      component.stateHasChangedInternal();
+    }
     return true;
   }
 
@@ -582,17 +600,52 @@ export class Renderer {
 
   /**
    * @internal Routes a component failure to its handler. Blazor's
-   * HandleExceptionViaErrorBoundary: an ErrorBoundary (Phase 3) will be looked
-   * up along `component`'s parent chain here; without one, `errorHandler`
-   * receives it. Never throws.
+   * HandleExceptionViaErrorBoundary: a failure with an identified component
+   * (everything but dispose and batch-internal failures) is offered to the
+   * nearest error boundary along the logical parent chain; without one,
+   * `errorHandler` receives it (Blazor's HandleException, i.e. fatal). Never
+   * throws to the failure's origin (a boundary over its MaximumErrorCount is
+   * fatal here, not by unwinding).
    */
   handleComponentError(error: unknown, component: ComponentState | null, phase: RenderErrorPhase): void {
+    if (
+      component !== null &&
+      phase !== "dispose" && // Blazor: disposal errors are always fatal
+      phase !== "batch" && // … so are batch-loop listeners and renderer internals
+      this.routeToErrorBoundary(error, component, phase)
+    ) {
+      return;
+    }
     try {
       this.errorHandler({ error, component, phase });
     } catch (handlerError) {
       defaultErrorHandler({ error: handlerError, component, phase });
       defaultErrorHandler({ error, component, phase });
     }
+  }
+
+  /**
+   * Blazor's HandleExceptionViaErrorBoundary: walks the parent chain (self
+   * included — an error inside a boundary's own error content is caught by it
+   * again, bounded by MaximumErrorCount) and hands the first error boundary
+   * the failure. Returns whether one took it.
+   */
+  private routeToErrorBoundary(error: unknown, source: ComponentState, phase: RenderErrorPhase): boolean {
+    for (let candidate: ComponentState | null = source; candidate !== null; candidate = candidate.parent) {
+      if (candidate.disposed || !isIErrorBoundary(candidate.component)) continue;
+      // Blazor's AddToRenderQueue(boundary, empty): the failed subtree is
+      // unmounted even when a custom boundary's output would not change.
+      candidate.forcedRenderFragment = emptyRenderFragment;
+      try {
+        candidate.component.handleException(error);
+      } catch {
+        // Over MaximumErrorCount or an onError fault: fatal (Blazor's
+        // HandleException). The empty render stays queued.
+        this.errorHandler({ error, component: candidate, phase });
+      }
+      return true;
+    }
+    return false;
   }
 
   /**

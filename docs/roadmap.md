@@ -392,8 +392,8 @@ leer ist (Renders aus Render/Lifecycle/neuen Kindern im selben Batch). Dafür fo
 synchroner Lifecycle seinen Render jetzt synchron an (vorher immer nach einem `await`);
 async Hooks unverändert (R6 bleibt B4). Batch-Ende: `renderer.onBatchCompleted(listener)`
 mit `renderedComponents` (ein Eintrag pro Pass). Fehler-Hook: `renderer.errorHandler`
-(`{ error, component, phase }`), zentral über `handleComponentError` — dort setzt die
-ErrorBoundary-Suche entlang der Parent-Kette (Phase 3) an. Ein Pass, der in Render/Diff/DOM
+(`{ error, component, phase }`), zentral über `handleComponentError` — dort sitzt seit 3.1
+die ErrorBoundary-Suche entlang der Parent-Kette. Ein Pass, der in Render/Diff/DOM
 scheitert, wird verworfen (Builder und Slot-Map des Live-Baums bleiben, neu instanziierte
 Kinder werden disposed; bereits angewandte DOM-Edits werden nicht zurückgerollt).
 `activeRenderer` entfernt; `isRenderingInProgress` spiegelt den Batch. Frame-Referenzen:
@@ -920,19 +920,48 @@ Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25
 
 **Voraussetzung:** B2 (Fehlerisolation), B3/B4 (Disposal, Lifecycle), 2.3 (Slots).
 
-| Schritt | Inhalt | Abhängig von |
-|---|---|---|
-| 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 |
-| 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) |
-| 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 |
-| 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate` | B3 (Logical Ranges außerhalb des Roots) |
-| 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 |
+**Stand (2026-10-01):** 3.1 umgesetzt — `ErrorBoundary`/`ErrorBoundaryBase` in der Runtime,
+Renderer-Routing per Parent-Kette (Blazors `HandleExceptionViaErrorBoundary`), erzwungene
+Empty-Render-Passes, MaximumErrorCount/Recover, Dispose- und Batch-Fehler bleiben fatal.
+Slot-Syntax (`<ErrorContent Context="error">`) aus 2.3 funktioniert gegen die Built-in-Metadaten.
+
+| Schritt | Inhalt | Abhängig von | Stand |
+|---|---|---|---|
+| 3.1 | `ErrorBoundary` (`ChildContent`, `ErrorContent` mit Kontext, `Recover()`) | B2-Error-Hook, 2.3 | umgesetzt |
+| 3.2 | `DynamicComponent` (`Type`, `Parameters`) | 2.1 (Parameter-Validierung zur Laufzeit) | — |
+| 3.3 | `MarkupString`: Compiler erkennt den Typ in `addContent` ⇒ Markup-Frame | A4, 2.1 | — |
+| 3.4 | `HeadContent`/`HeadOutlet`, `FocusOnNavigate` | B3 (Logical Ranges außerhalb des Roots) | — |
+| 3.5 | EditForm: `OnSubmit`/`OnInvalidSubmit`, `onValidSubmit` awaiten und tracken | B4 | — |
 | 3.6 | Validierungsmodell entscheiden und umsetzen: Decorator-basiert (`@Required()`, `@MaxLength()`) als DataAnnotations-Pendant **oder** Beibehaltung der Funktions-Map plus Adapter | 2.1 (Decorator-Metadaten); Entscheidung vor 5.2 |
 | 3.7 | `InputFile`, `SupplyParameterFromQuery`, `@bind:format` (Datum/Zahl, Kultur) | B7 (Query), A5 |
 | 3.8 | DI: Scoped-Lifetime, Zyklus-Erkennung | — |
 
 **Messpunkt:** FluentCMS-Probe + erste portierte FluentCMS-Admin-Seiten (CRUD-Plugins nutzen
 PluginForm, Slots und `@bind` in Masse).
+
+### 3.1 — ErrorBoundary
+
+**Stand: umgesetzt** (2026-10-01, Branch `roadmap/p3-builtins`). Neue
+`packages/runtime/src/components/error-boundary.ts`: `ErrorBoundaryBase` (Port von Blazors
+`ErrorBoundaryBase.cs`) mit `childContent`, `errorContent: (error: unknown) => RenderFragment`
+(Blazor: `RenderFragment<Exception>` — TS-Abweichung `unknown`), `maximumErrorCount` (Default
+100), `recover()` (nur im Fehlerzustand, Zähler-Reset wie Blazors `Recover`) und dem
+Logging-Hook `onError` (Default `console.error`); `ErrorBoundary` als Tag-Component.
+`IErrorBoundary` ist das Marker-Protokoll (`isErrorBoundary === true`,
+`isIErrorBoundary(component)`) — jeder Komponente erlaubt, wie Blazors Interface `IErrorBoundary`.
+
+Routing in `renderer.ts` (`handleComponentError` → `routeToErrorBoundary`): alle Phasen außer
+`dispose` und `batch` (Blazor: nur dort) und nur mit identifizierbarer Komponente; die Parent-
+Kette inkl. Quelle selbst — der eigene ErrorContent wirft ⇒ die Boundary fängt wieder, und der
+Fehlerzähler begrenzt die Schleife. Vor `handleException` rendert der Renderer den nächsten
+Pass der Boundary als leeren Baum (`state.forcedRenderFragment` — Port von Blazors
+`AddToRenderQueue(boundary, empty)`; diff/dispose baut den fehlgeschlagenen Subtree ab, auch
+wenn eine Unterkasse ohne Unterschied rendert), danach wieder der eigene Output (ErrorContent).
+Über `maximumErrorCount`: fatal an `renderer.errorHandler` (Blazor rethrowt;
+`ExceptionDispatchInfo` n/a). Konformität: 16 Runtime-/Markup-Tests in
+`packages/conformance/test/runtime/error-boundary.test.ts` (nearest-wins, Recover, count-Reset,
+default UI, sync/async Event-, Lifecycle-, AfterRender-Fehler, Subtree-Unmount, Dispose fatal,
+Loop-Guard).
 
 ---
 
