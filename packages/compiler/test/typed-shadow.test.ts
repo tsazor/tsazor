@@ -36,6 +36,14 @@ const list = metadataOf(
     optionalCount: { category: "value", type: "number", optional: true },
   },
 );
+/** The runtime's untyped delegate placeholder (`typeArgument: "unknown"`). */
+const virtualized = metadataOf(
+  "Virtualized",
+  {
+    items: { category: "value", optional: false, type: "unknown[]", references: [] },
+    itemTemplate: { category: "RenderFragment<T>", type: "(item: unknown) => RenderFragment", typeArgument: "unknown", references: [] },
+  },
+);
 
 /** Compiles `source` (+ the shared `@code` prologue). */
 function gen(
@@ -104,6 +112,14 @@ describe("typed slot contexts (shadow-only)", () => {
 
   it("the context stays `any` without a resolved argument", () => {
     const { result } = gen('<Grid Items="people"><RowTemplate>@context</RowTemplate></Grid>', undefined, typedShadow);
+    expect(result.code).toContain("(context: any) =>");
+  });
+
+  it("the context stays `any` for the runtime's untyped delegate placeholder", () => {
+    // The runtime manifests untyped delegates (e.g. Virtualize's ItemTemplate)
+    // with the literal type argument `unknown` — not a slot to type, and the
+    // shadow layer must not pretend otherwise (2.4).
+    const { result } = gen('<Virtualized Items="people"><ItemTemplate>@context</ItemTemplate></Virtualized>', { Virtualized: virtualized }, typedShadow);
     expect(result.code).toContain("(context: any) =>");
   });
 });

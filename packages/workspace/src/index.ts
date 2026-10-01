@@ -23,6 +23,8 @@ export {
   componentMetadataForTag,
   buildPackageManifest,
   buildRuntimeManifest,
+  componentTypeDeclaration,
+  componentTypeDeclarations,
   manifestEntriesOfModule,
   type ManifestEntry,
   type MetadataCacheOptions,
