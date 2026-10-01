@@ -21,7 +21,7 @@ from the cursor position:
 | Context | Example | Candidates |
 |---|---|---|
 | Tag name | `<Gr` → `Greeter` | Components in `@using`-resolvable directories (directory scan) + runtime built-ins (`RUNTIME_COMPONENTS`). |
-| Attribute name | `<Greeter ` | The resolved component's `@Parameter()` names, `@bind-<param>` pairs, directive attributes (`@bind`, `@onclick`, `@onchange`, `@oninput`, `@ref`, `@key`, `@attributes`); plain elements get a small HTML list (`class`, `style`, `id`, `href`, `type`, `value`, `data-testid`). |
+| Attribute name | `<Greeter ` | The resolved component's parameters from the 2.1 metadata (own, code-behind and inherited; cascading parameters excluded), `@bind-<param>` where `<param>Changed` is an `EventCallback`, directive attributes (`@bind`, `@onclick`, `@onchange`, `@oninput`, `@ref`, `@key`, `@attributes`); plain elements get a small HTML list (`class`, `style`, `id`, `href`, `type`, `value`, `data-testid`). |
 | Directive | `@p` | Directive keywords with snippets (`@page "/route"`, `@code { … }`, `@if`, `@for`, `@foreach`, `@switch`, …). |
 | Expression | `Count: @co` | Members of the component's own `@code` state, the code-behind sidecar (`X.tsazor.ts`), and `@inject` fields. |
 
@@ -43,16 +43,24 @@ AST node (`nodeAt`, 0-based LSP positions over the compiler's 1-based lines):
 - Cursor inside `@code` → nothing (that region is TypeScript; a future
   integration with a TS server could complete there).
 
-### Parameter and member sources (v1 heuristics)
+### Parameter and member sources
 
-- **`.tsazor` components:** the tag is resolved via the workspace resolver
-  (`componentFile`), the file's member `@code` blocks are parsed, and
-  `@Parameter()`/`@CascadingParameter()` names are extracted by the same regex
-  the code generator itself uses.
-- **Runtime built-ins:** hand-maintained table `RUNTIME_COMPONENT_PARAMS` in
-  `packages/workspace/src/builtins.ts`, transcribed from the runtime sources
-  (input components share `InputBase`'s `Value`/`ValueChanged`/`ValueExpression`).
-- **Expression members:** line-based regexes over member code (getter /
+- **Component parameters** come from the parameter metadata (roadmap 2.1,
+  [architecture.md](architecture.md#parameter-metadaten-21)):
+  `context.resolveComponentMetadata(tag, usings, imports)` resolves the tag
+  exactly like the build (`@import` binding, enclosing folders, `@using`
+  sources, runtime built-ins, packages) and returns every parameter the
+  component accepts — `@code`, the code-behind class and the whole base chain
+  (`@inherits LayoutComponentBase`, `extends InputBase<string>` with
+  substituted type arguments). Runtime built-ins come from the embedded
+  runtime manifest, package components from their `dist/tsazor-components.json`.
+  The item detail shows `Tag · category · type`, the doc is the member's JSDoc.
+  Cascading parameters are not offered (Blazor rejects them as attributes);
+  `@bind-X` is offered only when an `XChanged` parameter of category
+  `EventCallback`/`EventCallback<T>` exists. The metadata cache is shared and
+  stamped per file, so edits of another component, its code-behind or a base
+  show up on the next completion without a restart.
+- **Expression members (v1 heuristic):** line-based regexes over member code (getter /
   `@Parameter()`-decorated field / method / field), matched in order per line.
   This is intentionally best effort — no TypeScript type analysis yet — so
   rename tracking, inherited members beyond the direct sidecar, and

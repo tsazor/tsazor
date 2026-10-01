@@ -14,6 +14,7 @@ import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
 import { parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
+import type { ComponentMetadata } from "./metadata.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -81,6 +82,13 @@ export interface CodegenOptions {
    * where an `@import` or a global has the same name.
    */
   codeBehindSource?: string;
+  /**
+   * Parameter metadata of the component a tag resolves to (2.1; the
+   * workspace resolver provides it). `imports` are the file's own `@import`s
+   * (an imported tag binds directly). Not consulted by the code generator
+   * yet — metadata-driven codegen is 2.2.
+   */
+  resolveComponentMetadata?: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
 }
 
 export interface CodegenResult {

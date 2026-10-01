@@ -1,6 +1,7 @@
 // Workspace-level resolution shared by the Vite plugin and the language server
 export {
   collectImports,
+  collectImportsSync,
   candidateDirs,
   checkUsing,
   enclosingDirs,
@@ -15,4 +16,15 @@ export {
 } from "./imports.js";
 export { createFileContext, classNameForFile, resolutionOptions, type FileContext } from "./resolver.js";
 export { exportsOfFile, importKindOf, packageExports } from "./exports.js";
-export { RUNTIME_PACKAGE, RUNTIME_COMPONENTS, RUNTIME_TYPES, RUNTIME_COMPONENT_PARAMS } from "./builtins.js";
+export { RUNTIME_PACKAGE, RUNTIME_COMPONENTS, RUNTIME_TYPES } from "./builtins.js";
+export {
+  MetadataCache,
+  defaultMetadataCache,
+  componentMetadataForTag,
+  buildPackageManifest,
+  buildRuntimeManifest,
+  manifestEntriesOfModule,
+  type ManifestEntry,
+  type MetadataCacheOptions,
+} from "./metadata.js";
+export { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";

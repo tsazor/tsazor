@@ -5,7 +5,11 @@
   "description": "Bootstrap 5 UI component library for Tsazor — written in .tsazor (dogfooding the compiler and runtime).",
   "main": "./dist/index.js",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./tsazor-components.json": "./dist/tsazor-components.json"
+  },
+  "tsazor": {
+    "components": "./dist/tsazor-components.json"
   },
   "files": [
     "dist",

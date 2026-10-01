@@ -4,8 +4,9 @@
  * candidates for four contexts:
  *
  *   <Gr                    → component tags (@using dirs, package exports, runtime built-ins)
- *   <Greeter …             → the resolved component's @Parameter() attributes,
- *                            plus directive attributes (@bind, @onclick, …)
+ *   <Greeter …             → the resolved component's parameters (2.1 metadata,
+ *                            incl. inherited; @bind-X where XChanged is an
+ *                            EventCallback), plus directive attributes (@bind, @onclick, …)
  *   @                      → directives (top level) or expression members
  *   Count: @co             → members of @code state, the code-behind class, @inject fields
  *                            and @import names (own + inherited from _Imports.tsazor)
@@ -13,9 +14,9 @@
  * Positions: LSP (0-based line/character) in, completions out. The compiler's
  * AST spans are 1-based/0-based-columns — nodeAt already handles the shift.
  */
-import { parseDocument, DiagnosticBag, type CodeBlockNode, type ElementNode, type ExpressionNode } from "@tsazor/compiler";
+import type { CodeBlockNode, ComponentParameter, ElementNode, ExpressionNode } from "@tsazor/compiler";
 import {
-  RUNTIME_COMPONENT_PARAMS,
+  RUNTIME_MANIFEST,
   RUNTIME_PACKAGE,
   RUNTIME_COMPONENTS,
   candidateDirs,
@@ -171,13 +172,19 @@ function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefi
   };
 
   if (element.isComponent) {
-    for (const param of parametersOfComponent(analyzed, element.tagName)) {
-      push({ label: param.name, kind: "attribute", detail: element.tagName, doc: param.doc });
+    const parameters = parametersOfComponent(analyzed, element.tagName);
+    for (const param of parameters) {
+      push({ label: param.name, kind: "attribute", detail: parameterDetail(element.tagName, param), doc: param.doc });
+    }
+    // @bind-X needs the X + XChanged pair (Blazor: Value/ValueChanged), XChanged an EventCallback.
+    for (const param of parameters) {
+      const changed = parameters.find((candidate) => candidate.name.toLowerCase() === `${param.name.toLowerCase()}changed`);
+      if (!changed || (changed.category !== "EventCallback" && changed.category !== "EventCallback<T>")) continue;
       push({
         label: `@bind-${param.name}`,
         kind: "attribute",
         detail: "two-way binding",
-        doc: `Value + ${param.name}Changed pair (like Blazor's @bind-Value).`,
+        doc: `Binds ${param.name} and ${changed.name} (like Blazor's @bind-Value).`,
       });
     }
   }
@@ -190,35 +197,21 @@ function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefi
   return items.filter((item) => item.label.toLowerCase().startsWith(needle));
 }
 
-/** Parameters of the component the tag resolves to (built-in table or .tsazor scan). */
-function parametersOfComponent(
-  analyzed: AnalyzedFile,
-  tagName: string,
-): ReadonlyArray<{ name: string; doc?: string }> {
-  const file = analyzed.context.componentFile(tagName);
-  const params = file ? parameterNamesOfTsazorFile(file) : [];
-  if (params.length > 0) return params;
-  return RUNTIME_COMPONENT_PARAMS[tagName] ?? [];
+/**
+ * Parameters settable from markup on the component the tag resolves to —
+ * from the parameter metadata (2.1: own, code-behind and inherited
+ * parameters; runtime and package components from their manifests).
+ * Cascading parameters only take cascaded values (Blazor rejects them as
+ * attributes) and are not offered.
+ */
+function parametersOfComponent(analyzed: AnalyzedFile, tagName: string): readonly ComponentParameter[] {
+  const metadata = analyzed.context.resolveComponentMetadata(tagName, [...analyzed.usings], analyzed.ownImports);
+  return (metadata?.parameters ?? []).filter((parameter) => parameter.cascading === undefined);
 }
 
-/** Regex extraction of @Parameter() names from a component's @code (v1 heuristic). */
-export function parameterNamesOfTsazorFile(file: string): ReadonlyArray<{ name: string; doc?: string }> {
-  let source: string;
-  try {
-    source = readFileSync(file, "utf8");
-  } catch {
-    return [];
-  }
-  const parsed = parseDocument(source, new DiagnosticBag());
-  const text = parsed.body
-    .filter((n): n is CodeBlockNode => n.kind === "codeBlock" && n.member === true)
-    .map((n) => n.code)
-    .join("\n");
-  const names = new Map<string, { name: string; doc?: string }>();
-  for (const match of text.matchAll(/@(?:Cascading)?Parameter\s*\([^)]*\)\s*([\w$]+)/g)) {
-    if (!names.has(match[1]!)) names.set(match[1]!, { name: match[1]! });
-  }
-  return [...names.values()];
+function parameterDetail(tagName: string, parameter: ComponentParameter): string {
+  const type = parameter.type ?? parameter.inferredType;
+  return `${tagName} · ${parameter.category}${type ? ` · ${type}` : ""}`;
 }
 
 /* Component tag candidates ----------------------------------------------------- */
@@ -254,7 +247,7 @@ function componentCandidates(analyzed: AnalyzedFile, prefix: string): Completion
   }
   for (const tag of RUNTIME_COMPONENTS) {
     if (!seen.add(tag)) continue;
-    const params = RUNTIME_COMPONENT_PARAMS[tag];
+    const params = RUNTIME_MANIFEST.components[tag]?.parameters.filter((p) => p.cascading === undefined);
     const names = params && params.length > 0 ? `params: ${params.map((p) => p.name).join(", ")}` : undefined;
     items.push({ label: tag, kind: "component", detail: RUNTIME_PACKAGE, doc: `<${tag}> — ${names ?? "@tsazor/runtime"}` });
   }

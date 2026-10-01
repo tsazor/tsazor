@@ -658,6 +658,38 @@ Kategorie (`string` / sonstiger Wert / `EventCallback` / `RenderFragment` /
 Codegen; der Plugin-Resolver liefert sie für Ziel-Komponenten (analog `resolveComponent`).
 Fertige Pakete (`components`, `fluent`) liefern sie als Manifest.
 
+**Stand: 2.1 umgesetzt** (Branch `roadmap/p2-1-metadata`; Modell in
+[architecture.md](architecture.md#parameter-metadaten-21)). Extraktor + Auflösung in
+`@tsazor/compiler` (`metadata.ts`, syntaktisch, Host-basiert), Dateisystem-Host,
+Cache und Manifeste in `@tsazor/workspace` (`metadata.ts`). Kategorien `string` /
+`value` / `EventCallback` / `EventCallback<T>` / `RenderFragment` /
+`RenderFragment<T>` / `captureUnmatchedValues` aus der Annotation (Unions, `?:`,
+umbenannte und Namespace-Runtime-Imports, lokale und relativ importierte Aliase,
+Funktionstyp `(x: T) => RenderFragment`), Typ als Quelltext + Bindungen der
+Typnamen (`references`, für 2.4), `@typeparam`s/Klassen-Typparameter,
+Cascading-Optionen, JSDoc. Vererbung über `@inherits`/`extends`/Code-behind über
+Dateien und in das Runtime-Manifest, Typargumente eingesetzt (`InputBase<string>`).
+`FileContext.resolveComponentMetadata(tag, usings, imports)` →
+`CompileOptions.resolveComponentMetadata` (Codegen liest es noch nicht —
+alle 117 Repo-`.tsazor` vorher/nachher byte-identisch inkl. Sourcemaps, ebenso
+`components`/`fluent`-dist). Manifeste `dist/tsazor-components.json` (`package.json`
+`tsazor.components`) aus den Builds von runtime, components, fluent; Runtime-Manifest
+in den Workspace eingebettet, `RUNTIME_COMPONENTS` daraus abgeleitet,
+`RUNTIME_COMPONENT_PARAMS` entfernt; Sync-Tests gegen Quellen und `getParameterInfo`.
+Cache pro Datei (mtime+Größe) mit Abhängigkeitskanten (Code-behind, `_Imports`,
+Basisdateien, Manifeste) und `dependentsOf`/`invalidate` für 4.1. LSP:
+Attribut-Completion aus den Metadaten (inkl. geerbter Parameter, ohne Cascading,
+`@bind-X` nur mit `XChanged`-EventCallback). Gates: 842/842 Tests, LSP-Smokes,
+Pizza, Gallery, Sleipnir, Demo (components 31, scoped 10, code-behind 5,
+debugging 14, counter-state 8) grün.
+**Offen für 2.2/2.3/2.4:** Codegen auf `category` umstellen (C12, Sync B8,
+unbekannte Parameter ⇒ Fehler; `uncertain` dort als Warnung statt Fehler);
+Slot-Erkennung über `RenderFragment`/`RenderFragment<T>`-Parameter und
+`typeParameters` für `TItem` (2.3); `references` + `file` für Typ-Imports im Shadow
+(2.4 — paketrelative `file`-Pfade zeigen in `src/`, das die Pakete mitliefern);
+Typen aus Fremd-Paketen ohne Manifest bleiben `uncertain`; eine neu angelegte
+`_Imports.tsazor` invalidiert den Cache nicht selbst (4.1).
+
 ### 2.2 — Metadaten-gestützte Codegen
 
 - Statische Attributwerte auf Nicht-String-Parametern sind Ausdrücke (`Count="5"` ⇒ `5`,

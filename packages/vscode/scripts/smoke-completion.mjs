@@ -18,7 +18,7 @@ await mkdir(path.join(work, "Shared"), { recursive: true });
 await mkdir(path.join(work, "Pages"), { recursive: true });
 await writeFile(
   path.join(work, "Shared", "Greeter.tsazor"),
-  '<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n    count = 0;\n}\n',
+  '<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n    @Parameter() NameChanged?: EventCallback<string>;\n    count = 0;\n}\n',
 );
 await writeFile(path.join(work, "_Imports.tsazor"), "@using ./Shared\n");
 await writeFile(path.join(work, "Pages", "Demo.tsazor"), "@page \"/demo\"\n<p>@c</p>\n");

@@ -19,8 +19,15 @@ beforeAll(async () => {
   await mkdir(path.join(dir, "Shared"), { recursive: true });
   await writeFile(
     path.join(dir, "Shared", "Greeter.tsazor"),
-    '<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n    greetCount = 0;\n}\n',
+    '<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n    @Parameter() NameChanged?: EventCallback<string>;\n    @Parameter() Title?: string;\n    @CascadingParameter() theme?: string;\n    greetCount = 0;\n}\n',
   );
+  // Parameters inherited from a code-behind base and from the runtime (InputBase).
+  await writeFile(path.join(dir, "Shared", "Fancy.tsazor"), "<p></p>\n@code {\n    @Parameter() own = 1;\n}\n");
+  await writeFile(
+    path.join(dir, "Shared", "Fancy.tsazor.ts"),
+    'import { ComponentBase, Parameter } from "@tsazor/runtime";\nexport default class Fancy extends ComponentBase {\n    @Parameter() behind?: string;\n}\n',
+  );
+  await writeFile(path.join(dir, "Shared", "TextBox.tsazor"), "@inherits InputBase<string>\n<input />\n");
   // _Imports makes root + Shared resolvable for every file below root.
   await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./Shared\n");
   cleanup = async () => rm(dir, { recursive: true, force: true });
@@ -101,9 +108,30 @@ describe("completeAt — attributes", () => {
     expect(labels).not.toContain("greetCount");
   });
 
-  it("offers @bind-<param> pairs on components", async () => {
+  it("offers @bind-<param> only for params with a <Param>Changed EventCallback", async () => {
     const labels = await complete(GREETER_PAGE, 3, 4);
     expect(labels).toContain("@bind-Name");
+    expect(labels).not.toContain("@bind-Title");
+    expect(labels).not.toContain("@bind-NameChanged");
+  });
+
+  it("does not offer cascading parameters as attributes", async () => {
+    const labels = await complete(GREETER_PAGE, 3, 4);
+    expect(labels).toContain("Title");
+    expect(labels).not.toContain("theme");
+  });
+
+  it("offers inherited parameters (code-behind base, runtime InputBase)", async () => {
+    expect(await complete("<Fancy \n", 0, 7)).toEqual(expect.arrayContaining(["own", "behind"]));
+    const textBox = await complete("<TextBox \n", 0, 9);
+    expect(textBox).toEqual(expect.arrayContaining(["Value", "ValueChanged", "@bind-Value"]));
+    expect(textBox).not.toContain("editContext");
+  });
+
+  it("describes parameters with category and type", async () => {
+    const analyzed = await analyzeSource(path.join(root, "Pages", "Demo.tsazor"), GREETER_PAGE, root);
+    const name = completeAt(analyzed, 3, 4).find((c) => c.label === "Name");
+    expect(name?.detail).toBe("Greeter · string · string");
   });
 
   it("offers built-in parameters on runtime components", async () => {

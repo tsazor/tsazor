@@ -9,7 +9,11 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./fluent.css": "./dist/fluent.css"
+    "./fluent.css": "./dist/fluent.css",
+    "./tsazor-components.json": "./dist/tsazor-components.json"
+  },
+  "tsazor": {
+    "components": "./dist/tsazor-components.json"
   },
   "files": [
     "dist",

@@ -1,6 +1,5 @@
 import { compile, type ImportInfo, type TszDiagnostic } from "@tsazor/compiler";
-import { existsSync, statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
 /** One _Imports.tsazor contribution, already resolved against its own directory. */
@@ -43,6 +42,11 @@ export function stripQuotes(value: string): string {
 
 /** Reads _Imports.tsazor files from `dir` up to `root` (nearest first). */
 export async function collectImports(fileDir: string, root: string): Promise<ImportsChain> {
+  return collectImportsSync(fileDir, root);
+}
+
+/** collectImports for synchronous callers (metadata resolution inside a compile). */
+export function collectImportsSync(fileDir: string, root: string): ImportsChain {
   const layers: ImportsLayer[] = [];
   let current = path.resolve(fileDir);
   const stop = path.resolve(root);
@@ -50,7 +54,7 @@ export async function collectImports(fileDir: string, root: string): Promise<Imp
   while (true) {
     const importsPath = path.join(current, IMPORTS_FILE);
     if (existsSync(importsPath)) {
-      const source = await readFile(importsPath, "utf8");
+      const source = readFileSync(importsPath, "utf8");
       const dir = current;
       // _Imports.tsazor is directive-only; compile() gives us the parsed values
       // (and diagnoses invalid @import forms / missing @using directories).
