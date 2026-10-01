@@ -230,7 +230,7 @@ export type AttributeNode =
       kind: "bind";
       /** Two-way expression (from @bind, @bind:get is stored separately). */
       expression?: string;
-      /** Component parameter target of @bind-Value (e.g. "Value"). */
+      /** Target of @bind-Value: a component parameter ("Value"), on an element the bound attribute ("value"). */
       bindTarget?: string;
       event?: string;
       format?: string;

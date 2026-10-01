@@ -93,6 +93,25 @@ describe("@bind codegen (C16, C17)", () => {
     expect(gen('<Field @bind-Value="v" @bind-Value:get="g" @bind-Value:set="s" />', component).diagnostics.errors[0]!.message)
       .toContain("'@bind-Value' can't be used together with '@bind-Value:get'");
   });
+
+  it("A7: @bind-<attr> on an element binds that attribute (Razor), not a component parameter", () => {
+    const { code, diagnostics } = gen('<input @bind-value="name" @bind-value:event="oninput" /><input type="checkbox" @bind-checked="done" />');
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
+    expect(code).toContain('__builder.addEventHandler(2, "oninput", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__event.target as HTMLInputElement).value; }));');
+    expect(code).toContain('__builder.addAttribute(5, "checked", this.done);');
+    expect(code).toContain("this.done = (__event.target as HTMLInputElement).checked;");
+    expect(code).not.toContain("ValueChanged");
+    expect(code).not.toContain('"valueChanged"');
+  });
+
+  it("A7: element @bind-value keeps the number coercion and the modifier rules; the label names the attribute", () => {
+    const { code } = gen('<input type="number" @bind-Value="count" />');
+    expect(code).toContain('"value", this.count');
+    expect(code).toContain("Number((__event.target as HTMLInputElement).value)");
+    expect(gen('<input @bind-value:after="f" />').diagnostics.errors[0]!.message).toContain("'@bind-value:after' was used but no '@bind-value' was found");
+    expect(gen('<input @bind-value="a?.b" />').diagnostics.errors[0]!.message).toContain("'@bind-value' target 'a?.b'");
+  });
 });
 
 describe("event modifiers (C15)", () => {

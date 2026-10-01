@@ -201,3 +201,48 @@ describe("C17 — @bind targets", () => {
     expect(diagnostics.find((d) => d.code === "TZS008")!.message).toMatch(/optional chaining/);
   });
 });
+
+describe("A7 — @bind-<attr> on elements (Razor element semantics)", () => {
+  const change = async (m: Awaited<ReturnType<typeof mount>>, selector: string, value: string, type = "change"): Promise<void> => {
+    const input = m.container.querySelector<HTMLInputElement>(selector)!;
+    input.value = value;
+    input.dispatchEvent(new Event(type, { bubbles: true }));
+    await m.settle();
+  };
+
+  it("@bind-value binds the value attribute with onchange, like @bind", async () => {
+    const m = await mount(`<input id="a" @bind-value="name" /><p>@name</p>
+@code { private name = "start"; }`);
+    expect(m.container.querySelector<HTMLInputElement>("#a")!.value).toBe("start");
+    await change(m, "#a", "typed");
+    expect(m.container.querySelector("p")!.textContent).toBe("typed");
+  });
+
+  it("@bind-value:event picks the DOM event; number inputs coerce like @bind", async () => {
+    const m = await mount(`<input id="a" @bind-value="text" @bind-value:event="oninput" /><input id="n" type="number" @bind-value="count" />
+<p>@text/@(typeof count):@count</p>
+@code { private text = ""; private count = 1; }`);
+    await change(m, "#a", "live", "input");
+    await change(m, "#n", "42");
+    expect(m.container.querySelector("p")!.textContent).toBe("live/number:42");
+  });
+
+  it("@bind-value with :after, and :get/:set", async () => {
+    const m = await mount(`<input id="a" @bind-value="v" @bind-value:after="changed" /><input id="b" @bind-value:get="w" @bind-value:set="store" />
+<p>@v/@w/@log</p>
+@code { private v = ""; private w = ""; private log = ""; changed() { this.log += "after:" + this.v; } store(value: string) { this.w = value.toUpperCase(); } }`);
+    await change(m, "#a", "x");
+    await change(m, "#b", "y");
+    expect(m.container.querySelector("p")!.textContent).toBe("x/Y/after:x");
+  });
+
+  it("component @bind-Value is unchanged (Value + ValueChanged)", async () => {
+    const m = await mount({
+      "Test.tsazor": `<Field @bind-Value="v" /><p>@v</p>\n@code { private v = ""; }`,
+      "Field.tsazor": field,
+    });
+    m.container.querySelector("button")!.click();
+    await m.settle();
+    expect(m.container.querySelector("p")!.textContent).toBe("x");
+  });
+});

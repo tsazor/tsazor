@@ -1220,7 +1220,8 @@ class Parser {
       return { kind: "bind", expression: expression?.code ?? "", ...end() };
     }
 
-    // @bind-<Target>[:event|:format|:get|:set|:after] — component parameter binding.
+    // @bind-<Target>[:event|:format|:get|:set|:after] — a component parameter,
+    // or on an element the attribute <Target> (codegen decides).
     if (rest.startsWith("-")) {
       const target = rest.slice(1);
       const colon = target.indexOf(":");

@@ -1128,9 +1128,12 @@ class Codegen {
    *  Value + ValueChanged for component parameter targets. */
   private emitBind(attr: Extract<AttributeNode, { kind: "bind" }>, ctx: { tag: string; attributes: AttributeNode[]; isComponent?: boolean }): void {
     const pos = attr.pos;
-    // Component parameter binding: @bind-Target or @bind on a component tag
-    // → Target + TargetChanged / Value + ValueChanged parameter pair.
-    const isComponentBind = attr.bindTarget !== undefined || ctx.isComponent === true;
+    // Component parameter binding: @bind or @bind-Target on a component tag
+    // → Target + TargetChanged / Value + ValueChanged parameter pair. On an
+    // element, `@bind-<attr>` binds that attribute (Razor: `@bind-value` is
+    // `@bind` spelled out); an unresolved component tag keeps component form.
+    const elementTag = ctx.tag !== "" && !/^[A-Z]/.test(ctx.tag) && !ctx.tag.includes(".");
+    const isComponentBind = ctx.isComponent === true || (attr.bindTarget !== undefined && !elementTag);
     const label = attr.bindTarget !== undefined ? `@bind-${attr.bindTarget}` : "@bind";
     if (!this.checkBindShape(attr, label)) return;
 
@@ -1141,7 +1144,7 @@ class Codegen {
       } else {
         // v1: native input display formatting applies; a custom format string is
         // accepted but only affects parsing of number/date inputs.
-        this.diagnostics.warning("TZS008", format, "'@bind:format' has limited v1 support: number and date inputs use native parsing.");
+        this.diagnostics.warning("TZS008", format, `'${label}:format' has limited v1 support: number and date inputs use native parsing.`);
       }
     }
 
@@ -1150,23 +1153,29 @@ class Codegen {
       return;
     }
 
-    // Element binding: @bind / @bind:get + @bind:set / @bind:after / @bind:event.
+    // Element binding: @bind / @bind-<attr> / :get + :set / :after / :event.
     const tag = ctx.tag.toLowerCase();
     const inputType = staticAttributeValue(ctx.attributes, "type")?.toLowerCase();
     const isCheckbox = tag === "input" && inputType === "checkbox";
-    const isNumber = tag === "input" && inputType === "number";
-    const isDate = tag === "input" && inputType === "date";
-    const valueAttribute = isCheckbox ? "checked" : "value";
+    // `@bind` picks the attribute from the input type; `@bind-<attr>` names it
+    // (HTML attribute names are case-insensitive: `@bind-Value` = `value`).
+    const valueAttribute = attr.bindTarget !== undefined ? attr.bindTarget.toLowerCase() : isCheckbox ? "checked" : "value";
+    // Number/date coercion applies to the value attribute (Razor's typed
+    // `BindInputElement` entries cover `@bind` and `@bind-value` alike).
+    const isNumber = tag === "input" && inputType === "number" && valueAttribute === "value";
+    const isDate = tag === "input" && inputType === "date" && valueAttribute === "value";
     const event = attr.event ?? "onchange";
 
     // Value side: @bind or @bind:get.
     const display = this.expr(attr.get ?? attr.expression ?? "");
     if (display.length === 0) {
-      this.diagnostics.error("TZS009", attr, "'@bind' requires an expression.");
+      this.diagnostics.error("TZS009", attr, `'${label}' requires an expression.`);
       return;
     }
 
-    // Extraction of the DOM value inside the change handler.
+    // Extraction of the DOM value inside the change handler: Blazor's change
+    // event value — `checked` for a checkbox, `value` otherwise, whatever
+    // attribute is bound.
     let extract = "(__event.target as HTMLInputElement).value";
     if (isCheckbox) extract = "(__event.target as HTMLInputElement).checked";
     else if (isNumber) extract = "Number((__event.target as HTMLInputElement).value)";

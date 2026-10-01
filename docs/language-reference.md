@@ -230,6 +230,7 @@ Markup beginnt nur
 | `@bind:event="oninput"` | anderes DOM-Event |
 | `@bind:get="v" @bind:set="store"` | get-/set-Seite statt `@bind` (nur als Paar) |
 | `@bind:after="changed"` | nach der Zuweisung aufgerufen; ein Promise wird abgewartet, dann rendert die Komponente |
+| `<input @bind-value="name">`, `@bind-value:event="oninput"` | auf einem *Element* bindet `@bind-<attr>` das Attribut `<attr>` (Razor: `@bind-value` = `@bind` ausgeschrieben) mit `onchange`; Modifier und `number`/`date`-Coercion wie bei `@bind`, der Wert kommt aus dem Change-Event (`checked` bei Checkboxen, sonst `value`) |
 | `<Stepper @bind-Value="current" />` | `Value` + `ValueChanged` (EventCallback) |
 | `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | dieselben Modifier auf Komponenten |
 | `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-Callback-Parameter `OnPick` statt `ValueChanged` (Blazor) |
