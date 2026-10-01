@@ -5,7 +5,7 @@
  * completion mechanism.
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -45,7 +45,8 @@ beforeAll(async () => {
       "export declare class ComponentBase {",
       "  protected buildRenderTree(b: RenderTreeBuilder): void {}",
       "}",
-      "export declare const Parameter: ParameterDecorator;",
+      // The real runtime's standard (TC39) decorator factory.
+      "export declare function Parameter(options?: { captureUnmatchedValues?: boolean }): (value: unknown, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext) => void;",
       "",
     ].join("\n"),
   );
@@ -115,6 +116,10 @@ describe("TsazorTypeService", () => {
     // With Alert's shadow registered, the whole graph resolves cleanly.
     const diags = service.semanticDiagnosticsOnShadow(ticker!);
     expect(diags).toEqual([]);
+  });
+
+  it("type-checks @Parameter() as a standard decorator (no decorator errors)", () => {
+    expect(service.semanticDiagnosticsOnShadow(alert!).map((d) => d.code)).toEqual([]);
   });
 
   it("completes inherited and own members after `this.` (open doc)", async () => {
@@ -197,6 +202,35 @@ describe("TsazorTypeService", () => {
     const srcPos = entry!.shadow.map.genToSrc(genPos.line, genPos.column);
     // Inside the verbatim @code line — the statement's content column.
     expect(srcPos).toEqual({ line: 3, character: 4 });
+  });
+
+  it("overrides a legacy decorator setting in the project tsconfig", async () => {
+    const legacyRoot = await mkdtemp(path.join(tmpdir(), "tsazor-lsp-legacy-"));
+    try {
+      await mkdir(path.join(legacyRoot, "node_modules", "@tsazor"), { recursive: true });
+      await writeFile(
+        path.join(legacyRoot, "tsconfig.json"),
+        JSON.stringify({ compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } }),
+      );
+      // Same runtime stub as the main workspace.
+      for (const file of ["package.json", "index.d.ts"]) {
+        await mkdir(path.join(legacyRoot, "node_modules", "@tsazor", "runtime"), { recursive: true });
+        writeFileSync(
+          path.join(legacyRoot, "node_modules", "@tsazor", "runtime", file),
+          readFileSync(path.join(root, "node_modules", "@tsazor", "runtime", file)),
+        );
+      }
+      await writeFile(path.join(legacyRoot, "Badge.tsazor"), '<b>@Text</b>\n\n@code {\n    @Parameter() Text = "";\n}\n');
+      const legacy = new TsazorTypeService(legacyRoot);
+      try {
+        const entry = await legacy.ensureTsazor(path.join(legacyRoot, "Badge.tsazor"));
+        expect(legacy.semanticDiagnosticsOnShadow(entry!).map((d) => d.code)).toEqual([]);
+      } finally {
+        legacy.dispose();
+      }
+    } finally {
+      await rm(legacyRoot, { recursive: true, force: true });
+    }
   });
 
   it("caches on-demand shadows by mtime", async () => {
