@@ -330,6 +330,45 @@ Klassen-Generikum, Runtime-Typen via `@tsazor/runtime`-Import); Ambient-Deklarat
 für `*.tsazor` und `virtual:tsazor-routes` liefert `@tsazor/vite-plugin/client`. Details:
 [design-2.4-typed-checks.md](design-2.4-typed-checks.md).
 
+### LSP projektweit, Slots und Codemod (2.5)
+
+**Project-Routing über alle Workspace-Folder.** Der Language Server baut eine
+`ProjectRegistry` (`packages/lsp/src/projects.ts`) über jeden Workspace-Folder; eine Datei
+gehört zum Projekt der **nächsten** `tsconfig.json` oberhalb ihrer (keine tsconfig ⇒ das
+Folder-Root — früher: pauschal `workspaceFolders[0]`, was die App-Optionen einer Multi-App-Mappe
+verfälschte). Schlüssel-Konvention: **Projekt**-Keys sind `` `${root}|${config}` `` — derselbe
+tsconfig an zwei Roots ist zweimal eigenständig; **Datei**-Keys sind posix-Pfad **+ lowercase**
+(getrimmt auf Windows-Groß/Klein), die Registry vergleicht nur diese Keys. `didChangeWatchedFiles`
+wird dynamisch nach Initialized registriert (`**/*.tsazor`, `**/tsconfig.json`): Create/Change
+frischen den Disk-Shadow und re-checken die Dependents (`dependentsOf` aus dem 2.4-Import-Graph),
+Delete entfernt den Shadow; tsconfig-Change baut das besitzende Projekt neu (Compiler-Optionen und
+Lib-Auflösung) und re-publish alle offenen Dokumente. Nach jedem Edit einer offenen Datei wird ihr
+eigenes Shadow zuerst rebuilt, danach die Dependents re-publish — deren Cache ist geworfen, denn
+auch ihre Komponenten-Metadaten hängen an der Änderung. Die v1-Analyse jeder offenen Datei
+kompiliert weiter lokal (`registry.rootOf` als Import-Root — der Workspace-Folder, so wie
+der Build das Projekt sieht); das TS-Layer kommt per `registry.projectFor`.
+
+**Slots als eigenes Klassifikations-Modul** (`packages/lsp/src/slots.ts`). Die LSP-Features
+(Hover, Completion) brauchen dieselbe Slot-Logik wie der Compiler (2.3): eine Ancestor-Kette
+(`chainAt`, äußerst→innerst am Cursor), Fragment-Parameter nur vom **direkten** Parent
+(`fragmentParametersOfParent` — `<Row>` unterhalb eines Nicht-Parents ist TZS027, nicht ein Slot),
+und der Kontext-Name durch einen Walk **innen→außen** (eigener `Context=`-Wert vor dem des Slots
+vor dem Default `context`; nur `RenderFragment<T>`-Parameter und ein generisches
+`ChildContent` als Loose-Inhalt bekommen eine Kontext-Variable). Hover an einem Slot-Tag spricht vom Slot statt von einer
+Komponente gleichen Namens; die Completion schattet Slot-Tags über Komponenten (die gleiche
+Bindungs-Reihenfolge, die der TZS025-Umbenennungsfix verlangt). Slot-Body-Kandidaten bleiben aus
+Completion außen vor (TZS027-Nestings).
+
+**Codemod-Kern im Compiler** (`@tsazor/compiler`, `src/codemod.ts`). `codemodSource` läuft die
+A7-`fix`-Payloads zum Fixpunkt (max. 8 Passes) und re-schreibt daneben die PascalCase-API-Formen
+im Markup (`.ToString()/.Length/.ToLower()/.ToUpper()` — außerhalb `@code`/`@functions`, deren
+Blanks sich `markupRegions`/`blankCodeBlocks` merken). Pro Pass werden Fix-Edits und API-Formen
+auf demselben Stand berechnet und gemeinsam via `applyTextEdits` (absteigend) angewandt — Fix
+gewinnt jede Überlappung, die API-Form folgt im nächsten Pass; ein Crash startet einen
+Blank-Re-Lauf (Positionen bleiben, Fixes adressieren das Original). Konsument ist
+`tsazor codemod <path> [--write]` (`@tsazor/cli`, dry-run default, `.tsazor` neben `.razor`);
+dieselben Formen sind die LSP-Quick-Fixes. Regeln: [language-reference.md](language-reference.md#codemod-razor--tsazor-25).
+
 ## HMR (State-Retention)
 
 Jede `.tsazor`-Datei akzeptiert ihre eigenen Updates:

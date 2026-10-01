@@ -174,7 +174,10 @@ Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
   das sie per `@attributes` (`captureUnmatchedValues`) auf ihr Element legt — wie in Blazor.
   Unbekannte oder doppelte Modifier ⇒ TZS008.
   Unquoted Werte (`type=checkbox`) wie in HTML; ein wertloses Attribut (`disabled`) wird
-  wie in Razor als `true` übergeben.
+  wie in Razor als `true` übergeben. Unquoted, direkt parenthesisierte Werte
+  (`href=@("a" + id)`) sind explizite Ausdrücke wie in Razor (Roslyn bindet `@(`
+  unabhängig vom Markup; 2.5 — vorher TZS009-Kaskade, der `(`-Rest wurde als weiteres
+  Attribut gedeutet; unbalancierte Klammern ⇒ TZS003).
 
 ## Code-Kontexte (code-first, wie Razor)
 
@@ -450,7 +453,7 @@ typisiert:
 | Markup, Komponenten-Tags, Attribut-Syntax | identisch |
 | `@page`, `@layout`, `@typeparam`, `@bind` (+Modifier), `@onclick`-Familie (+Modifier mit Wert), `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
 | `@attribute [C#-Attribut]` | Fehler TZS021 mit TS-Form (`@authorize`/`@authorize({ roles, policy })`, TS-Decorator per `@attribute @x()`) |
-| `@foreach (var x in xs)`, `where T : …`, `var`, `@switch` ohne `break` | C#-Köpfe/-Constraints ⇒ TZS021 (Codemod, Phase 2.5); `var` und Fallthrough mit TS-Semantik + Warnung (TZS022/TZS023) |
+| `@foreach (var x in xs)`, `where T : …`, `var`, `@switch` ohne `break` | C#-Köpfe/-Constraints ⇒ TZS021 (seit 2.5 vom Codemod umgesetzt, dieselben Formen als LSP-Quick-Fix); `var` und Fallthrough mit TS-Semantik + Warnung (TZS022/TZS023) |
 | `buildRenderTree` im `@code` | Fehler TZS020 (wie CS0111) |
 | `@using` | Komponenten-Ordner/Pakete statt Namespaces; Typen/Werte für Markup und `@code` kommen per `@import` |
 | C#-Code in `@code` | abweichend (→ TypeScript — der eigentliche Punkt) |
@@ -462,6 +465,53 @@ typisiert:
 | `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
 | `@authorize` | ja (Tsazor-Erweiterung für `[Authorize]`; bare oder mit `{ roles, policy }`; nicht über `_Imports` vererbt) |
 | `@implements` | akzeptiert, ignoriert (TS-Interfaces sind strukturell) |
+
+## Codemod .razor → .tsazor (2.5)
+
+`tsazor codemod <path> [--write]` (`@tsazor/cli`) übersetzt die mechanischen C#-Reste einer
+`.razor`-Quelle und schreibt das Ergebnis als `.tsazor` **neben** die unveränderte `.razor`
+(nichts destruktiv; ohne `--write` Dry-Run mit Report). `path` = Datei oder Verzeichnis; der
+Dateibaum darunter wird durchlaufen (`bin`/`obj`/`node_modules`/`.git` übersprungen),
+pro Datei gibt der Report angewandte Fixes, API-Formen und die verbleibenden Diagnose-Codes
+(`TZS005×4`-Liste) aus; ein hartes Compile-Versagen wird pro Datei als `CRASH` gemeldet,
+ohne zu schreiben. Exit-Code 0 nur, wenn Dateien gefunden wurden; Fehlerfreiheit ist nicht
+das Ziel — verbleibende Befunde sind der Handarbeits-Rest (siehe unten).
+
+**Was es anwendet** — dieselben `fix`-Payloads, aus denen die LSP-Quick-Fixes bestehen,
+bis zum Fixpunkt (maximal 8 Passes; Fixes und API-Formen werden pro Pass auf demselben
+Text berechnet und gemeinsam angewandt — wo eine API-Form in einen umgeschriebenen
+`@foreach`-Kopf fällt, gewinnt der Fix und die API-Form folgt im nächsten Pass):
+
+| Form | Übersetzung |
+|---|---|
+| `@foreach (var x in xs)` (auch `(string s in xs)`, `(var (k, v) in pairs)`) | `@foreach (const x of xs)` / `const [k, v] of pairs` |
+| `$"…{x}…"`, `$@"…"`, `@"…"` | Template-Literal `` `…${x}…` `` (Loch-Layout `{x,2:C}` fällt, `@` im Loch fällt) |
+| `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | `@authorize({ roles, policy })` / `@page "…"` / Zeile entfernen |
+| `@typeparam T where T : IItem` | `@typeparam T extends IItem` |
+| `var` (TZS022) | `let` |
+
+**PascalCase-API-Formen** werden nur im Markup (außerhalb `@code`/`@functions` — dort
+bleibt C# bis zur Phase-3-Migration) ersetzt:
+
+| C# | TypeScript |
+|---|---|
+| `.ToString()` | `.toString()` |
+| `.Length` | `.length` |
+| `.ToLower()` | `.toLowerCase()` |
+| `.ToUpper()` | `.toUpperCase()` |
+
+`.Count` wird absichtlich **nicht** gemappt — C# `.Count` heißt beim Dictionary `.size` und
+bei Liste/Array `.length`; der Aufruf ist nicht mechanisch und bleibt stehen.
+
+**Was stehen bleibt:** Diagnosen ohne Fix — TZS005 (unaufgelöste Tags: Slots unbekannter
+Komponenten, `DynamicComponent` …), TZS024 ohne mechanisches Gegenstück
+(`(MarkupString)x`, `new { … }`, `out var`, `is (not) null`) und nicht gemappte
+`@attribute`-Listen (u. a. DataAnnotations ⇒ Validierungsmodell, Phase 3.6;
+`[CascadingTypeParameter]` per A6-Entscheid entfernt man von Hand), und C# im `@code`.
+Eine bekannte Grenze des Template-Literal-Fixes: eine ohne Klammern geschriebene Ternary
+in einem Interpolations-Loch — `$"{x ? "a" : "b"}` wird wie in C# gelesen (der `:` als
+Format-Trenner) und bleibt beschnitten (`${x ? "a"}`) — C# selbst verlangt dort
+Klammern (Parität); `@(x ? "a" : "b")` bzw. `{(x ? "a" : "b")}` funktionieren.
 
 ## Diagnostics
 
@@ -495,6 +545,10 @@ mit gleichem Kontextnamen; die Meldung nennt `Context="another_name"`). Auch 2.3
 unbekanntes Slot-Kürzel bei vollständigen Metadaten ist `TZS025` (jetzt auch mit Fix für
 Element- und End-Tag-Namen), und ein leerer bzw. ungültiger `TItem`-Typargumentwert ist
 `TZS009` bzw. `TZS024`.
+2.5: Ein `TZS024`, dessen Ursache ein C#-interpolierter bzw. verbatim String ist, trägt den
+Template-Literal-Fix (Tabelle oben); die übrigen TZS024-Ursachen (C#-Casts wie
+`(MarkupString)x`, anonyme Objekte `new { … }`, `out var`, `is (not) null`) sind nicht
+mechanisch und bleiben ohne Fix — Handarbeit bzw. Phase-3-Built-ins.
 Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
 
 **Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte
@@ -512,4 +566,5 @@ text }] }`, im LSP als Quick-Fix (Code Action):
 | `TZS021` `@typeparam T where T : IItem` | Klausel ⇒ `extends IItem` (keiner für `struct`/`class`/`new` …) |
 | `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Direktive ⇒ `@authorize…` / `@page "…"` / Zeile entfernen (nur bei einem Attribut pro Liste, nur literale Werte) |
 | `TZS022` `var` | ⇒ `let` |
+| `TZS024` C#-interpolierter String `$"…{x}…"` / `$@"…"` / verbatim `@"…"` | Template-Literal: Löcher ⇒ `${…}` (Razor-`@` im Loch fällt), `{{`/`}}` ⇒ Klammern, C#-Layout `{x,2:C}` fällt weg (seit 2.5; Fix nur, wenn der String die Fehlerursache ist — TZS024 hat sonst keinen; Limitierung siehe [Codemod](#codemod-razor--tsazor-25)) |
 | `TZS025` unbekannter Komponenten-Parameter mit naher Entsprechung | Attribut- bzw. Elementname ⇒ Vorschlag (`Lable` ⇒ `Label`, `<RowTemplat>` ⇒ `<RowTemplate>` inkl. End-Tag) |

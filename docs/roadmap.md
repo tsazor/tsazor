@@ -864,6 +864,53 @@ Completion aus den Metadaten (2.1) statt v1-Regex.
 `foreach … in`, `$"…"` ⇒ Template-Literal, `[Attribute]` ⇒ `@authorize`/Decorator, `where` ⇒
 `extends`, PascalCase-API-Aufrufe ⇒ camelCase, DataAnnotations ⇒ Validierungsmodell (3.6). Dieselben
 Regeln als LSP-Quick-Fixes. Messgröße: Handarbeit nach Codemod auf der FluentCMS-Probe.
+Regeln in [language-reference.md](language-reference.md#codemod-razor--tsazor-25), Details in
+[language-server.md](language-server.md).
+
+**Stand: 2.5 umgesetzt** (Branch `roadmap/p2-5-lsp`):
+
+- *LSP projektweit:* Multi-Root — eine `ProjectRegistry` über **alle** Workspace-Folder;
+  jede Datei wird dem Projekt der nächsten `tsconfig.json` darüber zugeordnet (ohne tsconfig
+  erbt sie das Folder-Root statt pauschal `workspaceFolders[0]`). Projekt-Keys sind
+  `root|config`, Datei-Keys posix-geformt + kleingeschrieben — Windows-sicher. `didChangeWatchedFiles`
+  wird dynamisch nach Initialized registriert (`**/*.tsazor`, `**/tsconfig.json`): neue/veränderte
+  `.tsazor` frischen den Disk-Shadow und re-checken die abhängigen Dokumente (Dependents aus der
+  2.4-Graph-Registry), gelöschte verlassen den Shadow-Graphen; eine tsconfig-Änderung baut das
+  besitzende Projekt neu und re-publish alle offenen Dokumente. Nach jedem Edit re-publish die
+  Dependents der offenen Datei mit geworfenem Cache — auch die Komponenten-Metadaten der
+  Dependents hängen an der Änderung.
+- *Slots im LSP (aus 2.3/2.4 nachgezogen):* Klassifikation in `slots.ts` — Ancestor-Kette,
+  Fragment-Parameter nur am **direkten** Parent, Kontext-Walk innen→außen (eigener
+  `Context=`-Name vor dem des Slots vor dem „context"). Completion: Slot-Tags aus den
+  Fragment-Parametern des Parents (eine Komponente gleichen Namens wird geschattet — wie der
+  TZS025-Umbenennungsfix es verlangt; in Slot-Bodies keine Slots, dort sind Nestings TZS027),
+  `Context`-Kandidat auf generischen Slots und Komponenten mit generischem `ChildContent`,
+  Kontext-Variable im Slot-Body und im Loose-Content (Typanzeige `slot context · <typeArgument>`),
+  Hover an Slot-Tags (`named slot of`, Parameter/Kategorie/Kontextzeile).
+- *Codemod:* Kern `codemodSource` in `@tsazor/compiler` (dort getestet) — fix-zum-Fixpunkt über
+  die A7-`fix`-Payloads (`@foreach … in`, `[Attribute]`-Map, `where ⇒ extends`, `var ⇒ let`,
+  TZS024 interpolierte Strings ⇒ Template-Literal) plus PascalCase-API-Formen im Markup
+  (`.ToString()/.Length/.ToLower()/.ToUpper()`; `.Count` bleibt absichtlich — `size` vs `length`
+  ist nicht mechanisch). Pass-Regel: Fixes und API-Formen pro Pass auf dem **selben** Text
+  berechnet und gemeinsam angewandt — Fix gewinnt Überlappungen, die API-Form folgt im nächsten
+  Pass (Regressionstest). CLI `tsazor codemod <path> [--write]` (Dry-Run per Default, `X.tsazor`
+  neben `X.razor`, pro-Datei-Report mit Fixes/API-Formen/verbleibenden Codes). DataAnnotations
+  haben kein Fix-Payload (A6: Weglassen ist die TS-Lösung — Rest ⇒ 3.6); ohne Klammern
+  geschriebene Ternaries in Interpolations-Löchern bleiben beschnitten (C#-Parität, dokumentiert).
+- *Messgröße (FluentCMS-Probe, `codemod --write` auf einer lokalen Kopie von FluentCMS@c63d49c —
+  der Upstream bleibt ungecheckt):* Baseline unverändert **149/217** sauber (nicht regressiert).
+  Nach Codemod: **166/217** sauber (+17), **196/217** ohne Compile-Fehler (vorher 164),
+  Dateien mit echten Fehlern **53 → 21**, 0 Crashes; 51 Fix-Payloads + 5 API-Formen über
+  217 Dateien in unter einer Sekunde. Verbleibend: TZS024 ×23 (nicht mechanisch:
+  `(MarkupString)`-Casts, `new { … }`, `out var`, `is (not) null`), TZS005 ×57 in 36 Dateien
+  (Slots, Phase-3-Built-ins), 1 × `[CascadingTypeParameter]` (kein Fix per A6-Decision — von
+  Hand entfernen); stille Befunde 5 → 10 Dateien (die 18 `@context`-Funde bleiben; Dateien, die
+  erst nach dem Codemod kompilieren, legen ihre stillen offen — erklärbar, nicht neu).
+- Gates: Build, **1055/1055** Tests (75 Dateien), LSP-Smokes (Completion + TS-Engine), Pizza,
+  Gallery, Sleipnir und Demo-E2E (components 31, scoped, code-behind, debugging, counter-state)
+  grün; `tsazor check` auf allen vier Apps ohne Befunde.
+- **VSIX:** ein 0.5.0-Repack ist jetzt möglich (`packages/vscode/package.json` Version bumpen,
+  Build, `npx @vscode/vsce@3.1.0 package --no-dependencies`, install, VS Code reload).
 
 ---
 
