@@ -363,10 +363,12 @@ export interface ClassMembers {
   instance: Set<string>;
   /** Static members (referenced through the class, not `this`). */
   statics: Set<string>;
+  /** The instance members declared as methods (a method group passed to a delegate parameter is bound). */
+  methods: Set<string>;
 }
 
 export function emptyMembers(): ClassMembers {
-  return { instance: new Set(), statics: new Set() };
+  return { instance: new Set(), statics: new Set(), methods: new Set() };
 }
 
 /** Members declared by `@code` text (a class body), collected syntactically. */
@@ -414,6 +416,7 @@ function addClassMembers(cls: ts.ClassLikeDeclaration, into: ClassMembers): void
     if (!member.name || !(ts.isIdentifier(member.name) || ts.isStringLiteral(member.name))) continue;
     const isStatic = ts.canHaveModifiers(member) && (ts.getModifiers(member)?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword) ?? false);
     (isStatic ? into.statics : into.instance).add(member.name.text);
+    if (!isStatic && ts.isMethodDeclaration(member)) into.methods.add(member.name.text);
   }
 }
 

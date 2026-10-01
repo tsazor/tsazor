@@ -747,10 +747,15 @@ Repo-`.tsazor` alt/neu): stille String-Bugs behoben (`size="20"`, `rows="3"`,
 `disabled="true"` u. a. kamen als Strings an); eine Aufrufstelle korrigiert (Gallery
 `<BreadcrumbItem childContent="Home" />` ⇒ Element-Inhalt). Gates: 944/944 Tests, LSP-Smokes,
 Pizza, Gallery, Sleipnir, Demo (31/10/5/14/8) grün; FluentCMS-Probe unverändert 149/164 (die
-Probe hat keine Metadaten). **Offen:** Method-Groups auf Funktions-Parametern (kein
-`EventCallback`) bleiben ungebunden (TS-Semantik, Blazor bindet Delegates) — Entscheidung
-offen; Typprüfung der Ausdrücke gegen den Parametertyp (2.4); Slots/`RenderFragment<T>`-Inhalt
-(2.3).
+Probe hat keine Metadaten). **Nachtrag (entschieden 2026-10-01, Branch `roadmap/p2-3-templates`):**
+Method-Groups auf Funktions-Parametern (Metadaten-Flag `delegate`: Kategorie `value` mit
+Funktionstyp) werden gebunden wie C#-Delegates — `Filter="isVisible"` (deklarierte Methode oder
+geerbter Member) und `Filter="svc.isVisible"`; Lambdas, Aufrufe und Felder bleiben TS. Der Helfer
+ist jetzt Runtime-Export `bindMethod` mit Cache pro (Receiver, Methode) statt einer Funktion pro
+Modul; Change-Detection unverändert (Delegates gelten wie in Blazor als möglicherweise geändert),
+ein `EventCallback` über `item.toggle` vergleicht dadurch gleich. Regressionslauf: 110 Repo-Dateien
+ohne Diff. **Offen:** Typprüfung der Ausdrücke gegen den Parametertyp (2.4);
+Slots/`RenderFragment<T>`-Inhalt (2.3).
 
 ### 2.3 — Templated Components
 

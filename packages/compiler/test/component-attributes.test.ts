@@ -98,6 +98,42 @@ describe("EventCallback parameters", () => {
   });
 });
 
+describe("delegate parameters: method groups are bound (Razor delegate conversion)", () => {
+  const filter = metadataOf("Filter", { onlyIf: { category: "value", delegate: true }, plain: "value" });
+  const source = (attribute: string) =>
+    gen(`<Filter ${attribute} />\n@code { private isVisible(n: number) { return n > 0; } private pred = (n: number) => n > 1; private svc = { ok(n: number) { return n > 2; } }; private make() { return () => true; } }`, { Filter: filter });
+
+  it.each([
+    // A member method: bound to this component (cached per receiver + method by the runtime).
+    ['onlyIf="isVisible"', "__tsazor_bindMethod(this, this.isVisible)"],
+    ['onlyIf="@isVisible"', "__tsazor_bindMethod(this, this.isVisible)"],
+    // A method group with a receiver keeps it, as for EventCallbacks (A4/C18).
+    ['onlyIf="svc.ok"', "__tsazor_bindMethod(this.svc, this.svc.ok)"],
+    // An inherited (undeclared) member is a method group too.
+    ['onlyIf="baseCheck"', "__tsazor_bindMethod(this, this.baseCheck)"],
+    // Lambdas, fields holding functions and calls stay plain TypeScript.
+    ['onlyIf="(n) => isVisible(n)"', "(n) => this.isVisible(n)"],
+    ['onlyIf="pred"', "this.pred"],
+    ['onlyIf="make()"', "this.make()"],
+  ])("%s ⇒ %s", (attribute, expected) => {
+    const { code, diagnostics } = source(attribute);
+    expect(valueOf(code, "onlyIf")).toBe(expected);
+    expect(diagnostics.all).toEqual([]);
+  });
+
+  it("imports the cached runtime helper instead of emitting one", () => {
+    const { code } = source('onlyIf="isVisible"');
+    expect(code).toMatch(/import \{[^}]*bindMethod as __tsazor_bindMethod[^}]*\} from "@tsazor\/runtime";/);
+    expect(code).not.toContain("function __tsazor_bindMethod");
+  });
+
+  it("a non-delegate value parameter and missing metadata keep the 2.2 lowering", () => {
+    expect(valueOf(source('plain="isVisible"').code, "plain")).toBe("this.isVisible");
+    const unknown = gen(`<Filter Check="@isVisible" />\n@code { private isVisible() { return true; } }`, { Filter: null });
+    expect(valueOf(unknown.code, "Check")).toBe("this.isVisible");
+  });
+});
+
 describe("unknown parameters (TZS025)", () => {
   it("is an error on a target with complete metadata, with a 'did you mean' fix", () => {
     const { diagnostics } = gen('<Probe Lable="x" />');

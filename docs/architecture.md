@@ -232,7 +232,8 @@ der Runtime-Export, auch in einer Union (`EventCallback<X> | ((x) => void)`);
 `RenderFragment`; `RenderFragment<T>` — Funktionstyp `(ctx: T) => RenderFragment`
 (Tsazors Schreibweise) oder eine generische `RenderFragment<T>`-Referenz;
 `captureUnmatchedValues` — aus der Decorator-Option; sonst `value` (Delegates
-wie `(e) => void` sind Werte, wie Blazors `Action<T>`). Typ-Aliase werden
+wie `(e) => void` sind Werte, wie Blazors `Action<T>`, mit `delegate: true` — eine
+Method-Group darauf wird gebunden). Typ-Aliase werden
 verfolgt — lokal und über relative Imports inkl. Re-Exporten, generische Aliase
 mit eingesetzten Argumenten. Ohne Annotation entscheidet ein Literal-Initializer
 (`href = ""` ⇒ `string`).

@@ -32,7 +32,8 @@ export const RUNTIME_MODULE = "@tsazor/runtime";
  * - `RenderFragment<T>`: a function type `(context: T) => RenderFragment` (Tsazor's
  *   spelling of Blazor's `RenderFragment<T>`) or a generic `RenderFragment<T>` reference,
  * - `captureUnmatchedValues`: `@Parameter({ captureUnmatchedValues: true })`,
- * - `value`: anything else (incl. delegates, which Blazor also passes as plain values).
+ * - `value`: anything else (incl. delegates, which Blazor also passes as plain values;
+ *   a function type sets `delegate`, so a method group passed to it is bound).
  */
 export type ParameterCategory =
   | "string"
@@ -85,6 +86,13 @@ export interface ComponentParameter {
   doc?: string;
   /** The category rests on a name that could not be followed (counts as `value`). */
   uncertain?: boolean;
+  /**
+   * A `value` parameter whose type is a function type (also through aliases,
+   * or a union of function types with `null`/`undefined`) — Blazor's
+   * delegate (`Func<…>`/`Action<…>`): a method group passed to it is bound
+   * to its receiver.
+   */
+  delegate?: boolean;
   /** Bindings of the root identifiers in `type` (empty/absent: none). */
   references?: TypeReference[];
   /** Class that declares the parameter (the component itself or a base). */
@@ -635,11 +643,13 @@ function resolveOwnParameter(own: OwnParameter, declaredBy: string, module: Modu
 function categorizeParameter(parameter: ComponentParameter, own: Pick<OwnParameter, "captureUnmatchedValues" | "opaqueInitializer"> | undefined, host: MetadataHost): void {
   delete parameter.typeArgument;
   delete parameter.uncertain;
+  delete parameter.delegate;
   if (parameter.type !== undefined) {
     const result = categorizeType(parameter.type, parameter.references ?? [], host);
     parameter.category = result.category;
     if (result.typeArgument !== undefined) parameter.typeArgument = result.typeArgument;
     if (result.uncertain) parameter.uncertain = true;
+    if (result.delegate && result.category === "value") parameter.delegate = true;
     if (result.includesUndefined) parameter.optional = true;
   } else {
     parameter.category = parameter.inferredType === "string" ? "string" : "value";
@@ -649,6 +659,7 @@ function categorizeParameter(parameter: ComponentParameter, own: Pick<OwnParamet
     parameter.category = "captureUnmatchedValues";
     delete parameter.typeArgument;
     delete parameter.uncertain;
+    delete parameter.delegate;
   }
 }
 
@@ -764,6 +775,8 @@ interface Categorized {
   uncertain?: boolean;
   /** The (union) type includes `undefined` (or `void`). */
   includesUndefined?: boolean;
+  /** A function type (not a RenderFragment<T>): see ComponentParameter.delegate. */
+  delegate?: boolean;
 }
 
 /** Categorizes a type text given the bindings of its root identifiers (see ParameterCategory). */
@@ -794,6 +807,9 @@ function categorizeNode(node: ts.TypeNode, scope: ReadonlyMap<string, TypeRefere
     const pick = order.map((category) => members.find((m) => m.category === category)).find((m) => m !== undefined);
     const result: Categorized = pick ? { ...pick } : { category: "value" };
     if (!pick && members.some((m) => m.uncertain)) result.uncertain = true;
+    // A delegate only when every non-nullish member is one (`((x) => boolean) | undefined`).
+    if (!pick && members.length > 0 && ts.isUnionTypeNode(node) && members.every((m) => m.delegate)) result.delegate = true;
+    else delete result.delegate;
     if (includesUndefined && ts.isUnionTypeNode(node)) result.includesUndefined = true;
     else delete result.includesUndefined;
     return result;
@@ -811,7 +827,7 @@ function categorizeNode(node: ts.TypeNode, scope: ReadonlyMap<string, TypeRefere
     const returns = categorizeNode(node.type, scope, host, depth + 1);
     const first = node.parameters[0];
     if (returns.category === "RenderFragment" && first) return { category: "RenderFragment<T>", typeArgument: first.type?.getText() ?? "unknown" };
-    return { category: "value" };
+    return { category: "value", delegate: true };
   }
   if (ts.isTypeReferenceNode(node)) {
     const typeArguments = node.typeArguments ?? [];

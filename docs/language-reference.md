@@ -294,14 +294,26 @@ ist — TypeScript:
 | Parameter-Typ (Kategorie) | Attribut | Wert |
 |---|---|---|
 | `string` (auch Unions mit `string`, Literal-Typen) | `Title="5"`, `Title="@x"`, `Title="n: @x"` | `"5"`, `this.x`, Template-String — wie auf Elementen |
-| sonstiger Wert (`number`, `boolean`, Objekte, Arrays, Funktionstypen, `RenderFragment`) | `Count="5"`, `Enabled="true"`, `Items="people"`, `Interval="@4000"`, `Max="@a + 1"`, `<X Enabled />` | TS-Ausdruck mit oder ohne `@`: `5`, `true`, `this.people`, `4000`, `this.a + 1`, `true` |
+| sonstiger Wert (`number`, `boolean`, Objekte, Arrays, Funktionstypen, `RenderFragment`) | `Count="5"`, `Enabled="true"`, `Items="people"`, `Interval="@4000"`, `Max="@a + 1"`, `<X Enabled />` | TS-Ausdruck mit oder ohne `@`: `5`, `true`, `this.people`, `4000`, `this.a + 1`, `true`; auf einem Funktionstyp wird eine Method-Group gebunden (siehe unten) |
 | `EventCallback` / `EventCallback<T>` | `OnClick="handle"`, `OnClick="item.toggle"`, `OnClick="() => n++"`, `OnClick="@OnClick"` | `EventCallback`, gebunden an die Komponente (Re-Render danach); eine Method-Group mit Receiver behält ihn (wie `@onclick`); ein bereits gebundener `EventCallback` (weitergereicht) bleibt unverändert |
 | `captureUnmatchedValues` / nicht deklariert, aber eine Capture-Property existiert | beliebig | wie geschrieben (Text als String) |
 
-- Ein Funktionstyp, der kein `EventCallback` ist (`onlyIf?: (n: number) => boolean`), ist ein
-  gewöhnlicher Wert — unabhängig vom Namen; die Runtime wandelt nichts mehr um (seit 2.2). Eine
-  Method-Group wird dort wie in TS **nicht** gebunden (`Filter="isVisible"` ⇒ `this.isVisible`);
-  `this` im Handler braucht eine Arrow-Function oder ein Arrow-Feld.
+- Ein Funktionstyp, der kein `EventCallback` ist (`onlyIf?: (n: number) => boolean`, auch über
+  Aliase oder `| undefined`), ist ein gewöhnlicher Wert — unabhängig vom Namen; die Runtime wandelt
+  nichts um (seit 2.2). **Method-Groups werden dort gebunden** wie ein C#-Delegate: Markup ist
+  Razor, und ein Methodenname im Template meint „diese Methode dieser Komponente" — dieselbe Regel
+  wie bei `EventCallback`. `Filter="isVisible"` ⇒ `bindMethod(this, this.isVisible)` (eine im
+  `@code`/Code-behind deklarierte Methode oder ein nicht deklarierter, also geerbter Member);
+  `Filter="svc.isVisible"` ⇒ an `svc` gebunden (Receiver beim Rendern ausgewertet, wie bei
+  `@onclick`). Unverändert TypeScript bleiben Lambdas (`(n) => isVisible(n)`), Aufrufe
+  (`makeFilter()`), deklarierte Felder/Accessoren, die eine Funktion halten (`pred = (n) => …`), und
+  jeder andere Ausdruck. Die gebundene Funktion ist pro (Receiver, Methode) gecacht (`WeakMap`) —
+  bei jedem Render dieselbe Referenz. Change-Detection wie Blazor: ein Delegate ist kein bekannt
+  immutabler Typ, das Kind rendert also trotzdem bei jedem Parent-Render neu; die stabile Identität
+  zählt für Vergleiche im Kind (`===`, Set/Map, `removeEventListener`) und für einen `EventCallback`
+  über eine Method-Group mit Receiver (`OnClick="item.toggle"`), der jetzt gleich vergleicht (Blazor:
+  gleiches Target + Methode) und das Kind nicht mehr neu rendern lässt. Ohne bzw. mit `uncertain`
+  Metadaten (TZS026) bleibt es bei `this.isVisible`.
 - Ein leerer Wert auf einem Nicht-String-Parameter (`Count=""`) bzw. ein wertloses Attribut auf
   einem `EventCallback` ⇒ TZS009; Syntaxfehler im Wert ⇒ TZS024.
 - `@bind-Value` übergibt `ValueExpression` (allgemein `<Target>Expression`) nur, wenn die Komponente

@@ -3,9 +3,40 @@
  * ParameterView.DefinitelyEquals) and the per-class parameter metadata cache.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, EventCallback, Parameter, Renderer, defineComponent, type RenderFragment, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EventCallback, Parameter, Renderer, bindMethod, defineComponent, type RenderFragment, type RenderTreeBuilder } from "../src/index";
 import { mayHaveChanged } from "../src/components/change-detection";
 import { defineParameter, findParameterMetadata, getParameterInfo } from "../src/components/parameter-metadata";
+
+describe("bindMethod (method groups in markup)", () => {
+  it("binds to the receiver and returns the same function for the same receiver + method", () => {
+    const a = { n: 1, get() { return this.n; } };
+    const b = { n: 2, get: a.get };
+    const bound = bindMethod(a, a.get);
+    expect(bound()).toBe(1);
+    expect(bindMethod(a, a.get)).toBe(bound);
+    expect(bindMethod(b, b.get)).not.toBe(bound);
+    expect(bindMethod(b, b.get)()).toBe(2);
+  });
+
+  it("passes non-functions through and binds primitive receivers uncached", () => {
+    const value = { x: 1 };
+    expect(bindMethod({}, value)).toBe(value);
+    expect(bindMethod("abc", String.prototype.toUpperCase)()).toBe("ABC");
+  });
+
+  it("an EventCallback over the cached function compares equal (Blazor: same target + method)", () => {
+    const owner = new (class extends ComponentBase {})();
+    const item = { toggle() {} };
+    const first = EventCallback.bind(owner, bindMethod(item, item.toggle));
+    const second = EventCallback.bind(owner, bindMethod(item, item.toggle));
+    expect(mayHaveChanged(first, second)).toBe(false);
+  });
+
+  it("a delegate stays 'may have changed' even when identical (Blazor: delegates are not known immutable)", () => {
+    const item = { check() { return true; } };
+    expect(mayHaveChanged(bindMethod(item, item.check), bindMethod(item, item.check))).toBe(true);
+  });
+});
 
 describe("mayHaveChanged", () => {
   it("known immutable values compare by Object.is", () => {

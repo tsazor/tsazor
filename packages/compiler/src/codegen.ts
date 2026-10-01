@@ -174,8 +174,8 @@ interface SeqScope {
  */
 const BUILDER = "__builder";
 const THIS_ALIAS = "__tsazor_this";
-const BIND_METHOD = "__tsazor_bindMethod";
 const alias = (name: string): string => `__tsazor_${name}`;
+const BIND_METHOD = alias("bindMethod");
 
 export function generateCode(document: DocumentNode, options: CodegenOptions, diagnostics: DiagnosticBag): CodegenResult {
   return new Codegen(options, diagnostics).run(document);
@@ -432,13 +432,9 @@ class Codegen {
     this.line("  }");
     this.line("}");
     this.line("");
-    if (this.needsBindMethod) {
-      // C18: a method group keeps its receiver (`item.toggle` runs on item).
-      this.line(`function ${BIND_METHOD}<T>(receiver: unknown, method: T): T {`);
-      this.line(`  return typeof method === "function" ? method.bind(receiver) : method;`);
-      this.line("}");
-      this.line("");
-    }
+    // C18: a method group keeps its receiver (`item.toggle` runs on item); the
+    // runtime caches the bound function per (receiver, method).
+    if (this.needsBindMethod) this.runtimeAliases.add("bindMethod");
     // Member references inside non-arrow functions of the render code use
     // the captured component (`this` is rebound there).
     if (this.needsThisAlias) this.writer.insertLines(bodyStart, [`    const ${THIS_ALIAS} = this;`]);
@@ -758,17 +754,48 @@ class Codegen {
     const rewritten = this.exprRewrite(code, start);
     const baked = rewritten?.text ?? code.trim();
     const head = `${this.eventCallback()}.bind(this, `;
-    const group = rewritten?.methodGroup;
-    if (!group) {
-      this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + head.length }));
-      return `${head}${baked})`;
-    }
+    const bound = rewritten?.methodGroup ? this.boundMethodGroup(rewritten, baked) : baked;
+    this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + head.length }));
+    return `${head}${bound})`;
+  }
+
+  /**
+   * A value for a delegate parameter (a function type that is not an
+   * EventCallback): a method group becomes a function bound to its receiver,
+   * like a C# delegate — a member method (`isVisible` ⇒ bound to this
+   * component; also a name the component does not declare, i.e. an inherited
+   * member) or a method group with a receiver (`svc.isVisible`, as for
+   * EventCallbacks). Lambdas, calls, declared fields and accessors, and any
+   * other expression stay plain TypeScript. The runtime caches the bound
+   * function per (receiver, method), so it is the same function every render.
+   */
+  private delegateValue(code: string, start?: SourcePos): string {
+    const rewritten = this.exprRewrite(code, start);
+    const baked = rewritten?.text ?? code.trim();
+    if (rewritten?.methodGroup) return this.boundMethodGroup(rewritten, baked);
+    const name = code.trim();
+    const isMemberMethod = bareIdentifier(name) && baked === `this.${name}` &&
+      (this.members.methods.has(name) || !this.members.instance.has(name));
+    if (!isMemberMethod) return baked;
+    this.needsBindMethod = true;
+    const pre = `${BIND_METHOD}(this, `;
+    this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + pre.length }));
+    return `${pre}${baked})`;
+  }
+
+  /**
+   * `recv.name` bound to its receiver (C18): `bindMethod(recv, recv.name)`,
+   * bound when rendered like a C# delegate; a receiver with effects is
+   * evaluated once. Pending entries are re-based to the returned text.
+   */
+  private boundMethodGroup(rewritten: RewriteResult, baked: string): string {
+    const group = rewritten.methodGroup!;
     this.needsBindMethod = true;
     if (group.simpleReceiver) {
       // The receiver is re-evaluated (unmapped); the handler keeps its tokens.
       const pre = `${BIND_METHOD}(${group.receiver}, `;
-      this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + head.length + pre.length }));
-      return `${head}${pre}${baked}))`;
+      this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + pre.length }));
+      return `${pre}${baked})`;
     }
     // A receiver with effects is evaluated once: ((r) => bind(r, r.name))(receiver).
     const r = "__tsazor_receiver";
@@ -777,14 +804,14 @@ class Codegen {
     const mid = `${name}))(`;
     this.pendingExprEntries = this.pendingExprEntries.flatMap((e) => {
       if (e.outOffset >= group.nameOffset && e.outOffset < group.nameEnd) {
-        return [{ ...e, outOffset: head.length + pre.length + e.outOffset - group.nameOffset }];
+        return [{ ...e, outOffset: pre.length + e.outOffset - group.nameOffset }];
       }
       if (e.outOffset >= group.receiverOffset && e.outOffset < group.receiverOffset + group.receiver.length) {
-        return [{ ...e, outOffset: head.length + pre.length + mid.length + e.outOffset - group.receiverOffset }];
+        return [{ ...e, outOffset: pre.length + mid.length + e.outOffset - group.receiverOffset }];
       }
       return [];
     });
-    return `${head}${pre}${mid}${group.receiver}))`;
+    return `${pre}${mid}${group.receiver})`;
   }
 
   private line(text: string): void {
@@ -1235,7 +1262,11 @@ class Codegen {
       this.diagnostics.error("TZS009", attr, `'${attr.name}' sets the ${category} parameter '${name}' of '<${target.tag}>' and needs a handler value.`);
       return;
     }
-    const value = isCallback ? this.callbackValue(source.code, source.start) : this.expr(source.code, source.start);
+    const value = isCallback
+      ? this.callbackValue(source.code, source.start)
+      : parameter!.delegate
+        ? this.delegateValue(source.code, source.start)
+        : this.expr(source.code, source.start);
     const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`;
     this.stmt(text, attr.pos, text.lastIndexOf(value));
   }
