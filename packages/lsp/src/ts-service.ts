@@ -137,6 +137,8 @@ export class TsazorTypeService {
   private readonly entries = new Map<string, ShadowEntry>();
   private readonly variants = new Map<string, VariantModule & { path: string }>();
   private nextVersion = 1;
+  /** `.tsazor` keys currently building — cycle guard for the shadow cascade. */
+  private readonly building = new Set<string>();
 
   constructor(projectRoot: string) {
     this.projectRoot = path.resolve(projectRoot);
@@ -197,24 +199,49 @@ export class TsazorTypeService {
    *  the program query needs the module in the registry. */
   private async buildEntry(tsazorPath: string, source: string, mtimeMs?: number): Promise<ShadowEntry | null> {
     const key = shadowKey(tsazorPath);
-    let typeArguments: ReadonlyMap<string, ReadonlyMap<string, string>> | undefined;
-    let entry: ShadowEntry | null = null;
-    for (let pass = 0; pass < 4; pass++) {
-      const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot, typeArguments);
-      if (!shadow) {
-        this.entries.delete(key);
-        return null;
+    if (this.building.has(key)) return this.entries.get(key) ?? null;
+    this.building.add(key);
+    try {
+      let typeArguments: ReadonlyMap<string, ReadonlyMap<string, string>> | undefined;
+      let entry: ShadowEntry | null = null;
+      for (let pass = 0; pass < 4; pass++) {
+        const shadow = await buildShadowModule(tsazorPath, source, this.projectRoot, typeArguments);
+        if (!shadow) {
+          this.entries.delete(key);
+          return null;
+        }
+        entry = { shadow, version: this.nextVersion++, ...(mtimeMs !== undefined ? { mtimeMs } : {}) };
+        this.entries.set(key, entry);
+        const requests = shadow.typedInference ?? [];
+        if (requests.length === 0) break;
+        const resolved = this.inferTypeArguments(entry, requests);
+        const fresh = [...resolved].filter(([tagId]) => typeArguments?.get(tagId) === undefined);
+        if (fresh.length === 0) break;
+        typeArguments = this.mergeTypeArguments(typeArguments, resolved);
       }
-      entry = { shadow, version: this.nextVersion++, ...(mtimeMs !== undefined ? { mtimeMs } : {}) };
-      this.entries.set(key, entry);
-      const requests = shadow.typedInference ?? [];
-      if (requests.length === 0) break;
-      const resolved = this.inferTypeArguments(entry, requests);
-      const fresh = [...resolved].filter(([tagId]) => typeArguments?.get(tagId) === undefined);
-      if (fresh.length === 0) break;
-      typeArguments = this.mergeTypeArguments(typeArguments, resolved);
+      // 2.4: shadows the graph reaches outside the project root (rewrite B —
+      // bare-package components like `@tsazor/fluent`) must exist too, or the
+      // consumer reports TS2307 for the package's `.tsazor.gen` shadow path.
+      if (entry) await this.ensureImportedShadows(entry);
+      return entry;
+    } finally {
+      this.building.delete(key);
     }
-    return entry;
+  }
+
+  /** Ensures shadows for every `.tsazor` component source the shadow imports
+   *  by absolute or relative shadow path (`X.tsazor.gen`) — recursion stops
+   *  at files already being built (cycles) or already registered. */
+  private async ensureImportedShadows(entry: ShadowEntry): Promise<void> {
+    const fileDir = path.dirname(entry.shadow.virtualPath);
+    const imported = new Set<string>();
+    for (const match of entry.shadow.code.matchAll(/from\s*["']([^"']+)["']/g)) {
+      const specifier = match[1];
+      if (specifier === undefined) continue;
+      const resolved = path.resolve(fileDir, specifier);
+      if (/\.tsazor\.gen(\.ts)?$/.test(resolved)) imported.add(resolved.replace(/\.gen(\.ts)?$/, ""));
+    }
+    await Promise.all([...imported].map((candidate) => (existsSync(candidate) ? this.ensureTsazor(candidate) : Promise.resolve())));
   }
 
   /** Merges newly inferred tag type arguments into `previous` (later values win). */
@@ -275,32 +302,9 @@ export class TsazorTypeService {
    *  — so types flow across files not currently open too. Returns the
    *  scanned file count. */
   async scanProject(): Promise<number> {
-    let count = 0;
-    const walk = (dir: string): void => {
-      let names: string[];
-      try {
-        names = readdirSync(dir);
-      } catch {
-        return;
-      }
-      for (const name of names) {
-        if (name === "node_modules" || name === ".git" || name === "dist" || name === "bin" || name === "obj") continue;
-        const entry = path.join(dir, name);
-        let stat;
-        try {
-          stat = statSync(entry);
-        } catch {
-          continue;
-        }
-        if (stat.isDirectory()) walk(entry);
-        else if (name.endsWith(".tsazor")) {
-          count++;
-          void this.ensureTsazor(entry);
-        }
-      }
-    };
-    walk(this.projectRoot);
-    return count;
+    const files = findTsazorFiles(this.projectRoot);
+    for (const file of files) void this.ensureTsazor(file);
+    return files.length;
   }
 
   closeTsazor(tsazorPath: string): void {
@@ -495,6 +499,35 @@ export class TsazorTypeService {
 }
 
 /* Registry helpers -------------------------------------------------------- */
+
+/** Every `.tsazor` under `root` in source-tree order (node_modules, .git,
+ *  dist/bin/obj excluded) — the T4 project scan and `tsazor check` share it. */
+export function findTsazorFiles(root: string): string[] {
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    let names: string[];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return;
+    }
+    names.sort();
+    for (const name of names) {
+      if (name === "node_modules" || name === ".git" || name === "dist" || name === "bin" || name === "obj") continue;
+      const entry = path.join(dir, name);
+      let stat;
+      try {
+        stat = statSync(entry);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) walk(entry);
+      else if (name.endsWith(".tsazor")) files.push(entry);
+    }
+  };
+  walk(path.resolve(root));
+  return files;
+}
 
 /** The deepest node covering `offset` (public-API stand-in for the internal
  *  getTokenAtPosition — the checker needs the value's token, not a range). */

@@ -218,6 +218,16 @@ importers:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
 
+  packages/cli:
+    dependencies:
+      '@tsazor/lsp':
+        specifier: workspace:*
+        version: link:../lsp
+    devDependencies:
+      '@types/node':
+        specifier: ^20.17.0
+        version: 20.19.43
+
   packages/compiler:
     dependencies:
       '@jridgewell/gen-mapping':
