@@ -103,7 +103,7 @@ export default class Greeter extends ComponentBase {
     <span>hidden</span>
   }
   <ul>
-    @foreach (var item in items) {
+    @foreach (const item of items) {
       <li @key="item">@item</li>
     }
   </ul>

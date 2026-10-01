@@ -61,7 +61,7 @@ fire-and-forget aus `onParametersSet`, wie im Original (`PollForUpdates` + `Stat
 |---|---|
 | Component-Event-Attrs | Proven form: `OnSelect="@(() => fn())"`. `@() => ...` **ohne** äußere Klammern ist kaputt (parses als expliziter Ausdruck + Text). |
 | Element-Handler | Kleinschreibung `@onclick="handlerName"` (bare Name) oder `@onclick="@(() => ...)"`. PascalCase-Element-Attrs funktionieren ebenfalls. |
-| `@foreach` | Razor-Syntax `@foreach (var x in y)` → `for (const x of ...)`. `@foreach (const x of y)` löst den TZS001-Fallback aus (funktioniert versehentlich, aber falsch). |
+| `@foreach` | *Überholt (A6a):* der Kopf ist TypeScript — `@foreach (const x of y)`; die C#-Form `@foreach (var x in y)` ist Fehler TZS021 mit dieser TS-Form ([language-reference.md](language-reference.md#code-kontexte-code-first-wie-razor)). |
 | `@@`-Escape | `@@` escape't das @: `placeholder="test@@example.com"` (plain `@example.com` parst `@example` als Expression). |
 | `<text>`-Tags | Werden unterstützt (textTag-Node). |
 | `@inject` | Nur auf Dokument-Ebene, **nie** innerhalb von `@code` (sonst esbuild-Fehler `Expected ";" but found ...`). |

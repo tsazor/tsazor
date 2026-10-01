@@ -4,6 +4,7 @@ import type {
   DirectiveNode,
   DocumentNode,
   ElementNode,
+  ForNode,
   MarkupNode,
   StatementNode,
 } from "./ast.js";
@@ -11,7 +12,7 @@ import { childNodes } from "./ast.js";
 import { DiagnosticBag, type SourcePos } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
-import { csharpString, parseAttributeLists } from "./attributes.js";
+import { parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import {
   bodyMemberOffset,
@@ -19,6 +20,7 @@ import {
   collectBodyMembers,
   collectDefaultClassMembers,
   emptyMembers,
+  forHeaderKind,
   rewriteSnippet,
   type NameResolver,
   type RewriteResult,
@@ -90,10 +92,10 @@ export interface CodegenResult {
     /** Every @page template in source order — Blazor registers each as a route. */
     routeTemplates: string[];
     layout?: string;
-    /** @authorize or `@attribute [Authorize]` on a @page → protected route. */
+    /** @authorize on a @page → protected route. */
     authorize?: boolean;
-    /** Roles/policy of `@attribute [Authorize(Roles = "…", Policy = "…")]`
-     *  (the route's AuthorizationRequirements); absent = authentication suffices. */
+    /** Roles/policy of `@authorize({ roles: […], policy: "…" })` (the
+     *  route's AuthorizationRequirements); absent = authentication suffices. */
     authorizeData?: { roles?: string[]; policy?: string };
     usings: string[];
     /** The file's own `@import` directives, parsed (invalid ones are dropped). */
@@ -182,9 +184,8 @@ class Codegen {
   private inheritsBase = "ComponentBase";
   /** `@attribute @decorator(…)` directives, emitted on the class. */
   private readonly decorators: DirectiveNode[] = [];
-  /** Requirements of each `[Authorize(…)]` (Blazor ANDs several), and `[AllowAnonymous]`. */
-  private readonly authorizeAttributes: Array<{ roles?: string[]; policy?: string; pos: SourcePos }> = [];
-  private allowAnonymous = false;
+  /** Requirements of each `@authorize` (all must pass, like Blazor's several `[Authorize]`). */
+  private readonly authorizeRequirements: Array<AuthorizeRequirement & { pos: SourcePos }> = [];
 
   constructor(
     private readonly options: CodegenOptions,
@@ -210,7 +211,7 @@ class Codegen {
           this.metadata.layout = d.value.trim();
           break;
         case "authorize":
-          this.metadata.authorize = true;
+          this.authorizeDirective(d);
           break;
         case "attribute":
           this.attributeDirective(d);
@@ -237,11 +238,16 @@ class Codegen {
           this.metadata.inherits = d.value.trim();
           break;
         case "typeparam": {
-          // A C# constraint clause (`where T : class`) has no TS meaning; the
-          // TS form `@typeparam T extends X` passes through.
+          // The TS form `@typeparam T extends X` passes through; a C# constraint
+          // clause (`where T : IItem`) is TZS021 (the name alone is kept for recovery).
           const where = /\s+where\s[\s\S]*$/.exec(d.value);
           if (where) {
-            this.diagnostics.warning("TZS014", d.pos, `C# constraint '${where[0].trim()}' ignored — use '@typeparam T extends X'.`);
+            const name = d.value.slice(0, where.index).trim();
+            const constraint = /^where\s+[A-Za-z_]\w*\s*:\s*([A-Za-z_][\w.]*(?:<[^>]*>)?)\s*$/.exec(where[0].trim())?.[1];
+            const form = constraint !== undefined && !["class", "struct", "notnull", "unmanaged", "new"].includes(constraint)
+              ? `'@typeparam ${name} extends ${constraint}'`
+              : `'@typeparam ${name} extends X' (TypeScript constraints are types)`;
+            this.diagnostics.error("TZS021", d.pos, `C# constraint '${where[0].trim()}' — use ${form}.`);
           }
           this.metadata.typeParams.push(d.value.slice(0, where ? where.index : undefined).trim());
           break;
@@ -414,10 +420,9 @@ class Codegen {
 
   /**
    * `@attribute` (C19). The TS form `@attribute @decorator(…)` decorates the
-   * class. A C# attribute list has no TS meaning, with one exception the
-   * runtime understands: `[Authorize]` (= `@authorize`, with `Roles`/`Policy`
-   * as the route's AuthorizationRequirements) and `[AllowAnonymous]`. Every
-   * other C# attribute is ignored with a TZS014 warning.
+   * class. A C# attribute list has no TS meaning: each attribute is TZS021
+   * naming its TS form (`[Authorize(Roles = "A")]` ⇒ `@authorize({ roles:
+   * ["A"] })`, see typescriptFormOf).
    */
   private attributeDirective(d: DirectiveNode): void {
     const value = d.value.trim();
@@ -427,34 +432,22 @@ class Codegen {
     }
     const attributes = parseAttributeLists(value);
     if (attributes === null) {
-      this.diagnostics.error("TZS019", d.pos, "Expected a TS decorator ('@attribute @decorator(…)') or a C# attribute list ('@attribute [Authorize]').");
+      this.diagnostics.error("TZS019", d.pos, "Expected a TS class decorator ('@attribute @decorator(…)').");
       return;
     }
     for (const attribute of attributes) {
-      if (attribute.name === "AllowAnonymous") {
-        this.allowAnonymous = true;
-        continue;
-      }
-      if (attribute.name !== "Authorize") {
-        this.diagnostics.warning("TZS014", d.pos, `C# attribute '[${attribute.written}]' has no TypeScript equivalent and is ignored.`);
-        continue;
-      }
-      const requirement: { roles?: string[]; policy?: string; pos: SourcePos } = { pos: d.pos };
-      attribute.args.forEach((arg, index) => {
-        const key = arg.name ?? (index === 0 ? "Policy" : undefined);
-        const text = csharpString(arg.value);
-        if (key === "Roles" && text !== null) {
-          requirement.roles = text.split(",").map((role) => role.trim()).filter((role) => role.length > 0);
-        } else if (key === "Policy" && text !== null) {
-          requirement.policy = text;
-        } else if (key === "Roles" || key === "Policy") {
-          this.diagnostics.error("TZS019", d.pos, `'[${attribute.written}]': ${key} must be a string literal (got '${arg.value}').`);
-        } else {
-          this.diagnostics.warning("TZS014", d.pos, `'[${attribute.written}]' argument '${arg.name ?? arg.value}' is ignored (only Roles and Policy apply).`);
-        }
-      });
-      this.authorizeAttributes.push(requirement);
+      this.diagnostics.error("TZS021", d.pos, `C# attribute '[${attribute.written}]' — use ${typescriptFormOf(attribute)}.`);
     }
+  }
+
+  /** `@authorize` / `@authorize({ roles: […], policy: "…" })` (TS object literal, literal values). */
+  private authorizeDirective(d: DirectiveNode): void {
+    const requirement = parseAuthorizeArgument(d.value);
+    if (typeof requirement === "string") {
+      this.diagnostics.error("TZS019", d.valueStart ?? d.pos, `Invalid @authorize: ${requirement}.`);
+      return;
+    }
+    this.authorizeRequirements.push({ ...requirement, pos: d.pos });
   }
 
   /**
@@ -481,22 +474,18 @@ class Codegen {
     }
   }
 
-  /** Merges `@authorize` and `[Authorize]`/`[AllowAnonymous]` into the route metadata. */
+  /** Merges the `@authorize` directives into the route metadata. */
   private resolveAuthorization(): void {
-    if (this.allowAnonymous) {
-      // Blazor: [AllowAnonymous] wins over any [Authorize].
-      this.metadata.authorize = undefined;
-      return;
-    }
-    if (this.authorizeAttributes.length === 0) return;
+    if (this.authorizeRequirements.length === 0) return;
     this.metadata.authorize = true;
-    const withRoles = this.authorizeAttributes.filter((a) => a.roles !== undefined);
-    const withPolicy = this.authorizeAttributes.filter((a) => a.policy !== undefined);
-    // Blazor requires every [Authorize] to pass; AuthorizationRequirements
-    // holds one role set and one policy, so a second of either cannot be
-    // represented — refused instead of weakening the check.
+    const withRoles = this.authorizeRequirements.filter((a) => a.roles !== undefined);
+    const withPolicy = this.authorizeRequirements.filter((a) => a.policy !== undefined);
+    // Every @authorize must pass (Blazor ANDs several [Authorize]);
+    // AuthorizationRequirements holds one role set and one policy, so a
+    // second of either cannot be represented — refused instead of weakening
+    // the check.
     for (const extra of [...withRoles.slice(1), ...withPolicy.slice(1)]) {
-      this.diagnostics.error("TZS019", extra.pos, "Several [Authorize] attributes with Roles (or with a Policy) cannot be combined — use one role list and one policy.");
+      this.diagnostics.error("TZS019", extra.pos, "Several @authorize with roles (or with a policy) cannot be combined — use one role list and one policy.");
     }
     const roles = withRoles[0]?.roles;
     const policy = withPolicy[0]?.policy;
@@ -882,36 +871,38 @@ class Codegen {
         this.emitIf(node);
         break;
       case "for": {
-        if (node.isForEach) {
-          const header = parseForEachHeader(node.code);
-          if (header) {
-            // C#-style @foreach (var item in items) → for (const item of this.items);
-            // `var (k, v) in pairs` destructures → for (const [k, v] of this.pairs).
-            const iterableStart = node.codeStart === undefined ? undefined : advancePos(node.codeStart, node.code.slice(0, header.iterableOffset));
-            const iterable = this.headerExpr(header.iterable, iterableStart);
-            const binding = header.names.length === 1 && !header.destructure ? header.names[0]! : `[${header.names.join(", ")}]`;
-            const text = `for (const ${binding} of ${iterable}) {`;
-            this.stmt(text, node.pos, text.lastIndexOf(iterable));
-            this.withScope(() => {
-              for (const name of header.names) this.locals.add(name);
-              for (const child of node.children) this.emitNode(child, node.pos);
-            });
-            this.stmt(`}`, node.pos);
-            break;
-          }
-          this.diagnostics.warning("TZS001", node.pos, "@foreach expects '(variable in iterable)'; falling back to verbatim for-header.");
+        const csharp = node.isForEach ? this.checkForEachHeader(node) : null;
+        if (csharp) {
+          // Recovery after TZS021: the C# header emitted as its TS form
+          // (`var x in xs` ⇒ `const x of xs`), so locals and the LSP shadow stay intact.
+          const iterableStart = node.codeStart === undefined ? undefined : advancePos(node.codeStart, node.code.slice(0, csharp.iterableOffset));
+          const iterable = this.headerExpr(csharp.iterable, iterableStart);
+          const text = `for (const ${csharp.binding} of ${iterable}) {`;
+          this.stmt(text, node.pos, text.lastIndexOf(iterable));
+          this.withScope(() => {
+            for (const name of csharp.names) this.locals.add(name);
+            for (const child of node.children) this.emitNode(child, node.pos);
+          });
+          this.stmt(`}`, node.pos);
+          break;
         }
-        // Plain @for: `var` becomes `let` (a binding per iteration, as C#'s
-        // loop variable — deferred child content captures its own value);
-        // the declared loop variables are locals of the body.
+        // The header is TypeScript, emitted as written (`@foreach` is a
+        // `for…of`/`for…in`): `let`/`const` bind per iteration — deferred
+        // child content captures its own value — while `var` keeps its TS
+        // meaning (one function-scoped binding, TZS022). The declared loop
+        // variables are locals of the body; a `var` stays one after the loop.
+        let declares: string[] = [];
         this.withScope(() => {
           const rewritten = this.rewrite(node.code, "forHeader");
+          this.warnVar(rewritten, node.code, node.codeStart ?? node.pos);
           const header = this.headerLines(node.code, rewritten.text, node.codeStart);
-          for (const name of rewritten.declares) this.locals.add(name);
+          declares = rewritten.declares;
+          for (const name of declares) this.locals.add(name);
           const text = `for (${header}) {`;
           this.stmt(text, node.pos, text.indexOf(header));
           for (const child of node.children) this.emitNode(child, node.pos);
         });
+        if (/^\s*var\b/.test(node.code)) for (const name of declares) this.locals.add(name);
         this.stmt(`}`, node.pos);
         break;
       }
@@ -1297,28 +1288,27 @@ class Codegen {
   }
 
   /**
-   * Emits a switch with TS semantics (= C# for stacked labels): an empty
-   * section falls through to the next label; a section's statements get a
-   * block of their own, and a `break;` when they do not end in a jump (the
-   * pre-code-first switch added it implicitly — kept for compatibility).
+   * Emits a switch with TS semantics: the sections share the case block (one
+   * lexical scope, as in TS) and a section without a final jump falls
+   * through to the next one — there is no implicit `break`. TZS023 warns
+   * about that like TS's `noFallthroughCasesInSwitch`; stacked empty labels
+   * (`case 1: case 2:`) and the last section are silent.
    */
   private emitSwitch(node: Extract<MarkupNode, { kind: "switch" }>): void {
     const header = this.headerExpr(node.code, node.codeStart);
     const text = `switch (${header}) {`;
     this.stmt(text, node.pos, text.indexOf(header));
-    for (const c of node.cases) {
-      const label = c.code === null ? "default:" : `case ${this.expr(c.code)}:`;
-      if (c.children.length === 0) {
+    this.withScope(() => {
+      node.cases.forEach((c, index) => {
+        const label = c.code === null ? "default:" : `case ${this.expr(c.code)}:`;
         this.stmt(label, c.span.pos);
-        continue;
-      }
-      this.stmt(`${label} {`, c.span.pos);
-      this.withScope(() => {
         for (const child of c.children) this.emitNode(child, node.pos);
+        if (c.children.length > 0 && index < node.cases.length - 1 && !endsWithJump(c.children)) {
+          const written = c.code === null ? "default" : `case ${c.code}`;
+          this.diagnostics.warning("TZS023", c.span.pos, `'${written}:' falls through to the next case (TypeScript has no implicit break) — end it with 'break;'.`);
+        }
       });
-      if (!endsWithJump(c.children)) this.stmt(`break;`, c.span.pos);
-      this.stmt(`}`, c.span.pos);
-    }
+    });
     this.stmt(`}`, node.pos);
   }
 
@@ -1330,10 +1320,47 @@ class Codegen {
     for (const name of node.declares) this.locals.add(name);
     // Rewriting inserts `this.` prefixes, so its per-token entries keep the
     // columns after each prefix exact.
-    const baked = this.rewrite(node.code, "statements", node.pos).text;
+    const rewritten = this.rewrite(node.code, "statements", node.pos);
+    const baked = rewritten.text;
     const tokens = this.pendingExprEntries;
+    this.warnVar(rewritten, node.code, node.pos);
     this.pendingExprEntries = [];
     this.emitCodeVerbatim(baked, node.pos, 4, tokens);
+  }
+
+  /**
+   * `@foreach` takes a TS `for…of`/`for…in` header (`const x of xs`,
+   * `const [k, v] of pairs`, `const k in obj` — key iteration, as in TS),
+   * emitted as written. A C# header (`var x in xs`, `string s in xs`,
+   * `var (k, v) in pairs`) is TZS021 naming the exact TS rewrite; its TS
+   * form is returned for recovery. Any other header is TZS015.
+   */
+  private checkForEachHeader(node: ForNode): CSharpForEach | null {
+    const pos = node.codeStart ?? node.pos;
+    const csharp = csharpForEachHeader(node.code);
+    if (csharp) {
+      const form = `@foreach (const ${csharp.binding} of ${csharp.iterable.replace(/\s+/g, " ")})`;
+      this.diagnostics.error("TZS021", pos, `Use '${form}' — in TypeScript, for…in iterates keys.`);
+      return csharp;
+    }
+    const kind = forHeaderKind(node.code);
+    if (kind === "for") {
+      this.diagnostics.error("TZS015", pos, "@foreach takes a for…of header ('const x of xs') — use @for for a counting loop.");
+    } else if (kind === null) {
+      this.diagnostics.error("TZS015", pos, "Invalid @foreach header — expected '(const x of xs)'.");
+    }
+    return null;
+  }
+
+  /** TZS022 for each `var` declaration of render code; it keeps its TS meaning. */
+  private warnVar(rewritten: RewriteResult, code: string, start: SourcePos): void {
+    for (const offset of rewritten.varKeywords) {
+      this.diagnostics.warning(
+        "TZS022",
+        advancePos(start, code.slice(0, offset)),
+        "'var' is function-scoped in TypeScript: one binding for the whole render method, shared by every loop iteration and deferred child content.",
+      );
+    }
   }
 
   /** Runs `emit` in a nested local scope: locals it declares vanish after. */
@@ -1377,33 +1404,50 @@ class Codegen {
   }
 }
 
-/** Whether a switch section ends in a jump (`break`, `return`, `continue`, `throw`). */
+/**
+ * Whether a switch section ends in a jump (`break`, `return`, `continue`,
+ * `throw`) — also inside a trailing block, or in every branch of a trailing
+ * if/else.
+ */
 function endsWithJump(children: MarkupNode[]): boolean {
   const last = children[children.length - 1];
+  if (last?.kind === "block") return endsWithJump(last.children);
+  if (last?.kind === "if") {
+    return last.branches.some((b) => b.condition === null) && last.branches.every((b) => endsWithJump(b.children));
+  }
   if (last?.kind !== "statement") return false;
   const code = last.code.replace(/\/\/[^\n]*$/gm, "").trim();
   const lastLine = code.split(/[;\n]\s*(?=\S)/).pop() ?? "";
   return /^(break|continue|return|throw)\b/.test(lastLine.trim());
 }
 
+/** A C# `@foreach` header and its TS form (`binding` of `const <binding> of <iterable>`). */
+interface CSharpForEach {
+  names: string[];
+  binding: string;
+  iterable: string;
+  /** Offset of the iterable within the header code. */
+  iterableOffset: number;
+}
+
 /**
- * C#-style @foreach headers: `var x in xs`, `string s in xs` (typed C#
- * variable), `let x in xs`, and deconstruction `var (k, v) in pairs`.
- * `iterableOffset` = offset of the iterable within `code`.
+ * C# @foreach headers: `var x in xs`, `string s in xs` (typed C# variable)
+ * and deconstruction `var (k, v) in pairs` / `(string k, int v) in pairs`.
+ * TS headers (`const k in obj`, `let x of xs`) are not C#.
  */
-function parseForEachHeader(code: string): { names: string[]; destructure: boolean; iterable: string; iterableOffset: number } | null {
+function csharpForEachHeader(code: string): CSharpForEach | null {
   const tuple = /^\s*(?:var\s*)?\(\s*([^)]*)\)\s+in\s+/.exec(code);
   if (tuple) {
     // `(k, v)` or typed `(string k, int v)` → the names.
     const names = tuple[1]!.split(",").map((part) => part.trim().split(/\s+/).pop() ?? "");
     if (names.length === 0 || !names.every((n) => /^[A-Za-z_$][\w$]*$/.test(n))) return null;
-    return { names, destructure: true, iterable: code.slice(tuple[0].length).trim(), iterableOffset: tuple[0].length };
+    return { names, binding: `[${names.join(", ")}]`, iterable: code.slice(tuple[0].length).trim(), iterableOffset: tuple[0].length };
   }
-  const single = /^\s*(?:(?:var|let|const)\s+|[A-Za-z_$][\w$.]*(?:<[^()]*>)?(?:\[\])*\??\s+)?([A-Za-z_$][\w$]*)\s+in\s+/.exec(code);
+  const single = /^\s*(?:var\s+|(?!(?:let|const|var)\b)[A-Za-z_$][\w$.]*(?:<[^()]*>)?(?:\[\])*\??\s+)([A-Za-z_$][\w$]*)\s+in\s+/.exec(code);
   if (!single) return null;
   const iterable = code.slice(single[0].length);
   if (iterable.trim().length === 0) return null;
-  return { names: [single[1]!], destructure: false, iterable: iterable.trim(), iterableOffset: single[0].length };
+  return { names: [single[1]!], binding: single[1]!, iterable: iterable.trim(), iterableOffset: single[0].length };
 }
 
 /** Attribute frames come first: emit them before children. */

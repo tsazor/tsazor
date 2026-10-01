@@ -14,7 +14,10 @@
  *   node scripts/probe-razor-corpus.mjs --repo https://github.com/org/repo --name repo
  *
  * C# inside @code/@functions blocks is stripped first (it is not TypeScript);
- * the probe measures markup-level compatibility only.
+ * the probe measures markup-level compatibility only. C# forms with a
+ * mechanical TS rewrite (`@foreach (var x in xs)`, `@attribute [Authorize]`,
+ * `where T : …` — the TZS021 diagnostics, roadmap A6) are counted apart from
+ * real errors: they are what the `.razor` → `.tsazor` codemod must handle.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -145,6 +148,16 @@ const SILENT = {
     (code.match(/EventCallback\.bind\(this, (this\.)?(true|false)\b/g) ?? []).length,
 };
 
+/** Error codes for C# forms with a mechanical TS rewrite (codemod-fixable, A6). */
+const CODEMOD_FIXABLE = new Set(["TZS021"]);
+
+/** Kind of a codemod-fixable diagnostic, from its message (for the breakdown). */
+const csharpFormKind = (message) =>
+  /@foreach/.test(message) ? "@foreach C# header"
+  : /C# attribute/.test(message) ? "@attribute [C# attribute]"
+  : /C# constraint/.test(message) ? "@typeparam … where"
+  : "other";
+
 // ---------- run ----------
 const rows = [];
 for (const file of files) {
@@ -180,8 +193,9 @@ for (const file of files) {
     }
   }
   const errors = diagnostics.filter((d) => d.severity === "error");
+  const csharpForms = errors.filter((d) => CODEMOD_FIXABLE.has(d.code)).length;
   const unresolved = diagnostics.filter((d) => d.code === "TZS005").map((d) => d.message.match(/<([^>]+)>/)?.[1] ?? "?");
-  rows.push({ file: rel, crash, diagnostics, errors: errors.length, unresolved, silent });
+  rows.push({ file: rel, crash, diagnostics, errors: errors.length, csharpForms, realErrors: errors.length - csharpForms, unresolved, silent });
 }
 
 // ---------- report ----------
@@ -200,24 +214,38 @@ const summary = {
   noErrors: count((r) => !r.crash && r.errors === 0),
   withSilentIssues: count((r) => !r.crash && r.errors === 0 && hasSilent(r)),
   withUnresolvedTags: count((r) => r.unresolved.length > 0),
+  withCSharpForms: count((r) => r.csharpForms > 0),
+  withRealErrors: count((r) => r.realErrors > 0),
   clean: count((r) => !r.crash && r.errors === 0 && !hasSilent(r) && r.unresolved.length === 0),
+  cleanAfterCodemod: count((r) => !r.crash && r.realErrors === 0 && !hasSilent(r) && r.unresolved.length === 0),
 };
 
 const pad = (s, n) => String(s).padStart(n);
 console.log(`\nRazor corpus probe — ${summary.corpus} (${summary.files} files)\n`);
 console.log(`  clean (no errors, no silent issues, all tags resolved) ${pad(summary.clean, 5)}`);
+console.log(`  clean after codemod-fixable C# forms (TZS021)          ${pad(summary.cleanAfterCodemod, 5)}`);
 console.log(`  compile without errors                                 ${pad(summary.noErrors, 5)}`);
 console.log(`    … but with detected silent issues                    ${pad(summary.withSilentIssues, 5)}`);
 console.log(`  files with compile errors                              ${pad(summary.withErrors, 5)}`);
+console.log(`    … with C# forms (codemod-fixable)                    ${pad(summary.withCSharpForms, 5)}`);
+console.log(`    … with real errors                                   ${pad(summary.withRealErrors, 5)}`);
 console.log(`  files with unresolved tags (TZS005, e.g. named slots)  ${pad(summary.withUnresolvedTags, 5)}`);
 console.log(`  compiler crashes                                       ${pad(summary.crashes, 5)}`);
 
-const errorCodes = tally(rows.flatMap((r) => r.diagnostics.filter((d) => d.severity === "error").map((d) => d.code)));
-console.log("\nErrors by code:");
+const csharpForms = tally(rows.flatMap((r) => r.diagnostics.filter((d) => d.severity === "error" && CODEMOD_FIXABLE.has(d.code)).map((d) => csharpFormKind(d.message))));
+console.log("\nC# forms (codemod-fixable):");
+for (const [kind, n] of csharpForms) console.log(`  ${pad(n, 4)}  ${kind}`);
+
+const errorCodes = tally(rows.flatMap((r) => r.diagnostics.filter((d) => d.severity === "error" && !CODEMOD_FIXABLE.has(d.code)).map((d) => d.code)));
+console.log("\nReal errors by code:");
 for (const [code, n] of errorCodes) {
   const sample = rows.flatMap((r) => r.diagnostics.filter((d) => d.code === code && d.severity === "error").map((d) => ({ ...d, file: r.file })))[0];
   console.log(`  ${code} ×${pad(n, 4)}  e.g. ${sample.file}:${sample.line}  ${sample.text ?? ""}`);
 }
+
+const warningCodes = tally(rows.flatMap((r) => r.diagnostics.filter((d) => d.severity === "warning").map((d) => d.code)));
+console.log("\nWarnings by code (TZS022 var / TZS023 fallthrough: codemod candidates):");
+for (const [code, n] of warningCodes) console.log(`  ${code} ×${pad(n, 4)}`);
 
 const silentTotals = tally(rows.flatMap((r) => Object.keys(r.silent)));
 console.log("\nSilent issues (heuristic, files affected):");

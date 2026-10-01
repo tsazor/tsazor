@@ -42,7 +42,7 @@ describe("C12 — attribute values on non-string parameters are expressions", ()
 
 describe("C13 — templated components", () => {
   const grid = `
-@foreach (var item in Items) {
+@foreach (const item of Items) {
     <tr>@RowTemplate(item)</tr>
 }
 @code {

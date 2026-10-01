@@ -40,6 +40,9 @@ const CODES = {
   TZS018: "Unresolved @using directory.",
   TZS019: "Invalid @attribute directive.",
   TZS020: "Member conflicts with the generated component code.",
+  TZS021: "C# form — use the TypeScript form.",
+  TZS022: "'var' declaration — use 'let' or 'const'.",
+  TZS023: "Switch case falls through.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

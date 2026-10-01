@@ -40,8 +40,8 @@ Origin-Root; `regex(...)`-Constraints immer verankert; `Date` gilt als veränder
 - `@inherits`-Basis-Member mit DOM-Global-Namen (`length`, `top`) bleiben global (2.1/2.4).
 - `@bind-value` (klein) auf *Elementen* wird als Komponenten-Bind emittiert; `@bind` auf eine
   `@foreach`-Variable scheitert erst zur Laufzeit (C#: CS1656) (A-Nachtrag vor 2.2).
-- Syntaxfehler in Markup-Ausdrücken ohne eigene TZS-Diagnose; `var` in Statement-Runs bleibt
-  `var` (Closure-Capture) (A-Nachtrag).
+- Syntaxfehler in Markup-Ausdrücken ohne eigene TZS-Diagnose (A-Nachtrag); `var` in
+  Statement-Runs bleibt `var` — seit A6a mit Warnung TZS022 (TS-Semantik).
 - Code-behind-/`_Imports`-Änderungen invalidieren abhängige Module nicht (4.1).
 - `NavLink` vergleicht base-relative statt absolute URIs (klein, vor Phase 3).
 - EditForm `OnInvalidSubmit` / awaited `OnValidSubmit` (3.5).
@@ -106,7 +106,10 @@ Ohne verlässliche Tests sind die Umbauten in A und B nicht absicherbar.
   · nach A3 unverändert 145/217 (die Probe kompiliert ohne Workspace-Auflösung)
   · nach A4 unverändert 145/217 (verbleibende Befunde: `@bind`-`!.`, `@context`/Slots → A5/Phase 2)
   · nach A5 **178/217** sauber (216 ohne Fehler; 1 Datei mit Fehlern — TZS009 ×12, C#-`$"…"` als
-  unquoted Attributwert; stille Befunde nur noch `@context` ×18; unaufgelöste Tags ×36 → Phase 2).
+  unquoted Attributwert; stille Befunde nur noch `@context` ×18; unaufgelöste Tags ×36 → Phase 2)
+  · nach A6a **160/217** sauber, **178/217 nach Codemod-Formen** (C#-Formen TZS021 werden
+  getrennt gezählt: 33 Dateien — `@foreach (var … in …)` ×35, `@attribute [CascadingTypeParameter]`
+  ×1; echte Fehler unverändert 1 Datei; TZS022 `var` ×4).
 
 | Schritt | Inhalt | Warum hier |
 |---|---|---|
@@ -598,6 +601,32 @@ akzeptierte C#-Formen werden Diagnosen mit dem TS-Gegenstück (Quick-Fix kommt m
 
 Migration der Repo-Apps/-Libraries im selben Schritt; die FluentCMS-Probe misst danach, was ein
 Codemod übernehmen muss.
+
+**Stand: A6a umgesetzt** (Branch `roadmap/a6a-ts-forms`; A6b — Standard-Decorators — separat).
+Neue Codes: **TZS021** (Fehler) C#-Form mit mechanischem TS-Gegenstück, die Meldung nennt die
+TS-Form; **TZS022** (Warnung) `var` in Render-Code; **TZS023** (Warnung) durchfallende
+`@switch`-Section. Regeln: `@foreach`-Köpfe sind TS (`const`/`let`, Destructuring; `for…in`
+iteriert Schlüssel wie in TS); `var x in xs`, `string s in xs`, `var (k, v) in xs` ⇒ TZS021
+(`'@foreach (const x of xs)' — in TypeScript, for…in iterates keys`), zur Fehlererholung als
+diese TS-Form kompiliert; Zählköpfe unter `@foreach` ⇒ TZS015. `var` wird wie geschrieben
+emittiert (kein `var`→`let` mehr in `@for`), bleibt function-scoped (Local auch nach der
+Schleife) ⇒ TZS022. `@switch`: Sections teilen den Case-Block (kein generierter
+`case X: { … }`-Block mehr — er hätte TS-Scoping verändert), kein implizites `break`, TZS023 wie
+`noFallthroughCasesInSwitch` (gestapelte leere Labels und letzte Section still; Sprung am Ende
+eines Blocks oder in allen if/else-Zweigen zählt). `@attribute [X]` ⇒ TZS021 mit TS-Form
+(`[Authorize(Roles = "A, B")]` ⇒ `@authorize({ roles: ["A", "B"] })`, `[AllowAnonymous]` ⇒
+entfernen, `[Route]` ⇒ `@page`, sonst Decorator/entfernen); `@authorize({ roles, policy })` als
+TS-Objektliteral (TS-Parser, nur Literale, mehrzeilig erlaubt; sonst TZS019), Manifest-Form wie
+A5. `@authorize` wird **nicht** über `_Imports` vererbt (dort TZS014-Warnung) ⇒ kein Opt-out
+nötig. `@typeparam T where T : X` ⇒ TZS021 (`'@typeparam T extends X'`). Migriert: 9
+`@foreach`-Köpfe in Pizza und Bench; Repo-Build ohne Warnungen. Probe: neue Kategorie „C#-Formen
+(codemod-fixable)“ (siehe 0.5). Gates: 752/752 Tests, LSP-Smokes, Pizza, Gallery, Sleipnir,
+Demo (components 31, scoped, code-behind, debugging, counter-state) grün.
+**Offen für den Codemod (2.5):** `foreach … in` ⇒ `const … of` (35× in FluentCMS),
+`[Authorize(…)]` ⇒ `@authorize({…})`, `[AllowAnonymous]`/`[CascadingTypeParameter]`/
+`[StreamRendering]` entfernen, `where` ⇒ `extends`, `var` ⇒ `let`/`const` (4×); die Meldungen
+liefern die Ziel-Texte, eine Quick-Fix-Range (Header-Span) fehlt noch (Diagnosen tragen nur
+eine Startposition).
 
 ---
 

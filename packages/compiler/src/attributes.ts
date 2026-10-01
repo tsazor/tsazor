@@ -1,10 +1,62 @@
+import ts from "typescript";
+
 /**
- * C# attribute lists of `@attribute [...]` (roadmap A5, review C19). C#
- * attributes have no TS equivalent: codegen maps the authorization ones
- * (`[Authorize]`, `[AllowAnonymous]`) onto route metadata and ignores the
- * rest with a warning; the TS form `@attribute @decorator(…)` is emitted as
- * a real class decorator and never reaches this parser.
+ * `@authorize` and C# attribute lists of `@attribute [...]` (roadmap A5/A6,
+ * review C19). The TS forms are `@authorize` / `@authorize({ roles, policy })`
+ * (route metadata) and `@attribute @decorator(…)` (a real class decorator,
+ * never parsed here). C# attribute lists have no TS meaning: codegen reports
+ * them (TZS021) with the TS form computed from the parsed list.
  */
+
+/** The route's AuthorizationRequirements (`{}`: authentication suffices). */
+export interface AuthorizeRequirement {
+  roles?: string[];
+  policy?: string;
+}
+
+/**
+ * The value of `@authorize` after the directive name: empty, or one TS
+ * object literal in parentheses — `({ roles: ["A", "B"], policy: "P" })` —
+ * parsed with the TS parser; only string literals are accepted (the
+ * requirement is static route metadata). A string is the error detail.
+ */
+export function parseAuthorizeArgument(value: string): AuthorizeRequirement | string {
+  if (value.trim() === "") return {};
+  const usage = "expected '@authorize' or '@authorize({ roles: [\"A\"], policy: \"P\" })'";
+  const file = ts.createSourceFile("authorize.ts", `authorize${value}\n;`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const statement = file.statements[0];
+  const syntaxErrors = (file as unknown as { parseDiagnostics?: readonly unknown[] }).parseDiagnostics ?? [];
+  if (syntaxErrors.length > 0 || file.statements.length !== 1 || !statement || !ts.isExpressionStatement(statement)) return usage;
+  const call = statement.expression;
+  if (!ts.isCallExpression(call) || !ts.isIdentifier(call.expression) || call.arguments.length > 1) return usage;
+  const arg = call.arguments[0];
+  if (arg === undefined) return {};
+  if (!ts.isObjectLiteralExpression(arg)) return `${usage} (the argument is an object literal)`;
+  const requirement: AuthorizeRequirement = {};
+  const literal = (node: ts.Expression): string | null =>
+    ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : null;
+  for (const property of arg.properties) {
+    const name = ts.isPropertyAssignment(property) ? property.name : undefined;
+    const key = name && (ts.isIdentifier(name) || ts.isStringLiteral(name)) ? name.text : undefined;
+    if (!ts.isPropertyAssignment(property) || (key !== "roles" && key !== "policy")) {
+      return `unknown property '${property.getText(file)}' — only 'roles' and 'policy' apply`;
+    }
+    if (key in requirement) return `duplicate property '${key}'`;
+    if (key === "policy") {
+      const policy = literal(property.initializer);
+      if (policy === null) return `'policy' must be a string literal (got '${property.initializer.getText(file)}')`;
+      requirement.policy = policy;
+      continue;
+    }
+    const list = property.initializer;
+    const roles = ts.isArrayLiteralExpression(list) ? list.elements.map((element) => literal(element)) : null;
+    if (roles === null || roles.some((role) => role === null)) {
+      return `'roles' must be an array of string literals (got '${list.getText(file)}')`;
+    }
+    requirement.roles = roles as string[];
+  }
+  return requirement;
+}
 
 export interface CSharpAttributeArgument {
   /** Named argument (`Roles = "A"`); undefined for a positional one. */
@@ -56,6 +108,41 @@ export function parseAttributeLists(text: string): CSharpAttribute[] | null {
     i = end + 1;
   }
   return attributes.length > 0 ? attributes : null;
+}
+
+/**
+ * The TS replacement of one C# attribute, for the TZS021 message (the
+ * codemod's mapping): `[Authorize(Roles = "A, B", Policy = "P")]` ⇒
+ * `@authorize({ roles: ["A", "B"], policy: "P" })`, `[AllowAnonymous]` ⇒
+ * remove (pages are anonymous unless they declare `@authorize`), anything
+ * else ⇒ remove, or a TS class decorator.
+ */
+export function typescriptFormOf(attribute: CSharpAttribute): string {
+  switch (attribute.name) {
+    case "Authorize": {
+      const requirement: AuthorizeRequirement = {};
+      let literal = true;
+      attribute.args.forEach((arg, index) => {
+        const key = arg.name ?? (index === 0 ? "Policy" : undefined);
+        const text = csharpString(arg.value);
+        if (key === "Roles" && text !== null) requirement.roles = text.split(",").map((role) => role.trim()).filter((role) => role.length > 0);
+        else if (key === "Policy" && text !== null) requirement.policy = text;
+        else if (key === "Roles" || key === "Policy") literal = false;
+      });
+      if (!literal) return "'@authorize({ roles: [\"…\"], policy: \"…\" })' with string literals";
+      const parts = [
+        ...(requirement.roles !== undefined ? [`roles: [${requirement.roles.map((role) => JSON.stringify(role)).join(", ")}]`] : []),
+        ...(requirement.policy !== undefined ? [`policy: ${JSON.stringify(requirement.policy)}`] : []),
+      ];
+      return parts.length > 0 ? `'@authorize({ ${parts.join(", ")} })'` : "'@authorize'";
+    }
+    case "AllowAnonymous":
+      return "no directive — a page is anonymous unless it declares @authorize (which is not inherited)";
+    case "Route":
+      return "'@page \"…\"'";
+    default:
+      return "a TS class decorator ('@attribute @decorator(…)'), or remove it";
+  }
 }
 
 /** The value of a C# string literal (`"a\"b"`, verbatim `@"a""b"`), or null. */

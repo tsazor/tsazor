@@ -3,7 +3,7 @@
  * bare `<` in text, braces in child content, whitespace, @foreach headers.
  */
 import { describe, expect, it } from "vitest";
-import { errorCodes, mount } from "../harness.js";
+import { diagnosticsOf, errorCodes, mount } from "../harness.js";
 
 describe("C8 — Razor comments", () => {
   it("@* … *@ renders nothing and compiles cleanly", async () => {
@@ -71,21 +71,43 @@ describe("HTML tag handling", () => {
 
 describe("whitespace", () => {
   it("a single-line @foreach emits no whitespace text nodes", async () => {
-    const m = await mount(`<ul>@foreach (var x in xs) { <li>@x</li> }</ul>\n@code { private xs = ["a", "b"]; }`);
+    const m = await mount(`<ul>@foreach (const x of xs) { <li>@x</li> }</ul>\n@code { private xs = ["a", "b"]; }`);
     const ul = m.container.querySelector("ul")!;
     const textNodes = [...ul.childNodes].filter((n) => n.nodeType === 3);
     expect(textNodes.map((n) => n.textContent)).toEqual([]);
   });
 });
 
-describe("@foreach header forms", () => {
-  it("typed loop variable (Razor/C# form)", async () => {
-    const m = await mount(`@foreach (string s in xs) {\n<i>@s</i>\n}\n@code { private xs = ["a", "b"]; }`);
+describe("@foreach header forms (TypeScript)", () => {
+  it("for…of over values", async () => {
+    const m = await mount(`@foreach (const s of xs) {\n<i>@s</i>\n}\n@code { private xs = ["a", "b"]; }`);
+    expect(m.diagnostics).toEqual([]);
     expect(m.html()).toBe("<i>a</i><i>b</i>");
   });
 
-  it("tuple deconstruction", async () => {
-    const m = await mount(`@foreach (var (k, v) in pairs) {\n<i>@k@v</i>\n}\n@code { private pairs: [string, number][] = [["a", 1], ["b", 2]]; }`);
+  it("array destructuring (C#'s tuple deconstruction)", async () => {
+    const m = await mount(`@foreach (const [k, v] of pairs) {\n<i>@k@v</i>\n}\n@code { private pairs: [string, number][] = [["a", 1], ["b", 2]]; }`);
     expect(m.html()).toBe("<i>a1</i><i>b2</i>");
+  });
+
+  it("object destructuring with let", async () => {
+    const m = await mount(`@foreach (let { id, label } of rows) {\n<i>@id:@label</i>\n}\n@code { private rows = [{ id: 1, label: "x" }, { id: 2, label: "y" }]; }`);
+    expect(m.html()).toBe("<i>1:x</i><i>2:y</i>");
+  });
+
+  it("for…in iterates keys, as in TypeScript", async () => {
+    const m = await mount(`@foreach (const key in totals) {\n<i>@key=@totals[key]</i>\n}\n@code { private totals: Record<string, number> = { a: 1, b: 2 }; }`);
+    expect(m.diagnostics).toEqual([]);
+    expect(m.html()).toBe("<i>a=1</i><i>b=2</i>");
+  });
+
+  it.each([
+    ["var x in xs", "@foreach (const x of xs)"],
+    ["string s in xs", "@foreach (const s of xs)"],
+    ["var (k, v) in pairs", "@foreach (const [k, v] of pairs)"],
+  ])("the C# header '%s' is TZS021 naming '%s'", async (header, form) => {
+    const diagnostics = await diagnosticsOf(`@foreach (${header}) {\n<i>x</i>\n}\n@code { private xs = []; private pairs = []; }`);
+    expect(diagnostics.map((d) => [d.code, d.severity])).toEqual([["TZS021", "error"]]);
+    expect(diagnostics[0]!.message).toContain(`'${form}' — in TypeScript, for…in iterates keys`);
   });
 });
