@@ -10,7 +10,12 @@
         <div>Get Pizza</div>
     </NavLink>
 
-    <AuthorizeView ChildContent="@myOrdersTab" />
+    <AuthorizeView>
+        <NavLink Href="/myorders" CssClass="nav-tab">
+            <img src="img/bike.svg" />
+            <div>My Orders</div>
+        </NavLink>
+    </AuthorizeView>
 
     <LoginDisplay />
 </div>
@@ -18,20 +23,3 @@
 <div class="content">
     @Body
 </div>
-
-@code {
-    private myOrdersTab: RenderFragment = (b: RenderTreeBuilder) => {
-        b.openComponent(0, NavLink);
-        b.addAttribute(1, "Href", "/myorders");
-        b.addAttribute(2, "CssClass", "nav-tab");
-        b.addContent(3, (inner) => {
-            inner.openElement(0, "img");
-            inner.addAttribute(1, "src", "img/bike.svg");
-            inner.closeElement();
-            inner.openElement(2, "div");
-            inner.addContent(3, "My Orders");
-            inner.closeElement();
-        });
-        b.closeComponent();
-    };
-}
