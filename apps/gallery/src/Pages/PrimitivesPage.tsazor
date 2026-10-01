@@ -71,9 +71,9 @@
 <div class="demo">
     <h2>Breadcrumb</h2>
     <Breadcrumb>
-        <BreadcrumbItem href="/primitives" childContent="Home" />
-        <BreadcrumbItem href="/primitives" childContent="Layout" />
-        <BreadcrumbItem active="true" childContent="Detail" />
+        <BreadcrumbItem href="/primitives">Home</BreadcrumbItem>
+        <BreadcrumbItem href="/primitives">Layout</BreadcrumbItem>
+        <BreadcrumbItem active="true">Detail</BreadcrumbItem>
     </Breadcrumb>
 </div>
 

@@ -245,8 +245,8 @@ describe("async lifecycle orchestration", () => {
   });
 });
 
-describe("plain-function event parameters (Blazor's EventCallbackFactory conversion)", () => {
-  it("binds a plain function to an on*-named parameter and re-renders the declaring parent", async () => {
+describe("EventCallback parameters (Blazor's EventCallbackFactory conversion, done by the compiler since B8)", () => {
+  it("an EventCallback bound to the declaring parent re-renders it", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();
 
@@ -269,11 +269,11 @@ describe("plain-function event parameters (Blazor's EventCallbackFactory convers
         b.addContent(1, this.label);
         b.closeElement();
         b.openComponent(2, defineComponent(Clicker));
-        // Plain function on purpose: the renderer must bind it to this
-        // component (Blazor's `OnClick="Handler"` semantics).
-        b.addAttribute(3, "onClick", () => {
+        // What the compiler emits for `OnClick="handler"` on an EventCallback
+        // parameter; the renderer passes values through unchanged (B8).
+        b.addAttribute(3, "onClick", EventCallback.bind(this, () => {
           this.label = "clicked";
-        });
+        }));
         b.closeComponent();
       }
     }

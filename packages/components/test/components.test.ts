@@ -59,9 +59,9 @@ describe("Button", () => {
       b.addAttribute(2, "outline", true);
       b.addAttribute(3, "size", "lg");
       b.addAttribute(4, "childContent", text("Go"));
-      b.addAttribute(5, "onClick", () => {
+      b.addAttribute(5, "onClick", EventCallback.unbound(() => {
         clicks++;
-      });
+      }));
       b.closeComponent();
     });
     const button = container.querySelector("button")!;
@@ -106,9 +106,9 @@ describe("Alert", () => {
       b.openComponent(0, Alert);
       b.addAttribute(1, "variant", "warning");
       b.addAttribute(2, "dismissible", true);
-      b.addAttribute(3, "onDismissed", () => {
+      b.addAttribute(3, "onDismissed", EventCallback.unbound(() => {
         dismissed++;
-      });
+      }));
       b.addAttribute(4, "childContent", text("Careful!"));
       b.closeComponent();
     });
@@ -166,9 +166,9 @@ describe("Modal", () => {
       b.openComponent(0, Modal);
       b.addAttribute(1, "isOpen", true);
       b.addAttribute(2, "title", "Confirm");
-      b.addAttribute(3, "onClosed", () => {
+      b.addAttribute(3, "onClosed", EventCallback.unbound(() => {
         closed++;
-      });
+      }));
       b.addAttribute(4, "childContent", text("Sure?"));
       b.closeComponent();
     });
@@ -185,9 +185,9 @@ describe("Modal", () => {
     const { container, renderer } = await renderTree((b) => {
       b.openComponent(0, Modal);
       b.addAttribute(1, "isOpen", true);
-      b.addAttribute(2, "onClosed", () => {
+      b.addAttribute(2, "onClosed", EventCallback.unbound(() => {
         closed++;
-      });
+      }));
       b.addAttribute(3, "childContent", text("Body"));
       b.closeComponent();
     });
@@ -275,9 +275,9 @@ describe("Dropdown + DropdownItem", () => {
       b.addAttribute(1, "label", "Menu");
       b.addAttribute(2, "childContent", (inner: typeof b) => {
         inner.openComponent(0, DropdownItem);
-        inner.addAttribute(1, "onSelect", () => {
+        inner.addAttribute(1, "onSelect", EventCallback.unbound(() => {
           selected++;
-        });
+        }));
         inner.addAttribute(2, "childContent", text("Action"));
         inner.closeComponent();
       });
@@ -319,9 +319,9 @@ describe("Pagination", () => {
       b.openComponent(0, Pagination);
       b.addAttribute(1, "page", page);
       b.addAttribute(2, "pageCount", 3);
-      b.addAttribute(3, "onPageChanged", (next: number) => {
+      b.addAttribute(3, "onPageChanged", EventCallback.unbound((next: number) => {
         page = next;
-      });
+      }));
       b.closeComponent();
     });
     await settle(renderer);
@@ -373,9 +373,9 @@ describe("ListGroup + ListGroupItem", () => {
         inner.addAttribute(3, "childContent", text("One"));
         inner.closeComponent();
         inner.openComponent(4, ListGroupItem);
-        inner.addAttribute(5, "onClick", () => {
+        inner.addAttribute(5, "onClick", EventCallback.unbound(() => {
           clicked++;
-        });
+        }));
         inner.addAttribute(6, "childContent", text("Two"));
         inner.closeComponent();
       });

@@ -5,7 +5,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { type RenderFragment } from "@tsazor/runtime";
+import { EventCallback, type RenderFragment } from "@tsazor/runtime";
 import { Badge, Button, Card, CardFooter, CardHeader, Divider, Spinner } from "../dist/index.js";
 
 /** A fragment rendering one text node. */
@@ -32,9 +32,9 @@ describe("Button", () => {
       b.addAttribute(1, "appearance", "primary");
       b.addAttribute(2, "size", "large");
       b.addAttribute(3, "childContent", text("Go"));
-      b.addAttribute(4, "onClick", () => {
+      b.addAttribute(4, "onClick", EventCallback.unbound(() => {
         clicks++;
-      });
+      }));
       b.closeComponent();
     });
     const button = container.querySelector("button")!;
@@ -50,9 +50,9 @@ describe("Button", () => {
     const { container, renderer } = await renderTree((b) => {
       b.openComponent(0, Button);
       b.addAttribute(1, "disabled", true);
-      b.addAttribute(2, "onClick", () => {
+      b.addAttribute(2, "onClick", EventCallback.unbound(() => {
         clicks++;
-      });
+      }));
       b.closeComponent();
     });
     const button = container.querySelector("button")!;
