@@ -150,7 +150,8 @@ Das **Vite-Plugin** ergänzt das, was Blazors Build (Roslyn) sonst leistet:
 1. `_Imports.tsazor`-Kette + `@using` → `resolveComponent`/`resolveType` per Dateisystem,
 2. Runtime-Built-ins als Markup-Tags (Blazors `Microsoft.AspNetCore.Components.Web`),
 3. geerbte `@import`s der `_Imports`-Kette, relative Specifier auf die Datei umgeschrieben,
-4. `virtual:tsazor-routes`-Manifest aus allen `@page`-Dateien.
+4. `virtual:tsazor-routes`-Manifest aus allen `@page`-Dateien,
+5. Parameter-Metadaten der Ziel-Komponenten (`resolveComponentMetadata`, 2.1).
 
 ### Import-Modell und Auflösung (A3)
 
@@ -185,6 +186,98 @@ entweder lokal, ein JS-Global, per `@import` gebunden (eigene Datei oder `_Impor
   TZS017, keine ⇒ TZS005, fehlender `@using`-Ordner/-Paket ⇒ TZS018 (Warnung).
 - Diagnostics einer `_Imports.tsazor` hängen an ihrer Ebene (`ImportsLayer.diagnostics`);
   das Plugin wirft ihre Fehler beim importierenden Modul und meldet Warnungen einmal.
+
+### Parameter-Metadaten (2.1)
+
+Statische, rein syntaktische Beschreibung der Parameter jeder Komponente — das
+Gegenstück zu den Laufzeit-Metadaten der Decorators (`getParameterInfo`), ohne
+Type-Checker. Zwei Schritte:
+
+1. **Extraktion pro Datei** (`@tsazor/compiler`, `metadata.ts`):
+   `extractTsazorMetadata` (`.tsazor`: `@code`-Member der generierten Klasse,
+   `@typeparam`, Basis = Code-behind-Klasse ⇒ `@inherits` ⇒ `ComponentBase`, wie
+   der Compiler; eigene + geerbte `@import`s) und `extractModuleMetadata`
+   (`.ts`: alle Klassen, Imports, lokale Typ-Aliase, Exporte/Re-Exporte,
+   `defineParameter(K, "x", …)`-Aufrufe). Parameter sind `@Parameter(…)`/
+   `@CascadingParameter(…)` auf Feldern, `accessor`-Feldern und Settern, deren
+   Decorator an den Runtime-Export gebunden ist (auch umbenannt oder über
+   `* as rt`); `static`/`#private` zählen nicht (die Runtime wirft dort). Namen,
+   die der Compiler selbst importiert (`Parameter`, `CascadingParameter`,
+   `EventCallback`, `RenderFragment`, `ComponentBase`), gelten in `.tsazor` ohne
+   `@import` als Runtime-Namen.
+2. **Auflösung** (`resolveComponentMetadata` über einen `MetadataHost`): die
+   Basisklassen-Kette wird wie in der Runtime geflacht — Basis zuerst, eine
+   Neudeklaration gewinnt auf dem Platz der Basis (Map-Semantik) —, über relative
+   `.ts`/`.tsazor`-Dateien, die Code-behind-Datei und für `@tsazor/runtime`- bzw.
+   Paket-Basen über deren Manifest. Typargumente der Basis werden eingesetzt
+   (`extends InputBase<string>` ⇒ `Value: string`, Kategorie `string`).
+
+Pro Parameter (`ComponentParameter`): `name`, `category`, `typeArgument`
+(`T` von `EventCallback<T>` bzw. Kontexttyp von `RenderFragment<T>`), `type`
+(Annotation als Quelltext), `inferredType` (Literal-Initializer ohne
+Annotation), `optional` (`?:` oder `| undefined`), `hasInitializer`, `member`
+(`field`/`accessor`/`setter`), `cascading` (`name`, `type` als Quelltext), `doc`
+(JSDoc), `declaredBy`, `uncertain` und `references` — die Bindung jedes
+Wurzel-Bezeichners im Typ (`runtime`, `import` mit Specifier + Datei, `local`,
+`typeParameter`, `global`), also der Import-Kontext, mit dem 2.4 den Typ im Shadow
+referenzieren kann. Pro Komponente: `typeParameters` (Name, Constraint, Default),
+`base`, `isComponent` (Kette erreicht `ComponentBase`), `abstract`, `incomplete`
+(Basis nicht auflösbar).
+
+**Kategorien** (aus der Annotation, Klammern und `null`/`undefined` in Unions
+entfernt): `string` — `string`, String-Literal-/Template-Literal-Typen oder eine
+Union, die einen davon enthält (`"a" | "b"`, `string | number`: ein statischer
+Attributwert bleibt ein gültiger String); `EventCallback` / `EventCallback<T>` —
+der Runtime-Export, auch in einer Union (`EventCallback<X> | ((x) => void)`);
+`RenderFragment`; `RenderFragment<T>` — Funktionstyp `(ctx: T) => RenderFragment`
+(Tsazors Schreibweise) oder eine generische `RenderFragment<T>`-Referenz;
+`captureUnmatchedValues` — aus der Decorator-Option; sonst `value` (Delegates
+wie `(e) => void` sind Werte, wie Blazors `Action<T>`). Typ-Aliase werden
+verfolgt — lokal und über relative Imports inkl. Re-Exporten, generische Aliase
+mit eingesetzten Argumenten. Ohne Annotation entscheidet ein Literal-Initializer
+(`href = ""` ⇒ `string`).
+
+**Ohne Checker nicht entscheidbar** (Kategorie `value`, `uncertain: true`):
+Typen aus Bare-Paketen außer der Runtime (z. B. ein Alias in einer Fremd-
+Bibliothek), nicht auflösbare relative Imports, nicht-literale Initializer ohne
+Annotation (`label = defaultLabel()`). Bedingte, gemappte und Indexzugriffs-Typen sowie Typparameter
+(`TItem`, ohne Einsetzung) sind `value` — sicher genug, weil ein Attribut auf
+einem solchen Parameter ein Ausdruck sein muss. Der Typ von `typeArgument` ist
+Quelltext im Scope, in dem er steht (bei einem Alias: dessen Modul).
+
+**Auflösung im Resolver:** `FileContext.resolveComponentMetadata(tag, usings,
+imports?)` liefert die Metadaten der Zielkomponente — dieselbe Auflösung wie
+`resolveComponent` (`@import`-Bindung zuerst, dann Ordner, `@using`-Quellen,
+Runtime-Built-ins, Pakete); `resolutionOptions` reicht sie als
+`CompileOptions.resolveComponentMetadata` an Compiler, Plugin, Library-Builds und
+LSP. Die Codegen liest sie in 2.1 noch nicht (Ausgabe byte-identisch, 2.2 baut
+darauf auf).
+
+**Manifeste:** `@tsazor/runtime`, `@tsazor/components` und `@tsazor/fluent`
+erzeugen beim Build `dist/tsazor-components.json` (`{ tsazorComponentManifest: 1,
+package, components: { Tag: ComponentMetadata } }`, Parameter bereits geflacht,
+Pfade paketrelativ; `package.json` → `tsazor.components` und Export
+`./tsazor-components.json`) mit demselben Extraktor
+(`buildPackageManifest`/`buildRuntimeManifest`). Konsumenten lesen das Manifest
+statt Quellen zu parsen. Das Runtime-Manifest ist zusätzlich in
+`@tsazor/workspace` eingebettet (`runtime-manifest.generated.ts`, erzeugt von
+`scripts/gen-runtime-manifest.mjs`), damit Built-ins ohne installierte Runtime
+bekannt sind (gebündelter Language Server, temporäre Workspaces);
+`RUNTIME_COMPONENTS` ist daraus abgeleitet (konkrete Komponenten),
+`RUNTIME_COMPONENT_PARAMS` entfällt. Tests halten das eingebettete Manifest
+synchron zu den Runtime-Quellen und zu `getParameterInfo` jedes Built-ins (Namen,
+Reihenfolge, Capture, Cascading-Optionen).
+
+**Cache und Abhängigkeiten** (`MetadataCache`, geteilt als
+`defaultMetadataCache`): Modul-Einträge pro Datei, gestempelt mit mtime+Größe der
+Datei, bei `.tsazor` auch der Code-behind-Datei (auch solange sie fehlt) und der
+`_Imports`-Ebenen; aufgelöste Komponenten gestempelt mit allen Dateien der
+Basiskette und gelesenen Paket-Manifesten. Ein Eintrag gilt, solange alle Stempel
+passen — eine Änderung an Komponente, Code-behind oder Basis löst genau die
+abhängigen Einträge neu auf. Für 4.1 (HMR) liegen die Kanten offen:
+`dependenciesOf(file)`, `dependentsOf(file)` (Rückwärtskanten) und
+`invalidate(file)`. Grenze: eine neu angelegte `_Imports.tsazor` oberhalb
+invalidiert nicht von selbst (4.1 ruft `invalidate`).
 
 ## HMR (State-Retention)
 
