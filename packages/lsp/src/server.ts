@@ -20,6 +20,8 @@ import {
   type CodeAction,
   type CodeActionParams,
   CodeActionKind,
+  DidChangeWatchedFilesNotification,
+  FileChangeType,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import path from "node:path";
@@ -62,6 +64,13 @@ const documents = new TextDocuments(TextDocument);
 connection.onInitialize((params: InitializeParams): InitializeResult => {
   const root = projectRootOf(params);
   const typeService = new TsazorTypeService(root);
+  // T4 (2.4): the shadow graph covers every project .tsazor, not only open
+  // documents — types flow across closed files too. Scanned in the
+  // background; the per-document rebuilds keep the open ones fresh.
+  void typeService.scanProject().then(
+    (count) => connection.console.log(`tsazor: ${count} project .tsazor shadowed`),
+    (error) => connection.console.error(`tsazor scan failed: ${error instanceof Error ? error.stack : String(error)}`),
+  );
   // tsDiagnostics toggle; initializationOptions.tsDiagnostics: false → off.
   const init = (params.initializationOptions ?? {}) as { tsDiagnostics?: boolean };
   const tsDiagnosticsEnabled = init.tsDiagnostics !== false;
@@ -152,8 +161,22 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   });
   documents.onDidClose((event) => {
     cache.delete(event.document.uri);
-    typeService.closeTsazor(uriToPath(event.document.uri));
     connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
+    // Closed files keep their disk shadow (T4): rebuilt by mtime instead of
+    // dropped, so closed-file types stay in the shadow graph.
+    void typeService.ensureTsazor(uriToPath(event.document.uri));
+  });
+
+  // File change notifications: created/changed .tsazor files refresh their
+  // disk shadow (mtime cache), deleted ones leave the shadow graph.
+  connection.onDidChangeWatchedFiles((params) => {
+    for (const change of params.changes) {
+      const filePath = uriToPath(change.uri);
+      if (!filePath.endsWith(".tsazor")) continue;
+      if (change.type === FileChangeType.Deleted) typeService.closeTsazor(filePath);
+      else void typeService.ensureTsazor(filePath).catch(() => undefined);
+      invalidateShadows(filePath);
+    }
   });
 
   /* Hover: shadow positions → TS layer, everything else → v1 --------------- */
@@ -296,6 +319,14 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       completionProvider: { triggerCharacters: ["<", "@", " ", "."], resolveProvider: true },
     },
   };
+
+  // Watched .tsazor files need dynamic registration (the LSP static
+  // capability is client-side only). Handlers installed above.
+  connection.onInitialized(() => {
+    void connection.client.register(DidChangeWatchedFilesNotification.type, {
+      watchers: [{ globPattern: "**/*.tsazor" }],
+    });
+  });
 });
 
 documents.listen(connection);
