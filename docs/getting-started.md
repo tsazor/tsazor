@@ -1,5 +1,9 @@
 # Getting Started
 
+Coming from C#? The [C# to TypeScript cheat sheet](csharp-to-typescript.md) maps the language
+and the base class library, and the interactive tutorial's Blazor track opens with a short
+chapter, "TypeScript for C# developers".
+
 ## Setup
 
 Tsazor apps run on Vite (dev server, build, HMR). The plugin compiles every `.tsazor` file to an
@@ -82,6 +86,8 @@ would be checked as a legacy decorator and rejected at runtime):
   generated code. A pure type redeclaration of an inherited field is written `declare x: T`.
 - Decorators are lowered by esbuild (via the Vite plugin, also for the app's `.ts` files); no
   browser runs them natively yet. The runtime polyfills `Symbol.metadata`.
+- Newer array methods (`toSorted`, `findLast`) are ES2023: add
+  `"lib": ["ES2023", "DOM", "DOM.Iterable"]` (or a later version) to use them.
 - Hand-written components without decorator syntax (plain JS, tests) declare parameters with
   `defineParameter(Class, "name", options?)` from `@tsazor/runtime`.
 

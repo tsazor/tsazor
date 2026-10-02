@@ -1,0 +1,8 @@
+@import { orders, label, ship } from "./orders"
+
+<ul>
+    @foreach (const order of orders) {
+        <li>#@order.id @order.customer: @label(order.status)</li>
+    }
+</ul>
+<p class="shipped">After shipping #1: @label(ship(orders[0]!).status)</p>

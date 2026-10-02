@@ -1,0 +1,13 @@
+@import { Thermostat } from "./thermostat"
+
+<h1>@thermostat.room</h1>
+<p class="reading">@thermostat.celsius °C · @thermostat.fahrenheit °F</p>
+<button @onclick="warmer">+9 °F</button>
+
+@code {
+    thermostat = new Thermostat("Living room");
+
+    warmer() {
+        this.thermostat.fahrenheit += 9;
+    }
+}

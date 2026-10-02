@@ -179,8 +179,8 @@ async function main() {
     const blazorText = await page.textContent(".prose");
     check(/Blazor/.test(blazorText ?? ""), "Blazor track text loaded");
     await page.goto(`${APP}/`);
-    await page.waitForURL(/\/blazor\/welcome$/, { timeout: 20_000 });
-    check(true, "track choice persisted (/ → /blazor/welcome)");
+    await page.waitForURL(/\/blazor\/types-and-nullability$/, { timeout: 20_000 });
+    check(true, "track choice persisted (/ → the Blazor track's first lesson, /blazor/types-and-nullability)");
 
     /* 7 — deep link + scoped CSS in the preview */
     await page.goto(`${APP}/blazor/styling`);
@@ -348,6 +348,48 @@ async function main() {
     await waitForPreview(page, "h1", "Hello");
     check((await page.$(".preview .page-title")) === null, "a lesson without PageTitle shows no tab title");
 
+    /* 7d — the Blazor-only chapter "TypeScript for C# developers" */
+    await page.goto(`${APP}/blazor/types-and-nullability`);
+    check((await waitForPreview(page, "body", "Grace")).includes("Grace"), "C# chapter: a .ts module lesson renders in the preview");
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    const graceItems = await (await frameOf()).$$eval("td.quantity", (els) => els.map((el) => el.textContent));
+    check(graceItems.join(",") === "3,0,1", `C# chapter: ?? keeps Grace's 0 items (${graceItems.join(",")})`);
+    await page.click(".menu-button");
+    const blazorChapters = await page.$$eval(".panel h3", (els) => els.map((el) => el.textContent));
+    check(blazorChapters[0] === "TypeScript for C# developers" && blazorChapters[1] === "Introduction", `C# chapter: first in the Blazor track's menu (${blazorChapters.slice(0, 2).join(" | ")})`);
+    await page.goto(`${APP}/blazor/types-and-nullability`);
+    check((await page.$(".prose a[href$='docs/csharp-to-typescript.md']")) !== null, "C# chapter: links the cheat sheet");
+    await page.click(".prose a:has-text('Welcome')");
+    await page.waitForURL(/\/blazor\/welcome$/, { timeout: 20_000 });
+    check(true, "C# chapter: 'Skip ahead to Welcome' navigates within the Blazor track");
+    await page.goto(`${APP}/blazor/types-and-nullability`);
+    await page.click(".track:has-text('TypeScript developer')");
+    await page.waitForURL(/\/ts\/welcome$/, { timeout: 20_000 });
+    check(true, "C# chapter: the track switch from a Blazor-only lesson leads to the TS track's next lesson (/ts/welcome)");
+    await page.click(".menu-button");
+    const tsChapters = await page.$$eval(".panel h3", (els) => els.map((el) => el.textContent));
+    check(tsChapters[0] === "Introduction" && !tsChapters.some((title) => /C#/.test(title ?? "")), "C# chapter: absent from the TypeScript track's menu");
+
+    await page.goto(`${APP}/blazor/linq-and-arrays`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, ".top", "Barbara, Ada, Linus")).includes("Barbara, Ada, Linus"), "C# chapter: filter/toSorted/slice/map in the preview");
+    check(await noProblems(), "C# chapter: toSorted type-checks in the browser (ES2023 lib)");
+
+    await page.goto(`${APP}/blazor/the-real-traps`);
+    check((await waitForPreview(page, ".checkout", "TypeError")).includes("TypeError"), "C# chapter: the function-callback this trap throws in the preview");
+    await page.waitForSelector(".problem .code:has-text('TS2683')", { timeout: 30_000 }).catch(() => null);
+    check((await page.$(".problem .code:has-text('TS2683')")) !== null, "C# chapter: TS2683 shows in the problems panel");
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, ".checkout", "Total: 0.30")).includes("Total: 0.30"), "C# chapter: the arrow + cents solution adds up");
+    check(await noProblems(), "C# chapter: the traps solution type-checks");
+
+    await page.goto(`${APP}/blazor/attributes-and-decorators`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, "ol", "multiply(4, 5)")).includes("multiply(4, 5) → 20"), "C# chapter: a standard method decorator runs in the preview");
+    await shot(page, "09-csharp-decorators");
+    await page.goto(`${APP}/ts/your-first-component`);
+    await waitForPreview(page, "h1", "Hello");
     /* 8 — lesson menu navigates */
     await page.click(".menu-button");
     await page.click(".panel a:has-text('Dynamic attributes')");

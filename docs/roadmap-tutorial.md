@@ -1,7 +1,8 @@
 # Roadmap — English docs + interactive tutorial
 
-Status: **D, M1, M2 and M3 done** (2026-10-02; M1/M2 merged into `roadmap/phase-0`, M3 on
-`tutorial/m3`); M4 next. Runs before [roadmap-sleipnir.md](roadmap-sleipnir.md).
+Status: **D, M1, M2, M3 and the C# chapter done** (2026-10-02; M1–M3 merged into
+`roadmap/phase-0`, the Blazor-track chapter "TypeScript for C# developers" on
+`tutorial/csharp-to-ts`); M4 next. Runs before [roadmap-sleipnir.md](roadmap-sleipnir.md).
 
 ## Decisions (2026-10-02)
 
@@ -78,7 +79,7 @@ Gate: no German left in the listed files, all relative links resolve.
 19. *Next steps*
 
 **Track extras** — Blazor: **"TypeScript for C# developers"** (a short chapter before chapter 1
-in the Blazor track, planned right after M3; see below), "What's different from Blazor"
+in the Blazor track ✅; see below), "What's different from Blazor"
 (documented deviations), "Migrating `.razor` files (codemod)". TypeScript: none planned yet.
 
 **"TypeScript for C# developers"** (Blazor track only): the primary audience keeps its .NET
@@ -120,7 +121,21 @@ message: "you already know most of this". A companion cheat sheet lives at
    `EventCallback.invokeAsync()`, TS2869 on mixed attribute values. Claims pinned in
    `test/claims-part2.test.ts`; E2E smoke check per chapter (8–13). The planned Svelte-style
    chapters (attachments, transitions, animations, `<Await>`) wait for their features.
-4. **M4** — Part 3, static build, deploy target decided.
+4. **C# chapter** ✅ (after M3): "TypeScript for C# developers", 9 Blazor-only lessons before
+   chapter 1 (`content/01-basics/00-typescript-for-csharp`), each a `.ts` module with its output in
+   the preview: Types and nullability (`null`/`undefined`, `??` vs `||`, narrowing) · Tasks and
+   promises (`Promise.all`) · LINQ and array methods (`toSorted`, no deferred execution) · Classes,
+   interfaces, generics (structural typing) · Properties and access (getters/setters, `#private`) ·
+   Attributes and decorators (a `@logged` method decorator) · Namespaces and modules · Records,
+   enums and unions (string-literal unions, exhaustive `switch`) · The real traps (`this` in
+   callbacks, double arithmetic and money, `==`, `Date`). Companion cheat sheet
+   [csharp-to-typescript.md](csharp-to-typescript.md) (linked from README, getting-started and the
+   chapter). Engine: the in-browser type check uses the ES2023 lib (`toSorted`); the track switch
+   from a track-only lesson goes to the other track's next lesson (`TutorialState.counterpart`)
+   instead of a dead link. Claims pinned in `test/claims-csharp.test.ts`; the lesson gate allows
+   exactly this chapter to be Blazor-only; E2E smoke checks (menu, track switch, lessons in the
+   preview, TS2683 in the problems panel).
+5. **M4** — Part 3, static build, deploy target decided.
 
 Open for M4: routing lessons need an in-memory history in the `srcdoc` preview
 (port-findings H.7 — `NavigationManager` takes a `historyApi`; the preview's

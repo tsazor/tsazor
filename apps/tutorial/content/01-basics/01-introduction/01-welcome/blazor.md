@@ -6,6 +6,10 @@ focus: App.tsazor
 Welcome! This tutorial teaches you Tsazor — and since you're on the Blazor track, you already
 know most of it.
 
+New to TypeScript itself? The short chapter before this one,
+[TypeScript for C# developers](blazor/types-and-nullability), maps what you know from C# to
+TypeScript in nine small lessons.
+
 ## What is Tsazor?
 
 Tsazor is **Blazor with C# replaced by TypeScript**. The component model is the one you know:
