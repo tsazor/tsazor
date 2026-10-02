@@ -46,16 +46,18 @@ export class NavLink extends ComponentBase {
   }
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
+    // Hash routing (Tsazor extension) renders route hrefs as fragments (`#/orders`).
+    const href = this.navigation.toLinkHref(this.href);
     if (navLinkMatches(this.navigation.toAbsoluteUri(this.href), this.navigation.uri, this.match)) {
       b.openElement(0, "a");
-      b.addAttribute(1, "href", this.href);
+      b.addAttribute(1, "href", href);
       b.addAttribute(2, "class", joinClasses(this.cssClass, this.activeClass));
       b.addAttribute(3, "aria-current", "page");
       b.addContent(4, this.childContent);
       b.closeElement();
     } else {
       b.openElement(0, "a");
-      b.addAttribute(1, "href", this.href);
+      b.addAttribute(1, "href", href);
       b.addAttribute(2, "class", this.cssClass);
       b.addContent(3, this.childContent);
       b.closeElement();

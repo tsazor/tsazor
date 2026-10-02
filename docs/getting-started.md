@@ -100,6 +100,23 @@ createTsazorApp({ root: App, routes });
 - `createTsazorApp` builds the DI container + NavigationManager, renders the root into `#app`,
   and registers the HMR hook (`globalThis.__tsazor`).
 
+### Hosting: history or hash routing
+
+Routing follows Blazor: the route is the URL path (`/orders/5`). A deep link or reload then hits the
+server with that path, so the server must answer unknown paths with `index.html` (Vite's dev server
+and `vite preview` do; for production configure a rewrite/fallback). If you **cannot** configure
+that — plain static file hosting, an app embedded as an iframe whose host you do not control — opt
+into hash routing (Tsazor extension):
+
+```ts
+createTsazorApp({ root: App, routes, routing: { mode: "hash" } });
+```
+
+Routes then live in the fragment (`index.html?token=abc#/orders/5`); pages, `@page` templates,
+`NavLink` and `SupplyParameterFromQuery` stay unchanged, and the real query string is never touched.
+Write plain route links as `href="#/…"` (or use `NavLink`). Details:
+[Hash routing](language-reference.md#hash-routing-tsazor-extension).
+
 ## _Imports.tsazor
 
 The counterpart of Blazor's `_Imports.razor`: its directives apply to all `.tsazor` files in the

@@ -42,6 +42,8 @@ export {
   type LocationChangingContext,
   type LocationChangingHandler,
   type NavigationOptions,
+  type NavigationManagerOptions,
+  type RoutingMode,
 } from "./navigation/navigation-manager.js";
 
 // Routing
@@ -107,4 +109,4 @@ export { CascadingAuthenticationState } from "./auth/cascading-authentication-st
 export { AuthorizeRouteView } from "./auth/authorize-route-view.js";
 
 // App bootstrap
-export { createTsazorApp, type TsazorAppOptions } from "./app.js";
+export { createTsazorApp, type TsazorAppOptions, type RoutingOptions } from "./app.js";

@@ -14,6 +14,17 @@
  *   reverted first, the handlers are asked, and only if none prevents it the
  *   move is re-applied; a cancelled back/forward leaves the old URL.
  * Without handlers every navigation completes synchronously.
+ *
+ * Routing modes: "history" (default) is Blazor's model — the route is the URL
+ * path below the base URI. "hash" is a Tsazor extension (Blazor has no
+ * counterpart) for hosting without a server-side index.html fallback (static
+ * file hosting, iframe embeds): the route path and its query live in the
+ * fragment (`page?q=1#/orders/5?tab=2`). The manager then works with a
+ * *logical* URI — the fragment route mapped onto the base URI
+ * (`http://host/app/orders/5?tab=2`) — so Router, NavLink matching and
+ * SupplyParameterFromQuery behave exactly as in history mode. Only reading
+ * the browser location and writing history entries translate between the
+ * two; the real path and `location.search` are never touched.
  */
 export class NavigationManager {
   private readonly locationChangedHandlers = new Set<(sender: NavigationManager, event: LocationChangedEventArgs) => void>();
@@ -33,9 +44,29 @@ export class NavigationManager {
   /** Last location announced through LocationChanged (restore target for a cancelled popstate). */
   private lastLocation: string | undefined;
 
-  constructor(private readonly historyApi?: History) {
+  private readonly historyApi: History | undefined;
+  /** Routing mode, fixed at construction ("history" = Blazor; "hash" = Tsazor extension). */
+  readonly routingMode: RoutingMode;
+  /** True while a popstate is being processed (hash mode: its hashchange twin is ignored). */
+  private handlingPopState = false;
+
+  /**
+   * `new NavigationManager()` (history mode, window.history),
+   * `new NavigationManager(historyApi)` (custom History, e.g. tests) or
+   * `new NavigationManager({ mode: "hash", history })`.
+   */
+  constructor(historyApiOrOptions?: History | NavigationManagerOptions) {
+    const options: NavigationManagerOptions =
+      historyApiOrOptions === undefined || isHistory(historyApiOrOptions) ? { history: historyApiOrOptions } : historyApiOrOptions;
+    this.historyApi = options.history;
+    const mode = options.mode ?? "history";
+    if (mode !== "history" && mode !== "hash") {
+      throw new Error(`Unknown routing mode '${String(mode)}'. Expected "history" or "hash".`);
+    }
+    this.routingMode = mode;
     if (typeof window !== "undefined") {
       window.addEventListener("popstate", this.onPopState);
+      if (this.isHashMode) window.addEventListener("hashchange", this.onHashChange);
       const state = this.history.state as HistoryState | null;
       if (typeof state?._index === "number") {
         this.currentHistoryIndex = state._index;
@@ -50,9 +81,21 @@ export class NavigationManager {
     return this.historyApi ?? window.history;
   }
 
-  /** Current absolute URI. */
+  private get isHashMode(): boolean {
+    return this.routingMode === "hash";
+  }
+
+  /**
+   * Current absolute URI. In hash mode the logical URI: the fragment route
+   * (`#/orders/5?tab=2`) below baseUri; a fragment that does not start with
+   * `#/` (or none) is the root route.
+   */
   get uri(): string {
     if (typeof window !== "undefined") {
+      if (this.isHashMode) {
+        const hash = window.location.hash;
+        return this.baseUri + (hash.startsWith("#/") ? hash.slice(2) : "");
+      }
       return window.location.href;
     }
     return this.internalUri;
@@ -66,6 +109,12 @@ export class NavigationManager {
    * become the base).
    */
   get baseUri(): string {
+    if (this.isHashMode && typeof window !== "undefined") {
+      // Hash mode: the route space hangs off the document itself; <base href>
+      // only affects asset resolution there.
+      const { origin, pathname } = window.location;
+      return `${origin}${pathname.slice(0, pathname.lastIndexOf("/") + 1)}`;
+    }
     let base: string;
     if (typeof document !== "undefined" && document.querySelector("base[href]")) {
       base = document.baseURI;
@@ -95,8 +144,17 @@ export class NavigationManager {
     }
   }
 
-  /** Blazor's ToAbsoluteUri: resolves a (base-)relative URI against baseUri. */
+  /**
+   * Blazor's ToAbsoluteUri: resolves a (base-)relative URI against baseUri.
+   * Hash mode additionally reads route forms: `#/orders` and root-relative
+   * `/orders` are routes below the base, and a real URL of this document with
+   * a `#/` fragment maps to its logical URI.
+   */
   toAbsoluteUri(relativeUri: string): string {
+    if (this.isHashMode) {
+      const route = this.hashRouteOf(relativeUri);
+      if (route !== undefined) return this.baseUri + route;
+    }
     try {
       return new URL(relativeUri, this.baseUri).toString();
     } catch {
@@ -107,6 +165,19 @@ export class NavigationManager {
   /** Former name of toAbsoluteUri (kept for existing callers). */
   toAbsolute(uri: string): string {
     return this.toAbsoluteUri(uri);
+  }
+
+  /**
+   * The href to render for a link to `href` (NavLink uses it). History mode:
+   * unchanged (Blazor renders the Href as written). Hash mode: targets inside
+   * the base URI space become fragment links (`orders/5` ⇒ `#/orders/5`), so
+   * they also work without interception (new tab, copied link); fragments
+   * and external URLs stay as written.
+   */
+  toLinkHref(href: string): string {
+    if (!this.isHashMode || href.startsWith("#")) return href;
+    const absolute = this.toAbsoluteUri(href);
+    return this.isWithinBaseUriSpace(absolute) ? `#/${this.relativeToBase(absolute)}` : href;
   }
 
   /**
@@ -134,8 +205,11 @@ export class NavigationManager {
     const state = options.historyEntryState;
     const perform = () => {
       const absolute = this.toAbsoluteUri(uri);
-      if (!options.forceLoad && this.isWithinBaseUriSpace(absolute)) {
+      const withinBase = this.isWithinBaseUriSpace(absolute);
+      if (!options.forceLoad && withinBase) {
         this.performInternalNavigation(absolute, false, replaceEntry, state);
+      } else if (this.isHashMode && withinBase) {
+        this.performHashReload(absolute, replaceEntry);
       } else {
         // External navigation keeps the supplied text (Blazor's performExternalNavigation).
         this.performExternalNavigation(this.isAbsolute(uri) ? uri : absolute, replaceEntry);
@@ -211,7 +285,14 @@ export class NavigationManager {
     if (anchor.hasAttribute("download")) return;
     if (anchor.getAttribute("rel")?.split(/\s+/).includes("external")) return;
     const href = anchor.getAttribute("href");
-    if (!href || href.startsWith("#")) return;
+    if (!href) return;
+    if (this.isHashMode) {
+      // Hash mode intercepts route fragments only; other hrefs are real
+      // document navigations (the route space is the fragment).
+      if (!href.startsWith("#/")) return;
+    } else if (href.startsWith("#")) {
+      return;
+    }
     const absolute = this.toAbsoluteUri(href);
     if (!this.isWithinBaseUriSpace(absolute)) return;
     event.preventDefault();
@@ -241,6 +322,7 @@ export class NavigationManager {
     }
     if (typeof window !== "undefined") {
       window.removeEventListener("popstate", this.onPopState);
+      window.removeEventListener("hashchange", this.onHashChange);
     }
   }
 
@@ -296,11 +378,12 @@ export class NavigationManager {
 
   private performInternalNavigation(absolute: string, isIntercepted: boolean, replace: boolean, state: string | undefined): void {
     if (typeof window !== "undefined") {
+      const url = this.toBrowserUrl(absolute);
       if (replace) {
-        this.history.replaceState({ _index: this.currentHistoryIndex, userState: state } satisfies HistoryState, "", absolute);
+        this.history.replaceState({ _index: this.currentHistoryIndex, userState: state } satisfies HistoryState, "", url);
       } else {
         this.currentHistoryIndex++;
-        this.history.pushState({ _index: this.currentHistoryIndex, userState: state } satisfies HistoryState, "", absolute);
+        this.history.pushState({ _index: this.currentHistoryIndex, userState: state } satisfies HistoryState, "", url);
       }
     } else {
       this.internalUri = absolute;
@@ -325,6 +408,65 @@ export class NavigationManager {
     }
   }
 
+  /**
+   * Hash mode, forceLoad inside the base URI space: a fragment-only change
+   * never reloads, so write the entry and reload explicitly.
+   */
+  private performHashReload(absolute: string, replace: boolean): void {
+    if (typeof window === "undefined") {
+      this.internalUri = absolute;
+      this.notifyLocationChanged(absolute, false, undefined);
+      return;
+    }
+    const url = this.toBrowserUrl(absolute);
+    if (replace) {
+      this.history.replaceState({ _index: this.currentHistoryIndex } satisfies HistoryState, "", url);
+    } else {
+      this.currentHistoryIndex++;
+      this.history.pushState({ _index: this.currentHistoryIndex } satisfies HistoryState, "", url);
+    }
+    window.location.reload();
+  }
+
+  /**
+   * The browser URL for a logical URI: unchanged in history mode; in hash
+   * mode the current document (path + search untouched) with the route as
+   * its `#/` fragment.
+   */
+  private toBrowserUrl(absolute: string): string {
+    if (!this.isHashMode || typeof window === "undefined") return absolute;
+    return `${window.location.pathname}${window.location.search}#/${this.relativeToBase(absolute)}`;
+  }
+
+  /** The base-relative part of a URI inside the base URI space ("" for the base itself). */
+  private relativeToBase(absolute: string): string {
+    const base = this.baseUri;
+    if (absolute.startsWith(base)) return absolute.slice(base.length);
+    // The base without its trailing slash, or base + "?query"/"#hash".
+    return absolute.slice(base.length - 1);
+  }
+
+  /**
+   * Hash mode: the route a URI names, or undefined for a plain (base-relative
+   * or foreign absolute) URI. `#/x` / `#x` ⇒ `x`; root-relative `/x` ⇒ `x`
+   * (the pathname has no route meaning here); a URL of this document with a
+   * `#/` fragment ⇒ its fragment route.
+   */
+  private hashRouteOf(uri: string): string | undefined {
+    if (uri.startsWith("#")) return uri.slice(1).replace(/^\//, "");
+    if (uri.startsWith("/") && !uri.startsWith("//")) return uri.slice(1);
+    if (typeof window === "undefined" || !this.isAbsolute(uri)) return undefined;
+    try {
+      const url = new URL(uri);
+      if (url.origin === window.location.origin && url.pathname === window.location.pathname && url.hash.startsWith("#/")) {
+        return url.hash.slice(2);
+      }
+    } catch {
+      // Not parsable: resolved as a plain URI.
+    }
+    return undefined;
+  }
+
   private onPopState = (event: PopStateEvent): void => {
     if (this.popStateCallback) {
       // Our own revert/re-apply (history.go) — not a user navigation.
@@ -332,8 +474,29 @@ export class NavigationManager {
       return;
     }
     // event.state equals history.state at popstate (the latter also works for synthetic events).
-    void this.handlePopState((event.state ?? this.history.state) as HistoryState | null);
+    void this.trackPopState((event.state ?? this.history.state) as HistoryState | null);
   };
+
+  /**
+   * Hash mode: a fragment change announced only through hashchange (a typed
+   * URL, `location.hash = …`, an environment without popstate for fragment
+   * navigations) is handled like a back/forward move. Browsers that fire
+   * popstate for fragment navigations too make the hashchange twin find the
+   * location already announced (or a popstate still in progress).
+   */
+  private onHashChange = (): void => {
+    if (this.popStateCallback || this.handlingPopState || this.uri === this.lastLocation) return;
+    void this.trackPopState(this.history.state as HistoryState | null);
+  };
+
+  private async trackPopState(state: HistoryState | null): Promise<void> {
+    this.handlingPopState = true;
+    try {
+      await this.handlePopState(state);
+    } finally {
+      this.handlingPopState = false;
+    }
+  }
 
   private async handlePopState(state: HistoryState | null): Promise<void> {
     const uri = this.uri;
@@ -376,7 +539,7 @@ export class NavigationManager {
 
   private restoreLocation(): void {
     if (this.lastLocation && this.lastLocation !== this.uri) {
-      this.history.replaceState({ _index: this.currentHistoryIndex } satisfies HistoryState, "", this.lastLocation);
+      this.history.replaceState({ _index: this.currentHistoryIndex } satisfies HistoryState, "", this.toBrowserUrl(this.lastLocation));
     }
   }
 
@@ -387,6 +550,25 @@ export class NavigationManager {
       handler(this, event);
     }
   }
+}
+
+/**
+ * Routing mode. "history" (default): Blazor's model, the route is the URL
+ * path. "hash" (Tsazor extension): the route and its query live in the
+ * fragment (`#/orders/5?tab=2`) — for hosting without an index.html fallback.
+ */
+export type RoutingMode = "history" | "hash";
+
+/** Options of `new NavigationManager({ … })`. */
+export interface NavigationManagerOptions {
+  /** Routing mode (default "history"). */
+  readonly mode?: RoutingMode;
+  /** History implementation (default window.history; tests pass a fake). */
+  readonly history?: History;
+}
+
+function isHistory(value: History | NavigationManagerOptions): value is History {
+  return typeof (value as History).pushState === "function";
 }
 
 /** Blazor's NavigationOptions (plus `replace`, the former Tsazor spelling of ReplaceHistoryEntry). */
