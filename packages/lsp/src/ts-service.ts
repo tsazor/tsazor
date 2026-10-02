@@ -130,6 +130,23 @@ function resolveLibDir(): string {
   }
 }
 
+/**
+ * The tsconfig's own declaration files (`include`d `env.d.ts`, `vite-env.d.ts`,
+ * global augmentations): the program's roots are the shadows, so these would
+ * be missing — and with them every ambient module/global they declare.
+ */
+function loadAmbientDeclarations(projectRoot: string, configPath?: string): string[] {
+  try {
+    const config = configPath ?? ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+    if (!config) return [];
+    const parsed = ts.readConfigFile(config, ts.sys.readFile);
+    if (parsed.error) return [];
+    return ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(config)).fileNames.filter((name) => name.endsWith(".d.ts"));
+  } catch {
+    return [];
+  }
+}
+
 function loadProjectOptions(projectRoot: string, configPath?: string): ts.CompilerOptions {
   const fallback = fallbackCompilerOptions();
   try {
@@ -176,11 +193,14 @@ export class TsazorTypeService {
   /** `.tsazor` keys currently building — cycle guard for the shadow cascade. */
   private readonly building = new Set<string>();
   private readonly lookup?: ShadowLookup;
+  /** The tsconfig's .d.ts files — extra program roots next to the shadows. */
+  private readonly ambientDeclarations: readonly string[];
 
   constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup) {
     this.projectRoot = path.resolve(projectRoot);
     this.lookup = lookup;
     const options = loadProjectOptions(this.projectRoot, configPath);
+    this.ambientDeclarations = loadAmbientDeclarations(this.projectRoot, configPath);
     this.ls = ts.createLanguageService(this.createHost(options));
   }
 
@@ -417,6 +437,45 @@ export class TsazorTypeService {
   }
 
   /**
+   * The real TypeScript sources the shadow graph pulls in below `root` —
+   * code-behind classes (`X.tsazor.ts`) and the `.ts` modules they and the
+   * markup import — without shadows, declaration files and node_modules.
+   * Checked in the same program as the shadows, so `.tsazor` imports in them
+   * resolve to the real component types (plain `tsc` only sees the ambient
+   * `*.tsazor` declaration).
+   */
+  projectSourceFiles(root: string): string[] {
+    const program = this.ls.getProgram();
+    if (!program) return [];
+    const prefix = `${path.resolve(root).replace(/\\/g, "/").toLowerCase()}/`;
+    return program
+      .getSourceFiles()
+      .map((file) => file.fileName)
+      .filter((name) => {
+        const normalized = name.replace(/\\/g, "/");
+        return (
+          normalized.toLowerCase().startsWith(prefix) &&
+          !normalized.includes("/node_modules/") &&
+          !normalized.endsWith(".d.ts") &&
+          !normalized.endsWith(".tsazor.gen.ts") &&
+          /\.(ts|tsx|mts|cts)$/.test(normalized)
+        );
+      });
+  }
+
+  /** Syntactic + semantic diagnostics of a real source file of the program, with 0-based positions. */
+  sourceFileDiagnostics(fileName: string): { line: number; character: number; code: number; message: string }[] {
+    const program = this.ls.getProgram();
+    const sourceFile = program?.getSourceFile(fileName);
+    if (!sourceFile) return [];
+    const diagnostics = [...this.ls.getSyntacticDiagnostics(fileName), ...this.ls.getSemanticDiagnostics(fileName)];
+    return diagnostics.map((diagnostic) => {
+      const { line, character } = sourceFile.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
+      return { line, character, code: diagnostic.code, message: ts.flattenDiagnosticMessageText(diagnostic.messageText, " ") };
+    });
+  }
+
+  /**
    * Builds a one-request variant shadow from a patched .tsazor source and
    * computes the query cursor at the end of the baked `this.<chain>` text.
    */
@@ -479,6 +538,7 @@ export class TsazorTypeService {
     const base: ts.LanguageServiceHost = {
       getCompilationSettings: () => options,
       getScriptFileNames: () => [
+        ...this.ambientDeclarations,
         ...[...this.entries.values()].map((entry) => entry.shadow.virtualPath),
         ...[...this.variants.values()].map((v) => v.path),
       ],
@@ -500,8 +560,52 @@ export class TsazorTypeService {
     // TS itself calls these even though the public LanguageServiceHost type
     // omits them (observed at createProgram time); on Windows, case-folded
     // canonical names keep the lowercase shadow-registry keys consistent.
+    const moduleHost: ts.ModuleResolutionHost = {
+      fileExists: (fileName) => this.exists(fileName),
+      readFile: (fileName) => this.snapshotCode(fileName) ?? undefined,
+      directoryExists: (dir) => ts.sys.directoryExists(dir),
+      getDirectories: (dir) => ts.sys.getDirectories(dir),
+      realpath: ts.sys.realpath,
+    };
+    // Shadows register incrementally: a miss cached before a sibling shadow
+    // existed would stick, so the cache is dropped whenever the set of
+    // registered modules changed.
+    const resolutionCache = ts.createModuleResolutionCache(this.projectRoot, (name) => name.toLowerCase(), options);
+    let registeredModules = -1;
+    const currentCache = (): ts.ModuleResolutionCache => {
+      const count = this.entries.size + this.variants.size;
+      if (count !== registeredModules) {
+        registeredModules = count;
+        resolutionCache.clear();
+      }
+      return resolutionCache;
+    };
     return {
       ...base,
+      // A real .ts source (code-behind, a service) importing a component —
+      // `import type Child from "./Child.tsazor"` for a typed @ref — resolves
+      // to the component's shadow, as the shadows' own imports do; otherwise
+      // only the ambient `*.tsazor` declaration (a ComponentType value) is
+      // seen and the class cannot be used as a type.
+      resolveModuleNameLiterals: (literals, containingFile, redirectedReference, compilerOptions, containingSourceFile) =>
+        literals.map((literal) => {
+          const name = literal.text;
+          if (name.endsWith(".tsazor") && name.startsWith(".") && !isShadowPath(containingFile)) {
+            const shadow = shadowPathFor(path.resolve(path.dirname(containingFile), name));
+            if (this.exists(shadow)) {
+              return { resolvedModule: { resolvedFileName: shadow, extension: ts.Extension.Ts, isExternalLibraryImport: false } };
+            }
+          }
+          return ts.resolveModuleName(
+            name,
+            containingFile,
+            compilerOptions,
+            moduleHost,
+            currentCache(),
+            redirectedReference,
+            ts.getModeForUsageLocation(containingSourceFile, literal, compilerOptions),
+          );
+        }),
       // getDefaultLibLocation is also off the public type but read by
       // createProgram (defaultLibraryPath honors it before the fallback).
       getDefaultLibLocation: () => resolveLibDir(),

@@ -21,6 +21,8 @@ export type {
   PizzaTopping,
   Topping,
 } from "./api/models.js";
+// A re-export does not bind the names locally; the helpers below need them.
+import type { Address, LatLong, Order, Pizza, PizzaSpecial, PizzaTopping, Topping } from "./api/models.js";
 
 export const PIZZA_DEFAULT_SIZE = 12;
 export const PIZZA_MINIMUM_SIZE = 9;

@@ -764,10 +764,16 @@ typed:
   by name (`export { X }`) so that rewrite-B named imports resolve against the shadows;
   shadows of imported components from other packages are built
   automatically (cascade across package boundaries).
-- **`tsazor check`** (`tsazor check [project-root]`, exit 1 on errors) checks in
+- **`tsazor check`** (`tsazor check [project-root]`, root defaults to the current
+  directory, exit 1 on errors) checks in
   two passes: compiler diagnostics + shadow build of all project `.tsazor` files
   (including unsaved files), then TS diagnostics across the complete
-  shadow graph. Output `file(line,column) code message` (POSIX, 1-based).
+  shadow graph — the shadows **and** the real `.ts` sources they pull in below the
+  root (code-behind classes `X.tsazor.ts`, imported modules), so a type error in a
+  code-behind fails the gate too. In that program a `.tsazor` import of a `.ts`
+  file resolves to the component's shadow (`import type Child from "./Child.tsazor"`
+  types a `@ref` field as the class), and the tsconfig's own `.d.ts` files
+  (ambient/virtual modules) are included. Output `file(line,column) code message` (POSIX, 1-based).
   The Vite plugin can append the same check to the end of the build as `check: true` — errors
   fail the build.
 - **A real `.d.ts` per component.** From the package manifest,
