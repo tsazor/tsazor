@@ -89,6 +89,11 @@ architecture and security take priority.
   (A5/B7): keep it for routing and data values, replace it for display and input.
 - **E9 — Accessibility:** audit `@tsazor/components` and `@tsazor/fluent` against WCAG 2.2 AA (EU
   Accessibility Act / BFSG since June 2025), and add automated a11y checks to the E2E gates.
+- **E12 — Feel-at-home packages** ([design-extensions-primitives.md](design-extensions-primitives.md)):
+  `@tsazor/primitives` (`Decimal` first, since money in `number` drifts; then
+  `TimeSpan`/`DateOnly`/`TimeOnly`/`Guid`) and `@tsazor/extensions` (`HttpClient` + factory +
+  handler pipeline, `Logger<T>`, `Options<T>`). Opt-in and idiomatic TS; no BCL clones.
+  `Decimal` comes with E8.
 - **E11 — Opt-in hash routing** (Tsazor extension; Blazor has none, default stays history
   routing). For hosting without an `index.html` fallback, static hosting and iframe-embedded apps.
   Route and route query live in the fragment (`#/x?y=1`), and the real query string (e.g. an
