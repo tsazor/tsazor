@@ -192,15 +192,18 @@ validate out of the box with EditContext + `DataAnnotationsValidator`.
 
 ## VS Code
 
-`packages/vscode` contains the extension (v0.2.0): a TextMate grammar (`source.tsazor`) plus the
+`packages/vscode` contains the extension (v0.6.0): a TextMate grammar (`source.tsazor`) plus the
 bundled language server (`@tsazor/lsp`, `--stdio`), which starts one server instance per
 workspace:
 
-- **Diagnostics** live from the compiler (catalog `TZS001…`)
-- **Hover** over components and directives
-- **Go-to-definition** to `.tsazor` source files
+- **Diagnostics** live from the compiler (catalog `TZS001…`) plus mapped TypeScript diagnostics
+  from the typed shadow modules (toggleable)
+- **Hover** over components, directives and slot tags
+- **Go-to-definition** to `.tsazor` source files and `@inject` type modules
 - **Auto-complete**: tag names, component parameters (including `@bind-<param>`),
   directive keywords and expression members
+- **Quick fixes** for the mechanical C# → TypeScript compiler fixes (the same fixes
+  `tsazor codemod` applies in bulk)
 
 To test locally: open the `packages/vscode` folder in VS Code → `F5`
 (Extension Development Host). Details: [language-server.md](language-server.md).

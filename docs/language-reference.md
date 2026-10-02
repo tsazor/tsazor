@@ -147,7 +147,9 @@ rewritten). Shorthand is expanded: `@save({ id })` ⇒ `this.save({ id: this.id 
 `new Foo()` ⇒ `new this.Foo()` (member) or unchanged (import). Inside a local
 `function` or an object method, `this` does not point to the component — there the
 compiler uses the captured component. Unknown free names are not a
-compile error (they become `this.X`; type checking follows with Phase 2).
+compile error (they become `this.X`; a name that does not exist on the component is reported by
+the type layer — TS2339 in the language server and in `tsazor check`, see
+[Typed shadows](#typed-shadows-and-tsazor-check-24)).
 
 - Loop headers are emitted as written: with `let`/`const`, each iteration has
   its own variable — deferred ChildContent sees the value of its iteration. `var` keeps
@@ -591,8 +593,8 @@ typed:
   source line of the `.tsazor`.
 - **Typed slot contexts.** The slot body of a `RenderFragment<T>` parameter
   gets `context` (or `Context=...`) with the `typeArgument` as its type —
-  `context: Person` instead of `any` (this closes the 2.3 note "until 2.4", including
-  `TItem` inference through the type layer: exact or via `TItem[]`). If the
+  `context: Person` instead of `any`, including `TItem` inference through the type layer:
+  exact or via `TItem[]`. If the
   runtime placeholder `typeArgument === "unknown"` is present (an untyped delegate, e.g.
   Virtualize `itemTemplate`), the context intentionally stays `any`.
 - **Typed `@ref`.** Element `@ref`s get their tag type via a cast through the
@@ -666,7 +668,7 @@ text and applied together — where an API form falls inside a rewritten
 | `var` (TZS022) | `let` |
 
 **PascalCase API forms** are only replaced in markup (outside `@code`/`@functions` — C#
-stays there until the Phase 3 migration):
+there is left untouched and is ported by hand):
 
 | C# | TypeScript |
 |---|---|
@@ -681,7 +683,8 @@ stays there until the Phase 3 migration):
 **What remains:** diagnostics without a fix — TZS005 (unresolved tags: slots of unknown
 components, `DynamicComponent` …), TZS024 without a mechanical counterpart
 (`(MarkupString)x`, `new { … }`, `out var`, `is (not) null`) and unmapped
-`@attribute` lists (among them DataAnnotations ⇒ validation model, Phase 3.6;
+`@attribute` lists (among them DataAnnotations — rewrite them by hand as the validation
+decorators, `@Required()` etc.;
 `[CascadingTypeParameter]` is removed by hand per decision A6), and C# in `@code`.
 A known limitation of the template literal fix: a ternary written without parentheses
 in an interpolation hole — `$"{x ? "a" : "b"}` is read as in C# (the `:` as the
@@ -690,7 +693,7 @@ parentheses there (parity); `@(x ? "a" : "b")` or `{(x ? "a" : "b")}` work.
 
 ## Diagnostics
 
-The compiler never fails silently — codes `TZS001`–`TZS030` with a source range
+The compiler never fails silently — codes `TZS001`–`TZS029` with a source range
 (`TZS011`, `TZS014`, `TZS022`, `TZS023` and `TZS026` are warnings, e.g. an `@inherits` conflict with
 code-behind or an ignored directive/clause). New with the code-first parser: `TZS012` C# construct without
 a TS equivalent, `TZS013` directive outside the document level, `TZS015` invalid
@@ -700,7 +703,8 @@ package does not exist (warning; for `_Imports.tsazor`, reported in that file). 
 `TZS019` invalid or unrepresentable `@attribute`, `TZS020` member collides with the
 generated code (`buildRenderTree`). A6: `TZS021` C# form with a mechanical TS counterpart
 (error; the message names the TS form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
-`where T : …`; candidates for codemod/quick fix in Phase 2.5), `TZS022` `var` in render code
+`where T : …`; fixed by the codemod and available as LSP quick fixes, see
+[Codemod](#codemod-razor--tsazor-25)), `TZS022` `var` in render code
 (warning), `TZS023` `@switch` section falls through (warning). Difference from `TZS012`: there,
 no TS counterpart exists (`using (…)`, `lock`). A7: `TZS024` invalid TypeScript in a
 markup expression — `@x`/`@(…)`, attribute values (including mixed ones, event handlers, `@key`,
@@ -723,7 +727,8 @@ element and end tag names), and an empty or invalid `TItem` type argument value 
 2.5: A `TZS024` caused by a C# interpolated or verbatim string carries the
 template literal fix (table above); the other TZS024 causes (C# casts such as
 `(MarkupString)x`, anonymous objects `new { … }`, `out var`, `is (not) null`) are not
-mechanical and have no fix — manual work or Phase 3 built-ins.
+mechanical and have no fix — they are ported by hand, partly onto the built-ins (e.g.
+`(MarkupString)x` ⇒ `x as MarkupString`, see MarkupString above).
 Errors show up in the Vite dev overlay, warnings on the console.
 
 **Ranges and fixes (A7):** besides `pos` (start, 1-based line / 0-based column), every diagnostic

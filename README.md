@@ -111,49 +111,59 @@ createTsazorApp({ root: App, routes });
 | `@tsazor/compiler` | `.tsazor` → TS module: lexer/parser/codegen with source maps, diagnostics (`TZS001…`), scoped CSS scope hash, code-behind detection, `@authorize` |
 | `@tsazor/vite-plugin` | Vite plugin: transform + route manifest (`virtual:tsazor-routes`) + HMR with state retention + compiler errors in the dev overlay + scoped CSS rewriter (postcss) |
 | `@tsazor/components` | Bootstrap 5 UI library, itself written in `.tsazor` (dogfooding) |
+| `@tsazor/fluent` | Fluent 2 design system: token-driven, accessible components written in `.tsazor` ([docs/fluent.md](docs/fluent.md)) |
+| `@tsazor/dotnet` | .NET backend bridge: OpenAPI ⇒ typed TS client (`tsazor-dotnet generate`), `HttpResult`/ProblemDetails, DataAnnotations decorators, cookie/JWT auth ([README](packages/dotnet/README.md)) |
+| `@tsazor/cli` | `tsazor check` (typed component-usage gate) and `tsazor codemod` (`.razor` → `.tsazor`) |
 | `@tsazor/lsp` | Language server: diagnostics, hover, go-to-definition, auto-complete |
 | `@tsazor/testing` | `render()` test helper on top of happy-dom |
+| `@tsazor/conformance` | Blazor conformance suites for the compiler (render-based golden tests) and the runtime (lifecycle/diff semantics) |
 | `packages/vscode` | VS Code extension: TextMate grammar + LSP client |
 | `@tsazor/workspace` | Workspace infrastructure (package build chain, test gates) |
 
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
+- [Design principles](docs/design-principles.md)
 - [Language reference (.tsazor)](docs/language-reference.md)
 - [Architecture & HMR](docs/architecture.md)
 - [Scoped CSS (`X.tsazor.css`)](docs/scoped-css.md)
 - [Code-behind (`X.tsazor.ts`)](docs/code-behind.md)
+- [Fluent components (`@tsazor/fluent`)](docs/fluent.md)
 - [Language Server](docs/language-server.md)
 - [Debugging in DevTools](docs/debugging.md)
 - [Port findings (Blazing Pizza)](docs/port-findings.md)
 
 ## Status
 
-All milestones M1–M8 and the Phase 2 building block are implemented:
+Phases 0–5 of the [roadmap](docs/roadmap.md) are implemented (as of 2026-10-02):
 
-- **Runtime core through data** (M1–M6): RenderTree, diff, lifecycle, parameters/cascading,
-  routing/layout, forms/@bind, Virtualize + TsazorHttp — each with acceptance tests.
-- **Tooling** (M7/M8): Vite plugin with HMR and state retention, route manifest, diagnostics
-  catalog with an error overlay in the dev server, demo app (`apps/demo`).
-- **Components POC** (`@tsazor/components`): Bootstrap 5 in `.tsazor` — dogfooding the framework
-  with the framework.
-- **Blazing Pizza port**: a real workshop app (configurator, checkout, orders) runs 1:1,
-  19/19 E2E tests; gaps and learnings in [docs/port-findings.md](docs/port-findings.md).
-- **Sleipnir Ticker**: a second, different kind of app (live data instead of forms) — ASP.NET Core
-  API (NuGet `Sleipnir.Server`) with `[SleipnirEvent]` push, Tsazor frontend via the
-  **generated TS client** (`sleipnir-codegen`, type safety from the contract); connects Tsazor
-  ↔ Sleipnir, 15/15 E2E checks including subscription survival across navigation.
-- **Scoped CSS & code-behind**: Blazor parity (`b-<hash>` isolation, `::deep`;
-  `X.tsazor.ts` via inheritance instead of partial classes).
-- **Language server**: diagnostics, hover, go-to-definition, auto-complete (tag, attribute,
-  directive and expression context); VS Code extension v0.2.0.
-- **Debugging**: DevTools source map story verified in a real browser (CDP) —
-  breakpoints in `@code`, state inspection, stepping on `.tsazor` lines.
+- **Foundation and runtime core** (Phase 0, tracks A/B): code-first parser with source maps,
+  TS-AST rewriting, import model, RenderTree/diff, render queue with batches, lifecycle,
+  cascading values, parameter change detection, router/navigation, forms/@bind, Virtualize +
+  TsazorHttp.
+- **Parameter metadata and type checking** (Phase 2): metadata-driven codegen, templated
+  components with named slots and template contexts, typed shadows and `tsazor check`, a
+  project-wide language server, and the `.razor` → `.tsazor` codemod.
+- **Blazor parity: built-ins and forms** (Phase 3): ErrorBoundary, DynamicComponent,
+  MarkupString, Sections/HeadOutlet/FocusOnNavigate, EditForm semantics, validation decorators +
+  `DataAnnotationsValidator`, InputFile, SupplyParameterFromQuery, `@bind:format`, scoped DI
+  lifetimes with cycle detection.
+- **Dev server and component library** (Phase 4): HMR with invalidation and state retention,
+  the reworked Fluent library (`@tsazor/fluent`) next to the Bootstrap 5 components
+  (`@tsazor/components`).
+- **External use and .NET bridge** (Phase 5): `exports`-complete packages verified by a
+  tarball smoke gate (`node scripts/tarball-smoke.mjs`), and `@tsazor/dotnet`.
+- **Real-world ports**: Blazing Pizza (configurator, checkout, orders; gaps and learnings in
+  [docs/port-findings.md](docs/port-findings.md)) and Sleipnir Ticker (live data via the
+  generated Sleipnir TS client and SSE push, subscription survival across navigation).
+- **Tooling**: scoped CSS and code-behind with Blazor parity, DevTools debugging via inline
+  source maps (verified in a real browser over CDP), VS Code extension v0.6.0.
 
-**Gates:** package tests 180 ✓ · Pizza E2E 19/19 ✓ · demo regression 31/31 ✓ ·
-scoped demo 10/10 ✓ · code-behind demo 5/5 ✓ · debugging verification 14/14 ✓ ·
-Ticker E2E 15/15 ✓ (including live updates without polling, scoped CSS, subscription survival).
+**Gates** (from [docs/handoff-2026-10-02-phase-complete.md](docs/handoff-2026-10-02-phase-complete.md),
+not re-run for this README): 1227/1227 tests (91 files) ✓ · build ✓ · tarball smoke gate ✓ ·
+LSP smokes ✓ · app E2E: Pizza 20/20, Gallery, Sleipnir, demo including `verify-hmr.mjs` 19/19 ✓ ·
+`tsazor check` 0 findings ✓.
 
-Deliberately deferred for now (do not start without prior agreement): Web Components
-(`defineCustomElement`), named child slots, `@bind:format`, typecheck CLI,
-LSP rename, published npm layout.
+Not implemented (do not start without prior agreement): Web Components
+(`defineCustomElement`), LSP rename, publishing the packages to the npm registry (they are
+packaged and tarball-tested, but not published).

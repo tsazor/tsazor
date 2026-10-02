@@ -383,7 +383,7 @@ forms/edit-form.ts, ported from Blazor's `EditForm.cs`:
 - **Submit:** the `onsubmit` handler is `EventCallback.bind(this, () => this.handleSubmit())`
   (`PreventDefault`); `handleSubmit` awaits `onSubmit`, or, after `validate()`, forwards to
   `onValidSubmit`/`onInvalidSubmit` — the await happens inside the tracked event handler,
-  so `/renderer.waitUntilIdle()` covers async submit callbacks.
+  so `renderer.waitUntilIdle()` covers async submit callbacks.
 - `authorize-view.ts`/`authorize-route-view.ts`: as in Blazor, `notAuthorized` is a
   `RenderFragment<AuthenticationState>` — slot context `@context` in `<NotAuthorized>`.
 
