@@ -1,0 +1,61 @@
+:root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --bg-sunken: #f1f2f5;
+    --surface: #f7f8fa;
+    --fg: #1f2328;
+    --fg-muted: #636c76;
+    --fg-faint: #a3abb5;
+    --border: #e3e6ea;
+    --border-strong: #cfd4da;
+    --accent: #5b5bd6;
+    --accent-strong: #4343b5;
+    --accent-soft: #eeeefc;
+    --accent-fg: #ffffff;
+    --danger: #cf222e;
+    --danger-soft: #fff0f0;
+    --warning: #9a6700;
+    --success: #1a7f37;
+    --editor-bg: #fbfbfd;
+    --editor-active-line: #f2f3f8;
+    --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+}
+
+a {
+    color: var(--accent-strong);
+}
+
+.redirect {
+    padding: 2rem;
+    color: var(--fg-muted);
+}
+
+/* Syntax colors — shared by the editor and the lesson text (editor/highlighter.ts). */
+.tok-keyword { color: #8250df; }
+.tok-string { color: #0a7a3e; }
+.tok-comment { color: #8b949e; font-style: italic; }
+.tok-number { color: #b35900; }
+.tok-tagName { color: #116329; font-weight: 500; }
+.tok-typeName { color: #0550ae; }
+.tok-attributeName { color: #6639ba; }
+.tok-propertyName { color: #0550ae; }
+.tok-meta { color: #c4432b; font-weight: 600; }
+.tok-function { color: #6f42c1; }
+.tok-variableName { color: #24292f; }
+.tok-definition { color: #24292f; }
+.tok-operator { color: #57606a; }
+.tok-punctuation { color: #57606a; }
+.tok-invalid { color: var(--danger); }

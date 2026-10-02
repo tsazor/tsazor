@@ -1,0 +1,6 @@
+/* Styles in this file apply only to App.tsazor. */
+p {
+    color: goldenrod;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 2em;
+}

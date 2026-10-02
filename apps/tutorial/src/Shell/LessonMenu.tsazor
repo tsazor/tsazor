@@ -1,0 +1,62 @@
+<div class="menu">
+    <button type="button" class="menu-button" aria-expanded="@open" @onclick="toggle">
+        <span class="crumb">@current.part.title / @current.chapter.title /</span>
+        <strong>@titleOf(current)</strong>
+        <span class="chevron" aria-hidden="true">▾</span>
+    </button>
+    @if (open) {
+        <div class="backdrop" @onclick="close"></div>
+        <nav class="panel" aria-label="Lessons">
+            @foreach (const part of parts) {
+                <section>
+                    <h2>@part.title</h2>
+                    @foreach (const chapter of part.chapters) {
+                        <h3>@chapter.title</h3>
+                        <ol>
+                            @foreach (const ref of chapter.lessons) {
+                                <li>
+                                    <a href="@(`${track}/${ref.lesson.slug}`)"
+                                       class="@(ref.lesson.slug === current.lesson.slug ? "current" : null)"
+                                       @onclick="close">@titleOf(ref)</a>
+                                </li>
+                            }
+                        </ol>
+                    }
+                </section>
+            }
+        </nav>
+    }
+</div>
+
+@code {
+    @Parameter() track: Track = "ts";
+    @Parameter() current!: LessonRef;
+    @Parameter() lessons: LessonRef[] = [];
+
+    private open = false;
+
+    /** The track's lessons regrouped by part and chapter (track-only lessons drop out of the other track). */
+    private get parts() {
+        const parts: Array<{ title: string; chapters: Array<{ title: string; lessons: LessonRef[] }> }> = [];
+        for (const ref of this.lessons) {
+            let part = parts.find((candidate) => candidate.title === ref.part.title);
+            if (!part) parts.push((part = { title: ref.part.title, chapters: [] }));
+            let chapter = part.chapters.find((candidate) => candidate.title === ref.chapter.title);
+            if (!chapter) part.chapters.push((chapter = { title: ref.chapter.title, lessons: [] }));
+            chapter.lessons.push(ref);
+        }
+        return parts;
+    }
+
+    private titleOf(ref: LessonRef): string {
+        return ref.lesson.text[this.track]?.title ?? ref.lesson.slug;
+    }
+
+    private toggle(): void {
+        this.open = !this.open;
+    }
+
+    private close(): void {
+        this.open = false;
+    }
+}

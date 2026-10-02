@@ -1,0 +1,9 @@
+.editor {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* CodeMirror builds its own DOM inside the host. */
+.editor ::deep .cm-editor {
+    height: 100%;
+}

@@ -1,0 +1,5 @@
+<img />
+
+@code {
+    src = "/tutorial/rocket.svg";
+}

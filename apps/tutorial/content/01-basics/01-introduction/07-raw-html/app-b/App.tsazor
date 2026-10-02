@@ -1,0 +1,7 @@
+@import { MarkupString } from "@tsazor/runtime"
+
+<p>@(new MarkupString(html))</p>
+
+@code {
+    html = "this string contains some <strong>HTML!!!</strong>";
+}

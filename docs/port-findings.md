@@ -123,3 +123,93 @@ Weder Basisklassen- noch Free-Function-Workaround ist nötig.
   `node scripts/verify-pizza.mjs` (19 E2E-Checks, headless Edge, null Console-Errors)
 - Framework-Regressionen: alle Package-Tests bleiben grün (compiler, runtime,
   workspace, testing, lsp, vite-plugin, components)
+
+---
+
+# Dogfooding: Tutorial-App (`apps/tutorial`, M1) → Tsazor
+
+Die interaktive Tutorial-Shell (Topbar, Lektionsmenü, Text, Datei-Tabs, CodeMirror-Editor,
+Problems-Panel, Preview-Iframe) ist komplett in `.tsazor` geschrieben; dazu läuft die
+Compiler-Pipeline **im Browser** (Web Worker). Befunde:
+
+## G. Framework-Lücken (im Paket minimal geschlossen)
+
+### 1. Scoped-CSS-Selektorlogik hing an postcss + `node:crypto` — **verschoben**
+
+`scopeSelector` war reine String-Logik, lag aber in `packages/vite-plugin/src/scoped-css.ts`
+neben postcss und `createHash`. Ein Browser-Host konnte sie nicht importieren.
+**Fix:** nach `packages/compiler/src/scoped-css.ts` verschoben und aus `@tsazor/compiler`
+exportiert; das Vite-Plugin importiert und re-exportiert sie (Tests unverändert grün). Den
+Stylesheet-Walk (Regeln, `@media`, `@keyframes`) macht im Browser ein kleiner eigener Walker
+(`apps/tutorial/src/engine/scoped-css.ts`) — postcss bleibt Plugin-only.
+
+### 2. `@tsazor/workspace` ist nur über `node:fs` nutzbar — **Teil-Fix, Rest offen**
+
+Die Built-in-Listen (`RUNTIME_COMPONENTS`, `RUNTIME_TYPES`, `RUNTIME_MANIFEST`) sind reine
+Daten, kamen aber nur über den Index, der `node:fs`/`node:path` zieht. **Teil-Fix:** neuer
+Subpath-Export `@tsazor/workspace/builtins` (Node-frei; `RUNTIME_MANIFEST` dort re-exportiert).
+**Offen:** die eigentliche Auflösung (Enclosing-Folders, `@using`-Quellen, Ambiguität,
+`_Imports`-Kette, Metadata-Host) ist an das Dateisystem gebunden; das Tutorial dupliziert
+die Regeln in-memory (`apps/tutorial/src/engine/resolve.ts`, ~250 Zeilen). Vorschlag: ein
+`FileSystemHost`-Interface (`exists`, `read`, `list`) in `createFileContext`/`MetadataCache`,
+Node-Implementierung als Default — dann teilen Plugin, LSP und Browser-Hosts *eine*
+Auflösung (Playground, Tutorial, später ein REPL).
+
+## H. Reibungen (dokumentiert, kein Fix nötig)
+
+### 3. `@if`-Narrowing erreicht deferred ChildContent nicht
+
+```razor
+@if (current && text) {
+    <PageTitle>@text.title</PageTitle>   @* tsazor check: TS2532 'possibly undefined' *@
+}
+```
+
+Der Body von `<PageTitle>` ist ein `RenderFragment` (Lambda, später gerendert) — TS verwirft
+das Narrowing von `this.text` darin, korrekt nach TS-Semantik (C#/Razor-Nullable-Analyse
+verhält sich in Lambdas ähnlich). Überraschend für Lernende; Workaround: Getter
+(`pageTitle`) oder ein Local per `@{ const t = text; }` vor dem Tag. Kandidat für einen
+Hinweis in der Sprachreferenz bzw. später im Tutorial (Kapitel „Reusing content").
+
+### 4. `tsazor check` ohne Pfad prüft auch Beispiel-Projekte im App-Ordner
+
+`tsazor check` (Root = App) fand die Lektions-Dateien unter `content/` und meldete TZS005
+(`<Nested>` in `app-b/` liegt nur in `app-a/`). Es gibt kein Exclude; Workaround
+`tsazor check src`. Vorschlag: `check` respektiert `tsconfig.include`/`exclude` oder ein
+`--exclude`-Glob.
+
+### 5. Imperative Widgets einbetten: gut, mit einer Regel
+
+CodeMirror und der Preview-Iframe hängen per `@ref` + `onAfterRender(firstRender)` +
+`dispose()` sauber am Komponenten-Lifecycle (Blazor-Muster mit JS-Interop, hier ohne
+Interop). Callbacks aus Nicht-Tsazor-Events (postMessage, Editor-Updates) brauchen
+`this.stateHasChanged()` bzw. ein `EventCallback.invokeAsync` — wie Blazors
+`InvokeAsync(StateHasChanged)`. Funktionierte ohne Workaround.
+
+### 6. Komponenten-Typ für `@ref` braucht ein explizites `@import`
+
+`<CodeEditor @ref="editor" />` löst über `@using ./Shell` auf, das Feld
+`private editor?: CodeEditor;` braucht für den *Typ* trotzdem
+`@import CodeEditor from "../Shell/CodeEditor.tsazor"` (Tag-Auflösung ≠ Name im Code — so
+dokumentiert, aber eine Stolperstelle). Der Shadow könnte ein `@ref`-Feld ohne Annotation
+mit dem aufgelösten Tag-Typ versehen.
+
+### 7. Ausblick (in M1 nicht getroffen, für M3 notiert)
+
+Die Preview läuft als `srcdoc`-Iframe mit opakem Origin (`sandbox="allow-scripts"`). Für die
+Routing-Lektionen (`@page`, `NavLink`, `navigateTo`) wird `history.pushState` dort
+voraussichtlich scheitern (about:srcdoc). Option: NavigationManager mit In-Memory-History
+(der Konstruktor nimmt schon ein `historyApi`) — für Previews/Tests generell nützlich.
+
+## I. Was reibungslos funktionierte
+
+- Der Compiler läuft unverändert im Browser (Worker): nur `typescript` + `@jridgewell/*`,
+  keine Node-APIs — `compile()` + `extractTsazorMetadata` + `resolveComponentMetadata` mit
+  einem eigenen `MetadataHost` reichen für Parameter-Metadaten, TZS025 & Co.
+- `typescript.transpileModule` statt esbuild senkt die Standard-Decorators korrekt;
+  der `Symbol.metadata`-Polyfill der Runtime greift.
+- Quellmaps: Compiler-Map + TS-Map verkettet ⇒ Laufzeitfehler in der Preview zeigen
+  `App.tsazor:5:9` (E2E geprüft).
+- Router mit Route-Parametern (`@page "/{track}/{slug}"`), `PageTitle`, Scoped CSS +
+  `::deep` für Fremd-DOM (CodeMirror, Iframes, Markdown-HTML), `MarkupString` für den
+  Lektionstext, DI-Singleton für den Tutorial-State.

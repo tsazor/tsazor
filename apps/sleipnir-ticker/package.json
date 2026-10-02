@@ -10,7 +10,7 @@
     "codegen": "node scripts/codegen.mjs",
     "dev": "vite",
     "preview": "vite preview",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "verify": "node scripts/verify.mjs"
   },
   "dependencies": {

@@ -1,0 +1,10 @@
+<h1>Hello @name!</h1>
+
+<p>@quantity tickets at @price € each</p>
+<p>Total: @quantity * price €</p>
+
+@code {
+    name = "Tsazor";
+    quantity = 3;
+    price = 4.5;
+}
