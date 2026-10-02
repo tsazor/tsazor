@@ -4,7 +4,7 @@ Sitzungsziel nach den Phasen 2–5: englische Doku, interaktives Tutorial, Tsazo
 Profilschärfung und ein erster echter Port einer Firmen-SPA. **Zuerst lesen:** dieses Dokument,
 dann [roadmap-1.0.md](roadmap-1.0.md) als Gesamtübersicht.
 
-## Stand `roadmap/phase-0` (HEAD `8d043e8`, 40 Commits vor `origin`, nicht gepusht)
+## Stand `roadmap/phase-0` (HEAD nach diesem Handoff-Commit; über 40 Commits vor `origin`, nicht gepusht)
 
 Gemergt in dieser Sitzung:
 - **`docs/english`**: Nutzer-Doku auf Englisch und auf den aktuellen Stand gebracht. Interne
@@ -52,7 +52,7 @@ Gemergt in dieser Sitzung:
       `Logger<T>`, `Options<T>`.
     - Keine BCL-Klone. Offen: X1–X4.
 
-## Offen: Branch `port/modulestore-fixes` (nicht gemergt; Worktree `agent-a67bcfcce3084293c`)
+## Branch `port/modulestore-fixes` — **gemergt** (`205b30a`, Hash-Routing-Namen vom User bestätigt; Gates danach grün)
 
 Er entstand beim Port einer Business-SPA (Svelte 4, ca. 4k Zeilen, im iframe eingebettet).
 Der Port selbst liegt **außerhalb dieses Repos** (Firmencode; Ort siehe private Notizen).
@@ -73,11 +73,8 @@ Commits:
 Probe-Merge ohne Konflikte. Tests grün; ein Tutorial-Test („async-work app-b“) ist unter Last
 flaky, einzeln läuft er grün.
 
-**Entscheidungen des Users, die vor dem Merge noch ausstehen:**
-1. Die Namen der Hash-Routing-API (`routing.mode`, `NavigationManager({ mode })`, `toLinkHref`).
-2. Freigabe für den Merge.
-3. Die Sicherheitsthemen im Port: beheben oder originalgetreu lassen. Das betrifft den Port,
-   nicht dieses Repo.
+Noch offen: Die Sicherheitsthemen im Port beheben oder originalgetreu lassen? Das betrifft den
+Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte robuster werden.
 
 ## Weitere offene Fragen an den User
 
@@ -89,17 +86,16 @@ flaky, einzeln läuft er grün.
 
 ## Nächste Schritte (laut letztem Gesprächsstand)
 
-1. Die User-Entscheidungen zum Port-Branch einholen, dann mergen.
-2. **E8 Lokalisierung** als nächste große Baustelle. Anforderungen aus dem Port (port-findings R.1/R.2):
+1. **E8 Lokalisierung** als nächste große Baustelle. Anforderungen aus dem Port (port-findings R.1/R.2):
    - Komponenten rendern beim Sprachwechsel automatisch neu.
    - Sprachquellen in Prioritätsreihenfolge: explizit vor Profil vor Default.
    - Tabellen werden asynchron geladen, mit Fallback.
    - Platzhalter und typisierte Schlüssel.
    - **Übersetzbare Validierungsmeldungen.**
    - Kultur-Formatierung über `Intl`, später zusammen mit `Decimal`.
-3. Danach Tutorial M4 (Teil 3: Routing braucht eine In-Memory-History im srcdoc-Preview,
+2. Danach Tutorial M4 (Teil 3: Routing braucht eine In-Memory-History im srcdoc-Preview,
    H.7; Hash-Routing evtl. als Lektion), R1 CI + S1 API-Snapshot.
-4. Bundle-Analyse: erst vor dem Release-Kandidaten. Die Bundle-Größe ist laut User kein Blocker
+3. Bundle-Analyse: erst vor dem Release-Kandidaten. Die Bundle-Größe ist laut User kein Blocker
    (+15 KB gz zum Svelte-Original, cachebar).
 
 ## Resume-Regeln
