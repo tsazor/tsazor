@@ -3,7 +3,7 @@
  * Review §3 (EditForm), roadmap 3.5.
  */
 import { describe, expect, it } from "vitest";
-import { defineComponent, EditForm, EditContext, EventCallback, ValidationMessage, type RenderTreeBuilder } from "@tsazor/runtime";
+import { defineComponent, EditForm, EditContext, EventCallback, InputText, ValidationMessage, type RenderTreeBuilder } from "@tsazor/runtime";
 import { host } from "./host.js";
 
 async function formHost(attrs: Record<string, unknown>) {
@@ -158,5 +158,64 @@ describe("EditForm context semantics (3.5)", () => {
     expect(contexts[1]).not.toBe(contexts[0]);
     expect(inputAfter).not.toBe(inputBefore);
     expect(inputAfter.value).toBe("b");
+  });
+
+  it("an EditContext parameter survives parent re-renders (no context around the absent Model)", async () => {
+    // Blazor compares Model only when one is supplied; comparing the absent
+    // Model with the context's model recreated `new EditContext(undefined)`
+    // on every re-render — the subtree (inputs, ValidationMessages) was
+    // rebuilt against an empty context.
+    const editContext = new EditContext({ name: "" });
+    editContext.setValidator("name", (value) => (value === "" ? "name missing" : null));
+    const contexts: EditContext[] = [];
+    const build = (b: RenderTreeBuilder) => {
+      b.openComponent(0, defineComponent(EditForm));
+      b.addAttribute(1, "EditContext", editContext as never);
+      b.addAttribute(2, "ChildContent", ((context: EditContext) => (inner: RenderTreeBuilder) => {
+        contexts.push(context);
+        inner.openElement(0, "input");
+        inner.closeElement();
+        inner.openComponent(1, defineComponent(ValidationMessage));
+        inner.addAttribute(2, "For", "name");
+        inner.closeComponent();
+      }) as never);
+      b.closeComponent();
+    };
+    const h = await host(build);
+    const input = h.container.querySelector("input");
+    editContext.validate();
+    await h.update(build);
+    await h.update(build);
+    expect(new Set(contexts)).toEqual(new Set([editContext]));
+    expect(h.container.querySelector("input")).toBe(input);
+    expect(h.container.querySelector(".validation-message")?.textContent).toBe("name missing");
+  });
+
+  it("an input writes the bound model before the field-change validation runs (Blazor's order)", async () => {
+    const model = { name: "" };
+    const editContext = new EditContext(model);
+    const seen: string[] = [];
+    // A validator that reads the model instead of its value argument.
+    editContext.setValidator("name", () => {
+      seen.push(model.name);
+      return null;
+    });
+    const h = await host((b) => {
+      b.openComponent(0, defineComponent(EditForm));
+      b.addAttribute(1, "EditContext", editContext as never);
+      b.addAttribute(2, "ChildContent", ((_context: EditContext) => (inner: RenderTreeBuilder) => {
+        inner.openComponent(0, defineComponent(InputText));
+        inner.addAttribute(1, "Value", model.name);
+        inner.addAttribute(2, "ValueChanged", EventCallback.unbound((value: string) => (model.name = value)) as never);
+        inner.addAttribute(3, "ValueExpression", "name");
+        inner.closeComponent();
+      }) as never);
+      b.closeComponent();
+    });
+    const input = h.container.querySelector("input")!;
+    input.value = "typed";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(seen).toEqual(["typed"]);
   });
 });

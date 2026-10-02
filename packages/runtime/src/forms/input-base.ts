@@ -35,10 +35,13 @@ export abstract class InputBase<TValue> extends ComponentBase {
   set currentValue(value: TValue) {
     if (Object.is(value, this.Value)) return;
     this.Value = value;
+    // Blazor's order: ValueChanged first (the bound model field is written by
+    // the synchronous part of the @bind setter), then NotifyFieldChanged — so
+    // validators that read the model see the new value.
+    void this.ValueChanged?.invokeAsync(value);
     if (this.ValueExpression && this.editContext) {
       this.editContext.notifyFieldChanged(this.ValueExpression, value);
     }
-    this.ValueChanged?.invokeAsync(value);
   }
 
   protected override onInitialized(): void {
