@@ -282,6 +282,7 @@ Markup only starts
 | `<input type="number" @bind="n">`, `type="range"` | `Number()` coercion; empty or unparsable text keeps the model value (Blazor: `TryParse` fails — `Number("")` would be 0) |
 | `<input type="date" @bind="d">` | `Date` through the format `yyyy-MM-dd` (Blazor's default for date inputs): renders `formatValue(d, "yyyy-MM-dd")`, parses back as a local date; an explicit `@bind:format` replaces the default |
 | `@bind:event="oninput"` | A different DOM event |
+| `@bind:culture="c"` | E8: culture-aware *number* bind — renders/parses through `Intl` with the culture's separators; anything else warns TZS008 and stays invariant |
 | `@bind:get="v" @bind:set="store"` | Get/set side instead of `@bind` (only as a pair) |
 | `@bind:after="changed"` | Called after the assignment; a promise is awaited, then the component renders |
 | `<input @bind-value="name">`, `@bind-value:event="oninput"` | On an *element*, `@bind-<attr>` binds the attribute `<attr>` (Razor: `@bind-value` = `@bind` spelled out) with `onchange`; modifiers and `number`/`date` coercion as with `@bind`; the value comes from the change event (`checked` for checkboxes, otherwise `value`) |
@@ -310,7 +311,9 @@ attributes does not matter.
 
 **`@bind:format` (3.7)** renders and parses number/date binds through a dedicated
 `formatValue`/`parseValue` implementation (a subset of Blazor's `BindConverter`, invariant culture
-per A5/B7 — TS has no CultureInfo). The value follows Razor: `@bind:format="0.00"`
+per A5/B7 — culture enters only through `@bind:culture`, see
+[Localization](#localization-cultureservice-stringlocalizer-bindculture)). The value follows
+Razor: `@bind:format="0.00"`
 is a string literal (plain text in the attribute), `@bind:format="@fmt"` is an expression. Supported
 formats — a subset, a documented deviation from the full .NET format grammar:
 
@@ -330,8 +333,14 @@ compiler decides by the element, because it cannot see the field's type. Blazor'
 bind here (warning TZS008, format inert) — a documented deviation. Other binds keep Blazor's behavior: `:format` on a string bind and on
 a component bind is a warning TZS008 (the `BindConverter` only applies formats to types
 that carry one — strings don't; on components Blazor ignores it), and the native
-round trip is kept. `@bind:culture` (on elements and components) is error TZS008
-— invariant culture only (A5/B7).
+round trip is kept. `@bind:culture` (E8) applies to *number* binds only; on any other
+bind — and on components — it is a warning TZS008 and the bind stays invariant.
+
+**`@bind:culture` (E8)** is the culture-aware number bind: the value renders and parses through
+`Intl` with the culture's separators (`<input type="number" @bind="amount" @bind:culture="c" />`
+with an injected `CultureService C` and `c = C.current`). Without it everything stays
+exactly invariant (A5/B7) — a pure superset. Details and the whole localization surface:
+[Localization](#localization-cultureservice-stringlocalizer-bindculture).
 
 ## DI — ServiceCollection and lifetimes (3.8)
 
@@ -363,6 +372,59 @@ classes (identity-based — TS instead of interfaces):
   message `A circular dependency was detected for the service of type 'X'.` (a guard per
   synchronous resolution chain — covers self-references and mutual dependencies alike).
 - **Not registered:** `get` throws `Service not registered: X`, `tryGet` returns `undefined`.
+
+## Localization (CultureService, StringLocalizer, @bind:culture)
+
+Blazor's `IStringLocalizer`/`CultureInfo` counterpart, built on `Intl` — no BCL clones. Full
+design and the wiring recipe: [design-localization.md](design-localization.md) (decided and
+implemented; deviations noted in its §10).
+
+`createTsazorApp` always registers a `CultureService` (invariant by default) and a
+`StringLocalizer` (whose `get` returns the key); `localization` configures them, a `services`
+registration can replace either:
+
+```ts
+createTsazorApp({
+  localization: {
+    defaultCulture: "de-DE",
+    tables: { "de-DE": () => import("./i18n/de-DE.js"), "en-US": enTable },
+  },
+  // …
+});
+```
+
+- **`CultureInfo`** — immutable, thin: `name`, `displayName`, `formatNumber`/`formatDate`
+  (Intl options as given). `CultureInfo.invariant` (name `""`) formats fixed to `en-US`; a
+  malformed tag throws at construction.
+- **`CultureService`** — the app-wide culture state (a DI service, not ambient static state).
+  Priority: `setExplicit` (URL parameter, host postMessage) wins over `setFromProfile`
+  (token response) and locks it out for the service's lifetime; `setDefault` is lowest.
+  The URL/profile *wiring* is app code — the recipe is in the design doc.
+- **`StringLocalizer`** — `L.get("Welcome", { name: "Ann" })` (not Blazor's indexer: a class
+  index signature can't carry methods — bent TS for a C# shape). Placeholders are .NET 8's named
+  composite format (`{name}`, `{{` for a literal brace). Fallback chain, never a throw
+  (port-finding R.1): current culture's table → default culture's table → the key (dev warning).
+  Async loaders (`() => import(…)`) serve the fallback until the table arrives; the arrival
+  re-renders. Typed keys come free when the registration parameterizes the localizer with the
+  default table's literal type (`PlaceholdersOf` extracts the placeholders per message).
+- **Auto-render (Tsazor extension)** — injecting a culture-aware service (`CultureService`,
+  `StringLocalizer`) subscribes the component automatically: a culture switch re-renders every
+  injector, no `observe()` boilerplate. The same subscription a hand-written `observe` would
+  build (coalescing, teardown on dispose); the extension is only *who* calls it. Explicitly
+  observing an injected service yourself gets the existing double-subscription dev warning.
+  Blazor has no counterpart — it re-renders nothing on a culture change.
+- **Validation messages** — the built-in texts localize through the reserved
+  `tsazor.validation.<kind>` keys (`tsazor.validation.required`, `tsazor.validation.range`, …)
+  with `{displayName}` and the rule's params; a culture switch re-validates exactly the fields
+  that hold messages. Per rule, .NET's `ErrorMessage` parity:
+  `@Required({ message: "…" })`, `@MinLength(1, { messageKey: "User.NameRequired" })`,
+  `@Range(0, 10, { messageFactory: (ctx) => L.get("Order.Rating", ctx) })`.
+- **`@bind:culture`** — number binds only (see [@bind](#bind-blazor-net-7-semantics)); display-side
+  culture formatting lives on `CultureInfo.formatNumber`/`formatDate`. A5/B7 holds everywhere
+  else: routing, query strings and data values stay invariant.
+
+The snapshot trap (design doc §2): text that is *stored* (menu items in data models, navigation
+entries) does not change language on a culture switch. Store the **key**, translate at render.
 
 ## Components
 

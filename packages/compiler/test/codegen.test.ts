@@ -359,11 +359,20 @@ describe("codegen", () => {
     expect(code).not.toContain("new Date(");
   });
 
-  it("rejects @bind:culture with the invariant-culture decision (TZS008 error)", () => {
-    const errors = (source: string) => gen(source).diagnostics.errors.map((d) => d.message);
-    expect(errors('<input type="date" @bind="day" @bind:culture="de-DE" />')).toEqual([expect.stringContaining("invariant culture only")]);
-    expect(errors('<input @bind-value="x" @bind-value:culture="fr-FR" />')).toEqual([expect.stringContaining("invariant culture only")]);
-    expect(errors('<Stepper @bind-Value="v" @bind-Value:culture="de" />')).toEqual([expect.stringContaining("invariant culture only")]);
+  it("emits @bind:culture on number binds; non-number binds warn TZS008 and stay invariant (E8)", () => {
+    // E8 (design-localization.md §5): the culture expression is the third
+    // formatValue/parseValue argument; without a format it is `undefined`.
+    const number = gen('<input type="number" @bind="amount" @bind:culture="de" />');
+    expect(number.diagnostics.errors).toEqual([]);
+    expect(number.code).toContain('__tsazor_formatValue(this.amount, undefined, this.de)');
+    expect(number.code).toContain('__tsazor_parseValue((__event.target as HTMLInputElement).value, undefined, this.de)');
+    const warnings = (source: string) => gen(source).diagnostics.all.map((d) => d.message);
+    // A date input's value is ISO by the browser's contract — culture is inert.
+    expect(warnings('<input type="date" @bind="day" @bind:culture="de-DE" />')).toEqual([expect.stringContaining("number values only")]);
+    expect(warnings('<input @bind-value="x" @bind-value:culture="fr-FR" />')).toEqual([expect.stringContaining("number values only")]);
+    expect(
+      gen('<Stepper @bind-Value="v" @bind-Value:culture="de" />', withComponents({ Stepper: input("Stepper") })).diagnostics.all.map((d) => d.message),
+    ).toEqual([expect.stringContaining("no effect on a component")]);
   });
 
   /** A bindable input component that declares ValueExpression (like InputBase). */

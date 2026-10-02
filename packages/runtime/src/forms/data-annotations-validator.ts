@@ -1,8 +1,11 @@
 import { ComponentBase } from "../components/component-base.js";
 import { CascadingParameter } from "../components/parameter-metadata.js";
+import { getCurrentServices } from "../di/service-provider.js";
+import type { Token } from "../di/service-collection.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { EditContext } from "./edit-context.js";
 import { enableDataAnnotationsValidation, type DataAnnotationsValidationSubscription } from "./edit-context.js";
+import { StringLocalizer } from "../localization/string-localizer.js";
 
 /**
  * DataAnnotationsValidator, port of Blazor's DataAnnotationsValidator.cs
@@ -37,7 +40,13 @@ export class DataAnnotationsValidator extends ComponentBase {
       );
     }
     this.originalEditContext = this.editContext;
-    this.subscription = enableDataAnnotationsValidation(this.editContext);
+    // E8: a registered StringLocalizer localizes the built-in messages (the
+    // reserved tsazor.validation.* keys) and re-validates on culture change.
+    // tryGet, not inject: without one the messages stay English (a hand-built
+    // tree has no provider at all) — and no auto-render subscription is
+    // needed here: the validation pass's re-run notifies the form.
+    const localizer = getCurrentServices(this)?.tryGet(StringLocalizer as unknown as Token<StringLocalizer>);
+    this.subscription = enableDataAnnotationsValidation(this.editContext, { localizer });
   }
 
   protected override onParametersSet(): void {

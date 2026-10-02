@@ -154,7 +154,13 @@ export class Renderer {
   private createComponentState(definition: ComponentDefinition, parent: ComponentState | null, slotSequence: number): ComponentState {
     const id = this.nextComponentId++;
     void slotSequence;
-    const component = withServices(this.services, () => Reflect.construct(definition.type as unknown as new () => ComponentBase, []));
+    // E8 auto-render: marked services resolved during construction (the
+    // `@inject` field initializers) are collected and observed after —
+    // injecting a culture-aware service re-renders the component on its
+    // notifications (design-localization.md §3).
+    const autoObserve: unknown[] = [];
+    const component = withServices(this.services, () => Reflect.construct(definition.type as unknown as new () => ComponentBase, []), autoObserve);
+    for (const service of autoObserve) component.autoObserveInternal(service);
     component.componentServices = this.services;
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);

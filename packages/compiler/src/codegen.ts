@@ -2098,6 +2098,12 @@ class Codegen {
       // carries no format, like .NET's string binds.
     }
 
+    // E8 (@bind:culture, design-localization.md §5): on a component it is
+    // inert like :format; below, on elements, it applies to number values only.
+    if (attr.culture !== undefined && isComponentBind) {
+      this.diagnostics.warning("TZS008", attr.modifierSpans?.culture ?? attr, `'${label}:culture' has no effect on a component (Blazor ignores it).`);
+    }
+
     if (isComponentBind) {
       this.emitComponentBind(attr, attr.bindTarget ?? "Value", label, pos, ctx.component);
       return;
@@ -2123,6 +2129,20 @@ class Codegen {
     if (attr.format !== undefined && !isNumber && !isDate) {
       this.diagnostics.warning("TZS008", attr.modifierSpans?.format ?? attr, `'${label}:format' applies to date and number values only (Blazor: the BindConverter applies formats to the values that have one) — this bind keeps its native round trip.`);
     }
+    // E8: a culture-aware number bind formats the display value and parses the
+    // change value through Intl with the culture's separators (design-
+    // localization.md §5). A date bind's value is ISO by the browser's
+    // contract, so culture on it (and on any other non-number bind) is inert —
+    // the A5/B7 invariant policy holds everywhere else.
+    const cultureActive = attr.culture !== undefined && isNumber;
+    if (attr.culture !== undefined && !isNumber) {
+      this.diagnostics.warning(
+        "TZS008",
+        attr.modifierSpans?.culture ?? attr,
+        `'${label}:culture' applies to number values only (a date input's value is always ISO; other binds keep their native round trip) — this bind stays invariant.`,
+      );
+    }
+    const cultureEmit = cultureActive ? this.expr(attr.culture!, undefined, attr.codeStarts?.culture) : undefined;
     // A date input without a format binds through Blazor's default for it
     // (BindInputElement("date", …, format: "yyyy-MM-dd")): the element's value
     // is always ISO, so the Date renders as `yyyy-MM-dd` and parses back as a
@@ -2147,25 +2167,31 @@ class Codegen {
 
     // A formatting bind: the display side renders through formatValue, the
     // change value parses with parseValue (both take the format expression —
-    // it may be a variable — and keep the model's value when unparseable).
-    if (format !== undefined) this.runtimeAliases.add("formatValue");
-    if (format !== undefined) this.runtimeAliases.add("parseValue");
+    // it may be a variable — and keep the model's value when unparseable). A
+    // culture bind routes through the same pair (E8), with the culture
+    // expression as the third argument; without a format, `undefined` keeps
+    // the runtime's own default digits.
+    const formatted = format !== undefined || cultureActive;
+    if (formatted) this.runtimeAliases.add("formatValue");
+    if (formatted) this.runtimeAliases.add("parseValue");
+    const formatArgument = formatEmit ?? "undefined";
+    const cultureArgument = cultureEmit ?? "undefined";
 
     // Extraction of the DOM value inside the change handler: Blazor's change
     // event value — `checked` for a checkbox, `value` otherwise, whatever
     // attribute is bound.
     let extract = "(__event.target as HTMLInputElement).value";
     if (isCheckbox) extract = "(__event.target as HTMLInputElement).checked";
-    else if (isNumber) extract = format !== undefined ? "(__event.target as HTMLInputElement).value" : "Number((__event.target as HTMLInputElement).value)";
+    else if (isNumber) extract = formatted ? "(__event.target as HTMLInputElement).value" : "Number((__event.target as HTMLInputElement).value)";
     else if (isDate) extract = format !== undefined ? "(__event.target as HTMLInputElement).value" : "new Date((__event.target as HTMLInputElement).value)";
 
     const parts: string[] = [];
     if (attr.set !== undefined) {
       // Blazor awaits an async setter (and :after) before re-rendering.
-      if (format !== undefined && (isNumber || isDate)) {
+      if (formatted && (isNumber || isDate)) {
         // A parse failure skips the setter (Blazor: TryParse false → no write).
         parts.push(
-          `await ((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${FORMAT_PARSE}(${extract}, ${formatEmit}))`,
+          `await ((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${FORMAT_PARSE}(${extract}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""}))`,
         );
       } else {
         parts.push(`await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
@@ -2173,9 +2199,9 @@ class Codegen {
     } else {
       const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
-      if (format !== undefined && (isNumber || isDate)) {
+      if (formatted && (isNumber || isDate)) {
         // A parse failure skips the setter (Blazor: TryParse false → no write).
-        parts.push(`${assignmentTarget} = (${FORMAT_PARSE}(${extract}, ${formatEmit}) ?? ${assignmentTarget}) as never`);
+        parts.push(`${assignmentTarget} = (${FORMAT_PARSE}(${extract}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""}) ?? ${assignmentTarget}) as never`);
       } else if (isNumber) {
         // Unparsable text keeps the model value (Blazor: TryParse fails). That
         // includes empty text — `Number("")` is 0, and a number input reports
@@ -2190,7 +2216,7 @@ class Codegen {
     const async = attr.set !== undefined || attr.after !== undefined ? "async " : "";
 
     this.stmt(
-      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${format !== undefined ? `${FORMAT_VALUE}(${display}, ${formatEmit})` : display});`,
+      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${formatted ? `${FORMAT_VALUE}(${display}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""})` : display});`,
       pos,
     );
     this.stmt(
@@ -2218,7 +2244,7 @@ class Codegen {
       return error(`'${label}:after' can't be used with '${label}:set' — invoke the ':after' code inside ':set' instead.`);
     }
     if (!base && attr.get === undefined) {
-      const modifier = (["event", "format", "after"] as const).find((k) => attr[k] !== undefined);
+      const modifier = (["event", "format", "culture", "after"] as const).find((k) => attr[k] !== undefined);
       // No modifier either: an invalid bind attribute the parser already reported.
       return modifier === undefined ? false : error(`'${label}:${modifier}' was used but no '${label}' was found.`);
     }

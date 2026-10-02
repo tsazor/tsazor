@@ -35,6 +35,12 @@ export { isCascadingValueSupplier, type CascadingValueSupplier } from "./rendere
 export { ServiceCollection, ServiceProvider, type ServiceLifetime, type Token } from "./di/service-collection.js";
 export { inject } from "./di/service-provider.js";
 
+// Localization (E8): CultureInfo over Intl, the app-wide CultureService, the
+// IStringLocalizer counterpart (docs/design-localization.md).
+export { CultureInfo } from "./localization/culture-info.js";
+export { CultureService, type CultureChangedEventArgs } from "./localization/culture-service.js";
+export { StringLocalizer, formatMessage, type StringTable, type StringTableSource, type StringLocalizerOptions, type PlaceholdersOf } from "./localization/string-localizer.js";
+
 // Navigation
 export {
   NavigationManager,
@@ -109,4 +115,4 @@ export { CascadingAuthenticationState } from "./auth/cascading-authentication-st
 export { AuthorizeRouteView } from "./auth/authorize-route-view.js";
 
 // App bootstrap
-export { createTsazorApp, type TsazorAppOptions, type RoutingOptions } from "./app.js";
+export { createTsazorApp, type TsazorAppOptions, type RoutingOptions, type LocalizationOptions } from "./app.js";

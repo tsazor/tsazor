@@ -1066,7 +1066,7 @@ class Parser {
       // A modifier with no host is kept as a latent host: Blazor allows
       // @bind:get="x" @bind:set="y" without a base @bind.
       if (attr.kind === "bind" && attr.expression === undefined) {
-        const modifier = (["event", "format", "get", "set", "after"] as const).find((k) => attr[k] !== undefined);
+        const modifier = (["event", "format", "culture", "get", "set", "after"] as const).find((k) => attr[k] !== undefined);
         const host = [...attributes].reverse().find((a) => {
           if (a.kind !== "bind") return false;
           return (a as Extract<AttributeNode, { kind: "bind" }>).bindTarget === attr.bindTarget;
@@ -1255,7 +1255,7 @@ class Parser {
         const expression = this.parseRequiredExpression(`bind-${targetName}`, pos);
         return { kind: "bind", bindTarget: targetName, expression: expression?.code ?? "", ...codeStarts("expression", expression), ...end() };
       }
-      if (modifier === "event" || modifier === "format" || modifier === "get" || modifier === "set" || modifier === "after") {
+      if (modifier === "event" || modifier === "format" || modifier === "culture" || modifier === "get" || modifier === "set" || modifier === "after") {
         const value = this.parseRequiredExpression(`bind-${targetName}:${modifier}`, pos);
         // A plain-text :format value is a string literal (Razor: @bind:format="yyyy-MM-dd"); @expressions are code.
         const formatLiteral = modifier === "format" && value?.isText === true ? true : undefined;
@@ -1263,30 +1263,16 @@ class Parser {
           kind: "bind", bindTarget: targetName, [modifier]: value?.code ?? "", modifierSpans: { [modifier]: end() }, ...codeStarts(modifier, value), formatLiteral, ...end(),
         };
       }
-      if (modifier === "culture") {
-        // The culture policy (A5/B7): Tsazor formats and parses invariant only.
-        if (src[this.i] === "=") this.i++;
-        this.parseAttributeValue();
-        this.diagnostics.error("TZS008", end(), `Tsazor formats and parses bind values with invariant culture only — '@bind-${targetName}:culture' is not supported; remove the modifier.`);
-        return { kind: "bind", ...end() };
-      }
       if (src[this.i] === "=") this.i++;
       this.parseAttributeValue();
       this.diagnostics.error("TZS008", end(), `Unknown bind modifier '@bind-${targetName}:${modifier}'.`);
       return { kind: "bind", ...end() };
     }
 
-    // @bind:event / @bind:format / @bind:get / @bind:set / @bind:after
+    // @bind:event / @bind:format / @bind:culture / @bind:get / @bind:set / @bind:after
     if (rest.startsWith(":")) {
       const modifier = rest.slice(1);
-      const known = ["event", "format", "get", "set", "after"];
-      if (modifier.toLowerCase() === "culture") {
-        // The culture policy (A5/B7): Tsazor formats and parses invariant only.
-        if (src[this.i] === "=") this.i++;
-        this.parseAttributeValue();
-        this.diagnostics.error("TZS008", end(), `Tsazor formats and parses bind values with invariant culture only — '@bind:${modifier}' is not supported; remove the modifier.`);
-        return { kind: "bind", ...end() };
-      }
+      const known = ["event", "format", "culture", "get", "set", "after"];
       if (!known.includes(modifier.toLowerCase())) {
         if (src[this.i] === "=") this.i++;
         this.parseAttributeValue();

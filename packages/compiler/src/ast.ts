@@ -240,6 +240,8 @@ export type AttributeNode =
       format?: string;
       /** The @bind:format value was plain attribute text (Razor: a string literal, e.g. "yyyy-MM-dd"); an @expression carries none. */
       formatLiteral?: boolean;
+      /** E8: the @bind:culture expression (a CultureInfo, e.g. the injected CultureService's `current`). */
+      culture?: string;
       get?: string;
       set?: string;
       after?: string;
@@ -259,7 +261,7 @@ export interface RawAttributeValue {
   start: SourceSpan["pos"];
 }
 
-export type BindModifier = "event" | "format" | "get" | "set" | "after";
+export type BindModifier = "event" | "format" | "culture" | "get" | "set" | "after";
 
 export interface DocumentNode {
   directives: DirectiveNode[];

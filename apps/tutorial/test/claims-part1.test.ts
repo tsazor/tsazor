@@ -732,9 +732,12 @@ describe("bind-format", () => {
     expect(m.html()).toContain("<p>2025-12-24 0</p>");
   });
 
-  it("a format on a text input warns TZS008 (no effect); @bind:culture is an error", () => {
+  it("a format on a text input warns TZS008 (no effect); @bind:culture compiles clean (E8)", () => {
     expect(codes(app(`<input @bind="day" @bind:format="dd.MM.yyyy" />`, "day = new Date();"))).toEqual(["warning:TZS008"]);
-    expect(codes(app(`<input type="number" @bind="n" @bind:culture="de-DE" />`, "n = 1;"))).toEqual(["error:TZS008"]);
+    // E8: a culture-aware number bind exists (Part 3 covers it) — it compiles
+    // without diagnostics; a culture on non-number binds is the TZS008 warning.
+    expect(codes(app(`<input type="number" @bind="n" @bind:culture="de" />`, "de = new CultureInfo('de-DE'); n = 1;"))).toEqual([]);
+    expect(codes(app(`<input type="date" @bind="day" @bind:culture="de" />`, "de = new CultureInfo('de-DE'); day = new Date();"))).toEqual(["warning:TZS008"]);
   });
 });
 

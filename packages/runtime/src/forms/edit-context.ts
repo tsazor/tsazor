@@ -1,4 +1,4 @@
-import { rulesForField, validationRulesOf, type ValidationRule } from "./validation-attributes.js";
+import { resolveValidationMessage, rulesForField, validationRulesOf, type ValidationRule } from "./validation-attributes.js";
 
 /**
  * EditContext, port of Blazor's EditContext.cs (src/Components/Forms/src):
@@ -306,47 +306,100 @@ export interface DataAnnotationsValidationSubscription {
 }
 
 /**
+ * E8 (design-localization.md §4): what the DataAnnotations pass needs from a
+ * StringLocalizer — structural, so the forms module carries no localization
+ * dependency. `raw` looks a message up (undefined when missing);
+ * `subscribe` re-runs validation when the culture changes or a table arrives.
+ */
+export interface ValidationMessagesLocalizer {
+  /** @internal Reserved/override key lookup (StringLocalizer.raw). */
+  raw(key: string): string | undefined;
+  subscribe(listener: () => void): () => void;
+}
+
+/** The DataAnnotations validation pass options (E8 message localization). */
+export interface DataAnnotationsValidationOptions {
+  /** The StringLocalizer: reserved `tsazor.validation.*` keys and `messageKey`s resolve through it. */
+  readonly localizer?: ValidationMessagesLocalizer;
+}
+
+/**
  * Enables DataAnnotations validation on the EditContext: field changes and the
  * validation pass validate the model's decorated fields (rules from
  * validation-attributes.js, the class chain of `editContext.model`). The
  * provider keeps its own ValidationMessageStore, so its messages coexist with
  * the function-map adapter's. The subscriptions mirror Blazor's
  * DataAnnotationsEventSubscriptions (OnFieldChanged/OnValidationRequested).
+ *
+ * E8: with a `localizer`, the built-in messages localize through it
+ * (reserved `tsazor.validation.<kind>` keys) and a culture change re-validates
+ * the fields that hold messages, so a form's errors follow the new language
+ * without a full re-render.
  */
-export function enableDataAnnotationsValidation(editContext: EditContext): DataAnnotationsValidationSubscription {
+export function enableDataAnnotationsValidation(
+  editContext: EditContext,
+  options: DataAnnotationsValidationOptions = {},
+): DataAnnotationsValidationSubscription {
+  const localizer = options.localizer;
   const store = editContext.createValidationMessageStore();
+  // The fields that currently hold this provider's messages — the culture
+  // change re-validates exactly these (an untouched invalid field must not
+  // surface messages just because the language switched).
+  const fieldsWithMessages = new Set<string>();
+  const resolve = (rule: ValidationRule, displayName: string, english: string): string =>
+    resolveValidationMessage(rule, displayName, english, localizer);
 
   const validateField = (context: EditContext, field: string, value: unknown): void => {
     const rules = dataAnnotationsRules(context, field);
     if (rules.length === 0) return;
     store.clear(field);
+    fieldsWithMessages.delete(field);
     const model = context.model;
     const displayName = field;
+    const messages: string[] = [];
     for (const rule of rules) {
-      const message = rule.validate(value !== undefined ? value : (model as Record<string, unknown>)[field], model, displayName);
-      if (message) store.add(field, message);
+      const english = rule.validate(value !== undefined ? value : (model as Record<string, unknown>)[field], model, displayName);
+      if (english) messages.push(resolve(rule, displayName, english));
+    }
+    if (messages.length > 0) {
+      store.addAll(field, messages);
+      fieldsWithMessages.add(field);
     }
   };
 
   const validateForm = (context: EditContext): void => {
     store.clear();
+    fieldsWithMessages.clear();
     const model = context.model;
     for (const [field, rules] of validationRulesOfFieldMap(model)) {
       const displayName = field;
+      const messages: string[] = [];
       for (const rule of rules) {
-        const message = rule.validate((model as Record<string, unknown>)[field], model, displayName);
-        if (message) store.add(field, message);
+        const english = rule.validate((model as Record<string, unknown>)[field], model, displayName);
+        if (english) messages.push(resolve(rule, displayName, english));
+      }
+      if (messages.length > 0) {
+        store.addAll(field, messages);
+        fieldsWithMessages.add(field);
       }
     }
   };
 
   const unsubscribeFieldChanged = editContext.onFieldChanged.subscribe(validateField);
   const unsubscribeValidationRequested = editContext.onValidationRequested.subscribe(validateForm);
+  // E8: a culture change (or a late table arrival) re-localizes the fields
+  // that hold messages — the store writes notify, so the form re-renders.
+  const unsubscribeLocalizer = localizer?.subscribe(() => {
+    for (const field of [...fieldsWithMessages]) {
+      validateField(editContext, field, (editContext.model as Record<string, unknown>)[field]);
+    }
+  });
 
   return {
     dispose() {
       unsubscribeFieldChanged();
       unsubscribeValidationRequested();
+      unsubscribeLocalizer?.();
       store.clear();
     },
   };

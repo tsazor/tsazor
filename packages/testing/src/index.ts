@@ -1,4 +1,13 @@
-import { ComponentBase, Renderer, ServiceCollection, type RenderTreeBuilder } from "@tsazor/runtime";
+import {
+  ComponentBase,
+  CultureService,
+  Renderer,
+  ServiceCollection,
+  StringLocalizer,
+  type RenderTreeBuilder,
+  type StringTable,
+  type Token,
+} from "@tsazor/runtime";
 
 /**
  * Blazor's Bunit-style render helper: mounts a component into a detached
@@ -101,6 +110,50 @@ export function createFakeStore<T>(initial: T): FakeStore<T> {
       return () => {
         listeners.delete(listener);
       };
+    },
+  };
+}
+
+/**
+ * A localization fixture for components that inject `CultureService` or
+ * `StringLocalizer`: real services over the given tables (nothing about them
+ * needs faking — the fake is the one-line registration and the culture switch).
+ * `register` wires both under their app tokens into a `render`-style services
+ * callback; `switchTo` is an explicit culture change (it notifies, so injected
+ * components re-render — the E8 auto-render extension). For the profile/lock
+ * semantics call the `culture` service directly.
+ */
+export interface FakeLocalization {
+  readonly culture: CultureService;
+  readonly localizer: StringLocalizer;
+  /** Registers both under their app tokens — `render(C, { services: (s) => fake.register(s) })`. */
+  register(services: ServiceCollection): void;
+  /** Switches the current culture (explicit: wins, locks, notifies). */
+  switchTo(culture: string): void;
+}
+
+/** The fake localization fixture's tables: culture → key → message. */
+export interface FakeLocalizationOptions {
+  tables?: Readonly<Record<string, StringTable>>;
+  defaultCulture?: string;
+}
+
+export function createFakeLocalization(options: FakeLocalizationOptions = {}): FakeLocalization {
+  const culture = new CultureService(options.defaultCulture ?? "");
+  const localizer = new StringLocalizer({
+    culture,
+    tables: options.tables as Record<string, StringTable> | undefined,
+    defaultCulture: options.defaultCulture,
+  });
+  return {
+    culture,
+    localizer,
+    register(services) {
+      services.registerValue(CultureService as unknown as Token<CultureService>, culture);
+      services.register(StringLocalizer as unknown as Token<StringLocalizer>, () => localizer);
+    },
+    switchTo(name) {
+      culture.setExplicit(name);
     },
   };
 }

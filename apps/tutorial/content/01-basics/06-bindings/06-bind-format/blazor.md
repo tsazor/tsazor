@@ -14,7 +14,8 @@ Type `3.14159` and leave the field: the box shows `3.14`, `price` holds the pars
 `yyyy-MM-dd` by default.
 
 > **Coming from Blazor:** `@bind:format` is a documented subset of .NET formatting, always
-> with the invariant culture (`@bind:culture` is an error): number formats `F<n>`, `N<n>`
+> with the invariant culture — culture-aware number binds exist as a Tsazor extension
+> (`@bind:culture`, together with localization in Part 3). Number formats `F<n>`, `N<n>`
 > and digit masks (`0.00`, `#,##0.0`), and the date tokens `yyyy MM dd HH mm ss` (plus
 > `yy M d H m s`). It applies to `type="number"`, `type="range"` and `type="date"` inputs.
 > The common Blazor idiom — a *text* input bound to a `DateTime` with

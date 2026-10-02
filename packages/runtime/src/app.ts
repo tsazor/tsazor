@@ -5,6 +5,8 @@ import type { ComponentBase } from "./components/component-base.js";
 import type { ComponentDefinition } from "./components/component-definition.js";
 import { RouteManifest, type RouteEntry } from "./routing/route-data.js";
 import { HeadOutlet } from "./head/head-outlet.js";
+import { CultureService } from "./localization/culture-service.js";
+import { StringLocalizer, type StringTable, type StringTableSource } from "./localization/string-localizer.js";
 
 /**
  * Blazor's WebAssemblyHostBuilder equivalent: wires renderer, DI and
@@ -28,12 +30,27 @@ export interface TsazorAppOptions {
    * With a shared `navigationManager`, configure the mode there instead.
    */
   routing?: RoutingOptions;
+  /**
+   * Localization options (E8): the app's default culture and its translation
+   * tables. `CultureService` and `StringLocalizer` are always registered (an
+   * unconfigured app gets an invariant culture and an empty localizer, whose
+   * `get` returns the key); a `services` registration can replace either.
+   */
+  localization?: LocalizationOptions;
 }
 
 /** App-level routing options (`createTsazorApp({ routing })`). */
 export interface RoutingOptions {
   /** "history" (default, Blazor) or "hash" (Tsazor extension). */
   readonly mode?: RoutingMode;
+}
+
+/** App-level localization options (`createTsazorApp({ localization })`). */
+export interface LocalizationOptions {
+  /** The default culture (Blazor's ConfigureServices AddLocalization analogue); without it the app is invariant. */
+  readonly defaultCulture?: string;
+  /** Culture → table (a record, or an async loader — `import()` works). */
+  readonly tables?: Readonly<Record<string, StringTableSource>>;
 }
 
 export interface TsazorApp {
@@ -58,6 +75,16 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   if (options.routes) {
     collection.registerValue(RouteManifest as unknown as Token<RouteManifest>, new RouteManifest(options.routes));
   }
+  // E8: CultureService and StringLocalizer always exist (an unconfigured app
+  // is invariant with an empty localizer whose `get` returns the key); the
+  // app's `services` callback runs after and may replace either — a typed
+  // localizer resolves the shared CultureService through the provider.
+  const cultureService = new CultureService(options.localization?.defaultCulture ?? "");
+  collection.registerValue(CultureService as unknown as Token<CultureService>, cultureService);
+  collection.register(
+    StringLocalizer as unknown as Token<StringLocalizer>,
+    () => new StringLocalizer({ culture: cultureService, tables: options.localization?.tables as Record<string, StringTableSource> | undefined, defaultCulture: options.localization?.defaultCulture }),
+  );
   options.services?.(collection);
   const services = collection.build();
 

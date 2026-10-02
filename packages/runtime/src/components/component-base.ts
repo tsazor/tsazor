@@ -4,7 +4,7 @@ import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tr
 import type { RenderHandle } from "../renderer/render-handle.js";
 import type { RenderErrorPhase } from "../renderer/renderer.js";
 import { findParameterMetadata, getParameterInfo } from "./parameter-metadata.js";
-import { getCurrentServices } from "../di/service-provider.js";
+import { collectAutoObserve, getCurrentServices, isAutoRender } from "../di/service-provider.js";
 import { DEV, release, type ObserveListener, type ObserveSource, type ObserveTeardown } from "./observe.js";
 
 /**
@@ -248,7 +248,12 @@ export abstract class ComponentBase {
     if (!provider) {
       throw new Error(`No service provider is active for this component. inject(${String((token as { name?: string }).name)}) failed.`);
     }
-    return provider.get(token);
+    const service = provider.get(token);
+    // E8 auto-render: a culture-aware service injected from a lifecycle method
+    // is observed here (a construction-time call is collected and drained by
+    // the renderer — autoObserveInternal); anything else is just resolved.
+    if (isAutoRender(service) && !collectAutoObserve(service)) this.observe(service as ObserveSource);
+    return service;
   }
 
   /**
@@ -354,6 +359,16 @@ export abstract class ComponentBase {
       }
     }
     return entry.stop;
+  }
+
+  /**
+   * @internal E8 auto-render (design-localization.md §3): the renderer drains
+   * here the marked services resolved during construction (`@inject` field
+   * initializers) — a culture-aware service re-renders this component on its
+   * notifications, the same subscription a hand-written `observe` would build.
+   */
+  autoObserveInternal(source: unknown): void {
+    this.observe(source as ObserveSource);
   }
 
   /**
