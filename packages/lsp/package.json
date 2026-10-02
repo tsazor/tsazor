@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./ts-mapping": {
+      "types": "./dist/ts-mapping.d.ts",
+      "default": "./dist/ts-mapping.js"
+    },
     "./server": {
       "types": "./dist/server.d.ts",
       "default": "./dist/server.js"

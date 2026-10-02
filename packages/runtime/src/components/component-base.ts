@@ -24,11 +24,11 @@ export abstract class ComponentBase {
   /** @internal The DI scope the renderer used to construct this component. */
   componentServices: unknown;
 
-  private initialized = false;
-  private hasPendingRender = false;
-  private firstRenderDone = false;
-  private hasCalledOnAfterRender = false;
-  private readonly afterRenderCallbacks: Array<(firstRender: boolean) => void | Promise<void>> = [];
+  #initialized = false;
+  #hasPendingRender = false;
+  #firstRenderDone = false;
+  #hasCalledOnAfterRender = false;
+  readonly #afterRenderCallbacks: Array<(firstRender: boolean) => void | Promise<void>> = [];
 
   /**
    * Blazor's SetParametersAsync: parameter values are applied first (an
@@ -46,23 +46,23 @@ export abstract class ComponentBase {
    */
   setParametersAsync(parameters: ParameterView): Promise<void> {
     this.applyParameterValues(parameters);
-    if (!this.initialized) {
-      this.initialized = true;
-      return this.runInitAndSetParameters();
+    if (!this.#initialized) {
+      this.#initialized = true;
+      return this.#runInitAndSetParameters();
     }
-    return this.callOnParametersSet();
+    return this.#callOnParametersSet();
   }
 
   /** Blazor's RunInitAndSetParametersAsync. */
-  private runInitAndSetParameters(): Promise<void> {
+  #runInitAndSetParameters(): Promise<void> {
     const initialized = this.onInitialized();
     if (isPromiseLike(initialized)) {
       // Render after the synchronous part of onInitialized (loading state);
       // callOnParametersSet renders again once it completed.
       this.stateHasChanged();
-      return Promise.resolve(initialized).then(() => this.callOnParametersSet());
+      return Promise.resolve(initialized).then(() => this.#callOnParametersSet());
     }
-    return this.callOnParametersSet();
+    return this.#callOnParametersSet();
   }
 
   /**
@@ -70,7 +70,7 @@ export abstract class ComponentBase {
    * part of) onParametersSet; a returned Promise renders again on completion
    * (CallStateHasChangedOnAsyncCompletion).
    */
-  private callOnParametersSet(): Promise<void> {
+  #callOnParametersSet(): Promise<void> {
     const parametersSet = this.onParametersSet();
     this.stateHasChanged();
     if (isPromiseLike(parametersSet)) {
@@ -143,17 +143,17 @@ export abstract class ComponentBase {
    * happens, later ones only when shouldRender() agrees.
    */
   stateHasChangedInternal(): void {
-    if (this.hasPendingRender || !this.renderHandle) return;
-    if (!this.firstRenderDone || this.shouldRender()) {
-      this.hasPendingRender = true;
+    if (this.#hasPendingRender || !this.renderHandle) return;
+    if (!this.#firstRenderDone || this.shouldRender()) {
+      this.#hasPendingRender = true;
       this.renderHandle.render();
     }
   }
 
   /** @internal Queues a render regardless of shouldRender (hot reload, Blazor's IsRenderingOnMetadataUpdate). */
   forceRenderInternal(): void {
-    if (this.hasPendingRender || !this.renderHandle) return;
-    this.hasPendingRender = true;
+    if (this.#hasPendingRender || !this.renderHandle) return;
+    this.#hasPendingRender = true;
     this.renderHandle.render();
   }
 
@@ -165,7 +165,7 @@ export abstract class ComponentBase {
 
   /** Adds a callback to run after the next render (Blazor's OnAfterRender contract for fragments). */
   onAfterRenderInternal(callback: (firstRender: boolean) => void | Promise<void>): void {
-    this.afterRenderCallbacks.push(callback);
+    this.#afterRenderCallbacks.push(callback);
   }
 
   /**
@@ -175,12 +175,12 @@ export abstract class ComponentBase {
    * completed (async) onAfterRender does not trigger a render.
    */
   notifyAfterRender(): void | Promise<void> {
-    const firstRender = !this.hasCalledOnAfterRender;
-    this.hasCalledOnAfterRender = true;
-    if (this.afterRenderCallbacks.length === 0) {
+    const firstRender = !this.#hasCalledOnAfterRender;
+    this.#hasCalledOnAfterRender = true;
+    if (this.#afterRenderCallbacks.length === 0) {
       return this.onAfterRender(firstRender);
     }
-    const callbacks = this.afterRenderCallbacks.splice(0);
+    const callbacks = this.#afterRenderCallbacks.splice(0);
     return (async () => {
       for (const cb of callbacks) {
         await cb(firstRender);
@@ -191,7 +191,7 @@ export abstract class ComponentBase {
 
   /** @internal Whether a render is queued but not yet flushed. */
   get pendingRender(): boolean {
-    return this.hasPendingRender;
+    return this.#hasPendingRender;
   }
 
   /** @internal Renderer entry: builds the current output (wraps protected buildRenderTree). */
@@ -201,22 +201,22 @@ export abstract class ComponentBase {
 
   /** @internal */
   clearPendingRender(): void {
-    this.hasPendingRender = false;
+    this.#hasPendingRender = false;
   }
 
   /** @internal */
   get isInitialized(): boolean {
-    return this.initialized;
+    return this.#initialized;
   }
 
   /** @internal Whether the component has produced output at least once. */
   get firstRenderCompleted(): boolean {
-    return this.firstRenderDone;
+    return this.#firstRenderDone;
   }
 
   /** @internal */
   markFirstRenderCompleted(): void {
-    this.firstRenderDone = true;
+    this.#firstRenderDone = true;
   }
 
   /** All parameter metadata including inherited members (own class wins); cached per class, do not mutate. */

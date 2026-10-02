@@ -1,0 +1,8 @@
+<div class="area">
+    The pointer is at @x × @y
+</div>
+
+@code {
+    x = 0;
+    y = 0;
+}

@@ -1,0 +1,11 @@
+<Inner onMessage="handleMessage" />
+
+<p>@(message ?? "No message yet.")</p>
+
+@code {
+    message?: string;
+
+    handleMessage(text: string) {
+        this.message = `Inner says: ${text}`;
+    }
+}

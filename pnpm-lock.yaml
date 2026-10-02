@@ -277,6 +277,9 @@ importers:
       '@tsazor/components':
         specifier: workspace:*
         version: link:../../packages/components
+      '@tsazor/lsp':
+        specifier: workspace:*
+        version: link:../../packages/lsp
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime

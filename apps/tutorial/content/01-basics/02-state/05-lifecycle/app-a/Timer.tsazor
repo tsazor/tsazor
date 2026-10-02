@@ -1,0 +1,6 @@
+<p>The timer has been running for @seconds s.</p>
+
+@code {
+    seconds = 0;
+    private interval?: ReturnType<typeof setInterval>;
+}

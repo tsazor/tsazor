@@ -1,0 +1,11 @@
+<button @onclick="increment">Count: @count</button>
+<p>@count doubled is @doubled</p>
+
+@code {
+    count = 1;
+    doubled = this.count * 2;
+
+    increment() {
+        this.count++;
+    }
+}

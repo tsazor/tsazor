@@ -120,7 +120,11 @@ Browser ──(Renderer)──►  RenderTree frames ──(diff)──►  edit
   **Disposal** follows Blazor's disposal queue: parent before children (breadth-first), after
   the pass that removes them; `disposeAsync` takes precedence (then no `dispose`, like Blazor
   with `IAsyncDisposable` + `IDisposable`), a running `disposeAsync` is tracked, errors →
-  phase `dispose`, and the remaining disposals continue.
+  phase `dispose`, and the remaining disposals continue. `ComponentBase` keeps its own
+  bookkeeping (initialized, pending render, first render, after-render callbacks) in
+  `#private` fields: TypeScript's `private` is compile-time only, and a component field such
+  as `initialized` would otherwise overwrite the flag — Blazor's private base fields can't
+  collide either.
 - **Cascading values** (Blazor's `CascadingParameterState`): a supplier is any component
   with `isCascadingValueSupplier` (`CascadingValue`, EditForm, CascadingAuthenticationState,
   Tabs, …). Matching follows `CanSupplyValue`: with no name on either side, by type (static

@@ -1,0 +1,8 @@
+<p>Guests:</p>
+<Stepper value="@guests" />
+
+<p>Table for @guests.</p>
+
+@code {
+    guests = 2;
+}

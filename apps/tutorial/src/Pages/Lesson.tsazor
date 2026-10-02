@@ -57,8 +57,9 @@
         return this.current?.lesson.text[this.trackValue];
     }
 
+    /** Compile errors stop the preview; type errors (`tsazor check`) don't — the code still runs. */
     private get hasErrors(): boolean {
-        return this.diagnostics.some((d) => d.severity === "error");
+        return this.diagnostics.some((d) => d.severity === "error" && d.source !== "types");
     }
 
     private get pageTitle(): string {
@@ -94,6 +95,7 @@
         this.files = files;
         this.active = focus in files ? focus : Object.keys(files)[0] ?? "";
         this.revision++;
+        this.diagnostics = [];
         void this.compile();
     }
 
@@ -128,13 +130,18 @@
 
     private async compile(): Promise<void> {
         this.compiling = true;
-        const outcome = await compilerClient.compile(this.files);
+        const outcome = await compilerClient.compile(this.files, (types) => {
+            // The type check (`tsazor check`) follows the build.
+            this.diagnostics = [...(this.build?.diagnostics ?? []), ...types];
+            this.stateHasChanged();
+        });
         if (!outcome) return; // superseded by a newer edit
         this.compiling = false;
         this.compileError = outcome.error;
         if (outcome.build) {
             this.build = outcome.build;
-            this.diagnostics = outcome.build.diagnostics;
+            // Keep the previous type diagnostics until the new check arrives (no flicker).
+            this.diagnostics = [...outcome.build.diagnostics, ...this.diagnostics.filter((d) => d.source === "types")];
         }
         this.stateHasChanged();
     }

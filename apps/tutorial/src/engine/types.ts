@@ -20,6 +20,8 @@ export interface Diagnostic {
   severity: "error" | "warning";
   code: string;
   message: string;
+  /** "types": reported by the type check (`tsazor check`) — the code still runs. */
+  source?: "types";
 }
 
 export interface CompiledModule {

@@ -1,0 +1,11 @@
+<h1>Shopping list</h1>
+
+<ul>
+    @foreach (const item of items) {
+        <li>@item</li>
+    }
+</ul>
+
+@code {
+    items = ["Bread", "Milk", "Eggs", "Coffee", "More coffee"];
+}

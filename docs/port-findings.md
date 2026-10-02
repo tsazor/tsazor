@@ -213,3 +213,122 @@ voraussichtlich scheitern (about:srcdoc). Option: NavigationManager mit In-Memor
 - Router mit Route-Parametern (`@page "/{track}/{slug}"`), `PageTitle`, Scoped CSS +
   `::deep` für Fremd-DOM (CodeMirror, Iframes, Markdown-HTML), `MarkupString` für den
   Lektionstext, DI-Singleton für den Tutorial-State.
+---
+
+# Dogfooding: Tutorial M2 (Part 1, Kapitel 2–7) → Tsazor
+
+Die 27 neuen Lektionen (State, Parameter, Logik, Events, Bindings, Styles) haben jede
+Behauptung des Lektionstexts als Test gegen Compiler, Runtime und Typ-Check festgenagelt
+(`apps/tutorial/test/claims-part1.test.ts`). Dabei fielen auf:
+
+## J. Framework-Lücken (behoben, mit Tests)
+
+### 1. `ComponentBase`-Buchhaltung kollidierte mit Komponentenfeldern — **behoben**
+
+`ComponentBase` hielt seinen Lifecycle-Zustand in TS-`private`-Feldern (`initialized`,
+`hasPendingRender`, `firstRenderDone`, …). TS-`private` ist nur Compile-Zeit: ein
+Komponentenfeld `initialized = "no"` überschrieb das Flag, `setParametersAsync` hielt die
+Komponente für initialisiert und **rief `onInitialized` nie auf** (der Typ-Check meldet
+TS2415, der Build nicht). In Blazor kollidieren private Basisfelder nie. **Fix:** echte
+`#private`-Felder/Methoden in `component-base.ts` (nur dort benutzt). Test:
+`runtime/test/lifecycle.test.ts` („ComponentBase's own state is invisible“). Rest-Risiko:
+`renderHandle`/`componentServices` bleiben öffentliche (`@internal`) Namen.
+
+### 2. `@onclick="() => count++"` scheiterte am Typ-Check — **behoben**
+
+`EventCallback.bind` verlangte `(arg) => void | Promise<void>`. Die TS-Regel „jeder
+Rückgabetyp ist `void`-kompatibel“ gilt nur für reines `void`, nicht für die Union — jede
+Lambda mit Wert (`() => count++`, `() => show = !show`, Blazors Standardbeispiel) war
+TS2345 in `tsazor check`/LSP. **Fix:** Delegate-Typ `(arg) => unknown` (Laufzeit wartet
+ohnehin nur auf echte Promises). Gepinnt in `claims-part1` („inline-handlers“).
+
+### 3. `@attributes` mit nicht gesetztem Capture-Parameter — **behoben**
+
+`addMultipleAttributes(seq, undefined)` warf zur Laufzeit (`Object.keys(undefined)`) —
+also jede Komponente mit `captureUnmatchedValues`, der der Parent *keine* Extra-Attribute
+gibt. Der Typ verlangte zudem `Record<string, AttributeValue>`, so dass das übliche
+`attributes?: Record<string, unknown>` TS2345 war. **Fix:** Blazor-Semantik (null/undefined
+fügt nichts hinzu), Parametertyp `Readonly<Record<string, unknown>> | null | undefined`.
+Test: `runtime/test/render-tree.test.ts`.
+
+### 4. `@bind` auf `type="range"` lieferte Strings — **behoben**
+
+Die `Number()`-Konvertierung hing nur an `type="number"`; ein Range-Slider schrieb `"5"`
+in ein `number`-Feld (`a + b` ⇒ `"52"`). Blazor hat `BindInputElement("range", …)`.
+**Fix:** `range` wie `number` (inkl. `@bind:format`). Test: `compiler/test/codegen.test.ts`.
+
+### 5. `@bind` auf `type="date"` ohne Format zeigte nichts — **behoben**
+
+Die Anzeige band das `Date`-Objekt roh (`String(date)` ⇒ für ein Date-Input ungültig ⇒
+leeres Feld), die Rückrichtung parste mit `new Date(text)` (UTC-Mitternacht). Blazor nimmt
+für Date-Inputs das Default-Format `yyyy-MM-dd`. **Fix:** Default-Format `yyyy-MM-dd`
+(formatValue/parseValue, lokales Datum), ein explizites `@bind:format` ersetzt es.
+
+### 6. Leerer Number-Input setzte 0 — **behoben**
+
+Der NaN-Guard ließ `Number("") === 0` durch; ein Number-Input meldet ungültigen Text als
+`""`, also wurde Löschen/Tippfehler zu `0`. Blazor (`TryParse("")` schlägt fehl) und der
+Format-Pfad (`parseValue`) behalten den alten Wert. **Fix:** leerer Text behält den Wert.
+
+## K. Lücken (dokumentiert, nicht behoben)
+
+### 7. `@bind:format` auf Text-Inputs (Blazors Datums-Idiom) — **offen**
+
+`<input @bind="date" @bind:format="dd.MM.yyyy" />` ist in Blazor das Standardbeispiel. Der
+Compiler entscheidet Konvertierung/Format am Element (`type`), nicht am Feldtyp, und
+behandelt das als String-Bind (TZS008-Warnung, Format wirkungslos). Machbar wäre ein
+Laufzeit-Dispatch über den aktuellen Modellwert (`Date`/`number` ⇒ formatValue/parseValue),
+das ist aber mehr als ein Mini-Fix. Lektion „Formatted bindings“ zeigt `type="number"` +
+`F2` und den Date-Default und dokumentiert die Abweichung (Blazor-Track);
+`language-reference.md` ergänzt.
+
+### 8. Select/Number-Felder: kein Konvertieren nach Feldtyp
+
+Wie 7: `@bind` auf `<select>` schreibt immer den String. Blazor konvertiert nach `int`/Enum.
+`tsazor check` meldet die Zuweisung an ein `number`-Feld (TS2322) — die Lektion nutzt
+String-IDs und erklärt das.
+
+### 9. Event-Argument-Typ wird nicht gegen den Eventnamen geprüft
+
+`@onpointermove="move"` mit `move(e: KeyboardEvent)` ist im Typ-Check grün; Blazor würde
+`EventCallback<KeyboardEventArgs>` vs. `MouseEventArgs` ablehnen. Vorschlag: im typisierten
+Shadow den Handler gegen `HTMLElementEventMap[name]` prüfen. Lektion „DOM events“ sagt es
+ehrlich („the annotation is your promise“).
+
+### 10. TS1360-Squiggle sitzt hinter dem Attributwert (auch im LSP)
+
+Der Shadow prüft Komponentenattribute als `(value) satisfies T`; TS meldet TS1360 am
+*Typ*-Knoten, der keine Quelle hat — `genToSrc` rechnet vom letzten Token aus weiter und
+landet hinter dem Wert. Das Tutorial mappt den Fehler auf Attributstart…Wertende um
+(`apps/tutorial/src/engine/type-check.ts`, `satisfiedValueSpan`). Das LSP (`tsDiagnostics`)
+hat dieselbe Verschiebung — Kandidat für denselben Fix dort oder ein Mapping-Eintrag für
+den `satisfies`-Typ im Codegen.
+
+### 11. happy-dom 18: `nextSibling` von `<select>`/`<form>` ist `undefined`
+
+`select.nextSibling`/`form.nextSibling` liefern in happy-dom 18 `undefined`, obwohl
+`childNodes` stimmt. Der DomRenderer läuft Geschwister per `nextSibling` ab ⇒ DOM-Updates
+von Elementen *nach* einem Select/Form scheitern in `@tsazor/testing` („Cannot read
+properties of null“), im Browser nicht (E2E prüft den Select-Bind in Edge). Betrifft
+Nutzertests mit `@tsazor/testing`. Optionen: happy-dom-Update prüfen, oder `LogicalChildren`
+über `childNodes` statt `nextSibling` laufen lassen (nur für Tests nötig — nicht gemacht).
+
+## L. Engine-Ergänzungen fürs Tutorial
+
+- **In-Browser-`tsazor check`:** `src/engine/type-check.ts` baut die Shadow-Module wie das
+  LSP (`compile(…, { typedShadow })`, Rewrite A für Geschwister-Komponenten), dazu ein
+  TS-LanguageService über ein In-Memory-FS (lib-.d.ts + `@tsazor/runtime`/`components`-d.ts,
+  `virtual:tutorial-types`, lazy im Worker). Mapping über `TsazorGenMap` — dafür neuer
+  Subpath-Export `@tsazor/lsp/ts-mapping` (node-frei). Der Worker antwortet zweistufig
+  (Build ⇒ Preview sofort, Typ-Diagnosen danach); Typfehler stoppen die Preview nicht. Der
+  Lesson-Gate prüft jetzt jede `app-a`/`app-b` auch typ-sauber (`typeErrors: true` für die
+  Lektion, die davon handelt). Wiederkehrender Wunsch aus G.2: ein `FileSystemHost` in
+  `@tsazor/lsp`/`workspace`, dann entfiele die Duplizierung von Shadow-Bau und Auflösung.
+- **Highlighting:** der `.tsazor`-Stream-Mode behandelt Control-Block-Bodies und `@{ }` als
+  Code (Statements, Markup ab Tag in Statement-Position bis zum schließenden Tag, `@:`-Zeilen,
+  `else`/`catch`/`finally`-Fortsetzungen); Generics in `@code` sind keine Tags mehr.
+- **Gate mit Interaktion:** Front-Matter `gate: click …; wait …` für Lektionen, deren Lösung
+  sich erst im Verhalten unterscheidet; Formular-Zustand (value/checked) zählt zum Snapshot.
+- **verify.mjs** nutzt einen Server auf :5330 nur, wenn er diesen Checkout bedient
+  (`/__tutorial-root`), sonst startet es einen eigenen auf dem nächsten freien Port
+  (parallele Worktrees).

@@ -147,9 +147,15 @@ export class RenderTreeBuilder {
     });
   }
 
-  addMultipleAttributes(sequence: number, attributes: Record<string, AttributeValue>): void {
+  /**
+   * Blazor's AddMultipleAttributes (`@attributes`): null/undefined adds
+   * nothing — a captureUnmatchedValues property stays unset while the parent
+   * passes no extra attributes.
+   */
+  addMultipleAttributes(sequence: number, attributes: Readonly<Record<string, unknown>> | null | undefined): void {
+    if (attributes === null || attributes === undefined) return;
     for (const name of Object.keys(attributes)) {
-      this.addAttribute(sequence, name, attributes[name]!);
+      this.addAttribute(sequence, name, attributes[name] as AttributeValue);
     }
   }
 

@@ -1,11 +1,21 @@
 /**
  * A `.tsazor` highlighting mode as a CodeMirror stream parser: Razor markup
- * with embedded TypeScript (`@code { }`, `@{ }`, `@( )`, control-block
- * headers, implicit `@expressions`, attribute values). Shared by the editor
- * (StreamLanguage) and the build-time highlighter of the lesson text.
+ * with embedded TypeScript. Shared by the editor (StreamLanguage) and the
+ * build-time highlighter of the lesson text.
+ *
+ * Contexts follow the language (language-reference.md, "Code contexts"):
+ *
+ * - markup (the document level) with `@expr`, `@(…)`, attribute values;
+ * - `@code { }` / `@functions { }`: a TypeScript class body;
+ * - `@{ }` and the bodies of `@if`/`else`, `@foreach`, `@for`, `@while`,
+ *   `@switch`, `@try`… — **code-first**: TypeScript statements, where markup
+ *   only starts at a tag in statement position (and runs until that element
+ *   closes), at `@:` (the rest of the line) and at `@expr` (output);
+ * - `@if (…)` / `@foreach (…)` headers and directive lines (`@import …`).
  *
  * It is a highlighter, not a parser: it tracks just enough context (brace and
- * paren depth, quotes, comments) to color the tutorial's code correctly.
+ * paren depth, element nesting, quotes, comments) to color the tutorial's
+ * code correctly.
  */
 
 export interface StreamLike {
@@ -24,10 +34,17 @@ export interface StreamLike {
 }
 
 type Frame =
-  /** TS code until the matching close (`}` for blocks, `)` for expressions/headers). */
-  | { kind: "code"; close: "}" | ")" | "]"; depth: number }
-  /** Inside `<tag …>` after the name. */
-  | { kind: "tag" }
+  /**
+   * TS code until the matching close (`}` for blocks, `)` for expressions and
+   * headers). `statements`: a code-first context (`@{ }`, control bodies),
+   * where tags in statement position open markup; `control`: a control body,
+   * whose `}` may continue with `else`/`catch`/`finally`.
+   */
+  | { kind: "code"; close: "}" | ")" | "]"; depth: number; statements?: boolean; control?: boolean }
+  /** Element content opened from a code context: markup until the element closes. */
+  | { kind: "element"; depth: number }
+  /** Inside `<tag …>` after the name. `fromCode`: opened in statement position. */
+  | { kind: "tag"; closing: boolean; void: boolean; fromCode: boolean }
   /** A quoted attribute value. */
   | { kind: "attr"; quote: string };
 
@@ -37,14 +54,20 @@ export interface TsazorState {
   comment: "" | "razor" | "html" | "ts";
   /** Template literal in progress (TS). */
   template: boolean;
-  /** The last markup token was a control keyword: its `(` opens a code header. */
+  /** The last token was a control keyword: its `(` opens a code header. */
   expectHeader: boolean;
-  /** `@code` / `@functions` / `@if`… seen: the next `{` opens a code block (`@code`) or a markup body. */
-  expectBlock: "" | "code" | "markup";
+  /** The next `{` opens a code block: a class body (`@code`) or statements (`@{`, control bodies). */
+  expectBlock: "" | "code" | "control";
+  /** A control body just closed: `else` / `catch` / `finally` may continue it. */
+  maybeContinuation: boolean;
   /** Rest of a directive line (`@import …`, `@inject …`): tokenized as TypeScript. */
   lineCode: boolean;
+  /** Rest of a `@:` line inside a code context: tokenized as markup. */
+  lineMarkup: boolean;
   /** The `@` of an implicit expression was emitted; its identifier chain follows. */
   implicit: boolean;
+  /** Last significant character in a code context (statement-position check for tags). */
+  prev: string;
 }
 
 const TS_KEYWORDS = new Set([
@@ -52,15 +75,27 @@ const TS_KEYWORDS = new Set([
   "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for", "from", "function", "get", "if",
   "implements", "import", "in", "instanceof", "interface", "keyof", "let", "new", "null", "of", "override", "private",
   "protected", "public", "readonly", "return", "satisfies", "set", "static", "super", "switch", "this", "throw",
-  "true", "try", "type", "typeof", "undefined", "var", "void", "while", "yield",
+  "true", "try", "type", "typeof", "undefined", "var", "void", "while", "yield", "accessor",
 ]);
 const TS_TYPES = new Set(["string", "number", "boolean", "bigint", "unknown", "any", "never", "object", "symbol"]);
+const VOID_ELEMENTS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 
 const CONTROL = /^(if|else|foreach|for|while|do|switch|try|catch|finally)\b/;
 const DIRECTIVES = /^(page|layout|using|import|inject|inherits|typeparam|implements|namespace|attribute|authorize|rendermode|preservewhitespace)\b/;
 
 export function startState(): TsazorState {
-  return { stack: [], comment: "", template: false, expectHeader: false, expectBlock: "", lineCode: false, implicit: false };
+  return {
+    stack: [],
+    comment: "",
+    template: false,
+    expectHeader: false,
+    expectBlock: "",
+    maybeContinuation: false,
+    lineCode: false,
+    lineMarkup: false,
+    implicit: false,
+    prev: "",
+  };
 }
 
 export function copyState(state: TsazorState): TsazorState {
@@ -84,12 +119,16 @@ export function token(stream: StreamLike, state: TsazorState): string | null {
       return "variableName";
     }
   }
-  if (state.lineCode && stream.sol()) state.lineCode = false;
+  if (stream.sol()) {
+    state.lineCode = false;
+    state.lineMarkup = false;
+  }
   if (state.lineCode) return code(stream, state, LINE_FRAME);
   const frame = top(state);
-  if (frame?.kind === "code") return code(stream, state, frame);
-  if (frame?.kind === "tag") return tag(stream, state);
+  if (frame?.kind === "tag") return tag(stream, state, frame);
   if (frame?.kind === "attr") return attrValue(stream, state, frame);
+  if (state.lineMarkup) return markup(stream, state);
+  if (frame?.kind === "code") return code(stream, state, frame);
   return markup(stream, state);
 }
 
@@ -97,6 +136,20 @@ export function token(stream: StreamLike, state: TsazorState): string | null {
 
 function markup(stream: StreamLike, state: TsazorState): string | null {
   if (stream.eatSpace()) return null;
+  if (state.maybeContinuation) {
+    state.maybeContinuation = false;
+    const continuation = stream.match(/^(else|catch|finally)\b/) as RegExpMatchArray | null;
+    if (continuation) {
+      state.expectBlock = "control";
+      if (continuation[1] === "catch") state.expectHeader = true;
+      else if (continuation[1] === "else" && stream.match(/^\s*if\b/, false)) {
+        stream.eatSpace();
+        stream.match("if");
+        state.expectHeader = true;
+      }
+      return "keyword";
+    }
+  }
   if (stream.match("@*")) {
     state.comment = "razor";
     return razorComment(stream, state);
@@ -115,38 +168,30 @@ function markup(stream: StreamLike, state: TsazorState): string | null {
   }
   if (stream.peek() === "{" && state.expectBlock) {
     stream.next();
-    if (state.expectBlock === "code") state.stack.push({ kind: "code", close: "}", depth: 0 });
+    state.stack.push(
+      state.expectBlock === "code"
+        ? { kind: "code", close: "}", depth: 0 }
+        : { kind: "code", close: "}", depth: 0, statements: true, control: true },
+    );
     state.expectBlock = "";
+    state.prev = "{";
     return "brace";
   }
-  if (stream.peek() === "}") {
-    stream.next();
-    // `} else {` / `} else if (…) {`
-    if (stream.match(/^\s*else\b/, false)) {
-      stream.eatSpace();
-      stream.match("else");
-      state.expectBlock = "markup";
-      if (stream.match(/^\s*if\b/, false)) {
-        stream.eatSpace();
-        stream.match("if");
-        state.expectHeader = true;
-      }
-      return "keyword";
-    }
-    return "brace";
-  }
-  if (stream.match(/^<\/?[A-Za-z][\w.:-]*/, false)) {
-    const name = (stream.match(/^<\/?([A-Za-z][\w.:-]*)/) as RegExpMatchArray)[1]!;
-    state.stack.push({ kind: "tag" });
-    return /^[A-Z]/.test(name) ? "typeName" : "tagName";
-  }
+  if (stream.match(/^<\/?[A-Za-z][\w.:-]*/, false)) return openTag(stream, state, false);
   if (stream.match("&")) {
     stream.match(/^#?\w+;/);
     return "atom";
   }
   stream.next();
-  stream.eatWhile(/[^@<{}&\s]/);
+  stream.eatWhile(/[^@<&\s]/);
   return null;
+}
+
+function openTag(stream: StreamLike, state: TsazorState, fromCode: boolean): string {
+  const match = stream.match(/^<(\/?)([A-Za-z][\w.:-]*)/) as RegExpMatchArray;
+  const name = match[2]!;
+  state.stack.push({ kind: "tag", closing: match[1] === "/", void: VOID_ELEMENTS.has(name.toLowerCase()), fromCode });
+  return /^[A-Z]/.test(name) ? "typeName" : "tagName";
 }
 
 function transition(stream: StreamLike, state: TsazorState): string {
@@ -158,11 +203,13 @@ function transition(stream: StreamLike, state: TsazorState): string {
   }
   if (stream.peek() === "{") {
     stream.next();
-    state.stack.push({ kind: "code", close: "}", depth: 0 });
+    state.stack.push({ kind: "code", close: "}", depth: 0, statements: true });
+    state.prev = "{";
     return "meta";
   }
   if (stream.peek() === ":") {
     stream.next();
+    state.lineMarkup = true;
     return "meta";
   }
   if (stream.match(/^(code|functions)\b/)) {
@@ -172,7 +219,7 @@ function transition(stream: StreamLike, state: TsazorState): string {
   if (stream.match(CONTROL)) {
     const word = stream.current().slice(1);
     state.expectHeader = word !== "else" && word !== "do" && word !== "try" && word !== "finally";
-    state.expectBlock = "markup";
+    state.expectBlock = "control";
     return "keyword";
   }
   if (stream.sol() || stream.string.slice(0, stream.pos - 1).trim() === "") {
@@ -202,10 +249,24 @@ function implicitTail(stream: StreamLike, state: TsazorState): void {
 
 /* Tags and attributes ----------------------------------------------------------- */
 
-function tag(stream: StreamLike, state: TsazorState): string | null {
+function tag(stream: StreamLike, state: TsazorState, frame: Extract<Frame, { kind: "tag" }>): string | null {
   if (stream.eatSpace()) return null;
-  if (stream.match("/>") || stream.match(">")) {
+  const selfClosing = stream.match("/>");
+  if (selfClosing || stream.match(">")) {
     state.stack.pop();
+    const opensContent = !selfClosing && !frame.closing && !frame.void;
+    const parent = top(state);
+    if (parent?.kind === "element") {
+      // Nested element inside markup that a code context opened.
+      if (opensContent) parent.depth++;
+      else if (frame.closing && --parent.depth === 0) {
+        state.stack.pop();
+        state.prev = ">";
+      }
+    } else if (frame.fromCode) {
+      if (opensContent) state.stack.push({ kind: "element", depth: 1 });
+      else state.prev = ">";
+    }
     return "tagName";
   }
   if (stream.peek() === '"' || stream.peek() === "'") {
@@ -238,8 +299,15 @@ function attrValue(stream: StreamLike, state: TsazorState, frame: { quote: strin
 
 /* TypeScript -------------------------------------------------------------------- */
 
-function code(stream: StreamLike, state: TsazorState, frame: { close: string; depth: number }): string | null {
+function code(stream: StreamLike, state: TsazorState, frame: { close: string; depth: number; statements?: boolean; control?: boolean }): string | null {
   if (stream.eatSpace()) return null;
+  const style = codeToken(stream, state, frame);
+  const text = stream.current().trim();
+  if (text.length > 0 && style !== "comment") state.prev = text[text.length - 1]!;
+  return style;
+}
+
+function codeToken(stream: StreamLike, state: TsazorState, frame: { close: string; depth: number; statements?: boolean; control?: boolean }): string | null {
   const ch = stream.peek()!;
   if (stream.match("//")) {
     stream.skipToEnd();
@@ -248,6 +316,11 @@ function code(stream: StreamLike, state: TsazorState, frame: { close: string; de
   if (stream.match("/*")) {
     state.comment = "ts";
     return tsBlockComment(stream, state);
+  }
+  if (frame.statements) {
+    // Code-first contexts: markup at a tag in statement position, `@:` lines, `@expr` output.
+    if (ch === "@" && stream.match(/^@[:({A-Za-z_$]/, false)) return transition(stream, state);
+    if (ch === "<" && /^[{};)>]?$/.test(state.prev) && stream.match(/^<\/?[A-Za-z]/, false)) return openTag(stream, state, true);
   }
   if (ch === '"' || ch === "'") {
     stream.next();
@@ -283,17 +356,12 @@ function code(stream: StreamLike, state: TsazorState, frame: { close: string; de
     stream.next();
     if (frame.depth === 0) {
       state.stack.pop();
-      // `@if (…)` header closed: the body follows.
+      // A control body closed: `} else {`, `} catch (e) {`, `} finally {` may follow.
+      if (frame.control) state.maybeContinuation = true;
       return frame.close === "}" ? "brace" : "bracket";
     }
     frame.depth--;
     return frame.close === "}" ? "brace" : "bracket";
-  }
-  // Markup inside a code block: `<tag` in statement position.
-  if (ch === "<" && frame.close === "}" && stream.match(/^<\/?[A-Za-z]/, false)) {
-    const name = (stream.match(/^<\/?([A-Za-z][\w.:-]*)/) as RegExpMatchArray)[1]!;
-    state.stack.push({ kind: "tag" });
-    return /^[A-Z]/.test(name) ? "typeName" : "tagName";
   }
   if (stream.match(/^[{}()[\]]/)) return "bracket";
   if (stream.match(/^[=<>!+\-*/%&|^~?:]+/)) return "operator";

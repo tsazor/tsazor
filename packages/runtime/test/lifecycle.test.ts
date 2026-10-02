@@ -47,6 +47,27 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+describe("ComponentBase's own state is invisible to components", () => {
+  it("a component field named like the base's bookkeeping (initialized, …) does not disturb the lifecycle", async () => {
+    class Collides extends ComponentBase {
+      // In Blazor, a base class's private fields can't collide; with TS-only
+      // `private` they could (a truthy `initialized` skipped onInitialized).
+      initialized = "no";
+      hasPendingRender = "x";
+      firstRenderDone = "x";
+      override onInitialized(): void {
+        this.initialized = "yes";
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, this.initialized);
+      }
+    }
+    const { renderer, container } = mount(Collides);
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("yes");
+  });
+});
+
 describe("async lifecycle (Blazor's RunInitAndSetParametersAsync)", () => {
   it("a synchronous lifecycle renders exactly once, in the parent's batch", async () => {
     class Kid extends ComponentBase {

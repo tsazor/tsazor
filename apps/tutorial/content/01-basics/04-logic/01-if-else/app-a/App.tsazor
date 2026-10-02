@@ -1,0 +1,11 @@
+@if (!user.loggedIn) {
+    <button @onclick="toggle">Log in</button>
+}
+
+@code {
+    user = { name: "Ada", loggedIn: false };
+
+    toggle() {
+        this.user.loggedIn = !this.user.loggedIn;
+    }
+}

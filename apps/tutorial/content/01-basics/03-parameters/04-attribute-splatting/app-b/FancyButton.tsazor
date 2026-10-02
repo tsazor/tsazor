@@ -1,0 +1,6 @@
+<button class="fancy" @attributes="attributes">@label</button>
+
+@code {
+    @Parameter() label = "";
+    @Parameter({ captureUnmatchedValues: true }) attributes?: Record<string, unknown>;
+}

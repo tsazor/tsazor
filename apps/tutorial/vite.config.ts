@@ -13,6 +13,8 @@ export default defineConfig({
   },
   worker: {
     format: "es",
+    // The compile worker imports virtual:tutorial-types.
+    plugins: () => [tutorialPlugin({ root })],
   },
   build: {
     target: "es2022",

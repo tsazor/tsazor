@@ -1,0 +1,10 @@
+.boxes {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Meant for the boxes — but they are Box's elements, not App's. */
+.box {
+    background: #c4b5fd;
+    border-radius: 12px;
+}

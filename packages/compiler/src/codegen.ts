@@ -2058,8 +2058,9 @@ class Codegen {
     // (HTML attribute names are case-insensitive: `@bind-Value` = `value`).
     const valueAttribute = attr.bindTarget !== undefined ? attr.bindTarget.toLowerCase() : isCheckbox ? "checked" : "value";
     // Number/date coercion applies to the value attribute (Razor's typed
-    // `BindInputElement` entries cover `@bind` and `@bind-value` alike).
-    const isNumber = tag === "input" && inputType === "number" && valueAttribute === "value";
+    // `BindInputElement` entries cover `@bind` and `@bind-value` alike; a range
+    // input's value is numeric like a number input's — Blazor: invariant culture).
+    const isNumber = tag === "input" && (inputType === "number" || inputType === "range") && valueAttribute === "value";
     const isDate = tag === "input" && inputType === "date" && valueAttribute === "value";
     const event = attr.event ?? "onchange";
     // @bind:format on a number/date input formats the display value and parses
@@ -2069,13 +2070,18 @@ class Codegen {
     if (attr.format !== undefined && !isNumber && !isDate) {
       this.diagnostics.warning("TZS008", attr.modifierSpans?.format ?? attr, `'${label}:format' applies to date and number values only (Blazor: the BindConverter applies formats to the values that have one) — this bind keeps its native round trip.`);
     }
-    const format = attr.format === undefined || (!isNumber && !isDate) ? undefined : attr.format.trim();
+    // A date input without a format binds through Blazor's default for it
+    // (BindInputElement("date", …, format: "yyyy-MM-dd")): the element's value
+    // is always ISO, so the Date renders as `yyyy-MM-dd` and parses back as a
+    // local date — `String(date)` would leave the input empty.
+    const defaultFormat = isDate && attr.format === undefined ? "yyyy-MM-dd" : undefined;
+    const format = defaultFormat ?? (attr.format === undefined || (!isNumber && !isDate) ? undefined : attr.format.trim());
     // A plain-text format is a string literal (Razor: @bind:format="yyyy-MM-dd");
     // an @expression (e.g. @bind:format="@fmt") is the member reference.
     const formatEmit =
       format === undefined
         ? undefined
-        : attr.formatLiteral === true
+        : defaultFormat !== undefined || attr.formatLiteral === true
           ? JSON.stringify(format)
           : this.expr(attr.format!, undefined, attr.codeStarts?.format);
 
@@ -2118,7 +2124,11 @@ class Codegen {
         // A parse failure skips the setter (Blazor: TryParse false → no write).
         parts.push(`${assignmentTarget} = (${FORMAT_PARSE}(${extract}, ${formatEmit}) ?? ${assignmentTarget}) as never`);
       } else if (isNumber) {
-        parts.push(`${assignmentTarget} = Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? ${assignmentTarget} : ${extract}`);
+        // Unparsable text keeps the model value (Blazor: TryParse fails). That
+        // includes empty text — `Number("")` is 0, and a number input reports
+        // invalid text as "" — like the formatting path (parseValue).
+        const raw = "(__event.target as HTMLInputElement).value";
+        parts.push(`${assignmentTarget} = ${raw}.trim() === "" || Number.isNaN(Number(${raw})) ? ${assignmentTarget} : ${extract}`);
       } else {
         parts.push(`${assignmentTarget} = ${extract}`);
       }
