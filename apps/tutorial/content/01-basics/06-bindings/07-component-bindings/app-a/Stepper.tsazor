@@ -5,10 +5,9 @@
 </div>
 
 @code {
-    @Parameter() value = 0;
-    @Parameter() valueChanged?: EventCallback<number>;
+    @Bindable() accessor value = 0;
 
-    async change(delta: number) {
-        await this.valueChanged?.invokeAsync(this.value + delta);
+    change(delta: number) {
+        this.value += delta;
     }
 }
