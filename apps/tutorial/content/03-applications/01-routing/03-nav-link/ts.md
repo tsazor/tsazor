@@ -4,40 +4,31 @@ focus: App.tsazor
 gate: click nav a:nth-child(2)
 ---
 
-The menu is three plain anchors. Click Orders: the page changes, the URL
-changes — and nothing in the menu says *where you are*. A menu should mark the
-active entry, and the router already knows the answer, so use a link that asks
-it:
+Click Orders. The page and the URL change, but the menu doesn't show where you are. A
+`NavLink` can do that for you, because it knows the current URL:
 
 ```tsazor
 <NavLink href="/orders">Orders</NavLink>
 ```
 
-Replace all three anchors in `App.tsazor`. A `NavLink` renders an ordinary
-`<a>`, navigates like one, and re-checks the URL on every navigation: while the
-current location matches its `href`, the anchor carries the class `active`
-plus `aria-current="page"` — the standard accessibility signal for "this is the
-current page". The app's stylesheet bolds `.menu .active`, so the entry lights
-up.
+Replace the three anchors in `App.tsazor` with `NavLink`s. Each one renders an ordinary
+`<a>`. While the URL matches its `href`, the link gets the class `active` (the stylesheet
+makes it bold) and `aria-current="page"`, which tells screen readers it's the current page.
 
-Matching is *prefix* by default: `/orders` covers `/orders` itself and
-everything below it (`/orders/101` stays on the Orders tab's watch — useful
-for section links). But every URL starts with `/`, so a prefix link to `/`
-would be active on *every* page. The Home link must match the whole URL only:
+Now click Orders again — Home lights up too. By default a `NavLink` matches by *prefix*:
+`/orders` is also active on `/orders/101`, which is what you want for a section. But every
+URL starts with `/`, so Home is always active. Tell it to match the whole URL:
 
 ```tsazor
 <NavLink href="/" Match="@NavLinkMatch.All">Home</NavLink>
 ```
 
-`NavLinkMatch` is a value that lives in the runtime package, and free names in
-markup are never auto-imported — hence the first line of the file:
+`NavLinkMatch` is an ordinary value, not a component, so you import it at the top of the
+file:
 
 ```tsazor
 @import { NavLinkMatch } from "@tsazor/runtime"
 ```
 
-Two more parameters when you need them: `ActiveClass` overrides the `"active"`
-default, `CssClass` puts static classes on the anchor (`CssClass="tab"` gives
-you `class="tab"` when idle and `class="tab active"` when active). The
-comparison is case-insensitive and ignores the URL's query and fragment, so
-`/orders?state=open` still counts as being on `/orders`.
+If you need different classes, `ActiveClass` replaces `active`, and `CssClass` adds classes
+that are always there.

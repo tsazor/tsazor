@@ -4,46 +4,38 @@ focus: Orders.tsazor
 gate: click nav a:nth-child(2); click .filters a:nth-child(2)
 ---
 
-The orders page gained filter links: All, Open, Picked up. Each is the same
-route — `/orders` — with a *query string* tacked on: `/orders?state=open`.
-Click Open: the URL changes, the page re-renders… and the list ignores it.
-The route has no `{state}` segment, and the page doesn't read the query.
+The orders page now has filter links: All, Open, Picked up. They all go to `/orders`, with a
+**query string** added — `/orders?state=open`. Click Open: the URL changes, but the list
+doesn't, because the page never reads the query.
 
-That's the point of query strings: data that isn't a path of its own. Filters,
-search terms, page numbers — present in the address, shareable in a link,
-optional on every view. A page reads them with the
-`@SupplyParameterFromQuery` decorator:
+Query strings are the place for things like filters, search terms and page numbers. They're
+optional, and they still end up in the URL, so a link keeps them. To read one, add a
+parameter with a second decorator:
 
 ```tsazor
 @Parameter() @SupplyParameterFromQuery() state: string | null = null;
 ```
 
-Two decorators stack: `@Parameter()` because the value arrives as a page
-parameter, `@SupplyParameterFromQuery()` because its source is the query
-string. Both are field decorators, so the import at the top of the file is
-needed — free names are never auto-imported:
+`@Parameter()` makes `state` a parameter, and `@SupplyParameterFromQuery()` fills it from
+`?state=…`. Like any value you use in code, the decorator needs an import at the top of the
+file:
 
 ```tsazor
 @import { SupplyParameterFromQuery } from "@tsazor/runtime"
 ```
 
-With `state` filled from `?state=…`, the filter is two lines — `shown` becomes
-a getter over the list, the markup loops over it. Click through the filters:
-the URL drives the list, "All" (no query string) supplies `null`, and the
-browser's back button steps through the filters, because each click pushed a
-history entry.
+Now filter the list with a getter, and loop over that instead of `orders`:
 
-The details:
+```ts
+get shown() {
+    return this.state === null ? this.orders : this.orders.filter((order) => order.state === this.state);
+}
+```
 
-- The query key defaults to the field name; `@SupplyParameterFromQuery({
-  name: "st" })` reads `?st=…` instead. Keys match case-insensitively.
-- A value converts like a route value when you declare the type:
-  `@SupplyParameterFromQuery({ type: "int" }) page: number | null = null`
-  gives you a real number (`"string"`, `"int"`, `"long"`, `"bool"`, `"double"`,
-  `"float"`, `"decimal"`, `"datetime"`, `"guid"`).
-- A repeated key can supply an array:
-  `@SupplyParameterFromQuery({ multiple: true }) tags: string[] | null =
-  null` turns `?tags=rye&tags=wheat` into `["rye", "wheat"]`; without
-  `multiple`, the first value wins.
-- An absent key supplies `null` — declare the field nullable, as the `string |
-  null` above.
+Click through the filters. The list follows the URL, and the back button steps back through
+your clicks. Without a `?state=` in the URL, `state` is `null` — that's why the field is
+nullable.
+
+The decorator takes options when you need them: `name` reads a different key,
+`type: "int"` converts the value to a number, and `multiple: true` collects a repeated key
+into an array.

@@ -146,9 +146,16 @@ Done for M4 so far: H.7 — in-memory history for the `srcdoc` preview
 (`runtime/src/navigation/memory-history.ts`, the preview bar shows the live URL);
 the Routing chapter (`content/03-applications/01-routing/`, six lessons: pages,
 route parameters, NavLink, navigation, query parameters, not found) and the
-Forms chapter (`content/03-applications/02-forms/`, six lessons: the order
-form, rules on the model, the invalid submit, field styles, rules with
-context, attaching a file) — claims pinned in `test/claims-part3.test.ts`.
+Forms chapter (`content/03-applications/02-forms/`, seven lessons: the order
+form, rules on the model, validation messages, the invalid submit, field
+styles, rules with context, attaching a file) — claims pinned in
+`test/claims-part3.test.ts`. Tone pass on both chapters (2026-10-02): the
+lesson texts had drifted from chapter 1 (task buried mid-text, reference lists,
+mannered imagery, Forms' Blazor track a copy of the TS track plus a callout);
+rewritten to chapter-1 style — task first, one concept per lesson, short
+Blazor track, callouts around 50 words. "Rules on the model" split in two
+(rules / messages). Learners cannot create files in the editor, so lessons that
+ask for a new file ship it as a stub in `app-a` (`Lost.tsazor`, `BreadOrder.ts`).
 Lesson-text corrections found by those claims: an absent optional route segment
 supplies `null` (not the field default — Blazor parity),
 `NavigationManager.baseRelativePath` has no leading slash; and the auto-import

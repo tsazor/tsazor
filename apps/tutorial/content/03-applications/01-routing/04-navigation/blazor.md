@@ -4,8 +4,8 @@ focus: Order.tsazor
 gate: click nav a:nth-child(2); click .orders a; click button
 ---
 
-The order page's "Back to orders" button calls an empty `back()`. You know this
-one — inject the navigator and call it:
+The "Back to orders" button calls an empty `back()`. Inject `NavigationManager` as you
+would in Blazor, and navigate:
 
 ```tsazor
 @inject NavigationManager navigation
@@ -17,14 +17,11 @@ back() {
 }
 ```
 
-Same as Blazor's `NavigationManager.NavigateTo`: URL changes, history entry
-pushed, router matches, page renders.
+Open an order and click the button: you're back on the list, with a new history entry.
 
-> **Coming from Blazor:** the camel-case surface maps one to one —
-    `navigateTo(uri, { forceLoad, replaceHistoryEntry, historyEntryState })`
-  is `NavigateTo(uri, options)`, `addLocationChanged(handler)` returns the
-  unsubscribe function (Blazor's `IDisposable` from `LocationChanged` +=
-  is the returned `() => void`), `registerLocationChangingHandler` is
-  `RegisterLocationChangingHandler` with `preventNavigation()` on the
-  context, and `uri` / `baseRelativePath` are `Uri` / `baseRelativePath` in
-  spirit. An external URL performs a full browser navigation, as in Blazor.
+> **Coming from Blazor:** the API is Blazor's in camelCase.
+> `navigateTo(uri, { forceLoad, replaceHistoryEntry, historyEntryState })` is
+> `NavigateTo(uri, options)`, and `uri`, `baseUri` and `toBaseRelativePath()` are what you
+> know. `addLocationChanged(handler)` stands in for the `LocationChanged` event and returns a
+> function that unsubscribes. `registerLocationChangingHandler` works as in Blazor,
+> including `preventNavigation()`.

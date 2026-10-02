@@ -4,7 +4,7 @@
  * from the build's @page manifest, a NavigationManager over an in-memory
  * history, intercepted anchors). Chapter 14: routing — pages, route
  * parameters, NavLink, navigation, query parameters, not found. Chapter 15:
- * forms — EditForm, rule decorators, the invalid submit, field classes,
+ * forms — EditForm, rule decorators, validation messages, the invalid submit, field classes,
  * validators with context, InputFile. Each `describe` names the lesson whose
  * text makes the claim.
  */
@@ -377,6 +377,41 @@ describe("edit-form", () => {
 describe("rules-on-the-model", () => {
   const { b } = lesson("rules-on-the-model");
 
+  it("with the validator and no message components, an invalid submit is blocked silently", async () => {
+    const m = await mount(b);
+    await openBread(m);
+    click(m);
+    await m.settle();
+    const html = m.html();
+    expect(html).not.toContain("Reserved:");
+    expect(html).not.toContain("validation-message");
+    edit(m.container.querySelector(".order input") as HTMLInputElement, "Marta");
+    await m.settle();
+    click(m);
+    await m.settle();
+    expect(m.html()).toContain("Reserved: 1 × sourdough for Marta.");
+    m.dispose();
+  });
+
+  it("the validator tag auto-imports like every component; the rule decorators are code and need theirs", async () => {
+    // The page carries no @import for DataAnnotationsValidator — and works.
+    expect(b["Bread.tsazor"]).not.toContain("@import { DataAnnotationsValidator");
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    await openBread(m);
+    click(m);
+    await m.settle();
+    expect(m.html()).not.toContain("Reserved:");
+    m.dispose();
+    // The decorators are names in code: without the import the model fails.
+    const noDecoratorImport = { ...b, "BreadOrder.ts": b["BreadOrder.ts"]!.replace('import { MaxLength, Range, Required } from "@tsazor/runtime";\n', "") };
+    expect(typeCodes(noDecoratorImport)).toContain("TS2552");
+  });
+});
+
+describe("validation-messages", () => {
+  const { b } = lesson("validation-messages");
+
   it("a failed submit shows the ready-made message and blocks the success paragraph", async () => {
     const m = await mount(b);
     await openBread(m);
@@ -434,19 +469,20 @@ describe("rules-on-the-model", () => {
     m.dispose();
   });
 
-  it("the validator tag auto-imports like every component; the rule decorators are code and need theirs", async () => {
-    // The page carries no @import for DataAnnotationsValidator — and works.
-    expect(b["Bread.tsazor"]).not.toContain("@import { DataAnnotationsValidator");
-    expect(types(b)).toEqual([]);
+  it("the summary renders nothing while the form is valid", async () => {
+    const m = await mount(b);
+    await openBread(m);
+    expect(m.html()).not.toContain("validation-summary");
+    m.dispose();
+  });
+
+  it("the summary lists every message after a failed submit", async () => {
     const m = await mount(b);
     await openBread(m);
     click(m);
     await m.settle();
-    expect(m.html()).toContain("The name field is required.");
+    expect(m.html()).toContain('<ul class="validation-summary"><li>The name field is required.</li></ul>');
     m.dispose();
-    // The decorators are names in code: without the import the model fails.
-    const noDecoratorImport = { ...b, "BreadOrder.ts": b["BreadOrder.ts"]!.replace('import { MaxLength, Range, Required } from "@tsazor/runtime";\n', "") };
-    expect(typeCodes(noDecoratorImport)).toContain("TS2552");
   });
 });
 
@@ -465,7 +501,7 @@ describe("invalid-submit", () => {
     m.dispose();
   });
 
-  it("the invalid state is a conversation: fix, resubmit — summary and status clear, the reserve goes through", async () => {
+  it("fix and resubmit — summary and status clear, the reserve goes through", async () => {
     const m = await mount(b);
     await openBread(m);
     click(m);
@@ -478,13 +514,6 @@ describe("invalid-submit", () => {
     expect(html).toContain("Reserved: 1 × sourdough for Marta.");
     expect(html).not.toContain("validation-summary");
     expect(html).not.toContain("need a look");
-    m.dispose();
-  });
-
-  it("the summary renders nothing while the form is valid", async () => {
-    const m = await mount(b);
-    await openBread(m);
-    expect(m.html()).not.toContain("validation-summary");
     m.dispose();
   });
 });

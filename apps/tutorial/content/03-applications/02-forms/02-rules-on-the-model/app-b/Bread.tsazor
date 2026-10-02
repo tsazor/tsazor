@@ -4,8 +4,8 @@
 <p>Reserve today's loaf — we hold it until noon.</p>
 <EditForm Model="@order" OnValidSubmit="handleOrder" class="order">
     <DataAnnotationsValidator />
-    <label>Name<InputText @bind="order.name" /><ValidationMessage For="name" /></label>
-    <label>How many<InputNumber @bind="order.quantity" /><ValidationMessage For="quantity" /></label>
+    <label>Name<InputText @bind="order.name" /></label>
+    <label>How many<InputNumber @bind="order.quantity" /></label>
     <label>Bread
         <InputSelect @bind="order.bread">
             <option value="sourdough">Sourdough</option>

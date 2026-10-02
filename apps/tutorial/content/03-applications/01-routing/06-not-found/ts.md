@@ -4,14 +4,12 @@ focus: App.tsazor
 gate: click nav a:nth-child(3)
 ---
 
-The menu promises a Bread page that doesn't exist — `/bread` matches no route.
-Click it: the router's `NotFound` slot runs, and the current placeholder is a
-lonely `?`. A "?" is honest but unhelpful; a real app answers with a proper
-"lost" page: what happened, and the way back.
+The menu links to a Bread page that doesn't exist. Click it: the router can't match
+`/bread`, so it shows the `NotFound` content — a lonely `?`. Let's give lost visitors a real
+page with a way back.
 
-Anything can sit in the `NotFound` slot, including a component. Make one —
-`Lost.tsazor`, ordinary markup, no `@page` (it isn't a route; it renders *when
-there is no route*):
+`Lost.tsazor` is already there, empty. Fill it in — without a `@page`, because it isn't a
+route of its own:
 
 ```tsazor
 <h2>Lost in the oven</h2>
@@ -19,7 +17,7 @@ there is no route*):
 <p><a href="/">Take me home</a></p>
 ```
 
-Then give the slot to it in `App.tsazor`:
+Then use it in `App.tsazor`:
 
 ```tsazor
 <NotFound>
@@ -27,23 +25,16 @@ Then give the slot to it in `App.tsazor`:
 </NotFound>
 ```
 
-The `NotFound` answer covers more than a mislabeled menu link. When the app
-starts, the router first matches the URL it *arrived* on — a bookmark straight
-to `/orders/101`, a link someone pasted into a chat, the address a user typed.
-Every URL that can reach the app must land somewhere, and when it matches
-nothing, the lost page is the landing; its link home is just an anchor, because
-anchors are navigation — by now you know how that works.
+This page isn't only for broken menu links. When the app starts, the router matches the URL
+it was opened with — a bookmark, a link from a chat, a typo in the address bar. Any URL
+without a route ends up here.
 
-The `NotFound` fragment gets no route data — there is none. But the lost page
-can still name the road that dead-ended: inject the navigator and read
-`navigation.baseRelativePath`, which still holds the unmatched path. It is
-relative to the app's root without the leading slash, so the markup puts the
-slash in front:
+If you like, show the address that failed. `NotFound` gets no route data, but the navigator
+still knows the path:
 
 ```tsazor
 @inject NavigationManager navigation
 <p>There is nothing at <code>/@(this.navigation.baseRelativePath)</code>.</p>
 ```
 
-Small touch, real apps want it — users paste the failing address into bug
-reports.
+`baseRelativePath` has no leading slash, so the markup adds one.

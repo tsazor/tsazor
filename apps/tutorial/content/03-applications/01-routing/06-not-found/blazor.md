@@ -4,11 +4,9 @@ focus: App.tsazor
 gate: click nav a:nth-child(3)
 ---
 
-The menu promises a Bread page that doesn't exist — `/bread` matches no
-route. Click it: the router's `NotFound` slot runs, and what's there is a
-placeholder `?`. Real apps answer with a proper lost page, and since anything
-can sit in the slot, it can be a component. `Lost.tsazor`, no `@page` (it
-isn't a route — it renders *when there is no route*):
+The Bread link leads to `/bread`, which has no route, and `NotFound` shows only a `?`. Do
+what you'd do in Blazor and put a component there: fill in the empty `Lost.tsazor`, without
+a `@page`:
 
 ```tsazor
 <h2>Lost in the oven</h2>
@@ -22,11 +20,7 @@ isn't a route — it renders *when there is no route*):
 </NotFound>
 ```
 
-> **Coming from Blazor:** the `NotFound` you know from `Routes.razor`, with the
-> same pattern: point it at a component (like Blazor's NotFound.razor
-> convention). It covers the deep-link case the same way — the router matches
-> the URL the app *arrived* on (a bookmark, a pasted link), and there's no
-> route data in the slot, as in Blazor. The one upgrade over Blazor: the
-> fragment *can* name the failed address — inject `NavigationManager` and
-> read `baseRelativePath`, which still holds the unmatched path
-> (`@(this.navigation.baseRelativePath)`).
+> **Coming from Blazor:** same slot, same behavior for deep links, and no route data in it.
+> To show the failed address, inject `NavigationManager` and read `baseRelativePath`, a
+> shortcut for `toBaseRelativePath(uri)`:
+> `<code>/@(this.navigation.baseRelativePath)</code>`.

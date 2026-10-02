@@ -3,6 +3,7 @@
 <h2>Pre-order bread</h2>
 <p>Reserve today's loaf — we hold it until noon.</p>
 <EditForm Model="@order" OnValidSubmit="handleOrder" class="order">
+    <ValidationSummary />
     <DataAnnotationsValidator />
     <label>Name<InputText @bind="order.name" /><ValidationMessage For="name" /></label>
     <label>How many<InputNumber @bind="order.quantity" /><ValidationMessage For="quantity" /></label>

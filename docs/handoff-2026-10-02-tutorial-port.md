@@ -133,7 +133,14 @@ Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte r
      entsprechend korrigiert; der Claims-Test pinnt beide Seiten (Tag ohne Import baut+prüft+läuft,
      Decorator ohne Import → TS2552). Auch gefixt: 06/app-a führte den Stand von Lektion 05
      (Validators-Map) nicht mit — Kontinuitätsbruch.
-     Tutorial-Gesamt danach: 450/450 grün, `pnpm -r --filter '!fluentcms-admin' build` + `test`
+     **Ton-Überarbeitung** (2026-10-02, danach): Routing + Forms auf den Stil von Kapitel 1
+     zurückgeführt (Aufgabe zuerst, ein Konzept pro Lektion, eigener knapper Blazor-Track,
+     Callouts ~50 Wörter); „Rules on the model“ geteilt → 7 Lektionen (03-validation-messages
+     neu, 04–07 umnummeriert). Editor kann keine Dateien anlegen → Stub-Dateien in app-a
+     (`Lost.tsazor`, `BreadOrder.ts`). Faktenfehler in Blazor-Callouts korrigiert
+     (`Uri`/`BaseUri`/`ToBaseRelativePath`; Blazor hat kein `GetInvalidFields`). 455/455 grün,
+     `scripts/verify.mjs` ALL PASS.
+     Tutorial-Gesamt davor: 450/450 grün, `pnpm -r --filter '!fluentcms-admin' build` + `test`
      grün. **Wichtig:** Runtime-Dist nach `input-base.ts`-Änderungen rebuilden — das Tutorial
      testet gegen das gebaute Dist, nicht gegen src.
    - **Harness-Lektion:** ein failender Assert überspringt `dispose()` — die lebende App
