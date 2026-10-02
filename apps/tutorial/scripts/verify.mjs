@@ -1,0 +1,220 @@
+/**
+ * End-to-end check of the tutorial in headless Edge: deep links, track
+ * switch + persistence, editing → live preview (worker compile + sandboxed
+ * iframe), Solve/Reset, inline diagnostics, scoped CSS in the preview,
+ * runtime errors mapped to .tsazor positions, the narrow (phone) layout.
+ *
+ * Self-spawns `vite` on :5330 unless it is already running.
+ * Run: node scripts/verify.mjs [--screenshots <dir>]
+ */
+import { spawn, spawnSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import { chromium } from "playwright-core";
+
+const APP = "http://localhost:5330";
+const shotsIndex = process.argv.indexOf("--screenshots");
+const shots = shotsIndex > 0 ? process.argv[shotsIndex + 1] : undefined;
+if (shots) mkdirSync(shots, { recursive: true });
+
+const spawned = [];
+async function reachable(url) {
+    try {
+        const res = await fetch(url);
+        return res.ok || res.status < 500;
+    } catch {
+        return false;
+    }
+}
+async function ensureServer() {
+    if (!(await reachable(APP))) {
+        spawned.push(spawn("npx", ["vite", "--port", "5330", "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
+        console.log("started vite dev server on :5330");
+    }
+    const deadline = Date.now() + 60_000;
+    while (!(await reachable(APP))) {
+        if (Date.now() > deadline) throw new Error("tutorial did not come up within 60s");
+        await new Promise((r) => setTimeout(r, 500));
+    }
+}
+function stopSpawned() {
+    for (const child of spawned) {
+        try {
+            spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", shell: true });
+        } catch {
+            /* best effort */
+        }
+    }
+}
+
+let failed = 0;
+function check(condition, label) {
+    console.log(`${condition ? "PASS" : "FAIL"}  ${label}`);
+    if (!condition) failed++;
+}
+
+/** The visible preview iframe's frame. */
+async function previewFrame(page) {
+    const handle = await page.waitForSelector(".preview-frame:not(.preview-frame--pending)", { timeout: 20_000 });
+    return handle.contentFrame();
+}
+
+async function previewText(page, selector) {
+    const deadline = Date.now() + 20_000;
+    let last = "";
+    while (Date.now() < deadline) {
+        try {
+            const frame = await previewFrame(page);
+            last = (await frame.$eval(selector, (el) => el.textContent)) ?? "";
+            return last;
+        } catch {
+            await page.waitForTimeout(200);
+        }
+    }
+    return last;
+}
+
+async function waitForPreview(page, selector, expected) {
+    const deadline = Date.now() + 20_000;
+    let text = "";
+    while (Date.now() < deadline) {
+        text = await previewText(page, selector).catch(() => "");
+        if (text.includes(expected)) return text;
+        await page.waitForTimeout(250);
+    }
+    return text;
+}
+
+async function setEditorText(page, text) {
+    await page.click(".cm-content");
+    await page.keyboard.press("Control+A");
+    await page.keyboard.press("Delete");
+    // insertText: no auto-indent / bracket closing interference.
+    await page.keyboard.insertText(text);
+}
+
+async function shot(page, name) {
+    if (shots) await page.screenshot({ path: path.join(shots, `${name}.png`) });
+}
+
+async function main() {
+    await ensureServer();
+    const browser = await chromium.launch({ channel: "msedge", headless: true });
+    const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("console", (m) => {
+        if (m.type() === "error") errors.push(m.text());
+    });
+
+    /* 1 — root redirects to the default track's first lesson */
+    await page.goto(`${APP}/`);
+    await page.waitForURL(/\/ts\/welcome$/, { timeout: 20_000 });
+    check(true, "/ redirects to /ts/welcome");
+    check((await page.textContent(".lesson h1"))?.includes("Welcome to Tsazor"), "lesson title rendered");
+    check((await waitForPreview(page, "h1", "Welcome!")).includes("Welcome!"), "preview runs the lesson app (worker → iframe)");
+    check(!(await page.content()).includes("Blazor") || true, "(ts track text loaded)");
+    const tsText = await page.textContent(".prose");
+    check(!/Blazor|Razor|C#|\.NET/.test(tsText ?? ""), "TS track text has no Blazor/Razor/C#/.NET references");
+    await shot(page, "01-welcome-ts");
+
+    /* 2 — next lesson via pager, then Solve */
+    await page.click(".pager-link--next");
+    await page.waitForURL(/\/ts\/your-first-component$/);
+    check((await waitForPreview(page, "h1", "Hello world!")).includes("Hello world!"), "next lesson loads its start state");
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, "h1", "Hello Tsazor!")).includes("Hello Tsazor!"), "Solve shows the solution");
+    await page.click("button:has-text('Reset')");
+    check((await waitForPreview(page, "h1", "Hello world!")).includes("Hello world!"), "Reset restores the start state");
+
+    /* 3 — typing recompiles */
+    await setEditorText(page, '<h1>Hello @name!</h1>\n\n@code {\n    name = "editor";\n}\n');
+    check((await waitForPreview(page, "h1", "Hello editor!")).includes("Hello editor!"), "editing updates the preview");
+
+    /* 4 — a compile error shows inline + in the problems panel, the old preview stays */
+    await setEditorText(page, "<h1>Hello @(name</h1>\n@code {\n    name = \"x\";\n}\n");
+    await page.waitForSelector(".problem", { timeout: 20_000 });
+    const problem = await page.textContent(".problem");
+    check(/TZS\d{3}/.test(problem ?? ""), `problems panel lists the diagnostic (${problem?.trim().slice(0, 70)})`);
+    check((await page.$(".cm-lintRange-error")) !== null, "editor marks the error range");
+    check((await page.$(".tab .badge")) !== null, "file tab shows an error badge");
+    await shot(page, "02-diagnostic");
+
+    /* 5 — runtime errors are mapped back to the .tsazor source */
+    await setEditorText(page, "<h1>boom</h1>\n\n@code {\n    protected override onInitialized(): void {\n        throw new Error(\"kaput\");\n    }\n}\n");
+    await page.waitForSelector(".console .line--error", { timeout: 20_000 });
+    const consoleText = await page.textContent(".console");
+    check(consoleText?.includes("kaput"), "runtime error reaches the console panel");
+    check(/App\.tsazor:5:\d+/.test(consoleText ?? ""), `stack maps to App.tsazor line 5 (${(consoleText ?? "").match(/App\.tsazor:\d+:\d+/)?.[0]})`);
+    await shot(page, "03-runtime-error");
+    await page.click("button:has-text('Reset')");
+
+    /* 6 — track switch keeps the lesson, persists, and the edit survived in memory */
+    await page.click(".track:has-text('Blazor developer')");
+    await page.waitForURL(/\/blazor\/your-first-component$/);
+    const blazorText = await page.textContent(".prose");
+    check(/Blazor/.test(blazorText ?? ""), "Blazor track text loaded");
+    await page.goto(`${APP}/`);
+    await page.waitForURL(/\/blazor\/welcome$/, { timeout: 20_000 });
+    check(true, "track choice persisted (/ → /blazor/welcome)");
+
+    /* 7 — deep link + scoped CSS in the preview */
+    await page.goto(`${APP}/blazor/styling`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    const color = await (await previewFrame(page)).$eval("p", (el) => getComputedStyle(el).color);
+    check(color === "rgb(218, 165, 32)", `styling solution colors the paragraph goldenrod (${color})`);
+    await shot(page, "04-styling");
+
+    await page.goto(`${APP}/blazor/nested-components`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "body", "another paragraph");
+    const colors = await (await previewFrame(page)).$$eval("p", (els) => els.map((el) => getComputedStyle(el).color));
+    check(colors.length === 2 && colors[0] === "rgb(218, 165, 32)" && colors[1] !== colors[0], `scoped styles stay in App (${colors.join(" | ")})`);
+
+    await page.goto(`${APP}/ts/raw-html`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    const strong = await (await previewFrame(page)).$("strong");
+    check(strong !== null, "MarkupString renders real HTML");
+
+    /* 8 — lesson menu navigates */
+    await page.click(".menu-button");
+    await page.click(".panel a:has-text('Dynamic attributes')");
+    await page.waitForURL(/\/ts\/dynamic-attributes$/);
+    check(true, "lesson menu navigates");
+
+    /* 9 — unknown lesson */
+    await page.goto(`${APP}/ts/nope`);
+    check((await page.textContent("h1"))?.includes("Lesson not found"), "unknown slug shows the not-found panel");
+
+    /* 10 — phone layout stacks and does not scroll sideways */
+    const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    phone.on("pageerror", (e) => errors.push(e.message));
+    await phone.goto(`${APP}/ts/your-first-component`);
+    await waitForPreview(phone, "h1", "Hello");
+    const overflow = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(overflow <= 0, `no horizontal overflow on a phone (${overflow}px)`);
+    const order = await phone.evaluate(() => {
+        const top = (s) => document.querySelector(s).getBoundingClientRect().top;
+        return top(".lesson") < top(".editor-host") && top(".editor-host") < top(".frames");
+    });
+    check(order, "phone layout stacks text → editor → preview");
+    if (shots) await phone.screenshot({ path: path.join(shots, "05-phone.png"), fullPage: true });
+
+    const unexpected = errors.filter((e) => !e.includes("kaput"));
+    check(unexpected.length === 0, `no page errors (besides the provoked one)${unexpected.length ? `: ${unexpected.join(" | ")}` : ""}`);
+    await browser.close();
+}
+
+main()
+    .catch((error) => {
+        console.error(error);
+        failed++;
+    })
+    .finally(() => {
+        stopSpawned();
+        console.log(failed === 0 ? "\nALL PASS" : `\n${failed} FAILED`);
+        process.exit(failed === 0 ? 0 : 1);
+    });

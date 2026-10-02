@@ -14,7 +14,8 @@
     "demo:dev": "pnpm --filter demo dev",
     "demo:build": "pnpm --filter demo build",
     "smoke": "node scripts/tarball-smoke.mjs",
-    "probe": "node scripts/probe-razor-corpus.mjs"
+    "probe": "node scripts/probe-razor-corpus.mjs",
+    "tutorial:dev": "pnpm --filter tutorial dev"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.44.0",

@@ -37,3 +37,4 @@ export {
 export { TSScanner } from "./scanner.js";
 export type * from "./ast.js";
 export { childNodes } from "./ast.js";
+export { scopeSelector } from "./scoped-css.js";

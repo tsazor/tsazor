@@ -1,0 +1,29 @@
+@if (compileError) {
+    <div class="problems problems--crash" role="alert">
+        <strong>The compiler crashed.</strong> This is a bug in Tsazor, not in your code.
+        <pre>@compileError</pre>
+    </div>
+} else if (items.length > 0) {
+    <ul class="problems" aria-label="Problems">
+        @foreach (const item of items) {
+            <li>
+                <button type="button" class="problem problem--@item.severity" @onclick="() => pick(item)">
+                    <span class="where">@item.file:@item.line:@(item.column + 1)</span>
+                    <span class="code">@item.code</span>
+                    <span class="message">@item.message</span>
+                </button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    @Parameter() items: Diagnostic[] = [];
+    @Parameter() compiling = false;
+    @Parameter() compileError?: string;
+    @Parameter() onPick?: EventCallback<Diagnostic>;
+
+    private async pick(item: Diagnostic): Promise<void> {
+        await this.onPick?.invokeAsync(item);
+    }
+}

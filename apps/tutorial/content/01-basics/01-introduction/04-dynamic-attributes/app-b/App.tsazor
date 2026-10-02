@@ -1,0 +1,6 @@
+<img src="@src" alt="@name takes off." />
+
+@code {
+    src = "/tutorial/rocket.svg";
+    name = "A rocket";
+}

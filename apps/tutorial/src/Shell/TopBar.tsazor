@@ -1,0 +1,28 @@
+<header class="topbar">
+    <a class="brand" href="">
+        <span class="logo" aria-hidden="true">T</span>
+        <span>Tsazor <span class="brand-sub">tutorial</span></span>
+    </a>
+    <LessonMenu Track="@track" Current="@current" Lessons="@lessons" />
+    <nav class="tracks" aria-label="Track">
+        @foreach (const option of tracks) {
+            <a class="track @(option === track ? "track--active" : null)"
+               href="@hrefFor(option)"
+               aria-current="@(option === track ? "page" : null)">@TRACK_LABELS[option]</a>
+        }
+    </nav>
+</header>
+
+@code {
+    @Parameter() track: Track = "ts";
+    @Parameter() current!: LessonRef;
+    @Parameter() lessons: LessonRef[] = [];
+
+    private readonly tracks: Track[] = ["blazor", "ts"];
+
+    /** The same lesson in the other track, or that track's first lesson. */
+    private hrefFor(option: Track): string {
+        const slug = this.current.lesson.text[option] ? this.current.lesson.slug : undefined;
+        return `${option}/${slug ?? ""}`;
+    }
+}

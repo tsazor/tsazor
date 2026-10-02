@@ -1,0 +1,7 @@
+@using ./Shell
+@import { ComponentBase, Parameter, EventCallback, NavigationManager, MarkupString } from "@tsazor/runtime"
+@import type { RenderFragment } from "@tsazor/runtime"
+@import { TutorialState, TRACK_LABELS, isTrack } from "./TutorialState"
+@import type { LessonRef } from "./TutorialState"
+@import type { Track, LessonContent, LessonFiles } from "./content-types"
+@import type { Diagnostic, ProjectBuild } from "./engine/types"

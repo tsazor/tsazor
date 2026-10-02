@@ -7,6 +7,10 @@
  */
 import { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";
 
+// Re-exported for browser hosts (the tutorial), which import this module via
+// the Node-free `@tsazor/workspace/builtins` entry instead of the index.
+export { RUNTIME_MANIFEST };
+
 export const RUNTIME_PACKAGE = "@tsazor/runtime";
 
 /**

@@ -1,0 +1,4 @@
+<div class="not-found">
+    <h1>Lesson not found</h1>
+    <p>There's no lesson at this address. <a href="">Start at the beginning</a>.</p>
+</div>

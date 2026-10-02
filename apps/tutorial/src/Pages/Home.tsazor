@@ -1,0 +1,14 @@
+@page "/"
+@inject NavigationManager Nav
+@inject TutorialState State
+
+<p class="redirect">Opening the tutorial…</p>
+
+@code {
+    protected override onInitialized(): void {
+        // The persisted track's first lesson (the URL is the source of truth from here on).
+        const track = this.State.preferredTrack;
+        const first = this.State.lessons(track)[0];
+        if (first) this.Nav.navigateTo(`${track}/${first.lesson.slug}`, { replaceHistoryEntry: true });
+    }
+}

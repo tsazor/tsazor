@@ -1,0 +1,42 @@
+@import { TutorialEditor } from "../editor/editor"
+
+<div class="editor" @ref="host"></div>
+
+@code {
+    /** The project files. Reloaded into the editor only when `revision` changes. */
+    @Parameter() files: LessonFiles = {};
+    @Parameter() active = "";
+    @Parameter() revision = 0;
+    @Parameter() diagnostics: Diagnostic[] = [];
+    @Parameter() onEdit?: EventCallback<{ file: string; text: string }>;
+
+    private host?: HTMLElement;
+    private editor?: TutorialEditor;
+    private loadedRevision = -1;
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender && this.host) {
+            this.editor = new TutorialEditor(this.host, {
+                onChange: (file, text) => void this.onEdit?.invokeAsync({ file, text }),
+            });
+        }
+        const editor = this.editor;
+        if (!editor) return;
+        if (this.revision !== this.loadedRevision) {
+            this.loadedRevision = this.revision;
+            editor.load(this.files, this.active);
+        } else {
+            editor.open(this.active);
+        }
+        editor.setDiagnostics(this.diagnostics);
+    }
+
+    /** Jumps to a diagnostic's position. */
+    reveal(file: string, line: number, column: number): void {
+        this.editor?.reveal(file, line, column);
+    }
+
+    dispose(): void {
+        this.editor?.destroy();
+    }
+}

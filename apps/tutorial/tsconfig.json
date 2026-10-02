@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "types": [
+      "vite/client",
+      "@tsazor/vite-plugin/client"
+    ]
+  },
+  "include": [
+    "src",
+    "build",
+    "test",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
+}

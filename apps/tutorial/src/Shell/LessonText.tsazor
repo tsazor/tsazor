@@ -1,0 +1,45 @@
+<article class="lesson" @ref="scroller">
+    <div class="content">
+        <p class="eyebrow">@current.chapter.title</p>
+        <h1>@text?.title</h1>
+        <div class="prose">@(new MarkupString(text?.html ?? ""))</div>
+    </div>
+    <footer class="pager">
+        @if (previous) {
+            <a class="pager-link" href="@(`${track}/${previous.lesson.slug}`)">
+                <span class="pager-label">Previous</span>
+                <span>@previous.lesson.text[track]?.title</span>
+            </a>
+        } else {
+            <span></span>
+        }
+        @if (next) {
+            <a class="pager-link pager-link--next" href="@(`${track}/${next.lesson.slug}`)">
+                <span class="pager-label">Next</span>
+                <span>@next.lesson.text[track]?.title</span>
+            </a>
+        }
+    </footer>
+</article>
+
+@code {
+    @Parameter() current!: LessonRef;
+    @Parameter() track: Track = "ts";
+    @Parameter() previous?: LessonRef;
+    @Parameter() next?: LessonRef;
+
+    private scroller?: HTMLElement;
+    private shownSlug = "";
+
+    private get text() {
+        return this.current.lesson.text[this.track];
+    }
+
+    protected override onAfterRender(): void {
+        // A new lesson starts at the top of its text.
+        if (this.current.lesson.slug !== this.shownSlug) {
+            this.shownSlug = this.current.lesson.slug;
+            this.scroller?.scrollTo({ top: 0 });
+        }
+    }
+}
