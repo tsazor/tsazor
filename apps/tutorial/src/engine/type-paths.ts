@@ -10,5 +10,5 @@ export type TypeEnvironment = Readonly<Record<string, string>>;
 /** Project files live here (`/app/App.tsazor.gen.ts`). */
 export const APP_ROOT = "/app/";
 
-/** TypeScript's lib files (`/lib/lib.es2022.d.ts`). */
+/** TypeScript's lib files (`/lib/lib.es2023.d.ts`). */
 export const LIB_ROOT = "/lib/";

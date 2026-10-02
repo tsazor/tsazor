@@ -127,6 +127,7 @@ createTsazorApp({ root: App, routes });
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
+- [C# to TypeScript (cheat sheet)](docs/csharp-to-typescript.md)
 - [Design principles](docs/design-principles.md)
 - [Language reference (.tsazor)](docs/language-reference.md)
 - [Architecture & HMR](docs/architecture.md)

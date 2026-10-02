@@ -1,0 +1,15 @@
+@import { orders, quantityOf, cityOf, noteOf } from "./orders"
+
+<h1>Orders</h1>
+<table>
+    <tr><th>#</th><th>Customer</th><th>Items</th><th>Ship to</th><th>Note</th></tr>
+    @foreach (const order of orders) {
+        <tr>
+            <td>@order.id</td>
+            <td>@order.customer</td>
+            <td class="quantity">@quantityOf(order)</td>
+            <td>@cityOf(order)</td>
+            <td>@noteOf(order)</td>
+        </tr>
+    }
+</table>

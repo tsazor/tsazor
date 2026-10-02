@@ -1,3 +1,4 @@
+@inject TutorialState State
 <header class="topbar">
     <a class="brand" href="">
         <span class="logo" aria-hidden="true">T</span>
@@ -20,9 +21,8 @@
 
     private readonly tracks: Track[] = ["blazor", "ts"];
 
-    /** The same lesson in the other track, or that track's first lesson. */
+    /** The same lesson in the other track; from a track-only lesson, the next one that track has. */
     private hrefFor(option: Track): string {
-        const slug = this.current.lesson.text[option] ? this.current.lesson.slug : undefined;
-        return `${option}/${slug ?? ""}`;
+        return `${option}/${this.State.counterpart(option, this.current.lesson)?.lesson.slug ?? ""}`;
     }
 }

@@ -65,6 +65,17 @@ export class TutorialState {
     return this.lessons(track).find((ref) => ref.lesson.slug === slug);
   }
 
+  /**
+   * Where the track switch leads from `lesson`: the same lesson in `track`,
+   * else (a track-only lesson) the next lesson `track` has, else its last one.
+   */
+  counterpart(track: Track, lesson: LessonContent): LessonRef | undefined {
+    const refs = this.lessons(track);
+    const all = this.content.parts.flatMap((part) => part.chapters.flatMap((chapter) => chapter.lessons));
+    const next = all.slice(Math.max(0, all.indexOf(lesson))).find((candidate) => candidate.text[track]);
+    return refs.find((ref) => ref.lesson === next) ?? refs.at(-1);
+  }
+
   /** The files the editor shows for a lesson: the saved workspace, else the start state. */
   workspace(lesson: LessonContent): LessonFiles {
     return this.workspaces.get(lesson.slug) ?? { ...lesson.a };

@@ -1,0 +1,8 @@
+@import { invoice } from "./invoice"
+
+<h1>Invoice</h1>
+<table>
+    @foreach (const line of invoice(42.5)) {
+        <tr><th>@line.label</th><td>@line.amount</td></tr>
+    }
+</table>

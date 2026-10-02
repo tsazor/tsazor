@@ -116,8 +116,9 @@ const format = (build: ProjectBuild): string =>
   build.diagnostics.map((d) => `${d.file}(${d.line},${d.column + 1}) ${d.code} ${d.message}`).join("\n");
 
 describe("tutorial lessons", () => {
-  it("has the Part 1 and Part 2 chapters, every lesson in both tracks", () => {
+  it("has the Part 1 and Part 2 chapters, every lesson in both tracks but the Blazor-only C# chapter", () => {
     expect(content.parts[0]!.chapters.map((chapter) => chapter.title)).toEqual([
+      "TypeScript for C# developers",
       "Introduction",
       "State & rendering",
       "Parameters",
@@ -134,14 +135,19 @@ describe("tutorial lessons", () => {
       "Special components",
       "Organizing code",
     ]);
-    expect(lessons.length).toBeGreaterThanOrEqual(51);
+    const csharp = content.parts[0]!.chapters[0]!.lessons;
+    expect(csharp.length).toBeGreaterThanOrEqual(6);
+    expect(csharp.length).toBeLessThanOrEqual(9);
+    expect(lessons.length).toBeGreaterThanOrEqual(51 + csharp.length);
     for (const lesson of lessons) {
-      expect(Object.keys(lesson.text).sort(), lesson.slug).toEqual(["blazor", "ts"]);
+      const tracks = csharp.includes(lesson) ? ["blazor"] : ["blazor", "ts"];
+      expect(Object.keys(lesson.text).sort(), lesson.slug).toEqual(tracks);
     }
   });
 
   it("keeps the TypeScript track free of Blazor/Razor/C#/.NET references", () => {
     for (const lesson of lessons) {
+      if (!lesson.text.ts) continue;
       const text = readFileSync(path.join(contentDir, lesson.dir, "ts.md"), "utf8");
       expect(text, lesson.slug).not.toMatch(/Blazor|Razor|C#|\.NET|\.razor/i);
     }

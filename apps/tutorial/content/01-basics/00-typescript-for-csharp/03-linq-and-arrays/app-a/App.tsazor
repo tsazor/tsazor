@@ -1,0 +1,9 @@
+@import { openTotal, hasBigOrder, firstClosed, topOpenCustomers } from "./report"
+
+<h1>Order report</h1>
+<ul>
+    <li>Open total: @openTotal</li>
+    <li>Any order over 200: @hasBigOrder</li>
+    <li>First closed order: @firstClosed</li>
+    <li class="top">Top open customers: @topOpenCustomers().join(", ")</li>
+</ul>

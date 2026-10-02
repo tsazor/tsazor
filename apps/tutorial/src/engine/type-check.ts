@@ -24,7 +24,7 @@ export { APP_ROOT, LIB_ROOT, type TypeEnvironment };
 const OPTIONS: ts.CompilerOptions = {
   strict: true,
   target: ts.ScriptTarget.ES2022,
-  lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"],
+  lib: ["lib.es2023.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"],
   module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
   allowImportingTsExtensions: true,
