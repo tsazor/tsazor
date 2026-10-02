@@ -124,7 +124,17 @@ Browser ──(Renderer)──►  RenderTree frames ──(diff)──►  edit
   bookkeeping (initialized, pending render, first render, after-render callbacks) in
   `#private` fields: TypeScript's `private` is compile-time only, and a component field such
   as `initialized` would otherwise overwrite the flag — Blazor's private base fields can't
-  collide either.
+  collide either. **`disposeSignal`/`track` (Tsazor extension):** before `dispose`/
+  `disposeAsync`, the renderer calls `ComponentBase.disposeInternal()`, which aborts the
+  (lazily created) `disposeSignal` and stops every tracked subscription (a throwing
+  unsubscribe → phase `dispose`). A `track` notification calls `onNext`, then
+  `stateHasChangedInternal()` — so it joins the render queue like any request and a burst
+  coalesces into one render. Work outside the render pipeline reports failures through
+  `RenderHandle.reportError(error, phase)` (internal) into `handleComponentError`:
+  `onNext`/source errors as `lifecycle`, a failing `@Bindable` change callback as `event`
+  (attributed to the component that assigned), so both reach the nearest `ErrorBoundary`.
+  An async `track` handshake is deliberately not tracked by `waitUntilIdle`; a `@Bindable`
+  callback is.
 - **Cascading values** (Blazor's `CascadingParameterState`): a supplier is any component
   with `isCascadingValueSupplier` (`CascadingValue`, EditForm, CascadingAuthenticationState,
   Tabs, …). Matching follows `CanSupplyValue`: with no name on either side, by type (static
@@ -246,8 +256,15 @@ steps:
    `@CascadingParameter(…)` on fields, `accessor` fields and setters whose decorator is
    bound to the runtime export (also when renamed or via `* as rt`); `static`/`#private`
    don't count (the runtime throws there). Names the compiler imports itself
-   (`Parameter`, `CascadingParameter`, `EventCallback`, `RenderFragment`, `ComponentBase`)
-   count as runtime names in `.tsazor` even without an `@import`.
+   (`Parameter`, `CascadingParameter`, `Bindable`, `EventCallback`, `RenderFragment`,
+   `ComponentBase`) count as runtime names in `.tsazor` even without an `@import`.
+   `@Bindable(…)` (Tsazor extension) records its member plus the synthesized parameters
+   (`bindable` on the value, `synthesizedBy` on the others): `<name>Changed` (or the
+   `changed` option) typed `EventCallback<T>` with the runtime's `EventCallback` as its
+   reference whatever the module imports, `T` = annotation, literal type or `unknown`; with
+   `expression: true` also `<name>Expression: string`. At runtime the decorator registers
+   the same names; the value's metadata entry carries the accessor's backing slot (`store`),
+   which `applyParameterValues` writes so a parameter set never invokes the callback.
 2. **Resolution** (`resolveComponentMetadata` via a `MetadataHost`): the base class chain is
    flattened as in the runtime — base first, a redeclaration wins in the base's position
    (map semantics) — across relative `.ts`/`.tsazor` files, the code-behind file, and, for

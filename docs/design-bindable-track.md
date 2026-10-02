@@ -1,6 +1,7 @@
 # Design draft — `@Bindable` and `this.track`
 
-Status: **accepted, in implementation** (2026-10-02). Open decisions resolved as recommended. Two Tsazor extensions under the v1 superset rule
+Status: **implemented** (2026-10-02, branch `feature/bindable-track`; see "Implementation notes"
+at the end). Open decisions resolved as recommended. Two Tsazor extensions under the v1 superset rule
 (design-principles, "Parity first, then scale"). Both live on the TypeScript side. Markup is
 untouched, every valid `.razor` construct keeps its meaning, and each extension desugars to the
 Blazor form with identical semantics. The codemod keeps emitting the Blazor form; the LSP offers
@@ -198,3 +199,39 @@ T3 then needs no separate lifecycle machinery. Generated event methods return a 
 | Skip the callback for equal values? | yes (`Object.is`) |
 | `track` deduplication: per source identity, or a warning only? | warning only in v1 (explicit beats magic) |
 | `track` as a `ComponentBase` method or a free function `track(this, …)`? | method, since the cost is small and it is discoverable |
+
+## Implementation notes (2026-10-02)
+
+Implemented as designed; the points below are where the design left room or where the
+implementation had to choose.
+
+- **Diagnostic:** `@Bindable()` on a non-accessor is **TZS030** (error, fix "Insert
+  'accessor'"); at runtime the decorator throws with the same advice.
+- **Typed member:** a decorator cannot add members to a class type. In a `.tsazor` the
+  compiler emits `declare valueChanged?: EventCallback<T>` (and `valueExpression?: string`)
+  unless `@code` declares it; a plain `.ts` class writes that line itself when it uses the
+  member. `T` is the annotation or the literal initializer's type, else `unknown`.
+- **Backing storage:** the decorator keeps the value in a symbol-keyed slot
+  (`Symbol.for("tsazor.bindable.<name>")`) instead of the accessor's private storage, so a
+  hot-swapped class still reads an existing instance; parameter sets write that slot
+  (`ParameterMeta.store`).
+- **Callback errors:** routed through a new internal `RenderHandle.reportError` with phase
+  `event`, attributed to the component that assigned; the callback promise is tracked by
+  `waitUntilIdle`. A plain function as the callback (hand-built trees) is accepted too.
+- **`track` sources:** the listener is callable and carries `next`/`error`/`complete` and
+  Sleipnir's `onNext`/`onError`/`onComplete`, so all four shapes need no adapter. Source
+  errors and a rejected handshake take the lifecycle path like `onNext` errors; an
+  unsubscribe that throws during disposal is a `dispose` error.
+- **`waitUntilIdle`:** a pending async handshake is *not* tracked (an open-ended
+  subscription must not stall idle detection or a future prerender).
+- **Order on dispose:** `disposeSignal` aborts and tracked subscriptions end *before* the
+  component's own `dispose`/`disposeAsync` runs.
+- **Dev mode:** `import.meta.env.DEV` (Vite, Vitest); the warnings are compiled out of
+  production bundles.
+- **Bind type check:** `@bind-X` values (and `:get`) are now checked against the target
+  parameter's type in the typed shadow — for the explicit pair and `@Bindable` alike.
+- **Tutorial:** "External data" is lesson 05 of chapter 2, directly after "Async work"
+  (Lifecycle moved to 06). The tutorial's `track` parameter was renamed (`lessonTrack`): a
+  component member named like a new `ComponentBase` method overrides it (port-findings M.1).
+- **Bundle:** bench 24.79 → 25.28 KB gz (+0.49): `track`/`disposeSignal` live on
+  `ComponentBase` and are not tree-shaken; `@Bindable` is.

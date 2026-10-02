@@ -364,6 +364,23 @@ describe("track", () => {
     expect(phases).toEqual(["lifecycle"]);
   });
 
+  it("routes a source's error() and a rejected handshake as lifecycle errors; a throwing unsubscribe as a dispose error", async () => {
+    let observer: { error(e: unknown): void } | undefined;
+    class Page extends ComponentBase {
+      protected override onInitialized(): void {
+        this.track({ subscribe: (o: { error(e: unknown): void }) => { observer = o; return () => { throw new Error("unsub"); }; } });
+        this.track({ subscribe: () => new Promise<never>((_, reject) => setTimeout(() => reject(new Error("handshake")), 5)) });
+      }
+    }
+    const { renderer, remove } = await mountRemovable(Page);
+    const seen: string[] = [];
+    renderer.errorHandler = ({ error, phase }) => seen.push(`${phase}:${(error as Error).message}`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    observer!.error(new Error("source"));
+    await remove();
+    expect(seen.sort()).toEqual(["dispose:unsub", "lifecycle:handshake", "lifecycle:source"]);
+  });
+
   it("warns (dev) when tracking after dispose and ignores the call", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = new Store();

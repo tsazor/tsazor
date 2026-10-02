@@ -250,6 +250,7 @@ Markup only starts
 | `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | The same modifiers on components |
 | `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-callback parameter `OnPick` instead of `ValueChanged` (Blazor) |
 | `<InputText @bind="name" />` | Component tag ⇒ same as `@bind-Value` |
+| `@Bindable() accessor Value = 0` (in the component) | Tsazor extension: declares `Value` + `ValueChanged` in one line; `@bind-Value` works unchanged — see [Two-way parameters](#two-way-parameters-bindable-tsazor-extension) |
 
 **Bind target:** the expression must be assignable — checked on the TS AST; the assignment targets
 exactly this expression (after the member rule): fields, member paths, non-null assertions
@@ -468,6 +469,105 @@ classes (identity-based — TS instead of interfaces):
 - Unknown attributes → the parameter with `captureUnmatchedValues` (`additionalAttributes`);
   without one ⇒ error TZS025 (see below).
 
+### Two-way parameters: `@Bindable()` (Tsazor extension)
+
+```razor
+<button @onclick="() => value++">@value</button>
+
+@code {
+    @Bindable() accessor value = 0;
+}
+```
+
+`@Bindable() accessor value: T = init` is exactly the Blazor pair
+
+```ts
+@Parameter() value: T = init;
+@Parameter() valueChanged?: EventCallback<T>;
+```
+
+plus one behavior: **assigning `this.value` in the component** sets the value and then
+invokes `valueChanged` with it. The parent is unchanged — `<Stepper @bind-value="guests" />`,
+including `:after`, `:get`/`:set` and `:event`, behaves as with the hand-written pair
+(conformance-tested side by side).
+
+- **Parameter writes don't echo.** Values the parent passes are written to the accessor's
+  backing slot directly; only local assignments invoke the callback.
+- **Equal values invoke nothing** (`Object.is`, so `NaN` equals `NaN`) — no echo loops with
+  parents that normalize the value.
+- **Fire and forget.** A setter cannot be awaited: the callback runs in the background
+  (tracked by `waitUntilIdle`), and its failure takes the event handler error path
+  (nearest `ErrorBoundary`, phase `event`, attributed to the component that assigned). Code
+  that must await writes `await this.valueChanged?.invokeAsync(v)` — the synthesized member
+  is real and typed: in a `.tsazor` the compiler declares it (`declare valueChanged?:
+  EventCallback<T>`, no field is emitted); a plain `.ts` class declares it itself if it uses it.
+- **Unbound use works** ("uncontrolled"): without a `valueChanged` the value just changes locally.
+- **No render of its own.** From an event handler the handler's re-render applies, and the
+  parent's re-render passes the value down; from an external source, use `track` (below).
+- **Options:** `@Bindable({ changed: "onPick" })` names the callback parameter differently
+  (`@bind-value:event="onPick"`); `@Bindable({ expression: true })` also declares
+  `valueExpression?: string` (the field name `InputBase`-style components hand to
+  `EditContext`).
+- **`accessor` is required.** Standard (TC39) field decorators cannot intercept
+  assignments, auto-accessor decorators can; `accessor` is standard TypeScript (5.0+).
+  `@Bindable()` on a plain field is error **TZS030** with the quick fix "Insert 'accessor'"
+  (at runtime the decorator throws).
+- **Metadata (2.1):** the accessor contributes both parameters (the callback as
+  `EventCallback<T>` of the runtime, `T` from the annotation or the literal initializer), so
+  `@bind-value` resolves, TZS025 applies to unknown targets, and the bound value is
+  type-checked in the shadow like any `value`/`string` parameter.
+- **Editor:** hover on the member shows the desugared pair; on an explicit
+  `@Parameter() x` + `@Parameter() xChanged?: EventCallback<T>` pair the LSP offers the
+  refactoring "Convert 'x'/'xChanged' to @Bindable()". The codemod keeps emitting the Blazor
+  pair.
+
+### External sources: `track` and `disposeSignal` (Tsazor extension)
+
+```razor
+@code {
+    protected override onInitialized(): void {
+        this.track(this.Store);                                         // re-render per change
+        this.track({ subscribe: (h) => this.Client.market.tickerUpdated(h) }, (s) => this.last = s); // Sleipnir handlers + onNext
+        addEventListener("resize", this.onResize, { signal: this.disposeSignal });
+    }
+}
+```
+
+- **`this.disposeSignal`** — an `AbortSignal` that aborts when the component is disposed
+  (before `dispose`/`disposeAsync` run; read after disposal it is already aborted).
+  Everything that takes a signal tears itself down: listeners, `fetch`, timers wrapped by hand.
+- **`this.track(source, onNext?)`** subscribes, re-renders on every notification and
+  unsubscribes on dispose — Blazor's `IDisposable` + subscribe +
+  `InvokeAsync(StateHasChanged)` + unsubscribe in `Dispose`, written once. Sources
+  (structural, no imports):
+
+  | Shape | Examples |
+  |---|---|
+  | `subscribe(listener) → () => void` | Svelte-style stores, Zustand, the ticker's `TickerStore` |
+  | `subscribe(observer) → { unsubscribe() }` | RxJS, TC39 Observable |
+  | `subscribe(…) → Promise<{ unsubscribe() }>` | async handshakes (Sleipnir events) |
+  | `(signal: AbortSignal, notify: (value?) => void) => void` | escape hatch (a timer, anything else) |
+
+  The listener `track` passes is callable *and* an observer (`next`/`error`/`complete`,
+  Sleipnir's `onNext`/`onError`/`onComplete`), so each shape gets what it calls.
+- **Rendering:** a notification runs `onNext` (if given), then `stateHasChanged()` — the
+  render queue coalesces a burst into one render; `shouldRender` is honoured as usual.
+- **Errors:** an exception in `onNext`, a source's `error(…)` and a rejected handshake take
+  the lifecycle error path (nearest `ErrorBoundary`, phase `lifecycle`); a throwing
+  unsubscribe at dispose is a `dispose` error (fatal, as in Blazor).
+- **Teardown:** on dispose every tracked subscription ends; a handshake that resolves later
+  is unsubscribed immediately, and late notifications are ignored. The return value stops
+  tracking early. A pending handshake is *not* part of `waitUntilIdle` (a subscription is
+  open-ended; it must not stall idle detection).
+- **When to call:** in `onInitialized`. After dispose `track` is a no-op (dev warning); in
+  `onParametersSet` it subscribes again on every parameter change — dev mode warns when the
+  same source is tracked twice (v1: a warning, no deduplication). Dev mode is Vite's
+  `import.meta.env.DEV` (also Vitest); elsewhere the warnings are off.
+- **Testing:** `@tsazor/testing` has `createFakeStore(initial)` (`set`, `notify`,
+  `listenerCount`).
+- **Naming:** `track` and `disposeSignal` are `ComponentBase` members — a component member of
+  the same name overrides them (TS2416 in the check).
+
 ### Component attributes by parameter type
 
 Like Razor, the compiler lowers a component attribute according to the type of the target parameter
@@ -594,7 +694,9 @@ typed:
   categories `value` and `string` are checked; `mixedValue` values,
   EventCallback and RenderFragment attributes stay untyped (as in Razor, where
   attribute values pass through the renderer as strings). Diagnostics appear on the
-  source line of the `.tsazor`.
+  source line of the `.tsazor`. The value of a component bind (`@bind-Value="x"`,
+  `:get`) is checked the same way against the target parameter — for an explicit pair and
+  a `@Bindable()` parameter alike.
 - **Typed slot contexts.** The slot body of a `RenderFragment<T>` parameter
   gets `context` (or `Context=...`) with the `typeArgument` as its type —
   `context: Person` instead of `any`, including `TItem` inference through the type layer:
@@ -697,7 +799,7 @@ parentheses there (parity); `@(x ? "a" : "b")` or `{(x ? "a" : "b")}` work.
 
 ## Diagnostics
 
-The compiler never fails silently — codes `TZS001`–`TZS029` with a source range
+The compiler never fails silently — codes `TZS001`–`TZS030` with a source range
 (`TZS011`, `TZS014`, `TZS022`, `TZS023` and `TZS026` are warnings, e.g. an `@inherits` conflict with
 code-behind or an ignored directive/clause). New with the code-first parser: `TZS012` C# construct without
 a TS equivalent, `TZS013` directive outside the document level, `TZS015` invalid
@@ -733,6 +835,8 @@ template literal fix (table above); the other TZS024 causes (C# casts such as
 `(MarkupString)x`, anonymous objects `new { … }`, `out var`, `is (not) null`) are not
 mechanical and have no fix — they are ported by hand, partly onto the built-ins (e.g.
 `(MarkupString)x` ⇒ `x as MarkupString`, see MarkupString above).
+Tsazor extensions: `TZS030` `@Bindable()` on a member that is not an auto-accessor (error, fix
+"Insert 'accessor'"; see [Two-way parameters](#two-way-parameters-bindable-tsazor-extension)).
 Errors show up in the Vite dev overlay, warnings on the console.
 
 **Ranges and fixes (A7):** besides `pos` (start, 1-based line / 0-based column), every diagnostic
@@ -750,5 +854,6 @@ text }] }`, exposed in the LSP as a quick fix (code action):
 | `TZS021` `@typeparam T where T : IItem` | Clause ⇒ `extends IItem` (none for `struct`/`class`/`new` …) |
 | `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Directive ⇒ `@authorize…` / `@page "…"` / line removed (only with one attribute per list, only literal values) |
 | `TZS022` `var` | ⇒ `let` |
+| `TZS030` `@Bindable() value = 0` | ⇒ `@Bindable() accessor value = 0` |
 | `TZS024` C# interpolated string `$"…{x}…"` / `$@"…"` / verbatim `@"…"` | Template literal: holes ⇒ `${…}` (a Razor `@` in the hole is dropped), `{{`/`}}` ⇒ braces, C# layout `{x,2:C}` is dropped (since 2.5; fix only when the string is the cause of the error — TZS024 has no fix otherwise; for the limitation see [Codemod](#codemod-razor--tsazor-25)) |
 | `TZS025` unknown component parameter with a close match | Attribute or element name ⇒ suggestion (`Lable` ⇒ `Label`, `<RowTemplat>` ⇒ `<RowTemplate>` including the end tag) |

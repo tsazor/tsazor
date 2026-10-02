@@ -200,6 +200,29 @@ describe("@Bindable()", () => {
     }).toThrow("@Bindable() needs an auto-accessor: write 'accessor value'");
   });
 
+  it("survives a hot swap: the new class reads (and writes) the instance's value", async () => {
+    class V1 extends ComponentBase {
+      @Bindable() accessor value = 0;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, `v1:${this.value}`);
+      }
+    }
+    class V2 extends ComponentBase {
+      @Bindable() accessor value = 0;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, `v2:${this.value}`);
+      }
+    }
+    const { container, renderer } = await mount(V1);
+    const instance = renderer.getComponentState(1)!.component as V1;
+    instance.value = 4;
+    expect(renderer.hmrSwap(V1, V2)).toBe(1);
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("v2:4");
+    (instance as unknown as V2).value = 5;
+    expect((instance as unknown as V2).value).toBe(5);
+  });
+
   it("does not render by itself: an assignment outside an event needs stateHasChanged or track", async () => {
     const { renderer, container } = await mount(Stepper);
     const child = renderer.getComponentState(1)!.component as Stepper;
