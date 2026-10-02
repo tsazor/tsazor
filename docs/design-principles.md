@@ -8,6 +8,14 @@ TypeScript: for .NET developers (low migration effort from Blazor, a bridge to t
 **and** for frontend developers outside the Microsoft ecosystem who want to use this model in
 idiomatic TypeScript. Both audiences are equally important.
 
+Above all, Tsazor is **a gentle way out of the .NET space**, for companies that need to leave it,
+fully or partly. Leaving is hard and sometimes necessary, so every step should be as small as
+possible. Step one moves the frontend: Blazor becomes Tsazor while the .NET backend stays
+(`@tsazor/dotnet`), route by route instead of in one big bang. A later step may move the backend
+too, independently, because nothing in the frontend depends on .NET (OpenAPI is
+backend-agnostic). Because the primary audience is professional teams, clean architecture,
+security and long-term stability take priority.
+
 In short: **Blazor, with C# replaced by TypeScript.** The same development model, the same Razor
 templates, the same CSS (scoped CSS as `X.tsazor.css` with `::deep`, like `X.razor.css`) — and
 TypeScript is TypeScript. No hybrid of C# and TS: it confuses both audiences. Porting effort is
