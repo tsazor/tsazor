@@ -95,7 +95,11 @@ Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte r
 
 ## Nächste Schritte (laut letztem Gesprächsstand)
 
-1. **E8 Lokalisierung** als nächste große Baustelle. Anforderungen aus dem Port (port-findings R.1/R.2):
+0. Kleine Aufgaben (entschieden): Lektion „The real traps“ in zwei teilen; empfohlene tsconfig `lib` auf
+   ES2023 (getting-started, Lektionstexte, Spickzettel). Vorgeschlagen: als Agent parallel zum E8-Entwurf.
+   Vor der Umsetzung von `@State` (D4) ein kurzes eigenes Design-Dokument (flach, keine Proxies,
+   Zusammenspiel mit `observe()`/`@Bindable`).
+1. **E8 Lokalisierung** — **zuerst ein Design-Dokument vorlegen**, dann umsetzen. als nächste große Baustelle. Anforderungen aus dem Port (port-findings R.1/R.2):
    - Komponenten rendern beim Sprachwechsel automatisch neu.
    - Sprachquellen in Prioritätsreihenfolge: explizit vor Profil vor Default.
    - Tabellen werden asynchron geladen, mit Fallback.
