@@ -95,19 +95,22 @@ Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte r
 
 ## Nächste Schritte (laut letztem Gesprächsstand)
 
-0. Kleine Aufgaben (entschieden): Lektion „The real traps“ in zwei teilen; empfohlene tsconfig `lib` auf
-   ES2023 (getting-started, Lektionstexte, Spickzettel). Vorgeschlagen: als Agent parallel zum E8-Entwurf.
+0. ~~Kleine Aufgaben (entschieden): Lektion „The real traps“ in zwei teilen; empfohlene tsconfig
+   `lib` auf ES2023~~ — **erledigt** (Commits `48645ed`, `475cec3`, 2026-10-02). Die Teilung:
+   09-this-and-equality + 10-numbers-and-dates; alle Gates grün (Tutorial 375/375 + verify ALL PASS).
    Vor der Umsetzung von `@State` (D4) ein kurzes eigenes Design-Dokument (flach, keine Proxies,
-   Zusammenspiel mit `observe()`/`@Bindable`).
-1. **E8 Lokalisierung** — **zuerst ein Design-Dokument vorlegen**, dann umsetzen. als nächste große Baustelle. Anforderungen aus dem Port (port-findings R.1/R.2):
-   - Komponenten rendern beim Sprachwechsel automatisch neu.
-   - Sprachquellen in Prioritätsreihenfolge: explizit vor Profil vor Default.
-   - Tabellen werden asynchron geladen, mit Fallback.
-   - Platzhalter und typisierte Schlüssel.
-   - **Übersetzbare Validierungsmeldungen.**
-   - Kultur-Formatierung über `Intl`, später zusammen mit `Decimal`.
+   Zusammenspiel mit `observe()`/`@Bindable`) — **weiterhin offen**.
+1. ~~**E8 Lokalisierung**~~ — **erledigt** (`475cec3`, 2026-10-02). Design-Doc
+   `docs/design-localization.md` (D-L1..D-L7 entschieden wie empfohlen, Implementation-Notes in
+   §10). Umgesetzt: `runtime/src/localization/` (CultureInfo/CultureService/StringLocalizer),
+   Auto-Render über DI-Marker, `createTsazorApp({ localization })`, Validierungs-Meldungen über
+   reservierte `tsazor.validation.*`-Keys, `@bind:culture` (nur Numbers — Dates bleiben ISO, s. §10),
+   Compiler-Support, 28 Conformance-Tests, `@tsazor/testing`-Fixture `createFakeLocalization`,
+   language-reference-Sektion. **Noch offen aus E8:** Part-3-Lokalisierungs-Lektion (M4+),
+   E12-`Decimal`-Komposition mit `@bind:culture`.
 2. Danach Tutorial M4 (Teil 3: Routing braucht eine In-Memory-History im srcdoc-Preview,
-   H.7; Hash-Routing evtl. als Lektion), R1 CI + S1 API-Snapshot.
+   H.7; Hash-Routing evtl. als Lektion — die Lokalisierungs-Lektion kommt hier dazu), R1 CI +
+   S1 API-Snapshot.
 3. Bundle-Analyse: erst vor dem Release-Kandidaten. Die Bundle-Größe ist laut User kein Blocker
    (+15 KB gz zum Svelte-Original, cachebar).
 
