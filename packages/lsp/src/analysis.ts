@@ -1,6 +1,10 @@
 import {
+  advancePos,
+  bindableMembers,
+  bindablePairs,
   childNodes,
   compile,
+  type CodeBlockNode,
   parseDocument,
   DiagnosticBag,
   type DocumentNode,
@@ -133,6 +137,84 @@ export function quickFixesAt(file: AnalyzedFile, range: LspRange): QuickFix[] {
     });
   }
   return fixes;
+}
+
+/* @Bindable (Tsazor extension) ----------------------------------------------- */
+
+export interface Refactor {
+  title: string;
+  edits: Array<{ range: LspRange; newText: string }>;
+}
+
+/** The `@code` blocks of the file (class members) with their source start. */
+function memberBlocks(file: AnalyzedFile): Array<{ code: string; start: { line: number; column: number } }> {
+  return file.document.body
+    .filter((node): node is CodeBlockNode => node.kind === "codeBlock" && node.member === true && node.codeStart !== undefined)
+    .map((node) => ({ code: node.code, start: node.codeStart! }));
+}
+
+/** LSP position (0-based line) of an offset inside a code block. */
+function blockPosition(block: { code: string; start: { line: number; column: number } }, offset: number): { line: number; character: number } {
+  const pos = advancePos(block.start, block.code.slice(0, offset));
+  return { line: pos.line - 1, character: pos.column };
+}
+
+function touches(range: LspRange, start: { line: number; character: number }, end: { line: number; character: number }): boolean {
+  const before = (a: { line: number; character: number }, b: { line: number; character: number }): boolean =>
+    a.line < b.line || (a.line === b.line && a.character < b.character);
+  return !before(end, range.start) && !before(range.end, start);
+}
+
+/**
+ * Refactor "convert Value/ValueChanged pair to @Bindable": for an explicit
+ * pair `@Parameter() x` + `@Parameter() xChanged?: EventCallback<T>` that the
+ * range touches, rewrites `x` as `@Bindable() accessor x` and removes
+ * `xChanged` (`@Bindable()` synthesizes it, typed). Code that invokes the
+ * callback explicitly keeps working.
+ */
+export function bindableRefactorsAt(file: AnalyzedFile, range: LspRange): Refactor[] {
+  const refactors: Refactor[] = [];
+  for (const block of memberBlocks(file)) {
+    for (const pair of bindablePairs(block.code)) {
+      const valueStart = blockPosition(block, pair.value.start);
+      const valueEnd = blockPosition(block, pair.value.end);
+      const changedStart = blockPosition(block, pair.changed.start);
+      const changedEnd = blockPosition(block, pair.changed.end);
+      if (!touches(range, valueStart, valueEnd) && !touches(range, changedStart, changedEnd)) continue;
+      refactors.push({
+        title: `Convert '${pair.name}'/'${pair.name}Changed' to @Bindable()`,
+        edits: [
+          { range: { start: valueStart, end: valueEnd }, newText: pair.replacement },
+          { range: { start: changedStart, end: changedEnd }, newText: "" },
+        ],
+      });
+    }
+  }
+  return refactors;
+}
+
+/** Hover on a `@Bindable()` member: the Blazor pair it stands for. */
+export function bindableHoverAt(file: AnalyzedFile, line: number, character: number): HoverInfo | null {
+  for (const block of memberBlocks(file)) {
+    for (const member of bindableMembers(block.code)) {
+      const start = blockPosition(block, member.nameOffset);
+      const end = blockPosition(block, member.nameOffset + member.name.length);
+      if (!touches({ start: { line, character }, end: { line, character } }, start, end)) continue;
+      const type = member.type ?? member.inferredType ?? "unknown";
+      const lines = [
+        `**\`@Bindable()\`** — two-way parameter (Tsazor extension). \`@bind-${member.name}\` binds it; it stands for:`,
+        "```ts",
+        `@Parameter() ${member.name}: ${type};`,
+        `@Parameter() ${member.changed}?: EventCallback<${type}>;`,
+        ...(member.expression !== undefined ? [`@Parameter() ${member.expression}?: string;`] : []),
+        "```",
+        `Assigning \`this.${member.name}\` sets the value and invokes \`${member.changed}\` (not for an equal value); parameter values from the parent never invoke it.`,
+      ];
+      if (!member.accessor) lines.push("", "_Needs `accessor` (TZS030)._");
+      return { markdown: lines.join("\n") };
+    }
+  }
+  return null;
 }
 
 /* Node lookup --------------------------------------------------------------- */
