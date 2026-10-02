@@ -6,9 +6,10 @@
  * bundles; the iframe turns each into a blob URL (blob URLs are origin-bound,
  * so they must be created inside the opaque origin), installs an import map
  * (`@tsazor/runtime`, `@tsazor/components`, `$app/…`), injects the CSS and
- * mounts `App` with createTsazorApp. Errors and console output come back via
- * postMessage; stack positions are mapped to the original files with the
- * modules' source maps.
+ * mounts `App` with createTsazorApp — or imports the lesson's `Program.ts`,
+ * which starts the app itself (with its services). Errors, console output and
+ * the document title (PageTitle) come back via postMessage; stack positions
+ * are mapped to the original files with the modules' source maps.
  */
 import { originalPosition, type CompiledModule, type ProjectBuild } from "../engine/types.js";
 
@@ -21,6 +22,8 @@ export interface PreviewCallbacks {
   /** The app mounted (or failed to). */
   onStatus(status: "running" | "ready" | "failed"): void;
   onMessage(message: PreviewMessage): void;
+  /** The visible app's document title changed (`<PageTitle>`; "" without one). */
+  onTitle?(title: string): void;
 }
 
 let bundles: Promise<{ runtime: string; components: string }> | undefined;
@@ -68,7 +71,7 @@ function srcdoc(baseHref: string): string {
   }
   addEventListener("message", (event) => {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
-    const { modules, runtime, components, css, entry } = event.data;
+    const { modules, runtime, components, css, entry, program } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
     const imports = { "@tsazor/runtime": url(runtime), "@tsazor/components": url(components) };
     const urls = {};
@@ -84,13 +87,24 @@ function srcdoc(baseHref: string): string {
     document.getElementById("tsazor-app-css").textContent = css;
     const boot = document.createElement("script");
     boot.type = "module";
-    boot.textContent =
-      'import { createTsazorApp } from "@tsazor/runtime";\\n' +
-      "import App from " + JSON.stringify(entry) + ";\\n" +
-      "createTsazorApp({ root: App });\\n" +
+    // A Program.ts starts the app itself (and registers its services);
+    // otherwise the entry component is mounted directly.
+    boot.textContent = (program
+      ? "import " + JSON.stringify(program) + ";\\n"
+      : 'import { createTsazorApp } from "@tsazor/runtime";\\n' +
+        "import App from " + JSON.stringify(entry) + ";\\n" +
+        "createTsazorApp({ root: App });\\n") +
       'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';
     document.body.appendChild(boot);
   });
+  // The document title (PageTitle) is shown in the preview bar, like a tab.
+  let title = null;
+  const reportTitle = () => {
+    if (document.title === title) return;
+    title = document.title;
+    send({ type: "title", text: title });
+  };
+  new MutationObserver(reportTitle).observe(document.head, { childList: true, subtree: true, characterData: true });
   send({ type: "loaded" });
 })();
 </script>
@@ -104,6 +118,7 @@ export class PreviewHost {
   private pending: HTMLIFrameElement | undefined;
   private modulesById = new Map<string, CompiledModule>();
   private idsByUrl: Record<string, string> = {};
+  private readonly titles = new WeakMap<HTMLIFrameElement, string>();
   private run = 0;
   private readonly listener = (event: MessageEvent): void => this.handleMessage(event);
 
@@ -132,6 +147,7 @@ export class PreviewHost {
       components,
       css: build.css,
       entry: build.entry,
+      program: build.program,
     };
     (frame as HTMLIFrameElement & { __payload?: unknown }).__payload = payload;
     this.callbacks.onStatus("running");
@@ -147,6 +163,7 @@ export class PreviewHost {
     this.frame = frame;
     if (this.pending === frame) this.pending = undefined;
     frame.classList.remove("preview-frame--pending");
+    this.callbacks.onTitle?.(this.titles.get(frame) ?? "");
   }
 
   private handleMessage(event: MessageEvent): void {
@@ -160,6 +177,10 @@ export class PreviewHost {
         frame.contentWindow!.postMessage(payload, "*");
         break;
       }
+      case "title":
+        this.titles.set(frame, data.text ?? "");
+        if (frame === this.frame) this.callbacks.onTitle?.(data.text ?? "");
+        break;
       case "urls":
         this.idsByUrl = data.urls ?? {};
         break;

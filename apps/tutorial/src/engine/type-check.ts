@@ -12,7 +12,7 @@
  * (TsazorGenMap, the LSP's own class); diagnostics in unmapped generated
  * plumbing are dropped, exactly like `tsDiagnostics` in the LSP.
  */
-import { compile } from "@tsazor/compiler";
+import { compile, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { TsazorGenMap } from "@tsazor/lsp/ts-mapping";
 import ts from "typescript";
 import { basename, createResolver, dirname, joinPath, relativeSpecifier } from "./resolve.js";
@@ -40,7 +40,13 @@ interface ShadowEntry {
   file: string;
   map: TsazorGenMap;
   code: string;
+  /** `TItem` inference requests of generic component tags (2.4). */
+  requests: readonly TypedTagInferenceRequest[];
+  /** Type arguments inferred so far, per tag (`line:column`). */
+  typeArguments?: ReadonlyMap<string, ReadonlyMap<string, string>>;
 }
+
+type TypeArguments = ReadonlyMap<string, ReadonlyMap<string, string>>;
 
 /** A long-lived checker: the language service keeps the parsed lib files between checks. */
 export class TypeChecker {
@@ -69,6 +75,17 @@ export class TypeChecker {
       getDirectories: () => [],
       realpath: (file) => file,
       useCaseSensitiveFileNames: () => true,
+      // `import App from "./App.tsazor"` in a plain .ts file (Program.ts, a
+      // code-behind) → the component's shadow; everything else as usual.
+      resolveModuleNameLiterals: (literals, containingFile, _redirect, options) =>
+        literals.map((literal) => {
+          const specifier = literal.text;
+          if (specifier.startsWith(".") && specifier.endsWith(".tsazor")) {
+            const shadow = `${joinPath(dirname(containingFile), specifier)}.gen.ts`.replace(/^(?!\/)/, "/");
+            if (this.scripts.has(shadow)) return { resolvedModule: { resolvedFileName: shadow, extension: ts.Extension.Ts, isExternalLibraryImport: false } };
+          }
+          return ts.resolveModuleName(specifier, containingFile, options, host);
+        }),
     };
     this.service = ts.createLanguageService(host, ts.createDocumentRegistry(true, APP_ROOT));
   }
@@ -76,6 +93,7 @@ export class TypeChecker {
   /** Type diagnostics of the project (compiler diagnostics are the build's job). */
   check(files: Files): Diagnostic[] {
     this.update(files);
+    this.inferTypeArguments(files);
     const program = this.service.getProgram();
     if (!program) return [];
     const results: Diagnostic[] = [];
@@ -120,6 +138,40 @@ export class TypeChecker {
     }
   }
 
+  /**
+   * The LSP's `TItem` inference (2.4, ts-service `buildEntry`): a generic
+   * component tag whose type parameter the compiler could not resolve asks
+   * for the real type of an attribute value (`items="@todos"` → `Todo[]`);
+   * the program answers, the shadow is rebuilt with the type argument —
+   * until no new tag resolves.
+   */
+  private inferTypeArguments(files: Files): void {
+    const resolver = createResolver(files);
+    for (let pass = 0; pass < 3; pass++) {
+      const program = this.service.getProgram();
+      if (!program) return;
+      const checker = program.getTypeChecker();
+      let changed = false;
+      for (const [path, entry] of this.shadows) {
+        if (entry.requests.length === 0) continue;
+        const sourceFile = program.getSourceFile(path);
+        if (!sourceFile) continue;
+        const resolved = inferRequests(sourceFile, checker, entry);
+        const fresh = [...resolved].filter(([tagId]) => entry.typeArguments?.get(tagId) === undefined);
+        if (fresh.length === 0) continue;
+        const merged = new Map(entry.typeArguments ?? []);
+        for (const [tagId, args] of resolved) merged.set(tagId, new Map([...(merged.get(tagId) ?? []), ...args]));
+        const shadow = buildShadow(files, entry.file, resolver, merged);
+        if (!shadow) continue;
+        const previous = this.scripts.get(path)!;
+        this.scripts.set(path, { text: shadow.code, version: previous.version + 1 });
+        this.shadows.set(path, { file: entry.file, map: shadow.map, code: shadow.code, requests: shadow.requests, typeArguments: merged });
+        changed = true;
+      }
+      if (!changed) return;
+    }
+  }
+
   /** Rebuilds the script set: shadows of every component, plain .ts files as they are. */
   private update(files: Files): void {
     const resolver = createResolver(files);
@@ -139,7 +191,7 @@ export class TypeChecker {
         if (!shadow) continue;
         const path = `${APP_ROOT}${file}.gen.ts`;
         put(path, shadow.code);
-        shadows.set(path, { file, map: shadow.map, code: shadow.code });
+        shadows.set(path, { file, map: shadow.map, code: shadow.code, requests: shadow.requests });
       }
     }
     this.scripts = next;
@@ -148,7 +200,12 @@ export class TypeChecker {
 }
 
 /** The shadow module of one component, or null when the compiler rejects the file. */
-function buildShadow(files: Files, file: string, resolver: ReturnType<typeof createResolver>): { code: string; map: TsazorGenMap } | null {
+function buildShadow(
+  files: Files,
+  file: string,
+  resolver: ReturnType<typeof createResolver>,
+  typeArguments?: TypeArguments,
+): { code: string; map: TsazorGenMap; requests: readonly TypedTagInferenceRequest[] } | null {
   const fileDir = dirname(file);
   const options = resolver.optionsFor(file);
   const codeBehindFile = `${file}.ts`;
@@ -166,6 +223,7 @@ function buildShadow(files: Files, file: string, resolver: ReturnType<typeof cre
           if (reference.file === undefined) return undefined;
           return relativeSpecifier(fileDir, joinPath(dirname(reference.file), reference.specifier));
         },
+        ...(typeArguments ? { typeArguments } : {}),
       },
     });
   } catch {
@@ -174,7 +232,44 @@ function buildShadow(files: Files, file: string, resolver: ReturnType<typeof cre
   if (compiled.diagnostics.hasErrors) return null;
   // Imports of sibling components → their shadows (the LSP's rewrite A).
   const code = compiled.code.replace(/^(import\s[^;]*?\sfrom\s+)(["'])(\.{1,2}\/[^"']*?\.tsazor)\2/gm, "$1$2$3.gen$2");
-  return { code, map: new TsazorGenMap(compiled.mappings ?? []) };
+  return { code, map: new TsazorGenMap(compiled.mappings ?? []), requests: compiled.typedInference ?? [] };
+}
+
+/** One inference pass over a shadow (the LSP's `inferTypeArguments`): exact (`T`) or through the array element (`T[]`). */
+function inferRequests(sourceFile: ts.SourceFile, checker: ts.TypeChecker, entry: ShadowEntry): Map<string, Map<string, string>> {
+  const result = new Map<string, Map<string, string>>();
+  for (const request of entry.requests) {
+    const gen = entry.map.srcToGen(request.value.line - 1, request.value.column);
+    if (!gen) continue;
+    const offset = sourceFile.getPositionOfLineAndCharacter(gen.line, gen.column);
+    if (offset >= sourceFile.text.length) continue;
+    // The outermost expression starting at the value's position is the attribute value.
+    let node: ts.Node = descendTo(sourceFile, offset);
+    while (node.parent !== undefined && ts.isExpression(node.parent) && node.parent.getStart(sourceFile) === node.getStart(sourceFile)) node = node.parent;
+    const type = checker.getTypeAtLocation(node);
+    const declared = request.parameterType.trim();
+    let argument: string | undefined;
+    if (declared === request.typeParameter) {
+      argument = checker.typeToString(type, node, ts.TypeFormatFlags.NoTruncation);
+    } else if (declared.endsWith("[]") && declared.slice(0, -2).trim() === request.typeParameter && checker.isArrayType(type)) {
+      const [item] = checker.getTypeArguments(type as ts.TypeReference);
+      if (item !== undefined) argument = checker.typeToString(item, node, ts.TypeFormatFlags.NoTruncation);
+    }
+    if (argument === undefined || argument.trim().length === 0) continue;
+    const args = result.get(request.tagId) ?? new Map<string, string>();
+    args.set(request.typeParameter, argument);
+    result.set(request.tagId, args);
+  }
+  return result;
+}
+
+function descendTo(sourceFile: ts.SourceFile, offset: number): ts.Node {
+  let current: ts.Node = sourceFile;
+  for (;;) {
+    const next = current.getChildren(sourceFile).find((child) => child.getStart(sourceFile) <= offset && offset < child.getEnd());
+    if (next === undefined) return current;
+    current = next;
+  }
 }
 
 type Located = Pick<Diagnostic, "file" | "line" | "column" | "endLine" | "endColumn">;

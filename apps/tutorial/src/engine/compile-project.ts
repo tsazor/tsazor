@@ -8,6 +8,7 @@
  *   X.tsazor.css  → scoped CSS (scope attribute stamped by the compiler)
  *   X.ts          → transpileModule
  *   X.css         → global CSS
+ *   Program.ts    → (optional) the app's start: createTsazorApp + services
  *
  * Relative import specifiers are rewritten to module ids (`$app/App.tsazor`),
  * which the preview maps to blob URLs through an import map; bare specifiers
@@ -40,6 +41,9 @@ const TRANSPILE_OPTIONS: ts.CompilerOptions = {
   isolatedModules: true,
 };
 
+/** The app's start file, when a lesson has one (services are registered there). */
+export const PROGRAM = "Program.ts";
+
 export function moduleIdFor(file: string): string {
   return `${MODULE_PREFIX}${file}`;
 }
@@ -60,7 +64,10 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
     } else if (file.endsWith(".css")) {
       cssParts.push(`/* ${file} */\n${source}`);
     } else if (file.endsWith(".tsazor")) {
-      if (basename(file) === "_Imports.tsazor") continue;
+      if (basename(file) === "_Imports.tsazor") {
+        diagnoseImports(file, source, resolver, diagnostics);
+        continue;
+      }
       const built = buildComponent(files, file, resolver, diagnostics);
       if (built) modules[built.id] = built;
     } else if (file.endsWith(".ts")) {
@@ -71,7 +78,40 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
 
   const result: ProjectBuild = { modules, css: cssParts.join("\n"), diagnostics };
   if (modules[moduleIdFor(entry)]) result.entry = moduleIdFor(entry);
+  if (modules[moduleIdFor(PROGRAM)]) result.program = moduleIdFor(PROGRAM);
   return result;
+}
+
+/**
+ * `_Imports.tsazor` is directive-only: no module, but its mistakes (an
+ * invalid `@import`, a `@using` folder that doesn't exist) are reported on
+ * it — as @tsazor/workspace's `collectImports` does, including the TZS014
+ * for an `@authorize` that would not be inherited.
+ */
+function diagnoseImports(file: string, source: string, resolver: ReturnType<typeof createResolver>, diagnostics: Diagnostic[]): void {
+  let compiled: ReturnType<typeof compile>;
+  try {
+    compiled = compile(source, { className: "_Imports", fileName: file, generateSourceMap: false, resolveUsing: resolver.optionsFor(file).resolveUsing });
+  } catch (error) {
+    diagnostics.push(internalError(file, error));
+    return;
+  }
+  for (const diagnostic of compiled.diagnostics.all) diagnostics.push(fromCompiler(file, diagnostic));
+  const authorize = compiled.metadata.authorize ? /^[ \t]*@authorize\b/m.exec(source) : null;
+  if (authorize) {
+    const line = source.slice(0, authorize.index).split("\n").length;
+    const column = authorize[0].indexOf("@");
+    diagnostics.push({
+      file,
+      line,
+      column,
+      endLine: line,
+      endColumn: column + "@authorize".length,
+      severity: "warning",
+      code: "TZS014",
+      message: "Ignored directive or clause. @authorize in _Imports.tsazor is not inherited — declare it on each page that requires it.",
+    });
+  }
 }
 
 function buildComponent(files: Files, file: string, resolver: ReturnType<typeof createResolver>, diagnostics: Diagnostic[]): CompiledModule | undefined {
