@@ -1,0 +1,120 @@
+# Handoff: Tutorial, Erweiterungen, Business-SPA-Port (Stand 2026-10-02, Neustart)
+
+Sitzungsziel nach den Phasen 2–5: englische Doku, interaktives Tutorial, Tsazor-Erweiterungen,
+Profilschärfung und ein erster echter Port einer Firmen-SPA. **Zuerst lesen:** dieses Dokument,
+dann [roadmap-1.0.md](roadmap-1.0.md) als Gesamtübersicht.
+
+## Stand `roadmap/phase-0` (HEAD `8d043e8`, 40 Commits vor `origin`, nicht gepusht)
+
+Gemergt in dieser Sitzung:
+- **`docs/english`**: Nutzer-Doku auf Englisch und auf den aktuellen Stand gebracht. Interne
+  Dokumente (roadmap*, handoffs, reviews, port-findings, design-2.4) bleiben deutsch.
+- **Tutorial `apps/tutorial`** (`pnpm --filter tutorial dev`, :5330):
+  - Svelte-Stil: links Text, rechts Editor (CodeMirror) mit Live-Preview im sandboxed iframe.
+  - Compiler und `tsazor check` laufen im Browser (Web Worker).
+  - Zwei Tracks: **TS = Haupttrack**, Blazor = „kennst du, das ist anders“.
+  - M1 und M2 decken Teil 1 ab (Kapitel 1–7), M3 Teil 2 (Kapitel 8–13).
+  - Dazu im Blazor-Track das Kapitel „TypeScript for C# developers“ (9 Lektionen) und der
+    Spickzettel `docs/csharp-to-typescript.md`.
+  - Gates: `pnpm --filter tutorial test` (Lesson-Gate und Claims-Tests) und
+    `pnpm --filter tutorial verify` (E2E in Edge).
+- **Tsazor-Erweiterungen** ([design-bindable-observe.md](design-bindable-observe.md)):
+  - `@Bindable() accessor value` mit Diagnose TZS030.
+  - `this.observe(source)`; der Name war zuerst `track` und wurde wegen Namenskollisionen
+    umbenannt.
+  - `this.disposeSignal`.
+- **Framework-Fixes aus dem Tutorial** (port-findings J, N): u. a. `#private`-Lifecycle-Felder,
+  `@attributes` ohne Capture, `@bind` bei range/date/leerer Zahl, `@ref` nach ChildContent,
+  `EventCallback`-Typen, TS2869 in gemischten Attributen.
+- **`pnpm -r test` unter Node 25 grün**: eigene vitest-Configs für cli/lsp/workspace,
+  `node --test test/*.test.mjs` in den Apps.
+- Gates zuletzt grün: `pnpm -r --filter '!fluentcms-admin' build` und `… test`.
+
+## Neue Grundsatz-Dokumente (alle committed)
+
+- `design-principles.md`:
+  - „Why Tsazor“: Die Hauptzielgruppe sind .NET-Backend-Teams, die nur Blazor verlassen.
+    Backend-Optionen bleiben offen, Sleipnir ist optional.
+  - „Parity first, then scale“: v1 = Blazor-Parität mit Superset-Regel.
+  - „Type safety is a requirement“: strict ist Pflicht, kein relaxed-Profil; daraus folgt das
+    Stabilitätsversprechen.
+- `roadmap-1.0.md`: Gesamtplan für 1.0. §4 Stabilität/Onboarding S1–S6, §5 Enterprise
+  readiness E1–E12, §6 Release R1–R5, am Ende die Reihenfolge.
+- `roadmap-tutorial.md`, `roadmap-sleipnir.md` (Entwurf, offene Entscheidungen),
+  `roadmap-ssr.md` (**post-1.0**; entschieden: anhängen statt ersetzen, Islands, Node).
+- Design-Entwürfe:
+  - `design-svelte-features.md`:
+    - F1a static markup ist eine Paritätslücke zu Razor (AddMarkupContent).
+    - F2 `@attach`, F3 `<Await>`, F4 transitions, F5 `@animate`.
+    - Offen: D1 (der `@`-Namensraum ist in Razor nicht frei, verifiziert mit .NET 10).
+  - `design-extensions-primitives.md`:
+    - `Decimal`, `TimeSpan`/`DateOnly`/`Guid`, `HttpClient` + Factory + Handler,
+      `Logger<T>`, `Options<T>`.
+    - Keine BCL-Klone. Offen: X1–X4.
+
+## Offen: Branch `port/modulestore-fixes` (nicht gemergt; Worktree `agent-a67bcfcce3084293c`)
+
+Er entstand beim Port einer Business-SPA (Svelte 4, ca. 4k Zeilen, im iframe eingebettet).
+Der Port selbst liegt **außerhalb dieses Repos** (Firmencode; Ort siehe private Notizen).
+Commits:
+- `918e451` **Hash-Routing als Opt-in** (E11): `createTsazorApp({ routing: { mode: "hash" } })`,
+  `new NavigationManager({ mode: "hash" })`, `toLinkHref`. Dazu 19 Tests in
+  `conformance/test/runtime/hash-routing.test.ts`.
+- `2e0dfa3` `tsazor check` **ohne Pfad prüfte nichts** (Exit 0). Die Gates `tsazor check &&
+  vite build` in pizza, demo, gallery und sleipnir-ticker waren deshalb wirkungslos. Jetzt wird
+  das aktuelle Verzeichnis geprüft.
+- `4a8863b` `tsazor check` prüft jetzt auch Code-behind und importierte `.ts`-Dateien. Dabei ist
+  ein echter Fehler in `apps/blazing-pizza/src/models.ts` aufgefallen, behoben.
+- `dccd930` Forms:
+  - `EditForm` mit `EditContext`-Parameter baute bei jedem Re-Render neu.
+  - `InputBase` schreibt das Model jetzt vor der Validierung.
+- `d915ab9` port-findings, Abschnitte Q–U (allgemein formuliert).
+
+Probe-Merge ohne Konflikte. Tests grün; ein Tutorial-Test („async-work app-b“) ist unter Last
+flaky, einzeln läuft er grün.
+
+**Entscheidungen des Users, die vor dem Merge noch ausstehen:**
+1. Die Namen der Hash-Routing-API (`routing.mode`, `NavigationManager({ mode })`, `toLinkHref`).
+2. Freigabe für den Merge.
+3. Die Sicherheitsthemen im Port: beheben oder originalgetreu lassen. Das betrifft den Port,
+   nicht dieses Repo.
+
+## Weitere offene Fragen an den User
+
+- Tutorial: Sollen die langen C#-Lektionen („the-real-traps“, „structural-typing“) so bleiben,
+  oder werden die Fallen auf zwei Lektionen aufgeteilt?
+- Empfohlene `tsconfig` auf `lib: ES2023` anheben (für `toSorted`)? Ich empfehle ja.
+- Design-Entscheidungen D1–D4 (Svelte-Features) und X1–X4 (Extensions).
+- Sleipnir-Roadmap: Wo passiert die Upstream-Arbeit, und wo liegt der Emitter?
+
+## Nächste Schritte (laut letztem Gesprächsstand)
+
+1. Die User-Entscheidungen zum Port-Branch einholen, dann mergen.
+2. **E8 Lokalisierung** als nächste große Baustelle. Anforderungen aus dem Port (port-findings R.1/R.2):
+   - Komponenten rendern beim Sprachwechsel automatisch neu.
+   - Sprachquellen in Prioritätsreihenfolge: explizit vor Profil vor Default.
+   - Tabellen werden asynchron geladen, mit Fallback.
+   - Platzhalter und typisierte Schlüssel.
+   - **Übersetzbare Validierungsmeldungen.**
+   - Kultur-Formatierung über `Intl`, später zusammen mit `Decimal`.
+3. Danach Tutorial M4 (Teil 3: Routing braucht eine In-Memory-History im srcdoc-Preview,
+   H.7; Hash-Routing evtl. als Lektion), R1 CI + S1 API-Snapshot.
+4. Bundle-Analyse: erst vor dem Release-Kandidaten. Die Bundle-Größe ist laut User kein Blocker
+   (+15 KB gz zum Svelte-Original, cachebar).
+
+## Resume-Regeln
+
+- Prüfen: `git status --short`, `git log --oneline -3`, `git worktree list`.
+- **Nicht anfassen:** `pnpm-lock.yaml` (lokale Änderung des Users für `apps/fluentcms-admin`)
+  und `apps/fluentcms-admin/` (lokales WIP des Users, untracked, Build scheitert an fehlendem
+  `app.css`). Aus Gates ausschließen mit `--filter '!fluentcms-admin'`.
+- Wenn ein Merge `pnpm-lock.yaml` ändert: User-Diff sichern, eindeutig benannten Stash anlegen,
+  mergen, `pnpm install`, Inhalt mit dem gesicherten Diff vergleichen (ohne die Zeilen
+  `index`/`@@`), Stash droppen.
+- Merges nach `roadmap/phase-0` nur mit ausdrücklicher Freigabe des Users. Pushen nur auf
+  ausdrückliche Bitte.
+- **Firmencode bleibt draußen:** keine Inhalte, Namen oder URLs aus Firmen-Apps in dieses
+  (öffentliche) Repo, auch nicht in Tests, Doku, Findings oder Commit-Messages.
+- Gate-Reihenfolge: `pnpm install`, `pnpm -r build`, `pnpm install` (Bin-Links), dann Tests.
+- Worktrees der gemergten Branches (`agent-*`, `p2-4` … `p5`) können aufgeräumt werden. Vorher
+  den User fragen.
