@@ -65,6 +65,8 @@ Gate: no German left in the listed files, all relative links resolve.
 11. *Element references*: `@ref`
 12. *Special components*: `ErrorBoundary` · `DynamicComponent` · `PageTitle`/`HeadContent` · Sections
 13. *Organizing code*: Code-behind · `_Imports.tsazor` · `@import`
+- *Planned, once the features land* ([design-svelte-features.md](design-svelte-features.md)):
+  *Attachments* (`@attach`) · *Transitions* · *Animations* (`@animate`) · an `<Await>` lesson
 
 **Part 3 — Applications**
 14. *Routing*: `@page` · Route parameters & constraints · `NavLink` · Navigation · Query parameters ·
