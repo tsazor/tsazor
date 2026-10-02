@@ -39,7 +39,13 @@ export class EventCallback<TArg = unknown> {
     return new EventCallback<never>(null, null);
   }
 
-  async invokeAsync(arg: TArg): Promise<void> {
+  /**
+   * Blazor's `EventCallback<T>.InvokeAsync(T)` — and, for a plain
+   * `EventCallback` (`TArg` = `unknown`), the argument-less
+   * `EventCallback.InvokeAsync()`.
+   */
+  async invokeAsync(...args: unknown extends TArg ? [arg?: TArg] : [arg: TArg]): Promise<void> {
+    const arg = args[0] as TArg;
     if (this.delegate === null) return;
     // Call with the receiver as `this` (Blazor's Factory.Bind semantics): the
     // compiler passes method references like `this.incrementCount`, which are

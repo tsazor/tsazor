@@ -582,6 +582,10 @@ member name: `Appearance="…"` sets `appearance`). Markup stays Razor; the valu
 | `EventCallback` / `EventCallback<T>` | `OnClick="handle"`, `OnClick="item.toggle"`, `OnClick="() => n++"`, `OnClick="@OnClick"` | `EventCallback` bound to the component (re-render afterwards); a method group with a receiver keeps it (like `@onclick`); an already bound `EventCallback` (passed through) stays unchanged |
 | `captureUnmatchedValues` / not declared, but a capture property exists | anything | as written (text as string) |
 
+- Invoking: `await this.onPick?.invokeAsync(value)` for an `EventCallback<T>` (the argument is
+  required), `await this.onClose?.invokeAsync()` for a plain `EventCallback` (Blazor's
+  argument-less `InvokeAsync()`). `EventCallback` is available in `@code` without an import,
+  like `Parameter`.
 - A function type that is not an `EventCallback` (`onlyIf?: (n: number) => boolean`, also through
   aliases or `| undefined`) is an ordinary value — regardless of its name; the runtime converts
   nothing (since 2.2). **Method groups are bound there** like a C# delegate: markup is
@@ -680,6 +684,16 @@ it is no longer rendered as `ChildContent` or as a component:
   its `ChildContent` — if that is a `RenderFragment<T>`, it takes the
   context (`Context=`, otherwise `context`) and is emitted as a template;
   a component without a `ChildContent` parameter does not accept element content (TZS025).
+- **Spelling in TypeScript:** a plain fragment is `RenderFragment` (`@import type {
+  RenderFragment } from "@tsazor/runtime"`, usually in `_Imports.tsazor`); Blazor's
+  `RenderFragment<TItem>` is written as the function it is, `(item: TItem) => RenderFragment`,
+  and called as `@itemTemplate(item)`. (A generic `RenderFragment<T>` reference is recognized
+  by the metadata, but the runtime type is not generic — port-findings P.5.)
+- **Narrowing does not reach deferred content.** A fragment body is a function that runs
+  later, so TypeScript drops the narrowing of a member from an enclosing `@if`:
+  `@if (user) { <Card>@user.name</Card> }` is TS2532 in `tsazor check` (the same for
+  `<PageTitle>`, slots and templates). Capture the value first — `@if (user) { const current =
+  user; <Card>@current.name</Card> }` — or read it through a getter.
 
 ## Typed shadows and tsazor check (2.4)
 

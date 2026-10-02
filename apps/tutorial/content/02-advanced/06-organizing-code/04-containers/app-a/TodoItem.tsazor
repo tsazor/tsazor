@@ -1,0 +1,20 @@
+@inject TodoStore store
+
+<li class="todo @(todo?.done ? "done" : null)">
+    <label>
+        <input type="checkbox" checked="@todo?.done" @onchange="() => store.toggle(id)" />
+        @todo?.title
+    </label>
+</li>
+
+@code {
+    @Parameter() id = 0;
+
+    get todo() {
+        return this.store.todos.find((candidate) => candidate.id === this.id);
+    }
+
+    override onInitialized() {
+        this.observe(this.store);
+    }
+}

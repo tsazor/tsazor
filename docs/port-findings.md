@@ -380,3 +380,128 @@ nach (+0,49 KB gz; `observe`/`disposeSignal`/`disposeInternal` sind `ComponentBa
 damit nicht tree-shakebar; `@Bindable` selbst fällt raus, wenn ungenutzt; die Dev-Warnungen
 entfernt Vite über `import.meta.env.DEV`). Die 20,4 KB aus der Roadmap sind ein älterer Stand —
 die Ausgangsbasis dieses Branches war bereits 24,79.
+
+---
+
+# Dogfooding: Tutorial M3 (Part 2, Kapitel 8–13) → Tsazor
+
+17 neue Lektionen (Reusing content, Cascading values, Services, Element references, Special
+components, Organizing code), jede Behauptung in `apps/tutorial/test/claims-part2.test.ts`
+gegen Compiler, Runtime und Typ-Check festgenagelt — ausgeführt wie in der Preview
+(`test/harness.ts`: HeadOutlet als zweite Wurzel, `Program.ts` mit `createTsazorApp`).
+
+## N. Framework-Lücken (behoben, mit Tests)
+
+### 1. `@ref` auf einer Komponente schnitt ihren Child Content ab — **behoben**
+
+`<ErrorBoundary @ref="b"><ChildContent>…</ChildContent>…</ErrorBoundary>` renderte **nichts**.
+Der Compiler emittierte `addComponentReferenceCapture` direkt nach den Attributen, *vor* den
+Fragment-Attributen (benannte Slots, implizites ChildContent). Der ParameterView ist aber der
+Lauf der Attribut-Frames nach dem Komponenten-Frame (`attributeMap` bricht am ersten
+Nicht-Attribut ab, wie Blazors `ParameterView`) — alles nach dem Capture fiel weg. Blazor
+emittiert den Capture zuletzt. **Fix:** `codegen.ts` emittiert die Reference-Captures nach
+Slots/ChildContent. Test: `compiler/test/templates.test.ts` („@ref on a component with child
+content“), Lektion „Error boundaries“ (Boundary mit `@ref` + `recover()`).
+
+### 2. `EventCallback` nur als Typ im `@code` → TS2304 — **behoben**
+
+`@Parameter() onPick?: EventCallback<string>` in einer Komponente *ohne* eigene Event-Handler
+war im Typ-Check TS2304: der Compiler importierte `EventCallback` (laut Sprachreferenz
+automatisch verfügbar) nur, wenn das Markup es brauchte. **Fix:** Scan des Member-Codes wie bei
+`@Parameter(`/`@Bindable(` (`codegen.ts`). Test: `compiler/test/codegen.test.ts`.
+
+### 3. Nicht-generisches `EventCallback.invokeAsync()` verlangte ein Argument — **behoben**
+
+`@Parameter() onToggle?: EventCallback` + `await this.onToggle?.invokeAsync()` war TS2554
+(`TArg` = `unknown` ⇒ Pflichtparameter). Blazors `EventCallback.InvokeAsync()` hat keins.
+**Fix:** `invokeAsync(...args: unknown extends TArg ? [arg?: TArg] : [arg: TArg])` — typisierte
+Callbacks (`EventCallback<string>`) verlangen das Argument weiter. Gepinnt in `claims-part2`
+(„a plain EventCallback needs no argument; a typed one does“); alle Pakete bauen unverändert.
+
+### 4. TS2869 bei gemischten Attributwerten — **behoben**
+
+`style="width: @(score * 25)%"` war im Typ-Check *Right operand of ?? is unreachable* (TS 5.6+
+meldet `??` hinter syntaktisch nie-nullishen Ausdrücken). Der Codegen erzeugt
+`` `width: ${(x) ?? ""}%` `` — das `?? ""` ist reine Laufzeitsemantik (null ⇒ leer). **Fix:** der
+typisierte Shadow lässt es weg (Mapping-Offsets unverändert), der echte Build behält es.
+Betrifft LSP und `tsazor check` gleichermaßen. Test: `compiler/test/typed-shadow.test.ts`.
+
+## O. Engine-Ergänzungen (Tutorial)
+
+- **`Program.ts` als Einstieg:** hat eine Lektion `Program.ts`, startet die Preview die App
+  darüber (`createTsazorApp({ root, services })`, wie eine echte App) statt `App` direkt zu
+  mounten — damit sind Services/`@inject` lehrbar. Gate/Claims ersetzen `@tsazor/runtime` in
+  `Program.ts` durch einen Shim, der die Optionen aufzeichnet, und mounten wie
+  `createTsazorApp` (NavigationManager, ein Renderer, HeadOutlet-Wurzel in `document.head`).
+- **Titel in der Preview:** der Iframe meldet `document.title` (MutationObserver auf `<head>`),
+  die Preview-Leiste zeigt ihn als Tab. Der Gate-Snapshot enthält den Head (Titel + Inhalt).
+- **Typ-Check:** `.tsazor`-Imports aus `.ts`-Dateien (`import App from "./App.tsazor"` in
+  `Program.ts`) lösen auf den Shadow auf (`resolveModuleNameLiterals`); die `TItem`-Inferenz
+  des LSP (Inferenz-Requests ⇒ Programmabfrage ⇒ Shadow-Neubau) ist nachgebaut — ohne sie war
+  der Kontext eines Templates `any` und `@todo.titel` unentdeckt. Das ist die dritte Kopie von
+  LSP-Logik im Tutorial (G.2: ein `FileSystemHost` in `@tsazor/lsp` würde sie überflüssig machen).
+- **`_Imports.tsazor` wird diagnostiziert** (ungültige `@import`-Formen TZS016, fehlende
+  `@using`-Ordner TZS018, TZS014 für `@authorize`) — vorher übersprang der Build die Datei,
+  Fehler darin blieben unsichtbar.
+- **Gate:** `refactor: true` (Lösung muss *identisch* rendern — für Code-behind/_Imports/
+  Container-Lektionen), von einer `ErrorBoundary` behandelte Fehler zählen nicht als Fehler;
+  `.gate/lessons` statt `.gate` (das `afterAll` löschte sonst parallel laufende Claims-Dirs).
+- **Kein Datei-Anlegen im Editor:** Lektionen, deren Lösung eine Datei braucht
+  (`X.tsazor.ts`, `_Imports.tsazor`), liefern sie im Start leer mit. Für M4 wünschenswert:
+  Dateien anlegen/löschen in den Tabs.
+
+## P. Reibungen und Abweichungen (dokumentiert, nicht behoben)
+
+### 5. `RenderFragment<T>` als generische Referenz — **offen**
+
+Die Metadaten erkennen `RenderFragment<T>` (metadata.ts: „a function type … or a generic
+`RenderFragment<T>` reference“), der Runtime-Typ ist aber nicht generisch ⇒ TS2315 *Type
+'RenderFragment' is not generic.* Das Tutorial lehrt die TS-Schreibweise
+`(item: TItem) => RenderFragment` (die ohnehin alle Runtime-Komponenten nutzen). Vorschlag:
+`export type RenderFragment<T = void> = [T] extends [void] ? (b: RenderTreeBuilder) => void :
+(context: T) => (b: RenderTreeBuilder) => void` — kleine, aber zentrale Typänderung; nicht
+nebenbei gemacht.
+
+### 6. `RenderFragment` braucht einen Import, `EventCallback`/`Parameter` nicht
+
+Uneinheitlich für Lernende: der Compiler importiert `Parameter`, `CascadingParameter`,
+`Bindable`, `inject`, (jetzt auch) `EventCallback` automatisch, `RenderFragment` nicht. Die
+Apps lösen es per `_Imports.tsazor`; das Tutorial zeigt `@import type { RenderFragment }` und
+später `_Imports`. Vorschlag: `RenderFragment` in die Auto-Import-Liste (reiner Typ, kostet nichts).
+
+### 7. Typen für `@ref`, `DynamicComponent`, `ErrorBoundary` brauchen `@import` (H.6 bestätigt)
+
+`<Editor @ref="editor" />` + `editor?: Editor` ⇒ TS2304 ohne `@import Editor from
+"./Editor.tsazor"`; `{ heading: Heading }` für `DynamicComponent` ⇒ zur Laufzeit
+`ReferenceError` ohne Import; `boundary?: ErrorBoundary` ⇒ TS2304. Für TS-Entwickler natürlich,
+für Blazor-Entwickler eine Stolperstelle (Lektionen erklären es). Der Vorschlag aus H.6 (Shadow
+typisiert ein `@ref`-Feld ohne Annotation) bleibt offen.
+
+### 8. Unbenannte `@CascadingParameter()` ohne `type` nehmen jeden unbenannten Cascade
+
+Blazor matcht unbenannt per deklariertem Typ; Tsazor ohne `type`-Option den nächsten
+unbenannten Cascade — ein `string`- und ein `number`-Cascade kollidieren, wo Blazor sie trennt
+(gepinnt). Lektion „Names and types“ lehrt Namen bzw. `{ type }`. Denkbar: der Compiler leitet
+`type` aus der Annotation ab, wenn sie eine importierte Klasse ist.
+
+### 9. Fehler ohne `ErrorBoundary` beenden die App nicht; Fehler im `ErrorContent` loopen
+
+Ohne Boundary loggt der Renderer und die App läuft weiter (Blazor: Circuit/App tot,
+`#blazor-error-ui`) — im Blazor-Track als Abweichung erklärt. Wirft der `ErrorContent` selbst,
+behandelt dieselbe Boundary den Fehler erneut, bis `maximumErrorCount` (100) erreicht ist —
+100 Konsolenzeilen, dann fatal. Mechanisch wie Blazor, aber laut; das Tutorial sagt nur „halte
+die Fehleransicht einfach“.
+
+### 10. `createTsazorApp().dispose()` disposed den Service-Provider nicht — **offen**
+
+Beim Schreiben der Lifetimes-Lektion aufgefallen: `dispose()` räumt Komponenten, Head-Wurzel,
+NavigationManager und HMR-Brücke ab, ruft aber nicht `services.dispose()` — Singletons mit
+`dispose()` werden nie freigegeben (Blazor disposed den Root-Provider beim Herunterfahren).
+Klein, aber eine Verhaltensänderung für Apps mit eigenen Disposables; das Tutorial behauptet
+dazu nichts. Vorschlag: der App-eigene Provider wird in `dispose()` mit freigegeben.
+
+### 11. Code-behind: Markup-Member müssen `protected` sein
+
+Weil der generierte Markup-Klasse *erbt*, ist ein `private` Member der Code-behind-Klasse im
+Markup TS2341. Logisch, aber für Blazor-Entwickler (partial class teilt `private`) neu — jetzt in
+`docs/code-behind.md` und in der Lektion „Code-behind“.

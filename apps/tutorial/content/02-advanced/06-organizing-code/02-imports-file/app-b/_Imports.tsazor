@@ -1,0 +1,3 @@
+@* Directives in this file apply to every .tsazor file in this folder and below. *@
+@import type { RenderFragment } from "@tsazor/runtime"
+@import { formatMoney } from "./money"

@@ -1,0 +1,11 @@
+@typeparam TItem
+
+<ul class="list">
+    @foreach (const item of items) {
+        <li>@item</li>
+    }
+</ul>
+
+@code {
+    @Parameter() items: TItem[] = [];
+}

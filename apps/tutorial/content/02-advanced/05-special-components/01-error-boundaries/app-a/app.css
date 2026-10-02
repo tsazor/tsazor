@@ -1,0 +1,14 @@
+.widget,
+.failed {
+    max-width: 24rem;
+    margin-bottom: 1rem;
+    padding: 0.25rem 1.25rem 1rem;
+    border: 1px solid #e3e6ea;
+    border-radius: 10px;
+}
+
+.failed {
+    border-color: #cf222e;
+    background: #fff0f0;
+    color: #cf222e;
+}

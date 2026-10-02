@@ -1,0 +1,14 @@
+@inject Cart cart
+
+<ul class="products">
+    @foreach (const product of products) {
+        <li>
+            @product
+            <button @onclick="() => cart.add(product)">Add</button>
+        </li>
+    }
+</ul>
+
+@code {
+    products = ["Apples", "Bread", "Cheese"];
+}

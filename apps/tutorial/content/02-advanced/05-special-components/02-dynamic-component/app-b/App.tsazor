@@ -1,0 +1,12 @@
+@import { page } from "./page"
+@import Heading from "./Heading.tsazor"
+@import Paragraph from "./Paragraph.tsazor"
+@import Quote from "./Quote.tsazor"
+
+@foreach (const block of page) {
+    <DynamicComponent Type="@blocks[block.kind]" Parameters="@block.props" />
+}
+
+@code {
+    readonly blocks = { heading: Heading, text: Paragraph, quote: Quote };
+}

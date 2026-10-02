@@ -1,0 +1,15 @@
+.editor {
+    display: block;
+    width: 100%;
+    max-width: 28rem;
+    padding: 0.6rem;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    font: inherit;
+}
+
+.count {
+    margin: 0.3rem 0 0;
+    color: #636c76;
+    font-size: 0.85rem;
+}

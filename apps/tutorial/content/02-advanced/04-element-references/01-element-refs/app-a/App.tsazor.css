@@ -1,0 +1,28 @@
+button {
+    padding: 0.45rem 1rem;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.danger {
+    border-color: #cf222e;
+    background: #cf222e;
+    color: #fff;
+}
+
+.confirm {
+    max-width: 20rem;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+}
+
+.confirm::backdrop {
+    background: rgb(31 35 40 / 0.4);
+}
+
+.confirm button + button {
+    margin-left: 0.5rem;
+}

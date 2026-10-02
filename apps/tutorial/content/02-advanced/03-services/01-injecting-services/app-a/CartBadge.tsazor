@@ -1,0 +1,11 @@
+@import { Cart } from "./Cart"
+
+<span class="badge">🛒 @cart.count</span>
+
+@code {
+    cart = new Cart();
+
+    override onInitialized() {
+        this.observe(this.cart);
+    }
+}

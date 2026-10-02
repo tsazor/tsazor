@@ -1,0 +1,11 @@
+<section class="widget">
+    <h2>Weather</h2>
+    <p>Sunny, 21 °C</p>
+    <button class="refresh" @onclick="refresh">Refresh</button>
+</section>
+
+@code {
+    refresh() {
+        throw new Error("The weather service is down.");
+    }
+}

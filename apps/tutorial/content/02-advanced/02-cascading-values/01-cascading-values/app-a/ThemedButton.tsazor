@@ -1,0 +1,6 @@
+<button class="themed @theme">@label</button>
+
+@code {
+    @Parameter() label = "";
+    theme = "light";
+}

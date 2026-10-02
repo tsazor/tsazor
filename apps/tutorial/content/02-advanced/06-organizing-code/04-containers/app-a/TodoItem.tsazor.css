@@ -1,0 +1,9 @@
+.todo {
+    padding: 0.45rem 0.25rem;
+    border-bottom: 1px solid #e3e6ea;
+}
+
+.done {
+    color: #a3abb5;
+    text-decoration: line-through;
+}

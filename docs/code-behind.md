@@ -29,6 +29,11 @@ generated class X extends (default export of X.tsazor.ts)
 - **`@code` still works alongside.** Both merge: sidecar members are the base,
   `@code` members join the generated class. Overriding a code-behind method in
   `@code` is plain TS inheritance.
+- **What the markup reads is `protected` (or public).** The markup's class is a
+  *subclass* of the sidecar, so a `private` member used in the markup is TS2341
+  in `tsazor check` (*Property 'x' is private and only accessible within class
+  'XBase'*) — unlike a C# partial class, which shares `private` members. Keep
+  `private` for helpers only the sidecar itself uses.
 
 ## What already works through the chain (runtime)
 

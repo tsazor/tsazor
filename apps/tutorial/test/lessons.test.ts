@@ -1,50 +1,37 @@
 /**
  * Gate: every lesson's start state (app-a) and solution (app-b) compiles with
- * the in-browser pipeline and renders headlessly. The solution must be free
- * of diagnostics (errors and warnings); the start state may only fail where
- * the lesson declares it (`startFails: true` in its front-matter). Both must
- * pass the type check (`tsazor check`), except a start state that is about
- * its type errors (`typeErrors: true`). The solution must differ visibly from
- * the start — after the `gate:` interaction steps, for behavior lessons.
+ * the in-browser pipeline and renders headlessly — the way the preview runs
+ * it (test/harness.ts: a head outlet next to the app, `Program.ts` when the
+ * lesson has one). The solution must be free of diagnostics (errors and
+ * warnings); the start state may only fail where the lesson declares it
+ * (`startFails: true` in its front-matter). Both must pass the type check
+ * (`tsazor check`), except a start state that is about its type errors
+ * (`typeErrors: true`). The solution must differ visibly from the start —
+ * after the `gate:` interaction steps, for behavior lessons; a refactoring
+ * lesson (`refactor: true`) must instead render exactly the same.
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { render } from "@tsazor/testing";
 import { loadContent, parseFrontMatter } from "../build/content";
-import { buildProject, MODULE_PREFIX, type ProjectBuild } from "../src/engine/compile-project";
-import { readFileSync, existsSync } from "node:fs";
+import { buildProject, type ProjectBuild } from "../src/engine/compile-project";
 import { loadTypeEnvironment } from "../build/type-env";
 import { TypeChecker } from "../src/engine/type-check";
+import { headSnapshot, mountWritten, writeModules } from "./harness";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contentDir = path.join(appRoot, "content");
-const gateDir = path.join(appRoot, ".gate");
+const gateDir = path.join(appRoot, ".gate", "lessons");
 const content = loadContent(contentDir);
 const lessons = content.parts.flatMap((part) => part.chapters.flatMap((chapter) => chapter.lessons));
 
 afterAll(() => rmSync(gateDir, { recursive: true, force: true }));
 
-/** Writes the modules as files; module ids become relative file imports. */
-function writeModules(build: ProjectBuild, dir: string): string {
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
-  for (const module of Object.values(build.modules)) {
-    const fileDir = path.posix.dirname(module.file);
-    const code = module.code.replace(/(["'])\$app\/([^"']+)\1/g, (_match, quote: string, target: string) => {
-      const relative = path.posix.relative(fileDir === "." ? "" : fileDir, target);
-      return `${quote}${relative.startsWith(".") ? relative : `./${relative}`}.js${quote}`;
-    });
-    const out = path.join(dir, `${module.file}.js`);
-    mkdirSync(path.dirname(out), { recursive: true });
-    writeFileSync(out, code);
-  }
-  return path.join(dir, `${build.entry!.slice(MODULE_PREFIX.length)}.js`);
-}
+type FrontMatterKey = "startFails" | "typeErrors" | "gate" | "refactor";
 
 /** A front-matter value set in either track's text (the first one found). */
-function frontMatter(lessonDir: string, name: "startFails" | "typeErrors" | "gate"): string | undefined {
+function frontMatter(lessonDir: string, name: FrontMatterKey): string | undefined {
   for (const track of ["blazor", "ts"]) {
     const file = path.join(contentDir, lessonDir, `${track}.md`);
     const value = existsSync(file) ? parseFrontMatter(readFileSync(file, "utf8")).data[name] : undefined;
@@ -52,7 +39,7 @@ function frontMatter(lessonDir: string, name: "startFails" | "typeErrors" | "gat
   }
   return undefined;
 }
-const flag = (lessonDir: string, name: "startFails" | "typeErrors"): boolean => frontMatter(lessonDir, name) === "true";
+const flag = (lessonDir: string, name: FrontMatterKey): boolean => frontMatter(lessonDir, name) === "true";
 const startFails = (lessonDir: string): boolean => flag(lessonDir, "startFails");
 
 const checker = new TypeChecker(loadTypeEnvironment(appRoot));
@@ -102,17 +89,23 @@ const formState = (container: HTMLElement): string =>
     .map((el) => `${(el as HTMLInputElement).value}|${(el as HTMLInputElement).checked}`)
     .join(",");
 
+/** An error an ErrorBoundary caught is the lesson working, not a failure. */
+const handledByBoundary = (args: unknown[]): boolean => typeof args[0] === "string" && args[0].startsWith("[tsazor] ErrorBoundary handled:");
+
 async function renderBuild(build: ProjectBuild, dir: string, steps?: string): Promise<{ html: string; errors: unknown[] }> {
-  const entry = writeModules(build, dir);
+  writeModules(build, dir);
   const errors: unknown[] = [];
   const original = console.error;
-  console.error = (...args: unknown[]) => errors.push(args);
+  console.error = (...args: unknown[]) => {
+    if (!handledByBoundary(args)) errors.push(args);
+  };
   try {
-    const module = (await import(pathToFileURL(entry).href)) as { default: never };
-    const result = await render(module.default);
-    await runSteps(result.container, steps);
-    const html = `${result.container.innerHTML}\n${formState(result.container)}`;
-    result.dispose();
+    const mounted = await mountWritten(build, dir);
+    await runSteps(mounted.container, steps);
+    await mounted.settle();
+    // The document head counts: PageTitle and HeadContent render there.
+    const html = `${mounted.container.innerHTML}\n${formState(mounted.container)}\n${headSnapshot()}`;
+    mounted.dispose();
     return { html, errors };
   } finally {
     console.error = original;
@@ -123,7 +116,7 @@ const format = (build: ProjectBuild): string =>
   build.diagnostics.map((d) => `${d.file}(${d.line},${d.column + 1}) ${d.code} ${d.message}`).join("\n");
 
 describe("tutorial lessons", () => {
-  it("has the Part 1 lessons in both tracks", () => {
+  it("has the Part 1 and Part 2 chapters, every lesson in both tracks", () => {
     expect(content.parts[0]!.chapters.map((chapter) => chapter.title)).toEqual([
       "Introduction",
       "State & rendering",
@@ -133,7 +126,15 @@ describe("tutorial lessons", () => {
       "Bindings",
       "Classes & styles",
     ]);
-    expect(lessons.length).toBeGreaterThanOrEqual(34);
+    expect(content.parts[1]!.chapters.map((chapter) => chapter.title)).toEqual([
+      "Reusing content",
+      "Cascading values",
+      "Services",
+      "Element references",
+      "Special components",
+      "Organizing code",
+    ]);
+    expect(lessons.length).toBeGreaterThanOrEqual(51);
     for (const lesson of lessons) {
       expect(Object.keys(lesson.text).sort(), lesson.slug).toEqual(["blazor", "ts"]);
     }
@@ -177,11 +178,18 @@ describe("tutorial lessons", () => {
           const { html, errors } = await renderBuild(build, path.join(gateDir, lesson.slug, "b"), steps);
           expect(errors).toEqual([]);
           expect(html.length).toBeGreaterThan(0);
-          // The solution changes something visible (markup, form state or styles),
-          // after the lesson's gate steps where its difference is behavior.
           const a = buildProject(lesson.a);
           const before = a.entry ? (await renderBuild(a, path.join(gateDir, lesson.slug, "a2"), steps)).html + a.css : "";
-          expect(html + build.css).not.toBe(before);
+          if (flag(lesson.dir, "refactor")) {
+            // A refactoring moves code around: the app must render exactly as before.
+            const strip = (s: string): string => s.replace(/\s+b-[0-9a-f]{8}=""/g, "").replace(/\/\* [^*]+ \*\/\n/g, "");
+            expect(strip(html + build.css)).toBe(strip(before));
+            expect(lesson.b).not.toEqual(lesson.a);
+          } else {
+            // The solution changes something visible (markup, form state, styles or
+            // the document head), after the lesson's gate steps where its difference is behavior.
+            expect(html + build.css).not.toBe(before);
+          }
         });
       }
     });
