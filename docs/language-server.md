@@ -83,7 +83,7 @@ AST node (`nodeAt`, 0-based LSP positions over the compiler's 1-based lines):
 ### Parameter and member sources
 
 - **Component parameters** come from the parameter metadata (roadmap 2.1,
-  [architecture.md](architecture.md#parameter-metadaten-21)):
+  [architecture.md](architecture.md#parameter-metadata-21)):
   `context.resolveComponentMetadata(tag, usings, imports)` resolves the tag
   exactly like the build (`@import` binding, enclosing folders, `@using`
   sources, runtime built-ins, packages) and returns every parameter the

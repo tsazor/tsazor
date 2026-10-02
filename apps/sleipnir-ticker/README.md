@@ -1,67 +1,65 @@
-# Sleipnir Ticker — Live-Bitcoin-Viewer
+# Sleipnir Ticker — live Bitcoin viewer
 
-Erste reale App, die **Tsazor** mit **Sleipnir** verdrahtet: eine ASP.NET Core API
-(NuGet `Sleipnir.Server`) relaisiert Binance-WebSocket-Ticker-Daten als
-Command-API mit Server-Push-Events; das Tsazor-Frontend rendert sie live —
-ohne Polling, die Updates kommen per SSE-Event in die Komponenten.
+The first real app that wires **Tsazor** to **Sleipnir**: an ASP.NET Core API
+(NuGet `Sleipnir.Server`) relays Binance WebSocket ticker data as a command API with
+server-push events; the Tsazor frontend renders it live — no polling, the updates arrive in
+the components as SSE events.
 
-## Starten
+## Running
 
 ```bash
-pnpm --filter sleipnir-ticker api     # API auf :5310 (TICKER_MODE siehe unten)
-pnpm --filter sleipnir-ticker dev     # App auf :5311 (SSE/REST via Vite-Proxy)
+pnpm --filter sleipnir-ticker api     # API on :5310 (TICKER_MODE see below)
+pnpm --filter sleipnir-ticker dev     # app on :5311 (SSE/REST via Vite proxy)
 ```
 
-Der Datenpfad endet nie still: der Binance-Feed `wss://stream.binance.com:9443/
-ws/btcusdt@ticker` wird vom Server per `ClientWebSocket` angebunden (Reconnect
-mit Backoff, proaktiver Reconnect vor Binance 24 h-Close). Wenn Binance nicht
-erreichbar ist, fällt `TICKER_MODE=auto` (Default) nach 10 s auf einen
-Synthetic-Feed (Random Walk) zurück — der Modus steht im `TickerFeedStatus`
-und im Verbindungs-Badge der UI.
+The data path never ends silently: the server connects to the Binance feed
+`wss://stream.binance.com:9443/ws/btcusdt@ticker` via `ClientWebSocket` (reconnect with
+backoff, proactive reconnect before Binance's 24 h close). If Binance is unreachable,
+`TICKER_MODE=auto` (the default) falls back to a synthetic feed (random walk) after 10 s — the
+mode is shown in `TickerFeedStatus` and in the UI's connection badge.
 
 ```bash
 TICKER_MODE=auto|binance|synthetic
 ```
 
-Verify (synthetic, deterministisch): `pnpm --filter sleipnir-ticker verify`
+Verify (synthetic, deterministic): `pnpm --filter sleipnir-ticker verify`
 
-## Der generierte Client (Typesicherheit aus dem Contract)
+## The generated client (type safety from the contract)
 
-Der TS-Client wird aus der Laufzeit-Discovery der API generiert — keine
-handgeschriebenen Wrapper, die C#-Contracts (records in
-`api/Controllers`/`api/Models`) sind die Quelle für alle Typen:
+The TS client is generated from the API's runtime discovery — no hand-written wrappers; the C#
+contracts (records in `api/Controllers`/`api/Models`) are the source of all types:
 
 ```bash
-pnpm --filter sleipnir-ticker codegen   # startet ggf. die API selbst, generiert in src/api/
+pnpm --filter sleipnir-ticker codegen   # starts the API itself if needed, generates into src/api/
 ```
 
-- `src/api/` enthält das generierte Resultat (`sleipnir-gen --lang ts
-  --transport rest`) und ist **committed** — Verify braucht keine laufende API.
-- Contract-Drift prüfen: `npx sleipnir-gen … --selfcheck` (Exit 4 bei Drift).
-- Nutzt: `client.market.getTicker()` → `TypedResponse<TickerSnapshot>`
-  (narrowed `data`), Events via `client.market.tickerUpdated(handlers)` →
+- `src/api/` contains the generated result (`sleipnir-gen --lang ts
+  --transport rest`) and is **committed** — verify does not need a running API.
+- Check for contract drift: `npx sleipnir-gen … --selfcheck` (exit code 4 on drift).
+- Usage: `client.market.getTicker()` → `TypedResponse<TickerSnapshot>`
+  (narrowed `data`), events via `client.market.tickerUpdated(handlers)` →
   `Promise<SleipnirSubscription>`.
 
-## Struktur
+## Structure
 
-| Teil | Inhalt |
+| Part | Contents |
 |---|---|
-| `api/` | ASP.NET Core (net9.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated über `IObservable<TickerSnapshot>`), `TickerFeed`-Singleton, `BinanceTickerSource`/`SyntheticTickerSource` hinter `ITickerSource` |
-| `src/TickerStore.ts` | App-weiter Store: 1 SSE-Subscription für die App-Laufzeit, Pages subscriben in `onInitialized` und unsubscriben in `dispose()` |
-| `src/Pages/` | `/` Live-Dashboard (Preis, 24h-Stats, Sparkline, Event-Log) · `/history` Ring-Buffer-Tabelle |
-| `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — Scoped-CSS-Isolation) · `EventLog.tsazor` |
-| `scripts/` | `verify.mjs` (E2E, 15 Checks, self-starting) · `codegen.mjs` |
-| `test/` | `node --test` über die Pure-Helper (`src/formatters.mjs`) |
+| `api/` | ASP.NET Core (net9.0): `MarketController` ([SleipnirMethod] GetTicker/GetHistory/GetStatus + [SleipnirEvent] TickerUpdated via `IObservable<TickerSnapshot>`), `TickerFeed` singleton, `BinanceTickerSource`/`SyntheticTickerSource` behind `ITickerSource` |
+| `src/TickerStore.ts` | App-wide store: 1 SSE subscription for the app's lifetime; pages subscribe in `onInitialized` and unsubscribe in `dispose()` |
+| `src/Pages/` | `/` live dashboard (price, 24h stats, sparkline, event log) · `/history` ring-buffer table |
+| `src/components/` | `Sparkline.tsazor` (+`.tsazor.css` — scoped CSS isolation) · `EventLog.tsazor` |
+| `scripts/` | `verify.mjs` (E2E, 15 checks, self-starting) · `codegen.mjs` |
+| `test/` | `node --test` over the pure helpers (`src/formatters.mjs`) |
 
 ## Ports
 
-API :5310 · Vite :5311 (`strictPort`, Proxy: `/api/sleipnir`, `/sleipnirws`).
-Blazing Pizza nutzt :5300/:5301, die Demo :5199.
+API :5310 · Vite :5311 (`strictPort`, proxy: `/api/sleipnir`, `/sleipnirws`).
+Blazing Pizza uses :5300/:5301, the demo :5199.
 
-## Bekannte Grenzen (v1)
+## Known limitations (v1)
 
-- **Kein Resume über Reload**: die generierte Client-Oberfläche exponiert kein
-  `router.resume(subscriptionId, lastEventId)` → ein Reload subskribiert neu.
-  Serverseitig bleibt `Resumable = true` (gratis in-process Replay).
-- Sidecar-`TICKER_MODE=auto` hält Binance nur mit 10-s-Budget — danach ist der
-  Feed für diese API-Laufzeit synthetic (Re-Start für erneuten Versuch).
+- **No resume across reload**: the generated client surface does not expose
+  `router.resume(subscriptionId, lastEventId)` → a reload subscribes again.
+  On the server side `Resumable = true` stays (free in-process replay).
+- Sidecar `TICKER_MODE=auto` only tries Binance within a 10 s budget — after that the feed is
+  synthetic for the rest of this API process's lifetime (restart to try again).

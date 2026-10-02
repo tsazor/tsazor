@@ -684,7 +684,7 @@ Codegen; der Plugin-Resolver liefert sie für Ziel-Komponenten (analog `resolveC
 Fertige Pakete (`components`, `fluent`) liefern sie als Manifest.
 
 **Stand: 2.1 umgesetzt** (Branch `roadmap/p2-1-metadata`; Modell in
-[architecture.md](architecture.md#parameter-metadaten-21)). Extraktor + Auflösung in
+[architecture.md](architecture.md#parameter-metadata-21)). Extraktor + Auflösung in
 `@tsazor/compiler` (`metadata.ts`, syntaktisch, Host-basiert), Dateisystem-Host,
 Cache und Manifeste in `@tsazor/workspace` (`metadata.ts`). Kategorien `string` /
 `value` / `EventCallback` / `EventCallback<T>` / `RenderFragment` /
@@ -725,7 +725,7 @@ Typen aus Fremd-Paketen ohne Manifest bleiben `uncertain`; eine neu angelegte
 - Unbekannte Parameter ⇒ Compile-Fehler (statisches Pendant zu T3).
 
 **Stand: 2.2 umgesetzt** (Branch `roadmap/p2-2-codegen`; Regeln in
-[language-reference.md](language-reference.md#komponenten-attribute-nach-parametertyp)).
+[language-reference.md](language-reference.md#component-attributes-by-parameter-type)).
 Komponenten-Attribute nach `category` des Ziel-Parameters: `string` wie bisher; sonstige
 Werte und `RenderFragment` als TS-Ausdruck auch ohne `@` (`Count="5"` ⇒ `5`, `Items="people"`
 ⇒ `this.people`, `Interval="@4000"` ⇒ `4000`, wertlos ⇒ `true`); `EventCallback(<T>)` ⇒
@@ -768,7 +768,7 @@ fluentcms-Port und gallery-Table ohne handgeschriebenen `RenderTreeBuilder`-Code
 eine Komponente ist; und 2.4 soll Slots bereits typisiert prüfen.
 
 **Stand: 2.3 umgesetzt** (Branch `roadmap/p2-3-templates`; Regeln in
-[language-reference.md](language-reference.md#templated-components-benannte-slots-und-template-kontexte-23)).
+[language-reference.md](language-reference.md#templated-components-named-slots-and-template-contexts-23)).
 Slot vs. Komponente entscheidet das Elternteil anhand seiner Parameter-Metadaten (C13): ein
 direktes Kind, das einen `RenderFragment`-/`RenderFragment<T>`-Parameter benennt, ist
 Child-Content-Element — auch wenn eine gleichnamige Komponente existiert (wie Razor, wo
@@ -813,7 +813,7 @@ LSP-Completion/Hover für Slots (2.5).
 
 **Stand: 2.4 umgesetzt** (Branch `roadmap/p2-4-typed-checks`; Details in
 [design-2.4-typed-checks.md](design-2.4-typed-checks.md), Regeln in
-[language-reference.md](language-reference.md#typisierte-shadows-und-tsazor-check-24)).
+[language-reference.md](language-reference.md#typed-shadows-and-tsazor-check-24)).
 Der Compiler akzeptiert `typedShadow: true` und emittiert dann in jede Shadow pro
 Komponenten-Tag ein `satisfies`-Check-Objekt mit den eigenen Parametern — Kategorie
 `value`/`string` typisiert, `mixedValue`/EventCallback/RenderFragment bewusst untypisiert

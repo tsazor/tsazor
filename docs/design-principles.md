@@ -1,53 +1,54 @@
-# Design-Prinzipien
+# Design principles
 
-## Warum Tsazor
+## Why Tsazor
 
-Blazors Komponentenmodell — RenderTree, Lifecycle, Parameter, Cascading Values, DI, EditForm,
-Routing — ist ein gut durchdachtes Modell, und es ist nicht an .NET gebunden. Tsazor bringt es nach
-TypeScript: für .NET-Entwickler (geringer Migrationsaufwand von Blazor, Brücke zum .NET-Backend)
-**und** für Frontend-Entwickler außerhalb des Microsoft-Umfelds, die dieses Modell in idiomatischem
-TypeScript nutzen wollen. Beide Zielgruppen sind gleichrangig.
+Blazor's component model — RenderTree, lifecycle, parameters, cascading values, DI, EditForm,
+routing — is a well-thought-out model, and it is not tied to .NET. Tsazor brings it to
+TypeScript: for .NET developers (low migration effort from Blazor, a bridge to the .NET backend)
+**and** for frontend developers outside the Microsoft ecosystem who want to use this model in
+idiomatic TypeScript. Both audiences are equally important.
 
-Kurz: **Blazor, mit C# durch TypeScript ersetzt.** Dasselbe Entwicklungsmodell, dieselben
-Razor-Templates, dasselbe CSS (Scoped CSS als `X.tsazor.css` mit `::deep`, wie `X.razor.css`) —
-und TypeScript ist TypeScript. Keine Mischform aus C# und TS: Sie verwirrt beide Zielgruppen.
-Portierungsaufwand wird an anderer Stelle gelöst, größtenteils automatisiert (Codemod).
+In short: **Blazor, with C# replaced by TypeScript.** The same development model, the same Razor
+templates, the same CSS (scoped CSS as `X.tsazor.css` with `::deep`, like `X.razor.css`) — and
+TypeScript is TypeScript. No hybrid of C# and TS: it confuses both audiences. Porting effort is
+handled elsewhere, mostly automated (codemod).
 
-## Markup ist Razor, Code ist TypeScript, die Brücke ist Werkzeug
+## Markup is Razor, code is TypeScript, the bridge is tooling
 
-1. **Markup und Direktiven: 1:1 Blazor.** Tags, Attribute, `@bind`, `@onclick`, `@page`,
-   `@layout`, `@inject Typ Name`, `@code`, `@key`, `@ref`. Hier entsteht der geringe
-   Migrationsaufwand — es ist der Großteil einer `.razor`-Datei.
-2. **Alles, was Code ist, ist sauberes TypeScript.** `@code`, `@{ }`, Control-Block-Köpfe und
-   Ausdrücke folgen TypeScript-Syntax und -Semantik. Keine C#-Syntax, und keine C#-Semantik, die
-   TypeScript widerspricht. TypeScript wird nicht in Richtung C# verbogen.
-3. **Runtime-API: Blazor-Semantik, TypeScript-Namen.** `onInitialized` statt `OnInitialized`,
-   `bigint` statt `long`, ein Boolean rendert `"true"`. Moderne Standard-TS-Features haben Vorrang
-   (z. B. Standard-Decorators statt `experimentalDecorators`).
-4. **Migration über Werkzeuge, nicht über Compiler-Toleranz.** C#-Reste in portiertem Code
-   behandelt ein Codemod (`.razor` → `.tsazor`) und LSP-Diagnosen mit Quick-Fix. Der Compiler
-   akzeptiert C#-Konstrukte nicht still — er meldet sie mit dem TypeScript-Gegenstück.
+1. **Markup and directives: 1:1 Blazor.** Tags, attributes, `@bind`, `@onclick`, `@page`,
+   `@layout`, `@inject Type Name`, `@code`, `@key`, `@ref`. This is where the low migration
+   effort comes from — it is the bulk of a `.razor` file.
+2. **Everything that is code is clean TypeScript.** `@code`, `@{ }`, control-block headers and
+   expressions follow TypeScript syntax and semantics. No C# syntax, and no C# semantics that
+   contradict TypeScript. TypeScript is not bent towards C#.
+3. **Runtime API: Blazor semantics, TypeScript names.** `onInitialized` instead of
+   `OnInitialized`, `bigint` instead of `long`, a boolean renders as `"true"`. Modern standard TS
+   features take precedence (e.g. standard decorators instead of `experimentalDecorators`).
+4. **Migration through tooling, not through compiler leniency.** Leftover C# in ported code is
+   handled by a codemod (`.razor` → `.tsazor`) and LSP diagnostics with quick fixes. The
+   compiler does not silently accept C# constructs — it reports them together with the
+   TypeScript equivalent.
 
-## Was keine Verbiegung ist
+## What is not bending
 
-Konventionen der Razor-*Templatesprache* — nicht von C# — bleiben:
+Conventions of the Razor *template language* — not of C# — stay:
 
-- **Freie Namen im Markup sind Member** (`@count` statt `@this.count`), wie in Vue-, Angular- oder
-  Svelte-Templates. Im `@code`-Block bleibt `this.` Pflicht.
-- **Parameter-Namen werden im Markup case-insensitiv zugeordnet.** So bleibt portiertes Markup
-  (`<Button Appearance="…">`) unverändert, während die TS-Klasse beim idiomatischen camelCase
-  (`appearance`) bleibt. Members werden nicht auf PascalCase umgestellt.
-- **Nackter Text in einem Code-Kontext ist ein Fehler** — das folgt aus Razors Markup/Code-Grenze,
-  nicht aus C#.
+- **Free names in markup are members** (`@count` instead of `@this.count`), as in Vue, Angular
+  or Svelte templates. Inside the `@code` block, `this.` remains mandatory.
+- **Parameter names are matched case-insensitively in markup.** That way ported markup
+  (`<Button Appearance="…">`) stays unchanged while the TS class keeps idiomatic camelCase
+  (`appearance`). Members are not switched to PascalCase.
+- **Bare text in a code context is an error** — this follows from Razor's markup/code boundary,
+  not from C#.
 
-## Im Zweifel TypeScript
+## When in doubt, TypeScript
 
-Bei strittigen Fällen gilt die **TypeScript-Konvention, nicht die von Blazor**. Blazor-Treue
-betrifft Markup, Direktiven und die Semantik des Komponentenmodells; wo sie mit idiomatischem
-TypeScript kollidiert (Namensgebung, Typen, Syntax, Sprach-Features), gewinnt TypeScript.
+In contested cases, the **TypeScript convention wins, not Blazor's**. Fidelity to Blazor covers
+markup, directives and the semantics of the component model; where it collides with idiomatic
+TypeScript (naming, types, syntax, language features), TypeScript wins.
 
-## Prüffrage für neue Features
+## The test question for new features
 
-Würde ein TypeScript-Entwickler ohne .NET-Hintergrund das natürlich finden — und bleibt ein
-Blazor-Port trotzdem billig? Wenn nur die zweite Frage mit Ja beantwortet wird, gehört die Hilfe
-in den Codemod oder in eine Diagnose, nicht in die Sprache.
+Would a TypeScript developer without a .NET background find this natural — and does a Blazor
+port still stay cheap? If only the second question gets a yes, the help belongs in the codemod
+or in a diagnostic, not in the language.

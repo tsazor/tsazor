@@ -1,12 +1,11 @@
 # Tsazor — TypeScript Razor
 
-Tsazor ist ein SPA-Framework, das sich 1:1 an Blazors Architektur orientiert — RenderTree,
-Renderer, Lifecycle, Parameter-System, Routing, Forms — aber ohne WASM und C#: TypeScript
-ist die primäre Sprache, alles läuft rein im Browser.
+Tsazor is an SPA framework that follows Blazor's architecture 1:1 — RenderTree, renderer,
+lifecycle, parameter system, routing, forms — but without WASM and C#: TypeScript is the primary
+language, and everything runs purely in the browser.
 
-`.tsazor`-Dateien verwenden Razor als Markup-Syntax. Der Code in `@code`-Blöcken ist
-TypeScript; abgesehen davon sind die Markups weitgehend austauschbar mit Blazors
-`.razor`-Dateien.
+`.tsazor` files use Razor as their markup syntax. The code in `@code` blocks is TypeScript;
+apart from that, the markup is largely interchangeable with Blazor's `.razor` files.
 
 ```razor
 @page "/counter"
@@ -26,55 +25,55 @@ TypeScript; abgesehen davon sind die Markups weitgehend austauschbar mit Blazors
 }
 ```
 
-**Leitprinzip:** Markup ist Razor (1:1 Blazor), Code ist sauberes TypeScript — siehe
+**Guiding principle:** markup is Razor (1:1 Blazor), code is clean TypeScript — see
 [docs/design-principles.md](docs/design-principles.md).
 
-## Feature-Überblick
+## Feature overview
 
-- **Blazor-Architektur 1:1:** RenderTree, Renderer/Diff, Komponenten-Lifecycle, Parameter
-  (`@Parameter()`), Cascading, DI, Routing mit Layouts, EditForm/`@bind`-Validierung,
+- **Blazor architecture 1:1:** RenderTree, renderer/diff, component lifecycle, parameters
+  (`@Parameter()`), cascading values, DI, routing with layouts, EditForm/`@bind` validation,
   Virtualize.
-- **Scoped CSS:** `X.tsazor.css` als Sidecar-Stylesheet, Selector-Rewriting per postcss,
-  `::deep` wie in Blazor ([docs/scoped-css.md](docs/scoped-css.md)).
-- **Code-behind:** `X.tsazor.ts` als Sidecar-Klasse (per Vererbung statt partial classes,
+- **Scoped CSS:** `X.tsazor.css` as a sidecar stylesheet, selector rewriting via postcss,
+  `::deep` as in Blazor ([docs/scoped-css.md](docs/scoped-css.md)).
+- **Code-behind:** `X.tsazor.ts` as a sidecar class (via inheritance instead of partial classes,
   [docs/code-behind.md](docs/code-behind.md)).
-- **Language Server:** Diagnostics, Hover, Go-to-Definition und Auto-Complete für `.tsazor`
+- **Language server:** diagnostics, hover, go-to-definition and auto-complete for `.tsazor`
   ([docs/language-server.md](docs/language-server.md)).
-- **Debugging in DevTools:** Inline-Sourcemaps binden `.tsazor` an die echte Quelle —
-  Breakpoints in `@code` und Variablen-Inspektion funktionieren im Browser
+- **Debugging in DevTools:** inline source maps map `.tsazor` back to the real source —
+  breakpoints in `@code` and variable inspection work in the browser
   ([docs/debugging.md](docs/debugging.md)).
 
 ## Quickstart
 
 ```bash
 pnpm install
-pnpm demo:dev        # Demo-App (Vite Dev-Server mit HMR)
-pnpm -r build        # alle Pakete bauen
-pnpm -r test         # alle Tests (Vitest + happy-dom)
+pnpm demo:dev        # demo app (Vite dev server with HMR)
+pnpm -r build        # build all packages
+pnpm -r test         # run all tests (Vitest + happy-dom)
 ```
 
-Realer Härtetest 1: **[Blazing Pizza](apps/blazing-pizza)** (Port der Blazor-Workshop-App,
-Details in [docs/port-findings.md](docs/port-findings.md)):
+Real-world stress test 1: **[Blazing Pizza](apps/blazing-pizza)** (a port of the Blazor workshop
+app, details in [docs/port-findings.md](docs/port-findings.md)):
 
 ```bash
-pnpm --filter blazing-pizza server   # API auf :5300
-pnpm --filter blazing-pizza dev      # App auf :5301
-node apps/blazing-pizza/scripts/verify-pizza.mjs   # E2E (startet/kills Server selbst)
+pnpm --filter blazing-pizza server   # API on :5300
+pnpm --filter blazing-pizza dev      # app on :5301
+node apps/blazing-pizza/scripts/verify-pizza.mjs   # E2E (starts/kills the server itself)
 ```
 
-Seed-Login: `test@example.com` / `test1234`.
+Seed login: `test@example.com` / `test1234`.
 
-Realer Härtetest 2: **[Sleipnir Ticker](apps/sleipnir-ticker)** — Live-Daten statt Forms:
-eine ASP.NET-Core-API relaisiert Binance-WebSocket-Ticker-Daten als Sleipnir
-Command-API, das Tsazor-Frontend rendert sie per SSE-Push live:
+Real-world stress test 2: **[Sleipnir Ticker](apps/sleipnir-ticker)** — live data instead of
+forms: an ASP.NET Core API relays Binance WebSocket ticker data as a Sleipnir command API, and the
+Tsazor frontend renders it live via SSE push:
 
 ```bash
-pnpm --filter sleipnir-ticker api    # API auf :5310
-pnpm --filter sleipnir-ticker codegen   # generierten TS-Client in src/api/ regenerieren
-node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic-Feed, self-starting)
+pnpm --filter sleipnir-ticker api    # API on :5310
+pnpm --filter sleipnir-ticker codegen   # regenerate the generated TS client in src/api/
+node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic feed, self-starting)
 ```
 
-Eine eigene App:
+Your own app:
 
 ```bash
 npm create vite@latest my-app -- --template vanilla-ts
@@ -99,62 +98,72 @@ export default defineConfig({ plugins: [tsazor()] });
 // src/Program.ts
 import { createTsazorApp } from "@tsazor/runtime";
 import App from "./App.tsazor";
-import routes from "virtual:tsazor-routes"; // generiert aus allen @page-Dateien
+import routes from "virtual:tsazor-routes"; // generated from all @page files
 
 createTsazorApp({ root: App, routes });
 ```
 
-## Pakete
+## Packages
 
-| Paket | Inhalt |
+| Package | Contents |
 | --- | --- |
-| `@tsazor/runtime` | RenderTree (flaches Frame-Array wie Blazor), Renderer/DomRenderer, Diff, ComponentBase-Lifecycle, Parameter + Cascading, DI, Navigation/Router, Forms/@bind (EditForm, Input*-Familie, Validierung), Data (Virtualize, TsazorHttp) |
-| `@tsazor/compiler` | `.tsazor` → TS-Modul: Lexer/Parser/Codegen mit Sourcemaps, Diagnostics (`TZS001…`), Scoped-CSS-Scope-Hash, Code-behind-Erkennung, `@authorize` |
-| `@tsazor/vite-plugin` | Vite-Plugin: Transform + Route-Manifest (`virtual:tsazor-routes`) + HMR mit State-Retention + Compiler-Fehler im Dev-Overlay + Scoped-CSS-Rewriter (postcss) |
-| `@tsazor/components` | Bootstrap-5-UI-Bibliothek, selbst in `.tsazor` geschrieben (Dogfooding) |
-| `@tsazor/lsp` | Language Server: Diagnostics, Hover, Go-to-Definition, Auto-Complete |
-| `@tsazor/testing` | `render()`-Testhelper über happy-dom |
-| `packages/vscode` | VS Code Extension: TextMate-Grammar + LSP-Client |
-| `@tsazor/workspace` | Workspace-Infrastruktur (Package-Build-Chain, Test-Gates) |
+| `@tsazor/runtime` | RenderTree (flat frame array as in Blazor), Renderer/DomRenderer, diff, ComponentBase lifecycle, parameters + cascading values, DI, navigation/router, forms/@bind (EditForm, Input* family, validation), data (Virtualize, TsazorHttp) |
+| `@tsazor/compiler` | `.tsazor` → TS module: lexer/parser/codegen with source maps, diagnostics (`TZS001…`), scoped CSS scope hash, code-behind detection, `@authorize` |
+| `@tsazor/vite-plugin` | Vite plugin: transform + route manifest (`virtual:tsazor-routes`) + HMR with state retention + compiler errors in the dev overlay + scoped CSS rewriter (postcss) |
+| `@tsazor/components` | Bootstrap 5 UI library, itself written in `.tsazor` (dogfooding) |
+| `@tsazor/fluent` | Fluent 2 design system: token-driven, accessible components written in `.tsazor` ([docs/fluent.md](docs/fluent.md)) |
+| `@tsazor/dotnet` | .NET backend bridge: OpenAPI ⇒ typed TS client (`tsazor-dotnet generate`), `HttpResult`/ProblemDetails, DataAnnotations decorators, cookie/JWT auth ([README](packages/dotnet/README.md)) |
+| `@tsazor/cli` | `tsazor check` (typed component-usage gate) and `tsazor codemod` (`.razor` → `.tsazor`) |
+| `@tsazor/lsp` | Language server: diagnostics, hover, go-to-definition, auto-complete |
+| `@tsazor/testing` | `render()` test helper on top of happy-dom |
+| `@tsazor/conformance` | Blazor conformance suites for the compiler (render-based golden tests) and the runtime (lifecycle/diff semantics) |
+| `packages/vscode` | VS Code extension: TextMate grammar + LSP client |
+| `@tsazor/workspace` | Workspace infrastructure (package build chain, test gates) |
 
-## Dokumentation
+## Documentation
 
 - [Getting Started](docs/getting-started.md)
-- [Sprach-Referenz (.tsazor)](docs/language-reference.md)
-- [Architektur & HMR](docs/architecture.md)
+- [Design principles](docs/design-principles.md)
+- [Language reference (.tsazor)](docs/language-reference.md)
+- [Architecture & HMR](docs/architecture.md)
 - [Scoped CSS (`X.tsazor.css`)](docs/scoped-css.md)
 - [Code-behind (`X.tsazor.ts`)](docs/code-behind.md)
+- [Fluent components (`@tsazor/fluent`)](docs/fluent.md)
 - [Language Server](docs/language-server.md)
 - [Debugging in DevTools](docs/debugging.md)
-- [Port-Findings (Blazing Pizza)](docs/port-findings.md)
+- [Port findings (Blazing Pizza)](docs/port-findings.md)
 
 ## Status
 
-Alle Meilensteine M1–M8 und der Phase-2-Baustein sind umgesetzt:
+Phases 0–5 of the [roadmap](docs/roadmap.md) are implemented (as of 2026-10-02):
 
-- **Runtime-Kern bis Data** (M1–M6): RenderTree, Diff, Lifecycle, Parameter/Cascading,
-  Routing/Layout, Forms/@bind, Virtualize + TsazorHttp — jeweils mit Akzeptanztests.
-- **Tooling** (M7/M8): Vite-Plugin mit HMR und State-Retention, Route-Manifest,
-  Diagnostics-Katalog mit Fehler-Overlay im Dev-Server, Demo-App (`apps/demo`).
-- **Components-POC** (`@tsazor/components`): Bootstrap 5 in `.tsazor` — Dogfooding des
-  Frameworks mit dem Framework.
-- **Blazing-Pizza-Port**: reale Workshop-App (Konfigurator, Checkout, Orders) läuft 1:1,
-  19/19 E2E-Tests; Gaps und Learnings in [docs/port-findings.md](docs/port-findings.md).
-- **Sleipnir-Ticker**: zweite, anders geartete App (Live-Daten statt Forms) — ASP.NET-Core-API
-  (NuGet `Sleipnir.Server`) mit `[SleipnirEvent]`-Push, Tsazor-Frontend über den
-  **generierten TS-Client** (`sleipnir-codegen`, Typesicherheit aus dem Contract); bindet Tsazor
-  ↔ Sleipnir, 15/15 E2E-Checks inkl. Subscription-Survival über Navigation.
-- **Scoped CSS & Code-behind**: Blazor-Parität (`b-<hash>`-Isolation, `::deep`;
-  `X.tsazor.ts` via Vererbung statt partial classes).
-- **Language Server**: Diagnostics, Hover, Go-to-Definition, Auto-Complete (Tag-, Attribut-,
-  Direktiven- und Expression-Kontext); VS-Code-Extension v0.2.0.
-- **Debugging**: DevTools-Sourcemap-Story am echten Browser (CDP) verifiziert —
-  Breakpoints in `@code`, State-Inspektion, Steps auf `.tsazor`-Zeilen.
+- **Foundation and runtime core** (Phase 0, tracks A/B): code-first parser with source maps,
+  TS-AST rewriting, import model, RenderTree/diff, render queue with batches, lifecycle,
+  cascading values, parameter change detection, router/navigation, forms/@bind, Virtualize +
+  TsazorHttp.
+- **Parameter metadata and type checking** (Phase 2): metadata-driven codegen, templated
+  components with named slots and template contexts, typed shadows and `tsazor check`, a
+  project-wide language server, and the `.razor` → `.tsazor` codemod.
+- **Blazor parity: built-ins and forms** (Phase 3): ErrorBoundary, DynamicComponent,
+  MarkupString, Sections/HeadOutlet/FocusOnNavigate, EditForm semantics, validation decorators +
+  `DataAnnotationsValidator`, InputFile, SupplyParameterFromQuery, `@bind:format`, scoped DI
+  lifetimes with cycle detection.
+- **Dev server and component library** (Phase 4): HMR with invalidation and state retention,
+  the reworked Fluent library (`@tsazor/fluent`) next to the Bootstrap 5 components
+  (`@tsazor/components`).
+- **External use and .NET bridge** (Phase 5): `exports`-complete packages verified by a
+  tarball smoke gate (`node scripts/tarball-smoke.mjs`), and `@tsazor/dotnet`.
+- **Real-world ports**: Blazing Pizza (configurator, checkout, orders; gaps and learnings in
+  [docs/port-findings.md](docs/port-findings.md)) and Sleipnir Ticker (live data via the
+  generated Sleipnir TS client and SSE push, subscription survival across navigation).
+- **Tooling**: scoped CSS and code-behind with Blazor parity, DevTools debugging via inline
+  source maps (verified in a real browser over CDP), VS Code extension v0.6.0.
 
-**Gates:** Package-Tests 180 ✓ · Pizza-E2E 19/19 ✓ · Demo-Regression 31/31 ✓ ·
-Scoped-Demo 10/10 ✓ · Code-behind-Demo 5/5 ✓ · Debugging-Verifikation 14/14 ✓ ·
-Ticker-E2E 15/15 ✓ (inkl. Live-Updates ohne Polling, Scoped-CSS, Subscription-Survival).
+**Gates** (from [docs/handoff-2026-10-02-phase-complete.md](docs/handoff-2026-10-02-phase-complete.md),
+not re-run for this README): 1227/1227 tests (91 files) ✓ · build ✓ · tarball smoke gate ✓ ·
+LSP smokes ✓ · app E2E: Pizza 20/20, Gallery, Sleipnir, demo including `verify-hmr.mjs` 19/19 ✓ ·
+`tsazor check` 0 findings ✓.
 
-Damit bewusst vertagt (nicht ohne Rücksprache starten): Web Components
-(`defineCustomElement`), named child slots, `@bind:format`, typecheck-CLI,
-LSP-Rename, published npm layout.
+Not implemented (do not start without prior agreement): Web Components
+(`defineCustomElement`), LSP rename, publishing the packages to the npm registry (they are
+packaged and tarball-tested, but not published).
