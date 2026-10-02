@@ -1,4 +1,4 @@
-@page "/{track}/{slug}"
+@page "/{lessonTrack}/{slug}"
 @inject TutorialState State
 @import { compilerClient } from "../engine/compiler-client"
 @import CodeEditor from "../Shell/CodeEditor.tsazor"
@@ -6,9 +6,9 @@
 @if (current && text) {
     <PageTitle>@pageTitle</PageTitle>
     <div class="tutorial">
-        <TopBar Track="@trackValue" Current="@current" Lessons="@lessons" />
+        <TopBar LessonTrack="@trackValue" Current="@current" Lessons="@lessons" />
         <div class="body">
-            <LessonText Current="@current" Track="@trackValue" Previous="@previous" Next="@next" />
+            <LessonText Current="@current" LessonTrack="@trackValue" Previous="@previous" Next="@next" />
             <div class="workbench">
                 <div class="editor-pane">
                     <div class="toolbar">
@@ -32,7 +32,7 @@
 }
 
 @code {
-    @Parameter() track = "";
+    @Parameter() lessonTrack = "";
     @Parameter() slug = "";
 
     private current?: LessonRef;
@@ -50,7 +50,7 @@
     private editor?: CodeEditor;
 
     private get trackValue(): Track {
-        return isTrack(this.track) ? this.track : "ts";
+        return isTrack(this.lessonTrack) ? this.lessonTrack : "ts";
     }
 
     private get text() {
@@ -79,13 +79,13 @@
     }
 
     protected override onParametersSet(): void {
-        if (!isTrack(this.track)) {
+        if (!isTrack(this.lessonTrack)) {
             this.current = undefined;
             return;
         }
-        this.State.preferredTrack = this.track;
-        this.lessons = this.State.lessons(this.track);
-        this.current = this.State.find(this.track, this.slug);
+        this.State.preferredTrack = this.lessonTrack;
+        this.lessons = this.State.lessons(this.lessonTrack);
+        this.current = this.State.find(this.lessonTrack, this.slug);
         if (!this.current || this.current.lesson.slug === this.loadedSlug) return;
         this.loadedSlug = this.current.lesson.slug;
         this.load(this.State.workspace(this.current.lesson), this.text!.focus);
