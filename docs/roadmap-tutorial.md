@@ -77,8 +77,18 @@ Gate: no German left in the listed files, all relative links resolve.
 18. *Testing*: `@tsazor/testing`
 19. *Next steps*
 
-**Track extras** — Blazor: "What's different from Blazor" (documented deviations), "Migrating
-`.razor` files (codemod)". TypeScript: none planned yet.
+**Track extras** — Blazor: **"TypeScript for C# developers"** (a short chapter before chapter 1
+in the Blazor track, planned right after M3; see below), "What's different from Blazor"
+(documented deviations), "Migrating `.razor` files (codemod)". TypeScript: none planned yet.
+
+**"TypeScript for C# developers"** (Blazor track only): the primary audience keeps its .NET
+backend and leaves only Blazor. They should feel they are staying in something familiar. The
+chapter is a side-by-side ("in C# you write…, in TypeScript…"): types and nullability (`null` vs
+`undefined`), `Task` ↔ `Promise` and `async`/`await` (nearly identical), LINQ ↔
+`map`/`filter`/`reduce`, classes/interfaces/generics, properties ↔ getters/setters, attributes ↔
+decorators, namespaces ↔ modules, plus the real traps (`this` in callbacks, `==` vs `===`). The
+message: "you already know most of this". A companion cheat sheet lives at
+`docs/csharp-to-typescript.md`.
 
 ### Milestones
 

@@ -8,13 +8,20 @@ TypeScript: for .NET developers (low migration effort from Blazor, a bridge to t
 **and** for frontend developers outside the Microsoft ecosystem who want to use this model in
 idiomatic TypeScript. Both audiences are equally important.
 
-Above all, Tsazor is **a gentle way out of the .NET space**, for companies that need to leave it,
-fully or partly. Leaving is hard and sometimes necessary, so every step should be as small as
-possible. Step one moves the frontend: Blazor becomes Tsazor while the .NET backend stays
-(`@tsazor/dotnet`), route by route instead of in one big bang. A later step may move the backend
-too, independently, because nothing in the frontend depends on .NET (OpenAPI is
-backend-agnostic). Because the primary audience is professional teams, clean architecture,
-security and long-term stability take priority.
+**Primary audience:** professional teams that **keep their .NET backend** but are unhappy with
+Blazor as their only SPA option. Tsazor gives them a TypeScript SPA that still feels familiar:
+the same component model, the same Razor markup, the same concepts (`@inject`, `EditForm`,
+DataAnnotations-style validation), and a typed bridge to their backend (`@tsazor/dotnet`). The
+migration is gentle and incremental, route by route instead of one big bang.
+
+**Backend options stay open.** Nothing in the frontend may depend on .NET. The bridge is built on
+OpenAPI, which is backend-agnostic, and .NET conventions (ProblemDetails, claim URIs, the
+FluentCMS envelope) are supported but never required. Optional integrations such as
+`@tsazor/sleipnir` are separate packages; nothing in the core depends on them. A team that later
+wants to move its backend away from .NET can do so without touching the frontend architecture.
+
+Because the primary audience is professional teams, clean architecture, security and long-term
+stability take priority.
 
 In short: **Blazor, with C# replaced by TypeScript.** The same development model, the same Razor
 templates, the same CSS (scoped CSS as `X.tsazor.css` with `::deep`, like `X.razor.css`) — and

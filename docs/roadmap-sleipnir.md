@@ -8,6 +8,11 @@ subscriptions bound to the component lifecycle, connection state and auth as fra
 Because the Tsazor maintainer also maintains Sleipnir, gaps are fixed **upstream** where they are
 not Tsazor-specific; Sleipnir stays framework-neutral (Svelte/JS consumers benefit too).
 
+**Optional by design.** `@tsazor/sleipnir` is one integration option among others, a separate
+package. Nothing in the Tsazor core, `@tsazor/dotnet` or the tutorial depends on it, and generic
+mechanisms it needs (e.g. `observe()`/`disposeSignal` for subscriptions) live in the core in a
+protocol-neutral way (design-principles: "Backend options stay open").
+
 Baseline: Sleipnir 1.4.3 (`sleipnir-client`, `sleipnir-codegen`, NuGet `Sleipnir.*`), reference
 consumer `apps/sleipnir-ticker`.
 
