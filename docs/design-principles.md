@@ -64,6 +64,28 @@ stages and with restraint:
   record (what changes, why, which ports break, what the codemod/diagnostic does about it).
   Each divergence must earn its keep. Convenience alone is not a reason.
 
+## Type safety is a requirement — the stability promise
+
+Tsazor is TypeScript-only, and **strict** type checking is a requirement, not an option. This
+is what allows a promise no untyped framework can make:
+
+> **Code that passes `tsazor check` (strict) behaves the same on every 1.x release. Every
+> breaking change shows up as a `tsazor check` error, with a codemod or quick fix.**
+
+- The public API surface (the published `.d.ts`) is the contract. CI snapshots it, so any
+  change to it is deliberate and versioned.
+- Strict is the only supported configuration for `tsazor check` and production builds. There is
+  no relaxed profile, because it would void the promise.
+- **Strict at the door, gentle on the way in.** Developers used to loosely typed JavaScript are
+  welcome and must not be lost at the start:
+  - Development never blocks on type errors: the dev server, HMR and the tutorial preview keep
+    running and show the errors next to the code. The promise applies to what is deployed, not
+    to the first minute.
+  - Inference does most of the work (`count = 0` is a `number`, markup handlers are contextually
+    typed); explicit annotations are rarely needed beyond method parameters.
+  - Tooling writes the types: a quick fix infers missing parameter types from usage.
+  - The tutorial presents types as what keeps an app stable, not as an entry fee.
+
 ## The test question for new features
 
 Would a TypeScript developer without a .NET background find this natural — and does a Blazor
