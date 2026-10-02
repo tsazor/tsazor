@@ -240,7 +240,8 @@ Markup only starts
 |---|---|
 | `<input @bind="name">` | `value` attribute + `onchange` handler with assignment |
 | `<input type="checkbox" @bind="flag">` | `checked` + handler |
-| `<input type="number" @bind="n">` | `Number()` coercion |
+| `<input type="number" @bind="n">`, `type="range"` | `Number()` coercion; empty or unparsable text keeps the model value (Blazor: `TryParse` fails — `Number("")` would be 0) |
+| `<input type="date" @bind="d">` | `Date` through the format `yyyy-MM-dd` (Blazor's default for date inputs): renders `formatValue(d, "yyyy-MM-dd")`, parses back as a local date; an explicit `@bind:format` replaces the default |
 | `@bind:event="oninput"` | A different DOM event |
 | `@bind:get="v" @bind:set="store"` | Get/set side instead of `@bind` (only as a pair) |
 | `@bind:after="changed"` | Called after the assignment; a promise is awaited, then the component renders |
@@ -283,7 +284,10 @@ formats — a subset, a documented deviation from the full .NET format grammar:
 - Empty text never parses as 0 (`.NET TryParse("")` fails).
 
 Not implemented: integer zero padding (`D5`/`00000#` padding) — a deviation, noted in the
-roadmap. Other binds keep Blazor's behavior: `:format` on a string bind and on
+roadmap. Formats apply to `type="number"`, `type="range"` and `type="date"` inputs — the
+compiler decides by the element, because it cannot see the field's type. Blazor's idiom of a
+*text* input bound to a `DateTime` with `@bind:format="dd.MM.yyyy"` is therefore a string
+bind here (warning TZS008, format inert) — a documented deviation. Other binds keep Blazor's behavior: `:format` on a string bind and on
 a component bind is a warning TZS008 (the `BindConverter` only applies formats to types
 that carry one — strings don't; on components Blazor ignores it), and the native
 round trip is kept. `@bind:culture` (on elements and components) is error TZS008

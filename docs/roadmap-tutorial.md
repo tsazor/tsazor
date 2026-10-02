@@ -1,6 +1,7 @@
 # Roadmap — English docs + interactive tutorial
 
-Status: **D and M1 done** (2026-10-02, merged into `roadmap/phase-0`); M2 in progress. Runs before [roadmap-sleipnir.md](roadmap-sleipnir.md).
+Status: **D, M1 and M2 done** (2026-10-02; M1 merged into `roadmap/phase-0`, M2 on
+`tutorial/m2`); M3 next. Runs before [roadmap-sleipnir.md](roadmap-sleipnir.md).
 
 ## Decisions (2026-10-02)
 
@@ -79,5 +80,22 @@ Gate: no German left in the listed files, all relative links resolve.
 ### Milestones
 
 1. **M1** — engine + the 7 lessons of chapter 1 in both tracks → **review with the user** (tone,
-   UX, lesson length) before writing more content.
-2. **M2** — rest of Part 1 · **M3** — Part 2 · **M4** — Part 3, static build, deploy target decided.
+   UX, lesson length) before writing more content. ✅ (user: "exactly the look and feel of the
+   Svelte tutorial")
+2. **M2** — rest of Part 1 ✅: chapters 2–7, 27 lessons in both tracks (34 in Part 1). The
+   TypeScript track is written as the primary one (TS-native motivation: plain fields as
+   state, getters, decorators, narrowing, `tsazor check`); the Blazor track as "you know
+   this, here's what differs". Engine: in-browser `tsazor check` (type diagnostics in the
+   problems panel and as squiggles, two-phase worker answer, lesson gate type-checks every
+   `app-a`/`app-b`), control-block bodies highlighted as code, interaction steps in the
+   gate (`gate:` front-matter), table styles. Framework fixes found by the lessons
+   (port-findings J): `ComponentBase` state as `#private`, `EventCallback` lambdas returning
+   values, `@attributes` with no captured values, `@bind` on range and date inputs, empty
+   number input. Claims pinned in `test/claims-part1.test.ts`; E2E smoke check per chapter.
+3. **M3** — Part 2 · **M4** — Part 3, static build, deploy target decided.
+
+Open for M3 (from M2): routing lessons need an in-memory history in the `srcdoc` preview
+(port-findings H.7); `@bind:format` on text inputs (K.7) and handler-type checks against
+the event name (K.9) would let the Blazor track drop two caveats; the TS1360 squiggle fix
+belongs into the LSP as well (K.10); consider a `FileSystemHost` so the tutorial stops
+duplicating resolution and shadow building (G.2, L).
