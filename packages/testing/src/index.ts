@@ -62,4 +62,47 @@ export function renderTree(build: (b: RenderTreeBuilder) => void): Promise<Rende
   return render(TestComponent);
 }
 
+/**
+ * A fake external store for components that `track` it: the shape of a
+ * Svelte-style store (`subscribe(listener) → unsubscribe`). `set` notifies
+ * every listener synchronously; `listenerCount` shows whether a component
+ * still listens (0 after it was disposed).
+ */
+export interface FakeStore<T> {
+  readonly value: T;
+  readonly listenerCount: number;
+  /** Sets the value and notifies every listener with it. */
+  set(value: T): void;
+  /** Notifies every listener again with the current value (an in-place mutation). */
+  notify(): void;
+  subscribe(listener: (value: T) => void): () => void;
+}
+
+export function createFakeStore<T>(initial: T): FakeStore<T> {
+  const listeners = new Set<(value: T) => void>();
+  let value = initial;
+  const notify = (): void => {
+    for (const listener of [...listeners]) listener(value);
+  };
+  return {
+    get value() {
+      return value;
+    },
+    get listenerCount() {
+      return listeners.size;
+    },
+    set(next: T) {
+      value = next;
+      notify();
+    },
+    notify,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
 export * from "@tsazor/runtime";
