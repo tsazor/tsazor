@@ -153,6 +153,14 @@ describe("TItem inference requests (shadow-only)", () => {
   });
 });
 
+describe("mixed attribute values", () => {
+  it("the real build renders a nullish part as empty; the shadow leaves out the `??` (TS2869 on never-nullish values)", () => {
+    const source = '<div style="width: @(x * 25)%"></div>';
+    expect(gen(source).result.code).toContain('`width: ${(this.x * 25) ?? ""}%`');
+    expect(gen(source, undefined, typedShadow).result.code).toContain("`width: ${(this.x * 25)}%`");
+  });
+});
+
 describe("typed @ref captures", () => {
   it("casts the element to its interface in the shadow build", () => {
     const { result } = gen('<input @ref="box" />', undefined, typedShadow);

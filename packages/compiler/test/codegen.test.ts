@@ -13,6 +13,13 @@ function gen(source: string, options?: Parameters<typeof generateCode>[1]) {
 }
 
 describe("codegen", () => {
+  it("imports EventCallback when only the member code names it (a callback parameter, no handlers)", () => {
+    const { code } = gen("<p>x</p>\n@code { @Parameter() onPick?: EventCallback<string>; }");
+    expect(code).toMatch(/import \{[^}]*\bEventCallback\b[^}]*\} from "@tsazor\/runtime";/);
+    const imported = gen('@import { EventCallback } from "@tsazor/runtime"\n<p>x</p>\n@code { @Parameter() onPick?: EventCallback<string>; }');
+    expect(imported.code.match(/\bEventCallback\b(?! as)/g)?.length).toBe(2); // the @import, the annotation — no second import
+  });
+
   it("bakes bare member references across whole code spans (C# semantics in TS)", () => {
     const { code } = gen("@for (const forecast of forecasts) { <td>@forecast.date</td> }\n@if (loading && forecasts.length > 0) { <p>@model.name</p> }\n@code { private forecasts: Array<{ date: string }> = []; private model = { name: \"\" }; private loading = true; }");
     // The loop iterable resolves to the component member…

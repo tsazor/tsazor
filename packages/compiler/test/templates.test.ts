@@ -198,3 +198,29 @@ describe("diagnostics", () => {
     expect(nested.diagnostics.errors[0]!.message).toContain("must be its direct child");
   });
 });
+
+describe("@ref on a component with child content", () => {
+  // The parameter view is the run of attribute frames after the component
+  // frame (Blazor's ParameterView): a reference capture before a fragment
+  // attribute cut the fragment off — `<ErrorBoundary @ref="b"><ChildContent>…`
+  // rendered nothing. Blazor emits the capture last.
+  const capture = (code: string): number => lines(code).findIndex((l) => l.startsWith("__builder.addComponentReferenceCapture("));
+  const lastFragment = (code: string): number =>
+    // A plain ChildContent is written as `addContent` in the component frame
+    // (the builder turns it into the ChildContent attribute, in place).
+    lines(code).reduce((last, l, i) => (/^__builder\.(addAttribute\(\d+, "(header|childContent)"|addContent\(\d+, \(__builder\))/.test(l) ? i : last), -1);
+
+  it("named slots come before the capture", () => {
+    const { code, diagnostics } = gen('<Panel @ref="x"><Header><h1>H</h1></Header><ChildContent><p>b</p></ChildContent></Panel>');
+    expect(diagnostics.all).toEqual([]);
+    expect(lastFragment(code)).toBeGreaterThan(0);
+    expect(capture(code)).toBeGreaterThan(lastFragment(code));
+  });
+
+  it("implicit child content comes before the capture", () => {
+    const { code, diagnostics } = gen('<Panel @ref="x"><p>b</p></Panel>');
+    expect(diagnostics.all).toEqual([]);
+    expect(lastFragment(code)).toBeGreaterThan(0);
+    expect(capture(code)).toBeGreaterThan(lastFragment(code));
+  });
+});
