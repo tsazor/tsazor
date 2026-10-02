@@ -9,7 +9,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "server": "node server/server.mjs",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "verify": "node scripts/verify-pizza.mjs"
   },
   "dependencies": {
