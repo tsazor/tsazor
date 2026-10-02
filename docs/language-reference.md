@@ -49,6 +49,45 @@ manifest does not matter (`/users/new` beats `/users/{id}`). Two routes with equ
 equal constraints (`/a/{x}` and `/A/{y}`) ⇒ error "The following routes are ambiguous" when the route table is built
 (router lifecycle). Equal precedence but different constraints (`{x:int}` vs. `{x:bool}`) ⇒ manifest order.
 
+### Hash routing (Tsazor extension)
+
+Blazor routes by the URL path (history routing), which needs a server that answers every deep link
+with `index.html`. Where that fallback cannot be configured — static file hosting, an app embedded in
+an iframe of a host you do not control — opt into hash routing at app level:
+
+```ts
+createTsazorApp({ root: App, routes, routing: { mode: "hash" } });
+// or, with a shared manager: new NavigationManager({ mode: "hash" })
+```
+
+The default stays `"history"` (Blazor). In hash mode the route path **and its query** live in the
+fragment: `https://host/app/index.html?token=abc#/orders/5?tab=2` is the route `orders/5` with the
+query `tab=2`. The real path and `location.search` (`?token=abc`) are never written — they survive
+every navigation.
+
+`NavigationManager` works with a *logical* URI — the fragment route below `baseUri` — so everything
+built on it behaves exactly as in history mode:
+
+| API | Hash mode |
+|---|---|
+| `baseUri` | Directory of the document (`https://host/app/`); `<base href>` only affects assets |
+| `uri` | Logical: `https://host/app/orders/5?tab=2` (the address bar shows `…/index.html?token=abc#/orders/5?tab=2`); a fragment without `#/` (or none) is the root route |
+| `toBaseRelativePath`, `baseRelativePath` | `orders/5?tab=2` — Router matching, `@page` templates and constraints unchanged |
+| `toAbsoluteUri` | Also reads `#/orders` and root-relative `/orders` as routes (the pathname has no route meaning) and a real URL of the document with a `#/` fragment |
+| `navigateTo(uri, …)` | Pushes/replaces `path + search + #/route`; `forceLoad` inside the base writes the entry and reloads the document (a fragment change alone never reloads); external URLs as usual |
+| `toLinkHref(href)` | The href to render: `orders/5` ⇒ `#/orders/5`; fragments and external URLs unchanged (history mode: always unchanged) |
+| LocationChanged / locks | Same flow; back/forward (popstate) and a bare `hashchange` (typed URL, `location.hash = …`) navigate, announced once |
+
+- **NavLink** renders `#/…` hrefs (they work without interception: new tab, copied link) and matches
+  the logical URI as in Blazor.
+- **Plain anchors:** `<a href="#/orders">` clicks are intercepted (location-changing handlers see
+  `isNavigationIntercepted`); other hrefs (`orders`, `/orders`, `#section`) are real document
+  navigations — write route links as `#/…` or use `NavLink`. In-page anchors (`#section`) do not mix
+  with hash routing (the route becomes the root, as in other hash routers).
+- **SupplyParameterFromQuery** reads the fragment's query, not `location.search`; read real query
+  values (a token in `?…`) from `window.location.search`.
+- `FocusOnNavigate`, `NotFound`, `NavigationLock` and `@authorize` are unaffected (they work on route data).
+
 ## @authorize and @attribute
 
 C# attributes have no TypeScript counterpart; the TS forms are `@authorize` (route metadata)
@@ -725,10 +764,16 @@ typed:
   by name (`export { X }`) so that rewrite-B named imports resolve against the shadows;
   shadows of imported components from other packages are built
   automatically (cascade across package boundaries).
-- **`tsazor check`** (`tsazor check [project-root]`, exit 1 on errors) checks in
+- **`tsazor check`** (`tsazor check [project-root]`, root defaults to the current
+  directory, exit 1 on errors) checks in
   two passes: compiler diagnostics + shadow build of all project `.tsazor` files
   (including unsaved files), then TS diagnostics across the complete
-  shadow graph. Output `file(line,column) code message` (POSIX, 1-based).
+  shadow graph — the shadows **and** the real `.ts` sources they pull in below the
+  root (code-behind classes `X.tsazor.ts`, imported modules), so a type error in a
+  code-behind fails the gate too. In that program a `.tsazor` import of a `.ts`
+  file resolves to the component's shadow (`import type Child from "./Child.tsazor"`
+  types a `@ref` field as the class), and the tsconfig's own `.d.ts` files
+  (ambient/virtual modules) are included. Output `file(line,column) code message` (POSIX, 1-based).
   The Vite plugin can append the same check to the end of the build as `check: true` — errors
   fail the build.
 - **A real `.d.ts` per component.** From the package manifest,

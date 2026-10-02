@@ -505,3 +505,165 @@ dazu nichts. Vorschlag: der App-eigene Provider wird in `dispose()` mit freigege
 Weil der generierte Markup-Klasse *erbt*, ist ein `private` Member der Code-behind-Klasse im
 Markup TS2341. Logisch, aber für Blazor-Entwickler (partial class teilt `private`) neu — jetzt in
 `docs/code-behind.md` und in der Lektion „Code-behind“.
+
+# Business-SPA-Port: Svelte 4 → Tsazor
+
+Port einer proprietären Business-SPA (~4k Zeilen, Svelte 4 + TS, ~38 Komponenten, Hash-Router,
+Svelte-Stores, eigene i18n, Bestellformular mit Validierung), die als iframe in ein Portal
+eingebettet ist (Token per Query-String oder `postMessage`). Der Code der App liegt außerhalb
+dieses Repos; hier stehen nur generische Befunde. Verifikation: Original und Port gegen dasselbe
+Mock-Backend, Playwright (Edge) über 11 Flows / 21 Schritte mit Screenshot-Vergleich —
+19 Schritte pixelgleich, Requests und Bestell-Bodies identisch (Rest: siehe U).
+
+## Q. Framework-Lücken (behoben, mit Tests)
+
+### 1. Kein Hash-Routing — **hinzugefügt (Tsazor-Erweiterung)**
+
+Die App wird auf Hosting ohne `index.html`-Fallback betrieben und muss ihre URLs
+(`…?token=…#/route/1`) behalten. Neu: `createTsazorApp({ routing: { mode: "hash" } })` bzw.
+`new NavigationManager({ mode: "hash" })`. Der NavigationManager arbeitet mit einer *logischen*
+URI (Fragment-Route unter `baseUri`); Router, `@page`/Constraints, NavLink-Matching und
+SupplyParameterFromQuery bleiben unverändert, `location.search` wird nie geschrieben. NavLink
+rendert `#/…`-Hrefs (`toLinkHref`), `<a href="#/…">` wird abgefangen, popstate und ein nacktes
+`hashchange` navigieren genau einmal, `forceLoad` lädt explizit neu.
+Tests: `packages/conformance/test/runtime/hash-routing.test.ts`; Doku: language-reference
+„Hash routing“, getting-started „Hosting“.
+
+### 2. `tsazor check` ohne Pfad prüfte nichts — **behoben**
+
+`[project-root]` ist laut Usage optional, ohne Argument kam aber Exit 0 ohne Prüfung. Damit
+waren die `"build": "tsazor check && vite build"`-Gates der Apps (blazing-pizza, demo, gallery,
+sleipnir-ticker) wirkungslos. Root ist jetzt standardmäßig `.`; `--help` → Usage/Exit 0.
+Test: `packages/cli/test/check-cli.test.ts`.
+
+### 3. `tsazor check` ignorierte Code-behind und importierte `.ts` — **behoben**
+
+Nur die Shadows wurden diagnostiziert; ein Typfehler in `X.tsazor.ts` (hier: ein
+Blazor-typisches `override onInitializedAsync`, siehe R.5) ging durchs Gate. Ein dritter Pass
+meldet jetzt die echten `.ts`-Quellen des Shadow-Graphen unter dem Root. Im selben Programm
+löst ein relativer `.tsazor`-Import aus einer `.ts`-Datei auf den Shadow auf
+(`import type Child from "./Child.tsazor"` typisiert ein `@ref`-Feld im Code-behind — vorher
+TS2749, weil nur die ambiente `ComponentType`-Deklaration sichtbar war), und die `.d.ts`-Dateien
+der tsconfig sind Programm-Roots (sonst TS2307 für virtuelle Module). Das breitere Gate fand
+einen echten Fehler in `apps/blazing-pizza/src/models.ts` (re-exportierte Typen ohne Import).
+Test: `packages/lsp/test/check-sources.test.ts`.
+
+### 4. `EditForm` mit `EditContext`-Parameter baute bei jedem Re-Render neu — **behoben**
+
+`onParametersSet` verglich das (fehlende) `Model` mit dem Model des Kontexts und legte bei jedem
+Parent-Render `new EditContext(undefined)` an → Region-Neuaufbau, Inputs und
+`ValidationMessage`s hingen an einem leeren Kontext (Meldungen erschienen eine Interaktion zu
+spät und veraltet). Blazor vergleicht `Model` nur, wenn eines übergeben wird.
+
+### 5. `InputBase`: `NotifyFieldChanged` vor `ValueChanged` — **behoben**
+
+Validatoren, die das Model lesen (feldübergreifende Regeln), sahen den alten Wert. Blazors
+Reihenfolge: erst `ValueChanged` (der synchrone Teil des `@bind`-Setters schreibt das Feld), dann
+`NotifyFieldChanged`. Tests zu 4 und 5: `packages/conformance/test/runtime/forms.test.ts`.
+
+## R. Reibungen und Lücken (dokumentiert, nicht behoben)
+
+### 1. Keine Lokalisierung (E8)
+
+Die App bringt i18n als Store mit; im Port ein DI-Service mit `observe()`. Anforderungen aus der
+realen Nutzung:
+- Locale als app-weiter, beobachtbarer Zustand. Heute muss **jede** übersetzende Komponente
+  `this.observe(loc)` aufrufen (Svelte: `$t` abonniert automatisch) — eine Framework-API sollte
+  Konsumenten ohne Boilerplate neu rendern (z. B. `@inject IStringLocalizer L` mit automatischer
+  Abo-Verwaltung, oder ein Baum-Re-Render beim Kulturwechsel).
+- Quellen mit Vorrang: explizit (URL-Parameter, Host-`postMessage`) > Benutzerprofil
+  (Token-Antwort) > Default; „explizit gesetzt sperrt spätere Profilwerte“.
+- Tabellen asynchron von einer URL laden, gebündelter Fallback; definierte Policy für fehlende
+  Keys/Locales (die App wirft — sinnvoller: Fallback-Kultur + Dev-Warnung).
+- Platzhalter (`{{name}}`), typisierte Keys (aus der JSON-Tabelle, geprüft von `tsazor check`).
+- Lokalisierte **Validierungsmeldungen**, siehe R.2.
+- Snapshot-Falle: Texte, die in Datenmodelle kopiert werden (Navigationseinträge), wechseln die
+  Sprache nicht mit — die API sollte Keys statt Strings speicherbar machen.
+- Nicht genutzt, aber naheliegend: Zahlen/Datum per Kultur (heute invariant, A5/B7).
+
+### 2. Validierungs-Decorators sind nicht lokalisierbar
+
+`@Required()` & Co. tragen feste .NET-Texte; es gibt kein `ErrorMessage`/Resource-Key/
+Message-Factory. Der Port deklariert die Regeln per Decorator (`@MinLength(1)`,
+`@RegularExpression(…)`) und bildet `rule.kind` über den `validators`-Adapter
+(`validationRulesOf`) auf Übersetzungs-Keys ab. Vorschlag: Option
+`{ message: string | ((context) => string) }` oder ein `ValidationMessageProvider`-Service.
+
+### 3. Formular-UX der Vorlage passt nicht 1:1 auf EditForm
+
+Die Vorlage zeigt Feldmeldungen erst nach dem ersten Submit und aktualisiert sie dann pro
+Tastendruck; Blazor validiert bei `onchange` und zeigt sofort. Nachbau: `ValidationMessage`
+hinter einem Flag + eine kleine `InputBase`-Unterklasse mit `oninput` (InputText hat — wie in
+Blazor — keine Event-Option; ein `@bind-Value:event`-Äquivalent wäre nützlich).
+`ValidationMessage` rendert `<span>` statt des Original-`<div>` → `::deep .validation-message`.
+
+### 4. `<select @bind>` mit nicht passendem Wert
+
+Blazor/Tsazor lassen dann die erste Option ausgewählt (Browser-Default), Svelte zeigt ein leeres
+Select. Tsazor bleibt bei Blazor; der Port setzt `selectedIndex = -1` per `@ref`. Für den
+Migrationsguide (E7b).
+
+### 5. Kein `onInitializedAsync`
+
+Tsazor hat nur `onInitialized(): void | Promise<void>`. Ein Blazor-Entwickler schreibt
+`onInitializedAsync` — mit `override` meldet TS4117 den Fehler (seit Q.3 auch im Gate), **ohne**
+`override` wird die Methode still nie aufgerufen (die Seite hing im Ladezustand). Vorschlag:
+Warnung mit Quick-Fix, wenn eine Komponente `onInitializedAsync`/`onParametersSetAsync`/
+`onAfterRenderAsync` (oder PascalCase-Formen) deklariert; oder `noImplicitOverride` empfehlen.
+
+### 6. Doppelte Anführungszeichen in Handler-Attributen
+
+`@onkeydown="(e) => { if (e.key === "Enter") … }"` erzeugt eine Kaskade aus TZS009/TZS024/TS1109
+(Razor beendet den Attributwert ebenfalls am inneren `"`). Die Meldung könnte konkret auf
+einfache Anführungszeichen oder `@(...)` hinweisen.
+
+### 7. `undefined` in gemischten Attributen und Defaults
+
+Svelte: ein explizit übergebenes `undefined` überschreibt den Prop-Default, und
+`style="--x:{undefined}"` rendert `undefined`; Tsazor rendert in gemischten Attributen `""`.
+Beides ergibt eine ungültige Custom Property — pixelgleich. Für den Guide: kein
+„undefined → Default“-Mapping einbauen (das hatte die Parität zunächst gebrochen).
+
+### 8. Narrowing in Deferred Content (H.3 bestätigt)
+
+In fast jeder Komponente mit Slots nötig: `@if (x) { const current = x; <Slot>@current…</Slot> }`
+bzw. Getter — auch für `<HeadContent>` und den `ChildContent` einfacher Wrapper (Tile, Button).
+
+### 9. Svelte-Idiome ohne direkte Entsprechung
+
+- CSS-Custom-Property-Props (`<Comp --pad="10px">`, Svelte wickelt in `display: contents`) →
+  Parameter, der die Property setzt.
+- `:global(...)` in Komponenten-CSS → globale Datei (Scoped CSS kennt nur `::deep`, wie Blazor).
+- `svelte:self` → der eigene Tag funktioniert; ein `@import` der eigenen Datei gibt TS2440 statt
+  eines Hinweises „Selbstreferenz braucht keinen Import“.
+- `$querystring`-Reaktivität → `@SupplyParameterFromQuery()` + `onParametersSet` (sauber).
+
+### 10. npm + `file:`-Tarballs
+
+npm cacht `file:`-Tarballs nach der Integrity im Lockfile; ein neu gepackter Tarball gleichen
+Namens wird **nicht** installiert. Für Konsumenten vor einer Registry-Veröffentlichung:
+versionierte Tarball-Namen oder Integrity entfernen.
+
+## S. Was reibungslos funktionierte
+
+Scoped CSS 1:1 (Svelte-Scoping → `X.tsazor.css`, pixelgleich), Named Slots als RenderFragments,
+`@Bindable` über zwei Ebenen (Scrollwert Kind → Enkel → Seite), `observe()` für Services,
+`@ref` auf Komponenten mit Methodenaufruf, `HeadContent`, `MarkupString`, DI mit
+Factory-Registrierungen, Code-behind für die größeren Komponenten, Back/Forward im Hash-Modus.
+
+## T. Aufwand (für E7/E7b)
+
+- **Mechanisch** (geschätzt ~60 %): Markup (`{#if}`→`@if`, `{#each}`→`@foreach`,
+  `on:click`→`@onclick`, `{x}`→`@x`), Props → `@Parameter()`, `<style>` → `.tsazor.css`,
+  Stores → Service-Klassen mit `notify()`, `$store` → Service-Member + `observe`.
+- **Manuell** (~40 %): `$:`-Blöcke (Abhängigkeiten verstehen → Getter oder `onParametersSet`),
+  `onMount`-Mutationen, `bind:`-Ketten, Slot-Inhalte mit Narrowing, Formular-Validierung,
+  Timing-Eigenheiten der Vorlage (Messen beim `bind:this`, Reihenfolge Kind-/Eltern-`onMount`).
+- Ein Svelte→Tsazor-Markup-Codemod würde den mechanischen Teil abdecken.
+
+## U. Verbleibende Unterschiede
+
+- Detailseite: der scrollbare Bereich bekommt im Port das 10px-Rechts-Padding (Overflow nach dem
+  ersten Render gemessen); die Vorlage misst beim `bind:this`, bevor der Inhalt steht, und
+  bekommt es nie (~1,4 % Pixel). Bewusst nicht nachgebaut.
+- Bundle: ~58 kB gzip (Port) vs. ~43 kB gzip (Svelte-Original).

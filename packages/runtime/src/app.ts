@@ -1,5 +1,5 @@
 import { Renderer } from "./renderer/renderer.js";
-import { NavigationManager } from "./navigation/navigation-manager.js";
+import { NavigationManager, type RoutingMode } from "./navigation/navigation-manager.js";
 import { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection.js";
 import type { ComponentBase } from "./components/component-base.js";
 import type { ComponentDefinition } from "./components/component-definition.js";
@@ -21,6 +21,19 @@ export interface TsazorAppOptions {
   selector?: string;
   /** Shared NavigationManager; a fresh one is created when omitted. */
   navigationManager?: NavigationManager;
+  /**
+   * Routing options for the app's NavigationManager. `mode: "hash"` (Tsazor
+   * extension) keeps the route in the URL fragment (`#/orders/5`) for hosting
+   * without an index.html fallback; the default is Blazor's history routing.
+   * With a shared `navigationManager`, configure the mode there instead.
+   */
+  routing?: RoutingOptions;
+}
+
+/** App-level routing options (`createTsazorApp({ routing })`). */
+export interface RoutingOptions {
+  /** "history" (default, Blazor) or "hash" (Tsazor extension). */
+  readonly mode?: RoutingMode;
 }
 
 export interface TsazorApp {
@@ -34,7 +47,13 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   const collection = new ServiceCollection();
   // An app-created NavigationManager is owned (and disposed) by the app; a
   // shared one passed in stays with its owner.
-  const ownedNavigation = options.navigationManager ? null : new NavigationManager();
+  const requestedMode = options.routing?.mode;
+  if (options.navigationManager && requestedMode !== undefined && requestedMode !== options.navigationManager.routingMode) {
+    throw new Error(
+      `createTsazorApp: routing.mode '${requestedMode}' conflicts with the shared NavigationManager's mode '${options.navigationManager.routingMode}'. Configure the mode on the NavigationManager.`,
+    );
+  }
+  const ownedNavigation = options.navigationManager ? null : new NavigationManager({ mode: requestedMode ?? "history" });
   collection.registerValue(NavigationManager as unknown as Token<NavigationManager>, options.navigationManager ?? ownedNavigation!);
   if (options.routes) {
     collection.registerValue(RouteManifest as unknown as Token<RouteManifest>, new RouteManifest(options.routes));

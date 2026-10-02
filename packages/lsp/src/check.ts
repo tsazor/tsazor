@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 export interface CheckDiagnostic {
-  /** Absolute path of the .tsazor file. */
+  /** Absolute path of the .tsazor file (or of a .ts source it pulls in: code-behind, imported modules). */
   file: string;
   /** 1-based line / column of the diagnostic (source coordinates). */
   line: number;
@@ -80,6 +80,28 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
             severity: "error",
             message: diagnostic.message,
           });
+        }
+      }
+      // Pass 3: the real .ts sources of the graph (code-behind classes and the
+      // modules the components import) — part of the component, so part of
+      // the gate. Each file once, from the project that owns it.
+      const seen = new Set<string>();
+      const projects = new Set([...entries.keys()].map((file) => registry.projectFor(file)));
+      for (const project of projects) {
+        for (const source of project.service.projectSourceFiles(project.root)) {
+          const key = path.resolve(source).toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          for (const diagnostic of project.service.sourceFileDiagnostics(source)) {
+            diagnostics.push({
+              file: path.resolve(source),
+              line: diagnostic.line + 1,
+              column: diagnostic.character + 1,
+              code: `TS${diagnostic.code}`,
+              severity: "error",
+              message: diagnostic.message,
+            });
+          }
         }
       }
     }

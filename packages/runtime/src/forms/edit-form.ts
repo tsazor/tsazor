@@ -96,8 +96,12 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
       throw new Error("When supplying an OnSubmit parameter to EditForm, do not also supply OnValidSubmit or OnInvalidSubmit.");
     }
 
-    if (this.editContext !== undefined && this.editContext !== this.currentEditContext) {
-      this.bindEditContext(this.editContext);
+    // Blazor: a new Model creates a context, a new EditContext replaces it —
+    // with an EditContext parameter the (absent) Model must not be compared,
+    // or every re-render would wrap `undefined` in a fresh context.
+    if (this.editContext !== undefined) {
+      if (this.editContext !== this.currentEditContext) this.bindEditContext(this.editContext);
+      else this.applyValidators();
     } else if (this.model !== this.currentEditContext?.model) {
       this.bindEditContext(new EditContext(this.model!));
     } else {

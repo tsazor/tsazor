@@ -16,12 +16,13 @@ const VERSION = "0.2.0";
  *  relative to the root, posix) and returns the exit code — 0 clean, 1 with
  *  errors, 2 on a fatal setup failure or wrong usage. */
 export async function main(argv: readonly string[], stdout: (line: string) => void): Promise<number> {
-  const [command, root, ...extra] = argv.slice(2);
+  const [command, rootArgument, ...extra] = argv.slice(2);
   if (command === "--version" || command === "-v") {
     stdout(`tsazor ${VERSION}`);
     return 0;
   }
-  if (command !== "check" && command !== "codemod") {
+  const help = rootArgument === "--help" || rootArgument === "-h";
+  if ((command !== "check" && command !== "codemod") || help) {
     stdout("Usage: tsazor check [project-root]");
     stdout("  Compiler and TypeScript diagnostics for every .tsazor under root.");
     stdout("  Exit code 1 when any error is found.");
@@ -30,11 +31,16 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     stdout("  payloads (TZS021 C# forms, TZS022 var, TZS024 interpolated strings)");
     stdout("  and the PascalCase API forms; writes <name>.tsazor beside the source");
     stdout("  with --write, reports the dry-run otherwise.");
+    return help ? 0 : 2;
+  }
+  if (command === "codemod" && rootArgument === undefined) {
+    stdout("Usage: tsazor codemod <path> [--write]");
     return 2;
   }
-  if (root === undefined || root === "--help" || root === "-h") {
-    return command === "codemod" ? 2 : 0;
-  }
+  // `tsazor check` without a root checks the current directory (the documented
+  // `[project-root]` default) — it used to return 0 without checking anything,
+  // which made `tsazor check && vite build` gates vacuous.
+  const root = rootArgument ?? ".";
   if (command === "codemod") {
     const write = extra.includes("--write");
     if (extra.some((option) => option !== "--write")) {
