@@ -8,10 +8,13 @@ import type { ComponentBase } from "./component-base.js";
 export class EventCallback<TArg = unknown> {
   private constructor(
     private readonly receiver: ComponentBase | null,
-    private readonly delegate: ((arg: TArg) => void | Promise<void>) | null,
+    private readonly delegate: ((arg: TArg) => unknown) | null,
   ) {}
 
-  /** Creates a callback whose owner re-renders after invocation. Accepts an
+  /** Creates a callback whose owner re-renders after invocation. The delegate
+   *  may return anything — only a returned Promise is awaited — so expression
+   *  lambdas like `@onclick="() => count++"` type-check (C#: an Action accepts
+   *  a statement expression). Accepts an
    *  already-bound callback as the delegate too: the compiler wraps every
    *  EventCallback parameter value and event handler in `bind` without knowing
    *  whether the expression already is an EventCallback (a forwarded
@@ -20,14 +23,14 @@ export class EventCallback<TArg = unknown> {
    *  receiver (Blazor's `EventCallbackFactory.Create(receiver, callback)`). */
   static bind<TArg>(
     receiver: ComponentBase,
-    delegate: ((arg: TArg) => void | Promise<void>) | EventCallback<TArg>,
+    delegate: ((arg: TArg) => unknown) | EventCallback<TArg>,
   ): EventCallback<TArg> {
     if (delegate instanceof EventCallback) return delegate;
     return new EventCallback(receiver, delegate);
   }
 
   /** Creates a callback without an owning component (no auto re-render). */
-  static unbound<TArg>(delegate: (arg: TArg) => void | Promise<void>): EventCallback<TArg> {
+  static unbound<TArg>(delegate: (arg: TArg) => unknown): EventCallback<TArg> {
     return new EventCallback(null, delegate);
   }
 

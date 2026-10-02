@@ -19,6 +19,17 @@ describe("RenderTreeBuilder", () => {
     expect(frames[2]!.elementSubtreeLength).toBe(2);
   });
 
+  it("adds nothing for null/undefined @attributes (Blazor's AddMultipleAttributes)", () => {
+    const b = new RenderTreeBuilder();
+    b.openElement(0, "button");
+    b.addMultipleAttributes(1, undefined);
+    b.addMultipleAttributes(2, null);
+    b.addMultipleAttributes(3, { title: "t", disabled: true });
+    b.closeElement();
+    const frames = b.getFrames();
+    expect(frames.map((frame) => frame.attributeName ?? frame.elementName)).toEqual(["button", "title", "disabled"]);
+  });
+
   it("wraps RenderFragment content in a region frame", () => {
     const b = new RenderTreeBuilder();
     b.addContent(0, (fragment) => {

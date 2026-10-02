@@ -332,6 +332,26 @@ describe("codegen", () => {
     expect(number).toContain("Number((__event.target as HTMLInputElement).value)");
   });
 
+  it("coerces a range input like a number input (Blazor's BindInputElement range)", () => {
+    const { code } = gen('<input type="range" @bind="volume" />');
+    expect(code).toContain(
+      'this.volume = (__event.target as HTMLInputElement).value.trim() === "" || Number.isNaN(Number((__event.target as HTMLInputElement).value)) ? this.volume : Number((__event.target as HTMLInputElement).value);',
+    );
+    // `@bind:format` applies to it like to a number input (no TZS008 warning).
+    const formatted = gen('<input type="range" @bind="volume" @bind:format="F1" />');
+    expect(formatted.code).toContain('__tsazor_formatValue(this.volume, "F1")');
+    expect(formatted.diagnostics.all.some((d) => d.code === "TZS008")).toBe(false);
+  });
+
+  it("binds a date input through Blazor's default yyyy-MM-dd format", () => {
+    // Blazor: BindInputElement("date", …, format: "yyyy-MM-dd") — the input's
+    // value is always ISO; a raw Date would render as String(date) (empty input).
+    const { code } = gen('<input type="date" @bind="day" />');
+    expect(code).toContain('__builder.addAttribute(2, "value", __tsazor_formatValue(this.day, "yyyy-MM-dd"));');
+    expect(code).toContain('this.day = (__tsazor_parseValue((__event.target as HTMLInputElement).value, "yyyy-MM-dd") ?? this.day) as never;');
+    expect(code).not.toContain("new Date(");
+  });
+
   it("rejects @bind:culture with the invariant-culture decision (TZS008 error)", () => {
     const errors = (source: string) => gen(source).diagnostics.errors.map((d) => d.message);
     expect(errors('<input type="date" @bind="day" @bind:culture="de-DE" />')).toEqual([expect.stringContaining("invariant culture only")]);
