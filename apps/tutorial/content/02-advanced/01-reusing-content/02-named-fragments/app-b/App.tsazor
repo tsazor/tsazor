@@ -1,0 +1,11 @@
+<Panel>
+    <Header>
+        Weekly report
+    </Header>
+    <ChildContent>
+        <p>Sales are up 12% on last week.</p>
+    </ChildContent>
+    <Footer>
+        <button>Export</button>
+    </Footer>
+</Panel>

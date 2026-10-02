@@ -1,0 +1,6 @@
+.line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px dashed #e3e6ea;
+}

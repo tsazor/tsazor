@@ -1,0 +1,8 @@
+<div class="card">
+    <h2>@title</h2>
+    <p class="empty">Nothing here yet.</p>
+</div>
+
+@code {
+    @Parameter() title = "";
+}

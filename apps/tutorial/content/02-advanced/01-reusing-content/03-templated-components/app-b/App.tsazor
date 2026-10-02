@@ -1,0 +1,26 @@
+<h2>Todos</h2>
+<List items="@todos">
+    <ItemTemplate Context="todo">
+        <input type="checkbox" checked="@todo.done" disabled />
+        @todo.title
+    </ItemTemplate>
+</List>
+
+<h2>Contacts</h2>
+<List items="@contacts">
+    <ItemTemplate Context="contact">
+        <strong>@contact.name</strong> · <a href="mailto:@contact.email">@contact.email</a>
+    </ItemTemplate>
+</List>
+
+@code {
+    todos = [
+        { title: "Water the plants", done: true },
+        { title: "Call the bakery", done: false },
+    ];
+
+    contacts = [
+        { name: "Ada", email: "ada@example.com" },
+        { name: "Grace", email: "grace@example.com" },
+    ];
+}

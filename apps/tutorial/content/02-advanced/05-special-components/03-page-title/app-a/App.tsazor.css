@@ -1,0 +1,16 @@
+.mails {
+    max-width: 24rem;
+    padding: 0;
+    list-style: none;
+}
+
+li {
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid #e3e6ea;
+    color: #636c76;
+}
+
+.unread {
+    color: #1f2328;
+    font-weight: 600;
+}

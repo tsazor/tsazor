@@ -1,0 +1,24 @@
+<button class="danger" @onclick="ask">Delete account…</button>
+<p>@status</p>
+
+<dialog class="confirm">
+    <p>Delete your account? This can't be undone.</p>
+    <button @onclick="cancel">Cancel</button>
+    <button class="danger" @onclick="confirm">Delete</button>
+</dialog>
+
+@code {
+    status = "Your account is active.";
+
+    ask() {
+        // Show the dialog as a modal.
+    }
+
+    cancel() {
+        this.status = "Nothing happened.";
+    }
+
+    confirm() {
+        this.status = "Account deleted. (Not really.)";
+    }
+}

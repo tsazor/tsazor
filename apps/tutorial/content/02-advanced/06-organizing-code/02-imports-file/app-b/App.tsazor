@@ -1,0 +1,5 @@
+<Box title="Your order">
+    <Line label="Flat white" amount="3.2" />
+    <Line label="Croissant" amount="2.5" />
+    <p class="total">Total: @formatMoney(5.7)</p>
+</Box>

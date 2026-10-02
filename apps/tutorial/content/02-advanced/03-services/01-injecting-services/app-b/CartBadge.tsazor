@@ -1,0 +1,9 @@
+@inject Cart cart
+
+<span class="badge">🛒 @cart.count</span>
+
+@code {
+    override onInitialized() {
+        this.observe(this.cart);
+    }
+}

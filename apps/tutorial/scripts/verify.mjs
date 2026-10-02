@@ -281,6 +281,73 @@ async function main() {
     const editorKeywords = await page.$$eval(".cm-content .tok-keyword", (els) => els.map((el) => el.textContent));
     check(editorKeywords.includes("else"), "control-block keywords are highlighted in the editor");
 
+    /* 7c — one smoke check per Part 2 chapter (8–13), in the real browser */
+    const problemCount = () => page.$$eval(".problem", (els) => els.length);
+    async function noProblems() {
+        await page.waitForFunction(() => document.querySelectorAll(".problem").length === 0, null, { timeout: 30_000 }).catch(() => null);
+        return (await problemCount()) === 0;
+    }
+
+    await page.goto(`${APP}/ts/templated-components`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, "li strong", "Ada")).includes("Ada"), "ch8 Reusing content: a templated List renders its ItemTemplate with a typed context");
+    check(await noProblems(), "ch8 Reusing content: the solution type-checks (TItem inferred)");
+
+    await page.goto(`${APP}/ts/cascading-values`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, ".toolbar", "Save");
+    await (await frameOf()).check("input[type=checkbox]");
+    await page.waitForTimeout(300);
+    const themed = await (await frameOf()).$eval(".themed", (el) => el.className);
+    check(themed.includes("dark"), `ch9 Cascading values: the cascade reaches the nested button (${themed})`);
+
+    await page.goto(`${APP}/ts/injecting-services`);
+    check((await waitForPreview(page, ".badge", "🛒 0")).includes("🛒 0"), "ch10 Services: a lesson with Program.ts starts through createTsazorApp");
+    await page.click("button:has-text('Solve')");
+    // The start state reads the same: give the solution's frame time to take over.
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, ".badge", "🛒 0");
+    await previewClick(".products button");
+    check((await waitForPreview(page, ".badge", "🛒 1")).includes("🛒 1"), "ch10 Services: @inject shares the registered Cart");
+
+    await page.goto(`${APP}/ts/element-refs`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, "p", "Your account is active.");
+    await previewClick("button.danger");
+    await page.waitForTimeout(300);
+    const modal = await (await frameOf()).$eval("dialog", (el) => el.open && el.matches(":modal"));
+    check(modal, "ch11 Element references: @ref + showModal() opens a real modal dialog");
+
+    await page.goto(`${APP}/ts/page-title`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForSelector(".preview .page-title", { timeout: 20_000 }).catch(() => null);
+    const tabTitle = (await page.textContent(".preview .page-title").catch(() => "")) ?? "";
+    check(tabTitle.includes("(2) Inbox"), `ch12 Special components: PageTitle shows in the preview's tab bar (${tabTitle})`);
+    await previewClick("button");
+    await page.waitForFunction(() => document.querySelector(".preview .page-title")?.textContent?.includes("(0) Inbox"), null, { timeout: 10_000 }).catch(() => null);
+    check(((await page.textContent(".preview .page-title")) ?? "").includes("(0) Inbox"), "ch12 Special components: the tab title follows the component");
+    await shot(page, "08-page-title");
+
+    await page.goto(`${APP}/ts/error-boundaries`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, "h1", "Dashboard");
+    await previewClick(".refresh");
+    check((await waitForPreview(page, ".failed", "The weather service is down.")).includes("The weather service is down."), "ch12 Special components: the ErrorBoundary shows its error view");
+
+    await page.goto(`${APP}/ts/code-behind`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, ".verdict", "Weak")).includes("Weak"), "ch13 Organizing code: a code-behind (X.tsazor.ts) runs in the preview");
+    check(await noProblems(), "ch13 Organizing code: the code-behind solution type-checks");
+    await page.goto(`${APP}/ts/imports-file`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, ".total", "€5.70")).includes("€5.70"), "ch13 Organizing code: imports inherited from _Imports.tsazor");
+    check(await noProblems(), "ch13 Organizing code: the _Imports solution type-checks");
+    await page.goto(`${APP}/ts/your-first-component`);
+    await waitForPreview(page, "h1", "Hello");
+    check((await page.$(".preview .page-title")) === null, "a lesson without PageTitle shows no tab title");
+
     /* 8 — lesson menu navigates */
     await page.click(".menu-button");
     await page.click(".panel a:has-text('Dynamic attributes')");
@@ -305,8 +372,9 @@ async function main() {
     check(order, "phone layout stacks text → editor → preview");
     if (shots) await phone.screenshot({ path: path.join(shots, "05-phone.png"), fullPage: true });
 
-    const unexpected = errors.filter((e) => !e.includes("kaput"));
-    check(unexpected.length === 0, `no page errors (besides the provoked one)${unexpected.length ? `: ${unexpected.join(" | ")}` : ""}`);
+    // Provoked: the runtime-error check ("kaput") and the error-boundary lesson (logged as handled).
+    const unexpected = errors.filter((e) => !e.includes("kaput") && !e.includes("[tsazor] ErrorBoundary handled:"));
+    check(unexpected.length === 0, `no page errors (besides the provoked ones)${unexpected.length ? `: ${unexpected.join(" | ")}` : ""}`);
     await browser.close();
 }
 

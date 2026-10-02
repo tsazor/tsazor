@@ -1,0 +1,14 @@
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: -16px -20px 1rem;
+    padding: 0.6rem 1.25rem;
+    background: #1f2328;
+    color: #f7f8fa;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
