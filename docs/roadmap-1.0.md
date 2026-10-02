@@ -89,6 +89,11 @@ architecture and security take priority.
   (A5/B7): keep it for routing and data values, replace it for display and input.
 - **E9 — Accessibility:** audit `@tsazor/components` and `@tsazor/fluent` against WCAG 2.2 AA (EU
   Accessibility Act / BFSG since June 2025), and add automated a11y checks to the E2E gates.
+- **E11 — Opt-in hash routing** (Tsazor extension; Blazor has none, default stays history
+  routing). For hosting without an `index.html` fallback, static hosting and iframe-embedded apps.
+  Route and route query live in the fragment (`#/x?y=1`), and the real query string (e.g. an
+  access token) is left untouched. Needed by the first business-SPA port; in progress on
+  `port/modulestore-fixes`.
 - **E10 — Support policy:** LTS window and deprecation rules, extending the stability promise.
 
 ## 6 — Release infrastructure
