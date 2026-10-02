@@ -2,7 +2,10 @@
  * Gate: every lesson's start state (app-a) and solution (app-b) compiles with
  * the in-browser pipeline and renders headlessly. The solution must be free
  * of diagnostics (errors and warnings); the start state may only fail where
- * the lesson declares it (`startFails: true` in its front-matter).
+ * the lesson declares it (`startFails: true` in its front-matter). Both must
+ * pass the type check (`tsazor check`), except a start state that is about
+ * its type errors (`typeErrors: true`). The solution must differ visibly from
+ * the start — after the `gate:` interaction steps, for behavior lessons.
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -12,6 +15,8 @@ import { render } from "@tsazor/testing";
 import { loadContent, parseFrontMatter } from "../build/content";
 import { buildProject, MODULE_PREFIX, type ProjectBuild } from "../src/engine/compile-project";
 import { readFileSync, existsSync } from "node:fs";
+import { loadTypeEnvironment } from "../build/type-env";
+import { TypeChecker } from "../src/engine/type-check";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contentDir = path.join(appRoot, "content");
@@ -38,15 +43,66 @@ function writeModules(build: ProjectBuild, dir: string): string {
   return path.join(dir, `${build.entry!.slice(MODULE_PREFIX.length)}.js`);
 }
 
-function startFails(lessonDir: string): boolean {
+/** A front-matter value set in either track's text (the first one found). */
+function frontMatter(lessonDir: string, name: "startFails" | "typeErrors" | "gate"): string | undefined {
   for (const track of ["blazor", "ts"]) {
     const file = path.join(contentDir, lessonDir, `${track}.md`);
-    if (existsSync(file) && parseFrontMatter(readFileSync(file, "utf8")).data.startFails === "true") return true;
+    const value = existsSync(file) ? parseFrontMatter(readFileSync(file, "utf8")).data[name] : undefined;
+    if (value !== undefined) return value;
   }
-  return false;
+  return undefined;
+}
+const flag = (lessonDir: string, name: "startFails" | "typeErrors"): boolean => frontMatter(lessonDir, name) === "true";
+const startFails = (lessonDir: string): boolean => flag(lessonDir, "startFails");
+
+const checker = new TypeChecker(loadTypeEnvironment(appRoot));
+
+/**
+ * The `gate:` front-matter: interaction steps run on the start state and on
+ * the solution before they are compared — for lessons whose solution only
+ * differs in behavior. `;`-separated:
+ *
+ *   click <selector…>             element.click()
+ *   check <selector…>             toggle checked, dispatch `change`
+ *   change <selector> <value…>    set value, dispatch `change` (one-token selector)
+ *   input <selector> <value…>     set value, dispatch `input`
+ *   pointer <selector> <type>     dispatch a pointer event at (10, 20)
+ *   wait <ms>                     let timers run
+ */
+async function runSteps(container: HTMLElement, steps: string | undefined): Promise<void> {
+  for (const step of (steps ?? "").split(";").map((s) => s.trim()).filter(Boolean)) {
+    const [verb, ...rest] = step.split(/\s+/);
+    if (verb === "wait") {
+      await new Promise((resolve) => setTimeout(resolve, Number(rest[0])));
+      continue;
+    }
+    // click/check take the whole rest as the selector; the others a one-token selector + argument.
+    const whole = verb === "click" || verb === "check";
+    const selector = whole ? rest.join(" ") : rest[0]!;
+    const args = whole ? [] : rest.slice(1);
+    const element = container.querySelector(selector) as HTMLInputElement | null;
+    if (!element) throw new Error(`gate step '${step}': no element matches '${selector}'`);
+    if (verb === "click") element.click();
+    else if (verb === "change" || verb === "input") {
+      element.value = args.join(" ");
+      element.dispatchEvent(new Event(verb, { bubbles: true }));
+    } else if (verb === "check") {
+      element.checked = !element.checked;
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    } else if (verb === "pointer") {
+      element.dispatchEvent(new MouseEvent(args[0]!, { bubbles: true, clientX: 10, clientY: 20 }));
+    } else throw new Error(`gate step '${step}': unknown verb`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
 }
 
-async function renderBuild(build: ProjectBuild, dir: string): Promise<{ html: string; errors: unknown[] }> {
+/** Form state is visible but not in the markup: values and checked flags join the snapshot. */
+const formState = (container: HTMLElement): string =>
+  [...container.querySelectorAll("input, select, textarea")]
+    .map((el) => `${(el as HTMLInputElement).value}|${(el as HTMLInputElement).checked}`)
+    .join(",");
+
+async function renderBuild(build: ProjectBuild, dir: string, steps?: string): Promise<{ html: string; errors: unknown[] }> {
   const entry = writeModules(build, dir);
   const errors: unknown[] = [];
   const original = console.error;
@@ -54,7 +110,8 @@ async function renderBuild(build: ProjectBuild, dir: string): Promise<{ html: st
   try {
     const module = (await import(pathToFileURL(entry).href)) as { default: never };
     const result = await render(module.default);
-    const html = result.container.innerHTML;
+    await runSteps(result.container, steps);
+    const html = `${result.container.innerHTML}\n${formState(result.container)}`;
     result.dispose();
     return { html, errors };
   } finally {
@@ -66,8 +123,17 @@ const format = (build: ProjectBuild): string =>
   build.diagnostics.map((d) => `${d.file}(${d.line},${d.column + 1}) ${d.code} ${d.message}`).join("\n");
 
 describe("tutorial lessons", () => {
-  it("has the chapter-1 lessons in both tracks", () => {
-    expect(lessons.length).toBeGreaterThanOrEqual(7);
+  it("has the Part 1 lessons in both tracks", () => {
+    expect(content.parts[0]!.chapters.map((chapter) => chapter.title)).toEqual([
+      "Introduction",
+      "State & rendering",
+      "Parameters",
+      "Logic",
+      "Events",
+      "Bindings",
+      "Classes & styles",
+    ]);
+    expect(lessons.length).toBeGreaterThanOrEqual(34);
     for (const lesson of lessons) {
       expect(Object.keys(lesson.text).sort(), lesson.slug).toEqual(["blazor", "ts"]);
     }
@@ -95,16 +161,26 @@ describe("tutorial lessons", () => {
         expect(html.length).toBeGreaterThan(0);
       });
 
+      it("app-a passes the type check (unless the lesson is about its errors)", () => {
+        const types = checker.check(lesson.a);
+        if (flag(lesson.dir, "typeErrors")) expect(types.length, "declared typeErrors").toBeGreaterThan(0);
+        else expect(types, format({ diagnostics: types } as ProjectBuild)).toEqual([]);
+      });
+
       if (lesson.b) {
         it("app-b compiles without diagnostics and renders", async () => {
           const build = buildProject(lesson.b!);
           expect(build.diagnostics, format(build)).toEqual([]);
-          const { html, errors } = await renderBuild(build, path.join(gateDir, lesson.slug, "b"));
+          const types = checker.check(lesson.b!);
+          expect(types, format({ diagnostics: types } as ProjectBuild)).toEqual([]);
+          const steps = frontMatter(lesson.dir, "gate");
+          const { html, errors } = await renderBuild(build, path.join(gateDir, lesson.slug, "b"), steps);
           expect(errors).toEqual([]);
           expect(html.length).toBeGreaterThan(0);
-          // The solution changes something visible (markup or styles).
+          // The solution changes something visible (markup, form state or styles),
+          // after the lesson's gate steps where its difference is behavior.
           const a = buildProject(lesson.a);
-          const before = a.entry ? (await renderBuild(a, path.join(gateDir, lesson.slug, "a2"))).html + a.css : "";
+          const before = a.entry ? (await renderBuild(a, path.join(gateDir, lesson.slug, "a2"), steps)).html + a.css : "";
           expect(html + build.css).not.toBe(before);
         });
       }

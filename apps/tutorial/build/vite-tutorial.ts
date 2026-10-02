@@ -7,17 +7,23 @@
  *   `@tsazor/runtime` and `@tsazor/components` (components with the runtime
  *   external), as strings: the preview iframe turns them into blob URLs and
  *   maps the bare specifiers to them with an import map.
+ * - `virtual:tutorial-types` — the type environment of the in-browser
+ *   `tsazor check` (lib .d.ts + package declarations, build/type-env.ts);
+ *   loaded lazily by the compile worker.
  */
 import { build } from "esbuild";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import { loadContent } from "./content.js";
+import { loadTypeEnvironment } from "./type-env.js";
 
 const CONTENT_ID = "virtual:tutorial-content";
 const BUNDLES_ID = "virtual:tutorial-bundles";
+const TYPES_ID = "virtual:tutorial-types";
 const RESOLVED_CONTENT = `\0${CONTENT_ID}`;
 const RESOLVED_BUNDLES = `\0${BUNDLES_ID}`;
+const RESOLVED_TYPES = `\0${TYPES_ID}`;
 
 export async function bundlePackages(fromDir: string): Promise<{ runtime: string; components: string }> {
   const require = createRequire(path.join(fromDir, "package.json"));
@@ -52,6 +58,7 @@ export function tutorialPlugin(options: { root: string }): Plugin {
     resolveId(id) {
       if (id === CONTENT_ID) return RESOLVED_CONTENT;
       if (id === BUNDLES_ID) return RESOLVED_BUNDLES;
+      if (id === TYPES_ID) return RESOLVED_TYPES;
       return null;
     },
     async load(id) {
@@ -65,9 +72,14 @@ export function tutorialPlugin(options: { root: string }): Plugin {
         const { runtime, components } = await bundles;
         return `export const runtime = ${JSON.stringify(runtime)};\nexport const components = ${JSON.stringify(components)};`;
       }
+      if (id === RESOLVED_TYPES) {
+        return `export default ${JSON.stringify(loadTypeEnvironment(options.root))};`;
+      }
       return null;
     },
     configureServer(server: ViteDevServer) {
+      // Lets scripts/verify.mjs tell whether a server on its port serves this checkout.
+      server.middlewares.use("/__tutorial-root", (_request, response) => response.end(path.resolve(options.root)));
       server.watcher.add(contentDir);
       const reload = (file: string): void => {
         if (!path.resolve(file).startsWith(contentDir)) return;

@@ -2,7 +2,7 @@
  * Main-thread side of the compile worker: debounced, latest-wins requests.
  * A shared singleton — the worker (and the TypeScript it carries) loads once.
  */
-import type { Files, ProjectBuild } from "./compile-project.js";
+import type { Diagnostic, Files, ProjectBuild } from "./types.js";
 import type { CompileRequest, CompileResponse } from "./compile.worker.js";
 
 export interface CompileOutcome {
@@ -12,17 +12,28 @@ export interface CompileOutcome {
   time: number;
 }
 
+/** Receives the type diagnostics of a compile, after its build. */
+export type TypeDiagnosticsListener = (diagnostics: Diagnostic[]) => void;
+
 export class CompilerClient {
   private worker: Worker | undefined;
   private nextId = 1;
   private latest = 0;
   private readonly pending = new Map<number, (outcome: CompileOutcome | null) => void>();
+  private readonly typeListeners = new Map<number, TypeDiagnosticsListener>();
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
     const worker = new Worker(new URL("./compile.worker.ts", import.meta.url), { type: "module", name: "tsazor-compiler" });
     worker.addEventListener("message", (event: MessageEvent<CompileResponse>) => {
-      const { id, ...outcome } = event.data;
+      const response = event.data;
+      if (response.kind === "types") {
+        const listener = this.typeListeners.get(response.id);
+        this.typeListeners.delete(response.id);
+        if (response.id === this.latest) listener?.(response.diagnostics);
+        return;
+      }
+      const { id, kind: _kind, ...outcome } = response;
       const resolve = this.pending.get(id);
       this.pending.delete(id);
       // A newer request superseded this one: its caller gets null.
@@ -38,10 +49,16 @@ export class CompilerClient {
     return worker;
   }
 
-  /** Compiles `files`; resolves with null when a newer compile was requested meanwhile. */
-  compile(files: Files): Promise<CompileOutcome | null> {
+  /**
+   * Compiles `files`; resolves with null when a newer compile was requested
+   * meanwhile. `onTypes` receives the type check's diagnostics afterwards
+   * (not called for superseded compiles).
+   */
+  compile(files: Files, onTypes?: TypeDiagnosticsListener): Promise<CompileOutcome | null> {
     const id = this.nextId++;
     this.latest = id;
+    for (const old of this.typeListeners.keys()) if (old !== id) this.typeListeners.delete(old);
+    if (onTypes) this.typeListeners.set(id, onTypes);
     const request: CompileRequest = { id, files: { ...files } };
     return new Promise((resolve) => {
       this.pending.set(id, resolve);

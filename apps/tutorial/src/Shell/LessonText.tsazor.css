@@ -78,6 +78,29 @@ h1 {
     color: var(--accent-strong);
 }
 
+.prose ::deep table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 1rem 0;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.prose ::deep th,
+.prose ::deep td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+.prose ::deep th {
+    font-weight: 600;
+    border-bottom-width: 2px;
+}
+
 .pager {
     display: flex;
     justify-content: space-between;

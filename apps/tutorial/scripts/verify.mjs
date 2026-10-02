@@ -12,7 +12,8 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-core";
 
-const APP = "http://localhost:5330";
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
+let APP = "http://localhost:5330";
 const shotsIndex = process.argv.indexOf("--screenshots");
 const shots = shotsIndex > 0 ? process.argv[shotsIndex + 1] : undefined;
 if (shots) mkdirSync(shots, { recursive: true });
@@ -26,10 +27,32 @@ async function reachable(url) {
         return false;
     }
 }
+/** The checkout a dev server on `url` serves (its tutorial root), or undefined. */
+async function servedRoot(url) {
+    try {
+        const res = await fetch(`${url}/__tutorial-root`);
+        return res.ok ? path.resolve(await res.text()) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 async function ensureServer() {
-    if (!(await reachable(APP))) {
-        spawned.push(spawn("npx", ["vite", "--port", "5330", "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
-        console.log("started vite dev server on :5330");
+    // Reuse a running server only if it serves this checkout (other worktrees
+    // may run their own tutorial on :5330); otherwise start one on a free port.
+    for (let port = 5330; port < 5340; port++) {
+        const url = `http://localhost:${port}`;
+        if (await reachable(url)) {
+            if ((await servedRoot(url))?.toLowerCase() === ROOT.toLowerCase()) {
+                APP = url;
+                break;
+            }
+            continue;
+        }
+        APP = url;
+        spawned.push(spawn("npx", ["vite", "--port", String(port), "--strictPort"], { shell: true, stdio: "ignore", cwd: ROOT, env: { ...process.env } }));
+        console.log(`started vite dev server on :${port}`);
+        break;
     }
     const deadline = Date.now() + 60_000;
     while (!(await reachable(APP))) {
@@ -178,6 +201,67 @@ async function main() {
     await page.waitForTimeout(1500);
     const strong = await (await previewFrame(page)).$("strong");
     check(strong !== null, "MarkupString renders real HTML");
+
+    /* 7b — one smoke check per Part 1 chapter (2–7), in the real browser */
+    const frameOf = () => previewFrame(page);
+    async function previewClick(selector) {
+        await (await frameOf()).click(selector);
+    }
+
+    await page.goto(`${APP}/ts/fields-are-state`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "button", "Clicked 0");
+    await previewClick("button");
+    check((await waitForPreview(page, "button", "Clicked 1 time")).includes("Clicked 1 time"), "ch2 State: a click re-renders the counter");
+
+    await page.goto(`${APP}/ts/typed-checks`);
+    await waitForPreview(page, "h1", "Welcome back");
+    await page.waitForSelector(".problem .code:has-text('TS2339')", { timeout: 30_000 }).catch(() => null);
+    const typeProblems = (await page.$$eval(".problem .code", (els) => els.map((el) => el.textContent?.trim()))).join(",");
+    check(typeProblems.includes("TS2339") && typeProblems.includes("TS1360"), `ch3 Parameters: tsazor check shows real type diagnostics (${typeProblems})`);
+    check((await page.$(".preview-frame--pending, .frames--stale")) === null, "type errors don't mark the preview stale");
+    await shot(page, "06-typed-checks");
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "h1", "Welcome back, Ada!");
+    await page.waitForFunction(() => document.querySelectorAll(".problem").length === 0, null, { timeout: 30_000 }).catch(() => null);
+    check((await page.$$(".problem")).length === 0, "the solution clears the type diagnostics");
+
+    await page.goto(`${APP}/blazor/keyed-blocks`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "body", "egg");
+    await previewClick("button");
+    check((await waitForPreview(page, "p", "🍌")).includes("🍌 banana"), "ch4 Logic: @key keeps each Thing with its item");
+
+    await page.goto(`${APP}/ts/event-modifiers`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "h2", "Inbox");
+    await previewClick(".card button");
+    const log = await waitForPreview(page, "body", "Log: archived");
+    check(log.includes("Log: archived") && !log.includes("opened"), "ch5 Events: stopPropagation keeps the card closed");
+
+    await page.goto(`${APP}/ts/select-bindings`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "p", "mother");
+    await (await frameOf()).selectOption("select", "school");
+    check((await waitForPreview(page, "p", "school")).includes("school"), "ch6 Bindings: a select bind writes back (real browser)");
+
+    await page.goto(`${APP}/ts/deep-styles`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    const boxColor = await (await frameOf()).$eval(".box", (el) => getComputedStyle(el).backgroundColor);
+    check(boxColor === "rgb(196, 181, 253)", `ch7 Styles: ::deep styles the child component (${boxColor})`);
+
+    await page.goto(`${APP}/ts/lifecycle`);
+    await page.waitForSelector(".prose table");
+    await shot(page, "07-lifecycle-table");
+
+    await page.goto(`${APP}/ts/if-else`);
+    const keywordInBody = await page.$$eval(".prose pre.code .tok-keyword", (els) => els.map((el) => el.textContent));
+    check(keywordInBody.includes("const") && keywordInBody.includes("else"), "control-block bodies are highlighted as code (lesson text)");
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(500);
+    const editorKeywords = await page.$$eval(".cm-content .tok-keyword", (els) => els.map((el) => el.textContent));
+    check(editorKeywords.includes("else"), "control-block keywords are highlighted in the editor");
 
     /* 8 — lesson menu navigates */
     await page.click(".menu-button");

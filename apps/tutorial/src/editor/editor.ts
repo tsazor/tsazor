@@ -134,7 +134,7 @@ export class TutorialEditor {
         const from = offset(d.line, d.column);
         let to = offset(d.endLine, d.endColumn);
         if (to <= from) to = Math.min(from + 1, doc.length);
-        return { from, to, severity: d.severity, message: `${d.code}: ${d.message}`, source: "tsazor" };
+        return { from, to, severity: d.severity, message: `${d.code}: ${d.message}`, source: d.source === "types" ? "tsazor check" : "tsazor" };
       });
     this.view.dispatch(setDiagnostics(this.view.state, marks));
   }
