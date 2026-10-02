@@ -1,94 +1,94 @@
-# Sprach-Referenz (.tsazor)
+# Language reference (.tsazor)
 
-## Direktiven
+## Directives
 
-| Direktiv | Beispiel | Semantik |
+| Directive | Example | Semantics |
 |---|---|---|
-| `@page` | `@page "/user/{Id:int}"` | Routen-Template, siehe [Routen](#routen). Mehrere `@page` ⇒ jedes Template ist eine Route (Blazor) |
-| `@layout` | `@layout MainLayout` | Layout für diese Route (überschreibt `_Imports`) |
-| `@using` | `@using ./Shared` | Komponenten-Tags und `@inject`-/`@inherits`-Typen (siehe Getting Started) |
-| `@import` | `@import { Status, formatDate } from "./utils"` | TypeScript-Import für Markup und `@code` (siehe unten); in `_Imports.tsazor` vererbt |
-| `@inject` | `@inject NavigationManager Nav` | DI: Feld-Initializer `inject(<Type>)` |
-| `@inherits` | `@inherits LayoutComponentBase` | Basisklasse (Standard: `ComponentBase`) |
-| `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | generische Typparameter (v1 deklarativ); C#-Constraint `where T : …` ⇒ Fehler TZS021 mit Hinweis auf `extends` |
-| `@authorize` | `@authorize` / `@authorize({ roles: ["Admin"], policy: "P" })` | die Route verlangt Anmeldung (und Rollen/Policy) — siehe [@authorize und @attribute](#authorize-und-attribute) |
-| `@attribute` | `@attribute @tracked()` | TS-Class-Decorator; C#-Attribute (`[Authorize]`) ⇒ Fehler TZS021 mit TS-Form |
-| `@code` / `@functions` | `@code { … }` | TypeScript-Klassenmember, wörtlich |
-| `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | `@namespace App.Pages` | Blazor-only: akzeptiert und ignoriert (`@rendermode`/`@preservewhitespace` mit Warnung TZS014) |
-| `@@` | `@@` | literals `@` |
+| `@page` | `@page "/user/{Id:int}"` | Route template, see [Routes](#routes). Multiple `@page` ⇒ each template is a route (Blazor) |
+| `@layout` | `@layout MainLayout` | Layout for this route (overrides `_Imports`) |
+| `@using` | `@using ./Shared` | Component tags and `@inject`/`@inherits` types (see Getting Started) |
+| `@import` | `@import { Status, formatDate } from "./utils"` | TypeScript import for markup and `@code` (see below); inherited from `_Imports.tsazor` |
+| `@inject` | `@inject NavigationManager Nav` | DI: field initializer `inject(<Type>)` |
+| `@inherits` | `@inherits LayoutComponentBase` | Base class (default: `ComponentBase`) |
+| `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | Generic type parameters (declarative in v1); a C# constraint `where T : …` ⇒ error TZS021 pointing to `extends` |
+| `@authorize` | `@authorize` / `@authorize({ roles: ["Admin"], policy: "P" })` | The route requires sign-in (and roles/policy) — see [@authorize and @attribute](#authorize-and-attribute) |
+| `@attribute` | `@attribute @tracked()` | TS class decorator; C# attributes (`[Authorize]`) ⇒ error TZS021 with the TS form |
+| `@code` / `@functions` | `@code { … }` | TypeScript class members, verbatim |
+| `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | `@namespace App.Pages` | Blazor-only: accepted and ignored (`@rendermode`/`@preservewhitespace` with warning TZS014) |
+| `@@` | `@@` | A literal `@` |
 
-Direktiven gelten nur auf Dokumentebene; innerhalb von Elementen oder Code-Blöcken ⇒ TZS013.
-Ein unbekanntes `@wort` ist keine Direktive, sondern eine implizite Expression (Razor).
+Directives are only valid at document level; inside elements or code blocks ⇒ TZS013.
+An unknown `@word` is not a directive but an implicit expression (Razor).
 
-## Routen
+## Routes
 
-Templates wie Blazor: Literale (case-insensitiv), `{name}`, `{name:constraint}` (mehrere: `{id:int:regex(...)}`),
-optional `{name?}`/`{id:int?}` (nur am Ende, ggf. vor einem Catch-all), Catch-all `{*path}`/`{**path}` (letztes Segment).
-Query-String und Hash zählen nicht zum Matching. Ungültige Templates und unbekannte Constraints sind Fehler (Blazors Meldungen).
+Templates work as in Blazor: literals (case-insensitive), `{name}`, `{name:constraint}` (several: `{id:int:regex(...)}`),
+optional `{name?}`/`{id:int?}` (only at the end, possibly before a catch-all), catch-all `{*path}`/`{**path}` (last segment).
+Query string and hash do not take part in matching. Invalid templates and unknown constraints are errors (Blazor's messages).
 
-| Constraint | Wert im Page-Parameter | Anmerkung |
+| Constraint | Value in the page parameter | Notes |
 |---|---|---|
-| `int` | `number` | 32-Bit-Bereich, Vorzeichen erlaubt |
-| `long` | `bigint` | 64-Bit-Bereich; `bigint`, damit Werte > 2^53 exakt bleiben |
-| `bool` | `boolean` | case-insensitiv (`True` ⇒ `true`) |
-| `double`, `float` | `number` | Dezimalpunkt, Exponent, Tausender-Komma (`float` via `Math.fround`) |
-| `decimal` | `number` | ohne Exponent; JS hat keinen Decimal-Typ (Double-Genauigkeit) |
-| `datetime` | `Date` | ISO `yyyy-MM-dd`, optional `THH:mm[:ss[.f]]` und `Z`/`±hh:mm`; ohne Offset lokale Zeit |
-| `guid` | `string` | Formate D, N, B, P; Wert = URL-Text |
+| `int` | `number` | 32-bit range, sign allowed |
+| `long` | `bigint` | 64-bit range; `bigint` so that values > 2^53 stay exact |
+| `bool` | `boolean` | case-insensitive (`True` ⇒ `true`) |
+| `double`, `float` | `number` | Decimal point, exponent, thousands comma (`float` via `Math.fround`) |
+| `decimal` | `number` | No exponent; JS has no decimal type (double precision) |
+| `datetime` | `Date` | ISO `yyyy-MM-dd`, optionally `THH:mm[:ss[.f]]` and `Z`/`±hh:mm`; without an offset, local time |
+| `guid` | `string` | Formats D, N, B, P; value = URL text |
 | `alpha`, `alphaNumeric` | `string` | |
-| `regex(...)` | `string` | als `^(?:…)$` verankert, case-insensitiv; `{{`/`}}` für geschweifte Klammern |
+| `regex(...)` | `string` | Anchored as `^(?:…)$`, case-insensitive; `{{`/`}}` for curly braces |
 
-Jedes Constraint ist verankert und gruppiert (`regex(a|b)` matcht nur `a` oder `b`). Segmente werden URL-dekodiert,
-außer `%2F` (.NET 8); ein Catch-all erhält den dekodierten Rest mit `/` verbunden, leer ⇒ `null`. Ein fehlender
-optionaler Parameter ist `null`, ebenso Parameter, die nur in einem *anderen* `@page`-Template derselben Seite vorkommen.
-Mehrere Constraints müssen alle passen; das erste typisierte bestimmt den Wert.
+Every constraint is anchored and grouped (`regex(a|b)` matches only `a` or `b`). Segments are URL-decoded,
+except `%2F` (.NET 8); a catch-all receives the decoded remainder joined with `/`, empty ⇒ `null`. A missing
+optional parameter is `null`, as are parameters that only occur in *another* `@page` template of the same page.
+Multiple constraints must all match; the first typed one determines the value.
 
-**Präzedenz** (Blazors Route-Table): Segmente von links verglichen — Literal vor Constraint-Parameter vor Parameter vor
-Constraint-Catch-all vor Catch-all; bei Gleichstand gewinnt die Route mit weniger Segmenten. Die Reihenfolge im Manifest
-spielt keine Rolle (`/users/new` schlägt `/users/{id}`). Zwei Routen mit gleicher Präzedenz, gleichen Literalen und
-gleichen Constraints (`/a/{x}` und `/A/{y}`) ⇒ Fehler „The following routes are ambiguous“ beim Aufbau der Route-Table
-(Router-Lifecycle). Gleiche Präzedenz, aber verschiedene Constraints (`{x:int}` vs. `{x:bool}`) ⇒ Manifest-Reihenfolge.
+**Precedence** (Blazor's route table): segments are compared from the left — literal before constrained parameter before
+parameter before constrained catch-all before catch-all; on a tie, the route with fewer segments wins. The order in the
+manifest does not matter (`/users/new` beats `/users/{id}`). Two routes with equal precedence, equal literals and
+equal constraints (`/a/{x}` and `/A/{y}`) ⇒ error "The following routes are ambiguous" when the route table is built
+(router lifecycle). Equal precedence but different constraints (`{x:int}` vs. `{x:bool}`) ⇒ manifest order.
 
-## @authorize und @attribute
+## @authorize and @attribute
 
-C#-Attribute haben kein TypeScript-Gegenstück; die TS-Formen sind `@authorize` (Route-Metadaten)
-und `@attribute @decorator(…)` (echter Class-Decorator):
+C# attributes have no TypeScript counterpart; the TS forms are `@authorize` (route metadata)
+and `@attribute @decorator(…)` (a real class decorator):
 
-| Schreibweise | Ergebnis |
+| Syntax | Result |
 |---|---|
-| `@authorize` | die Route verlangt Anmeldung |
-| `@authorize({ roles: ["A", "B"], policy: "P" })` | die `AuthorizationRequirements` der Route (`{ roles: [...] }` / `{ policy: "P" }`), geprüft von `AuthorizeRouteView` (Rollen: mindestens eine; Policy: registriert in `AuthorizationService.policies`) |
-| `@attribute @tracked("x")` (TS-Form: Wert beginnt mit `@`) | echter Class-Decorator, wörtlich über `export default class` (Standard-Decorator, TC39, wie `@Parameter`: `(value, context: ClassDecoratorContext)`); Namen kommen per `@import` |
-| `@attribute [Authorize]`, `[Authorize(Roles = "A, B", Policy = "P")]`, `[Authorize("P")]` | Fehler TZS021 mit der TS-Form (`@authorize`, `@authorize({ roles: ["A", "B"], policy: "P" })`) |
-| `@attribute [AllowAnonymous]` | Fehler TZS021: entfernen — eine Seite ist anonym, solange sie kein `@authorize` deklariert |
-| jedes andere C#-Attribut (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Fehler TZS021: entfernen oder als TS-Decorator schreiben |
+| `@authorize` | The route requires sign-in |
+| `@authorize({ roles: ["A", "B"], policy: "P" })` | The route's `AuthorizationRequirements` (`{ roles: [...] }` / `{ policy: "P" }`), checked by `AuthorizeRouteView` (roles: at least one; policy: registered in `AuthorizationService.policies`) |
+| `@attribute @tracked("x")` (TS form: value starts with `@`) | A real class decorator, emitted verbatim above `export default class` (standard TC39 decorator, like `@Parameter`: `(value, context: ClassDecoratorContext)`); names come in via `@import` |
+| `@attribute [Authorize]`, `[Authorize(Roles = "A, B", Policy = "P")]`, `[Authorize("P")]` | Error TZS021 with the TS form (`@authorize`, `@authorize({ roles: ["A", "B"], policy: "P" })`) |
+| `@attribute [AllowAnonymous]` | Error TZS021: remove it — a page is anonymous as long as it declares no `@authorize` |
+| Any other C# attribute (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Error TZS021: remove it or write it as a TS decorator |
 
-- Das Argument von `@authorize` ist ein TS-Objektliteral (mit dem TS-Parser gelesen, darf über
-  mehrere Zeilen gehen) mit nur `roles` (Array von String-Literalen) und `policy`
-  (String-Literal) — die Anforderung ist statische Route-Metadatum. Andere Werte, Keys oder
-  Formen ⇒ TZS019.
-- Mehrere `@authorize` müssen alle erfüllt sein (wie mehrere `[Authorize]` in Blazor). Zwei mit
-  `roles` (oder zwei mit `policy`) lassen sich in `AuthorizationRequirements` (eine Rollenliste,
-  eine Policy) nicht abbilden ⇒ Fehler TZS019 statt einer stillen Abschwächung.
-- **Keine Vererbung:** `@authorize` gilt pro Seite; in `_Imports.tsazor` wirkt es nicht
-  (Warnung TZS014). Deshalb braucht es auch kein Opt-out (Blazors `[AllowAnonymous]`).
-- Wie in Blazor wirkt die Anforderung nur auf Routen (`@page` + `AuthorizeRouteView`), nicht
-  auf eingebettete Komponenten. Unlesbare `@attribute`-Werte (`@attribute Authorize`) ⇒ TZS019.
-- `<NotAuthorized>` empfängt wie Blazors `RenderFragment<AuthenticationState>` den
-  `AuthenticationState` als Slot-Kontext (`@context.user.name`, 3.5).
+- The argument of `@authorize` is a TS object literal (read with the TS parser, may span
+  multiple lines) containing only `roles` (an array of string literals) and `policy`
+  (a string literal) — the requirement is static route metadata. Other values, keys or
+  shapes ⇒ TZS019.
+- Multiple `@authorize` must all be satisfied (like multiple `[Authorize]` in Blazor). Two with
+  `roles` (or two with `policy`) cannot be represented in `AuthorizationRequirements` (one role list,
+  one policy) ⇒ error TZS019 instead of a silent weakening.
+- **No inheritance:** `@authorize` applies per page; in `_Imports.tsazor` it has no effect
+  (warning TZS014). That is also why no opt-out (Blazor's `[AllowAnonymous]`) is needed.
+- As in Blazor, the requirement only applies to routes (`@page` + `AuthorizeRouteView`), not
+  to embedded components. Unreadable `@attribute` values (`@attribute Authorize`) ⇒ TZS019.
+- Like Blazor's `RenderFragment<AuthenticationState>`, `<NotAuthorized>` receives the
+  `AuthenticationState` as its slot context (`@context.user.name`, 3.5).
 
-## buildRenderTree ist generiert
+## buildRenderTree is generated
 
-Jede `.tsazor`-Datei erzeugt `buildRenderTree` — auch eine ohne Markup, wie Razor für jede
-`.razor` `BuildRenderTree` erzeugt. Ein selbst geschriebenes `buildRenderTree` im `@code` oder
-in der Code-behind-Klasse ist deshalb ein Fehler (TZS020, Blazor: CS0111 doppelter Member),
-statt still ersetzt zu werden. Handgeschriebener Render-Code gehört in eine normale
-`.ts`-Klasse (`extends ComponentBase`), die als Komponente importiert wird.
+Every `.tsazor` file generates `buildRenderTree` — even one without markup, just as Razor generates
+`BuildRenderTree` for every `.razor`. A hand-written `buildRenderTree` in `@code` or
+in the code-behind class is therefore an error (TZS020, Blazor: CS0111 duplicate member)
+instead of being silently replaced. Hand-written render code belongs in a plain
+`.ts` class (`extends ComponentBase`) that is imported as a component.
 
 ## @import
 
-Nach `@import` steht die Syntax einer TypeScript-Import-Deklaration — der Compiler parst
-sie mit dem TS-Parser (syntaktisch) und emittiert sie als echten Modul-Import:
+`@import` is followed by the syntax of a TypeScript import declaration — the compiler parses
+it with the TS parser (syntactically) and emits it as a real module import:
 
 ```razor
 @import { Status, formatDate as fmt } from "./utils"
@@ -104,101 +104,101 @@ sie mit dem TS-Parser (syntaktisch) und emittiert sie als echten Modul-Import:
 <p>@Status.Open · @fmt(order.date) · max @MAX_ITEMS</p>
 ```
 
-- **Freie Namen:** jede importierte lokale Bindung bleibt in Markup, `@{ }` und
-  Control-Headern unverändert (`@Status.Open`, nicht `this.Status.Open`) — siehe
-  [Member und freie Namen](#member-und-freie-namen). Ausnahme: ein deklarierter Member
-  gleichen Namens (`@inject NavigationManager NavigationManager`, `@Parameter() Status`)
-  ist ein Member.
-- **Vererbung:** `@import` in `_Imports.tsazor` gilt für alle Dateien darunter (wie `@using`).
-  Relative Specifier sind relativ zur `_Imports.tsazor` geschrieben und werden pro Datei
-  umgeschrieben (`"./utils"` in `src/` ⇒ `"../utils"` für `src/Pages/X.tsazor`); Paket-
-  und absolute Specifier bleiben. Eine Bindung der Datei selbst überschattet eine geerbte,
-  eine nähere `_Imports`-Ebene eine entferntere.
-- **Komponenten:** ein importierter Wert kann direkt als Tag dienen
-  (`@import Badge from "./widgets/Badge.tsazor"` ⇒ `<Badge />`), ohne `@using`.
-- Ungenutzte Imports entfernt der Build (esbuild); ein Standard-Set in `_Imports.tsazor`
-  kostet nichts. Ungültige Formen (`@import X`, `@import x = require(…)`, fehlende Klammer, …)
-  ⇒ Fehler TZS016.
-- Nicht importiert wird nur, was der Compiler selbst für den erzeugten Code braucht:
-  `ComponentBase`/`RenderTreeBuilder`/`EventCallback`/`Parameter`/`inject` (sofern kein
-  `@import` sie schon bindet), aufgelöste Komponenten-Tags und `@inject`-/`@inherits`-Typen.
-  Der erzeugte Code selbst benutzt hygienische Aliase (`__tsazor_EventCallback`, Builder-
-  Parameter `__builder`, …) — ein gleichnamiger Local, Member oder `@import type` kollidiert
-  nicht.
+- **Free names:** every imported local binding stays unchanged in markup, `@{ }` and
+  control headers (`@Status.Open`, not `this.Status.Open`) — see
+  [Members and free names](#members-and-free-names). Exception: a declared member
+  with the same name (`@inject NavigationManager NavigationManager`, `@Parameter() Status`)
+  is a member.
+- **Inheritance:** `@import` in `_Imports.tsazor` applies to all files below it (like `@using`).
+  Relative specifiers are written relative to the `_Imports.tsazor` and are rewritten per file
+  (`"./utils"` in `src/` ⇒ `"../utils"` for `src/Pages/X.tsazor`); package
+  and absolute specifiers stay as they are. A binding in the file itself shadows an inherited one,
+  a nearer `_Imports` level shadows a more distant one.
+- **Components:** an imported value can be used directly as a tag
+  (`@import Badge from "./widgets/Badge.tsazor"` ⇒ `<Badge />`), without `@using`.
+- The build (esbuild) removes unused imports; a standard set in `_Imports.tsazor`
+  costs nothing. Invalid forms (`@import X`, `@import x = require(…)`, missing brace, …)
+  ⇒ error TZS016.
+- The only things not imported this way are what the compiler itself needs for the generated code:
+  `ComponentBase`/`RenderTreeBuilder`/`EventCallback`/`Parameter`/`inject` (unless an
+  `@import` already binds them), resolved component tags and `@inject`/`@inherits` types.
+  The generated code itself uses hygienic aliases (`__tsazor_EventCallback`, builder
+  parameter `__builder`, …) — a local, member or `@import type` with the same name does not
+  collide.
 
-## Member und freie Namen
+## Members and free names
 
-C# erlaubt Member ohne `this.`, TypeScript nicht. Der Compiler parst jede Markup-Expression,
-jeden Attributwert, jeden Control-Header und jeden Statement-Lauf in Code-Kontexten mit dem
-TS-Parser (syntaktisch, ohne Type-Checker) und entscheidet pro Bezeichner-Referenz:
+C# allows members without `this.`, TypeScript does not. The compiler parses every markup expression,
+every attribute value, every control header and every statement run in code contexts with the
+TS parser (syntactically, without the type checker) and decides per identifier reference:
 
-| Name ist … | Ergebnis |
+| The name is … | Result |
 |---|---|
-| lokal: Parameter (auch Destructuring, Default-Werte sehen den äußeren Scope), `const`/`let`/`var`, `function`/`class`/`enum`, Schleifenvariable, `catch`-Parameter, Label | unverändert |
-| deklarierter Member: `@code`-Klassenkörper, Code-behind-Klasse (`X.tsazor.ts`), `@inject`-Feld | `this.X` (statisch: `Klasse.X`) — auch wenn ein Import oder Global gleich heißt |
-| per `@import` gebunden (eigene Datei oder `_Imports`-Kette) | unverändert |
-| JS-/DOM-Global (aus TypeScripts `lib.es*.d.ts`/`lib.dom.d.ts`, ohne `@deprecated` wie `name`/`status`/`event`) | unverändert |
-| sonst (z. B. Member einer `@inherits`-Basisklasse) | `this.X` |
+| local: parameter (including destructuring; default values see the outer scope), `const`/`let`/`var`, `function`/`class`/`enum`, loop variable, `catch` parameter, label | unchanged |
+| a declared member: `@code` class body, code-behind class (`X.tsazor.ts`), `@inject` field | `this.X` (static: `ClassName.X`) — even if an import or global has the same name |
+| bound via `@import` (own file or `_Imports` chain) | unchanged |
+| a JS/DOM global (from TypeScript's `lib.es*.d.ts`/`lib.dom.d.ts`, excluding `@deprecated` ones such as `name`/`status`/`event`) | unchanged |
+| anything else (e.g. a member of an `@inherits` base class) | `this.X` |
 
-Nie umgeschrieben werden Property-Namen (`a.b`, `a?.b`), Objekt-Keys, Deklarationen und
-Typ-Positionen (`as T`, `<T>x`, `satisfies T`, Generics, Annotationen, `typeof x` im Typ);
-String-, Template-, Regex- und Zahl-Literale sind eigene Tokens (`${…}`-Spans werden
-umgeschrieben). Shorthand wird expandiert: `@save({ id })` ⇒ `this.save({ id: this.id })`,
-`new Foo()` ⇒ `new this.Foo()` (Member) bzw. unverändert (Import). In einer lokalen
-`function` oder einer Objekt-Methode zeigt `this` nicht auf die Komponente — dort
-verwendet der Compiler die gefangene Komponente. Unbekannte freie Namen sind kein
-Compile-Fehler (sie werden `this.X`; die Typprüfung folgt mit Phase 2).
+Never rewritten: property names (`a.b`, `a?.b`), object keys, declarations and
+type positions (`as T`, `<T>x`, `satisfies T`, generics, annotations, `typeof x` in a type);
+string, template, regex and number literals are tokens of their own (`${…}` spans are
+rewritten). Shorthand is expanded: `@save({ id })` ⇒ `this.save({ id: this.id })`,
+`new Foo()` ⇒ `new this.Foo()` (member) or unchanged (import). Inside a local
+`function` or an object method, `this` does not point to the component — there the
+compiler uses the captured component. Unknown free names are not a
+compile error (they become `this.X`; type checking follows with Phase 2).
 
-- Schleifenköpfe werden wie geschrieben emittiert: mit `let`/`const` hat jede Iteration
-  ihre eigene Variable — deferred ChildContent sieht den Wert seiner Iteration. `var` behält
-  seine TS-Bedeutung (eine function-scoped Variable für die ganze Render-Methode, alle
-  ChildContents sehen den Endwert) ⇒ Warnung TZS022.
-- Method-Groups: `@onclick="handler"` bindet an die Komponente (Re-Render danach);
-  `@onclick="item.toggle"` ruft `toggle` auf `item` auf (Receiver beim Rendern ausgewertet,
-  wie ein C#-Delegate), die Komponente rendert danach neu.
-- Gemischte Attributwerte: `class="btn @(cond ? "on" : null)"` — `null`/`undefined` wird leer.
+- Loop headers are emitted as written: with `let`/`const`, each iteration has
+  its own variable — deferred ChildContent sees the value of its iteration. `var` keeps
+  its TS meaning (one function-scoped variable for the whole render method, all
+  ChildContents see the final value) ⇒ warning TZS022.
+- Method groups: `@onclick="handler"` binds to the component (re-render afterwards);
+  `@onclick="item.toggle"` calls `toggle` on `item` (receiver evaluated at render time,
+  like a C# delegate), and the component re-renders afterwards.
+- Mixed attribute values: `class="btn @(cond ? "on" : null)"` — `null`/`undefined` becomes empty.
 
 ## Expressions
 
-- `@expression` — implizit: Identifier + Dot-Chains + balancierte Aufrufe; endet konservativ
-  bei Whitespace/`<`/`>`. Bei Mehrdeutigkeit `@(...)` verwenden.
-- `@(expression)` — explizit.
-- `MarkupString` (3.3) — rohes HTML: `@(new MarkupString(html))` und `@(html as MarkupString)`
-  (das Pendant zu C#s `(MarkupString)s`) werden vom Compiler direkt in eine Markup-Frame-Emisierung
-  (`addMarkupContent`) gebacken — der Inhalt rendert **unescaped**; normale `@`-Ausdrücke bleiben
-  escaped (Blazor-Semantik). Voraussetzung: `@import { MarkupString } from "@tsazor/runtime"`
-  (Alias erlaubt); derselbe Name aus einem anderen Modul wird nicht umgeschrieben. Handgebaute
-  Bäume geben `MarkupString`-Instanzen an `addContent` — die Runtime entpackt sie in Markup-Frames
-  (dynamische Werte, Diff vergleicht den Markup-Text), `toString()` liefert den Wert.
-- E-Mail-Regel: `@` direkt nach einem alphanumerischen Textzeichen ist literal
-  (`info@example.com`, auch in Attributwerten).
-- `@* … *@` — Razor-Kommentar (überall, mehrzeilig, darf Markup und `@` enthalten).
-- `<text>…</text>` — Markup-Ausnahmezone.
-- Attribute: `Name="@expr"`, Events `@onclick="handler"` mit Modifiern
+- `@expression` — implicit: identifier + dot chains + balanced calls; ends conservatively
+  at whitespace/`<`/`>`. Use `@(...)` when in doubt.
+- `@(expression)` — explicit.
+- `MarkupString` (3.3) — raw HTML: `@(new MarkupString(html))` and `@(html as MarkupString)`
+  (the counterpart of C#'s `(MarkupString)s`) are baked by the compiler directly into a markup frame emission
+  (`addMarkupContent`) — the content renders **unescaped**; normal `@` expressions stay
+  escaped (Blazor semantics). Requirement: `@import { MarkupString } from "@tsazor/runtime"`
+  (an alias is allowed); the same name from a different module is not rewritten. Hand-built
+  trees pass `MarkupString` instances to `addContent` — the runtime unwraps them into markup frames
+  (dynamic values; the diff compares the markup text), `toString()` returns the value.
+- Email rule: an `@` directly after an alphanumeric text character is literal
+  (`info@example.com`, also in attribute values).
+- `@* … *@` — Razor comment (anywhere, multi-line, may contain markup and `@`).
+- `<text>…</text>` — markup escape zone.
+- Attributes: `Name="@expr"`, events `@onclick="handler"` with the modifiers
   `@onclick:preventDefault` / `@onclick:stopPropagation`, `@key="…"`, `@ref="…"`.
-  Ein Modifier ist ein eigenes Attribut (Blazors `__internal_preventDefault_onclick`), kein
-  Handler: `@onclick:preventDefault="cond"` nimmt einen bool-Ausdruck, der bei jedem Render neu
-  ausgewertet wird (ohne Wert = `true`), und wirkt auch ohne Handler
-  (`<form @onsubmit:preventDefault>`). Auf einer Komponente ist er ein gewöhnliches Attribut,
-  das sie per `@attributes` (`captureUnmatchedValues`) auf ihr Element legt — wie in Blazor.
-  Unbekannte oder doppelte Modifier ⇒ TZS008.
-  Unquoted Werte (`type=checkbox`) wie in HTML; ein wertloses Attribut (`disabled`) wird
-  wie in Razor als `true` übergeben. Unquoted, direkt parenthesisierte Werte
-  (`href=@("a" + id)`) sind explizite Ausdrücke wie in Razor (Roslyn bindet `@(`
-  unabhängig vom Markup; 2.5 — vorher TZS009-Kaskade, der `(`-Rest wurde als weiteres
-  Attribut gedeutet; unbalancierte Klammern ⇒ TZS003).
+  A modifier is an attribute of its own (Blazor's `__internal_preventDefault_onclick`), not a
+  handler: `@onclick:preventDefault="cond"` takes a bool expression that is re-evaluated on every
+  render (no value = `true`), and it works even without a handler
+  (`<form @onsubmit:preventDefault>`). On a component it is an ordinary attribute
+  that the component puts on its element via `@attributes` (`captureUnmatchedValues`) — as in Blazor.
+  Unknown or duplicate modifiers ⇒ TZS008.
+  Unquoted values (`type=checkbox`) work as in HTML; a valueless attribute (`disabled`) is
+  passed as `true`, as in Razor. Unquoted, directly parenthesized values
+  (`href=@("a" + id)`) are explicit expressions, as in Razor (Roslyn binds `@(`
+  independently of the markup; 2.5 — previously a TZS009 cascade where the `(` remainder was
+  interpreted as another attribute; unbalanced parentheses ⇒ TZS003).
 
-## Code-Kontexte (code-first, wie Razor)
+## Code contexts (code-first, like Razor)
 
-In `@{ … }` und in den Bodies von `@if`/`else`, `@for`, `@foreach`, `@while`,
-`@do … while`, `@switch` und `@try`/`catch`/`finally` ist der Inhalt **TypeScript**
-(gescannt mit dem TS-Lexer — Strings, Template-Literals, Kommentare und Regex sind sicher).
-Markup beginnt nur
+In `@{ … }` and in the bodies of `@if`/`else`, `@for`, `@foreach`, `@while`,
+`@do … while`, `@switch` and `@try`/`catch`/`finally`, the content is **TypeScript**
+(scanned with the TS lexer — strings, template literals, comments and regexes are safe).
+Markup only starts
 
-- an einem Tag in Statement-Position (`<p>…</p>`, `<Comp />`),
-- bei `@:` (Rest der Zeile ist Markup, inkl. `@`-Transitions),
-- bei `<text>…</text>`,
-- bei `@expr` / `@(expr)` (Ausgabe).
+- at a tag in statement position (`<p>…</p>`, `<Comp />`),
+- at `@:` (the rest of the line is markup, including `@` transitions),
+- at `<text>…</text>`,
+- at `@expr` / `@(expr)` (output).
 
 ```razor
 @foreach (const item of items) {
@@ -211,114 +211,114 @@ Markup beginnt nur
 }
 ```
 
-- Locals (`const`/`let`/`var`, auch Destructuring, `function`), Schleifenvariablen und
-  `catch`-Parameter sind für nachfolgendes Markup im selben Scope sichtbar. `@{ }` öffnet
-  keinen eigenen Scope (Razor) — seine Locals gelten für das folgende Markup.
-- Whitespace in Code-Kontexten wird nicht gerendert (`@foreach (…) { <li/> }` erzeugt keine
-  Leerzeichen-Textframes).
-- Nackter Text in einem Code-Kontext ist ein Fehler (TZS015), kein stiller Text.
-- `@foreach`-Header sind TypeScript: `const x of xs` (auch `let`, Destructuring
-  `const [k, v] of pairs`, `const { a } of rows`; ohne Typannotation, wie in TS) und
-  `const k in obj` — `for…in` iteriert wie in TS die **Schlüssel**. C#-Köpfe ⇒ Fehler TZS021
-  mit der TS-Form: `var x in xs` / `string s in xs` ⇒ `const x of xs`, `var (k, v) in pairs` ⇒
-  `const [k, v] of pairs`. Ein Zählkopf (`let i = 0; …`) gehört zu `@for` (TZS015).
-- `@for (…; …; …)`, `@while`, `@do` sind reines TS; `var` in Schleifenköpfen und
-  Statements ⇒ Warnung TZS022 (siehe oben), emittiert wird es wie geschrieben.
-- `@switch` hat TS-Semantik: alle Sections teilen den Case-Block (ein lexikalischer Scope),
-  eine Section ohne abschließendes `break`/`return`/`throw`/`continue` fällt in die nächste
-  durch — kein implizites `break`. Eine nicht-leere Section, die durchfällt, ⇒ Warnung TZS023
-  (wie TS' `noFallthroughCasesInSwitch`); gestapelte leere Labels (`case 1:\ncase 2:`) und die
-  letzte Section bleiben still. Ein eigener Block (`case 1: { … break; }`) ist normales TS.
-- C#-Konstrukte ohne TS-Entsprechung — `@using (…) { }`, `lock (…)`, `@await` im Markup —
-  sind Fehler (TZS012).
+- Locals (`const`/`let`/`var`, including destructuring, `function`), loop variables and
+  `catch` parameters are visible to subsequent markup in the same scope. `@{ }` does not open
+  a scope of its own (Razor) — its locals apply to the following markup.
+- Whitespace in code contexts is not rendered (`@foreach (…) { <li/> }` produces no
+  whitespace text frames).
+- Bare text in a code context is an error (TZS015), not silent text.
+- `@foreach` headers are TypeScript: `const x of xs` (also `let`, destructuring
+  `const [k, v] of pairs`, `const { a } of rows`; without a type annotation, as in TS) and
+  `const k in obj` — `for…in` iterates over the **keys**, as in TS. C# headers ⇒ error TZS021
+  with the TS form: `var x in xs` / `string s in xs` ⇒ `const x of xs`, `var (k, v) in pairs` ⇒
+  `const [k, v] of pairs`. A counting header (`let i = 0; …`) belongs to `@for` (TZS015).
+- `@for (…; …; …)`, `@while`, `@do` are plain TS; `var` in loop headers and
+  statements ⇒ warning TZS022 (see above); it is emitted as written.
+- `@switch` has TS semantics: all sections share the case block (one lexical scope),
+  and a section without a terminating `break`/`return`/`throw`/`continue` falls through into the next
+  — there is no implicit `break`. A non-empty section that falls through ⇒ warning TZS023
+  (like TS's `noFallthroughCasesInSwitch`); stacked empty labels (`case 1:\ncase 2:`) and the
+  last section stay silent. A block of its own (`case 1: { … break; }`) is normal TS.
+- C# constructs without a TS equivalent — `@using (…) { }`, `lock (…)`, `@await` in markup —
+  are errors (TZS012).
 
-## @bind (Blazor .NET-7-Semantik)
+## @bind (Blazor .NET 7 semantics)
 
-| Schreibweise | Erzeugt |
+| Syntax | Generates |
 |---|---|
-| `<input @bind="name">` | `value`-Attribut + `onchange`-Handler mit Zuweisung |
-| `<input type="checkbox" @bind="flag">` | `checked` + Handler |
-| `<input type="number" @bind="n">` | `Number()`-Coercion |
-| `@bind:event="oninput"` | anderes DOM-Event |
-| `@bind:get="v" @bind:set="store"` | get-/set-Seite statt `@bind` (nur als Paar) |
-| `@bind:after="changed"` | nach der Zuweisung aufgerufen; ein Promise wird abgewartet, dann rendert die Komponente |
-| `<input @bind-value="name">`, `@bind-value:event="oninput"` | auf einem *Element* bindet `@bind-<attr>` das Attribut `<attr>` (Razor: `@bind-value` = `@bind` ausgeschrieben) mit `onchange`; Modifier und `number`/`date`-Coercion wie bei `@bind`, der Wert kommt aus dem Change-Event (`checked` bei Checkboxen, sonst `value`) |
+| `<input @bind="name">` | `value` attribute + `onchange` handler with assignment |
+| `<input type="checkbox" @bind="flag">` | `checked` + handler |
+| `<input type="number" @bind="n">` | `Number()` coercion |
+| `@bind:event="oninput"` | A different DOM event |
+| `@bind:get="v" @bind:set="store"` | Get/set side instead of `@bind` (only as a pair) |
+| `@bind:after="changed"` | Called after the assignment; a promise is awaited, then the component renders |
+| `<input @bind-value="name">`, `@bind-value:event="oninput"` | On an *element*, `@bind-<attr>` binds the attribute `<attr>` (Razor: `@bind-value` = `@bind` spelled out) with `onchange`; modifiers and `number`/`date` coercion as with `@bind`; the value comes from the change event (`checked` for checkboxes, otherwise `value`) |
 | `<Stepper @bind-Value="current" />` | `Value` + `ValueChanged` (EventCallback) |
-| `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | dieselben Modifier auf Komponenten |
-| `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-Callback-Parameter `OnPick` statt `ValueChanged` (Blazor) |
-| `<InputText @bind="name" />` | Komponenten-Tag ⇒ wie `@bind-Value` |
+| `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | The same modifiers on components |
+| `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-callback parameter `OnPick` instead of `ValueChanged` (Blazor) |
+| `<InputText @bind="name" />` | Component tag ⇒ same as `@bind-Value` |
 
-**Bind-Ziel:** der Ausdruck muss zuweisbar sein — geprüft auf dem TS-AST, die Zuweisung ist
-genau dieser Ausdruck (nach der Member-Regel): Felder, Member-Pfade, Non-Null-Assertions
-(`Model!.Title`, `a.b!.c`), Element-Zugriffe (`items[i].name`, `map[key]`), Klammern und
-Type-Assertions. Optional Chaining (`a?.b`) ist nie zuweisbar (TS2779) ⇒ TZS008, ebenso
-Nicht-L-Values (`f()`, `a + b`). Ebenso TZS008 (zur Compile-Zeit statt erst zur Laufzeit): ein
-Bind auf einen nicht zuweisbaren Local — `const` (TS2588), `function`/`class`/`enum`, einen
-`@import` (TS2632, sofern kein Member gleich heißt) — und auf die Variable einer
-`for…of`/`for…in`-Schleife (C#: CS1656; auch mit `let`: die Zuweisung träfe nur die Kopie dieser
-Iteration und ginge beim nächsten Render verloren). Gebunden wird an einen Member (`item.name`)
-oder über einen Index (`@for (let i = 0; …)` + `items[i]`). `ValueExpression` (Feldname für `EditContext`) ist der letzte
-Member-Name des Pfads (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), auch aus `:get`.
+**Bind target:** the expression must be assignable — checked on the TS AST; the assignment targets
+exactly this expression (after the member rule): fields, member paths, non-null assertions
+(`Model!.Title`, `a.b!.c`), element accesses (`items[i].name`, `map[key]`), parentheses and
+type assertions. Optional chaining (`a?.b`) is never assignable (TS2779) ⇒ TZS008, and neither are
+non-lvalues (`f()`, `a + b`). Also TZS008 (at compile time instead of only at runtime): a
+bind to a non-assignable local — `const` (TS2588), `function`/`class`/`enum`, an
+`@import` (TS2632, unless a member has the same name) — and to the variable of a
+`for…of`/`for…in` loop (C#: CS1656; also with `let`: the assignment would only hit this
+iteration's copy and be lost on the next render). Bind to a member instead (`item.name`)
+or via an index (`@for (let i = 0; …)` + `items[i]`). `ValueExpression` (the field name for `EditContext`) is the last
+member name of the path (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), also from `:get`.
 
-**Kombinationen** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` zusammen mit
-`:get`; `:get` ohne `:set` und umgekehrt; `:set` zusammen mit `:after` (den `:after`-Code in
-`:set` aufrufen); `:after`/`:event`/`:format` ohne `@bind` bzw. `:get`. Die Reihenfolge der
-Attribute ist egal.
+**Combinations** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` together with
+`:get`; `:get` without `:set` and vice versa; `:set` together with `:after` (call the `:after` code from
+`:set` instead); `:after`/`:event`/`:format` without `@bind` or `:get`. The order of the
+attributes does not matter.
 
-**`@bind:format` (3.7)** rendert und parst number-/date-Binds über eine eigene
-`formatValue`/`parseValue`-Implementierung (Blazors `BindConverter`-Subset, invariant culture
-nach A5/B7 — TS kennt keine CultureInfo). Der Wert ist Razor-getreu: `@bind:format="0.00"`
-ist ein String-Literal (Klartext im Attribut), `@bind:format="@fmt"` ein Ausdruck. Unterstützte
-Formate — Teilmenge, dokumentierte Abweichung vom vollen .NET-Grammatikumfang:
+**`@bind:format` (3.7)** renders and parses number/date binds through a dedicated
+`formatValue`/`parseValue` implementation (a subset of Blazor's `BindConverter`, invariant culture
+per A5/B7 — TS has no CultureInfo). The value follows Razor: `@bind:format="0.00"`
+is a string literal (plain text in the attribute), `@bind:format="@fmt"` is an expression. Supported
+formats — a subset, a documented deviation from the full .NET format grammar:
 
-- Zahlen: `F<n>` (feste Stellen), `N<n>` (Tausender-Gruppierung) und die Ziffernmasken
-  `0`, `0.00`, `#,##0.0` (Stellenanzahl aus der Maske, Gruppierung sobald `,` drinsteht).
-  Alles andere formatiert wie `String(value)` und parst tolerant (`Number` ohne `,`/Leerzeichen).
-- Datumsangaben: die Tokens `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`, `ss`, `M`, `d`, `H`, `m`,
-  `s`; jedes andere Zeichen ist Literaltext (`dd.MM.yyyy`). Geparse wird über eine aus dem
-  Format gebaute Regex; ein Out-of-Range-Wert (`31.02.2024`) gibt `null` — der Handler behält
-  den bisherigen Modellwert wie beim NaN-Guard des nativen Number-Binds.
-- Leerer Text parst nie als 0 (`.NET TryParse("")` scheitert).
+- Numbers: `F<n>` (fixed digits), `N<n>` (thousands grouping) and the digit masks
+  `0`, `0.00`, `#,##0.0` (number of digits taken from the mask, grouping as soon as it contains `,`).
+  Everything else formats like `String(value)` and parses leniently (`Number` without `,`/spaces).
+- Dates: the tokens `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`, `ss`, `M`, `d`, `H`, `m`,
+  `s`; every other character is literal text (`dd.MM.yyyy`). Parsing uses a regex built from the
+  format; an out-of-range value (`31.02.2024`) yields `null` — the handler keeps
+  the previous model value, like the NaN guard of the native number bind.
+- Empty text never parses as 0 (`.NET TryParse("")` fails).
 
-Nicht implementiert: ganzzahlige Null-Auffüllung (`D5`/`00000#`-Padding) — Abweichung, in der
-Roadmap vermerkt. Andere Binds behalten Blazors Verhalten: `:format` auf einem String-Bind und
-einem Komponenten-Bind ist eine Warnung TZS008 (der `BindConverter` wendet Formate nur auf Typen
-mit einem an — Strings tragen keins; auf Komponenten ignoriert Blazor es), der native
-Round-Trip bleibt bestehen. `@bind:culture` (auf Element und Komponente) ist Fehler TZS008
+Not implemented: integer zero padding (`D5`/`00000#` padding) — a deviation, noted in the
+roadmap. Other binds keep Blazor's behavior: `:format` on a string bind and on
+a component bind is a warning TZS008 (the `BindConverter` only applies formats to types
+that carry one — strings don't; on components Blazor ignores it), and the native
+round trip is kept. `@bind:culture` (on elements and components) is error TZS008
 — invariant culture only (A5/B7).
 
-## DI — ServiceCollection und Lifetimes (3.8)
+## DI — ServiceCollection and lifetimes (3.8)
 
-`@inject NavigationManager Nav` ist das Markup-Pendant des Feld-Initializers
-`inject(NavigationManager)` — aufgelöst zur Konstruktorzeit der Komponente (der Renderer
-aktiviert den Provider um die Instanziierung herum, siehe `withServices`). Token sind
-Klassen (identitätsbasiert — TS statt Interfaces):
+`@inject NavigationManager Nav` is the markup counterpart of the field initializer
+`inject(NavigationManager)` — resolved when the component is constructed (the renderer
+activates the provider around instantiation, see `withServices`). Tokens are
+classes (identity-based — TS instead of interfaces):
 
-| Registrierung | Lifetime |
+| Registration | Lifetime |
 |---|---|
-| `register(Foo, (services) => new Foo(services.get(Bar)))` | singleton (Default) — Instanz am Root-Provider, über alle Scopes geteilt |
-| `…, { lifetime: "scoped" }` | scoped — eine Instanz je Service-Scope (`createScope()`), Blazors `AddScoped` |
-| `…, { lifetime: "transient" }` bzw. `{ singleton: false }` (alte Form) | transient — neu je Auflösung |
-| `registerType(Foo, options?)` | Factory `new Foo(services)` mit der Option-Lifetime |
-| `registerValue(Foo, instance)` | Konstante — disposed nicht der Provider, sondern ihr Besitzer |
+| `register(Foo, (services) => new Foo(services.get(Bar)))` | singleton (default) — instance at the root provider, shared across all scopes |
+| `…, { lifetime: "scoped" }` | scoped — one instance per service scope (`createScope()`), Blazor's `AddScoped` |
+| `…, { lifetime: "transient" }` or `{ singleton: false }` (old form) | transient — new per resolution |
+| `registerType(Foo, options?)` | Factory `new Foo(services)` with the lifetime from the options |
+| `registerValue(Foo, instance)` | Constant — disposed by its owner, not by the provider |
 
-- **Scopes** (Blazors `CreateScope`): `provider.createScope()` leitet einen Scope ab, der die
-  Registrierungen teilt, aber seine scoped Services selbst cached; Singletons fallen an den
-  Root-Provider durch (eine Instanz app-weit). Scopes mit Scopes bilden die Kette zum selben
-  Root ab.
-- **Dispose:** der Provider gibt die Instanzen frei, die er über eine Factory erzeugt hat — in
-  umgekehrter Erzeugungsreihenfolge (eine Instanz mit `dispose()`), Blazors
-  `ServiceProvider`-Engine-Verhalten. `registerValue`-Konstanten bleiben ihrem Besitzer (die
-  App disposed z. B. ihren NavigationManager selbst — der Container würde sie doppelt
-  freigeben). Der Root-Provider disposed seine Singletons mit, ein Scope.Dispose nur seine
-  scoped und die direkt aufgelösten transients; `get` auf einem disposeten Provider wirft
-  .NETs `Cannot access a disposed object.`.
-- **Zykluserkennung:** eine Factory, die denselben Token erneut anfordert, wirft .NETs exakte
-  Meldung `A circular dependency was detected for the service of type 'X'.` (Guard pro
-  synchroner Auflösungskette — Selbstreferenz und gegenseitige Abhängigkeiten alike).
-- **Nicht registriert:** `get` wirft `Service not registered: X`, `tryGet` gibt `undefined`.
+- **Scopes** (Blazor's `CreateScope`): `provider.createScope()` derives a scope that shares the
+  registrations but caches its scoped services itself; singletons fall through to the
+  root provider (one instance app-wide). Scopes of scopes form a chain to the same
+  root.
+- **Dispose:** the provider releases the instances it created through a factory — in
+  reverse creation order (instances with `dispose()`), matching the behavior of Blazor's
+  `ServiceProvider` engine. `registerValue` constants stay with their owner (the
+  app, for example, disposes its NavigationManager itself — the container would release it
+  twice). The root provider also disposes its singletons; a scope's dispose only disposes its
+  scoped services and the transients it resolved directly; `get` on a disposed provider throws
+  .NET's `Cannot access a disposed object.`.
+- **Cycle detection:** a factory that requests the same token again throws .NET's exact
+  message `A circular dependency was detected for the service of type 'X'.` (a guard per
+  synchronous resolution chain — covers self-references and mutual dependencies alike).
+- **Not registered:** `get` throws `Service not registered: X`, `tryGet` returns `undefined`.
 
-## Komponenten
+## Components
 
 ```razor
 <Greeter Name="@name" />
@@ -334,190 +334,190 @@ Klassen (identitätsbasiert — TS statt Interfaces):
 <Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
 ```
 
-- `ErrorBoundary` (3.1) fängt Fehler des eigenen Subtrees — Render, Diff, DOM-Anwendung,
-  Lifecycle, synchrones und async `@onclick`-Handling, `onAfterRender` (Blazors
-  `HandleExceptionViaErrorBoundary`; Dispose- und Batch-Fehler bleiben wie dort fatal). Gesund
-  rendert `ChildContent`, fehlerhaft `ErrorContent` — das als `RenderFragment<unknown>`
-  typisiert ist (Abweichung: Blazor `RenderFragment<Exception>`); ohne Slot das Default-UI
-  `<div class="blazor-error-boundary">` (CSS-Styling wie im Blazor-Template). Der
-  Slot-Kontext heißt Default `context`:
+- `ErrorBoundary` (3.1) catches errors in its own subtree — render, diff, DOM application,
+  lifecycle, synchronous and async `@onclick` handling, `onAfterRender` (Blazor's
+  `HandleExceptionViaErrorBoundary`; dispose and batch errors stay fatal, as there). When healthy it
+  renders `ChildContent`, when faulted `ErrorContent` — which is typed as `RenderFragment<unknown>`
+  (deviation: Blazor uses `RenderFragment<Exception>`); without the slot, the default UI
+  `<div class="blazor-error-boundary">` (styled with CSS as in the Blazor template). The
+  slot context is named `context` by default:
   `<ErrorContent Context="error">…@error.message…</ErrorContent>`. `maximumErrorCount`
-  (Default 100 wie Blazor) zählt Fehler zwischen zwei `recover()`-Aufrufen; darüber hinaus
-  ist der Fehler fatal und erreicht `renderer.errorHandler`. Eigene Boundaries erben von
-  `ErrorBoundaryBase` (oder implementieren `IErrorBoundary`: `isErrorBoundary = true` +
-  `handleException`); das `onError`-Hook loggt Default per Konsole (Blazor loggt über den
-  injizierten `IErrorBoundaryLogger` — Tsazor hat diesen Service nicht).
+  (default 100, as in Blazor) counts errors between two `recover()` calls; beyond that
+  the error is fatal and reaches `renderer.errorHandler`. Custom boundaries inherit from
+  `ErrorBoundaryBase` (or implement `IErrorBoundary`: `isErrorBoundary = true` +
+  `handleException`); the `onError` hook logs to the console by default (Blazor logs through the
+  injected `IErrorBoundaryLogger` — Tsazor does not have this service).
 
-- `DynamicComponent` (3.2) rendert eine zur Laufzeit gewählte Komponente (Blazor
-  `DynamicComponent.cs`): `Type` ist die Komponenten-Klasse (einer der Tags, importiert oder
-  aus dem Markup bekannt), `Parameters` ist ein Dictionary `{ name: value }`, das unverändert
-  an das gerenderte Kind gereicht wird:
+- `DynamicComponent` (3.2) renders a component chosen at runtime (Blazor's
+  `DynamicComponent.cs`): `Type` is the component class (one of the tags, imported or
+  known from the markup), `Parameters` is a dictionary `{ name: value }` that is passed unchanged
+  to the rendered child:
 
   ```razor
   <DynamicComponent Type="@picked" Parameters="@({ label: "x" })" />
   ```
 
-  Gleicher `Type` aktualisiert die Kind-Instanz (kein Neu-Render), ein `Type`-Wechsel ersetzt
-  sie (Dispose + Initialisierung — Blazor-Diffing). `Instance` nimmt die gerenderte
-  Kind-Instanz per Reference-Capture auf. Nur `Type`/`Parameters` werden als direkte Parameter
-  akzeptiert, alles andere ist TZS025 (im Markup) bzw. Blazors Laufzeit-Fehler
+  The same `Type` updates the child instance (no re-creation), a change of `Type` replaces
+  it (dispose + initialization — Blazor diffing). `Instance` captures the rendered
+  child instance via reference capture. Only `Type`/`Parameters` are accepted as direct parameters;
+  anything else is TZS025 (in markup) or Blazor's runtime error
   `DynamicComponent does not accept a parameter with the name 'X'. To pass parameters …`
-  (in handgebauten Bäumen). Fehlt `Type` (null), wirft die Komponente Blazors
+  (in hand-built trees). If `Type` is missing (null), the component throws Blazor's
   `DynamicComponent requires a non-null value for the parameter Type.`
 
-- Sections (3.4) — Blazor-Parität: `<SectionContent SectionName="x">…</SectionContent>` ist ein
-  Provider, `<SectionOutlet SectionName="x" />` rendert den Inhalt desselben Identifikators
-  (`SectionId` mit einem Objekt statt `SectionName` geht auch; beides zugleich oder keins ist
-  ein Laufzeitfehler). „Last added wins“ — der zuletzt gerenderte Provider überschreibt (ein
-  Provider rendert an seiner eigenen Stelle nichts, ohne Outlet auch nichts); wird der letzte
-  Provider entfernt, fällt der Outlet auf den vorherigen zurück. Genau ein Outlet je
-  Identifikator — der zweite wirft Blazors Fehler.
-- `HeadContent`/`HeadOutlet`/`PageTitle`/`FocusOnNavigate` (3.4) — Blazor-Web-Pendants: die
-  Runtime mountet (createTsazorApp) als zweiten Root einen `HeadOutlet` in `document.head`;
-  `<HeadContent>`-Inhalt landet dort, `<PageTitle>` setzt als Title-Sektion `document.title`
-  (ein statischer Prerender-`<title>` wird beim ersten Render erfasst, als Fallback-Default
-  übernommen und aus dem Head entfernt — wie in Blazor). `<FocusOnNavigate
-  RouteData="@routeData" Selector="h1" />` (im Router-Kontext; `RouteData` kommt vom Router)
-  fokussiert das Element bei Seitenwechsel — ohne `tabindex` bekommt es `tabIndex = -1`,
-  mit Fokus `preventScroll`.
+- Sections (3.4) — Blazor parity: `<SectionContent SectionName="x">…</SectionContent>` is a
+  provider, `<SectionOutlet SectionName="x" />` renders the content of the same identifier
+  (`SectionId` with an object instead of `SectionName` also works; both at once or neither is
+  a runtime error). "Last added wins" — the most recently rendered provider takes over (a
+  provider renders nothing in its own place, and without an outlet nothing at all); when the last
+  provider is removed, the outlet falls back to the previous one. Exactly one outlet per
+  identifier — a second one throws Blazor's error.
+- `HeadContent`/`HeadOutlet`/`PageTitle`/`FocusOnNavigate` (3.4) — the Blazor Web counterparts: the
+  runtime (createTsazorApp) mounts a `HeadOutlet` as a second root in `document.head`;
+  `<HeadContent>` content ends up there, `<PageTitle>` sets `document.title` as the title section
+  (a static prerendered `<title>` is captured on the first render, taken over as the fallback default
+  and removed from the head — as in Blazor). `<FocusOnNavigate
+  RouteData="@routeData" Selector="h1" />` (in the router context; `RouteData` comes from the router)
+  focuses the element on page changes — without `tabindex` it gets `tabIndex = -1`,
+  and focus uses `preventScroll`.
 
-- `EditForm` (3.5) — Blazors `EditForm.cs`: `Model`**oder** `EditContext` (beides zugleich
-  bzw. keins wirft Blazors Fehlermeldung), `OnSubmit` hat Vorrang vor der Validierung und
-  ersetzt sie (zusammen mit `OnValidSubmit`/`OnInvalidSubmit` ist der Kombinations-Fehler
- Blazors Meldung), sonst validiert der `EditContext` und es geht an `OnValidSubmit` bzw.
-  `OnInvalidSubmit`. Alle drei Callbacks empfangen den `EditContext`
-  (`EventCallback<EditContext>`), und das Await des Callbacks liegt im getrackten
-  Submit-Handler — `waitUntilIdle` deckt ein asynchrones `OnValidSubmit` ab. Der `EditContext`
-  wird als fixer Cascade-Wert geliefert (`IsFixed=true`); bei einem neuen `Model` wird der
-  Kontext neu erzeugt und die Blazor-Region (`OpenRegion(_editContext.GetHashCode())` — hier:
-  Kontext-Identität aus einem WeakMap-Zähler) errichtet den ganzen Form-Subtree neu. Das
-  `<EditForm>`-Kind empfangt den Kontext als Slot-Kontext (`@context` — ChildContent ist
+- `EditForm` (3.5) — Blazor's `EditForm.cs`: `Model` **or** `EditContext` (both at once
+  or neither throws Blazor's error message); `OnSubmit` takes precedence over validation and
+  replaces it (combined with `OnValidSubmit`/`OnInvalidSubmit`, the combination error is
+  Blazor's message); otherwise the `EditContext` validates and dispatches to `OnValidSubmit` or
+  `OnInvalidSubmit`. All three callbacks receive the `EditContext`
+  (`EventCallback<EditContext>`), and awaiting the callback happens inside the tracked
+  submit handler — `waitUntilIdle` covers an asynchronous `OnValidSubmit`. The `EditContext`
+  is supplied as a fixed cascading value (`IsFixed=true`); with a new `Model`, the
+  context is recreated and the Blazor region (`OpenRegion(_editContext.GetHashCode())` — here:
+  context identity from a WeakMap counter) rebuilds the entire form subtree. The
+  `<EditForm>` child receives the context as its slot context (`@context` — ChildContent is
   `(context: EditContext) => RenderFragment`).
 
-- Datenannotierte Validierung (3.6) — Blazors `DataAnnotationsValidator` + das
-  Validierungsmodell dahinter. Entschieden per Roadmap-Empfehlung „Decorators“ (ermöglicht
-  5.2 Schema ⇒ Validatoren): die Regeln deklariert das Modell mit TC39-Feld-Decorators —
+- Data-annotation validation (3.6) — Blazor's `DataAnnotationsValidator` plus the
+  validation model behind it. Decided per the roadmap recommendation "decorators" (enables
+  5.2 schema ⇒ validators): the model declares the rules with TC39 field decorators —
   `@Required()`, `@MinLength(n)`, `@MaxLength(n)`, `@StringLength(max, { minimumLength })`,
   `@Range(min, max)`, `@EmailAddress()`, `@RegularExpression(pattern)`,
-  `@Compare("otherField")` — als Pendant zu den DataAnnotations-Attributen. `<EditForm …><DataAnnotationsValidator />`
-  aktiviert sie auf dem Kontext (Blazors `EditContext.EnableDataAnnotationsValidation`);
-  ohne einen gecascadeten `EditContext` wirft es Blazors Fehlermeldung, ein dynamischer
-  Kontextwechsel ebenfalls. Fehlermeldungen sind die exakten .NET-Texte
-  („The name field is required.“, „The field age must be between 18 and 99.“, …), mit dem
-  Feldnamen als Displayname. Timing wie Blazor: eine Feldänderung validiert genau dieses
-  Feld (OnFieldChanged), der Submit (validate()) validiert alle annotierten Felder
-  (OnValidationRequested). Mehrere Regeln an einem Feld hängen ihre Meldungen in
-  Deklarationsreihenfolge an (TC39 ruft bottom-up auf — der Lesezugriff kehrt die Reihenfolge
-  um, .NET: GetCustomAttributes-Reihenfolge). Die alte funktionsbasierte `Validators`-Map
-  (`validators: Record<string, (value, model) => string | null>` am `<EditForm>`) bleibt als
-  Adapter für Logik, die ein Schema nicht ausdrücken kann; ihre Meldungen und die
-  Decorator-Meldungen koexistieren pro Feld (Blazors ValidationMessageStore-Modell — jeder
-  Provider hat einen eigenen Store). Abweichungen: kein `[Display]`-Port (Displayname ist der
-  Feldname), keine `AddAsyncValidator`-API (asynchrone Validierung wartet im
-  `OnValidSubmit`-Callback), kein `DisableClientValidation`/SSR-Mapping, und die Attribut-*
-  Menge ist die oben genannte Teilmenge — weitere Attribute (z. B. `[Range(typeof(...))]`,
-  `CustomValidationAttribute`) über `validators` oder eigene Decorators mit der
-  `FieldRuleDecorator`-Signatur.
+  `@Compare("otherField")` — as the counterpart of the DataAnnotations attributes. `<EditForm …><DataAnnotationsValidator />`
+  enables them on the context (Blazor's `EditContext.EnableDataAnnotationsValidation`);
+  without a cascaded `EditContext` it throws Blazor's error message, and likewise on a dynamic
+  context change. Error messages are the exact .NET texts
+  ("The name field is required.", "The field age must be between 18 and 99.", …), with the
+  field name as display name. Timing as in Blazor: a field change validates exactly that
+  field (OnFieldChanged), submit (validate()) validates all annotated fields
+  (OnValidationRequested). Multiple rules on one field append their messages in
+  declaration order (TC39 calls decorators bottom-up — the read side reverses the order;
+  .NET: GetCustomAttributes order). The old function-based `Validators` map
+  (`validators: Record<string, (value, model) => string | null>` on `<EditForm>`) remains as an
+  adapter for logic a schema cannot express; its messages and the
+  decorator messages coexist per field (Blazor's ValidationMessageStore model — each
+  provider has its own store). Deviations: no `[Display]` port (the display name is the
+  field name), no `AddAsyncValidator` API (asynchronous validation waits in the
+  `OnValidSubmit` callback), no `DisableClientValidation`/SSR mapping, and the attribute
+  set is the subset listed above — further attributes (e.g. `[Range(typeof(...))]`,
+  `CustomValidationAttribute`) via `validators` or custom decorators with the
+  `FieldRuleDecorator` signature.
 
-- `InputFile` und `SupplyParameterFromQuery` (3.7) — Blazors Web-Pendants mit denselben
-  Abweichungen wie überall hier: Browser-Objekte statt .NET-Abstraktionen.
+- `InputFile` and `SupplyParameterFromQuery` (3.7) — Blazor's Web counterparts with the same
+  deviations as everywhere here: browser objects instead of .NET abstractions.
 
-  - `<InputFile OnChange="@handle" />` öffnet den Dateidialog; `multiple` und `accept` laufen
-    als Element-Attribute mit. Das Event empfängt ein `InputFileChangeEventArgs`:
-    `FileCount`, `GetMultipleFiles(max)` (Default `10`, Blazors Limit), `File` (die erste
-    Datei, `null` ohne Auswahl). Die Dateien sind native `File`-Objekte statt Blazors
-    `IBrowserFile` — `name`/`size`/`type` gleichen sich, `OpenReadStream`/`ReadBuffer` gibt es
-    nicht (Inhalt per `file.text()`/`arrayBuffer()` lesen). Die Frame-Reihenfolge ist wie
-    Blazors InputFile: Attribute, `type="file"` und Reference-Capture vor dem Handler — ein
-    `@ref` zwischen ihnen schattiert die nachfolgenden Handler nicht (Diff und Renderer
-    fassen Attribute, Handler und Captures als den Preamble-Bereich des Elements auf; Captures
-    feuern nur bei der frischen Element-Insertion).
+  - `<InputFile OnChange="@handle" />` opens the file dialog; `multiple` and `accept` are passed
+    through as element attributes. The event receives an `InputFileChangeEventArgs`:
+    `FileCount`, `GetMultipleFiles(max)` (default `10`, Blazor's limit), `File` (the first
+    file, `null` without a selection). The files are native `File` objects instead of Blazor's
+    `IBrowserFile` — `name`/`size`/`type` match, `OpenReadStream`/`ReadBuffer` do not
+    exist (read the content via `file.text()`/`arrayBuffer()`). The frame order is the same as in
+    Blazor's InputFile: attributes, `type="file"` and reference capture before the handler — an
+    `@ref` between them does not shadow the following handlers (diff and renderer
+    treat attributes, handlers and captures as the element's preamble range; captures
+    only fire on a fresh element insertion).
 
-  - `[SupplyParameterFromQuery]` (Decorator-Form `@SupplyParameterFromQuery()`) liefert den
-    Wert einer Route-/Page-Komponente aus dem Query-String — nur mit `@Parameter` deklariert
-    (Blazors Meldung für fehlendes `[Parameter]`). Blazor liest den Zieldatentyp aus dem
-    Parameter-Typ; TypeScript kennt den Laufzeittyp nicht, daher die Option: `{ type: "int" |
-    "long" | "bool" | "double" | "float" | "decimal" | "datetime" | "guid" }` (Default
-    `string`, dieselben Konvertierungen wie die Routen-Constraints) und `{ multiple: true }`
-    (Abweichung statt der Array-Erkennung: das Feld ist ein Array (`string[] | T[]`) und
-    bekommt je Wiederholung des Keys einen konvertierten Wert — Blazors
-    `SupplyParameterFromQuery`-Verhalten für Array-Parameter). Wie Blazor: der Key ist der
-    Feldname (case-insensitiv), abwesend ⇒ `null`, mehrere Werte ⇒ der erste, Route-Werte
-    schlagen Query-Werte für dasselbe Feld, eine gescheiterte Konvertierung ist Blazors
-    Fehler `Cannot parse the value 'X' as type 'T' for 'Y'.`, ein nicht unterstützter Typ
-    `Querystring values cannot be parsed as type 'X'.`. RouteView versorgt die Parameter bei
-    jedem Navigation-Wechsel neu (NavigationManager-Subscription wie Blazor).
+  - `[SupplyParameterFromQuery]` (decorator form `@SupplyParameterFromQuery()`) supplies the
+    value of a route/page component from the query string — only when declared with `@Parameter`
+    (Blazor's message for a missing `[Parameter]`). Blazor reads the target data type from the
+    parameter type; TypeScript does not know the runtime type, hence the option: `{ type: "int" |
+    "long" | "bool" | "double" | "float" | "decimal" | "datetime" | "guid" }` (default
+    `string`, the same conversions as the route constraints) and `{ multiple: true }`
+    (a deviation instead of array detection: the field is an array (`string[] | T[]`) and
+    receives one converted value per repetition of the key — Blazor's
+    `SupplyParameterFromQuery` behavior for array parameters). As in Blazor: the key is the
+    field name (case-insensitive), absent ⇒ `null`, multiple values ⇒ the first, route values
+    beat query values for the same field, a failed conversion is Blazor's
+    error `Cannot parse the value 'X' as type 'T' for 'Y'.`, an unsupported type is
+    `Querystring values cannot be parsed as type 'X'.`. RouteView re-supplies the parameters on
+    every navigation change (NavigationManager subscription, as in Blazor).
 
-- `NavLink` vergleicht wie Blazor (.NET 8) absolute URIs: `Href` wird gegen die Base-URI
-  aufgelöst (relativ `counter`, root-relativ `/app/counter` unter `<base href="/app/">`, absolut
-  `http://…`) und case-insensitiv mit der aktuellen URI verglichen. `NavLinkMatch.All`: exakt
-  (Href darf zusätzlich auf `/` enden; Query und Fragment der aktuellen URI zählen nicht);
-  `Prefix` (Standard): zusätzlich alles darunter, an einem Trenner (`/abc` deckt `/abc/def` und
-  `/abc?x`, nicht `/abcdef`). Ein `Prefix`-Link auf die Basis (`Href=""`, ohne `<base>` auch
-  `Href="/"`) ist deshalb überall aktiv — der Home-Link nimmt `Match="@NavLinkMatch.All"`.
-- Ein leerer Attributwert (`href=""`) ist der leere String (Element-Attribut wie Parameter).
-- Element-Inhalt einer Komponente → `ChildContent`-Parameter; Elemente, die
-  `RenderFragment`-Parameter benennen (benannte Slots), setzen genau diesen
-  Parameter (`<Found Context="routeData">…` — siehe unten).
-- Unbekannte Attribute → Parameter mit `captureUnmatchedValues` (`additionalAttributes`);
-  ohne einen solchen ⇒ Fehler TZS025 (siehe unten).
+- `NavLink` compares absolute URIs as Blazor (.NET 8) does: `Href` is resolved against the base
+  URI (relative `counter`, root-relative `/app/counter` under `<base href="/app/">`, absolute
+  `http://…`) and compared case-insensitively with the current URI. `NavLinkMatch.All`: exact
+  (Href may additionally end in `/`; query and fragment of the current URI do not count);
+  `Prefix` (default): additionally everything below it, at a separator (`/abc` covers `/abc/def` and
+  `/abc?x`, not `/abcdef`). A `Prefix` link to the base (`Href=""`, without `<base>` also
+  `Href="/"`) is therefore active everywhere — the home link uses `Match="@NavLinkMatch.All"`.
+- An empty attribute value (`href=""`) is the empty string (for element attributes and parameters alike).
+- A component's element content → the `ChildContent` parameter; elements that
+  name `RenderFragment` parameters (named slots) set exactly that
+  parameter (`<Found Context="routeData">…` — see below).
+- Unknown attributes → the parameter with `captureUnmatchedValues` (`additionalAttributes`);
+  without one ⇒ error TZS025 (see below).
 
-### Komponenten-Attribute nach Parametertyp
+### Component attributes by parameter type
 
-Wie Razor senkt der Compiler ein Komponenten-Attribut nach dem Typ des Ziel-Parameters ab
-(Parameter-Metadaten, Phase 2.1; der Name wird case-insensitiv zugeordnet, emittiert wird der
-Member-Name: `Appearance="…"` setzt `appearance`). Markup bleibt Razor, der Wert ist — wo er Code
-ist — TypeScript:
+Like Razor, the compiler lowers a component attribute according to the type of the target parameter
+(parameter metadata, Phase 2.1; the name is matched case-insensitively, the emitted name is the
+member name: `Appearance="…"` sets `appearance`). Markup stays Razor; the value — where it is code
+— is TypeScript:
 
-| Parameter-Typ (Kategorie) | Attribut | Wert |
+| Parameter type (category) | Attribute | Value |
 |---|---|---|
-| `string` (auch Unions mit `string`, Literal-Typen) | `Title="5"`, `Title="@x"`, `Title="n: @x"` | `"5"`, `this.x`, Template-String — wie auf Elementen |
-| sonstiger Wert (`number`, `boolean`, Objekte, Arrays, Funktionstypen, `RenderFragment`) | `Count="5"`, `Enabled="true"`, `Items="people"`, `Interval="@4000"`, `Max="@a + 1"`, `<X Enabled />` | TS-Ausdruck mit oder ohne `@`: `5`, `true`, `this.people`, `4000`, `this.a + 1`, `true`; auf einem Funktionstyp wird eine Method-Group gebunden (siehe unten) |
-| `EventCallback` / `EventCallback<T>` | `OnClick="handle"`, `OnClick="item.toggle"`, `OnClick="() => n++"`, `OnClick="@OnClick"` | `EventCallback`, gebunden an die Komponente (Re-Render danach); eine Method-Group mit Receiver behält ihn (wie `@onclick`); ein bereits gebundener `EventCallback` (weitergereicht) bleibt unverändert |
-| `captureUnmatchedValues` / nicht deklariert, aber eine Capture-Property existiert | beliebig | wie geschrieben (Text als String) |
+| `string` (also unions with `string`, literal types) | `Title="5"`, `Title="@x"`, `Title="n: @x"` | `"5"`, `this.x`, template string — as on elements |
+| any other value (`number`, `boolean`, objects, arrays, function types, `RenderFragment`) | `Count="5"`, `Enabled="true"`, `Items="people"`, `Interval="@4000"`, `Max="@a + 1"`, `<X Enabled />` | TS expression with or without `@`: `5`, `true`, `this.people`, `4000`, `this.a + 1`, `true`; on a function type a method group is bound (see below) |
+| `EventCallback` / `EventCallback<T>` | `OnClick="handle"`, `OnClick="item.toggle"`, `OnClick="() => n++"`, `OnClick="@OnClick"` | `EventCallback` bound to the component (re-render afterwards); a method group with a receiver keeps it (like `@onclick`); an already bound `EventCallback` (passed through) stays unchanged |
+| `captureUnmatchedValues` / not declared, but a capture property exists | anything | as written (text as string) |
 
-- Ein Funktionstyp, der kein `EventCallback` ist (`onlyIf?: (n: number) => boolean`, auch über
-  Aliase oder `| undefined`), ist ein gewöhnlicher Wert — unabhängig vom Namen; die Runtime wandelt
-  nichts um (seit 2.2). **Method-Groups werden dort gebunden** wie ein C#-Delegate: Markup ist
-  Razor, und ein Methodenname im Template meint „diese Methode dieser Komponente" — dieselbe Regel
-  wie bei `EventCallback`. `Filter="isVisible"` ⇒ `bindMethod(this, this.isVisible)` (eine im
-  `@code`/Code-behind deklarierte Methode oder ein nicht deklarierter, also geerbter Member);
-  `Filter="svc.isVisible"` ⇒ an `svc` gebunden (Receiver beim Rendern ausgewertet, wie bei
-  `@onclick`). Unverändert TypeScript bleiben Lambdas (`(n) => isVisible(n)`), Aufrufe
-  (`makeFilter()`), deklarierte Felder/Accessoren, die eine Funktion halten (`pred = (n) => …`), und
-  jeder andere Ausdruck. Die gebundene Funktion ist pro (Receiver, Methode) gecacht (`WeakMap`) —
-  bei jedem Render dieselbe Referenz. Change-Detection wie Blazor: ein Delegate ist kein bekannt
-  immutabler Typ, das Kind rendert also trotzdem bei jedem Parent-Render neu; die stabile Identität
-  zählt für Vergleiche im Kind (`===`, Set/Map, `removeEventListener`) und für einen `EventCallback`
-  über eine Method-Group mit Receiver (`OnClick="item.toggle"`), der jetzt gleich vergleicht (Blazor:
-  gleiches Target + Methode) und das Kind nicht mehr neu rendern lässt. Ohne bzw. mit `uncertain`
-  Metadaten (TZS026) bleibt es bei `this.isVisible`.
-- Ein leerer Wert auf einem Nicht-String-Parameter (`Count=""`) bzw. ein wertloses Attribut auf
-  einem `EventCallback` ⇒ TZS009; Syntaxfehler im Wert ⇒ TZS024.
-- `@bind-Value` übergibt `ValueExpression` (allgemein `<Target>Expression`) nur, wenn die Komponente
-  den Parameter deklariert (wie Razor); `Value`/`ValueChanged` bzw. `:event` müssen existieren.
-- **Unbekannter Parameter ⇒ Fehler TZS025** („Component 'X' does not have a parameter 'Y'"), das
-  statische Gegenstück zum Laufzeitfehler (B4) — sofern die Metadaten vollständig sind und die
-  Komponente keinen `captureUnmatchedValues`-Parameter hat. Mit naher Entsprechung (Edit-Distanz,
-  case-insensitiv, fehlendes `On`-Präfix) „Did you mean 'Label'?" plus Fix (Umbenennen). Ebenso
-  für `@onclick` auf einer Komponente und Event-Modifier (`@onclick:preventDefault` braucht dort
-  einen Capture-Parameter).
-- **Typ unbekannt ⇒ Warnung TZS026**, der Wert wird wie bisher übergeben (Text als String,
-  `@expr` als Ausdruck, `On*`-Werte als `EventCallback`): wenn ein Parameter `uncertain` ist (Typ
-  aus einem Paket ohne Manifest, nicht verfolgbarer Import, keine Annotation und kein Literal-
-  Initializer — die Meldung nennt den Grund; eine Typannotation behebt es), wenn kein Manifest /
-  keine Quelldatei die Komponente beschreibt, oder wenn ihre Basisklasse nicht auflösbar ist
-  (dann nur für nicht zugeordnete Attribute, einmal pro Tag). Ohne Metadaten entfällt auch
-  `<Target>Expression`.
-- Cascading: `@CascadingParameter({ type: EditContext })` (by-type) oder
-  `@CascadingParameter({ name: "x" })` (by-name) — `CascadingValue`/`EditForm` liefern.
+- A function type that is not an `EventCallback` (`onlyIf?: (n: number) => boolean`, also through
+  aliases or `| undefined`) is an ordinary value — regardless of its name; the runtime converts
+  nothing (since 2.2). **Method groups are bound there** like a C# delegate: markup is
+  Razor, and a method name in the template means "this method of this component" — the same rule
+  as for `EventCallback`. `Filter="isVisible"` ⇒ `bindMethod(this, this.isVisible)` (a method declared in
+  `@code`/code-behind, or an undeclared and therefore inherited member);
+  `Filter="svc.isVisible"` ⇒ bound to `svc` (receiver evaluated at render time, as with
+  `@onclick`). Left unchanged as TypeScript: lambdas (`(n) => isVisible(n)`), calls
+  (`makeFilter()`), declared fields/accessors that hold a function (`pred = (n) => …`), and
+  any other expression. The bound function is cached per (receiver, method) (`WeakMap`) —
+  the same reference on every render. Change detection as in Blazor: a delegate is not a known
+  immutable type, so the child still re-renders on every parent render; the stable identity
+  matters for comparisons in the child (`===`, Set/Map, `removeEventListener`) and for an `EventCallback`
+  over a method group with a receiver (`OnClick="item.toggle"`), which now compares equal (Blazor:
+  same target + method) and no longer makes the child re-render. Without metadata, or with `uncertain`
+  metadata (TZS026), it stays `this.isVisible`.
+- An empty value on a non-string parameter (`Count=""`) or a valueless attribute on
+  an `EventCallback` ⇒ TZS009; a syntax error in the value ⇒ TZS024.
+- `@bind-Value` passes `ValueExpression` (in general `<Target>Expression`) only if the component
+  declares that parameter (as in Razor); `Value`/`ValueChanged` or `:event` must exist.
+- **Unknown parameter ⇒ error TZS025** ("Component 'X' does not have a parameter 'Y'"), the
+  static counterpart of the runtime error (B4) — provided the metadata is complete and the
+  component has no `captureUnmatchedValues` parameter. With a close match (edit distance,
+  case-insensitive, missing `On` prefix): "Did you mean 'Label'?" plus a fix (rename). The same
+  applies to `@onclick` on a component and to event modifiers (`@onclick:preventDefault` needs a
+  capture parameter there).
+- **Type unknown ⇒ warning TZS026**; the value is passed as before (text as string,
+  `@expr` as expression, `On*` values as `EventCallback`): when a parameter is `uncertain` (type
+  from a package without a manifest, an import that cannot be followed, no annotation and no literal
+  initializer — the message names the reason; a type annotation fixes it), when no manifest /
+  no source file describes the component, or when its base class cannot be resolved
+  (then only for unmatched attributes, once per tag). Without metadata,
+  `<Target>Expression` is omitted as well.
+- Cascading: `@CascadingParameter({ type: EditContext })` (by type) or
+  `@CascadingParameter({ name: "x" })` (by name) — supplied by `CascadingValue`/`EditForm`.
 
-### Templated Components: benannte Slots und Template-Kontexte (2.3)
+### Templated components: named slots and template contexts (2.3)
 
-Ein Element als **direktes** Kind einer Komponente, dessen Tag einen
-`RenderFragment`-/`RenderFragment<T>`-Parameter der Komponente benennt, ist ein
-Child-Content-Element (Blazor-Templates) und wird als dieser Parameter gesetzt —
-nicht mehr als `ChildContent` oder als Komponente gerendert:
+An element that is a **direct** child of a component and whose tag names a
+`RenderFragment`/`RenderFragment<T>` parameter of that component is a
+child content element (Blazor templates) and is set as that parameter —
+it is no longer rendered as `ChildContent` or as a component:
 
 ```razor
 <Router>
@@ -541,132 +541,132 @@ nicht mehr als `ChildContent` oder als Komponente gerendert:
 </Table>
 ```
 
-- **Slot vs. Komponente** entscheidet das Elternteil: die Metadaten der
-  übergeordneten Komponente kennen den Parameter — wie Razor, wo Child-Content-
-  Tag-Helper vor Komponenten binden. `<Header>` innerhalb einer Komponente mit
-  `Header`-Fragment-Parameter ist deren Slot, auch wenn eine Komponente `Header`
-  existiert; außerhalb (oder unterhalb, in Markup verschachtelt) bleibt `<Header>`
-  jene Komponente bzw. ist dort TZS027, wenn sie nur als Slot bekannt ist. Ohne
-  Metadaten des Elternteils bleibt ein Tag Komponente/Element (2.2-Verhalten).
-- `RenderFragment<T>`: der Kontext heißt standardmäßig `context` und ist eine
-  lokale Variable des Slot-Bodys (außerhalb eines Templates bleibt `@context`
-  das Member `this.context`). **`Context="x"` auf der Komponente** benennt den
-  Kontext aller ihrer `RenderFragment<T>`-Child-Contents (Komponente, Slot und
-  generisches `ChildContent`), **`Context="y"` auf dem Slot** überschreibt es
-  für genau diesen. Der Wert muss literal sein — ein TypeScript-Bezeichner
-  (der Kontexttyp stammt aus dem `typeArgument`; siehe
-  [Typisierte Shadows](#typisierte-shadows-und-tsazor-check-24), der
-  Runtime-Platzhalter `unknown` bleibt `any`). Geschachtelte Templates mit demselben
-  Kontextnamen ⇒ TZS029 in der inneren (Razors Vorschlag: `Context="another_name"`).
-- **Typargument-Attribute** einer generischen Komponente (`TItem="Person"`, ein
-  Attribut pro `@typeparam`) sind Schablonen-Syntax — kein Attribut zur Laufzeit:
-  der Wert muss ein TypeScript-Typ sein (sonst TZS024; leer oder Mixed TZS009)
-  und wird gegen die `@typeparam`s der Komponente zugeordnet.
-- Lose Inhalte, die neben Child-Content-Elementen stehen (Whitespace zwischen
-  ihnen zählt nicht), ⇒ TZS027; ein zweimal gesetzter bzw. auch per Attribut
-  gesetzter Slot ⇒ TZS028; Attribute auf dem Slot außer `Context` (und nur auf
-  einem `RenderFragment<T>`) ⇒ TZS028; ein Tag, das keinen Fragment-Parameter
-  benennt, als Child-Content-Element geschrieben ⇒ TZS028 (Wert-Parameter
-  gehört ins Attribut); unbekanntes Slot-Namenskürzel bei vollständigen
-  Metadaten ⇒ TZS025 mit Umbenennungs-Fix (auch für End-Tags); ein Slot als
-  direkes Kind der falschen Komponente bzw. verschachtelt ⇒ TZS027.
-- Der Element-Inhalt einer Komponente **ohne** Child-Content-Elemente bleibt
-  deren `ChildContent` — ist dieser ein `RenderFragment<T>`, nimmt er den
-  Kontext (`Context=`, sonst `context`) und wird als Template emittiert; ein
-  eine Komponente ohne `ChildContent`-Parameter duldet keinen Element-Inhalt (TZS025).
+- **Slot vs. component** is decided by the parent: the metadata of the
+  enclosing component knows the parameter — as in Razor, where child content
+  tag helpers bind before components. `<Header>` inside a component with a
+  `Header` fragment parameter is that component's slot, even if a component named `Header`
+  exists; outside of it (or further down, nested in markup) `<Header>` stays
+  that component, or is TZS027 there if it is only known as a slot. Without
+  metadata for the parent, a tag stays a component/element (2.2 behavior).
+- `RenderFragment<T>`: the context is named `context` by default and is a
+  local variable of the slot body (outside a template, `@context` stays
+  the member `this.context`). **`Context="x"` on the component** names the
+  context of all its `RenderFragment<T>` child contents (component, slot and
+  generic `ChildContent`); **`Context="y"` on the slot** overrides it
+  for that slot only. The value must be literal — a TypeScript identifier
+  (the context type comes from the `typeArgument`; see
+  [Typed shadows](#typed-shadows-and-tsazor-check-24); the
+  runtime placeholder `unknown` stays `any`). Nested templates with the same
+  context name ⇒ TZS029 in the inner one (Razor's suggestion: `Context="another_name"`).
+- **Type argument attributes** of a generic component (`TItem="Person"`, one
+  attribute per `@typeparam`) are template syntax — not an attribute at runtime:
+  the value must be a TypeScript type (otherwise TZS024; empty or mixed: TZS009)
+  and is matched against the component's `@typeparam`s.
+- Loose content next to child content elements (whitespace between
+  them does not count) ⇒ TZS027; a slot set twice, or also set
+  via an attribute ⇒ TZS028; attributes on the slot other than `Context` (and that only on
+  a `RenderFragment<T>`) ⇒ TZS028; a tag that does not name a fragment parameter
+  written as a child content element ⇒ TZS028 (a value parameter
+  belongs in an attribute); an unknown slot name with complete
+  metadata ⇒ TZS025 with a rename fix (also for end tags); a slot as a
+  direct child of the wrong component, or nested ⇒ TZS027.
+- The element content of a component **without** child content elements stays
+  its `ChildContent` — if that is a `RenderFragment<T>`, it takes the
+  context (`Context=`, otherwise `context`) and is emitted as a template;
+  a component without a `ChildContent` parameter does not accept element content (TZS025).
 
-## Typisierte Shadows und tsazor check (2.4)
+## Typed shadows and tsazor check (2.4)
 
-Der Typ-Layer baut für jede `.tsazor` ein **Shadow-Modul** (`<dir>/<Name>.tsazor.gen.ts`,
-virtuell — es liegt nie auf der Platte): der generierte TS-Code plus Typ-Hilfen, das
-Sprachserver und `tsazor check` dagegen diagnostizieren. Seit 2.4 ist der Shadow
-typisiert:
+For every `.tsazor`, the type layer builds a **shadow module** (`<dir>/<Name>.tsazor.gen.ts`,
+virtual — it never exists on disk): the generated TS code plus type helpers, which the
+language server and `tsazor check` diagnose. Since 2.4 the shadow is
+typed:
 
-- **Prop-Prüfungen pro Komponenten-Tag.** Jedes Attribut einer Komponente mit
-  Metadaten wird als `satisfies`-Check-Objekt emittiert — eigene Parameter
-  (`declaredBy === name`) mit ihrem deklarierten Typ, Fremd-Parameter ohne. Nur die
-  Kategorien `value` und `string` werden geprüft; `mixedValue`-Werte,
-  EventCallback- und RenderFragment-Attribute bleiben untypisiert (wie Razor, wo
-  Attribut-Werte als Strings über den Renderer laufen). Diagnostik erscheint auf der
-  Quellzeile der `.tsazor`.
-- **Typisierte Slot-Kontexte.** Ein Slot-Body eines `RenderFragment<T>`-Parameters
-  bekommt `context` (bzw. `Context=...`) mit dem `typeArgument` als Typ —
-  `context: Person` statt `any` (schließt den 2.3-Hinweis „bis 2.4" ein, auch die
-  `TItem`-Inferenz über die Typschicht: exakt oder via `TItem[]`). Steht der
-  Runtime-Platzhalter `typeArgument === "unknown"` (untypisierter Delegat, z. B.
-  Virtualize `itemTemplate`), bleibt der Kontext absichtlich `any`.
-- **Typisierte `@ref`.** Element-`@ref`s kommen per Cast über die
-  `HTML`-/`SVGElementTagNameMap` an ihren Tag-Typ (TS2740-False-Positive weg),
-  Komponenten-`@ref`s über die Component-Reference-Capture — mit Import-Anpassung
-  (`rebaseTypeImport`) für importierte Typen. Runtime-Kurz-refs (`Element`-Familie)
-  erhalten hygienische lokale Namen. Shadows re-exportieren die Komponentenklasse
-  per Name (`export { X }`), damit Rewrite-B-named-Imports gegen die Schatten
-  auflösen; Schatten importierter Fremdpaket-Komponenten werden automatisch
-  mitgebaut (Cascade über Paketgrenzen).
-- **`tsazor check`** (`tsazor check [project-root]`, Exit 1 bei Fehlern) prüft in
-  zwei Durchläufen: Compiler-Diagnosen + Shadow-Bau aller Projekt-`.tsazor`
-  (auch ungeschriebene Dateien), danach TS-Diagnosen über den kompletten
-  Schatten-Graphen. Ausgabe `datei(zeile,spalte) code message` (posix, 1-basiert).
-  Das Vite-Plugin kann dasselbe als `check: true` ans Build-Ende hängen — Fehler
-  brechen den Build.
-- **Echtes `.d.ts` je Komponente.** Aus dem Package-Manifest baut
-  `componentTypeDeclarations` pro exportierter Komponente
-  `dist/<Name>.d.ts`: eigene Parameter mit Doc-Kommentar und deren Typ
-  (Runtime-Typen via `@tsazor/runtime`), generisches `@inherits` als
-  Klassen-Generikum (`export default class TextInput extends InputBase<string> { … }`) —
-  der permissive `export const X: any`-Index ist weg.
-- **Ambient-Typen.** `*.tsazor` (Default-Komponente) und `virtual:tsazor-routes`
-  sind als `@tsazor/vite-plugin/client` deklariert — Apps tragen das in
-  `compilerOptions.types` ein statt `types.d.ts` zu kopieren.
+- **Prop checks per component tag.** Every attribute of a component with
+  metadata is emitted as a `satisfies` check object — the component's own parameters
+  (`declaredBy === name`) with their declared type, foreign parameters without. Only the
+  categories `value` and `string` are checked; `mixedValue` values,
+  EventCallback and RenderFragment attributes stay untyped (as in Razor, where
+  attribute values pass through the renderer as strings). Diagnostics appear on the
+  source line of the `.tsazor`.
+- **Typed slot contexts.** The slot body of a `RenderFragment<T>` parameter
+  gets `context` (or `Context=...`) with the `typeArgument` as its type —
+  `context: Person` instead of `any` (this closes the 2.3 note "until 2.4", including
+  `TItem` inference through the type layer: exact or via `TItem[]`). If the
+  runtime placeholder `typeArgument === "unknown"` is present (an untyped delegate, e.g.
+  Virtualize `itemTemplate`), the context intentionally stays `any`.
+- **Typed `@ref`.** Element `@ref`s get their tag type via a cast through the
+  `HTML`/`SVGElementTagNameMap` (the TS2740 false positive is gone),
+  component `@ref`s via the component reference capture — with import adjustment
+  (`rebaseTypeImport`) for imported types. Runtime short refs (the `Element` family)
+  get hygienic local names. Shadows re-export the component class
+  by name (`export { X }`) so that rewrite-B named imports resolve against the shadows;
+  shadows of imported components from other packages are built
+  automatically (cascade across package boundaries).
+- **`tsazor check`** (`tsazor check [project-root]`, exit 1 on errors) checks in
+  two passes: compiler diagnostics + shadow build of all project `.tsazor` files
+  (including unsaved files), then TS diagnostics across the complete
+  shadow graph. Output `file(line,column) code message` (POSIX, 1-based).
+  The Vite plugin can append the same check to the end of the build as `check: true` — errors
+  fail the build.
+- **A real `.d.ts` per component.** From the package manifest,
+  `componentTypeDeclarations` builds `dist/<Name>.d.ts` for every exported component:
+  the component's own parameters with doc comments and their types
+  (runtime types via `@tsazor/runtime`), a generic `@inherits` as a
+  class generic (`export default class TextInput extends InputBase<string> { … }`) —
+  the permissive `export const X: any` index is gone.
+- **Ambient types.** `*.tsazor` (default component) and `virtual:tsazor-routes`
+  are declared as `@tsazor/vite-plugin/client` — apps add that to
+  `compilerOptions.types` instead of copying `types.d.ts`.
 
-## Kompatibilität .razor ↔ .tsazor
+## Compatibility .razor ↔ .tsazor
 
-| Konstrukt | Status |
+| Construct | Status |
 |---|---|
-| Markup, Komponenten-Tags, Attribut-Syntax | identisch |
-| `@page`, `@layout`, `@typeparam`, `@bind` (+Modifier), `@onclick`-Familie (+Modifier mit Wert), `@key`, `@ref`, `@inject`, Expressions, `@@`, `<text>`, `@code`/`@functions` | identisch |
-| `@attribute [C#-Attribut]` | Fehler TZS021 mit TS-Form (`@authorize`/`@authorize({ roles, policy })`, TS-Decorator per `@attribute @x()`) |
-| `@foreach (var x in xs)`, `where T : …`, `var`, `@switch` ohne `break` | C#-Köpfe/-Constraints ⇒ TZS021 (seit 2.5 vom Codemod umgesetzt, dieselben Formen als LSP-Quick-Fix); `var` und Fallthrough mit TS-Semantik + Warnung (TZS022/TZS023) |
-| `buildRenderTree` im `@code` | Fehler TZS020 (wie CS0111) |
-| `@using` | Komponenten-Ordner/Pakete statt Namespaces; Typen/Werte für Markup und `@code` kommen per `@import` |
-| C#-Code in `@code` | abweichend (→ TypeScript — der eigentliche Punkt) |
-| Code in `@{ }` und Control-Bodies | code-first wie Razor, aber TypeScript; `using (…)`, `lock`, `@await` ⇒ Fehler |
-| `@namespace`, `@rendermode`, `@preservewhitespace` | akzeptiert, ignoriert |
-| DataAnnotations-Validierung | Decorators als Pendant (`@Required()`, `@MaxLength(n)`, … am Modell + `DataAnnotationsValidator`); `validators`-Map bleibt als Adapter; Teilmenge der Attribute (3.6) |
-| `@bind:format` | Teilmenge (3.7) — Zahlenmasken `F<n>`/`N<n>`/`0.00`, Datums-Tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); Klartext-Wert ist String-Literal, `@expr` Ausdruck; auf String-/Komponenten-Binds Warnung TZS008 (Blazors BindConverter-Verhalten), `@bind:culture` Fehler TZS008 |
-| `<InputFile>` | ja (3.7) — `InputFileChangeEventArgs` mit nativen `File`-Objekten statt `IBrowserFile` (`OpenReadStream` gibt es nicht) |
-| `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` statt Blazors Datentyp-Erkennung; nur mit `@Parameter() deklariert`; Key = Feldname (case-insensitiv), abwesend ⇒ `null`, `multiple` sammelt Wiederholungen (3.7) |
-| Benannte Child-Slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identisch (2.3 — siehe [Templated Components](#templated-components-benannte-slots-und-template-kontexte-23)) |
-| `@inherits`, Partials (code-behind) | `@inherits` ja; Code-behind (`X.tsazor.ts`, via Vererbung — [docs/code-behind.md](code-behind.md)) ja |
-| `@authorize` | ja (Tsazor-Erweiterung für `[Authorize]`; bare oder mit `{ roles, policy }`; nicht über `_Imports` vererbt) |
-| `@implements` | akzeptiert, ignoriert (TS-Interfaces sind strukturell) |
+| Markup, component tags, attribute syntax | identical |
+| `@page`, `@layout`, `@typeparam`, `@bind` (+modifiers), the `@onclick` family (+modifiers with a value), `@key`, `@ref`, `@inject`, expressions, `@@`, `<text>`, `@code`/`@functions` | identical |
+| `@attribute [C# attribute]` | Error TZS021 with the TS form (`@authorize`/`@authorize({ roles, policy })`, TS decorator via `@attribute @x()`) |
+| `@foreach (var x in xs)`, `where T : …`, `var`, `@switch` without `break` | C# headers/constraints ⇒ TZS021 (converted by the codemod since 2.5, the same forms available as LSP quick fixes); `var` and fallthrough with TS semantics + warning (TZS022/TZS023) |
+| `buildRenderTree` in `@code` | Error TZS020 (like CS0111) |
+| `@using` | Component folders/packages instead of namespaces; types/values for markup and `@code` come via `@import` |
+| C# code in `@code` | different (→ TypeScript — the whole point) |
+| Code in `@{ }` and control bodies | code-first like Razor, but TypeScript; `using (…)`, `lock`, `@await` ⇒ error |
+| `@namespace`, `@rendermode`, `@preservewhitespace` | accepted, ignored |
+| DataAnnotations validation | Decorators as the counterpart (`@Required()`, `@MaxLength(n)`, … on the model + `DataAnnotationsValidator`); the `validators` map remains as an adapter; a subset of the attributes (3.6) |
+| `@bind:format` | Subset (3.7) — number masks `F<n>`/`N<n>`/`0.00`, date tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); a plain-text value is a string literal, `@expr` an expression; on string/component binds warning TZS008 (Blazor's BindConverter behavior), `@bind:culture` error TZS008 |
+| `<InputFile>` | yes (3.7) — `InputFileChangeEventArgs` with native `File` objects instead of `IBrowserFile` (`OpenReadStream` does not exist) |
+| `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; only when declared with `@Parameter()`; key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
+| Named child slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identical (2.3 — see [Templated components](#templated-components-named-slots-and-template-contexts-23)) |
+| `@inherits`, partials (code-behind) | `@inherits` yes; code-behind (`X.tsazor.ts`, via inheritance — [docs/code-behind.md](code-behind.md)) yes |
+| `@authorize` | yes (Tsazor extension replacing `[Authorize]`; bare or with `{ roles, policy }`; not inherited through `_Imports`) |
+| `@implements` | accepted, ignored (TS interfaces are structural) |
 
 ## Codemod .razor → .tsazor (2.5)
 
-`tsazor codemod <path> [--write]` (`@tsazor/cli`) übersetzt die mechanischen C#-Reste einer
-`.razor`-Quelle und schreibt das Ergebnis als `.tsazor` **neben** die unveränderte `.razor`
-(nichts destruktiv; ohne `--write` Dry-Run mit Report). `path` = Datei oder Verzeichnis; der
-Dateibaum darunter wird durchlaufen (`bin`/`obj`/`node_modules`/`.git` übersprungen),
-pro Datei gibt der Report angewandte Fixes, API-Formen und die verbleibenden Diagnose-Codes
-(`TZS005×4`-Liste) aus; ein hartes Compile-Versagen wird pro Datei als `CRASH` gemeldet,
-ohne zu schreiben. Exit-Code 0 nur, wenn Dateien gefunden wurden; Fehlerfreiheit ist nicht
-das Ziel — verbleibende Befunde sind der Handarbeits-Rest (siehe unten).
+`tsazor codemod <path> [--write]` (`@tsazor/cli`) translates the mechanical C# leftovers of a
+`.razor` source and writes the result as a `.tsazor` file **next to** the unchanged `.razor`
+(nothing destructive; without `--write` it is a dry run with a report). `path` = a file or directory; the
+file tree below it is walked (`bin`/`obj`/`node_modules`/`.git` are skipped);
+per file, the report lists the applied fixes, API forms and the remaining diagnostic codes
+(a `TZS005×4`-style list); a hard compile failure is reported per file as `CRASH`,
+without writing. The exit code is 0 only if files were found; being error-free is not
+the goal — remaining findings are the manual remainder (see below).
 
-**Was es anwendet** — dieselben `fix`-Payloads, aus denen die LSP-Quick-Fixes bestehen,
-bis zum Fixpunkt (maximal 8 Passes; Fixes und API-Formen werden pro Pass auf demselben
-Text berechnet und gemeinsam angewandt — wo eine API-Form in einen umgeschriebenen
-`@foreach`-Kopf fällt, gewinnt der Fix und die API-Form folgt im nächsten Pass):
+**What it applies** — the same `fix` payloads that the LSP quick fixes consist of,
+until a fixed point is reached (at most 8 passes; fixes and API forms are computed per pass on the same
+text and applied together — where an API form falls inside a rewritten
+`@foreach` header, the fix wins and the API form follows in the next pass):
 
-| Form | Übersetzung |
+| Form | Translation |
 |---|---|
-| `@foreach (var x in xs)` (auch `(string s in xs)`, `(var (k, v) in pairs)`) | `@foreach (const x of xs)` / `const [k, v] of pairs` |
-| `$"…{x}…"`, `$@"…"`, `@"…"` | Template-Literal `` `…${x}…` `` (Loch-Layout `{x,2:C}` fällt, `@` im Loch fällt) |
-| `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | `@authorize({ roles, policy })` / `@page "…"` / Zeile entfernen |
+| `@foreach (var x in xs)` (also `(string s in xs)`, `(var (k, v) in pairs)`) | `@foreach (const x of xs)` / `const [k, v] of pairs` |
+| `$"…{x}…"`, `$@"…"`, `@"…"` | Template literal `` `…${x}…` `` (hole layout `{x,2:C}` is dropped, `@` in the hole is dropped) |
+| `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | `@authorize({ roles, policy })` / `@page "…"` / line removed |
 | `@typeparam T where T : IItem` | `@typeparam T extends IItem` |
 | `var` (TZS022) | `let` |
 
-**PascalCase-API-Formen** werden nur im Markup (außerhalb `@code`/`@functions` — dort
-bleibt C# bis zur Phase-3-Migration) ersetzt:
+**PascalCase API forms** are only replaced in markup (outside `@code`/`@functions` — C#
+stays there until the Phase 3 migration):
 
 | C# | TypeScript |
 |---|---|
@@ -675,71 +675,71 @@ bleibt C# bis zur Phase-3-Migration) ersetzt:
 | `.ToLower()` | `.toLowerCase()` |
 | `.ToUpper()` | `.toUpperCase()` |
 
-`.Count` wird absichtlich **nicht** gemappt — C# `.Count` heißt beim Dictionary `.size` und
-bei Liste/Array `.length`; der Aufruf ist nicht mechanisch und bleibt stehen.
+`.Count` is deliberately **not** mapped — C# `.Count` is `.size` on a dictionary and
+`.length` on a list/array; the call is not mechanical and is left as is.
 
-**Was stehen bleibt:** Diagnosen ohne Fix — TZS005 (unaufgelöste Tags: Slots unbekannter
-Komponenten, `DynamicComponent` …), TZS024 ohne mechanisches Gegenstück
-(`(MarkupString)x`, `new { … }`, `out var`, `is (not) null`) und nicht gemappte
-`@attribute`-Listen (u. a. DataAnnotations ⇒ Validierungsmodell, Phase 3.6;
-`[CascadingTypeParameter]` per A6-Entscheid entfernt man von Hand), und C# im `@code`.
-Eine bekannte Grenze des Template-Literal-Fixes: eine ohne Klammern geschriebene Ternary
-in einem Interpolations-Loch — `$"{x ? "a" : "b"}` wird wie in C# gelesen (der `:` als
-Format-Trenner) und bleibt beschnitten (`${x ? "a"}`) — C# selbst verlangt dort
-Klammern (Parität); `@(x ? "a" : "b")` bzw. `{(x ? "a" : "b")}` funktionieren.
+**What remains:** diagnostics without a fix — TZS005 (unresolved tags: slots of unknown
+components, `DynamicComponent` …), TZS024 without a mechanical counterpart
+(`(MarkupString)x`, `new { … }`, `out var`, `is (not) null`) and unmapped
+`@attribute` lists (among them DataAnnotations ⇒ validation model, Phase 3.6;
+`[CascadingTypeParameter]` is removed by hand per decision A6), and C# in `@code`.
+A known limitation of the template literal fix: a ternary written without parentheses
+in an interpolation hole — `$"{x ? "a" : "b"}` is read as in C# (the `:` as the
+format separator) and stays truncated (`${x ? "a"}`) — C# itself requires
+parentheses there (parity); `@(x ? "a" : "b")` or `{(x ? "a" : "b")}` work.
 
 ## Diagnostics
 
-Der Compiler scheitert nie still — Codes `TZS001`–`TZS030` mit Quellbereich
-(`TZS011`, `TZS014`, `TZS022`, `TZS023` und `TZS026` sind Warnungen, z. B. `@inherits`-Konflikt mit
-Code-behind bzw. ignorierte Direktive/Klausel). Neu mit dem code-first-Parser: `TZS012` C#-Konstrukt ohne
-TS-Entsprechung, `TZS013` Direktive außerhalb der Dokumentebene, `TZS015` ungültiges
-TypeScript (oder nackter Text) in einem Code-Kontext. Import-Modell: `TZS016` ungültiges
-`@import`, `TZS017` mehrdeutiger Komponenten-Tag (Fehler), `TZS018` `@using`-Ordner bzw.
--Paket existiert nicht (Warnung; für `_Imports.tsazor` in dieser Datei gemeldet). A5:
-`TZS019` ungültiges oder nicht abbildbares `@attribute`, `TZS020` Member kollidiert mit dem
-generierten Code (`buildRenderTree`). A6: `TZS021` C#-Form mit mechanischem TS-Gegenstück
-(Fehler; die Meldung nennt die TS-Form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
-`where T : …`; Kandidaten für Codemod/Quick-Fix in Phase 2.5), `TZS022` `var` in Render-Code
-(Warnung), `TZS023` `@switch`-Section fällt durch (Warnung). Unterschied zu `TZS012`: dort gibt
-es kein TS-Gegenstück (`using (…)`, `lock`). A7: `TZS024` ungültiges TypeScript in einem
-Markup-Ausdruck — `@x`/`@(…)`, Attributwerte (auch gemischte, Event-Handler, `@key`,
-`@attributes`), `@bind`-Wert/`:get`/`:set`/`:after`, `@if`/`@while`/`@switch`-Bedingungen und
-`case`-Labels; gemeldet wird der erste Syntaxfehler des TS-Parsers auf seinem Token (statt eines
-späteren esbuild-Fehlers). Ein ungültiger `@for`-Zählkopf ist `TZS015` wie Statement-Läufe.
-2.2 ([Komponenten-Attribute](#komponenten-attribute-nach-parametertyp)): `TZS025` unbekannter
-Komponenten-Parameter (Fehler, mit „Did you mean"-Fix), `TZS026` Parametertyp bzw. Parameter der
-Komponente unbekannt (Warnung; der Wert wird wie geschrieben übergeben). 2.3
-([Templated Components](#templated-components-benannte-slots-und-template-kontexte-23)):
-`TZS027` unerkannter Child-Content (Fehler — lose Inhalte neben Child-Content-Elementen;
-ein Slot außerhalb seiner Komponente oder nicht direkt darunter), `TZS028` ungültiges
-Child-Content-Element (Fehler — doppelt gesetzt, auch per Attribut gesetzt, unbekanntes
-Attribut auf dem Slot, nicht-literaler `Context`, ein nicht-Fragment-Parameter als Element
-geschrieben), `TZS029` Namenskonflikt des Template-Kontexts (Fehler — geschachtelte Templates
-mit gleichem Kontextnamen; die Meldung nennt `Context="another_name"`). Auch 2.3: ein
-unbekanntes Slot-Kürzel bei vollständigen Metadaten ist `TZS025` (jetzt auch mit Fix für
-Element- und End-Tag-Namen), und ein leerer bzw. ungültiger `TItem`-Typargumentwert ist
-`TZS009` bzw. `TZS024`.
-2.5: Ein `TZS024`, dessen Ursache ein C#-interpolierter bzw. verbatim String ist, trägt den
-Template-Literal-Fix (Tabelle oben); die übrigen TZS024-Ursachen (C#-Casts wie
-`(MarkupString)x`, anonyme Objekte `new { … }`, `out var`, `is (not) null`) sind nicht
-mechanisch und bleiben ohne Fix — Handarbeit bzw. Phase-3-Built-ins.
-Fehler landen im Vite-Dev-Overlay, Warnungen auf der Konsole.
+The compiler never fails silently — codes `TZS001`–`TZS030` with a source range
+(`TZS011`, `TZS014`, `TZS022`, `TZS023` and `TZS026` are warnings, e.g. an `@inherits` conflict with
+code-behind or an ignored directive/clause). New with the code-first parser: `TZS012` C# construct without
+a TS equivalent, `TZS013` directive outside the document level, `TZS015` invalid
+TypeScript (or bare text) in a code context. Import model: `TZS016` invalid
+`@import`, `TZS017` ambiguous component tag (error), `TZS018` `@using` folder or
+package does not exist (warning; for `_Imports.tsazor`, reported in that file). A5:
+`TZS019` invalid or unrepresentable `@attribute`, `TZS020` member collides with the
+generated code (`buildRenderTree`). A6: `TZS021` C# form with a mechanical TS counterpart
+(error; the message names the TS form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
+`where T : …`; candidates for codemod/quick fix in Phase 2.5), `TZS022` `var` in render code
+(warning), `TZS023` `@switch` section falls through (warning). Difference from `TZS012`: there,
+no TS counterpart exists (`using (…)`, `lock`). A7: `TZS024` invalid TypeScript in a
+markup expression — `@x`/`@(…)`, attribute values (including mixed ones, event handlers, `@key`,
+`@attributes`), `@bind` value/`:get`/`:set`/`:after`, `@if`/`@while`/`@switch` conditions and
+`case` labels; the TS parser's first syntax error is reported on its token (instead of a
+later esbuild error). An invalid `@for` counting header is `TZS015`, like statement runs.
+2.2 ([Component attributes](#component-attributes-by-parameter-type)): `TZS025` unknown
+component parameter (error, with a "Did you mean" fix), `TZS026` parameter type or the component's
+parameters unknown (warning; the value is passed as written). 2.3
+([Templated components](#templated-components-named-slots-and-template-contexts-23)):
+`TZS027` unrecognized child content (error — loose content next to child content elements;
+a slot outside its component or not directly below it), `TZS028` invalid
+child content element (error — set twice, also set via an attribute, unknown
+attribute on the slot, non-literal `Context`, a non-fragment parameter written as an element),
+`TZS029` template context name conflict (error — nested templates
+with the same context name; the message suggests `Context="another_name"`). Also 2.3: an
+unknown slot name with complete metadata is `TZS025` (now also with a fix for
+element and end tag names), and an empty or invalid `TItem` type argument value is
+`TZS009` or `TZS024`, respectively.
+2.5: A `TZS024` caused by a C# interpolated or verbatim string carries the
+template literal fix (table above); the other TZS024 causes (C# casts such as
+`(MarkupString)x`, anonymous objects `new { … }`, `out var`, `is (not) null`) are not
+mechanical and have no fix — manual work or Phase 3 built-ins.
+Errors show up in the Vite dev overlay, warnings on the console.
 
-**Bereiche und Fixes (A7):** Jede Diagnose (`TszDiagnostic`) trägt neben `pos` (Start, 1-basierte
-Zeile / 0-basierte Spalte) ein exklusives `endPos` — den Bereich des fehlerhaften Konstrukts:
-den ganzen `@foreach (…)`-Kopf, die Direktive (ohne Zeilenende), das Attribut (`@bind="a?.b"`,
-ein gefalteter Modifier wie `@bind:format="…"` mit eigenem Bereich), den Tag-Namen
-(`TZS005`/`TZS017`), den Ausdruck bzw. das Token eines Syntaxfehlers, den Öffner eines nie
-geschlossenen Blocks (`@{`, `{`, `@(`, `<div`). Der LSP veröffentlicht diese Bereiche.
-Diagnosen mit mechanischem TS-Gegenstück tragen zusätzlich `fix: { title, edits: [{ pos, endPos,
-text }] }`, im LSP als Quick-Fix (Code Action):
+**Ranges and fixes (A7):** besides `pos` (start, 1-based line / 0-based column), every diagnostic
+(`TszDiagnostic`) carries an exclusive `endPos` — the range of the faulty construct:
+the whole `@foreach (…)` header, the directive (without the line ending), the attribute (`@bind="a?.b"`;
+a folded modifier such as `@bind:format="…"` has its own range), the tag name
+(`TZS005`/`TZS017`), the expression or the token of a syntax error, the opener of a block that is never
+closed (`@{`, `{`, `@(`, `<div`). The LSP publishes these ranges.
+Diagnostics with a mechanical TS counterpart additionally carry `fix: { title, edits: [{ pos, endPos,
+text }] }`, exposed in the LSP as a quick fix (code action):
 
 | Code | Fix |
 |---|---|
-| `TZS021` `@foreach (var x in xs)` / `(string s in xs)` / `(var (k, v) in pairs)` | Kopf-Code ⇒ `const x of xs` / `const [k, v] of pairs` |
-| `TZS021` `@typeparam T where T : IItem` | Klausel ⇒ `extends IItem` (keiner für `struct`/`class`/`new` …) |
-| `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Direktive ⇒ `@authorize…` / `@page "…"` / Zeile entfernen (nur bei einem Attribut pro Liste, nur literale Werte) |
+| `TZS021` `@foreach (var x in xs)` / `(string s in xs)` / `(var (k, v) in pairs)` | Header code ⇒ `const x of xs` / `const [k, v] of pairs` |
+| `TZS021` `@typeparam T where T : IItem` | Clause ⇒ `extends IItem` (none for `struct`/`class`/`new` …) |
+| `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Directive ⇒ `@authorize…` / `@page "…"` / line removed (only with one attribute per list, only literal values) |
 | `TZS022` `var` | ⇒ `let` |
-| `TZS024` C#-interpolierter String `$"…{x}…"` / `$@"…"` / verbatim `@"…"` | Template-Literal: Löcher ⇒ `${…}` (Razor-`@` im Loch fällt), `{{`/`}}` ⇒ Klammern, C#-Layout `{x,2:C}` fällt weg (seit 2.5; Fix nur, wenn der String die Fehlerursache ist — TZS024 hat sonst keinen; Limitierung siehe [Codemod](#codemod-razor--tsazor-25)) |
-| `TZS025` unbekannter Komponenten-Parameter mit naher Entsprechung | Attribut- bzw. Elementname ⇒ Vorschlag (`Lable` ⇒ `Label`, `<RowTemplat>` ⇒ `<RowTemplate>` inkl. End-Tag) |
+| `TZS024` C# interpolated string `$"…{x}…"` / `$@"…"` / verbatim `@"…"` | Template literal: holes ⇒ `${…}` (a Razor `@` in the hole is dropped), `{{`/`}}` ⇒ braces, C# layout `{x,2:C}` is dropped (since 2.5; fix only when the string is the cause of the error — TZS024 has no fix otherwise; for the limitation see [Codemod](#codemod-razor--tsazor-25)) |
+| `TZS025` unknown component parameter with a close match | Attribute or element name ⇒ suggestion (`Lable` ⇒ `Label`, `<RowTemplat>` ⇒ `<RowTemplate>` including the end tag) |

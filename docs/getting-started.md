@@ -2,22 +2,22 @@
 
 ## Setup
 
-Tsazor-Apps laufen mit Vite (Dev-Server, Build, HMR). Das Plugin kompiliert jede
-`.tsazor`-Datei on demand zu einem ES-Modul.
+Tsazor apps run on Vite (dev server, build, HMR). The plugin compiles every `.tsazor` file to an
+ES module on demand.
 
 ```bash
 pnpm install
 pnpm demo:dev
 ```
 
-Die Demo (`apps/demo`) zeigt: Counter (@onclick + State), Routing mit Layout und
-NavLink, ein Formular mit Validierung (`@bind` + EditForm), Virtualize über 10.000
-Items und FetchData über `TsazorHttp`.
+The demo (`apps/demo`) shows: Counter (@onclick + state), routing with a layout and NavLink, a
+form with validation (`@bind` + EditForm), Virtualize over 10,000 items, and FetchData via
+`TsazorHttp`.
 
-### Externe Nutzung (npm)
+### External use (npm)
 
-Die Pakete sind als `@tsazor/*` lieferfähig (Tarball-Gate: `node scripts/tarball-smoke.mjs`
-probiert exakt diese Form in einem isolierten Projekt):
+The packages ship as `@tsazor/*` (tarball gate: `node scripts/tarball-smoke.mjs` tries exactly
+this setup in an isolated project):
 
 ```bash
 pnpm add @tsazor/runtime @tsazor/vite-plugin @tsazor/cli
@@ -25,7 +25,7 @@ pnpm add -D typescript vite
 ```
 
 ```ts
-// vite.config.ts — exakt die Form aus dem Gate
+// vite.config.ts — exactly the form used by the gate
 import { defineConfig } from "vite";
 import { tsazor } from "@tsazor/vite-plugin";
 
@@ -34,12 +34,12 @@ export default defineConfig({
 });
 ```
 
-Die CLI läuft auch als installierter Tarball: `npx tsazor check` bzw.
-`node node_modules/@tsazor/cli/dist/bin.js check .`. Für Component-Tests zusätzlich
-`@tsazor/testing` (Vitest-Config braucht denselben Plugin-Aufruf, damit die `.tsazor`-Importe
-im Test durchgeladen werden — Form oben im [Tests](#tests)-Abschnitt).
+The CLI also runs from an installed tarball: `npx tsazor check` or
+`node node_modules/@tsazor/cli/dist/bin.js check .`. For component tests, add
+`@tsazor/testing` as well (the Vitest config needs the same plugin call so that `.tsazor`
+imports load in tests — see the form in the [Tests](#tests) section).
 
-## Projektstruktur
+## Project structure
 
 ```
 my-app/
@@ -47,25 +47,25 @@ my-app/
 ├── vite.config.ts           # plugins: [tsazor()]
 └── src/
     ├── Program.ts           # createTsazorApp({ root: App, routes })
-    ├── _Imports.tsazor       # projektweite Direktiven (@layout, @using, Standard-@imports)
-    ├── App.tsazor            # Wurzelkomponente (Router)
-    ├── MainLayout.tsazor     # Layout (@inherits LayoutComponentBase, @Body)
-    ├── MainLayout.tsazor.css # (optional) scoped CSS, nur für MainLayout
+    ├── _Imports.tsazor       # project-wide directives (@layout, @using, standard @imports)
+    ├── App.tsazor            # root component (Router)
+    ├── MainLayout.tsazor     # layout (@inherits LayoutComponentBase, @Body)
+    ├── MainLayout.tsazor.css # (optional) scoped CSS, MainLayout only
     └── Pages/
         ├── Home.tsazor       # @page "/"
         ├── Counter.tsazor    # @page "/counter"
         └── …
 ```
 
-Optional zu jeder `X.tsazor`-Datei: ein Sidecar-Stylesheet `X.tsazor.css` (CSS Isolation,
-[Scoped CSS](scoped-css.md)) und eine Code-behind-Klasse `X.tsazor.ts`
+Every `X.tsazor` file can optionally have a sidecar stylesheet `X.tsazor.css` (CSS isolation,
+[Scoped CSS](scoped-css.md)) and a code-behind class `X.tsazor.ts`
 ([Code-behind](code-behind.md)).
 
 ## tsconfig
 
-Tsazor nutzt **Standard-Decorators** (TC39, TS 5.2+) und Standard-Klassenfelder. Die App
-braucht dafür nichts Besonderes — nur **kein** `experimentalDecorators` (damit würde jedes
-`@Parameter()` als Legacy-Decorator geprüft und zur Laufzeit abgelehnt):
+Tsazor uses **standard decorators** (TC39, TS 5.2+) and standard class fields. The app needs
+nothing special for this — just **no** `experimentalDecorators` (with it, every `@Parameter()`
+would be checked as a legacy decorator and rejected at runtime):
 
 ```json
 {
@@ -78,12 +78,12 @@ braucht dafür nichts Besonderes — nur **kein** `experimentalDecorators` (dami
 }
 ```
 
-- `target` ES2022 oder neuer ⇒ `useDefineForClassFields` ist `true` (TS-Default), wie im
-  generierten Code. Eine reine Typ-Neudeklaration eines geerbten Felds heißt `declare x: T`.
-- Decorators senkt esbuild (Vite-Plugin, auch für die `.ts`-Dateien der App); kein Browser
-  führt sie bisher nativ aus. `Symbol.metadata` polyfillt die Runtime.
-- Handgeschriebene Komponenten ohne Decorator-Syntax (Plain JS, Tests) deklarieren Parameter
-  mit `defineParameter(Klasse, "name", options?)` aus `@tsazor/runtime`.
+- `target` ES2022 or newer ⇒ `useDefineForClassFields` is `true` (the TS default), matching the
+  generated code. A pure type redeclaration of an inherited field is written `declare x: T`.
+- Decorators are lowered by esbuild (via the Vite plugin, also for the app's `.ts` files); no
+  browser runs them natively yet. The runtime polyfills `Symbol.metadata`.
+- Hand-written components without decorator syntax (plain JS, tests) declare parameters with
+  `defineParameter(Class, "name", options?)` from `@tsazor/runtime`.
 
 ## Bootstrap
 
@@ -95,17 +95,16 @@ import routes from "virtual:tsazor-routes";
 createTsazorApp({ root: App, routes });
 ```
 
-- `routes` kommt aus dem virtuellen Manifest, das das Plugin aus allen `@page`-Dateien
-  erzeugt (jeweils Template, Komponente und ggf. Layout).
-- `createTsazorApp` baut DI-Container + NavigationManager, rendert die Wurzel in `#app`
-  und registriert den HMR-Hook (`globalThis.__tsazor`).
+- `routes` comes from the virtual manifest that the plugin generates from all `@page` files
+  (template, component and, if present, layout for each).
+- `createTsazorApp` builds the DI container + NavigationManager, renders the root into `#app`,
+  and registers the HMR hook (`globalThis.__tsazor`).
 
 ## _Imports.tsazor
 
-Das Pendant zu Blazors `_Imports.razor`: Direktiven darin gelten für alle `.tsazor`-Dateien
-im selben Ordner und darunter. Wo Blazor `@using Microsoft.AspNetCore.Components` schreibt,
-steht in Tsazor das **Standard-Runtime-Set** als `@import` (ungenutzte Imports entfernt der
-Build):
+The counterpart of Blazor's `_Imports.razor`: its directives apply to all `.tsazor` files in the
+same folder and below. Where Blazor writes `@using Microsoft.AspNetCore.Components`, Tsazor has
+the **standard runtime set** as `@import`s (the build removes unused imports):
 
 ```razor
 @layout MainLayout
@@ -115,40 +114,40 @@ Build):
 @import { NavigationManager, Router, RouteView, AuthorizeRouteView, LayoutView, NavLink, NavLinkMatch } from "@tsazor/runtime"
 @import { EditContext, AuthenticationState, AuthenticationStateProvider, TsazorHttp } from "@tsazor/runtime"
 @import type { RenderFragment, RouteData, ModelValidator } from "@tsazor/runtime"
-@* App-eigene Typen/Helfer (Blazor: @using MyApp.Models) *@
+@* App-specific types/helpers (Blazor: @using MyApp.Models) *@
 @import type { Order, Pizza } from "./models"
 @import { formatDate } from "./format"
 ```
 
-Namen, die Markup oder `@code` verwenden, müssen importiert sein — es gibt **keine**
-Import-Inferenz aus Bezeichnern. Eine Komponentenklasse, die `@code` als Wert braucht
-(z. B. `DefaultLayout` im Router), wird explizit importiert:
-`@import MainLayout from "./MainLayout.tsazor"`. Siehe [`@import`](language-reference.md#import).
+Names used by markup or `@code` must be imported — there is **no** import inference from
+identifiers. A component class that `@code` needs as a value (e.g. `DefaultLayout` on the
+Router) is imported explicitly:
+`@import MainLayout from "./MainLayout.tsazor"`. See [`@import`](language-reference.md#import).
 
-## Component-Resolution
+## Component resolution
 
-Tags mit Großbuchstaben am Anfang sind Komponenten. Aufgelöst wird — wie C#-Typnamen
-über Namespaces und `@using`:
+Tags that start with an uppercase letter are components. They are resolved the way C# type names
+are resolved via namespaces and `@using`:
 
-1. **Explizit importiert** (`@import X from "./X.tsazor"`) ⇒ genau diese Klasse.
-2. **Umschließende Ordner:** das eigene Verzeichnis der Datei, dann die Verzeichnisse der
-   `_Imports.tsazor`-Kette (Geschwister sind sichtbar); der nächste Treffer gewinnt.
-3. **`@using`-Quellen** als Ganzes: `@using`-Ordner (aus der Datei und der `_Imports`-Kette),
-   die Runtime-Built-ins (`Router`, `NavLink`, `EditForm`, `InputText`, `Virtualize`, …) und
-   Bare-Paket-`@using`s — ein Paket liefert nur Namen, die sein Entry-Modul wirklich
-   exportiert. Findet sich ein Tag in **mehr als einer** Quelle ⇒ Fehler TZS017 (mehrdeutig);
-   in keiner ⇒ Warnung TZS005 (wird als Element ausgegeben).
+1. **Explicitly imported** (`@import X from "./X.tsazor"`) ⇒ exactly that class.
+2. **Enclosing folders:** the file's own directory, then the directories of the
+   `_Imports.tsazor` chain (siblings are visible); the nearest match wins.
+3. **`@using` sources** as a whole: `@using` folders (from the file and the `_Imports` chain),
+   the runtime built-ins (`Router`, `NavLink`, `EditForm`, `InputText`, `Virtualize`, …) and
+   bare-package `@using`s — a package only contributes names that its entry module actually
+   exports. If a tag is found in **more than one** source ⇒ error TZS017 (ambiguous); in none ⇒
+   warning TZS005 (emitted as a plain element).
 
-`@using`-Formen:
+`@using` forms:
 
-| Schreibweise | Bedeutung |
+| Syntax | Meaning |
 |---|---|
-| `@using ./Shared` | Verzeichnis mit Komponenten (und `@inject`-Typen), relativ zur Datei bzw. `_Imports.tsazor` |
-| `@using @tsazor/fluent` | npm-Paket; Tags/Typen nur aus seiner Export-Liste |
+| `@using ./Shared` | Directory containing components (and `@inject` types), relative to the file or `_Imports.tsazor` |
+| `@using @tsazor/fluent` | npm package; tags/types only from its export list |
 
-Ein `@using`-Ordner oder -Paket, das nicht existiert, ist eine Warnung (TZS018).
-`@inject`-/`@inherits`-Typen werden über dieselben Quellen aufgelöst; ob Default- oder
-Named-Import, entscheidet der **tatsächliche** Export der Zieldatei (`.tsazor` ⇒ Default).
+A `@using` folder or package that does not exist is a warning (TZS018).
+`@inject`/`@inherits` types are resolved through the same sources; whether a default or a named
+import is generated depends on the target file's **actual** export (`.tsazor` ⇒ default).
 
 ## Tests
 
@@ -159,19 +158,19 @@ import Counter from "./Pages/Counter.tsazor";
 test("increments", async () => {
     const { container, renderer } = await render(Counter as never);
     container.querySelector("button")!.click();
-    // Events renderen asynchron (Diff-Queue) — erst abwarten, dann zusichern:
+    // Events render asynchronously (diff queue) — wait first, then assert:
     await renderer.waitUntilIdle();
     expect(container.querySelector("strong")?.textContent).toBe("1");
 });
 ```
 
-## Backend anbinden (`@tsazor/dotnet`)
+## Connecting a backend (`@tsazor/dotnet`)
 
-Für ein .NET-Backend (ASP.NET Core, Swashbuckle/NSwag-OpenAPI) ist [`@tsazor/dotnet`](https://www.npmjs.com/package/@tsazor/dotnet)
-die eine Brücke statt App-eigener HTTP-Helfer (Details und Abweichungen: [README](../packages/dotnet/README.md)):
+For a .NET backend (ASP.NET Core, Swashbuckle/NSwag OpenAPI), [`@tsazor/dotnet`](https://www.npmjs.com/package/@tsazor/dotnet)
+is the single bridge, instead of app-specific HTTP helpers (details and deviations: [README](../packages/dotnet/README.md)):
 
 ```bash
-npx tsazor-dotnet generate https://meine.app/swagger/v1/swagger.json --out src/api
+npx tsazor-dotnet generate https://my.app/swagger/v1/swagger.json --out src/api
 ```
 
 ```ts
@@ -180,28 +179,28 @@ import { PizzaApiClient } from "./api/pizza-api";
 const client = new PizzaApiClient(new TsazorHttp());
 const result = await client.getOrders();
 if (result.ok) {
-    // result.body ist der DTO-Typ aus dem Schema
+    // result.body is the DTO type from the schema
 } else {
     // result.problem: ProblemDetails | null, result.validationErrors?: Record<string, string[]>
     console.error(problemMessage(result));
 }
 ```
 
-Fehler sind `HttpResult`-Werte (ProblemDetails, Envelope) — geworfen wird nur bei nicht
-erreichbarem Backend; die generierten DTO-Klassen tragen die DataAnnotations-Decorators aus
-dem Schema und validieren sofort mit EditContext + `DataAnnotationsValidator`.
+Errors are `HttpResult` values (ProblemDetails, envelope) — it only throws when the backend is
+unreachable; the generated DTO classes carry the DataAnnotations decorators from the schema and
+validate out of the box with EditContext + `DataAnnotationsValidator`.
 
 ## VS Code
 
-`packages/vscode` enthält die Extension (v0.2.0): TextMate-Grammar (`source.tsazor`)
-plus den mitgelieferten Language Server (`@tsazor/lsp`, `--stdio`), der pro Workspace
-eine Server-Instanz startet:
+`packages/vscode` contains the extension (v0.2.0): a TextMate grammar (`source.tsazor`) plus the
+bundled language server (`@tsazor/lsp`, `--stdio`), which starts one server instance per
+workspace:
 
-- **Diagnostics** live aus dem Compiler (Katalog `TZS001…`)
-- **Hover** über Komponenten und Direktiven
-- **Go-to-Definition** zu `.tsazor`-Quelldateien
-- **Auto-Complete**: Tag-Namen, Komponenten-Parameter (inkl. `@bind-<param>`),
-  Direktiven-Keywords und Expression-Members
+- **Diagnostics** live from the compiler (catalog `TZS001…`)
+- **Hover** over components and directives
+- **Go-to-definition** to `.tsazor` source files
+- **Auto-complete**: tag names, component parameters (including `@bind-<param>`),
+  directive keywords and expression members
 
-Zum lokalen Testen: Ordner `packages/vscode` in VS Code öffnen → `F5`
+To test locally: open the `packages/vscode` folder in VS Code → `F5`
 (Extension Development Host). Details: [language-server.md](language-server.md).

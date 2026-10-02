@@ -1,67 +1,66 @@
 # @tsazor/dotnet
 
-Die offizielle Brücke zwischen Tsazor-Frontends und .NET-Backends (Roadmap 5.2) —
-*nur ein Weg statt drei App-eigener* (Review 7.3: Sleipnir, FluentCMS und Pizza
-betrieben jeweils eigene HTTP-Helfer).
+The official bridge between Tsazor frontends and .NET backends (roadmap 5.2) —
+*one way instead of three app-specific ones* (review 7.3: Sleipnir, FluentCMS and Pizza each
+ran their own HTTP helpers).
 
-## Was drin ist
+## What's included
 
-- **OpenAPI ⇒ typisierter TS-Client.** Lokale Generierung aus einem
-  ASP.NET-Core-OpenAPI-Dokument (Swashbuckle/NSwag, JSON — 3.0/3.1):
-  `tsazor-dotnet generate <openapi.json|url> --out <dir>` schreibt
-  `models.ts` und `<Name>Client.ts`. Einstiege: `.` ist browser-safe
-  (Client/HttpResult/Auth, keine Node-Module), `@tsazor/dotnet/generator`
-  ist der Node-seitige Teil (OpenAPI-Lesen, Generierung, CLI).
-- **`HttpResult<T>` statt throw.** Der Client wirft bei `!ok` nicht, bevor der
-  Körper lesbar ist: RFC-9457-ProblemDetails und ValidationProblemDetails
-  (`errors: Record<string, string[]>`) sind Werte auf dem Resultat.
-- **Envelope-Entpackung.** APIs, die `{ data: T, errors: [...] }` umschlagen
-  (FluentCMS-Stil), werden mit `--envelope data,errors` unterstützt; ein
-  nicht-leerer Envelope-Fehler macht aus einem 2xx ein `ok:false`-Resultat.
-- **Schema ⇒ DataAnnotations.** Constraints aus dem Schema werden als
-  3.6-Decorators auf die generierten Modell-*Klassen* emittiert
-  (`@Required()`, `@MinLength`, `@MaxLength`, `@StringLength`,
+- **OpenAPI ⇒ typed TS client.** Local generation from an ASP.NET Core OpenAPI document
+  (Swashbuckle/NSwag, JSON — 3.0/3.1):
+  `tsazor-dotnet generate <openapi.json|url> --out <dir>` writes
+  `models.ts` and `<Name>Client.ts`. Entry points: `.` is browser-safe
+  (client/HttpResult/auth, no Node modules), `@tsazor/dotnet/generator`
+  is the Node-side part (OpenAPI reading, generation, CLI).
+- **`HttpResult<T>` instead of throwing.** On `!ok` the client does not throw before the body
+  can be read: RFC 9457 ProblemDetails and ValidationProblemDetails
+  (`errors: Record<string, string[]>`) are values on the result.
+- **Envelope unwrapping.** APIs that wrap responses in `{ data: T, errors: [...] }`
+  (FluentCMS style) are supported with `--envelope data,errors`; a non-empty envelope error
+  turns a 2xx into an `ok:false` result.
+- **Schema ⇒ DataAnnotations.** Constraints from the schema are emitted as 3.6 decorators on the
+  generated model *classes* (`@Required()`, `@MinLength`, `@MaxLength`, `@StringLength`,
   `@Range`, `@EmailAddress`, `@RegularExpression`) — EditContext +
-  `DataAnnotationsValidator` validieren damit sofort.
-- **Auth-Integration.** `CookieAuthenticationStateProvider` (Session-Endpunkt)
-  und `JwtAuthenticationStateProvider` (lokale Payload-Dekodierung, Microsoft-
-  Claim-URIs) auf dem Runtime-`AuthenticationStateProvider`;
-  `attachJwtAuth` setzt den `Authorization: Bearer`-Interceptor.
+  `DataAnnotationsValidator` validate with them out of the box.
+- **Auth integration.** `CookieAuthenticationStateProvider` (session endpoint)
+  and `JwtAuthenticationStateProvider` (local payload decoding, Microsoft claim URIs) on top of
+  the runtime's `AuthenticationStateProvider`;
+  `attachJwtAuth` installs the `Authorization: Bearer` interceptor.
 
-## Nullability-Regeln
+## Nullability rules
 
 | Schema | TS |
 | --- | --- |
-| `required`, nicht nullable | `T` (Primitive mit .NET-Default: `""`, `0`, `false`, `[]`) |
+| `required`, not nullable | `T` (primitives with the .NET default: `""`, `0`, `false`, `[]`) |
 | `required`, nullable | `T \| null = null` |
-| optional, nicht nullable | `?: T` |
+| optional, not nullable | `?: T` |
 | optional, nullable | `?: T \| null` |
 
-Dokumentierte Teilmenge (Abweichungen sind Absicht):
+Documented subset (the deviations are intentional):
 
-- `integer`/`number`/`int64` ⇒ `number` — JS hat ein Zahlformat; die
-  Int64-Präzisionsgrenze ist dieselbe wie bei `openapi-typescript`.
-- `Range` nur, wenn `minimum` **und** `maximum` gesetzt sind (DataAnnotations
-  verlangt zwei Grenzen).
-- Inline-Objekte ohne `$ref` ⇒ `Record<string, unknown>` (mit Generator-Warnung);
-  `additionalProperties`-Felder werden als `Record<string, T>` gemappt.
-- `@Required()` an Strings und Objekt-Referenzen (die .NET-Semantik des
-  RequiredAttribute); Zahlen/Booleans bekommen den Initialwert und brauchen es nicht.
-- YAML wird nicht gelesen (JSON-Dokumente und URLs).
+- `integer`/`number`/`int64` ⇒ `number` — JS has one number format; the Int64 precision limit
+  is the same as with `openapi-typescript`.
+- `Range` only when both `minimum` **and** `maximum` are set (DataAnnotations requires two
+  bounds).
+- Inline objects without `$ref` ⇒ `Record<string, unknown>` (with a generator warning);
+  `additionalProperties` fields are mapped to `Record<string, T>`.
+- `@Required()` on strings and object references (the .NET semantics of RequiredAttribute);
+  numbers/booleans get their initial value and don't need it.
+- YAML is not read (JSON documents and URLs only).
 
-## Benutzung
+## Usage
 
 ```sh
 npx tsazor-dotnet generate openapi.json --out src/api --name ContosoOrders
-# mit Envelope und fester Basis-URL:
-npx tsazor-dotnet generate https://meine.app/swagger/v1/swagger.json \
-    --out src/api --envelope data,errors --base-url https://meine.app
+# with an envelope and a fixed base URL:
+npx tsazor-dotnet generate https://my.app/swagger/v1/swagger.json \
+    --out src/api --envelope data,errors --base-url https://my.app
 ```
 
 ```ts
 import { ContosoOrdersClient } from "./api/contoso-orders.js";
 
-const client = new ContosoOrdersClient(new TsazorHttp()); // oder baseUrl-Default aus --base-url
+const client = new ContosoOrdersClient(new TsazorHttp()); // or the baseUrl default from --base-url
 const result = await client.getOrder(1);
 if (result.ok) {
     // result.body: OrderDto
@@ -71,11 +70,11 @@ if (result.ok) {
 }
 ```
 
-Die generierten Dateien sind GENERATED CODE (Kopfzeile im File); sie gehören in
-die Versionskontrolle, sodass die Build-Pipeline kein .NET mehr braucht.
+The generated files are GENERATED CODE (header line in the file); they belong in version
+control, so the build pipeline no longer needs .NET.
 
-## Testen ohne .NET-Backend
+## Testing without a .NET backend
 
-Die Paket-Tests fahren ProblemDetails/Envelope über einen kleinen Node-HTTP-Server
-(`node:http`) und prüfen den generierten Output mit einem echten TypeScript-Durchlauf
-(`tsc`) gegen die Paket-Typen.
+The package tests exercise ProblemDetails/envelope handling against a small Node HTTP server
+(`node:http`) and check the generated output with a real TypeScript run (`tsc`) against the
+package types.
