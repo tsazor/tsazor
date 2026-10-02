@@ -137,7 +137,7 @@ describe("tutorial lessons", () => {
     ]);
     const csharp = content.parts[0]!.chapters[0]!.lessons;
     expect(csharp.length).toBeGreaterThanOrEqual(6);
-    expect(csharp.length).toBeLessThanOrEqual(9);
+    expect(csharp.length).toBeLessThanOrEqual(10);
     expect(lessons.length).toBeGreaterThanOrEqual(51 + csharp.length);
     for (const lesson of lessons) {
       const tracks = csharp.includes(lesson) ? ["blazor"] : ["blazor", "ts"];

@@ -88,7 +88,8 @@ describe("the chapter", () => {
       "attributes-and-decorators",
       "namespaces-and-modules",
       "records-enums-unions",
-      "the-real-traps",
+      "this-and-equality",
+      "numbers-and-dates",
     ]);
     for (const l of chapter.lessons) expect(Object.keys(l.text), l.slug).toEqual(["blazor"]);
   });
@@ -475,10 +476,10 @@ describe("records-enums-unions", () => {
   });
 });
 
-/* the-real-traps ---------------------------------------------------------------- */
+/* this-and-equality ------------------------------------------------------------- */
 
-describe("the-real-traps", () => {
-  const files = lesson("the-real-traps");
+describe("this-and-equality", () => {
+  const files = lesson("this-and-equality");
 
   it("start: a function callback has no this (TypeError at runtime, TS2683 in the check)", async () => {
     expect(typeCodes(files.a)).toEqual(["TS2683"]);
@@ -486,21 +487,9 @@ describe("the-real-traps", () => {
     expect(await textOf(files.a)).toMatch(/^TypeError: /);
   });
 
-  it("an arrow function keeps this — and then the doubles show: 0.30000000000000004", async () => {
-    const arrow = replace(files.a, "basket.ts", "prices.forEach(function (price) {", "prices.forEach((price) => {");
-    expect(typeCodes(arrow)).toEqual([]);
-    expect(await textOf(arrow)).toMatch(/^Total: 0\.30000000000000004 /);
-  });
-
-  it("the solution counts cents: Total: 0.30", async () => {
-    expect(await textOf(files.b!)).toMatch(/^Total: 0\.30 /);
-  });
-
-  it("the numbers-and-dates list renders 3.5, 3, MAX_SAFE_INTEGER and October 2nd", async () => {
-    const text = await textOf(files.b!);
-    expect(text).toContain("7 / 2 → 3.5, Math.trunc(7 / 2) → 3");
-    expect(text).toContain("Number.MAX_SAFE_INTEGER → 9007199254740991");
-    expect(text).toContain("new Date(2026, 9, 2) → Fri Oct 02 2026");
+  it("the arrow solution keeps this — and reveals the double: 0.30000000000000004", async () => {
+    expect(typeCodes(files.b!)).toEqual([]);
+    expect(await textOf(files.b!)).toBe("Total: 0.30000000000000004");
   });
 
   it("a method passed by name loses its this; an arrow wrapper doesn't", () => {
@@ -526,15 +515,6 @@ describe("the-real-traps", () => {
     m.dispose();
   });
 
-  it("number is a double: 0.1 + 0.2, 7 / 2; integers are exact up to MAX_SAFE_INTEGER", () => {
-    expect(0.1 + 0.2).not.toBe(0.3);
-    expect(String(0.1 + 0.2)).toBe("0.30000000000000004");
-    expect(7 / 2).toBe(3.5);
-    expect(Number.MAX_SAFE_INTEGER).toBe(2 ** 53 - 1);
-    expect(Number.MAX_SAFE_INTEGER + 1 === Number.MAX_SAFE_INTEGER + 2).toBe(true);
-    expect(10 + 20).toBe(30);
-  });
-
   it("== converts before it compares; x == null matches null and undefined only", () => {
     const zeroString: unknown = "0";
     const empty: unknown = "";
@@ -549,6 +529,34 @@ describe("the-real-traps", () => {
   it("with known types, \"0\" == 0 is already a type error (TS2367)", () => {
     expect(tsCodes(`export const same = "0" == 0;\n`)).toEqual(["TS2367"]);
     expect(tsCodes(`const data: any = JSON.parse("0");\nexport const same = data == "0";\n`)).toEqual([]);
+  });
+});
+
+/* numbers-and-dates ------------------------------------------------------------- */
+
+describe("numbers-and-dates", () => {
+  const files = lesson("numbers-and-dates");
+
+  it("the arrow basket adds doubles (start type-checks); the solution counts cents: Total: 0.30", async () => {
+    expect(typeCodes(files.a)).toEqual([]);
+    expect(await textOf(files.a)).toMatch(/^Total: 0\.30000000000000004 /);
+    expect(await textOf(files.b!)).toMatch(/^Total: 0\.30 /);
+  });
+
+  it("the numbers-and-dates list renders 3.5, 3, MAX_SAFE_INTEGER and October 2nd", async () => {
+    const text = await textOf(files.b!);
+    expect(text).toContain("7 / 2 → 3.5, Math.trunc(7 / 2) → 3");
+    expect(text).toContain("Number.MAX_SAFE_INTEGER → 9007199254740991");
+    expect(text).toContain("new Date(2026, 9, 2) → Fri Oct 02 2026");
+  });
+
+  it("number is a double: 0.1 + 0.2, 7 / 2; integers are exact up to MAX_SAFE_INTEGER", () => {
+    expect(0.1 + 0.2).not.toBe(0.3);
+    expect(String(0.1 + 0.2)).toBe("0.30000000000000004");
+    expect(7 / 2).toBe(3.5);
+    expect(Number.MAX_SAFE_INTEGER).toBe(2 ** 53 - 1);
+    expect(Number.MAX_SAFE_INTEGER + 1 === Number.MAX_SAFE_INTEGER + 2).toBe(true);
+    expect(10 + 20).toBe(30);
   });
 
   it("Date: months from 0, mutable, and a date-only string is midnight UTC", () => {

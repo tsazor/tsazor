@@ -99,8 +99,9 @@ The array methods run **immediately** and return new arrays: no deferred executi
 
 Two traps: `sort()` and `reverse()` work **in place** (prefer `toSorted()`/`toReversed()`),
 and `sort()` without a comparer compares as strings (`[10, 9, 1].sort()` is `[1, 10, 9]`).
-`toSorted`, `toReversed` and `findLast` need `"lib": ["ES2023", "DOM", "DOM.Iterable"]` (or a
-later version) in `tsconfig.json`; `Object.groupBy` needs ES2024.
+`toSorted`, `toReversed` and `findLast` are ES2023 — the recommended tsconfig (see
+[Getting started](getting-started.md)) already includes the ES2023 lib, so they type-check
+out of the box; `Object.groupBy` needs ES2024.
 
 ### Classes, interfaces, generics
 

@@ -1,10 +1,10 @@
 export class Basket {
-    /** Cents: integers are exact. */
+    /** Euros. */
     total = 0;
 
     addAll(prices: number[]): void {
         prices.forEach((price) => {
-            this.total += Math.round(price * 100);
+            this.total += price;
         });
     }
 }
@@ -14,7 +14,7 @@ export function checkout(prices: number[]): string {
     try {
         const basket = new Basket();
         basket.addAll(prices);
-        return `Total: ${(basket.total / 100).toFixed(2)}`;
+        return `Total: ${basket.total}`;
     } catch (error) {
         return `${(error as Error).name}: ${(error as Error).message}`;
     }

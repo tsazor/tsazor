@@ -78,9 +78,9 @@ Gate: no German left in the listed files, all relative links resolve.
 18. *Testing*: `@tsazor/testing`
 19. *Next steps*
 
-**Decided 2026-10-02 (to do):** split "The real traps" into two lessons (`this` & equality /
-numbers & dates; "Structural typing" stays one lesson); raise the recommended tsconfig `lib` to
-ES2023 (getting-started, lesson texts, cheat sheet, starter), which removes the "add the lib" hint.
+**Done 2026-10-02 ✅:** "The real traps" split into two lessons (This and equality / Numbers
+and dates; "Structural typing" stays one lesson) and the recommended tsconfig `lib` raised
+to ES2023 (getting-started, lesson texts, cheat sheet), which removes the "add the lib" hint.
 
 **Track extras** — Blazor: **"TypeScript for C# developers"** (a short chapter before chapter 1
 in the Blazor track ✅; see below), "What's different from Blazor"
@@ -91,9 +91,9 @@ backend and leaves only Blazor. They should feel they are staying in something f
 chapter is a side-by-side ("in C# you write…, in TypeScript…"): types and nullability (`null` vs
 `undefined`), `Task` ↔ `Promise` and `async`/`await` (nearly identical), LINQ ↔
 `map`/`filter`/`reduce`, classes/interfaces/generics, properties ↔ getters/setters, attributes ↔
-decorators, namespaces ↔ modules, plus the real traps (`this` in callbacks, `==` vs `===`). The
-message: "you already know most of this". A companion cheat sheet lives at
-`docs/csharp-to-typescript.md`.
+decorators, namespaces ↔ modules, plus the traps (`this` in callbacks, `==` vs `===`, double
+arithmetic and money, `Date`). The message: "you already know most of this". A companion cheat
+sheet lives at `docs/csharp-to-typescript.md`.
 
 ### Milestones
 
@@ -125,15 +125,16 @@ message: "you already know most of this". A companion cheat sheet lives at
    `EventCallback.invokeAsync()`, TS2869 on mixed attribute values. Claims pinned in
    `test/claims-part2.test.ts`; E2E smoke check per chapter (8–13). The planned Svelte-style
    chapters (attachments, transitions, animations, `<Await>`) wait for their features.
-4. **C# chapter** ✅ (after M3): "TypeScript for C# developers", 9 Blazor-only lessons before
+4. **C# chapter** ✅ (after M3): "TypeScript for C# developers", 10 Blazor-only lessons before
    chapter 1 (`content/01-basics/00-typescript-for-csharp`), each a `.ts` module with its output in
    the preview: Types and nullability (`null`/`undefined`, `??` vs `||`, narrowing) · Tasks and
    promises (`Promise.all`) · LINQ and array methods (`toSorted`, no deferred execution) · Classes,
    interfaces, generics (structural typing) · Properties and access (getters/setters, `#private`) ·
    Attributes and decorators (a `@logged` method decorator) · Namespaces and modules · Records,
-   enums and unions (string-literal unions, exhaustive `switch`) · The real traps (`this` in
-   callbacks, double arithmetic and money, `==`, `Date`). Companion cheat sheet
-   [csharp-to-typescript.md](csharp-to-typescript.md) (linked from README, getting-started and the
+   enums and unions (string-literal unions, exhaustive `switch`) · This and equality (`this` in
+   callbacks, `==` vs `===`) · Numbers and dates (double arithmetic and money, `Date`).
+   Companion cheat sheet [csharp-to-typescript.md](csharp-to-typescript.md) (linked from README,
+   getting-started and the
    chapter). Engine: the in-browser type check uses the ES2023 lib (`toSorted`); the track switch
    from a track-only lesson goes to the other track's next lesson (`TutorialState.counterpart`)
    instead of a dead link. Claims pinned in `test/claims-csharp.test.ts`; the lesson gate allows

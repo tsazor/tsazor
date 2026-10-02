@@ -376,13 +376,24 @@ async function main() {
     check((await waitForPreview(page, ".top", "Barbara, Ada, Linus")).includes("Barbara, Ada, Linus"), "C# chapter: filter/toSorted/slice/map in the preview");
     check(await noProblems(), "C# chapter: toSorted type-checks in the browser (ES2023 lib)");
 
-    await page.goto(`${APP}/blazor/the-real-traps`);
+    await page.goto(`${APP}/blazor/this-and-equality`);
     check((await waitForPreview(page, ".checkout", "TypeError")).includes("TypeError"), "C# chapter: the function-callback this trap throws in the preview");
     await page.waitForSelector(".problem .code:has-text('TS2683')", { timeout: 30_000 }).catch(() => null);
     check((await page.$(".problem .code:has-text('TS2683')")) !== null, "C# chapter: TS2683 shows in the problems panel");
     await page.click("button:has-text('Solve')");
-    check((await waitForPreview(page, ".checkout", "Total: 0.30")).includes("Total: 0.30"), "C# chapter: the arrow + cents solution adds up");
-    check(await noProblems(), "C# chapter: the traps solution type-checks");
+    check((await waitForPreview(page, ".checkout", "0.30000000000000004")).includes("0.30000000000000004"), "C# chapter: the arrow solution keeps this (and shows the double)");
+    check(await noProblems(), "C# chapter: the this-and-equality solution type-checks");
+
+    await page.goto(`${APP}/blazor/numbers-and-dates`);
+    check((await waitForPreview(page, ".checkout", "0.30000000000000004")).includes("0.30000000000000004"), "C# chapter: the double basket starts the numbers lesson");
+    await page.click("button:has-text('Solve')");
+    let cents = "";
+    for (let tries = 0; tries < 80 && cents.trim() !== "Total: 0.30"; tries++) {
+      cents = await previewText(page, ".checkout").catch(() => "");
+      if (cents.trim() !== "Total: 0.30") await page.waitForTimeout(250);
+    }
+    check(cents.trim() === "Total: 0.30", `C# chapter: the cents solution adds up (${cents.trim()})`);
+    check(await noProblems(), "C# chapter: the numbers-and-dates solution type-checks");
 
     await page.goto(`${APP}/blazor/attributes-and-decorators`);
     await page.click("button:has-text('Solve')");

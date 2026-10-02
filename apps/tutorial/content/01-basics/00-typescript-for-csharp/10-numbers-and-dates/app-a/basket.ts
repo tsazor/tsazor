@@ -3,7 +3,7 @@ export class Basket {
     total = 0;
 
     addAll(prices: number[]): void {
-        prices.forEach(function (price) {
+        prices.forEach((price) => {
             this.total += price;
         });
     }

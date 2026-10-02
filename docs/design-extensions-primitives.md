@@ -115,7 +115,7 @@ services.configure(ApiOptions, { section: "api", source: import.meta.env, valida
 ## Tutorial and docs
 
 - The cheat sheet gets a line per package ("in .NET you use X, here it is Y").
-- The Blazor track's C# chapter points to `Decimal` in "The real traps" (money).
+- The Blazor track's C# chapter points to `Decimal` in "Numbers and dates" (money).
 - New lessons, both tracks:
   - Part 3 "Talking to a backend": `HttpClient` with handlers.
   - Part 2 "Services": `Logger`/`Options` as examples of DI services.

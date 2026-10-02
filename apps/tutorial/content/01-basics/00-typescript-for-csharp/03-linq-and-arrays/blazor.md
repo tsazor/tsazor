@@ -32,8 +32,8 @@ export function topOpenCustomers(): string[] {
 ```
 
 Sorting takes a comparer instead of a key selector: negative means `a` first, so
-`b.total - a.total` is `OrderByDescending`. (`toSorted` is ES2023; in your own project, put
-`"lib": ["ES2023", "DOM", "DOM.Iterable"]` in `tsconfig.json`. The tutorial already does.)
+`b.total - a.total` is `OrderByDescending`. (`toSorted` is ES2023; the recommended tsconfig
+includes the ES2023 lib, and so does the tutorial.)
 
 > **Coming from C#:** there's no deferred execution. Each method runs immediately and returns
 > a new array: no `IEnumerable` that re-runs when enumerated twice, no `ToList()` needed. And

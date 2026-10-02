@@ -77,6 +77,7 @@ would be checked as a legacy decorator and rejected at runtime):
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "strict": true
   }
 }
@@ -84,10 +85,10 @@ would be checked as a legacy decorator and rejected at runtime):
 
 - `target` ES2022 or newer ⇒ `useDefineForClassFields` is `true` (the TS default), matching the
   generated code. A pure type redeclaration of an inherited field is written `declare x: T`.
+- `lib` ES2023 ⇒ the newer array methods (`toSorted`, `toReversed`, `findLast`) type-check
+  out of the box.
 - Decorators are lowered by esbuild (via the Vite plugin, also for the app's `.ts` files); no
   browser runs them natively yet. The runtime polyfills `Symbol.metadata`.
-- Newer array methods (`toSorted`, `findLast`) are ES2023: add
-  `"lib": ["ES2023", "DOM", "DOM.Iterable"]` (or a later version) to use them.
 - Hand-written components without decorator syntax (plain JS, tests) declare parameters with
   `defineParameter(Class, "name", options?)` from `@tsazor/runtime`.
 
