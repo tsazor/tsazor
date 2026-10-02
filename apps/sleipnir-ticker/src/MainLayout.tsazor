@@ -17,8 +17,8 @@
 
 @code {
     protected override onInitialized(): void {
-        // The layout always shows the connection state — it tracks the store itself.
-        this.track(this.Store);
+        // The layout always shows the connection state — it observes the store itself.
+        this.observe(this.Store);
     }
 }
 

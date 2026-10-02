@@ -56,6 +56,9 @@ consumer `apps/sleipnir-ticker`.
 - **T3 — Lifecycle-bound subscriptions**: subscribe from a component, re-render on `onNext`,
   unsubscribe on `dispose()` automatically (AbortSignal from U3); resume policy configurable;
   optional shared (ref-counted) subscriptions for app-wide feeds, replacing hand-written stores.
+  The lifecycle part exists as `this.observe(source)` / `this.disposeSignal` (Tsazor extension,
+  [design-bindable-observe.md](design-bindable-observe.md)): generated event methods only need to
+  return a source `observe` understands.
 - **T4 — Connection state** as a service + `CascadingValue` (`SleipnirConnection`), plus a small
   status component.
 - **T5 — Auth**: `SleipnirAuthenticationStateProvider` over a configurable "who am I" method

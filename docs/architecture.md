@@ -124,16 +124,16 @@ Browser ──(Renderer)──►  RenderTree frames ──(diff)──►  edit
   bookkeeping (initialized, pending render, first render, after-render callbacks) in
   `#private` fields: TypeScript's `private` is compile-time only, and a component field such
   as `initialized` would otherwise overwrite the flag — Blazor's private base fields can't
-  collide either. **`disposeSignal`/`track` (Tsazor extension):** before `dispose`/
+  collide either. **`disposeSignal`/`observe` (Tsazor extension):** before `dispose`/
   `disposeAsync`, the renderer calls `ComponentBase.disposeInternal()`, which aborts the
-  (lazily created) `disposeSignal` and stops every tracked subscription (a throwing
-  unsubscribe → phase `dispose`). A `track` notification calls `onNext`, then
+  (lazily created) `disposeSignal` and stops every observed subscription (a throwing
+  unsubscribe → phase `dispose`). An `observe` notification calls `onNext`, then
   `stateHasChangedInternal()` — so it joins the render queue like any request and a burst
   coalesces into one render. Work outside the render pipeline reports failures through
   `RenderHandle.reportError(error, phase)` (internal) into `handleComponentError`:
   `onNext`/source errors as `lifecycle`, a failing `@Bindable` change callback as `event`
   (attributed to the component that assigned), so both reach the nearest `ErrorBoundary`.
-  An async `track` handshake is deliberately not tracked by `waitUntilIdle`; a `@Bindable`
+  An async `observe` handshake is deliberately not tracked by `waitUntilIdle`; a `@Bindable`
   callback is.
 - **Cascading values** (Blazor's `CascadingParameterState`): a supplier is any component
   with `isCascadingValueSupplier` (`CascadingValue`, EditForm, CascadingAuthenticationState,

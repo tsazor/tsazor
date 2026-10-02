@@ -34,7 +34,7 @@ apart from that, the markup is largely interchangeable with Blazor's `.razor` fi
   (`@Parameter()`), cascading values, DI, routing with layouts, EditForm/`@bind` validation,
   Virtualize.
 - **Tsazor extensions (superset, desugar to the Blazor form):** `@Bindable() accessor value`
-  (a two-way parameter in one line) and `this.track(source)` / `this.disposeSignal` (external
+  (a two-way parameter in one line) and `this.observe(source)` / `this.disposeSignal` (external
   sources bound to the component lifetime) — see the
   [language reference](docs/language-reference.md#two-way-parameters-bindable-tsazor-extension).
 - **Scoped CSS:** `X.tsazor.css` as a sidecar stylesheet, selector rewriting via postcss,

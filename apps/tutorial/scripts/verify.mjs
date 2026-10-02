@@ -221,7 +221,7 @@ async function main() {
     const priceBefore = await previewText(page, ".price");
     await page.waitForTimeout(1200);
     const priceAfter = await previewText(page, ".price");
-    check(priceBefore !== priceAfter && /ACME: \d+\.\d\d/.test(priceAfter), `ch2 External data: this.track re-renders on every tick (${priceBefore} → ${priceAfter})`);
+    check(priceBefore !== priceAfter && /ACME: \d+\.\d\d/.test(priceAfter), `ch2 External data: this.observe re-renders on every tick (${priceBefore} → ${priceAfter})`);
     await previewClick("button");
     await previewClick("button");
     check((await waitForPreview(page, ".listeners", "Listening: 1")).includes("Listening: 1"), "ch2 External data: hide/show keeps one subscription (teardown on dispose)");

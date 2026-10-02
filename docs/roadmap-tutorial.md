@@ -47,7 +47,7 @@ Gate: no German left in the listed files, all relative links resolve.
 1. *Introduction*: Welcome · Your first component · Expressions in markup · Dynamic attributes ·
    Styling (scoped CSS) · Nested components · Raw HTML (`MarkupString`)
 2. *State & rendering*: Fields are state · When a component re-renders (`stateHasChanged`) ·
-   Derived values (getters) · Async work · External data (`this.track`, `disposeSignal`) ·
+   Derived values (getters) · Async work · External data (`this.observe`, `disposeSignal`) ·
    Lifecycle (`onInitialized`, `onParametersSet`,
    `onAfterRender`, `dispose`)
 3. *Parameters*: Declaring parameters · Defaults · Typed checks (`tsazor check`) · Attribute splatting

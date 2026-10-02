@@ -503,7 +503,7 @@ including `:after`, `:get`/`:set` and `:event`, behaves as with the hand-written
   EventCallback<T>`, no field is emitted); a plain `.ts` class declares it itself if it uses it.
 - **Unbound use works** ("uncontrolled"): without a `valueChanged` the value just changes locally.
 - **No render of its own.** From an event handler the handler's re-render applies, and the
-  parent's re-render passes the value down; from an external source, use `track` (below).
+  parent's re-render passes the value down; from an external source, use `observe` (below).
 - **Options:** `@Bindable({ changed: "onPick" })` names the callback parameter differently
   (`@bind-value:event="onPick"`); `@Bindable({ expression: true })` also declares
   `valueExpression?: string` (the field name `InputBase`-style components hand to
@@ -521,13 +521,13 @@ including `:after`, `:get`/`:set` and `:event`, behaves as with the hand-written
   refactoring "Convert 'x'/'xChanged' to @Bindable()". The codemod keeps emitting the Blazor
   pair.
 
-### External sources: `track` and `disposeSignal` (Tsazor extension)
+### External sources: `observe` and `disposeSignal` (Tsazor extension)
 
 ```razor
 @code {
     protected override onInitialized(): void {
-        this.track(this.Store);                                         // re-render per change
-        this.track({ subscribe: (h) => this.Client.market.tickerUpdated(h) }, (s) => this.last = s); // Sleipnir handlers + onNext
+        this.observe(this.Store);                                         // re-render per change
+        this.observe({ subscribe: (h) => this.Client.market.tickerUpdated(h) }, (s) => this.last = s); // Sleipnir handlers + onNext
         addEventListener("resize", this.onResize, { signal: this.disposeSignal });
     }
 }
@@ -536,7 +536,7 @@ including `:after`, `:get`/`:set` and `:event`, behaves as with the hand-written
 - **`this.disposeSignal`** — an `AbortSignal` that aborts when the component is disposed
   (before `dispose`/`disposeAsync` run; read after disposal it is already aborted).
   Everything that takes a signal tears itself down: listeners, `fetch`, timers wrapped by hand.
-- **`this.track(source, onNext?)`** subscribes, re-renders on every notification and
+- **`this.observe(source, onNext?)`** subscribes, re-renders on every notification and
   unsubscribes on dispose — Blazor's `IDisposable` + subscribe +
   `InvokeAsync(StateHasChanged)` + unsubscribe in `Dispose`, written once. Sources
   (structural, no imports):
@@ -548,24 +548,24 @@ including `:after`, `:get`/`:set` and `:event`, behaves as with the hand-written
   | `subscribe(…) → Promise<{ unsubscribe() }>` | async handshakes (Sleipnir events) |
   | `(signal: AbortSignal, notify: (value?) => void) => void` | escape hatch (a timer, anything else) |
 
-  The listener `track` passes is callable *and* an observer (`next`/`error`/`complete`,
+  The listener `observe` passes is callable *and* an observer (`next`/`error`/`complete`,
   Sleipnir's `onNext`/`onError`/`onComplete`), so each shape gets what it calls.
 - **Rendering:** a notification runs `onNext` (if given), then `stateHasChanged()` — the
   render queue coalesces a burst into one render; `shouldRender` is honoured as usual.
 - **Errors:** an exception in `onNext`, a source's `error(…)` and a rejected handshake take
   the lifecycle error path (nearest `ErrorBoundary`, phase `lifecycle`); a throwing
   unsubscribe at dispose is a `dispose` error (fatal, as in Blazor).
-- **Teardown:** on dispose every tracked subscription ends; a handshake that resolves later
+- **Teardown:** on dispose every observed subscription ends; a handshake that resolves later
   is unsubscribed immediately, and late notifications are ignored. The return value stops
-  tracking early. A pending handshake is *not* part of `waitUntilIdle` (a subscription is
+  observing early. A pending handshake is *not* part of `waitUntilIdle` (a subscription is
   open-ended; it must not stall idle detection).
-- **When to call:** in `onInitialized`. After dispose `track` is a no-op (dev warning); in
+- **When to call:** in `onInitialized`. After dispose `observe` is a no-op (dev warning); in
   `onParametersSet` it subscribes again on every parameter change — dev mode warns when the
-  same source is tracked twice (v1: a warning, no deduplication). Dev mode is Vite's
+  same source is observed twice (v1: a warning, no deduplication). Dev mode is Vite's
   `import.meta.env.DEV` (also Vitest); elsewhere the warnings are off.
 - **Testing:** `@tsazor/testing` has `createFakeStore(initial)` (`set`, `notify`,
   `listenerCount`).
-- **Naming:** `track` and `disposeSignal` are `ComponentBase` members — a component member of
+- **Naming:** `observe` and `disposeSignal` are `ComponentBase` members — a component member of
   the same name overrides them (TS2416 in the check).
 
 ### Component attributes by parameter type

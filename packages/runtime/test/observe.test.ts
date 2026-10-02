@@ -1,5 +1,5 @@
 /**
- * `disposeSignal` and `track(source, onNext?)` (Tsazor extension): external
+ * `disposeSignal` and `observe(source, onNext?)` (Tsazor extension): external
  * sources bound to the component lifetime — subscribe, re-render per
  * notification (coalesced through the render queue), unsubscribe on dispose.
  */
@@ -11,7 +11,7 @@ import {
   defineComponent,
   type RenderFragment,
   type RenderTreeBuilder,
-  type TrackSource,
+  type ObserveSource,
 } from "../src/index";
 
 afterEach(() => {
@@ -113,12 +113,12 @@ describe("disposeSignal", () => {
   });
 });
 
-describe("track", () => {
+describe("observe", () => {
   it("re-renders on every notification and unsubscribes on dispose", async () => {
     const store = new Store();
     class Page extends ComponentBase {
       protected override onInitialized(): void {
-        this.track(store);
+        this.observe(store);
       }
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.addContent(0, `n${store.value}`);
@@ -138,7 +138,7 @@ describe("track", () => {
     let renders = 0;
     class Page extends ComponentBase {
       protected override onInitialized(): void {
-        this.track(store);
+        this.observe(store);
       }
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         renders++;
@@ -161,7 +161,7 @@ describe("track", () => {
     class Page extends ComponentBase {
       last = -1;
       protected override onInitialized(): void {
-        this.track(store, (value) => {
+        this.observe(store, (value) => {
           order.push(`next:${value}`);
           this.last = value!;
         });
@@ -191,7 +191,7 @@ describe("track", () => {
     class Page extends ComponentBase {
       text = "";
       protected override onInitialized(): void {
-        this.track(observable, (value) => { this.text = value; });
+        this.observe(observable, (value) => { this.text = value; });
       }
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.addContent(0, this.text);
@@ -218,7 +218,7 @@ describe("track", () => {
     class Page extends ComponentBase {
       price = 0;
       protected override onInitialized(): void {
-        this.track(events, (value) => { this.price = value; });
+        this.observe(events, (value) => { this.price = value; });
       }
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.addContent(0, `$${this.price}`);
@@ -245,7 +245,7 @@ describe("track", () => {
     let renders = 0;
     class Page extends ComponentBase {
       protected override onInitialized(): void {
-        this.track(events);
+        this.observe(events);
       }
       protected override buildRenderTree(): void {
         renders++;
@@ -268,7 +268,7 @@ describe("track", () => {
       let ticks = 0;
       class Clock extends ComponentBase {
         protected override onInitialized(): void {
-          this.track((signal, notify) => {
+          this.observe((signal, notify) => {
             const id = setInterval(() => { ticks++; notify(); }, 1000);
             signal.addEventListener("abort", () => clearInterval(id));
           });
@@ -289,13 +289,13 @@ describe("track", () => {
     }
   });
 
-  it("the returned function stops tracking early", async () => {
+  it("the returned function stops observing early", async () => {
     const store = new Store();
     let renders = 0;
     class Page extends ComponentBase {
       stop!: () => void;
       protected override onInitialized(): void {
-        this.stop = this.track(store);
+        this.stop = this.observe(store);
       }
       protected override buildRenderTree(): void {
         renders++;
@@ -315,7 +315,7 @@ describe("track", () => {
     const store = new Store();
     class Page extends ComponentBase {
       protected override onInitialized(): void {
-        this.track(store, () => {
+        this.observe(store, () => {
           throw new Error("bad tick");
         });
       }
@@ -351,7 +351,7 @@ describe("track", () => {
     const store = new Store();
     class Page extends ComponentBase {
       protected override onInitialized(): void {
-        this.track(store, () => {
+        this.observe(store, () => {
           throw new Error("bad tick");
         });
       }
@@ -368,8 +368,8 @@ describe("track", () => {
     let observer: { error(e: unknown): void } | undefined;
     class Page extends ComponentBase {
       protected override onInitialized(): void {
-        this.track({ subscribe: (o: { error(e: unknown): void }) => { observer = o; return () => { throw new Error("unsub"); }; } });
-        this.track({ subscribe: () => new Promise<never>((_, reject) => setTimeout(() => reject(new Error("handshake")), 5)) });
+        this.observe({ subscribe: (o: { error(e: unknown): void }) => { observer = o; return () => { throw new Error("unsub"); }; } });
+        this.observe({ subscribe: () => new Promise<never>((_, reject) => setTimeout(() => reject(new Error("handshake")), 5)) });
       }
     }
     const { renderer, remove } = await mountRemovable(Page);
@@ -381,12 +381,12 @@ describe("track", () => {
     expect(seen.sort()).toEqual(["dispose:unsub", "lifecycle:handshake", "lifecycle:source"]);
   });
 
-  it("warns (dev) when tracking after dispose and ignores the call", async () => {
+  it("warns (dev) when observing after dispose and ignores the call", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = new Store();
     class Page extends ComponentBase {
       later(): () => void {
-        return this.track(store);
+        return this.observe(store);
       }
     }
     const { child, remove } = await mountRemovable(Page);
@@ -394,27 +394,27 @@ describe("track", () => {
     const stop = (child() as Page).later();
     expect(store.listeners.size).toBe(0);
     expect(() => stop()).not.toThrow();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("track() after dispose is ignored"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("observe() after dispose is ignored"));
   });
 
-  it("warns (dev) when the same source is tracked twice — and keeps both subscriptions", async () => {
+  it("warns (dev) when the same source is observed twice — and keeps both subscriptions", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = new Store();
     class Page extends ComponentBase {
       protected override onParametersSet(): void {
-        this.track(store);
+        this.observe(store);
       }
     }
     const { child, remove } = await mountRemovable(Page);
     (child() as unknown as { onParametersSet(): void }).onParametersSet();
     expect(store.listeners.size).toBe(2);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("the same source is tracked twice"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("the same source is observed twice"));
     await remove();
     expect(store.listeners.size).toBe(0);
   });
 
   it("type-checks the supported source shapes", () => {
-    const shapes: TrackSource<number>[] = [
+    const shapes: ObserveSource<number>[] = [
       { subscribe: (listener: (value: number) => void) => () => void listener },
       { subscribe: (observer: { next(value: number): void }) => ({ unsubscribe: () => void observer }) },
       { subscribe: async (handlers: { onNext: (value: number) => void; onError?: (error: Error) => void }) => ({ unsubscribe: async () => void handlers }) },

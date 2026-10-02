@@ -1,4 +1,4 @@
-/** createFakeStore + render: a component that tracks an external store. */
+/** createFakeStore + render: a component that observes an external store. */
 import { afterEach, describe, expect, it } from "vitest";
 import { ComponentBase, type RenderTreeBuilder } from "@tsazor/runtime";
 import { createFakeStore, render } from "../src";
@@ -12,7 +12,7 @@ const prices = createFakeStore(100);
 class Ticker extends ComponentBase {
   renders = 0;
   protected override onInitialized(): void {
-    this.track(prices);
+    this.observe(prices);
   }
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     this.renders++;
@@ -21,7 +21,7 @@ class Ticker extends ComponentBase {
 }
 
 describe("createFakeStore", () => {
-  it("drives a tracked component; waitUntilIdle sees the coalesced render; dispose unsubscribes", async () => {
+  it("drives an observing component; waitUntilIdle sees the coalesced render; dispose unsubscribes", async () => {
     const result = await render(Ticker);
     expect(result.container.textContent).toBe("$100");
     expect(prices.listenerCount).toBe(1);

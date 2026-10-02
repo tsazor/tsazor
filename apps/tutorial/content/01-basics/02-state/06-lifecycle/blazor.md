@@ -29,7 +29,7 @@ dispose() {
 }
 ```
 
-(With the previous lesson's `this.track((signal, notify) => { … })`, the interval would stop
+(With the previous lesson's `this.observe((signal, notify) => { … })`, the interval would stop
 by itself.)
 
 > **Coming from Blazor:** there are no separate `…Async` methods. A hook may return a

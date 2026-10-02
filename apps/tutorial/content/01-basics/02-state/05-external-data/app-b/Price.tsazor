@@ -5,6 +5,6 @@
 
 @code {
     override onInitialized() {
-        this.track(ticker);
+        this.observe(ticker);
     }
 }

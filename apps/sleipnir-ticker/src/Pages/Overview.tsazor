@@ -68,6 +68,6 @@
 @code {
     protected override onInitialized(): void {
         // Page re-renders on every store tick (push, not polling); unsubscribed on dispose.
-        this.track(this.Store);
+        this.observe(this.Store);
     }
 }

@@ -25,8 +25,8 @@ const STATUS_EVERY = 10;
 
 /**
  * App-wide live-data store. One SSE subscription to the Sleipnir event
- * (Market.TickerUpdated) for the whole page lifetime — pages track the
- * store in onInitialized (`this.track(this.Store)`: re-render per change,
+ * (Market.TickerUpdated) for the whole page lifetime — pages observe the
+ * store in onInitialized (`this.observe(this.Store)`: re-render per change,
  * unsubscribed on dispose). The data
  * layer itself is the GENERATED Client from `sleipnir-codegen`; this class
  * only manages state and subscriptions, no hand-written wire calls.

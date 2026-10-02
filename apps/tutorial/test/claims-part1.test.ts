@@ -154,7 +154,7 @@ describe("external-data", () => {
   const tickerOf = async (): Promise<{ ticker: { price: number; listeners: number } }> =>
     (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "ticker.ts.js")).href)) as { ticker: { price: number; listeners: number } };
 
-  it("without track the price is frozen; with track it moves and the subscription goes with the component", async () => {
+  it("without observe the price is frozen; with observe it moves and the subscription goes with the component", async () => {
     const frozen = await mount(lesson.a);
     await frozen.settle(1100);
     expect(frozen.html()).toContain("ACME: 100.00");
@@ -184,7 +184,7 @@ describe("external-data", () => {
 
   it("a burst of notifications renders once; onNext runs before the render, with the value", async () => {
     const files: Files = {
-      "App.tsazor": `@import { store } from "./store"\n<p>@seen.join(",")|@(store.renders++)</p>\n@code {\n    seen: number[] = [];\n    override onInitialized() {\n        this.track(store, (value) => this.seen.push(value!));\n    }\n}\n`,
+      "App.tsazor": `@import { store } from "./store"\n<p>@seen.join(",")|@(store.renders++)</p>\n@code {\n    seen: number[] = [];\n    override onInitialized() {\n        this.observe(store, (value) => this.seen.push(value!));\n    }\n}\n`,
       "store.ts": store,
     };
     expect(typeCodes(files)).toEqual([]);
@@ -199,10 +199,10 @@ describe("external-data", () => {
     expect(m.html()).toBe(`<p>1,2,3|${before}</p>`);
   });
 
-  it("track returns a function that stops early; (signal, notify) aborts its signal; disposeSignal aborts on removal", async () => {
+  it("observe returns a function that stops early; (signal, notify) aborts its signal; disposeSignal aborts on removal", async () => {
     const files: Files = {
       "App.tsazor": `<button @onclick="() => show = !show">t</button>\n@if (show) {\n    <Child />\n}\n@code {\n    show = true;\n}\n`,
-      "Child.tsazor": `@import { store } from "./store"\n<p>@store.value</p>\n@code {\n    static log: string[] = [];\n    stop = () => {};\n    override onInitialized() {\n        this.stop = this.track(store);\n        this.track((signal, notify) => { signal.addEventListener("abort", () => Child.log.push("hatch aborted")); void notify; });\n        this.disposeSignal.addEventListener("abort", () => Child.log.push("disposed"));\n    }\n}\n`,
+      "Child.tsazor": `@import { store } from "./store"\n<p>@store.value</p>\n@code {\n    static log: string[] = [];\n    stop = () => {};\n    override onInitialized() {\n        this.stop = this.observe(store);\n        this.observe((signal, notify) => { signal.addEventListener("abort", () => Child.log.push("hatch aborted")); void notify; });\n        this.disposeSignal.addEventListener("abort", () => Child.log.push("disposed"));\n    }\n}\n`,
       "store.ts": store,
     };
     expect(typeCodes(files)).toEqual([]);
@@ -216,23 +216,23 @@ describe("external-data", () => {
     expect(m.html()).toContain("<p>0</p>"); // stopped: no re-render
     click(m);
     await m.settle();
-    // disposeSignal aborts first, then the tracked subscriptions end.
+    // disposeSignal aborts first, then the observed subscriptions end.
     expect(childModule.default.log).toEqual(["disposed", "hatch aborted"]);
   });
 
-  it("track in onParametersSet warns (development) when it tracks the same source again", async () => {
+  it("observe in onParametersSet warns (development) when it observes the same source again", async () => {
     const warnings: unknown[] = [];
     const original = console.warn;
     console.warn = (...args: unknown[]) => warnings.push(args.join(" "));
     try {
       const m = await mount({
         "App.tsazor": `<Child label="@label" /><button @onclick="() => label = 'b'">b</button>\n@code {\n    label = "a";\n}\n`,
-        "Child.tsazor": `@import { store } from "./store"\n<p>@label</p>\n@code {\n    @Parameter() label = "";\n    override onParametersSet() {\n        this.track(store);\n    }\n}\n`,
+        "Child.tsazor": `@import { store } from "./store"\n<p>@label</p>\n@code {\n    @Parameter() label = "";\n    override onParametersSet() {\n        this.observe(store);\n    }\n}\n`,
         "store.ts": store,
       });
       click(m);
       await m.settle();
-      expect(warnings.join("\n")).toContain("the same source is tracked twice");
+      expect(warnings.join("\n")).toContain("the same source is observed twice");
       m.dispose();
     } finally {
       console.warn = original;

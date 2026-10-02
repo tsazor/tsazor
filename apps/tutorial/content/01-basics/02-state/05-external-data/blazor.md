@@ -25,25 +25,25 @@ Tsazor has a short form for exactly this:
 
 ```ts
 override onInitialized() {
-    this.track(ticker);
+    this.observe(ticker);
 }
 ```
 
 The price moves. Hide it and show it again: "Listening" stays at 1 — the old subscription
 went away with the old component.
 
-> **Tsazor extension — `track` and `disposeSignal`:** `this.track(source, onNext?)` is
+> **Tsazor extension — `observe` and `disposeSignal`:** `this.observe(source, onNext?)` is
 > subscribe + `InvokeAsync(StateHasChanged)` + unsubscribe in `Dispose`, written once.
 > Notifications go through the render queue (a burst renders once); `onNext` runs before
 > each render, and an error in it reaches the nearest `ErrorBoundary` like a lifecycle error.
 > Sources: `subscribe(listener)` returning an unsubscribe function, observables returning
 > `{ unsubscribe() }` (also as a promise, after a handshake — one that resolves after dispose
 > is unsubscribed at once), or `(signal, notify) => { … }` for anything else. The return value
-> stops tracking early. `this.disposeSignal` is an `AbortSignal` that aborts on dispose — the
+> stops observing early. `this.disposeSignal` is an `AbortSignal` that aborts on dispose — the
 > web platform's counterpart of a `CancellationToken`: `fetch(url, { signal: this.disposeSignal })`,
 > `addEventListener(…, { signal: this.disposeSignal })`.
 
 > **Coming from Blazor:** there's no `InvokeAsync` around `StateHasChanged` — JavaScript has
 > one thread, so `stateHasChanged()` is safe from any callback. Like a subscription in
-> `OnParametersSet`, a `track` there subscribes again on every parameter change (in
-> development a warning says so); track once, in `onInitialized`.
+> `OnParametersSet`, an `observe` call there subscribes again on every parameter change (in
+> development a warning says so); observe once, in `onInitialized`.

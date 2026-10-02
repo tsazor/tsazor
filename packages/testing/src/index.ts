@@ -63,7 +63,7 @@ export function renderTree(build: (b: RenderTreeBuilder) => void): Promise<Rende
 }
 
 /**
- * A fake external store for components that `track` it: the shape of a
+ * A fake external store for components that `observe` it: the shape of a
  * Svelte-style store (`subscribe(listener) → unsubscribe`). `set` notifies
  * every listener synchronously; `listenerCount` shows whether a component
  * still listens (0 after it was disposed).

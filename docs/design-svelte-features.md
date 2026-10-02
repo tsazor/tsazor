@@ -1,7 +1,7 @@
 # Design draft — Svelte-style features ("Svelte magic")
 
-Status: **draft for review** (2026-10-02). Scheduled after `@Bindable`/`this.track`
-([design-bindable-track.md](design-bindable-track.md)), in parallel with tutorial M3.
+Status: **draft for review** (2026-10-02). Scheduled after `@Bindable`/`this.observe`
+([design-bindable-observe.md](design-bindable-observe.md)), in parallel with tutorial M3.
 
 JavaScript allows things C# makes hard: functions as values everywhere, cheap closures, direct
 DOM access. Svelte uses this for features Blazor doesn't have at all. This document takes over what
@@ -125,12 +125,12 @@ A built-in component, so the markup stays pure Razor and no D1 decision is neede
 timers. It is technically a superset (only extra, coalesced renders). **Deliberately not deep**: no
 proxies, no `items.push` detection (identity problems, conflicts with `#private`, cost, hard to
 debug). Svelte 5 itself moved away from implicit `$:` magic to explicit runes. Decide once
-`this.track` has shown in the tutorial and the ticker how much need remains.
+`this.observe` has shown in the tutorial and the ticker how much need remains.
 
 ## Not planned
 
 - Deep reactivity via proxies (see F6).
-- `$store` auto-subscription syntax: `$store` is an ordinary identifier in TS, and `this.track` is
+- `$store` auto-subscription syntax: `$store` is an ordinary identifier in TS, and `this.observe` is
   the equivalent.
 - `transition:fade` / `class:active` / `bind:clientWidth` attribute forms: these are ordinary
   attributes in Razor, and reinterpreting them is off-limits.
@@ -158,4 +158,4 @@ the Blazor track explains that Blazor has no counterpart.
 | D1 | Treat the `@` attribute namespace as reserved for directive attributes, or only component forms? | reserve it (like Microsoft); document TZS001 as a deviation; component forms only where natural (`<Await>`) |
 | D2 | `@attach` or `@use`? | `@attach` (Svelte 5 naming; `use` is generic) |
 | D3 | Built-in transition set for v1 | `fade`, `fly`, `slide`, `scale`, `blur`, `draw`, `crossfade`, `flip` |
-| D4 | F6 `@State` | defer until after `track` |
+| D4 | F6 `@State` | defer until after `observe` |

@@ -16,7 +16,7 @@ export interface RenderHandle {
    * @internal Routes a failure of this component to the renderer's error
    * path (nearest ErrorBoundary, else the error handler) — for work that
    * runs outside a render pass, event handler or lifecycle hook
-   * (`@Bindable` callbacks, `track` notifications).
+   * (`@Bindable` callbacks, `observe` notifications).
    */
   reportError(error: unknown, phase: RenderErrorPhase): void;
   /** Blazor's RenderHandle.SectionRegistry: the sections of THIS renderer. */

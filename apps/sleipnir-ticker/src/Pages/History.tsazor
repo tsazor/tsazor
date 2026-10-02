@@ -28,7 +28,7 @@
     private reversed: PricePoint[] = [];
 
     protected override onInitialized(): void {
-        this.track(this.Store, () => this.updateRows());
+        this.observe(this.Store, () => this.updateRows());
         this.updateRows();
     }
 
