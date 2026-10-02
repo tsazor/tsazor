@@ -62,9 +62,9 @@ scale"). That needs fast first paint, SEO and small per-page JavaScript, which S
 - Benchmarks against React (Next) and Svelte (SvelteKit) SSR: TTFB, LCP, JS bytes per page,
   time-to-interactive. Results go into the README only once they're measured.
 
-## Open decisions
-| Question | Recommendation |
+## Decisions (2026-10-02)
+| Question | Decision |
 |---|---|
-| Hydration: real attach or Blazor-style replace? | attach, with replace as the mismatch fallback |
-| Default for interactive pages: whole-page hydration or islands? | islands (static by default, as Blazor 8) |
-| Where does S2 run in the reference deployment? | Node; Bun/edge covered by the Web-standard handler |
+| Hydration: real attach or Blazor-style replace? | **Attach**, replace only as the mismatch fallback |
+| Default for interactive pages: whole-page hydration or islands? | **Islands** (static by default, as Blazor 8) |
+| Where does S2 run in the reference deployment? | **Node**; Bun/edge covered by the Web-standard handler |
