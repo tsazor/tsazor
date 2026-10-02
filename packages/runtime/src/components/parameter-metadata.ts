@@ -19,6 +19,12 @@ export interface ParameterMeta {
   readonly cascadingType?: abstract new (...args: never[]) => unknown;
   /** Captures attributes the parent passed that have no matching parameter. */
   readonly captureUnmatchedValues?: boolean;
+  /**
+   * @internal `@Bindable()`: the instance slot behind the accessor. The
+   * runtime writes parameter values there directly, so setting parameters
+   * never invokes the change callback (only local assignments do).
+   */
+  readonly store?: symbol;
 }
 
 // `Symbol.metadata` polyfill (TS 5.2+ decorator metadata; not every browser
@@ -161,8 +167,12 @@ function collectParameterMetadata(type: ComponentClass): Map<string, ParameterMe
   return result;
 }
 
-/** Records a decorated member in its class's decorator metadata. */
-function register(context: ParameterDecoratorContext, decorator: string, meta: Omit<ParameterMeta, "propertyName">): void {
+/**
+ * @internal Records a decorated member in its class's decorator metadata;
+ * `name` defaults to the decorated member (`@Bindable` adds its synthesized
+ * callback parameters under their own names).
+ */
+export function register(context: ParameterDecoratorContext, decorator: string, meta: Omit<ParameterMeta, "propertyName">, name?: string): void {
   if (typeof context !== "object" || context === null) {
     // A legacy call `(prototype, "name")`: compiled with experimentalDecorators.
     throw new Error(`${decorator} is a standard (TC39) decorator — remove "experimentalDecorators" from the tsconfig (or call defineParameter() by hand).`);
@@ -173,7 +183,8 @@ function register(context: ParameterDecoratorContext, decorator: string, meta: O
   if (context.metadata == null) {
     throw new Error(`${decorator}: decorator metadata is unavailable (Symbol.metadata was not installed before the class was defined).`);
   }
-  ownParameterMap(context.metadata).set(context.name, { propertyName: context.name, ...meta });
+  const propertyName = name ?? context.name;
+  ownParameterMap(context.metadata).set(propertyName, { propertyName, ...meta });
 }
 
 /** [Parameter]-equivalent field decorator (`@Parameter() title = "";`). */

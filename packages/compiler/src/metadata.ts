@@ -97,6 +97,14 @@ export interface ComponentParameter {
   references?: TypeReference[];
   /** Class that declares the parameter (the component itself or a base). */
   declaredBy: string;
+  /**
+   * `@Bindable()` (Tsazor extension) on this parameter: the names of the
+   * parameters it synthesizes — the change callback and, with
+   * `{ expression: true }`, `<name>Expression`.
+   */
+  bindable?: { changed: string; expression?: string };
+  /** Synthesized by `@Bindable()` on the named parameter (not a declared member). */
+  synthesizedBy?: string;
 }
 
 export interface ComponentMetadata {
@@ -146,6 +154,13 @@ export interface OwnParameter {
   captureUnmatchedValues?: boolean;
   cascading?: { name?: string; type?: string };
   doc?: string;
+  /** `@Bindable()`: see ComponentParameter.bindable. */
+  bindable?: { changed: string; expression?: string };
+  /**
+   * A parameter `@Bindable()` synthesizes for the parameter `of`: the change
+   * callback (`EventCallback<value type>`) or the `string` expression name.
+   */
+  synthesized?: { of: string; role: "changed" | "expression" };
 }
 
 export interface ClassRecord {
@@ -314,7 +329,7 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
 }
 
 /** Runtime names the compiler imports itself when the file does not bind them. */
-const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "EventCallback", "RenderFragment"];
+const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "Bindable", "EventCallback", "RenderFragment"];
 
 function emptyModule(file: string, kind: ModuleMetadata["kind"], runtimeInternal: boolean | undefined): ModuleMetadata {
   const module: ModuleMetadata = {
@@ -382,7 +397,7 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
       name: member.name.text,
       member: isField ? (hasModifier(member, ts.SyntaxKind.AccessorKeyword) ? "accessor" : "field") : "setter",
       questionToken: isField && member.questionToken !== undefined,
-      ...decoratorOptions(decorator, file),
+      ...decoratorOptions(decorator, file, member.name.text),
     };
     if (isField) {
       if (member.type) parameter.type = member.type.getText(file);
@@ -394,8 +409,46 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
     const doc = jsDocOf(member);
     if (doc) parameter.doc = doc;
     record.parameters.push(parameter);
+    if (decorator.kind === "Bindable") record.parameters.push(...bindableParameters(parameter));
   }
   return record;
+}
+
+/**
+ * The parameters `@Bindable()` synthesizes besides its own (Tsazor
+ * extension): `@Bindable() accessor value: T` desugars to `@Parameter()
+ * value: T` + `@Parameter() valueChanged?: EventCallback<T>` (+
+ * `valueExpression?: string` with `{ expression: true }`).
+ */
+function bindableParameters(parameter: OwnParameter): OwnParameter[] {
+  const bindable = parameter.bindable!;
+  const valueType = bindableValueType(parameter);
+  const synthesized: OwnParameter[] = [
+    {
+      name: bindable.changed,
+      member: "field",
+      questionToken: true,
+      type: `EventCallback<${valueType}>`,
+      synthesized: { of: parameter.name, role: "changed" },
+      doc: `Change callback of the two-way parameter '${parameter.name}' (synthesized by @Bindable(); \`@bind-${parameter.name}\` sets it).`,
+    },
+  ];
+  if (bindable.expression !== undefined) {
+    synthesized.push({
+      name: bindable.expression,
+      member: "field",
+      questionToken: true,
+      type: "string",
+      synthesized: { of: parameter.name, role: "expression" },
+      doc: `Field name of the two-way parameter '${parameter.name}' for EditContext validation (synthesized by @Bindable({ expression: true })).`,
+    });
+  }
+  return synthesized;
+}
+
+/** The value type of a `@Bindable()` parameter as type text (`unknown` when it cannot be read syntactically). */
+export function bindableValueType(parameter: Pick<OwnParameter, "type" | "inferredType">): string {
+  return parameter.type ?? parameter.inferredType ?? "unknown";
 }
 
 function typeParameterInfo(parameter: ts.TypeParameterDeclaration, file: ts.SourceFile): TypeParameterInfo {
@@ -410,11 +463,23 @@ function parameterDecorator(decorator: ts.Decorator, module: ModuleMetadata): { 
   const call = decorator.expression;
   if (!ts.isCallExpression(call)) return undefined; // the runtime decorators are factories
   const kind = runtimeName(module, call.expression);
-  return kind === "Parameter" || kind === "CascadingParameter" ? { kind, call } : undefined;
+  return kind === "Parameter" || kind === "CascadingParameter" || kind === "Bindable" ? { kind, call } : undefined;
 }
 
-function decoratorOptions(decorator: { kind: string; call: ts.CallExpression }, file: ts.SourceFile): Pick<OwnParameter, "captureUnmatchedValues" | "cascading"> {
+function decoratorOptions(
+  decorator: { kind: string; call: ts.CallExpression },
+  file: ts.SourceFile,
+  name: string,
+): Pick<OwnParameter, "captureUnmatchedValues" | "cascading" | "bindable"> {
   const options = objectLiteralProperties(decorator.call.arguments[0], file);
+  if (decorator.kind === "Bindable") {
+    const changed = options.get("changed");
+    const bindable: { changed: string; expression?: string } = {
+      changed: changed && ts.isStringLiteralLike(changed) ? changed.text : `${name}Changed`,
+    };
+    if (options.get("expression")?.kind === ts.SyntaxKind.TrueKeyword) bindable.expression = `${name}Expression`;
+    return { bindable };
+  }
   if (decorator.kind === "CascadingParameter") {
     const cascading: { name?: string; type?: string } = {};
     const name = options.get("name");
@@ -629,13 +694,19 @@ function resolveOwnParameter(own: OwnParameter, declaredBy: string, module: Modu
   };
   if (own.type !== undefined) {
     parameter.type = own.type;
-    const references = referencesOf(own.type, module, typeParameters);
+    let references = referencesOf(own.type, module, typeParameters);
+    if (own.synthesized?.role === "changed") {
+      // The synthesized `EventCallback<T>` is the runtime's, whatever the module imports.
+      references = [{ name: "EventCallback", kind: "runtime", imported: "EventCallback" }, ...references.filter((ref) => ref.name !== "EventCallback")];
+    }
     if (references.length > 0) parameter.references = references;
   } else if (own.inferredType) {
     parameter.inferredType = own.inferredType;
   }
   if (own.cascading) parameter.cascading = own.cascading;
   if (own.doc) parameter.doc = own.doc;
+  if (own.bindable) parameter.bindable = own.bindable;
+  if (own.synthesized) parameter.synthesizedBy = own.synthesized.of;
   categorizeParameter(parameter, own, host);
   return parameter;
 }

@@ -16,15 +16,9 @@
 </div>
 
 @code {
-    private unsub: () => void = () => {};
-
     protected override onInitialized(): void {
-        // The layout always shows the connection state — it subscribes itself.
-        this.unsub = this.Store.subscribe(() => this.stateHasChanged());
-    }
-
-    dispose(): void {
-        this.unsub();
+        // The layout always shows the connection state — it observes the store itself.
+        this.observe(this.Store);
     }
 }
 

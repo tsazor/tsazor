@@ -1,0 +1,13 @@
+<button @onclick="toggle">@(showPrice ? "Hide" : "Show") the price</button>
+
+@if (showPrice) {
+    <Price />
+}
+
+@code {
+    showPrice = true;
+
+    toggle() {
+        this.showPrice = !this.showPrice;
+    }
+}

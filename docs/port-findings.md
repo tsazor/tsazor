@@ -332,3 +332,51 @@ Nutzertests mit `@tsazor/testing`. Optionen: happy-dom-Update prüfen, oder `Log
 - **verify.mjs** nutzt einen Server auf :5330 nur, wenn er diesen Checkout bedient
   (`/__tutorial-root`), sonst startet es einen eigenen auf dem nächsten freien Port
   (parallele Worktrees).
+
+# Umsetzung `@Bindable` + `this.observe` (design-bindable-observe.md)
+
+## M. Framework-Lücken, gefunden beim Umsetzen
+
+### 1. Neue `ComponentBase`-Member kollidieren mit Komponenten-Membern — **umgangen, offen als Regel**
+
+Die Methode hieß zuerst `track()` und brach das Tutorial: `Lesson`/`TopBar`/`LessonMenu`/`LessonText`
+hatten einen Parameter `track` (die Lern-Spur „ts“/„blazor“) ⇒ TS2416 im Check, zur Laufzeit
+hätte der Parameter die Methode überschrieben. Der Parameter wurde in `lessonTrack` umbenannt (Route-Platzhalter
+`/{lessonTrack}/{slug}`, URLs unverändert), danach die API selbst in `observe()` (Entscheidung des
+Users: `track` ist ein häufiges Fachwort, die Kollision wäre in Ports wiedergekommen). Allgemein: Blazors `ComponentBase` hat PascalCase-
+Member, die mit camelCase-Feldern nie kollidieren — Tsazors camelCase-API teilt sich den
+Namensraum mit den Nutzerfeldern. Jede neue öffentliche/protected Methode auf `ComponentBase`
+(`observe`, `disposeSignal`, künftig mehr) ist ein potenzieller Bruch für Ports. Der Check meldet
+es (TS2416), aber ohne Erklärung. Vorschlag: eine Liste reservierter Namen + eigene Diagnose mit
+Umbenennungs-Fix, und neue Base-Member sparsam (Entscheidung „Methode statt freier Funktion“ in
+der Design-Tabelle hat diesen Preis).
+
+### 2. `@bind-X`-Werte wurden nicht typgeprüft — **behoben**
+
+Der Shadow prüfte Komponenten-Attribute per `satisfies`, aber nicht den Wert eines
+Komponenten-Binds (`@bind-Value="x"`, `:get`). Jetzt gleich behandelt (Paar wie `@Bindable`);
+alle Apps blieben sauber.
+
+### 3. Async-Handshake und `waitUntilIdle` — **Entscheidung**
+
+Ein `observe` auf eine Quelle, deren `subscribe` ein nie auflösendes Promise liefert, ließ
+`waitUntilIdle` (und damit `render()` in `@tsazor/testing`) hängen, solange der Handshake
+mitgezählt wurde. Jetzt nicht mitgezählt: eine Subscription ist offen, sie darf Idle-Erkennung
+(und künftiges Prerendering, roadmap-ssr) nicht blockieren. Tests, die den Handshake abwarten
+wollen, warten auf die Quelle selbst.
+
+### 4. Synthetisierte Member sind in `.ts`-Klassen nicht typisiert — **Grenze**
+
+Ein Decorator kann den Klassentyp nicht erweitern. In `.tsazor` deklariert der Compiler
+`declare valueChanged?: EventCallback<T>` selbst; eine Code-behind-/`.ts`-Klasse, die
+`this.valueChanged` benutzt, muss die Zeile selbst schreiben (die Metadaten/`@bind` brauchen
+sie nicht). Bei nicht-literalem Initializer ohne Annotation ist `T` `unknown` (wie TZS026 bei
+`@Parameter`).
+
+### 5. Bundle
+
+Bench-Bundle (`apps/bench/tsazor`): 87,38 kB / **24,79 KB gz** vor ⇒ 88,70 kB / **25,28 KB gz**
+nach (+0,49 KB gz; `observe`/`disposeSignal`/`disposeInternal` sind `ComponentBase`-Methoden und
+damit nicht tree-shakebar; `@Bindable` selbst fällt raus, wenn ungenutzt; die Dev-Warnungen
+entfernt Vite über `import.meta.env.DEV`). Die 20,4 KB aus der Roadmap sind ein älterer Stand —
+die Ausgangsbasis dieses Branches war bereits 24,79.

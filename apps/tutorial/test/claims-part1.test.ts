@@ -146,6 +146,100 @@ describe("async-work", () => {
   });
 });
 
+describe("external-data", () => {
+  const lesson = loadContent(path.join(appRoot, "content"))
+    .parts.flatMap((part) => part.chapters.flatMap((chapter) => chapter.lessons))
+    .find((l) => l.slug === "external-data")!;
+  /** The lesson's ticker module as the mounted build loaded it. */
+  const tickerOf = async (): Promise<{ ticker: { price: number; listeners: number } }> =>
+    (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "ticker.ts.js")).href)) as { ticker: { price: number; listeners: number } };
+
+  it("without observe the price is frozen; with observe it moves and the subscription goes with the component", async () => {
+    const frozen = await mount(lesson.a);
+    await frozen.settle(1100);
+    expect(frozen.html()).toContain("ACME: 100.00");
+    expect(frozen.html()).toContain("Listening: 0");
+    frozen.dispose();
+
+    expect(typeCodes(lesson.b!)).toEqual([]);
+    const m = await mount(lesson.b!);
+    const { ticker } = await tickerOf();
+    expect(ticker.listeners).toBe(1);
+    await m.settle(1100);
+    expect(m.html()).toContain("ACME: 100.50");
+    // Hide and show: a new component, still one listener.
+    click(m);
+    await m.settle();
+    expect(ticker.listeners).toBe(0);
+    click(m);
+    await m.settle();
+    expect(m.html()).toContain("Listening: 1");
+    m.dispose();
+    expect(ticker.listeners).toBe(0);
+  });
+
+  const store = `type Listener = (value?: number) => void;\nconst listeners = new Set<Listener>();\nexport const store = {\n    value: 0,\n    renders: 0,\n    subscribe(listener: Listener) { listeners.add(listener); return () => listeners.delete(listener); },\n    emit(value: number) { store.value = value; for (const l of listeners) l(value); },\n};\n`;
+  const storeOf = async (): Promise<{ store: { value: number; renders: number; emit(value: number): void } }> =>
+    (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "store.ts.js")).href)) as { store: { value: number; renders: number; emit(value: number): void } };
+
+  it("a burst of notifications renders once; onNext runs before the render, with the value", async () => {
+    const files: Files = {
+      "App.tsazor": `@import { store } from "./store"\n<p>@seen.join(",")|@(store.renders++)</p>\n@code {\n    seen: number[] = [];\n    override onInitialized() {\n        this.observe(store, (value) => this.seen.push(value!));\n    }\n}\n`,
+      "store.ts": store,
+    };
+    expect(typeCodes(files)).toEqual([]);
+    const m = await mount(files);
+    const { store: s } = await storeOf();
+    const before = s.renders;
+    s.emit(1);
+    s.emit(2);
+    s.emit(3);
+    await m.settle();
+    expect(s.renders - before).toBe(1);
+    expect(m.html()).toBe(`<p>1,2,3|${before}</p>`);
+  });
+
+  it("observe returns a function that stops early; (signal, notify) aborts its signal; disposeSignal aborts on removal", async () => {
+    const files: Files = {
+      "App.tsazor": `<button @onclick="() => show = !show">t</button>\n@if (show) {\n    <Child />\n}\n@code {\n    show = true;\n}\n`,
+      "Child.tsazor": `@import { store } from "./store"\n<p>@store.value</p>\n@code {\n    static log: string[] = [];\n    stop = () => {};\n    override onInitialized() {\n        this.stop = this.observe(store);\n        this.observe((signal, notify) => { signal.addEventListener("abort", () => Child.log.push("hatch aborted")); void notify; });\n        this.disposeSignal.addEventListener("abort", () => Child.log.push("disposed"));\n    }\n}\n`,
+      "store.ts": store,
+    };
+    expect(typeCodes(files)).toEqual([]);
+    const m = await mount(files);
+    const childModule = (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "Child.tsazor.js")).href)) as { default: { log: string[] } };
+    const { store: s } = await storeOf();
+    const child = m.renderer.getComponentState(2)!.component as unknown as { stop(): void };
+    child.stop();
+    s.emit(5);
+    await m.settle();
+    expect(m.html()).toContain("<p>0</p>"); // stopped: no re-render
+    click(m);
+    await m.settle();
+    // disposeSignal aborts first, then the observed subscriptions end.
+    expect(childModule.default.log).toEqual(["disposed", "hatch aborted"]);
+  });
+
+  it("observe in onParametersSet warns (development) when it observes the same source again", async () => {
+    const warnings: unknown[] = [];
+    const original = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.join(" "));
+    try {
+      const m = await mount({
+        "App.tsazor": `<Child label="@label" /><button @onclick="() => label = 'b'">b</button>\n@code {\n    label = "a";\n}\n`,
+        "Child.tsazor": `@import { store } from "./store"\n<p>@label</p>\n@code {\n    @Parameter() label = "";\n    override onParametersSet() {\n        this.observe(store);\n    }\n}\n`,
+        "store.ts": store,
+      });
+      click(m);
+      await m.settle();
+      expect(warnings.join("\n")).toContain("the same source is observed twice");
+      m.dispose();
+    } finally {
+      console.warn = original;
+    }
+  });
+});
+
 describe("lifecycle", () => {
   const files: Files = {
     "App.tsazor": `<button @onclick="() => show = !show">t</button>\n@if (show) {\n    <Child label="@label" />\n}\n@code {\n    show = true;\n    label = "a";\n}\n`,
@@ -644,9 +738,79 @@ describe("bind-format", () => {
   });
 });
 
-describe("component-bindings", () => {
-  const stepper = `<button @onclick="() => change(1)">+</button><span>@value</span>\n@code {\n    @Parameter() value = 0;\n    @Parameter() valueChanged?: EventCallback<number>;\n    async change(delta: number) {\n        await this.valueChanged?.invokeAsync(this.value + delta);\n    }\n}`;
+/** The explicit pair (Blazor track) and the `@Bindable()` short form (both tracks) — the same component. */
+const pairStepper = `<button @onclick="() => change(1)">+</button><span>@value</span>\n@code {\n    @Parameter() value = 0;\n    @Parameter() valueChanged?: EventCallback<number>;\n    async change(delta: number) {\n        await this.valueChanged?.invokeAsync(this.value + delta);\n    }\n}`;
+const bindableStepper = `<button @onclick="() => change(1)">+</button><span>@value</span>\n@code {\n    @Bindable() accessor value = 0;\n    change(delta: number) {\n        this.value += delta;\n    }\n}`;
 
+describe("component-bindings — @Bindable()", () => {
+  it("the lesson's Stepper is the @Bindable short form", () => {
+    const lesson = loadContent(path.join(appRoot, "content"))
+      .parts.flatMap((part) => part.chapters.flatMap((chapter) => chapter.lessons))
+      .find((l) => l.slug === "component-bindings")!;
+    expect(lesson.a["Stepper.tsazor"]).toContain("@Bindable() accessor value = 0;");
+  });
+
+  it("unbound, the component keeps its own value; the parent stays", async () => {
+    const m = await mount({ "App.tsazor": `<Stepper value="@guests" /><p>@guests</p>\n@code {\n    guests = 2;\n}`, "Stepper.tsazor": bindableStepper });
+    click(m);
+    await m.settle();
+    expect(m.html()).toBe("<button>+</button><span>3</span><p>2</p>");
+  });
+
+  it("assigning the value it already has invokes nothing", async () => {
+    const files = {
+      "App.tsazor": `<Stepper @bind-value="guests" @bind-value:after="changed" /><p>@calls</p>\n@code {\n    guests = 2;\n    calls = 0;\n    changed() { this.calls++; }\n}`,
+      "Stepper.tsazor": `<button @onclick="same">=</button>\n@code {\n    @Bindable() accessor value = 0;\n    same() { this.value = this.value; }\n}`,
+    };
+    const m = await mount(files);
+    click(m);
+    await m.settle();
+    expect(m.html()).toContain("<p>0</p>");
+  });
+
+  it("a plain field is TZS030 (the editor's fix inserts 'accessor')", () => {
+    const files = { "App.tsazor": `<p>@value</p>\n@code {\n    @Bindable() value = 0;\n}` };
+    expect(codes(files)).toEqual(["error:TZS030"]);
+    expect(messages(files)).toContain("@Bindable() needs an auto-accessor: write 'accessor value'");
+  });
+
+  it("the callback is a typed member: awaiting it explicitly type-checks", () => {
+    const files = { "App.tsazor": `<p>@value</p>\n@code {\n    @Bindable() accessor value = 0;\n    async jump(next: number) {\n        await this.valueChanged?.invokeAsync(next);\n    }\n}` };
+    expect(codes(files)).toEqual([]);
+    expect(typeCodes(files)).toEqual([]);
+  });
+
+  it("{ changed } names the callback for :event; { expression: true } adds valueExpression", async () => {
+    const m = await mount({
+      "App.tsazor": `<Picker @bind-value="model.size" @bind-value:event="onPick" /><p>@model.size</p>\n@code {\n    model = { size: 1 };\n}`,
+      "Picker.tsazor": `<button @onclick="() => value++">@valueExpression</button>\n@code {\n    @Bindable({ changed: "onPick", expression: true }) accessor value = 0;\n}`,
+    });
+    click(m);
+    await m.settle();
+    expect(m.html()).toBe("<button>size</button><p>2</p>");
+  });
+
+  it("a callback that fails reaches the ErrorBoundary, like an event handler's", async () => {
+    const original = console.error;
+    console.error = () => {};
+    try {
+      const m = await mount({
+        "App.tsazor": `<ErrorBoundary><ChildContent><Stepper @bind-value:get="guests" @bind-value:set="fail" /></ChildContent><ErrorContent>caught: @context</ErrorContent></ErrorBoundary>\n@code {\n    guests = 2;\n    fail(_value: number) { throw "nope"; }\n}`,
+        "Stepper.tsazor": bindableStepper,
+      });
+      click(m);
+      await m.settle();
+      expect(m.html()).toBe("caught: nope");
+    } finally {
+      console.error = original;
+    }
+  });
+});
+
+describe.each([
+  ["the explicit pair", pairStepper],
+  ["@Bindable()", bindableStepper],
+])("component-bindings — %s", (_form, stepper) => {
   for (const usage of [`<Stepper @bind-value="guests" />`, `<Stepper @bind-Value="guests" />`, `<Stepper value="@guests" valueChanged="(value) => guests = value" />`]) {
     it(`${usage} binds both ways and type-checks`, async () => {
       const files = { "App.tsazor": `${usage}<p>@guests</p>\n@code {\n    guests = 2;\n}`, "Stepper.tsazor": stepper };
@@ -674,8 +838,18 @@ describe("component-bindings", () => {
     expect(m.html()).toContain("<span>7</span>");
   });
 
-  it("without the binding, the child's proposal goes nowhere", async () => {
+  it("without the binding, the parent never hears about the change", async () => {
     const m = await mount({ "App.tsazor": `<Stepper value="@guests" /><p>@guests</p>\n@code {\n    guests = 2;\n}`, "Stepper.tsazor": stepper });
+    click(m);
+    await m.settle();
+    // The pair only proposes (the child shows 2); @Bindable keeps its own value (3).
+    expect(m.html()).toBe(`<button>+</button><span>${stepper === pairStepper ? 2 : 3}</span><p>2</p>`);
+  });
+
+  it(":get/:set — a setter that normalizes wins over the child's value", async () => {
+    const files = { "App.tsazor": `<Stepper @bind-value:get="guests" @bind-value:set="store" /><p>@guests</p>\n@code {\n    guests = 2;\n    store(value: number) { this.guests = Math.min(value, 2); }\n}`, "Stepper.tsazor": stepper };
+    expect(typeCodes(files)).toEqual([]);
+    const m = await mount(files);
     click(m);
     await m.settle();
     expect(m.html()).toBe("<button>+</button><span>2</span><p>2</p>");

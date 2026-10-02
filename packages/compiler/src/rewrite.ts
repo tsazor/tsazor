@@ -1,5 +1,6 @@
 import ts from "typescript";
 import { CodeScanner } from "./code-scanner.js";
+import { bindableMembersOf, synthesizedNames } from "./bindable.js";
 
 /**
  * Member rewriting over the TS AST (roadmap A4). C# lets markup and code
@@ -385,10 +386,10 @@ export function emptyMembers(): ClassMembers {
 }
 
 /** Members declared by `@code` text (a class body), collected syntactically. */
-export function collectBodyMembers(body: string, into: ClassMembers): void {
+export function collectBodyMembers(body: string, into: ClassMembers, synthesized = true): void {
   const file = ts.createSourceFile("members.ts", `class __tsazor_members {\n${body}\n}`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const cls = file.statements.find(ts.isClassDeclaration);
-  if (cls) addClassMembers(cls, into);
+  if (cls) addClassMembers(cls, into, synthesized);
 }
 
 /** Offset (within `body`) of the name of the first member called `name` declared by `@code` text. */
@@ -416,7 +417,7 @@ export function collectDefaultClassMembers(source: string, into: ClassMembers): 
   if (target) addClassMembers(target, into);
 }
 
-function addClassMembers(cls: ts.ClassLikeDeclaration, into: ClassMembers): void {
+function addClassMembers(cls: ts.ClassLikeDeclaration, into: ClassMembers, synthesized = true): void {
   for (const member of cls.members) {
     if (ts.isConstructorDeclaration(member)) {
       for (const parameter of member.parameters) {
@@ -430,6 +431,11 @@ function addClassMembers(cls: ts.ClassLikeDeclaration, into: ClassMembers): void
     const isStatic = ts.canHaveModifiers(member) && (ts.getModifiers(member)?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword) ?? false);
     (isStatic ? into.statics : into.instance).add(member.name.text);
     if (!isStatic && ts.isMethodDeclaration(member)) into.methods.add(member.name.text);
+  }
+  // `@Bindable()` synthesizes instance members (the change callback, …).
+  if (!synthesized) return;
+  for (const bindable of bindableMembersOf(cls, cls.getSourceFile())) {
+    for (const name of synthesizedNames(bindable)) into.instance.add(name);
   }
 }
 

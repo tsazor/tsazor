@@ -18,6 +18,7 @@ import { importStatements, parseImportDirective, type ImportInfo } from "./impor
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
 import { RUNTIME_MODULE, replaceIdentifiers } from "./metadata.js";
+import { bindableMembers } from "./bindable.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -405,6 +406,7 @@ class Codegen {
     const memberSource = memberCode.map((n) => n.code).join("\n");
     if (/@Parameter\s*\(/.test(memberSource)) this.runtimeImports.add("Parameter");
     if (/@CascadingParameter\s*\(/.test(memberSource)) this.runtimeImports.add("CascadingParameter");
+    if (/@Bindable\s*\(/.test(memberSource)) this.runtimeImports.add("Bindable");
     if (this.metadata.injects.length > 0 || /\binject\s*\(/.test(memberSource)) this.runtimeImports.add("inject");
     if (this.metadata.injects.length > 0) this.runtimeAliases.add("inject");
 
@@ -412,6 +414,10 @@ class Codegen {
     // and the @inject fields; base-class members fall under "otherwise ⇒ this.X".
     for (const block of memberCode) collectBodyMembers(block.code, this.members);
     if (this.options.codeBehindSource !== undefined) collectDefaultClassMembers(this.options.codeBehindSource, this.members);
+    // `@Bindable()` members: TZS030 on a non-accessor, `declare`s of what they synthesize.
+    const declaredMembers = emptyMembers();
+    for (const block of memberCode) collectBodyMembers(block.code, declaredMembers, false);
+    const bindableDeclarations = this.checkBindables(memberCode, declaredMembers);
     for (const inject of this.metadata.injects) this.members.instance.add(inject.name);
     this.checkRenderMethodConflict(memberCode);
 
@@ -500,6 +506,10 @@ class Codegen {
       this.emitCodeVerbatim(block.code, block.codeStart ?? { line: block.pos.line, column: 0 }, 2);
       this.line("");
     }
+    // `@Bindable()` (Tsazor extension): the members it synthesizes, typed
+    // (the decorator registers them at runtime; `declare` emits no field).
+    for (const declaration of bindableDeclarations) this.line(`  ${declaration}`);
+    if (bindableDeclarations.length > 0) this.line("");
 
     this.line(`  protected override buildRenderTree(${BUILDER}: ${alias("RenderTreeBuilder")}): void {`);
     const bodyStart = this.writer.lineCount;
@@ -611,6 +621,40 @@ class Codegen {
         this.diagnostics.error("TZS020", textRange({ line: 1, column: 0 }, ""), `'buildRenderTree' in the code-behind class would be replaced by the generated member. ${hint}`);
       }
     }
+  }
+
+  /**
+   * `@Bindable()` in `@code` (Tsazor extension). On anything but an
+   * auto-accessor it is TZS030 (standard field decorators cannot intercept
+   * assignments) with the fix "insert 'accessor'". Returns the `declare`
+   * lines of the synthesized members (`valueChanged?: EventCallback<T>`, …)
+   * the `@code` does not declare itself, so `this.valueChanged` is typed.
+   */
+  private checkBindables(memberCode: CodeBlockNode[], declared: { instance: ReadonlySet<string> }): string[] {
+    const declarations: string[] = [];
+    for (const block of memberCode) {
+      for (const bindable of bindableMembers(block.code)) {
+        if (!bindable.accessor) {
+          const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, bindable.nameOffset)) : block.pos;
+          const range = textRange(pos, bindable.name);
+          this.diagnostics.error(
+            "TZS030",
+            range,
+            `@Bindable() needs an auto-accessor: write 'accessor ${bindable.name}'. A standard field decorator cannot intercept assignments, so the change callback would never fire.`,
+            { title: "Insert 'accessor'", edits: [{ pos, endPos: pos, text: "accessor " }] },
+          );
+          continue;
+        }
+        const type = bindable.type ?? bindable.inferredType ?? "unknown";
+        if (!declared.instance.has(bindable.changed)) {
+          declarations.push(`declare ${bindable.changed}?: ${this.eventCallback()}<${type}>;`);
+        }
+        if (bindable.expression !== undefined && !declared.instance.has(bindable.expression)) {
+          declarations.push(`declare ${bindable.expression}?: string;`);
+        }
+      }
+    }
+    return declarations;
   }
 
   /** Merges the `@authorize` directives into the route metadata. */
@@ -2269,7 +2313,10 @@ class Codegen {
       ? this.componentParameter(component, target, attr, attr.bindTarget !== undefined ? { line: pos.line, column: pos.column + "@bind-".length } : undefined)
       : undefined;
     const changedParameter = component ? this.componentParameter(component, changed, attr.modifierSpans?.event ?? attr) : undefined;
-    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(targetParameter?.name ?? target)}, ${display});`, pos);
+    // 2.4: the bound value is checked against the target parameter's type
+    // (an explicit pair and a @Bindable() parameter alike).
+    const checkedDisplay = targetParameter && !targetParameter.uncertain ? this.optionallyCheckedValue(display, targetParameter) : display;
+    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(targetParameter?.name ?? target)}, ${checkedDisplay});`, pos);
     // InputBase keys EditContext validation on a plain field-name string
     // (v1 contract): derive it from the bound member path — `this.model.name`
     // and `Model!.name` register under "name", matching the validators map's

@@ -15,7 +15,7 @@
                         <ol>
                             @foreach (const ref of chapter.lessons) {
                                 <li>
-                                    <a href="@(`${track}/${ref.lesson.slug}`)"
+                                    <a href="@(`${lessonTrack}/${ref.lesson.slug}`)"
                                        class="@(ref.lesson.slug === current.lesson.slug ? "current" : null)"
                                        @onclick="close">@titleOf(ref)</a>
                                 </li>
@@ -29,7 +29,7 @@
 </div>
 
 @code {
-    @Parameter() track: Track = "ts";
+    @Parameter() lessonTrack: Track = "ts";
     @Parameter() current!: LessonRef;
     @Parameter() lessons: LessonRef[] = [];
 
@@ -49,7 +49,7 @@
     }
 
     private titleOf(ref: LessonRef): string {
-        return ref.lesson.text[this.track]?.title ?? ref.lesson.slug;
+        return ref.lesson.text[this.lessonTrack]?.title ?? ref.lesson.slug;
     }
 
     private toggle(): void {

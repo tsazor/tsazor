@@ -159,6 +159,7 @@ export class Renderer {
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);
     (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.track(promise);
+    (state.renderHandle as { reportError?: unknown }).reportError = (error: unknown, phase: RenderErrorPhase) => this.handleComponentError(error, state, phase);
     (state.renderHandle as { sectionRegistry?: unknown }).sectionRegistry = this.sectionRegistry;
     Object.defineProperty(state.renderHandle, "isRenderingInProgress", { get: () => this.batchInProgress });
     component.renderHandle = state.renderHandle;
@@ -409,6 +410,9 @@ export class Renderer {
 
   private disposeInstance(state: ComponentState): void {
     const component = state.component as unknown as { dispose?: () => void; disposeAsync?: () => unknown };
+    // disposeSignal / track teardown first: the user's dispose already sees
+    // an aborted disposeSignal. Never throws (subscription errors are routed).
+    state.component.disposeInternal();
     try {
       if (typeof component.disposeAsync === "function") {
         const pending = component.disposeAsync();

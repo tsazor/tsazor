@@ -82,7 +82,10 @@ export class ComponentState {
       },
       isRenderingInProgress: false,
       track: (promise) => promise,
-    } as RenderHandle;
+      reportError: (error: unknown): void => {
+        throw error;
+      },
+    } as Partial<RenderHandle> as RenderHandle;
   }
 }
 

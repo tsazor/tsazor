@@ -29,6 +29,9 @@ dispose() {
 }
 ```
 
+(With the previous lesson's `this.observe((signal, notify) => { … })`, the interval would stop
+by itself.)
+
 > **Coming from Blazor:** there are no separate `…Async` methods. A hook may return a
 > promise — `override async onInitialized()` *is* `OnInitializedAsync`, rendered around the
 > `await` the way Blazor does it. Disposal needs no `@implements IDisposable`: the renderer

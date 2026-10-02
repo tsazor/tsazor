@@ -4,28 +4,44 @@ focus: App.tsazor
 gate: click .stepper button[aria-label=More]
 ---
 
-`@bind` isn't limited to inputs. Look at `Stepper.tsazor`: it shows a `value` parameter and,
-when a button is clicked, doesn't change `value` itself — it reports the new number through
-`valueChanged`. The parent owns the state; the stepper only proposes changes.
+`@bind` isn't limited to inputs. Look at `Stepper.tsazor`: its `value` is declared with
+`@Bindable()` instead of `@Parameter()` — a parameter that works in both directions. The
+buttons simply assign `this.value`.
 
-Right now `App` passes the value down but doesn't listen, so the buttons do nothing. Bind
-it instead:
+Click **+**: the stepper counts, but "Table for 2" doesn't move. `App` passes a starting
+value down and never hears about changes. Bind it instead:
 
 ```tsazor
 <Stepper @bind-value="guests" />
 ```
 
-Click **+**. `@bind-value` is shorthand for a parameter *and* its change event:
+Now both numbers move together. Every assignment inside the stepper reports the new number
+up, `App` stores it in `guests` and re-renders, and the value flows back down. The parent
+owns the state; whoever uses the stepper decides where the value lives.
+
+**What `@Bindable()` means.** It's short for a parameter plus a change callback:
+
+```ts
+@Parameter() value = 0;
+@Parameter() valueChanged?: EventCallback<number>;
+```
+
+— and assigning `this.value` sets the value *and* invokes `valueChanged` with it (assigning
+the value it already has invokes nothing). `@bind-value`, in turn, is shorthand for passing
+both:
 
 ```tsazor
 <Stepper value="@guests" valueChanged="(value) => guests = value" />
 ```
 
-The convention is the whole contract: a parameter `x` plus an `EventCallback` named
-`xChanged` make `@bind-x` work on any component. Since `valueChanged` is an
-`EventCallback<number>`, `App` re-renders after the assignment, and the new value flows back
-down into the stepper.
+So the convention is the whole contract: a parameter `x` plus an `EventCallback` named
+`xChanged` make `@bind-x` work on any component, and `@Bindable()` writes that pair for you.
+Without a binding, as you saw first, the component simply keeps its own value.
 
-This is the pattern for every reusable input — a date picker, a rating, a color chooser:
-the component stays stateless about the value, and whoever uses it decides where it lives.
+`accessor` is standard TypeScript (an auto-accessor). A decorator on a plain field can't see
+assignments; one on an accessor can. Forget it and the compiler says so (TZS030), with a fix
+that inserts it. The callback is a real, typed member too: code that has to wait for the
+parent writes `await this.valueChanged?.invokeAsync(next)` itself.
+
+This is the pattern for every reusable input — a date picker, a rating, a color chooser.
 `@bind-value:after` works here as well, like on elements.

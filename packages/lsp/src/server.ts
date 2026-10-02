@@ -26,7 +26,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { analyzeSource, definitionAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
+import { analyzeSource, bindableHoverAt, bindableRefactorsAt, definitionAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
 import { completeAt, type CompletionKind } from "./completions.js";
 import { ProjectRegistry } from "./projects.js";
 import type { ShadowEntry } from "./ts-service.js";
@@ -232,12 +232,15 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
     const pos = params.position;
+    const current = await analyzed(document);
+    // A @Bindable() member: the desugared pair, above the TS layer's own hover.
+    const bindable = bindableHoverAt(current, pos.line, pos.character);
     const entry = await entryFor(document);
     if (entry) {
       const info = tsHover(registry.projectFor(uriToPath(document.uri)).service, entry, pos.line, pos.character);
-      if (info) return { contents: { kind: "markdown", value: info.markdown } };
+      if (info) return { contents: { kind: "markdown", value: bindable ? `${bindable.markdown}\n\n---\n\n${info.markdown}` : info.markdown } };
     }
-    const current = await analyzed(document);
+    if (bindable) return { contents: { kind: "markdown", value: bindable.markdown } };
     const info = hoverAt(current, pos.line, pos.character);
     if (!info) return null;
     const contents: MarkupContent = { kind: "markdown", value: info.markdown };
@@ -354,13 +357,20 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
     const current = await analyzed(document);
-    return quickFixesAt(current, params.range).map((fix): CodeAction => ({
+    const fixes = quickFixesAt(current, params.range).map((fix): CodeAction => ({
       title: fix.title,
       kind: CodeActionKind.QuickFix,
       isPreferred: true,
       diagnostics: params.context.diagnostics.filter((d) => d.code === fix.diagnostic.code && d.message === fix.diagnostic.message),
       edit: { changes: { [document.uri]: fix.edits } },
     }));
+    // Tsazor extension offers (no diagnostic): the codemod keeps the Blazor form.
+    const refactors = bindableRefactorsAt(current, params.range).map((refactor): CodeAction => ({
+      title: refactor.title,
+      kind: CodeActionKind.RefactorRewrite,
+      edit: { changes: { [document.uri]: refactor.edits } },
+    }));
+    return [...fixes, ...refactors];
   });
 
   return {
@@ -368,7 +378,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       hoverProvider: true,
       definitionProvider: true,
-      codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix] },
+      codeActionProvider: { codeActionKinds: [CodeActionKind.QuickFix, CodeActionKind.RefactorRewrite] },
       completionProvider: { triggerCharacters: ["<", "@", " ", "."], resolveProvider: true },
     },
   };

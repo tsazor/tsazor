@@ -25,14 +25,14 @@
 </div>
 
 @code {
-    private unsub: () => void = () => {};
     private reversed: PricePoint[] = [];
 
     protected override onInitialized(): void {
-        this.unsub = this.Store.subscribe(() => {
-            this.reversed = [...this.Store.points].reverse().slice(0, 120);
-            this.stateHasChanged();
-        });
+        this.observe(this.Store, () => this.updateRows());
+        this.updateRows();
+    }
+
+    private updateRows(): void {
         this.reversed = [...this.Store.points].reverse().slice(0, 120);
     }
 
@@ -42,9 +42,5 @@
 
     private cellPrice(price: number | undefined): string {
         return price === undefined ? "—" : price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    dispose(): void {
-        this.unsub();
     }
 }

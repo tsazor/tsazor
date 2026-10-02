@@ -2,8 +2,10 @@ import type { ParameterInfo, ParameterMeta } from "./parameter-metadata.js";
 import type { ParameterView } from "./parameter-view.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import type { RenderHandle } from "../renderer/render-handle.js";
+import type { RenderErrorPhase } from "../renderer/renderer.js";
 import { findParameterMetadata, getParameterInfo } from "./parameter-metadata.js";
 import { getCurrentServices } from "../di/service-provider.js";
+import { DEV, release, type ObserveListener, type ObserveSource, type ObserveTeardown } from "./observe.js";
 
 /**
  * The settled promise a lifecycle returns when it completed synchronously;
@@ -29,6 +31,11 @@ export abstract class ComponentBase {
   #firstRenderDone = false;
   #hasCalledOnAfterRender = false;
   readonly #afterRenderCallbacks: Array<(firstRender: boolean) => void | Promise<void>> = [];
+  #disposed = false;
+  /** Created on first use of disposeSignal (most components never ask). */
+  #disposeController: AbortController | null = null;
+  /** Active `observe` subscriptions: source → stop (null until the first observe). */
+  #observed: Set<{ source: unknown; stop: () => void }> | null = null;
 
   /**
    * Blazor's SetParametersAsync: parameter values are applied first (an
@@ -100,7 +107,8 @@ export abstract class ComponentBase {
       const meta = propertyName ? metadata.get(propertyName) : undefined;
       if (meta) {
         if (meta.captureUnmatchedValues) captureSetExplicitly = true;
-        (this as unknown as Record<string, unknown>)[meta.propertyName] = value;
+        // @Bindable: the backing slot, so the parent's value never echoes back.
+        (this as unknown as Record<PropertyKey, unknown>)[meta.store ?? meta.propertyName] = value;
       } else if (captureProperty !== null) {
         (unmatched ??= {})[name] = value;
       } else {
@@ -241,6 +249,141 @@ export abstract class ComponentBase {
       throw new Error(`No service provider is active for this component. inject(${String((token as { name?: string }).name)}) failed.`);
     }
     return provider.get(token);
+  }
+
+  /**
+   * Tsazor extension: an `AbortSignal` that aborts when the component is
+   * disposed. Anything that takes a signal tears itself down with the
+   * component: `addEventListener(…, { signal })`, `fetch(url, { signal })`.
+   */
+  get disposeSignal(): AbortSignal {
+    if (this.#disposeController === null) {
+      this.#disposeController = new AbortController();
+      if (this.#disposed) this.#disposeController.abort();
+    }
+    return this.#disposeController.signal;
+  }
+
+  /**
+   * Tsazor extension: subscribes to an external source for the component's
+   * lifetime. Every notification runs `onNext` (if given) and then requests
+   * a render through the render queue, so a burst of notifications renders
+   * once. The subscription ends when the component is disposed, or earlier
+   * through the returned function. An async subscription (`subscribe`
+   * returns a promise) that resolves after that is unsubscribed right away.
+   * Errors in `onNext` and source errors take the lifecycle error path
+   * (nearest ErrorBoundary). Blazor form: subscribe + `InvokeAsync(StateHasChanged)`
+   * + unsubscribe in `Dispose`.
+   */
+  protected observe<T>(source: ObserveSource<T>, onNext?: (value: T) => void): () => void {
+    if (this.#disposed) {
+      // eslint-disable-next-line no-console
+      if (DEV) console.warn(`[tsazor] ${this.constructor.name}: observe() after dispose is ignored.`);
+      return () => {};
+    }
+    const observed = (this.#observed ??= new Set());
+    if (DEV) {
+      for (const entry of observed) {
+        if (entry.source === source) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[tsazor] ${this.constructor.name}: the same source is observed twice — each observe() is a new subscription. ` +
+              "Observe once in onInitialized, or stop the previous one with the function observe() returns.",
+          );
+          break;
+        }
+      }
+    }
+    let active = true;
+    let teardown: ObserveTeardown;
+    let controller: AbortController | undefined;
+    const fail = (error: unknown): void => {
+      if (active) this.reportErrorInternal(error, "lifecycle");
+    };
+    const notify = (value?: T): void => {
+      if (!active) return;
+      if (onNext !== undefined) {
+        try {
+          onNext.call(this, value as T);
+        } catch (error) {
+          fail(error);
+          return;
+        }
+      }
+      this.stateHasChangedInternal();
+    };
+    const entry = {
+      source,
+      stop: (): void => {
+        if (!active) return;
+        active = false;
+        observed.delete(entry);
+        controller?.abort();
+        const pending = release(teardown);
+        if (isPromiseLike(pending)) Promise.resolve(pending).catch((error) => this.reportErrorInternal(error, "dispose"));
+      },
+    };
+    observed.add(entry);
+    if (typeof source === "function") {
+      controller = new AbortController();
+      source(controller.signal, notify);
+    } else {
+      const noop = (): void => {};
+      const listener: ObserveListener<T> = Object.assign((value?: T) => notify(value), {
+        next: notify,
+        error: fail,
+        complete: noop,
+        onNext: notify,
+        onError: fail,
+        onComplete: noop,
+      });
+      const result = source.subscribe(listener);
+      if (isPromiseLike(result)) {
+        // An async handshake. Not tracked for waitUntilIdle: a subscription is
+        // open-ended (a pending handshake must not stall idle/prerendering).
+        // A handle that arrives after stop/dispose is released at once.
+        void Promise.resolve(result as PromiseLike<ObserveTeardown>).then(
+          (handle) => {
+            if (active) teardown = handle;
+            else release(handle);
+          },
+          fail,
+        );
+      } else {
+        teardown = result as ObserveTeardown;
+      }
+    }
+    return entry.stop;
+  }
+
+  /**
+   * @internal Routes a failure of work outside the render pipeline
+   * (`@Bindable` callbacks, `observe`) to the renderer's error path; an
+   * unmounted component logs it.
+   */
+  reportErrorInternal(error: unknown, phase: RenderErrorPhase): void {
+    if (this.renderHandle) this.renderHandle.reportError(error, phase);
+    // eslint-disable-next-line no-console
+    else console.error(`[tsazor] ${this.constructor.name}:`, error);
+  }
+
+  /**
+   * @internal Called by the renderer when it disposes the component, before
+   * dispose/disposeAsync: aborts disposeSignal and ends every observed
+   * subscription. Teardown failures go to the dispose error path.
+   */
+  disposeInternal(): void {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#disposeController?.abort();
+    if (this.#observed === null) return;
+    for (const entry of [...this.#observed]) {
+      try {
+        entry.stop();
+      } catch (error) {
+        this.reportErrorInternal(error, "dispose");
+      }
+    }
   }
 }
 

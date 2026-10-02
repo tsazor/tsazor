@@ -214,6 +214,24 @@ async function main() {
     await previewClick("button");
     check((await waitForPreview(page, "button", "Clicked 1 time")).includes("Clicked 1 time"), "ch2 State: a click re-renders the counter");
 
+    await page.goto(`${APP}/ts/external-data`);
+    check((await waitForPreview(page, ".listeners", "Listening: 0")).includes("Listening: 0"), "ch2 External data: the start state does not listen");
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, ".listeners", "Listening: 1");
+    const priceBefore = await previewText(page, ".price");
+    await page.waitForTimeout(1200);
+    const priceAfter = await previewText(page, ".price");
+    check(priceBefore !== priceAfter && /ACME: \d+\.\d\d/.test(priceAfter), `ch2 External data: this.observe re-renders on every tick (${priceBefore} → ${priceAfter})`);
+    await previewClick("button");
+    await previewClick("button");
+    check((await waitForPreview(page, ".listeners", "Listening: 1")).includes("Listening: 1"), "ch2 External data: hide/show keeps one subscription (teardown on dispose)");
+
+    await page.goto(`${APP}/ts/component-bindings`);
+    await page.click("button:has-text('Solve')");
+    await waitForPreview(page, "body", "Table for 2");
+    await previewClick(".stepper button[aria-label=More]");
+    check((await waitForPreview(page, "body", "Table for 3")).includes("Table for 3"), "ch6 Bindings: @bind-value on a @Bindable component writes back");
+
     await page.goto(`${APP}/ts/typed-checks`);
     await waitForPreview(page, "h1", "Welcome back");
     await page.waitForSelector(".problem .code:has-text('TS2339')", { timeout: 30_000 }).catch(() => null);

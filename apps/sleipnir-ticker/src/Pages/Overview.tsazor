@@ -66,14 +66,8 @@
 </div>
 
 @code {
-    private unsub: () => void = () => {};
-
     protected override onInitialized(): void {
-        // Page re-renders on every store tick (push, not polling).
-        this.unsub = this.Store.subscribe(() => this.stateHasChanged());
-    }
-
-    dispose(): void {
-        this.unsub();
+        // Page re-renders on every store tick (push, not polling); unsubscribed on dispose.
+        this.observe(this.Store);
     }
 }

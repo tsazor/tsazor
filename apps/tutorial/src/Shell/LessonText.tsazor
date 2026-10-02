@@ -6,17 +6,17 @@
     </div>
     <footer class="pager">
         @if (previous) {
-            <a class="pager-link" href="@(`${track}/${previous.lesson.slug}`)">
+            <a class="pager-link" href="@(`${lessonTrack}/${previous.lesson.slug}`)">
                 <span class="pager-label">Previous</span>
-                <span>@previous.lesson.text[track]?.title</span>
+                <span>@previous.lesson.text[lessonTrack]?.title</span>
             </a>
         } else {
             <span></span>
         }
         @if (next) {
-            <a class="pager-link pager-link--next" href="@(`${track}/${next.lesson.slug}`)">
+            <a class="pager-link pager-link--next" href="@(`${lessonTrack}/${next.lesson.slug}`)">
                 <span class="pager-label">Next</span>
-                <span>@next.lesson.text[track]?.title</span>
+                <span>@next.lesson.text[lessonTrack]?.title</span>
             </a>
         }
     </footer>
@@ -24,7 +24,7 @@
 
 @code {
     @Parameter() current!: LessonRef;
-    @Parameter() track: Track = "ts";
+    @Parameter() lessonTrack: Track = "ts";
     @Parameter() previous?: LessonRef;
     @Parameter() next?: LessonRef;
 
@@ -32,7 +32,7 @@
     private shownSlug = "";
 
     private get text() {
-        return this.current.lesson.text[this.track];
+        return this.current.lesson.text[this.lessonTrack];
     }
 
     protected override onAfterRender(): void {

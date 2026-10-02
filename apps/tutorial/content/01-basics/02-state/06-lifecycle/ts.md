@@ -41,5 +41,7 @@ dispose() {
 ```
 
 Release everything a component started in `dispose()`: intervals, event listeners on
-`window`, subscriptions. And use `onAfterRender` when you need the actual DOM elements —
-we'll get to that in the chapter on element references.
+`window`, subscriptions — unless `this.observe` or `this.disposeSignal` from the previous
+lesson already take care of them. The interval here could be
+`this.observe((signal, notify) => { … })` as well. And use `onAfterRender` when you need the
+actual DOM elements — we'll get to that in the chapter on element references.
