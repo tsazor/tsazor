@@ -47,6 +47,23 @@ In contested cases, the **TypeScript convention wins, not Blazor's**. Fidelity t
 markup, directives and the semantics of the component model; where it collides with idiomatic
 TypeScript (naming, types, syntax, language features), TypeScript wins.
 
+## Parity first, then scale
+
+Tsazor targets a different problem space than Blazor: public web apps for very large audiences,
+where bundle size, startup time and rendering cost matter — a place nobody would deploy Blazor.
+So Blazor compatibility is a **starting point, not a permanent constraint**. It is applied in
+stages and with restraint:
+
+- **Version 1: Blazor parity.** Every valid `.razor` construct keeps its Blazor meaning;
+  nothing is reinterpreted. Extensions are allowed only as a superset: on the TypeScript side
+  (decorators, runtime API) or in markup syntax that Razor rejects or gives no meaning to. Each
+  extension desugars to the Blazor form with identical semantics, is marked "Tsazor extension"
+  in the docs, and the codemod always emits the Blazor form.
+- **After version 1: deliberate divergence.** Where Blazor's semantics stand in the way of scale
+  (performance, payload, rendering), Tsazor may diverge, but only through an explicit decision
+  record (what changes, why, which ports break, what the codemod/diagnostic does about it).
+  Each divergence must earn its keep. Convenience alone is not a reason.
+
 ## The test question for new features
 
 Would a TypeScript developer without a .NET background find this natural — and does a Blazor
