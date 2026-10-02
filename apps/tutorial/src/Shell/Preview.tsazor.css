@@ -60,6 +60,24 @@
     text-overflow: ellipsis;
 }
 
+/* The app's URL (routing lessons), drawn like an address field on the bar. */
+.page-url {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: -0.35rem 0.75rem -0.36rem;
+    padding: 0.3rem 0.8rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: #fff;
+    color: var(--fg);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 .bar .status {
     margin-left: auto;
 }

@@ -46,6 +46,24 @@ export interface ProjectBuild {
    * without it the preview mounts the entry component.
    */
   program?: string;
+  /**
+   * One entry per `@page` template of the project's pages (the counterpart of
+   * a real app's `virtual:tsazor-routes` manifest). The preview/harness
+   * import the modules and hand the RouteEntry[] to createTsazorApp.
+   */
+  routes: RouteRequest[];
+}
+
+/** A `@page` route of the built project, by module id (imported at mount time). */
+export interface RouteRequest {
+  /** The route template as written in the @page directive. */
+  template: string;
+  /** Module id of the page component (`$app/Pages/Orders.tsazor`). */
+  module: string;
+  /** Module id of the page's layout, when its @layout resolves to a project file. */
+  layout?: string;
+  /** Authorization requirements of the page's @authorize (consumed by AuthorizeRouteView). */
+  authorize?: { roles?: string[]; policy?: string };
 }
 
 /**

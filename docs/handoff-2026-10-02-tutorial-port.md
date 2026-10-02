@@ -108,9 +108,24 @@ Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte r
    Compiler-Support, 28 Conformance-Tests, `@tsazor/testing`-Fixture `createFakeLocalization`,
    language-reference-Sektion. **Noch offen aus E8:** Part-3-Lokalisierungs-Lektion (M4+),
    E12-`Decimal`-Komposition mit `@bind:culture`.
-2. Danach Tutorial M4 (Teil 3: Routing braucht eine In-Memory-History im srcdoc-Preview,
-   H.7; Hash-Routing evtl. als Lektion — die Lokalisierungs-Lektion kommt hier dazu), R1 CI +
-   S1 API-Snapshot.
+2. Tutorial M4 (Teil 3 „Applications"): **Routing-Kapitel erledigt** (2026-10-02, noch
+   nicht committet): 6 Lektionen `content/03-applications/01-routing/` (01-pages …
+   06-not-found, kumulativer App-Zustand, app-b wie üblich nur geänderte Dateien),
+   Engine-Prerequisite **H.7 In-Memory-History** umgesetzt (`runtime/src/navigation/memory-history.ts`
+   + Tests; Preview zeigt die URL im srcdoc-iframe), 18 Claims-Tests
+   `test/claims-part3.test.ts` pinnen jeden Text-Aussagen ans echte Compiler/Runtime
+   (Route-Manifest, Interception, `:int`-Konvertierung, Optional-segment-liefert-null
+   — Blazor-Parität!, NavLink-Semantik inkl. `class=""` inaktiv + Prefix/All-Falle,
+   TS2339 ohne Import, navigateTo, LocationChanged + registerLocationChangingHandler,
+   Query-Parameter inkl. dokumentiertem Throw, NotFound). Tutorial-Gesamt: 414/414 grün.
+   **Harness-Lektion:** ein failender Assert überspringt `dispose()` — die lebende App
+   behält ihren document-weiten Click-Listener und schluckt die Klicks des nächsten
+   Tests; Fix: `live: Mounted[]` + `afterEach`-Disposal (claims-part3.test.ts:30-34).
+   **Offen in M4:** Forms (EditForm, Validierung, InputFile), Auth (AuthorizeView),
+   Talking to a backend, Testing, Next steps; die Lokalisierungs-Lektion (E8-Follow-up)
+   und Hash-Routing evtl. als Lektion. Danach R1 CI + S1 API-Snapshot. Optional:
+   Echte-Browser-Routing-Prüfung in `scripts/verify.mjs` (Deep-Link + URL-Bar nach
+   Klick) — happy-dom kann das srcdoc-Memory-History-Verhalten nicht verifizieren.
 3. Bundle-Analyse: erst vor dem Release-Kandidaten. Die Bundle-Größe ist laut User kein Blocker
    (+15 KB gz zum Svelte-Original, cachebar).
 

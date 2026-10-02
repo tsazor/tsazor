@@ -7,6 +7,9 @@
         @if (pageTitle) {
             <span class="page-title" title="The app's document title (PageTitle)">@pageTitle</span>
         }
+        @if (pageUrl) {
+            <span class="page-url" title="The app's URL (in-memory history — the preview itself is a sandboxed document)">@pageUrl</span>
+        }
         <span class="status status--@status">@statusText</span>
     </div>
     <div class="frames @(stale ? "frames--stale" : null)" @ref="frames"></div>
@@ -34,6 +37,8 @@
     private messages: PreviewMessage[] = [];
     /** The running app's document title, shown like a browser tab. */
     private pageTitle = "";
+    /** The running app's URL (path + query), shown like an address bar (routing lessons). */
+    private pageUrl = "";
 
     private get statusText(): string {
         switch (this.status) {
@@ -60,6 +65,16 @@
                 },
                 onTitle: (title) => {
                     this.pageTitle = title;
+                    this.stateHasChanged();
+                },
+                onUrl: (url) => {
+                    // The full logical URL, but the bar shows the route: path + query.
+                    try {
+                        const parsed = new URL(url);
+                        this.pageUrl = `${parsed.pathname}${parsed.search}`;
+                    } catch {
+                        this.pageUrl = url;
+                    }
                     this.stateHasChanged();
                 },
             });

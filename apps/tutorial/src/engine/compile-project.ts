@@ -21,9 +21,9 @@ import { eachMapping, originalPositionFor, TraceMap } from "@jridgewell/trace-ma
 import { basename, classNameForFile, createResolver, resolveModuleFile } from "./resolve.js";
 import { scopeCss, scopeHashFor } from "./scoped-css.js";
 
-import { MODULE_PREFIX, type CompiledModule, type Diagnostic, type Files, type ProjectBuild } from "./types.js";
+import { MODULE_PREFIX, type CompiledModule, type Diagnostic, type Files, type ProjectBuild, type RouteRequest } from "./types.js";
 
-export { MODULE_PREFIX, originalPosition, type CompiledModule, type Diagnostic, type Files, type ProjectBuild } from "./types.js";
+export { MODULE_PREFIX, originalPosition, type CompiledModule, type Diagnostic, type Files, type ProjectBuild, type RouteRequest } from "./types.js";
 
 export interface BuildOptions {
   /** Entry component file (default `App.tsazor`). */
@@ -53,6 +53,7 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
   const diagnostics: Diagnostic[] = [];
   const modules: Record<string, CompiledModule> = {};
   const cssParts: string[] = [];
+  const routes: RouteRequest[] = [];
   const entry = options.entry ?? "App.tsazor";
 
   const paths = Object.keys(files).sort();
@@ -68,7 +69,7 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
         diagnoseImports(file, source, resolver, diagnostics);
         continue;
       }
-      const built = buildComponent(files, file, resolver, diagnostics);
+      const built = buildComponent(files, file, resolver, diagnostics, routes);
       if (built) modules[built.id] = built;
     } else if (file.endsWith(".ts")) {
       const built = transpile(files, file, source, undefined, diagnostics);
@@ -76,7 +77,7 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
     }
   }
 
-  const result: ProjectBuild = { modules, css: cssParts.join("\n"), diagnostics };
+  const result: ProjectBuild = { modules, css: cssParts.join("\n"), diagnostics, routes };
   if (modules[moduleIdFor(entry)]) result.entry = moduleIdFor(entry);
   if (modules[moduleIdFor(PROGRAM)]) result.program = moduleIdFor(PROGRAM);
   return result;
@@ -114,7 +115,13 @@ function diagnoseImports(file: string, source: string, resolver: ReturnType<type
   }
 }
 
-function buildComponent(files: Files, file: string, resolver: ReturnType<typeof createResolver>, diagnostics: Diagnostic[]): CompiledModule | undefined {
+function buildComponent(
+  files: Files,
+  file: string,
+  resolver: ReturnType<typeof createResolver>,
+  diagnostics: Diagnostic[],
+  routes: RouteRequest[],
+): CompiledModule | undefined {
   const className = classNameForFile(file);
   const extraImports: string[] = [];
   const codeBehindFile = `${file}.ts`;
@@ -139,7 +146,37 @@ function buildComponent(files: Files, file: string, resolver: ReturnType<typeof 
     diagnostics.push(fromCompiler(file, diagnostic));
   }
   if (compiled.diagnostics.hasErrors) return undefined;
+  collectRoutes(files, file, resolver, compiled.metadata, routes);
   return transpile(files, file, compiled.code, compiled.map, diagnostics);
+}
+
+/**
+ * The route manifest: one RouteRequest per @page template (the in-browser
+ * counterpart of a real app's `virtual:tsazor-routes`, which the Vite plugin
+ * scans from disk). A @layout resolves like a tag: the named file in the
+ * page's folder or an enclosing one.
+ */
+function collectRoutes(
+  files: Files,
+  file: string,
+  resolver: ReturnType<typeof createResolver>,
+  metadata: ReturnType<typeof compile>["metadata"],
+  routes: RouteRequest[],
+): void {
+  if (metadata.routeTemplates.length === 0) return;
+  const options = resolver.optionsFor(file);
+  let layout: string | undefined;
+  if (metadata.layout) {
+    const resolved = options.resolveComponent?.(metadata.layout, []) ?? null;
+    layout = resolved ? resolveModuleFile(files, resolved.specifier, file) : undefined;
+  }
+  const authorize = metadata.authorize ? (metadata.authorizeData ?? {}) : undefined;
+  for (const template of metadata.routeTemplates) {
+    const request: RouteRequest = { template, module: moduleIdFor(file) };
+    if (layout) request.layout = moduleIdFor(layout);
+    if (authorize) request.authorize = authorize;
+    routes.push(request);
+  }
 }
 
 function transpile(files: Files, file: string, source: string, innerMap: string | undefined, diagnostics: Diagnostic[]): CompiledModule | undefined {

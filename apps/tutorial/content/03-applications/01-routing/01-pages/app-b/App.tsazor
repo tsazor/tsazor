@@ -1,0 +1,14 @@
+<nav class="menu">
+    <a href="/">Home</a>
+    <a href="/about">About</a>
+</nav>
+<main>
+    <Router>
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" />
+        </Found>
+        <NotFound>
+            <p>Nothing here.</p>
+        </NotFound>
+    </Router>
+</main>

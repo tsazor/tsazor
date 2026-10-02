@@ -1,0 +1,6 @@
+@page "/orders/{id:int}"
+<h2>Order #@id</h2>
+
+@code {
+    @Parameter() id = 0;
+}

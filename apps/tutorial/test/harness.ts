@@ -11,12 +11,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   HeadOutlet,
+  MemoryHistory,
   NavigationManager,
   Renderer,
+  RouteManifest,
   ServiceCollection,
   type ComponentBase,
   type ComponentState,
   type RenderError,
+  type RouteEntry,
   type TsazorAppOptions,
   type Token,
 } from "@tsazor/testing";
@@ -68,6 +71,8 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
     (await import(pathToFileURL(path.join(dir, `${id.slice(MODULE_PREFIX.length)}.js`)).href)) as Record<string, unknown>;
   let root: TsazorAppOptions["root"];
   let services: TsazorAppOptions["services"];
+  /** A Program.ts may pass its own routes (as createTsazorApp's `routes` option). */
+  let programRoutes: RouteEntry[] | undefined;
   if (build.program) {
     const globals = globalThis as { __tsazorGateApp?: TsazorAppOptions };
     delete globals.__tsazorGateApp;
@@ -76,14 +81,31 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
     if (!options) throw new Error("Program.ts did not call createTsazorApp");
     root = options.root;
     services = options.services;
+    programRoutes = options.routes as RouteEntry[] | undefined;
   } else {
     root = (await load(build.entry!)).default as TsazorAppOptions["root"];
   }
 
-  // As createTsazorApp: a NavigationManager, the app's registrations, one renderer, two roots.
+  // As createTsazorApp: the @page routes (a routing project's manifest), an
+  // in-memory NavigationManager (the gate has no URL bar either), the app's
+  // registrations, one renderer, two roots.
   const collection = new ServiceCollection();
-  const navigation = new NavigationManager();
+  const history = new MemoryHistory(document.baseURI);
+  const navigation = new NavigationManager({ history, location: history });
   collection.registerValue(NavigationManager as unknown as Token<NavigationManager>, navigation);
+  const routes = programRoutes ?? [];
+  if (routes.length === 0) {
+    for (const request of build.routes) {
+      const page = await load(request.module);
+      const entry: RouteEntry = { template: request.template, type: page.default as RouteEntry["type"] };
+      if (request.layout) entry.layout = (await load(request.layout)).default as RouteEntry["layout"];
+      if (request.authorize) entry.authorize = request.authorize;
+      routes.push(entry);
+    }
+  }
+  if (routes.length > 0) {
+    collection.registerValue(RouteManifest as unknown as Token<RouteManifest>, new RouteManifest(routes));
+  }
   services?.(collection);
   const renderer = new Renderer(collection.build());
   if (options.onError) renderer.errorHandler = options.onError;

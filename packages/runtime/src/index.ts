@@ -51,6 +51,7 @@ export {
   type NavigationManagerOptions,
   type RoutingMode,
 } from "./navigation/navigation-manager.js";
+export { MemoryHistory } from "./navigation/memory-history.js";
 
 // Routing
 export {

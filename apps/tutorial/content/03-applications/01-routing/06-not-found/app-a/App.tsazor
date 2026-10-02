@@ -1,0 +1,15 @@
+<nav class="menu">
+    <a href="/">Home</a>
+    <a href="/orders">Orders</a>
+    <a href="/bread">Bread</a>
+</nav>
+<main>
+    <Router>
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" />
+        </Found>
+        <NotFound>
+            <p class="missing">?</p>
+        </NotFound>
+    </Router>
+</main>

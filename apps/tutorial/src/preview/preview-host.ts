@@ -7,9 +7,11 @@
  * so they must be created inside the opaque origin), installs an import map
  * (`@tsazor/runtime`, `@tsazor/components`, `$app/…`), injects the CSS and
  * mounts `App` with createTsazorApp — or imports the lesson's `Program.ts`,
- * which starts the app itself (with its services). Errors, console output and
- * the document title (PageTitle) come back via postMessage; stack positions
- * are mapped to the original files with the modules' source maps.
+ * which starts the app itself (with its services). A routing project gets
+ * its `@page` manifest as the app's routes and an in-memory History (a srcdoc
+ * document has no usable history API). Errors, console output, the document
+ * title (PageTitle) and the current URL come back via postMessage; stack
+ * positions are mapped to the original files with the modules' source maps.
  */
 import { originalPosition, type CompiledModule, type ProjectBuild } from "../engine/types.js";
 
@@ -24,6 +26,8 @@ export interface PreviewCallbacks {
   onMessage(message: PreviewMessage): void;
   /** The visible app's document title changed (`<PageTitle>`; "" without one). */
   onTitle?(title: string): void;
+  /** The app's (logical) URL changed and after mount — routing lessons only. */
+  onUrl?(url: string): void;
 }
 
 let bundles: Promise<{ runtime: string; components: string }> | undefined;
@@ -71,7 +75,7 @@ function srcdoc(baseHref: string): string {
   }
   addEventListener("message", (event) => {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
-    const { modules, runtime, components, css, entry, program } = event.data;
+    const { modules, runtime, components, css, entry, program, routes } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
     const imports = { "@tsazor/runtime": url(runtime), "@tsazor/components": url(components) };
     const urls = {};
@@ -88,13 +92,33 @@ function srcdoc(baseHref: string): string {
     const boot = document.createElement("script");
     boot.type = "module";
     // A Program.ts starts the app itself (and registers its services);
-    // otherwise the entry component is mounted directly.
-    boot.textContent = (program
-      ? "import " + JSON.stringify(program) + ";\\n"
-      : 'import { createTsazorApp } from "@tsazor/runtime";\\n' +
+    // otherwise the entry component is mounted directly. Without a Program.ts
+    // the app gets its routes (the @page manifest) and — in a srcdoc document
+    // history.pushState throws — an in-memory History, whose URL is reported
+    // like a browser address bar (H.7).
+    if (program) {
+      boot.textContent = "import " + JSON.stringify(program) + ";\\n" +
+        'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';
+    } else {
+      const body =
+        'import { createTsazorApp, MemoryHistory, NavigationManager } from "@tsazor/runtime";\\n' +
         "import App from " + JSON.stringify(entry) + ";\\n" +
-        "createTsazorApp({ root: App });\\n") +
-      'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';
+        "const post = (message) => parent.postMessage({ source: \\"tsazor-preview\\", ...message }, \\"*\\");\\n" +
+        "const routes = [];\\n" +
+        "for (const request of " + JSON.stringify(routes) + ") {\\n" +
+        "  const page = await import(request.module);\\n" +
+        "  const route = { template: request.template, type: page.default };\\n" +
+        "  if (request.layout) route.layout = (await import(request.layout)).default;\\n" +
+        "  if (request.authorize) route.authorize = request.authorize;\\n" +
+        "  routes.push(route);\\n" +
+        "}\\n" +
+        "const history = new MemoryHistory(document.baseURI);\\n" +
+        "const navigation = new NavigationManager({ history, location: history });\\n" +
+        "createTsazorApp({ root: App, routes, navigationManager: navigation });\\n" +
+        "navigation.addLocationChanged(() => post({ type: \\"url\\", text: history.href }));\\n" +
+        "post({ type: \\"url\\", text: history.href });\\n";
+      boot.textContent = body + 'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';
+    }
     document.body.appendChild(boot);
   });
   // The document title (PageTitle) is shown in the preview bar, like a tab.
@@ -119,6 +143,7 @@ export class PreviewHost {
   private modulesById = new Map<string, CompiledModule>();
   private idsByUrl: Record<string, string> = {};
   private readonly titles = new WeakMap<HTMLIFrameElement, string>();
+  private readonly urls = new WeakMap<HTMLIFrameElement, string>();
   private run = 0;
   private readonly listener = (event: MessageEvent): void => this.handleMessage(event);
 
@@ -148,6 +173,7 @@ export class PreviewHost {
       css: build.css,
       entry: build.entry,
       program: build.program,
+      routes: build.routes,
     };
     (frame as HTMLIFrameElement & { __payload?: unknown }).__payload = payload;
     this.callbacks.onStatus("running");
@@ -164,6 +190,8 @@ export class PreviewHost {
     if (this.pending === frame) this.pending = undefined;
     frame.classList.remove("preview-frame--pending");
     this.callbacks.onTitle?.(this.titles.get(frame) ?? "");
+    const url = this.urls.get(frame);
+    if (url !== undefined) this.callbacks.onUrl?.(url);
   }
 
   private handleMessage(event: MessageEvent): void {
@@ -180,6 +208,10 @@ export class PreviewHost {
       case "title":
         this.titles.set(frame, data.text ?? "");
         if (frame === this.frame) this.callbacks.onTitle?.(data.text ?? "");
+        break;
+      case "url":
+        this.urls.set(frame, data.text ?? "");
+        if (frame === this.frame) this.callbacks.onUrl?.(data.text ?? "");
         break;
       case "urls":
         this.idsByUrl = data.urls ?? {};

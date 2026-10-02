@@ -116,7 +116,7 @@ const format = (build: ProjectBuild): string =>
   build.diagnostics.map((d) => `${d.file}(${d.line},${d.column + 1}) ${d.code} ${d.message}`).join("\n");
 
 describe("tutorial lessons", () => {
-  it("has the Part 1 and Part 2 chapters, every lesson in both tracks but the Blazor-only C# chapter", () => {
+  it("has the Part 1, 2 and 3 chapters, every lesson in both tracks but the Blazor-only C# chapter", () => {
     expect(content.parts[0]!.chapters.map((chapter) => chapter.title)).toEqual([
       "TypeScript for C# developers",
       "Introduction",
@@ -135,10 +135,12 @@ describe("tutorial lessons", () => {
       "Special components",
       "Organizing code",
     ]);
+    expect(content.parts[2]!.chapters.map((chapter) => chapter.title)).toEqual(["Routing"]);
     const csharp = content.parts[0]!.chapters[0]!.lessons;
     expect(csharp.length).toBeGreaterThanOrEqual(6);
     expect(csharp.length).toBeLessThanOrEqual(10);
-    expect(lessons.length).toBeGreaterThanOrEqual(51 + csharp.length);
+    expect(content.parts[2]!.chapters[0]!.lessons.length).toBeGreaterThanOrEqual(6);
+    expect(lessons.length).toBeGreaterThanOrEqual(57 + csharp.length);
     for (const lesson of lessons) {
       const tracks = csharp.includes(lesson) ? ["blazor"] : ["blazor", "ts"];
       expect(Object.keys(lesson.text).sort(), lesson.slug).toEqual(tracks);

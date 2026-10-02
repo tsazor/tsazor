@@ -45,6 +45,8 @@ export class NavigationManager {
   private lastLocation: string | undefined;
 
   private readonly historyApi: History | undefined;
+  /** URI source when the document's location is not the route space (MemoryHistory). */
+  private readonly uriSource: { readonly href: string } | undefined;
   /** Routing mode, fixed at construction ("history" = Blazor; "hash" = Tsazor extension). */
   readonly routingMode: RoutingMode;
   /** True while a popstate is being processed (hash mode: its hashchange twin is ignored). */
@@ -53,12 +55,17 @@ export class NavigationManager {
   /**
    * `new NavigationManager()` (history mode, window.history),
    * `new NavigationManager(historyApi)` (custom History, e.g. tests) or
-   * `new NavigationManager({ mode: "hash", history })`.
+   * `new NavigationManager({ mode: "hash", history })`. A MemoryHistory as
+   * the history also becomes the URI source (`{ history, location }` for any
+   * other History implementation with an href).
    */
   constructor(historyApiOrOptions?: History | NavigationManagerOptions) {
     const options: NavigationManagerOptions =
       historyApiOrOptions === undefined || isHistory(historyApiOrOptions) ? { history: historyApiOrOptions } : historyApiOrOptions;
     this.historyApi = options.history;
+    // A MemoryHistory is both the history and the URI source (its href is the
+    // current entry); an explicit `location` wins either way.
+    this.uriSource = options.location ?? (isMemoryHistory(options.history) ? options.history : undefined);
     const mode = options.mode ?? "history";
     if (mode !== "history" && mode !== "hash") {
       throw new Error(`Unknown routing mode '${String(mode)}'. Expected "history" or "hash".`);
@@ -91,6 +98,7 @@ export class NavigationManager {
    * `#/` (or none) is the root route.
    */
   get uri(): string {
+    if (this.uriSource) return this.uriSource.href;
     if (typeof window !== "undefined") {
       if (this.isHashMode) {
         const hash = window.location.hash;
@@ -565,10 +573,21 @@ export interface NavigationManagerOptions {
   readonly mode?: RoutingMode;
   /** History implementation (default window.history; tests pass a fake). */
   readonly history?: History;
+  /**
+   * URI source instead of `window.location.href` — for documents whose
+   * location is not the route space (a srcdoc preview is `about:srcdoc`).
+   * A MemoryHistory passed as `history` serves as the source by itself.
+   */
+  readonly location?: { readonly href: string };
 }
 
 function isHistory(value: History | NavigationManagerOptions): value is History {
   return typeof (value as History).pushState === "function";
+}
+
+/** A MemoryHistory exposes its current URL (window.history does not — that is location's job). */
+function isMemoryHistory(history: History | undefined): history is History & { readonly href: string } {
+  return history !== undefined && typeof (history as { href?: unknown }).href === "string";
 }
 
 /** Blazor's NavigationOptions (plus `replace`, the former Tsazor spelling of ReplaceHistoryEntry). */

@@ -142,12 +142,23 @@ sheet lives at `docs/csharp-to-typescript.md`.
    preview, TS2683 in the problems panel).
 5. **M4** — Part 3, static build, deploy target decided.
 
-Open for M4: routing lessons need an in-memory history in the `srcdoc` preview
-(port-findings H.7 — `NavigationManager` takes a `historyApi`; the preview's
-`createTsazorApp` would pass an in-memory one, and the preview bar could show the URL next
-to the title tab); creating/deleting files in the editor (lessons ship empty placeholder
-files instead, O); `RenderFragment<T>` as a generic runtime type and `RenderFragment` in the
-auto-imports (P.5, P.6); `createTsazorApp().dispose()` should dispose the service provider
-(P.10). Still open from M2: `@bind:format` on text inputs (K.7), handler-type checks against
-the event name (K.9), the TS1360 squiggle fix in the LSP (K.10), a `FileSystemHost` so the
-tutorial stops duplicating resolution, shadow building and now `TItem` inference (G.2, L, O).
+Done for M4 so far: H.7 — in-memory history for the `srcdoc` preview
+(`runtime/src/navigation/memory-history.ts`, the preview bar shows the live URL);
+the Routing chapter (`content/03-applications/01-routing/`, six lessons: pages,
+route parameters, NavLink, navigation, query parameters, not found) with its claims
+pinned in `test/claims-part3.test.ts`. Lesson-text corrections found by those
+claims: an absent optional route segment supplies `null` (not the field default —
+Blazor parity), `NavigationManager.baseRelativePath` has no leading slash.
+
+Open for M4: the remaining Part 3 chapters (Forms, Auth, Talking to a backend,
+Testing, Next steps) and the localization lesson (E8 follow-up, M4+); hash routing
+maybe as a lesson; a real-browser routing check in `scripts/verify.mjs`
+(the happy-dom gate cannot verify the preview's srcdoc memory-history behavior).
+Still open from M2: `@bind:format` on text inputs (K.7),
+handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
+LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,
+shadow building and now `TItem` inference (G.2, L, O); creating/deleting files in
+the editor (lessons ship empty placeholder files instead, O);
+`RenderFragment<T>` as a generic runtime type and `RenderFragment` in the
+auto-imports (P.5, P.6); `createTsazorApp().dispose()` should dispose the
+service provider (P.10).
