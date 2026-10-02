@@ -78,6 +78,10 @@ Gate: no German left in the listed files, all relative links resolve.
 18. *Testing*: `@tsazor/testing`
 19. *Next steps*
 
+**Decided 2026-10-02 (to do):** split "The real traps" into two lessons (`this` & equality /
+numbers & dates; "Structural typing" stays one lesson); raise the recommended tsconfig `lib` to
+ES2023 (getting-started, lesson texts, cheat sheet, starter), which removes the "add the lib" hint.
+
 **Track extras** — Blazor: **"TypeScript for C# developers"** (a short chapter before chapter 1
 in the Blazor track ✅; see below), "What's different from Blazor"
 (documented deviations), "Migrating `.razor` files (codemod)". TypeScript: none planned yet.

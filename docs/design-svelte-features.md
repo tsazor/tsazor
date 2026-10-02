@@ -1,6 +1,6 @@
 # Design draft — Svelte-style features ("Svelte magic")
 
-Status: **draft for review** (2026-10-02). Scheduled after `@Bindable`/`this.observe`
+Status: **accepted** (2026-10-02, decisions D1–D4 below). Scheduled after `@Bindable`/`this.observe`
 ([design-bindable-observe.md](design-bindable-observe.md)), in parallel with tutorial M3.
 
 JavaScript allows things C# makes hard: functions as values everywhere, cheap closures, direct
@@ -119,7 +119,7 @@ A built-in component, so the markup stays pure Razor and no D1 decision is neede
   is a diagnostic otherwise.
 - Built-in `flip`, custom ones with the same contract as F4.
 
-## F6 — `@State` (opt-in automatic re-render), **decision deferred**
+## F6 — `@State` (opt-in automatic re-render), **planned for v1** (D4)
 
 `@State() accessor count = 0` would schedule a render on assignment, which would also work from
 timers. It is technically a superset (only extra, coalesced renders). **Deliberately not deep**: no
@@ -149,13 +149,13 @@ the Blazor track explains that Blazor has no counterpart.
 1. F1a (parity) → F1b
 2. F2 `@attach`, F3 `<Await>`
 3. F4 `@transition`/`@in`/`@out` (after D1), then F5 `@animate`
-4. F6 only on demonstrated need
+4. F6 `@State` (shallow, opt-in; design detail in its own short doc before implementation)
 
-## Open decisions
+## Decisions (2026-10-02)
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 |---|---|---|
-| D1 | Treat the `@` attribute namespace as reserved for directive attributes, or only component forms? | reserve it (like Microsoft); document TZS001 as a deviation; component forms only where natural (`<Await>`) |
-| D2 | `@attach` or `@use`? | `@attach` (Svelte 5 naming; `use` is generic) |
-| D3 | Built-in transition set for v1 | `fade`, `fly`, `slide`, `scale`, `blur`, `draw`, `crossfade`, `flip` |
-| D4 | F6 `@State` | defer until after `observe` |
+| D1 | Treat the `@` attribute namespace as reserved for directive attributes, or only component forms? | **reserve it** (like Microsoft); document TZS001 as a deviation; component forms only where natural (`<Await>`) |
+| D2 | `@attach` or `@use`? | **`@attach`** (Svelte 5 naming; `use` is generic) |
+| D3 | Built-in transition set for v1 | **Svelte set:** `fade`, `fly`, `slide`, `scale`, `blur`, `draw`, `crossfade`, `flip` |
+| D4 | F6 `@State` | **planned for v1** (user decision; the recommendation was to defer) |

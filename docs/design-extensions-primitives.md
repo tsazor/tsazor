@@ -1,6 +1,6 @@
 # Design draft — `@tsazor/primitives` and `@tsazor/extensions` ("feel-at-home" packages)
 
-Status: **draft for review** (2026-10-02).
+Status: **accepted** (2026-10-02, decisions X1–X4 below).
 
 **Goal:** opt-in packages that give .NET developers familiar building blocks where JavaScript
 has real gaps, written in idiomatic TypeScript (camelCase, Promises, real arrays/maps, no `out`
@@ -48,8 +48,8 @@ gross.format("de-DE", { style: "currency", currency: "EUR" }); // "71,36 €" vi
   broadly available.
 - `Guid`: `Guid.newGuid()` (crypto.randomUUID), `parse`, `empty`, `equals`.
 - `@tsazor/dotnet` maps `format: date` → `DateOnly`, `format: duration`/the .NET TimeSpan shape
-  → `TimeSpan`, `format: uuid` → `Guid` (opt-in per generator flag; the default stays `string`,
-  so existing clients don't change).
+  → `TimeSpan`, `format: uuid` → `Guid` (**on by default**, decision X4: there are no 1.x users yet, so the default
+  is set now; a generator flag switches back to `string`).
 
 ## `@tsazor/extensions` (in the spirit of `Microsoft.Extensions.*`)
 
@@ -128,11 +128,11 @@ services.configure(ApiOptions, { section: "api", source: import.meta.env, valida
 3. `Logger`, `Options`.
 4. `TimeSpan`, `DateOnly`, `TimeOnly`, `Guid` and the generator mappings.
 
-## Open decisions
+## Decisions (2026-10-02)
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 |---|---|---|
 | X1 | Package split: two packages or one `@tsazor/extensions`? | two: `primitives` (pure values, no DI) and `extensions` (DI services) |
 | X2 | `HttpClient` alias in the runtime for Blazor parity (`@inject HttpClient Http`)? | yes, independent of X1 |
 | X3 | `Decimal` default rounding | `toEven` (as .NET `Math.Round`), with explicit modes |
-| X4 | Generator mappings for `Decimal`/`DateOnly`/`Guid` on by default? | off by default in 1.x (no change to existing clients), on in new projects via `npm create tsazor` |
+| X4 | Generator mappings for `Decimal`/`DateOnly`/`Guid` on by default? | **always on** (user decision: set the default before 1.0; opt-out flag for `string`) |

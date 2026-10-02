@@ -18,8 +18,9 @@ M1 and M2 (Part 1) done · M3 (Part 2) in progress · M4 (Part 3, static deploy)
 ## 2 — Svelte-style features ([design-svelte-features.md](design-svelte-features.md))
 
 F1a static markup frames (a Razor parity gap) · F1b update hints · F2 `@attach` · F3 `<Await>` ·
-F4 `@transition`/`@in`/`@out` · F5 `@animate`. Open decisions D1–D4; F6 `@State` deferred. Each
-feature gets its tutorial chapter.
+F4 `@transition`/`@in`/`@out` · F5 `@animate` · F6 `@State`. Decided 2026-10-02: the `@` namespace is
+reserved (D1), `@attach` (D2), the Svelte transition set (D3), `@State` in v1 (D4). Each feature
+gets its tutorial chapter.
 
 ## 3 — Sleipnir integration ([roadmap-sleipnir.md](roadmap-sleipnir.md))
 
@@ -92,7 +93,9 @@ architecture and security take priority.
 - **E12 — Feel-at-home packages** ([design-extensions-primitives.md](design-extensions-primitives.md)):
   `@tsazor/primitives` (`Decimal` first, since money in `number` drifts; then
   `TimeSpan`/`DateOnly`/`TimeOnly`/`Guid`) and `@tsazor/extensions` (`HttpClient` + factory +
-  handler pipeline, `Logger<T>`, `Options<T>`). Opt-in and idiomatic TS; no BCL clones.
+  handler pipeline, `Logger<T>`, `Options<T>`). Opt-in and idiomatic TS; no BCL clones. Decided: two packages (X1); an `HttpClient` alias in the
+  runtime for `@inject HttpClient Http` parity (X2); `toEven` rounding (X3); generator mappings on by
+  default (X4).
   `Decimal` comes with E8.
 - **E11 — Opt-in hash routing** (Tsazor extension; Blazor has none, default stays history
   routing). For hosting without an `index.html` fallback, static hosting and iframe-embedded apps.

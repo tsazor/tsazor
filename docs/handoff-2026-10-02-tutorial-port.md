@@ -76,7 +76,16 @@ flaky, einzeln läuft er grün.
 Noch offen: Die Sicherheitsthemen im Port beheben oder originalgetreu lassen? Das betrifft den
 Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte robuster werden.
 
-## Weitere offene Fragen an den User
+## Entscheidungen des Users (2026-10-02, nach dem Handoff)
+
+- Der Port bleibt originalgetreu; die Sicherheitsfunde gehen als Liste an das Team.
+- "The real traps" wird in zwei Lektionen aufgeteilt; tsconfig `lib` ES2023.
+- D1: `@`-Namensraum reserviert · D2: `@attach` · D3: Svelte-Set · D4: **`@State` in v1**.
+- X1: zwei Pakete · X2: `HttpClient`-Alias · X3: `toEven` · X4: **Mappings immer an**.
+- Sleipnir: frischer Klon, Feature-Branch + PR · Emitter in `@tsazor/sleipnir` · vor dem Start
+  ein Plan-Review.
+
+## (Erledigt) Frühere offene Fragen an den User
 
 - Tutorial: Sollen die langen C#-Lektionen („the-real-traps“, „structural-typing“) so bleiben,
   oder werden die Fallen auf zwei Lektionen aufgeteilt?

@@ -79,10 +79,10 @@ consumer `apps/sleipnir-ticker`.
 3. U1 + U2, then validation in T1/T2
 4. T5, T7
 
-## Open decisions (before starting)
+## Decisions (2026-10-02)
 
-| Question | Recommendation |
+| Question | Decision |
 |---|---|
-| Where does upstream work happen — existing local clone or fresh clone, PRs or direct branch? | ask the maintainer |
-| Emitter in `@tsazor/sleipnir` (on the upstream IR) or `--lang tsazor` in `sleipnir-codegen`? | `@tsazor/sleipnir` — keeps Sleipnir framework-free |
-| Plan review first or autonomous execution like Phases 2–5? | ask the maintainer |
+| Where does upstream work happen? | **fresh clone** (e.g. `D:OwnSleipnir`), a feature branch per track-U item, **PR on GitHub** for the maintainer's review; nothing directly on `main` |
+| Emitter in `@tsazor/sleipnir` (on the upstream IR) or `--lang tsazor` in `sleipnir-codegen`? | **`@tsazor/sleipnir`** — keeps Sleipnir framework-free |
+| Plan review first or autonomous execution? | **plan review with the maintainer before starting**, then autonomous with merge approvals |
