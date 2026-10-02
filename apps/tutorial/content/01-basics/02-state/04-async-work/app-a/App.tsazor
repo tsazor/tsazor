@@ -1,0 +1,14 @@
+@import { rollDie } from "./dice"
+
+<button @onclick="roll" disabled="@rolling">Roll the die</button>
+<p>@message</p>
+
+@code {
+    message = "Click to roll.";
+    rolling = false;
+
+    async roll() {
+        const value = await rollDie();
+        this.message = `You rolled a ${value}.`;
+    }
+}

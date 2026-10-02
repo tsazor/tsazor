@@ -1,0 +1,9 @@
+<button @onclick="sayHello">Click to say hello</button>
+
+@code {
+    @Parameter() onMessage?: EventCallback<string>;
+
+    async sayHello() {
+        await this.onMessage?.invokeAsync("Hello!");
+    }
+}

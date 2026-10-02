@@ -1,0 +1,41 @@
+.card {
+    position: relative;
+    width: 16rem;
+    height: 10rem;
+    border: none;
+    padding: 0;
+    background: none;
+    font: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+    perspective: 60rem;
+}
+
+.face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    border-radius: 12px;
+    backface-visibility: hidden;
+    transition: transform 0.4s;
+}
+
+.front {
+    background: #fde68a;
+}
+
+.back {
+    background: #a7f3d0;
+    transform: rotateY(180deg);
+}
+
+.flipped .front {
+    transform: rotateY(-180deg);
+}
+
+.flipped .back {
+    transform: rotateY(0);
+}

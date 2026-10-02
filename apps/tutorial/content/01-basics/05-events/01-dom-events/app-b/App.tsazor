@@ -1,0 +1,13 @@
+<div class="area" @onpointermove="move">
+    The pointer is at @x × @y
+</div>
+
+@code {
+    x = 0;
+    y = 0;
+
+    move(event: PointerEvent) {
+        this.x = event.clientX;
+        this.y = event.clientY;
+    }
+}

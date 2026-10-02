@@ -1,0 +1,10 @@
+<FancyButton label="Push me" />
+<p>Pushed @pushes @(pushes === 1 ? "time" : "times")</p>
+
+@code {
+    pushes = 0;
+
+    push() {
+        this.pushes++;
+    }
+}

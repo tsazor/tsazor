@@ -1,0 +1,26 @@
+<h2>Insecurity questions</h2>
+
+<label>
+    Question
+    <select>
+        @foreach (const question of questions) {
+            <option value="@question.id">@question.text</option>
+        }
+    </select>
+</label>
+
+<p>Selected: @(current?.text ?? "nothing")</p>
+
+@code {
+    questions = [
+        { id: "school", text: "Where did you go to school?" },
+        { id: "mother", text: "What is your mother's name?" },
+        { id: "other", text: "What is another personal fact that an attacker could easily find with Google?" },
+    ];
+
+    selected = "mother";
+
+    get current() {
+        return this.questions.find((question) => question.id === this.selected);
+    }
+}

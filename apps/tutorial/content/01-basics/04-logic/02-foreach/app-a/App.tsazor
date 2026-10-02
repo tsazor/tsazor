@@ -1,0 +1,9 @@
+<h1>Shopping list</h1>
+
+<ul>
+    <li>@items[0]</li>
+</ul>
+
+@code {
+    items = ["Bread", "Milk", "Eggs", "Coffee", "More coffee"];
+}

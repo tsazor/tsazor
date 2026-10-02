@@ -1,0 +1,14 @@
+<p>Pick a color:</p>
+
+<div class="colors">
+    @foreach (const color of colors) {
+        <button style="background: @color" aria-label="@color"></button>
+    }
+</div>
+
+<p>You picked <strong style="color: @picked">@picked</strong>.</p>
+
+@code {
+    colors = ["red", "orange", "gold", "green", "blue", "indigo", "violet"];
+    picked = "red";
+}

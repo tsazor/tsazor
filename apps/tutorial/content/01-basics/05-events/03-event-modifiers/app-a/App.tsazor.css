@@ -1,0 +1,11 @@
+.card {
+    max-width: 18rem;
+    padding: 0.5rem 1rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.card:hover {
+    border-color: #888;
+}

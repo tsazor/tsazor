@@ -1,0 +1,14 @@
+<div class="stepper">
+    <button @onclick="() => change(-1)" aria-label="Less">−</button>
+    <span>@value</span>
+    <button @onclick="() => change(+1)" aria-label="More">+</button>
+</div>
+
+@code {
+    @Parameter() value = 0;
+    @Parameter() valueChanged?: EventCallback<number>;
+
+    async change(delta: number) {
+        await this.valueChanged?.invokeAsync(this.value + delta);
+    }
+}

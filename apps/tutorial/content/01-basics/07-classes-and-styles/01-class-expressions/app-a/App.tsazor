@@ -1,0 +1,12 @@
+<button class="card" @onclick="flip">
+    <span class="face front">What do you call a fake noodle?</span>
+    <span class="face back">An impasta.</span>
+</button>
+
+@code {
+    flipped = false;
+
+    flip() {
+        this.flipped = !this.flipped;
+    }
+}

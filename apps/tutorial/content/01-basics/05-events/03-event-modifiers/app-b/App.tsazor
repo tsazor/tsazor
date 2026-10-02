@@ -1,0 +1,19 @@
+<div class="card" @onclick="open">
+    <h2>Inbox</h2>
+    <p>3 unread messages</p>
+    <button @onclick="archive" @onclick:stopPropagation>Archive</button>
+</div>
+
+<p>Log: @(log.join(", "))</p>
+
+@code {
+    log: string[] = [];
+
+    open() {
+        this.log.push("opened");
+    }
+
+    archive() {
+        this.log.push("archived");
+    }
+}

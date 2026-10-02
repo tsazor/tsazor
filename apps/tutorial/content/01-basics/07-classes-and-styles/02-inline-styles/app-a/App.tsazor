@@ -1,0 +1,16 @@
+<label>
+    Hue
+    <input type="range" min="0" max="360" @bind="hue" @bind:event="oninput" />
+</label>
+
+<label>
+    Size
+    <input type="range" min="1" max="6" step="0.5" @bind="size" @bind:event="oninput" />
+</label>
+
+<p class="sample">Hello, colorful world!</p>
+
+@code {
+    hue = 200;
+    size = 2;
+}

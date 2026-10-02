@@ -1,0 +1,21 @@
+@import { getForecast, type Forecast } from "./weather"
+
+<h1>Weather</h1>
+
+@if (forecasts === undefined) {
+    <p>Loading…</p>
+} else {
+    <ul>
+        @foreach (const forecast of forecasts) {
+            <li>@forecast.day: @forecast.summary, @forecast.temperature °C</li>
+        }
+    </ul>
+}
+
+@code {
+    forecasts?: Forecast[];
+
+    override async onInitialized() {
+        this.forecasts = await getForecast();
+    }
+}

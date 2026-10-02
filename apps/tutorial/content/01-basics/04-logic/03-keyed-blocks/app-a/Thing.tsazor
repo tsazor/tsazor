@@ -1,0 +1,14 @@
+@import { EMOJIS } from "./emojis"
+
+<p><span class="emoji">@emoji</span> @name</p>
+
+@code {
+    @Parameter() name = "";
+
+    /** Picked once, when the component is created. */
+    emoji = "";
+
+    override onInitialized() {
+        this.emoji = EMOJIS[this.name] ?? "❓";
+    }
+}
