@@ -71,7 +71,17 @@ architecture and security take priority.
 - **E6 — Incremental migration:** run Blazor and Tsazor side by side, route by route (YARP in
   front of both, a shared auth cookie), with a reference setup and docs.
 - **E7 — Migration guide:** the codemod workflow, what is automatic and what is manual, effort
-  figures from the FluentCMS-admin port.
+  figures from the FluentCMS-admin port. It has a dedicated step for **Blazor Server**: there,
+  components call services and the database in-process, so there was never an API boundary. Before
+  such an app can become a SPA, that boundary has to be drawn. The guide covers exposing the
+  existing services as an API, either with OpenAPI controllers (`@tsazor/dotnet`) or, as an option,
+  with Sleipnir commands. Blazor WebAssembly apps usually have the boundary already.
+- **E7b — Coexistence guide:** not every team migrates. A common target is a Blazor app (e.g. an
+  admin/backoffice) that stays, plus a public Tsazor frontend on the same .NET backend, which
+  replaces e.g. a Svelte or React frontend chosen only because Blazor didn't fit. The guide
+  covers sharing DTOs (one OpenAPI contract for both), auth (a shared cookie domain), CSS/design
+  tokens, and how the same architecture vocabulary (components, DI, EditForm, validation) carries
+  over.
 
 **Operations**
 - **E8 — Localization and culture:** an `IStringLocalizer` counterpart, `CultureInfo` over `Intl`,
