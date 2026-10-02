@@ -1,0 +1,10 @@
+<CascadingValue Value="@theme">
+    <CascadingValue Value="@language">
+        <Greeting />
+    </CascadingValue>
+</CascadingValue>
+
+@code {
+    theme = "dark";
+    language = "de";
+}

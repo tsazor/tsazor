@@ -1,0 +1,17 @@
+@import type { Todo } from "./TodoStore"
+
+<li class="todo @(todo.done ? "done" : null)">
+    <label>
+        <input type="checkbox" checked="@todo.done" @onchange="toggle" />
+        @todo.title
+    </label>
+</li>
+
+@code {
+    @Parameter() todo!: Todo;
+    @Parameter() onToggle?: EventCallback;
+
+    async toggle() {
+        await this.onToggle?.invokeAsync();
+    }
+}

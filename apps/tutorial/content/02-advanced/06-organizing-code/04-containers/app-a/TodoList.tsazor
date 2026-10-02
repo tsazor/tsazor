@@ -1,0 +1,13 @@
+@inject TodoStore store
+
+<ul class="todos">
+    @foreach (const todo of store.todos) {
+        <TodoItem id="@todo.id" @key="todo.id" />
+    }
+</ul>
+
+@code {
+    override onInitialized() {
+        this.observe(this.store);
+    }
+}

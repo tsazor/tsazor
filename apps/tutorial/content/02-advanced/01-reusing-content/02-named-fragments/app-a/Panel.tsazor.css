@@ -1,0 +1,26 @@
+.panel {
+    max-width: 24rem;
+    border: 1px solid #e3e6ea;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+header {
+    padding: 0.6rem 1rem;
+    background: #eeeefc;
+    color: #4343b5;
+    font-weight: 600;
+}
+
+.body {
+    padding: 0.25rem 1rem;
+}
+
+footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid #e3e6ea;
+    background: #f7f8fa;
+}

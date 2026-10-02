@@ -4,6 +4,9 @@
 <div class="preview">
     <div class="bar">
         <span class="title">Preview</span>
+        @if (pageTitle) {
+            <span class="page-title" title="The app's document title (PageTitle)">@pageTitle</span>
+        }
         <span class="status status--@status">@statusText</span>
     </div>
     <div class="frames @(stale ? "frames--stale" : null)" @ref="frames"></div>
@@ -29,6 +32,8 @@
     private shown?: ProjectBuild;
     private status: "idle" | "running" | "ready" | "failed" = "idle";
     private messages: PreviewMessage[] = [];
+    /** The running app's document title, shown like a browser tab. */
+    private pageTitle = "";
 
     private get statusText(): string {
         switch (this.status) {
@@ -51,6 +56,10 @@
                 onMessage: (message) => {
                     if (message.kind === "error") this.status = "failed";
                     this.messages = [...this.messages.slice(-49), message];
+                    this.stateHasChanged();
+                },
+                onTitle: (title) => {
+                    this.pageTitle = title;
                     this.stateHasChanged();
                 },
             });

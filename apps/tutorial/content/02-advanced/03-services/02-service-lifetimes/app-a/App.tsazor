@@ -1,0 +1,4 @@
+<div class="match">
+    <Scoreboard team="Home" />
+    <Scoreboard team="Away" />
+</div>

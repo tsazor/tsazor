@@ -22,6 +22,48 @@
     font-weight: 600;
 }
 
+.page-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 60%;
+    margin: 0 0.75rem;
+    padding: 0.1rem 0.7rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    border-bottom-color: transparent;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bar .status {
+    margin-left: auto;
+}
+
+/* The app's document title, drawn like a browser tab on the bar. */
+.page-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: -0.35rem 0.75rem -0.36rem;
+    padding: 0.3rem 0.8rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: #fff;
+    color: var(--fg);
+    font-size: 0.78rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bar .status {
+    margin-left: auto;
+}
+
 .status--running {
     color: var(--fg-muted);
 }

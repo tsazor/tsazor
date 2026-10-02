@@ -1,0 +1,10 @@
+<header class="topbar">
+    <strong>Notebook</strong>
+    <div class="actions">
+        <SectionOutlet SectionName="actions" />
+    </div>
+</header>
+
+<main>
+    <EditorPage />
+</main>

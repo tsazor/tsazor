@@ -1,0 +1,5 @@
+<Panel>
+    <h2>Weekly report</h2>
+    <p>Sales are up 12% on last week.</p>
+    <button>Export</button>
+</Panel>

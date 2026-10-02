@@ -1,7 +1,7 @@
 # Roadmap — English docs + interactive tutorial
 
-Status: **D, M1 and M2 done** (2026-10-02; M1 merged into `roadmap/phase-0`, M2 on
-`tutorial/m2`); M3 next. Runs before [roadmap-sleipnir.md](roadmap-sleipnir.md).
+Status: **D, M1, M2 and M3 done** (2026-10-02; M1/M2 merged into `roadmap/phase-0`, M3 on
+`tutorial/m3`); M4 next. Runs before [roadmap-sleipnir.md](roadmap-sleipnir.md).
 
 ## Decisions (2026-10-02)
 
@@ -105,10 +105,29 @@ message: "you already know most of this". A companion cheat sheet lives at
    (port-findings J): `ComponentBase` state as `#private`, `EventCallback` lambdas returning
    values, `@attributes` with no captured values, `@bind` on range and date inputs, empty
    number input. Claims pinned in `test/claims-part1.test.ts`; E2E smoke check per chapter.
-3. **M3** — Part 2 · **M4** — Part 3, static build, deploy target decided.
+3. **M3** — Part 2 ✅: chapters 8–13, 17 lessons in both tracks (51 in total): Child
+   content · Named fragments · Templated components (incl. the `@if`-narrowing caveat for
+   deferred content, H.3) · Passing values down · Names and types · Injecting services ·
+   Lifetimes · Element references (`disposeSignal` for listeners) · Component references ·
+   Error boundaries · Dynamic components · Page title and head · Sections · Code-behind ·
+   Shared imports · Logic in modules · Containers and views (the last three: patterns against
+   logic-heavy templates). Engine: `Program.ts` as the app's start (services in the
+   preview), the preview's document title shown as a tab in its bar, `.tsazor` imports from
+   `.ts` and the LSP's `TItem` inference in the in-browser type check, `_Imports.tsazor`
+   diagnosed, gate runs like the preview (head outlet, `Program.ts`), `refactor: true`
+   lessons must render identically. Framework fixes (port-findings N): `@ref` on a
+   component cut off its child content, `EventCallback` type-only import, argument-less
+   `EventCallback.invokeAsync()`, TS2869 on mixed attribute values. Claims pinned in
+   `test/claims-part2.test.ts`; E2E smoke check per chapter (8–13). The planned Svelte-style
+   chapters (attachments, transitions, animations, `<Await>`) wait for their features.
+4. **M4** — Part 3, static build, deploy target decided.
 
-Open for M3 (from M2): routing lessons need an in-memory history in the `srcdoc` preview
-(port-findings H.7); `@bind:format` on text inputs (K.7) and handler-type checks against
-the event name (K.9) would let the Blazor track drop two caveats; the TS1360 squiggle fix
-belongs into the LSP as well (K.10); consider a `FileSystemHost` so the tutorial stops
-duplicating resolution and shadow building (G.2, L).
+Open for M4: routing lessons need an in-memory history in the `srcdoc` preview
+(port-findings H.7 — `NavigationManager` takes a `historyApi`; the preview's
+`createTsazorApp` would pass an in-memory one, and the preview bar could show the URL next
+to the title tab); creating/deleting files in the editor (lessons ship empty placeholder
+files instead, O); `RenderFragment<T>` as a generic runtime type and `RenderFragment` in the
+auto-imports (P.5, P.6); `createTsazorApp().dispose()` should dispose the service provider
+(P.10). Still open from M2: `@bind:format` on text inputs (K.7), handler-type checks against
+the event name (K.9), the TS1360 squiggle fix in the LSP (K.10), a `FileSystemHost` so the
+tutorial stops duplicating resolution, shadow building and now `TItem` inference (G.2, L, O).

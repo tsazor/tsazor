@@ -1,0 +1,5 @@
+@import { page } from "./page"
+
+@foreach (const block of page) {
+    <pre class="raw">@block.kind: @JSON.stringify(block.props)</pre>
+}

@@ -1,0 +1,11 @@
+@import { formatMoney } from "./money"
+
+<div class="line">
+    <span>@label</span>
+    <span>@formatMoney(amount)</span>
+</div>
+
+@code {
+    @Parameter() label = "";
+    @Parameter() amount = 0;
+}

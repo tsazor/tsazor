@@ -1,0 +1,15 @@
+@import Editor from "./Editor.tsazor"
+
+<div class="toolbar">
+    <button @onclick="sign">Insert signature</button>
+</div>
+
+<Editor @ref="editor" />
+
+@code {
+    editor?: Editor;
+
+    sign() {
+        this.editor?.insert("— Ada");
+    }
+}

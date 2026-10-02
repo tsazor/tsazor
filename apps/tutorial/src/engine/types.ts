@@ -40,6 +40,12 @@ export interface ProjectBuild {
   diagnostics: Diagnostic[];
   /** Module id of the entry component, when it compiled. */
   entry?: string;
+  /**
+   * Module id of `Program.ts`, when the project has one: it starts the app
+   * itself (`createTsazorApp({ root: App, services })`, as in a real app);
+   * without it the preview mounts the entry component.
+   */
+  program?: string;
 }
 
 /**

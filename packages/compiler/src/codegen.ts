@@ -407,6 +407,9 @@ class Codegen {
     if (/@Parameter\s*\(/.test(memberSource)) this.runtimeImports.add("Parameter");
     if (/@CascadingParameter\s*\(/.test(memberSource)) this.runtimeImports.add("CascadingParameter");
     if (/@Bindable\s*\(/.test(memberSource)) this.runtimeImports.add("Bindable");
+    // `@Parameter() onPick?: EventCallback<T>` in a component without event
+    // handlers: the type is used only by the member code.
+    if (/\bEventCallback\b/.test(memberSource)) this.runtimeImports.add("EventCallback");
     if (this.metadata.injects.length > 0 || /\binject\s*\(/.test(memberSource)) this.runtimeImports.add("inject");
     if (this.metadata.injects.length > 0) this.runtimeAliases.add("inject");
 
@@ -1581,19 +1584,6 @@ class Codegen {
     this.stmt(open, node.pos);
     if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: node.tagName, attributes: regular, isComponent: true, component });
-    for (const ref of refs) {
-      if (ref.kind !== "ref") continue;
-      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
-        this.diagnostics.error("TZS008", ref, "@ref on components requires a bare property name.");
-        continue;
-      }
-      this.emitComponentRefStmt(
-        ref,
-        node.pos,
-        local,
-        (component.metadata?.typeParameters.length ?? 0) === 0 || (tagTypeArgs?.size ?? 0) === (component.metadata?.typeParameters.length ?? 0) ? "instance" : "never",
-      );
-    }
     const setByAttribute = (parameter: ComponentParameter): AttributeNode | undefined =>
       regular.find((a) => "name" in a && a.kind !== "eventHandler" && a.kind !== "eventModifier" && component.metadata && findParameter(component.metadata, a.name) === parameter);
     // Explicit child content elements (named slots), in source order.
@@ -1621,6 +1611,22 @@ class Codegen {
       this.diagnostics.error("TZS027", { pos: first.pos, endPos: first.endPos }, `Unrecognized child content inside component '${node.tagName}'. With explicit child content elements (${accepted}), all content must be inside one — wrap the rest in '<ChildContent>…</ChildContent>'.`);
     } else if (loose.length > 0) {
       this.emitImplicitChildContent(node, component, loose, template.context, setByAttribute);
+    }
+    // Blazor order: the reference capture follows every attribute, child
+    // content included. The parameter view is the run of attribute frames
+    // after the component frame — a capture before a fragment cut it off.
+    for (const ref of refs) {
+      if (ref.kind !== "ref") continue;
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
+        this.diagnostics.error("TZS008", ref, "@ref on components requires a bare property name.");
+        continue;
+      }
+      this.emitComponentRefStmt(
+        ref,
+        node.pos,
+        local,
+        (component.metadata?.typeParameters.length ?? 0) === 0 || (tagTypeArgs?.size ?? 0) === (component.metadata?.typeParameters.length ?? 0) ? "instance" : "never",
+      );
     }
     this.plumbingStmt(`${BUILDER}.closeComponent();`);
     this.tagTypeArgs = previousTagArgs;
@@ -1869,7 +1875,10 @@ class Codegen {
             for (const entry of this.pendingExprEntries) {
               precise.push({ ...entry, outOffset: template.length + 3 + entry.outOffset });
             }
-            template += `\${(${baked}) ?? ""}`;
+            // The typed shadow leaves out the `?? ""`: it is runtime behavior,
+            // and on a value that can't be nullish (`@(score * 25)`) TypeScript
+            // reports it (TS2869 "Right operand of ?? is unreachable").
+            template += this.options.typedShadow !== undefined ? `\${(${baked})}` : `\${(${baked}) ?? ""}`;
           } else {
             template += escapeTemplate(decodeHtmlEntities(part.text ?? ""));
           }

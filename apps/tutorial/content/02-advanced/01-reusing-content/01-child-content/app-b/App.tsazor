@@ -1,0 +1,7 @@
+<Card title="Did you know?">
+    <p>An octopus has <strong>three</strong> hearts.</p>
+</Card>
+
+<Card title="Shortcut">
+    <p>Press <kbd>Ctrl</kbd> + <kbd>S</kbd> to save.</p>
+</Card>

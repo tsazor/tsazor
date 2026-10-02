@@ -1,0 +1,15 @@
+@inject Tally tally
+
+<section class="board">
+    <h2>@team</h2>
+    <p class="points">@tally.points</p>
+    <button @onclick="() => tally.add()">+1</button>
+</section>
+
+@code {
+    @Parameter() team = "";
+
+    override onInitialized() {
+        this.observe(this.tally);
+    }
+}

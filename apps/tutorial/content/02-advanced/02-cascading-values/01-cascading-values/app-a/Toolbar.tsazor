@@ -1,0 +1,4 @@
+<nav class="toolbar">
+    <ThemedButton label="Save" />
+    <ThemedButton label="Share" />
+</nav>

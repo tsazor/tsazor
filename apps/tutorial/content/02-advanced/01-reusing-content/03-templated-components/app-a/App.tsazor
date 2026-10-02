@@ -1,0 +1,17 @@
+<h2>Todos</h2>
+<List items="@todos" />
+
+<h2>Contacts</h2>
+<List items="@contacts" />
+
+@code {
+    todos = [
+        { title: "Water the plants", done: true },
+        { title: "Call the bakery", done: false },
+    ];
+
+    contacts = [
+        { name: "Ada", email: "ada@example.com" },
+        { name: "Grace", email: "grace@example.com" },
+    ];
+}
