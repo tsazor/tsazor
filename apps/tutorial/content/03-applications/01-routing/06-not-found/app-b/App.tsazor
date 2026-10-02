@@ -1,7 +1,9 @@
+@import { NavLinkMatch } from "@tsazor/runtime"
+
 <nav class="menu">
-    <a href="/">Home</a>
-    <a href="/orders">Orders</a>
-    <a href="/bread">Bread</a>
+    <NavLink href="/" Match="@NavLinkMatch.All">Home</NavLink>
+    <NavLink href="/orders">Orders</NavLink>
+    <NavLink href="/bread">Bread</NavLink>
 </nav>
 <main>
     <Router>

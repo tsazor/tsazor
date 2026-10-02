@@ -145,15 +145,26 @@ sheet lives at `docs/csharp-to-typescript.md`.
 Done for M4 so far: H.7 — in-memory history for the `srcdoc` preview
 (`runtime/src/navigation/memory-history.ts`, the preview bar shows the live URL);
 the Routing chapter (`content/03-applications/01-routing/`, six lessons: pages,
-route parameters, NavLink, navigation, query parameters, not found) with its claims
-pinned in `test/claims-part3.test.ts`. Lesson-text corrections found by those
-claims: an absent optional route segment supplies `null` (not the field default —
-Blazor parity), `NavigationManager.baseRelativePath` has no leading slash.
+route parameters, NavLink, navigation, query parameters, not found) and the
+Forms chapter (`content/03-applications/02-forms/`, six lessons: the order
+form, rules on the model, the invalid submit, field styles, rules with
+context, attaching a file) — claims pinned in `test/claims-part3.test.ts`.
+Lesson-text corrections found by those claims: an absent optional route segment
+supplies `null` (not the field default — Blazor parity),
+`NavigationManager.baseRelativePath` has no leading slash; and the auto-import
+boundary is "what renders in markup auto-imports, names in code need the
+`@import`" — the rule decorators need theirs, but the `DataAnnotationsValidator`
+and `InputFile` tags do not. The forms lessons also surfaced a Blazor parity
+gap in the runtime, now fixed: `InputBase.fieldClass` returns the four
+documented states (`valid`/`invalid`/`modified valid`/`modified invalid`,
+`runtime/src/forms/input-base.ts`; the fluent wrappers keep an untouched
+field quiet by keying on `modified`).
 
-Open for M4: the remaining Part 3 chapters (Forms, Auth, Talking to a backend,
-Testing, Next steps) and the localization lesson (E8 follow-up, M4+); hash routing
-maybe as a lesson; a real-browser routing check in `scripts/verify.mjs`
-(the happy-dom gate cannot verify the preview's srcdoc memory-history behavior).
+Open for M4: the remaining Part 3 chapters (Auth, Talking to a backend,
+Testing, Next steps) and the localization lesson (E8 follow-up, M4+); hash
+routing maybe as a lesson; a real-browser routing check in
+`scripts/verify.mjs` (the happy-dom gate cannot verify the preview's srcdoc
+memory-history behavior).
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,

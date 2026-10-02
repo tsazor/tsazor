@@ -131,7 +131,8 @@ describe("EditForm + Input* components", () => {
 
     const message = document.querySelector("span.validation-message");
     expect(message?.textContent).toBe("Email must contain @");
-    expect(input.className).toBe("invalid");
+    // Blazor's EditContext.FieldCssClass: modified + invalid ⇒ "modified invalid".
+    expect(input.className).toBe("modified invalid");
     expect(page().model.email).toBe("not-an-email");
 
     input.value = "me@tsazor.dev";

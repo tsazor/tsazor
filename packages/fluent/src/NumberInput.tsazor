@@ -70,7 +70,9 @@
     private get inputClass(): string {
         const base = "fui-input";
         if (this.fieldClass.includes("invalid")) return `${base} fui-input--invalid`;
-        if (this.fieldClass) return `${base} fui-input--valid`;
+        // Blazor's four states: green only for "modified valid" — an untouched
+        // "valid" field stays quiet.
+        if (this.fieldClass.includes("modified")) return `${base} fui-input--valid`;
         return base;
     }
 

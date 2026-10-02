@@ -58,10 +58,11 @@ export abstract class InputBase<TValue> extends ComponentBase {
   /** Blazor's FieldClass: validation CSS class for the bound field. */
   protected get fieldClass(): string {
     if (!this.editContext || !this.ValueExpression) return "";
-    const messages = this.editContext.getValidationMessages(this.ValueExpression);
-    if (messages.length > 0) return "invalid";
-    if (this.editContext.isModified(this.ValueExpression)) return "modified valid";
-    return "";
+    const isValid = this.editContext.getValidationMessages(this.ValueExpression).length === 0;
+    const isModified = this.editContext.isModified(this.ValueExpression);
+    // Blazor's EditContext.FieldCssClass: the four documented states.
+    if (isModified) return isValid ? "modified valid" : "modified invalid";
+    return isValid ? "valid" : "invalid";
   }
 
   /** Merges validation class with pass-through attributes for one element. */

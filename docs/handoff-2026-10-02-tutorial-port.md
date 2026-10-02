@@ -108,24 +108,42 @@ Port, nicht dieses Repo. Der flaky Tutorial-Test „async-work app-b“ sollte r
    Compiler-Support, 28 Conformance-Tests, `@tsazor/testing`-Fixture `createFakeLocalization`,
    language-reference-Sektion. **Noch offen aus E8:** Part-3-Lokalisierungs-Lektion (M4+),
    E12-`Decimal`-Komposition mit `@bind:culture`.
-2. Tutorial M4 (Teil 3 „Applications"): **Routing-Kapitel erledigt** (2026-10-02, noch
-   nicht committet): 6 Lektionen `content/03-applications/01-routing/` (01-pages …
-   06-not-found, kumulativer App-Zustand, app-b wie üblich nur geänderte Dateien),
-   Engine-Prerequisite **H.7 In-Memory-History** umgesetzt (`runtime/src/navigation/memory-history.ts`
-   + Tests; Preview zeigt die URL im srcdoc-iframe), 18 Claims-Tests
-   `test/claims-part3.test.ts` pinnen jeden Text-Aussagen ans echte Compiler/Runtime
-   (Route-Manifest, Interception, `:int`-Konvertierung, Optional-segment-liefert-null
-   — Blazor-Parität!, NavLink-Semantik inkl. `class=""` inaktiv + Prefix/All-Falle,
-   TS2339 ohne Import, navigateTo, LocationChanged + registerLocationChangingHandler,
-   Query-Parameter inkl. dokumentiertem Throw, NotFound). Tutorial-Gesamt: 414/414 grün.
-   **Harness-Lektion:** ein failender Assert überspringt `dispose()` — die lebende App
-   behält ihren document-weiten Click-Listener und schluckt die Klicks des nächsten
-   Tests; Fix: `live: Mounted[]` + `afterEach`-Disposal (claims-part3.test.ts:30-34).
-   **Offen in M4:** Forms (EditForm, Validierung, InputFile), Auth (AuthorizeView),
-   Talking to a backend, Testing, Next steps; die Lokalisierungs-Lektion (E8-Follow-up)
-   und Hash-Routing evtl. als Lektion. Danach R1 CI + S1 API-Snapshot. Optional:
-   Echte-Browser-Routing-Prüfung in `scripts/verify.mjs` (Deep-Link + URL-Bar nach
-   Klick) — happy-dom kann das srcdoc-Memory-History-Verhalten nicht verifizieren.
+2. Tutorial M4 (Teil 3 „Applications"):
+   - **Routing-Kapitel erledigt** (Commit `dfa55fc`, 2026-10-02): 6 Lektionen
+     `content/03-applications/01-routing/` (01-pages … 06-not-found, kumulativer App-Zustand,
+     app-b wie üblich nur geänderte Dateien), Engine-Prerequisite **H.7 In-Memory-History**
+     (`runtime/src/navigation/memory-history.ts` + Tests; Preview zeigt die URL im
+     srcdoc-iframe), 18 Claims-Tests `test/claims-part3.test.ts` (Route-Manifest, Interception,
+     `:int`-Konvertierung, Optional-segment-liefert-null — Blazor-Parität!, NavLink-Semantik
+     inkl. `class=""` inaktiv + Prefix/All-Falle, TS2339 ohne Import, navigateTo,
+     LocationChanged + registerLocationChangingHandler, Query-Parameter inkl. dokumentiertem
+     Throw, NotFound).
+   - **Forms-Kapitel erledigt** (2026-10-02): 6 Lektionen `content/03-applications/02-forms/`
+     (01-edit-form … 06-attaching-a-file; die tote `/bread`-Route wird das Vorbestell-Formular),
+     14 weitere Claims-Tests im selben File (EditForm-Submit-Routing inkl. OnSubmit-Throw,
+     exakte Decorator-Meldungen, gestapelte Regeln, Summary/Status-Fluss, die vier
+     Field-Klassen, Validators-Map sofortige Meldung + Koexistenz, InputFile inkl. Guards).
+     Zwei echte Funde: **Blazor-Paritätslücke im Runtime gefixt** — `InputBase.fieldClass`
+     liefert jetzt die vier dokumentierten Zustände `valid`/`invalid`/`modified valid`/
+     `modified invalid` (`runtime/src/forms/input-base.ts`; fluent-Wrapper bleiben „still“ für
+     unberührte Felder, indem sie auf `modified` schlüsseln). Und die **Auto-Import-Grenze war
+     in den Lerntexten falsch beschrieben**: Markup-Tags importieren sich selbst — auch
+     `DataAnnotationsValidator` und `InputFile`; nur Code-Namen (Decorators, `EditContext`,
+     `ModelValidator`, `InputFileChangeEventArgs`) brauchen `@import`. Lerntexte und App-Dateien
+     entsprechend korrigiert; der Claims-Test pinnt beide Seiten (Tag ohne Import baut+prüft+läuft,
+     Decorator ohne Import → TS2552). Auch gefixt: 06/app-a führte den Stand von Lektion 05
+     (Validators-Map) nicht mit — Kontinuitätsbruch.
+     Tutorial-Gesamt danach: 450/450 grün, `pnpm -r --filter '!fluentcms-admin' build` + `test`
+     grün. **Wichtig:** Runtime-Dist nach `input-base.ts`-Änderungen rebuilden — das Tutorial
+     testet gegen das gebaute Dist, nicht gegen src.
+   - **Harness-Lektion:** ein failender Assert überspringt `dispose()` — die lebende App
+     behält ihren document-weiten Click-Listener und schluckt die Klicks des nächsten
+     Tests; Fix: `live: Mounted[]` + `afterEach`-Disposal (claims-part3.test.ts).
+   **Offen in M4:** Auth (AuthorizeView), Talking to a backend, Testing, Next steps; die
+   Lokalisierungs-Lektion (E8-Follow-up) und Hash-Routing evtl. als Lektion. Danach R1 CI +
+   S1 API-Snapshot. Optional: Echte-Browser-Routing-Prüfung in `scripts/verify.mjs`
+   (Deep-Link + URL-Bar nach Klick) — happy-dom kann das srcdoc-Memory-History-Verhalten
+   nicht verifizieren.
 3. Bundle-Analyse: erst vor dem Release-Kandidaten. Die Bundle-Größe ist laut User kein Blocker
    (+15 KB gz zum Svelte-Original, cachebar).
 
