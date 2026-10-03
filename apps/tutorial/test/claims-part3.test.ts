@@ -622,3 +622,173 @@ describe("attaching-a-file", () => {
     m.dispose();
   });
 });
+/* Chapter 16 — Auth -------------------------------------------------------------------- */
+
+describe("signing-in", () => {
+  const { a, b } = lesson("signing-in");
+
+  it("Program.ts registers one provider under both keys — it type-checks without a cast", () => {
+    expect(types(a)).toEqual([]);
+    expect(types(b)).toEqual([]);
+  });
+
+  it("the start: Sign in calls an empty method — the header doesn't change", async () => {
+    const m = await mount(a);
+    expect(m.html()).toContain(">Sign in</button>");
+    click(m, ".user button");
+    await m.settle();
+    expect(m.html()).toContain(">Sign in</button>");
+    expect(m.html()).not.toContain("Hi, ");
+  });
+
+  it("the solution: notify, and the header switches both ways", async () => {
+    const m = await mount(b);
+    click(m, ".user button");
+    await m.settle();
+    expect(m.html()).toContain("Hi, Marta");
+    expect(m.html()).toContain(">Sign out</button>");
+    click(m, ".user button");
+    await m.settle();
+    expect(m.html()).toContain(">Sign in</button>");
+  });
+
+  it("without the notification the header misses the sign-in", async () => {
+    const files = { ...b, "BakeryAuth.ts": b["BakeryAuth.ts"]!.replace("this.notifyAuthenticationStateChanged(this.current);", "") };
+    const m = await mount(files);
+    click(m, ".user button");
+    await m.settle();
+    expect(m.html()).not.toContain("Hi, Marta");
+  });
+});
+
+describe("authorize-view", () => {
+  const { b } = lesson("authorize-view");
+
+  it("Authorized / NotAuthorized switch with the provider's notification", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    expect(m.html()).toContain("Sign in to see your usual order.");
+    click(m, ".user button");
+    await m.settle();
+    expect(m.html()).toContain("Welcome back, Marta! Your usual sourdough is waiting.");
+    expect(m.html()).not.toContain("Sign in to see");
+  });
+
+  it("the simplest form: content without sections shows to signed-in users, with context", async () => {
+    const files = {
+      ...b,
+      "Home.tsazor": '@page "/"\n<AuthorizeView>\n    <p class="welcome">Welcome back, @context.user.name!</p>\n</AuthorizeView>\n',
+    };
+    expect(types(files)).toEqual([]);
+    const m = await mount(files);
+    expect(m.html()).not.toContain("welcome");
+    click(m, ".user button");
+    await m.settle();
+    expect(m.html()).toContain("Welcome back, Marta!");
+  });
+});
+
+describe("roles", () => {
+  const { b } = lesson("roles");
+  const signInAs = (m: Mounted, index: 1 | 2): void => click(m, `.user button:nth-of-type(${index})`);
+
+  it("AuthorizeView Roles shows the link to bakers only", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    expect(m.html()).not.toContain('href="/orders"');
+    signInAs(m, 1);
+    await m.settle();
+    expect(m.html()).toContain("Hi, Marta");
+    expect(m.html()).not.toContain('href="/orders"');
+    click(m, ".user button");
+    await m.settle();
+    signInAs(m, 2);
+    await m.settle();
+    expect(m.html()).toContain("Hi, Bea");
+    expect(m.html()).toContain('href="/orders"');
+  });
+
+  it("Roles takes a comma-separated list; one role is enough", async () => {
+    const files = { ...b, "App.tsazor": b["App.tsazor"]!.replace('Roles="baker"', 'Roles="owner, baker"') };
+    const m = await mount(files);
+    signInAs(m, 2);
+    await m.settle();
+    expect(m.html()).toContain('href="/orders"');
+  });
+});
+
+describe("protected-pages", () => {
+  const { a, b } = lesson("protected-pages");
+
+  it("the start: hiding the link doesn't protect the page", async () => {
+    const m = await mount(a);
+    click(m, ".staff a");
+    await m.settle();
+    expect(m.html()).toContain("#101 Marta");
+  });
+
+  it("@authorize + AuthorizeRouteView: denied for anonymous and for Marta, the list for Bea — live on sign-in", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    click(m, ".staff a");
+    await m.settle();
+    expect(m.html()).toContain("Bakers only");
+    expect(m.html()).not.toContain("#101 Marta");
+    click(m, ".user button:nth-of-type(1)");
+    await m.settle();
+    expect(m.html()).toContain("Bakers only");
+    click(m, ".user button");
+    await m.settle();
+    click(m, ".user button:nth-of-type(2)");
+    await m.settle();
+    expect(m.html()).not.toContain("Bakers only");
+    expect(m.html()).toContain("#101 Marta");
+  });
+
+  it("a bare @authorize means signed-in users only", async () => {
+    const files = { ...b, "Orders.tsazor": b["Orders.tsazor"]!.replace('@authorize({ roles: ["baker"] })', "@authorize") };
+    const m = await mount(files);
+    click(m, ".staff a");
+    await m.settle();
+    expect(m.html()).toContain("Bakers only");
+    click(m, ".user button:nth-of-type(1)");
+    await m.settle();
+    expect(m.html()).toContain("#101 Marta");
+  });
+});
+
+describe("the-user-in-code", () => {
+  const { b } = lesson("the-user-in-code");
+  const nameInput = (m: Mounted) => m.container.querySelector(".order input") as HTMLInputElement;
+
+  it("the cascaded state prefills the name after sign-in", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    click(m, ".user button");
+    await m.settle();
+    click(m, "nav a:nth-child(2)");
+    await m.settle();
+    expect(nameInput(m).value).toBe("Marta");
+  });
+
+  it("onParametersSet runs again when the user changes — signing in on the form fills it", async () => {
+    const m = await mount(b);
+    click(m, "nav a:nth-child(2)");
+    await m.settle();
+    expect(nameInput(m).value).toBe("");
+    click(m, ".user button");
+    await m.settle();
+    expect(nameInput(m).value).toBe("Marta");
+  });
+
+  it("a typed name is kept", async () => {
+    const m = await mount(b);
+    click(m, "nav a:nth-child(2)");
+    await m.settle();
+    edit(nameInput(m), "Jonas");
+    await m.settle();
+    click(m, ".user button");
+    await m.settle();
+    expect(nameInput(m).value).toBe("Jonas");
+  });
+});

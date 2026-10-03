@@ -197,4 +197,17 @@ describe("App.razor shapes over the built-in components", () => {
     document.body.innerHTML = "";
     expect(await start(files, "/", routes, new AuthenticationState(createUser({ name: "alice" })))).toBe("<span>Hello, alice!</span>");
   });
+
+  it("<AuthorizeView> content without sections receives context too (Blazor: RenderFragment<AuthenticationState>)", async () => {
+    const files: Files = {
+      ...pages,
+      "Home.tsazor": `<AuthorizeView><span>Hello, @context.user.name!</span></AuthorizeView>`,
+      "App.tsazor": `<Router><Found Context="routeData"><RouteView RouteData="@routeData" /></Found></Router>`,
+    };
+    const routes = [{ template: "/", page: "Home.tsazor" }];
+    expect(await start(files, "/", routes)).toBe("");
+    app!.dispose();
+    document.body.innerHTML = "";
+    expect(await start(files, "/", routes, new AuthenticationState(createUser({ name: "alice" })))).toBe("<span>Hello, alice!</span>");
+  });
 });

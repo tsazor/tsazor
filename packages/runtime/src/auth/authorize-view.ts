@@ -19,8 +19,9 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   /** Roles that grant access (string array or comma-separated string). */
   @Parameter() roles?: readonly string[] | string;
 
-  /** Authorized content without the state context (Razor's default ChildContent). */
-  @Parameter() childContent?: RenderFragment;
+  /** Authorized content without sections (Razor's ChildContent — like Blazor's
+   *  RenderFragment<AuthenticationState>, it receives the state as `context`). */
+  @Parameter() childContent?: (state: AuthenticationState) => RenderFragment;
   /** Authorized content receiving the AuthenticationState (Razor's <Authorized>). */
   @Parameter() authorized?: (state: AuthenticationState) => RenderFragment;
   /** Rendered when access is denied; receives the AuthenticationState
@@ -67,7 +68,7 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
       if (this.authorized) {
         b.addContent(0, this.authorized(state));
       } else if (this.childContent) {
-        b.addContent(1, this.childContent);
+        b.addContent(1, this.childContent(state));
       }
     } else if (this.notAuthorized) {
       b.addContent(2, this.notAuthorized(state));

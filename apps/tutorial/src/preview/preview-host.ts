@@ -7,7 +7,8 @@
  * so they must be created inside the opaque origin), installs an import map
  * (`@tsazor/runtime`, `@tsazor/components`, `$app/…`), injects the CSS and
  * mounts `App` with createTsazorApp — or imports the lesson's `Program.ts`,
- * which starts the app itself (with its services). A routing project gets
+ * which starts the app itself (with its services; a runtime shim adds the
+ * routes and the History below). A routing project gets
  * its `@page` manifest as the app's routes and an in-memory History (a srcdoc
  * document has no usable history API). Errors, console output, the document
  * title (PageTitle) and the current URL come back via postMessage; stack
@@ -78,9 +79,32 @@ function srcdoc(baseHref: string): string {
     const { modules, runtime, components, css, entry, program, routes } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
     const imports = { "@tsazor/runtime": url(runtime), "@tsazor/components": url(components) };
+    // A Program.ts starts the app itself, but it cannot know the preview's
+    // routes or its in-memory History: its @tsazor/runtime import goes to a
+    // shim whose createTsazorApp adds both (unless the program passes its own).
+    const programShim = program && url(
+      'import { createTsazorApp as start, MemoryHistory, NavigationManager } from "@tsazor/runtime";\\n' +
+      'export * from "@tsazor/runtime";\\n' +
+      "const routes = [];\\n" +
+      "for (const request of " + JSON.stringify(routes) + ") {\\n" +
+      "  const page = await import(request.module);\\n" +
+      "  const route = { template: request.template, type: page.default };\\n" +
+      "  if (request.layout) route.layout = (await import(request.layout)).default;\\n" +
+      "  if (request.authorize) route.authorize = request.authorize;\\n" +
+      "  routes.push(route);\\n" +
+      "}\\n" +
+      "export function createTsazorApp(options) {\\n" +
+      "  const history = new MemoryHistory(document.baseURI);\\n" +
+      "  const navigation = options.navigationManager ?? new NavigationManager({ history, location: history });\\n" +
+      "  const app = start({ ...options, routes: options.routes ?? (routes.length > 0 ? routes : undefined), navigationManager: navigation });\\n" +
+      "  const post = () => parent.postMessage({ source: \\"tsazor-preview\\", type: \\"url\\", text: history.href }, \\"*\\");\\n" +
+      "  if (!options.navigationManager) { navigation.addLocationChanged(post); post(); }\\n" +
+      "  return app;\\n" +
+      "}\\n");
     const urls = {};
     for (const module of modules) {
-      imports[module.id] = url(module.code + "\\n//# sourceURL=" + module.id);
+      const code = module.id === program ? module.code.replace(/(["'])@tsazor\\/runtime\\1/g, JSON.stringify(programShim)) : module.code;
+      imports[module.id] = url(code + "\\n//# sourceURL=" + module.id);
       urls[imports[module.id]] = module.id;
     }
     send({ type: "urls", urls });
@@ -91,11 +115,11 @@ function srcdoc(baseHref: string): string {
     document.getElementById("tsazor-app-css").textContent = css;
     const boot = document.createElement("script");
     boot.type = "module";
-    // A Program.ts starts the app itself (and registers its services);
-    // otherwise the entry component is mounted directly. Without a Program.ts
-    // the app gets its routes (the @page manifest) and — in a srcdoc document
-    // history.pushState throws — an in-memory History, whose URL is reported
-    // like a browser address bar (H.7).
+    // A Program.ts starts the app itself (and registers its services; the
+    // shim above adds routes and History); otherwise the entry component is
+    // mounted directly. Either way the app gets its routes (the @page
+    // manifest) and — in a srcdoc document history.pushState throws — an
+    // in-memory History, whose URL is reported like a browser address bar (H.7).
     if (program) {
       boot.textContent = "import " + JSON.stringify(program) + ";\\n" +
         'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';

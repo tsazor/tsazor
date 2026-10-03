@@ -1,0 +1,27 @@
+@page "/orders"
+@authorize({ roles: ["baker"] })
+@import { SupplyParameterFromQuery } from "@tsazor/runtime"
+<h2>Orders</h2>
+<nav class="filters">
+    <a href="/orders">All</a>
+    <a href="/orders?state=open">Open</a>
+    <a href="/orders?state=picked-up">Picked up</a>
+</nav>
+<ul class="orders">
+    @foreach (const order of shown) {
+        <li>#@order.id @order.customer (@order.state)</li>
+    }
+</ul>
+
+@code {
+    @Parameter() @SupplyParameterFromQuery() state: string | null = null;
+    orders = [
+        { id: 101, customer: "Marta", state: "open" },
+        { id: 102, customer: "Jonas", state: "picked-up" },
+        { id: 103, customer: "Bea", state: "open" },
+    ];
+
+    get shown() {
+        return this.state === null ? this.orders : this.orders.filter((order) => order.state === this.state);
+    }
+}

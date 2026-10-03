@@ -344,6 +344,21 @@ async function main() {
     await page.click("button:has-text('Solve')");
     check((await waitForPreview(page, ".total", "€5.70")).includes("€5.70"), "ch13 Organizing code: imports inherited from _Imports.tsazor");
     check(await noProblems(), "ch13 Organizing code: the _Imports solution type-checks");
+
+    /* 7c — Part 3: a Program.ts lesson with routes (the preview's runtime shim) */
+    await page.goto(`${APP}/ts/the-user-in-code`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, ".user button", "Sign in");
+    await previewClick(".user button");
+    check((await waitForPreview(page, ".user", "Hi, Marta")).includes("Hi, Marta"), "ch16 Auth: Program.ts registers the provider; the header follows the sign-in");
+    await previewClick("nav a:nth-child(2)");
+    await waitForPreview(page, "h2", "Pre-order bread");
+    const prefilled = await (await frameOf()).$eval(".order input", (el) => el.value);
+    check(prefilled === "Marta", `ch16 Auth: a Program.ts app routes in the preview and the cascade prefills the form (${prefilled})`);
+    const authUrl = (await page.textContent(".page-url").catch(() => "")) ?? "";
+    check(authUrl.endsWith("/bread"), `ch16 Auth: the preview bar shows the URL of a Program.ts app (${authUrl})`);
+    check(await noProblems(), "ch16 Auth: the solution type-checks");
     await page.goto(`${APP}/ts/your-first-component`);
     await waitForPreview(page, "h1", "Hello");
     check((await page.$(".preview .page-title")) === null, "a lesson without PageTitle shows no tab title");

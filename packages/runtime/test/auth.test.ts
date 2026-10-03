@@ -147,7 +147,7 @@ describe("AuthorizeView", () => {
     class App extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
-        b.addAttribute(1, "ChildContent", fragment("secret"));
+        b.addAttribute(1, "ChildContent", stateFragment("secret"));
         b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
@@ -174,7 +174,7 @@ describe("AuthorizeView", () => {
           for (const [name, value] of Object.entries(rules)) {
             b.addAttribute(sequence++, name, value as never);
           }
-          b.addAttribute(sequence, "ChildContent", fragment("granted"));
+          b.addAttribute(sequence, "ChildContent", stateFragment("granted"));
           b.addAttribute(sequence + 1, "NotAuthorized", stateFragment("denied"));
           b.closeComponent();
         }
@@ -210,7 +210,7 @@ describe("AuthorizeView", () => {
     class App extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
-        b.addAttribute(1, "ChildContent", fragment("secret"));
+        b.addAttribute(1, "ChildContent", stateFragment("secret"));
         b.addAttribute(2, "NotAuthorized", stateFragment("denied"));
         b.closeComponent();
       }
@@ -236,7 +236,7 @@ describe("AuthorizeView", () => {
     class App extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.openComponent(0, defineComponent(AuthorizeView));
-        b.addAttribute(1, "ChildContent", fragment("secret"));
+        b.addAttribute(1, "ChildContent", stateFragment("secret"));
         b.addAttribute(2, "Authorizing", fragment("checking…"));
         b.closeComponent();
       }

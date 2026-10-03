@@ -1926,20 +1926,26 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         },
         {
           "name": "childContent",
-          "category": "RenderFragment",
+          "category": "RenderFragment<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "AuthorizeView",
-          "type": "RenderFragment",
+          "type": "(state: AuthenticationState) => RenderFragment",
           "references": [
+            {
+              "name": "AuthenticationState",
+              "kind": "runtime",
+              "imported": "AuthenticationState"
+            },
             {
               "name": "RenderFragment",
               "kind": "runtime",
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Authorized content without the state context (Razor's default ChildContent)."
+          "doc": "Authorized content without sections (Razor's ChildContent — like Blazor's\n RenderFragment<AuthenticationState>, it receives the state as `context`).",
+          "typeArgument": "AuthenticationState"
         },
         {
           "name": "authorized",
