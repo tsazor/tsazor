@@ -22,6 +22,10 @@ As in Razor, the attribute is lowered by the parameter's type: `answer` is a `nu
 value is the expression `42` (and `answer="6 * 7"` would pass 42 too); a `string` parameter
 takes the text as written.
 
+Unlike many JavaScript frameworks, Tsazor checks parameters as strictly as the C# compiler:
+a parameter without a type, or a value of the wrong type, is a compile-time error, not a
+surprise at runtime.
+
 > **Coming from Blazor:** `[Parameter] public int Answer { get; set; }` becomes the field
 > `@Parameter() answer?: number;` — a TC39 decorator on a plain class field, no property
 > needed, and no import (the compiler provides `Parameter`). Parameter names are matched

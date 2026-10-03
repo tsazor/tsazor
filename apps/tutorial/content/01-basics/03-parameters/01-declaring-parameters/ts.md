@@ -3,8 +3,8 @@ title: Declaring parameters
 focus: App.tsazor
 ---
 
-So far our components only had their own state. To pass data *into* a component — the way
-attributes configure an HTML element — it declares **parameters**.
+So far our components only had their own state. To pass data *into* a component, the way
+attributes configure an HTML element, it declares **parameters**.
 
 Pass an `answer` to `Nested` in `App.tsazor`:
 
@@ -12,21 +12,24 @@ Pass an `answer` to `Nested` in `App.tsazor`:
 <Nested answer="42" />
 ```
 
-The problems panel objects right away: `Nested` doesn't have a parameter called `answer`. Its
-field is private state as far as the outside world is concerned. Open `Nested.tsazor` and
-mark the field as a parameter:
+The problems panel objects right away: `Nested` has no parameter called `answer`. Open
+`Nested.tsazor` and mark the field as one:
 
 ```ts
 @Parameter() answer?: number;
 ```
 
-`@Parameter()` is a decorator — standard TypeScript, nothing Tsazor-specific about the
-syntax — and it's available in every `.tsazor` file without an import. The field stays an
-ordinary field: you read it as `this.answer` in code and `@answer` in the markup. The
-difference is that the parent may now set it — and when the parent renders again with a new
-value, `Nested` gets the new value and renders too.
+`@Parameter()` is a standard TypeScript decorator, available in every `.tsazor` file without
+an import. The field stays an ordinary field (`this.answer` in code, `@answer` in markup),
+but now the parent may set it, and `Nested` renders again when the value changes.
 
-Notice the value arrives as the *number* 42, not the string `"42"`. The attribute is read
-according to the parameter's type: for a `number` (or a boolean, an object, an array…) the
-attribute value is a TypeScript expression — `answer="6 * 7"` passes 42 as well. Only a
-`string` parameter takes the text as written.
+The value arrives as the *number* 42, not the string `"42"`: the attribute is read according
+to the parameter's type. For a `number` it's an expression (`answer="6 * 7"` passes 42 too).
+Only a `string` parameter takes the text as written.
+
+That type is not optional. Tsazor always checks types strictly: a parameter without a type
+is an error, and so is a value that doesn't fit, like a string passed to `answer`. Many
+JavaScript frameworks accept whatever you pass, and you find the mistake when the page
+breaks in the browser. Here it's a compile-time error instead: the problems panel shows it
+while you type, before the app runs. (A default value such as `answer = 0` gives the field
+its type too. That's the next lesson.)

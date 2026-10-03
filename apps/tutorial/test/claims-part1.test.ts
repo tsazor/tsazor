@@ -283,6 +283,18 @@ describe("declaring-parameters", () => {
     expect(m.html()).toBe("<p>42 number</p><p>42 number</p><p>42 string</p>");
   });
 
+  it("types are not optional: an untyped parameter and a value that doesn't fit are errors before the app runs", () => {
+    const nested = (declaration: string) => `<p>@answer</p>
+@code {
+    ${declaration}
+}`;
+    expect(typeCodes({ "App.tsazor": `<Nested answer="42" />`, "Nested.tsazor": nested("@Parameter() answer;") })).toEqual(["TS7008"]);
+    expect(typeCodes({ "App.tsazor": `<Nested answer="@("42")" />`, "Nested.tsazor": nested("@Parameter() answer?: number;") })).toEqual(["TS1360"]);
+    // A default value gives the field its type too.
+    expect(typeCodes({ "App.tsazor": `<Nested answer="42" />`, "Nested.tsazor": nested("@Parameter() answer = 0;") })).toEqual([]);
+    expect(typeCodes({ "App.tsazor": `<Nested answer="@("42")" />`, "Nested.tsazor": nested("@Parameter() answer = 0;") })).toEqual(["TS1360"]);
+  });
+
   it("names match case-insensitively", async () => {
     const m = await mount({ "App.tsazor": `<Nested Answer="42" />`, "Nested.tsazor": `<p>@answer</p>\n@code {\n    @Parameter() answer?: number;\n}` });
     expect(m.html()).toBe("<p>42</p>");
