@@ -41,3 +41,8 @@ Until the answer arrives, `orders` is `null`. Show that in the markup:
 ```
 
 Sign in as baker and open Orders. "Loading…" shows briefly, then five orders from the server.
+
+> **Plain `fetch` works too.** `TsazorHttp` is optional: a component can call
+> `await fetch(url)` like any other code. The client adds a base address, JSON helpers,
+> errors that keep the server's answer, and hooks for things like auth headers. Because
+> it's injected, it can also be swapped out, which is how the preview plays the server.
