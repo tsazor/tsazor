@@ -33,6 +33,7 @@ import {
   type SnippetKind,
 } from "./rewrite.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
+import type { ExpressionValue } from "./expression-values.js";
 import * as ts from "typescript";
 
 export interface ResolvedComponent {
@@ -168,6 +169,8 @@ export interface CodegenResult {
   };
   /** 2.4: the tag-level TItem inference requests (shadow layer only). */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** 2.4: plain-text values read as expressions (shadow layer only) — see expression-values.ts. */
+  expressionValues?: readonly ExpressionValue[];
 }
 
 interface MapEntry {
@@ -288,6 +291,8 @@ class Codegen {
   /** `import type` lines the shadow module needs for the parameter types. */
   private readonly shadowTypeImports = new Map<string, { specifier: string; imported?: string }>();
   private readonly inferenceRequests: TypedTagInferenceRequest[] = [];
+  /** 2.4: plain-text values of non-string parameters (typed-shadow builds only). */
+  private readonly expressionValues: ExpressionValue[] = [];
   /** The subset of importedNames bound to runtime values (usable as component tags). */
   private readonly importedValues = new Set<string>();
   /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
@@ -557,6 +562,7 @@ class Codegen {
       mappings: this.takeMappings(),
       metadata: this.metadata,
       ...(this.options.typedShadow !== undefined && this.inferenceRequests.length > 0 ? { typedInference: this.inferenceRequests } : {}),
+      ...(this.expressionValues.length > 0 ? { expressionValues: this.expressionValues } : {}),
     };
   }
 
@@ -1966,6 +1972,17 @@ class Codegen {
     if (source === null) {
       this.diagnostics.error("TZS009", attr, `'${attr.name}' sets the ${category} parameter '${name}' of '<${target.tag}>': its value is a TypeScript expression, not empty text.`);
       return;
+    }
+    if (this.options.typedShadow !== undefined && category === "value" && attr.kind !== "expression" && attr.raw !== undefined && !attr.raw.text.startsWith("@")) {
+      // Plain text read as code: the tooling explains unknown names in it.
+      const type = parameter!.type ?? parameter!.inferredType;
+      this.expressionValues.push({
+        start: attr.raw.start,
+        end: advancePos(attr.raw.start, attr.raw.text),
+        parameter: name,
+        tag: target.tag,
+        ...(type !== undefined ? { type } : {}),
+      });
     }
     const isCallback = category === "EventCallback" || category === "EventCallback<T>";
     if (isCallback && source.code === "true" && source.start === undefined) {

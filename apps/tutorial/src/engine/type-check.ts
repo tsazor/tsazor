@@ -12,7 +12,7 @@
  * (TsazorGenMap, the LSP's own class); diagnostics in unmapped generated
  * plumbing are dropped, exactly like `tsDiagnostics` in the LSP.
  */
-import { compile, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { compile, explainExpressionValue, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { TsazorGenMap } from "@tsazor/lsp/ts-mapping";
 import ts from "typescript";
 import { basename, createResolver, dirname, joinPath, relativeSpecifier } from "./resolve.js";
@@ -42,6 +42,8 @@ interface ShadowEntry {
   code: string;
   /** `TItem` inference requests of generic component tags (2.4). */
   requests: readonly TypedTagInferenceRequest[];
+  /** Plain-text values of non-string parameters (unknown names in them get a note). */
+  expressionValues?: readonly ExpressionValue[];
   /** Type arguments inferred so far, per tag (`line:column`). */
   typeArguments?: ReadonlyMap<string, ReadonlyMap<string, string>>;
 }
@@ -119,7 +121,7 @@ export class TypeChecker {
           ...located,
           severity: diagnostic.category === ts.DiagnosticCategory.Error ? "error" : "warning",
           code: `TS${diagnostic.code}`,
-          message,
+          message: explainExpressionValue(diagnostic.code, message, { line: located.line, column: located.column }, shadow?.expressionValues),
           source: "types",
         });
       }
@@ -165,7 +167,7 @@ export class TypeChecker {
         if (!shadow) continue;
         const previous = this.scripts.get(path)!;
         this.scripts.set(path, { text: shadow.code, version: previous.version + 1 });
-        this.shadows.set(path, { file: entry.file, map: shadow.map, code: shadow.code, requests: shadow.requests, typeArguments: merged });
+        this.shadows.set(path, { file: entry.file, map: shadow.map, code: shadow.code, requests: shadow.requests, expressionValues: shadow.expressionValues, typeArguments: merged });
         changed = true;
       }
       if (!changed) return;
@@ -191,7 +193,7 @@ export class TypeChecker {
         if (!shadow) continue;
         const path = `${APP_ROOT}${file}.gen.ts`;
         put(path, shadow.code);
-        shadows.set(path, { file, map: shadow.map, code: shadow.code, requests: shadow.requests });
+        shadows.set(path, { file, map: shadow.map, code: shadow.code, requests: shadow.requests, expressionValues: shadow.expressionValues });
       }
     }
     this.scripts = next;
@@ -205,7 +207,7 @@ function buildShadow(
   file: string,
   resolver: ReturnType<typeof createResolver>,
   typeArguments?: TypeArguments,
-): { code: string; map: TsazorGenMap; requests: readonly TypedTagInferenceRequest[] } | null {
+): { code: string; map: TsazorGenMap; requests: readonly TypedTagInferenceRequest[]; expressionValues?: readonly ExpressionValue[] } | null {
   const fileDir = dirname(file);
   const options = resolver.optionsFor(file);
   const codeBehindFile = `${file}.ts`;
@@ -232,7 +234,7 @@ function buildShadow(
   if (compiled.diagnostics.hasErrors) return null;
   // Imports of sibling components → their shadows (the LSP's rewrite A).
   const code = compiled.code.replace(/^(import\s[^;]*?\sfrom\s+)(["'])(\.{1,2}\/[^"']*?\.tsazor)\2/gm, "$1$2$3.gen$2");
-  return { code, map: new TsazorGenMap(compiled.mappings ?? []), requests: compiled.typedInference ?? [] };
+  return { code, map: new TsazorGenMap(compiled.mappings ?? []), requests: compiled.typedInference ?? [], expressionValues: compiled.expressionValues };
 }
 
 /** One inference pass over a shadow (the LSP's `inferTypeArguments`): exact (`T`) or through the array element (`T[]`). */

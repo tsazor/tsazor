@@ -12,6 +12,7 @@ export {
   type DiagnosticCode,
 } from "./diagnostics.js";
 export { buildSourceMap, type SourceMapEntry } from "./source-map.js";
+export { explainExpressionValue, type ExpressionValue } from "./expression-values.js";
 export { parseImportDirective, importStatements, scanModuleExports, type ImportInfo, type ImportBinding, type ParsedImport, type ModuleExports } from "./imports.js";
 export {
   extractModuleMetadata,

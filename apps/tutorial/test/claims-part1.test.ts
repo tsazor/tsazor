@@ -295,6 +295,16 @@ describe("declaring-parameters", () => {
     expect(typeCodes({ "App.tsazor": `<Nested answer="@("42")" />`, "Nested.tsazor": nested("@Parameter() answer = 0;") })).toEqual(["TS1360"]);
   });
 
+  it("text for a number parameter is read as code — the error says so", () => {
+    const files = { "App.tsazor": `<Nested answer="hello" />`, "Nested.tsazor": `<p>@answer</p>\n@code {\n    @Parameter() answer?: number;\n}` };
+    const [diagnostic, ...rest] = checker.check(files);
+    expect(rest).toEqual([]);
+    expect(diagnostic!.code).toBe("TS2339");
+    expect(diagnostic!.message).toBe(
+      "Property 'hello' does not exist on type 'App'. Note: 'answer' on <Nested> is a 'number' parameter, so its value is read as a TypeScript expression, not as text.",
+    );
+  });
+
   it("names match case-insensitively", async () => {
     const m = await mount({ "App.tsazor": `<Nested Answer="42" />`, "Nested.tsazor": `<p>@answer</p>\n@code {\n    @Parameter() answer?: number;\n}` });
     expect(m.html()).toBe("<p>42</p>");

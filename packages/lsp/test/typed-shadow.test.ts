@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { TsazorTypeService, shadowOffsetToPos } from "../src/ts-service";
+import { tsDiagnostics } from "../src/ts-features";
 
 let root = "";
 let service: TsazorTypeService;
@@ -131,6 +132,11 @@ beforeAll(async () => {
       "",
     ].join("\n"),
   );
+
+  // Text meant for a number parameter: `answer="hello"` reads the value as
+  // the expression `hello` — the TS2339 gets a note why.
+  await writeFile(path.join(root, "Shared", "Answer.tsazor"), "<p>@answer</p>\n@code {\n    @Parameter() answer?: number;\n}\n");
+  await writeFile(path.join(root, "TextForNumber.tsazor"), '<Answer answer="hello" />\n<Answer answer="@missing" />\n');
 });
 
 afterAll(async () => {
@@ -179,5 +185,17 @@ describe("typed checks through the shadow program (2.4)", () => {
     const srcPos = entry!.shadow.map.genToSrc(genPos.line, genPos.column);
     // Mapped back into the `this.nav.goTo` line of the .tsazor file.
     expect(srcPos?.line).toBe(5);
+  });
+
+  it("text for a number parameter: the unknown name gets a note that the value is code, not text", async () => {
+    const entry = await service.ensureTsazor(path.join(root, "TextForNumber.tsazor"));
+    const diags = tsDiagnostics(service, entry!).filter((d) => d.code === 2339);
+    expect(diags.map((d) => d.line)).toEqual([0, 1]);
+    const [plain, explicit] = diags;
+    expect(plain!.message).toBe(
+      "Property 'hello' does not exist on type 'TextForNumber'. Note: 'answer' on <Answer> is a 'number' parameter, so its value is read as a TypeScript expression, not as text.",
+    );
+    // An explicit `@expr` is code by intent: no note.
+    expect(explicit!.message).not.toContain("Note:");
   });
 });

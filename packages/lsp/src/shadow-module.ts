@@ -1,4 +1,4 @@
-import { compile, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { compile, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -32,6 +32,8 @@ export interface ShadowModule {
   /** 2.4: the tag-level `TItem` inference requests when the shadow was built
    *  without resolved type arguments for all generic tags. */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** 2.4: plain-text values of non-string parameters — unknown names in them get a note. */
+  expressionValues?: readonly ExpressionValue[];
 }
 
 /** Synthetic path of a shadow module: `X.tsazor` → `X.tsazor.gen.ts`. */
@@ -116,6 +118,7 @@ export async function buildShadowModule(
       map: new TsazorGenMap(compiled.mappings ?? []),
       className: context.className,
       ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),
+      ...(compiled.expressionValues !== undefined ? { expressionValues: compiled.expressionValues } : {}),
     };
   } catch {
     // Compiler-level failures (TSZE000-style) → no type layer; the v1 layer

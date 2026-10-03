@@ -9,6 +9,7 @@
  * worse, it only covers @code and expressions, which v1 does not.
  */
 import * as ts from "typescript";
+import { explainExpressionValue } from "@tsazor/compiler";
 import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
 import { readFileSync } from "node:fs";
@@ -464,7 +465,12 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
       endLine,
       endCharacter,
       code: diag.code,
-      message: ts.flattenDiagnosticMessageText(diag.messageText, " "),
+      message: explainExpressionValue(
+        diag.code,
+        ts.flattenDiagnosticMessageText(diag.messageText, " "),
+        { line: src.line + 1, column: src.character },
+        entry.shadow.expressionValues,
+      ),
     });
     if (results.length >= cap) break;
   }

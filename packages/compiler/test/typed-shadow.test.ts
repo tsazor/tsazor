@@ -104,6 +104,19 @@ describe("satisfies checks on attribute values (shadow-only)", () => {
   });
 });
 
+describe("plain-text values read as expressions (shadow-only)", () => {
+  it("records a non-string parameter's plain value — not `@expr`, not string parameters", () => {
+    const { result } = gen('<List OptionalCount="hello" />\n<List OptionalCount="@x" />\n<Grid TItem="Person" Title="text" />', undefined, typedShadow);
+    expect(result.expressionValues).toEqual([
+      { start: { line: 1, column: 21 }, end: { line: 1, column: 26 }, parameter: "optionalCount", tag: "List", type: "number" },
+    ]);
+  });
+
+  it("records nothing in a real build", () => {
+    expect(gen('<List OptionalCount="hello" />').result.expressionValues).toBeUndefined();
+  });
+});
+
 describe("typed slot contexts (shadow-only)", () => {
   it("types the context from the substituted type argument", () => {
     const { result } = gen('<Grid TItem="Person"><RowTemplate><td>@context.name</td></RowTemplate></Grid>', undefined, typedShadow);
