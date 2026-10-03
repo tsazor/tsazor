@@ -1,7 +1,8 @@
 # Roadmap — Tsazor 1.0
 
-Status: **planning** (2026-10-02). The overview for version 1. Detailed plans live in the
-linked roadmaps and design docs.
+Status (2026-10-03): **step 1 of the order below** — tutorial M1–M3 done, M4 half done
+(Routing, Forms); E8 and E11 done; decisions D1–D4 and X1–X4 taken; no CI yet (R1).
+The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
 
 **Goal of 1.0:** a single-page-app framework with **Blazor parity** (markup and semantics),
 superset-only Tsazor extensions, strict TypeScript, and the stability promise
@@ -13,7 +14,8 @@ docs, `@Bindable`/`observe`/`disposeSignal` ([design-bindable-observe.md](design
 
 ## 1 — Tutorial ([roadmap-tutorial.md](roadmap-tutorial.md))
 
-M1 and M2 (Part 1) done · M3 (Part 2) in progress · M4 (Part 3, static deploy).
+M1 and M2 (Part 1) done · M3 (Part 2) done · M4 (Part 3, static deploy) in progress: Routing and
+Forms done; Auth, Talking to a backend, Testing, Next steps open.
 
 ## 2 — Svelte-style features ([design-svelte-features.md](design-svelte-features.md))
 
@@ -85,7 +87,8 @@ architecture and security take priority.
   over.
 
 **Operations**
-- **E8 — Localization and culture:** an `IStringLocalizer` counterpart, `CultureInfo` over `Intl`,
+- **E8 — Localization and culture** (done 2026-10-02, `475cec3`; open: the tutorial lesson,
+  `Decimal` with `@bind:culture`): an `IStringLocalizer` counterpart, `CultureInfo` over `Intl`,
   `@bind:culture`, culture-aware formatting for display and input. Revisit the invariant-only policy
   (A5/B7): keep it for routing and data values, replace it for display and input.
 - **E9 — Accessibility:** audit `@tsazor/components` and `@tsazor/fluent` against WCAG 2.2 AA (EU
@@ -100,8 +103,7 @@ architecture and security take priority.
 - **E11 — Opt-in hash routing** (Tsazor extension; Blazor has none, default stays history
   routing). For hosting without an `index.html` fallback, static hosting and iframe-embedded apps.
   Route and route query live in the fragment (`#/x?y=1`), and the real query string (e.g. an
-  access token) is left untouched. Needed by the first business-SPA port; in progress on
-  `port/modulestore-fixes`.
+  access token) is left untouched. Needed by the first business-SPA port; done (merged in `205b30a`).
 - **E10 — Support policy:** LTS window and deprecation rules, extending the stability promise.
 
 ## 6 — Release infrastructure
