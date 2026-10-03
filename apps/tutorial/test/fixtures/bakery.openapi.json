@@ -1,0 +1,160 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Bakery",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/orders": {
+      "get": {
+        "operationId": "GetOrders",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "picked-up"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CreateOrder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewOrder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "customer",
+          "bread",
+          "quantity",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customer": {
+            "type": "string"
+          },
+          "bread": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "picked-up"
+            ]
+          }
+        }
+      },
+      "NewOrder": {
+        "type": "object",
+        "required": [
+          "name",
+          "bread",
+          "quantity"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "bread": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "pickup": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}

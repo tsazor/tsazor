@@ -135,7 +135,7 @@ describe("tutorial lessons", () => {
       "Special components",
       "Organizing code",
     ]);
-    expect(content.parts[2]!.chapters.map((chapter) => chapter.title)).toEqual(["Routing", "Forms", "Auth"]);
+    expect(content.parts[2]!.chapters.map((chapter) => chapter.title)).toEqual(["Routing", "Forms", "Auth", "Talking to a backend"]);
     const csharp = content.parts[0]!.chapters[0]!.lessons;
     expect(csharp.length).toBeGreaterThanOrEqual(6);
     expect(csharp.length).toBeLessThanOrEqual(10);

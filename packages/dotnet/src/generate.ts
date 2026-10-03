@@ -102,13 +102,14 @@ class Generator {
       this.modelClass(body, className, flat);
     }
     const header: string[] = [
-      "// GENERATED CODE — nicht manuell editieren.",
-      `// Quelle: OpenAPI ${(this.document.info?.title ?? "").trim()} ${(this.document.info?.version ?? "").trim()}`.trimEnd(),
+      "// GENERATED CODE — do not edit by hand.",
+      `// Source: OpenAPI ${(this.document.info?.title ?? "").trim()} ${(this.document.info?.version ?? "").trim()}`.trimEnd(),
       "",
     ];
-    // Decorator-Import nur, wenn Decorators entstehen (keine toten Importe).
-    if (body.some((line) => line.trimStart().startsWith("@"))) {
-      header.push('import { EmailAddress, MaxLength, MinLength, Range, RegularExpression, Required, StringLength } from "@tsazor/runtime";', "");
+    // Import exactly the decorators the models use (no dead imports).
+    const decorators = new Set(body.flatMap((line) => /^\s*@(\w+)\(/.exec(line)?.[1] ?? []));
+    if (decorators.size > 0) {
+      header.push(`import { ${[...decorators].sort().join(", ")} } from "@tsazor/runtime";`, "");
     }
     return [...header, ...body].join("\n").replace(/\n{3,}/g, "\n\n").replace(/\n+$/, "\n");
   }
@@ -143,7 +144,7 @@ class Generator {
       if (fieldDoc) out.push(fieldDoc);
       out.push(this.fieldLine(name, property, schemaNullable(property), required.has(name)));
     }
-    if (Object.keys(properties).length === 0) out.push("    // (leeres Schema)");
+    if (Object.keys(properties).length === 0) out.push("    // (empty schema)");
     out.push("}", "");
   }
 
@@ -230,7 +231,7 @@ class Generator {
     const operations = this.operations();
     this.tracking = false;
 
-    const out: string[] = ["// GENERATED CODE — nicht manuell editieren.", ""];
+    const out: string[] = ["// GENERATED CODE — do not edit by hand.", ""];
     if (clientModelRefs.size > 0) {
       out.push(`import type { ${[...clientModelRefs].sort().join(", ")} } from "./models";`, "");
     }
@@ -376,7 +377,7 @@ class Generator {
       // type alias statt interface: queryString(Record<…>) verlangt ein
       // implizites Index-Signatur-Target — Interfaces bekommen das nicht.
       interface: [
-        docComment("", `Query-Parameter der Operation ${name}.`),
+        docComment("", `Query parameters of the ${name} operation.`),
         `export type ${interfaceName} = {`,
         ...fields.flat(),
         "};",

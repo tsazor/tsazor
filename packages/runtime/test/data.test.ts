@@ -193,6 +193,24 @@ describe("TsazorHttp", () => {
     expect(request.headers.get("authorization")).toBe("Bearer t1");
   });
 
+  it("sends through the fetch option instead of the global fetch (HttpClient's handler)", async () => {
+    const globalFetch = vi.fn(async () => new Response("global"));
+    vi.stubGlobal("fetch", globalFetch);
+    const seen: string[] = [];
+    const http = new TsazorHttp({
+      baseUrl: "https://bakery.example",
+      fetch: async (request) => {
+        seen.push(`${request.method} ${request.url} ${request.headers.get("authorization")}`);
+        return new Response(JSON.stringify(["rye"]), { status: 200 });
+      },
+    });
+    http.addRequestInterceptor((request) => new Request(request, { headers: { authorization: "Bearer t" } }));
+
+    expect(await http.getJson<string[]>("/api/breads")).toEqual(["rye"]);
+    expect(seen).toEqual(["GET https://bakery.example/api/breads Bearer t"]);
+    expect(globalFetch).not.toHaveBeenCalled();
+  });
+
   it("throws TsazorHttpError with status and readable body on error responses", async () => {
     vi.stubGlobal(
       "fetch",

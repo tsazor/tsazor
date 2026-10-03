@@ -1,9 +1,10 @@
 /**
  * Collects the type environment of the in-browser `tsazor check` (Node,
- * build time): TypeScript's lib files reachable from es2023 + dom (es2023: 	oSorted, indLast, …), and the
- * declaration files of @tsazor/runtime and @tsazor/components with their
- * package.json — keyed by the absolute paths the in-memory host serves them
- * under (see src/engine/type-check.ts).
+ * build time): TypeScript's lib files reachable from es2023 + dom (es2023:
+ * toSorted, findLast, …), and the declaration files of @tsazor/runtime,
+ * @tsazor/components and @tsazor/dotnet with their package.json — keyed by
+ * the absolute paths the in-memory host serves them under (see
+ * src/engine/type-check.ts).
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -11,7 +12,7 @@ import path from "node:path";
 import { LIB_ROOT, type TypeEnvironment } from "../src/engine/type-paths.js";
 
 const ROOT_LIBS = ["lib.es2023.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"];
-const PACKAGES = ["@tsazor/runtime", "@tsazor/components"];
+const PACKAGES = ["@tsazor/runtime", "@tsazor/components", "@tsazor/dotnet"];
 
 export function loadTypeEnvironment(fromDir: string): TypeEnvironment {
   const require = createRequire(path.join(fromDir, "package.json"));

@@ -10,6 +10,12 @@ export interface TsazorHttpOptions {
   baseUrl?: string;
   /** Sent with every request unless overridden. */
   defaultHeaders?: Record<string, string>;
+  /**
+   * Sends the request instead of the global `fetch` — like the
+   * HttpMessageHandler of a .NET HttpClient: an in-memory backend for tests
+   * and demos, or a wrapper around `fetch`. Interceptors still run around it.
+   */
+  fetch?: (request: Request) => Promise<Response>;
 }
 
 /** Transforms (or replaces) the outgoing request. */
@@ -70,7 +76,7 @@ export class TsazorHttp {
     for (const interceptor of this.requestInterceptors) {
       current = await interceptor(current);
     }
-    let response = await fetch(current);
+    let response = await (this.options.fetch ?? fetch)(current);
     for (const interceptor of this.responseInterceptors) {
       response = await interceptor(response);
     }

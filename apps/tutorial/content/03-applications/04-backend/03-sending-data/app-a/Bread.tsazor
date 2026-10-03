@@ -1,0 +1,60 @@
+@page "/bread"
+@import { AuthenticationState, EditContext, InputFileChangeEventArgs, ModelValidator } from "@tsazor/runtime"
+@import { BreadOrder } from "./BreadOrder.ts"
+<h2>Pre-order bread</h2>
+<p>Reserve today's loaf — we hold it until noon.</p>
+<EditForm Model="@order" Validators="@validators" OnValidSubmit="handleOrder" OnInvalidSubmit="handleInvalid" class="order">
+    <div class="summary"><ValidationSummary /></div>
+    <DataAnnotationsValidator />
+    <label>Name<InputText @bind="order.name" /><ValidationMessage For="name" /></label>
+    <label>How many<InputNumber @bind="order.quantity" /><ValidationMessage For="quantity" /></label>
+    <label>Bread
+        <InputSelect @bind="order.bread">
+            <option value="sourdough">Sourdough</option>
+            <option value="rye">Rye</option>
+            <option value="ciabatta">Ciabatta</option>
+        </InputSelect>
+        <ValidationMessage For="bread" />
+    </label>
+    <label class="pickup"><InputCheckbox @bind="order.pickup" /> Pick up at eight</label>
+    <label>Picture<InputFile OnChange="handlePicture" accept="image/*" /></label>
+    <p class="picture">@(picture === null ? "No picture chosen." : `${picture.name} (${picture.size} bytes)`)</p>
+    <button type="submit">Reserve</button>
+    @if (submitted) {
+        <p class="success">Reserved: @order.quantity × @order.bread for @order.name.</p>
+    }
+    @if (status !== null) {
+        <p class="status">@status</p>
+    }
+</EditForm>
+
+@code {
+    @CascadingParameter({ type: AuthenticationState }) authentication?: AuthenticationState;
+    order = new BreadOrder();
+    submitted = false;
+    status: string | null = null;
+    picture: File | null = null;
+    validators: Record<string, ModelValidator> = {
+        bread: (value) => (value === "rye" ? "Rye is sold out today — pick another bread." : null),
+    };
+
+    override onParametersSet() {
+        const user = this.authentication?.user;
+        if (user?.isAuthenticated && this.order.name === "") {
+            this.order.name = user.name;
+        }
+    }
+
+    handleOrder() {
+        this.submitted = true;
+        this.status = null;
+    }
+
+    handleInvalid(context: EditContext) {
+        this.status = `${context.getInvalidFields().length} field(s) need a look.`;
+    }
+
+    handlePicture(args: InputFileChangeEventArgs) {
+        this.picture = args.file;
+    }
+}

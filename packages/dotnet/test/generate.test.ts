@@ -80,6 +80,23 @@ describe("generateClient — models.ts", () => {
     const models = generation.files.find((f) => f.path === "models.ts")!.content;
     expect(models).toContain('import { EmailAddress, MaxLength, MinLength, Range, RegularExpression, Required, StringLength } from "@tsazor/runtime";');
   });
+
+  it("importiert genau die benutzten Decorators (keine toten Importe)", () => {
+    const models = (schemas: Record<string, unknown>): string =>
+      generateClient({ openapi: "3.0.1", info: { title: "Bakery", version: "v1" }, paths: {}, components: { schemas } } as OpenApiDocument)
+        .files.find((f) => f.path === "models.ts")!.content;
+    const subset = models({
+      NewOrder: {
+        type: "object",
+        required: ["name"],
+        properties: { name: { type: "string", maxLength: 40 }, quantity: { type: "integer", minimum: 1, maximum: 10 } },
+      },
+    });
+    expect(subset).toContain('import { MaxLength, Range, Required } from "@tsazor/runtime";');
+    expect(subset.startsWith("// GENERATED CODE — do not edit by hand.\n// Source: OpenAPI Bakery v1\n")).toBe(true);
+    const none = models({ Note: { type: "object", properties: { text: { type: "string" } } } });
+    expect(none).not.toContain("import");
+  });
 });
 
 describe("generateClient — client", () => {

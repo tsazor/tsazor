@@ -14,4 +14,6 @@ declare module "virtual:tutorial-bundles" {
   export const runtime: string;
   /** @tsazor/components as one ES module (imports @tsazor/runtime). */
   export const components: string;
+  /** @tsazor/dotnet as one ES module (imports @tsazor/runtime). */
+  export const dotnet: string;
 }

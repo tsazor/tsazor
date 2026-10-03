@@ -167,11 +167,32 @@ documented states (`valid`/`invalid`/`modified valid`/`modified invalid`,
 `runtime/src/forms/input-base.ts`; the fluent wrappers keep an untouched
 field quiet by keying on `modified`).
 
-Open for M4: the remaining Part 3 chapters (Auth, Talking to a backend,
-Testing, Next steps) and the localization lesson (E8 follow-up, M4+); hash
-routing maybe as a lesson; a real-browser routing check in
-`scripts/verify.mjs` (the happy-dom gate cannot verify the preview's srcdoc
-memory-history behavior).
+The Auth chapter (`03-auth/`, five lessons: signing in, AuthorizeView, roles,
+protected pages, the user in code) and the Talking-to-a-backend chapter
+(`04-backend/`, five lessons: data from the server, when parameters change,
+sending data, when the server says no, a typed client) are done (2026-10-03),
+with claims in `test/claims-part3.test.ts` and real-browser checks in
+`scripts/verify.mjs`. The backend chapter plays the server in memory
+(`BakeryApi.ts`) through a new `TsazorHttp` option, `fetch` — the counterpart of
+an `HttpClient`'s `HttpMessageHandler`, useful for tests too. The preview now
+maps `@tsazor/dotnet` as well; the typed-client lesson ships the generator's
+real output (pinned against `test/fixtures/bakery.openapi.json`). Findings,
+all fixed:
+- `AuthorizeRouteView` re-implemented the page rendering of `RouteView` and
+  dropped the `@SupplyParameterFromQuery` values — under it, a query change
+  never reached the page. It now derives from `RouteView`, as in Blazor
+  (conformance test for both views).
+- The preview iframe lacked `allow-forms`: the browser drops a sandboxed form
+  submission *before* the submit event, so no `EditForm` could submit in the
+  real preview (the happy-dom gate cannot see this).
+- `AuthorizeView`'s `ChildContent` receives the state as `context`
+  (`RenderFragment<AuthenticationState>`).
+- The OpenAPI generator wrote German comments into generated code and
+  imported every validation decorator; it now writes English and imports only
+  the decorators it uses.
+
+Open for M4: the remaining Part 3 chapters (Testing, Next steps) and the
+localization lesson (E8 follow-up, M4+); hash routing maybe as a lesson.
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,

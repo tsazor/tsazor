@@ -359,6 +359,37 @@ async function main() {
     const authUrl = (await page.textContent(".page-url").catch(() => "")) ?? "";
     check(authUrl.endsWith("/bread"), `ch16 Auth: the preview bar shows the URL of a Program.ts app (${authUrl})`);
     check(await noProblems(), "ch16 Auth: the solution type-checks");
+
+    /* 7c' — chapter 17: TsazorHttp over the in-memory server, @tsazor/dotnet in the import map */
+    await page.goto(`${APP}/ts/when-parameters-change`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, ".user button", "Sign in");
+    await previewClick(".user button:last-of-type");
+    await previewClick("nav a:nth-child(3)");
+    check((await waitForPreview(page, ".orders", "#105 Lena")).includes("#105 Lena"), "ch17 Backend: the orders come from BakeryApi.ts through TsazorHttp");
+    await previewClick(".filters a:nth-child(2)");
+    let openOnly = "";
+    for (const deadline = Date.now() + 10_000; Date.now() < deadline; await page.waitForTimeout(250)) {
+        openOnly = await previewText(page, ".orders").catch(() => "");
+        if (openOnly.includes("#104 Omar") && !openOnly.includes("Lena")) break;
+    }
+    check(openOnly.includes("#104 Omar") && !openOnly.includes("Lena"), `ch17 Backend: a new query parameter loads again in onParametersSet (${openOnly.trim().replace(/\s+/g, " ")})`);
+    check(await noProblems(), "ch17 Backend: the parameters solution type-checks");
+    await page.goto(`${APP}/ts/a-typed-client`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, ".user button", "Sign in");
+    await previewClick(".user button");
+    await previewClick("nav a:nth-child(2)");
+    await waitForPreview(page, "h2", "Pre-order bread");
+    const bread = await frameOf();
+    await bread.selectOption(".order select", "ciabatta");
+    await bread.fill(".order input[type=number]", "5");
+    await bread.dispatchEvent(".order input[type=number]", "change");
+    await previewClick(".order button[type=submit]");
+    check((await waitForPreview(page, ".status", "Only 2 ciabatta")).includes("Only 2 ciabatta left today."), "ch17 Backend: the generated client and problemMessage (@tsazor/dotnet) run in the preview");
+    check(await noProblems(), "ch17 Backend: the typed-client solution type-checks");
     await page.goto(`${APP}/ts/your-first-component`);
     await waitForPreview(page, "h1", "Hello");
     check((await page.$(".preview .page-title")) === null, "a lesson without PageTitle shows no tab title");

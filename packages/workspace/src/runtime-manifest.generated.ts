@@ -2057,7 +2057,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "optional": false,
           "hasInitializer": false,
           "member": "field",
-          "declaredBy": "AuthorizeRouteView",
+          "declaredBy": "RouteView",
           "type": "RouteData",
           "references": [
             {
@@ -2074,7 +2074,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "optional": true,
           "hasInitializer": false,
           "member": "field",
-          "declaredBy": "AuthorizeRouteView",
+          "declaredBy": "RouteView",
           "type": "abstract new (...args: never[]) => ComponentBase",
           "references": [
             {
@@ -2150,7 +2150,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         }
       ],
       "base": {
-        "name": "ComponentBase",
+        "name": "RouteView",
         "resolved": true
       }
     }

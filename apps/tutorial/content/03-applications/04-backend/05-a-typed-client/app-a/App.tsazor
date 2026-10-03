@@ -1,0 +1,38 @@
+@import { NavLinkMatch } from "@tsazor/runtime"
+@inject BakeryAuth auth
+
+<nav class="menu">
+    <NavLink href="/" Match="@NavLinkMatch.All">Home</NavLink>
+    <NavLink href="/bread">Bread</NavLink>
+    <AuthorizeView Roles="baker">
+        <NavLink href="/orders">Orders</NavLink>
+    </AuthorizeView>
+    <span class="user">
+        <AuthorizeView>
+            <Authorized>
+                Hi, @context.user.name
+                <button @onclick="() => auth.signOut()">Sign out</button>
+            </Authorized>
+            <NotAuthorized>
+                <button @onclick="@(() => auth.signIn("Marta"))">Sign in</button>
+                <button @onclick="@(() => auth.signIn("Bea", ["baker"]))">Sign in as baker</button>
+            </NotAuthorized>
+        </AuthorizeView>
+    </span>
+</nav>
+<main>
+    <CascadingAuthenticationState>
+        <Router>
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData">
+                    <NotAuthorized>
+                        <p class="denied">Bakers only — please sign in as a baker.</p>
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <Lost />
+            </NotFound>
+        </Router>
+    </CascadingAuthenticationState>
+</main>

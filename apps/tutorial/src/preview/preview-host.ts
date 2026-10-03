@@ -31,9 +31,15 @@ export interface PreviewCallbacks {
   onUrl?(url: string): void;
 }
 
-let bundles: Promise<{ runtime: string; components: string }> | undefined;
-const loadBundles = (): Promise<{ runtime: string; components: string }> =>
-  (bundles ??= import("virtual:tutorial-bundles").then((module) => ({ runtime: module.runtime, components: module.components })));
+interface Bundles {
+  runtime: string;
+  components: string;
+  dotnet: string;
+}
+
+let bundles: Promise<Bundles> | undefined;
+const loadBundles = (): Promise<Bundles> =>
+  (bundles ??= import("virtual:tutorial-bundles").then((module) => ({ runtime: module.runtime, components: module.components, dotnet: module.dotnet })));
 
 const PREVIEW_STYLE = `
   :root { color-scheme: light; }
@@ -76,9 +82,9 @@ function srcdoc(baseHref: string): string {
   }
   addEventListener("message", (event) => {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
-    const { modules, runtime, components, css, entry, program, routes } = event.data;
+    const { modules, runtime, components, dotnet, css, entry, program, routes } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
-    const imports = { "@tsazor/runtime": url(runtime), "@tsazor/components": url(components) };
+    const imports = { "@tsazor/runtime": url(runtime), "@tsazor/components": url(components), "@tsazor/dotnet": url(dotnet) };
     // A Program.ts starts the app itself, but it cannot know the preview's
     // routes or its in-memory History: its @tsazor/runtime import goes to a
     // shim whose createTsazorApp adds both (unless the program passes its own).
@@ -178,13 +184,16 @@ export class PreviewHost {
   /** Runs a build in a fresh iframe; the old one stays visible until the new one is up. */
   async show(build: ProjectBuild): Promise<void> {
     const run = ++this.run;
-    const { runtime, components } = await loadBundles();
+    const { runtime, components, dotnet } = await loadBundles();
     if (run !== this.run || !build.entry) return;
     this.pending?.remove();
     const frame = document.createElement("iframe");
     frame.title = "Preview";
     frame.className = "preview-frame preview-frame--pending";
-    frame.setAttribute("sandbox", "allow-scripts allow-modals");
+    // allow-forms: without it the browser drops a form submission before the
+    // submit event fires, so EditForm would never see it. (EditForm cancels
+    // the navigation itself; the frame stays without allow-same-origin.)
+    frame.setAttribute("sandbox", "allow-scripts allow-modals allow-forms");
     frame.srcdoc = srcdoc(new URL(import.meta.env.BASE_URL, location.href).href);
     this.pending = frame;
     this.modulesById = new Map(Object.values(build.modules).map((module) => [module.id, module]));
@@ -194,6 +203,7 @@ export class PreviewHost {
       modules: Object.values(build.modules).map(({ id, code }) => ({ id, code })),
       runtime,
       components,
+      dotnet,
       css: build.css,
       entry: build.entry,
       program: build.program,

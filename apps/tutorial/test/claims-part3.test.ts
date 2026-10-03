@@ -5,8 +5,10 @@
  * history, intercepted anchors). Chapter 14: routing — pages, route
  * parameters, NavLink, navigation, query parameters, not found. Chapter 15:
  * forms — EditForm, rule decorators, validation messages, the invalid submit, field classes,
- * validators with context, InputFile. Each `describe` names the lesson whose
- * text makes the claim.
+ * validators with context, InputFile. Chapter 16: auth. Chapter 17: talking
+ * to a backend — loading, reloading on new parameters, sending, ProblemDetails,
+ * the generated client. Each `describe` names the lesson whose text makes the
+ * claim.
  */
 import path from "node:path";
 import { rmSync } from "node:fs";
@@ -790,5 +792,161 @@ describe("the-user-in-code", () => {
     click(m, ".user button");
     await m.settle();
     expect(nameInput(m).value).toBe("Jonas");
+  });
+});
+
+/* Chapter 17 — Talking to a backend ----------------------------------------------------- */
+
+/** The in-memory server answers after 300 ms ("the network"). */
+const SERVER = 400;
+/** Signs in as baker (the last header button) and opens Orders (the menu's third link). */
+const openOrdersAsBaker = async (m: Mounted): Promise<void> => {
+  click(m, ".user button:last-of-type");
+  await m.settle();
+  click(m, "nav a:nth-child(3)");
+  await m.settle();
+};
+const orderLines = (m: Mounted): string[] => [...m.container.querySelectorAll(".orders li")].map((li) => li.textContent ?? "");
+/** Signs in as Marta, opens Bread, orders `quantity` × `bread` and waits for the server. */
+const reserve = async (m: Mounted, bread?: string, quantity?: number): Promise<void> => {
+  click(m, ".user button");
+  await m.settle();
+  click(m, "nav a:nth-child(2)");
+  await m.settle();
+  if (bread) edit(m.container.querySelector(".order select") as HTMLSelectElement, bread);
+  if (quantity) edit(m.container.querySelector(".order input[type=number]") as HTMLInputElement, String(quantity));
+  await m.settle();
+  click(m, ".order button[type=submit]");
+  await m.settle(SERVER);
+};
+
+describe("from-the-server", () => {
+  const { a, b } = lesson("from-the-server");
+
+  it("the start: three orders typed into the page", async () => {
+    const m = await mount(a);
+    await openOrdersAsBaker(m);
+    expect(orderLines(m)).toHaveLength(3);
+  });
+
+  it("the solution: Loading… until the answer, then five orders — and nothing goes over the network", async () => {
+    expect(types(b)).toEqual([]);
+    const network = globalThis.fetch;
+    globalThis.fetch = () => Promise.reject(new Error("the network was used"));
+    try {
+      const m = await mount(b);
+      click(m, ".user button:last-of-type");
+      await m.settle();
+      click(m, "nav a:nth-child(3)");
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(m.html()).toContain("Loading…");
+      await m.settle(SERVER);
+      expect(m.html()).not.toContain("Loading…");
+      expect(orderLines(m)).toEqual(["#101 Marta (open)", "#102 Jonas (picked-up)", "#103 Bea (open)", "#104 Omar (open)", "#105 Lena (picked-up)"]);
+    } finally {
+      globalThis.fetch = network;
+    }
+  });
+});
+
+describe("when-parameters-change", () => {
+  const { a, b } = lesson("when-parameters-change");
+
+  it("the start: Open keeps the page — onInitialized doesn't run again, the list stays", async () => {
+    const m = await mount(a);
+    await openOrdersAsBaker(m);
+    await m.settle(SERVER);
+    click(m, ".filters a:nth-child(2)");
+    await m.settle(SERVER);
+    expect(orderLines(m)).toHaveLength(5);
+  });
+
+  it("the solution: onParametersSet asks the server again — only the open orders come back", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    await openOrdersAsBaker(m);
+    await m.settle(SERVER);
+    click(m, ".filters a:nth-child(2)");
+    await m.settle(SERVER);
+    expect(orderLines(m)).toEqual(["#101 Marta (open)", "#103 Bea (open)", "#104 Omar (open)"]);
+    click(m, ".filters a:nth-child(1)");
+    await m.settle(SERVER);
+    expect(orderLines(m)).toHaveLength(5);
+  });
+});
+
+describe("sending-data", () => {
+  const { b } = lesson("sending-data");
+
+  it("the server saves the order and answers with it — the order is on the bakers' list", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    await reserve(m);
+    expect(m.container.querySelector(".success")?.textContent).toBe("Reserved as order #106: 1 × sourdough for Marta.");
+    click(m, ".user button"); // Sign out
+    await m.settle();
+    await openOrdersAsBaker(m);
+    await m.settle(SERVER);
+    expect(orderLines(m)).toContain("#106 Marta (open)");
+  });
+});
+
+describe("when-the-server-says-no", () => {
+  const { a, b } = lesson("when-the-server-says-no");
+
+  it("the start: the refusal is an uncaught TsazorHttpError carrying the ProblemDetails", async () => {
+    const errors: RenderError[] = [];
+    const m = await mount(a, (error) => errors.push(error));
+    await reserve(m, "ciabatta", 5);
+    expect(m.container.querySelector(".success, .status")).toBeNull();
+    const error = errors.map((e) => e.error).find((e) => e instanceof Error && e.name === "TsazorHttpError") as { status: number; body: unknown } | undefined;
+    expect(error?.status).toBe(409);
+    expect(error?.body).toEqual({ type: "https://bakery.example/problems/sold-out", title: "Not enough bread", status: 409, detail: "Only 2 ciabatta left today." });
+  });
+
+  it("the solution shows the detail; two ciabatta still work", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    await reserve(m, "ciabatta", 5);
+    expect(m.container.querySelector(".status")?.textContent).toBe("Only 2 ciabatta left today.");
+    edit(m.container.querySelector(".order input[type=number]") as HTMLInputElement, "2");
+    await m.settle();
+    click(m, ".order button[type=submit]");
+    await m.settle(SERVER);
+    expect(m.container.querySelector(".status")).toBeNull();
+    expect(m.container.querySelector(".success")?.textContent).toContain("2 × ciabatta");
+  });
+
+  it("error.body is unknown — reading .detail directly is a type error", () => {
+    const files = { ...b, "Bread.tsazor": b["Bread.tsazor"]!.replace("asProblemDetails(error.body)?.detail", "error.body.detail") };
+    expect(typeCodes(files)).toContain("TS18046");
+  });
+});
+
+describe("a-typed-client", () => {
+  const { b } = lesson("a-typed-client");
+
+  it("bakery.ts and models.ts are exactly what the generator writes for the bakery's OpenAPI document", async () => {
+    const { generateClient } = await import("@tsazor/dotnet/generator");
+    const { readFileSync } = await import("node:fs");
+    const document = JSON.parse(readFileSync(path.join(appRoot, "test", "fixtures", "bakery.openapi.json"), "utf8"));
+    const files = Object.fromEntries(generateClient(document, { clientName: "BakeryClient" }).files.map((file) => [file.path, file.content]));
+    expect(Object.keys(files).sort()).toEqual(["bakery.ts", "models.ts"]);
+    expect(b["bakery.ts"]).toBe(files["bakery.ts"]);
+    expect(b["models.ts"]).toBe(files["models.ts"]);
+  });
+
+  it("the client returns the refusal instead of throwing; problemMessage picks the detail", async () => {
+    expect(types(b)).toEqual([]);
+    const errors: RenderError[] = [];
+    const m = await mount(b, (error) => errors.push(error));
+    await reserve(m, "ciabatta", 5);
+    expect(errors).toEqual([]);
+    expect(m.container.querySelector(".status")?.textContent).toBe("Only 2 ciabatta left today.");
+  });
+
+  it("a body that doesn't fit NewOrder is a type error", () => {
+    const files = { ...b, "Bread.tsazor": b["Bread.tsazor"]!.replace("createOrder(this.order)", 'createOrder({ name: "Marta", bread: "rye" })') };
+    expect(typeCodes(files)).toContain("TS2345");
   });
 });

@@ -4,8 +4,8 @@
  * - `virtual:tutorial-content` — the content tree (build/content.ts), lesson
  *   text rendered to HTML at build time; reloads when content/ changes.
  * - `virtual:tutorial-bundles` — prebuilt ES-module bundles of
- *   `@tsazor/runtime` and `@tsazor/components` (components with the runtime
- *   external), as strings: the preview iframe turns them into blob URLs and
+ *   `@tsazor/runtime`, `@tsazor/components` and `@tsazor/dotnet` (the latter
+ *   two with the runtime external), as strings: the preview iframe turns them into blob URLs and
  *   maps the bare specifiers to them with an import map.
  * - `virtual:tutorial-types` — the type environment of the in-browser
  *   `tsazor check` (lib .d.ts + package declarations, build/type-env.ts);
@@ -25,7 +25,13 @@ const RESOLVED_CONTENT = `\0${CONTENT_ID}`;
 const RESOLVED_BUNDLES = `\0${BUNDLES_ID}`;
 const RESOLVED_TYPES = `\0${TYPES_ID}`;
 
-export async function bundlePackages(fromDir: string): Promise<{ runtime: string; components: string }> {
+export interface PackageBundles {
+  runtime: string;
+  components: string;
+  dotnet: string;
+}
+
+export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
   const require = createRequire(path.join(fromDir, "package.json"));
   const bundle = async (entry: string, external: string[]): Promise<string> => {
     const result = await build({
@@ -43,16 +49,17 @@ export async function bundlePackages(fromDir: string): Promise<{ runtime: string
     });
     return result.outputFiles[0]!.text;
   };
-  const [runtime, components] = await Promise.all([
+  const [runtime, components, dotnet] = await Promise.all([
     bundle("@tsazor/runtime", []),
     bundle("@tsazor/components", ["@tsazor/runtime"]),
+    bundle("@tsazor/dotnet", ["@tsazor/runtime"]),
   ]);
-  return { runtime, components };
+  return { runtime, components, dotnet };
 }
 
 export function tutorialPlugin(options: { root: string }): Plugin {
   const contentDir = path.join(options.root, "content");
-  let bundles: Promise<{ runtime: string; components: string }> | undefined;
+  let bundles: Promise<PackageBundles> | undefined;
   return {
     name: "tsazor-tutorial",
     resolveId(id) {
@@ -69,8 +76,9 @@ export function tutorialPlugin(options: { root: string }): Plugin {
       }
       if (id === RESOLVED_BUNDLES) {
         bundles ??= bundlePackages(options.root);
-        const { runtime, components } = await bundles;
-        return `export const runtime = ${JSON.stringify(runtime)};\nexport const components = ${JSON.stringify(components)};`;
+        return Object.entries(await bundles)
+          .map(([name, code]) => `export const ${name} = ${JSON.stringify(code)};`)
+          .join("\n");
       }
       if (id === RESOLVED_TYPES) {
         return `export default ${JSON.stringify(loadTypeEnvironment(options.root))};`;

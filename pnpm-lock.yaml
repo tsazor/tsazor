@@ -277,6 +277,9 @@ importers:
       '@tsazor/components':
         specifier: workspace:*
         version: link:../../packages/components
+      '@tsazor/dotnet':
+        specifier: workspace:*
+        version: link:../../packages/dotnet
       '@tsazor/lsp':
         specifier: workspace:*
         version: link:../../packages/lsp

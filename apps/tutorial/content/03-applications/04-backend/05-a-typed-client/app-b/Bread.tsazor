@@ -1,0 +1,65 @@
+@page "/bread"
+@import { AuthenticationState, EditContext, InputFileChangeEventArgs, ModelValidator } from "@tsazor/runtime"
+@import { problemMessage } from "@tsazor/dotnet"
+@import { BreadOrder } from "./BreadOrder.ts"
+@import { Order } from "./Order.ts"
+@import { BakeryClient } from "./bakery.ts"
+@inject BakeryClient bakery
+<h2>Pre-order bread</h2>
+<p>Reserve today's loaf — we hold it until noon.</p>
+<EditForm Model="@order" Validators="@validators" OnValidSubmit="handleOrder" OnInvalidSubmit="handleInvalid" class="order">
+    <div class="summary"><ValidationSummary /></div>
+    <DataAnnotationsValidator />
+    <label>Name<InputText @bind="order.name" /><ValidationMessage For="name" /></label>
+    <label>How many<InputNumber @bind="order.quantity" /><ValidationMessage For="quantity" /></label>
+    <label>Bread
+        <InputSelect @bind="order.bread">
+            <option value="sourdough">Sourdough</option>
+            <option value="rye">Rye</option>
+            <option value="ciabatta">Ciabatta</option>
+        </InputSelect>
+        <ValidationMessage For="bread" />
+    </label>
+    <label class="pickup"><InputCheckbox @bind="order.pickup" /> Pick up at eight</label>
+    <label>Picture<InputFile OnChange="handlePicture" accept="image/*" /></label>
+    <p class="picture">@(picture === null ? "No picture chosen." : `${picture.name} (${picture.size} bytes)`)</p>
+    <button type="submit">Reserve</button>
+    @if (confirmation !== null) {
+        <p class="success">Reserved as order #@confirmation.id: @confirmation.quantity × @confirmation.bread for @confirmation.customer.</p>
+    }
+    @if (status !== null) {
+        <p class="status">@status</p>
+    }
+</EditForm>
+
+@code {
+    @CascadingParameter({ type: AuthenticationState }) authentication?: AuthenticationState;
+    order = new BreadOrder();
+    confirmation: Order | null = null;
+    status: string | null = null;
+    picture: File | null = null;
+    validators: Record<string, ModelValidator> = {
+        bread: (value) => (value === "rye" ? "Rye is sold out today — pick another bread." : null),
+    };
+
+    override onParametersSet() {
+        const user = this.authentication?.user;
+        if (user?.isAuthenticated && this.order.name === "") {
+            this.order.name = user.name;
+        }
+    }
+
+    async handleOrder() {
+        const result = await this.bakery.createOrder(this.order);
+        this.confirmation = result.ok ? result.body : null;
+        this.status = result.ok ? null : problemMessage(result);
+    }
+
+    handleInvalid(context: EditContext) {
+        this.status = `${context.getInvalidFields().length} field(s) need a look.`;
+    }
+
+    handlePicture(args: InputFileChangeEventArgs) {
+        this.picture = args.file;
+    }
+}

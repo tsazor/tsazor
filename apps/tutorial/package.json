@@ -27,6 +27,7 @@
     "@lezer/highlight": "^1.2.5",
     "@tsazor/compiler": "workspace:*",
     "@tsazor/components": "workspace:*",
+    "@tsazor/dotnet": "workspace:*",
     "@tsazor/lsp": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",

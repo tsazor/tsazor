@@ -7,8 +7,12 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  AuthenticationState,
+  AuthenticationStateProvider,
+  AuthorizeRouteView,
   ComponentBase,
   createTsazorApp,
+  createUser,
   defineComponent,
   matchRoute,
   NavigationManager,
@@ -189,4 +193,53 @@ describe("SupplyParameterFromQuery — RouteView interactions", () => {
     expect(root.querySelector("output")?.textContent).toBe("null");
     app.dispose();
   });
+
+  for (const view of ["RouteView", "AuthorizeRouteView"] as const) {
+    it(`a query change keeps the page and runs its onParametersSet again, not onInitialized (${view})`, async () => {
+      const calls: string[] = [];
+      class FilterPage extends ComponentBase {
+        @Parameter() @SupplyParameterFromQuery() state: string | null = null;
+        protected override onInitialized(): void {
+          calls.push(`init ${this.state}`);
+        }
+        protected override async onParametersSet(): Promise<void> {
+          calls.push(`set ${this.state}`);
+          await Promise.resolve();
+        }
+      }
+      const viewType = view === "RouteView" ? RouteView : AuthorizeRouteView;
+      class App extends ComponentBase {
+        protected override buildRenderTree(b: RenderTreeBuilder): void {
+          b.openComponent(0, defineComponent(Router));
+          b.addAttribute(1, "Found", (routeData: RouteData) => (inner: RenderTreeBuilder) => {
+            inner.openComponent(0, defineComponent(viewType));
+            inner.addAttribute(1, "RouteData", routeData);
+            inner.closeComponent();
+          });
+          b.closeComponent();
+        }
+      }
+      class Provider extends AuthenticationStateProvider {
+        getState(): Promise<AuthenticationState> {
+          return Promise.resolve(new AuthenticationState(createUser({ name: "bea" })));
+        }
+      }
+      const root = document.createElement("div");
+      root.id = "app";
+      document.body.appendChild(root);
+      const app = createTsazorApp({
+        root: App,
+        routes: [{ template: "/orders", type: FilterPage } as RouteEntry],
+        services: (services) => services.registerValue(AuthenticationStateProvider, new Provider()),
+      });
+      app.navigationManager.navigateTo("/orders");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await app.renderer.waitUntilIdle();
+      app.navigationManager.navigateTo("/orders?state=open");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await app.renderer.waitUntilIdle();
+      expect(calls).toEqual(["init null", "set null", "set open"]);
+      app.dispose();
+    });
+  }
 });
