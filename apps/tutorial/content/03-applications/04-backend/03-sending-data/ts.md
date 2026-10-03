@@ -43,3 +43,8 @@ Show what the server saved:
 ```
 
 Sign in as baker and reserve a loaf. Then open Orders: your order is on the list.
+
+> **With plain `fetch`,** the same request takes two steps:
+> `fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(this.order) })`,
+> then `await response.json()`. `postJson` does both, and it also checks the status. The next
+> lesson relies on that.
