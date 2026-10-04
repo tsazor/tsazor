@@ -52,6 +52,12 @@ jobs:
       - run: pnpm -r build
       - name: Tutorial
         run: pnpm --filter tutorial verify
+      - name: Tutorial as GitHub Pages serves it (R4)
+        run: |
+          pnpm --filter tutorial build:pages
+          pnpm --filter tutorial verify:pages
+        env:
+          TUTORIAL_BASE: /Tsazor/
       - name: Blazing Pizza
         run: pnpm --filter blazing-pizza verify
       - name: Gallery

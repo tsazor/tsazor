@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "check": "tsazor check src",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "build:pages": "vite build && node -e \"require('fs').copyFileSync('dist/index.html', 'dist/404.html')\"",
+    "verify:pages": "node scripts/verify-pages.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",

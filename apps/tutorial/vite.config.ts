@@ -6,6 +6,8 @@ import { tutorialPlugin } from "./build/vite-tutorial";
 const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
+  // GitHub Pages serves the tutorial below the repository name (TUTORIAL_BASE=/Tsazor/).
+  base: process.env.TUTORIAL_BASE ?? "/",
   plugins: [tsazor(), tutorialPlugin({ root })],
   server: {
     port: 5330,

@@ -144,7 +144,12 @@ architecture and security take priority.
 - **R4 — Docs site:** the tutorial plus user docs, statically deployed. **Decided (2026-10-04):**
   GitHub Pages. The repository is private (Pages needs a paid plan there, and the site would be
   public): the static build with an SPA fallback and a deploy workflow are prepared now; it runs
-  once Pages is enabled in the repository settings.
+  once Pages is enabled in the repository settings. **Prepared (2026-10-04):** `TUTORIAL_BASE` sets the base path
+  (`<base href="%BASE_URL%">`), `pnpm --filter tutorial build:pages` adds the `404.html` fallback,
+  `.github/workflows/pages.yml` deploys on pushes to `main` and by hand; CI checks the Pages build
+  in Edge (`verify-pages.mjs`: entry, deep link, preview, navigation below `/Tsazor/`). **To go
+  live:** Settings → Pages → Source "GitHub Actions", then the repository variable
+  `PAGES_ENABLED` = `true`.
 - **R5 — Numbers:** a current bundle-size figure (25.28 KB gz on the bench as of 2026-10-02;
   README/roadmap still say 20.4) and benchmarks before claiming anything publicly.
 
