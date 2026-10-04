@@ -2,6 +2,9 @@
 
 Status: **draft, not started** (2026-10-02). Scheduled after the English docs + tutorial work.
 
+Handoff for the upstream work (findings re-checked against Sleipnir 1.4.3 on 2026-10-04, with two
+corrections): [handoff-sleipnir.md](handoff-sleipnir.md).
+
 Goal: a Tsazor binding for [Sleipnir](https://github.com/HolgerTheHuck/Sleipnir) that is as tight as
 `@tsazor/dotnet` is for REST/OpenAPI — typed DTO classes with validation, errors as values,
 subscriptions bound to the component lifecycle, connection state and auth as framework services.
