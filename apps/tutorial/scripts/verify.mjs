@@ -389,6 +389,17 @@ async function main() {
     await page.click("button:has-text('Solve')");
     check((await waitForPreview(page, ".test-summary", "2 passed")).includes("2 passed"), "ch18 Testing: a form test submits through the real browser");
 
+    /* 7c'''' — chapter 19: localization through Program.ts, Intl in the real browser */
+    await page.goto(`${APP}/ts/prices-and-dates`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, ".price", "€3.40");
+    await previewClick(".languages button:nth-child(2)");
+    const germanPrice = (await waitForPreview(page, ".price", "3,40")).replace(/ /g, " ");
+    const germanDate = await waitForPreview(page, ".baked", "Oktober");
+    check(germanPrice.includes("3,40 €") && germanDate.includes("5. Oktober 2026"), `ch19 Localization: the switch re-renders; Intl formats in German (${germanPrice.trim()}, ${germanDate.trim()})`);
+    check(await noProblems(), "ch19 Localization: the solution type-checks");
+
     /* 7c' — chapter 17: TsazorHttp over the in-memory server, @tsazor/dotnet in the import map */
     await page.goto(`${APP}/ts/when-parameters-change`);
     await page.click("button:has-text('Solve')");

@@ -8,7 +8,8 @@
  * validators with context, InputFile. Chapter 16: auth. Chapter 17: talking
  * to a backend — loading, reloading on new parameters, sending, ProblemDetails,
  * the generated client. Chapter 18: testing — render, parameters, fakes for
- * services and the server, forms. Each `describe` names the lesson whose text makes the
+ * services and the server, forms. Chapter 19: localization — translated text,
+ * switching the language, prices and dates. Each `describe` names the lesson whose text makes the
  * claim.
  */
 import path from "node:path";
@@ -1065,5 +1066,82 @@ describe("testing-a-form", () => {
   it("change + the submit button run the form's rules; the message is the rule's own", async () => {
     const report = await testReport(b);
     expect(report.every((result) => result.passed)).toBe(true);
+  });
+});
+
+/* Chapter 19 — Localization ------------------------------------------------------------- */
+
+describe("translated-text", () => {
+  const { b } = lesson("translated-text");
+
+  it("a missing translation falls back to the default language, then to the key — never an error", async () => {
+    const texts = b["Texts.ts"]!.replace('    Greeting: "Guten Morgen, {name}!",\n', "");
+    const files = {
+      ...b,
+      "Texts.ts": texts,
+      "App.tsazor": b["App.tsazor"]!.replace('<h1>@L.get("Title")</h1>', '<h1>@L.get("Title")</h1><p class="missing">@L.get("Nowhere")</p>'),
+      "Program.ts": b["Program.ts"]!.replace('defaultCulture: "en-US"', 'defaultCulture: "de-DE"').replace('{ "en-US": english, "de-DE": german }', '{ "de-DE": german, "en-US": english }'),
+    };
+    expect(texts).not.toContain("Guten Morgen");
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      const m = await mount(files);
+      // German is the default here; its table lacks Greeting, and nothing has Nowhere.
+      expect(m.container.querySelector("h1")?.textContent).toBe("Das tägliche Brot");
+      expect(m.container.querySelector(".missing")?.textContent).toBe("Nowhere");
+    } finally {
+      console.warn = warn;
+    }
+  });
+});
+
+describe("switching-the-language", () => {
+  const { a, b } = lesson("switching-the-language");
+
+  it("the start's buttons do nothing; the solution re-renders the page without an explicit render call", async () => {
+    const start = await mount(a);
+    click(start, ".languages button:nth-child(2)");
+    await start.settle();
+    expect(start.container.querySelector("h1")?.textContent).toBe("The Daily Loaf");
+    start.dispose();
+    const m = await mount(b);
+    click(m, ".languages button:nth-child(2)");
+    await m.settle();
+    expect(m.container.querySelector("h1")?.textContent).toBe("Das tägliche Brot");
+    expect(m.container.querySelector(".greeting")?.textContent).toBe("Guten Morgen, Marta!");
+    expect(b["App.tsazor"]).not.toMatch(/stateHasChanged|observe\(/);
+  });
+
+  it("setExplicit (the user's choice) wins over a profile's suggestion later", async () => {
+    const { CultureService } = await import("@tsazor/runtime");
+    const culture = new CultureService("en-US");
+    culture.setExplicit("de-DE");
+    expect(culture.setFromProfile("fr-FR")).toBe(false);
+    expect(culture.current.name).toBe("de-DE");
+  });
+});
+
+describe("prices-and-dates", () => {
+  const { a, b } = lesson("prices-and-dates");
+  const shown = (m: Mounted, selector: string) => (m.container.querySelector(selector)?.textContent ?? "").replace(/ /g, " ");
+
+  it("the start keeps €3.40 and 2026-10-05 in German", async () => {
+    const m = await mount(a);
+    click(m, ".languages button:nth-child(2)");
+    await m.settle();
+    expect(shown(m, ".price")).toBe("€3.40");
+    expect(shown(m, ".baked")).toBe("Gebacken am 2026-10-05");
+  });
+
+  it("formatted with the culture: €3.40 / October 5, 2026 in English, 3,40 € / 5. Oktober 2026 in German", async () => {
+    const m = await mount(b);
+    expect(shown(m, ".price")).toBe("€3.40");
+    expect(shown(m, ".baked")).toBe("Baked on October 5, 2026");
+    click(m, ".languages button:nth-child(2)");
+    await m.settle();
+    expect(shown(m, ".price")).toBe("3,40 €");
+    expect(shown(m, ".baked")).toBe("Gebacken am 5. Oktober 2026");
+    expect(m.instance.price).toBe(3.4);
   });
 });

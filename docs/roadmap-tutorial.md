@@ -76,7 +76,8 @@ Gate: no German left in the listed files, all relative links resolve.
 16. *Auth*: `AuthorizeView` · `@authorize` · `AuthenticationStateProvider`
 17. *Talking to a backend*: `@tsazor/dotnet` (mocked fetch in the preview)
 18. *Testing*: `@tsazor/testing`
-19. *Next steps*
+19. *Localization*: `StringLocalizer` · `CultureService` · culture formatting
+20. *Next steps*
 
 **Done 2026-10-02 ✅:** "The real traps" split into two lessons (This and equality / Numbers
 and dates; "Structural typing" stays one lesson) and the recommended tsconfig `lib` raised
@@ -214,7 +215,13 @@ gate step now compares mid-flight.
 The Next steps chapter (`06-next-steps/`: your own project, where to go next)
 is done (2026-10-04): two closing lessons without a task.
 
-Open for M4: the localization lesson (E8 follow-up).
+The Localization chapter (`06-localization/`: translated text, switching the
+language, prices and dates) is done (2026-10-04); Next steps moved to
+`07-next-steps/`. The test harness now registers `CultureService` and
+`StringLocalizer` from a Program.ts's `localization` option, as
+`createTsazorApp` does.
+
+Part 3 is complete. Open for M4: the static build and the deploy target.
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,

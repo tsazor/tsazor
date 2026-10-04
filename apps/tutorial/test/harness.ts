@@ -10,12 +10,14 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  CultureService,
   HeadOutlet,
   MemoryHistory,
   NavigationManager,
   Renderer,
   RouteManifest,
   ServiceCollection,
+  StringLocalizer,
   type ComponentBase,
   type ComponentState,
   type RenderError,
@@ -80,6 +82,8 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
   let programRoutes: RouteEntry[] | undefined;
   /** A Program.ts may choose the routing mode (`routing: { mode: "hash" }`). */
   let routingMode: "history" | "hash" | undefined;
+  /** A Program.ts may configure localization (culture + tables). */
+  let localization: TsazorAppOptions["localization"];
   if (build.program) {
     const globals = globalThis as { __tsazorGateApp?: TsazorAppOptions };
     delete globals.__tsazorGateApp;
@@ -90,6 +94,7 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
     services = options.services;
     programRoutes = options.routes as RouteEntry[] | undefined;
     routingMode = options.routing?.mode;
+    localization = options.localization;
   } else {
     root = (await load(build.entry!)).default as TsazorAppOptions["root"];
   }
@@ -114,6 +119,13 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
   if (routes.length > 0) {
     collection.registerValue(RouteManifest as unknown as Token<RouteManifest>, new RouteManifest(routes));
   }
+  // E8, as createTsazorApp: a CultureService and a StringLocalizer always exist.
+  const culture = new CultureService(localization?.defaultCulture ?? "");
+  collection.registerValue(CultureService as unknown as Token<CultureService>, culture);
+  collection.register(
+    StringLocalizer as unknown as Token<StringLocalizer>,
+    () => new StringLocalizer({ culture, tables: localization?.tables, defaultCulture: localization?.defaultCulture }),
+  );
   services?.(collection);
   const renderer = new Renderer(collection.build());
   if (options.onError) renderer.errorHandler = options.onError;
