@@ -144,6 +144,11 @@ architecture and security take priority.
 2. R1 CI + S1 API snapshot (needed before anything is published).
 3. Enterprise must-haves: E8 localization/culture, E9 accessibility, E2 auth guidance, E1 CSP,
    F1a static markup (a parity gap).
+3b. **Decided 2026-10-04:** after step 3 and before step 4 — a tutorial introduction (landing page:
+   what Tsazor is, the three parts, the track choice), a keyword index (front-matter `keywords`,
+   an index page with search, checked by a test), and the **reference** in the tutorial app as
+   part of R4: the language reference split into pages, the components generated from the
+   manifests, the runtime API from the `.d.ts`, cross-linked with the lessons.
 4. E4–E7 architecture and migration (incremental migration E6 is the main sales argument).
 5. Sleipnir integration; the remaining Svelte-style features with their chapters.
 6. S2, S4, E3, E10, R2, R3, R4, R5 → 1.0 release candidate.
