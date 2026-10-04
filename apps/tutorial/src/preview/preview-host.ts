@@ -101,7 +101,7 @@ function srcdoc(baseHref: string): string {
       "}\\n" +
       "export function createTsazorApp(options) {\\n" +
       "  const history = new MemoryHistory(document.baseURI);\\n" +
-      "  const navigation = options.navigationManager ?? new NavigationManager({ history, location: history });\\n" +
+      "  const navigation = options.navigationManager ?? new NavigationManager({ mode: options.routing?.mode, history, location: history });\\n" +
       "  const app = start({ ...options, routes: options.routes ?? (routes.length > 0 ? routes : undefined), navigationManager: navigation });\\n" +
       "  const post = () => parent.postMessage({ source: \\"tsazor-preview\\", type: \\"url\\", text: history.href }, \\"*\\");\\n" +
       "  if (!options.navigationManager) { navigation.addLocationChanged(post); post(); }\\n" +

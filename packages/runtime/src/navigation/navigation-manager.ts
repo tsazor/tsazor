@@ -98,15 +98,22 @@ export class NavigationManager {
    * `#/` (or none) is the root route.
    */
   get uri(): string {
-    if (this.uriSource) return this.uriSource.href;
-    if (typeof window !== "undefined") {
-      if (this.isHashMode) {
-        const hash = window.location.hash;
-        return this.baseUri + (hash.startsWith("#/") ? hash.slice(2) : "");
-      }
-      return window.location.href;
+    const page = this.documentLocation;
+    if (this.isHashMode && page) {
+      return this.baseUri + (page.hash.startsWith("#/") ? page.hash.slice(2) : "");
     }
+    if (this.uriSource) return this.uriSource.href;
+    if (typeof window !== "undefined") return window.location.href;
     return this.internalUri;
+  }
+
+  /**
+   * The document's URL, which hash mode reads its route from: the URI
+   * source's (a MemoryHistory — the preview, tests) or the window's.
+   */
+  private get documentLocation(): { readonly origin: string; readonly pathname: string; readonly search: string; readonly hash: string } | undefined {
+    if (this.uriSource) return new URL(this.uriSource.href);
+    return typeof window !== "undefined" ? window.location : undefined;
   }
 
   /**
@@ -117,10 +124,11 @@ export class NavigationManager {
    * become the base).
    */
   get baseUri(): string {
-    if (this.isHashMode && typeof window !== "undefined") {
+    const page = this.documentLocation;
+    if (this.isHashMode && page) {
       // Hash mode: the route space hangs off the document itself; <base href>
       // only affects asset resolution there.
-      const { origin, pathname } = window.location;
+      const { origin, pathname } = page;
       return `${origin}${pathname.slice(0, pathname.lastIndexOf("/") + 1)}`;
     }
     let base: string;
@@ -442,8 +450,9 @@ export class NavigationManager {
    * its `#/` fragment.
    */
   private toBrowserUrl(absolute: string): string {
-    if (!this.isHashMode || typeof window === "undefined") return absolute;
-    return `${window.location.pathname}${window.location.search}#/${this.relativeToBase(absolute)}`;
+    const page = this.documentLocation;
+    if (!this.isHashMode || !page) return absolute;
+    return `${page.pathname}${page.search}#/${this.relativeToBase(absolute)}`;
   }
 
   /** The base-relative part of a URI inside the base URI space ("" for the base itself). */
@@ -463,10 +472,11 @@ export class NavigationManager {
   private hashRouteOf(uri: string): string | undefined {
     if (uri.startsWith("#")) return uri.slice(1).replace(/^\//, "");
     if (uri.startsWith("/") && !uri.startsWith("//")) return uri.slice(1);
-    if (typeof window === "undefined" || !this.isAbsolute(uri)) return undefined;
+    const page = this.documentLocation;
+    if (!page || !this.isAbsolute(uri)) return undefined;
     try {
       const url = new URL(uri);
-      if (url.origin === window.location.origin && url.pathname === window.location.pathname && url.hash.startsWith("#/")) {
+      if (url.origin === page.origin && url.pathname === page.pathname && url.hash.startsWith("#/")) {
         return url.hash.slice(2);
       }
     } catch {

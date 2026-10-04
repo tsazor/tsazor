@@ -73,6 +73,8 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
   let services: TsazorAppOptions["services"];
   /** A Program.ts may pass its own routes (as createTsazorApp's `routes` option). */
   let programRoutes: RouteEntry[] | undefined;
+  /** A Program.ts may choose the routing mode (`routing: { mode: "hash" }`). */
+  let routingMode: "history" | "hash" | undefined;
   if (build.program) {
     const globals = globalThis as { __tsazorGateApp?: TsazorAppOptions };
     delete globals.__tsazorGateApp;
@@ -82,6 +84,7 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
     root = options.root;
     services = options.services;
     programRoutes = options.routes as RouteEntry[] | undefined;
+    routingMode = options.routing?.mode;
   } else {
     root = (await load(build.entry!)).default as TsazorAppOptions["root"];
   }
@@ -91,7 +94,7 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
   // registrations, one renderer, two roots.
   const collection = new ServiceCollection();
   const history = new MemoryHistory(document.baseURI);
-  const navigation = new NavigationManager({ history, location: history });
+  const navigation = new NavigationManager({ mode: routingMode, history, location: history });
   collection.registerValue(NavigationManager as unknown as Token<NavigationManager>, navigation);
   const routes = programRoutes ?? [];
   if (routes.length === 0) {

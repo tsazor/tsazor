@@ -191,8 +191,16 @@ all fixed:
   imported every validation decorator; it now writes English and imports only
   the decorators it uses.
 
+Hash routing is a lesson now (2026-10-04, `01-routing/07-hash-routing`, a
+Program.ts lesson). It needed hash mode over a `MemoryHistory`: the
+`NavigationManager` read the fragment from `window.location`, which in the
+srcdoc preview (and in tests) is not the app's document. Hash mode now reads
+the document URL from the URI source when there is one. The preview shim and
+the test harness pass `routing.mode` on, and the preview bar shows the
+fragment.
+
 Open for M4: the remaining Part 3 chapters (Testing, Next steps) and the
-localization lesson (E8 follow-up, M4+); hash routing maybe as a lesson.
+localization lesson (E8 follow-up, M4+).
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,

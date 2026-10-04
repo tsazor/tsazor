@@ -68,10 +68,11 @@
                     this.stateHasChanged();
                 },
                 onUrl: (url) => {
-                    // The full logical URL, but the bar shows the route: path + query.
+                    // The full URL, but the bar shows the route: path + query, and
+                    // the fragment, where hash routing keeps the route (`/#/orders`).
                     try {
                         const parsed = new URL(url);
-                        this.pageUrl = `${parsed.pathname}${parsed.search}`;
+                        this.pageUrl = `${parsed.pathname}${parsed.search}${parsed.hash}`;
                     } catch {
                         this.pageUrl = url;
                     }

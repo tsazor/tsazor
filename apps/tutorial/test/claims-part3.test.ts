@@ -3,7 +3,7 @@
  * and type check — run the way the preview runs them (test/harness.ts: routes
  * from the build's @page manifest, a NavigationManager over an in-memory
  * history, intercepted anchors). Chapter 14: routing — pages, route
- * parameters, NavLink, navigation, query parameters, not found. Chapter 15:
+ * parameters, NavLink, navigation, query parameters, not found, hash routing. Chapter 15:
  * forms — EditForm, rule decorators, validation messages, the invalid submit, field classes,
  * validators with context, InputFile. Chapter 16: auth. Chapter 17: talking
  * to a backend — loading, reloading on new parameters, sending, ProblemDetails,
@@ -315,6 +315,57 @@ describe("not-found", () => {
     await m.settle();
     expect(m.html()).toContain("There is nothing at <code>/bread</code>.");
     m.dispose();
+  });
+});
+
+describe("hash-routing", () => {
+  const { a, b } = lesson("hash-routing");
+  const openOrders = (m: Mounted): string[] => [...m.container.querySelectorAll(".orders li")].map((li) => li.textContent ?? "");
+  /** Clicks `selector`; true when the app took the click over (a route), false when the browser would load a document. */
+  const clickIsRoute = (m: Mounted, selector: string): boolean => {
+    let routed = false;
+    // Registered after the NavigationManager's listener, so it sees its decision; then stops the real load.
+    const after = (event: Event): void => {
+      routed = event.defaultPrevented;
+      event.preventDefault();
+    };
+    document.addEventListener("click", after);
+    (m.container.querySelector(selector) as HTMLElement).click();
+    document.removeEventListener("click", after);
+    return routed;
+  };
+
+  it("the start routes by path: NavLink renders /orders", async () => {
+    const m = await mount(a);
+    expect(m.container.querySelector("nav a:nth-child(2)")?.getAttribute("href")).toBe("/orders");
+  });
+
+  it("hash mode: NavLink renders #/ links by itself, the #/ filter links route — query included", async () => {
+    expect(types(b)).toEqual([]);
+    const m = await mount(b);
+    expect([...m.container.querySelectorAll("nav a")].map((link) => link.getAttribute("href"))).toEqual(["#/", "#/orders", "#/bread"]);
+    click(m, "nav a:nth-child(2)");
+    await m.settle();
+    expect(clickIsRoute(m, ".filters a:nth-child(2)")).toBe(true);
+    await m.settle();
+    expect(openOrders(m)).toEqual(["#101 Marta (open)", "#103 Bea (open)"]);
+  });
+
+  it("only #/ links are routes: an unchanged /orders?state=open would load a new document", async () => {
+    const m = await mount({ ...b, "Orders.tsazor": a["Orders.tsazor"]! });
+    click(m, "nav a:nth-child(2)");
+    await m.settle();
+    expect(clickIsRoute(m, ".filters a:nth-child(2)")).toBe(false);
+  });
+
+  it("the lost page's #/ link leads home", async () => {
+    const m = await mount(b);
+    click(m, "nav a:nth-child(3)");
+    await m.settle();
+    expect(m.html()).toContain("Lost in the oven");
+    click(m, "main a");
+    await m.settle();
+    expect(m.html()).toContain("The Daily Loaf");
   });
 });
 

@@ -360,6 +360,23 @@ async function main() {
     check(authUrl.endsWith("/bread"), `ch16 Auth: the preview bar shows the URL of a Program.ts app (${authUrl})`);
     check(await noProblems(), "ch16 Auth: the solution type-checks");
 
+    /* 7c'' — chapter 14: hash routing through Program.ts (the shim keeps the mode) */
+    await page.goto(`${APP}/ts/hash-routing`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, "h1", "The Daily Loaf");
+    await previewClick("nav a:nth-child(2)");
+    await waitForPreview(page, "h2", "Orders");
+    await previewClick(".filters a:nth-child(2)");
+    const hashList = await waitForPreview(page, ".orders", "#101 Marta");
+    let hashUrl = "";
+    for (const deadline = Date.now() + 10_000; Date.now() < deadline; await page.waitForTimeout(250)) {
+        hashUrl = (await page.textContent(".page-url").catch(() => "")) ?? "";
+        if (hashUrl.endsWith("#/orders?state=open")) break;
+    }
+    check(hashUrl.endsWith("/#/orders?state=open") && !hashList.includes("Jonas"), `ch14 Routing: hash mode routes in the preview; the bar shows the fragment (${hashUrl})`);
+    check(await noProblems(), "ch14 Routing: the hash solution type-checks");
+
     /* 7c' — chapter 17: TsazorHttp over the in-memory server, @tsazor/dotnet in the import map */
     await page.goto(`${APP}/ts/when-parameters-change`);
     await page.click("button:has-text('Solve')");

@@ -120,3 +120,26 @@ describe("NavigationManager over a MemoryHistory", () => {
     navigation.releaseNavigationLock("form");
   });
 });
+describe("hash mode over a MemoryHistory (the preview's document has no usable location)", () => {
+  it("reads and writes the route in the history's fragment; uri stays logical", async () => {
+    const history = new MemoryHistory("http://localhost/app/index.html?token=abc");
+    const navigation = new NavigationManager({ mode: "hash", history });
+    managers.push(navigation);
+    expect(navigation.baseUri).toBe("http://localhost/app/");
+    expect(navigation.uri).toBe("http://localhost/app/");
+    expect(navigation.toLinkHref("orders?state=open")).toBe("#/orders?state=open");
+
+    const seen: string[] = [];
+    navigation.addLocationChanged((_sender, event: LocationChangedEventArgs) => seen.push(event.location));
+    navigation.navigateTo("orders?state=open");
+    expect(history.href).toBe("http://localhost/app/index.html?token=abc#/orders?state=open");
+    expect(navigation.uri).toBe("http://localhost/app/orders?state=open");
+    expect(navigation.baseRelativePath).toBe("orders?state=open");
+    expect(navigation.toAbsoluteUri("#/bread")).toBe("http://localhost/app/bread");
+
+    history.back();
+    await tick();
+    expect(navigation.uri).toBe("http://localhost/app/");
+    expect(seen).toEqual(["http://localhost/app/orders?state=open", "http://localhost/app/"]);
+  });
+});
