@@ -1,5 +1,6 @@
 ---
 title: Parameters in tests
+keywords: setParameters, parameters, testing
 focus: PriceTag.test.ts
 ---
 

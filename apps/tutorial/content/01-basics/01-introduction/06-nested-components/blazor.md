@@ -1,5 +1,6 @@
 ---
 title: Nested components
+keywords: nested components, child component, @using
 focus: App.tsazor
 ---
 

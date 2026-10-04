@@ -1,5 +1,6 @@
 ---
 title: Pages
+keywords: @page, Router, routing, RouteView, pages
 focus: App.tsazor
 gate: click nav a:nth-child(2)
 ---

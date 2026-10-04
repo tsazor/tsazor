@@ -34,9 +34,16 @@
     font-weight: 450;
 }
 
+.index-link {
+    margin-left: auto;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    flex: none;
+}
+
 .tracks {
     display: flex;
-    margin-left: auto;
     padding: 3px;
     border-radius: 999px;
     background: var(--bg-sunken);
@@ -76,7 +83,6 @@
 
     .tracks {
         order: 3;
-        margin-left: 0;
         width: 100%;
         justify-content: stretch;
     }

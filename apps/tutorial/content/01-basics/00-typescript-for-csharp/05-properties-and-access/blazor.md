@@ -1,5 +1,6 @@
 ---
 title: Properties and access
+keywords: private, readonly, getter, access modifiers, static
 focus: thermostat.ts
 typeErrors: true
 gate: click button

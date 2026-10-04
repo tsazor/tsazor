@@ -1,5 +1,6 @@
 ---
 title: Passing values down
+keywords: CascadingValue, @CascadingParameter(), theme, IsFixed
 focus: App.tsazor
 gate: check input
 ---

@@ -1,5 +1,6 @@
 ---
 title: AuthorizeView
+keywords: AuthorizeView, Authorized, NotAuthorized, claims
 focus: Home.tsazor
 gate: click .user button
 ---

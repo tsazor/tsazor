@@ -1,5 +1,6 @@
 ---
 title: Signing in
+keywords: authentication, AuthenticationStateProvider, signIn, signOut, login
 focus: BakeryAuth.ts
 gate: click .user button
 ---

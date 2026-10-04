@@ -1,5 +1,6 @@
 ---
 title: Prices and dates
+keywords: formatNumber, formatDate, Intl, culture, @bind:culture
 focus: App.tsazor
 gate: click .languages button:nth-child(2)
 ---

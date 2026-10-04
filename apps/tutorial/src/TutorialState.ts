@@ -61,6 +61,29 @@ export class TutorialState {
     return refs;
   }
 
+  /** The lesson last opened in a track (localStorage), for the start page's "Continue". */
+  lastLesson(track: Track): LessonRef | undefined {
+    try {
+      const slug = localStorage.getItem(`${STORAGE_KEY}:${track}:last`);
+      return slug ? this.find(track, slug) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  rememberLesson(track: Track, slug: string): void {
+    try {
+      localStorage.setItem(`${STORAGE_KEY}:${track}:last`, slug);
+    } catch {
+      // not persisted — the start page then offers the first lesson
+    }
+  }
+
+  /** The first lesson of a chapter in a track (a chapter can be track-only). */
+  chapterStart(track: Track, chapter: ChapterContent): LessonRef | undefined {
+    return this.lessons(track).find((ref) => ref.chapter === chapter);
+  }
+
   find(track: Track, slug: string): LessonRef | undefined {
     return this.lessons(track).find((ref) => ref.lesson.slug === slug);
   }

@@ -1,5 +1,6 @@
 ---
 title: Tasks and promises
+keywords: Promise, async, await, AbortSignal, Task
 focus: shop.ts
 gate: wait 100
 ---

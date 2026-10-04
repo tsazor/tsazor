@@ -1,5 +1,6 @@
 ---
 title: Injecting services
+keywords: services, @inject, dependency injection, shared state
 focus: CartBadge.tsazor
 gate: click .products button
 ---

@@ -1,5 +1,6 @@
 ---
 title: Faking the server
+keywords: vi.fn, fake fetch, mocking, TsazorHttp
 focus: TodaysBread.test.ts
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Text inputs
+keywords: @bind, binding, text input, two-way binding
 focus: App.tsazor
 gate: change input Tsazor
 ---

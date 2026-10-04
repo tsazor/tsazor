@@ -1,5 +1,6 @@
 ---
 title: Namespaces and modules
+keywords: modules, namespaces, import, export, @import
 focus: invoice.ts
 ---
 

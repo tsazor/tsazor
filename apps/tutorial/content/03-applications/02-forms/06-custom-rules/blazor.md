@@ -1,5 +1,6 @@
 ---
 title: Rules with context
+keywords: custom validation, ModelValidator, validation, ValidationAttribute
 focus: Bread.tsazor
 gate: click nav a:nth-child(3); change select rye; click button
 ---

@@ -1,5 +1,6 @@
 ---
 title: Numeric inputs
+keywords: @bind, number input, range, binding
 focus: App.tsazor
 gate: change input[type=range] 5
 ---

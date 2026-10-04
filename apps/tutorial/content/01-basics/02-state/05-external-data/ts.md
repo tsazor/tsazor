@@ -1,5 +1,6 @@
 ---
 title: External data
+keywords: subscribe, external data, disposeSignal, stateHasChanged
 focus: Price.tsazor
 gate: wait 1100
 ---

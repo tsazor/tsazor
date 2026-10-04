@@ -1,0 +1,14 @@
+<header class="site-bar">
+    <a class="brand" href="" aria-current="@(current === "home" ? "page" : null)">
+        <span class="logo" aria-hidden="true">T</span>
+        <span>Tsazor <span class="brand-sub">tutorial</span></span>
+    </a>
+    <nav class="site-links" aria-label="Tutorial">
+        <a href="index" aria-current="@(current === "index" ? "page" : null)">Index</a>
+    </nav>
+</header>
+
+@code {
+    /** The page showing the bar (marked with aria-current). */
+    @Parameter() current: "home" | "index" = "home";
+}

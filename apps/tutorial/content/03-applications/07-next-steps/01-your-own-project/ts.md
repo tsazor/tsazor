@@ -1,5 +1,6 @@
 ---
 title: Your own project
+keywords: new project, Vite, setup, migration
 focus: Program.ts
 ---
 

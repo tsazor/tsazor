@@ -1,5 +1,6 @@
 ---
 title: Rules on the model
+keywords: validation, DataAnnotationsValidator, Required, StringLength, EmailAddress
 focus: BreadOrder.ts
 gate: click nav a:nth-child(3); click button
 ---

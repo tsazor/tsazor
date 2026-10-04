@@ -1,5 +1,6 @@
 ---
 title: Loops
+keywords: @foreach, loops, for…of, lists
 focus: App.tsazor
 ---
 

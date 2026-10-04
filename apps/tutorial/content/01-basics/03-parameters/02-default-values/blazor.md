@@ -1,5 +1,6 @@
 ---
 title: Default values
+keywords: default values, parameters, optional parameter
 focus: Nested.tsazor
 ---
 

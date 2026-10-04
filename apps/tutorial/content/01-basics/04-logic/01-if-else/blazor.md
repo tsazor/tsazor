@@ -1,5 +1,6 @@
 ---
 title: If and else
+keywords: @if, else, conditional rendering
 focus: App.tsazor
 gate: click button
 ---

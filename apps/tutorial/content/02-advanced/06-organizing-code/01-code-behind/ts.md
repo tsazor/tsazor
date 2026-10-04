@@ -1,5 +1,6 @@
 ---
 title: Code-behind
+keywords: code-behind, ComponentBase, partial class
 focus: Password.tsazor
 refactor: true
 ---

@@ -1,5 +1,6 @@
 ---
 title: Protected pages
+keywords: @authorize, AuthorizeRouteView, protected pages, redirect
 focus: Orders.tsazor
 gate: click .staff a
 ---

@@ -1,5 +1,6 @@
 ---
 title: Field styles
+keywords: validation styles, invalid, modified, ::deep
 focus: Bread.tsazor.css
 gate: click nav a:nth-child(3); click button
 ---

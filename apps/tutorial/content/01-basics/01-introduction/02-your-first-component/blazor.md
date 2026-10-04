@@ -1,5 +1,6 @@
 ---
 title: Your first component
+keywords: component, @code, .tsazor, field
 focus: App.tsazor
 ---
 

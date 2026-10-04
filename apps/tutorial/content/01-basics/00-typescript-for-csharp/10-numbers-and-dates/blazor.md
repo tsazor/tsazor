@@ -1,5 +1,6 @@
 ---
 title: Numbers and dates
+keywords: number, Date, decimal, bigint, Intl.NumberFormat
 focus: basket.ts
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Types and nullability
+keywords: number, nullability, ?., ??, type inference
 focus: orders.ts
 ---
 

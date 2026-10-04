@@ -1,5 +1,6 @@
 ---
 title: Translated text
+keywords: localization, StringLocalizer, translations, i18n
 focus: App.tsazor
 refactor: true
 ---

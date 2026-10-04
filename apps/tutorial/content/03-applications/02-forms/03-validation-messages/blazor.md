@@ -1,5 +1,6 @@
 ---
 title: Validation messages
+keywords: ValidationMessage, ValidationSummary, validation
 focus: Bread.tsazor
 gate: click nav a:nth-child(3); click button
 ---

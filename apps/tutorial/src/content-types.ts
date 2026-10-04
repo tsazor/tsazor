@@ -8,6 +8,8 @@ export interface LessonText {
   title: string;
   /** File opened first in the editor. */
   focus: string;
+  /** Index entries (front-matter `keywords`, comma-separated). */
+  keywords: string[];
   /** Rendered lesson text (HTML, code blocks pre-highlighted). */
   html: string;
 }

@@ -1,5 +1,6 @@
 ---
 title: Binding while typing
+keywords: @bind:event, @bind:after, oninput
 focus: App.tsazor
 gate: input input ap; wait 300
 ---

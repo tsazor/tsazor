@@ -4,7 +4,7 @@
  *   content/<part>/meta.json                    { "title": "Basics" }
  *   content/<part>/common/…                     base files of every lesson in the part
  *   content/<part>/<chapter>/meta.json          { "title": "Introduction" }
- *   content/<part>/<chapter>/<lesson>/blazor.md  Blazor track text (front-matter: title, focus)
+ *   content/<part>/<chapter>/<lesson>/blazor.md  Blazor track text (front-matter: title, keywords, focus)
  *   content/<part>/<chapter>/<lesson>/ts.md      TypeScript track text
  *   content/<part>/<chapter>/<lesson>/app-a/…   start state
  *   content/<part>/<chapter>/<lesson>/app-b/…   solution (only the changed files)
@@ -107,7 +107,8 @@ export function loadContent(contentDir: string): TutorialContent {
           const { data, body } = parseFrontMatter(readFileSync(file, "utf8"));
           if (!data.title) throw new Error(`${file}: front-matter needs a title`);
           const focus = data.focus ?? Object.keys(bOnly)[0] ?? Object.keys(a)[0] ?? "App.tsazor";
-          lesson.text[track] = { title: data.title, focus, html: marked.parse(body) as string };
+          const keywords = (data.keywords ?? "").split(",").map((word) => word.trim()).filter(Boolean);
+          lesson.text[track] = { title: data.title, focus, keywords, html: marked.parse(body) as string };
         }
         if (Object.keys(lesson.text).length === 0) throw new Error(`${lessonDir}: no blazor.md or ts.md`);
         lessons.push(lesson);

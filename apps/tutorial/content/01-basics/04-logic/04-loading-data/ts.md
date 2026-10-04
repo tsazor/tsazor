@@ -1,5 +1,6 @@
 ---
 title: Loading data
+keywords: loading data, onInitialized, async, loading state
 focus: App.tsazor
 ---
 

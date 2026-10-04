@@ -1,5 +1,6 @@
 ---
 title: This and equality
+keywords: this, arrow functions, ===, equality
 focus: basket.ts
 typeErrors: true
 ---

@@ -1,5 +1,6 @@
 ---
 title: When a component renders
+keywords: stateHasChanged, rendering, timer
 focus: App.tsazor
 gate: click button; wait 1100
 ---

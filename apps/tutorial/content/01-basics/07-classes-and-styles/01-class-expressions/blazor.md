@@ -1,5 +1,6 @@
 ---
 title: Class expressions
+keywords: class, CSS classes, conditional classes
 focus: App.tsazor
 gate: click button
 ---

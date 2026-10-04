@@ -1,5 +1,6 @@
 ---
 title: Named fragments
+keywords: RenderFragment, named fragments, slots
 focus: Panel.tsazor
 ---
 

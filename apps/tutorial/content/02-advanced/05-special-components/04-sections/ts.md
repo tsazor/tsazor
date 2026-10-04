@@ -1,5 +1,6 @@
 ---
 title: Sections
+keywords: SectionContent, SectionOutlet, sections
 focus: EditorPage.tsazor
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Switching the language
+keywords: CultureService, culture, language switch
 focus: App.tsazor
 gate: click .languages button:nth-child(2)
 ---

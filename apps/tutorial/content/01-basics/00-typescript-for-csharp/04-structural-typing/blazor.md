@@ -1,5 +1,6 @@
 ---
 title: Classes, interfaces, generics
+keywords: structural typing, interface, class, generics, implements
 focus: greetings.ts
 ---
 

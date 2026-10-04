@@ -1,5 +1,6 @@
 ---
 title: Logic in modules
+keywords: modules, @import, plain functions
 focus: Receipt.tsazor
 ---
 

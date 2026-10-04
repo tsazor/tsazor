@@ -1,5 +1,6 @@
 ---
 title: Data from the server
+keywords: TsazorHttp, getJson, fetch, HTTP, API
 focus: Orders.tsazor
 gate: click .user button:last-of-type; click nav a:nth-child(3); wait 400
 ---

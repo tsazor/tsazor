@@ -1,5 +1,6 @@
 ---
 title: Your first test
+keywords: testing, render, @tsazor/testing, expect
 focus: Basket.test.ts
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Typed checks
+keywords: type checking, parameters, compile-time errors
 focus: App.tsazor
 typeErrors: true
 ---

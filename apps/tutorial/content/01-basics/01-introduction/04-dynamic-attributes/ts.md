@@ -1,5 +1,6 @@
 ---
 title: Dynamic attributes
+keywords: attributes, src, disabled, boolean attributes
 focus: App.tsazor
 ---
 

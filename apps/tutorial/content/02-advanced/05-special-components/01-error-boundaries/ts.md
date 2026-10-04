@@ -1,5 +1,6 @@
 ---
 title: Error boundaries
+keywords: ErrorBoundary, errors, recover, ErrorContent
 focus: App.tsazor
 gate: click .refresh
 ---

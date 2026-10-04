@@ -1,5 +1,6 @@
 ---
 title: Checkbox inputs
+keywords: @bind, checkbox, checked, boolean
 focus: App.tsazor
 gate: check input
 ---

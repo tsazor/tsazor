@@ -1,5 +1,6 @@
 ---
 title: Component events
+keywords: EventCallback, component events, invokeAsync
 focus: Inner.tsazor
 gate: click button
 ---

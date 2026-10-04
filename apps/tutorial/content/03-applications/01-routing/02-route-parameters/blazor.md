@@ -1,5 +1,6 @@
 ---
 title: Route parameters
+keywords: route parameters, route constraints, catch-all, @page
 focus: Order.tsazor
 gate: click nav a:nth-child(2); click .orders a
 ---

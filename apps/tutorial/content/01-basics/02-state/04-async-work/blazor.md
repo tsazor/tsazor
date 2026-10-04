@@ -1,5 +1,6 @@
 ---
 title: Async work
+keywords: async, await, Promise, event handlers, Task
 focus: App.tsazor
 gate: click button; wait 50; look
 ---

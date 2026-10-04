@@ -1,5 +1,6 @@
 ---
 title: DOM events
+keywords: events, PointerEvent
 focus: App.tsazor
 gate: pointer .area pointermove
 ---

@@ -1,5 +1,6 @@
 ---
 title: Fields are state
+keywords: state, fields, @onclick, re-render
 focus: App.tsazor
 gate: click button
 ---

@@ -1,5 +1,6 @@
 ---
 title: Select bindings
+keywords: @bind, select, dropdown, option
 focus: App.tsazor
 ---
 

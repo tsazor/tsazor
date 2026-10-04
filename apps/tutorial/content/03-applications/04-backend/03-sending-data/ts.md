@@ -1,5 +1,6 @@
 ---
 title: Sending data
+keywords: postJson, POST, fetch, sending data
 focus: Bread.tsazor
 gate: click .user button; click nav a:nth-child(2); click .order button[type=submit]; wait 400
 ---

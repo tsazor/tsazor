@@ -1,5 +1,6 @@
 ---
 title: Element references
+keywords: @ref, element references, focus, dialog
 focus: App.tsazor
 gate: click .danger
 ---

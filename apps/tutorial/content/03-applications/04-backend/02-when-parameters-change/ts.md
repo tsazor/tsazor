@@ -1,5 +1,6 @@
 ---
 title: When parameters change
+keywords: onParametersSet, reloading data, query parameters
 focus: Orders.tsazor
 gate: click .user button:last-of-type; click nav a:nth-child(3); wait 400; click .filters a:nth-child(2); wait 400
 ---

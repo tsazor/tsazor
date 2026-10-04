@@ -1,5 +1,6 @@
 ---
 title: Welcome to Tsazor
+keywords: component, tracks, editor, preview
 focus: App.tsazor
 ---
 

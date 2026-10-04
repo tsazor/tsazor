@@ -1,5 +1,6 @@
 ---
 title: Styling child components
+keywords: ::deep, CSS isolation, child components
 focus: App.tsazor.css
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Derived values
+keywords: derived values, getter, computed
 focus: App.tsazor
 gate: click button
 ---

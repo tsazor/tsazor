@@ -1,5 +1,6 @@
 ---
 title: When the server says no
+keywords: TsazorHttpError, ProblemDetails, asProblemDetails, error handling
 focus: Bread.tsazor
 gate: click .user button; click nav a:nth-child(2); change select ciabatta; change input[type=number] 5; click .order button[type=submit]; wait 400
 ---

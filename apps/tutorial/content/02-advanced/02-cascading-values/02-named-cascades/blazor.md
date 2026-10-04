@@ -1,5 +1,6 @@
 ---
 title: Names and types
+keywords: CascadingValue, named cascades, @CascadingParameter
 focus: Greeting.tsazor
 ---
 

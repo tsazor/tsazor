@@ -1,5 +1,6 @@
 ---
 title: Inline styles
+keywords: style, inline styles, CSS
 focus: App.tsazor
 ---
 

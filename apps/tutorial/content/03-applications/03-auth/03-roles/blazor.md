@@ -1,5 +1,6 @@
 ---
 title: Roles
+keywords: roles, policies, authorization, AuthorizeView
 focus: App.tsazor
 gate: click .user button:last-of-type
 ---

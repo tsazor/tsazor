@@ -1,5 +1,6 @@
 ---
 title: Child content
+keywords: ChildContent, RenderFragment, child content
 focus: Card.tsazor
 ---
 

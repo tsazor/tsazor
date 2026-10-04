@@ -1,5 +1,6 @@
 ---
 title: NavLink
+keywords: NavLink, active, NavLinkMatch, aria-current
 focus: App.tsazor
 gate: click nav a:nth-child(2)
 ---

@@ -1,5 +1,6 @@
 ---
 title: Page title and head
+keywords: PageTitle, HeadContent, title, HeadOutlet
 focus: App.tsazor
 ---
 

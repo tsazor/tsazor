@@ -84,6 +84,7 @@
             return;
         }
         this.State.preferredTrack = this.lessonTrack;
+        this.State.rememberLesson(this.lessonTrack, this.slug);
         this.lessons = this.State.lessons(this.lessonTrack);
         this.current = this.State.find(this.lessonTrack, this.slug);
         if (!this.current || this.current.lesson.slug === this.loadedSlug) return;

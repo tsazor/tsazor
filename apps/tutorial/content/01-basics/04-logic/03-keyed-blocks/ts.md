@@ -1,5 +1,6 @@
 ---
 title: Keyed loops
+keywords: @key, keyed loops, lists
 focus: App.tsazor
 gate: click button
 ---

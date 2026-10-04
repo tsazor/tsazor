@@ -1,5 +1,6 @@
 ---
 title: Not found
+keywords: NotFound, unknown address, routing
 focus: App.tsazor
 gate: click nav a:nth-child(3)
 ---

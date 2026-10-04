@@ -1,5 +1,6 @@
 ---
 title: Inline handlers
+keywords: inline handlers, lambda, arrow functions, event handlers
 focus: App.tsazor
 gate: click .colors button:nth-child(3)
 ---

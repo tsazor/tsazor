@@ -1,5 +1,6 @@
 ---
 title: Declaring parameters
+keywords: parameters, @Parameter(), type safety
 focus: App.tsazor
 ---
 

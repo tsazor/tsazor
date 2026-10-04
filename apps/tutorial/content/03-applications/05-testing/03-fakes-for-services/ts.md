@@ -1,5 +1,6 @@
 ---
 title: Fakes for services
+keywords: fakes, services, testing, dependency injection
 focus: OpenSign.test.ts
 ---
 

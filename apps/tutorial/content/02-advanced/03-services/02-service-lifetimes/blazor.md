@@ -1,5 +1,6 @@
 ---
 title: Lifetimes
+keywords: singleton, scoped, transient, service lifetimes
 focus: Program.ts
 gate: click .board button
 ---

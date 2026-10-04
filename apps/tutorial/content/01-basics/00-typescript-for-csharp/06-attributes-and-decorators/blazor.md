@@ -1,5 +1,6 @@
 ---
 title: Attributes and decorators
+keywords: decorators, attributes, @Parameter()
 focus: calculator.ts
 ---
 

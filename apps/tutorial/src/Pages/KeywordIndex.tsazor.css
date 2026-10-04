@@ -1,0 +1,139 @@
+.index-page {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.index-main {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+}
+
+h1 {
+    font-size: 2rem;
+    margin: 0 0 0.75rem;
+}
+
+.intro {
+    line-height: 1.6;
+    max-width: 44rem;
+    margin: 0 0 1.5rem;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.search {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1 1 18rem;
+    max-width: 28rem;
+}
+
+.search-label {
+    font-weight: 500;
+}
+
+.search input {
+    font: inherit;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+}
+
+.track-switch {
+    display: flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+}
+
+.track {
+    border: 0;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    background: none;
+    color: var(--fg-muted);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.track:hover {
+    color: var(--fg);
+}
+
+.track--active {
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.status {
+    color: var(--fg-muted);
+    margin: 1.25rem 0 0;
+}
+
+.group h2 {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.entries {
+    margin: 0;
+}
+
+.entry {
+    display: grid;
+    grid-template-columns: minmax(9rem, 13rem) 1fr;
+    gap: 0.25rem 1.25rem;
+    padding: 0.45rem 0;
+}
+
+dt code {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    background: var(--bg-sunken);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    overflow-wrap: anywhere;
+    font-variant-ligatures: none;
+}
+
+dd {
+    margin: 0;
+}
+
+.refs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    line-height: 1.7;
+}
+
+.chapter {
+    color: var(--fg-muted);
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+}
+
+@media (max-width: 40rem) {
+    .entry {
+        grid-template-columns: 1fr;
+    }
+}
+
+dt {
+    font-weight: 500;
+}

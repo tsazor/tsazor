@@ -1,5 +1,6 @@
 ---
 title: Component references
+keywords: @ref, component references
 focus: App.tsazor
 gate: click .toolbar button
 ---

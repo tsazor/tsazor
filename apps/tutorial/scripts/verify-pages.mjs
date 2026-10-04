@@ -59,8 +59,10 @@ try {
   };
 
   await page.goto(`${ORIGIN}${BASE}`);
-  await page.waitForURL((url) => url.pathname.startsWith(`${BASE}ts/`) || url.pathname.startsWith(`${BASE}blazor/`), { timeout: 30_000 });
-  check(true, `the entry opens the first lesson below ${BASE} (${new URL(page.url()).pathname})`);
+  await page.waitForSelector(".home h1", { timeout: 30_000 });
+  await page.click("a:has-text('Start the TypeScript track')");
+  await page.waitForURL((url) => url.pathname.startsWith(`${BASE}ts/`), { timeout: 30_000 });
+  check(true, `the start page leads to the first lesson below ${BASE} (${new URL(page.url()).pathname})`);
   check(((await previewText("h1")) ?? "").length > 0, "the preview compiles and runs the lesson");
 
   await page.goto(`${ORIGIN}${BASE}ts/your-first-component`);
@@ -72,6 +74,12 @@ try {
   await page.click("a:has-text('Next'), button:has-text('Next')");
   await page.waitForTimeout(500);
   check(new URL(page.url()).pathname.startsWith(`${BASE}ts/`) && !page.url().endsWith("your-first-component"), `Next stays below ${BASE} (${new URL(page.url()).pathname})`);
+  await page.goto(`${ORIGIN}${BASE}index`);
+  await page.waitForSelector(".index-page .group", { timeout: 30_000 });
+  await page.click(".entry a >> nth=0");
+  await page.waitForURL((url) => /^\/Tsazor\/(ts|blazor)\/[\w-]+$/.test(url.pathname), { timeout: 30_000 });
+  check(true, `the keyword index loads as a deep link and its entries stay below ${BASE}`);
+
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 } catch (error) {
   console.error(error);

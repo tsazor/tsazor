@@ -1,5 +1,6 @@
 ---
 title: Component bindings
+keywords: component bindings, @Bindable(), valueChanged, two-way binding
 focus: App.tsazor
 gate: click .stepper button[aria-label=More]
 ---

@@ -131,10 +131,14 @@ async function main() {
         if (m.type() === "error") errors.push(m.text());
     });
 
-    /* 1 — root redirects to the default track's first lesson */
+    /* 1 — the start page: introduction, track choice, chapters; Start opens the track's first lesson */
     await page.goto(`${APP}/`);
+    await page.waitForSelector(".home h1", { timeout: 20_000 });
+    check((await page.textContent(".home h1"))?.includes("Build web apps"), "/ shows the introduction");
+    check((await page.$$(".part")).length === 3, "the start page lists the three parts");
+    await page.click("a:has-text('Start the TypeScript track')");
     await page.waitForURL(/\/ts\/welcome$/, { timeout: 20_000 });
-    check(true, "/ redirects to /ts/welcome");
+    check(true, "Start the TypeScript track opens /ts/welcome");
     check((await page.textContent(".lesson h1"))?.includes("Welcome to Tsazor"), "lesson title rendered");
     check((await waitForPreview(page, "h1", "Welcome!")).includes("Welcome!"), "preview runs the lesson app (worker → iframe)");
     check(!(await page.content()).includes("Blazor") || true, "(ts track text loaded)");
@@ -179,8 +183,27 @@ async function main() {
     const blazorText = await page.textContent(".prose");
     check(/Blazor/.test(blazorText ?? ""), "Blazor track text loaded");
     await page.goto(`${APP}/`);
-    await page.waitForURL(/\/blazor\/types-and-nullability$/, { timeout: 20_000 });
-    check(true, "track choice persisted (/ → the Blazor track's first lesson, /blazor/types-and-nullability)");
+    await page.waitForSelector(".resume a", { timeout: 20_000 });
+    const resumeHref = (await page.getAttribute(".resume a", "href")) ?? "";
+    check(resumeHref.endsWith("blazor/your-first-component"), `the start page offers to continue where you left off (${resumeHref})`);
+    check((await page.textContent(".parts-track"))?.includes("Blazor developer"), "the remembered track's chapters are shown");
+
+    /* 6b — keyword index: reached from the start page, searchable, links into the remembered track */
+    await page.click(".site-links a:has-text('Index')");
+    await page.waitForSelector(".index-page .group", { timeout: 20_000 });
+    check((await page.locator(".group h2").count()) > 10, "the index lists keywords by letter");
+    check((await page.textContent(".track--active"))?.includes("Blazor developer"), "the index follows the remembered track");
+    await page.fill(".search input", "navlink");
+    await page.waitForFunction(() => [...document.querySelectorAll(".entry dt")].every((dt) => dt.textContent.toLowerCase().includes("navlink")));
+    check((await page.locator(".entry").count()) >= 2, `the search filters the entries (${await page.textContent(".status")})`);
+    await page.click(".entry a:has-text('NavLink')");
+    await page.waitForURL(/\/blazor\/nav-link$/);
+    check(true, "an index entry opens its lesson");
+    if (shots) {
+        await page.goto(`${APP}/index`);
+        await page.waitForSelector(".group");
+        await page.screenshot({ path: path.join(shots, "00-index.png") });
+    }
 
     /* 7 — deep link + scoped CSS in the preview */
     await page.goto(`${APP}/blazor/styling`);
@@ -510,6 +533,12 @@ async function main() {
     });
     check(order, "phone layout stacks text → editor → preview");
     if (shots) await phone.screenshot({ path: path.join(shots, "05-phone.png"), fullPage: true });
+    for (const page of ["", "index"]) {
+        await phone.goto(`${APP}/${page}`);
+        await phone.waitForSelector(".site-bar");
+        const sideways = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        check(sideways <= 0, `/${page}: no horizontal overflow on a phone (${sideways}px)`);
+    }
 
     // Provoked: the runtime-error check ("kaput") and the error-boundary lesson (logged as handled).
     const unexpected = errors.filter((e) => !e.includes("kaput") && !e.includes("[tsazor] ErrorBoundary handled:"));

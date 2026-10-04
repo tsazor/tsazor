@@ -1,5 +1,6 @@
 ---
 title: Lifecycle
+keywords: lifecycle, onInitialized, onParametersSet, onAfterRender, dispose
 focus: Timer.tsazor
 gate: wait 1100
 ---

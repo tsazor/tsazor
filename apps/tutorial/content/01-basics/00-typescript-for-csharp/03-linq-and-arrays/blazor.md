@@ -1,5 +1,6 @@
 ---
 title: LINQ and array methods
+keywords: LINQ, array methods, map, filter, reduce
 focus: report.ts
 ---
 

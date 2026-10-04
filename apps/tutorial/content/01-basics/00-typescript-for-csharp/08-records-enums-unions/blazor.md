@@ -1,5 +1,6 @@
 ---
 title: Records, enums and unions
+keywords: union types, enum, records, switch
 focus: orders.ts
 ---
 

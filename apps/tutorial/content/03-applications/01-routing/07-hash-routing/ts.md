@@ -1,5 +1,6 @@
 ---
 title: Hash routing
+keywords: hash routing, #/, static hosting
 focus: Program.ts
 gate: click nav a:nth-child(2); click .filters a:nth-child(2)
 ---

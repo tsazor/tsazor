@@ -1,5 +1,6 @@
 ---
 title: Navigation
+keywords: NavigationManager, navigateTo, locationChanged, navigation
 focus: Order.tsazor
 gate: click nav a:nth-child(2); click .orders a; click button
 ---

@@ -1,5 +1,6 @@
 ---
 title: Formatted bindings
+keywords: @bind:format, date input, formatting
 focus: App.tsazor
 ---
 

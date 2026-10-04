@@ -1,5 +1,6 @@
 ---
 title: Event modifiers
+keywords: preventDefault, stopPropagation, event modifiers
 focus: App.tsazor
 gate: click .card button
 ---

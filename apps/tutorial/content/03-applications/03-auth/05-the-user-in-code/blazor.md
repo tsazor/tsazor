@@ -1,5 +1,6 @@
 ---
 title: The user in code
+keywords: AuthenticationState, CascadingAuthenticationState, current user
 focus: Bread.tsazor
 gate: click .user button; click nav a:nth-child(2)
 ---

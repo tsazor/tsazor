@@ -1,5 +1,6 @@
 ---
 title: Containers and views
+keywords: containers, presentational components, EventCallback
 focus: TodoItem.tsazor
 refactor: true
 gate: check .todo input

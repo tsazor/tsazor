@@ -1,5 +1,6 @@
 ---
 title: Attribute splatting
+keywords: attribute splatting, @attributes, CaptureUnmatchedValues
 focus: App.tsazor
 gate: click button
 ---

@@ -1,5 +1,6 @@
 ---
 title: Templated components
+keywords: templated components, @typeparam, generics, context
 focus: List.tsazor
 typeErrors: true
 ---

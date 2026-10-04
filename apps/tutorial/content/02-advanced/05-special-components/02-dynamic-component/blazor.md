@@ -1,5 +1,6 @@
 ---
 title: Dynamic components
+keywords: DynamicComponent, dynamic components, Parameters
 focus: App.tsazor
 ---
 

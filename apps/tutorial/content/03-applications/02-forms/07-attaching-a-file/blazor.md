@@ -1,5 +1,6 @@
 ---
 title: Attaching a file
+keywords: InputFile, file upload, OnChange
 focus: Bread.tsazor
 gate: click nav a:nth-child(3); click button
 ---
