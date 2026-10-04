@@ -13,6 +13,7 @@ export {
 } from "./diagnostics.js";
 export { buildSourceMap, type SourceMapEntry } from "./source-map.js";
 export { explainExpressionValue, type ExpressionValue } from "./expression-values.js";
+export { RESERVED_MEMBERS, OVERRIDABLE_MEMBERS } from "./reserved-members.js";
 export { parseImportDirective, importStatements, scanModuleExports, type ImportInfo, type ImportBinding, type ParsedImport, type ModuleExports } from "./imports.js";
 export {
   extractModuleMetadata,

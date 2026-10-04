@@ -337,7 +337,13 @@ Nutzertests mit `@tsazor/testing`. Optionen: happy-dom-Update prüfen, oder `Log
 
 ## M. Framework-Lücken, gefunden beim Umsetzen
 
-### 1. Neue `ComponentBase`-Member kollidieren mit Komponenten-Membern — **umgangen, offen als Regel**
+### 1. Neue `ComponentBase`-Member kollidieren mit Komponenten-Membern — **behoben (S5, TZS031)**
+
+Seit 2026-10-04: `TZS031` meldet einen `@code`-Member oder `@inject`-Namen, der einen
+`ComponentBase`-Member verdecken würde, mit Begründung statt TS2416. Die Liste
+(`compiler/src/reserved-members.ts`) prüft ein Test in `@tsazor/workspace` gegen die Runtime: ein
+neuer Base-Member ohne Entscheidung (reserviert oder Lifecycle-Hook) lässt den Test scheitern.
+Kein Umbenennungs-Fix (das Umbenennen aller Verwendungen ist Sache des LSP-Rename).
 
 Die Methode hieß zuerst `track()` und brach das Tutorial: `Lesson`/`TopBar`/`LessonMenu`/`LessonText`
 hatten einen Parameter `track` (die Lern-Spur „ts“/„blazor“) ⇒ TS2416 im Check, zur Laufzeit

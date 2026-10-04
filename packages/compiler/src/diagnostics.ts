@@ -78,6 +78,7 @@ const CODES = {
   TZS028: "Invalid child content element.",
   TZS029: "Template context name conflict.",
   TZS030: "@Bindable() needs an auto-accessor.",
+  TZS031: "Name reserved by ComponentBase.",
 } as const;
 
 export type DiagnosticCode = keyof typeof CODES;

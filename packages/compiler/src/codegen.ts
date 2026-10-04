@@ -34,6 +34,7 @@ import {
 } from "./rewrite.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 import type { ExpressionValue } from "./expression-values.js";
+import { bodyMemberNames, RESERVED_MEMBERS } from "./reserved-members.js";
 import * as ts from "typescript";
 
 export interface ResolvedComponent {
@@ -347,6 +348,7 @@ class Codegen {
           }
           const name = parts[parts.length - 1]!;
           const type = parts.slice(0, -1).join(" ");
+          if (RESERVED_MEMBERS.has(name)) this.diagnostics.error("TZS031", directiveRange(d), reservedMessage(name, "an injected service"));
           this.metadata.injects.push({ type, name });
           this.resolveType(type);
           break;
@@ -428,6 +430,7 @@ class Codegen {
     const bindableDeclarations = this.checkBindables(memberCode, declaredMembers);
     for (const inject of this.metadata.injects) this.members.instance.add(inject.name);
     this.checkRenderMethodConflict(memberCode);
+    this.checkReservedMembers(memberCode);
 
     // Pre-resolve component tags so imports come out once, before the class.
     this.classifyChildContent(document.body);
@@ -628,6 +631,22 @@ class Codegen {
       if (codeBehind.instance.has("buildRenderTree")) {
         // The member lives in the code-behind file: reported at the start of this one.
         this.diagnostics.error("TZS020", textRange({ line: 1, column: 0 }, ""), `'buildRenderTree' in the code-behind class would be replaced by the generated member. ${hint}`);
+      }
+    }
+  }
+
+  /**
+   * S5: a `@code` member named like a ComponentBase member (`observe`,
+   * `stateHasChanged`, …) replaces the inherited one — TZS031 says so,
+   * instead of the type check's bare TS2416. Lifecycle hooks are overridden
+   * on purpose and stay allowed.
+   */
+  private checkReservedMembers(memberCode: CodeBlockNode[]): void {
+    for (const block of memberCode) {
+      for (const { name, offset } of bodyMemberNames(block.code)) {
+        if (!RESERVED_MEMBERS.has(name)) continue;
+        const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, offset)) : block.pos;
+        this.diagnostics.error("TZS031", textRange(pos, name), reservedMessage(name, "a member"));
       }
     }
   }
@@ -2630,6 +2649,11 @@ function elementRefCastTag(tagName: string): string | undefined {
 }
 
 /** A directive without its trailing whitespace: `@name value`. */
+/** TZS031's message: why a ComponentBase name can't be reused. */
+function reservedMessage(name: string, what: string): string {
+  return `'${name}' is already a member of every component (ComponentBase.${name}). Declaring ${what} called '${name}' would replace the inherited one, which the runtime relies on. Choose another name.`;
+}
+
 function directiveRange(d: DirectiveNode): SourceRange {
   if (d.value.length > 0 && d.valueStart) return { pos: d.pos, endPos: advancePos(d.valueStart, d.value) };
   return { pos: d.pos, endPos: { line: d.pos.line, column: d.pos.column + 1 + d.name.length } };

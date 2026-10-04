@@ -44,7 +44,8 @@ upstream work happens, where the emitter lives) need answers first.
   errors in `.tsazor` files.
 - **S5 — Reserved-name diagnostic:** a component member that shadows a `ComponentBase` member
   (`observe`, `dispose`, `stateHasChanged`, …) gets a Tsazor diagnostic instead of a cryptic
-  TS2416 (port-findings M.1).
+  TS2416 (port-findings M.1). **Done (2026-10-04):** `TZS031`, the list checked against the
+  runtime by a test.
 - **S6 — Tutorial:** the TS track's "Typed checks" lesson carries the message "types keep your app
   stable, and inference does most of the work".
 

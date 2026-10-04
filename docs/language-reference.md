@@ -920,7 +920,7 @@ parentheses there (parity); `@(x ? "a" : "b")` or `{(x ? "a" : "b")}` work.
 
 ## Diagnostics
 
-The compiler never fails silently — codes `TZS001`–`TZS030` with a source range
+The compiler never fails silently — codes `TZS001`–`TZS031` with a source range
 (`TZS011`, `TZS014`, `TZS022`, `TZS023` and `TZS026` are warnings, e.g. an `@inherits` conflict with
 code-behind or an ignored directive/clause). New with the code-first parser: `TZS012` C# construct without
 a TS equivalent, `TZS013` directive outside the document level, `TZS015` invalid
@@ -958,6 +958,11 @@ mechanical and have no fix — they are ported by hand, partly onto the built-in
 `(MarkupString)x` ⇒ `x as MarkupString`, see MarkupString above).
 Tsazor extensions: `TZS030` `@Bindable()` on a member that is not an auto-accessor (error, fix
 "Insert 'accessor'"; see [Two-way parameters](#two-way-parameters-bindable-tsazor-extension)).
+`TZS031` a `@code` member or `@inject` name that would replace a `ComponentBase` member
+(`observe`, `inject`, `stateHasChanged`, `disposeSignal`, …): Blazor's base members are PascalCase
+and never meet a component's fields, Tsazor's camelCase API shares their namespace. The lifecycle
+hooks (`onInitialized`, `onParametersSet`, `onAfterRender`, `shouldRender`, `setParametersAsync`)
+are overridden on purpose and stay allowed; `buildRenderTree` is `TZS020`.
 Errors show up in the Vite dev overlay, warnings on the console.
 
 **Ranges and fixes (A7):** besides `pos` (start, 1-based line / 0-based column), every diagnostic
