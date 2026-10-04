@@ -449,7 +449,8 @@ The check (`check.ts` in `@tsazor/lsp`) runs in two passes: pass 1 is compiler d
 + shadow construction for **all** `.tsazor` files under the project root (T4 — including
 files that aren't open), pass 2 is TypeScript diagnostics over the complete shadow graph.
 `@tsazor/cli` packages this as `tsazor check [root]` (exit 1 on errors), the Vite plugin as
-`check: true` at the end of the build. Per component, `componentTypeDeclarations`
+`check: true` at the end of the build (and, non-blocking, in the background of the dev
+server: `vite-plugin/src/dev-check.ts`). Per component, `componentTypeDeclarations`
 (workspace/metadata.ts) writes a real `dist/<Name>.d.ts` from the package manifest (own
 parameters with doc comments, a generic `@inherits` as a class generic, runtime types via
 an `@tsazor/runtime` import); ambient declarations for `*.tsazor` and

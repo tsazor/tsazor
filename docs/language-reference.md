@@ -837,7 +837,10 @@ typed:
   types a `@ref` field as the class), and the tsconfig's own `.d.ts` files
   (ambient/virtual modules) are included. Output `file(line,column) code message` (POSIX, 1-based).
   The Vite plugin can append the same check to the end of the build as `check: true` — errors
-  fail the build.
+  fail the build. In the dev server the same option runs the check in the background (at start,
+  then after every `.tsazor`/`.ts` change) and prints the findings to the terminal; it never
+  blocks: a type error does not fail a module, and HMR keeps updating (only compiler errors —
+  `TZS…` — show the overlay, because the module can't be built).
 - **A real `.d.ts` per component.** From the package manifest,
   `componentTypeDeclarations` builds `dist/<Name>.d.ts` for every exported component:
   the component's own parameters with doc comments and their types

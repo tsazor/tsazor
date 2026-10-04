@@ -19,8 +19,10 @@ const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
 export interface TsazorPluginOptions {
   /** Project root; defaults to the Vite config root. */
   root?: string;
-  /** Runs `tsazor check` over the build root at build end (2.4): compiler
-   *  diagnostics plus the typed shadow checks; errors fail the build. */
+  /** Runs `tsazor check` (2.4): compiler diagnostics plus the typed shadow
+   *  checks. A build runs it at the end and fails on errors. The dev server
+   *  runs it in the background (at start and after each change) and prints
+   *  the findings without blocking anything (S3). */
   check?: boolean;
 }
 
@@ -47,6 +49,12 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      // S3: type errors are reported in the background, never as a failed module.
+      if (options.check === true) {
+        void import("./dev-check.js").then(({ startDevCheck }) =>
+          startDevCheck(server.watcher, { root: projectRoot, log: (line) => server.config.logger.warn(`[tsazor] ${line}`) }),
+        );
+      }
       // Eager compile: dev transforms are lazy, so @code errors would only
       // surface when the browser requests the module. Warm every .tsazor at
       // startup — vite logs pre-transform errors to the terminal immediately.

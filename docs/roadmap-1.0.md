@@ -38,7 +38,9 @@ upstream work happens, where the emitter lives) need answers first.
   `tsazor check` documents strict as the supported configuration.
 - **S3 — Never block development:** verify, and pin in tests, that the dev server and HMR keep
   running with TS type errors (shown as an overlay or console output, not as a failed module).
-  Production builds keep failing on errors.
+  Production builds keep failing on errors. **Done (2026-10-04):** the transform never type-checks
+  (pinned); with `check: true` the dev server runs the check in the background and prints the
+  findings (`dev-check.ts`); the build fails on them.
 - **S4 — Quick fix for missing types:** TS7006 (implicit `any`) in `.tsazor` files gets
   "infer parameter types from usage" in the LSP. Plain-language hints for the most common TS
   errors in `.tsazor` files.
