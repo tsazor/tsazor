@@ -1,7 +1,8 @@
 # Roadmap — Tsazor 1.0
 
-Status (2026-10-03): **step 1 of the order below** — tutorial M1–M3 done, M4 half done
-(Routing, Forms); E8 and E11 done; decisions D1–D4 and X1–X4 taken; no CI yet (R1).
+Status (2026-10-04): **steps 1 and 2 of the order below are done** — the tutorial's three parts
+(M4 without the static deploy, whose target is still to decide), S3, S5, R1 CI and the S1 API
+snapshot; E8 and E11 done; decisions D1–D4 and X1–X4 taken. Next: step 3.
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
 
 **Goal of 1.0:** a single-page-app framework with **Blazor parity** (markup and semantics),
@@ -34,6 +35,8 @@ upstream work happens, where the emitter lives) need answers first.
 
 - **S1 — API contract:** a snapshot of the public `.d.ts` surface of every package, checked in CI.
   A diff fails the build unless the snapshot is updated deliberately (with a changelog entry).
+  **Done (2026-10-04):** `scripts/api-snapshot.mjs` → `api/<package>.api.d.ts`, `pnpm api:check` in
+  CI, `pnpm api:update` + `CHANGELOG.md` for deliberate changes.
 - **S2 — Strict only:** `getting-started`, templates and `npm create tsazor` use `strict: true`.
   `tsazor check` documents strict as the supported configuration.
 - **S3 — Never block development:** verify, and pin in tests, that the dev server and HMR keep
@@ -114,6 +117,10 @@ architecture and security take priority.
 
 - **R1 — CI** (GitHub Actions): build before test, all package and app tests, tarball smoke
   gate, E2E gates (tutorial, pizza, gallery, sleipnir-ticker in synthetic mode), API snapshot (S1).
+  **Done (2026-10-04):** `.github/workflows/ci.yml` — job `check` (ubuntu: build, all tests, API
+  snapshot, tarball smoke) and job `e2e` (windows: the four verify scripts in Edge, ticker via
+  `dotnet`). It found two Linux-only bugs on its first runs (the `tsazor` bin link on a fresh
+  checkout, the scope hash of backslash paths), both fixed.
 - **R2 — npm publishing:** versioning, changelog, provenance, and the publish workflow.
 - **R3 — `npm create tsazor`:** project starter (strict, Vite, `_Imports.tsazor`, a sample
   component and test, optional `@tsazor/dotnet`).
