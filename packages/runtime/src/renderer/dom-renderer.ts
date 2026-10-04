@@ -249,15 +249,56 @@ function createElementIn(tagName: string, parent: Node): Element {
 /* Markup blocks                                                       */
 /* ------------------------------------------------------------------ */
 
-/** Inserts a markup block as a logical range (markers around the parsed nodes); returns its start. */
-function insertMarkup(markup: string, parent: Node, before: Node | null, journal: DomJournal | null): Comment {
+/**
+ * Inserts a markup block; returns its first node. F1a: the string is parsed
+ * once (per context) and every insertion imports a copy of the parsed nodes.
+ * A block of exactly one node — every compiler-emitted static block — is
+ * inserted as that node, tracked like an element frame's node; any other
+ * shape (MarkupString content) goes into a logical range between markers.
+ */
+function insertMarkup(markup: string, parent: Node, before: Node | null, journal: DomJournal | null): Node {
+  const parsed = parsedMarkup(markup, parent);
+  if (parsed.childNodes.length === 1) {
+    const node = document.importNode(parsed.firstChild!, true);
+    journal?.position(node);
+    parent.insertBefore(node, before);
+    return node;
+  }
   const range = new LogicalRange("bl-tsazor:markup");
-  const content = parseMarkup(markup, parent);
+  const content = document.importNode(parsed, true);
   content.insertBefore(range.start, content.firstChild);
   content.appendChild(range.end);
   journal?.restore(range, removeRange, null);
   parent.insertBefore(content, before);
   return range.start;
+}
+
+/** The table structure a table part is parsed in, and how deep its content sits. */
+const TABLE_WRAPPERS: Record<string, { open: string; close: string; depth: number }> = {
+  td: { open: "<table><tbody><tr>", close: "</tr></tbody></table>", depth: 3 },
+  th: { open: "<table><tbody><tr>", close: "</tr></tbody></table>", depth: 3 },
+  tr: { open: "<table><tbody>", close: "</tbody></table>", depth: 2 },
+  thead: { open: "<table>", close: "</table>", depth: 1 },
+  tbody: { open: "<table>", close: "</table>", depth: 1 },
+  tfoot: { open: "<table>", close: "</table>", depth: 1 },
+  caption: { open: "<table>", close: "</table>", depth: 1 },
+  colgroup: { open: "<table>", close: "</table>", depth: 1 },
+  col: { open: "<table><colgroup>", close: "</colgroup></table>", depth: 2 },
+};
+
+/** Parsed markup per string, for HTML and SVG contexts; bounded, since MarkupString content can be anything. */
+const MARKUP_CACHE_SIZE = 1000;
+const markupCache = { html: new Map<string, DocumentFragment>(), svg: new Map<string, DocumentFragment>() };
+
+function parsedMarkup(markup: string, parent: Node): DocumentFragment {
+  const cache = isSvgContext(parent) ? markupCache.svg : markupCache.html;
+  let parsed = cache.get(markup);
+  if (parsed === undefined) {
+    parsed = parseMarkup(markup, parent);
+    if (cache.size >= MARKUP_CACHE_SIZE) cache.delete(cache.keys().next().value!);
+    cache.set(markup, parsed);
+  }
+  return parsed;
 }
 
 /**
@@ -286,8 +327,20 @@ function trustedHtml(markup: string): string {
 function parseMarkup(markup: string, parent: Node): DocumentFragment {
   if (!isSvgContext(parent)) {
     const template = document.createElement("template");
-    template.innerHTML = trustedHtml(markup);
-    return template.content;
+    // Table parts (a static <td> block inside a dynamic <tr>) are parsed inside
+    // their table structure: parsers without the template's table modes
+    // (happy-dom, older engines) would otherwise drop the tags.
+    const wrapper = TABLE_WRAPPERS[/^<([a-z]+)/.exec(markup)?.[1] ?? ""];
+    if (wrapper === undefined) {
+      template.innerHTML = trustedHtml(markup);
+      return template.content;
+    }
+    template.innerHTML = trustedHtml(`${wrapper.open}${markup}${wrapper.close}`);
+    let host: ParentNode = template.content;
+    for (let level = 0; level < wrapper.depth; level++) host = host.firstElementChild!;
+    const fragment = document.createDocumentFragment();
+    while (host.firstChild) fragment.appendChild(host.firstChild);
+    return fragment;
   }
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
   svg.innerHTML = trustedHtml(markup);

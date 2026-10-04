@@ -24,6 +24,9 @@ export interface TsazorPluginOptions {
    *  runs it in the background (at start and after each change) and prints
    *  the findings without blocking anything (S3). */
   check?: boolean;
+  /** F1a: static subtrees as one markup block each (default true). `false` emits
+   *  element frames throughout — an escape hatch for one release (design-static-markup.md D-S5). */
+  staticMarkup?: boolean;
 }
 
 export function tsazor(options: TsazorPluginOptions = {}): Plugin {
@@ -146,7 +149,7 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         }
         return { code: "export default null;\n", map: null };
       }
-      const result = await transformTsazor(code, filePath, projectRoot);
+      const result = await transformTsazor(code, filePath, projectRoot, options.staticMarkup === false ? { staticMarkup: false } : {});
       registry.recordTransform(filePath, result.metadata, result.componentFiles);
       reportImportsDiagnostics(result.importsDiagnostics);
       reportDiagnostics(result.diagnostics, filePath);

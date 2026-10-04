@@ -1,6 +1,6 @@
 # Design draft — Static markup blocks (F1a)
 
-Status: **draft, decisions open** (§7). Roadmap: [roadmap-1.0.md](roadmap-1.0.md) step 3,
+Status: **implemented 2026-10-04** — D-S1 to D-S5 as recommended (§7); results in §8. Roadmap: [roadmap-1.0.md](roadmap-1.0.md) step 3,
 [design-svelte-features.md](design-svelte-features.md) F1a. F1b (update hints, hoisting) is a
 separate step and builds on this one.
 
@@ -144,7 +144,7 @@ map maps a block to its first element's start. Hot reload replaces a changed blo
 2. Runtime: the template cache, the single-root fast path, `UpdateMarkup` for it.
 3. The gates of §5; the language reference documents the frame shape and the deviations.
 
-## 7. Decisions to confirm
+## 7. Decisions (confirmed 2026-10-04, all as recommended)
 
 - **D-S1 — one block per static element, siblings not merged** (as Razor). *Recommended.*
   Merging siblings would give fewer frames but multi-node blocks, which need the boundary
@@ -160,3 +160,21 @@ map maps a block to its first element's start. Hot reload replaces a changed blo
   *Recommended.* Without it F1a is slower than today in loops.
 - **D-S5 — `staticMarkup: false` as an escape hatch for one release**, then removed.
   *Recommended.*
+
+## 8. Results (2026-10-04)
+
+- **DOM equality** (`apps/tutorial/test/static-markup-equality.test.ts`): every lesson's start and
+  solution — 189 projects with 601 blocks — render the same DOM, body and head, with and without
+  blocks. It found one bug on the way: a static `<td>` block inside a dynamic `<tr>` lost its
+  tags in happy-dom, whose parser lacks the template's table modes. Table parts are now parsed
+  inside their table structure (`TABLE_WRAPPERS` in `dom-renderer.ts`).
+- **Beyond the design:** form elements are excluded entirely (`input`, `textarea`, `select`,
+  `option`) and so are `value`/`checked`/`selected` attributes, because the renderer applies
+  them as properties (Razor puts `input`/`textarea` into markup). Inline `on…` attributes stay
+  out too.
+- **Strict CSP:** the demo's check (`verify-csp.mjs`) stays green with blocks.
+- **Bench** (`apps/bench`, Edge headless, two alternating runs per variant, medians of 5): the rows
+  scenario is unchanged within noise (create 10k 289/284 → 281/286 ms; select 24/26 → 19/19 ms;
+  heap 15.9 → 15.3 MB). The static-heavy `/cards` page (3,000 cards, static chrome, a dynamic
+  price; `measure/static-markup.mjs`, medians of 7): show 23.3/25.9 → 14.1/14.1 ms, render again
+  4.5/4.3 → 1.6/1.9 ms, hide unchanged (32.5/33.3 → 32.0/30.5 ms).

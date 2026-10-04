@@ -17,6 +17,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - `@tsazor/runtime`: `createTsazorApp({ strictCsp: true })` writes style attributes through the
   CSSOM, for a CSP without `'unsafe-inline'`; `MarkupString` goes through a Trusted Types policy
   named `tsazor` (see docs/csp.md).
+- F1a static markup blocks: `@tsazor/compiler` emits a static subtree as one `addMarkupContent`
+  frame (option `staticMarkup`, default on; the Vite plugin passes `staticMarkup: false` through as
+  an escape hatch); `@tsazor/runtime` parses each markup string once, clones it per insertion and
+  inserts single-node blocks without boundary comments.
 - `@tsazor/vite-plugin`: with `check: true`, the dev server reports type errors in the
   background without blocking.
 - `@tsazor/dotnet`: generated code is commented in English and imports only the validation

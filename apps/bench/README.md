@@ -100,3 +100,9 @@ Reading notes:
   completed/persistence) pass in all 5 apps; the harness asserts them on every run.
 
 <!-- RESULTS-END -->
+
+## F1a — static markup blocks (Tsazor only)
+
+`measure/static-markup.mjs` builds the Tsazor app with and without static markup blocks
+(`TSAZOR_STATIC_MARKUP=0`) and times the `/cards` page: 3,000 cards with static chrome and a
+dynamic price. Results and the rows A/B: [docs/design-static-markup.md §8](../../docs/design-static-markup.md#8-results-2026-10-04).

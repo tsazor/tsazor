@@ -1,0 +1,42 @@
+@page "/cards"
+
+@* F1a measurement (measure/static-markup.mjs): 3,000 cards, static chrome, dynamic price. *@
+<section class="cardsbench">
+    <button id="show" @onclick="show">show 3,000 cards</button>
+    <button id="rerender" @onclick="rerender">render again</button>
+    <button id="hide" @onclick="hide">hide</button>
+    <span id="renders">@renders</span>
+    @foreach (const card of cards) {
+        <article class="card">
+            <header class="card-head">
+                <span class="badge">Fresh today</span>
+                <h3 class="card-title">Sourdough loaf</h3>
+            </header>
+            <p class="card-text">Baked this morning from organic flour and a twelve-hour starter. Available while stocks last.</p>
+            <ul class="card-facts">
+                <li><strong>Weight</strong> 1 kg</li>
+                <li><strong>Crust</strong> dark</li>
+                <li><strong>Keeps</strong> four days</li>
+            </ul>
+            <footer class="card-foot"><span class="price">€@card.price</span></footer>
+        </article>
+    }
+</section>
+
+@code {
+    private cards: Array<{ id: number; price: string }> = [];
+    private renders = 0;
+
+    private show() {
+        this.cards = Array.from({ length: 3000 }, (_, id) => ({ id, price: (3 + (id % 7) * 0.5).toFixed(2) }));
+    }
+
+    private rerender() {
+        this.cards = [...this.cards];
+        this.renders++;
+    }
+
+    private hide() {
+        this.cards = [];
+    }
+}

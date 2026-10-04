@@ -12,6 +12,8 @@ export interface TransformTsazorOptions {
   sourceMap?: boolean;
   /** Append the HMR accept block (default true; harnesses outside Vite turn it off). */
   hmr?: boolean;
+  /** F1a static markup blocks (default true). */
+  staticMarkup?: boolean;
 }
 
 export interface TransformTsazorResult {
@@ -81,6 +83,7 @@ export async function transformTsazor(
     codeBehindSource: codeBehindClass ? readFileSync(codeBehindPath, "utf8") : undefined,
     scopeHash,
     generateSourceMap: sourceMap,
+    ...(options.staticMarkup === false ? { staticMarkup: false } : {}),
   });
 
   const importsDiagnostics = chain.layers.flatMap((layer) =>

@@ -48,6 +48,7 @@ export declare function transformTsazor(code: string, filePath: string, projectR
 export interface TransformTsazorOptions {
     sourceMap?: boolean;
     hmr?: boolean;
+    staticMarkup?: boolean;
 }
 
 // TransformTsazorResult
@@ -73,6 +74,7 @@ export declare function tsazorHotUpdate(options: TsazorHotUpdateOptions, default
 export interface TsazorPluginOptions {
     root?: string;
     check?: boolean;
+    staticMarkup?: boolean;
 }
 
 /* @tsazor/vite-plugin/client */

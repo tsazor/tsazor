@@ -124,6 +124,16 @@ in the code-behind class is therefore an error (TZS020, Blazor: CS0111 duplicate
 instead of being silently replaced. Hand-written render code belongs in a plain
 `.ts` class (`extends ComponentBase`) that is imported as a component.
 
+**Static markup blocks (F1a).** As Razor does, an element whose whole subtree is static becomes
+one `addMarkupContent` frame; the runtime parses each block once and clones it per insertion,
+without boundary comments. The DOM is the same as with element frames. A subtree stays element
+frames when it contains an `@` expression or directive attribute, a component, a form control
+(`input`, `textarea`, `select`, `option`), a `value`/`checked`/`selected` or `style` attribute (a
+strict CSP blocks styles in parsed markup), or a shape the HTML parser would rebuild (`<p>` around
+a `<div>`, `<table>` without `<tbody>`, `<pre>`, `<template>`, unknown camelCase SVG names). The
+Vite plugin's `staticMarkup: false` turns blocks off (an escape hatch for one release). Details:
+[design-static-markup.md](design-static-markup.md).
+
 ## @import
 
 `@import` is followed by the syntax of a TypeScript import declaration — the compiler parses

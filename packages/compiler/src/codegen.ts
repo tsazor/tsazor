@@ -35,6 +35,7 @@ import {
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 import type { ExpressionValue } from "./expression-values.js";
 import { bodyMemberNames, RESERVED_MEMBERS } from "./reserved-members.js";
+import { staticMarkupOf } from "./static-markup.js";
 import * as ts from "typescript";
 
 export interface ResolvedComponent {
@@ -76,6 +77,13 @@ export interface CodegenOptions {
    * left alone (Blazor behavior). Unset → byte-identical emission as before.
    */
   scopeHash?: string;
+  /**
+   * F1a: an element whose whole subtree is static is emitted as one
+   * `addMarkupContent` block (Razor's markup blocks; docs/design-static-markup.md).
+   * Default true; `false` emits element frames throughout (escape hatch).
+   * Typed-shadow builds always keep element frames.
+   */
+  staticMarkup?: boolean;
   /**
    * Class name of the default export of the sibling `X.tsazor.ts` (code-behind).
    * When set, the generated class extends it — the code-behind class itself
@@ -1280,7 +1288,13 @@ class Codegen {
             this.emitComponent(node);
           }
         } else {
-          this.emitElement(node);
+          const markup = this.options.staticMarkup !== false && this.options.typedShadow === undefined ? staticMarkupOf(node, this.options.scopeHash) : null;
+          if (markup !== null) {
+            // F1a: the whole static subtree as one markup block.
+            this.stmt(`${BUILDER}.addMarkupContent(${this.seq()}, ${JSON.stringify(markup)});`, node.pos);
+          } else {
+            this.emitElement(node);
+          }
         }
         break;
       case "if":

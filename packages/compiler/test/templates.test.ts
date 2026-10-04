@@ -33,6 +33,7 @@ function gen(source: string, components: Record<string, ComponentMetadata | null
   const doc = parseDocument(`${source}\n@code { private people = []; private x = 1; }`, diagnostics);
   const result = generateCode(doc, {
     className: "Demo",
+    staticMarkup: false, // element-frame emission
     resolveComponent: (tag) => (tag in components ? { specifier: `./${tag}.tsazor` } : null),
     resolveComponentMetadata: (tag) => components[tag] ?? null,
   }, diagnostics);

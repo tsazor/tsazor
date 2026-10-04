@@ -205,8 +205,9 @@ describe("applier — ranges in render passes", () => {
     expect(h.container.querySelectorAll("i")).toHaveLength(2);
     expect(disposed).toContain("a");
     const comments = [...h.container.childNodes].filter((n) => n.nodeType === 8).length;
-    // Ranges are flat siblings: the host's, plus per wrapper its own, its item's and the markup's.
-    expect(comments).toBe(2 + 2 * 6);
+    // Ranges are flat siblings: the host's, plus per wrapper its own and its item's. The
+    // markup (one <i>) is a single node and needs no markers (F1a).
+    expect(comments).toBe(2 + 2 * 4);
   });
 
   it("removing a component range leaves no nodes behind and disposes it", async () => {
@@ -638,5 +639,84 @@ describe("input value normalization (Blazor normalizeInputValue)", () => {
     expect(await inputWith({ type: "datetime-local", value: "2026-09-30T13:45:00" })).toBe("2026-09-30T13:45");
     expect(await inputWith({ type: "datetime-local", step: "1", value: "2026-09-30T13:45:30" })).toBe("2026-09-30T13:45:30");
     expect(await inputWith({ type: "text", value: "13:45:00" })).toBe("13:45:00");
+  });
+});
+
+describe("F1a — markup blocks: parsed once, single-node blocks without markers", () => {
+  it("a single-node block is inserted as that node — no boundary comments — and every insertion is a separate copy", async () => {
+    const h = await mount((b) => {
+      for (let i = 0; i < 3; i++) b.addMarkupContent(0, '<span aria-hidden="true">x</span>');
+    });
+    expect(dump(h.container)).not.toContain("bl-tsazor:markup");
+    const spans = [...h.container.querySelectorAll("span")];
+    expect(spans).toHaveLength(3);
+    expect(new Set(spans).size).toBe(3);
+    expect(spans.every((span) => span.ownerDocument === document)).toBe(true);
+  });
+
+  it("multi-node markup (a MarkupString) keeps its markers; a changed string replaces either shape", async () => {
+    let one = '<b>one</b>';
+    let two = "<i>a</i><i>b</i>";
+    const h = await mount((b) => {
+      b.addMarkupContent(0, one);
+      b.addMarkupContent(1, two);
+    });
+    expect(h.container.innerHTML).toContain("<!--bl-tsazor:markup--><i>a</i><i>b</i><!--/bl-tsazor:markup-->");
+    one = "<b>uno</b>";
+    two = "<u>c</u>";
+    await h.update();
+    expect(h.container.textContent).toBe("unoc");
+    expect(dump(h.container)).not.toContain("bl-tsazor:markup");
+    one = "<b>1</b><b>2</b>";
+    await h.update();
+    expect(h.container.textContent).toBe("12c");
+  });
+
+  it("a block is parsed once however often it is inserted", async () => {
+    const original = HTMLTemplateElement.prototype;
+    let parses = 0;
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML")!;
+    Object.defineProperty(original, "innerHTML", {
+      configurable: true,
+      set(value: string) {
+        parses++;
+        descriptor.set!.call(this, value);
+      },
+      get() {
+        return descriptor.get!.call(this);
+      },
+    });
+    try {
+      await mount((b) => {
+        for (let i = 0; i < 50; i++) b.addMarkupContent(0, '<em class="parse-once">x</em>');
+      });
+      expect(parses).toBe(1);
+    } finally {
+      delete (original as unknown as Record<string, unknown>).innerHTML;
+    }
+  });
+});
+
+describe("F1a — table parts as blocks", () => {
+  it("a static <td>, <tr> or <col> block keeps its tags (parsed inside its table structure)", async () => {
+    const h = await mount((b) => {
+      b.openElement(0, "table");
+      b.openElement(1, "tbody");
+      b.openElement(2, "tr");
+      b.addMarkupContent(3, '<td class="x">Subtotal</td>');
+      b.openElement(4, "td");
+      b.addContent(5, "€1");
+      b.closeElement();
+      b.closeElement();
+      b.addMarkupContent(6, "<tr><th>Total</th></tr>");
+      b.closeElement();
+      b.openElement(7, "colgroup");
+      b.addMarkupContent(8, '<col span="2">');
+      b.closeElement();
+      b.closeElement();
+    });
+    expect(h.container.innerHTML.replace(/<!--[^>]*-->/g, "")).toBe(
+      '<table><tbody><tr><td class="x">Subtotal</td><td>€1</td></tr><tr><th>Total</th></tr></tbody><colgroup><col span="2"></colgroup></table>',
+    );
   });
 });

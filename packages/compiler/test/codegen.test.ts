@@ -8,7 +8,8 @@ import { metadataOf, withComponents } from "./component-metadata";
 function gen(source: string, options?: Parameters<typeof generateCode>[1]) {
   const diagnostics = new DiagnosticBag();
   const doc = parseDocument(source, diagnostics);
-  const result = generateCode(doc, { className: "Demo", ...options }, diagnostics);
+  // Element-frame emission (F1a static blocks have their own tests: static-markup.test.ts).
+  const result = generateCode(doc, { className: "Demo", staticMarkup: false, ...options }, diagnostics);
   return { code: result.code, mappings: result.mappings, metadata: result.metadata, diagnostics };
 }
 

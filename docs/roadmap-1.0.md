@@ -21,7 +21,7 @@ the static build and deploy target open.
 
 ## 2 — Svelte-style features ([design-svelte-features.md](design-svelte-features.md))
 
-F1a static markup frames (a Razor parity gap; design draft: [design-static-markup.md](design-static-markup.md)) · F1b update hints · F2 `@attach` · F3 `<Await>` ·
+F1a static markup frames (a Razor parity gap; **done 2026-10-04**, [design-static-markup.md](design-static-markup.md)) · F1b update hints · F2 `@attach` · F3 `<Await>` ·
 F4 `@transition`/`@in`/`@out` · F5 `@animate` · F6 `@State`. Decided 2026-10-02: the `@` namespace is
 reserved (D1), `@attach` (D2), the Svelte transition set (D3), `@State` in v1 (D4). Each feature
 gets its tutorial chapter.

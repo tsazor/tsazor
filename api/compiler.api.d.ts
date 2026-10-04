@@ -172,6 +172,7 @@ export interface CodegenOptions {
     usingSpecifiers?: Record<string, string>;
     fileName?: string;
     scopeHash?: string;
+    staticMarkup?: boolean;
     codeBehindClass?: string;
     codeBehindSource?: string;
     resolveComponentMetadata?: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
