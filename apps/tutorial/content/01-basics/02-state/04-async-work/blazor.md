@@ -1,7 +1,7 @@
 ---
 title: Async work
 focus: App.tsazor
-gate: click button; wait 50
+gate: click button; wait 50; look
 ---
 
 Async handlers work as in Blazor: `async roll()` returns a `Promise` instead of a `Task`, and

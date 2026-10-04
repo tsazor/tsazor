@@ -55,10 +55,15 @@ const checker = new TypeChecker(loadTypeEnvironment(appRoot));
  *   input <selector> <value…>     set value, dispatch `input`
  *   pointer <selector> <type>     dispatch a pointer event at (10, 20)
  *   wait <ms>                     let timers run
+ *   look                          compare now, mid-flight (last step): the
+ *                                 pending async work is not awaited first
+ *
+ * Returns true for `look`.
  */
-async function runSteps(container: HTMLElement, steps: string | undefined): Promise<void> {
+async function runSteps(container: HTMLElement, steps: string | undefined): Promise<boolean> {
   for (const step of (steps ?? "").split(";").map((s) => s.trim()).filter(Boolean)) {
     const [verb, ...rest] = step.split(/\s+/);
+    if (verb === "look") return true;
     if (verb === "wait") {
       await new Promise((resolve) => setTimeout(resolve, Number(rest[0])));
       continue;
@@ -81,6 +86,7 @@ async function runSteps(container: HTMLElement, steps: string | undefined): Prom
     } else throw new Error(`gate step '${step}': unknown verb`);
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
+  return false;
 }
 
 /** Form state is visible but not in the markup: values and checked flags join the snapshot. */
@@ -101,8 +107,7 @@ async function renderBuild(build: ProjectBuild, dir: string, steps?: string): Pr
   };
   try {
     const mounted = await mountWritten(build, dir);
-    await runSteps(mounted.container, steps);
-    await mounted.settle();
+    if (!(await runSteps(mounted.container, steps))) await mounted.settle();
     // The document head counts: PageTitle and HeadContent render there.
     const html = `${mounted.container.innerHTML}\n${formState(mounted.container)}\n${headSnapshot()}`;
     mounted.dispose();

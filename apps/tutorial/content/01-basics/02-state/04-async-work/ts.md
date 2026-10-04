@@ -1,7 +1,7 @@
 ---
 title: Async work
 focus: App.tsazor
-gate: click button; wait 50
+gate: click button; wait 50; look
 ---
 
 Real apps wait for things: a server, a file, a timer. In Tsazor, an event handler can simply
