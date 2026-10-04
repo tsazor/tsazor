@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { relative as pathRelativeOf } from "node:path";
+import { posix } from "node:path";
 import postcss, { type AtRule, type Rule } from "postcss";
 import { scopeSelector } from "@tsazor/compiler";
 
@@ -23,9 +23,16 @@ export { scopeSelector };
 
 const COMBINATORS = new Set([">", "+", "~"]);
 
-/** Full scope attribute name for a .tsazor file, e.g. "b-1a2b3c4d". */
+/** A path with forward slashes and an upper-case drive letter (Windows paths compare case-insensitively). */
+const posixPath = (value: string): string => value.replace(/\\/g, "/").replace(/^([a-z]):/, (_match, drive: string) => `${drive.toUpperCase()}:`);
+
+/**
+ * Full scope attribute name for a .tsazor file, e.g. "b-1a2b3c4d": a hash of
+ * the project-relative POSIX path, so the same file gets the same attribute
+ * on every OS and for either slash spelling.
+ */
 export function scopeHashFor(projectRoot: string, filePath: string): string {
-  const rel = pathRelativeOf(projectRoot, filePath).replace(/\\/g, "/");
+  const rel = posix.relative(posixPath(projectRoot), posixPath(filePath));
   const digest = createHash("sha1").update(rel).digest("hex");
   return `b-${digest.slice(0, 8)}`;
 }
