@@ -29,3 +29,34 @@ jobs:
         run: pnpm api:check
       - name: Tarball smoke
         run: pnpm smoke
+
+  e2e:
+    name: E2E gates (real browser)
+    needs: check
+    # The verify scripts are written for Windows (Edge channel, taskkill
+    # cleanup) — run them where they are developed.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - name: Tutorial
+        run: pnpm --filter tutorial verify
+      - name: Blazing Pizza
+        run: pnpm --filter blazing-pizza verify
+      - name: Gallery
+        run: pnpm --filter gallery verify
+      - name: Sleipnir ticker (synthetic mode)
+        run: |
+          dotnet build apps/sleipnir-ticker/api
+          pnpm --filter sleipnir-ticker verify
