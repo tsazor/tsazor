@@ -104,6 +104,9 @@ architecture and security take priority.
   (A5/B7): keep it for routing and data values, replace it for display and input.
 - **E9 — Accessibility:** audit `@tsazor/components` and `@tsazor/fluent` against WCAG 2.2 AA (EU
   Accessibility Act / BFSG since June 2025), and add automated a11y checks to the E2E gates.
+  **Decided (2026-10-04), staged:** now axe-core in the E2E gates (gallery: every `@tsazor/fluent`
+  component; demo: `@tsazor/components`) plus keyboard/focus tests for the interactive components
+  (dialog, tabs, select); the manual screen-reader audit is its own item before the 1.0 release.
 - **E12 — Feel-at-home packages** ([design-extensions-primitives.md](design-extensions-primitives.md)):
   `@tsazor/primitives` (`Decimal` first, since money in `number` drifts; then
   `TimeSpan`/`DateOnly`/`TimeOnly`/`Guid`) and `@tsazor/extensions` (`HttpClient` + factory +
@@ -128,7 +131,10 @@ architecture and security take priority.
 - **R2 — npm publishing:** versioning, changelog, provenance, and the publish workflow.
 - **R3 — `npm create tsazor`:** project starter (strict, Vite, `_Imports.tsazor`, a sample
   component and test, optional `@tsazor/dotnet`).
-- **R4 — Docs site:** the tutorial plus user docs, statically deployed.
+- **R4 — Docs site:** the tutorial plus user docs, statically deployed. **Decided (2026-10-04):**
+  GitHub Pages. The repository is private (Pages needs a paid plan there, and the site would be
+  public): the static build with an SPA fallback and a deploy workflow are prepared now; it runs
+  once Pages is enabled in the repository settings.
 - **R5 — Numbers:** a current bundle-size figure (25.28 KB gz on the bench as of 2026-10-02;
   README/roadmap still say 20.4) and benchmarks before claiming anything publicly.
 
