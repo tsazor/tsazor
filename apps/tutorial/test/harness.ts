@@ -8,7 +8,7 @@
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   HeadOutlet,
   MemoryHistory,
@@ -24,6 +24,10 @@ import {
   type Token,
 } from "@tsazor/testing";
 import { MODULE_PREFIX, type ProjectBuild } from "../src/engine/compile-project";
+import { run, type TestResult } from "../src/preview/mini-test";
+
+/** "vitest" in a lesson's test file is the preview's runner — here too (the one module instance whose `run` is above). */
+const MINI_TEST = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../src/preview/mini-test.ts")).href;
 
 /** Stands in for @tsazor/runtime in Program.ts: records the app options instead of starting. */
 const SHIM = `export * from "@tsazor/runtime";
@@ -44,6 +48,7 @@ export function writeModules(build: ProjectBuild, dir: string): void {
       return rel.startsWith(".") ? rel : `./${rel}`;
     };
     let code = module.code.replace(/(["'])\$app\/([^"']+)\1/g, (_match, quote: string, target: string) => `${quote}${relative(target)}.js${quote}`);
+    code = code.replace(/(["'])vitest\1/g, JSON.stringify(MINI_TEST));
     if (build.program && module.id === build.program) {
       code = code.replace(/(["'])@tsazor\/runtime\1/g, `$1${relative("__gate-runtime.mjs")}$1`);
     }
@@ -143,4 +148,12 @@ export async function mountWritten(build: ProjectBuild, dir: string, options: { 
 /** The preview document's head as the app left it: the title and the outlet's content. */
 export function headSnapshot(): string {
   return `title:${document.title}|${document.head.innerHTML.replace(/<!--\/?bl-tsazor:[^>]*-->/g, "")}`;
+}
+
+/** Runs a written build's test files (*.test.ts) with the preview's runner, as the preview does. */
+export async function runWrittenTests(build: ProjectBuild, dir: string): Promise<TestResult[]> {
+  for (const module of Object.values(build.modules)) {
+    if (module.file.endsWith(".test.ts")) await import(pathToFileURL(path.join(dir, `${module.file}.js`)).href);
+  }
+  return run();
 }

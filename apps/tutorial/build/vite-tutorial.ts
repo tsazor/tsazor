@@ -29,13 +29,17 @@ export interface PackageBundles {
   runtime: string;
   components: string;
   dotnet: string;
+  /** @tsazor/testing (the runtime external). */
+  testing: string;
+  /** The preview's test runner (src/preview/mini-test.ts), imported as "vitest". */
+  vitest: string;
 }
 
 export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
   const require = createRequire(path.join(fromDir, "package.json"));
   const bundle = async (entry: string, external: string[]): Promise<string> => {
     const result = await build({
-      entryPoints: [require.resolve(entry)],
+      entryPoints: [path.isAbsolute(entry) ? entry : require.resolve(entry)],
       bundle: true,
       format: "esm",
       platform: "browser",
@@ -49,12 +53,14 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
     });
     return result.outputFiles[0]!.text;
   };
-  const [runtime, components, dotnet] = await Promise.all([
+  const [runtime, components, dotnet, testing, vitest] = await Promise.all([
     bundle("@tsazor/runtime", []),
     bundle("@tsazor/components", ["@tsazor/runtime"]),
     bundle("@tsazor/dotnet", ["@tsazor/runtime"]),
+    bundle("@tsazor/testing", ["@tsazor/runtime"]),
+    bundle(path.join(fromDir, "src", "preview", "mini-test.ts"), []),
   ]);
-  return { runtime, components, dotnet };
+  return { runtime, components, dotnet, testing, vitest };
 }
 
 export function tutorialPlugin(options: { root: string }): Plugin {

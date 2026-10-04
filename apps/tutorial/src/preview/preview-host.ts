@@ -35,11 +35,13 @@ interface Bundles {
   runtime: string;
   components: string;
   dotnet: string;
+  testing: string;
+  vitest: string;
 }
 
 let bundles: Promise<Bundles> | undefined;
 const loadBundles = (): Promise<Bundles> =>
-  (bundles ??= import("virtual:tutorial-bundles").then((module) => ({ runtime: module.runtime, components: module.components, dotnet: module.dotnet })));
+  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest }) => ({ runtime, components, dotnet, testing, vitest })));
 
 const PREVIEW_STYLE = `
   :root { color-scheme: light; }
@@ -47,6 +49,13 @@ const PREVIEW_STYLE = `
   h1 { font-size: 2em; margin: 0.3em 0 0.5em; }
   img { max-width: 100%; }
   button { font: inherit; }
+  .test-summary { font-weight: 600; margin: 0 0 0.75rem; }
+  .test-summary.failed { color: #b3261e; }
+  .test-summary.passed { color: #1a7f37; }
+  .test-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
+  .test-pass::before { content: "✓ "; color: #1a7f37; font-weight: 600; }
+  .test-fail::before { content: "✗ "; color: #b3261e; font-weight: 600; }
+  .test-fail pre { margin: 0.25rem 0 0 1.2rem; white-space: pre-wrap; font-size: 0.85em; color: #b3261e; }
 `;
 
 /** The iframe document: a classic bootstrap script that waits for the "run" message. */
@@ -82,9 +91,15 @@ function srcdoc(baseHref: string): string {
   }
   addEventListener("message", (event) => {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
-    const { modules, runtime, components, dotnet, css, entry, program, routes } = event.data;
+    const { modules, runtime, components, dotnet, testing, vitest, css, entry, program, routes, tests } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
-    const imports = { "@tsazor/runtime": url(runtime), "@tsazor/components": url(components), "@tsazor/dotnet": url(dotnet) };
+    const imports = {
+      "@tsazor/runtime": url(runtime),
+      "@tsazor/components": url(components),
+      "@tsazor/dotnet": url(dotnet),
+      "@tsazor/testing": url(testing),
+      vitest: url(vitest),
+    };
     // A Program.ts starts the app itself, but it cannot know the preview's
     // routes or its in-memory History: its @tsazor/runtime import goes to a
     // shim whose createTsazorApp adds both (unless the program passes its own).
@@ -126,7 +141,25 @@ function srcdoc(baseHref: string): string {
     // mounted directly. Either way the app gets its routes (the @page
     // manifest) and — in a srcdoc document history.pushState throws — an
     // in-memory History, whose URL is reported like a browser address bar (H.7).
-    if (program) {
+    // A lesson with *.test.ts files runs its tests instead and shows the report.
+    if (tests.length > 0) {
+      boot.textContent =
+        'import { run } from "vitest";\\n' +
+        tests.map((id) => "await import(" + JSON.stringify(id) + ");\\n").join("") +
+        "const results = await run();\\n" +
+        "const failed = results.filter((result) => !result.passed).length;\\n" +
+        'const summary = Object.assign(document.createElement("p"), { className: "test-summary " + (failed > 0 || results.length === 0 ? "failed" : "passed") });\\n' +
+        'summary.textContent = results.length === 0 ? "No tests yet." : (results.length - failed) + " passed" + (failed > 0 ? ", " + failed + " failed" : "");\\n' +
+        'const list = Object.assign(document.createElement("ul"), { className: "test-list" });\\n' +
+        "for (const result of results) {\\n" +
+        '  const item = Object.assign(document.createElement("li"), { className: result.passed ? "test-pass" : "test-fail", textContent: result.name });\\n' +
+        '  if (!result.passed) item.append(Object.assign(document.createElement("pre"), { textContent: result.error }));\\n' +
+        "  list.append(item);\\n" +
+        "}\\n" +
+        "document.body.replaceChildren(summary, list);\\n" +
+        'parent.postMessage({ source: "tsazor-preview", type: "tests", results }, "*");\\n' +
+        'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';
+    } else if (program) {
       boot.textContent = "import " + JSON.stringify(program) + ";\\n" +
         'parent.postMessage({ source: "tsazor-preview", type: "ready" }, "*");';
     } else {
@@ -184,7 +217,7 @@ export class PreviewHost {
   /** Runs a build in a fresh iframe; the old one stays visible until the new one is up. */
   async show(build: ProjectBuild): Promise<void> {
     const run = ++this.run;
-    const { runtime, components, dotnet } = await loadBundles();
+    const { runtime, components, dotnet, testing, vitest } = await loadBundles();
     if (run !== this.run || !build.entry) return;
     this.pending?.remove();
     const frame = document.createElement("iframe");
@@ -204,10 +237,14 @@ export class PreviewHost {
       runtime,
       components,
       dotnet,
+      testing,
+      vitest,
       css: build.css,
       entry: build.entry,
       program: build.program,
       routes: build.routes,
+      // Test files (*.test.ts): the preview runs them instead of the app.
+      tests: Object.values(build.modules).filter((module) => module.file.endsWith(".test.ts")).map((module) => module.id),
     };
     (frame as HTMLIFrameElement & { __payload?: unknown }).__payload = payload;
     this.callbacks.onStatus("running");

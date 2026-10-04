@@ -18,7 +18,7 @@ import { loadContent, parseFrontMatter } from "../build/content";
 import { buildProject, type ProjectBuild } from "../src/engine/compile-project";
 import { loadTypeEnvironment } from "../build/type-env";
 import { TypeChecker } from "../src/engine/type-check";
-import { headSnapshot, mountWritten, writeModules } from "./harness";
+import { headSnapshot, mountWritten, runWrittenTests, writeModules } from "./harness";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contentDir = path.join(appRoot, "content");
@@ -140,7 +140,7 @@ describe("tutorial lessons", () => {
       "Special components",
       "Organizing code",
     ]);
-    expect(content.parts[2]!.chapters.map((chapter) => chapter.title)).toEqual(["Routing", "Forms", "Auth", "Talking to a backend"]);
+    expect(content.parts[2]!.chapters.map((chapter) => chapter.title)).toEqual(["Routing", "Forms", "Auth", "Talking to a backend", "Testing"]);
     const csharp = content.parts[0]!.chapters[0]!.lessons;
     expect(csharp.length).toBeGreaterThanOrEqual(6);
     expect(csharp.length).toBeLessThanOrEqual(10);
@@ -192,6 +192,19 @@ describe("tutorial lessons", () => {
           const { html, errors } = await renderBuild(build, path.join(gateDir, lesson.slug, "b"), steps);
           expect(errors).toEqual([]);
           expect(html.length).toBeGreaterThan(0);
+          if (Object.keys(lesson.b!).some((file) => file.endsWith(".test.ts"))) {
+            // A testing lesson: the preview runs its tests. The solution's all
+            // pass; the start's report differs (a missing or failing test).
+            const solved = await runWrittenTests(build, path.join(gateDir, lesson.slug, "b"));
+            expect(solved.length, "the solution has tests").toBeGreaterThan(0);
+            expect(solved.filter((result) => !result.passed), "the solution's tests pass").toEqual([]);
+            const start = buildProject(lesson.a);
+            const startDir = path.join(gateDir, lesson.slug, "a-tests");
+            writeModules(start, startDir);
+            const started = await runWrittenTests(start, startDir);
+            expect(started, "the start's test report differs").not.toEqual(solved);
+            return;
+          }
           const a = buildProject(lesson.a);
           const before = a.entry ? (await renderBuild(a, path.join(gateDir, lesson.slug, "a2"), steps)).html + a.css : "";
           if (flag(lesson.dir, "refactor")) {

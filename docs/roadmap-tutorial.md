@@ -199,8 +199,19 @@ the document URL from the URI source when there is one. The preview shim and
 the test harness pass `routing.mode` on, and the preview bar shows the
 fragment.
 
-Open for M4: the remaining Part 3 chapters (Testing, Next steps) and the
-localization lesson (E8 follow-up, M4+).
+The Testing chapter (`05-testing/`, five lessons: your first test, parameters
+in tests, fakes for services, faking the server, testing a form) is done
+(2026-10-04). Lessons with `*.test.ts` files run them in the preview with a
+small Vitest-compatible runner (`src/preview/mini-test.ts`, served as
+"vitest"; its source is also the type declaration, and the Node gate runs
+lessons with it) and show the report instead of the app. `@tsazor/testing`
+grew to bUnit's shape: typed `parameters`, `find`/`findAll`/`click`/`change`/
+`setParameters`/`settle`/`markup`, `.tsazor` imports without a cast, and a
+component's failure rejects the call that waited for it. The async-work
+lesson's gate passed by dice luck (it compared after the roll); a `look`
+gate step now compares mid-flight.
+
+Open for M4: Next steps and the localization lesson (E8 follow-up, M4+).
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,

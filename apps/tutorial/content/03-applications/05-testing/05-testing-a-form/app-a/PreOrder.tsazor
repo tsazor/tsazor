@@ -1,0 +1,19 @@
+@import { Reservation } from "./Reservation.ts"
+<EditForm Model="@reservation" OnValidSubmit="reserve" class="order">
+    <DataAnnotationsValidator />
+    <label>Name <InputText @bind="reservation.name" /></label>
+    <ValidationMessage For="name" />
+    <button type="submit">Reserve</button>
+</EditForm>
+@if (reserved) {
+    <p class="success">Reserved for @reservation.name.</p>
+}
+
+@code {
+    reservation = new Reservation();
+    reserved = false;
+
+    reserve() {
+        this.reserved = true;
+    }
+}

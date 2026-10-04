@@ -209,7 +209,8 @@ describe("external-data", () => {
     const m = await mount(files);
     const childModule = (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "Child.tsazor.js")).href)) as { default: { log: string[] } };
     const { store: s } = await storeOf();
-    const child = m.renderer.getComponentState(2)!.component as unknown as { stop(): void };
+    const childState = [1, 2, 3, 4].map((id) => m.renderer.getComponentState(id)).find((state) => state?.component.constructor.name === "Child");
+    const child = childState!.component as unknown as { stop(): void };
     child.stop();
     s.emit(5);
     await m.settle();
@@ -464,15 +465,10 @@ describe("keyed-blocks", () => {
   });
 
   it("duplicate keys are an error", async () => {
-    const errors: unknown[] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => errors.push(args);
-    try {
-      await mount(app(`@foreach (const n of items) {\n    <p @key="n">@n</p>\n}`, "items = [1, 1];"));
-    } finally {
-      console.error = original;
-    }
-    expect((errors as unknown[][]).flat().map(String).join("\n")).toContain("More than one sibling of element 'p' has the same key value, '1'.");
+    // (@tsazor/testing's render fails with the component's error, as bUnit does.)
+    await expect(mount(app(`@foreach (const n of items) {\n    <p @key="n">@n</p>\n}`, "items = [1, 1];"))).rejects.toThrow(
+      "More than one sibling of element 'p' has the same key value, '1'.",
+    );
   });
 });
 

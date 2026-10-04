@@ -7,7 +7,8 @@
  * forms — EditForm, rule decorators, validation messages, the invalid submit, field classes,
  * validators with context, InputFile. Chapter 16: auth. Chapter 17: talking
  * to a backend — loading, reloading on new parameters, sending, ProblemDetails,
- * the generated client. Each `describe` names the lesson whose text makes the
+ * the generated client. Chapter 18: testing — render, parameters, fakes for
+ * services and the server, forms. Each `describe` names the lesson whose text makes the
  * claim.
  */
 import path from "node:path";
@@ -20,7 +21,7 @@ import { buildProject, type Files } from "../src/engine/compile-project";
 import { TypeChecker } from "../src/engine/type-check";
 import { loadTypeEnvironment } from "../build/type-env";
 import { loadContent } from "../build/content";
-import { mountWritten, writeModules, type Mounted } from "./harness";
+import { mountWritten, runWrittenTests, writeModules, type Mounted } from "./harness";
 
 const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const gateDir = path.join(appRoot, ".gate", "claims-part3");
@@ -999,5 +1000,70 @@ describe("a-typed-client", () => {
   it("a body that doesn't fit NewOrder is a type error", () => {
     const files = { ...b, "Bread.tsazor": b["Bread.tsazor"]!.replace("createOrder(this.order)", 'createOrder({ name: "Marta", bread: "rye" })') };
     expect(typeCodes(files)).toContain("TS2345");
+  });
+});
+
+/* Chapter 18 — Testing ------------------------------------------------------------------ */
+
+/** Runs a lesson project's tests as the preview does. */
+const testReport = async (files: Files) => {
+  const build = buildProject(files);
+  expect(build.diagnostics.filter((d) => d.severity === "error"), JSON.stringify(build.diagnostics)).toEqual([]);
+  const dir = path.join(gateDir, String(counter++));
+  writeModules(build, dir);
+  return runWrittenTests(build, dir);
+};
+
+describe("parameters-in-tests", () => {
+  const { b } = lesson("parameters-in-tests");
+
+  it("parameters are typed: a misspelled name and a wrong type are errors before the test runs", () => {
+    expect(types(b)).toEqual([]);
+    const misspelled = { ...b, "PriceTag.test.ts": b["PriceTag.test.ts"]!.replace("{ cents: 340 }", "{ cent: 340 }") };
+    expect(typeCodes(misspelled)).toContain("TS2561"); // "… Did you mean 'cents'?"
+    const wrongType = { ...b, "PriceTag.test.ts": b["PriceTag.test.ts"]!.replace("{ cents: 340 }", '{ cents: "340" }') };
+    expect(typeCodes(wrongType)).toContain("TS2322");
+  });
+});
+
+describe("fakes-for-services", () => {
+  const { a, b } = lesson("fakes-for-services");
+
+  it("the start fails with the missing service's name", async () => {
+    expect(await testReport(a)).toEqual([{ name: "OpenSign > is open at eight in the morning", passed: false, error: "Service not registered: BakeryClock" }]);
+  });
+
+  it("a plain object with now() is accepted as a BakeryClock; the fake decides the answer", async () => {
+    expect(types(b)).toEqual([]);
+    const report = await testReport(b);
+    expect(report.map((result) => result.passed)).toEqual([true, true]);
+  });
+});
+
+describe("faking-the-server", () => {
+  const { b } = lesson("faking-the-server");
+
+  it("the tests pass without the network", async () => {
+    expect(types(b)).toEqual([]);
+    const network = globalThis.fetch;
+    globalThis.fetch = () => Promise.reject(new Error("the network was used"));
+    try {
+      const report = await testReport(b);
+      expect(report.map((result) => [result.name, result.passed])).toEqual([
+        ["TodaysBread > lists today's breads", true],
+        ["TodaysBread > says so when the server fails", true],
+      ]);
+    } finally {
+      globalThis.fetch = network;
+    }
+  });
+});
+
+describe("testing-a-form", () => {
+  const { b } = lesson("testing-a-form");
+
+  it("change + the submit button run the form's rules; the message is the rule's own", async () => {
+    const report = await testReport(b);
+    expect(report.every((result) => result.passed)).toBe(true);
   });
 });

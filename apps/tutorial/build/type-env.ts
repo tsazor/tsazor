@@ -12,7 +12,7 @@ import path from "node:path";
 import { LIB_ROOT, type TypeEnvironment } from "../src/engine/type-paths.js";
 
 const ROOT_LIBS = ["lib.es2023.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"];
-const PACKAGES = ["@tsazor/runtime", "@tsazor/components", "@tsazor/dotnet"];
+const PACKAGES = ["@tsazor/runtime", "@tsazor/components", "@tsazor/dotnet", "@tsazor/testing"];
 
 export function loadTypeEnvironment(fromDir: string): TypeEnvironment {
   const require = createRequire(path.join(fromDir, "package.json"));
@@ -47,5 +47,8 @@ export function loadTypeEnvironment(fromDir: string): TypeEnvironment {
     };
     walk(path.join(packageDir, "dist"));
   }
+  // "vitest" in a lesson is the preview's runner: its source is its own declaration.
+  env["/node_modules/vitest/package.json"] = JSON.stringify({ name: "vitest", types: "./index.ts" });
+  env["/node_modules/vitest/index.ts"] = readFileSync(path.join(fromDir, "src", "preview", "mini-test.ts"), "utf8");
   return env;
 }

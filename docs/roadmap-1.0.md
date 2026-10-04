@@ -15,7 +15,7 @@ docs, `@Bindable`/`observe`/`disposeSignal` ([design-bindable-observe.md](design
 ## 1 — Tutorial ([roadmap-tutorial.md](roadmap-tutorial.md))
 
 M1 and M2 (Part 1) done · M3 (Part 2) done · M4 (Part 3, static deploy) in progress: Routing,
-Forms, Auth and Talking to a backend done; Testing, Next steps open.
+Forms, Auth, Talking to a backend and Testing done; Next steps open.
 
 ## 2 — Svelte-style features ([design-svelte-features.md](design-svelte-features.md))
 

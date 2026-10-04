@@ -1,0 +1,9 @@
+<span class="price">@formatted</span>
+
+@code {
+    @Parameter() cents = 0;
+
+    get formatted() {
+        return `€${(this.cents / 100).toFixed(2)}`;
+    }
+}

@@ -377,6 +377,18 @@ async function main() {
     check(hashUrl.endsWith("/#/orders?state=open") && !hashList.includes("Jonas"), `ch14 Routing: hash mode routes in the preview; the bar shows the fragment (${hashUrl})`);
     check(await noProblems(), "ch14 Routing: the hash solution type-checks");
 
+    /* 7c''' — chapter 18: the preview runs *.test.ts with its Vitest-compatible runner */
+    await page.goto(`${APP}/ts/fakes-for-services`);
+    const startReport = await waitForPreview(page, ".test-summary", "failed");
+    const startError = await waitForPreview(page, ".test-fail pre", "BakeryClock");
+    check(startReport.includes("0 passed, 1 failed") && startError.includes("Service not registered: BakeryClock"), `ch18 Testing: the start's report shows the failing test and why (${startReport.trim()})`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, ".test-summary", "2 passed")).includes("2 passed"), "ch18 Testing: the solved tests pass in the preview (@tsazor/testing + vitest in the import map)");
+    check(await noProblems(), "ch18 Testing: the fake clock type-checks against BakeryClock");
+    await page.goto(`${APP}/ts/testing-a-form`);
+    await page.click("button:has-text('Solve')");
+    check((await waitForPreview(page, ".test-summary", "2 passed")).includes("2 passed"), "ch18 Testing: a form test submits through the real browser");
+
     /* 7c' — chapter 17: TsazorHttp over the in-memory server, @tsazor/dotnet in the import map */
     await page.goto(`${APP}/ts/when-parameters-change`);
     await page.click("button:has-text('Solve')");

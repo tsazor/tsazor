@@ -16,4 +16,8 @@ declare module "virtual:tutorial-bundles" {
   export const components: string;
   /** @tsazor/dotnet as one ES module (imports @tsazor/runtime). */
   export const dotnet: string;
+  /** @tsazor/testing as one ES module (imports @tsazor/runtime). */
+  export const testing: string;
+  /** The preview's test runner, served as "vitest". */
+  export const vitest: string;
 }
