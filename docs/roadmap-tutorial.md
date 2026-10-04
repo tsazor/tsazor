@@ -211,7 +211,10 @@ component's failure rejects the call that waited for it. The async-work
 lesson's gate passed by dice luck (it compared after the roll); a `look`
 gate step now compares mid-flight.
 
-Open for M4: Next steps and the localization lesson (E8 follow-up, M4+).
+The Next steps chapter (`06-next-steps/`: your own project, where to go next)
+is done (2026-10-04): two closing lessons without a task.
+
+Open for M4: the localization lesson (E8 follow-up).
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,
