@@ -148,6 +148,7 @@ export default class Progress extends ComponentBase {
     animated: boolean;
     variant: string;
     label?: string;
+    ariaLabel?: string;
 }
 
 // Spinner

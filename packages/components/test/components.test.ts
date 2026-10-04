@@ -381,11 +381,18 @@ describe("ListGroup + ListGroupItem", () => {
       });
       b.closeComponent();
     });
+    // Every item is an <li> of the <ul> (WCAG 1.3.1); links and clickable items hold a real
+    // <a>/<button>, so the keyboard reaches them (WCAG 2.1.1).
     const items = container.querySelectorAll(".list-group-item");
     expect(items).toHaveLength(2);
-    expect(items[0]!.tagName).toBe("A");
+    expect([...items].map((item) => item.tagName)).toEqual(["LI", "LI"]);
+    expect([...container.querySelector(".list-group")!.children].every((child) => child.tagName === "LI")).toBe(true);
     expect(items[0]!.className).toContain("active");
-    items[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(items[0]!.querySelector("a")?.getAttribute("href")).toBe("/one");
+    expect(items[0]!.querySelector("a")?.getAttribute("aria-current")).toBe("true");
+    const button = items[1]!.querySelector("button")!;
+    expect(button.getAttribute("type")).toBe("button");
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await settle(renderer);
     expect(clicked).toBe(1);
   });

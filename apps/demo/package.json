@@ -8,7 +8,8 @@
     "check": "tsazor check",
     "dev": "vite",
     "preview": "vite preview",
-    "verify:csp": "node scripts/verify-csp.mjs"
+    "verify:csp": "node scripts/verify-csp.mjs",
+    "verify:a11y": "node scripts/verify-a11y.mjs"
   },
   "dependencies": {
     "@tsazor/components": "workspace:*",

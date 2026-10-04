@@ -14,23 +14,23 @@
     <EditForm Model="@model" OnValidSubmit="@handleValid" OnInvalidSubmit="@handleInvalid">
         <DataAnnotationsValidator />
         <div class="field">
-            <label>Name</label>
-            <InputText @bind="model.name" />
+            <label for="validation-name">Name</label>
+            <InputText id="validation-name" @bind="model.name" />
             <ValidationMessage For="name" />
         </div>
         <div class="field">
-            <label>Email</label>
-            <InputText @bind="model.email" />
+            <label for="validation-email">Email</label>
+            <InputText id="validation-email" @bind="model.email" />
             <ValidationMessage For="email" />
         </div>
         <div class="field">
-            <label>Confirm email</label>
-            <InputText @bind="model.confirmEmail" />
+            <label for="validation-confirm">Confirm email</label>
+            <InputText id="validation-confirm" @bind="model.confirmEmail" />
             <ValidationMessage For="confirmEmail" />
         </div>
         <div class="field">
-            <label>Age (18–99)</label>
-            <InputNumber @bind="model.age" />
+            <label for="validation-age">Age (18–99)</label>
+            <InputNumber id="validation-age" @bind="model.age" />
             <ValidationMessage For="age" />
         </div>
         <button type="submit" class="btn">Save</button>

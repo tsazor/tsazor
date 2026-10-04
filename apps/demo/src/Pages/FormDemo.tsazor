@@ -9,18 +9,18 @@
 <div class="card">
     <EditForm Model="@model" Validators="@validators" OnValidSubmit="@handleSubmit">
         <div class="field">
-            <label>Name</label>
-            <InputText @bind="model.name" placeholder="Your name" />
+            <label for="form-name">Name</label>
+            <InputText id="form-name" @bind="model.name" placeholder="Your name" />
             <ValidationMessage For="name" />
         </div>
         <div class="field">
-            <label>Age</label>
-            <InputNumber @bind="model.age" />
+            <label for="form-age">Age</label>
+            <InputNumber id="form-age" @bind="model.age" />
             <ValidationMessage For="age" />
         </div>
         <div class="field">
-            <label>Topic</label>
-            <InputSelect @bind="model.topic">
+            <label for="form-topic">Topic</label>
+            <InputSelect id="form-topic" @bind="model.topic">
                 <option value="general">General</option>
                 <option value="support">Support</option>
                 <option value="feedback">Feedback</option>

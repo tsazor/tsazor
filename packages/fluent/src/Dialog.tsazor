@@ -128,13 +128,14 @@
         const first = focusables[0]!;
         const last = focusables[focusables.length - 1]!;
         const active = document.activeElement;
-        if (active === last) {
-            first.focus();
-            e.preventDefault();
-        } else if (e.shiftKey && (active === first || active === overlay)) {
-            last.focus();
-            e.preventDefault();
-        } else if (active === overlay) {
+        // The direction first: Shift+Tab from the last element just goes back
+        // (the browser does that); only the edges wrap.
+        if (e.shiftKey) {
+            if (active === first || active === overlay) {
+                last.focus();
+                e.preventDefault();
+            }
+        } else if (active === last || active === overlay) {
             first.focus();
             e.preventDefault();
         }

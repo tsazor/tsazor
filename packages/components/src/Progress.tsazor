@@ -1,4 +1,4 @@
-<div class="progress" role="progressbar" aria-valuenow="@value" aria-valuemin="0" aria-valuemax="100">
+<div class="progress" role="progressbar" aria-label="@accessibleName" aria-valuenow="@clamped" aria-valuemin="0" aria-valuemax="100">
     <div class="@barClass" style="width: @(clamped)%">@label</div>
 </div>
 
@@ -9,8 +9,14 @@
     /** Animates the stripes (implies striped). */
     @Parameter() animated: boolean = false;
     @Parameter() variant: string = "";
-    /** Optional label rendered inside the bar. */
+    /** Optional label rendered inside the bar (also the accessible name when `ariaLabel` is unset). */
     @Parameter() label?: string;
+    /** The progress bar's accessible name, e.g. "Upload" — a screen reader needs one (WCAG 4.1.2). */
+    @Parameter() ariaLabel?: string;
+
+    private get accessibleName(): string | undefined {
+        return this.ariaLabel ?? this.label;
+    }
 
     private get clamped(): number {
         return Math.max(0, Math.min(100, this.value));

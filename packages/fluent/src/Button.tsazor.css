@@ -34,17 +34,17 @@
 }
 
 .fui-button--primary {
-  background: var(--fui-accent);
+  background: var(--fui-brand-background);
   color: var(--fui-foreground-on-brand);
   border-color: transparent;
 }
 
 .fui-button--primary:hover {
-  background: var(--fui-accent-hover);
+  background: var(--fui-brand-background-hover);
 }
 
 .fui-button--primary:active {
-  background: var(--fui-accent-active);
+  background: var(--fui-brand-background-pressed);
   color: var(--fui-foreground-on-brand-selected);
 }
 

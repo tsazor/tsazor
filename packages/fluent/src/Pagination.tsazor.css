@@ -25,12 +25,12 @@
     cursor: default;
 }
 .fui-pagination__page--current {
-    background: var(--fui-accent);
+    background: var(--fui-brand-background);
     color: var(--fui-foreground-on-brand);
     font-weight: var(--fui-font-weight-semibold);
 }
 .fui-pagination__page--current:hover:not(:disabled) {
-    background: var(--fui-accent-hover);
+    background: var(--fui-brand-background-hover);
     color: var(--fui-foreground-on-brand);
 }
 .fui-pagination__ellipsis {

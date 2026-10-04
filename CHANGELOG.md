@@ -21,6 +21,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   frame (option `staticMarkup`, default on; the Vite plugin passes `staticMarkup: false` through as
   an escape hatch); `@tsazor/runtime` parses each markup string once, clones it per insertion and
   inserts single-node blocks without boundary comments.
+- Accessibility (E9): `@tsazor/fluent` dark-theme fills meet 4.5:1 (`--fui-brand-background*`,
+  `--fui-color-*-filled`), the light subtle brand badge too, and the dialog's Shift+Tab focus trap
+  is fixed; `@tsazor/components`: `Progress` gets `ariaLabel` (its name), `Badge` uses Bootstrap's
+  `text-bg-*`, `ListGroupItem` is always an `<li>` with a real `<a>`/`<button>` inside.
 - `@tsazor/vite-plugin`: with `check: true`, the dev server reports type errors in the
   background without blocking.
 - `@tsazor/dotnet`: generated code is commented in English and imports only the validation

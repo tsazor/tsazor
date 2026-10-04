@@ -22,7 +22,7 @@
         <Card>
             <CardHeader>Progress</CardHeader>
             <CardBody>
-                <Progress Value="@progress" Variant="success" Striped="@true" Animated="@true" />
+                <Progress Value="@progress" Variant="success" Striped="@true" Animated="@true" AriaLabel="Demo progress" />
                 <p class="d-flex gap-2 mt-2">
                     <Button Variant="secondary" Size="sm" OnClick="@moreProgress">+10 %</Button>
                     <Button Variant="secondary" Size="sm" OnClick="@resetProgress">Reset</Button>

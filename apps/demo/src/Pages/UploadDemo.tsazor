@@ -6,7 +6,7 @@
 <p>Select files below — <code>&lt;InputFile /&gt;</code> renders <code>&lt;input type="file"&gt;</code> and raises <code>OnChange</code> with an <code>InputFileChangeEventArgs</code> whose messages and guards match Blazor's (roadmap 3.7). The files are the native DOM Files.</p>
 
 <div class="card">
-    <InputFile OnChange="@handleFiles" multiple accept="text/*" />
+    <InputFile OnChange="@handleFiles" multiple accept="text/*" aria-label="Text files to upload" />
     @if (files.length > 0) {
         <ul class="file-list">
             @foreach (const f of files) {

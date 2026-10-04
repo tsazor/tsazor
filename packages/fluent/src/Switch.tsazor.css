@@ -46,7 +46,7 @@
 
 /* Checked: input before the track in source order — CSS selector order. */
 .fui-switch .fui-switch__native:checked + .fui-switch__track {
-  background: var(--fui-accent);
+  background: var(--fui-brand-background);
   border-color: transparent;
 }
 

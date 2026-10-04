@@ -7,13 +7,13 @@
 
 <div class="card">
     <div class="field">
-        <label>Price (mask 0.00)</label>
-        <input type="number" step="0.01" @bind="price" @bind:format="0.00" />
+        <label for="format-price">Price (mask 0.00)</label>
+        <input id="format-price" type="number" step="0.01" @bind="price" @bind:format="0.00" />
         <p class="log">model: @price — grouped N2: @formatValue(price, "N2")</p>
     </div>
     <div class="field">
-        <label>Ordered (yyyy-MM-dd)</label>
-        <input type="date" @bind="ordered" @bind:format="yyyy-MM-dd" />
+        <label for="format-ordered">Ordered (yyyy-MM-dd)</label>
+        <input id="format-ordered" type="date" @bind="ordered" @bind:format="yyyy-MM-dd" />
         <p class="log">model ISO: @ordered.toISOString() — as dd.MM.yyyy: @formatValue(ordered, "dd.MM.yyyy")</p>
     </div>
     <p class="log">total N2: @formatValue(sum, "N2")</p>

@@ -31,7 +31,7 @@
 /* Color themes: filled = solid, subtle = glass ("color-*-2" pairs). */
 
 .fui-badge--filled.fui-badge--brand {
-  background: var(--fui-accent);
+  background: var(--fui-brand-background);
   color: var(--fui-foreground-on-brand);
 }
 
@@ -41,7 +41,7 @@
 }
 
 .fui-badge--filled.fui-badge--success {
-  background: var(--fui-color-green-1);
+  background: var(--fui-color-green-filled);
   color: #FFFFFF;
 }
 
@@ -51,7 +51,7 @@
 }
 
 .fui-badge--filled.fui-badge--warning {
-  background: var(--fui-color-amber-1);
+  background: var(--fui-color-amber-filled);
   color: #FFFFFF;
 }
 
@@ -61,7 +61,7 @@
 }
 
 .fui-badge--filled.fui-badge--error {
-  background: var(--fui-color-red-1);
+  background: var(--fui-color-red-filled);
   color: #FFFFFF;
 }
 

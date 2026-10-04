@@ -95,7 +95,7 @@
   --fui-color-red-1: #B10E1C;
   --fui-color-glass-red: #FDC6C6;
   --fui-color-blue-1: #0F6CBD;
-  --fui-color-glass-blue: #CFE4FA;
+  --fui-color-glass-blue: #EBF3FC;
 
   /* Control colors (light). */
   --fui-control-fill: #F5F5F5;
@@ -117,6 +117,15 @@
   --fui-accent: var(--fui-brand-80);
   --fui-accent-hover: var(--fui-brand-70);
   --fui-accent-active: var(--fui-brand-40);
+  /* Fills behind on-brand text (Fluent's brandBackground): the accent is for text,
+     lines and icons; a fill needs 4.5:1 against white in every theme (E9). */
+  --fui-brand-background: var(--fui-brand-80);
+  --fui-brand-background-hover: var(--fui-brand-70);
+  --fui-brand-background-pressed: var(--fui-brand-40);
+  /* Status fills behind white text (filled badges). */
+  --fui-color-green-filled: #0E700E;
+  --fui-color-amber-filled: #B75C06;
+  --fui-color-red-filled: #B10E1C;
 
   /* Radius — Fluent 2 corner style. */
   --fui-radius-none: 0;
@@ -243,6 +252,12 @@
   --fui-accent: var(--fui-brand-100);
   --fui-accent-hover: var(--fui-brand-90);
   --fui-accent-active: var(--fui-brand-70);
+  --fui-brand-background: var(--fui-brand-70);
+  --fui-brand-background-hover: var(--fui-brand-80);
+  --fui-brand-background-pressed: var(--fui-brand-40);
+  --fui-color-green-filled: #107C10;
+  --fui-color-amber-filled: #B75C06;
+  --fui-color-red-filled: #B10E1C;
 
   --fui-shadow-2: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
   --fui-shadow-4: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
@@ -301,6 +316,12 @@
     --fui-accent: var(--fui-brand-100);
     --fui-accent-hover: var(--fui-brand-70);
     --fui-accent-active: var(--fui-brand-40);
+    --fui-brand-background: var(--fui-brand-70);
+    --fui-brand-background-hover: var(--fui-brand-80);
+    --fui-brand-background-pressed: var(--fui-brand-40);
+    --fui-color-green-filled: #107C10;
+    --fui-color-amber-filled: #B75C06;
+    --fui-color-red-filled: #B10E1C;
   }
 }
 
