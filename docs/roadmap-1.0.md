@@ -62,7 +62,10 @@ architecture and security take priority.
 **Security**
 - **E1 — CSP and Trusted Types:** document and CI-test that apps run under a strict CSP. Verified
   2026-10-02: there is no `eval`/`new Function` in runtime or components, and `innerHTML` is used
-  only for `MarkupString`. `MarkupString` gets a Trusted Types integration.
+  only for `MarkupString`. `MarkupString` gets a Trusted Types integration. **Done (2026-10-04):**
+  [csp.md](csp.md); the `tsazor` Trusted Types policy for `MarkupString`; `strictCsp: true` writes
+  style attributes through the CSSOM (a strict `style-src` blocks `setAttribute("style")`, found by
+  the new browser check); CI runs the demo's build under the policy (`verify-csp.mjs`).
 - **E2 — Auth guidance:** the BFF pattern with an HttpOnly cookie (`CookieAuthenticationStateProvider`)
   is the documented default, with an ASP.NET BFF template. JWT in the browser only with a stated
   reason. Fix `@tsazor/dotnet` comments that suggest storing tokens in `localStorage`

@@ -260,16 +260,37 @@ function insertMarkup(markup: string, parent: Node, before: Node | null, journal
   return range.start;
 }
 
+/**
+ * Trusted Types (E1): under `require-trusted-types-for 'script'`, `innerHTML`
+ * only takes TrustedHTML. MarkupString is the app's own statement that a
+ * string is safe HTML (as in Blazor), so the runtime's policy — named
+ * `tsazor`, to be allowed by the CSP's `trusted-types` directive — passes it
+ * through unchanged; it does not sanitize. Created on first use; without
+ * Trusted Types, or when the CSP doesn't allow the name, plain strings.
+ */
+let markupPolicy: { createHTML(markup: string): unknown } | null | undefined;
+function trustedHtml(markup: string): string {
+  if (markupPolicy === undefined) {
+    const factory = (globalThis as { trustedTypes?: { createPolicy(name: string, rules: { createHTML(input: string): string }): { createHTML(markup: string): unknown } } }).trustedTypes;
+    try {
+      markupPolicy = factory?.createPolicy("tsazor", { createHTML: (input) => input }) ?? null;
+    } catch {
+      markupPolicy = null; // the CSP doesn't allow 'tsazor': innerHTML reports the violation itself
+    }
+  }
+  return (markupPolicy ? markupPolicy.createHTML(markup) : markup) as string;
+}
+
 /** Parses markup into a fragment; inside SVG it is parsed in an <svg> element
  *  so <circle>, <path>… get the SVG namespace (Blazor's sharedSvgElemForParsing). */
 function parseMarkup(markup: string, parent: Node): DocumentFragment {
   if (!isSvgContext(parent)) {
     const template = document.createElement("template");
-    template.innerHTML = markup;
+    template.innerHTML = trustedHtml(markup);
     return template.content;
   }
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
-  svg.innerHTML = markup;
+  svg.innerHTML = trustedHtml(markup);
   const fragment = document.createDocumentFragment();
   while (svg.firstChild) fragment.appendChild(svg.firstChild);
   return fragment;

@@ -14,6 +14,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   works over a `MemoryHistory`.
 - `@tsazor/compiler`: `TZS031` (names reserved by `ComponentBase`); unknown names in text read
   as an expression get an explanation (`explainExpressionValue`).
+- `@tsazor/runtime`: `createTsazorApp({ strictCsp: true })` writes style attributes through the
+  CSSOM, for a CSP without `'unsafe-inline'`; `MarkupString` goes through a Trusted Types policy
+  named `tsazor` (see docs/csp.md).
 - `@tsazor/vite-plugin`: with `check: true`, the dev server reports type errors in the
   background without blocking.
 - `@tsazor/dotnet`: generated code is commented in English and imports only the validation

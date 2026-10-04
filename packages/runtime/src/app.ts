@@ -7,6 +7,7 @@ import { RouteManifest, type RouteEntry } from "./routing/route-data.js";
 import { HeadOutlet } from "./head/head-outlet.js";
 import { CultureService } from "./localization/culture-service.js";
 import { StringLocalizer, type StringTable, type StringTableSource } from "./localization/string-localizer.js";
+import { useCssomStyles } from "./renderer/dom-attributes.js";
 
 /**
  * Blazor's WebAssemblyHostBuilder equivalent: wires renderer, DI and
@@ -37,6 +38,15 @@ export interface TsazorAppOptions {
    * `get` returns the key); a `services` registration can replace either.
    */
   localization?: LocalizationOptions;
+  /**
+   * E1: the app runs under a strict Content Security Policy — `style-src`
+   * without 'unsafe-inline', which blocks `setAttribute("style", …)`. Style
+   * attributes are then written through the CSSOM (`style.cssText`); the
+   * browser normalizes their text. Default false: the text stays as written.
+   * (MarkupString needs no option: under Trusted Types it goes through the
+   * runtime's `tsazor` policy.) See docs/csp.md.
+   */
+  strictCsp?: boolean;
 }
 
 /** App-level routing options (`createTsazorApp({ routing })`). */
@@ -64,6 +74,7 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   const collection = new ServiceCollection();
   // An app-created NavigationManager is owned (and disposed) by the app; a
   // shared one passed in stays with its owner.
+  useCssomStyles(options.strictCsp === true);
   const requestedMode = options.routing?.mode;
   if (options.navigationManager && requestedMode !== undefined && requestedMode !== options.navigationManager.routingMode) {
     throw new Error(

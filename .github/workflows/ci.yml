@@ -56,6 +56,8 @@ jobs:
         run: pnpm --filter blazing-pizza verify
       - name: Gallery
         run: pnpm --filter gallery verify
+      - name: Demo under a strict CSP (E1)
+        run: pnpm --filter demo verify:csp
       - name: Sleipnir ticker (synthetic mode)
         run: |
           dotnet build apps/sleipnir-ticker/api

@@ -15,17 +15,9 @@
         <NavLink Href="/fetchdata">FetchData</NavLink>
         <NavLink Href="/auth">Auth</NavLink>
         <NavLink Href="/components">Components</NavLink>
+        <NavLink Href="/csp">Strict CSP</NavLink>
     </nav>
     <main class="main page">
         @Body
     </main>
 </div>
-
-<style>
-    .layout { font-family: system-ui, sans-serif; }
-    .nav { display: flex; gap: 1rem; padding: 0.75rem 1rem; border-bottom: 1px solid #ddd; align-items: center; }
-    .nav a { text-decoration: none; color: #0366d6; }
-    .nav a.active { font-weight: 700; text-decoration: underline; }
-    .brand { font-weight: 700; margin-right: 1rem; }
-    .main { padding: 1rem; }
-</style>

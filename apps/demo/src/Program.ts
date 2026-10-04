@@ -11,6 +11,8 @@ const authProvider = new DemoAuthProvider();
 const app = createTsazorApp({
   root: App,
   routes,
+  // Served under a strict CSP (scripts/verify-csp.mjs): style attributes via the CSSOM.
+  strictCsp: true,
   // One instance under both tokens: the concrete class (for @inject in
   // pages) and the base (for AuthorizeView & Co.). Blazor:
   // AddScoped<AuthenticationStateProvider, MyProvider>().

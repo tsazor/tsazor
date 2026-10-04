@@ -138,6 +138,30 @@ function eventModifierOf(name: string): { eventName: string; flag: number } | nu
 
 function setAttribute(element: Element, name: string, text: string, journal: DomJournal | null): void {
   journal?.attribute(element, name);
+  writeAttribute(element, name, text);
+}
+
+/** E1: whether `style` attributes go through the CSSOM — `createTsazorApp({ strictCsp: true })`. */
+let cssomStyles = false;
+
+/** @internal Set by createTsazorApp's `strictCsp` option. */
+export function useCssomStyles(enabled: boolean): void {
+  cssomStyles = enabled;
+}
+
+/**
+ * Writes an attribute. With `strictCsp`, `style` goes through the CSSOM
+ * (`style.cssText`): a Content Security Policy whose `style-src` has no
+ * 'unsafe-inline' blocks `setAttribute("style", …)` as an inline style, but
+ * not the CSSOM. The browser then normalizes the attribute's text (and drops
+ * declarations it can't parse), so by default the text stays as written
+ * (Blazor), and test DOMs with a partial CSS parser keep every declaration.
+ */
+export function writeAttribute(element: Element, name: string, text: string): void {
+  if (cssomStyles && name.length === 5 && name.toLowerCase() === "style" && "style" in element) {
+    (element as HTMLElement).style.cssText = text;
+    return;
+  }
   element.setAttribute(name, text);
 }
 

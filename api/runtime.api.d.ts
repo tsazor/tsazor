@@ -1267,6 +1267,7 @@ export interface TsazorAppOptions {
     navigationManager?: NavigationManager;
     routing?: RoutingOptions;
     localization?: LocalizationOptions;
+    strictCsp?: boolean;
 }
 
 // TsazorHttp

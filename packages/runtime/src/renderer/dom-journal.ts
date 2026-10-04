@@ -8,6 +8,7 @@
  * PrependFrame are discarded as a whole by undoing their single insertion.
  * Entries are a flat array (kind, target, a, b) — no allocation per record.
  */
+import { writeAttribute } from "./dom-attributes.js";
 
 const enum EntryKind {
   /** `target` was at (parent `a`, next sibling `b`), or detached when `a` is null. */
@@ -70,7 +71,7 @@ export class DomJournal {
             break;
           case EntryKind.Attribute:
             if (b === null) (target as Element).removeAttribute(a as string);
-            else (target as Element).setAttribute(a as string, b as string);
+            else writeAttribute(target as Element, a as string, b as string);
             break;
           case EntryKind.Property:
             (target as Record<string, unknown>)[a as string] = b;
