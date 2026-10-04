@@ -1,61 +1,158 @@
 import {
   ComponentBase,
   CultureService,
+  defineComponent,
   Renderer,
   ServiceCollection,
   StringLocalizer,
+  type AttributeValue,
+  type ComponentType,
   type RenderTreeBuilder,
   type StringTable,
   type Token,
 } from "@tsazor/runtime";
 
 /**
- * Blazor's Bunit-style render helper: mounts a component into a detached
- * happy-dom document and returns the container plus the live instance.
+ * The parameters a test may pass to a component: its own fields (typed), or —
+ * when only the generic component type is known (a `.tsazor` import outside
+ * the type-checked shadow) — any name.
+ */
+export type ParametersOf<TComponent extends ComponentBase> = ComponentBase extends TComponent
+  ? Record<string, unknown>
+  : Partial<Omit<TComponent, keyof ComponentBase>>;
+
+/**
+ * Blazor's bUnit-style render result: the rendered component in a container
+ * attached to the document, its live instance, and helpers that act like a
+ * user and wait for the render (bUnit's Find / Click / Change / SetParametersAndRender).
  */
 export interface RenderResult<TComponent extends ComponentBase = ComponentBase> {
   /** The DOM output container (attached to document.body). */
   container: HTMLElement;
   renderer: Renderer;
-  /** The root component instance. */
+  /** The component instance. */
   instance: TComponent;
-  /** Queues a re-render of the root component and waits for it to flush. */
+  /** The rendered HTML, without the renderer's boundary comments. */
+  readonly markup: string;
+  /** The first element matching `selector`; throws when there is none (bUnit's Find). */
+  find(selector: string): HTMLElement;
+  /** Every element matching `selector`. */
+  findAll(selector: string): HTMLElement[];
+  /** Clicks the element and waits until the component has rendered (async handlers included). */
+  click(selector: string): Promise<void>;
+  /** Sets an input's value, raises `change` (what `@bind` listens to) and waits for the render. */
+  change(selector: string, value: string): Promise<void>;
+  /** Passes new parameter values (merged with the earlier ones) and waits for the render. */
+  setParameters(parameters: ParametersOf<TComponent>): Promise<void>;
+  /** Waits until pending renders and async work (handlers, lifecycle methods) are done. */
+  settle(): Promise<void>;
+  /** Queues a re-render of the component and waits for it to flush. */
   rerender(): Promise<void>;
   /** Removes the component and clears the container. */
   dispose(): void;
 }
 
-export interface RenderOptions {
+export interface RenderOptions<TComponent extends ComponentBase = ComponentBase> {
+  /** Parameter values, as a parent's attributes would pass them. */
+  parameters?: ParametersOf<TComponent>;
   /** DI registrations applied before the component instantiates. */
   services?: (services: ServiceCollection) => void;
 }
 
-/** Mounts `component` (a class) and awaits the first render + async hooks. */
+/**
+ * Mounts `component` with its parameters and awaits the first render and
+ * async lifecycle methods. Accepts a component class or a `.tsazor` import.
+ * A failure of the component (a missing service, an exception in a lifecycle
+ * method or an event handler) rejects the call that waited for it.
+ */
 export async function render<TComponent extends ComponentBase>(
-  component: abstract new (...args: never[]) => TComponent,
-  options?: RenderOptions,
+  component: ComponentType<TComponent> | (abstract new (...args: never[]) => TComponent),
+  options?: RenderOptions<TComponent>,
 ): Promise<RenderResult<TComponent>> {
   const collection = new ServiceCollection();
   options?.services?.(collection);
   const renderer = new Renderer(collection.build());
+  // A component's failure (render, lifecycle, event handler) fails the test
+  // at the next wait, as bUnit throws it — instead of only being logged.
+  const failures: unknown[] = [];
+  renderer.errorHandler = ({ error }) => {
+    failures.push(error);
+  };
+  const rethrow = (): void => {
+    if (failures.length === 0) return;
+    const [first] = failures.splice(0);
+    throw first;
+  };
   const container = document.createElement("div");
   document.body.appendChild(container);
-  const state = renderer.renderInContainer(component, container);
-  await renderer.waitUntilIdle();
 
-  return {
+  // A host passes the parameters the way a parent component would.
+  let parameters: Record<string, unknown> = { ...options?.parameters };
+  let instance: TComponent | undefined;
+  const target = (typeof component === "function" ? defineComponent(component) : component) as ComponentType;
+  class TestHost extends ComponentBase {
+    protected override buildRenderTree(b: RenderTreeBuilder): void {
+      b.openComponent(0, target);
+      let sequence = 1;
+      for (const [name, value] of Object.entries(parameters)) b.addAttribute(sequence++, name, value as AttributeValue);
+      b.addComponentReferenceCapture(sequence, (captured) => {
+        instance = captured as TComponent;
+      });
+      b.closeComponent();
+    }
+  }
+  const host = renderer.renderInContainer(TestHost, container);
+  await renderer.waitUntilIdle();
+  rethrow();
+
+  const settle = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await renderer.waitUntilIdle();
+    rethrow();
+  };
+  const find = (selector: string): HTMLElement => {
+    const element = container.querySelector<HTMLElement>(selector);
+    if (!element) throw new Error(`No element matches '${selector}'. The markup is:\n${result.markup}`);
+    return element;
+  };
+  const result: RenderResult<TComponent> = {
     container,
     renderer,
-    instance: state.component as TComponent,
+    get instance() {
+      return instance!;
+    },
+    get markup() {
+      return container.innerHTML.replace(/<!--\/?bl-tsazor:[^>]*-->/g, "");
+    },
+    find,
+    findAll: (selector) => [...container.querySelectorAll<HTMLElement>(selector)],
+    click: async (selector) => {
+      find(selector).click();
+      await settle();
+    },
+    change: async (selector, value) => {
+      const element = find(selector) as HTMLInputElement;
+      element.value = value;
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      await settle();
+    },
+    setParameters: async (next) => {
+      parameters = { ...parameters, ...next };
+      (host.component as ComponentBase).stateHasChangedInternal();
+      await settle();
+    },
+    settle,
     rerender: async () => {
-      (state.component as ComponentBase).stateHasChangedInternal();
+      instance!.stateHasChangedInternal();
       await renderer.waitUntilIdle();
+      rethrow();
     },
     dispose: () => {
-      renderer.disposeComponent(state);
+      renderer.disposeComponent(host);
       container.remove();
     },
   };
+  return result;
 }
 
 /**
@@ -68,7 +165,7 @@ export function renderTree(build: (b: RenderTreeBuilder) => void): Promise<Rende
       build(b);
     }
   }
-  return render(TestComponent);
+  return render<ComponentBase>(TestComponent);
 }
 
 /**

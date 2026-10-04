@@ -176,17 +176,27 @@ import is generated depends on the target file's **actual** export (`.tsazor` �
 ## Tests
 
 ```ts
+import { expect, test } from "vitest";
 import { render } from "@tsazor/testing";
 import Counter from "./Pages/Counter.tsazor";
 
 test("increments", async () => {
-    const { container, renderer } = await render(Counter as never);
-    container.querySelector("button")!.click();
-    // Events render asynchronously (diff queue) — wait first, then assert:
-    await renderer.waitUntilIdle();
-    expect(container.querySelector("strong")?.textContent).toBe("1");
+    const counter = await render(Counter, { parameters: { step: 1 } });
+    await counter.click("button"); // clicks and waits for the render (async handlers too)
+    expect(counter.find("strong").textContent).toBe("1");
 });
 ```
+
+`render` mounts the component (bUnit's `RenderComponent`) and returns helpers that act like a
+user and wait for the render: `find`/`findAll` (CSS selectors; `find` fails when nothing
+matches), `click`, `change` (sets a value and raises `change`, which `@bind` listens to),
+`setParameters`, `settle`, plus `container`, `markup` and the `instance`. Parameters are typed
+against the component's fields. A failure of the component — a missing service, an exception in
+a lifecycle method or an event handler — fails the call that waited for it.
+
+Fakes go in through DI, as in the app: `render(Page, { services: (s) => s.registerValue(Clock, fake) })`.
+For HTTP, register a `TsazorHttp` with a `fetch` function that answers instead of the network:
+`new TsazorHttp({ baseUrl, fetch: async (request) => new Response(JSON.stringify(data)) })`.
 
 ## Connecting a backend (`@tsazor/dotnet`)
 
