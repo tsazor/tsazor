@@ -13,6 +13,14 @@
  *    Gültigkeit entscheidet der Server (JwtBearer).
  *  - attachJwtAuth setzt einen Request-Interceptor `Authorization: Bearer …`
  *    auf den TsazorHttp — die Client-Seite der Middleware-Pipeline.
+ *
+ * Empfohlener Standard ist der Cookie-Provider (BFF-Muster, docs/auth.md):
+ * das Token bleibt beim Server in einem HttpOnly-Cookie, kein Skript im
+ * Browser kommt daran. JWT im Browser nur mit benanntem Grund (etwa der
+ * direkte Aufruf einer fremden API) — und dann nur im Speicher halten, nie in
+ * localStorage/sessionStorage, wo jedes eingeschleuste Skript (XSS) es liest.
+ * In beiden Fällen gilt: AuthorizeView/@authorize steuern nur die Oberfläche;
+ * durchgesetzt wird auf dem Server, bei jeder Anfrage.
  */
 import { TsazorHttp, type Claim, type ClaimsPrincipal, type RequestInterceptor } from "@tsazor/runtime";
 import { ANONYMOUS, AuthenticationState, createUser } from "@tsazor/runtime";
@@ -147,7 +155,8 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
   private token: string | undefined;
   private state: AuthenticationState = ANONYMOUS;
 
-  /** Startzustand sofort aus `initialToken` (Typischer Fall: Token aus localStorage). */
+  /** Startzustand sofort aus `initialToken` (etwa aus einem gerade abgeschlossenen Login-Flow).
+   *  Das Token nur im Speicher halten — nicht in localStorage/sessionStorage (XSS liest es dort). */
   constructor(initialToken?: string) {
     super();
     this.token = initialToken;

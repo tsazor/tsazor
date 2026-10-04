@@ -130,6 +130,7 @@ createTsazorApp({ root: App, routes });
 - [C# to TypeScript (cheat sheet)](docs/csharp-to-typescript.md)
 - [Design principles](docs/design-principles.md)
 - [Language reference (.tsazor)](docs/language-reference.md)
+- [Authentication (BFF with an HttpOnly cookie)](docs/auth.md)
 - [Architecture & HMR](docs/architecture.md)
 - [Scoped CSS (`X.tsazor.css`)](docs/scoped-css.md)
 - [Code-behind (`X.tsazor.ts`)](docs/code-behind.md)

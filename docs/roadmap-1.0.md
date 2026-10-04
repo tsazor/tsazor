@@ -67,7 +67,8 @@ architecture and security take priority.
   is the documented default, with an ASP.NET BFF template. JWT in the browser only with a stated
   reason. Fix `@tsazor/dotnet` comments that suggest storing tokens in `localStorage`
   (`packages/dotnet/src/auth.ts`). State clearly that `AuthorizeView`/`@authorize` are UI only;
-  enforcement happens on the server.
+  enforcement happens on the server. **Done (2026-10-04):** [auth.md](auth.md) with the ASP.NET
+  Core BFF template; the `localStorage` hint in `auth.ts` replaced.
 - **E3 — Supply chain:** npm provenance, SBOM, signed releases, and a `SECURITY.md` with a
   vulnerability disclosure process. Zero runtime dependencies stays a policy.
 

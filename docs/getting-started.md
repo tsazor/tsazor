@@ -224,6 +224,10 @@ Errors are `HttpResult` values (ProblemDetails, envelope) — it only throws whe
 unreachable; the generated DTO classes carry the DataAnnotations decorators from the schema and
 validate out of the box with EditContext + `DataAnnotationsValidator`.
 
+Signing users in: [Authentication](auth.md) — the BFF pattern with an HttpOnly cookie is the
+default, with an ASP.NET Core template; `AuthorizeView`/`@authorize` are UI only, the server
+enforces.
+
 ## VS Code
 
 `packages/vscode` contains the extension (v0.6.0): a TextMate grammar (`source.tsazor`) plus the

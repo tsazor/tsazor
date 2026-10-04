@@ -25,7 +25,9 @@ ran their own HTTP helpers).
 - **Auth integration.** `CookieAuthenticationStateProvider` (session endpoint)
   and `JwtAuthenticationStateProvider` (local payload decoding, Microsoft claim URIs) on top of
   the runtime's `AuthenticationStateProvider`;
-  `attachJwtAuth` installs the `Authorization: Bearer` interceptor.
+  `attachJwtAuth` installs the `Authorization: Bearer` interceptor. The cookie provider (the BFF
+  pattern, token in an HttpOnly cookie) is the recommended default; JWT in the browser only with a
+  stated reason, kept in memory — see [docs/auth.md](../../docs/auth.md).
 
 ## Nullability rules
 
