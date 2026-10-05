@@ -1,8 +1,7 @@
 # Design: the reference in the tutorial app (R4)
 
-Status: **parked** (2026-10-05). Decided: `docs/language-reference.md` stays the reference
-as one document; the tutorial and its keyword index complement it. This draft is kept for
-R4, in case a generated component/API reference is wanted later.
+Status: **approved** (2026-10-05), with D-R1 changed: `docs/language-reference.md` stays
+one document and is shown as one page (not split). Roadmap step 3b, part of R4.
 
 The tutorial teaches; the reference answers "what exactly does X do, which
 parameters does Y take". It lives in the tutorial app (one site, one deploy,
@@ -21,20 +20,16 @@ one search) under `/reference`, next to the start page and the index.
 
 ```text
 /reference                          overview: the four sections, search hint
-/reference/language/<topic>         hand-written, one page per topic
+/reference/language                 docs/language-reference.md, one page
 /reference/components/<package>/<Name>   generated from the manifests
 /reference/api/<package>/<symbol>   generated from the source .d.ts with JSDoc
 /reference/diagnostics              generated: every TZS code
 ```
 
-**1. Language** (hand-written, split from `language-reference.md`): one page
-per topic, about 12 pages — Directives overview, `@page` and routes (incl. hash
-routing), `@code` and members, expressions and code contexts, `@bind` (all
-modifiers), events and modifiers, components and parameters (`@Parameter`,
-`@Bindable`, `observe`), templated components and fragments, cascading values,
-DI and lifetimes, `@authorize`/`@attribute`, localization, CSS isolation,
-`@import`/`@using`/`_Imports`. Each page: syntax table first, then rules, then
-"differs from Blazor" where it does.
+**1. Language**: `docs/language-reference.md`, rendered at build time as one
+page with the same Markdown pipeline as the lessons, a table of contents from its
+`##`/`###` headings and stable heading anchors (so reference entries, lessons
+and error messages can link to a section). The file stays the single source.
 
 **2. Components** (generated): per package an overview table (name, one-line
 doc), per component a page — parameters (name, type, required/optional,
@@ -50,14 +45,10 @@ link to the gallery demo.
 **4. Diagnostics** (generated): every `TZSxxx` code with severity, message
 and the fix — the place error messages can link to.
 
-## Decisions to make
+## Decisions (approved 2026-10-05)
 
-- **D-R1 — Single source for the language reference.** The pages are the
-  source of truth (`apps/tutorial/reference/language/*.md`, same Markdown
-  pipeline as the lessons); `docs/language-reference.md` becomes a short
-  pointer. *Alternative:* keep the docs file and split it by `##` at build
-  time — no duplication, but page boundaries follow the file's headings.
-  **Proposal: split by hand once, pages are the source.**
+- **D-R1 — Single source for the language reference.** **Decided:**
+  `docs/language-reference.md` stays one document, shown as one page; no split.
 - **D-R2 — API extraction.** Use the TypeScript compiler API at build time on
   each package's `src/index.ts` (exports + JSDoc), not the snapshot (no docs)
   and not TypeDoc (another dependency, its own HTML). **Proposal: own
@@ -82,7 +73,7 @@ and the fix — the place error messages can link to.
 1. Route skeleton, overview page, SiteBar link "Reference".
 2. Components (generated) — quickest win, manifests exist; doc gaps filled.
 3. Diagnostics (generated).
-4. Language pages (split by hand).
+4. Language page (the docs file, one page with a table of contents).
 5. API extractor + pages.
 6. Cross-links and the shared search; gates (coverage, link targets);
    verify/verify:pages steps.
