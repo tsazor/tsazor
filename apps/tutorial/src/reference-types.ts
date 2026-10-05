@@ -63,8 +63,48 @@ export interface ReferenceDiagnostic {
   quickFix?: boolean;
 }
 
+export type ApiKind = "class" | "interface" | "type" | "function" | "const" | "enum" | "namespace";
+
+export interface ApiMember {
+  name: string;
+  kind: "constructor" | "method" | "property" | "accessor" | "index" | "call";
+  /** Every signature (overloads, get/set), highlighted HTML. */
+  signature: string;
+  /** Rendered JSDoc (HTML). */
+  doc: string;
+  static?: boolean;
+  protected?: boolean;
+  /** Rendered `@deprecated` text (HTML). */
+  deprecated?: string;
+}
+
+export interface ApiSymbol {
+  name: string;
+  kind: ApiKind;
+  packageSlug: string;
+  /** Declaration (class/interface: the header), highlighted HTML. */
+  signature: string;
+  /** Rendered JSDoc with its tags (HTML). */
+  doc: string;
+  /** The doc's first sentence (inline HTML). */
+  summary: string;
+  members: ApiMember[];
+  /** A component class: its component page (base-relative). */
+  component?: string;
+  /** Rendered `@deprecated` text (HTML). */
+  deprecated?: string;
+}
+
+export interface ApiPackage {
+  slug: string;
+  name: string;
+  description: string;
+  symbols: ApiSymbol[];
+}
+
 export interface ReferenceContent {
   packages: ReferencePackage[];
+  api: ApiPackage[];
   language: { html: string; headings: ReferenceHeading[] };
   diagnostics: ReferenceDiagnostic[];
 }

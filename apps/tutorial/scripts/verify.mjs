@@ -219,6 +219,11 @@ async function main() {
     await page.click(".codes a:has-text('TZS025')");
     await page.waitForFunction(() => location.hash === "#tzs025" && document.getElementById("tzs025").getBoundingClientRect().top < 100);
     check((await page.locator(".diagnostic .example").count()) > 15, "the diagnostics page lists the codes with examples and jumps to a code");
+    await page.click(".reference-nav a[href='reference/api/runtime']");
+    await page.waitForURL(/\/reference\/api\/runtime$/);
+    await page.click(".symbols a:has-text('NavigationManager')");
+    await page.waitForURL(/\/reference\/api\/runtime\/NavigationManager$/);
+    check((await page.locator(".member").count()) > 10 && (await page.textContent(".member:has-text('navigateTo')")) !== null, "an API page shows the export's members with their signatures");
     if (shots) {
         await page.goto(`${APP}/index`);
         await page.waitForSelector(".group");

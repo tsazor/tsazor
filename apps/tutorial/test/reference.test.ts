@@ -71,3 +71,35 @@ describe("diagnostics page", () => {
     }
   });
 });
+
+describe("API pages", () => {
+  for (const pkg of reference.api) {
+    it(`${pkg.name}: every export and member is documented`, () => {
+      expect(pkg.symbols.length).toBeGreaterThan(0);
+      const undocumented = pkg.symbols.flatMap((symbol) => [
+        ...(symbol.doc ? [] : [`${symbol.name} (export)`]),
+        ...symbol.members.filter((member) => !member.doc).map((member) => `${symbol.name}.${member.name}`),
+      ]);
+      expect(undocumented).toEqual([]);
+    });
+  }
+
+  it("prints signatures without export/declare and without private members", () => {
+    const runtime = reference.api.find((pkg) => pkg.slug === "runtime")!;
+    const navigation = runtime.symbols.find((symbol) => symbol.name === "NavigationManager")!;
+    const text = (html: string): string => html.replace(/<[^>]*>/g, "");
+    expect(text(navigation.signature)).toBe("class NavigationManager");
+    expect(navigation.members.map((member) => member.name)).toContain("navigateTo");
+    expect(navigation.members.map((member) => member.name)).not.toContain("scrollTarget");
+    expect(runtime.symbols.every((symbol) => !/^(export|declare)\b/.test(text(symbol.signature)))).toBe(true);
+  });
+
+  it("links component classes to their component page", () => {
+    const runtime = reference.api.find((pkg) => pkg.slug === "runtime")!;
+    expect(runtime.symbols.find((symbol) => symbol.name === "NavLink")!.component).toBe("reference/components/runtime/NavLink");
+    const pages = new Set(reference.packages.flatMap((pkg) => pkg.components.map((component) => `reference/components/${pkg.slug}/${component.name}`)));
+    for (const symbol of reference.api.flatMap((pkg) => pkg.symbols)) {
+      if (symbol.component) expect(pages.has(symbol.component), symbol.name).toBe(true);
+    }
+  });
+});

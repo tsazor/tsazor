@@ -1,0 +1,63 @@
+@page "/reference/api/{packageSlug}"
+@import reference from "virtual:tutorial-reference"
+@import type { ApiKind, ApiPackage, ApiSymbol } from "../../reference-types"
+
+<PageTitle>@(pkg ? pkg.name + " API" : "Not found") · Tsazor reference</PageTitle>
+<ReferenceShell Section="api" PackageSlug="@packageSlug">
+    @if (pkg) {
+        <h1>@pkg.name</h1>
+        <p class="lead">@pkg.description</p>
+        @foreach (const group of groups) {
+            <section class="group" @key="group.kind" aria-labelledby="@("kind-" + group.kind)">
+                <h2 id="@("kind-" + group.kind)">@group.heading</h2>
+                <table class="symbols">
+                    <tbody>
+                        @foreach (const symbol of group.symbols) {
+                            <tr @key="symbol.name">
+                                <td><a href="@("reference/api/" + pkg.slug + "/" + symbol.name)"><code>@symbol.name</code></a></td>
+                                <td>
+                                    @(new MarkupString(symbol.summary))
+                                    @if (symbol.component) {
+                                        <span class="tag">component</span>
+                                    }
+                                    @if (symbol.deprecated) {
+                                        <span class="tag tag--deprecated">deprecated</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+    } else {
+        <h1>Not in the reference</h1>
+        <p>There is no API package “@packageSlug”. The <a href="reference">overview</a> lists them all.</p>
+    }
+</ReferenceShell>
+
+@code {
+    /** Route parameter: runtime | testing | dotnet | vite-plugin. */
+    @Parameter() packageSlug = "";
+
+    private static readonly ORDER: ReadonlyArray<[ApiKind, string]> = [
+        ["function", "Functions"],
+        ["class", "Classes"],
+        ["interface", "Interfaces"],
+        ["type", "Types"],
+        ["enum", "Enums"],
+        ["const", "Constants"],
+        ["namespace", "Namespaces"],
+    ];
+
+    private get pkg(): ApiPackage | undefined {
+        return reference.api.find((candidate) => candidate.slug === this.packageSlug);
+    }
+
+    private get groups(): Array<{ kind: ApiKind; heading: string; symbols: ApiSymbol[] }> {
+        const symbols = this.pkg?.symbols ?? [];
+        return ReferenceApiPackagePage.ORDER
+            .map(([kind, heading]) => ({ kind, heading, symbols: symbols.filter((symbol) => symbol.kind === kind) }))
+            .filter((group) => group.symbols.length > 0);
+    }
+}

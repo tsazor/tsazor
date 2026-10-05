@@ -86,6 +86,9 @@ try {
   await page.goto(`${ORIGIN}${BASE}reference/components/fluent/Button`);
   await page.waitForSelector(".parameters", { timeout: 30_000 });
   check(true, "a component page loads as a deep link");
+  await page.goto(`${ORIGIN}${BASE}reference/api/testing/render`);
+  await page.waitForSelector(".signature", { timeout: 30_000 });
+  check(true, "an API page loads as a deep link");
 
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 } catch (error) {

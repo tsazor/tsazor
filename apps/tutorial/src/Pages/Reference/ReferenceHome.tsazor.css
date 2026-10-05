@@ -55,3 +55,14 @@ code {
     font-size: 0.85rem;
     color: var(--fg-muted);
 }
+
+.kind {
+    margin-left: 0.3rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+    color: var(--fg-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    vertical-align: middle;
+}

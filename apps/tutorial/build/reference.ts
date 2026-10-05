@@ -5,6 +5,7 @@
  *   contents and stable heading anchors (the file stays the single source).
  * - Components: the component manifests of @tsazor/runtime, components and
  *   fluent (`dist/tsazor-components.json`), docs rendered as Markdown.
+ * - API: the public exports of runtime, testing, dotnet, vite-plugin (build/api.ts).
  * - Diagnostics: the compiler's DIAGNOSTIC_CATALOG, titled by its messages.
  *
  * Raw HTML in the Markdown is shown as text (docs say `<ul>` and mean the
@@ -15,6 +16,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Marked, type Tokens } from "marked";
 import { DIAGNOSTIC_CATALOG, DIAGNOSTIC_MESSAGES, type ComponentManifest, type ComponentMetadata, type ComponentParameter } from "@tsazor/compiler";
+import { loadApi } from "./api.js";
 import { highlight } from "./highlight.js";
 import type {
   ReferenceComponent,
@@ -157,5 +159,13 @@ export function loadReference(repoRoot: string): ReferenceContent {
   // The page has its own <h1>: the file's title line is dropped.
   const body = source.replace(/^# .*\n/, "");
   const html = createMarkdown(headings).parse(body) as string;
-  return { packages, language: { html, headings }, diagnostics: diagnostics() };
+  const api = loadApi(repoRoot, {
+    markdown: (text) => docMarkdown.parse(text) as string,
+    inline: (text) => docMarkdown.parseInline(text) as string,
+    componentHref: (slug, name) => {
+      const pkg = packages.find((candidate) => candidate.slug === slug);
+      return pkg?.components.some((component) => component.name === name) ? `reference/components/${slug}/${name}` : undefined;
+    },
+  });
+  return { packages, api, language: { html, headings }, diagnostics: diagnostics() };
 }
