@@ -214,6 +214,11 @@ async function main() {
     await page.click(".toc a:has-text('Diagnostics')");
     await page.waitForFunction(() => window.scrollY > 1000);
     check(new URL(page.url()).hash === "#diagnostics", "the language page's contents link to the section and scroll there");
+    await page.click(".reference-nav a:has-text('Diagnostics')");
+    await page.waitForSelector(".diagnostic");
+    await page.click(".codes a:has-text('TZS025')");
+    await page.waitForFunction(() => location.hash === "#tzs025" && document.getElementById("tzs025").getBoundingClientRect().top < 100);
+    check((await page.locator(".diagnostic .example").count()) > 15, "the diagnostics page lists the codes with examples and jumps to a code");
     if (shots) {
         await page.goto(`${APP}/index`);
         await page.waitForSelector(".group");

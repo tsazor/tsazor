@@ -57,3 +57,17 @@ describe("language page", () => {
     expect(slugify("Compatibility .razor ↔ .tsazor")).toBe("compatibility-razor--tsazor");
   });
 });
+
+describe("diagnostics page", () => {
+  it("lists every code of the compiler's catalog with a unique anchor, a description and a fix", () => {
+    const { diagnostics } = reference;
+    expect(diagnostics.length).toBeGreaterThan(25);
+    expect(new Set(diagnostics.map((diagnostic) => diagnostic.id)).size).toBe(diagnostics.length);
+    for (const diagnostic of diagnostics) {
+      expect(diagnostic.id).toMatch(/^tzs\d{3}$/);
+      expect(diagnostic.title.length, diagnostic.code).toBeGreaterThan(5);
+      expect(diagnostic.description, diagnostic.code).toMatch(/<p>/);
+      expect(diagnostic.fix, diagnostic.code).toMatch(/<(p|pre)/);
+    }
+  });
+});

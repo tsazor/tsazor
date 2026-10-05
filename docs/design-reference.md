@@ -80,7 +80,7 @@ and the fix — the place error messages can link to.
 
 Each step is committed on its own.
 
-**Progress:** steps 1, 2 and 4 done (2026-10-05) — overview, components of runtime, components
+**Progress:** steps 1, 2, 3 and 4 done (2026-10-05) — diagnostics from the compiler's `DIAGNOSTIC_CATALOG` (examples compiled by its test); — overview, components of runtime, components
 and fluent from the manifests (with the doc-coverage gate `apps/tutorial/test/reference.test.ts`),
 the language page. Prerequisites that came with it: component `doc` and parameter `default` in the
 manifests, and Blazor's scrolling on navigation (fragments) in the runtime.

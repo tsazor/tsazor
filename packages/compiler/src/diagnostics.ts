@@ -47,8 +47,9 @@ export interface TszDiagnostic extends SourceRange {
   readonly fix?: DiagnosticFix;
 }
 
-const CODES = {
-  TZS001: "Unknown directive.",
+/** Each code with its message (the first sentence of every diagnostic; the reference's title). */
+export const DIAGNOSTIC_MESSAGES = {
+  TZS001: "Invalid or misplaced directive.",
   TZS002: "Unclosed element.",
   TZS003: "Unbalanced braces in expression or code block.",
   TZS004: "Invalid implicit expression.",
@@ -80,6 +81,8 @@ const CODES = {
   TZS030: "@Bindable() needs an auto-accessor.",
   TZS031: "Name reserved by ComponentBase.",
 } as const;
+
+const CODES = DIAGNOSTIC_MESSAGES;
 
 export type DiagnosticCode = keyof typeof CODES;
 

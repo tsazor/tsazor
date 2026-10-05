@@ -45,7 +45,26 @@ export interface ReferenceHeading {
   level: number;
 }
 
+export interface ReferenceDiagnostic {
+  /** `TZS025`. */
+  code: string;
+  /** Anchor on the diagnostics page (`tzs025`). */
+  id: string;
+  severity: "error" | "warning" | "error or warning";
+  /** The diagnostic's message (inline HTML). */
+  title: string;
+  /** When it is reported (HTML). */
+  description: string;
+  /** A source that reports it (highlighted HTML). */
+  example?: string;
+  /** How to fix it (HTML). */
+  fix: string;
+  /** The editor offers a quick fix. */
+  quickFix?: boolean;
+}
+
 export interface ReferenceContent {
   packages: ReferencePackage[];
   language: { html: string; headings: ReferenceHeading[] };
+  diagnostics: ReferenceDiagnostic[];
 }

@@ -11,6 +11,7 @@
             <ul class="nav-sections">
                 <li><a href="reference" aria-current="@(section === "overview" ? "page" : null)">Overview</a></li>
                 <li><a href="reference/language" aria-current="@(section === "language" ? "page" : null)">Language</a></li>
+                <li><a href="reference/diagnostics" aria-current="@(section === "diagnostics" ? "page" : null)">Diagnostics</a></li>
             </ul>
             <h2 class="nav-heading">Components</h2>
             <ul class="nav-packages">
@@ -36,8 +37,8 @@
 </div>
 
 @code {
-    /** The section shown: the overview, the language page or a components page. */
-    @Parameter() section: "overview" | "language" | "components" = "overview";
+    /** The section shown: the overview, the language or diagnostics page, or a components page. */
+    @Parameter() section: "overview" | "language" | "diagnostics" | "components" = "overview";
     /** The package whose components the navigation lists. */
     @Parameter() packageSlug?: string;
     /** The component shown (marked in the navigation). */

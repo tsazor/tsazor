@@ -10,7 +10,9 @@ export {
   type TextEdit,
   type DiagnosticFix,
   type DiagnosticCode,
+  DIAGNOSTIC_MESSAGES,
 } from "./diagnostics.js";
+export { DIAGNOSTIC_CATALOG, RETIRED_DIAGNOSTIC_CODES, type DiagnosticInfo } from "./diagnostic-catalog.js";
 export { buildSourceMap, type SourceMapEntry } from "./source-map.js";
 export { explainExpressionValue, type ExpressionValue } from "./expression-values.js";
 export { RESERVED_MEMBERS, OVERRIDABLE_MEMBERS } from "./reserved-members.js";

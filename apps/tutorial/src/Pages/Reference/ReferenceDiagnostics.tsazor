@@ -1,0 +1,44 @@
+@page "/reference/diagnostics"
+@import reference from "virtual:tutorial-reference"
+
+<PageTitle>Diagnostics · Tsazor reference</PageTitle>
+<ReferenceShell Section="diagnostics">
+    <h1>Diagnostics</h1>
+    <p class="lead">
+        Every code the compiler reports, with when it happens and how to fix it. Errors stop the build (the Vite overlay
+        shows them), warnings go to the console; the editor shows both and offers a quick fix where one is marked.
+    </p>
+    <nav class="codes" aria-label="Codes">
+        @foreach (const diagnostic of reference.diagnostics) {
+            <a href="@("reference/diagnostics#" + diagnostic.id)" @key="diagnostic.code" class="@("code code--" + severityClass(diagnostic.severity))">@diagnostic.code</a>
+        }
+    </nav>
+
+    @foreach (const diagnostic of reference.diagnostics) {
+        <section class="diagnostic" @key="diagnostic.code" aria-labelledby="@diagnostic.id">
+            <h2 id="@diagnostic.id">
+                <span class="code-name">@diagnostic.code</span>
+                <span class="title">@(new MarkupString(diagnostic.title))</span>
+            </h2>
+            <p class="badges">
+                <span class="@("badge badge--" + severityClass(diagnostic.severity))">@diagnostic.severity</span>
+                @if (diagnostic.quickFix) {
+                    <span class="badge">quick fix</span>
+                }
+            </p>
+            <Prose Html="@diagnostic.description" />
+            @if (diagnostic.example) {
+                <h3>Example</h3>
+                <pre class="example"><code>@(new MarkupString(diagnostic.example))</code></pre>
+            }
+            <h3>Fix</h3>
+            <Prose Html="@diagnostic.fix" />
+        </section>
+    }
+</ReferenceShell>
+
+@code {
+    private severityClass(severity: string): string {
+        return severity === "error" ? "error" : severity === "warning" ? "warning" : "mixed";
+    }
+}

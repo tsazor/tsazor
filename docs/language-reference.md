@@ -885,7 +885,7 @@ typed:
 | Code in `@{ }` and control bodies | code-first like Razor, but TypeScript; `using (…)`, `lock`, `@await` ⇒ error |
 | `@namespace`, `@rendermode`, `@preservewhitespace` | accepted, ignored |
 | DataAnnotations validation | Decorators as the counterpart (`@Required()`, `@MaxLength(n)`, … on the model + `DataAnnotationsValidator`); the `validators` map remains as an adapter; a subset of the attributes (3.6) |
-| `@bind:format` | Subset (3.7) — number masks `F<n>`/`N<n>`/`0.00`, date tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); a plain-text value is a string literal, `@expr` an expression; on string/component binds warning TZS008 (Blazor's BindConverter behavior), `@bind:culture` error TZS008 |
+| `@bind:format` | Subset (3.7) — number masks `F<n>`/`N<n>`/`0.00`, date tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); a plain-text value is a string literal, `@expr` an expression; on string/component binds warning TZS008 (Blazor's BindConverter behavior); `@bind:culture` on anything but a number bind warns TZS008 too |
 | `<InputFile>` | yes (3.7) — `InputFileChangeEventArgs` with native `File` objects instead of `IBrowserFile` (`OpenReadStream` does not exist) |
 | `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; only when declared with `@Parameter()`; key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
 | Named child slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identical (2.3 — see [Templated components](#templated-components-named-slots-and-template-contexts-23)) |
@@ -943,49 +943,11 @@ parentheses there (parity); `@(x ? "a" : "b")` or `{(x ? "a" : "b")}` work.
 
 ## Diagnostics
 
-The compiler never fails silently — codes `TZS001`–`TZS031` with a source range
-(`TZS011`, `TZS014`, `TZS022`, `TZS023` and `TZS026` are warnings, e.g. an `@inherits` conflict with
-code-behind or an ignored directive/clause). New with the code-first parser: `TZS012` C# construct without
-a TS equivalent, `TZS013` directive outside the document level, `TZS015` invalid
-TypeScript (or bare text) in a code context. Import model: `TZS016` invalid
-`@import`, `TZS017` ambiguous component tag (error), `TZS018` `@using` folder or
-package does not exist (warning; for `_Imports.tsazor`, reported in that file). A5:
-`TZS019` invalid or unrepresentable `@attribute`, `TZS020` member collides with the
-generated code (`buildRenderTree`). A6: `TZS021` C# form with a mechanical TS counterpart
-(error; the message names the TS form — `@foreach (var x in xs)`, `@attribute [Authorize]`,
-`where T : …`; fixed by the codemod and available as LSP quick fixes, see
-[Codemod](#codemod-razor--tsazor-25)), `TZS022` `var` in render code
-(warning), `TZS023` `@switch` section falls through (warning). Difference from `TZS012`: there,
-no TS counterpart exists (`using (…)`, `lock`). A7: `TZS024` invalid TypeScript in a
-markup expression — `@x`/`@(…)`, attribute values (including mixed ones, event handlers, `@key`,
-`@attributes`), `@bind` value/`:get`/`:set`/`:after`, `@if`/`@while`/`@switch` conditions and
-`case` labels; the TS parser's first syntax error is reported on its token (instead of a
-later esbuild error). An invalid `@for` counting header is `TZS015`, like statement runs.
-2.2 ([Component attributes](#component-attributes-by-parameter-type)): `TZS025` unknown
-component parameter (error, with a "Did you mean" fix), `TZS026` parameter type or the component's
-parameters unknown (warning; the value is passed as written). 2.3
-([Templated components](#templated-components-named-slots-and-template-contexts-23)):
-`TZS027` unrecognized child content (error — loose content next to child content elements;
-a slot outside its component or not directly below it), `TZS028` invalid
-child content element (error — set twice, also set via an attribute, unknown
-attribute on the slot, non-literal `Context`, a non-fragment parameter written as an element),
-`TZS029` template context name conflict (error — nested templates
-with the same context name; the message suggests `Context="another_name"`). Also 2.3: an
-unknown slot name with complete metadata is `TZS025` (now also with a fix for
-element and end tag names), and an empty or invalid `TItem` type argument value is
-`TZS009` or `TZS024`, respectively.
-2.5: A `TZS024` caused by a C# interpolated or verbatim string carries the
-template literal fix (table above); the other TZS024 causes (C# casts such as
-`(MarkupString)x`, anonymous objects `new { … }`, `out var`, `is (not) null`) are not
-mechanical and have no fix — they are ported by hand, partly onto the built-ins (e.g.
-`(MarkupString)x` ⇒ `x as MarkupString`, see MarkupString above).
-Tsazor extensions: `TZS030` `@Bindable()` on a member that is not an auto-accessor (error, fix
-"Insert 'accessor'"; see [Two-way parameters](#two-way-parameters-bindable-tsazor-extension)).
-`TZS031` a `@code` member or `@inject` name that would replace a `ComponentBase` member
-(`observe`, `inject`, `stateHasChanged`, `disposeSignal`, …): Blazor's base members are PascalCase
-and never meet a component's fields, Tsazor's camelCase API shares their namespace. The lifecycle
-hooks (`onInitialized`, `onParametersSet`, `onAfterRender`, `shouldRender`, `setParametersAsync`)
-are overridden on purpose and stay allowed; `buildRenderTree` is `TZS020`.
+The compiler never fails silently: every problem is a diagnostic with a code (`TZS001`…), a
+severity and a source range. **Every code with when it is reported, an example and the fix is on
+the reference's Diagnostics page** (`/reference/diagnostics` in the tutorial app), generated from
+the compiler's catalog (`packages/compiler/src/diagnostic-catalog.ts`; a test keeps it complete and
+compiles each example). `TZS007` and `TZS010` are retired.
 Errors show up in the Vite dev overlay, warnings on the console.
 
 **Ranges and fixes (A7):** besides `pos` (start, 1-based line / 0-based column), every diagnostic

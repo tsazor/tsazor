@@ -5,6 +5,7 @@
  *   contents and stable heading anchors (the file stays the single source).
  * - Components: the component manifests of @tsazor/runtime, components and
  *   fluent (`dist/tsazor-components.json`), docs rendered as Markdown.
+ * - Diagnostics: the compiler's DIAGNOSTIC_CATALOG, titled by its messages.
  *
  * Raw HTML in the Markdown is shown as text (docs say `<ul>` and mean the
  * tag), links to other docs files become plain text (they are not part of
@@ -13,9 +14,16 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Marked, type Tokens } from "marked";
-import type { ComponentManifest, ComponentMetadata, ComponentParameter } from "@tsazor/compiler";
+import { DIAGNOSTIC_CATALOG, DIAGNOSTIC_MESSAGES, type ComponentManifest, type ComponentMetadata, type ComponentParameter } from "@tsazor/compiler";
 import { highlight } from "./highlight.js";
-import type { ReferenceComponent, ReferenceContent, ReferenceHeading, ReferencePackage, ReferenceParameter } from "../src/reference-types.js";
+import type {
+  ReferenceComponent,
+  ReferenceContent,
+  ReferenceDiagnostic,
+  ReferenceHeading,
+  ReferencePackage,
+  ReferenceParameter,
+} from "../src/reference-types.js";
 
 export const LANGUAGE_PATH = "reference/language";
 
@@ -115,6 +123,23 @@ function componentOf(metadata: ComponentMetadata, packageSlug: string): Referenc
   return component;
 }
 
+/** The compiler's diagnostic catalog, its message as the title (without the final period). */
+function diagnostics(): ReferenceDiagnostic[] {
+  return DIAGNOSTIC_CATALOG.map((entry) => {
+    const diagnostic: ReferenceDiagnostic = {
+      code: entry.code,
+      id: entry.code.toLowerCase(),
+      severity: entry.severity,
+      title: docMarkdown.parseInline(DIAGNOSTIC_MESSAGES[entry.code as keyof typeof DIAGNOSTIC_MESSAGES].replace(/\.$/, "")) as string,
+      description: docMarkdown.parse(entry.description) as string,
+      fix: docMarkdown.parse(entry.fix) as string,
+    };
+    if (entry.example !== undefined) diagnostic.example = highlight(entry.example.replace(/\n$/, ""), "tsazor");
+    if (entry.quickFix) diagnostic.quickFix = true;
+    return diagnostic;
+  });
+}
+
 export function loadReference(repoRoot: string): ReferenceContent {
   const packages: ReferencePackage[] = PACKAGES.map(({ dir, exclude = [], ...info }) => {
     const file = path.join(repoRoot, "packages", dir, "dist", "tsazor-components.json");
@@ -132,5 +157,5 @@ export function loadReference(repoRoot: string): ReferenceContent {
   // The page has its own <h1>: the file's title line is dropped.
   const body = source.replace(/^# .*\n/, "");
   const html = createMarkdown(headings).parse(body) as string;
-  return { packages, language: { html, headings } };
+  return { packages, language: { html, headings }, diagnostics: diagnostics() };
 }

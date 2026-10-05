@@ -312,6 +312,44 @@ export interface ConditionalBranch {
     span?: SourceSpan;
 }
 
+// DIAGNOSTIC_CATALOG
+export declare const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[];
+
+// DIAGNOSTIC_MESSAGES
+export declare const DIAGNOSTIC_MESSAGES: {
+    readonly TZS001: "Invalid or misplaced directive.";
+    readonly TZS002: "Unclosed element.";
+    readonly TZS003: "Unbalanced braces in expression or code block.";
+    readonly TZS004: "Invalid implicit expression.";
+    readonly TZS005: "Unresolved component tag.";
+    readonly TZS006: "Unclosed code block.";
+    readonly TZS007: "Duplicate attribute.";
+    readonly TZS008: "Unsupported directive attribute.";
+    readonly TZS009: "Missing attribute value.";
+    readonly TZS010: "Invalid implicit expression terminator.";
+    readonly TZS011: "Conflicting code-behind.";
+    readonly TZS012: "Unsupported C# construct.";
+    readonly TZS013: "Directive not allowed here.";
+    readonly TZS014: "Ignored directive or clause.";
+    readonly TZS015: "Invalid TypeScript in code block.";
+    readonly TZS016: "Invalid @import directive.";
+    readonly TZS017: "Ambiguous component tag.";
+    readonly TZS018: "Unresolved @using directory.";
+    readonly TZS019: "Invalid @attribute directive.";
+    readonly TZS020: "Member conflicts with the generated component code.";
+    readonly TZS021: "C# form — use the TypeScript form.";
+    readonly TZS022: "'var' declaration — use 'let' or 'const'.";
+    readonly TZS023: "Switch case falls through.";
+    readonly TZS024: "Invalid TypeScript expression.";
+    readonly TZS025: "Unknown component parameter.";
+    readonly TZS026: "Component parameter type unknown.";
+    readonly TZS027: "Unrecognized child content.";
+    readonly TZS028: "Invalid child content element.";
+    readonly TZS029: "Template context name conflict.";
+    readonly TZS030: "@Bindable() needs an auto-accessor.";
+    readonly TZS031: "Name reserved by ComponentBase.";
+};
+
 // DiagnosticBag
 export declare class DiagnosticBag {
     private readonly items;
@@ -330,6 +368,16 @@ export type DiagnosticCode = keyof typeof CODES;
 export interface DiagnosticFix {
     readonly title: string;
     readonly edits: readonly TextEdit[];
+}
+
+// DiagnosticInfo
+export interface DiagnosticInfo {
+    readonly code: string;
+    readonly severity: "error" | "warning" | "error or warning";
+    readonly description: string;
+    readonly example?: string;
+    readonly fix: string;
+    readonly quickFix?: boolean;
 }
 
 // DirectiveNode
@@ -560,6 +608,9 @@ export interface ResolvedType {
     specifier: string;
     exportName?: string;
 }
+
+// RETIRED_DIAGNOSTIC_CODES
+export declare const RETIRED_DIAGNOSTIC_CODES: readonly string[];
 
 // RUNTIME_MODULE
 export declare const RUNTIME_MODULE = "@tsazor/runtime";

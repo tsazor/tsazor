@@ -5,7 +5,7 @@
 <ReferenceShell Section="overview">
     <h1>Reference</h1>
     <p class="lead">
-        Everything in full: the <code>.tsazor</code> language and every component with its parameters. The tutorial teaches
+        Everything in full: the <code>.tsazor</code> language, every compiler diagnostic and every component with its parameters. The tutorial teaches
         each topic with a task; the <a href="index">index</a> finds the lesson for a keyword.
     </p>
 
@@ -14,6 +14,11 @@
             <h2>Language</h2>
             <p>Directives, routes, expressions and code contexts, <code>@@bind</code>, components and parameters, DI, localization, typed checks, diagnostics.</p>
             <span class="meta">@reference.language.headings.length sections</span>
+        </a>
+        <a class="card" href="reference/diagnostics">
+            <h2>Diagnostics</h2>
+            <p>Every compiler code (TZS001…): when it is reported and how to fix it, with an example.</p>
+            <span class="meta">@reference.diagnostics.length codes</span>
         </a>
         @foreach (const pkg of reference.packages) {
             <a class="card" href="@("reference/components/" + pkg.slug)" @key="pkg.slug">

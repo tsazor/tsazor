@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`: `DIAGNOSTIC_CATALOG` (every code: severity, when it is reported, an example,
+  the fix) and `DIAGNOSTIC_MESSAGES` are exported — the source of the reference's diagnostics page;
+  `RETIRED_DIAGNOSTIC_CODES` (`TZS007`, `TZS010`). `TZS001` reads "Invalid or misplaced directive."
+  (it was "Unknown directive.", which never matched what it reports).
 - `@tsazor/runtime`: scrolling on navigation as in Blazor — after an internal navigation the
   `Router` scrolls to the fragment's element (`orders#total`, by id, else by name) or to the top;
   a link that only changes the fragment of the current page adds a history entry and scrolls,
