@@ -1,132 +1,128 @@
-# Handoff: Sleipnir-Verbesserungen (Track U, upstream)
+# Handoff: Sleipnir improvements (track U, upstream)
 
-Stand: 2026-10-04. Für eine neue Sitzung, die die Upstream-Verbesserungen an
-[Sleipnir](https://github.com/HolgerTheHuck/Sleipnir) umsetzt. Grundlage ist
-[roadmap-sleipnir.md](roadmap-sleipnir.md); dieses Dokument macht daraus einen umsetzbaren
-Auftrag, mit am Upstream-Code geprüften Befunden. Die Tsazor-Seite (`@tsazor/sleipnir`,
-Track T) folgt später in diesem Repo und ist hier nur der Kontext.
+As of 2026-10-05 (plan reviewed with the maintainer). For the work on the upstream improvements
+to [Sleipnir](https://github.com/HolgerTheHuck/Sleipnir). Based on
+[roadmap-sleipnir.md](roadmap-sleipnir.md); this document turns it into an actionable task with
+findings checked against the upstream code. The Tsazor side (`@tsazor/sleipnir`, track T) follows
+in this repo and is context here.
 
-## 1. Rahmen — bitte zuerst lesen
+## 1. Ground rules — read first
 
-- **Arbeitsort:** ein **frischer Clone** von `HolgerTheHuck/Sleipnir` (z. B. `D:\Own\Sleipnir`;
-  existiert noch nicht). Pro Punkt (U3, U4, U1, U2) ein **Feature-Branch** und ein **PR auf
-  GitHub** zum Review durch den Maintainer. Nichts direkt auf `main`.
-- **Vor dem Start: Plan-Review mit dem Maintainer** (Entscheidung 2026-10-02). Erst den Plan
-  zeigen — insbesondere die offenen Fragen in §6 —, dann autonom umsetzen; Merges nur mit
-  Freigabe.
-- **Sleipnir bleibt framework-neutral.** Nichts Tsazor-Spezifisches upstream (kein
-  `--lang tsazor`, keine Tsazor-Typen); der Tsazor-Emitter lebt später in `@tsazor/sleipnir`.
-  Was upstream landet, muss auch Svelte-/JS-Konsumenten nützen.
-- **Im Sleipnir-Repo gibt es eine eigene `CLAUDE.md`** — zuerst lesen; ihre Regeln gelten dort.
-- **Kompatibilität:** alle Discovery-Erweiterungen sind additiv, `discoveryVersion` bleibt `"1"`.
-  Bestehende 1.4.x-Clients und -Server müssen weiter funktionieren.
+- **Where:** a **fresh clone** of `HolgerTheHuck/Sleipnir` (`D:\Own\Sleipnir`). One **feature
+  branch** and one **pull request on GitHub** per item (U3, U4, U1, U2), reviewed by the
+  maintainer. Nothing directly on `main`; merges only with the maintainer's approval.
+- **The plan review took place on 2026-10-05** (decisions in §6); work proceeds autonomously.
+- **Sleipnir stays framework-neutral.** Nothing Tsazor-specific upstream (no `--lang tsazor`, no
+  Tsazor types); the Tsazor emitter lives in `@tsazor/sleipnir`. What lands upstream must help
+  Svelte/JS consumers too.
+- **The Sleipnir repo has its own `CLAUDE.md`** — read it first; its rules apply there.
+- **Compatibility:** every discovery extension is additive, `discoveryVersion` stays `"1"`.
+  Existing 1.4.x clients and servers keep working.
 
-## 2. Ausgangslage (geprüft am 2026-10-04)
+## 2. Starting point (checked 2026-10-04)
 
-- Neueste Version **1.4.3** (Tag `v1.4.3`, npm `sleipnir-client`/`sleipnir-codegen`, NuGet
-  `Sleipnir.*`). Letzte Änderung auf `main`: 2026-09-08 — die Befunde der Roadmap gelten noch.
-- Referenz-Konsument in Tsazor: `apps/sleipnir-ticker` (Ticker-API in .NET, Synthetic-Modus für
-  deterministische Tests; E2E-Gate in der Tsazor-CI).
+- Latest version **1.4.3** (tag `v1.4.3`, npm `sleipnir-client`/`sleipnir-codegen`, NuGet
+  `Sleipnir.*`). Last change on `main`: 2026-09-08 — the roadmap's findings still hold.
+- Reference consumer in Tsazor: `apps/sleipnir-ticker` (ticker API in .NET, synthetic mode for
+  deterministic tests; E2E gate in Tsazor's CI).
 
-### Befunde, am Code geprüft — mit zwei Korrekturen gegenüber der Roadmap
+### Findings, checked against the code — with two corrections to the roadmap
 
-| Befund | Beleg | Status |
+| Finding | Evidence | Status |
 |---|---|---|
-| **Pflicht/optional fehlt**: jede DTO-Property wird `name?: T` | `clients/codegen/src/emitters/ts.ts` `emitTypes` (`${p.wireName}?: ${ty}`) | bestätigt |
-| **Nullability wird *beachtet***: `TypeRef.nullable` → `T \| null` | `clients/codegen/src/core/model.ts` `tsTypeOfRef`; `docs/discovery-schema.md` §2 | **Korrektur:** die Roadmap sagte „ignoriert `nullable`“. Was fehlt, ist die *Pflichtangabe* (`required`) pro Property — die kommt erst mit U1. Der Kommentar im Emitter („discovery carries no nullability“) ist veraltet. |
-| **Property-Metadaten fehlen**: `PropertyMeta` hat nur `PropertyName`, `PropertyType`, `Navigation` | `DISCOVERY_REFERENCE.md` §TypeMeta/PropertyMeta | bestätigt; der Emitter gibt `documentation` schon aus, bekommt aber nie welche. Auch Parameter-Doku ist laut §6 nicht verdrahtet (fällt auf die Methoden-Doku zurück). |
-| **Enums werden zu Zahlen** (`long`) | `model.ts` Kopfkommentar (Enum-Refs kollabieren auf den Wire-Typ) | bestätigt; `TypeMeta` mit `Members` wird aber schon emittiert — die Information ist da. |
-| **Fehler-Kategorie fehlt im TS-Client**: Server hat `SleipnirError.Category`, `SleipnirErrorBody` (TS) nicht | `SleipnirCommon/Models/SleipnirError.cs`, `clients/ts/src/types.ts` | bestätigt (Drift) |
-| **Kein gebündelter Verbindungsstatus** im `SleipnirTransportRouter` | `clients/ts/src/transport-router.ts` | bestätigt (kein State-Observable) |
-| Event-Methoden ohne Optionen (`signal`, `resumePolicy`, `timeout`) | generierte `controllers.ts` | aus der Roadmap, nicht neu geprüft |
-| Browser-WS sendet `?access_token=`, der Server liest es nicht | `guide/chapters/08-auth.md` | aus der Roadmap, nicht neu geprüft |
-| Keine strukturierten Validierungsfehler; Validierungs-Interceptor nur Roadmap | `ERROR_CATALOG.md`, `ROADMAP.md`, `docs/design/phase-1-interceptor-pipeline.md` | aus der Roadmap, nicht neu geprüft |
+| **Required/optional missing**: every DTO property becomes `name?: T` | `clients/codegen/src/emitters/ts.ts` `emitTypes` (`${p.wireName}?: ${ty}`) | confirmed |
+| **Nullability *is* honored**: `TypeRef.nullable` → `T \| null` | `clients/codegen/src/core/model.ts` `tsTypeOfRef`; `docs/discovery-schema.md` §2 | **correction:** the roadmap said "ignores `nullable`". What is missing is *requiredness* per property — it comes with U1. The emitter's comment ("discovery carries no nullability") is outdated. |
+| **Property metadata missing**: `PropertyMeta` has only `PropertyName`, `PropertyType`, `Navigation` | `DISCOVERY_REFERENCE.md` §TypeMeta/PropertyMeta | confirmed; the emitter already writes `documentation` but never gets any. Parameter docs are not wired either (they fall back to the method's, §6). |
+| **Enums become numbers** (`long`) | `model.ts` header comment (enum refs collapse to the wire type) | confirmed; `TypeMeta` with `Members` is emitted already — the information is there. |
+| **Error category missing in the TS client**: the server has `SleipnirError.Category`, `SleipnirErrorBody` (TS) does not | `SleipnirCommon/Models/SleipnirError.cs`, `clients/ts/src/types.ts` | confirmed (drift) |
+| **No aggregated connection state** in `SleipnirTransportRouter` | `clients/ts/src/transport-router.ts` | confirmed (no state observable) |
+| Event methods without options (`signal`, `resumePolicy`, `timeout`) | generated `controllers.ts` | from the roadmap, re-check at the start |
+| Browser WS sends `?access_token=`, the server does not read it | `guide/chapters/08-auth.md` | from the roadmap, re-check at the start |
+| No structured validation errors; validation interceptor only on the roadmap | `ERROR_CATALOG.md`, `ROADMAP.md`, `docs/design/phase-1-interceptor-pipeline.md` | from the roadmap, re-check at the start |
 
-Die als „nicht neu geprüft“ markierten Punkte zu Beginn kurz am Code bestätigen.
+## 3. Order
 
-## 3. Reihenfolge
+1. **U3 + U4** (small, low risk) → **Sleipnir 1.5.0-preview** as a local feed (§6.4).
+2. **U1 + U2** (discovery extension, validation interceptor) → then U3's required/optional part,
+   which needs `required` from U1.
 
-1. **U3 + U4** (klein, risikoarm) → Release **Sleipnir 1.5.0-preview**.
-2. **U1 + U2** (Discovery-Erweiterung, Validierungs-Interceptor) → dann der Pflicht/optional-Teil
-   von U3, der `required` aus U1 braucht.
+Track T (Tsazor) starts after the preview and works without U1/U2 at first.
 
-Track T (Tsazor) startet nach dem Preview und arbeitet zunächst ohne U1/U2.
+## 4. The items
 
-## 4. Die Punkte
+### U3 — codegen correctness (`clients/codegen`)
 
-### U3 — Codegen-Korrektheit (`clients/codegen`)
-
-- **Pflicht/optional:** sobald U1 `required` liefert, die vier Kombinationen wie in
-  `@tsazor/dotnet` abbilden — Pflicht + nicht nullable ⇒ `name: T`; Pflicht + nullable ⇒
-  `name: T | null`; optional ⇒ `name?: T` bzw. `name?: T | null`. Bis dahin: Verhalten lassen,
-  aber den veralteten Kommentar korrigieren („discovery carries no requiredness“).
-- **Enums:** eine echte Enum-Identität im TS-Output, Wire bleibt die Zahl. Vorschlag:
+- **Required/optional:** once U1 delivers `required`, map the four combinations as
+  `@tsazor/dotnet` does — required + non-nullable ⇒ `name: T`; required + nullable ⇒
+  `name: T | null`; optional ⇒ `name?: T` or `name?: T | null`. Until then: keep the behavior and
+  correct the outdated comment ("discovery carries no requiredness") — decision §6.2.
+- **Enums:** a real enum identity in the TS output, the wire stays the number — decision §6.1:
   `export const OrderState = { Open: 0, Shipped: 1 } as const;` plus
-  `export type OrderState = (typeof OrderState)[keyof typeof OrderState];` — Literal-Union der
-  Zahlen, ohne TS-`enum` (Tree-Shaking, `isolatedModules`). Nutzungsstellen referenzieren den Typ
-  statt `number`. Python-/C#-Emitter analog oder bewusst unverändert lassen (im PR begründen).
-- **Event-Methoden:** ein Optionsparameter `{ signal?: AbortSignal; resumePolicy?; timeout? }`;
-  `signal` beendet das Abo (Grundlage für die Lifecycle-Bindung in Tsazor: `observe()`/
+  `export type OrderState = (typeof OrderState)[keyof typeof OrderState];` — a literal union of
+  the numbers, no TS `enum` (tree shaking, `isolatedModules`). Use sites reference the type
+  instead of `number`. The other emitters separately (§6.5).
+- **Event methods:** an options parameter `{ signal?: AbortSignal; resumePolicy?; timeout? }`;
+  `signal` ends the subscription (the basis for Tsazor's lifecycle binding: `observe()`/
   `disposeSignal`).
-- **Tests:** die Codegen-Snapshot-/Unit-Tests erweitern; `--selfcheck` (Exit 4) bleibt grün.
+- **Tests:** extend the codegen snapshot/unit tests; `--selfcheck` (exit 4) stays green.
 
-### U4 — Client (`clients/ts`) und Server-Token
+### U4 — client (`clients/ts`) and server token
 
-- **Verbindungsstatus:** ein Observable am `SleipnirTransportRouter` über alle Backends (WS, SSE,
-  SignalR; REST ist zustandslos), z. B. `"connecting" | "open" | "reconnecting" | "closed"` mit
-  `subscribe(listener) → unsubscribe` (die Form, die Tsazors `observe()` und Svelte-Stores
-  verstehen).
-- **`category`** in `SleipnirErrorBody` (TS) — die Server-Werte aus
-  `SleipnirCommon/Results/SleipnirErrorCategory.cs`, als String-Literal-Union.
-- **`access_token` beim WS-Upgrade/SSE serverseitig lesen** — nur auf diesen Endpunkten, nie für
-  normale Requests; Token-Query aus Logs filtern. Cookie-Auth bleibt der empfohlene Weg (Tsazors
-  BFF-Leitfaden `docs/auth.md`); die Query ist nur für Bearer-Szenarien im Browser.
-- **401-Hook:** optional `onUnauthenticated` → Refresh → genau ein Retry.
+- **Connection state:** an observable on `SleipnirTransportRouter` across all backends (WS, SSE,
+  SignalR; REST is stateless), e.g. `"connecting" | "open" | "reconnecting" | "closed"` with
+  `subscribe(listener) → unsubscribe` (the shape Tsazor's `observe()` and Svelte stores understand).
+- **`category`** in `SleipnirErrorBody` (TS) — the server's values from
+  `SleipnirCommon/Results/SleipnirErrorCategory.cs`, as a string literal union.
+- **Read `access_token` on WS upgrade/SSE on the server** — decision §6.3: only on those
+  endpoints, never for ordinary requests; filter the token query from logs. Cookie auth stays the
+  recommended way (Tsazor's BFF guide `docs/auth.md`); the query is for bearer scenarios in the
+  browser only.
+- **401 hook:** optional `onUnauthenticated` → refresh → exactly one retry.
 
-### U1 — Discovery-Erweiterung (Server, additiv)
+### U1 — discovery extension (server, additive)
 
-- `PropertyMeta` und `ParameterMeta` bekommen: `required`, `minLength`/`maxLength`, `range`
-  (`min`/`max`), `pattern`, `email`, eine eigene Fehlermeldung (`message`), `documentation`,
-  `displayName` — aus den DataAnnotations (`[Required]`, `[StringLength]`, `[Range]`,
-  `[RegularExpression]`, `[EmailAddress]`, `[Display]`) und `[SleipnirDocumentation]`.
-- Parameter-Dokumentation wirklich pro Parameter verdrahten (heute fällt sie auf die Methode
-  zurück, `DISCOVERY_REFERENCE.md` §6).
-- Event-Metadaten: `resumable`.
-- **Bewusst nicht:** Autorisierung in der Discovery (Angriffsflächen-Orakel, Roadmap §9).
-- `docs/discovery-schema.md` und `DISCOVERY_REFERENCE.md` nachziehen; Tests in
+- `PropertyMeta` and `ParameterMeta` get: `required`, `minLength`/`maxLength`, `range`
+  (`min`/`max`), `pattern`, `email`, a custom error message (`message`), `documentation`,
+  `displayName` — from the DataAnnotations (`[Required]`, `[StringLength]`, `[Range]`,
+  `[RegularExpression]`, `[EmailAddress]`, `[Display]`) and `[SleipnirDocumentation]`.
+- Wire parameter documentation per parameter (today it falls back to the method,
+  `DISCOVERY_REFERENCE.md` §6).
+- Event metadata: `resumable`.
+- **Deliberately not:** authorization in discovery (attack-surface oracle, roadmap §9).
+- Update `docs/discovery-schema.md` and `DISCOVERY_REFERENCE.md`; tests in
   `SleipnirDiscoveryServiceTests`/`SleipnirDiscoveryTypeRefTests`.
 
-### U2 — Validierungs-Interceptor (Server, opt-in)
+### U2 — validation interceptor (server, opt-in)
 
-- DataAnnotations auf Methodenparametern und DTOs prüfen, opt-in über `SleipnirOptions`.
-- Verletzungen ⇒ `Category = InvalidArgument`, Code 400, mit einer `errors`-Map in der Form von
-  `ValidationProblemDetails` (Feldpfade in camelCase, wie auf dem Wire).
-- `ERROR_CATALOG.md` und die Interceptor-Pipeline-Doku nachziehen.
+- Check DataAnnotations on method parameters and DTOs, opt-in through `SleipnirOptions`.
+- Violations ⇒ `Category = InvalidArgument`, code 400, with an `errors` map shaped like
+  `ValidationProblemDetails` (camelCase field paths, as on the wire).
+- Update `ERROR_CATALOG.md` and the interceptor pipeline docs.
 
 ## 5. Gates
 
-- **Sleipnir:** `dotnet test`, die Client- und Codegen-Tests, `--selfcheck`; die vorhandene CI
-  des Sleipnir-Repos (`.github/`).
-- **Konsument:** `apps/sleipnir-ticker` in Tsazor gegen das Preview — Pakete auf
-  `1.5.0-preview` heben (npm `sleipnir-client`/`sleipnir-codegen`, NuGet `Sleipnir.Server`), Typen
-  neu generieren (`pnpm --filter sleipnir-ticker codegen`), `pnpm --filter sleipnir-ticker verify`
-  (Synthetic-Modus) und die Tsazor-CI. Vor einem echten Release lokal per Tarball/Paket-Feed
-  testen, nicht erst nach der Veröffentlichung.
+- **Sleipnir:** `dotnet test`, the client and codegen tests, `--selfcheck`; the Sleipnir repo's
+  existing CI (`.github/`).
+- **Consumer:** `apps/sleipnir-ticker` in Tsazor against the preview — packages on
+  `1.5.0-preview` from the local feed (npm tarballs `sleipnir-client`/`sleipnir-codegen`, a local
+  NuGet source for `Sleipnir.Server`), regenerate the types (`pnpm --filter sleipnir-ticker
+  codegen`), `pnpm --filter sleipnir-ticker verify` (synthetic mode) and Tsazor's CI.
 
-## 6. Offene Fragen für das Plan-Review
+## 6. Decisions of the plan review (2026-10-05)
 
-1. **Enum-Darstellung:** `as const`-Objekt + Literal-Union (Vorschlag) oder TS-`enum`?
-2. **Pflicht/optional vor U1?** Bis U1 alle Properties optional lassen (Vorschlag) oder
-   übergangsweise Nicht-Nullable als Pflicht deuten (bricht bestehende Aufrufer)?
-3. **`access_token` per Query** überhaupt unterstützen oder nur Cookies (Sicherheit: Tokens in
-   URLs landen in Logs und Proxies)?
-4. **Release:** `1.5.0-preview` auf npm/NuGet veröffentlichen oder nur als lokaler Feed, bis
-   Track T die Form bestätigt hat?
-5. **Andere Emitter** (`py.ts`, `cs.ts`, `js.ts`): U3 dort mitziehen oder getrennt?
+| # | Question | Decision |
+|---|---|---|
+| 6.1 | Enum representation | **`as const` object + literal union** (no TS `enum`) |
+| 6.2 | Required/optional before U1? | **keep everything optional** until U1 delivers `required`; only fix the outdated comment |
+| 6.3 | Accept `access_token` in the query? | **yes, narrowly:** WS upgrade and SSE only, filtered from logs; cookies stay the recommended way |
+| 6.4 | Release of 1.5.0-preview | **local feed first** (tarballs, local NuGet source) until track T confirms the shape; publish afterwards |
+| 6.5 | U3 in the other emitters (`py.ts`, `cs.ts`, `js.ts`)? | **separately**, reasoned in the PR |
+| 6.6 | Order within roadmap step 5 | **Sleipnir (tracks U, T) before the remaining Svelte-style features** |
 
-## 7. Danach (Kontext, nicht Teil dieses Auftrags)
+## 7. Afterwards (context, not part of this task)
 
-Track T in Tsazor: T1 Emitter auf der Upstream-IR (`tsazor-sleipnir generate`), T2
-`SleipnirResult<T>` + `applyServerErrors(editContext, result)`, T3 lebenszyklus-gebundene
-Abos über `observe()`, T4 Verbindungsstatus als Service, T5 Auth, T6 `services.addSleipnir(…)`,
-T7 Migration der Ticker-App. Details: [roadmap-sleipnir.md](roadmap-sleipnir.md).
+Track T in Tsazor: T1 emitter on the upstream IR (`tsazor-sleipnir generate`), T2
+`SleipnirResult<T>` + `applyServerErrors(editContext, result)`, T3 lifecycle-bound
+subscriptions via `observe()`, T4 connection state as a service, T5 auth, T6
+`services.addSleipnir(…)`, T7 migrating the ticker app. Details:
+[roadmap-sleipnir.md](roadmap-sleipnir.md).

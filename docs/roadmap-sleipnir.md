@@ -1,6 +1,6 @@
 # Roadmap — Sleipnir integration (`@tsazor/sleipnir`)
 
-Status: **draft, not started** (2026-10-02). Scheduled after the English docs + tutorial work.
+Status: **plan reviewed** (2026-10-05), track U in progress. Roadmap step 5.
 
 Handoff for the upstream work (findings re-checked against Sleipnir 1.4.3 on 2026-10-04, with two
 corrections): [handoff-sleipnir.md](handoff-sleipnir.md).
@@ -88,4 +88,4 @@ consumer `apps/sleipnir-ticker`.
 |---|---|
 | Where does upstream work happen? | **fresh clone** (e.g. `D:OwnSleipnir`), a feature branch per track-U item, **PR on GitHub** for the maintainer's review; nothing directly on `main` |
 | Emitter in `@tsazor/sleipnir` (on the upstream IR) or `--lang tsazor` in `sleipnir-codegen`? | **`@tsazor/sleipnir`** — keeps Sleipnir framework-free |
-| Plan review first or autonomous execution? | **plan review with the maintainer before starting**, then autonomous with merge approvals |
+| Plan review first or autonomous execution? | **plan review with the maintainer before starting**, then autonomous with merge approvals — **review held 2026-10-05**, decisions in [handoff-sleipnir.md](handoff-sleipnir.md) §6 (enums as `as const` + literal union; everything optional until U1; `access_token` query on WS/SSE only; 1.5.0-preview as a local feed first; other emitters separately; Sleipnir before the Svelte-style features) |
