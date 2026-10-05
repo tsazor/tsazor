@@ -49,6 +49,11 @@ consumer `apps/sleipnir-ticker`.
 - **U4 — Client**: aggregated connection-state observable on `SleipnirTransportRouter`
   (all backends incl. SSE), `category` in `SleipnirErrorBody`, server reads `access_token` on
   WS upgrade/SSE, optional 401 hook (`onUnauthenticated` → refresh → retry once).
+- **U5 — Required and present properties** (change request 2026-10-05, implemented by the
+  maintainer in Sleipnir): discovery reports `required` and `omitted` per property; the TS emitter
+  types responses as present (`name: T` / `T | null`) and inputs by requiredness. Details in
+  [handoff-sleipnir.md](handoff-sleipnir.md) U5. **Status 2026-10-05:** U4 merged (#43), U3 in
+  review (#42), both verified against the ticker from a local 1.5.0-preview.1 feed.
 
 ## Track T — `@tsazor/sleipnir`
 

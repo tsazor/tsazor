@@ -42,6 +42,12 @@ in this repo and is context here.
 
 ## 3. Order
 
+**Status (2026-10-05):** U4 merged (PR #43, `5c67db1`); U3 rebased on it, PR #42 green in review
+(merge approved). Both verified together against `apps/sleipnir-ticker` from a local
+`1.5.0-preview.1` feed (`D:Ownsleipnir-feed`): all checks green, no hand-written changes needed.
+Follow-up: the generated client does not pass through `onUnauthenticated` and `connection` yet
+(small codegen PR after #42). U5 (requiredness) is with the maintainer.
+
 1. **U3 + U4** (small, low risk) → **Sleipnir 1.5.0-preview** as a local feed (§6.4).
 2. **U1 + U2** (discovery extension, validation interceptor) → then U3's required/optional part,
    which needs `required` from U1.
@@ -52,10 +58,8 @@ Track T (Tsazor) starts after the preview and works without U1/U2 at first.
 
 ### U3 — codegen correctness (`clients/codegen`)
 
-- **Required/optional:** once U1 delivers `required`, map the four combinations as
-  `@tsazor/dotnet` does — required + non-nullable ⇒ `name: T`; required + nullable ⇒
-  `name: T | null`; optional ⇒ `name?: T` or `name?: T | null`. Until then: keep the behavior and
-  correct the outdated comment ("discovery carries no requiredness") — decision §6.2.
+- **Required/optional:** see **U5** (change request, implemented by the maintainer). U3 itself
+  kept the behavior and corrected the outdated comment.
 - **Enums:** a real enum identity in the TS output, the wire stays the number — decision §6.1:
   `export const OrderState = { Open: 0, Shipped: 1 } as const;` plus
   `export type OrderState = (typeof OrderState)[keyof typeof OrderState];` — a literal union of
@@ -78,6 +82,57 @@ Track T (Tsazor) starts after the preview and works without U1/U2 at first.
   recommended way (Tsazor's BFF guide `docs/auth.md`); the query is for bearer scenarios in the
   browser only.
 - **401 hook:** optional `onUnauthenticated` → refresh → exactly one retry.
+
+### U5 — required and present properties (change request, 2026-10-05)
+
+**Owner: the Sleipnir maintainer** — implemented in Sleipnir directly and released as a new
+version; Tsazor consumes it. Replaces decision 6.2 ("everything optional until U1").
+
+**Problem.** Every generated DTO property is optional (`name?: T`), although the server always
+writes every property (System.Text.Json serializes all of them, `null` included). Consumers write
+`?.` and `??` for values that can never be missing, while a property that really can be missing
+looks the same. Nullability itself is right (`DateTime?` → `string | null`); what is missing is
+whether the property is *present*. In `apps/sleipnir-ticker`:
+
+```csharp
+public record TickerSnapshot(string Symbol, decimal LastPrice, … string Mode);
+public record TickerFeedStatus(string Mode, string State, DateTime? ConnectedSinceUtc, int Reconnects, string? Detail);
+```
+
+```ts
+// today                                          // wanted
+export interface TickerSnapshot {                 export interface TickerSnapshot {
+  symbol?: string;                                  symbol: string;
+  lastPrice?: number;                               lastPrice: number;
+  …                                                 …
+}                                                 }
+export interface TickerFeedStatus {               export interface TickerFeedStatus {
+  connectedSinceUtc?: string | null;                connectedSinceUtc: string | null;
+  reconnects?: number;                              reconnects: number;
+  detail?: string | null;                           detail: string | null;
+}                                                 }
+```
+
+**Change.**
+
+1. **Discovery** (additive, `discoveryVersion` stays `"1"`) — per property:
+   - `required`: true for a positional-record parameter without a default value, the C#
+     `required` modifier, `[Required]` or `[JsonRequired]`.
+   - `omitted`: when the serializer leaves the property out — `[JsonIgnore(Condition =
+     WhenWritingNull | WhenWritingDefault)]` on the property, or the global
+     `JsonSerializerOptions.DefaultIgnoreCondition`; absent = always written.
+2. **Codegen** (TS emitter; other emitters as they see fit) — by direction:
+   - **Server → client** (return types, event payloads): `name: T`, nullable `name: T | null`;
+     only a property the serializer may omit is `name?: T` (`name?: T | null`).
+   - **Client → server** (parameters): `name: T` when `required`, otherwise `name?: T`.
+   - A type used in both directions: the response form for reading, the requiredness rule for
+     input — split into two emitted types if needed (to be settled in the implementation).
+3. **Result in the ticker:** `this.current.lastPrice` without `?.`; only `connectedSinceUtc` and
+   `detail` stay `| null`.
+
+**Tsazor side once released:** raise the ticker's packages, regenerate, drop the now needless
+`?.`/`??` in `TickerStore.ts`; `@tsazor/sleipnir`'s form models (T1) take `required` for their
+validation decorators.
 
 ### U1 — discovery extension (server, additive)
 
@@ -118,7 +173,7 @@ Track T (Tsazor) starts after the preview and works without U1/U2 at first.
 | # | Question | Decision |
 |---|---|---|
 | 6.1 | Enum representation | **`as const` object + literal union** (no TS `enum`) |
-| 6.2 | Required/optional before U1? | **keep everything optional** until U1 delivers `required`; only fix the outdated comment |
+| 6.2 | Required/optional before U1? | ~~keep everything optional until U1~~ — **superseded by U5** (change request 2026-10-05): discovery reports `required` and `omitted`, the TS emitter types by direction |
 | 6.3 | Accept `access_token` in the query? | **yes, narrowly:** WS upgrade and SSE only, filtered from logs; cookies stay the recommended way |
 | 6.4 | Release of 1.5.0-preview | **local feed first** (tarballs, local NuGet source) until track T confirms the shape; publish afterwards |
 | 6.5 | U3 in the other emitters (`py.ts`, `cs.ts`, `js.ts`)? | **separately**, reasoned in the PR |
