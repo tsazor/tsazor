@@ -108,7 +108,7 @@ architecture and security take priority.
   replaces e.g. a Svelte or React frontend chosen only because Blazor didn't fit. The guide
   covers sharing DTOs (one OpenAPI contract for both), auth (a shared cookie domain), CSS/design
   tokens, and how the same architecture vocabulary (components, DI, EditForm, validation) carries
-  over.
+  over. **Done (2026-10-05):** [coexistence.md](coexistence.md).
 
 **Operations**
 - **E8 — Localization and culture** (done 2026-10-02, `475cec3`; open: the tutorial lesson,
