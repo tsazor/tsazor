@@ -1,99 +1,99 @@
-# 2.4 — Typisierte Prüfungen: Entwurf
+# 2.4 — Typed checks: design
 
-Ziel (Roadmap 2.4): Der Typ-Layer (Shadow-Module) prüft die Komponenten-Verwendung —
-Attributwerte gegen Parametertypen, Slot-Kontexte gegen `RenderFragment<T>`,
-`@ref` gegen den Ziel-Typ — und die Typen wandern durch den Shadow-Graph auch aus
-geschlossenen Dateien. `tsazor check` macht die Prüfungen zum Gate (nichtnull Exit).
+Goal (roadmap 2.4): the type layer (shadow modules) checks component usage —
+attribute values against parameter types, slot contexts against `RenderFragment<T>`,
+`@ref` against the target type — and the types flow through the shadow graph even from
+closed files. `tsazor check` turns the checks into a gate (non-zero exit).
 
-## 1. Compiler — Schatten-Emission (`typedShadow`)
+## 1. Compiler — shadow emission (`typedShadow`)
 
-`CompileOptions.typedShadow` aktiviert schatten-exclusive Emission; echte Builds
-bleiben byte-identisch, außer der `@ref`-Form:
+`CompileOptions.typedShadow` enables shadow-only emission; real builds
+stay byte-identical, except for the `@ref` form:
 
-- **Attribut-Wert-Checks** (T2, „`<Greeter Name="@(123)" Nmae="typo"/>` → 0
-  Diagnostik“): Wert-Attribute bekannter Parameter (Kategorien `value`/`string`,
-  nicht `uncertain`, Metadaten vollständig) emittieren
-  `__builder.addAttribute(seq, "Name", (Wert) satisfies Typ)`. Die Prüfung läuft
-  über den Shadow-TS-Zyklus zurück in die Quelle; `Nmae` ist TZS025 (2.2),
-  der Wert-Verstoß kommt als TS-Diagnostik durch die LSP/CLI-Schicht.
-  Optionale Parameter erhalten `Typ | undefined`. Typ-Text = substituierte
-  Parameter-Annotation aus den 2.1-Metadaten; unbekannte/unsichere Typen werden
-  nicht geprüft (TZS026-Warnung bleibt).
-- **Slot-Kontexttypen**: `RenderFragment<T>` emittiert
-  `(context: Person) => (_builder) => …` statt `(context: any) => …`. Der Typ
-  kommt aus `parameter.typeArgument` (neu wie `type` mit `references` berechnet),
-  substituiert mit den Typ-Argumenten des Tags. Unauflösbar ⇒ unverändert `any`.
-- **Typ-Imports** (2.1-Rest): Referenzen der Parametertypen landen als
-  `import type …` im Schatten — `runtime` über den Runtime-Import-Alias,
-  `import` über einen `rebaseSpecifier`-Hook aus `@tsazor/workspace`
-  (deklarierendes Modul + Spezifier → vom nutzenden Modul auflösbaren Import),
-  `local` ⇒ Parameter ungeprüft (der Typ ist aus dem fremden Modul nicht
-  importierbar).
-- **`@ref`-Typen** (TS2740-False-Positive): Elemente emittieren
-  `this.x = el as HTMLElementTagNameMap[tag]` (SVG analog; unbekannte Tags ohne
-  Cast), Komponenten `addComponentReferenceCapture(seq, (c) => { this.x = c as Typ; })`.
+- **Attribute value checks** (T2, "`<Greeter Name="@(123)" Nmae="typo"/>` → 0
+  diagnostics"): value attributes of known parameters (categories `value`/`string`,
+  not `uncertain`, metadata complete) emit
+  `__builder.addAttribute(seq, "Name", (value) satisfies Type)`. The check runs
+  through the shadow TS cycle back into the source; `Nmae` is TZS025 (2.2),
+  the value violation comes through the LSP/CLI layer as a TS diagnostic.
+  Optional parameters get `Type | undefined`. Type text = substituted
+  parameter annotation from the 2.1 metadata; unknown/uncertain types are
+  not checked (the TZS026 warning stays).
+- **Slot context types**: `RenderFragment<T>` emits
+  `(context: Person) => (_builder) => …` instead of `(context: any) => …`. The type
+  comes from `parameter.typeArgument` (new, computed like `type` with `references`),
+  substituted with the tag's type arguments. Unresolvable ⇒ `any`, unchanged.
+- **Type imports** (2.1 remainder): references of the parameter types land in the
+  shadow as `import type …` — `runtime` via the runtime import alias,
+  `import` via a `rebaseSpecifier` hook from `@tsazor/workspace`
+  (declaring module + specifier → an import resolvable from the using module),
+  `local` ⇒ parameter unchecked (the type cannot be imported from the
+  foreign module).
+- **`@ref` types** (TS2740 false positive): elements emit
+  `this.x = el as HTMLElementTagNameMap[tag]` (SVG likewise; unknown tags without
+  a cast), components `addComponentReferenceCapture(seq, (c) => { this.x = c as Type; })`.
 
-## 2. Runtime — Komponenten-`@ref` fängt die Instanz
+## 2. Runtime — component `@ref` captures the instance
 
-Echtes Blazor-Verhalten: `@ref` an einer Komponente liefert die Instanz, nicht
-das Elternelement (bislang feuerte die Capture-Aktion an Komponenten-Frames gar
-nicht). Neu: `FrameType.ComponentReferenceCapture`,
-`RenderTreeBuilder.addComponentReferenceCapture(sequence, action)`, der Renderer
-feuert die Captures frisch erstellter Komponenten mit der Instanz. Der Codegen
-wechselt für `@ref` an Komponenten-Tags auf die neue API — auch im echten Build
-(DOM-Semantik unverändert, der Cast wird ausgestrichen).
+Real Blazor behavior: `@ref` on a component yields the instance, not
+the parent element (until now the capture action did not fire on component frames at
+all). New: `FrameType.ComponentReferenceCapture`,
+`RenderTreeBuilder.addComponentReferenceCapture(sequence, action)`; the renderer
+fires the captures of freshly created components with the instance. The codegen
+switches to the new API for `@ref` on component tags — in the real build too
+(DOM semantics unchanged, the cast is erased).
 
-## 3. LSP — Typ-Layer für alle Projektdateien (T4)
+## 3. LSP — type layer for all project files (T4)
 
-Der Shadow-Graph hält die Schatten aller `.tsazor` des Projekts, nicht nur der
-offenen Dokumente: Scan beim Initialize, vor jedem Publish aktualisiert,
-`didChangeWatchedFiles` hält neu erstellte/löschbare Dateien aktuell. Damit
-wird `<Greeter @ref="g"/>` gegen die Quelle geschlosener Komponenten geprüft.
+The shadow graph holds the shadows of all `.tsazor` files in the project, not just the
+open documents: scanned on initialize, refreshed before every publish,
+`didChangeWatchedFiles` keeps newly created/deleted files current. This way
+`<Greeter @ref="g"/>` is checked against the source of closed components.
 
-## 4. `TItem`-Inferenz über Typen
+## 4. `TItem` inference via types
 
-Der Type-Service ermittelt für generische Tags ohne vollständige explizite
-Typ-Argumente den Typ des Attributwerts, dessen Parametertyp den Typparameter
-nutzt (exakt oder als Array), aus dem TS-Programm und prüft gegen die
-substituierte Varianten-Schatten. Ohne Auflösung bleibt alles wie bisher
-(Kontext `any`, Parameter ungeprüft) — keine False Positives.
+For generic tags without complete explicit type arguments, the type service
+determines, from the TS program, the type of the attribute value whose parameter type
+uses the type parameter (exactly or as an array), and checks against the
+substituted variant shadow. Without resolution everything stays as before
+(context `any`, parameter unchecked) — no false positives.
 
 ## 5. CLI `tsazor check` (T1) — `@tsazor/cli`
 
-`tsazor check [root]`: kompiliert jedes `.tsazor` des Projekts (Compiler-Diagnostik)
-und lädt alle Schatten in einen `TsazorTypeService` (TS-Syntax- und Semantik-
-Diagnostik, gefiltert wie die LSP-Schicht). Ausgabe `file(line,column) code message`,
-Exit 1 bei Fehlern, sonst 0. Das Vite-Plugin erhält `check: true` (Build-Ende).
+`tsazor check [root]`: compiles every `.tsazor` in the project (compiler diagnostics)
+and loads all shadows into a `TsazorTypeService` (TS syntax and semantic
+diagnostics, filtered like the LSP layer). Output `file(line,column) code message`,
+exit 1 on errors, otherwise 0. The Vite plugin gets `check: true` (end of build).
 
-## 6. Paket-Typen
+## 6. Package types
 
-`@tsazor/fluent` und `@tsazor/components` bauen pro Komponente ein `.d.ts` mit
-typisierten Parametern (aus dem Manifest) statt `export const X: any`. Ambient-
-Typen für `*.tsazor` und `virtual:tsazor-routes` ziehen in
-`@tsazor/vite-plugin/client` — die kopierten `types.d.ts` der Apps entfallen.
-`tsazor check` kommt in die Gate-Scripts jeder App.
+`@tsazor/fluent` and `@tsazor/components` build a `.d.ts` per component with
+typed parameters (from the manifest) instead of `export const X: any`. Ambient
+types for `*.tsazor` and `virtual:tsazor-routes` move into
+`@tsazor/vite-plugin/client` — the apps' copied `types.d.ts` files go away.
+`tsazor check` goes into every app's gate scripts.
 
-## 7. Stand (implementiert, Branch `roadmap/p2-4-typed-checks`)
+## 7. Status (implemented, branch `roadmap/p2-4-typed-checks`)
 
-Umgesetzt wie in §1–§6, mit diesen Deltas:
+Implemented as in §1–§6, with these deltas:
 
-- **Slot-Kontexte:** der Runtime-Platzhalter `typeArgument === "unknown"`
-  (untypisierter Delegat, z. B. Virtualize `itemTemplate`) lässt den Kontext
-  **absichtlich** `any` — das Design sagte nur „unauflösbar ⇒ any"; hier ist
-  der Unterschied, dass er *auflösbar* ist, aber kein echter Typ dahintersteht.
-- **Schatten re-exportieren die Komponentenklasse per Name** (`export { X }`) —
-  nicht im Entwurf, aber nötig, weil Apps Paket-Komponenten als named imports
-  (Rewrite B importieren) und die Schatten sonst TS2614 werfen.
-- **Cross-Package-Cascade:** Schatten importierter Fremdpaket-`.tsazor` (Rewrite-B-
-  Ziele außerhalb des Projektroots) baut der TypeService beim `buildEntry`
-  automatisch mit — cycle-guarded über ein `building`-Set. Der Entwurf hatte den
-  T4-Scan nur für Dateien *innerhalb* des Roots vorgesehen (TS2307 in der Gallery).
-- **`checkProject` ist Two-Pass:** Pass 1 Compiler-Diagnosen + Shadow-Bau aller
-  Dateien, erst dann Pass 2 TS-Diagnosen über den kompletten Graphen — sonst
-  meldet der Typschicht-Import eines Schatten den noch nicht gebauten
-  Nachbar-Schatten als TS2307.
-- **Akzeptanz-Meßpunkt:** die Fixture `packages/lsp/test/check.test.ts` pinnt beide
-  `RedirectToLogin`-Bugs — `this.nav` auf injiziertem `Nav` als TS2551/TS2339
-  (TS gibt bei Nah-Treffer „Did you mean?" statt 2339) und `buildRenderTree` in
-  `@code` als TZS020; der korrigierte Port prüft clean. `tsazor check` gegen das
-  ungetrackte `apps/fluentcms-admin` (read-only): `RedirectToLogin.tsazor` 0 Befunde.
+- **Slot contexts:** the runtime placeholder `typeArgument === "unknown"`
+  (untyped delegate, e.g. Virtualize `itemTemplate`) leaves the context
+  `any` **deliberately** — the design only said "unresolvable ⇒ any"; the
+  difference here is that it *is* resolvable, but there is no real type behind it.
+- **Shadows re-export the component class by name** (`export { X }`) —
+  not in the design, but needed because apps import package components as named imports
+  (Rewrite B) and the shadows would otherwise throw TS2614.
+- **Cross-package cascade:** the TypeService automatically builds shadows of imported
+  foreign-package `.tsazor` files (Rewrite B targets outside the project root) during
+  `buildEntry` — cycle-guarded via a `building` set. The design had planned the
+  T4 scan only for files *inside* the root (TS2307 in the gallery).
+- **`checkProject` is two-pass:** pass 1 compiler diagnostics + shadow build of all
+  files, only then pass 2 TS diagnostics over the complete graph — otherwise
+  a shadow's type-layer import reports the not-yet-built
+  neighbor shadow as TS2307.
+- **Acceptance measuring point:** the fixture `packages/lsp/test/check.test.ts` pins both
+  `RedirectToLogin` bugs — `this.nav` on injected `Nav` as TS2551/TS2339
+  (on a near match TS gives "Did you mean?" instead of 2339) and `buildRenderTree` in
+  `@code` as TZS020; the corrected port checks clean. `tsazor check` against the
+  untracked `apps/fluentcms-admin` (read-only): `RedirectToLogin.tsazor` 0 findings.

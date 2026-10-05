@@ -1,13 +1,13 @@
 /**
- * Auth-Integration (5.2): JWT-Lokal-Dekodierung (Microsoft-Claim-URIs,
- * String/Array-Rollen, UTF-8-Sicherheit), Provider-Benachrichtigungen und der
- * Cookie-Route-Stateful-Pfad über einen gestubbten fetch (401 ⇒ anonym).
+ * Auth integration (5.2): local JWT decoding (Microsoft claim URIs,
+ * string/array roles, UTF-8 safety), provider notifications and the
+ * stateful cookie-route path via a stubbed fetch (401 ⇒ anonymous).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANONYMOUS, TsazorHttp } from "@tsazor/runtime";
 import { CookieAuthenticationStateProvider, JwtAuthenticationStateProvider, attachJwtAuth, decodeJwt, principalFromJwt } from "../src/auth.js";
 
-/** Baut ein handgezeichnetes JWT (header.payload.signature, Base64URL). */
+/** Builds a hand-made JWT (header.payload.signature, Base64URL). */
 function makeJwt(payload: object): string {
   const encode = (part: object) =>
     Buffer.from(JSON.stringify(part), "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -15,36 +15,36 @@ function makeJwt(payload: object): string {
 }
 
 describe("decodeJwt / principalFromJwt", () => {
-  it("dekodiert das Payload UTF-8-sicher und wirft bei Nicht-JWT", () => {
+  it("decodes the payload UTF-8-safely and throws on non-JWT input", () => {
     const claims = decodeJwt(makeJwt({ sub: "u1", name: "Hölger Üßbach", role: ["admin", "staff"], "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": "Hölger Üßbach" }));
     expect(claims.name).toBe("Hölger Üßbach");
     expect(() => decodeJwt("not-a-jwt")).toThrow(/Not a JWT/);
   });
 
-  it("bildet Microsoft-Claim-URIs auf name/roles ab (Name auch kurz und lang)", () => {
+  it("maps Microsoft claim URIs to name/roles (name in both short and long form)", () => {
     const longName = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";
     const longRole = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
     const principal = principalFromJwt(makeJwtClaims({ [longName]: "Ada", [longRole]: ["admin", "staff"] }));
     expect(principal.name).toBe("Ada");
     expect(principal.isAuthenticated).toBe(true);
     expect([...principal.roles]).toEqual(["admin", "staff"]);
-    // Kurze Formen
+    // Short forms
     expect(principalFromJwt(makeJwtClaims({ name: "Bob", role: "reader" })).name).toBe("Bob");
     expect([...principalFromJwt(makeJwtClaims({ name: "Bob", role: "reader" })).roles]).toEqual(["reader"]);
-    // Fallback auf sub
+    // Fallback to sub
     expect(principalFromJwt(makeJwtClaims({ sub: "sub-9" })).name).toBe("sub-9");
     expect(principalFromJwt(makeJwtClaims({ sub: "sub-9" })).isAuthenticated).toBe(true);
   });
 });
 
-// Helper: decodeJwt erwartet ein Token — claims direkt ins Mapping geben.
+// Helper: decodeJwt expects a token — feed the claims straight into the mapping.
 function makeJwtClaims(payload: Record<string, unknown>): Record<string, string> {
   const jwt = decodeJwt(makeJwt(payload));
   return jwt as unknown as Record<string, string>;
 }
 
 describe("JwtAuthenticationStateProvider", () => {
-  it("startet mit dem Token, meldet setToken/logout und fällt bei kaputtem Token auf anonym", async () => {
+  it("starts with the token, reports setToken/logout and falls back to anonymous on a broken token", async () => {
     const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada", role: "admin" }));
     const states: string[] = [];
     const stop = provider.subscribe((state) => states.push(state.user.name));
@@ -62,13 +62,13 @@ describe("JwtAuthenticationStateProvider", () => {
     expect((await broken.getState()).user.isAuthenticated).toBe(false);
   });
 
-  it("attachJwtAuth fügt den Bearer-Header an (und überschreibt nicht bestehende)", async () => {
+  it("attachJwtAuth adds the Bearer header (and does not overwrite existing ones)", async () => {
     const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
     const http = new TsazorHttp();
     const detach = attachJwtAuth(http, provider);
     const seen: string[] = [];
     const fetchMock = vi.fn(async (request: Request) => {
-      seen.push(request.headers.get("authorization") ?? "(keine)");
+      seen.push(request.headers.get("authorization") ?? "(none)");
       return new Response("{}", { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -91,7 +91,7 @@ describe("CookieAuthenticationStateProvider", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fragt den Session-Endpunkt und baut createUser mit Rollen/Claims", async () => {
+  it("queries the session endpoint and builds createUser with roles/claims", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response(JSON.stringify({ user: { name: "Ada", roles: "admin", claims: { tenant: ["t1"] } } }), { status: 200 })),
@@ -103,7 +103,7 @@ describe("CookieAuthenticationStateProvider", () => {
     expect(state.user.claims).toEqual([{ type: "tenant", value: "t1" }]);
   });
 
-  it("ist anonym bei leerer user-Form (Logout-Signal des Servers)", async () => {
+  it("is anonymous on an empty user shape (the server's logout signal)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ user: undefined }), { status: 200 })));
     const provider = new CookieAuthenticationStateProvider(new TsazorHttp());
     expect((await provider.getState()).user.isAuthenticated).toBe(false);

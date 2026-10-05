@@ -1,92 +1,92 @@
-# Handoff — LSP v2 (Stand: VSIX 0.3.4 installiert, Restart ausstehend) — 2026-09-29
+# Handoff — LSP v2 (status: VSIX 0.3.4 installed, restart pending) — 2026-09-29
 
-Session-Fortsetzungsdatei für Claude Code. **Alles von heute ist committet und als VSIX 0.3.4 installiert** — die offene User-Aktion ist nur noch: **VS Code neu starten** (Extension-Host-Reload reicht ggf.). Dieser Prozess (Claude-Session) überlebt den Restart ggf. nicht — alles Relevante steht hier und im Commit-Verlauf (`git log`).
+Session continuation file for Claude Code. **Everything from today is committed and installed as VSIX 0.3.4** — the only open user action is: **restart VS Code** (an extension host reload may suffice). This process (the Claude session) may not survive the restart — everything relevant is here and in the commit history (`git log`).
 
-## Getan heute (2026-09-29, committed auf `main`)
+## Done today (2026-09-29, committed on `main`)
 
-| Commit | Inhalt |
+| Commit | Content |
 |---|---|
-| `5e71b76` | Runtime: `AttributeValue \| object`, `ComponentType`-Union, `EventCallback<any>` (addEventHandler/AttributeValue), Re-Wrap-Fix `bind`/`invokeAsync` (+ Test) |
-| `3a4b437` | Compiler: token-precise Source-Maps (codeStart-Spans; plumbing anchor-frei) |
-| `a3288b0` | Workspace: Named-Export-Auflösung + `isJsGlobal`-Guard (+ Test) |
-| `9c924de` | LSP: `prettifyHoverDisplay`/`sanitizeDoc` + Diag-Filter TS2307/TS2564 (+ Tests) |
-| `6646392` | VS Code: Grammar `#component-tag` + 0.3.4 + `docs/handoff-lsp-v2.md` |
+| `5e71b76` | Runtime: `AttributeValue \| object`, `ComponentType` union, `EventCallback<any>` (addEventHandler/AttributeValue), re-wrap fix `bind`/`invokeAsync` (+ test) |
+| `3a4b437` | Compiler: token-precise source maps (codeStart spans; plumbing anchor-free) |
+| `a3288b0` | Workspace: named-export resolution + `isJsGlobal` guard (+ test) |
+| `9c924de` | LSP: `prettifyHoverDisplay`/`sanitizeDoc` + diag filter TS2307/TS2564 (+ tests) |
+| `6646392` | VS Code: grammar `#component-tag` + 0.3.4 + `docs/handoff-lsp-v2.md` |
 
-**Fix-Ursachen (Kernpunkt, nicht vergessen):**
-1. **„`target` on `never`" auf `@bind`-Lambdas** (Login.tsazor): `addEventHandler(…, EventCallback<never>)` war als *kontextueller* Rückgabetyp eine Inferencing-Falle — `bind<TArg>` leitete `TArg = never` her, und das generierte `(e) => …` bekam `e: never` → TS2339 auf `e.target`. Fix: `EventCallback<any>` in render-tree (Signatur + AttributeValue-Member). Die auffälligen Spalten 100/119 hinter dem Zeilenende kamen aus dem Synthetic-Region-Mapping dieser Diagnose und sind mit ihr weg.
-2. **Double-Wrap `EventCallback.bind`**: der Compiler umwickelt ALLE on*-Attribute mit `bind(this, …)` — hält man eine `EventCallback`-Instanz in @code (FormDemo `handleSubmit`), gab es TS2345 im Shadow **und** einen latenten RuntimeError (EventCallback-Objekt als Funktion gerufen). Fix: `bind` akzeptiert `EventCallback` als Delegate, `invokeAsync` entpackt (Blazors EventCallbackFactory).
-3. **Shadow-Falsch-Positive gefiltert** (`tsDiagnostics`): TS2307 auf statische Assets (`.css`/Fonts/Bilder — vite serviert, kein d.ts) und TS2564 für `@Parameter`-Properties (Renderer setzt Parameter vor dem ersten Render, Blazor-Semantik).
+**Root causes of the fixes (key point, do not forget):**
+1. **"`target` on `never`" on `@bind` lambdas** (Login.tsazor): `addEventHandler(…, EventCallback<never>)` was an inference trap as a *contextual* return type — `bind<TArg>` inferred `TArg = never`, and the generated `(e) => …` got `e: never` → TS2339 on `e.target`. Fix: `EventCallback<any>` in render-tree (signature + AttributeValue member). The conspicuous columns 100/119 past the end of the line came from the synthetic-region mapping of this diagnostic and are gone with it.
+2. **Double wrap `EventCallback.bind`**: the compiler wraps ALL on* attributes with `bind(this, …)` — if you hold an `EventCallback` instance in @code (FormDemo `handleSubmit`), there was TS2345 in the shadow **and** a latent RuntimeError (EventCallback object called as a function). Fix: `bind` accepts an `EventCallback` as delegate, `invokeAsync` unwraps it (Blazor's EventCallbackFactory).
+3. **Shadow false positives filtered** (`tsDiagnostics`): TS2307 on static assets (`.css`/fonts/images — served by Vite, no d.ts) and TS2564 for `@Parameter` properties (the renderer sets parameters before the first render, Blazor semantics).
 
-Gelöst in der Runde davor (ebenfalls committed): „Components sind rot" (TextMate `#component-tag`), `AttributeValue | object` (Checkout 2345), `isJsGlobal`-Guard (Rollup-Build brach an `import { Math }`).
+Solved in the round before (also committed): "components are red" (TextMate `#component-tag`), `AttributeValue | object` (Checkout 2345), `isJsGlobal` guard (the Rollup build broke on `import { Math }`).
 
-## Verifizierung nach dem Restart (Checkliste)
+## Verification after the restart (checklist)
 
-VSIX 0.3.4 installiert (`code --list-extensions` → `tsazor.tsazor-vscode@0.3.4`); node_modules-Symlink zeigt auf packages/runtime/dist, das neu gebaut ist.
+VSIX 0.3.4 installed (`code --list-extensions` → `tsazor.tsazor-vscode@0.3.4`); the node_modules symlink points to packages/runtime/dist, which is freshly built.
 
-1. **Login.tsazor** — 0 `tsazor-ts`-Diagnostics (war der Ausgangspunkt: 2339 `target`/`never` @ 14:100/18:119).
-2. **FormDemo.tsazor** — 0 Diagnostics (Double-Wrap TS2345 @ 10:91 weg).
-3. **EventLog.tsazor / Sparkline.tsazor** — TS2564 („no initializer") auf `@Parameter`-Properties weg.
-4. **Map.tsazor** — TS2307 auf `leaflet/dist/leaflet.css` weg.
-5. **Checkout.tsazor** — 0 Diagnostics (Regression-Check von 0.3.3).
-6. **Tags blau** (Grammar, bestätigt in 0.3.3), Hover/Kompletion/Go-to-Def unverändert funktionieren.
+1. **Login.tsazor** — 0 `tsazor-ts` diagnostics (this was the starting point: 2339 `target`/`never` @ 14:100/18:119).
+2. **FormDemo.tsazor** — 0 diagnostics (double-wrap TS2345 @ 10:91 gone).
+3. **EventLog.tsazor / Sparkline.tsazor** — TS2564 ("no initializer") on `@Parameter` properties gone.
+4. **Map.tsazor** — TS2307 on `leaflet/dist/leaflet.css` gone.
+5. **Checkout.tsazor** — 0 diagnostics (regression check from 0.3.3).
+6. **Tags blue** (grammar, confirmed in 0.3.3), hover/completion/go-to-definition keep working unchanged.
 
-**Erwartet WEITERHIN Probleme (echte User-Code-Fehler — absichtlich nicht gefiltert):**
-- `blazing-pizza/src/App.tsazor:1` — `NotFound="@notFound"`, Member existiert nicht in @code (nur `found`/`notAuthorized`).
-- `blazing-pizza/…/ConfigurePizzaDialog.tsazor:13` — `@PIZZA_MINIMUM_SIZE`/`@PIZZA_MAXIMUM_SIZE` nie deklariert; Workshop nutzt dort statische `min`/`max`.
-- `demo/Pages/CodeBehindDemo.tsazor:6` — `@(code)` wird als Ausdruck ausgewertet (Variable `code` existiert nicht); als Text: `@@code`.
-- `sleipnir-ticker/…/EventLog.tsazor:9` — `entry.snapshot.lastPrice?: number` → `price(value: number)`; `?? 0` im Markup oder Typ entschärfen.
+**STILL expected to show problems (real user code errors — deliberately not filtered):**
+- `blazing-pizza/src/App.tsazor:1` — `NotFound="@notFound"`, the member does not exist in @code (only `found`/`notAuthorized`).
+- `blazing-pizza/…/ConfigurePizzaDialog.tsazor:13` — `@PIZZA_MINIMUM_SIZE`/`@PIZZA_MAXIMUM_SIZE` never declared; the workshop uses static `min`/`max` there.
+- `demo/Pages/CodeBehindDemo.tsazor:6` — `@(code)` is evaluated as an expression (variable `code` does not exist); as text: `@@code`.
+- `sleipnir-ticker/…/EventLog.tsazor:9` — `entry.snapshot.lastPrice?: number` → `price(value: number)`; defuse with `?? 0` in the markup or in the type.
 
-Verifiziert vor dem Packen: Suites compiler 63 / workspace 6 / lsp 63 / runtime 51 grün, beide Smokes PASS (`node packages/vscode/scripts/smoke-*.mjs`).
+Verified before packing: suites compiler 63 / workspace 6 / lsp 63 / runtime 51 green, both smokes PASS (`node packages/vscode/scripts/smoke-*.mjs`).
 
-## Offen / nicht committed
+## Open / not committed
 
-- **`apps/demo/src/Pages/Counter.tsazor`** — User-Hand-Änderung (`private currentCount : number = 0;`) bleibt uncommitted bis zur Entscheidung des Users (reindehen als Mini-Commit oder zurücknehmen).
-- **Dieser Handoff-Text** (die Überarbeitung nach dem Restart) ist uncommitted — bei nächster Freigabe mit einpacken.
-- v3-Backlog (docs/language-server.md): Rename, Refactors, Suggestions, Code-Actions, Auto-Imports.
-- Option für später: echte **Semantic-Tokens** im LSP (PascalCase-Tags als Token-Type „type") — könnte unresolvierte vs. aufgelöste Components unterscheiden; Grammar-Fix deckt das Red-Problem aber vollständig ab.
-- `@(...)`-Explicit-Expression als Sprachfeature? (Parser kann es noch nicht; Blazor hat es.) CodeBehindDemo zeigt den praktischen Nutzen.
-- 4 echte User-Code-Fehler oben — fixe ich auf Zuruf.
+- **`apps/demo/src/Pages/Counter.tsazor`** — the user's manual change (`private currentCount : number = 0;`) stays uncommitted until the user decides (fold in as a mini commit or revert).
+- **This handoff text** (the revision after the restart) is uncommitted — include it with the next approval.
+- v3 backlog (docs/language-server.md): rename, refactors, suggestions, code actions, auto-imports.
+- Option for later: real **semantic tokens** in the LSP (PascalCase tags as token type "type") — could distinguish unresolved vs. resolved components; but the grammar fix fully covers the red problem.
+- `@(...)` explicit expression as a language feature? (The parser cannot do it yet; Blazor has it.) CodeBehindDemo shows the practical benefit.
+- 4 real user code errors above — I fix them on request.
 
-## Laufende Prozesse (überleben den VS-Code-Restart nur, wenn außerhalb gestartet)
+## Running processes (survive the VS Code restart only if started outside it)
 
-- Blazing Pizza API: `pnpm --filter blazing-pizza server` → :5300 (Seed-User `test@example.com` / `test1234`)
-- Blazing Pizza Frontend: `pnpm --filter blazing-pizza dev` → :5301
-- sleipnir-ticker bei Bedarf: `pnpm --filter sleipnir-ticker api` (:5310) + `dev` (:5311)
+- Blazing Pizza API: `pnpm --filter blazing-pizza server` → :5300 (seed user `test@example.com` / `test1234`)
+- Blazing Pizza frontend: `pnpm --filter blazing-pizza dev` → :5301
+- sleipnir-ticker when needed: `pnpm --filter sleipnir-ticker api` (:5310) + `dev` (:5311)
 
-## Gotchas (nicht verlieren)
+## Gotchas (do not lose)
 
-1. **VSIX-Verifizierung per Extraktion braucht die VOLLE Entpackung** — ohne `extension/dist/lib` (100 d.ts) fällt `resolveLibDir` auf `dirname(getDefaultLibFileName)` = "" und die Typauflösung degradiert scheinbar. Einzeldatei-Extraktion fälscht kaputte Engines.
-2. **LSP-Stand vs. Editor:** dist kann schon neu sein, ohne dass die VSIX neu geraakt war — deshalb „es hat nicht funktioniert". Regel: nach Engine-Änderungen IMMER build → pack → install → VS-Code-Reload.
-3. **LSP-stdio-Probe:** `projectRootOf` liest nur `workspaceFolders[0]` (nicht `rootUri`) — Probes ohne `workspaceFolders` landen auf `process.cwd()`. Server-Fehler gehen als `window/logMessage` (nicht stderr). Publish ist debounced; **erste v2-Analyse großer Projekte > 5 s — Probe-Timeout ≥ 30 s**. didOpen MUSS den echten Disk-Inhalt senden (didOpen ersetzt den Dokumentinhalt!).
-4. **Klasseninstanzen als Attributwerte:** `Record<string, unknown>` ist zu streng für TS-Klassen ohne Index-Signature — `AttributeValue` hat jetzt `object` als Fallback-Member. Konsum bleibt `unknown`.
-5. **JS-Globals in `@code`:** `Math`, `Date`, `Record`, … dürfen NIEMALS importiert werden (Rollup bricht an fehlendem Export). Guard lebt in `resolveType` (Chokepoint für Compiler/vite/LSP-Shadow).
-6. **Inferencing-Falle bei generierten Handlern:** kontextuelle `EventCallback<never>` macht Lambda-Parameter zu `never` — generierte Handler-Signaturen immer permissiv typisieren (`any`), nie `never`.
-7. **Compiler Double-Wrap:** on*-Attribute werden ohne Typblick mit `EventCallback.bind` umwickelt — `@Parameter`-Metadaten/Halter-Felder mit EventCallback-Instanz müssen beim Runtime-Invoking entpackt werden (event-callback.ts).
+1. **VSIX verification by extraction needs the FULL unpack** — without `extension/dist/lib` (100 d.ts) `resolveLibDir` falls back to `dirname(getDefaultLibFileName)` = "" and type resolution appears to degrade. Single-file extraction fakes broken engines.
+2. **LSP state vs. editor:** dist can already be new without the VSIX having been repacked — hence "it didn't work". Rule: after engine changes ALWAYS build → pack → install → VS Code reload.
+3. **LSP stdio probe:** `projectRootOf` reads only `workspaceFolders[0]` (not `rootUri`) — probes without `workspaceFolders` land on `process.cwd()`. Server errors go out as `window/logMessage` (not stderr). Publishing is debounced; **the first v2 analysis of large projects > 5 s — probe timeout ≥ 30 s**. didOpen MUST send the real disk content (didOpen replaces the document content!).
+4. **Class instances as attribute values:** `Record<string, unknown>` is too strict for TS classes without an index signature — `AttributeValue` now has `object` as a fallback member. Consumption stays `unknown`.
+5. **JS globals in `@code`:** `Math`, `Date`, `Record`, … must NEVER be imported (Rollup breaks on the missing export). The guard lives in `resolveType` (chokepoint for compiler/vite/LSP shadow).
+6. **Inference trap with generated handlers:** a contextual `EventCallback<never>` turns lambda parameters into `never` — always type generated handler signatures permissively (`any`), never `never`.
+7. **Compiler double wrap:** on* attributes are wrapped with `EventCallback.bind` without looking at types — `@Parameter` metadata/holder fields with an EventCallback instance must be unwrapped when the runtime invokes them (event-callback.ts).
 
-## Architektur-Kurzreferenz (v2)
+## Architecture quick reference (v2)
 
-| File | Rolle |
+| File | Role |
 |---|---|
-| `packages/lsp/src/shadow-module.ts` | Shadow-Pipeline (Spiegel des vite-plugins) + Rewrites A (relative .tsazor-Imports → eigene Shadows) / B (bare-Package → mitgelieferte `src/*.tsazor`); `compile-throw → null` → v1-Fallback |
-| `packages/lsp/src/ts-mapping.ts` | `TsazorGenMap` — dependency-freie Positionsübersetzung über die rohen Compiler-Mappings (genLine 1-basiert am Eingang, → 0-basiert) |
-| `packages/lsp/src/ts-service.ts` | `TsazorTypeService` — Host + Shadow-Registry (mtime-Cache), `buildVariant` (Queries MÜSSEN den Variant-`virtualPath` adressieren, Base-Registry-Key zeigt weiterhin un-gepatcht) |
-| `packages/lsp/src/ts-features.ts` | Routing + Übersetzung: `classifyCodeContext`, `tsCompletions/tsHover/tsDefinition/tsDiagnostics` (+ `prettifyHoverDisplay`/`sanitizeDoc`, Diag-Filter 2307/2564) |
-| `packages/vscode/build.mjs` | Bundle + kopiert `typescript/lib/*.d.ts` → `dist/lib` (100 Dateien); resolveLibDir-Fallback: dirname(argv[1])/lib; env `TSAZOR_TS_LIB_DIR` |
-| `packages/vscode/scripts/smoke-ts.mjs`, `smoke-completion.mjs` | stdio-Smokes; gegen alternative Server mit env `TSAZOR_SMOKE_SERVER=<pfad>` |
+| `packages/lsp/src/shadow-module.ts` | Shadow pipeline (mirror of the vite-plugin) + rewrites A (relative .tsazor imports → own shadows) / B (bare package → shipped `src/*.tsazor`); `compile-throw → null` → v1 fallback |
+| `packages/lsp/src/ts-mapping.ts` | `TsazorGenMap` — dependency-free position translation over the raw compiler mappings (genLine 1-based at the input, → 0-based) |
+| `packages/lsp/src/ts-service.ts` | `TsazorTypeService` — host + shadow registry (mtime cache), `buildVariant` (queries MUST address the variant's `virtualPath`, the base registry key still points to the unpatched one) |
+| `packages/lsp/src/ts-features.ts` | Routing + translation: `classifyCodeContext`, `tsCompletions/tsHover/tsDefinition/tsDiagnostics` (+ `prettifyHoverDisplay`/`sanitizeDoc`, diag filter 2307/2564) |
+| `packages/vscode/build.mjs` | Bundles + copies `typescript/lib/*.d.ts` → `dist/lib` (100 files); resolveLibDir fallback: dirname(argv[1])/lib; env `TSAZOR_TS_LIB_DIR` |
+| `packages/vscode/scripts/smoke-ts.mjs`, `smoke-completion.mjs` | stdio smokes; against alternative servers with env `TSAZOR_SMOKE_SERVER=<path>` |
 
-## Wichtigste v2-Erkenntnisse (Gotchas, nicht verlieren)
+## Key v2 insights (gotchas, do not lose)
 
-1. **Trailing-Dot-Split**: `<p>@ticker.</p>` compiliert in ZWEI Statements — die Expression endet VOR dem Punkt (Punkt = eigener Text-Knoten). Completion dahinter: Variante, die einen Platzhalter-Ident anfügt (`@ticker.` → `this.ticker.__tsazorQuery`), dann Query direkt hinter dem gebackenen Punkt.
-2. **`@(...)` ist KEINE Syntax des Tsazor-Parsers** — compiliert als Literaltext; `@@` ist Escape.
-3. **Klassifizierung ist end-exklusiv** vs. Cursor, und das Zeichen vor dem Cursor nach `@ticker.` liegt im Text-Knoten → `expressionPrefixBefore` (roher Text) übersteuert `classifyCodeContext`; Zeilenanfang `@word` bleibt v1-Direktiven-Kontext.
-4. **Server-Gate in `onCompletion`** darf NICHT vorab auf `classify === "code"` prüfen — `tsCompletions` routet intern.
-5. **TS-Lib-Optionen** brauchen volle Dateinamen (`lib.es2022.d.ts`, …), nie `types: []` mit expliziter lib, `libReplacement: false`.
-6. **Windows:** Shadow-Keys lowercased, `getCanonicalFileName` lowercase, `getDefaultLibLocation`/`useCaseSensitiveFileNames` hinter `as ts.LanguageServiceHost`-Cast.
-7. **Diagnostics-Policy**: nur gemappte semantische Diagnostics (nicht mappbares Plumbing fällt implizit weg), Cap 200, `source: "tsazor-ts"`, Toggle `initializationOptions.tsDiagnostics`; Filter TS2307 (Assets) / TS2564 (@Parameter).
-8. **VSIX-Verpackung**: `npx @vscode/vsce@3.1.0 package --no-dependencies` (neuere vsce bricht an ESM-only parse5); Extension lädt Server via `context.asAbsolutePath("dist/server.js")`.
-9. **Build-Kette nach sourcnahen Änderungen**: `pnpm -r build` (topologisch: compiler → workspace → runtime → vite-plugin (esbuild!) → Components → Apps → tsazor-vscode) → Smokes. Runtime-dist ist auch für den LSP relevant — der Shadow löst `@tsazor/runtime` über die node_modules-Symlinks auf `packages/runtime/dist/index.d.ts` auf (nach Runtime-Änderungen IMMER `tsc -b` in runtime!)
+1. **Trailing-dot split**: `<p>@ticker.</p>` compiles into TWO statements — the expression ends BEFORE the dot (the dot = its own text node). Completion after it: a variant that appends a placeholder identifier (`@ticker.` → `this.ticker.__tsazorQuery`), then query directly behind the baked dot.
+2. **`@(...)` is NOT syntax of the Tsazor parser** — compiles as literal text; `@@` is the escape.
+3. **Classification is end-exclusive** relative to the cursor, and the character before the cursor after `@ticker.` lies in the text node → `expressionPrefixBefore` (raw text) overrides `classifyCodeContext`; `@word` at line start stays the v1 directive context.
+4. **The server gate in `onCompletion`** must NOT check `classify === "code"` up front — `tsCompletions` routes internally.
+5. **TS lib options** need full file names (`lib.es2022.d.ts`, …), never `types: []` with an explicit lib, `libReplacement: false`.
+6. **Windows:** shadow keys lowercased, `getCanonicalFileName` lowercase, `getDefaultLibLocation`/`useCaseSensitiveFileNames` behind an `as ts.LanguageServiceHost` cast.
+7. **Diagnostics policy**: only mapped semantic diagnostics (unmappable plumbing drops out implicitly), cap 200, `source: "tsazor-ts"`, toggle `initializationOptions.tsDiagnostics`; filter TS2307 (assets) / TS2564 (@Parameter).
+8. **VSIX packaging**: `npx @vscode/vsce@3.1.0 package --no-dependencies` (newer vsce breaks on ESM-only parse5); the extension loads the server via `context.asAbsolutePath("dist/server.js")`.
+9. **Build chain after source-level changes**: `pnpm -r build` (topological: compiler → workspace → runtime → vite-plugin (esbuild!) → components → apps → tsazor-vscode) → smokes. The runtime dist matters for the LSP too — the shadow resolves `@tsazor/runtime` via the node_modules symlinks to `packages/runtime/dist/index.d.ts` (after runtime changes ALWAYS `tsc -b` in runtime!)
 
-## Git-Konventionen
+## Git conventions
 
-- Commits nur nach User-Freigabe; Message-Ende: `Co-Authored-By: Claude Code <noreply@anthropic.com>`.
-- Deutscher Ton mit dem User; Repo-Doku überwiegend Englisch.
+- Commits only after user approval; message ending: `Co-Authored-By: Claude Code <noreply@anthropic.com>`.
+- German with the user; repo docs mostly English.

@@ -1,7 +1,7 @@
 /**
- * 4.1 — HMR-Invalidierung: Semantik von planInvalidation (pure), die
- * Windows-Regeln der Registry und die Umschaltung auf Vites Modul-Graph
- * (tsazorHotUpdate) mit einem Stub-Dev-Server.
+ * 4.1 — HMR invalidation: semantics of planInvalidation (pure), the
+ * registry's Windows rules and the hand-off to Vite's module graph
+ * (tsazorHotUpdate) with a stub dev server.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,7 +15,7 @@ import { transformTsazor } from "../src/transform";
 
 type Metadata = CodegenResult["metadata"];
 
-/** Metadata-Objekt mit den Pflichtfeldern des Compilers. */
+/** Metadata object with the compiler's required fields. */
 function metadata(overrides: Partial<Metadata> = {}): Metadata {
   return {
     routeTemplates: [],
@@ -49,8 +49,8 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-describe("planInvalidation: Semantik", () => {
-  it("create: eine neue Komponente re-transformiert Dateien mit vorher unaufgelöstem Tag", async () => {
+describe("planInvalidation: semantics", () => {
+  it("create: a new component re-transforms files with a previously unresolved tag", async () => {
     const registry = new TransformRegistry();
     const page = path.join(root, "Pages", "Home.tsazor");
     registry.recordTransform(page, metadata({ unresolvedTags: ["HmrBadge"] }), []);
@@ -61,7 +61,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.routesModule).toBe(false);
   });
 
-  it("create: eine neue @page-Seite aktualisiert das Routen-Manifest", async () => {
+  it("create: a new @page page updates the route manifest", async () => {
     const registry = new TransformRegistry();
     const plan = await planInvalidation(
       context(path.join(root, "Pages", "Imprint.tsazor"), "create", registry, metadata({ routeTemplates: ["/imprint"] })),
@@ -69,7 +69,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.routesModule).toBe(true);
   });
 
-  it("create: ein neues Layout, das eine Seite als @layout nennt, aktualisiert das Routen-Manifest", async () => {
+  it("create: a new layout that a page names as @layout updates the route manifest", async () => {
     const registry = new TransformRegistry();
     const page = path.join(root, "Pages", "Home.tsazor");
     registry.recordTransform(page, metadata({ layout: "FancyLayout" }), []);
@@ -79,7 +79,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.routesModule).toBe(true);
   });
 
-  it("create: neue Komponente ohne Routen-Bezug berährt das Routen-Manifest nicht", async () => {
+  it("create: a new component unrelated to routes leaves the route manifest untouched", async () => {
     const registry = new TransformRegistry();
     const plan = await planInvalidation(
       context(path.join(root, "Shared", "Badge.tsazor"), "create", registry, metadata()),
@@ -88,7 +88,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.retransform).toEqual([]);
   });
 
-  it("update: `@page` dazwischen re-transformiert nur Verbraucher und das Manifest", async () => {
+  it("update: an added `@page` re-transforms only consumers and the manifest", async () => {
     const registry = new TransformRegistry();
     const page = path.join(root, "Pages", "Home.tsazor");
     registry.recordTransform(page, metadata({ unresolvedTags: [] }), [path.join(root, "Shared", "Badge.tsazor")]);
@@ -104,7 +104,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.routesModule).toBe(true);
   });
 
-  it("update: reine Markup-Änderung verändert das Routen-Manifest nicht", async () => {
+  it("update: a markup-only change does not alter the route manifest", async () => {
     const registry = new TransformRegistry();
     const page = path.join(root, "Pages", "Home.tsazor");
     registry.recordTransform(page, metadata(), [path.join(root, "Shared", "Badge.tsazor")]);
@@ -115,7 +115,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.retransform).toEqual([page]);
   });
 
-  it("delete: eine entfernte @page-Seite aktualisiert das Routen-Manifest und entlädt den Registry-Eintrag", async () => {
+  it("delete: a removed @page page updates the route manifest and drops the registry entry", async () => {
     const registry = new TransformRegistry();
     const page = path.join(root, "Pages", "Imprint.tsazor");
     registry.recordTransform(page, metadata({ routeTemplates: ["/imprint"] }), []);
@@ -124,7 +124,7 @@ describe("planInvalidation: Semantik", () => {
     expect(registry.get(page)).toBeUndefined();
   });
 
-  it("_Imports.tsazor: Änderung re-transformiert alle Dateien darunter (via Scanner)", async () => {
+  it("_Imports.tsazor: a change re-transforms all files below it (via scanner)", async () => {
     const registry = new TransformRegistry();
     const importsFile = path.join(root, "_Imports.tsazor");
     const home = path.join(root, "Pages", "Home.tsazor");
@@ -141,7 +141,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.routesModule).toBe(false);
   });
 
-  it("_Imports.tsazor: geändertes @layout aktualisiert das Routen-Manifest", async () => {
+  it("_Imports.tsazor: a changed @layout updates the route manifest", async () => {
     const registry = new TransformRegistry();
     const importsFile = path.join(root, "_Imports.tsazor");
     registry.recordDynamic(importsFile, metadata({ layout: "MainLayout" }), true);
@@ -154,7 +154,7 @@ describe("planInvalidation: Semantik", () => {
     expect(registry.get(importsFile)?.layoutName).toBe("FancyLayout");
   });
 
-  it("_Imports.tsazor ohne vorherigen Eintrag (Startup) aktualisiert das Manifest nicht", async () => {
+  it("_Imports.tsazor without a previous entry (startup) does not update the manifest", async () => {
     const registry = new TransformRegistry();
     const importsFile = path.join(root, "_Imports.tsazor");
     const plan = await planInvalidation(
@@ -165,7 +165,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.routesModule).toBe(false);
   });
 
-  it("Code-behind (.tsazor.ts): Besitzer und Tag-Verbraucher werden neu transformiert", async () => {
+  it("code-behind (.tsazor.ts): owner and tag consumers are re-transformed", async () => {
     const registry = new TransformRegistry();
     const owner = path.join(root, "Shared", "Badge.tsazor");
     const consumer = path.join(root, "Pages", "Home.tsazor");
@@ -175,7 +175,7 @@ describe("planInvalidation: Semantik", () => {
     expect(touched).toEqual([normalizeFileKey(owner), normalizeFileKey(consumer)].sort());
   });
 
-  it("CSS-Sidecar: Änderung macht Vite selbst; Hinzufügen re-transformiert den Besitzer", async () => {
+  it("CSS sidecar: Vite handles changes itself; adding one re-transforms the owner", async () => {
     const registry = new TransformRegistry();
     const owner = path.join(root, "Shared", "Badge.tsazor");
     const update = await planInvalidation(context(`${owner}.css`, "update", registry, undefined));
@@ -186,7 +186,7 @@ describe("planInvalidation: Semantik", () => {
     expect(create.fullReload).toBe(false);
   });
 
-  it("CSS-Sidecar: Entfernen erzwingt einen vollen Reload (injizierte <style>-Tags überleben HMR nicht)", async () => {
+  it("CSS sidecar: removal forces a full reload (injected <style> tags do not survive HMR)", async () => {
     const registry = new TransformRegistry();
     const plan = await planInvalidation(
       context(`${path.join(root, "Shared", "Badge.tsazor")}.css`, "delete", registry, undefined),
@@ -195,7 +195,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.retransform).toEqual([path.join(root, "Shared", "Badge.tsazor")]);
   });
 
-  it("beliebiges .ts (Basiskette): Rückwärtskanten aus dem 2.1-Cache werden übernommen", async () => {
+  it("any .ts (base chain): reverse edges from the 2.1 cache are used", async () => {
     const registry = new TransformRegistry();
     const dependent = path.join(root, "Shared", "Derived.tsazor");
     registry.recordTransform(dependent, metadata(), []);
@@ -207,7 +207,7 @@ describe("planInvalidation: Semantik", () => {
     expect(plan.retransform).toEqual([dependent]);
   });
 
-  it("Entfernte Komponente: Verbraucher werden neu transformiert, Manifest nur bei Routen/Layout-Bezug", async () => {
+  it("removed component: consumers are re-transformed, manifest only when routes/layouts are involved", async () => {
     const registry = new TransformRegistry();
     const badge = path.join(root, "Shared", "Badge.tsazor");
     const consumer = path.join(root, "Pages", "Home.tsazor");
@@ -219,8 +219,8 @@ describe("planInvalidation: Semantik", () => {
   });
 });
 
-describe("TransformRegistry: Windows-Pfade case-insensitive", () => {
-  it("findet Einträge über Schreibweise hinweg (Backslashes vs. POSIX, Groß/klein)", () => {
+describe("TransformRegistry: Windows paths case-insensitive", () => {
+  it("finds entries regardless of spelling (backslashes vs. POSIX, upper/lower case)", () => {
     const registry = new TransformRegistry();
     const recorded = "D:\\Own\\Tsazor\\App\\Pages\\Home.tsazor";
     registry.recordTransform(recorded, metadata({ unresolvedTags: ["HmrBadge"] }), ["D:/Own/Tsazor/App/Shared/Badge.tsazor"]);
@@ -233,7 +233,7 @@ describe("TransformRegistry: Windows-Pfade case-insensitive", () => {
     expect(registry.hasLayoutNameOf("fancylayout")).toBe(true);
   });
 
-  it("dedupliziert den Selbst-Eintrag: die geänderte Datei selbst ist nicht im Plan", async () => {
+  it("deduplicates the self entry: the changed file itself is not in the plan", async () => {
     const registry = new TransformRegistry();
     const file = path.join(root, "Pages", "Self.tsazor");
     registry.recordTransform(file, metadata(), []);
@@ -244,8 +244,8 @@ describe("TransformRegistry: Windows-Pfade case-insensitive", () => {
   });
 });
 
-describe("tsazorHotUpdate: Umschaltung auf den Modul-Graph", () => {
-  /** Stub-Dev-Server: Modulgraph per URL/ID, HMR-Kanal zeichnet Payloads auf. */
+describe("tsazorHotUpdate: hand-off to the module graph", () => {
+  /** Stub dev server: module graph by URL/ID, HMR channel records payloads. */
   function fakeServer(projectRoot: string, hotPayloads: unknown[] = []): ViteDevServer {
     return {
       config: { root: projectRoot },
@@ -279,26 +279,26 @@ describe("tsazorHotUpdate: Umschaltung auf den Modul-Graph", () => {
     );
   }
 
-  it("durchläuft echte Transform-Aufzeichnung: neues Greeter-Tag lässt Home neu transformieren", async () => {
+  it("runs through real transform recording: a new Greeter tag re-transforms Home", async () => {
     const registry = new TransformRegistry();
     const server = fakeServer(app);
     const page = path.join(app, "Pages", "Home.tsazor");
     await writeFile(path.join(app, "Pages", "Home.tsazor"), '@page "/"\n<HmrBadge />\n');
 
-    // Der echte Transform-Zweig zeichnet auf — inkl. TZS005 (unresolvedTags).
+    // The real transform branch records — incl. TZS005 (unresolvedTags).
     const result = await transformTsazor(await readFile(page, "utf8"), page, app, { hmr: false });
     expect(result.metadata.unresolvedTags).toEqual(["HmrBadge"]);
     registry.recordTransform(page, result.metadata, result.componentFiles);
 
     const badge = path.join(app, "Shared", "HmrBadge.tsazor");
     const nodes = await hotUpdate(registry, server, "create", badge, "<span>badge</span>\n");
-    // 1. Vites Standard-Kanten (leer — das Badge ist noch nicht importiert) sind
-    //    keine: unser Plan liefert allein die Seite.
+    // 1. Vite's default edges (empty — the badge is not imported yet) contribute
+    //    nothing: our plan alone supplies the page.
     expect(nodes).toBeDefined();
     expect((nodes as { id: string }[]).map((node) => node.id)).toContain("/Pages/Home.tsazor");
   });
 
-  it("CSS-Sidecar-Verschwinden sendet einen Full-Reload-Payload", async () => {
+  it("a disappearing CSS sidecar sends a full-reload payload", async () => {
     const registry = new TransformRegistry();
     const payloads: unknown[] = [];
     const server = fakeServer(app, payloads);
@@ -308,13 +308,13 @@ describe("tsazorHotUpdate: Umschaltung auf den Modul-Graph", () => {
       "delete",
       path.join(app, "Shared", "Greeter.tsazor.css"),
     );
-    // Vites eigene Ausbreitung würde den Besitzer schon via CSS-Import-Edge
-    // erreichen; unser Plan re-transformiert ihn trotzdem (Scope-Attribut).
+    // Vite's own propagation would already reach the owner via the CSS import
+    // edge; our plan re-transforms it anyway (scope attribute).
     expect((nodes as { id: string }[]).map((node) => node.id)).toContain("/Shared/Greeter.tsazor");
     expect(payloads).toEqual([{ type: "full-reload" }]);
   });
 
-  it("kein Plan und keine Vite-Module → undefined (Vites eigene Ausbreitung läuft weiter)", async () => {
+  it("no plan and no Vite modules → undefined (Vite's own propagation continues)", async () => {
     const registry = new TransformRegistry();
     const server = fakeServer(app);
     const nodes = await hotUpdate(registry, server, "create", path.join(app, "Shared", "Unknown.tsazor"), "<p>x</p>\n");

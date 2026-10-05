@@ -1,13 +1,13 @@
 /**
- * End-to-End über einen echten Node-HTTP-Server (5.2-Forderung: ohne .NET
- * testbar): der Client liest ProblemDetails/ValidationProblemDetails als Wert
- * auf dem HttpResult — niemals ein throw vor lesbarern Körper — und entpackt
- * den FluentCMS-Envelope. Der Client ist hier eine handgeschriebene
- * OpenApiClient-Unterklage (die generierte Form wird in generate.test.ts
- * geprüft; die Laufzeit-Plumbing ist dieselbe `call`/`sendForResult`-Route).
+ * End-to-end over a real Node HTTP server (5.2 requirement: testable without
+ * .NET): the client reads ProblemDetails/ValidationProblemDetails as a value
+ * on the HttpResult — never a throw before a readable body — and unwraps
+ * the FluentCMS envelope. The client here is a hand-written OpenApiClient
+ * subclass (the generated form is checked in generate.test.ts; the runtime
+ * plumbing is the same `call`/`sendForResult` route).
  *
- * @vitest-environment node — node:http + node-fetch (happy-dom-Fetch reicht
- * hier nicht an die Loopback-Schnittstelle).
+ * @vitest-environment node — node:http + node-fetch (happy-dom's fetch does
+ * not reach the loopback interface here).
  */
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -40,7 +40,7 @@ beforeAll(async () => {
           type: "https://tools.ietf.org/html/rfc9110#section-15.5.5",
           title: "Not found",
           status: 404,
-          detail: "Bestellung 404 existiert nicht.",
+          detail: "Order 404 does not exist.",
           traceId: "00-abc",
         }),
       );
@@ -56,11 +56,11 @@ beforeAll(async () => {
         }),
       );
     } else if (url === "/api/plain-error") {
-      // Kein ProblemDetails: nur ein JSON-{message}-Körper.
+      // Not ProblemDetails: just a JSON {message} body.
       response.statusCode = 500;
       response.end(JSON.stringify({ message: "boom" }));
     } else if (url === "/api/text-error") {
-      // Rohtext-Körper (Proxy/legacy).
+      // Raw text body (proxy/legacy).
       response.statusCode = 502;
       response.setHeader("content-type", "text/plain");
       response.end("Bad Gateway");
@@ -106,8 +106,8 @@ class EnvelopeClient extends OpenApiClient {
   }
 }
 
-describe("OpenApiClient über einen Node-HTTP-Server", () => {
-  it("liefert ok:true mit gelesenen Körper bei 2xx", async () => {
+describe("OpenApiClient over a Node HTTP server", () => {
+  it("returns ok:true with the parsed body on 2xx", async () => {
     const client = new DemoClient(new TsazorHttp(), { baseUrl });
     const result = await client.getOrder(1);
     expect(result.ok).toBe(true);
@@ -115,20 +115,20 @@ describe("OpenApiClient über einen Node-HTTP-Server", () => {
     expect(result.body).toEqual({ id: 1, customerName: "Ada", note: null });
   });
 
-  it("liefert ProblemDetails als Wert bei 404 (application/problem+json)", async () => {
+  it("returns ProblemDetails as a value on 404 (application/problem+json)", async () => {
     const client = new DemoClient(new TsazorHttp(), { baseUrl });
     const result = await client.getOrder(404);
     expect(result.ok).toBe(false);
     expect(result.status).toBe(404);
     expect(result.problem).not.toBeNull();
     expect(result.problem!.title).toBe("Not found");
-    expect(result.problem!.detail).toBe("Bestellung 404 existiert nicht.");
+    expect(result.problem!.detail).toBe("Order 404 does not exist.");
     expect(result.problem!.traceId).toBe("00-abc");
     expect(result.problem!.status).toBe(404);
-    expect(problemMessage(result)).toBe("Bestellung 404 existiert nicht.");
+    expect(problemMessage(result)).toBe("Order 404 does not exist.");
   });
 
-  it("liefert ValidationProblemDetails mit den Feld-Fehlern bei 400", async () => {
+  it("returns ValidationProblemDetails with the field errors on 400", async () => {
     const client = new DemoClient(new TsazorHttp(), { baseUrl });
     await expect(
       (async () => {
@@ -143,11 +143,11 @@ describe("OpenApiClient über einen Node-HTTP-Server", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("behandelt Nicht-ProblemDetails-Körper als rohe body-Werte", async () => {
+  it("treats non-ProblemDetails bodies as raw body values", async () => {
     const client = new DemoClient(new TsazorHttp(), { baseUrl });
     const plain = await client.plainError();
     expect(plain.ok).toBe(false);
-    expect(plain.problem).toBeNull(); // { message: "boom" } ist kein RFC-9457-Körper
+    expect(plain.problem).toBeNull(); // { message: "boom" } is not an RFC 9457 body
     expect(plain.body).toEqual({ message: "boom" });
 
     const text = await client.textError();
@@ -157,7 +157,7 @@ describe("OpenApiClient über einen Node-HTTP-Server", () => {
     expect(problemMessage(text)).toBe("HTTP 502");
   });
 
-  it("entpackt den Envelope ok:true und markiert Envelope-Fehler als ok:false", async () => {
+  it("unwraps the envelope as ok:true and marks envelope errors as ok:false", async () => {
     const envelope: EnvelopeOptions = { data: "data", errors: "errors" };
     const client = new EnvelopeClient(new TsazorHttp(), { baseUrl, envelope });
     const ok = await client.get(1);

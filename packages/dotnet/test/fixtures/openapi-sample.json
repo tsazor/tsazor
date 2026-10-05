@@ -8,7 +8,7 @@
     "/api/orders": {
       "get": {
         "operationId": "ListOrders",
-        "summary": "Bestellungen listen",
+        "summary": "List orders",
         "parameters": [
           { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/OrderStatus" } },
           { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
@@ -16,7 +16,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Seite der Bestellungen",
+            "description": "Page of orders",
             "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/OrderDto" } } } }
           }
         }
@@ -30,7 +30,7 @@
         "responses": {
           "201": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } },
           "400": {
-            "description": "Validierung fehlgeschlagen",
+            "description": "Validation failed",
             "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ValidationProblemDetails" } } }
           }
         }
@@ -43,7 +43,7 @@
         "responses": {
           "200": { "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderDto" } } } },
           "404": {
-            "description": "Nicht gefunden",
+            "description": "Not found",
             "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } }
           }
         }
@@ -51,7 +51,7 @@
       "delete": {
         "operationId": "DeleteOrder",
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }],
-        "responses": { "204": { "description": "Gelöscht" } }
+        "responses": { "204": { "description": "Deleted" } }
       }
     },
     "/api/customers/{name}": {

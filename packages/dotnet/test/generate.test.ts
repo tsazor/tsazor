@@ -1,8 +1,8 @@
 /**
- * Generator-Tests über das gecheckte OpenAPI-Beispiel (ASP.NET-Core-Stil):
- * Nullability-Regeln, DataAnnotations-Decorators aus den Schema-Constraints,
- * Enum-Aliase, allOf-Vererbung, Pfad-Interpolation, Query-Interfaces und
- * Envelope-Konstruktion — plus einen Typcheck des generierten Outputs.
+ * Generator tests over the checked-in OpenAPI sample (ASP.NET Core style):
+ * nullability rules, DataAnnotations decorators from the schema constraints,
+ * enum aliases, allOf inheritance, path interpolation, query interfaces and
+ * envelope construction — plus a type check of the generated output.
  */
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -31,11 +31,11 @@ function classBodyOf(models: string, className: string): string {
 }
 
 describe("generateClient — models.ts", () => {
-  it("mappt Nullability nach den vier Regeln", async () => {
+  it("maps nullability according to the four rules", async () => {
     const generation = generateClient(await document, { clientName: "ContosoOrders" });
     const models = generation.files.find((f) => f.path === "models.ts")!.content;
     const orderBody = classBodyOf(models, "OrderDto");
-    // required && !nullable ⇒ T (Primitive mit Default)
+    // required && !nullable ⇒ T (primitive with default)
     expect(orderBody).toContain(`    id = 0;`);
     expect(orderBody).toContain(`    customerName = "";`);
     // required && nullable ⇒ `T | null = null`
@@ -45,7 +45,7 @@ describe("generateClient — models.ts", () => {
     expect(createBody).toContain(`    comment?: string;`);
   });
 
-  it("übersetzt Schema-Constraints in die 3.6-Decorators", async () => {
+  it("translates schema constraints into the 3.6 decorators", async () => {
     const generation = generateClient(await document);
     const models = generation.files.find((f) => f.path === "models.ts")!.content;
     const orderBody = classBodyOf(models, "OrderDto");
@@ -58,14 +58,14 @@ describe("generateClient — models.ts", () => {
     const itemBody = classBodyOf(models, "OrderItemDto");
     expect(itemBody).toContain("    @Range(1, 99)");
     expect(itemBody).toContain("    @MaxLength(60)");
-    // Enum-Schema ⇒ Alias-Typ
+    // enum schema ⇒ alias type
     expect(models).toContain('export type OrderStatus =\n    | "Pending"\n    | "Paid"\n    | "Shipped"\n    | "Cancelled";');
-    // Required-Objekt-Referenz (CreateOrderDto.items ⇒ Array mit Default [])
+    // required object reference (CreateOrderDto.items ⇒ array with default [])
     const createBody = classBodyOf(models, "CreateOrderDto");
     expect(createBody).toContain("    items: OrderItemDto[] = [];");
   });
 
-  it("klappt allOf-Vererbung zusammen (ASP.NET-Basisklassen)", async () => {
+  it("flattens allOf inheritance (ASP.NET base classes)", async () => {
     const generation = generateClient(await document);
     const models = generation.files.find((f) => f.path === "models.ts")!.content;
     const body = classBodyOf(models, "CustomerDetailsDto");
@@ -75,13 +75,13 @@ describe("generateClient — models.ts", () => {
     expect(body).toContain("    @EmailAddress()");
   });
 
-  it("importiert die Runtime-Decorators nur, wenn sie benutzt werden", async () => {
+  it("imports the runtime decorators only when they are used", async () => {
     const generation = generateClient(await document);
     const models = generation.files.find((f) => f.path === "models.ts")!.content;
     expect(models).toContain('import { EmailAddress, MaxLength, MinLength, Range, RegularExpression, Required, StringLength } from "@tsazor/runtime";');
   });
 
-  it("importiert genau die benutzten Decorators (keine toten Importe)", () => {
+  it("imports exactly the decorators used (no dead imports)", () => {
     const models = (schemas: Record<string, unknown>): string =>
       generateClient({ openapi: "3.0.1", info: { title: "Bakery", version: "v1" }, paths: {}, components: { schemas } } as OpenApiDocument)
         .files.find((f) => f.path === "models.ts")!.content;
@@ -100,30 +100,30 @@ describe("generateClient — models.ts", () => {
 });
 
 describe("generateClient — client", () => {
-  it("generiert Operationen mit Pfad-Interpolation, Query-Interface und HttpResult-Typen", async () => {
+  it("generates operations with path interpolation, query interface and HttpResult types", async () => {
     const generation = generateClient(await document, { clientName: "ContosoOrders" });
     const clientFile = generation.files.find((f) => f.path === "contoso-orders.ts")!.content;
     expect(clientFile).toContain(`export class ContosoOrdersClient extends OpenApiClient {`);
     expect(clientFile).toContain(`import type { CreateOrderDto, CustomerDetailsDto, OrderDto, OrderStatus } from "./models";`);
-    // GET mit Query
+    // GET with query
     expect(clientFile).toContain(
       `listOrders(query?: ListOrdersQuery): Promise<HttpResult<OrderDto[]>> {`,
     );
     expect(clientFile).toContain(`return this.call("GET", \`/api/orders\${queryString(query)}\`);`);
-    // Pfad-Parameter interpoliert
+    // path parameter interpolated
     expect(clientFile).toContain(`getOrder(id: number): Promise<HttpResult<OrderDto>> {`);
     expect(clientFile).toContain(`return this.call("GET", \`/api/orders/\${encodeURIComponent(id)}\`);`);
-    // POST mit Body
+    // POST with body
     expect(clientFile).toContain(`createOrder(body: CreateOrderDto): Promise<HttpResult<OrderDto>> {`);
     expect(clientFile).toContain(`return this.call("POST", \`/api/orders\`, body);`);
-    // 204 ohne Schema ⇒ void
+    // 204 without schema ⇒ void
     expect(clientFile).toContain(`deleteOrder(id: number): Promise<HttpResult<void>> {`);
-    // Query-Interface mit Array-Parameter (type alias — queryString-Contract)
+    // query interface with array parameter (type alias — queryString contract)
     expect(clientFile).toContain(`export type ListOrdersQuery = {`);
     expect(clientFile).toContain(`    tags?: string[];`);
   });
 
-  it("konstruiert den Envelope im super()-Aufruf und optional den Default-TsazorHttp", async () => {
+  it("constructs the envelope in the super() call and optionally the default TsazorHttp", async () => {
     const enveloped = generateClient(await document, { clientName: "ContosoOrders", envelope: { data: "data", errors: "errors" } });
     const clientFile = enveloped.files.find((f) => f.path === "contoso-orders.ts")!.content;
     expect(clientFile).toContain(`super(http, { envelope: { data: "data", errors: "errors" } });`);
@@ -133,10 +133,10 @@ describe("generateClient — client", () => {
     expect(baseFile).toContain(`constructor(http: TsazorHttp = new TsazorHttp({ baseUrl: "https://api.contoso.example" })) {`);
   });
 
-  it("typ-checkt den generierten Output gegen die Paket-Typen (kein TS-Fehler)", async () => {
-    // Die generierten Dateien landen für den Check im Dateisystem (echte
-    // Modulauflösung, echte tsconfig): test/.out-Scratch mit paths auf den
-    // paket-eigenen dist-Typen — exakt die Situation eines Nutzers.
+  it("type-checks the generated output against the package types (no TS error)", async () => {
+    // For the check, the generated files land on disk (real module
+    // resolution, real tsconfig): a test/.out scratch dir with paths to the
+    // package's own dist types — exactly a user's situation.
     const generation = generateClient(await document, { clientName: "ContosoOrders", baseUrl: "https://api.contoso.example" });
     const outDir = path.resolve(import.meta.dirname, ".out-generate");
     await mkdir(outDir, { recursive: true });
@@ -157,7 +157,7 @@ describe("generateClient — client", () => {
             lib: ["ES2022", "DOM", "DOM.Iterable"],
             types: [],
             noEmit: true,
-            // Kein self-link für @tsazor/dotnet in pnpm — Typen direkt auf dist.
+            // No self-link for @tsazor/dotnet in pnpm — types point straight at dist.
             paths: { "@tsazor/dotnet": ["../../dist/index.d.ts"] },
           },
           files: generation.files.map((f) => f.path),

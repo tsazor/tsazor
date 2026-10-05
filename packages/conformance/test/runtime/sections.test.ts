@@ -2,10 +2,10 @@
  * Sections vs. Blazor (SectionRegistry / SectionContent / SectionOutlet).
  * Review: Sections, roadmap 3.4.
  *
- * Blazor-Semantik (SectionRegistry.cs): "last added wins", Default-Content
- * verliert, Entfernen des letzten Providers fällt auf den vorherigen zurück,
- * Entfernen eines Nicht-letzten benachrichtigt nicht, genau ein Subscriber pro
- * Identifikator.
+ * Blazor semantics (SectionRegistry.cs): "last added wins", default content
+ * loses, removing the last provider falls back to the previous one,
+ * removing a non-last one does not notify, exactly one subscriber per
+ * identifier.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import {
