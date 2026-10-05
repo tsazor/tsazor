@@ -84,10 +84,11 @@ export function setAttributeValue(
   if (value instanceof EventCallback || typeof value === "function") {
     // Unbound function: no owning component, so no automatic re-render.
     const callback = value instanceof EventCallback ? (value as EventCallback<never>) : EventCallback.unbound(value as (arg: never) => void | Promise<void>);
-    setEventHandler(host, state, element, eventNameOf(name), callback, flags, journal);
+    const replaced = setEventHandler(host, state, element, eventNameOf(name), callback, flags, journal);
     // The handler replaces an inline (string) handler previously set under
-    // this name; a fresh element (no journal) cannot have one.
-    if (journal !== null) removeAttribute(element, name, journal);
+    // this name; a fresh element (no journal) cannot have one, nor can one
+    // that already had a handler (setting a string clears the handler).
+    if (journal !== null && !replaced) removeAttribute(element, name, journal);
     return;
   }
   // Any other value replaces a handler bound under this name.
@@ -353,6 +354,7 @@ export function selectOf(node: Node | null): HTMLSelectElement | null {
 /* Event handlers                                                      */
 /* ------------------------------------------------------------------ */
 
+/** Binds `callback` to `element`'s `eventName` listener; true when it replaced a handler (not just a modifier record). */
 function setEventHandler(
   host: EventHandlerHost,
   state: ComponentState,
@@ -361,9 +363,10 @@ function setEventHandler(
   callback: EventCallback<never>,
   flags: number,
   journal: DomJournal | null,
-): void {
+): boolean {
   const existing = handlersOf(element).get(eventName);
   if (existing !== undefined) {
+    const hadHandler = existing.callback !== null;
     // Same listener, new handler: no DOM listener churn per changed callback
     // (the record may exist for a modifier flag only).
     journal?.restore(existing, restoreHandler, { host: existing.host, state: existing.state, callback: existing.callback, flags: existing.flags });
@@ -371,9 +374,10 @@ function setEventHandler(
     existing.state = state;
     existing.callback = callback;
     existing.flags = flags;
-    return;
+    return hadHandler;
   }
   attachRecord(host, state, element, eventName, callback, flags, journal);
+  return false;
 }
 
 /**

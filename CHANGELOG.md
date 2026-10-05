@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: replacing an event handler no longer checks the DOM for a leftover inline
+  handler string (`hasAttribute`) — it cannot exist once the element had a handler. Selecting a row
+  among 11k: 19 → 16 ms.
 - `@tsazor/runtime`: features an app does not use stay out of its bundle — the document head
   (`HeadOutlet` and the sections it needs) is mounted once `PageTitle` or `HeadContent` is part of the
   app, `CultureService`/`StringLocalizer` are service defaults their own modules register (still
