@@ -1,7 +1,7 @@
-// GENERATED CODE — nicht manuell editieren.
-// Quelle: OpenAPI BlazingPizzaApi 1.0.0
+// GENERATED CODE — do not edit by hand.
+// Source: OpenAPI BlazingPizzaApi 1.0.0
 
-import { EmailAddress, MaxLength, MinLength, Range, RegularExpression, Required, StringLength } from "@tsazor/runtime";
+import { EmailAddress, Required } from "@tsazor/runtime";
 
 export class PizzaSpecial {
     id = 0;
@@ -70,7 +70,7 @@ export class Marker {
 export class Order {
     orderId?: number;
     userId?: string;
-    /** Epoch-Millisekunden (new Date(...).getTime()) */
+    /** Epoch milliseconds (new Date(...).getTime()) */
     createdTime?: number;
     @Required()
     deliveryAddress!: Address;

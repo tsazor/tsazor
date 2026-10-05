@@ -1,4 +1,4 @@
-// GENERATED CODE — nicht manuell editieren.
+// GENERATED CODE — do not edit by hand.
 
 import type { LoginRequest, Order, OrderWithStatus, PizzaSpecial, RegisterRequest, Topping, UserEnvelope, UserInfo } from "./models";
 
@@ -10,52 +10,52 @@ export class PizzaApiClient extends OpenApiClient {
         super(http);
     }
 
-    /** Alle Specials für die Startseite. */
+    /** All specials for the home page. */
     getSpecials(): Promise<HttpResult<PizzaSpecial[]>> {
         return this.call("GET", `/specials`);
     }
 
-    /** Alle Toppings, sortiert nach Name. */
+    /** All toppings, sorted by name. */
     getToppings(): Promise<HttpResult<Topping[]>> {
         return this.call("GET", `/toppings`);
     }
 
-    /** Die abgeschlossenen Bestellungen des aktuellen Users. */
+    /** The placed orders of the current user. */
     getOrders(): Promise<HttpResult<OrderWithStatus[]>> {
         return this.call("GET", `/orders`);
     }
 
-    /** Speichert eine neue Bestellung und liefert deren Id. */
+    /** Saves a new order and returns its id. */
     placeOrder(body: Order): Promise<HttpResult<number>> {
         return this.call("POST", `/orders`, body);
     }
 
-    /** Eine Bestellung mit Status und Live-Standorten (Poller-Futter). */
+    /** One order with status and live locations (fed to the poller). */
     getOrder(orderId: number): Promise<HttpResult<OrderWithStatus>> {
         return this.call("GET", `/orders/${encodeURIComponent(orderId)}`);
     }
 
-    /** Registriert die Push-Subscription des Browsers (doppelte Rolle: SSE-Proxy). */
+    /** Registers the browser's push subscription (dual role: SSE proxy). */
     subscribeToNotifications(body: Record<string, unknown>): Promise<HttpResult<Record<string, unknown>>> {
         return this.call("PUT", `/notifications/subscribe`, body);
     }
 
-    /** Startet die Cookie-Session; 401 bei falschen Zugangsdaten. */
+    /** Starts the cookie session; 401 on wrong credentials. */
     login(body: LoginRequest): Promise<HttpResult<UserInfo>> {
         return this.call("POST", `/auth/login`, body);
     }
 
-    /** Registriert den User (400 mit { error } bei Validierungsproblemen). */
+    /** Registers the user (400 with { error } on validation problems). */
     register(body: RegisterRequest): Promise<HttpResult<UserInfo>> {
         return this.call("POST", `/auth/register`, body);
     }
 
-    /** Beendet die Cookie-Session. */
+    /** Ends the cookie session. */
     logout(): Promise<HttpResult<void>> {
         return this.call("POST", `/auth/logout`);
     }
 
-    /** Der aktuelle User als RemoteAuthenticator-Form ({ user: null } wenn anonym). */
+    /** The current user in RemoteAuthenticator shape ({ user: null } when anonymous). */
     getCurrentUser(): Promise<HttpResult<UserEnvelope>> {
         return this.call("GET", `/auth/user`);
     }

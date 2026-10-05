@@ -1,10 +1,10 @@
 /**
- * Port of BlazingPizza.Client/OrdersClient.cs — HTTP läuft nicht mehr über
- * App-eigene TsazorHttp-Aufrufe, sondern über den aus api/openapi.json
- * generierten PizzaApiClient (@tsazor/dotnet, Roadmap 5.2). Fehler sind
- * HttpResult-Werte (ProblemDetails via problemMessage), kein throw, bevor der
- * Körper lesbar ist. Der vite-Dev-Proxy macht /specials, /toppings, /orders &
- * /notifications same-origin — deshalb relative Pfade ohne baseUrl.
+ * Port of BlazingPizza.Client/OrdersClient.cs — HTTP no longer goes through
+ * app-owned TsazorHttp calls but through the PizzaApiClient generated from
+ * api/openapi.json (@tsazor/dotnet, roadmap 5.2). Errors are HttpResult values
+ * (ProblemDetails via problemMessage), no throw before the body is readable.
+ * The vite dev proxy makes /specials, /toppings, /orders & /notifications
+ * same-origin — hence relative paths without a baseUrl.
  */
 import type { HttpResult } from "@tsazor/dotnet";
 import { TsazorHttp } from "@tsazor/runtime";

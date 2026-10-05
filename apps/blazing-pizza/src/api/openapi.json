@@ -9,10 +9,10 @@
     "/specials": {
       "get": {
         "operationId": "getSpecials",
-        "summary": "Alle Specials für die Startseite.",
+        "summary": "All specials for the home page.",
         "responses": {
           "200": {
-            "description": "Die Specials",
+            "description": "The specials",
             "content": {
               "application/json": {
                 "schema": {
@@ -28,10 +28,10 @@
     "/toppings": {
       "get": {
         "operationId": "getToppings",
-        "summary": "Alle Toppings, sortiert nach Name.",
+        "summary": "All toppings, sorted by name.",
         "responses": {
           "200": {
-            "description": "Die Toppings",
+            "description": "The toppings",
             "content": {
               "application/json": {
                 "schema": {
@@ -47,10 +47,10 @@
     "/orders": {
       "get": {
         "operationId": "getOrders",
-        "summary": "Die abgeschlossenen Bestellungen des aktuellen Users.",
+        "summary": "The placed orders of the current user.",
         "responses": {
           "200": {
-            "description": "Die Bestellungen mit Status",
+            "description": "The orders with status",
             "content": {
               "application/json": {
                 "schema": {
@@ -64,7 +64,7 @@
       },
       "post": {
         "operationId": "placeOrder",
-        "summary": "Speichert eine neue Bestellung und liefert deren Id.",
+        "summary": "Saves a new order and returns its id.",
         "requestBody": {
           "required": true,
           "content": {
@@ -73,7 +73,7 @@
         },
         "responses": {
           "200": {
-            "description": "Die Id der neuen Bestellung",
+            "description": "The id of the new order",
             "content": {
               "application/json": {
                 "schema": { "type": "integer", "format": "int64" }
@@ -86,19 +86,19 @@
     "/orders/{orderId}": {
       "get": {
         "operationId": "getOrder",
-        "summary": "Eine Bestellung mit Status und Live-Standorten (Poller-Futter).",
+        "summary": "One order with status and live locations (fed to the poller).",
         "parameters": [
           {
             "name": "orderId",
             "in": "path",
             "required": true,
-            "description": "Die Id der Bestellung",
+            "description": "The id of the order",
             "schema": { "type": "integer", "format": "int64" }
           }
         ],
         "responses": {
           "200": {
-            "description": "Die Bestellung mit Status",
+            "description": "The order with status",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/OrderWithStatus" }
@@ -111,7 +111,7 @@
     "/notifications/subscribe": {
       "put": {
         "operationId": "subscribeToNotifications",
-        "summary": "Registriert die Push-Subscription des Browsers (doppelte Rolle: SSE-Proxy).",
+        "summary": "Registers the browser's push subscription (dual role: SSE proxy).",
         "requestBody": {
           "required": true,
           "content": {
@@ -122,7 +122,7 @@
         },
         "responses": {
           "200": {
-            "description": "Die gespeicherte Subscription",
+            "description": "The stored subscription",
             "content": {
               "application/json": {
                 "schema": { "type": "object", "additionalProperties": true }
@@ -135,7 +135,7 @@
     "/auth/login": {
       "post": {
         "operationId": "login",
-        "summary": "Startet die Cookie-Session; 401 bei falschen Zugangsdaten.",
+        "summary": "Starts the cookie session; 401 on wrong credentials.",
         "requestBody": {
           "required": true,
           "content": {
@@ -144,7 +144,7 @@
         },
         "responses": {
           "200": {
-            "description": "Der eingeloggte User",
+            "description": "The signed-in user",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UserInfo" }
@@ -157,7 +157,7 @@
     "/auth/register": {
       "post": {
         "operationId": "register",
-        "summary": "Registriert den User (400 mit { error } bei Validierungsproblemen).",
+        "summary": "Registers the user (400 with { error } on validation problems).",
         "requestBody": {
           "required": true,
           "content": {
@@ -166,7 +166,7 @@
         },
         "responses": {
           "200": {
-            "description": "Der registrierte User",
+            "description": "The registered user",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UserInfo" }
@@ -179,19 +179,19 @@
     "/auth/logout": {
       "post": {
         "operationId": "logout",
-        "summary": "Beendet die Cookie-Session.",
+        "summary": "Ends the cookie session.",
         "responses": {
-          "204": { "description": "Ausgeloggt" }
+          "204": { "description": "Signed out" }
         }
       }
     },
     "/auth/user": {
       "get": {
         "operationId": "getCurrentUser",
-        "summary": "Der aktuelle User als RemoteAuthenticator-Form ({ user: null } wenn anonym).",
+        "summary": "The current user in RemoteAuthenticator shape ({ user: null } when anonymous).",
         "responses": {
           "200": {
-            "description": "Der User-Envelope",
+            "description": "The user envelope",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UserEnvelope" }
@@ -284,7 +284,7 @@
         "properties": {
           "orderId": { "type": "integer" },
           "userId": { "type": "string" },
-          "createdTime": { "type": "number", "description": "Epoch-Millisekunden (new Date(...).getTime())" },
+          "createdTime": { "type": "number", "description": "Epoch milliseconds (new Date(...).getTime())" },
           "deliveryAddress": { "$ref": "#/components/schemas/Address" },
           "deliveryLocation": { "$ref": "#/components/schemas/LatLong" },
           "pizzas": {

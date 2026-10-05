@@ -3,12 +3,12 @@
  * (cookie sessions). The original used OIDC + ASP.NET Identity via the
  * RemoteAuthenticator — the documented deviation of this port.
  *
- * Der HTTP-Teil läuft über den OpenAPI-generierten PizzaApiClient
- * (@tsazor/dotnet): ein !ok-Resultat ist ein Wert (mit body { error }), kein
- * throw — genau wie ein nicht erreichbares Backend als ok:false-Wert ankommt.
- * Der Backend-User ist das RemoteAuthenticator-Flat-Shape ({ userId, name, email }),
- * nicht das Cookie-Shape ({ user: { name, roles, claims } }) des Paket-Providers —
- * deshalb bleibt der provider-spezifische Mapping hier und nutzt nur die Brücke.
+ * The HTTP part goes through the OpenAPI-generated PizzaApiClient
+ * (@tsazor/dotnet): a !ok result is a value (with body { error }), not a
+ * throw — just as an unreachable backend arrives as an ok:false value.
+ * The backend user is the flat RemoteAuthenticator shape ({ userId, name, email }),
+ * not the cookie shape ({ user: { name, roles, claims } }) of the package provider —
+ * so the provider-specific mapping stays here and only uses the bridge.
  */
 import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, TsazorHttp, createUser } from "@tsazor/runtime";
 import { problemMessage, type HttpResult } from "@tsazor/dotnet";
@@ -40,7 +40,7 @@ export class AuthProvider extends AuthenticationStateProvider {
 
   /** Fetches /auth/user and publishes the resulting auth state. */
   async reload(): Promise<AuthenticationState> {
-    // HTTP-Fehler sind Werte; nur ein nicht erreichbares Backend wirft.
+    // HTTP errors are values; only an unreachable backend throws.
     const result = await this.soft(() => this.api.getCurrentUser());
     const user = result !== null && result.ok ? result.body.user : null;
     this.user = user;
@@ -84,7 +84,7 @@ export class AuthProvider extends AuthenticationStateProvider {
     this.notifyAuthenticationStateChanged(this.current);
   }
 
-  /** HTTP-Fehler sind HttpResult-Werte; Netzwerkfehler landen als null. */
+  /** HTTP errors are HttpResult values; network errors end up as null. */
   private soft<T>(call: () => Promise<HttpResult<T>>): Promise<HttpResult<T> | null> {
     return call().catch(() => null);
   }

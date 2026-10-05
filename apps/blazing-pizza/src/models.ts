@@ -5,10 +5,10 @@
  */
 
 /**
- * Die Wire-Shapes sind DTO-Klassen aus dem OpenAPI-Contract
- * (api/openapi.json, generiert mit tsazor-dotnet): ein Contract, ein Typ statt
- * doppelter Interfaces. Hier werden sie unter den Domain-Namen re-exportiert;
- * die Helfer darunter arbeiten mit denselben Typen.
+ * The wire shapes are DTO classes from the OpenAPI contract
+ * (api/openapi.json, generated with tsazor-dotnet): one contract, one type
+ * instead of duplicate interfaces. They are re-exported here under the domain
+ * names; the helpers below work with the same types.
  */
 export type {
   Address,
