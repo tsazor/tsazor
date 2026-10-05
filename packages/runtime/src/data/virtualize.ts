@@ -4,16 +4,21 @@ import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tr
 
 /** Blazor's ItemsProviderRequest: the slice the Virtualize needs. */
 export interface VirtualizeItemsProviderRequest {
+  /** Index of the first item to return (Blazor's `StartIndex`). */
   startIndex: number;
+  /** Number of items requested, overscan included (Blazor's `Count`). */
   count: number;
 }
 
 /** Blazor's ItemsProviderResult. */
 export interface VirtualizeItemsProviderResult<TItem> {
+  /** The items of the requested slice; may be fewer than requested. */
   items?: TItem[];
+  /** Total length of the list, which sizes the spacers; when omitted the previous total is kept. */
   totalItemCount?: number;
 }
 
+/** Loads one slice of the list on demand (Blazor's `ItemsProviderDelegate`). */
 export type VirtualizeItemsProvider<TItem> = (
   request: VirtualizeItemsProviderRequest,
 ) => Promise<VirtualizeItemsProviderResult<TItem>>;
@@ -171,6 +176,7 @@ export class Virtualize extends ComponentBase {
     await this.handleScroll();
   }
 
+  /** Removes the scroll listener and disconnects the resize observer. */
   dispose(): void {
     this.unsubscribeScroll?.();
     this.resizeObserver?.disconnect();

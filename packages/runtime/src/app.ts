@@ -70,6 +70,14 @@ export interface TsazorApp {
   dispose(): void;
 }
 
+/**
+ * Starts a Tsazor app (Blazor's `WebAssemblyHostBuilder` + `RunAsync`): builds
+ * the service provider (NavigationManager, CultureService, StringLocalizer and
+ * the route manifest, then `options.services`), renders `HeadOutlet` into
+ * `document.head` and the root component into the `selector` element.
+ * Throws when the root element is missing or `routing.mode` conflicts with a
+ * shared `navigationManager`.
+ */
 export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   const collection = new ServiceCollection();
   // An app-created NavigationManager is owned (and disposed) by the app; a

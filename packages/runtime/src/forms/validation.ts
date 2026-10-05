@@ -23,6 +23,7 @@ export class ValidationMessage extends ComponentBase {
     }
   }
 
+  /** Stops listening to the EditContext's change notifications. */
   dispose(): void {
     this.editContextUnsubscribe?.();
     this.editContextUnsubscribe = undefined;
@@ -68,6 +69,7 @@ export class ValidationSummary extends ComponentBase {
     }
   }
 
+  /** Stops listening to the EditContext's change notifications. */
   dispose(): void {
     this.editContextUnsubscribe?.();
     this.editContextUnsubscribe = undefined;

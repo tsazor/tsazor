@@ -64,9 +64,11 @@ export type RenderErrorPhase =
 
 /** A failure routed to the renderer's error handler. */
 export interface RenderError {
+  /** The thrown value. */
   readonly error: unknown;
   /** The component the failure is attributed to, or null (not attributable). */
   readonly component: ComponentState | null;
+  /** The pipeline stage the failure surfaced in. */
   readonly phase: RenderErrorPhase;
 }
 
@@ -107,6 +109,7 @@ export interface RenderBatch {
  * committed, so the next pass never sees half-applied DOM.
  */
 export class Renderer {
+  /** Schedules this renderer's render batches (Blazor's Dispatcher). */
   readonly dispatcher = new Dispatcher();
   private readonly dom: DomRenderer;
   private readonly states = new Map<number, ComponentState>();
@@ -129,15 +132,18 @@ export class Renderer {
    */
   errorHandler: RenderErrorHandler = defaultErrorHandler;
 
+  /** @param services — the provider components resolve `@inject` services from; defaults to an empty one. */
   constructor(services?: ServiceProvider) {
     this.services = services ?? new ServiceCollection().build();
     this.dom = new DomRenderer(this);
   }
 
+  /** The service provider this renderer's components resolve their services from. */
   get serviceScope(): ServiceProvider {
     return this.services;
   }
 
+  /** The state of the live component with renderer-wide id `id`, or `undefined` when there is none. */
   getComponentState(id: number): ComponentState | undefined {
     return this.states.get(id);
   }

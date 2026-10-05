@@ -29,6 +29,7 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 export interface RenderResult<TComponent extends ComponentBase = ComponentBase> {
   /** The DOM output container (attached to document.body). */
   container: HTMLElement;
+  /** The renderer that hosts the component, with the services from `RenderOptions.services`. */
   renderer: Renderer;
   /** The component instance. */
   instance: TComponent;
@@ -52,6 +53,7 @@ export interface RenderResult<TComponent extends ComponentBase = ComponentBase> 
   dispose(): void;
 }
 
+/** Options for `render`: the component's parameters and the DI registrations. */
 export interface RenderOptions<TComponent extends ComponentBase = ComponentBase> {
   /** Parameter values, as a parent's attributes would pass them. */
   parameters?: ParametersOf<TComponent>;
@@ -175,15 +177,19 @@ export function renderTree(build: (b: RenderTreeBuilder) => void): Promise<Rende
  * still listens (0 after it was disposed).
  */
 export interface FakeStore<T> {
+  /** The current value. */
   readonly value: T;
+  /** How many listeners are subscribed right now. */
   readonly listenerCount: number;
   /** Sets the value and notifies every listener with it. */
   set(value: T): void;
   /** Notifies every listener again with the current value (an in-place mutation). */
   notify(): void;
+  /** Adds a listener (not called on subscribe, only on `set`/`notify`); returns the unsubscribe function. */
   subscribe(listener: (value: T) => void): () => void;
 }
 
+/** Creates a `FakeStore` holding `initial`. */
 export function createFakeStore<T>(initial: T): FakeStore<T> {
   const listeners = new Set<(value: T) => void>();
   let value = initial;
@@ -221,7 +227,9 @@ export function createFakeStore<T>(initial: T): FakeStore<T> {
  * semantics call the `culture` service directly.
  */
 export interface FakeLocalization {
+  /** The culture service, starting at `defaultCulture` (invariant without one). */
   readonly culture: CultureService;
+  /** The localizer over the given tables, following `culture`. */
   readonly localizer: StringLocalizer;
   /** Registers both under their app tokens — `render(C, { services: (s) => fake.register(s) })`. */
   register(services: ServiceCollection): void;
@@ -231,10 +239,13 @@ export interface FakeLocalization {
 
 /** The fake localization fixture's tables: culture → key → message. */
 export interface FakeLocalizationOptions {
+  /** Culture → key → message, as `StringLocalizerOptions.tables`; default none (`get` returns the key). */
   tables?: Readonly<Record<string, StringTable>>;
+  /** The starting and fallback culture; required when `tables` has entries. */
   defaultCulture?: string;
 }
 
+/** Creates a `FakeLocalization` with a fresh `CultureService` and `StringLocalizer`. */
 export function createFakeLocalization(options: FakeLocalizationOptions = {}): FakeLocalization {
   const culture = new CultureService(options.defaultCulture ?? "");
   const localizer = new StringLocalizer({

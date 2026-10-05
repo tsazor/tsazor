@@ -56,6 +56,7 @@ export class DataAnnotationsValidator extends ComponentBase {
     }
   }
 
+  /** Detaches the validation handlers from the EditContext and removes the validator's messages. */
   dispose(): void {
     this.subscription?.dispose();
     this.subscription = undefined;

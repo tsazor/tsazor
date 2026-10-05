@@ -63,6 +63,7 @@ export class EventCallback<TArg = unknown> {
     }
   }
 
+  /** Blazor's EventCallback.HasDelegate: false for `EventCallback.empty`, whose invocation does nothing. */
   get hasDelegate(): boolean {
     return this.delegate !== null;
   }

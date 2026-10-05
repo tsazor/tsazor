@@ -9,6 +9,7 @@ import type { RenderErrorPhase } from "./renderer.js";
 export interface RenderHandle {
   /** Marks the component's current output as out-of-date; the renderer re-renders it soon. */
   render(fragment?: RenderFragment): void;
+  /** Whether the renderer is currently running a render batch. */
   readonly isRenderingInProgress: boolean;
   /** Registers in-flight async work so waitUntilIdle includes it (Blazor awaits async operations similarly). */
   track(promise: Promise<unknown>): Promise<unknown>;

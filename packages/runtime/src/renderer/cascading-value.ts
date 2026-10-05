@@ -13,7 +13,9 @@
  * value changes (CascadingValue does so on every parameter set, like Blazor's).
  */
 export interface CascadingValueSupplier {
+  /** Marker the renderer detects suppliers by (see `isCascadingValueSupplier`). */
   readonly isCascadingValueSupplier: true;
+  /** The value supplied to matching cascading parameters in the subtree. */
   readonly cascadeValue: unknown;
   /** Matches `CascadingParameter({ name })`, case-insensitive (Blazor's CascadingValue.Name). */
   readonly cascadeName?: string;
@@ -27,6 +29,7 @@ export interface CascadingValueSupplier {
   readonly isFixed: boolean;
 }
 
+/** Whether `value` is a component implementing `CascadingValueSupplier` (its `isCascadingValueSupplier` marker is `true`). */
 export function isCascadingValueSupplier(value: unknown): value is CascadingValueSupplier {
   return (
     typeof value === "object" &&

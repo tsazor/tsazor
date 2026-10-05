@@ -28,7 +28,7 @@
     }
 
     private handleSubmit = EventCallback.bind(this, (context: EditContext) => {
-        // Ab hier zeigen die Inputs ihre error rows (role="alert", 4.2).
+        // From here on the inputs show their error rows (role="alert", 4.2).
         markSubmitAttempt(context);
         this.onValidSubmit?.invokeAsync(context);
     });

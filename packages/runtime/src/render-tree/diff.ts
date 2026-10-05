@@ -34,10 +34,13 @@ export const enum RenderTreeEditType {
  * One edit of the diff (Blazor's RenderTreeEdit). Sibling indices count the
  * logical children of the current level: elements, text nodes, markup blocks
  * and child components count one each, regions are flattened. Every edit has
- * all fields (one monomorphic shape); unused ones are -1 / null.
+ * all fields (one monomorphic shape); unused ones are -1 / null, except
+ * `siblingIndex`, which is 0 on StepOut and PermutationListEnd.
  */
 export interface RenderTreeEdit {
+  /** What the edit does; decides which of the other fields are used. */
   readonly type: RenderTreeEditType;
+  /** Logical child index at the current level that the edit applies to (0 for StepOut and PermutationListEnd). */
   readonly siblingIndex: number;
   /** Frame index into the NEW tree (PrependFrame, SetAttribute, UpdateText, UpdateMarkup). */
   readonly referenceFrameIndex: number;
@@ -52,6 +55,7 @@ export interface RenderTreeEdit {
  * Pure data: computing it touches neither the DOM nor any component state.
  */
 export interface RenderTreeDiff {
+  /** The DOM edits in application order. */
   readonly edits: RenderTreeEdit[];
   /**
    * Child component frames of the new tree in diff order, as flat
@@ -69,6 +73,7 @@ export interface RenderTreeDiff {
   readonly disposedComponents: number[];
 }
 
+/** Options for `computeDiff`. */
 export interface DiffOptions {
   /**
    * Whether an old and a new component frame denote the same component type.

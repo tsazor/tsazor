@@ -17,26 +17,35 @@ export type RenderFragment = (builder: RenderTreeBuilder) => void;
  * pool is the same idea with in-place slot writes.
  */
 export interface RenderTreeFrame {
+  /** The kind of frame; decides which of the optional fields are set. */
   readonly frameType: FrameType;
+  /** Sequence number of the source position that wrote the frame; the diff matches sibling frames by it. */
   readonly sequence: number;
   /** Element frames */
   readonly elementName?: string;
+  /** The element's `@key`, set by `setKey`; keyed elements are matched by key instead of sequence. */
   readonly elementKey?: string | number | object | null;
+  /** Number of frames the element spans — itself, its attributes and its descendants; set on close. */
   readonly elementSubtreeLength?: number;
   /** Text frames */
   readonly textContent?: string | number | boolean | bigint;
   /** Attribute frames */
   readonly attributeName?: string;
+  /** The attribute's value: a primitive, an `EventCallback`, a function, a fragment or any object. */
   readonly attributeValue?: unknown;
+  /** Event name of an attribute written by `addEventHandler` (equal to `attributeName`). */
   readonly eventHandlerName?: string;
+  /** Event directive flags (`preventDefault`, `stopPropagation`) of an attribute written by `addEventHandler`. */
   readonly eventHandlerFlags?: EventHandlerFlags;
   /** Component frames */
   readonly componentType?: ComponentType;
+  /** Reserved for the child component's id (Blazor's ComponentId); currently never written. */
   readonly componentId?: number;
   /** Component @key: string | number from markup (`@key="…"`), any object from
    *  programmatic builds — SectionOutlet keys its nested renderer by the
    *  fragment (Blazor's SetKey(RenderFragment), object identity). */
   readonly componentKey?: string | number | object | null;
+  /** Number of frames the component frame spans — itself and its parameter attributes; set on close. */
   readonly componentSubtreeLength?: number;
   /** Region frames */
   readonly regionSubtreeLength?: number;
@@ -82,37 +91,48 @@ export class RenderTreeBuilder {
     return this.frames.length;
   }
 
+  /** The frames written so far — the builder's live array, not a copy. */
   getFrames(): RenderTreeFrame[] {
     return this.frames;
   }
 
+  /** Blazor's RenderTreeBuilder.OpenElement: starts an element frame; its attributes and children follow until `closeElement`. */
   openElement(sequence: number, elementName: string): void {
     this.frames.push({ frameType: FrameType.Element, sequence, elementName });
     this.openFrameStack.push(this.frames.length - 1);
   }
 
+  /** Blazor's CloseElement: closes the innermost open element and records its subtree length. */
   closeElement(): void {
     this.closeOpenFrame();
   }
 
+  /** Blazor's OpenComponent: starts a child component frame; the attributes that follow become its parameters. */
   openComponent(sequence: number, componentType: ComponentType): void {
     this.frames.push({ frameType: FrameType.Component, sequence, componentType });
     this.openFrameStack.push(this.frames.length - 1);
   }
 
+  /** Blazor's CloseComponent: closes the innermost open component frame. */
   closeComponent(): void {
     this.closeOpenFrame();
   }
 
+  /** Blazor's OpenRegion: starts a region grouping a fragment's frames; the diff compares a region's contents only with the matching region's. */
   openRegion(sequence: number): void {
     this.frames.push({ frameType: FrameType.Region, sequence });
     this.openFrameStack.push(this.frames.length - 1);
   }
 
+  /** Blazor's CloseRegion: closes the innermost open region. */
   closeRegion(): void {
     this.closeOpenFrame();
   }
 
+  /**
+   * Blazor's SetKey (`@key`): sets the key of the innermost open element or
+   * component. Throws when nothing is open or the open frame is a region.
+   */
   setKey(key: string | number | null | undefined | object): void {
     const index = this.openFrameStack[this.openFrameStack.length - 1];
     if (index === undefined) {
@@ -128,6 +148,7 @@ export class RenderTreeBuilder {
     }
   }
 
+  /** Blazor's AddAttribute: adds an attribute to the open element, or a parameter to the open component. */
   addAttribute(sequence: number, name: string, value: AttributeValue): void {
     this.frames.push({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value });
   }
@@ -159,6 +180,12 @@ export class RenderTreeBuilder {
     }
   }
 
+  /**
+   * Blazor's AddContent: a fragment renders inside a region, a `MarkupString`
+   * as unescaped markup, `null`/`undefined` as nothing and any other value as
+   * text (booleans as `"true"`/`"false"`). Inside an open component frame the
+   * content becomes the component's `ChildContent` parameter; a second one throws.
+   */
   addContent(
     sequence: number,
     textOrFragment:
@@ -209,11 +236,13 @@ export class RenderTreeBuilder {
     }
   }
 
+  /** Blazor's AddMarkupContent: adds an HTML string that is inserted unescaped; `null` adds nothing. */
   addMarkupContent(sequence: number, markup: string | null): void {
     if (markup === null || markup === undefined) return;
     this.frames.push({ frameType: FrameType.Markup, sequence, markupContent: markup });
   }
 
+  /** Blazor's AddElementReferenceCapture (`@ref` on an element): `action` receives the enclosing element's DOM node when it is created. */
   addElementReferenceCapture(sequence: number, action: (element: Element) => void): void {
     this.frames.push({ frameType: FrameType.ElementReferenceCapture, sequence, elementReferenceCaptureAction: action });
   }

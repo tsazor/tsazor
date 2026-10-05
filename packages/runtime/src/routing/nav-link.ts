@@ -41,6 +41,7 @@ export class NavLink extends ComponentBase {
     this.unsubscribe = this.navigation.addLocationChanged(() => this.stateHasChangedInternal());
   }
 
+  /** Stops listening to location changes. */
   dispose(): void {
     this.unsubscribe?.();
   }

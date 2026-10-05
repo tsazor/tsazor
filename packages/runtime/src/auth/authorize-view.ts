@@ -30,11 +30,13 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   /** Rendered while the state is still resolving (Razor's <Authorizing>). */
   @Parameter() authorizing?: RenderFragment;
 
+  /** Marks the component as a cascading value supplier for the renderer. */
   readonly isCascadingValueSupplier = true;
   /** The state changes over time (login/logout) — never fixed. */
   readonly isFixed = false;
   /** Cascades by type, unnamed (Blazor cascades its Task<AuthenticationState> the same way). */
   readonly cascadeType = AuthenticationState;
+  /** The cascaded AuthenticationState (anonymous until the provider resolves). */
   get cascadeValue(): unknown {
     return this.authenticationState ?? ANONYMOUS;
   }
@@ -52,6 +54,7 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
     });
   }
 
+  /** Stops listening to authentication state changes. */
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;

@@ -16,6 +16,7 @@ export { tsazorHotUpdate } from "./hot-update.js";
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
 
+/** Options of the `tsazor()` Vite plugin. */
 export interface TsazorPluginOptions {
   /** Project root; defaults to the Vite config root. */
   root?: string;
@@ -29,6 +30,22 @@ export interface TsazorPluginOptions {
   staticMarkup?: boolean;
 }
 
+/**
+ * The Tsazor Vite plugin (also the default export): compiles `.tsazor` files
+ * to JS modules with sourcemaps and HMR, scopes `.tsazor.css` sidecars,
+ * serves the `virtual:tsazor-routes` manifest of the app's `@page` routes,
+ * and lets esbuild lower the standard decorators of the app's `.ts` files.
+ * Compile errors fail the module (Vite's error overlay in dev); with
+ * `check: true` the type checks run as well.
+ *
+ * ```ts
+ * // vite.config.ts
+ * import { defineConfig } from "vite";
+ * import tsazor from "@tsazor/vite-plugin";
+ *
+ * export default defineConfig({ plugins: [tsazor()] });
+ * ```
+ */
 export function tsazor(options: TsazorPluginOptions = {}): Plugin {
   let projectRoot = options.root ?? process.cwd();
   /** 4.1: per-file dependency edges recorded by transform, consumed by the hot-update handler. */

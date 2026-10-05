@@ -93,6 +93,21 @@ describe("CultureService (E8 §1, D-L1) — priority and lock", () => {
     culture.setDefault("fr-FR");
     expect(culture.current.name).toBe("de-DE");
   });
+
+  it("setDefault applies while the culture is still the default, and stays below a profile value", () => {
+    const culture = new CultureService("en-US");
+    const events: CultureChangedEventArgs[] = [];
+    culture.subscribe((event) => events.push(event));
+    culture.setDefault("fr-FR");
+    expect(culture.current.name).toBe("fr-FR");
+    expect(events.map((event) => event.reason)).toEqual(["default"]);
+    culture.setDefault("it-IT");
+    expect(culture.current.name).toBe("it-IT");
+
+    culture.setFromProfile("de-DE");
+    culture.setDefault("es-ES");
+    expect(culture.current.name).toBe("de-DE");
+  });
 });
 
 const TABLES = {

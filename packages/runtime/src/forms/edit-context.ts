@@ -29,6 +29,7 @@ import { resolveValidationMessage, rulesForField, validationRulesOf, type Valida
  * - `Subscribe` (legacy Tsazor API) is `onValidationStateChanged.subscribe`.
  */
 export class EditContext {
+  /** The object being edited (Blazor's `EditContext.Model`). */
   readonly model: object;
 
   /** Blazor's OnFieldChanged: a field was marked modified. */
@@ -43,6 +44,7 @@ export class EditContext {
   private readonly fieldValidators = new Map<string, ModelValidator>();
   private readonly builtinStore: ValidationMessageStore;
 
+  /** Creates a context for `model` with no messages and no modified fields (Blazor's `new EditContext(model)`). */
   constructor(model: object) {
     this.model = model;
     this.onFieldChanged = new EventSet();
@@ -225,7 +227,11 @@ class FieldState {
 export class ValidationMessageStore {
   private readonly messagesByField = new Map<FieldState, string[]>();
 
-  constructor(readonly editContext: EditContext) {}
+  /** Creates an empty store for `editContext` (Blazor's `new ValidationMessageStore(editContext)`). */
+  constructor(
+    /** The context whose validation state this store contributes to. */
+    readonly editContext: EditContext,
+  ) {}
 
   /** Adds one message for a field (Blazor's Add(FieldIdentifier, message)). */
   add(field: string, message: string): void {
@@ -412,6 +418,8 @@ function validationRulesOfFieldMap(model: object): ReadonlyMap<string, readonly 
 
 /** The FieldIdentifier concept: model + field name (Tsazor: field name only). */
 export interface FieldIdentifier {
+  /** The field's name on the model (Blazor's `FieldName`). */
   readonly fieldName: string;
+  /** The object that owns the field (Blazor's `Model`). */
   readonly model: unknown;
 }

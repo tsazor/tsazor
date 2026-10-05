@@ -30,6 +30,7 @@ export class DomRenderer implements EventHandlerHost {
   private readonly journal = new DomJournal();
   private applying = false;
 
+  /** @internal Created by `Renderer`, which owns exactly one DomRenderer. */
   constructor(private readonly renderer: Renderer) {}
 
   /**

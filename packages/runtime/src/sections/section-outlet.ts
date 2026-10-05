@@ -55,6 +55,7 @@ export class SectionOutlet extends ComponentBase {
     b.closeComponent();
   }
 
+  /** Blazor's Dispose, called by the renderer: unsubscribes the outlet from its section, freeing the identifier for another outlet. */
   dispose(): void {
     if (this.subscribedIdentifier !== undefined) this.registry.unsubscribe(this.subscribedIdentifier);
   }

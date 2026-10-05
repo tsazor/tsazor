@@ -44,6 +44,7 @@ export class SectionContent extends ComponentBase {
     this.registry.notifyContentProviderChanged(identifier, this);
   }
 
+  /** Blazor's Dispose, called by the renderer: unregisters this provider; the outlet falls back to the previous provider's content. */
   dispose(): void {
     if (this.registeredIdentifier !== undefined) this.registry.removeProvider(this.registeredIdentifier, this);
   }

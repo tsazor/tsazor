@@ -31,6 +31,7 @@ export interface ProblemDetails {
  * what EditContext-forms render in a ValidationSummary.
  */
 export interface ValidationProblemDetails extends ProblemDetails {
+  /** Field name → its validation messages (ASP.NET Core's `Errors`). */
   errors?: Record<string, string[]>;
 }
 

@@ -1,26 +1,26 @@
 /**
- * Auth-Integration für .NET-Backends (Roadmap 5.2) auf dem Runtime-Modell
+ * Auth integration for .NET backends (roadmap 5.2) on the runtime model
  * (Blazor: AuthenticationStateProvider + ClaimsPrincipal):
  *
- *  - CookieAuthenticationStateProvider: fragt einen Session-Endpunkt (Default
- *    `/auth/user`) nach dem eingeloggten Benutzer; jede Fehlerseite (401/403,
- *    Netzwerk) ist anonym — der Server entscheidet pro Anfrage.
- *  - JwtAuthenticationStateProvider: dekodiert das JWT-Payload lokal (keine
- *    Abhängigkeit, kein Netzwerk) und bildet die Claims auf ClaimsPrincipal ab.
- *    `name` kommt aus `name`, `unique_name`, dem langen Microsoft-Claim-URI bzw.
- *    `sub`; Rollen aus `role` (auch als String oder String-Array, Microsoft-URI
- *    inklusive). Keine Signaturprüfung — Client-seitig nur Anzeige; die
- *    Gültigkeit entscheidet der Server (JwtBearer).
- *  - attachJwtAuth setzt einen Request-Interceptor `Authorization: Bearer …`
- *    auf den TsazorHttp — die Client-Seite der Middleware-Pipeline.
+ *  - CookieAuthenticationStateProvider: asks a session endpoint (default
+ *    `/auth/user`) for the signed-in user; every failure (401/403,
+ *    network) is anonymous — the server decides per request.
+ *  - JwtAuthenticationStateProvider: decodes the JWT payload locally (no
+ *    dependency, no network) and maps the claims onto a ClaimsPrincipal.
+ *    `name` comes from `name`, `unique_name`, the long Microsoft claim URI or
+ *    `sub`; roles from `role` (also as a string or string array, Microsoft URI
+ *    included). No signature check — client side it is display only; the
+ *    server (JwtBearer) decides validity.
+ *  - attachJwtAuth adds a request interceptor `Authorization: Bearer …`
+ *    to the TsazorHttp — the client side of the middleware pipeline.
  *
- * Empfohlener Standard ist der Cookie-Provider (BFF-Muster, docs/auth.md):
- * das Token bleibt beim Server in einem HttpOnly-Cookie, kein Skript im
- * Browser kommt daran. JWT im Browser nur mit benanntem Grund (etwa der
- * direkte Aufruf einer fremden API) — und dann nur im Speicher halten, nie in
- * localStorage/sessionStorage, wo jedes eingeschleuste Skript (XSS) es liest.
- * In beiden Fällen gilt: AuthorizeView/@authorize steuern nur die Oberfläche;
- * durchgesetzt wird auf dem Server, bei jeder Anfrage.
+ * The recommended default is the cookie provider (BFF pattern, docs/auth.md):
+ * the token stays with the server in an HttpOnly cookie, no script in the
+ * browser can reach it. JWT in the browser only with a named reason (such as
+ * calling a third-party API directly) — and then keep it in memory only, never
+ * in localStorage/sessionStorage, where any injected script (XSS) reads it.
+ * Either way: AuthorizeView/@authorize only control the UI;
+ * enforcement happens on the server, on every request.
  */
 import { TsazorHttp, type Claim, type ClaimsPrincipal, type RequestInterceptor } from "@tsazor/runtime";
 import { ANONYMOUS, AuthenticationState, createUser } from "@tsazor/runtime";
@@ -28,20 +28,25 @@ import { AuthenticationStateProvider } from "@tsazor/runtime";
 
 /* Cookie --------------------------------------------------------------------- */
 
-/** Antwortkörper eines Session-Endpunkts (Default /auth/user: `{ user: { … } }`). */
+/** Response body of a session endpoint (default /auth/user: `{ user: { … } }`). */
 export interface CookieUserEndpointResponse {
   user?: { name?: string; roles?: string | string[]; claims?: Record<string, string | string[]> };
 }
 
+/** Options for `CookieAuthenticationStateProvider`. */
 export interface CookieAuthOptions {
-  /** Der zu befragende Endpunkt (Default `/auth/user`). */
+  /** The endpoint to query (default `/auth/user`). */
   endpoint?: string;
 }
 
-/** Cookie-Session-Form: getState() fragt den Server; Fehler ⇒ anonym. */
+/** Cookie-session form: getState() asks the server; failure ⇒ anonymous. */
 export class CookieAuthenticationStateProvider extends AuthenticationStateProvider {
   private readonly endpoint: string;
 
+  /**
+   * @param http — the client the session endpoint is queried with (it must send the auth cookie).
+   * @param options — the endpoint; default `/auth/user`.
+   */
   constructor(
     private readonly http: TsazorHttp,
     options: CookieAuthOptions = {},
@@ -65,8 +70,8 @@ export class CookieAuthenticationStateProvider extends AuthenticationStateProvid
         }),
       );
     } catch {
-      // Netz/TLS/Parse-Fehler sind anonym — kein throw in getState (die
-      // Runtime loggt und fällt sonst ohnehin auf ANONYMOUS zurück).
+      // Network/TLS/parse errors are anonymous — no throw in getState (the
+      // runtime would log and fall back to ANONYMOUS anyway).
       return ANONYMOUS;
     }
   }
@@ -74,15 +79,15 @@ export class CookieAuthenticationStateProvider extends AuthenticationStateProvid
 
 /* JWT ------------------------------------------------------------------------ */
 
-/** Das dekodierte JWT-Payload: Claims, wie ASP.NET Core sie in das Token schreibt. */
+/** The decoded JWT payload: claims as ASP.NET Core writes them into the token. */
 export type JwtClaims = Record<string, string | number | string[] | undefined>;
 
-/** Microsofts lange Claim-URIs (Identity → JWT, ohne Shortname). */
+/** Microsoft's long claim URIs (Identity → JWT, without short name). */
 export const NAME_ID_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
 export const NAME_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name";
 export const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
 
-/** Dekodiert das JWT-Payload (Base64URL, UTF-8-sicher). Signatur wird nicht geprüft. */
+/** Decodes the JWT payload (Base64URL, UTF-8 safe). The signature is not checked. */
 export function decodeJwt(token: string): JwtClaims {
   const parts = token.split(".");
   if (parts.length !== 3) {
@@ -101,12 +106,12 @@ function base64UrlDecode(text: string): string {
     const binary = atob(base64);
     return new TextDecoder().decode(Uint8Array.from(binary, (character) => character.charCodeAt(0)));
   }
-  // Node (ohne atob): Buffer dekodiert direkt UTF-8.
+  // Node (without atob): Buffer decodes UTF-8 directly.
   const { Buffer } = globalThis as unknown as { Buffer: { from(text: string, encoding: string): { toString(encoding: string): string } } };
   return Buffer.from(base64, "base64").toString("utf8");
 }
 
-/** Claims ⇒ ClaimsPrincipal: Name, Rollen (auch Microsoft-URI), Claims-Liste. */
+/** Claims ⇒ ClaimsPrincipal: name, roles (Microsoft URI too), claims list. */
 export function principalFromJwt(claims: JwtClaims): ClaimsPrincipal {
   const name = claimText(claims, "name") ?? claimText(claims, "unique_name") ?? claimText(claims, NAME_CLAIM) ?? claimText(claims, "sub") ?? String(claimText(claims, NAME_ID_CLAIM) ?? "");
   const roleValue = claimValue(claims, "role") ?? claimValue(claims, ROLE_CLAIM);
@@ -150,32 +155,32 @@ function toClaims(record: Record<string, string | string[]>): Claim[] {
   );
 }
 
-/** Der JWT-basierte Provider: Zustand ist ein lokales Dekodieren, Benachrichtigung bei setToken/logout. */
+/** The JWT-based provider: state is a local decode, notification on setToken/logout. */
 export class JwtAuthenticationStateProvider extends AuthenticationStateProvider {
   private token: string | undefined;
   private state: AuthenticationState = ANONYMOUS;
 
-  /** Startzustand sofort aus `initialToken` (etwa aus einem gerade abgeschlossenen Login-Flow).
-   *  Das Token nur im Speicher halten — nicht in localStorage/sessionStorage (XSS liest es dort). */
+  /** Initial state right away from `initialToken` (e.g. from a login flow that just finished).
+   *  Keep the token in memory only — not in localStorage/sessionStorage (XSS reads it there). */
   constructor(initialToken?: string) {
     super();
     this.token = initialToken;
     this.state = initialToken ? this.decode(initialToken) : ANONYMOUS;
   }
 
-  /** Das aktuell gesetzte Token (attachJwtAuth liest es pro Anfrage). */
+  /** The token currently set (attachJwtAuth reads it per request). */
   getToken(): string | undefined {
     return this.token;
   }
 
-  /** Login/Ablauf: neues Token setzen (undefined = logout) und abonnenten melden. */
+  /** Login/expiry: set a new token (undefined = logout) and notify subscribers. */
   setToken(token: string | undefined): void {
     this.token = token;
     this.state = token ? this.decode(token) : ANONYMOUS;
     this.notifyAuthenticationStateChanged(this.state);
   }
 
-  /** Logout — Alias für setToken(undefined). */
+  /** Logout — alias for setToken(undefined). */
   logout(): void {
     this.setToken(undefined);
   }
@@ -188,13 +193,13 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
     try {
       return new AuthenticationState(principalFromJwt(decodeJwt(token)));
     } catch {
-      // Kaputtes Token ist anonym, kein throw — getState() bleibt total.
+      // A broken token is anonymous, no throw — getState() stays total.
       return ANONYMOUS;
     }
   }
 }
 
-/** Setzt `Authorization: Bearer <token>` pro Anfrage; Rückgabe = Unsubscribe. */
+/** Sets `Authorization: Bearer <token>` per request; returns the unsubscribe. */
 export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider): () => void {
   const interceptor: RequestInterceptor = (request) => {
     const token = provider.getToken();

@@ -54,6 +54,7 @@ export class InputFile extends ComponentBase {
  * `GetMultipleFiles` for multi-file ones).
  */
 export class InputFileChangeEventArgs {
+  /** Wraps the files of one change event (`InputFile` creates it; tests may too). */
   constructor(private readonly files: readonly File[]) {}
 
   /** The number of supplied files (Blazor's FileCount). */

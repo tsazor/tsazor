@@ -24,6 +24,12 @@ interface Registration {
 export class ServiceCollection {
   private readonly registrations = new Map<Token<never>, Registration>();
 
+  /**
+   * Blazor's AddSingleton/AddScoped/AddTransient with a factory: `factory`
+   * runs against the resolving provider. The lifetime defaults to singleton;
+   * `{ singleton: false }` means transient. A second registration for the
+   * same token replaces the first.
+   */
   register<T>(token: Token<T>, factory: (services: ServiceProvider) => T, options?: { singleton?: boolean; lifetime?: ServiceLifetime }): this {
     // `{ singleton: true }` (the previous default) stays a singleton,
     // `{ singleton: false }` stays a transient (fresh per resolve); `lifetime`
@@ -45,6 +51,7 @@ export class ServiceCollection {
     return this;
   }
 
+  /** Blazor's BuildServiceProvider: creates the root provider from a snapshot of the registrations (later registrations do not affect it). */
   build(): ServiceProvider {
     return new ServiceProvider(new Map(this.registrations));
   }
@@ -75,6 +82,7 @@ export class ServiceProvider {
     return new ServiceProvider(this.registrations, this.root ?? this);
   }
 
+  /** Blazor's GetRequiredService: resolves `token` according to its lifetime; throws when it is unregistered, on a circular dependency or after `dispose`. */
   get<T>(token: Token<T>): T {
     return this.resolve(token, true) as T;
   }

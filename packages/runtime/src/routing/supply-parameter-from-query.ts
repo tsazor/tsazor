@@ -28,6 +28,7 @@ export type QueryParameterType = "string" | "int" | "long" | "bool" | "double" |
 /** A TC39 class-field decorator (the only form the decorator accepts). */
 export type QueryParameterDecorator = (value: unknown, context: ClassFieldDecoratorContext) => void;
 
+/** What `@SupplyParameterFromQuery()` records for one field: query key, value type and array-ness. */
 export interface QueryParameterMeta {
   /** The query key; default: the field name (Blazor's Name). */
   readonly queryName?: string;

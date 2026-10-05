@@ -50,6 +50,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
     }
   }
 
+  /** Stops listening to the EditContext's change notifications. */
   dispose(): void {
     this.editContextUnsubscribe?.();
     this.editContextUnsubscribe = undefined;

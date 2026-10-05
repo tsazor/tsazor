@@ -7,6 +7,7 @@ import { scopeHashFor } from "./scoped-css.js";
 import { chainSourceMaps } from "./sourcemap.js";
 import { collectImports, createFileContext, resolutionOptions } from "@tsazor/workspace";
 
+/** Options for `transformTsazor`. */
 export interface TransformTsazorOptions {
   /** Emit a chained .tsazor → JS sourcemap (default true). */
   sourceMap?: boolean;
@@ -16,9 +17,11 @@ export interface TransformTsazorOptions {
   staticMarkup?: boolean;
 }
 
+/** What `transformTsazor` returns: the JS module, its sourcemap, the diagnostics and the HMR metadata. */
 export interface TransformTsazorResult {
   /** Browser-ready JS module (HMR appendix included). */
   code: string;
+  /** The .tsazor → JS sourcemap as JSON text; `null` with `sourceMap: false` or on compile errors. */
   map: string | null;
   /** Diagnostics of the compile (errors are not thrown here). */
   diagnostics: DiagnosticBag;

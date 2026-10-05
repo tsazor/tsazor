@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: `CultureService.setDefault` applies while the culture is still the previous
+  default (it compared against the new default and never applied). Every public export and member
+  of runtime, testing, dotnet and vite-plugin is documented (the reference's API pages).
 - `@tsazor/compiler`: `DIAGNOSTIC_CATALOG` (every code: severity, when it is reported, an example,
   the fix) and `DIAGNOSTIC_MESSAGES` are exported — the source of the reference's diagnostics page;
   `RETIRED_DIAGNOSTIC_CODES` (`TZS007`, `TZS010`). `TZS001` reads "Invalid or misplaced directive."

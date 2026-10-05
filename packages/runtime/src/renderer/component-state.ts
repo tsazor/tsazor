@@ -15,6 +15,7 @@ export class ComponentState {
   readonly slotChildren = new Map<number, ComponentState>();
   /** Slot children of the render pass currently being processed. */
   readonly newSlotChildren = new Map<number, ComponentState>();
+  /** The frames of the component's last completed render pass (Blazor's CurrentRenderTree). */
   currentRenderTree: RenderTreeFrame[] = [];
   /** Two alternating builders: while one holds the previous tree (the diff
    *  source), the other builds the next pass - no builder or frame-array
@@ -22,6 +23,7 @@ export class ComponentState {
   readonly renderBuilders = [new RenderTreeBuilder(), new RenderTreeBuilder()] as const;
   /** Index of the builder for the NEXT pass (toggles per flush). */
   renderPass = 0;
+  /** Set once the component has been disposed; queued renders for it are then skipped. */
   disposed = false;
   /** Distance from the root component: the render queue's parent-first order. */
   readonly depth: number;
@@ -57,20 +59,29 @@ export class ComponentState {
   /** Mutable so HMR can replace the definition in place. */
   definition: ComponentDefinition;
 
+  /** The component's `RenderHandle` (also assigned to `component.renderHandle`); the renderer wires up its methods. */
   readonly renderHandle: RenderHandle;
 
+  /** The comment node that marks the start of the component's DOM output. */
   get startMarker(): Comment {
     return this.range.start;
   }
 
+  /** The comment node that marks the end of the component's DOM output. */
   get endMarker(): Comment {
     return this.range.end;
   }
 
+  /**
+   * Created by the renderer when it instantiates a component.
+   */
   constructor(
+    /** The renderer-wide component id (Blazor's ComponentId), also used in the range's marker comments. */
     readonly id: number,
+    /** The component instance. */
     readonly component: ComponentBase,
     definition: ComponentDefinition,
+    /** The parent component's state; `null` for a root component. */
     readonly parent: ComponentState | null,
   ) {
     this.definition = definition;
@@ -91,7 +102,10 @@ export class ComponentState {
 
 /** A cascading value supplied by an ancestor CascadingValue component. */
 export interface CascadeEntry {
+  /** The supplied value. */
   readonly value: unknown;
+  /** The cascade name, matched case-insensitively against `CascadingParameter({ name })`. */
   readonly name?: string;
+  /** The value's static type for by-type matching. */
   readonly typeToken?: abstract new (...args: never[]) => unknown;
 }

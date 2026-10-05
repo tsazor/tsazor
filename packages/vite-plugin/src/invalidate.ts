@@ -1,29 +1,29 @@
 /**
- * 4.1 — HMR-Invalidierung.
+ * 4.1 — HMR invalidation.
  *
- * Vites Standard-Ausbreitung stoppt an selbst akzeptierenden Modulen und kennt
- * nur echte Import-Kanten. Der Tsazor-Graph hat drei weitere Abhängigkeitsarten
- * (A3 Import-Modell + 2.1 Metadaten-Cache), die dort unsichtbar sind:
+ * Vite's default propagation stops at self-accepting modules and only knows
+ * real import edges. The Tsazor graph has three more kinds of dependency
+ * (A3 import model + 2.1 metadata cache) that are invisible there:
  *
- * - `_Imports.tsazor` wird nie als Modul geladen; er vererbt Direktiven in jede
- *   transformierte Datei unterhalb seines Ordners.
- * - Markup-Tags, die beim letzten Transform unaufgelöst waren (TZS005), embedden
- *   kein Import — sobald ihre Komponente erscheint, müssen die Dateien neu
- *   transformiert werden.
- * - Codegen des Verbrauchers hängt an den Parameter-Metadaten des Ziels
- *   (2.2/2.3): ändert eine Komponente (auch über Code-behind/Basis), hängen die
- *   Dateien ihrer Tags neu ab.
+ * - `_Imports.tsazor` is never loaded as a module; it passes its directives on
+ *   to every transformed file below its folder.
+ * - Markup tags that were unresolved at the last transform (TZS005) embed
+ *   no import — as soon as their component appears, the files must be
+ *   transformed again.
+ * - The consumer's codegen depends on the target's parameter metadata
+ *   (2.2/2.3): when a component changes (also via code-behind/base), the
+ *   files using its tags depend on it anew.
  *
- * `TransformRegistry` hält diese Kanten pro transformierter Datei fest;
- * `planInvalidation` rechnet eine Watch-Änderung in "neu zu transformierende
- * .tsazor-Dateien" und "Routen-Manifest kann anders aussehen" über. Der Aufrufer
- * (Plugin) verteilt das Ergebnis auf Vites Modul-Graph. Pfade werden Windows-
- * gerecht case-insensitive verglichen (normalizeFileKey).
+ * `TransformRegistry` records these edges per transformed file;
+ * `planInvalidation` turns a watch change into ".tsazor files to transform
+ * again" and "the route manifest may look different". The caller
+ * (plugin) applies the result to Vite's module graph. Paths are compared
+ * case-insensitively, as Windows requires (normalizeFileKey).
  */
 import path from "node:path";
 import type { CodegenResult } from "@tsazor/compiler";
 
-/** Absolute, POSIX-getrennte, kleingeschriebene Form eines Pfads (Windows-Regel). */
+/** Absolute, POSIX-separated, lowercased form of a path (Windows rule). */
 export function normalizeFileKey(file: string): string {
   return path.resolve(file).replace(/\\/g, "/").toLowerCase();
 }
@@ -32,7 +32,7 @@ export function sameFile(a: string, b: string): boolean {
   return normalizeFileKey(a) === normalizeFileKey(b);
 }
 
-/** Routen-relevante Metadaten einer Seite (Routen-Manifest). */
+/** Route-relevant metadata of a page (route manifest). */
 export interface RouteSignature {
   templates: string[];
   layout?: string;
@@ -43,19 +43,19 @@ export interface RouteSignature {
 type CodegenMetadata = CodegenResult["metadata"];
 
 /**
- * Alles, was der Transform einer .tsazor-Datei festgehalten hat — die Kanten
- * für 4.1. `routes`/`layoutName`/`unresolvedTags` werden auch vom Hot-Update
- * (eigenes Neukompilieren) aktualisiert; `componentFiles` nur im Transform.
+ * Everything the transform of a .tsazor file recorded — the edges
+ * for 4.1. `routes`/`layoutName`/`unresolvedTags` are also updated by the hot
+ * update (its own recompile); `componentFiles` only in the transform.
  */
 export interface TransformRecord {
-  /** Absoluter Pfad, wie er vom Transform gemeldet wurde. */
+  /** Absolute path, as reported by the transform. */
   file: string;
-  /** Tags (TZS005), die beim letzten Transform unaufgelöst blieben. */
+  /** Tags (TZS005) that stayed unresolved at the last transform. */
   unresolvedTags: string[];
-  /** `@layout`-Name (auch in `_Imports.tsazor` — das Basis-Layout der Kette). */
+  /** `@layout` name (also in `_Imports.tsazor` — the chain's base layout). */
   layoutName?: string;
   routes: RouteSignature;
-  /** Absolute Komponenten-Dateien, auf die die Tags des Files aufgelöst sind (2.1-Metadaten). */
+  /** Absolute component files the file's tags resolved to (2.1 metadata). */
   componentFiles: string[];
 }
 
@@ -63,15 +63,20 @@ function newRecord(file: string): TransformRecord {
   return { file, unresolvedTags: [], routes: { templates: [] }, componentFiles: [] };
 }
 
+/**
+ * The plugin's per-file record of what each transformed `.tsazor` file
+ * depends on (resolved component files, unresolved tags, routes, `@layout`):
+ * the edges HMR invalidation follows beyond Vite's import graph.
+ */
 export class TransformRegistry {
   private readonly records = new Map<string, TransformRecord>();
 
-  /** Der Eintrag einer Datei (case-insensitive), oder undefined. */
+  /** The record of a file (case-insensitive), or undefined. */
   get(file: string): TransformRecord | undefined {
     return this.records.get(normalizeFileKey(file));
   }
 
-  /** Absolute Pfade (Original-Schreibung) aller transformierten Dateien. */
+  /** Absolute paths (original spelling) of all transformed files. */
   files(): string[] {
     return [...this.records.values()].map((record) => record.file);
   }
@@ -86,7 +91,7 @@ export class TransformRegistry {
     return record;
   }
 
-  /** Routes/Tags vom Hot-Update-Neukompilieren her anreichern (Kanten bleiben). */
+  /** Updates routes/tags from the hot-update recompile (edges stay). */
   recordDynamic(file: string, metadata: CodegenMetadata | undefined, isImports: boolean): void {
     const record = this.entryFor(file);
     if (metadata === undefined) return;
@@ -106,18 +111,19 @@ export class TransformRegistry {
     };
   }
 
-  /** Vom Transform her festhalten: Routen, unaufgelöste Tags, verbrauchte Komponenten-Dateien. */
+  /** Records from the transform: routes, unresolved tags, consumed component files. */
   recordTransform(file: string, metadata: CodegenMetadata, componentFiles: Iterable<string>): void {
     this.recordDynamic(file, metadata, false);
     const record = this.entryFor(file);
     record.componentFiles = [...componentFiles];
   }
 
+  /** Drops the record of a file (case-insensitive), e.g. after it was deleted. */
   remove(file: string): void {
     this.records.delete(normalizeFileKey(file));
   }
 
-  /** Dateien, deren Tags zu `componentFile` aufgelöst sind (Verbraucherkanten). */
+  /** Files whose tags resolved to `componentFile` (consumer edges). */
   consumersOf(componentFile: string): string[] {
     const target = normalizeFileKey(componentFile);
     const result: string[] = [];
@@ -127,7 +133,7 @@ export class TransformRegistry {
     return result;
   }
 
-  /** Dateien, deren Tags `tag` (case-insensitive = Windows/Blazor-Regel) unaufgelöst ließen. */
+  /** Files that left the tag `tag` unresolved (case-insensitive = Windows/Blazor rule). */
   filesWithUnresolvedTag(tag: string): string[] {
     const lowered = tag.toLowerCase();
     const result: string[] = [];
@@ -137,50 +143,52 @@ export class TransformRegistry {
     return result;
   }
 
-  /** Nutzt irgendein Eintrag (Seite oder `_Imports`) `@layout <className>`? */
+  /** Does any record (page or `_Imports`) use `@layout <className>`? */
   hasLayoutNameOf(className: string): boolean {
     const lowered = className.toLowerCase();
     return [...this.records.values()].some((record) => (record.layoutName ?? "").toLowerCase() === lowered);
   }
 }
 
-/* Invalidierungsplan ---------------------------------------------------------- */
+/* Invalidation plan ----------------------------------------------------------- */
 
+/** What `planInvalidation` computes for one file change. */
 export interface InvalidationPlan {
-  /** .tsazor-Dateien, deren erzeugtes Modul sich ändern kann — neu transformieren. */
+  /** .tsazor files whose generated module may change — transform them again. */
   retransform: string[];
-  /** Das `virtual:tsazor-routes`-Manifest kann anders aussehen (Vite: Reload). */
+  /** The `virtual:tsazor-routes` manifest may look different (Vite: reload). */
   routesModule: boolean;
-  /** Die Datei ist eine `.tsazor.css`-Sidecar, die verschwand — Vite kann den
-   *  injizierten Style nicht zurücknehmen; voller Reload statt HMR. */
+  /** The file is a `.tsazor.css` sidecar that disappeared — Vite cannot take back
+   *  the injected style; full reload instead of HMR. */
   fullReload: boolean;
 }
 
 export interface WatchEventContext {
-  /** Absoluter Pfad der geänderten Datei, wie der Beobachter sie meldet. */
+  /** Absolute path of the changed file, as the watcher reports it. */
   file: string;
   event: "update" | "create" | "delete";
-  /** Frisch kompilierte Metadaten der Datei (Hot-Update liest+compiliert). Undefined: löschen/leseschwierig. */
+  /** Freshly compiled metadata of the file (the hot update reads + compiles). Undefined: deleted/unreadable. */
   metadata: CodegenMetadata | undefined;
-  /** Registry des Plugins (Transform-Aufzeichnungen). */
+  /** The plugin's registry (transform records). */
   registry: TransformRegistry;
-  /** Alle .tsazor-Dateien unter `dir` (Routen-Scan-Regeln), absolut. */
+  /** All .tsazor files under `dir` (route-scan rules), absolute. */
   listTsazorUnder: (dir: string) => Promise<string[]>;
-  /** Metadaten-Rückwärtskanten (2.1-Cache): Komponenten-Dateien, deren Kette `file` liest. */
+  /** Metadata reverse edges (2.1 cache): component files whose chain reads `file`. */
   dependentsOf: (file: string) => string[];
 }
 
+/** Whether `file` is an `_Imports.tsazor` (name compared case-insensitively). */
 export function isImportsFile(file: string): boolean {
   return path.basename(file).toLowerCase() === "_imports.tsazor";
 }
 
 /**
- * Wandelt eine Dateiänderung in den Invalidierungsplan. Semantik laut 4.1:
- * Sidecar hinzufügen/entfernen ⇒ Besitzer; `_Imports.tsazor` ⇒ alle Dateien
- * darunter; neu hinzugefügte Komponente ⇒ Dateien mit vorher unaufgelöstem
- * Tag; jede Komponenten-Änderung ⇒ ihre Tag-Verbraucher (Metadaten-Codegen);
- * `@page`/Layout neu oder weg ⇒ Routen-Manifest. Basis-Ketten hängen über
- * `dependentsOf` (2.1-Cache) mit.
+ * Turns a file change into the invalidation plan. Semantics per 4.1:
+ * sidecar added/removed ⇒ owner; `_Imports.tsazor` ⇒ all files
+ * below it; newly added component ⇒ files with a previously unresolved
+ * tag; any component change ⇒ its tag consumers (metadata codegen);
+ * `@page`/layout added or removed ⇒ route manifest. Base chains are covered
+ * via `dependentsOf` (2.1 cache).
  */
 export async function planInvalidation(context: WatchEventContext): Promise<InvalidationPlan> {
   const { file, event, metadata, registry, listTsazorUnder, dependentsOf } = context;
@@ -199,8 +207,8 @@ export async function planInvalidation(context: WatchEventContext): Promise<Inva
 
   const plan: InvalidationPlan = { retransform: [], routesModule: false, fullReload: false };
 
-  // Code-behind-Sidecar: das Besitzer-.tsazor ändert seine Klasse (auch seine
-  // Tag-Verbraucher — das geflattene Parameter-Bild der Komponente ändert sich).
+  // Code-behind sidecar: the owner .tsazor changes its class (its tag consumers
+  // too — the component's flattened parameter picture changes).
   if (/\.tsazor\.ts$/i.test(file)) {
     const owner = file.slice(0, -".ts".length);
     registry.remove(file);
@@ -208,8 +216,8 @@ export async function planInvalidation(context: WatchEventContext): Promise<Inva
     return plan;
   }
 
-  // Scoped-CSS-Sidecar: Inhalt ändern macht Vite selbst; hinzufügen/entfernen
-  // ändert das erzeugte Modul (Import + Scope-Attribut).
+  // Scoped CSS sidecar: Vite handles content changes itself; adding/removing
+  // changes the generated module (import + scope attribute).
   if (/\.tsazor\.css$/i.test(file)) {
     const owner = file.slice(0, -".css".length);
     if (event === "update") return plan;
@@ -228,8 +236,8 @@ export async function planInvalidation(context: WatchEventContext): Promise<Inva
   }
 
   if (!file.toLowerCase().endsWith(".tsazor")) {
-    // Beliebiges .ts: der Metadaten-Cache kennt die Basisketten — Dateien, die
-    // eine Klasse daraus erben, neu transformieren (Vite deckt direkte Imports ab).
+    // Any .ts: the metadata cache knows the base chains — transform files that
+    // inherit a class from it again (Vite covers direct imports).
     plan.retransform = dependents;
     return plan;
   }
@@ -249,7 +257,7 @@ export async function planInvalidation(context: WatchEventContext): Promise<Inva
     const consumers = new Set(registry.filesWithUnresolvedTag(className));
     for (const consumer of registry.consumersOf(file)) consumers.add(consumer);
     plan.retransform = mark([...dependents, ...consumers]);
-    // Neue Seite, neues Layout — beides ändert das Routen-Manifest.
+    // New page, new layout — both change the route manifest.
     plan.routesModule =
       (metadata !== undefined && routesSignatureChanged(undefined, metadata)) ||
       (metadata !== undefined && layoutNameMatches(registry, className));
@@ -284,7 +292,7 @@ function signatureOf(routes: RouteSignature | undefined): string {
   });
 }
 
-/** Dateien (oder _Imports) mit einer `@layout <className>`-Anweisung. */
+/** Files (or _Imports) with an `@layout <className>` directive. */
 function layoutNameMatches(registry: TransformRegistry, className: string): boolean {
   return registry.hasLayoutNameOf(className);
 }

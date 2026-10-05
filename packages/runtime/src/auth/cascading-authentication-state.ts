@@ -16,10 +16,12 @@ export class CascadingAuthenticationState extends ComponentBase implements Casca
   /** Content whose subtree receives the AuthenticationState. */
   @Parameter() childContent?: RenderFragment;
 
+  /** Marks the component as a cascading value supplier for the renderer. */
   readonly isCascadingValueSupplier = true;
   readonly isFixed = false;
   /** Cascades by type, unnamed (Blazor cascades its Task<AuthenticationState> the same way). */
   readonly cascadeType = AuthenticationState;
+  /** The cascaded AuthenticationState (anonymous until the provider resolves). */
   get cascadeValue(): unknown {
     return this.authenticationState ?? ANONYMOUS;
   }
@@ -35,6 +37,7 @@ export class CascadingAuthenticationState extends ComponentBase implements Casca
     });
   }
 
+  /** Stops listening to authentication state changes. */
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;

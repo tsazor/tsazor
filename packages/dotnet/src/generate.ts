@@ -1,21 +1,20 @@
 /**
- * Generator: OpenAPI-Dokument ⇒ zwei TS-Dateien (`models.ts` + `<Client>.ts`).
+ * Generator: OpenAPI document ⇒ two TS files (`models.ts` + `<Client>.ts`).
  *
- * Regeln (dokumentiert im README):
+ * Rules (documented in the README):
  *  - Nullability: required && !nullable ⇒ `T`; required && nullable ⇒ `T | null`;
  *    optional && !nullable ⇒ `?: T`; optional && nullable ⇒ `?: T | null`.
- *  - `integer`/`number` (auch `int64`) ⇒ `number` — JS hat ein Zahlformat; die
- *    Int64-Präzisionsgrenze wie bei openapi-typescript, im README dokumentiert.
- *  - Modelle sind **Klassen**, damit Instanzen die 3.6-Decorator-Metadaten
- *    tragen und EditContext/DataAnnotationsValidator die Regeln aus dem Schema
- *    finden.
- *  - Schema-Constraints ⇒ DataAnnotations-Decorators (3.6): required (String/
- *    Objekt), minLength/maxLength (beide ⇒ StringLength, sonst einzeln),
- *    minimum/maximum (beide ⇒ Range), pattern, format "email". Abweichung von
- *    .NET: Range nur bei beiden Grenzen (DataAnnotations verlangt zwei).
- *  - Inline-Objekte ohne $ref (und Typen ohne Mapping) → `Record<string,
- *    unknown>`/`unknown` mit Generator-Warnung — die Teilmenge, die Swashbuckle
- *    für DTOs emitted, ist abgedeckt, alles andere bleibt explizit markiert.
+ *  - `integer`/`number` (`int64` too) ⇒ `number` — JS has one number format; the
+ *    Int64 precision limit as in openapi-typescript, documented in the README.
+ *  - Models are **classes**, so instances carry the 3.6 decorator metadata
+ *    and EditContext/DataAnnotationsValidator find the rules from the schema.
+ *  - Schema constraints ⇒ DataAnnotations decorators (3.6): required (string/
+ *    object), minLength/maxLength (both ⇒ StringLength, otherwise each alone),
+ *    minimum/maximum (both ⇒ Range), pattern, format "email". Deviation from
+ *    .NET: Range only with both bounds (DataAnnotations requires two).
+ *  - Inline objects without $ref (and types without a mapping) → `Record<string,
+ *    unknown>`/`unknown` with a generator warning — the subset Swashbuckle
+ *    emits for DTOs is covered, everything else stays explicitly marked.
  */
 import {
   flattenAllOf,
@@ -32,13 +31,13 @@ import {
 import type { EnvelopeOptions } from "./http-result.js";
 
 export interface GenerateOptions {
-  /** Klassenname des Clients (ohne "Client"); Default aus `info.title`. */
+  /** Class name of the client (without "Client"); default from `info.title`. */
   clientName?: string;
   /** CLI `--envelope data,errors`. */
   envelope?: EnvelopeOptions;
-  /** CLI `--base-url`: der generierte Client konstruiert per Default einen TsazorHttp darauf. */
+  /** CLI `--base-url`: by default the generated client constructs a TsazorHttp on it. */
   baseUrl?: string;
-  /** Dateiname des Clients (ohne .ts); Default aus clientName (kebab-case). */
+  /** File name of the client (without .ts); default from clientName (kebab-case). */
   clientFile?: string;
 }
 
@@ -49,7 +48,7 @@ export interface GeneratedFile {
 
 export interface Generation {
   files: GeneratedFile[];
-  /** Nicht-mappbare Ausschnitte (dokumentierte Teilmenge) als Warnungen. */
+  /** Unmappable parts (documented subset) as warnings. */
   warnings: string[];
 }
 
@@ -62,7 +61,7 @@ export function generateClient(document: OpenApiDocument, options: GenerateOptio
 }
 
 class Generator {
-  /** Modell-Typnamen, die der Client-File braucht (nur während der Client-Phase geschrieben). */
+  /** Model type names the client file needs (written only during the client phase). */
   private readonly clientModelRefs = new Set<string>();
   private tracking = false;
 
@@ -82,7 +81,7 @@ class Generator {
     ];
   }
 
-  /* Modelle ----------------------------------------------------------------- */
+  /* Models ------------------------------------------------------------------ */
 
   private models(): string {
     const schemas = this.document.components?.schemas ?? {};
@@ -152,7 +151,7 @@ class Generator {
     const key = fieldKey(name);
     const type = this.typeText(property, name);
     if (isRequired && !nullable) {
-      // Primitive bekommen den .NET-Default; Objekt-Referenzen definite assignment.
+      // Primitives get the .NET default; object references get definite assignment.
       if (type === "string") return `    ${key} = "";`;
       if (type === "number") return `    ${key} = 0;`;
       if (type === "boolean") return `    ${key} = false;`;
@@ -165,8 +164,8 @@ class Generator {
     return `    ${key}?: ${nullable ? `${type} | null` : type};`;
   }
 
-  /** TS-Typ eines Schemas; rekursiv über items/$ref. `withNull`: NullSuffix anfügen
-   *  (Felder regeln Nullability selbst — hier nur Items/Query-Positionen). */
+  /** TS type of a schema; recursive over items/$ref. `withNull`: append the null suffix
+   *  (fields handle nullability themselves — here only item/query positions). */
   private typeText(property: OpenApiSchema, owner: string, withNull = false): string {
     if (property.$ref !== undefined) {
       const name = pascal(property.$ref.slice(property.$ref.lastIndexOf("/") + 1));
@@ -182,7 +181,7 @@ class Generator {
       }
       case "integer":
       case "number":
-        // int32/int64/float/double → number (ein Zahlformat in JS; Präzisionsgrenze im README).
+        // int32/int64/float/double → number (one number format in JS; precision limit in the README).
         return `number${nullSuffix}`;
       case "boolean":
         return `boolean${nullSuffix}`;
@@ -191,14 +190,14 @@ class Generator {
           this.warn(`Schema "${owner}": array ohne items → unknown[]`);
           return "unknown[]";
         }
-        // $refs hier NICHT auflösen — typeText benennt den Zieltyp.
+        // Do NOT resolve $refs here — typeText names the target type.
         const itemType = this.typeText(property.items as OpenApiSchema, owner, schemaNullable(property.items as OpenApiSchema));
         return `${unionArray(itemType)}${nullSuffix}`;
       }
       case "object": {
         const additional = "additionalProperties" in property ? property.additionalProperties : undefined;
         if (Object.keys(property.properties ?? {}).length === 0 && additional !== undefined) {
-          // additionalProperties-Form (ASP.NET: Dictionaries) ohne Propertyverlust.
+          // additionalProperties form (ASP.NET: dictionaries) without losing properties.
           const valueType = additional === true || (typeof additional === "object" && Object.keys(additional).length === 0)
             ? "unknown"
             : this.typeText(additional as OpenApiSchema, owner);
@@ -235,8 +234,8 @@ class Generator {
     if (clientModelRefs.size > 0) {
       out.push(`import type { ${[...clientModelRefs].sort().join(", ")} } from "./models";`, "");
     }
-    // Paket-Importe: Basisklasse + Ergebnis-Typ immer, queryString nur bei
-    // Query-Operationen, TsazorHttp als Konstruktor-Typ immer.
+    // Package imports: base class + result type always, queryString only with
+    // query operations, TsazorHttp as the constructor type always.
     const usesQuery = operations.some((op) => op.queryInterface !== undefined);
     out.push(
       `import { OpenApiClient${usesQuery ? ", queryString" : ""}, type HttpResult } from "@tsazor/dotnet";`,
@@ -298,7 +297,7 @@ class Generator {
     const responseType = this.responseType(operation, name);
     const bodyType = this.bodyType(operation, name);
 
-    // Signatur: Pfad-Parameter, Body, dann das Query-Objekt.
+    // Signature: path parameters, body, then the query object.
     const signatureParts = pathParameters.map((p) => `${fieldKey(p.name)}: ${this.typeText(paramSchema(this.document, p), p.name)}`);
     if (bodyType) {
       const request = resolveSchemaLike(this.document, operation.requestBody as unknown as OpenApiSchema) as unknown as { required?: boolean };
@@ -307,7 +306,7 @@ class Generator {
     const query = queryParameters.length > 0 ? this.queryEntry(name, queryParameters) : undefined;
     if (query) signatureParts.push(query.signature);
 
-    // URL: Pfad-Template interpoliert, Query-String hinten angehängt.
+    // URL: path template interpolated, query string appended at the end.
     let inner = path;
     if (pathParameters.length > 0) {
       inner = path.replace(/\{([^}]+)\}/g, (_m, paramName: string) => "${encodeURIComponent(" + fieldKey(paramName) + ")}");
@@ -338,7 +337,7 @@ class Generator {
     return `${method}${segments}`;
   }
 
-  /** Erste 2xx-Antwort mit JSON-Schema (204 bzw. ohne Schema ⇒ void = undefined body). */
+  /** First 2xx response with a JSON schema (204 or no schema ⇒ void = undefined body). */
   private responseType(operation: OpenApiOperation, opName: string): { type: string } | undefined {
     if (operation.responses === undefined) return undefined;
     for (const [code, raw] of Object.entries(operation.responses)) {
@@ -374,8 +373,8 @@ class Generator {
     });
     return {
       signature: `query?: ${interfaceName}`,
-      // type alias statt interface: queryString(Record<…>) verlangt ein
-      // implizites Index-Signatur-Target — Interfaces bekommen das nicht.
+      // type alias instead of interface: queryString(Record<…>) needs an
+      // implicit index-signature target — interfaces don't get one.
       interface: [
         docComment("", `Query parameters of the ${name} operation.`),
         `export type ${interfaceName} = {`,
@@ -398,14 +397,14 @@ interface OperationQuery {
   interface: string[];
 }
 
-/* Hilfsfunktionen ------------------------------------------------------------ */
+/* Helpers -------------------------------------------------------------------- */
 
-/** Parameter-Schema ($ref bleibt $ref — typeText benennt den Zieltyp). */
+/** Parameter schema ($ref stays $ref — typeText names the target type). */
 function paramSchema(_document: OpenApiDocument, parameter: OpenApiParameter): OpenApiSchema {
   return (parameter.schema ?? {}) as OpenApiSchema;
 }
 
-/** Union-Elemente in Array-Position klammern: `(A | B)[]`. */
+/** Parenthesize unions in array position: `(A | B)[]`. */
 function unionArray(itemType: string): string {
   return /[\s|]/.test(itemType) ? `(${itemType})[]` : `${itemType}[]`;
 }
@@ -419,13 +418,13 @@ function kebab(name: string): string {
 }
 
 function camel(name: string): string {
-  // "List_Orders" → "listOrders"; PascalCase bleibt erhalten und wird nur
-  // klein am Anfang ("ListOrders" → "listOrders").
+  // "List_Orders" → "listOrders"; PascalCase is kept and only lowercased
+  // at the start ("ListOrders" → "listOrders").
   const clean = name.replace(/[^A-Za-z0-9]+(.)/g, (_m, c: string) => c.toUpperCase());
   return clean.length === 0 ? "op" : clean.charAt(0).toLowerCase() + clean.slice(1);
 }
 
-/** Eigenschaften-Schlüssel als Feld (quoten, wenn kein TS-Identifier). */
+/** Property key as a field (quoted when not a TS identifier). */
 function fieldKey(name: string): string {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
 }
@@ -439,12 +438,12 @@ function docComment(indent: string, description: string | undefined): string {
     .join("\n");
 }
 
-/** Die DataAnnotations-Decorators (3.6) für ein Schema-Property (fertig als `@X()`). */
+/** The DataAnnotations decorators (3.6) for a schema property (ready as `@X()`). */
 function validationDecorators(property: OpenApiSchema, isRequired: boolean): string[] {
   const decorators: string[] = [];
   const type = schemaType(property);
   const isString = type === "string";
-  // $ref zählt als Objekt-Referenz (auf ein DTO/Enum).
+  // $ref counts as an object reference (to a DTO/enum).
   const isObjectRef = property.$ref !== undefined || type === "object";
   if (isRequired && !schemaNullable(property) && (isString || isObjectRef)) {
     decorators.push("Required()");

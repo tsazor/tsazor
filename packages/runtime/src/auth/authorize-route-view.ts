@@ -35,6 +35,7 @@ export class AuthorizeRouteView extends RouteView {
     });
   }
 
+  /** Stops listening to authentication state changes. */
   dispose(): void {
     this.unsubscribe?.();
     this.unsubscribe = undefined;

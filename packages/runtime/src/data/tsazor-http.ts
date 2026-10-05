@@ -30,13 +30,16 @@ export type ResponseInterceptor = (response: Response) => Response | Promise<Res
  * bridge's `HttpResult` builds on this instead of losing the body.
  */
 export class TsazorHttpError extends Error {
+  /** The HTTP status code, e.g. `404`. */
   readonly status: number;
+  /** The HTTP status text, e.g. `"Not Found"`. */
   readonly statusText: string;
   /** Parsed JSON body when possible, else the raw body text, else null. */
   readonly body: unknown;
   /** The failing response (body may already be consumed). */
   readonly response: Response;
 
+  /** Builds the error from the failing response and its already-read body. */
   constructor(response: Response, body: unknown) {
     const summary = typeof body === "string" ? body : body === null ? "<no body>" : JSON.stringify(body);
     super(`[tsazor-http] ${response.status} ${response.statusText}: ${summary}`);
@@ -48,12 +51,22 @@ export class TsazorHttpError extends Error {
   }
 }
 
+/**
+ * Fetch-based JSON HTTP client, Tsazor's counterpart of Blazor's injected
+ * `HttpClient` with `GetFromJsonAsync` / `PostAsJsonAsync`. Register an
+ * instance in DI and `@inject` it; non-2xx responses throw `TsazorHttpError`.
+ */
 export class TsazorHttp {
   private readonly requestInterceptors: RequestInterceptor[] = [];
   private readonly responseInterceptors: ResponseInterceptor[] = [];
 
+  /** Creates a client with an optional base URL, default headers and `fetch` replacement. */
   constructor(private readonly options: TsazorHttpOptions = {}) {}
 
+  /**
+   * Adds an interceptor that runs on every outgoing request, in the order
+   * added (e.g. to set an auth header). Returns a function that removes it.
+   */
   addRequestInterceptor(interceptor: RequestInterceptor): () => void {
     this.requestInterceptors.push(interceptor);
     return () => {
@@ -62,6 +75,10 @@ export class TsazorHttp {
     };
   }
 
+  /**
+   * Adds an interceptor that runs on every response before the status check
+   * and JSON parsing, in the order added. Returns a function that removes it.
+   */
   addResponseInterceptor(interceptor: ResponseInterceptor): () => void {
     this.responseInterceptors.push(interceptor);
     return () => {
@@ -83,11 +100,19 @@ export class TsazorHttp {
     return response;
   }
 
+  /**
+   * Sends a GET and parses the JSON response (Blazor's `GetFromJsonAsync`).
+   * An empty body yields `null`; a non-2xx status throws `TsazorHttpError`.
+   */
   async getJson<T>(url: string, init?: RequestInit): Promise<T> {
     const response = await this.send(new Request(this.resolve(url), { method: "GET", headers: this.headers(), ...init }));
     return (await this.parse(response)) as T;
   }
 
+  /**
+   * Sends `body` as JSON with POST and parses the JSON response (Blazor's
+   * `PostAsJsonAsync` + `ReadFromJsonAsync`). Empty body → `null`; non-2xx throws `TsazorHttpError`.
+   */
   async postJson<T>(url: string, body: unknown, init?: RequestInit): Promise<T> {
     const response = await this.send(
       new Request(this.resolve(url), {
@@ -100,6 +125,10 @@ export class TsazorHttp {
     return (await this.parse(response)) as T;
   }
 
+  /**
+   * Sends `body` as JSON with PUT and parses the JSON response (Blazor's
+   * `PutAsJsonAsync`). Empty body → `null`; non-2xx throws `TsazorHttpError`.
+   */
   async putJson<T>(url: string, body: unknown, init?: RequestInit): Promise<T> {
     const response = await this.send(
       new Request(this.resolve(url), {
@@ -112,6 +141,10 @@ export class TsazorHttp {
     return (await this.parse(response)) as T;
   }
 
+  /**
+   * Sends a DELETE and parses the JSON response (Blazor's `DeleteAsync`).
+   * Empty body → `null`; non-2xx throws `TsazorHttpError`.
+   */
   async deleteJson<T>(url: string, init?: RequestInit): Promise<T> {
     const response = await this.send(new Request(this.resolve(url), { method: "DELETE", headers: this.headers(), ...init }));
     return (await this.parse(response)) as T;

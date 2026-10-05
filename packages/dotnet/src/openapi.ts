@@ -1,7 +1,7 @@
 /**
- * OpenAPI-subset-Reader for the generator: the document model (3.0 und 3.1)
- * plus $ref-Auflösung. The subset is deliberately small — the pieces a
- * ASP.NET-Core-Backend emits via Swashbuckle/NSwag: paths/operations,
+ * OpenAPI subset reader for the generator: the document model (3.0 and 3.1)
+ * plus $ref resolution. The subset is deliberately small — the pieces an
+ * ASP.NET Core backend emits via Swashbuckle/NSwag: paths/operations,
  * request/response bodies, parameters, components.schemas with properties,
  * required, nullable (3.0) / type-includes-"null" (3.1), enum, allOf,
  * additionalProperties and the constraint keywords the validation model
@@ -49,7 +49,7 @@ export interface OpenApiSchema {
   allOf?: (OpenApiSchema | { $ref: string })[];
   additionalProperties?: boolean | OpenApiSchema | { $ref: string };
   $ref?: string;
-  // Validation constraints (⇒ 3.6-Decorators im Generator):
+  // Validation constraints (⇒ 3.6 decorators in the generator):
   minLength?: number;
   maxLength?: number;
   pattern?: string;
@@ -114,10 +114,10 @@ export function resolveSchemaLike(document: OpenApiDocument, value: OpenApiSchem
 }
 
 /**
- * Flattens `allOf` inheritance (ASP.NET-Core emits it for base classes):
+ * Flattens `allOf` inheritance (ASP.NET Core emits it for base classes):
  * properties and required arrays fold together; each member's own $ref
- * resolves first. `allOf` mit Konflikt (gleiches Property in zwei Members)
- * gewinnt das erste Auftreten.
+ * resolves first. On an `allOf` conflict (same property in two members)
+ * the first occurrence wins.
  */
 export function flattenAllOf(document: OpenApiDocument, schema: OpenApiSchema): OpenApiSchema {
   if (schema.allOf === undefined) return schema;
@@ -131,7 +131,7 @@ export function flattenAllOf(document: OpenApiDocument, schema: OpenApiSchema): 
       if (!merged.required!.includes(name)) merged.required!.push(name);
     }
   }
-  // Eigene Constraints/Enum/Format des allOf-Knotens bleiben erhalten (z. B. discriminator-freie Zusätze).
+  // The allOf node's own constraints/enum/format are kept (e.g. discriminator-free additions).
   if (schema.properties !== undefined) {
     for (const [name, property] of Object.entries(schema.properties)) {
       merged.properties![name] = property;
@@ -145,7 +145,7 @@ export function flattenAllOf(document: OpenApiDocument, schema: OpenApiSchema): 
   return merged;
 }
 
-/** True when the schema allows null (3.0 `nullable: true` or 3.1 "null"-type-member). */
+/** True when the schema allows null (3.0 `nullable: true` or 3.1 "null" type member). */
 export function schemaNullable(schema: OpenApiSchema): boolean {
   if (schema.nullable === true) return true;
   return Array.isArray(schema.type) && schema.type.includes("null");

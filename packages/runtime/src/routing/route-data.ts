@@ -41,7 +41,11 @@ export interface RouteData {
  * the `routes` option (Blazor's AppAssembly reflection analogue).
  */
 export class RouteManifest {
-  constructor(readonly entries: RouteEntry[]) {}
+  /** Wraps the app's route entries for registration in DI. */
+  constructor(
+    /** The routes, in manifest order (the Router sorts them by precedence). */
+    readonly entries: RouteEntry[],
+  ) {}
 }
 
 /** Sentinel for "constraint did not match" (a match may legitimately convert to a falsy value). */
@@ -327,8 +331,16 @@ interface RouteTableEntry {
  * literals, same constraints) are ambiguous: building the table throws.
  */
 export class RouteTable {
-  private constructor(readonly entries: readonly RouteTableEntry[]) {}
+  private constructor(
+    /** The parsed routes in match order (highest precedence first). */
+    readonly entries: readonly RouteTableEntry[],
+  ) {}
 
+  /**
+   * Parses the route templates and sorts them by precedence (stable: equal
+   * routes keep their order). Throws on an invalid template or when two
+   * routes are ambiguous.
+   */
   static create(routes: readonly RouteEntry[]): RouteTable {
     const parametersByType = new Map<unknown, Map<string, string>>();
     const parsed = routes.map((route) => {

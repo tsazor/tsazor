@@ -683,6 +683,7 @@ export interface NavigationOptions {
 export interface LocationChangingContext {
   /** Absolute target URI. */
   readonly targetLocation: string;
+  /** The state passed via `NavigationOptions.historyEntryState`, or restored from the history entry on back/forward. */
   readonly historyEntryState: string | undefined;
   /** True for an intercepted link click. */
   readonly isNavigationIntercepted: boolean;
@@ -692,14 +693,22 @@ export interface LocationChangingContext {
   preventNavigation(): void;
 }
 
+/**
+ * A handler for `registerLocationChangingHandler`: runs before an internal
+ * navigation and may cancel it with `context.preventNavigation()` (Blazor's
+ * `Func<LocationChangingContext, ValueTask>`).
+ */
 export type LocationChangingHandler = (context: LocationChangingContext) => void | Promise<void>;
 
+/** Blazor's LocationChangedEventArgs: passed to `addLocationChanged` handlers after the URL changed. */
 export interface LocationChangedEventArgs {
+  /** The new absolute URI. */
   readonly location: string;
   /** Blazor's IsNavigationIntercepted: true for an intercepted link click. */
   readonly isNavigationIntercepted: boolean;
   /** Former Tsazor name of isNavigationIntercepted. */
   readonly isIntercepted: boolean;
+  /** The state stored with the new history entry (`NavigationOptions.historyEntryState`), if any. */
   readonly historyEntryState?: string;
 }
 

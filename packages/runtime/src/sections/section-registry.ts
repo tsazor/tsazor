@@ -1,24 +1,14 @@
 import type { RenderFragment } from "../render-tree/render-tree.js";
 
-/**
- * Blazor's SectionRegistry (one per renderer, reached via the component's
- * render handle): providers per section identifier ("last added wins" — the
- * default-content providers are kept at position 0), exactly ONE subscriber
- * (SectionOutlet) per identifier. Content changes notify the subscriber only
- * when the most recently added provider's content changes or when that latest
- * provider is removed (falling back to the second most recent one).
- *
- * Render-mode-mismatch detection (Blazor's DetectRenderModeMismatch) is not
- * ported: Tsazor has no render modes.
- */
-
 /** The part of a SectionContent the registry talks to. */
 export interface SectionContentLike {
+  /** The content the section's outlet renders while this provider is the latest one. */
   childContent?: RenderFragment | undefined;
 }
 
 /** The part of a SectionOutlet the registry talks to. */
 export interface SectionOutletLike {
+  /** Called by the registry with the provider whose content to show now, or `null` when the section has none. */
   contentUpdated(provider: SectionContentLike | null): void;
 }
 
@@ -35,10 +25,26 @@ export function resolveSectionIdentifier(componentName: string, sectionName: str
 const describe = (identifier: unknown): string =>
   typeof identifier === "string" ? identifier : String(identifier);
 
+/**
+ * Blazor's SectionRegistry (one per renderer, reached via the component's
+ * render handle): providers per section identifier ("last added wins" — the
+ * default-content providers are kept at position 0), exactly ONE subscriber
+ * (SectionOutlet) per identifier. Content changes notify the subscriber only
+ * when the most recently added provider's content changes or when that latest
+ * provider is removed (falling back to the second most recent one).
+ *
+ * Render-mode-mismatch detection (Blazor's DetectRenderModeMismatch) is not
+ * ported: Tsazor has no render modes.
+ */
 export class SectionRegistry {
   private readonly providersByIdentifier = new Map<unknown, SectionContentLike[]>();
   private readonly subscribersByIdentifier = new Map<unknown, SectionOutletLike>();
 
+  /**
+   * Registers a content provider for `identifier`. A default provider goes
+   * first, behind all others; any other becomes the latest. Does not notify
+   * the outlet — `notifyContentProviderChanged` follows.
+   */
   addProvider(identifier: unknown, provider: SectionContentLike, isDefaultProvider: boolean): void {
     let providers = this.providersByIdentifier.get(identifier);
     if (providers === undefined) {
@@ -50,6 +56,7 @@ export class SectionRegistry {
     else providers.push(provider);
   }
 
+  /** Unregisters a provider; when it was the latest, the outlet is notified with the next most recent one. Throws when it is not registered. */
   removeProvider(identifier: unknown, provider: SectionContentLike): void {
     const providers = this.providersByIdentifier.get(identifier);
     if (providers === undefined) {
@@ -67,6 +74,7 @@ export class SectionRegistry {
     }
   }
 
+  /** Subscribes the outlet for `identifier` and tells it the current content at once. Throws when the identifier already has an outlet. */
   subscribe(identifier: unknown, outlet: SectionOutletLike): void {
     if (this.subscribersByIdentifier.has(identifier)) {
       throw new Error(`There is already a subscriber to the content with the given section ID '${describe(identifier)}'.`);
@@ -77,12 +85,14 @@ export class SectionRegistry {
     this.subscribersByIdentifier.set(identifier, outlet);
   }
 
+  /** Removes the outlet of `identifier`. Throws when there is none. */
   unsubscribe(identifier: unknown): void {
     if (!this.subscribersByIdentifier.delete(identifier)) {
       throw new Error(`The subscriber with the given section ID '${describe(identifier)}' is already unsubscribed.`);
     }
   }
 
+  /** Reports that a provider's content changed; the outlet is notified only when it is the latest provider. Throws when the identifier has no providers. */
   notifyContentProviderChanged(identifier: unknown, provider: SectionContentLike): void {
     const providers = this.providersByIdentifier.get(identifier);
     if (providers === undefined) {

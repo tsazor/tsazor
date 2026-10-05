@@ -19,8 +19,11 @@ import { CultureInfo } from "./culture-info.js";
 
 /** What a culture change notification carries (Blazor: an event with no payload). */
 export interface CultureChangedEventArgs {
+  /** The culture before the change. */
   readonly previous: CultureInfo;
+  /** The culture now in effect. */
   readonly current: CultureInfo;
+  /** Which setter caused the change: `setExplicit`, `setFromProfile` or `setDefault`. */
   readonly reason: "explicit" | "profile" | "default";
 }
 
@@ -29,6 +32,12 @@ function toCulture(culture: string | CultureInfo): CultureInfo {
   return typeof culture === "string" ? new CultureInfo(culture) : culture;
 }
 
+/**
+ * The app-wide current culture as a DI service (Blazor/.NET keep it in the
+ * ambient `CultureInfo.CurrentCulture`). An explicit selection beats the user
+ * profile and locks it out; components that inject the service re-render on
+ * every change.
+ */
 export class CultureService {
   private currentCulture: CultureInfo;
   private defaultCulture: CultureInfo;
@@ -69,10 +78,11 @@ export class CultureService {
 
   /** The app default — lowest priority, used until anything else is set. */
   setDefault(culture: string | CultureInfo): void {
+    const previous = this.defaultCulture;
     this.defaultCulture = toCulture(culture);
-    // A default only applies while nothing stronger was selected (and it
-    // re-homes the fallback table when nothing was selected yet).
-    if (!this.locked && this.currentCulture === this.defaultCulture) this.change(this.defaultCulture, "default");
+    // A default only applies while nothing stronger was selected: the current
+    // culture is still the previous default.
+    if (!this.locked && this.currentCulture === previous) this.change(this.defaultCulture, "default");
   }
 
   /**

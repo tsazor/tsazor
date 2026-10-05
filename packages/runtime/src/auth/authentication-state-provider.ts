@@ -40,6 +40,10 @@ export abstract class AuthenticationStateProvider {
     }
   }
 
+  /**
+   * Calls `handler` with the new state on every notification (Blazor's
+   * `AuthenticationStateChanged` event). Returns the unsubscribe function.
+   */
   subscribe(handler: AuthenticationStateChangedHandler): () => void {
     this.subscribers.add(handler);
     return () => {

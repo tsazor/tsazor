@@ -56,6 +56,7 @@ export class NavigationLock extends ComponentBase {
 
   protected override buildRenderTree(_b: RenderTreeBuilder): void {}
 
+  /** Unregisters the location-changing handler and removes the `beforeunload` listener. */
   dispose(): void {
     this.registration?.dispose();
     this.registration = undefined;

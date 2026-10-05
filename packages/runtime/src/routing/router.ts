@@ -63,6 +63,7 @@ export class Router extends ComponentBase {
     if (!scrollToElement(target)) window.scrollTo?.(0, 0);
   }
 
+  /** Stops listening to location changes. */
   dispose(): void {
     this.unsubscribe?.();
   }

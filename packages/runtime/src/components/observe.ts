@@ -15,17 +15,25 @@ export type ObserveTeardown = (() => unknown) | { unsubscribe(): unknown } | nul
  * `onNext`/`onError`/`onComplete` (Sleipnir's SubscribeHandlers).
  */
 export interface ObserveListener<T> {
+  /** Notifies a new value: runs the `observe` callback, then re-renders the component. */
   (value?: T): void;
+  /** Same as calling the listener. */
   next(value: T): void;
+  /** Routes the source's error to the component's error path (nearest ErrorBoundary, else the error handler). */
   error(error: unknown): void;
+  /** Ignored: completion does not stop observing or re-render. */
   complete(): void;
+  /** Same as calling the listener. */
   onNext(value: T): void;
+  /** Same as `error`. */
   onError(error: unknown): void;
+  /** Same as `complete` (ignored). */
   onComplete(): void;
 }
 
 /** A source with a `subscribe` method (structural: Svelte-style stores, RxJS, Zustand, async handshakes). */
 export interface Subscribable<T> {
+  /** Starts the subscription; returns its teardown, or a promise of it for an async handshake. */
   subscribe(listener: ObserveListener<T>): ObserveTeardown | PromiseLike<ObserveTeardown>;
 }
 

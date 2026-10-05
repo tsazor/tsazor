@@ -50,6 +50,7 @@ export type PlaceholdersOf<Message extends string> =
         : { [K in Name]: string | number } & PlaceholdersOf<Rest>
       : unknown;
 
+/** Configuration for `new StringLocalizer(options)`: the tables, the default culture and the culture service. */
 export interface StringLocalizerOptions {
   /**
    * Culture → table (a record, or an async loader). The default culture's
@@ -67,6 +68,13 @@ export interface StringLocalizerOptions {
   readonly culture?: CultureService;
 }
 
+/**
+ * Translates keys for the current culture, Blazor's `IStringLocalizer`, with
+ * `L.get(key, params)` instead of `L["key"]`. Lookup falls back from the
+ * current culture's table to the default culture's to the key itself, never
+ * throwing; components that inject it re-render when the culture changes or
+ * an async table arrives.
+ */
 export class StringLocalizer<Table extends StringTable = StringTable> {
   private readonly tables: Readonly<Record<string, StringTableSource>>;
   private readonly defaultCulture: string;

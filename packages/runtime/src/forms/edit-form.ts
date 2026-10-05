@@ -63,6 +63,7 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
   /** Pass-through attributes (class, id, …). */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
+  /** Marks the component as a cascading value supplier for the renderer. */
   readonly isCascadingValueSupplier = true;
   /**
    * Blazor's IsFixed: true. This component re-renders whenever the context
@@ -72,6 +73,7 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
   readonly isFixed = true;
   /** Cascades by type, unnamed (Blazor's CascadingValue<EditContext>). */
   readonly cascadeType = EditContext;
+  /** The cascaded EditContext: the `editContext` parameter, or the one built for `model`. */
   get cascadeValue(): unknown {
     return this.currentEditContext;
   }
@@ -162,6 +164,7 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
     b.closeRegion();
   }
 
+  /** Stops listening to the EditContext's change notifications. */
   dispose(): void {
     this.editContextUnsubscribe?.();
     this.editContextUnsubscribe = undefined;

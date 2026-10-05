@@ -1,12 +1,12 @@
 /**
- * tsazor-dotnet CLI: OpenAPI ⇒ typisierter TS-Client.
+ * tsazor-dotnet CLI: OpenAPI ⇒ typed TS client.
  *
  *   tsazor-dotnet generate <openapi.json|https://…> --out <dir>
  *       [--name <ClientName>] [--envelope data,errors] [--base-url <url>]
  *
- * Schreibt `models.ts` und `<client>.ts` nach --out und druckt die
- * Generator-Warnungen (dokumentierte Teilmenge). Exit: 0 grün, 1 Fehler, 2
- * Usage/fatal — wie `tsazor`.
+ * Writes `models.ts` and `<client>.ts` to --out and prints the
+ * generator warnings (documented subset). Exit: 0 green, 1 errors, 2
+ * usage/fatal — like `tsazor`.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";

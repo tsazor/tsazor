@@ -1,12 +1,12 @@
 /**
- * @tsazor/dotnet — die offizielle Brücke zu .NET-Backends (Roadmap 5.2):
- *  - ProblemDetails/Envelope-Fehler als `HttpResult` (niemals ein throw
- *    vor lesbarern Körper),
- *  - der Basisklient `OpenApiClient` für die generierten Clients,
- *  - Auth-Integration (JWT/Cookie) auf `AuthenticationStateProvider`.
+ * @tsazor/dotnet — the official bridge to .NET backends (roadmap 5.2):
+ *  - ProblemDetails/envelope errors as `HttpResult` (never a throw
+ *    before a readable body),
+ *  - the base client `OpenApiClient` for the generated clients,
+ *  - auth integration (JWT/cookie) on `AuthenticationStateProvider`.
  *
- * Browser-safe: dieser Einstieg zieht KEINE Node-Module (node:fs/fetch) an —
- * die OpenAPI-Generierung lebt hinter dem Untereinstieg `@tsazor/dotnet/generator`.
+ * Browser-safe: this entry pulls in NO Node modules (node:fs/fetch) —
+ * OpenAPI generation lives behind the sub-entry `@tsazor/dotnet/generator`.
  */
 export {
   OpenApiClient,
