@@ -1,3 +1,6 @@
+@** A single Fluent UI 2 toast: optional title, message and Close button, announced politely
+    (role="alert" for severity error, otherwise role="status"). Usually created through
+    ToastProvider.show() rather than placed directly. *@
 @import { withAttributes } from "./attributes"
 
 <div @attributes="@this.toastAttributes">

@@ -1,3 +1,5 @@
+@** Renders a `<table>` with Bootstrap's `.table` classes (striped, bordered, hover, small, dark),
+    optionally wrapped for horizontal scrolling. Supply the table rows as child content. *@
 @if (responsive) {
     <div class="table-responsive"><table class="@tableClass">@childContent</table></div>
 } else {
@@ -5,14 +7,19 @@
 }
 
 @code {
+    /** Shades alternating rows (table-striped). */
     @Parameter() striped: boolean = false;
+    /** Draws borders on all cells (table-bordered). */
     @Parameter() bordered: boolean = false;
+    /** Highlights the row under the pointer (table-hover). */
     @Parameter() hover: boolean = false;
     /** Renders the compact table-sm variant. */
     @Parameter() small: boolean = false;
+    /** Renders the dark table variant (table-dark). */
     @Parameter() dark: boolean = false;
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
+    /** The table's content: thead, tbody and rows. */
     @Parameter() childContent?: RenderFragment;
 
     private get tableClass(): string {

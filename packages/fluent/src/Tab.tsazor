@@ -1,3 +1,5 @@
+@** One tab of a Tabs container: it registers its title with the parent Tabs and renders its
+    content as a tabpanel only while it is the active tab. Use inside Tabs. *@
 @import { withAttributes } from "./attributes"
 
 @if (this.active) {

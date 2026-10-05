@@ -1,3 +1,7 @@
+@** A Fluent UI 2 modal dialog (role="dialog", aria-modal) over a backdrop, rendered while isOpen.
+    On open it locks body scroll and moves focus into the overlay; Tab wraps within the dialog and
+    focus returns to the previous element on close. Escape, a backdrop click or the header's Close
+    button raise onClosed; the parent then sets isOpen to false. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 

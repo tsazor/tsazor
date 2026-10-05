@@ -1,3 +1,6 @@
+@** A Fluent UI 2 tab list (role="tablist") with one panel per Tab child; put Tab components inside.
+    The first tab starts active; clicking a tab or using ArrowLeft/ArrowRight/Home/End selects
+    and focuses it (roving tabindex) and raises onSelected. *@
 @import { withAttributes } from "./attributes"
 
 <div @attributes="@this.tabsAttributes">
@@ -10,11 +13,13 @@
 </div>
 
 @code {
+    /** Base for the tab and panel ids (`<id>-tab-<i>`, `<id>-panel-<i>`) behind aria-controls / aria-labelledby; omitted ids skip those attributes. */
     @Parameter() id?: string;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Invoked after the selected tab changes (for stateful hosts). */
     @Parameter() onSelected?: EventCallback<number>;
+    /** The Tab children. */
     @Parameter() childContent?: RenderFragment;
 
     readonly isCascadingValueSupplier = true;

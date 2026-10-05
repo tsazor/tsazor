@@ -1,3 +1,5 @@
+@** One panel of a Tabs component (Bootstrap's `.tab-pane`). Place it inside Tabs: its title appears
+    in the parent's nav, and its content is rendered only while it is the active tab. *@
 @import type Tabs from "./Tabs.tsazor"
 @if (isActive) {
     <div class="tab-pane fade show active">@childContent</div>
@@ -6,6 +8,7 @@
 @code {
     /** Label shown in the parent Tabs' nav. */
     @Parameter() title: string = "";
+    /** The panel content, shown while the tab is active. */
     @Parameter() childContent?: RenderFragment;
 
     /** Resolved from the nearest Tabs ancestor (by cascade name). */

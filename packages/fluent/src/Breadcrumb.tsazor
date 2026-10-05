@@ -1,3 +1,5 @@
+@** A breadcrumb trail: a nav landmark (aria-label="breadcrumb") around an ordered list. Put
+    BreadcrumbItem children inside and mark the current page's item active. *@
 @import { withAttributes } from "./attributes"
 
 <nav aria-label="breadcrumb" @attributes="@this.breadcrumbAttributes">
@@ -7,6 +9,7 @@
 @code {
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The BreadcrumbItem children, rendered inside the ol. */
     @Parameter() childContent?: RenderFragment;
 
     private get breadcrumbAttributes(): Record<string, unknown> {

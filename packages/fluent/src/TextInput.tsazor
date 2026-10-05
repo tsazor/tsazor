@@ -1,3 +1,7 @@
+@** A Fluent UI 2 single-line text field (input type text | password | email, InputBase; bind it
+    with @bind) with an optional label; the value updates on change. Inside a FluentForm it shows
+    the field's first validation message (role="alert", aria-invalid, aria-describedby) once a
+    submit was attempted. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 @import { hasSubmitAttempt } from "./form-state"
@@ -21,7 +25,9 @@
     @Parameter() placeholder?: string;
     /** Native input type: text (default) | password | email. */
     @Parameter() type: "text" | "password" | "email" = "text";
+    /** true disables the native input. */
     @Parameter() disabled: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
     /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;

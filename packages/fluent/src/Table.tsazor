@@ -1,3 +1,6 @@
+@** A Fluent UI 2 table with free-form templates: headerContent fills the thead and rowContent
+    builds one row per item; an empty-state row shows when there are no items. For column-driven
+    tables use DataGrid. *@
 @import { withAttributes } from "./attributes"
 
 @typeparam TRow

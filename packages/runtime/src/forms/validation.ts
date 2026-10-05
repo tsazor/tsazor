@@ -12,6 +12,7 @@ export class ValidationMessage extends ComponentBase {
   @Parameter() For?: string;
   /** Pass-through attributes. */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+  /** The enclosing form's EditContext (cascaded by EditForm). */
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
 
   private editContextUnsubscribe?: () => void;
@@ -54,7 +55,9 @@ export class ValidationMessage extends ComponentBase {
 
 /** Blazor's ValidationSummary: lists all validation messages of the EditContext. */
 export class ValidationSummary extends ComponentBase {
+  /** Pass-through attributes (on the <ul>). */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+  /** The enclosing form's EditContext (cascaded by EditForm). */
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
 
   private editContextUnsubscribe?: () => void;

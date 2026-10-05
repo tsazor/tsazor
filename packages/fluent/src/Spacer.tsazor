@@ -1,3 +1,5 @@
+@** An empty span that adds a fixed amount of space from the token spacing scale: height for
+    direction vertical, width for horizontal. Use it between items in a Stack. *@
 @import { withAttributes } from "./attributes"
 
 <span @attributes="@this.spacerAttributes"></span>

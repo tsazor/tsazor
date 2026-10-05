@@ -1,3 +1,5 @@
+@** A status dot (role="status") in a semantic color; with child content it becomes a labelled
+    status chip. Renders nothing while visible is false. *@
 @import { withAttributes } from "./attributes"
 
 @if (this.visible) {

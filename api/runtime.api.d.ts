@@ -699,6 +699,7 @@ export declare class NavigationManager {
     private readonly uriSource;
     readonly routingMode: RoutingMode;
     private handlingPopState;
+    private scrollTarget;
     constructor(historyApiOrOptions?: History | NavigationManagerOptions);
     private get history();
     private get isHashMode();
@@ -719,6 +720,9 @@ export declare class NavigationManager {
     releaseNavigationLock(lockId: string): void;
     private interceptionEnabled;
     enableNavigationInterception(): void;
+    takeScrollTarget(): string | undefined;
+    private isSamePageWithHash;
+    private scrollOnSamePage;
     private onDocumentClick;
     private isWithinBaseUriSpace;
     private isAbsolute;
@@ -726,6 +730,7 @@ export declare class NavigationManager {
     private runLocationChanging;
     private notifyLocationChanging;
     private performInternalNavigation;
+    private saveToHistory;
     private performExternalNavigation;
     private performHashReload;
     private toBrowserUrl;
@@ -1072,6 +1077,7 @@ export declare class Router extends ComponentBase {
     protected onInitialized(): void;
     protected onParametersSet(): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
+    protected onAfterRender(): void;
     dispose(): void;
 }
 

@@ -1,3 +1,5 @@
+@** Text on the Fluent UI 2 type ramp; variant picks both the element (h1 to h5, p for body, span
+    for caption) and the token type style, weight optionally sets semibold | bold. *@
 @import { withAttributes } from "./attributes"
 
 @if (this.variant === "h1") { <h1 @attributes="@this.textAttributes">@childContent</h1> }
@@ -15,6 +17,7 @@ else { <p @attributes="@this.textAttributes">@childContent</p> }
     @Parameter() weight?: "semibold" | "bold";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The text content. */
     @Parameter() childContent?: RenderFragment;
 
     private get textClass(): string {

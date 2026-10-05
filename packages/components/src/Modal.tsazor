@@ -1,3 +1,6 @@
+@** Renders Bootstrap's `.modal` dialog with a backdrop while `isOpen` is true, with an optional
+    header (title and close button) and footer. It does not close itself: the close button or a
+    backdrop click raises onClosed, and the parent sets `isOpen` to false. *@
 @if (isOpen) {
     <div class="modal-backdrop show"></div>
     <div class="modal d-block" tabindex="-1" @onclick="backdropClick">
@@ -33,6 +36,7 @@
     @Parameter() footer?: RenderFragment;
     /** Fired when the user requests a close (X button or backdrop). */
     @Parameter() onClosed?: EventCallback<MouseEvent>;
+    /** The modal's body. */
     @Parameter() childContent?: RenderFragment;
 
     private get dialogClass(): string {

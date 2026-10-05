@@ -1,3 +1,6 @@
+@** A column-driven table on the Table surface: one header cell per column, one row per item,
+    cells filled from the row's field (or format / cellContent), and an empty-state row when there
+    are no items. Sorting, filtering and paging stay in the host app (pair it with Pagination). *@
 @import type { DataGridColumn } from "./datagrid-columns"
 @import { withAttributes } from "./attributes"
 

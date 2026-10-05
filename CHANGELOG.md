@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: scrolling on navigation as in Blazor — after an internal navigation the
+  `Router` scrolls to the fragment's element (`orders#total`, by id, else by name) or to the top;
+  a link that only changes the fragment of the current page adds a history entry and scrolls,
+  without `LocationChanging`/`LocationChanged`.
+- Component manifests (`tsazor-components.json`, `@tsazor/compiler` `ComponentMetadata`): a
+  component `doc` (the class JSDoc, or a leading `@** … *@` in a `.tsazor` file — the markup
+  counterpart of `/** */`) and the parameter `default` as written. Every component of
+  `@tsazor/components` and `@tsazor/fluent` is documented.
 - API snapshots of every published package (`api/`), checked in CI (S1).
 - `@tsazor/testing`: `render(Component, { parameters, services })` with typed parameters;
   `find`, `findAll`, `click`, `change`, `setParameters`, `settle`, `markup`; a component's

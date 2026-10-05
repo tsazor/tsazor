@@ -1,3 +1,5 @@
+@** A CSS grid layout (div): a fixed number of equal columns, or responsive auto-fill tracks when
+    minChildWidth is set; gap from the token spacing scale. *@
 @import { withAttributes } from "./attributes"
 
 <div @attributes="@this.gridAttributes">@childContent</div>
@@ -5,12 +7,13 @@
 @code {
     /** Column count when no minChildWidth is given. */
     @Parameter() columns: number = 3;
-    /** Gap between tracks: xs | s | m (default) | l | xl. */
+    /** Gap between tracks: xs | s | m | l | xl; no gap when omitted. */
     @Parameter() gap?: "xs" | "s" | "m" | "l" | "xl";
     /** Responsive min column width (CSS length, e.g. "240px"); switches to auto-fill/minmax. */
     @Parameter() minChildWidth?: string;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The grid items; each child fills one cell. */
     @Parameter() childContent?: RenderFragment;
 
     /** minChildWidth > columns: responsive via CSS grid tracks, no JS. */

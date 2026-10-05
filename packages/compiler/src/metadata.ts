@@ -78,6 +78,8 @@ export interface ComponentParameter {
   /** `name?:` or a type that includes `undefined`. */
   optional: boolean;
   hasInitializer: boolean;
+  /** The initializer as written (`"primary"`, `false`, `[]`), when there is one. */
+  default?: string;
   /** Member form the decorator sits on. */
   member: "field" | "accessor" | "setter";
   /** `@CascadingParameter`: its options (`type` as source text). Not settable from markup. */
@@ -109,6 +111,8 @@ export interface ComponentParameter {
 
 export interface ComponentMetadata {
   name: string;
+  /** The component's doc comment: the class JSDoc, or a leading `@** … *@` in a .tsazor file. */
+  doc?: string;
   /** Declaring file (absolute in the workspace, package-relative in manifests). */
   file?: string;
   /** The base-class chain reaches `ComponentBase`. */
@@ -165,6 +169,7 @@ export interface OwnParameter {
 
 export interface ClassRecord {
   name: string;
+  doc?: string;
   abstract: boolean;
   typeParameters: TypeParameterInfo[];
   /** `extends` clause; `codeBehind`: the default class of the sibling X.tsazor.ts. */
@@ -311,6 +316,8 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
   const record: ClassRecord = cls
     ? classRecord(cls, options.className, file, module)
     : { name: options.className, abstract: false, typeParameters: [], parameters: [] };
+  const doc = leadingDocComment(source);
+  if (doc) record.doc = doc;
   if (options.codeBehind) {
     record.base = { name: `${options.className}Base`, typeArguments: [], codeBehind: true };
   } else if (record.base) {
@@ -375,6 +382,8 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
     typeParameters: (cls.typeParameters ?? []).map((parameter) => typeParameterInfo(parameter, file)),
     parameters: [],
   };
+  const doc = jsDocOf(cls);
+  if (doc) record.doc = doc;
   const extendsClause = cls.heritageClauses?.find((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword)?.types[0];
   if (extendsClause) {
     record.base = {
@@ -520,6 +529,22 @@ function describeInitializer(parameter: OwnParameter, initializer: ts.Expression
   else parameter.opaqueInitializer = true;
 }
 
+/**
+ * A .tsazor file's doc comment: `@** … *@` before anything else — the
+ * markup counterpart of a JSDoc block; a plain `@* … *@` stays an
+ * implementation note.
+ */
+export function leadingDocComment(source: string): string | undefined {
+  const match = /^\uFEFF?\s*@\*\*(?!@)([\s\S]*?)\*@/.exec(source);
+  if (!match) return undefined;
+  const text = match[1]!
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*\*?\s?/, "").trimEnd())
+    .join("\n")
+    .trim();
+  return text || undefined;
+}
+
 function jsDocOf(node: ts.Node): string | undefined {
   const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
   const last = docs[docs.length - 1];
@@ -589,6 +614,7 @@ export function resolveComponentMetadata(module: ModuleMetadata, className: stri
 function resolveClass(module: ModuleMetadata, record: ClassRecord, host: MetadataHost, visiting: Set<string>): ComponentMetadata {
   const key = `${module.file}#${record.name}`;
   const result: ComponentMetadata = { name: record.name, file: module.file, isComponent: false, typeParameters: record.typeParameters, parameters: [] };
+  if (record.doc) result.doc = record.doc;
   if (record.abstract) result.abstract = true;
   const parameters = new Map<string, ComponentParameter>();
   if (visiting.has(key) || visiting.size > MAX_DEPTH) {
@@ -692,6 +718,7 @@ function resolveOwnParameter(own: OwnParameter, declaredBy: string, module: Modu
     member: own.member,
     declaredBy,
   };
+  if (own.initializer !== undefined) parameter.default = own.initializer;
   if (own.type !== undefined) {
     parameter.type = own.type;
     let references = referencesOf(own.type, module, typeParameters);

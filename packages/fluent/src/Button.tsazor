@@ -1,3 +1,6 @@
+@** A Fluent UI 2 native button; appearance primary | secondary | subtle | transparent, shape
+    rounded | circular, size small | medium | large. Raises onClick unless disabled; use
+    type="submit" inside a FluentForm. *@
 @import { withAttributes } from "./attributes"
 
 <button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</button>
@@ -9,6 +12,7 @@
     @Parameter() shape: "rounded" | "circular" = "rounded";
     /** small | medium (default) | large. */
     @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** true disables the native button and suppresses onClick. */
     @Parameter() disabled: boolean = false;
     /** Native button role in a form: button (default) | submit | reset. */
     @Parameter() type: "button" | "submit" | "reset" = "button";
@@ -18,7 +22,9 @@
     @Parameter() ariaDescribedBy?: string;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired on click (not while disabled); receives the MouseEvent. */
     @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The button label (text and/or an Icon). */
     @Parameter() childContent?: RenderFragment;
 
     private get buttonClass(): string {

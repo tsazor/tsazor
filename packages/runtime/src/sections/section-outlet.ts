@@ -67,6 +67,7 @@ export class SectionOutlet extends ComponentBase {
  * (error boundaries, cascades) is re-evaluated for the new content.
  */
 export class SectionOutletContentRenderer extends ComponentBase {
+  /** The content of the provider currently shown. */
   @Parameter() content?: RenderFragment;
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     this.content?.(b);

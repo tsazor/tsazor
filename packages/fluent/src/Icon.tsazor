@@ -1,3 +1,5 @@
+@** An inline SVG icon from a small built-in stroke set, drawn in currentColor. Decorative
+    (aria-hidden) by default; with ariaLabel it gets role="img". Unknown names fall back to check. *@
 @import { withAttributes } from "./attributes"
 
 <svg @attributes="@this.iconAttributes">

@@ -1,3 +1,5 @@
+@** One entry of a Breadcrumb (Bootstrap's `.breadcrumb-item`): a link to `href`, or plain text
+    with the `active` class when it is the current page. Place it inside a Breadcrumb. *@
 <li class="@itemClass">
     @if (active) {
         @childContent

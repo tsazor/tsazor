@@ -1,3 +1,6 @@
+@** Renders Bootstrap's `.pagination`: Previous, one button per page, and Next, with the current
+    page marked active. It does not change the page itself: it raises onPageChanged, and the parent
+    updates `page`. *@
 <nav>
     <ul class="@this.listClass">
         <li class="@this.prevClass"><button class="page-link" @onclick="goPrev">Previous</button></li>
@@ -13,7 +16,9 @@
     @Parameter() page: number = 1;
     /** Total number of pages. */
     @Parameter() pageCount: number = 1;
+    /** Optional size: sm | lg. */
     @Parameter() size: string = "";
+    /** Fired when the user picks a different page, with the new page number (1-based). */
     @Parameter() onPageChanged?: EventCallback<number>;
 
     private select(page: number): void {

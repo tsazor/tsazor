@@ -1,3 +1,7 @@
+@** A controlled page navigator (nav landmark): First/Previous/Next/Last buttons and the page
+    numbers within 2 of the current page, plus the first and last page with an ellipsis where
+    numbers are skipped. It keeps no page state; clicks raise onPageChange and the parent updates
+    page. *@
 @import { withAttributes } from "./attributes"
 
 <nav aria-label="@this.ariaLabel" @attributes="@this.paginationAttributes">
@@ -30,6 +34,7 @@
     @Parameter() ariaLabel: string = "Pagination";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired when a button targets another valid page; receives the new 1-based page number. */
     @Parameter() onPageChange?: EventCallback<number>;
 
     private get paginationAttributes(): Record<string, unknown> {

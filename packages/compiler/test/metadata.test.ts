@@ -274,6 +274,30 @@ export default class C extends Base {
 describe(".tsazor extraction", () => {
   const host = (files: Record<string, string> = {}): MetadataHost => hostFor(files, RUNTIME_PACKAGES);
 
+  it("takes a leading @** … *@ as the component's doc; a plain @* *@ or a later one is not", () => {
+    const docOf = (source: string): string | undefined =>
+      resolveComponentMetadata(extractTsazorMetadata(source, "/virtual/Card.tsazor", { className: "Card" }), undefined, host())!.doc;
+    expect(docOf("@**\n * A card with a header.\n * Wraps `.card`.\n *@\n<div></div>")).toBe("A card with a header.\nWraps `.card`.");
+    expect(docOf("﻿  @** One line. *@\n<div></div>")).toBe("One line.");
+    expect(docOf("@* Implementation note. *@\n<div></div>")).toBeUndefined();
+    expect(docOf("<div></div>\n@** Too late. *@")).toBeUndefined();
+    expect(docOf("@**@ <div></div>")).toBeUndefined();
+  });
+
+  it("takes the class JSDoc as the doc of a TS component", () => {
+    const module = extractModuleMetadata(`${RT}/** A plain-TS counter. */\nexport default class Counter extends ComponentBase {}\n`, "/virtual/Counter.ts");
+    expect(resolveComponentMetadata(module, undefined, host())!.doc).toBe("A plain-TS counter.");
+  });
+
+  it("records the initializer as written as the parameter default", () => {
+    const module = extractModuleMetadata(
+      `${RT}export default class Chip extends ComponentBase {\n  @Parameter() variant = "primary";\n  @Parameter() items: string[] = [];\n  @Parameter() label?: string;\n}\n`,
+      "/virtual/Chip.ts",
+    );
+    const parameters = resolveComponentMetadata(module, undefined, host())!.parameters;
+    expect(parameters.map((p) => [p.name, p.default])).toEqual([["variant", '"primary"'], ["items", "[]"], ["label", undefined]]);
+  });
+
   it("reads @code parameters, @typeparam and inherited @imports; compiler-imported runtime names count", () => {
     const module = extractTsazorMetadata(
       [

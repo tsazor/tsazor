@@ -1,3 +1,7 @@
+@** A Fluent UI 2 number field (input type="number", InputBase; bind it with @bind) with an
+    optional label. The value updates on change; an empty field yields "". Inside a FluentForm it
+    shows the field's first validation message (role="alert", aria-invalid, aria-describedby) once a
+    submit was attempted. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 @import { hasSubmitAttempt } from "./form-state"
@@ -19,11 +23,15 @@
     @Parameter() label?: string;
     /** Placeholder text. */
     @Parameter() placeholder?: string;
+    /** true disables the native input. */
     @Parameter() disabled: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
-    /** Native numeric bounds/step (null skips the attribute). */
+    /** Native min attribute (null skips it). */
     @Parameter() min: number | null = null;
+    /** Native max attribute (null skips it). */
     @Parameter() max: number | null = null;
+    /** Native step attribute (null skips it). */
     @Parameter() step: number | null = null;
     /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;

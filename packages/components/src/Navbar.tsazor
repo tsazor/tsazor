@@ -1,3 +1,5 @@
+@** Renders Bootstrap's `.navbar` with an optional brand text and a `.navbar-nav` area for the
+    navigation links. It does not collapse into a toggler on small screens. *@
 <nav class="@navClass">
     <div class="container-fluid">
         @if (brand) {
@@ -12,6 +14,7 @@
     @Parameter() brand?: string;
     /** Background color: light | dark | primary | … */
     @Parameter() variant: string = "light";
+    /** The navigation links, placed inside `.navbar-nav`. */
     @Parameter() childContent?: RenderFragment;
 
     private get navClass(): string {

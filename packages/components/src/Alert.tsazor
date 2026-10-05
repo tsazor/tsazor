@@ -1,3 +1,5 @@
+@** Renders Bootstrap's `.alert` with `role="alert"` for a contextual feedback message. When
+    dismissible, a close button hides the alert and raises onDismissed. *@
 @if (visible) {
     <div class="@alertClass" role="alert">
         @childContent
@@ -12,7 +14,9 @@
     @Parameter() variant: string = "primary";
     /** Renders the dismiss button; the alert closes itself and fires OnDismissed. */
     @Parameter() dismissible: boolean = false;
+    /** Fired after the close button hides the alert, with the button's click event. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
+    /** The alert's body. */
     @Parameter() childContent?: RenderFragment;
 
     private visible = true;

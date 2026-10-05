@@ -1,7 +1,10 @@
+@** Renders Bootstrap's `.breadcrumb`: an ordered list inside a `<nav>` that shows the current
+    page's location in a hierarchy. Fill it with BreadcrumbItem children, the last one `active`. *@
 <nav>
     <ol class="breadcrumb">@childContent</ol>
 </nav>
 
 @code {
+    /** The BreadcrumbItem children. */
     @Parameter() childContent?: RenderFragment;
 }

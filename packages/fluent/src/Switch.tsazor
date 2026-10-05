@@ -1,3 +1,5 @@
+@** A Fluent UI 2 toggle switch for a boolean value: a native checkbox with role="switch"
+    (InputBase; bind it with @bind) inside a clickable label. It shows no validation message. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 
@@ -14,6 +16,7 @@
 @code {
     /** Label rendered to the right of the switch. */
     @Parameter() label?: string;
+    /** true disables the native checkbox and dims the switch. */
     @Parameter() disabled: boolean = false;
     /** Element id; generated automatically when omitted (label `for` association). */
     @Parameter() id?: string;

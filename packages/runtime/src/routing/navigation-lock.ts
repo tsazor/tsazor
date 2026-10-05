@@ -12,7 +12,9 @@ import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
  * (beforeunload). Renders nothing.
  */
 export class NavigationLock extends ComponentBase {
+  /** Runs before each internal navigation; call `context.preventNavigation()` to cancel it. */
   @Parameter() onBeforeInternalNavigation?: EventCallback<LocationChangingContext> | ((context: LocationChangingContext) => void | Promise<void>);
+  /** Asks the browser to confirm leaving the app (reload, close, external link) while rendered. */
   @Parameter() confirmExternalNavigation = false;
 
   private readonly navigation = this.inject(NavigationManager);

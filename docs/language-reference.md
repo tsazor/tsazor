@@ -16,6 +16,7 @@
 | `@code` / `@functions` | `@code { … }` | TypeScript class members, verbatim |
 | `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | `@namespace App.Pages` | Blazor-only: accepted and ignored (`@rendermode`/`@preservewhitespace` with warning TZS014) |
 | `@@` | `@@` | A literal `@` |
+| `@* … *@` / `@** … *@` | `@** A card with a header. *@` | Razor comment. `@** … *@` at the very start of a component file is its doc comment (Tsazor extension, the markup counterpart of `/** */`): it goes into the component manifest (`doc`) and the reference; a plain `@* … *@` stays a note |
 
 Directives are only valid at document level; inside elements or code blocks ⇒ TZS013.
 An unknown `@word` is not a directive but an implicit expression (Razor).
@@ -48,6 +49,15 @@ parameter before constrained catch-all before catch-all; on a tie, the route wit
 manifest does not matter (`/users/new` beats `/users/{id}`). Two routes with equal precedence, equal literals and
 equal constraints (`/a/{x}` and `/A/{y}`) ⇒ error "The following routes are ambiguous" when the route table is built
 (router lifecycle). Equal precedence but different constraints (`{x:int}` vs. `{x:bool}`) ⇒ manifest order.
+
+### Scrolling and fragments
+
+As in Blazor, after an internal navigation the `Router` scrolls to the top — or, when the target has a
+fragment, to the element with that id (else the first with that `name`): `<a href="orders#total">`. With
+a `<base href>`, write the page path in front of the fragment; a bare `href="#total"` resolves
+against the base. A link that only changes the fragment of the current page adds a history entry
+and scrolls, without `LocationChanging`/`LocationChanged`. Back/forward leaves the position to the
+browser. A deep link with a fragment scrolls once the Router rendered.
 
 ### Hash routing (Tsazor extension)
 

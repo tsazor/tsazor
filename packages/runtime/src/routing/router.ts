@@ -2,6 +2,7 @@ import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import { inject } from "../di/service-provider.js";
 import type { ServiceProvider, Token } from "../di/service-collection.js";
+import { scrollToElement } from "../navigation/dom-wrapper.js";
 import { NavigationManager } from "../navigation/navigation-manager.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { getRouteTable, RouteManifest, type RouteData, type RouteEntry, type RouteTable } from "./route-data.js";
@@ -53,6 +54,13 @@ export class Router extends ComponentBase {
     } else if (this.notFound) {
       b.addContent(1, this.notFound);
     }
+  }
+
+  /** Blazor resets the scroll position after a navigation renders — to the fragment's element, if any. */
+  protected override onAfterRender(): void {
+    const target = this.navigation.takeScrollTarget();
+    if (target === undefined || typeof window === "undefined") return;
+    if (!scrollToElement(target)) window.scrollTo?.(0, 0);
   }
 
   dispose(): void {

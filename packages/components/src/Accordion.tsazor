@@ -1,7 +1,11 @@
+@** Renders Bootstrap's `.accordion`: a stack of AccordionItem children, each with a header button
+    that shows or hides its body. It cascades itself to the items; at most one item is open at a
+    time (the first one initially), and opening an item closes the others. *@
 @import type AccordionItem from "./AccordionItem.tsazor"
 <div class="accordion">@childContent</div>
 
 @code {
+    /** The AccordionItem children. */
     @Parameter() childContent?: RenderFragment;
 
     readonly isCascadingValueSupplier = true;

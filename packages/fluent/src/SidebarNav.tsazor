@@ -1,3 +1,5 @@
+@** A sidebar navigation landmark (nav) that renders links as a list of runtime NavLinks, which
+    mark the link matching the current URL active. compact switches to the icon-rail variant. *@
 @import { withAttributes } from "./attributes"
 
 <nav aria-label="@this.ariaLabel" @attributes="@this.navAttributes">

@@ -1,3 +1,6 @@
+@** Renders Bootstrap's `.dropdown`: a toggle button (with `aria-expanded`) and a `.dropdown-menu`
+    that is rendered only while open. Fill the menu with DropdownItem children; it cascades itself to
+    them, and selecting an item or clicking the toggle again closes the menu. *@
 <div class="dropdown">
     <button class="@toggleClass" type="button" aria-expanded="@open" @onclick="toggle">
         @label
@@ -14,6 +17,7 @@
     @Parameter() variant: string = "primary";
     /** Renders the outline variant of the color. */
     @Parameter() outline: boolean = false;
+    /** The menu's DropdownItem children. */
     @Parameter() childContent?: RenderFragment;
 
     private open = false;

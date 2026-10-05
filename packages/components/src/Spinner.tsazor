@@ -1,3 +1,5 @@
+@** Renders Bootstrap's `.spinner-border` or `.spinner-grow` loading indicator, with optional
+    visible text next to it. The spinner itself is `aria-hidden`; use `text` to give it a readable label. *@
 <span class="@spinnerClass" role="status" aria-hidden="true"></span>
 @if (text) {
     <span class="ms-1">@text</span>

@@ -1,3 +1,5 @@
+@** One entry of a Dropdown menu (Bootstrap's `.dropdown-item`) rendered as a button. Place it inside
+    a Dropdown; clicking it raises onSelect and then closes the parent menu. *@
 @import type Dropdown from "./Dropdown.tsazor"
 <li>
     <button class="dropdown-item" type="button" @onclick="handleClick">@childContent</button>
@@ -6,6 +8,7 @@
 @code {
     /** Fired when the item is clicked. */
     @Parameter() onSelect?: EventCallback<MouseEvent>;
+    /** The item's label. */
     @Parameter() childContent?: RenderFragment;
 
     /** Resolved from the nearest Dropdown ancestor; selection closes the menu. */

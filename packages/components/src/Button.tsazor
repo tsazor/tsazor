@@ -1,3 +1,5 @@
+@** Renders a native `<button>` styled with Bootstrap's `.btn` classes (solid or outline color,
+    optional size). It raises onClick on click, Enter or Space. *@
 <button type="@type" class="@buttonClass" disabled="@disabled" @onclick="handleClick">@childContent</button>
 
 @code {
@@ -7,9 +9,13 @@
     @Parameter() outline: boolean = false;
     /** Optional size: sm | lg. */
     @Parameter() size: string = "";
+    /** Disables the native button; it then raises no clicks. */
     @Parameter() disabled: boolean = false;
+    /** The button's `type` attribute: button | submit | reset. */
     @Parameter() type: string = "button";
+    /** Fired when the button is clicked, with the click event. */
     @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The button's label. */
     @Parameter() childContent?: RenderFragment;
 
     private get buttonClass(): string {

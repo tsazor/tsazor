@@ -1,3 +1,5 @@
+@** Renders Bootstrap's `.list-group` as a `<ul>` for a list of items, optionally flush or
+    horizontal. Fill it with ListGroupItem children. *@
 <ul class="@listClass">@childContent</ul>
 
 @code {
@@ -5,6 +7,7 @@
     @Parameter() flush: boolean = false;
     /** Horizontal list variant. */
     @Parameter() horizontal: boolean = false;
+    /** The ListGroupItem children. */
     @Parameter() childContent?: RenderFragment;
 
     private get listClass(): string {

@@ -1,3 +1,5 @@
+@** One entry of a ListGroup (Bootstrap's `.list-group-item`): plain content, a link when `href` is
+    set, or a button that raises onClick when a handler is given. Place it inside a ListGroup. *@
 @* Always an <li> (valid in the <ul> of ListGroup — WCAG 1.3.1). A link or a
    clickable item holds a real <a>/<button> (keyboard reachable — WCAG 2.1.1);
    `stretched-link` makes the whole row its target, `text-reset` keeps the
@@ -17,12 +19,13 @@
 @code {
     /** Marks the item active. */
     @Parameter() active: boolean = false;
-    /** Renders the disabled look (non-interactive items). */
+    /** Renders the disabled look; on a button item it also disables the button and suppresses onClick. */
     @Parameter() disabled: boolean = false;
     /** Makes the item a link (an anchor inside the list item). */
     @Parameter() href?: string;
     /** Makes the item a button (inside the list item) and fires on click, Enter or Space. */
     @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The item's content. */
     @Parameter() childContent?: RenderFragment;
 
     private get itemClass(): string {

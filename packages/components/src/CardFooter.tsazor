@@ -1,5 +1,8 @@
+@** Renders Bootstrap's `.card-footer`, the bottom bar of a Card. Place it inside a Card, after
+    the CardBody. *@
 <div class="card-footer">@childContent</div>
 
 @code {
+    /** The footer content. */
     @Parameter() childContent?: RenderFragment;
 }

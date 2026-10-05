@@ -1,3 +1,6 @@
+@** One section of an Accordion (Bootstrap's `.accordion-item`): a header button with the title
+    and `aria-expanded`, and a body that is rendered only while the item is open. Place it inside
+    an Accordion; clicking the header toggles it through the parent. *@
 @import type Accordion from "./Accordion.tsazor"
 <div class="accordion-item">
     <h2 class="accordion-header">
@@ -13,6 +16,7 @@
 @code {
     /** Label shown in the item's header button. */
     @Parameter() title: string = "";
+    /** The item's body, shown while the item is open. */
     @Parameter() childContent?: RenderFragment;
 
     /** Resolved from the nearest Accordion ancestor (by cascade name). */

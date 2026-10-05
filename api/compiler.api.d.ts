@@ -142,6 +142,7 @@ export declare function childNodes(node: MarkupNode): MarkupNode[];
 // ClassRecord
 export interface ClassRecord {
     name: string;
+    doc?: string;
     abstract: boolean;
     typeParameters: TypeParameterInfo[];
     base?: {
@@ -261,6 +262,7 @@ export interface ComponentManifest {
 // ComponentMetadata
 export interface ComponentMetadata {
     name: string;
+    doc?: string;
     file?: string;
     isComponent: boolean;
     abstract?: boolean;
@@ -284,6 +286,7 @@ export interface ComponentParameter {
     inferredType?: "string" | "number" | "boolean" | "bigint";
     optional: boolean;
     hasInitializer: boolean;
+    default?: string;
     member: "field" | "accessor" | "setter";
     cascading?: {
         name?: string;

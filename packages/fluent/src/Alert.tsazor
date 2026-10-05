@@ -1,3 +1,6 @@
+@** A Fluent UI 2 message bar (role="alert") with a severity icon; variant info | success | danger |
+    warning | neutral. With dismissible it shows a Close button that hides the alert and then
+    raises onDismissed. *@
 @import { withAttributes } from "./attributes"
 
 @if (this.visible) {
@@ -19,8 +22,11 @@
     @Parameter() variant: "info" | "success" | "danger" | "warning" | "neutral" = "info";
     /** Shows a dismiss button. */
     @Parameter() dismissible: boolean = false;
+    /** `@attributes` pass-through onto the alert div (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Fired after the Close button has hidden the alert; receives the click MouseEvent. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
+    /** The alert message. */
     @Parameter() childContent?: RenderFragment;
 
     private visible = true;

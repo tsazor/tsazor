@@ -1,3 +1,5 @@
+@** Renders Bootstrap's `.progress` bar with `role="progressbar"` and `aria-valuenow`, for a value
+    in percent clamped to 0–100. *@
 <div class="progress" role="progressbar" aria-label="@accessibleName" aria-valuenow="@clamped" aria-valuemin="0" aria-valuemax="100">
     <div class="@barClass" style="width: @(clamped)%">@label</div>
 </div>
@@ -5,9 +7,11 @@
 @code {
     /** Progress value in percent (0–100). */
     @Parameter() value: number = 0;
+    /** Renders diagonal stripes on the bar. */
     @Parameter() striped: boolean = false;
     /** Animates the stripes (implies striped). */
     @Parameter() animated: boolean = false;
+    /** Optional bar color (bg-*): primary | secondary | success | danger | warning | info | light | dark. */
     @Parameter() variant: string = "";
     /** Optional label rendered inside the bar (also the accessible name when `ariaLabel` is unset). */
     @Parameter() label?: string;

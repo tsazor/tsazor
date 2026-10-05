@@ -1,3 +1,6 @@
+@** A Fluent UI 2 checkbox for a boolean value (InputBase; bind it with @bind). Inside a
+    FluentForm it shows the field's first validation message (role="alert", aria-invalid,
+    aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 @import { hasSubmitAttempt } from "./form-state"
@@ -17,7 +20,9 @@
 @code {
     /** Label rendered to the right of the box. */
     @Parameter() label?: string;
+    /** true disables the native checkbox. */
     @Parameter() disabled: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
     /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;

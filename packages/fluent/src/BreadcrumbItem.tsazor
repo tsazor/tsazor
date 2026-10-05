@@ -1,3 +1,5 @@
+@** One entry (li) of a Breadcrumb: a link to href, or, when active, plain text with
+    aria-current="page". Use inside Breadcrumb. *@
 @import { withAttributes } from "./attributes"
 
 <li @attributes="@this.itemAttributes">
@@ -12,6 +14,7 @@
     @Parameter() active: boolean = false;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The item label (link text, or the plain text of the active item). */
     @Parameter() childContent?: RenderFragment;
 
     private get itemAttributes(): Record<string, unknown> {

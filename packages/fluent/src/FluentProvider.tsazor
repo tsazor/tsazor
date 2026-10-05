@@ -1,3 +1,6 @@
+@** The theme root (a div with data-fluent-theme): place it at the app root, or around a subtree,
+    to scope the --fui-* token palette (light | dark) and apply tokenOverrides as inline custom
+    properties. It also cascades the theme as "FluentTheme" to descendants. *@
 @import { withAttributes } from "./attributes"
 
 <div @attributes="@this.providerAttributes">@childContent</div>
@@ -13,6 +16,7 @@
     @Parameter() tokenOverrides?: Record<string, string>;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The themed subtree (usually the whole app). */
     @Parameter() childContent?: RenderFragment;
 
     readonly isCascadingValueSupplier = true;

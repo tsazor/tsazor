@@ -10,6 +10,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "isComponent": true,
       "typeParameters": [],
       "parameters": [],
+      "doc": "Blazor's ComponentBase. Sync-first lifecycle: hooks may return a Promise;\nwhen they do, the component renders around the awaits exactly like\nBlazor's async lifecycle orchestration (see setParametersAsync).",
       "abstract": true
     },
     "CascadingValue": {
@@ -45,6 +46,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "CascadingValue",
+          "default": "false",
           "inferredType": "boolean",
           "doc": "Blazor's IsFixed: the value never changes — consumers do not subscribe. Cannot change after the first render."
         },
@@ -82,6 +84,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, id, …) — unused on output."
         }
       ],
+      "doc": "Blazor's CascadingValue: supplies `value` to the subtree below it. Match in\nthe child happens by name (`Name` ↔ CascadingParameter({ name }),\ncase-insensitive) or, when neither side has a name, by type\n(CascadingParameter({ type }) against the value's runtime type). Consumers\nsubscribe (unless `isFixed`): when the value may have changed, they get\ntheir parameters re-set directly, even when the components in between do\nnot re-render.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -100,6 +103,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "DynamicComponent",
+          "default": "null",
           "type": "ComponentType | null",
           "references": [
             {
@@ -127,6 +131,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Parameters handed to the dynamically rendered component."
         }
       ],
+      "doc": "Blazor's DynamicComponent: renders another component chosen at runtime.\n`type` is the component class (or a ComponentDefinition from the compiler);\n`parameters` is the dictionary passed verbatim to the rendered component.\n`instance` receives the rendered child via the component reference capture —\nit is intentionally NOT a parameter: in markup only `Type` and `Parameters`\nare accepted, anything else throws pointing at the `parameters` dictionary\n(Blazor's InvalidOperationException in DynamicComponent.SetParametersAsync).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -180,10 +185,12 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "ErrorBoundaryBase",
+          "default": "100",
           "type": "number",
           "doc": "The maximum number of errors handled between two recoveries; further\nerrors are fatal (Blazor's default)."
         }
       ],
+      "doc": "Blazor's ErrorBoundaryBase: renders ChildContent while healthy and switches\nto ErrorContent once the renderer has routed a child failure here.\n\nHandled errors run through `onError` (Blazor's OnErrorAsync logging hook);\nafter `maximumErrorCount` errors between recoveries the error is rethrown\n(fatal — the renderer routes it to its error handler, Blazor to\nHandleException).",
       "abstract": true,
       "base": {
         "name": "ComponentBase",
@@ -238,10 +245,12 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "ErrorBoundaryBase",
+          "default": "100",
           "type": "number",
           "doc": "The maximum number of errors handled between two recoveries; further\nerrors are fatal (Blazor's default)."
         }
       ],
+      "doc": "Blazor's ErrorBoundary (Microsoft.AspNetCore.Components.Web): the concrete\nboundary, `<ErrorBoundary>` in markup.",
       "base": {
         "name": "ErrorBoundaryBase",
         "resolved": true
@@ -274,6 +283,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The section to render the content of (by identifier object)."
         }
       ],
+      "doc": "Blazor's SectionOutlet: renders the content of the SectionContent with the\nmatching SectionName/SectionId. One outlet per section identifier (a second\none throws); without a provider nothing is rendered. The content is rendered\nthrough a keyed inner component (SectionOutletContentRenderer) so descendant\ncomponent instances are preserved only while they come from the same\nSectionContent — Blazor's `@key(fragment)` rationale.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -299,9 +309,11 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "runtime",
               "imported": "RenderFragment"
             }
-          ]
+          ],
+          "doc": "The content of the provider currently shown."
         }
       ],
+      "doc": "Blazor's SectionOutlet.SectionOutletContentRenderer: opens a fresh component\ninstance per content provider — when the content switches, this instance and\nits logical parent are rebuilt, so anything derived from the parent chain\n(error boundaries, cascades) is re-evaluated for the new content.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -357,10 +369,12 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "SectionContent",
+          "default": "false",
           "inferredType": "boolean",
           "doc": "Blazor's internal IsDefaultContent. Parameter here only so the runtime's\nHeadOutlet can pass it through its render tree — Tsazor has no\nIComponent.Attach construction (documented deviation)."
         }
       ],
+      "doc": "Blazor's SectionContent: provides content to the SectionOutlet with the\nmatching SectionName/SectionId. Several providers may exist per identifier —\nthe most recently added one wins; a provider registered as default content\n(Blazor's internal IsDefaultContent) loses to every later one.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -390,6 +404,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The content rendered into the document head."
         }
       ],
+      "doc": "Blazor's HeadContent: provides the content it wraps to the head-metadata\nsection of every HeadOutlet (rendered by the runtime's second root).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -401,6 +416,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "isComponent": true,
       "typeParameters": [],
       "parameters": [],
+      "doc": "Blazor's HeadOutlet: renders the title section and the head-metadata\nsection. The runtime mounts one per app as a second root in document.head\n(createTsazorApp) — Blazor's WebAssembly host does the same via its\n`<HeadOutlet>` root component.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -430,6 +446,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The page content rendered inside the layout."
         }
       ],
+      "doc": "Blazor's LayoutComponentBase: every @layout component extends this and\nrenders `Body` where the page content belongs.",
       "abstract": true,
       "base": {
         "name": "ComponentBase",
@@ -449,6 +466,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "Router",
+          "default": "[]",
           "type": "RouteEntry[]",
           "references": [
             {
@@ -500,6 +518,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Content rendered when no route matches (Blazor's <NotFound>)."
         }
       ],
+      "doc": "Blazor's Router: matches the current location against the route manifest\nand renders the found/not-found content. The manifest is an explicit list\nof RouteEntry values (M7's Vite plugin generates it from @page modules —\nBlazor uses assembly reflection, which TS does not have).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -546,6 +565,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Fallback layout when the page has no @layout."
         }
       ],
+      "doc": "Blazor's RouteView: renders the matched page inside its layout. The layout\nwins in order routeData (from @layout) → defaultLayout parameter.\n\nQuery parameters (3.7): the page's `@SupplyParameterFromQuery()` fields\nreceive the current URI's query values as attributes, appended to the route\nvalues (a field that is also a route parameter keeps the route value).\nBlazor does this through an internal cascading-value provider; Tsazor\nsupplies attributes directly, so the field is `@Parameter()` too. Values\nrefresh on every render — the Router re-renders after each navigation, so\na changed query string reaches the page in that pass. Absent keys supply\nnull (Blazor's provider nulls the value) with the parameter type's\ninvariant-culture conversion.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -592,6 +612,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The content to wrap (the layout's Body)."
         }
       ],
+      "doc": "Blazor's LayoutView: renders content inside an optional layout (without\nrouting). Used by RouteView-style callers and app code directly.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -610,6 +631,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "NavLink",
+          "default": "\"\"",
           "inferredType": "string",
           "doc": "Target href: relative to the base URI (\"counter\"), root-relative (\"/app/counter\") or absolute."
         },
@@ -620,6 +642,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "NavLink",
+          "default": "NavLinkMatch.Prefix",
           "type": "NavLinkMatch",
           "references": [
             {
@@ -637,6 +660,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "NavLink",
+          "default": "\"active\"",
           "inferredType": "string",
           "doc": "Class added while active."
         },
@@ -647,6 +671,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "NavLink",
+          "default": "\"\"",
           "inferredType": "string",
           "doc": "Static classes always present on the anchor."
         },
@@ -668,6 +693,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Link content (markup between the NavLink tags)."
         }
       ],
+      "doc": "Blazor's NavLink: an <a> that gains the active class when the current\nlocation matches its href. Re-renders on every location change.\n\nMatching is Blazor's (.NET 8): the href is resolved against the base URI\nand compared with the absolute current URI, case-insensitively. `All`\nmatches the URI exactly — also with a trailing slash only on the href, and\nignoring the current URI's query and fragment; `Prefix` additionally\nmatches URIs below the href at a separator (`/abc` covers `/abc/def` and\n`/abc?x`, not `/abcdef`). So a Prefix link to the base (`\"\"`, `\"/\"` without\na `<base>`) is active everywhere — the home link takes `NavLinkMatch.All`.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -697,6 +723,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The content rendered as the document title."
         }
       ],
+      "doc": "Blazor's PageTitle: renders an HTML <title> into the title section of the\nHeadOutlet (3.4) — the document title changes on navigation. Previously this\ncomponent wrote document.title directly at render time; the section port is\nBlazor 1:1 (SectionContent under HeadOutlet.TitleSectionId).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -736,6 +763,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "CSS selector of the element to focus after page changes."
         }
       ],
+      "doc": "Blazor's FocusOnNavigate: after navigating from one page to another, focuses\nan element matching a CSS selector (accessibility). The focus runs on\npage-type change — including the change to the FIRST page (a sentinel class\nstarts the comparison, as in Blazor) — after the render, via Blazor's\nDomWrapper.focusBySelector semantics.\n\nDeviation: Blazor's non-interactive path renders a\n`blazor-focus-on-navigate` custom element for its JS bridge; Tsazor is\nalways interactive, so the component renders nothing.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -771,6 +799,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
+          "doc": "Runs before each internal navigation; call `context.preventNavigation()` to cancel it.",
           "typeArgument": "LocationChangingContext"
         },
         {
@@ -780,9 +809,12 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "NavigationLock",
-          "inferredType": "boolean"
+          "default": "false",
+          "inferredType": "boolean",
+          "doc": "Asks the browser to confirm leaving the app (reload, close, external link) while rendered."
         }
       ],
+      "doc": "Blazor's NavigationLock: while rendered, `onBeforeInternalNavigation` runs\nbefore every internal navigation (programmatic, intercepted link click,\nback/forward) and may call `context.preventNavigation()`;\n`confirmExternalNavigation` asks the browser to confirm leaving the app\n(beforeunload). Renders nothing.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -829,6 +861,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "Virtualize",
+          "default": "50",
           "inferredType": "number",
           "doc": "Height of one item row in pixels."
         },
@@ -839,6 +872,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "Virtualize",
+          "default": "3",
           "inferredType": "number",
           "doc": "Extra rows rendered above and below the viewport."
         },
@@ -877,6 +911,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, …)."
         }
       ],
+      "doc": "Blazor's Virtualize<TItem>: renders only the visible window of a large list\nusing the spacer strategy — two height-allocating spacer divs around the\nrendered slice, so the scrollbar geometry matches the full list.\n\nv1: the per-item template is passed via `itemTemplate` (the .tsazor child\ncontent sugar comes with the Vite plugin milestone).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -977,6 +1012,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, placeholder, …)."
         }
       ],
+      "doc": "Blazor's InputBase<TValue>: the foundation of the Input* component family.\nHolds the two-way value parameters, resolves the EditContext cascading\nvalue, and tracks validation state for the bound field.\n\nv1 deviation: `ValueExpression` is a plain field name string (Blazor uses a\ncompiler-generated expression); the form validators and ValidationMessage\nkey on the same string.",
       "abstract": true,
       "base": {
         "name": "ComponentBase",
@@ -1064,6 +1100,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, placeholder, …)."
         }
       ],
+      "doc": "Blazor's InputText: single-line string input.",
       "base": {
         "name": "InputBase",
         "resolved": true,
@@ -1153,6 +1190,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, placeholder, …)."
         }
       ],
+      "doc": "Blazor's InputTextArea: multi-line string input.",
       "base": {
         "name": "InputBase",
         "resolved": true,
@@ -1242,6 +1280,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, placeholder, …)."
         }
       ],
+      "doc": "Blazor's InputNumber: numeric input; empty input maps to the empty string.",
       "base": {
         "name": "InputBase",
         "resolved": true,
@@ -1331,6 +1370,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, placeholder, …)."
         }
       ],
+      "doc": "Blazor's InputCheckbox: boolean checkbox.",
       "base": {
         "name": "InputBase",
         "resolved": true,
@@ -1430,6 +1470,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, style, placeholder, …)."
         }
       ],
+      "doc": "Blazor's InputDate: date input; parses to Date when valid.",
       "base": {
         "name": "InputBase",
         "resolved": true,
@@ -1536,6 +1577,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Option elements rendered inside the select."
         }
       ],
+      "doc": "Blazor's InputSelect: dropdown with child content as options.",
       "base": {
         "name": "InputBase",
         "resolved": true,
@@ -1707,6 +1749,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (class, id, …)."
         }
       ],
+      "doc": "Blazor's EditForm (src/Components/Web/src/Forms/EditForm.cs): hosts an\nEditContext around the model and cascades it to the Input* components in its\nchild content. Submit routes through `onsubmit`; with `onSubmit` the delegate\ndecides everything itself, otherwise the EditContext validates first and the\nresult routes to `onValidSubmit`/`onInvalidSubmit`. Validation providers are\ntwo-fold (roadmap 3.6): `validators` maps field names to validator functions\n(the adapter), and the DataAnnotationsValidator built-in enables the model's\nfield-rule decorators (`@Required()`, …) on the context.\n\nThe cascaded context is fixed (Blazor: CascadingValue.IsFixed=true) — safe\nbecause the region keyed by the context's identity tears the whole subtree\ndown whenever a new context appears (a new model).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -1761,9 +1804,11 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           ],
           "cascading": {
             "type": "EditContext"
-          }
+          },
+          "doc": "The enclosing form's EditContext (cascaded by EditForm)."
         }
       ],
+      "doc": "Blazor's ValidationMessage<T>: shows validation messages for one field.\nv1 deviation: `For` is a plain field name string (Blazor uses an expression).",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -1788,7 +1833,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "name": "Record",
               "kind": "global"
             }
-          ]
+          ],
+          "doc": "Pass-through attributes (on the <ul>)."
         },
         {
           "name": "editContext",
@@ -1807,9 +1853,11 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           ],
           "cascading": {
             "type": "EditContext"
-          }
+          },
+          "doc": "The enclosing form's EditContext (cascaded by EditForm)."
         }
       ],
+      "doc": "Blazor's ValidationSummary: lists all validation messages of the EditContext.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -1842,6 +1890,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Blazor's [CascadingParameter] EditContext CurrentEditContext (by type)."
         }
       ],
+      "doc": "DataAnnotationsValidator, port of Blazor's DataAnnotationsValidator.cs\n(src/Components/Forms/src): inside an EditForm, it enables DataAnnotations\nvalidation of the form model on the cascaded EditContext — Tsazor's pendant\nare the field-rule decorators (validation-attributes.ts, roadmap 3.6):\n`@Required()`, `@MinLength()`, `@MaxLength()`, `@StringLength()`, `@Range()`,\n`@EmailAddress()`, `@RegularExpression()`, `@Compare()`.\n\nTiming like Blazor's DataAnnotationsEventSubscriptions:\n- a field change revalidates exactly that field (its rules; a field without\n  rules is not touched),\n- validate() (form submit) validates every decorated field of the model and\n  first clears this provider's messages.\nMessages are stored with .NET's DataAnnotations texts (field name as display\nname). Deviations: `DisableClientValidation` and the SSR client-validation\nmapping (DataAnnotationsValidator's [Inject] IServiceProvider) have no\nTsazor counterpart; the validator is the only consumer of the model rules —\nadditional custom rules go through the EditForm `validators` adapter.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -1893,6 +1942,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (accept, multiple, class, …)."
         }
       ],
+      "doc": "Blazor's InputFile (src/Components/Web/src/Forms/InputFile.cs): an\n`<input type=\"file\">` that raises `onChange` with an\n`InputFileChangeEventArgs`.\n\nDeviations (documented, roadmap 3.7): the JS-interop plumbing is the\nbrowser's native File API — the event's files are the DOM `File` objects\n(`IBrowserFile` had no port; name/size/lastModified/type come from File),\n`OpenReadStream`/`ConvertToImageFileAsync` have no interop to port (a File\nstreams natively), and the `Element` capture is the plain DOM element.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -2011,6 +2061,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Rendered while the state is still resolving (Razor's <Authorizing>)."
         }
       ],
+      "doc": "Blazor's AuthorizeView: renders authorized/not-authorized content based on\nthe current user. The AuthenticationStateProvider is looked up in DI\n(register the provider instance via ServiceCollection.registerValue); the\nstate is cascaded to children as `@CascadingParameter({ type: AuthenticationState })`.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -2040,6 +2091,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Content whose subtree receives the AuthenticationState."
         }
       ],
+      "doc": "Blazor's CascadingAuthenticationState: cascades the AuthenticationState to\nthe whole subtree and re-renders it on login/logout. The\nAuthenticationStateProvider is looked up in DI (registerValue); this\nwrapper also re-renders children that cascade-consume the state.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -2149,6 +2201,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Rendered while the state is still resolving (Razor's <Authorizing>)."
         }
       ],
+      "doc": "Blazor's AuthorizeRouteView: like RouteView, but the matched page only\nrenders when the user meets the route's `authorize` requirements\n(Blazor's [Authorize] attribute on the page). Swap it into the Router's\nfound fragment to protect pages. As in Blazor it derives from RouteView,\nwhich renders the granted page (layout, route and query parameters).",
       "base": {
         "name": "RouteView",
         "resolved": true

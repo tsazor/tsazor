@@ -1,3 +1,6 @@
+@** A Fluent UI 2 multi-line text field (textarea, InputBase; bind it with @bind) with an optional
+    label; the value updates on change. Inside a FluentForm it shows the field's first validation
+    message (role="alert", aria-invalid, aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 @import { hasSubmitAttempt } from "./form-state"
@@ -21,7 +24,9 @@
     @Parameter() placeholder?: string;
     /** Visible line count (native rows attribute, defaults 3). */
     @Parameter() rows: number = 3;
+    /** true disables the native textarea. */
     @Parameter() disabled: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
     /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;

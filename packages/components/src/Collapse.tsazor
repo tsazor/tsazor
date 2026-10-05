@@ -1,3 +1,5 @@
+@** Shows or hides content with Bootstrap's `.collapse` class, controlled by the parent through
+    `isOpen`. The content is rendered only while open; there is no transition. *@
 @if (isOpen) {
     <div class="collapse show">@childContent</div>
 }
@@ -5,5 +7,6 @@
 @code {
     /** Whether the collapsible content is visible. */
     @Parameter() isOpen: boolean = false;
+    /** The content shown while open. */
     @Parameter() childContent?: RenderFragment;
 }

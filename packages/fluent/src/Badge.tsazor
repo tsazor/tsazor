@@ -1,3 +1,5 @@
+@** A small Fluent UI 2 pill (span) for a count or short status label; appearance filled | subtle,
+    color brand | success | warning | error, size small | medium. *@
 @import { withAttributes } from "./attributes"
 
 <span @attributes="@this.badgeAttributes">@childContent</span>
@@ -11,6 +13,7 @@
     @Parameter() size: "small" | "medium" = "medium";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The badge text. */
     @Parameter() childContent?: RenderFragment;
 
     private get badgeClass(): string {

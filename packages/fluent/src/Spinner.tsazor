@@ -1,3 +1,5 @@
+@** A Fluent UI 2 loading spinner (role="status" with an aria-label, "Loading…" by default);
+    size small | medium | large. Optional child content renders next to it. *@
 @import { withAttributes } from "./attributes"
 
 <span role="status" @attributes="@this.spinnerAttributes">@childContent</span>

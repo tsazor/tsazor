@@ -1,3 +1,5 @@
+import { scrollToElement } from "./dom-wrapper.js";
+
 /**
  * Blazor's NavigationManager: History-API based URL management with
  * LocationChanged notifications and location-changing handlers
@@ -25,6 +27,11 @@
  * SupplyParameterFromQuery behave exactly as in history mode. Only reading
  * the browser location and writing history entries translate between the
  * two; the real path and `location.search` are never touched.
+ *
+ * Scrolling (Blazor): after an internal navigation the Router scrolls to the
+ * fragment's element (`orders#total`) or to the top; a link that only
+ * changes the fragment of the current page just adds a history entry and
+ * scrolls — no LocationChanging/LocationChanged.
  */
 export class NavigationManager {
   private readonly locationChangedHandlers = new Set<(sender: NavigationManager, event: LocationChangedEventArgs) => void>();
@@ -51,6 +58,12 @@ export class NavigationManager {
   readonly routingMode: RoutingMode;
   /** True while a popstate is being processed (hash mode: its hashchange twin is ignored). */
   private handlingPopState = false;
+  /**
+   * Where the Router scrolls after it rendered the next navigation: an element
+   * id/name, "" for the top; undefined leaves the position alone (popstate:
+   * the browser restores it).
+   */
+  private scrollTarget: string | undefined;
 
   /**
    * `new NavigationManager()` (history mode, window.history),
@@ -219,6 +232,11 @@ export class NavigationManager {
       typeof forceLoadOrOptions === "object" ? forceLoadOrOptions : { forceLoad: forceLoadOrOptions ?? false, replace: replace ?? false };
     const replaceEntry = options.replaceHistoryEntry ?? options.replace ?? false;
     const state = options.historyEntryState;
+    const target = this.toAbsoluteUri(uri);
+    if (!options.forceLoad && this.isWithinBaseUriSpace(target) && this.isSamePageWithHash(target)) {
+      this.scrollOnSamePage(target, replaceEntry, state);
+      return;
+    }
     const perform = () => {
       const absolute = this.toAbsoluteUri(uri);
       const withinBase = this.isWithinBaseUriSpace(absolute);
@@ -288,6 +306,34 @@ export class NavigationManager {
     if (this.interceptionEnabled || this.disposed || typeof document === "undefined") return;
     this.interceptionEnabled = true;
     document.addEventListener("click", this.onDocumentClick);
+    // A deep link with a fragment: the element exists only once the Router rendered.
+    if (!this.isHashMode) this.scrollTarget = fragmentOf(this.uri) || undefined;
+  }
+
+  /**
+   * @internal Taken by the Router after it rendered: the element to scroll
+   * to ("" = the top), undefined when the render was no navigation.
+   */
+  takeScrollTarget(): string | undefined {
+    const target = this.scrollTarget;
+    this.scrollTarget = undefined;
+    return target;
+  }
+
+  /** Blazor's isSamePageWithHash: the target differs from the current URI only in its fragment. */
+  private isSamePageWithHash(absolute: string): boolean {
+    if (this.isHashMode) return false;
+    const hashIndex = absolute.indexOf("#");
+    return hashIndex > -1 && withoutFragment(this.uri) === absolute.slice(0, hashIndex);
+  }
+
+  /**
+   * Blazor's performScrollToElementOnTheSamePage: a history entry and a
+   * scroll, no LocationChanging/LocationChanged (the page stays as it is).
+   */
+  private scrollOnSamePage(absolute: string, replace: boolean, state: string | undefined): void {
+    this.saveToHistory(absolute, replace, state);
+    if (typeof document !== "undefined") scrollToElement(fragmentOf(absolute));
   }
 
   private onDocumentClick = (event: MouseEvent): void => {
@@ -312,6 +358,10 @@ export class NavigationManager {
     const absolute = this.toAbsoluteUri(href);
     if (!this.isWithinBaseUriSpace(absolute)) return;
     event.preventDefault();
+    if (this.isSamePageWithHash(absolute)) {
+      this.scrollOnSamePage(absolute, false, undefined);
+      return;
+    }
     this.runLocationChanging(absolute, undefined, true, () => this.performInternalNavigation(absolute, true, false, undefined));
   };
 
@@ -393,6 +443,13 @@ export class NavigationManager {
   }
 
   private performInternalNavigation(absolute: string, isIntercepted: boolean, replace: boolean, state: string | undefined): void {
+    this.saveToHistory(absolute, replace, state);
+    // Blazor's resetScrollAfterNextBatch — to the fragment's element, if any.
+    if (typeof window !== "undefined") this.scrollTarget = this.isHashMode ? "" : fragmentOf(absolute);
+    this.notifyLocationChanged(absolute, isIntercepted, state);
+  }
+
+  private saveToHistory(absolute: string, replace: boolean, state: string | undefined): void {
     if (typeof window !== "undefined") {
       const url = this.toBrowserUrl(absolute);
       if (replace) {
@@ -404,7 +461,6 @@ export class NavigationManager {
     } else {
       this.internalUri = absolute;
     }
-    this.notifyLocationChanged(absolute, isIntercepted, state);
   }
 
   private performExternalNavigation(uri: string, replace: boolean): void {
@@ -593,6 +649,17 @@ export interface NavigationManagerOptions {
 
 function isHistory(value: History | NavigationManagerOptions): value is History {
   return typeof (value as History).pushState === "function";
+}
+
+/** The fragment without `#` ("" when there is none). */
+function fragmentOf(uri: string): string {
+  const hashIndex = uri.indexOf("#");
+  return hashIndex < 0 ? "" : uri.slice(hashIndex + 1);
+}
+
+function withoutFragment(uri: string): string {
+  const hashIndex = uri.indexOf("#");
+  return hashIndex < 0 ? uri : uri.slice(0, hashIndex);
 }
 
 /** A MemoryHistory exposes its current URL (window.history does not — that is location's job). */

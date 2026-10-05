@@ -1,3 +1,5 @@
+@** Renders Bootstrap's `.badge`, a small label for counts or status, colored with `text-bg-{variant}`
+    and optionally pill-shaped. *@
 @* text-bg-*: Bootstrap picks a text color with enough contrast for the background (WCAG 1.4.3). *@
 <span class="badge @pillClass text-bg-@variant">@childContent</span>
 
@@ -6,6 +8,7 @@
     @Parameter() variant: string = "secondary";
     /** Rounded pill shape. */
     @Parameter() pill: boolean = false;
+    /** The badge text. */
     @Parameter() childContent?: RenderFragment;
 
     private get pillClass(): string {

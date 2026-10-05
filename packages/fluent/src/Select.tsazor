@@ -1,3 +1,7 @@
+@** A Fluent UI 2 dropdown (native select, InputBase; bind it with @bind) for a string value, with
+    an optional label; the options come from child content. Inside a FluentForm it shows the field's
+    first validation message (role="alert", aria-invalid, aria-describedby) once a submit was
+    attempted. *@
 @import { withAttributes } from "./attributes"
 @import { nextFieldId } from "./ids"
 @import { hasSubmitAttempt } from "./form-state"
@@ -17,7 +21,9 @@
 @code {
     /** Optional field label. */
     @Parameter() label?: string;
+    /** true disables the native select. */
     @Parameter() disabled: boolean = false;
+    /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
     /** Element id; generated automatically when omitted (label `for` / `aria-describedby`). */
     @Parameter() id?: string;

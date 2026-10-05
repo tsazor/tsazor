@@ -1,3 +1,6 @@
+@** The toast region (aria-live="polite"), positioned bottom-right or top-right. Wrap the app in
+    it; descendants resolve it through the "FluentToasts" cascade and call show(), which stacks a
+    Toast that auto-dismisses after its timeout (4000 ms by default, 0 = until closed). *@
 @import { withAttributes } from "./attributes"
 
 <div @attributes="@this.regionAttributes">
