@@ -5,7 +5,7 @@
             <polyline points="@this.linePoints" class="sparkline-line"></polyline>
         </svg>
     } else {
-        <p class="sparkline-empty">Keine Daten noch…</p>
+        <p class="sparkline-empty">No data yet…</p>
     }
 </div>
 

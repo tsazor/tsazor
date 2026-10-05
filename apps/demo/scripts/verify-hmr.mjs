@@ -1,15 +1,15 @@
 /**
- * Live verification for phase 4.1 (HMR und Invalidierung): starts a real Vite
+ * Live verification for phase 4.1 (HMR and invalidation): starts a real Vite
  * dev server, then drives the scenarios end to end in a headless browser:
  *
- *   (a) neue Seite (@page)      → Routen-Manifest ändert sich → Reload
- *   (b) neue Komponente für vorher unaufgelöstes Tag → ohne Reload
- *   (c) Komponenten-Änderung    → HMR-Swap, State (Marker) überlebt
- *   (d) `_Imports.tsazor` @import → freier Name der Seite löst sich, ohne Reload
- *   (e) CSS-Sidecar kommt       → Style wirkt, ohne Reload
- *   (f) CSS-Sidecar geht        → voller Reload (injizierte <style> überlebt nicht)
- *   (g) Komponente geht         → Tag wird wieder als Element emittiert, ohne Reload
- *   (h) Aufräumen (Seite weg)   → Routen-Manifest erneut, Reload
+ *   (a) new page (@page)        → route manifest changes → reload
+ *   (b) new component for a previously unresolved tag → no reload
+ *   (c) component change        → HMR swap, state (marker) survives
+ *   (d) `_Imports.tsazor` @import → the page's free name resolves, no reload
+ *   (e) CSS sidecar added       → style applies, no reload
+ *   (f) CSS sidecar removed     → full reload (the injected <style> does not survive)
+ *   (g) component removed       → tag is emitted as an element again, no reload
+ *   (h) cleanup (page removed)  → route manifest again, reload
  *
  * Uses msedge via playwright-core (no Chromium download).
  */
@@ -123,49 +123,49 @@ const IMPORTS_WITH_HELLO = () => `${savedImports}@import { hmrHello } from "./hm
 try {
   savedImports = await readFile(importsPath, "utf8");
 
-  // (a) — Neue Seite: Routen-Manifest ändert sich → Reload der App.
+  // (a) — New page: the route manifest changes → the app reloads.
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   const beforeA = reloads;
   await write("src/Pages/HmrProbe.tsazor", PROBE_V1);
   await waitFor(() => reloads > beforeA);
-  check("(a) neue Seite löst Reload aus (Routen-Manifest)", reloads === beforeA + 1, `reloads=${reloads - beforeA}`);
+  check("(a) new page triggers a reload (route manifest)", reloads === beforeA + 1, `reloads=${reloads - beforeA}`);
 
   await page.goto(`${BASE}/hmr-probe`, { waitUntil: "networkidle" });
-  check("(a) neue Route rendert", (await textOf("h1"))?.includes("HMR probe") === true);
-  check("(a) Page-State v1 gerendert", (await textOf(".hmr-stamp")) === "v1");
-  check("(a) unaufgelöstes Tag als Element", (await page.locator(".hmr-badge").count()) === 0);
+  check("(a) new route renders", (await textOf("h1"))?.includes("HMR probe") === true);
+  check("(a) page state v1 rendered", (await textOf(".hmr-stamp")) === "v1");
+  check("(a) unresolved tag as element", (await page.locator(".hmr-badge").count()) === 0);
 
-  // (b) — Neue Komponente für ein vorher unaufgelöstes Tag (TZS005).
+  // (b) — New component for a previously unresolved tag (TZS005).
   await arm();
   const beforeB = reloads;
   await write("src/Pages/HmrBadge.tsazor", `${BADGE_V1}\n`);
   await waitFor(async () => (await textOf(".hmr-badge")) === "badge-1");
   await page.waitForTimeout(400);
-  check("(b) neue Komponente erscheint ohne Reload", reloads === beforeB, `reloads=${reloads - beforeB}`);
-  check("(b) Browser-State überlebt den Swap", (await markerIs()) === 42);
+  check("(b) new component appears without reload", reloads === beforeB, `reloads=${reloads - beforeB}`);
+  check("(b) browser state survives the swap", (await markerIs()) === 42);
 
-  // (c) — Komponenten-Änderung: Swap des Inhalts, State bleibt.
+  // (c) — Component change: the content is swapped, state stays.
   const beforeC = reloads;
   await write("src/Pages/HmrBadge.tsazor", `${BADGE_V2}\n`);
   await waitFor(async () => (await textOf(".hmr-badge")) === "badge-2");
   await page.waitForTimeout(400);
-  check("(c) Komponenten-Änderung ohne Reload", reloads === beforeC, `reloads=${reloads - beforeC}`);
-  check("(c) State überlebt den Swap", (await markerIs()) === 42);
+  check("(c) component change without reload", reloads === beforeC, `reloads=${reloads - beforeC}`);
+  check("(c) state survives the swap", (await markerIs()) === 42);
 
-  // (d) — `_Imports.tsazor` @import: freie Namen lösen sich (A3), ohne Reload.
-  // Vorher: die Seite referenziert `hmrHello` — ohne den Import wirft der
-  // Render einen ReferenceError (erwartetes Rauschen, oben gefiltert); erst
-  // die _Imports-Änderung transformiert die Seite neu — jetzt mit Import.
+  // (d) — `_Imports.tsazor` @import: free names resolve (A3), no reload.
+  // Before: the page references `hmrHello` — without the import the render
+  // throws a ReferenceError (expected noise, filtered above); only the
+  // _Imports change re-transforms the page — now with the import.
   await write("src/hmr-hello.ts", 'export function hmrHello(): string { return "hello-v1"; }\n');
   await write("src/Pages/HmrProbe.tsazor", PROBE_V2);
   const beforeD = reloads;
   await writeFile(importsPath, IMPORTS_WITH_HELLO());
   await waitFor(async () => (await textOf(".hmr-hello")) === "hello-v1", 20_000);
   await page.waitForTimeout(400);
-  check("(d) _Imports-@import löst freien Namen ohne Reload", reloads === beforeD, `reloads=${reloads - beforeD}`);
-  check("(d) State überlebt den Swap", (await markerIs()) === 42);
+  check("(d) _Imports @import resolves the free name without reload", reloads === beforeD, `reloads=${reloads - beforeD}`);
+  check("(d) state survives the swap", (await markerIs()) === 42);
 
-  // (e) — CSS-Sidecar dazwischen: Style wirkt, ohne Reload.
+  // (e) — CSS sidecar added: the style applies, no reload.
   const beforeE = reloads;
   await write("src/Pages/HmrProbe.tsazor.css", ".hmr-stamp { color: rgb(255, 0, 0); }\n");
   await waitFor(async () => {
@@ -176,11 +176,11 @@ try {
   });
   const el = await page.locator(".hmr-stamp").first().elementHandle().catch(() => null);
   const stampColor = el === null ? null : (await page.evaluate((node) => getComputedStyle(node).color, el));
-  check("(e) CSS-Sidecar wird angewendet", stampColor === "rgb(255, 0, 0)", stampColor ?? "n/a");
-  check("(e) ohne Reload", reloads === beforeE, `reloads=${reloads - beforeE}`);
-  check("(e) State überlebt", (await markerIs()) === 42);
+  check("(e) CSS sidecar is applied", stampColor === "rgb(255, 0, 0)", stampColor ?? "n/a");
+  check("(e) without reload", reloads === beforeE, `reloads=${reloads - beforeE}`);
+  check("(e) state survives", (await markerIs()) === 42);
 
-  // (f) — CSS-Sidecar geht: der injizierte <style> überlebt HMR nicht → Reload.
+  // (f) — CSS sidecar removed: the injected <style> does not survive HMR → reload.
   const beforeF = reloads;
   await remove("src/Pages/HmrProbe.tsazor.css");
   await waitFor(() => reloads > beforeF);
@@ -188,29 +188,29 @@ try {
     const el = document.querySelector(".hmr-stamp");
     return el === null ? null : getComputedStyle(el).color;
   });
-  check("(f) CSS-Sidecar entfernen erzwingt Reload", reloads > beforeF, `reloads=${reloads - beforeF}`);
-  check("(f) Style ist weg", stampColorAfter !== "rgb(255, 0, 0)", stampColorAfter ?? "n/a");
+  check("(f) removing the CSS sidecar forces a reload", reloads > beforeF, `reloads=${reloads - beforeF}`);
+  check("(f) style is gone", stampColorAfter !== "rgb(255, 0, 0)", stampColorAfter ?? "n/a");
 
-  // (g) — Komponente geht: das Tag wird wieder als Element emittiert.
+  // (g) — Component removed: the tag is emitted as an element again.
   await arm();
   const beforeG = reloads;
   await remove("src/Pages/HmrBadge.tsazor");
   await waitFor(async () => (await page.locator(".hmr-badge").count()) === 0);
   await page.waitForTimeout(400);
-  check("(g) entferntes Komponenten-Tag ohne Reload", reloads === beforeG, `reloads=${reloads - beforeG}`);
-  check("(g) State überlebt den Swap", (await markerIs()) === 42);
+  check("(g) removed component tag without reload", reloads === beforeG, `reloads=${reloads - beforeG}`);
+  check("(g) state survives the swap", (await markerIs()) === 42);
 } catch (error) {
-  check("Szenarien vollständig durchgelaufen", false, error.message);
+  check("all scenarios ran to completion", false, error.message);
 } finally {
-  // (h) — Alles zurück: das Routen-Manifest ändert sich erneut (Reload).
+  // (h) — Revert everything: the route manifest changes again (reload).
   const beforeH = reloads;
   await remove("src/Pages/HmrProbe.tsazor");
   await waitFor(() => reloads > beforeH, 10_000).catch(() => {});
-  check("(h) entfernte Seite aktualisiert das Routen-Manifest", reloads > beforeH, `reloads=${reloads - beforeH}`);
+  check("(h) removed page updates the route manifest", reloads > beforeH, `reloads=${reloads - beforeH}`);
 
   await browser.close();
   await server.close();
-  // Demo-Dateien wiederherstellen, bevor die erzeugten Dateien wegkommen.
+  // Restore the demo files before the generated files are removed.
   if (savedImports !== null) await writeFile(importsPath, savedImports);
   for (const file of created) {
     await rm(file, { force: true, recursive: true });
@@ -219,11 +219,11 @@ try {
   await rm(path.join(appDir, "src", "Shared"), { force: true }).catch(() => {});
 }
 
-// Erwartetes Rauschen ausklammern:
-// - Szenario d: ReferenceError bis der Import da ist (der A3-Nachweis),
-// - Szenarien f/g: beim Entfernen einer geladenen Datei reicht Vites Client
-//   einmal an die verschwundene Datei (404 + "Failed to reload") bevor der
-//   Swap der Verbraucher landet — begrenzt, dokumentiert, unsichtbar am Ende.
+// Filter out expected noise:
+// - scenario d: ReferenceError until the import is there (the A3 proof),
+// - scenarios f/g: when a loaded file is removed, Vite's client reaches for
+//   the vanished file once (404 + "Failed to reload") before the consumers'
+//   swap lands — bounded, documented, invisible at the end.
 const isExpected = (line) =>
   line.startsWith("pageerror(expected)") ||
   line.includes("Failed to reload /src/Pages/HmrBadge.tsazor") ||
@@ -231,7 +231,7 @@ const isExpected = (line) =>
   (/Failed to load resource.*404/.test(line) &&
     (line.includes("HmrBadge") || line.includes("HmrProbe")));
 const unexpected = errors.filter((line) => !isExpected(line));
-check("keine unerwarteten Fehler", unexpected.length === 0, unexpected.join(" | ").slice(0, 400));
+check("no unexpected errors", unexpected.length === 0, unexpected.join(" | ").slice(0, 400));
 
 console.log(results.join("\n"));
 if (process.env.VITE_HMR_TRACE) console.log("ws-trace:\n" + traced.join("\n"));

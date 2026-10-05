@@ -91,12 +91,12 @@ export const ROLE_CLAIM = "http://schemas.microsoft.com/ws/2008/06/identity/clai
 export function decodeJwt(token: string): JwtClaims {
   const parts = token.split(".");
   if (parts.length !== 3) {
-    throw new Error("[tsazor-dotnet] Kein JWT (Erwartung: header.payload.signature).");
+    throw new Error("[tsazor-dotnet] Not a JWT (expected: header.payload.signature).");
   }
   try {
     return JSON.parse(base64UrlDecode(parts[1]!)) as JwtClaims;
   } catch (error) {
-    throw new Error(`[tsazor-dotnet] JWT-Payload nicht lesbar (${(error as Error).message}).`);
+    throw new Error(`[tsazor-dotnet] JWT payload not readable (${(error as Error).message}).`);
   }
 }
 

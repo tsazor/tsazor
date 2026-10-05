@@ -1,6 +1,6 @@
 <div class="event-log">
     @if (this.entries.length === 0) {
-        <p class="event-log-empty">Warten auf den ersten Tick…</p>
+        <p class="event-log-empty">Waiting for the first tick…</p>
     } else {
         <ListGroup Flush="@true">
             @for (const entry of this.entries) {

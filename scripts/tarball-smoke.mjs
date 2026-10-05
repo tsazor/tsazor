@@ -1,23 +1,25 @@
 #!/usr/bin/env node
 /**
- * Phase-5.1-Gate: Tarball-Smoke-Test.
+ * Phase 5.1 gate: tarball smoke test.
  *
- * Packt jedes liefernde Paket (`pnpm pack`), installiert die Tarballs in ein
- * Scratch-Projekt mit eigenem node_modules (keine Workspace-Verlinkung — genau
- * die Auflösung, die ein externer Nutzer sieht) und fährt dort drei Prüfungen:
+ * Packs every shipped package (`pnpm pack`), installs the tarballs into a
+ * scratch project with its own node_modules (no workspace linking — exactly
+ * the resolution an external user sees) and runs these checks there:
  *
- *   1. `vite build` gegen ein minimales .tsazor-Projekt (Plugin + Compiler +
- *      Runtime + Routes-Manifest, @tsazor/components über `@using`),
- *   2. einen Vitest-Lauf, der eine .tsazor-Komponente über @tsazor/testing rendert,
- *   3. `tsazor check` (die @tsazor/cli-Bin des installierten Tarballs).
+ *   1. `vite build` against a minimal .tsazor project (plugin + compiler +
+ *      runtime + routes manifest, @tsazor/components via `@using`),
+ *   2. a Vitest run that renders a .tsazor component via @tsazor/testing,
+ *   3. `tsazor check` (the @tsazor/cli bin of the installed tarball),
+ *   4. the @tsazor/dotnet entry points, CLI generation and a type check of
+ *      the generated output.
  *
- * Das Script ist der CI-Gate: exit 0 nur, wenn jede Prüfung pro Paket-Kombination
- * grün ist. Ausführen nach `pnpm -r build` (die Tarballs müssen fertige dists
- * enthalten; das Script bricht mit klarer Meldung ab, wenn dist fehlt).
+ * The script is the CI gate: exit 0 only when every check is green.
+ * Run it after `pnpm -r build` (the tarballs must contain finished dists;
+ * the script aborts with a clear message when dist is missing).
  *
- * Aufruf: node scripts/tarball-smoke.mjs [--keep] [--dir <pfad>]
- *   --keep   Scratch-Verzeichnis nicht löschen (Fehlersuche)
- *   --dir    festes Scratch-Verzeichnis statt OS-Tempdir
+ * Usage: node scripts/tarball-smoke.mjs [--keep] [--dir <path>]
+ *   --keep   do not delete the scratch directory (debugging)
+ *   --dir    fixed scratch directory instead of the OS temp dir
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
@@ -27,7 +29,7 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
-/** Die Pakete, die nach extern liefern (Reihenfolge: Blatt zuerst, egal — overrides regeln das). */
+/** The packages that ship externally (order: leaves first, irrelevant anyway — overrides take care of it). */
 const SHIPPED = [
   "compiler",
   "workspace",
@@ -69,33 +71,33 @@ function indent(text) {
   return text.replace(/^/gm, "  | ");
 }
 
-// 1. Packen -------------------------------------------------------------------
+// 1. Pack ---------------------------------------------------------------------
 
 step("pnpm pack");
-/** name -> relativer Pfad zum Tarball (aus dem Scratch-Projekt gesehen). */
+/** name -> relative path to the tarball (as seen from the scratch project). */
 const tarballByPkg = new Map();
 for (const pkg of SHIPPED) {
   const pkgDir = join(repoRoot, "packages", pkg);
   const manifest = JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
   if (!existsSync(join(pkgDir, "dist", "index.js"))) {
-    throw new Error(`packages/${pkg}/dist/index.js fehlt — zuerst „pnpm -r build“ ausführen.`);
+    throw new Error(`packages/${pkg}/dist/index.js is missing — run "pnpm -r build" first.`);
   }
   const result = spawnSync("pnpm", ["pack", "--pack-destination", tarballs], {
     cwd: pkgDir, shell: true, encoding: "utf8",
   });
   const out = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-  if (result.status !== 0) throw new Error(`pnpm pack (${pkg}) fehlgeschlagen:\n${out}`);
-  // pnpm pack schreibt den Pfad des Tarballs (letzte Zeile) auf stdout.
+  if (result.status !== 0) throw new Error(`pnpm pack (${pkg}) failed:\n${out}`);
+  // pnpm pack writes the tarball's path (last line) to stdout.
   const raw = out.trim().split(/\r?\n/).filter((l) => l.trim().endsWith(".tgz")).pop()?.trim();
-  if (!raw) throw new Error(`pnpm pack (${pkg}): Tarball-Name nicht erkennbar in:\n${out}`);
+  if (!raw) throw new Error(`pnpm pack (${pkg}): tarball name not recognizable in:\n${out}`);
   const file = raw.replace(/\\/g, "/").split("/").pop();
   tarballByPkg.set(manifest.name, `file:../tarballs/${file}`);
   console.log(`  ${manifest.name} -> ${file}`);
 }
 
-// 2. Scratch-Projekt ----------------------------------------------------------
+// 2. Scratch project ----------------------------------------------------------
 
-const tarballOf = (name) => tarballByPkg.get(name) ?? (() => { throw new Error(`Tarball für ${name} fehlt`); })();
+const tarballOf = (name) => tarballByPkg.get(name) ?? (() => { throw new Error(`tarball for ${name} is missing`); })();
 const deps = {};
 for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/components", "@tsazor/fluent", "@tsazor/dotnet"]) {
   deps[name] = tarballOf(name);
@@ -109,9 +111,9 @@ const scratchManifest = {
   version: "0.0.0",
   type: "module",
   dependencies: deps,
-  // Transitive @tsazor-Abhängigkeiten (z. B. @tsazor/testing -> @tsazor/runtime,
-  // @tsazor/lsp -> @tsazor/compiler) auf dieselben Tarballs legen — es gibt sie
-  // nicht in der Registry.
+  // Point transitive @tsazor dependencies (e.g. @tsazor/testing -> @tsazor/runtime,
+  // @tsazor/lsp -> @tsazor/compiler) at the same tarballs — they are not in
+  // the registry.
   pnpm: { overrides },
   devDependencies: {
     vite: "^7.1.7",
@@ -137,7 +139,7 @@ const tsconfig = {
 };
 writeFileSync(join(app, "tsconfig.json"), JSON.stringify(tsconfig, null, 2) + "\n");
 
-// vite.config.ts — exakt die Getting-Started-Form
+// vite.config.ts — exactly the Getting Started form
 writeFileSync(join(app, "vite.config.ts"), `import { defineConfig } from "vite";
 import { tsazor } from "@tsazor/vite-plugin";
 
@@ -146,7 +148,7 @@ export default defineConfig({
 });
 `);
 
-// vitest.config.ts — .tsazor-Importe im Test laufen durch denselben Plugin-Aufruf
+// vitest.config.ts — .tsazor imports in the test go through the same plugin call
 writeFileSync(join(app, "vitest.config.ts"), `import { defineConfig } from "vitest/config";
 import tsazor from "@tsazor/vite-plugin";
 
@@ -172,7 +174,7 @@ writeFileSync(join(app, "index.html"), `<!doctype html>
 </html>
 `);
 
-// _Imports.tsazor — die Standard-Importe (Getting-Started) plus Paket-@using
+// _Imports.tsazor — the standard imports (Getting Started) plus a package @using
 writeFileSync(join(app, "src", "_Imports.tsazor"), `@import { ComponentBase, Parameter, CascadingParameter, EventCallback, RenderTreeBuilder, inject } from "@tsazor/runtime"
 @import { Router, RouteView, NavLink, PageTitle } from "@tsazor/runtime"
 @import { TsazorHttp, EditContext } from "@tsazor/runtime"
@@ -185,8 +187,8 @@ writeFileSync(join(app, "src", "App.tsazor"), `@import Home from "./Pages/Home.t
 <Home />
 `);
 
-// Eine Seite, die einen Bootstrap-Baustein aus dem installierten
-// @taazor/components-Tarball nutzt (Komponenten-Auflösung über das Paket-Manifest)
+// A page that uses a Bootstrap building block from the installed
+// @tsazor/components tarball (component resolution via the package manifest)
 writeFileSync(join(app, "src", "Pages", "Home.tsazor"), `@page "/"
 
 @import { Accordion, AccordionItem } from "@tsazor/components"
@@ -217,7 +219,7 @@ import routes from "virtual:tsazor-routes";
 createTsazorApp({ root: App, routes });
 `);
 
-// Ein Vitest-Test über den installierten Tarball von @tsazor/testing
+// A Vitest test via the installed @tsazor/testing tarball
 mkdirSync(join(app, "src", "test"), { recursive: true });
 writeFileSync(join(app, "src", "test", "counter.test.ts"), `import { describe, expect, it } from "vitest";
 import { render } from "@tsazor/testing";
@@ -234,7 +236,7 @@ describe("tarball smoke", () => {
 });
 `);
 
-// Der @tsazor/dotnet-Smoke: ein Mini-OpenAPI-Dokument ...
+// The @tsazor/dotnet smoke: a mini OpenAPI document ...
 writeFileSync(join(app, "dotnet-openapi.json"), JSON.stringify({
   openapi: "3.0.1",
   info: { title: "SmokeApi", version: "1.0.0" },
@@ -245,7 +247,7 @@ writeFileSync(join(app, "dotnet-openapi.json"), JSON.stringify({
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         responses: {
           "200": {
-            description: "Das Ding",
+            description: "The thing",
             content: {
               "application/json": {
                 schema: {
@@ -263,8 +265,8 @@ writeFileSync(join(app, "dotnet-openapi.json"), JSON.stringify({
   components: { schemas: {} },
 }, null, 2) + "\n");
 
-// ... die Prüfung beider Paket-Einstiege (Browser-„." ohne node:*,
-// Generator-Einstieg mit dem CLI-Code) ...
+// ... the check of both package entry points (browser "." without node:*,
+// generator entry with the CLI code) ...
 writeFileSync(join(app, "dotnet-entries.mjs"), `const runtime = await import("@tsazor/dotnet");
 const generator = await import("@tsazor/dotnet/generator");
 for (const missing of [
@@ -272,20 +274,20 @@ for (const missing of [
     typeof runtime.problemMessage !== "function" && "problemMessage",
     typeof generator.generateClient !== "function" && "generateClient",
 ].filter(Boolean)) {
-    console.error(\`@tsazor/dotnet: \${missing} fehlt\`);
+    console.error(\`@tsazor/dotnet: \${missing} is missing\`);
     process.exit(1);
 }
 `);
 
-// ... und die CLI-Generierung aus dem installierten Tarball heraus.
+// ... and CLI generation from within the installed tarball.
 mkdirSync(join(app, "src", "dotnet-api"), { recursive: true });
 
 // 3. Install ------------------------------------------------------------------
 
-step("pnpm install (Scratch-Projekt, isoliertes node_modules)");
+step("pnpm install (scratch project, isolated node_modules)");
 run("pnpm", ["install", "--no-frozen-lockfile"], app);
 
-// 4. Prüfungen ----------------------------------------------------------------
+// 4. Checks -------------------------------------------------------------------
 
 const vite = ["node", ["node_modules/vite/bin/vite.js", "build"], app];
 const vitest = ["node", ["node_modules/vitest/vitest.mjs", "run"], app];
@@ -294,31 +296,31 @@ const check = ["node", ["node_modules/@tsazor/cli/dist/bin.js", "check", "."], a
 await gate("vite build", vite);
 await gate("vitest", vitest);
 await gate("tsazor check", check);
-await gate("dotnet-Einstiege", ["node", ["dotnet-entries.mjs"], app]);
+await gate("dotnet entry points", ["node", ["dotnet-entries.mjs"], app]);
 await gate("tsazor-dotnet generate", ["node", ["node_modules/@tsazor/dotnet/dist/bin.js", "generate", "dotnet-openapi.json", "--out", "src/dotnet-api", "--name", "SmokeApi"], app]);
-await gate("dotnet-Output-Typcheck", ["node", ["node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--moduleResolution", "bundler", "--module", "ESNext", "src/dotnet-api/models.ts", "src/dotnet-api/smoke-api.ts"], app]);
+await gate("dotnet output type check", ["node", ["node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--moduleResolution", "bundler", "--module", "ESNext", "src/dotnet-api/models.ts", "src/dotnet-api/smoke-api.ts"], app]);
 
 async function gate(name, [cmd, args, cwd]) {
   step(name);
   const result = run(cmd, args, cwd, { check: false });
   if (result.status !== 0) {
     failures.push(name);
-    process.stderr.write(`\n!! ${name} scheiterte`);
+    process.stderr.write(`\n!! ${name} failed`);
   } else {
     console.log(`  ok`);
   }
 }
 
-// 5. Bericht ------------------------------------------------------------------
+// 5. Report -------------------------------------------------------------------
 
-console.log(`\n==== Tarball-Smoke: ${failures.length === 0 ? "GRÜN" : `ROT (${failures.join(", ")})`} ====`);
-console.log(`Scratch: ${scratchRoot}${keep ? "" : " (wird gelöscht)"}`);
+console.log(`\n==== Tarball smoke: ${failures.length === 0 ? "GREEN" : `RED (${failures.join(", ")})`} ====`);
+console.log(`Scratch: ${scratchRoot}${keep ? "" : " (will be deleted)"}`);
 
 if (failures.length > 0 && !keep) {
-  console.log("Scratch bleibt für die Fehlersuche erhalten (--keep unterdrückt das Löschen nicht bei Fehlern).");
+  console.log("Scratch is kept for debugging (on failure it is never deleted, even without --keep).");
 }
 if (!keep && failures.length === 0) {
   rmSync(scratchRoot, { recursive: true, force: true });
-  console.log("Scratch entfernt (grün).");
+  console.log("Scratch removed (green).");
 }
 process.exit(failures.length === 0 ? 0 : 1);

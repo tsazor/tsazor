@@ -60,7 +60,7 @@ describe("compiled page integration (ComponentsDemo)", () => {
     await settle(renderer);
 
     const card = [...container.querySelectorAll(".card")].find((c) => c.textContent!.includes("Alert (dismissible)"))!;
-    expect(card.querySelector("button")?.textContent).toContain("Alert wieder zeigen");
+    expect(card.querySelector("button")?.textContent).toContain("Show alert again");
     expect(card.querySelector(".alert")).toBeNull();
   });
 
@@ -73,7 +73,7 @@ describe("compiled page integration (ComponentsDemo)", () => {
     renderer.renderInContainer(ComponentsDemo, container);
     await settle(renderer);
 
-    const countButtons = [...container.querySelectorAll("button")].filter((b) => b.textContent!.trim() === "Zählen");
+    const countButtons = [...container.querySelectorAll("button")].filter((b) => b.textContent!.trim() === "Count");
     countButtons[0]!.dispatchEvent(new Event("click", { bubbles: true }));
     await settle(renderer);
     expect(container.querySelector(".badge")!.textContent).toBe("1");

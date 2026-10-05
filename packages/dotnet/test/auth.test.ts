@@ -18,7 +18,7 @@ describe("decodeJwt / principalFromJwt", () => {
   it("dekodiert das Payload UTF-8-sicher und wirft bei Nicht-JWT", () => {
     const claims = decodeJwt(makeJwt({ sub: "u1", name: "Hölger Üßbach", role: ["admin", "staff"], "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": "Hölger Üßbach" }));
     expect(claims.name).toBe("Hölger Üßbach");
-    expect(() => decodeJwt("not-a-jwt")).toThrow(/Kein JWT/);
+    expect(() => decodeJwt("not-a-jwt")).toThrow(/Not a JWT/);
   });
 
   it("bildet Microsoft-Claim-URIs auf name/roles ab (Name auch kurz und lang)", () => {

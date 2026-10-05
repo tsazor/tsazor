@@ -20,10 +20,10 @@ export { loadOpenApiDocument } from "./openapi.js";
 const VERSION = "0.1.0";
 
 const USAGE = `Usage: tsazor-dotnet generate <openapi.json|url> --out <dir> [options]
-  --name <Name>        Klassenname des Clients (Default aus info.title)
-  --envelope data,errors  Antwort-Envelope entschlüsseln (z. B. FluentCMS)
-  --base-url <url>     Default-Basis-URL des generierten Clients
-Exit: 0 grün, 1 Fehler, 2 Usage/fatal.`;
+  --name <Name>        class name of the client (default from info.title)
+  --envelope data,errors  unwrap a response envelope (e.g. FluentCMS)
+  --base-url <url>     default base URL of the generated client
+Exit: 0 green, 1 errors, 2 usage/fatal.`;
 
 export async function main(argv: readonly string[], stdout: (line: string) => void): Promise<number> {
   const [command, source, ...extra] = argv.slice(2);
@@ -54,21 +54,21 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     switch (option) {
       case "--out":
         if (value === undefined) {
-          stdout("tsazor-dotnet generate: --out verlangt ein Verzeichnis.");
+          stdout("tsazor-dotnet generate: --out requires a directory.");
           return 2;
         }
         out = value;
         break;
       case "--name":
         if (value === undefined) {
-          stdout("tsazor-dotnet generate: --name verlangt einen Namen.");
+          stdout("tsazor-dotnet generate: --name requires a name.");
           return 2;
         }
         clientName = value;
         break;
       case "--envelope": {
         if (value === undefined) {
-          stdout("tsazor-dotnet generate: --envelope verlangt `data[,errors]`.");
+          stdout("tsazor-dotnet generate: --envelope requires `data[,errors]`.");
           return 2;
         }
         const [data = "", errors = ""] = value.split(",");
@@ -77,26 +77,26 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
           ...(errors.length > 0 ? { errors } : {}),
         };
         if (envelope.data === undefined && envelope.errors === undefined) {
-          stdout("tsazor-dotnet generate: --envelope ohne gültigen Schlüssel (`data[,errors]`).");
+          stdout("tsazor-dotnet generate: --envelope without a valid key (`data[,errors]`).");
           return 2;
         }
         break;
       }
       case "--base-url":
         if (value === undefined) {
-          stdout("tsazor-dotnet generate: --base-url verlangt eine URL.");
+          stdout("tsazor-dotnet generate: --base-url requires a URL.");
           return 2;
         }
         baseUrl = value;
         break;
       default:
-        stdout(`tsazor-dotnet generate: unbekannte Option "${option}".`);
+        stdout(`tsazor-dotnet generate: unknown option "${option}".`);
         stdout(USAGE);
         return 2;
     }
   }
   if (out === undefined) {
-    stdout("tsazor-dotnet generate: --out fehlt.");
+    stdout("tsazor-dotnet generate: --out is missing.");
     stdout(USAGE);
     return 2;
   }
@@ -112,11 +112,11 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
   await mkdir(out, { recursive: true });
   for (const file of generation.files) {
     await writeFile(path.join(out, file.path), file.content, "utf8");
-    stdout(`geschrieben: ${path.join(out, file.path)}`);
+    stdout(`written: ${path.join(out, file.path)}`);
   }
   for (const warning of generation.warnings) {
-    stdout(`warnung: ${warning}`);
+    stdout(`warning: ${warning}`);
   }
-  stdout(`tsazor-dotnet generate: ${generation.files.length} Datei(en) nach ${out}`);
+  stdout(`tsazor-dotnet generate: ${generation.files.length} file(s) to ${out}`);
   return 0;
 }

@@ -72,7 +72,7 @@ export async function loadOpenApiDocument(source: string): Promise<OpenApiDocume
   const text = await readSource(source);
   const document = JSON.parse(text) as OpenApiDocument;
   if (typeof document !== "object" || document === null || document.paths === undefined) {
-    throw new Error(`[tsazor-dotnet] „${source}" ist kein OpenAPI-Dokument (paths fehlt).`);
+    throw new Error(`[tsazor-dotnet] "${source}" is not an OpenAPI document (paths missing).`);
   }
   return document;
 }
@@ -81,7 +81,7 @@ async function readSource(source: string): Promise<string> {
   if (/^https?:\/\//i.test(source)) {
     const response = await fetch(source);
     if (!response.ok) {
-      throw new Error(`[tsazor-dotnet] OpenAPI-URL ${source} antwortete ${response.status} ${response.statusText}.`);
+      throw new Error(`[tsazor-dotnet] OpenAPI URL ${source} responded ${response.status} ${response.statusText}.`);
     }
     return response.text();
   }
@@ -92,13 +92,13 @@ async function readSource(source: string): Promise<string> {
 /** Resolves a local `$ref` (`#/components/schemas/Pet`) against the document. */
 export function resolveSchemaRef(document: OpenApiDocument, ref: string): OpenApiSchema {
   if (!ref.startsWith("#/")) {
-    throw new Error(`[tsazor-dotnet] Nur lokale $refs unterstützt (${ref}) — ferne Dokumente ausgelagert.`);
+    throw new Error(`[tsazor-dotnet] Only local $refs are supported (${ref}) — remote documents are out of scope.`);
   }
   let node: unknown = document;
   for (const segment of ref.slice(2).split("/")) {
     const key = segment.replace(/~1/g, "/").replace(/~0/g, "~");
     if (node === null || typeof node !== "object" || !(key in (node as object))) {
-      throw new Error(`[tsazor-dotnet] $ref "${ref}" nicht auflösbar (Segment "${key}" fehlt).`);
+      throw new Error(`[tsazor-dotnet] $ref "${ref}" cannot be resolved (segment "${key}" missing).`);
     }
     node = (node as Record<string, unknown>)[key];
   }

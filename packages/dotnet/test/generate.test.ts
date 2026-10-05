@@ -177,7 +177,7 @@ describe("generateClient — client", () => {
       errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n"),
       errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n"),
     ).toBe("");
-    // Warnungen: nur die dokumentierte Teilmenge (inline-Objekt im Fixture).
-    expect(generation.warnings).toEqual([`Schema "metadata": inline-Objekt ohne $ref → Record<string, unknown>`]);
+    // Warnings: only the documented subset (inline object in the fixture).
+    expect(generation.warnings).toEqual([`Schema "metadata": inline object without $ref → Record<string, unknown>`]);
   });
 });

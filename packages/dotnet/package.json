@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
-  "description": "Tsazor's .NET-Backend-Brücke: OpenAPI ⇒ typisierter TS-Client mit korrekter Nullability, ProblemDetails/Envelope als HttpResult, Schema ⇒ DataAnnotations-Validatoren, JWT-/Cookie-Auth.",
+  "description": "Tsazor's .NET backend bridge: OpenAPI ⇒ typed TS client with correct nullability, ProblemDetails/envelope as HttpResult, schema ⇒ DataAnnotations validators, JWT/cookie auth.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {

@@ -95,7 +95,7 @@ class Generator {
       }
       const flat = flattenAllOf(this.document, resolved);
       if (schemaType(flat) !== "object") {
-        this.warn(`Schema "${name}" (${schemaType(flat) ?? "unbestimmt"}) ist kein Objekt und kein Enum — übersprungen.`);
+        this.warn(`Schema "${name}" (${schemaType(flat) ?? "undetermined"}) is neither an object nor an enum — skipped.`);
         continue;
       }
       this.modelClass(body, className, flat);
@@ -187,7 +187,7 @@ class Generator {
         return `boolean${nullSuffix}`;
       case "array": {
         if (property.items === undefined) {
-          this.warn(`Schema "${owner}": array ohne items → unknown[]`);
+          this.warn(`Schema "${owner}": array without items → unknown[]`);
           return "unknown[]";
         }
         // Do NOT resolve $refs here — typeText names the target type.
@@ -203,12 +203,12 @@ class Generator {
             : this.typeText(additional as OpenApiSchema, owner);
           return `Record<string, ${valueType}>${nullSuffix}`;
         }
-        this.warn(`Schema "${owner}": inline-Objekt ohne $ref → Record<string, unknown>`);
+        this.warn(`Schema "${owner}": inline object without $ref → Record<string, unknown>`);
         return `Record<string, unknown>${nullSuffix}`;
       }
       case undefined:
       default:
-        this.warn(`Schema "${owner}": Typ "${type ?? ""}" nicht unterstützt → unknown`);
+        this.warn(`Schema "${owner}": type "${type ?? ""}" not supported → unknown`);
         return `unknown${nullSuffix}`;
     }
   }
@@ -333,7 +333,7 @@ class Generator {
   private methodName(operation: OpenApiOperation, method: OpenApiMethod, path: string): string {
     if (operation.operationId) return camel(operation.operationId);
     const segments = path.split("/").filter((s) => s.length > 0 && !/[$()&:]/.test(s)).map(pascal).join("");
-    this.warn(`Operation ${method.toUpperCase()} ${path} ohne operationId → Methodenname "${method}${segments}" abgeleitet.`);
+    this.warn(`Operation ${method.toUpperCase()} ${path} without operationId → derived method name "${method}${segments}".`);
     return `${method}${segments}`;
   }
 

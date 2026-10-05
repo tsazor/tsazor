@@ -2,22 +2,22 @@
 @inject DemoAuthProvider Auth
 
 <div class="card">
-    <h1>Auth-Demo</h1>
-    <p class="muted">AuthorizeView mit Blazor-Semantik — der AuthenticationStateProvider ist über DI registriert.</p>
+    <h1>Auth demo</h1>
+    <p class="muted">AuthorizeView with Blazor semantics — the AuthenticationStateProvider is registered via DI.</p>
 
     <AuthorizeView>
         <Authorized>
-            <div class="success">Angemeldet als @(context.user.name).</div>
-            <p>Diese Zeile sieht nur der angemeldete Benutzer.</p>
+            <div class="success">Signed in as @(context.user.name).</div>
+            <p>Only the signed-in user sees this line.</p>
         </Authorized>
         <NotAuthorized>
-            <p class="error-text">Nicht angemeldet — geschützter Inhalt ist ausgeblendet.</p>
+            <p class="error-text">Not signed in — protected content is hidden.</p>
         </NotAuthorized>
     </AuthorizeView>
 
     <div class="field">
-        <button class="btn" @onclick="signIn">Anmelden (alice)</button>
-        <button class="btn" @onclick="signOut">Abmelden</button>
+        <button class="btn" @onclick="signIn">Sign in (alice)</button>
+        <button class="btn" @onclick="signOut">Sign out</button>
     </div>
 </div>
 
