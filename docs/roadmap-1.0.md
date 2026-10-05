@@ -99,7 +99,10 @@ architecture and security take priority.
   existing services as an API, either with OpenAPI controllers (`@tsazor/dotnet`) or, as an option,
   with Sleipnir commands. Blazor WebAssembly apps usually have the boundary already. **Decided
   (2026-10-05):** the effort figures may come from the local FluentCMS-admin port, as aggregated,
-  generic numbers only (no code).
+  generic numbers only (no code). **Done (2026-10-05):** [migration.md](migration.md) — the codemod workflow, automatic vs
+  manual, the Blazor Server API boundary (what crosses it), figures from the FluentCMS corpus probe
+  (157/217 clean as is, 182/217 after the codemod). The local FluentCMS-admin port is too early for
+  hour figures (3 pages); they are added once measured.
 - **E7b — Coexistence guide:** not every team migrates. A common target is a Blazor app (e.g. an
   admin/backoffice) that stays, plus a public Tsazor frontend on the same .NET backend, which
   replaces e.g. a Svelte or React frontend chosen only because Blazor didn't fit. The guide
