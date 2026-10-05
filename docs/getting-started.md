@@ -45,6 +45,9 @@ imports load in tests — see the form in the [Tests](#tests) section).
 
 ## Project structure
 
+The minimal layout below; for an app that grows past a few pages (feature folders, services, containers
+and presentational components, testing) see [patterns.md](patterns.md).
+
 ```
 my-app/
 ├── index.html               # <div id="app"> + <script src="/src/Program.ts">

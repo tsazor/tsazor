@@ -78,7 +78,8 @@ architecture and security take priority.
 **Architecture**
 - **E4 — Architecture guide** (`docs/patterns.md`): layers, services via DI, feature folders, when
   to move to code-behind, presentational vs container components, testability with
-  `@tsazor/testing`.
+  `@tsazor/testing`. **Done (2026-10-05):** [patterns.md](patterns.md) (also carries the localization
+  snapshot-trap rule from E8).
 - **E5 — Lazy loading per feature or route** (router + vite plugin). **Decided (2026-10-05):** [design-lazy-routes.md](design-lazy-routes.md) —
   Blazor's `OnNavigateAsync`/`<Navigating>` first, then lazy manifest entries, opt-in per glob
   (`lazyRoutes`), one chunk per page, the layout loads with the page, a failed chunk reloads once. **Done
