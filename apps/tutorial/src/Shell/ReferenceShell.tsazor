@@ -1,0 +1,47 @@
+@** The frame of every reference page: the site bar, the reference navigation (sections, packages, the components of the current package) and the page content. *@
+@import reference from "virtual:tutorial-reference"
+
+<div class="reference">
+    <SiteBar Current="reference" />
+    <div class="reference-body">
+        <main class="reference-main">
+            @childContent
+        </main>
+        <nav class="reference-nav" aria-label="Reference">
+            <ul class="nav-sections">
+                <li><a href="reference" aria-current="@(section === "overview" ? "page" : null)">Overview</a></li>
+                <li><a href="reference/language" aria-current="@(section === "language" ? "page" : null)">Language</a></li>
+            </ul>
+            <h2 class="nav-heading">Components</h2>
+            <ul class="nav-packages">
+                @foreach (const pkg of reference.packages) {
+                    <li @key="pkg.slug">
+                        <a href="@("reference/components/" + pkg.slug)"
+                           aria-current="@(pkg.slug === packageSlug && !componentName ? "page" : null)">@pkg.name</a>
+                        @if (pkg.slug === packageSlug) {
+                            <ul class="nav-components">
+                                @foreach (const component of pkg.components) {
+                                    <li @key="component.name">
+                                        <a href="@("reference/components/" + pkg.slug + "/" + component.name)"
+                                           aria-current="@(component.name === componentName ? "page" : null)">@component.name</a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@code {
+    /** The section shown: the overview, the language page or a components page. */
+    @Parameter() section: "overview" | "language" | "components" = "overview";
+    /** The package whose components the navigation lists. */
+    @Parameter() packageSlug?: string;
+    /** The component shown (marked in the navigation). */
+    @Parameter() componentName?: string;
+    /** The page content. */
+    @Parameter() childContent?: RenderFragment;
+}

@@ -10,12 +10,16 @@
  * - `virtual:tutorial-types` — the type environment of the in-browser
  *   `tsazor check` (lib .d.ts + package declarations, build/type-env.ts);
  *   loaded lazily by the compile worker.
+ * - `virtual:tutorial-reference` — the reference (build/reference.ts): the
+ *   language reference and the component manifests; reloads when
+ *   docs/language-reference.md changes.
  */
 import { build } from "esbuild";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
 import { loadContent } from "./content.js";
+import { loadReference } from "./reference.js";
 import { loadTypeEnvironment } from "./type-env.js";
 
 const CONTENT_ID = "virtual:tutorial-content";
@@ -24,6 +28,8 @@ const TYPES_ID = "virtual:tutorial-types";
 const RESOLVED_CONTENT = `\0${CONTENT_ID}`;
 const RESOLVED_BUNDLES = `\0${BUNDLES_ID}`;
 const RESOLVED_TYPES = `\0${TYPES_ID}`;
+const REFERENCE_ID = "virtual:tutorial-reference";
+const RESOLVED_REFERENCE = `\0${REFERENCE_ID}`;
 
 export interface PackageBundles {
   runtime: string;
@@ -65,6 +71,8 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
 
 export function tutorialPlugin(options: { root: string }): Plugin {
   const contentDir = path.join(options.root, "content");
+  const repoRoot = path.resolve(options.root, "..", "..");
+  const languageReference = path.join(repoRoot, "docs", "language-reference.md");
   let bundles: Promise<PackageBundles> | undefined;
   return {
     name: "tsazor-tutorial",
@@ -72,6 +80,7 @@ export function tutorialPlugin(options: { root: string }): Plugin {
       if (id === CONTENT_ID) return RESOLVED_CONTENT;
       if (id === BUNDLES_ID) return RESOLVED_BUNDLES;
       if (id === TYPES_ID) return RESOLVED_TYPES;
+      if (id === REFERENCE_ID) return RESOLVED_REFERENCE;
       return null;
     },
     async load(id) {
@@ -89,15 +98,20 @@ export function tutorialPlugin(options: { root: string }): Plugin {
       if (id === RESOLVED_TYPES) {
         return `export default ${JSON.stringify(loadTypeEnvironment(options.root))};`;
       }
+      if (id === RESOLVED_REFERENCE) {
+        return `export default ${JSON.stringify(loadReference(repoRoot))};`;
+      }
       return null;
     },
     configureServer(server: ViteDevServer) {
       // Lets scripts/verify.mjs tell whether a server on its port serves this checkout.
       server.middlewares.use("/__tutorial-root", (_request, response) => response.end(path.resolve(options.root)));
-      server.watcher.add(contentDir);
+      server.watcher.add([contentDir, languageReference]);
       const reload = (file: string): void => {
-        if (!path.resolve(file).startsWith(contentDir)) return;
-        const module = server.moduleGraph.getModuleById(RESOLVED_CONTENT);
+        const changed = path.resolve(file);
+        const id = changed === languageReference ? RESOLVED_REFERENCE : changed.startsWith(contentDir) ? RESOLVED_CONTENT : undefined;
+        if (!id) return;
+        const module = server.moduleGraph.getModuleById(id);
         if (module) server.moduleGraph.invalidateModule(module);
         server.ws.send({ type: "full-reload" });
       };

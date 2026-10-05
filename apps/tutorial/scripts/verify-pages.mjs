@@ -80,6 +80,13 @@ try {
   await page.waitForURL((url) => /^\/Tsazor\/(ts|blazor)\/[\w-]+$/.test(url.pathname), { timeout: 30_000 });
   check(true, `the keyword index loads as a deep link and its entries stay below ${BASE}`);
 
+  await page.goto(`${ORIGIN}${BASE}reference/language#diagnostics`);
+  await page.waitForFunction(() => window.scrollY > 1000, undefined, { timeout: 30_000 });
+  check(true, "a reference deep link with a fragment loads and scrolls to its section");
+  await page.goto(`${ORIGIN}${BASE}reference/components/fluent/Button`);
+  await page.waitForSelector(".parameters", { timeout: 30_000 });
+  check(true, "a component page loads as a deep link");
+
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 } catch (error) {
   console.error(error);

@@ -1,0 +1,59 @@
+/**
+ * Gate for the reference (`/reference`): every component of the documented
+ * packages has a doc comment and every parameter a JSDoc (D-R3); every
+ * `#section` link of the language page has its anchor; anchors are unique.
+ */
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { LANGUAGE_PATH, loadReference, slugify } from "../build/reference";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const reference = loadReference(repoRoot);
+
+describe("components", () => {
+  for (const pkg of reference.packages) {
+    it(`${pkg.name}: every component and parameter is documented`, () => {
+      expect(pkg.components.length).toBeGreaterThan(0);
+      const undocumented = pkg.components.flatMap((component) => [
+        ...(component.doc ? [] : [`${component.name} (component)`]),
+        ...component.parameters.filter((parameter) => !parameter.doc).map((parameter) => `${component.name}.${parameter.name}`),
+      ]);
+      expect(undocumented).toEqual([]);
+    });
+  }
+
+  it("shows parameters as markup names with their defaults", () => {
+    const button = reference.packages.find((pkg) => pkg.slug === "components")!.components.find((component) => component.name === "Button")!;
+    const variant = button.parameters.find((parameter) => parameter.name === "Variant")!;
+    expect(variant).toMatchObject({ type: "string", default: '"primary"', required: false });
+    expect(button.summary).not.toMatch(/<p>/);
+  });
+
+  it("shows a tag named in a doc as text", () => {
+    const summary = reference.packages.find((pkg) => pkg.slug === "runtime")!.components.find((component) => component.name === "ValidationSummary")!;
+    expect(summary.parameters.find((parameter) => parameter.name === "AdditionalAttributes")!.doc).toContain("&lt;ul&gt;");
+  });
+});
+
+describe("language page", () => {
+  const { html, headings } = reference.language;
+
+  it("has unique anchors for every heading", () => {
+    expect(headings.length).toBeGreaterThan(15);
+    expect(new Set(headings.map((heading) => heading.id)).size).toBe(headings.length);
+  });
+
+  it("resolves every #section link", () => {
+    const ids = new Set(headings.map((heading) => heading.id));
+    const targets = [...html.matchAll(new RegExp(`href="${LANGUAGE_PATH}#([^"]+)"`, "g"))].map((match) => match[1]!);
+    expect(targets.length).toBeGreaterThan(0);
+    expect(targets.filter((target) => !ids.has(target))).toEqual([]);
+  });
+
+  it("slugifies like GitHub", () => {
+    expect(slugify("@authorize and @attribute")).toBe("authorize-and-attribute");
+    expect(slugify("Two-way parameters: <code>@Bindable()</code> (Tsazor extension)")).toBe("two-way-parameters-bindable-tsazor-extension");
+    expect(slugify("Compatibility .razor ↔ .tsazor")).toBe("compatibility-razor--tsazor");
+  });
+});

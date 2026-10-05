@@ -5,10 +5,11 @@
     </a>
     <nav class="site-links" aria-label="Tutorial">
         <a href="index" aria-current="@(current === "index" ? "page" : null)">Index</a>
+        <a href="reference" aria-current="@(current === "reference" ? "page" : null)">Reference</a>
     </nav>
 </header>
 
 @code {
     /** The page showing the bar (marked with aria-current). */
-    @Parameter() current: "home" | "index" = "home";
+    @Parameter() current: "home" | "index" | "reference" = "home";
 }

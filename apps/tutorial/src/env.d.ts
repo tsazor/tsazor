@@ -3,6 +3,11 @@ declare module "virtual:tutorial-content" {
   export default content;
 }
 
+declare module "virtual:tutorial-reference" {
+  const reference: import("./reference-types").ReferenceContent;
+  export default reference;
+}
+
 declare module "virtual:tutorial-types" {
   /** Absolute path → content: lib .d.ts files and the @tsazor package declarations. */
   const types: Readonly<Record<string, string>>;

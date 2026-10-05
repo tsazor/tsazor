@@ -1,0 +1,26 @@
+@page "/reference"
+@import reference from "virtual:tutorial-reference"
+
+<PageTitle>Reference · Tsazor tutorial</PageTitle>
+<ReferenceShell Section="overview">
+    <h1>Reference</h1>
+    <p class="lead">
+        Everything in full: the <code>.tsazor</code> language and every component with its parameters. The tutorial teaches
+        each topic with a task; the <a href="index">index</a> finds the lesson for a keyword.
+    </p>
+
+    <section class="cards" aria-label="Reference sections">
+        <a class="card" href="reference/language">
+            <h2>Language</h2>
+            <p>Directives, routes, expressions and code contexts, <code>@@bind</code>, components and parameters, DI, localization, typed checks, diagnostics.</p>
+            <span class="meta">@reference.language.headings.length sections</span>
+        </a>
+        @foreach (const pkg of reference.packages) {
+            <a class="card" href="@("reference/components/" + pkg.slug)" @key="pkg.slug">
+                <h2>@pkg.name</h2>
+                <p>@pkg.description</p>
+                <span class="meta">@pkg.components.length components</span>
+            </a>
+        }
+    </section>
+</ReferenceShell>

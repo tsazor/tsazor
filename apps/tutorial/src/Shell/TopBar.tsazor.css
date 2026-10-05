@@ -42,6 +42,10 @@
     flex: none;
 }
 
+.index-link--next {
+    margin-left: 0;
+}
+
 .tracks {
     display: flex;
     padding: 3px;

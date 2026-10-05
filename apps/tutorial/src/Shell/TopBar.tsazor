@@ -6,6 +6,7 @@
     </a>
     <LessonMenu LessonTrack="@lessonTrack" Current="@current" Lessons="@lessons" />
     <a class="index-link" href="index">Index</a>
+    <a class="index-link index-link--next" href="reference">Reference</a>
     <nav class="tracks" aria-label="Track">
         @foreach (const option of tracks) {
             <a class="track @(option === lessonTrack ? "track--active" : null)"

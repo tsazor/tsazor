@@ -199,6 +199,21 @@ async function main() {
     await page.click(".entry a:has-text('NavLink')");
     await page.waitForURL(/\/blazor\/nav-link$/);
     check(true, "an index entry opens its lesson");
+
+    /* 6c — reference: overview → package → component; the language page's contents scroll to the section */
+    await page.click(".topbar a:has-text('Reference')");
+    await page.waitForSelector(".reference .card", { timeout: 20_000 });
+    await page.click(".card:has-text('@tsazor/runtime')");
+    await page.waitForURL(/\/reference\/components\/runtime$/);
+    await page.click(".components a:has-text('NavLink')");
+    await page.waitForURL(/\/reference\/components\/runtime\/NavLink$/);
+    check((await page.locator(".parameters tbody tr").count()) >= 4, "a component page lists its parameters");
+    check((await page.textContent(".parameters"))?.includes('"active"'), "parameters show their defaults");
+    await page.click(".reference-nav a:has-text('Language')");
+    await page.waitForSelector(".toc a");
+    await page.click(".toc a:has-text('Diagnostics')");
+    await page.waitForFunction(() => window.scrollY > 1000);
+    check(new URL(page.url()).hash === "#diagnostics", "the language page's contents link to the section and scroll there");
     if (shots) {
         await page.goto(`${APP}/index`);
         await page.waitForSelector(".group");
@@ -533,7 +548,7 @@ async function main() {
     });
     check(order, "phone layout stacks text → editor → preview");
     if (shots) await phone.screenshot({ path: path.join(shots, "05-phone.png"), fullPage: true });
-    for (const page of ["", "index"]) {
+    for (const page of ["", "index", "reference/language", "reference/components/runtime/InputText"]) {
         await phone.goto(`${APP}/${page}`);
         await phone.waitForSelector(".site-bar");
         const sideways = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
