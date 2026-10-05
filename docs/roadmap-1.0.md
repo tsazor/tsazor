@@ -79,17 +79,23 @@ architecture and security take priority.
 - **E4 — Architecture guide** (`docs/patterns.md`): layers, services via DI, feature folders, when
   to move to code-behind, presentational vs container components, testability with
   `@tsazor/testing`.
-- **E5 — Lazy loading per feature or route** (router + vite plugin).
+- **E5 — Lazy loading per feature or route** (router + vite plugin). **Decided (2026-10-05):** [design-lazy-routes.md](design-lazy-routes.md) —
+  Blazor's `OnNavigateAsync`/`<Navigating>` first, then lazy manifest entries, opt-in per glob
+  (`lazyRoutes`), one chunk per page, the layout loads with the page, a failed chunk reloads once.
 
 **Migration**
 - **E6 — Incremental migration:** run Blazor and Tsazor side by side, route by route (YARP in
-  front of both, a shared auth cookie), with a reference setup and docs.
+  front of both, a shared auth cookie), with a reference setup and docs. **Decided (2026-10-05):** the
+  reference setup shows a **Blazor Server** app (the common and harder case; it also shows the API
+  boundary of E7).
 - **E7 — Migration guide:** the codemod workflow, what is automatic and what is manual, effort
   figures from the FluentCMS-admin port. It has a dedicated step for **Blazor Server**: there,
   components call services and the database in-process, so there was never an API boundary. Before
   such an app can become a SPA, that boundary has to be drawn. The guide covers exposing the
   existing services as an API, either with OpenAPI controllers (`@tsazor/dotnet`) or, as an option,
-  with Sleipnir commands. Blazor WebAssembly apps usually have the boundary already.
+  with Sleipnir commands. Blazor WebAssembly apps usually have the boundary already. **Decided
+  (2026-10-05):** the effort figures may come from the local FluentCMS-admin port, as aggregated,
+  generic numbers only (no code).
 - **E7b — Coexistence guide:** not every team migrates. A common target is a Blazor app (e.g. an
   admin/backoffice) that stays, plus a public Tsazor frontend on the same .NET backend, which
   replaces e.g. a Svelte or React frontend chosen only because Blazor didn't fit. The guide
