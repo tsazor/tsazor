@@ -90,7 +90,8 @@ architecture and security take priority.
 - **E6 — Incremental migration:** run Blazor and Tsazor side by side, route by route (YARP in
   front of both, a shared auth cookie), with a reference setup and docs. **Decided (2026-10-05):** the
   reference setup shows a **Blazor Server** app (the common and harder case; it also shows the API
-  boundary of E7).
+  boundary of E7). **Done (2026-10-05):** [apps/migration-sample](../apps/migration-sample/README.md) (Blazor
+  Server + YARP gateway + Tsazor pages, one cookie, `verify` in CI) and [migration.md](migration.md).
 - **E7 — Migration guide:** the codemod workflow, what is automatic and what is manual, effort
   figures from the FluentCMS-admin port. It has a dedicated step for **Blazor Server**: there,
   components call services and the database in-process, so there was never an API boundary. Before

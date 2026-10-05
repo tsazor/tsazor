@@ -1,0 +1,19 @@
+@page "/orders"
+@inject OrderService OrderData
+
+@* The Blazor version of the page, before the migration. While the gateway routes /orders to the
+   Tsazor build, this page is not reached; remove "/orders" from the gateway's Tsazor:Routes and it
+   serves again — the switch is per route and reversible. *@
+
+<PageTitle>Orders (Blazor) · Bakery admin</PageTitle>
+
+<h1>Orders</h1>
+<table class="grid">
+    <thead><tr><th>#</th><th>Customer</th><th>Item</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody>
+        @foreach (var order in OrderData.GetOrders())
+        {
+            <tr><td>@order.Id</td><td>@order.Customer</td><td>@order.Item</td><td>@order.Total.ToString("0.00")</td><td>@order.Status</td></tr>
+        }
+    </tbody>
+</table>

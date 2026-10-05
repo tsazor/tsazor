@@ -1,0 +1,23 @@
+@page "/customers"
+@inject OrderService Orders
+
+<PageTitle>Customers · Bakery admin</PageTitle>
+
+<h1>Customers</h1>
+<AuthorizeView>
+    <Authorized>
+        <p>Signed in as <strong class="who">@context.User.Identity?.Name</strong> (the same cookie the Tsazor pages use).</p>
+        <table class="grid">
+            <thead><tr><th>Name</th><th>City</th></tr></thead>
+            <tbody>
+                @foreach (var customer in Orders.GetCustomers())
+                {
+                    <tr><td>@customer.Name</td><td>@customer.City</td></tr>
+                }
+            </tbody>
+        </table>
+    </Authorized>
+    <NotAuthorized>
+        <p><a href="/account/login?returnUrl=/customers" target="_top">Sign in</a> to see the customers.</p>
+    </NotAuthorized>
+</AuthorizeView>

@@ -1,0 +1,6 @@
+@layout MainLayout
+@import { NavigationManager, NavLink, AuthorizeView, AuthenticationStateProvider } from "@tsazor/runtime"
+@import { OrdersClient } from "./orders-client"
+@import type { Order } from "./orders-client"
+@import MainLayout from "./MainLayout.tsazor"
+@import LeaveApp from "./LeaveApp.tsazor"

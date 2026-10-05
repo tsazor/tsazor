@@ -68,6 +68,8 @@ jobs:
         run: pnpm --filter gallery verify:a11y
       - name: Accessibility — @tsazor/components (E9)
         run: pnpm --filter demo verify:a11y
+      - name: Incremental migration — Blazor Server + Tsazor behind YARP (E6)
+        run: pnpm --filter migration-sample verify
       - name: Sleipnir ticker (synthetic mode)
         run: |
           dotnet build apps/sleipnir-ticker/api

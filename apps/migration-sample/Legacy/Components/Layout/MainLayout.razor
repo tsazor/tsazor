@@ -1,0 +1,30 @@
+@inherits LayoutComponentBase
+
+<div class="shell" data-app="blazor">
+    <header class="topbar">
+        <span class="brand">Bakery admin</span>
+        <nav aria-label="Main">
+            <NavLink href="" Match="NavLinkMatch.All">Home</NavLink>
+            @* Migrated to Tsazor: a full page load, so the gateway can route it (Blazor does not intercept target="_top"). *@
+            <a href="/orders" target="_top">Orders</a>
+            <NavLink href="customers">Customers</NavLink>
+        </nav>
+        <AuthorizeView>
+            <Authorized>
+                <span class="user">@context.User.Identity?.Name</span>
+                <form method="post" action="/auth/logout"><button type="submit">Sign out</button></form>
+            </Authorized>
+            <NotAuthorized>
+                <a href="/account/login" target="_top">Sign in</a>
+            </NotAuthorized>
+        </AuthorizeView>
+        <span class="served-by">Blazor Server</span>
+    </header>
+    <main>@Body</main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

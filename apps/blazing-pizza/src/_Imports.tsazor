@@ -16,6 +16,6 @@
     specialFormattedBasePrice,
     toppingFormattedPrice,
 } from "./models"
-@* Die Dotnet-Brücke: HttpResult + problemMessage für die generierten Clients. *@
+@* The .NET bridge: HttpResult + problemMessage for the generated clients. *@
 @import { problemMessage } from "@tsazor/dotnet"
 @import type { HttpResult } from "@tsazor/dotnet"
