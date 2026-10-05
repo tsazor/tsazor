@@ -164,6 +164,11 @@ architecture and security take priority.
    an index page with search, checked by a test), and the **reference** in the tutorial app as
    part of R4: the language reference split into pages, the components generated from the
    manifests, the runtime API from the `.d.ts`, cross-linked with the lessons.
+   **Done (2026-10-05):** start page and keyword index (a4c8488). **Decided (2026-10-05):** no
+   reference section in the tutorial app for now — `docs/language-reference.md` stays the
+   reference as one document; the tutorial with its index complements it. The draft for a
+   generated reference (components, API, diagnostics) is parked in `docs/design-reference.md`
+   for R4.
 4. E4–E7 architecture and migration (incremental migration E6 is the main sales argument).
 5. Sleipnir integration; the remaining Svelte-style features with their chapters.
 6. S2, S4, E3, E10, R2, R3, R4, R5 → 1.0 release candidate.
