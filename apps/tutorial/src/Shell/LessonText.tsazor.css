@@ -148,3 +148,9 @@ h1 {
         padding: 1rem;
     }
 }
+
+/* A code span linked to its reference entry (build/reference-links.ts). */
+.prose ::deep a.ref-link {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+}

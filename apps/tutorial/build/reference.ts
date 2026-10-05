@@ -167,5 +167,5 @@ export function loadReference(repoRoot: string): ReferenceContent {
       return pkg?.components.some((component) => component.name === name) ? `reference/components/${slug}/${name}` : undefined;
     },
   });
-  return { packages, api, language: { html, headings }, diagnostics: diagnostics() };
+  return { packages, api, language: { html, headings }, diagnostics: diagnostics(), keywordLinks: {}, search: [] };
 }

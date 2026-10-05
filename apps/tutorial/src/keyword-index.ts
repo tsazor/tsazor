@@ -5,6 +5,7 @@
  * under "Symbols".
  */
 import type { Track } from "./content-types";
+import type { ReferenceLink } from "./reference-types";
 import type { LessonRef } from "./TutorialState";
 
 export interface IndexEntry {
@@ -64,3 +65,23 @@ export function buildIndex(refs: LessonRef[], track: Track, query = ""): IndexGr
 }
 
 const compare = (a: string, b: string): number => a.localeCompare(b, "en");
+
+/**
+ * The reference entries for a search: exact name first, then names that
+ * start with the query, then names that contain it; at most `limit`.
+ * Nothing for an empty query.
+ */
+export function searchReference(entries: readonly ReferenceLink[], query: string, limit = 12): ReferenceLink[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return [];
+  const rank = (entry: ReferenceLink): number => {
+    const name = entry.name.toLowerCase();
+    return name === needle ? 0 : name.startsWith(needle) || sortKeyOf(entry.name).startsWith(sortKeyOf(needle)) ? 1 : name.includes(needle) ? 2 : 3;
+  };
+  return entries
+    .map((entry) => ({ entry, rank: rank(entry) }))
+    .filter(({ rank }) => rank < 3)
+    .sort((a, b) => a.rank - b.rank || a.entry.name.length - b.entry.name.length || compare(a.entry.name, b.entry.name))
+    .slice(0, limit)
+    .map(({ entry }) => entry);
+}

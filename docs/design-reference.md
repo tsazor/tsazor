@@ -80,7 +80,19 @@ and the fix — the place error messages can link to.
 
 Each step is committed on its own.
 
-**Progress:** steps 1, 2, 3 and 4 done (2026-10-05) — diagnostics from the compiler's `DIAGNOSTIC_CATALOG` (examples compiled by its test); — overview, components of runtime, components
-and fluent from the manifests (with the doc-coverage gate `apps/tutorial/test/reference.test.ts`),
-the language page. Prerequisites that came with it: component `doc` and parameter `default` in the
-manifests, and Blazor's scrolling on navigation (fragments) in the runtime.
+**Done (2026-10-05)**, all six steps:
+
+- Overview, the components of runtime, components and fluent from the manifests, the language
+  page (`docs/language-reference.md` as one page), the diagnostics page from the compiler's
+  `DIAGNOSTIC_CATALOG`, the API pages of runtime, testing, dotnet and vite-plugin from the
+  built declarations (`apps/tutorial/build/api.ts`).
+- Cross-links (`apps/tutorial/build/reference-links.ts`): the first code span of a lesson text
+  that names a reference entry links to it; component and API pages list "Learn it in" from the
+  lessons' keywords; index entries link to their reference entry; the index search also finds
+  reference entries. Library components (Badge, Card …) are search entries only — lessons write
+  their own components with those names.
+- Gates: `test/reference.test.ts` (every component, parameter, export and member documented;
+  anchors), `test/links.test.ts` (every generated link resolves), the catalog test in the
+  compiler; verify and verify:pages cover the pages.
+- Prerequisites that came with it: component `doc` (`@** … *@`) and parameter `default` in the
+  manifests, Blazor's scrolling on navigation (fragments), the documented public API.

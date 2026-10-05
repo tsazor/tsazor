@@ -13,6 +13,7 @@
             }
         </h1>
         <Prose Html="@component.doc" />
+        <LearnIn Lessons="@(component.learnIn ?? [])" />
 
         @if (component.typeParameters.length > 0 || component.extends) {
             <dl class="facts">

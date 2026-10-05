@@ -1,6 +1,8 @@
 @page "/index"
 @inject TutorialState State
-@import { buildIndex, isCodeLike, type IndexGroup } from "../keyword-index"
+@import { buildIndex, isCodeLike, searchReference, type IndexGroup } from "../keyword-index"
+@import reference from "virtual:tutorial-reference"
+@import type { ReferenceLink } from "../reference-types"
 
 <PageTitle>Index · Tsazor tutorial</PageTitle>
 <div class="index-page">
@@ -8,11 +10,11 @@
 
     <main class="index-main">
         <h1>Index</h1>
-        <p class="intro">Every lesson by keyword: directives, components, APIs and concepts. Each entry links to the lessons that teach it.</p>
+        <p class="intro">Every lesson by keyword: directives, components, APIs and concepts. Each entry links to the lessons that teach it, and to the <a href="reference">reference</a> where it has an entry.</p>
 
         <div class="controls">
             <label class="search">
-                <span class="search-label">Search keywords</span>
+                <span class="search-label">Search keywords and the reference</span>
                 <input type="search" @bind="query" @bind:event="oninput" placeholder="e.g. @@bind, NavLink, validation" />
             </label>
             <div class="track-switch" role="group" aria-label="Track">
@@ -25,6 +27,26 @@
         </div>
 
         <p class="status" role="status">@statusText</p>
+
+        @if (referenceHits.length > 0) {
+            <section class="reference-hits" aria-labelledby="reference-hits-title">
+                <h2 id="reference-hits-title">In the reference</h2>
+                <ul>
+                    @foreach (const hit of referenceHits) {
+                        <li @key="hit.href">
+                            <a href="@hit.href">
+                                @if (hit.kind === "language") {
+                                    @hit.name
+                                } else {
+                                    <code>@hit.name</code>
+                                }
+                            </a>
+                            <span class="chapter">@hit.detail</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
 
         @foreach (const group of groups) {
             <section class="group" @key="group.id" aria-labelledby="@("group-" + group.id)">
@@ -41,6 +63,9 @@
                                 <ul class="refs">
                                     @foreach (const ref of entry.refs) {
                                         <li><a href="@(track + "/" + ref.lesson.slug)">@ref.lesson.text[track]!.title</a> <span class="chapter">@ref.chapter.title</span></li>
+                                    }
+                                    @if (reference.keywordLinks[entry.keyword]) {
+                                        <li class="ref-entry"><a href="@reference.keywordLinks[entry.keyword]!.href">Reference</a> <span class="chapter">@reference.keywordLinks[entry.keyword]!.detail</span></li>
                                     }
                                 </ul>
                             </dd>
@@ -67,6 +92,10 @@
 
     private get groups(): IndexGroup[] {
         return buildIndex(this.State.lessons(this.track), this.track, this.query);
+    }
+
+    private get referenceHits(): ReferenceLink[] {
+        return searchReference(reference.search, this.query);
     }
 
     private get statusText(): string {

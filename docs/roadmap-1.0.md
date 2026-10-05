@@ -166,7 +166,8 @@ architecture and security take priority.
    manifests, the runtime API from the `.d.ts`, cross-linked with the lessons.
    **Done (2026-10-05):** start page and keyword index (a4c8488). **Decided (2026-10-05):** the reference
    as in `docs/design-reference.md` (D-R1…D-R5), except that `docs/language-reference.md` stays
-   one document, shown as one page.
+   one document, shown as one page. **Done (2026-10-05):** the reference with language, diagnostics,
+   components and API pages, cross-linked with the lessons and the index (see the design doc).
 4. E4–E7 architecture and migration (incremental migration E6 is the main sales argument).
 5. Sleipnir integration; the remaining Svelte-style features with their chapters.
 6. S2, S4, E3, E10, R2, R3, R4, R5 → 1.0 release candidate.

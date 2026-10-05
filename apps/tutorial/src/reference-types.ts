@@ -29,6 +29,8 @@ export interface ReferenceComponent {
   extends?: string;
   typeParameters: string[];
   parameters: ReferenceParameter[];
+  /** Lessons whose keywords name it. */
+  learnIn?: LessonLink[];
 }
 
 export interface ReferencePackage {
@@ -89,6 +91,8 @@ export interface ApiSymbol {
   /** The doc's first sentence (inline HTML). */
   summary: string;
   members: ApiMember[];
+  /** Lessons whose keywords name it. */
+  learnIn?: LessonLink[];
   /** A component class: its component page (base-relative). */
   component?: string;
   /** Rendered `@deprecated` text (HTML). */
@@ -102,9 +106,32 @@ export interface ApiPackage {
   symbols: ApiSymbol[];
 }
 
+/** A reference entry as a link target (build/reference-links.ts). */
+export interface ReferenceLink {
+  /** `NavLink`, `TZS025`, a language heading's text. */
+  name: string;
+  /** Base-relative (`reference/components/runtime/NavLink`). */
+  href: string;
+  kind: "component" | "api" | "diagnostic" | "language";
+  /** Package and kind, the diagnostic's message, or "Language reference". */
+  detail: string;
+}
+
+/** A lesson that teaches a reference entry ("Learn it in"). */
+export interface LessonLink {
+  slug: string;
+  /** Its title per track (a track-only lesson has one). */
+  title: Partial<Record<import("./content-types").Track, string>>;
+  chapter: string;
+}
+
 export interface ReferenceContent {
   packages: ReferencePackage[];
   api: ApiPackage[];
+  /** Index keyword ⇒ its reference entry (filled by linkReference). */
+  keywordLinks: Record<string, ReferenceLink>;
+  /** Every reference entry, for the index's search (filled by linkReference). */
+  search: ReferenceLink[];
   language: { html: string; headings: ReferenceHeading[] };
   diagnostics: ReferenceDiagnostic[];
 }

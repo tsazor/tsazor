@@ -224,6 +224,21 @@ async function main() {
     await page.click(".symbols a:has-text('NavigationManager')");
     await page.waitForURL(/\/reference\/api\/runtime\/NavigationManager$/);
     check((await page.locator(".member").count()) > 10 && (await page.textContent(".member:has-text('navigateTo')")) !== null, "an API page shows the export's members with their signatures");
+
+    /* 6d — cross-links: lesson code → reference → "Learn it in" → lesson; the index search finds reference entries */
+    await page.goto(`${APP}/ts/nav-link`);
+    await page.waitForSelector(".prose a.ref-link");
+    await page.click(".prose a.ref-link:has-text('NavLink')");
+    await page.waitForURL(/\/reference\/components\/runtime\/NavLink$/);
+    await page.waitForSelector(".learn-in a");
+    await page.click(".learn-in a:has-text('NavLink')");
+    await page.waitForURL(/\/(ts|blazor)\/nav-link$/);
+    check(true, "a code span links to its reference entry, whose page links back to the lesson");
+    await page.goto(`${APP}/index`);
+    await page.fill(".search input", "TsazorHttp");
+    await page.waitForSelector(".reference-hits a");
+    check((await page.textContent(".reference-hits"))?.includes("TsazorHttpError"), "the index search lists matching reference entries");
+    check((await page.locator(".entry .ref-entry a").count()) > 0, "index entries link to their reference entry");
     if (shots) {
         await page.goto(`${APP}/index`);
         await page.waitForSelector(".group");

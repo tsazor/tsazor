@@ -21,20 +21,52 @@ import type { Track, TutorialContent, LessonContent, ChapterContent, PartContent
 
 export const TRACKS: readonly Track[] = ["blazor", "ts"];
 
-const marked = new Marked({
-  gfm: true,
-  renderer: {
-    code({ text, lang }) {
-      const language = (lang ?? "").trim().split(/\s+/)[0] ?? "";
-      return `<pre class="code" data-lang="${language}"><code>${highlight(text, language)}</code></pre>\n`;
+/**
+ * A code span's reference entry (build/reference-links.ts): the first span
+ * of a lesson text that names one becomes a link to it.
+ */
+export type CodeLinker = (code: string) => { href: string; name: string } | undefined;
+
+export interface LoadContentOptions {
+  codeLink?: CodeLinker;
+}
+
+const escapeText = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+function createMarkdown(codeLink: CodeLinker | undefined): { render(markdown: string): string } {
+  // Per rendered text: the targets already linked, and whether we are inside a link.
+  let linked = new Set<string>();
+  let inLink = false;
+  const marked = new Marked({
+    gfm: true,
+    renderer: {
+      code({ text, lang }) {
+        const language = (lang ?? "").trim().split(/\s+/)[0] ?? "";
+        return `<pre class="code" data-lang="${language}"><code>${highlight(text, language)}</code></pre>\n`;
+      },
+      codespan({ text }) {
+        const code = `<code>${escapeText(text)}</code>`;
+        const target = !inLink && codeLink ? codeLink(text) : undefined;
+        if (!target || linked.has(target.href)) return code;
+        linked.add(target.href);
+        return `<a class="ref-link" href="${target.href}" title="Reference: ${escapeText(target.name)}">${code}</a>`;
+      },
+      link({ href, title, tokens }) {
+        inLink = true;
+        const inner = this.parser.parseInline(tokens);
+        inLink = false;
+        const external = /^https?:/.test(href);
+        return `<a href="${href}"${title ? ` title="${title}"` : ""}${external ? ' target="_blank" rel="noreferrer"' : ""}>${inner}</a>`;
+      },
     },
-    link({ href, title, tokens }) {
-      const inner = this.parser.parseInline(tokens);
-      const external = /^https?:/.test(href);
-      return `<a href="${href}"${title ? ` title="${title}"` : ""}${external ? ' target="_blank" rel="noreferrer"' : ""}>${inner}</a>`;
+  });
+  return {
+    render(markdown: string): string {
+      linked = new Set();
+      return marked.parse(markdown) as string;
     },
-  },
-});
+  };
+}
 
 const slugOf = (name: string): string => name.replace(/^\d+-/, "");
 
@@ -77,7 +109,8 @@ export function parseFrontMatter(source: string): { data: Record<string, string>
   return { data, body: text.slice(match[0].length) };
 }
 
-export function loadContent(contentDir: string): TutorialContent {
+export function loadContent(contentDir: string, options: LoadContentOptions = {}): TutorialContent {
+  const markdown = createMarkdown(options.codeLink);
   const parts: PartContent[] = [];
   const slugs = new Set<string>();
   for (const partName of sortedDirs(contentDir)) {
@@ -108,7 +141,7 @@ export function loadContent(contentDir: string): TutorialContent {
           if (!data.title) throw new Error(`${file}: front-matter needs a title`);
           const focus = data.focus ?? Object.keys(bOnly)[0] ?? Object.keys(a)[0] ?? "App.tsazor";
           const keywords = (data.keywords ?? "").split(",").map((word) => word.trim()).filter(Boolean);
-          lesson.text[track] = { title: data.title, focus, keywords, html: marked.parse(body) as string };
+          lesson.text[track] = { title: data.title, focus, keywords, html: markdown.render(body) };
         }
         if (Object.keys(lesson.text).length === 0) throw new Error(`${lessonDir}: no blazor.md or ts.md`);
         lessons.push(lesson);

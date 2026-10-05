@@ -137,3 +137,32 @@ dd {
 dt {
     font-weight: 500;
 }
+
+.reference-hits {
+    margin: 1rem 0 0;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.reference-hits h2 {
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+}
+
+.reference-hits ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    line-height: 1.8;
+}
+
+.reference-hits code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.ref-entry a {
+    font-weight: 500;
+}

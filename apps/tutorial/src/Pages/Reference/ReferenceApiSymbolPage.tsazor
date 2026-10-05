@@ -21,6 +21,7 @@
             <p class="component-note">A component: its parameters are on the <a href="@symbol.component">component page</a>.</p>
         }
         <Prose Html="@symbol.doc" />
+        <LearnIn Lessons="@(symbol.learnIn ?? [])" />
 
         @foreach (const group of groups) {
             <h2 @key="group.heading">@group.heading</h2>

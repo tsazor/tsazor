@@ -18,8 +18,7 @@ import { build } from "esbuild";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
-import { loadContent } from "./content.js";
-import { loadReference } from "./reference.js";
+import { loadSite, type Site } from "./site.js";
 import { loadTypeEnvironment } from "./type-env.js";
 
 const CONTENT_ID = "virtual:tutorial-content";
@@ -74,6 +73,9 @@ export function tutorialPlugin(options: { root: string }): Plugin {
   const repoRoot = path.resolve(options.root, "..", "..");
   const languageReference = path.join(repoRoot, "docs", "language-reference.md");
   let bundles: Promise<PackageBundles> | undefined;
+  // Content and reference link to each other: built together, rebuilt on a change of either.
+  let site: Site | undefined;
+  const currentSite = (): Site => (site ??= loadSite(options.root));
   return {
     name: "tsazor-tutorial",
     resolveId(id) {
@@ -87,7 +89,7 @@ export function tutorialPlugin(options: { root: string }): Plugin {
       if (id === RESOLVED_CONTENT) {
         // (Watched by configureServer below — addWatchFile on a directory
         // would turn into an import in dev.)
-        return `export default ${JSON.stringify(loadContent(contentDir))};`;
+        return `export default ${JSON.stringify(currentSite().content)};`;
       }
       if (id === RESOLVED_BUNDLES) {
         bundles ??= bundlePackages(options.root);
@@ -99,7 +101,7 @@ export function tutorialPlugin(options: { root: string }): Plugin {
         return `export default ${JSON.stringify(loadTypeEnvironment(options.root))};`;
       }
       if (id === RESOLVED_REFERENCE) {
-        return `export default ${JSON.stringify(loadReference(repoRoot))};`;
+        return `export default ${JSON.stringify(currentSite().reference)};`;
       }
       return null;
     },
@@ -109,10 +111,12 @@ export function tutorialPlugin(options: { root: string }): Plugin {
       server.watcher.add([contentDir, languageReference]);
       const reload = (file: string): void => {
         const changed = path.resolve(file);
-        const id = changed === languageReference ? RESOLVED_REFERENCE : changed.startsWith(contentDir) ? RESOLVED_CONTENT : undefined;
-        if (!id) return;
-        const module = server.moduleGraph.getModuleById(id);
-        if (module) server.moduleGraph.invalidateModule(module);
+        if (changed !== languageReference && !changed.startsWith(contentDir)) return;
+        site = undefined;
+        for (const id of [RESOLVED_CONTENT, RESOLVED_REFERENCE]) {
+          const module = server.moduleGraph.getModuleById(id);
+          if (module) server.moduleGraph.invalidateModule(module);
+        }
         server.ws.send({ type: "full-reload" });
       };
       server.watcher.on("change", reload);
