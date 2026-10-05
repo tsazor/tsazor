@@ -1,163 +1,163 @@
-# Port-Findings: Blazing Pizza → Tsazor
+# Port Findings: Blazing Pizza → Tsazor
 
-Ergebnis des ersten Ports einer realen, nicht-trivialen Blazor-App
-(dotnet-presentations/blazor-workshop, MIT) nach Tsazor. Der Port deckt ab:
-Specials-Grid, Pizza-Konfigurator, Checkout mit Adressvalidierung, MyOrders,
-OrderDetails mit Polling + Leaflet-Karte, Auth (Login/Logout/Registrierung),
-Status-Progression (Preparing → Out for delivery → Delivered).
+Result of the first port of a real, non-trivial Blazor app
+(dotnet-presentations/blazor-workshop, MIT) to Tsazor. The port covers:
+specials grid, pizza configurator, checkout with address validation, MyOrders,
+OrderDetails with polling + Leaflet map, auth (login/logout/registration),
+status progression (Preparing → Out for delivery → Delivered).
 
-**Ergebnis:** Der komplette Flow läuft E2E durch (`apps/blazing-pizza/scripts/verify-pizza.mjs`,
-19 Checks, null Console-Errors). Zwei Lücken wurden compiler-seitig geschlossen
-(@authorize, knownGlobals), der Rest sind dokumentierte Abweichungen/Workarounds.
+**Result:** The complete flow runs end to end (`apps/blazing-pizza/scripts/verify-pizza.mjs`,
+19 checks, zero console errors). Two gaps were closed on the compiler side
+(@authorize, knownGlobals); the rest are documented deviations/workarounds.
 
 ---
 
-## A. Framework-Lücken, die der Port aufgedeckt hat (compiler-seitig geschlossen)
+## A. Framework gaps uncovered by the port (closed on the compiler side)
 
-### 1. `@authorize`-Direktive fehlte — **beheb, hinzugefügt**
+### 1. `@authorize` directive was missing — **fixed, added**
 
-Blazor-Seiten schützen sich mit einer bare `@authorize`-Direktive; der Tsazor-Compiler
-kannte sie nicht.
+Blazor pages protect themselves with a bare `@authorize` directive; the Tsazor compiler
+did not know it.
 
 **Fix:** `packages/compiler/src/parser.ts` (`authorize` in `DIRECTIVE_NAMES`),
 `codegen.ts` (`metadata.authorize` → `export const routeAuthorize = true` +
-statische Klassen-Member), `packages/vite-plugin/src/routes.ts` (Manifest-Eintrag
-`authorize: {}`). Regressionsgetestet in compiler + vite-plugin. Semantik wie
-Blazors Default-Policy: authentifiziert = autorisiert.
+static class members), `packages/vite-plugin/src/routes.ts` (manifest entry
+`authorize: {}`). Regression-tested in compiler + vite-plugin. Semantics like
+Blazor's default policy: authenticated = authorized.
 
-### 2. Runtime-Enums in Markup wurden nach `this.*` gebacken — **behoben, hinzugefügt**
+### 2. Runtime enums in markup were baked to `this.*` — **fixed, added**
 
-`Match="@NavLinkMatch.All"` in Markup kompilierte zu `this.NavLinkMatch.All` —
-`NavLinkMatch` ist aber ein importierter Runtime-Enum, kein Komponenten-Member.
-`bakeMemberRefs` backt *jeden* freien Identifier nach `this.*`, weil zur
-Compile-Zeit nicht erkennbar ist, was später per `collectCodeImports` importiert wird.
+`Match="@NavLinkMatch.All"` in markup compiled to `this.NavLinkMatch.All` —
+but `NavLinkMatch` is an imported runtime enum, not a component member.
+`bakeMemberRefs` bakes *every* free identifier to `this.*`, because at
+compile time it cannot tell what will later be imported via `collectCodeImports`.
 
-**Fix:** Neue Codegen-Option `knownGlobals?: ReadonlySet<string>`; der
-vite-plugin-Transform prescannt den Quelltext nach `RUNTIME_TYPES`-Identifiern
-und übergibt sie. Regressionsgetestet (vite-plugin).
+**Fix:** New codegen option `knownGlobals?: ReadonlySet<string>`; the
+vite-plugin transform pre-scans the source for `RUNTIME_TYPES` identifiers
+and passes them in. Regression-tested (vite-plugin).
 
-**Stand A3 (2026-09-30):** `knownGlobals` und der Prescan sind entfernt; `NavLinkMatch`
-kommt per `@import` aus dem Standard-Set in `_Imports.tsazor` und bleibt dadurch frei.
+**State A3 (2026-09-30):** `knownGlobals` and the pre-scan are removed; `NavLinkMatch`
+comes via `@import` from the standard set in `_Imports.tsazor` and therefore stays free.
 
-### 3. Async-Lifecycle-Hooks rendern nicht nach dem `await` — **behoben (B4), Workaround entfernt**
+### 3. Async lifecycle hooks do not render after the `await` — **fixed (B4), workaround removed**
 
-*Korrektur:* Die ursprüngliche Beschreibung war in beiden Punkten falsch. Tsazor awaitete
-async `onInitialized`/`onParametersSet` und renderte **einmal am Ende** — ohne
-Loading-State (Review R6). Und Blazor verhält sich **nicht** so: `ComponentBase` rendert,
-solange der Task des Hooks läuft (nach seinem synchronen Teil), und erneut nach Abschluss
-(`RunInitAndSetParametersAsync` / `CallStateHasChangedOnAsyncCompletion`); die Originale
-von `Index`, `MyOrders` und `ConfigurePizzaDialog` rufen dort kein `StateHasChanged`. Das
-„hängt im Loading"-Symptom stammte vermutlich von Arbeit außerhalb des Hook-Tasks (Fire-and-forget), die
-auch in Blazor ein explizites `StateHasChanged` braucht.
+*Correction:* The original description was wrong on both counts. Tsazor awaited
+async `onInitialized`/`onParametersSet` and rendered **once at the end** — without a
+loading state (review R6). And Blazor does **not** behave this way: `ComponentBase` renders
+while the hook's task is running (after its synchronous part), and again after completion
+(`RunInitAndSetParametersAsync` / `CallStateHasChangedOnAsyncCompletion`); the originals
+of `Index`, `MyOrders` and `ConfigurePizzaDialog` do not call `StateHasChanged` there. The
+"stuck in loading" symptom probably came from work outside the hook's task (fire-and-forget), which
+also needs an explicit `StateHasChanged` in Blazor.
 
-**Stand (B4):** Tsazor rendert wie Blazor (Loading-State + Render nach Abschluss). Die
-`stateHasChanged()`-Aufrufe nach den awaits in `Index`, `MyOrders` und
-`ConfigurePizzaDialog` sind entfernt; `OrderDetails` behält ihn — dessen Poller läuft
-fire-and-forget aus `onParametersSet`, wie im Original (`PollForUpdates` + `StateHasChanged`).
+**State (B4):** Tsazor renders like Blazor (loading state + render after completion). The
+`stateHasChanged()` calls after the awaits in `Index`, `MyOrders` and
+`ConfigurePizzaDialog` are removed; `OrderDetails` keeps its call — its poller runs
+fire-and-forget from `onParametersSet`, as in the original (`PollForUpdates` + `StateHasChanged`).
 
-## B. Syntax-Regeln, die der Port bestätigt hat (Fallerinnerung, kein Fix nötig)
+## B. Syntax rules the port confirmed (reminder, no fix needed)
 
-| Thema | Regel |
+| Topic | Rule |
 |---|---|
-| Component-Event-Attrs | Proven form: `OnSelect="@(() => fn())"`. `@() => ...` **ohne** äußere Klammern ist kaputt (parses als expliziter Ausdruck + Text). |
-| Element-Handler | Kleinschreibung `@onclick="handlerName"` (bare Name) oder `@onclick="@(() => ...)"`. PascalCase-Element-Attrs funktionieren ebenfalls. |
-| `@foreach` | *Überholt (A6a):* der Kopf ist TypeScript — `@foreach (const x of y)`; die C#-Form `@foreach (var x in y)` ist Fehler TZS021 mit dieser TS-Form ([language-reference.md](language-reference.md#code-contexts-code-first-like-razor)). |
-| `@@`-Escape | `@@` escape't das @: `placeholder="test@@example.com"` (plain `@example.com` parst `@example` als Expression). |
-| `<text>`-Tags | Werden unterstützt (textTag-Node). |
-| `@inject` | Nur auf Dokument-Ebene, **nie** innerhalb von `@code` (sonst esbuild-Fehler `Expected ";" but found ...`). |
-| `@bind` auf `type="range"` | Coerced nicht zu number — manueller `@oninput`-Handler mit `Number()`-Cast nötig. |
+| Component event attrs | Proven form: `OnSelect="@(() => fn())"`. `@() => ...` **without** outer parentheses is broken (parses as an explicit expression + text). |
+| Element handlers | Lowercase `@onclick="handlerName"` (bare name) or `@onclick="@(() => ...)"`. PascalCase element attrs work too. |
+| `@foreach` | *Superseded (A6a):* the header is TypeScript — `@foreach (const x of y)`; the C# form `@foreach (var x in y)` is error TZS021 with this TS form ([language-reference.md](language-reference.md#code-contexts-code-first-like-razor)). |
+| `@@` escape | `@@` escapes the @: `placeholder="test@@example.com"` (plain `@example.com` parses `@example` as an expression). |
+| `<text>` tags | Supported (textTag node). |
+| `@inject` | Only at document level, **never** inside `@code` (otherwise esbuild error `Expected ";" but found ...`). |
+| `@bind` on `type="range"` | Does not coerce to number — a manual `@oninput` handler with a `Number()` cast is needed. |
 
-## C. bakeMemberRefs / freie Funktionen — Workaround-Pattern
+## C. bakeMemberRefs / free functions — workaround pattern
 
-Alle Markup-/Code-Expressions-Identifier, die keine Locals, Arrow-Params,
-KNOWN_GLOBALS, JS-Keywords oder After-Dot-Zugriffe sind, werden zu `this.X`
-gebacken — **auch importierte freie Funktionen** (`@orderFormattedTotalPrice(...)`
+All markup/code expression identifiers that are not locals, arrow params,
+KNOWN_GLOBALS, JS keywords or after-dot accesses are baked to `this.X`
+— **including imported free functions** (`@orderFormattedTotalPrice(...)`
 → `this.orderFormattedTotalPrice` = undefined).
 
-**Workaround (in der App):** `PizzaComponentBase.ts` — Basisklasse, die die
-Helper als `protected readonly` Member bindet; alle Seiten/Components mit
-`@inherits PizzaComponentBase`. Das ist sogar Blazor-idiomatisch
-(entspricht dort einer gemeinsamen Basisklasse).
+**Workaround (in the app):** `PizzaComponentBase.ts` — a base class that binds the
+helpers as `protected readonly` members; all pages/components use
+`@inherits PizzaComponentBase`. This is even Blazor-idiomatic
+(corresponds to a shared base class there).
 
-**Offene Frage fürs Framework:** Sollte `collectCodeImports` auch freie
-Funktionen aus `.ts`-Dateien erkennen und `knownGlobals` füttern? Aktuell
-scannt es nur PascalCase-Identifier (Typen/Components).
+**Open question for the framework:** Should `collectCodeImports` also recognize free
+functions from `.ts` files and feed `knownGlobals`? Currently
+it only scans PascalCase identifiers (types/components).
 
-**Stand A3 (2026-09-30):** beantwortet durch explizite Imports — die Helfer (und
-`PIZZA_MINIMUM_SIZE`/`PIZZA_MAXIMUM_SIZE`) stehen als `@import` in der `_Imports.tsazor`
-der App, `PizzaComponentBase` ist entfernt.
+**State A3 (2026-09-30):** answered by explicit imports — the helpers (and
+`PIZZA_MINIMUM_SIZE`/`PIZZA_MAXIMUM_SIZE`) are listed as `@import` in the app's `_Imports.tsazor`,
+`PizzaComponentBase` is removed.
 
-**Stand A4 (2026-09-30):** Abschnitt obsolet. `bakeMemberRefs` ist durch Rewriting über den
-TS-AST mit Scope-Analyse ersetzt (`packages/compiler/src/rewrite.ts`); Imports, Locals und
-JS-/DOM-Globals (aus TypeScripts `lib.d.ts`) bleiben frei, deklarierte Member werden `this.X`.
-Weder Basisklassen- noch Free-Function-Workaround ist nötig.
+**State A4 (2026-09-30):** Section obsolete. `bakeMemberRefs` has been replaced by rewriting over the
+TS AST with scope analysis (`packages/compiler/src/rewrite.ts`); imports, locals and
+JS/DOM globals (from TypeScript's `lib.d.ts`) stay free, declared members become `this.X`.
+Neither the base-class nor the free-function workaround is needed.
 
-## D. Dokumentierte Abweichungen vom Original
+## D. Documented deviations from the original
 
-| Original | Tsazor-Port | Begründung |
+| Original | Tsazor port | Reason |
 |---|---|---|
-| ASP.NET Core Server + EF/SQLite | `server/server.mjs` (node:http, zero deps, in-memory) | Port-Test-Case; REST-Vertrag 1:1 |
-| ASP.NET Identity + OIDC (RemoteAuthenticator) | Cookie-Session-Auth: `POST /auth/register\|login\|logout`, `GET /auth/user` | OIDC wäre eigenes Projekt; AuthProvider-Integration ist das Testziel |
-| `GET /auth/user` anonymous → 401 | → `200 { user: null }` | Hält die Browser-Console beim App-Start fehlerfrei (E2E-Gate: null Console-Errors) |
-| DataAnnotations (`[Required]`, `[MaxLength]`) | Funktionale `ModelValidator`-Map im `@code`-Block | Keine Reflection in TS; siehe `Checkout.tsazor` |
-| BootstrapFieldClassProvider | 2–3 CSS-Regeln in `wwwroot/css/site.css`, die Tsazors `invalid`/`modified valid`-Klassen auf Bootstrap-Farben mappen | Kein Provider-Konzept nötig |
-| ComponentsLibrary Map (JS-Interop + Leaflet) | `Map.tsazor` importiert Leaflet **direkt** via npm (`await import("leaflet")`) | Tsazor IST JS — kein Interop nötig; der größte Einzelgewinn des Ports |
-| Push-Notifications (VAPID/Service-Worker) | **skip** (PUT/GET /notifications-Vertrag wird honored, Subscription nur in Memory) | Eigenes Projekt; kein Testwert fürs Framework |
-| GraphQL Special Offers (Workshop-Modul 6) | **skip** | Ebenfalls eigenes Projekt |
-| LocalStorage/Geolocation via JS-Interop | Direkter `window.*`-Zugriff im `@code`-Block | dito |
+| ASP.NET Core server + EF/SQLite | `server/server.mjs` (node:http, zero deps, in-memory) | Port test case; REST contract 1:1 |
+| ASP.NET Identity + OIDC (RemoteAuthenticator) | Cookie session auth: `POST /auth/register\|login\|logout`, `GET /auth/user` | OIDC would be a project of its own; AuthProvider integration is the test goal |
+| `GET /auth/user` anonymous → 401 | → `200 { user: null }` | Keeps the browser console error-free at app start (E2E gate: zero console errors) |
+| DataAnnotations (`[Required]`, `[MaxLength]`) | Functional `ModelValidator` map in the `@code` block | No reflection in TS; see `Checkout.tsazor` |
+| BootstrapFieldClassProvider | 2–3 CSS rules in `wwwroot/css/site.css` that map Tsazor's `invalid`/`modified valid` classes to Bootstrap colors | No provider concept needed |
+| ComponentsLibrary Map (JS interop + Leaflet) | `Map.tsazor` imports Leaflet **directly** via npm (`await import("leaflet")`) | Tsazor IS JS — no interop needed; the biggest single win of the port |
+| Push notifications (VAPID/service worker) | **skip** (PUT/GET /notifications contract is honored, subscription only in memory) | A project of its own; no test value for the framework |
+| GraphQL special offers (workshop module 6) | **skip** | Likewise a project of its own |
+| LocalStorage/geolocation via JS interop | Direct `window.*` access in the `@code` block | ditto |
 
-## E. Was reibungslos funktionierte (Blazor-Parität bestätigt)
+## E. What worked smoothly (Blazor parity confirmed)
 
-- `@page` + Router + `NavLink` + Layouts + `@layout`
+- `@page` + Router + `NavLink` + layouts + `@layout`
 - `AuthorizeRouteView` / `AuthorizeView` / `AuthenticationStateProvider`
-  (Provider unter zwei DI-Tokens registriert: konkrete Klasse + Basisklasse)
-- `EditForm` + `Validators` + `ValidationMessage For="name"` (per-Field on submit)
-- `EventCallback` (Child → Parent, receiver re-rendert nach invoke — Poller/Dialog-Flow)
-- Cascading `OrderState`-Service via DI (Zustandsänderung → Re-Render der Konsumenten)
-- Route-Parameter mit Constraint (`@page "/myorders/{orderId:int}"` → `@Parameter() orderId!: number;`)
-- Dynamischer npm-Import in `.tsazor` (`await import("leaflet")` + CSS-Import)
+  (provider registered under two DI tokens: concrete class + base class)
+- `EditForm` + `Validators` + `ValidationMessage For="name"` (per field on submit)
+- `EventCallback` (child → parent, receiver re-renders after invoke — poller/dialog flow)
+- Cascading `OrderState` service via DI (state change → re-render of the consumers)
+- Route parameters with a constraint (`@page "/myorders/{orderId:int}"` → `@Parameter() orderId!: number;`)
+- Dynamic npm import in `.tsazor` (`await import("leaflet")` + CSS import)
 
-## F. Verifikation
+## F. Verification
 
-- `apps/blazing-pizza`: `node --test test/` (Status-Engine, 5 Tests) +
-  `node scripts/verify-pizza.mjs` (19 E2E-Checks, headless Edge, null Console-Errors)
-- Framework-Regressionen: alle Package-Tests bleiben grün (compiler, runtime,
+- `apps/blazing-pizza`: `node --test test/` (status engine, 5 tests) +
+  `node scripts/verify-pizza.mjs` (19 E2E checks, headless Edge, zero console errors)
+- Framework regressions: all package tests stay green (compiler, runtime,
   workspace, testing, lsp, vite-plugin, components)
 
 ---
 
-# Dogfooding: Tutorial-App (`apps/tutorial`, M1) → Tsazor
+# Dogfooding: Tutorial app (`apps/tutorial`, M1) → Tsazor
 
-Die interaktive Tutorial-Shell (Topbar, Lektionsmenü, Text, Datei-Tabs, CodeMirror-Editor,
-Problems-Panel, Preview-Iframe) ist komplett in `.tsazor` geschrieben; dazu läuft die
-Compiler-Pipeline **im Browser** (Web Worker). Befunde:
+The interactive tutorial shell (top bar, lesson menu, text, file tabs, CodeMirror editor,
+problems panel, preview iframe) is written entirely in `.tsazor`; in addition, the
+compiler pipeline runs **in the browser** (web worker). Findings:
 
-## G. Framework-Lücken (im Paket minimal geschlossen)
+## G. Framework gaps (minimally closed in the package)
 
-### 1. Scoped-CSS-Selektorlogik hing an postcss + `node:crypto` — **verschoben**
+### 1. Scoped CSS selector logic depended on postcss + `node:crypto` — **moved**
 
-`scopeSelector` war reine String-Logik, lag aber in `packages/vite-plugin/src/scoped-css.ts`
-neben postcss und `createHash`. Ein Browser-Host konnte sie nicht importieren.
-**Fix:** nach `packages/compiler/src/scoped-css.ts` verschoben und aus `@tsazor/compiler`
-exportiert; das Vite-Plugin importiert und re-exportiert sie (Tests unverändert grün). Den
-Stylesheet-Walk (Regeln, `@media`, `@keyframes`) macht im Browser ein kleiner eigener Walker
-(`apps/tutorial/src/engine/scoped-css.ts`) — postcss bleibt Plugin-only.
+`scopeSelector` was pure string logic, but lived in `packages/vite-plugin/src/scoped-css.ts`
+next to postcss and `createHash`. A browser host could not import it.
+**Fix:** moved to `packages/compiler/src/scoped-css.ts` and exported from `@tsazor/compiler`;
+the Vite plugin imports and re-exports it (tests unchanged and green). The
+stylesheet walk (rules, `@media`, `@keyframes`) is done in the browser by a small dedicated walker
+(`apps/tutorial/src/engine/scoped-css.ts`) — postcss stays plugin-only.
 
-### 2. `@tsazor/workspace` ist nur über `node:fs` nutzbar — **Teil-Fix, Rest offen**
+### 2. `@tsazor/workspace` is only usable via `node:fs` — **partial fix, rest open**
 
-Die Built-in-Listen (`RUNTIME_COMPONENTS`, `RUNTIME_TYPES`, `RUNTIME_MANIFEST`) sind reine
-Daten, kamen aber nur über den Index, der `node:fs`/`node:path` zieht. **Teil-Fix:** neuer
-Subpath-Export `@tsazor/workspace/builtins` (Node-frei; `RUNTIME_MANIFEST` dort re-exportiert).
-**Offen:** die eigentliche Auflösung (Enclosing-Folders, `@using`-Quellen, Ambiguität,
-`_Imports`-Kette, Metadata-Host) ist an das Dateisystem gebunden; das Tutorial dupliziert
-die Regeln in-memory (`apps/tutorial/src/engine/resolve.ts`, ~250 Zeilen). Vorschlag: ein
-`FileSystemHost`-Interface (`exists`, `read`, `list`) in `createFileContext`/`MetadataCache`,
-Node-Implementierung als Default — dann teilen Plugin, LSP und Browser-Hosts *eine*
-Auflösung (Playground, Tutorial, später ein REPL).
+The built-in lists (`RUNTIME_COMPONENTS`, `RUNTIME_TYPES`, `RUNTIME_MANIFEST`) are pure
+data, but were only available through the index, which pulls in `node:fs`/`node:path`. **Partial fix:** new
+subpath export `@tsazor/workspace/builtins` (Node-free; `RUNTIME_MANIFEST` re-exported there).
+**Open:** the actual resolution (enclosing folders, `@using` sources, ambiguity,
+`_Imports` chain, metadata host) is tied to the file system; the tutorial duplicates
+the rules in memory (`apps/tutorial/src/engine/resolve.ts`, ~250 lines). Proposal: a
+`FileSystemHost` interface (`exists`, `read`, `list`) in `createFileContext`/`MetadataCache`,
+with the Node implementation as default — then plugin, LSP and browser hosts share *one*
+resolution (playground, tutorial, later a REPL).
 
-## H. Reibungen (dokumentiert, kein Fix nötig)
+## H. Friction (documented, no fix needed)
 
-### 3. `@if`-Narrowing erreicht deferred ChildContent nicht
+### 3. `@if` narrowing does not reach deferred ChildContent
 
 ```razor
 @if (current && text) {
@@ -165,511 +165,511 @@ Auflösung (Playground, Tutorial, später ein REPL).
 }
 ```
 
-Der Body von `<PageTitle>` ist ein `RenderFragment` (Lambda, später gerendert) — TS verwirft
-das Narrowing von `this.text` darin, korrekt nach TS-Semantik (C#/Razor-Nullable-Analyse
-verhält sich in Lambdas ähnlich). Überraschend für Lernende; Workaround: Getter
-(`pageTitle`) oder ein Local per `@{ const t = text; }` vor dem Tag. Kandidat für einen
-Hinweis in der Sprachreferenz bzw. später im Tutorial (Kapitel „Reusing content").
+The body of `<PageTitle>` is a `RenderFragment` (a lambda, rendered later) — TS discards
+the narrowing of `this.text` inside it, correctly by TS semantics (C#/Razor nullable analysis
+behaves similarly in lambdas). Surprising for learners; workaround: a getter
+(`pageTitle`) or a local via `@{ const t = text; }` before the tag. Candidate for a
+note in the language reference or later in the tutorial (chapter "Reusing content").
 
-### 4. `tsazor check` ohne Pfad prüft auch Beispiel-Projekte im App-Ordner
+### 4. `tsazor check` without a path also checks sample projects in the app folder
 
-`tsazor check` (Root = App) fand die Lektions-Dateien unter `content/` und meldete TZS005
-(`<Nested>` in `app-b/` liegt nur in `app-a/`). Es gibt kein Exclude; Workaround
-`tsazor check src`. Vorschlag: `check` respektiert `tsconfig.include`/`exclude` oder ein
-`--exclude`-Glob.
+`tsazor check` (root = app) found the lesson files under `content/` and reported TZS005
+(`<Nested>` in `app-b/` only exists in `app-a/`). There is no exclude; workaround
+`tsazor check src`. Proposal: `check` respects `tsconfig.include`/`exclude` or an
+`--exclude` glob.
 
-### 5. Imperative Widgets einbetten: gut, mit einer Regel
+### 5. Embedding imperative widgets: good, with one rule
 
-CodeMirror und der Preview-Iframe hängen per `@ref` + `onAfterRender(firstRender)` +
-`dispose()` sauber am Komponenten-Lifecycle (Blazor-Muster mit JS-Interop, hier ohne
-Interop). Callbacks aus Nicht-Tsazor-Events (postMessage, Editor-Updates) brauchen
-`this.stateHasChanged()` bzw. ein `EventCallback.invokeAsync` — wie Blazors
-`InvokeAsync(StateHasChanged)`. Funktionierte ohne Workaround.
+CodeMirror and the preview iframe hang cleanly on the component lifecycle via `@ref` + `onAfterRender(firstRender)` +
+`dispose()` (the Blazor pattern with JS interop, here without
+interop). Callbacks from non-Tsazor events (postMessage, editor updates) need
+`this.stateHasChanged()` or an `EventCallback.invokeAsync` — like Blazor's
+`InvokeAsync(StateHasChanged)`. Worked without a workaround.
 
-### 6. Komponenten-Typ für `@ref` braucht ein explizites `@import`
+### 6. The component type for `@ref` needs an explicit `@import`
 
-`<CodeEditor @ref="editor" />` löst über `@using ./Shell` auf, das Feld
-`private editor?: CodeEditor;` braucht für den *Typ* trotzdem
-`@import CodeEditor from "../Shell/CodeEditor.tsazor"` (Tag-Auflösung ≠ Name im Code — so
-dokumentiert, aber eine Stolperstelle). Der Shadow könnte ein `@ref`-Feld ohne Annotation
-mit dem aufgelösten Tag-Typ versehen.
+`<CodeEditor @ref="editor" />` resolves via `@using ./Shell`, but the field
+`private editor?: CodeEditor;` still needs
+`@import CodeEditor from "../Shell/CodeEditor.tsazor"` for the *type* (tag resolution ≠ name in code — documented
+that way, but a stumbling block). The shadow could give an `@ref` field without an annotation
+the resolved tag type.
 
-### 7. Ausblick (in M1 nicht getroffen, für M3 notiert)
+### 7. Outlook (not hit in M1, noted for M3)
 
-Die Preview läuft als `srcdoc`-Iframe mit opakem Origin (`sandbox="allow-scripts"`). Für die
-Routing-Lektionen (`@page`, `NavLink`, `navigateTo`) wird `history.pushState` dort
-voraussichtlich scheitern (about:srcdoc). Option: NavigationManager mit In-Memory-History
-(der Konstruktor nimmt schon ein `historyApi`) — für Previews/Tests generell nützlich.
+The preview runs as a `srcdoc` iframe with an opaque origin (`sandbox="allow-scripts"`). For the
+routing lessons (`@page`, `NavLink`, `navigateTo`), `history.pushState` will
+probably fail there (about:srcdoc). Option: a NavigationManager with in-memory history
+(the constructor already takes a `historyApi`) — generally useful for previews/tests.
 
-## I. Was reibungslos funktionierte
+## I. What worked smoothly
 
-- Der Compiler läuft unverändert im Browser (Worker): nur `typescript` + `@jridgewell/*`,
-  keine Node-APIs — `compile()` + `extractTsazorMetadata` + `resolveComponentMetadata` mit
-  einem eigenen `MetadataHost` reichen für Parameter-Metadaten, TZS025 & Co.
-- `typescript.transpileModule` statt esbuild senkt die Standard-Decorators korrekt;
-  der `Symbol.metadata`-Polyfill der Runtime greift.
-- Quellmaps: Compiler-Map + TS-Map verkettet ⇒ Laufzeitfehler in der Preview zeigen
-  `App.tsazor:5:9` (E2E geprüft).
-- Router mit Route-Parametern (`@page "/{track}/{slug}"`), `PageTitle`, Scoped CSS +
-  `::deep` für Fremd-DOM (CodeMirror, Iframes, Markdown-HTML), `MarkupString` für den
-  Lektionstext, DI-Singleton für den Tutorial-State.
+- The compiler runs unchanged in the browser (worker): only `typescript` + `@jridgewell/*`,
+  no Node APIs — `compile()` + `extractTsazorMetadata` + `resolveComponentMetadata` with
+  a custom `MetadataHost` are enough for parameter metadata, TZS025 & co.
+- `typescript.transpileModule` instead of esbuild lowers the standard decorators correctly;
+  the runtime's `Symbol.metadata` polyfill kicks in.
+- Source maps: compiler map + TS map chained ⇒ runtime errors in the preview show
+  `App.tsazor:5:9` (checked by E2E).
+- Router with route parameters (`@page "/{track}/{slug}"`), `PageTitle`, scoped CSS +
+  `::deep` for foreign DOM (CodeMirror, iframes, Markdown HTML), `MarkupString` for the
+  lesson text, a DI singleton for the tutorial state.
 ---
 
-# Dogfooding: Tutorial M2 (Part 1, Kapitel 2–7) → Tsazor
+# Dogfooding: Tutorial M2 (Part 1, chapters 2–7) → Tsazor
 
-Die 27 neuen Lektionen (State, Parameter, Logik, Events, Bindings, Styles) haben jede
-Behauptung des Lektionstexts als Test gegen Compiler, Runtime und Typ-Check festgenagelt
-(`apps/tutorial/test/claims-part1.test.ts`). Dabei fielen auf:
+The 27 new lessons (state, parameters, logic, events, bindings, styles) pinned down every
+claim of the lesson text as a test against compiler, runtime and type check
+(`apps/tutorial/test/claims-part1.test.ts`). Along the way we noticed:
 
-## J. Framework-Lücken (behoben, mit Tests)
+## J. Framework gaps (fixed, with tests)
 
-### 1. `ComponentBase`-Buchhaltung kollidierte mit Komponentenfeldern — **behoben**
+### 1. `ComponentBase` bookkeeping collided with component fields — **fixed**
 
-`ComponentBase` hielt seinen Lifecycle-Zustand in TS-`private`-Feldern (`initialized`,
-`hasPendingRender`, `firstRenderDone`, …). TS-`private` ist nur Compile-Zeit: ein
-Komponentenfeld `initialized = "no"` überschrieb das Flag, `setParametersAsync` hielt die
-Komponente für initialisiert und **rief `onInitialized` nie auf** (der Typ-Check meldet
-TS2415, der Build nicht). In Blazor kollidieren private Basisfelder nie. **Fix:** echte
-`#private`-Felder/Methoden in `component-base.ts` (nur dort benutzt). Test:
-`runtime/test/lifecycle.test.ts` („ComponentBase's own state is invisible“). Rest-Risiko:
-`renderHandle`/`componentServices` bleiben öffentliche (`@internal`) Namen.
+`ComponentBase` kept its lifecycle state in TS `private` fields (`initialized`,
+`hasPendingRender`, `firstRenderDone`, …). TS `private` is compile-time only: a
+component field `initialized = "no"` overwrote the flag, `setParametersAsync` considered the
+component initialized and **never called `onInitialized`** (the type check reports
+TS2415, the build does not). In Blazor, private base fields never collide. **Fix:** real
+`#private` fields/methods in `component-base.ts` (only used there). Test:
+`runtime/test/lifecycle.test.ts` ("ComponentBase's own state is invisible"). Residual risk:
+`renderHandle`/`componentServices` remain public (`@internal`) names.
 
-### 2. `@onclick="() => count++"` scheiterte am Typ-Check — **behoben**
+### 2. `@onclick="() => count++"` failed the type check — **fixed**
 
-`EventCallback.bind` verlangte `(arg) => void | Promise<void>`. Die TS-Regel „jeder
-Rückgabetyp ist `void`-kompatibel“ gilt nur für reines `void`, nicht für die Union — jede
-Lambda mit Wert (`() => count++`, `() => show = !show`, Blazors Standardbeispiel) war
-TS2345 in `tsazor check`/LSP. **Fix:** Delegate-Typ `(arg) => unknown` (Laufzeit wartet
-ohnehin nur auf echte Promises). Gepinnt in `claims-part1` („inline-handlers“).
+`EventCallback.bind` required `(arg) => void | Promise<void>`. The TS rule "every
+return type is `void`-compatible" only applies to plain `void`, not to the union — every
+lambda with a value (`() => count++`, `() => show = !show`, Blazor's standard example) was
+TS2345 in `tsazor check`/LSP. **Fix:** delegate type `(arg) => unknown` (the runtime only waits
+for real promises anyway). Pinned in `claims-part1` ("inline-handlers").
 
-### 3. `@attributes` mit nicht gesetztem Capture-Parameter — **behoben**
+### 3. `@attributes` with an unset capture parameter — **fixed**
 
-`addMultipleAttributes(seq, undefined)` warf zur Laufzeit (`Object.keys(undefined)`) —
-also jede Komponente mit `captureUnmatchedValues`, der der Parent *keine* Extra-Attribute
-gibt. Der Typ verlangte zudem `Record<string, AttributeValue>`, so dass das übliche
-`attributes?: Record<string, unknown>` TS2345 war. **Fix:** Blazor-Semantik (null/undefined
-fügt nichts hinzu), Parametertyp `Readonly<Record<string, unknown>> | null | undefined`.
+`addMultipleAttributes(seq, undefined)` threw at runtime (`Object.keys(undefined)`) —
+i.e. every component with `captureUnmatchedValues` to which the parent passes *no* extra attributes.
+The type also required `Record<string, AttributeValue>`, so the usual
+`attributes?: Record<string, unknown>` was TS2345. **Fix:** Blazor semantics (null/undefined
+adds nothing), parameter type `Readonly<Record<string, unknown>> | null | undefined`.
 Test: `runtime/test/render-tree.test.ts`.
 
-### 4. `@bind` auf `type="range"` lieferte Strings — **behoben**
+### 4. `@bind` on `type="range"` produced strings — **fixed**
 
-Die `Number()`-Konvertierung hing nur an `type="number"`; ein Range-Slider schrieb `"5"`
-in ein `number`-Feld (`a + b` ⇒ `"52"`). Blazor hat `BindInputElement("range", …)`.
-**Fix:** `range` wie `number` (inkl. `@bind:format`). Test: `compiler/test/codegen.test.ts`.
+The `Number()` conversion was tied only to `type="number"`; a range slider wrote `"5"`
+into a `number` field (`a + b` ⇒ `"52"`). Blazor has `BindInputElement("range", …)`.
+**Fix:** `range` like `number` (incl. `@bind:format`). Test: `compiler/test/codegen.test.ts`.
 
-### 5. `@bind` auf `type="date"` ohne Format zeigte nichts — **behoben**
+### 5. `@bind` on `type="date"` without a format showed nothing — **fixed**
 
-Die Anzeige band das `Date`-Objekt roh (`String(date)` ⇒ für ein Date-Input ungültig ⇒
-leeres Feld), die Rückrichtung parste mit `new Date(text)` (UTC-Mitternacht). Blazor nimmt
-für Date-Inputs das Default-Format `yyyy-MM-dd`. **Fix:** Default-Format `yyyy-MM-dd`
-(formatValue/parseValue, lokales Datum), ein explizites `@bind:format` ersetzt es.
+The display bound the `Date` object raw (`String(date)` ⇒ invalid for a date input ⇒
+empty field), the reverse direction parsed with `new Date(text)` (UTC midnight). Blazor uses
+the default format `yyyy-MM-dd` for date inputs. **Fix:** default format `yyyy-MM-dd`
+(formatValue/parseValue, local date); an explicit `@bind:format` replaces it.
 
-### 6. Leerer Number-Input setzte 0 — **behoben**
+### 6. Empty number input set 0 — **fixed**
 
-Der NaN-Guard ließ `Number("") === 0` durch; ein Number-Input meldet ungültigen Text als
-`""`, also wurde Löschen/Tippfehler zu `0`. Blazor (`TryParse("")` schlägt fehl) und der
-Format-Pfad (`parseValue`) behalten den alten Wert. **Fix:** leerer Text behält den Wert.
+The NaN guard let `Number("") === 0` through; a number input reports invalid text as
+`""`, so clearing/a typo became `0`. Blazor (`TryParse("")` fails) and the
+format path (`parseValue`) keep the old value. **Fix:** empty text keeps the value.
 
-## K. Lücken (dokumentiert, nicht behoben)
+## K. Gaps (documented, not fixed)
 
-### 7. `@bind:format` auf Text-Inputs (Blazors Datums-Idiom) — **offen**
+### 7. `@bind:format` on text inputs (Blazor's date idiom) — **open**
 
-`<input @bind="date" @bind:format="dd.MM.yyyy" />` ist in Blazor das Standardbeispiel. Der
-Compiler entscheidet Konvertierung/Format am Element (`type`), nicht am Feldtyp, und
-behandelt das als String-Bind (TZS008-Warnung, Format wirkungslos). Machbar wäre ein
-Laufzeit-Dispatch über den aktuellen Modellwert (`Date`/`number` ⇒ formatValue/parseValue),
-das ist aber mehr als ein Mini-Fix. Lektion „Formatted bindings“ zeigt `type="number"` +
-`F2` und den Date-Default und dokumentiert die Abweichung (Blazor-Track);
-`language-reference.md` ergänzt.
+`<input @bind="date" @bind:format="dd.MM.yyyy" />` is the standard example in Blazor. The
+compiler decides conversion/format by the element (`type`), not by the field type, and
+treats this as a string bind (TZS008 warning, format has no effect). A
+runtime dispatch on the current model value (`Date`/`number` ⇒ formatValue/parseValue) would be feasible,
+but that is more than a mini-fix. Lesson "Formatted bindings" shows `type="number"` +
+`F2` and the date default and documents the deviation (Blazor track);
+`language-reference.md` updated.
 
-### 8. Select/Number-Felder: kein Konvertieren nach Feldtyp
+### 8. Select/number fields: no conversion by field type
 
-Wie 7: `@bind` auf `<select>` schreibt immer den String. Blazor konvertiert nach `int`/Enum.
-`tsazor check` meldet die Zuweisung an ein `number`-Feld (TS2322) — die Lektion nutzt
-String-IDs und erklärt das.
+As in 7: `@bind` on `<select>` always writes the string. Blazor converts to `int`/enum.
+`tsazor check` reports the assignment to a `number` field (TS2322) — the lesson uses
+string IDs and explains this.
 
-### 9. Event-Argument-Typ wird nicht gegen den Eventnamen geprüft
+### 9. The event argument type is not checked against the event name
 
-`@onpointermove="move"` mit `move(e: KeyboardEvent)` ist im Typ-Check grün; Blazor würde
-`EventCallback<KeyboardEventArgs>` vs. `MouseEventArgs` ablehnen. Vorschlag: im typisierten
-Shadow den Handler gegen `HTMLElementEventMap[name]` prüfen. Lektion „DOM events“ sagt es
-ehrlich („the annotation is your promise“).
+`@onpointermove="move"` with `move(e: KeyboardEvent)` is green in the type check; Blazor would
+reject `EventCallback<KeyboardEventArgs>` vs. `MouseEventArgs`. Proposal: in the typed
+shadow, check the handler against `HTMLElementEventMap[name]`. Lesson "DOM events" says so
+honestly ("the annotation is your promise").
 
-### 10. TS1360-Squiggle sitzt hinter dem Attributwert (auch im LSP)
+### 10. The TS1360 squiggle sits behind the attribute value (in the LSP too)
 
-Der Shadow prüft Komponentenattribute als `(value) satisfies T`; TS meldet TS1360 am
-*Typ*-Knoten, der keine Quelle hat — `genToSrc` rechnet vom letzten Token aus weiter und
-landet hinter dem Wert. Das Tutorial mappt den Fehler auf Attributstart…Wertende um
-(`apps/tutorial/src/engine/type-check.ts`, `satisfiedValueSpan`). Das LSP (`tsDiagnostics`)
-hat dieselbe Verschiebung — Kandidat für denselben Fix dort oder ein Mapping-Eintrag für
-den `satisfies`-Typ im Codegen.
+The shadow checks component attributes as `(value) satisfies T`; TS reports TS1360 on the
+*type* node, which has no source — `genToSrc` continues computing from the last token and
+lands behind the value. The tutorial remaps the error to attribute start…value end
+(`apps/tutorial/src/engine/type-check.ts`, `satisfiedValueSpan`). The LSP (`tsDiagnostics`)
+has the same shift — candidate for the same fix there or a mapping entry for
+the `satisfies` type in codegen.
 
-### 11. happy-dom 18: `nextSibling` von `<select>`/`<form>` ist `undefined`
+### 11. happy-dom 18: `nextSibling` of `<select>`/`<form>` is `undefined`
 
-`select.nextSibling`/`form.nextSibling` liefern in happy-dom 18 `undefined`, obwohl
-`childNodes` stimmt. Der DomRenderer läuft Geschwister per `nextSibling` ab ⇒ DOM-Updates
-von Elementen *nach* einem Select/Form scheitern in `@tsazor/testing` („Cannot read
-properties of null“), im Browser nicht (E2E prüft den Select-Bind in Edge). Betrifft
-Nutzertests mit `@tsazor/testing`. Optionen: happy-dom-Update prüfen, oder `LogicalChildren`
-über `childNodes` statt `nextSibling` laufen lassen (nur für Tests nötig — nicht gemacht).
+`select.nextSibling`/`form.nextSibling` return `undefined` in happy-dom 18, although
+`childNodes` is correct. The DomRenderer walks siblings via `nextSibling` ⇒ DOM updates
+of elements *after* a select/form fail in `@tsazor/testing` ("Cannot read
+properties of null"), but not in the browser (E2E checks the select bind in Edge). Affects
+user tests with `@tsazor/testing`. Options: check a happy-dom update, or let `LogicalChildren`
+walk via `childNodes` instead of `nextSibling` (only needed for tests — not done).
 
-## L. Engine-Ergänzungen fürs Tutorial
+## L. Engine additions for the tutorial
 
-- **In-Browser-`tsazor check`:** `src/engine/type-check.ts` baut die Shadow-Module wie das
-  LSP (`compile(…, { typedShadow })`, Rewrite A für Geschwister-Komponenten), dazu ein
-  TS-LanguageService über ein In-Memory-FS (lib-.d.ts + `@tsazor/runtime`/`components`-d.ts,
-  `virtual:tutorial-types`, lazy im Worker). Mapping über `TsazorGenMap` — dafür neuer
-  Subpath-Export `@tsazor/lsp/ts-mapping` (node-frei). Der Worker antwortet zweistufig
-  (Build ⇒ Preview sofort, Typ-Diagnosen danach); Typfehler stoppen die Preview nicht. Der
-  Lesson-Gate prüft jetzt jede `app-a`/`app-b` auch typ-sauber (`typeErrors: true` für die
-  Lektion, die davon handelt). Wiederkehrender Wunsch aus G.2: ein `FileSystemHost` in
-  `@tsazor/lsp`/`workspace`, dann entfiele die Duplizierung von Shadow-Bau und Auflösung.
-- **Highlighting:** der `.tsazor`-Stream-Mode behandelt Control-Block-Bodies und `@{ }` als
-  Code (Statements, Markup ab Tag in Statement-Position bis zum schließenden Tag, `@:`-Zeilen,
-  `else`/`catch`/`finally`-Fortsetzungen); Generics in `@code` sind keine Tags mehr.
-- **Gate mit Interaktion:** Front-Matter `gate: click …; wait …` für Lektionen, deren Lösung
-  sich erst im Verhalten unterscheidet; Formular-Zustand (value/checked) zählt zum Snapshot.
-- **verify.mjs** nutzt einen Server auf :5330 nur, wenn er diesen Checkout bedient
-  (`/__tutorial-root`), sonst startet es einen eigenen auf dem nächsten freien Port
-  (parallele Worktrees).
+- **In-browser `tsazor check`:** `src/engine/type-check.ts` builds the shadow modules like the
+  LSP (`compile(…, { typedShadow })`, rewrite A for sibling components), plus a
+  TS LanguageService over an in-memory FS (lib .d.ts + `@tsazor/runtime`/`components` d.ts,
+  `virtual:tutorial-types`, lazy in the worker). Mapping via `TsazorGenMap` — for this a new
+  subpath export `@tsazor/lsp/ts-mapping` (node-free). The worker answers in two stages
+  (build ⇒ preview immediately, type diagnostics afterwards); type errors do not stop the preview. The
+  lesson gate now also checks every `app-a`/`app-b` for type cleanliness (`typeErrors: true` for the
+  lesson that is about them). Recurring wish from G.2: a `FileSystemHost` in
+  `@tsazor/lsp`/`workspace`; then the duplication of shadow building and resolution would go away.
+- **Highlighting:** the `.tsazor` stream mode treats control-block bodies and `@{ }` as
+  code (statements, markup from a tag in statement position up to the closing tag, `@:` lines,
+  `else`/`catch`/`finally` continuations); generics in `@code` are no longer tags.
+- **Gate with interaction:** front matter `gate: click …; wait …` for lessons whose solution
+  only differs in behavior; form state (value/checked) is part of the snapshot.
+- **verify.mjs** uses a server on :5330 only if it serves this checkout
+  (`/__tutorial-root`), otherwise it starts its own on the next free port
+  (parallel worktrees).
 
-# Umsetzung `@Bindable` + `this.observe` (design-bindable-observe.md)
+# Implementing `@Bindable` + `this.observe` (design-bindable-observe.md)
 
-## M. Framework-Lücken, gefunden beim Umsetzen
+## M. Framework gaps found during implementation
 
-### 1. Neue `ComponentBase`-Member kollidieren mit Komponenten-Membern — **behoben (S5, TZS031)**
+### 1. New `ComponentBase` members collide with component members — **fixed (S5, TZS031)**
 
-Seit 2026-10-04: `TZS031` meldet einen `@code`-Member oder `@inject`-Namen, der einen
-`ComponentBase`-Member verdecken würde, mit Begründung statt TS2416. Die Liste
-(`compiler/src/reserved-members.ts`) prüft ein Test in `@tsazor/workspace` gegen die Runtime: ein
-neuer Base-Member ohne Entscheidung (reserviert oder Lifecycle-Hook) lässt den Test scheitern.
-Kein Umbenennungs-Fix (das Umbenennen aller Verwendungen ist Sache des LSP-Rename).
+Since 2026-10-04: `TZS031` reports a `@code` member or `@inject` name that would shadow a
+`ComponentBase` member, with an explanation instead of TS2416. The list
+(`compiler/src/reserved-members.ts`) is checked against the runtime by a test in `@tsazor/workspace`: a
+new base member without a decision (reserved or lifecycle hook) makes the test fail.
+No rename fix (renaming all usages is the job of the LSP rename).
 
-Die Methode hieß zuerst `track()` und brach das Tutorial: `Lesson`/`TopBar`/`LessonMenu`/`LessonText`
-hatten einen Parameter `track` (die Lern-Spur „ts“/„blazor“) ⇒ TS2416 im Check, zur Laufzeit
-hätte der Parameter die Methode überschrieben. Der Parameter wurde in `lessonTrack` umbenannt (Route-Platzhalter
-`/{lessonTrack}/{slug}`, URLs unverändert), danach die API selbst in `observe()` (Entscheidung des
-Users: `track` ist ein häufiges Fachwort, die Kollision wäre in Ports wiedergekommen). Allgemein: Blazors `ComponentBase` hat PascalCase-
-Member, die mit camelCase-Feldern nie kollidieren — Tsazors camelCase-API teilt sich den
-Namensraum mit den Nutzerfeldern. Jede neue öffentliche/protected Methode auf `ComponentBase`
-(`observe`, `disposeSignal`, künftig mehr) ist ein potenzieller Bruch für Ports. Der Check meldet
-es (TS2416), aber ohne Erklärung. Vorschlag: eine Liste reservierter Namen + eigene Diagnose mit
-Umbenennungs-Fix, und neue Base-Member sparsam (Entscheidung „Methode statt freier Funktion“ in
-der Design-Tabelle hat diesen Preis).
+The method was first called `track()` and broke the tutorial: `Lesson`/`TopBar`/`LessonMenu`/`LessonText`
+had a parameter `track` (the learning track "ts"/"blazor") ⇒ TS2416 in the check; at runtime
+the parameter would have overwritten the method. The parameter was renamed to `lessonTrack` (route placeholder
+`/{lessonTrack}/{slug}`, URLs unchanged), and then the API itself to `observe()` (the
+user's decision: `track` is a common domain word, the collision would have come back in ports). In general: Blazor's `ComponentBase` has PascalCase
+members that never collide with camelCase fields — Tsazor's camelCase API shares its
+namespace with user fields. Every new public/protected method on `ComponentBase`
+(`observe`, `disposeSignal`, more in future) is a potential break for ports. The check reports
+it (TS2416), but without explanation. Proposal: a list of reserved names + a dedicated diagnostic with
+a rename fix, and new base members used sparingly (the decision "method instead of free function" in
+the design table has this price).
 
-### 2. `@bind-X`-Werte wurden nicht typgeprüft — **behoben**
+### 2. `@bind-X` values were not type-checked — **fixed**
 
-Der Shadow prüfte Komponenten-Attribute per `satisfies`, aber nicht den Wert eines
-Komponenten-Binds (`@bind-Value="x"`, `:get`). Jetzt gleich behandelt (Paar wie `@Bindable`);
-alle Apps blieben sauber.
+The shadow checked component attributes via `satisfies`, but not the value of a
+component bind (`@bind-Value="x"`, `:get`). Now treated the same (pair like `@Bindable`);
+all apps stayed clean.
 
-### 3. Async-Handshake und `waitUntilIdle` — **Entscheidung**
+### 3. Async handshake and `waitUntilIdle` — **decision**
 
-Ein `observe` auf eine Quelle, deren `subscribe` ein nie auflösendes Promise liefert, ließ
-`waitUntilIdle` (und damit `render()` in `@tsazor/testing`) hängen, solange der Handshake
-mitgezählt wurde. Jetzt nicht mitgezählt: eine Subscription ist offen, sie darf Idle-Erkennung
-(und künftiges Prerendering, roadmap-ssr) nicht blockieren. Tests, die den Handshake abwarten
-wollen, warten auf die Quelle selbst.
+An `observe` on a source whose `subscribe` returns a never-resolving promise made
+`waitUntilIdle` (and thus `render()` in `@tsazor/testing`) hang as long as the handshake
+was counted. Now it is not counted: a subscription is open-ended, it must not block idle detection
+(or future prerendering, roadmap-ssr). Tests that want to wait for the handshake
+wait for the source itself.
 
-### 4. Synthetisierte Member sind in `.ts`-Klassen nicht typisiert — **Grenze**
+### 4. Synthesized members are not typed in `.ts` classes — **limit**
 
-Ein Decorator kann den Klassentyp nicht erweitern. In `.tsazor` deklariert der Compiler
-`declare valueChanged?: EventCallback<T>` selbst; eine Code-behind-/`.ts`-Klasse, die
-`this.valueChanged` benutzt, muss die Zeile selbst schreiben (die Metadaten/`@bind` brauchen
-sie nicht). Bei nicht-literalem Initializer ohne Annotation ist `T` `unknown` (wie TZS026 bei
+A decorator cannot extend the class type. In `.tsazor` the compiler declares
+`declare valueChanged?: EventCallback<T>` itself; a code-behind/`.ts` class that
+uses `this.valueChanged` has to write the line itself (the metadata/`@bind` do not need
+it). With a non-literal initializer without an annotation, `T` is `unknown` (like TZS026 for
 `@Parameter`).
 
 ### 5. Bundle
 
-Bench-Bundle (`apps/bench/tsazor`): 87,38 kB / **24,79 KB gz** vor ⇒ 88,70 kB / **25,28 KB gz**
-nach (+0,49 KB gz; `observe`/`disposeSignal`/`disposeInternal` sind `ComponentBase`-Methoden und
-damit nicht tree-shakebar; `@Bindable` selbst fällt raus, wenn ungenutzt; die Dev-Warnungen
-entfernt Vite über `import.meta.env.DEV`). Die 20,4 KB aus der Roadmap sind ein älterer Stand —
-die Ausgangsbasis dieses Branches war bereits 24,79.
+Bench bundle (`apps/bench/tsazor`): 87.38 kB / **24.79 KB gz** before ⇒ 88.70 kB / **25.28 KB gz**
+after (+0.49 KB gz; `observe`/`disposeSignal`/`disposeInternal` are `ComponentBase` methods and
+therefore not tree-shakeable; `@Bindable` itself drops out when unused; Vite removes the dev warnings
+via `import.meta.env.DEV`). The 20.4 KB in the roadmap are an older state —
+the baseline of this branch was already 24.79.
 
 ---
 
-# Dogfooding: Tutorial M3 (Part 2, Kapitel 8–13) → Tsazor
+# Dogfooding: Tutorial M3 (Part 2, chapters 8–13) → Tsazor
 
-17 neue Lektionen (Reusing content, Cascading values, Services, Element references, Special
-components, Organizing code), jede Behauptung in `apps/tutorial/test/claims-part2.test.ts`
-gegen Compiler, Runtime und Typ-Check festgenagelt — ausgeführt wie in der Preview
-(`test/harness.ts`: HeadOutlet als zweite Wurzel, `Program.ts` mit `createTsazorApp`).
+17 new lessons (Reusing content, Cascading values, Services, Element references, Special
+components, Organizing code), every claim pinned down in `apps/tutorial/test/claims-part2.test.ts`
+against compiler, runtime and type check — executed as in the preview
+(`test/harness.ts`: HeadOutlet as a second root, `Program.ts` with `createTsazorApp`).
 
-## N. Framework-Lücken (behoben, mit Tests)
+## N. Framework gaps (fixed, with tests)
 
-### 1. `@ref` auf einer Komponente schnitt ihren Child Content ab — **behoben**
+### 1. `@ref` on a component cut off its child content — **fixed**
 
-`<ErrorBoundary @ref="b"><ChildContent>…</ChildContent>…</ErrorBoundary>` renderte **nichts**.
-Der Compiler emittierte `addComponentReferenceCapture` direkt nach den Attributen, *vor* den
-Fragment-Attributen (benannte Slots, implizites ChildContent). Der ParameterView ist aber der
-Lauf der Attribut-Frames nach dem Komponenten-Frame (`attributeMap` bricht am ersten
-Nicht-Attribut ab, wie Blazors `ParameterView`) — alles nach dem Capture fiel weg. Blazor
-emittiert den Capture zuletzt. **Fix:** `codegen.ts` emittiert die Reference-Captures nach
-Slots/ChildContent. Test: `compiler/test/templates.test.ts` („@ref on a component with child
-content“), Lektion „Error boundaries“ (Boundary mit `@ref` + `recover()`).
+`<ErrorBoundary @ref="b"><ChildContent>…</ChildContent>…</ErrorBoundary>` rendered **nothing**.
+The compiler emitted `addComponentReferenceCapture` directly after the attributes, *before* the
+fragment attributes (named slots, implicit ChildContent). But the ParameterView is the
+run of attribute frames after the component frame (`attributeMap` stops at the first
+non-attribute, like Blazor's `ParameterView`) — everything after the capture was dropped. Blazor
+emits the capture last. **Fix:** `codegen.ts` emits the reference captures after
+slots/ChildContent. Test: `compiler/test/templates.test.ts` ("@ref on a component with child
+content"), lesson "Error boundaries" (boundary with `@ref` + `recover()`).
 
-### 2. `EventCallback` nur als Typ im `@code` → TS2304 — **behoben**
+### 2. `EventCallback` only as a type in `@code` → TS2304 — **fixed**
 
-`@Parameter() onPick?: EventCallback<string>` in einer Komponente *ohne* eigene Event-Handler
-war im Typ-Check TS2304: der Compiler importierte `EventCallback` (laut Sprachreferenz
-automatisch verfügbar) nur, wenn das Markup es brauchte. **Fix:** Scan des Member-Codes wie bei
+`@Parameter() onPick?: EventCallback<string>` in a component *without* its own event handlers
+was TS2304 in the type check: the compiler imported `EventCallback` (automatically available
+according to the language reference) only when the markup needed it. **Fix:** scan of the member code as for
 `@Parameter(`/`@Bindable(` (`codegen.ts`). Test: `compiler/test/codegen.test.ts`.
 
-### 3. Nicht-generisches `EventCallback.invokeAsync()` verlangte ein Argument — **behoben**
+### 3. Non-generic `EventCallback.invokeAsync()` required an argument — **fixed**
 
-`@Parameter() onToggle?: EventCallback` + `await this.onToggle?.invokeAsync()` war TS2554
-(`TArg` = `unknown` ⇒ Pflichtparameter). Blazors `EventCallback.InvokeAsync()` hat keins.
-**Fix:** `invokeAsync(...args: unknown extends TArg ? [arg?: TArg] : [arg: TArg])` — typisierte
-Callbacks (`EventCallback<string>`) verlangen das Argument weiter. Gepinnt in `claims-part2`
-(„a plain EventCallback needs no argument; a typed one does“); alle Pakete bauen unverändert.
+`@Parameter() onToggle?: EventCallback` + `await this.onToggle?.invokeAsync()` was TS2554
+(`TArg` = `unknown` ⇒ required parameter). Blazor's `EventCallback.InvokeAsync()` has none.
+**Fix:** `invokeAsync(...args: unknown extends TArg ? [arg?: TArg] : [arg: TArg])` — typed
+callbacks (`EventCallback<string>`) still require the argument. Pinned in `claims-part2`
+("a plain EventCallback needs no argument; a typed one does"); all packages build unchanged.
 
-### 4. TS2869 bei gemischten Attributwerten — **behoben**
+### 4. TS2869 on mixed attribute values — **fixed**
 
-`style="width: @(score * 25)%"` war im Typ-Check *Right operand of ?? is unreachable* (TS 5.6+
-meldet `??` hinter syntaktisch nie-nullishen Ausdrücken). Der Codegen erzeugt
-`` `width: ${(x) ?? ""}%` `` — das `?? ""` ist reine Laufzeitsemantik (null ⇒ leer). **Fix:** der
-typisierte Shadow lässt es weg (Mapping-Offsets unverändert), der echte Build behält es.
-Betrifft LSP und `tsazor check` gleichermaßen. Test: `compiler/test/typed-shadow.test.ts`.
+`style="width: @(score * 25)%"` was *Right operand of ?? is unreachable* in the type check (TS 5.6+
+reports `??` after syntactically never-nullish expressions). The codegen produces
+`` `width: ${(x) ?? ""}%` `` — the `?? ""` is pure runtime semantics (null ⇒ empty). **Fix:** the
+typed shadow omits it (mapping offsets unchanged), the real build keeps it.
+Affects LSP and `tsazor check` alike. Test: `compiler/test/typed-shadow.test.ts`.
 
-## O. Engine-Ergänzungen (Tutorial)
+## O. Engine additions (tutorial)
 
-- **`Program.ts` als Einstieg:** hat eine Lektion `Program.ts`, startet die Preview die App
-  darüber (`createTsazorApp({ root, services })`, wie eine echte App) statt `App` direkt zu
-  mounten — damit sind Services/`@inject` lehrbar. Gate/Claims ersetzen `@tsazor/runtime` in
-  `Program.ts` durch einen Shim, der die Optionen aufzeichnet, und mounten wie
-  `createTsazorApp` (NavigationManager, ein Renderer, HeadOutlet-Wurzel in `document.head`).
-- **Titel in der Preview:** der Iframe meldet `document.title` (MutationObserver auf `<head>`),
-  die Preview-Leiste zeigt ihn als Tab. Der Gate-Snapshot enthält den Head (Titel + Inhalt).
-- **Typ-Check:** `.tsazor`-Imports aus `.ts`-Dateien (`import App from "./App.tsazor"` in
-  `Program.ts`) lösen auf den Shadow auf (`resolveModuleNameLiterals`); die `TItem`-Inferenz
-  des LSP (Inferenz-Requests ⇒ Programmabfrage ⇒ Shadow-Neubau) ist nachgebaut — ohne sie war
-  der Kontext eines Templates `any` und `@todo.titel` unentdeckt. Das ist die dritte Kopie von
-  LSP-Logik im Tutorial (G.2: ein `FileSystemHost` in `@tsazor/lsp` würde sie überflüssig machen).
-- **`_Imports.tsazor` wird diagnostiziert** (ungültige `@import`-Formen TZS016, fehlende
-  `@using`-Ordner TZS018, TZS014 für `@authorize`) — vorher übersprang der Build die Datei,
-  Fehler darin blieben unsichtbar.
-- **Gate:** `refactor: true` (Lösung muss *identisch* rendern — für Code-behind/_Imports/
-  Container-Lektionen), von einer `ErrorBoundary` behandelte Fehler zählen nicht als Fehler;
-  `.gate/lessons` statt `.gate` (das `afterAll` löschte sonst parallel laufende Claims-Dirs).
-- **Kein Datei-Anlegen im Editor:** Lektionen, deren Lösung eine Datei braucht
-  (`X.tsazor.ts`, `_Imports.tsazor`), liefern sie im Start leer mit. Für M4 wünschenswert:
-  Dateien anlegen/löschen in den Tabs.
+- **`Program.ts` as entry point:** if a lesson has `Program.ts`, the preview starts the app
+  through it (`createTsazorApp({ root, services })`, like a real app) instead of mounting `App` directly
+  — this makes services/`@inject` teachable. Gate/claims replace `@tsazor/runtime` in
+  `Program.ts` with a shim that records the options, and mount like
+  `createTsazorApp` (NavigationManager, one renderer, HeadOutlet root in `document.head`).
+- **Title in the preview:** the iframe reports `document.title` (MutationObserver on `<head>`),
+  the preview bar shows it as a tab. The gate snapshot includes the head (title + content).
+- **Type check:** `.tsazor` imports from `.ts` files (`import App from "./App.tsazor"` in
+  `Program.ts`) resolve to the shadow (`resolveModuleNameLiterals`); the LSP's `TItem` inference
+  (inference requests ⇒ program query ⇒ shadow rebuild) is replicated — without it
+  a template's context was `any` and `@todo.titel` went undetected. This is the third copy of
+  LSP logic in the tutorial (G.2: a `FileSystemHost` in `@tsazor/lsp` would make them unnecessary).
+- **`_Imports.tsazor` is diagnosed** (invalid `@import` forms TZS016, missing
+  `@using` folders TZS018, TZS014 for `@authorize`) — previously the build skipped the file,
+  errors in it stayed invisible.
+- **Gate:** `refactor: true` (the solution must render *identically* — for code-behind/_Imports/
+  container lessons); errors handled by an `ErrorBoundary` do not count as errors;
+  `.gate/lessons` instead of `.gate` (otherwise the `afterAll` deleted claims dirs running in parallel).
+- **No file creation in the editor:** lessons whose solution needs a file
+  (`X.tsazor.ts`, `_Imports.tsazor`) ship it empty in the start state. Desirable for M4:
+  creating/deleting files in the tabs.
 
-## P. Reibungen und Abweichungen (dokumentiert, nicht behoben)
+## P. Friction and deviations (documented, not fixed)
 
-### 5. `RenderFragment<T>` als generische Referenz — **offen**
+### 5. `RenderFragment<T>` as a generic reference — **open**
 
-Die Metadaten erkennen `RenderFragment<T>` (metadata.ts: „a function type … or a generic
-`RenderFragment<T>` reference“), der Runtime-Typ ist aber nicht generisch ⇒ TS2315 *Type
-'RenderFragment' is not generic.* Das Tutorial lehrt die TS-Schreibweise
-`(item: TItem) => RenderFragment` (die ohnehin alle Runtime-Komponenten nutzen). Vorschlag:
+The metadata recognizes `RenderFragment<T>` (metadata.ts: "a function type … or a generic
+`RenderFragment<T>` reference"), but the runtime type is not generic ⇒ TS2315 *Type
+'RenderFragment' is not generic.* The tutorial teaches the TS notation
+`(item: TItem) => RenderFragment` (which all runtime components use anyway). Proposal:
 `export type RenderFragment<T = void> = [T] extends [void] ? (b: RenderTreeBuilder) => void :
-(context: T) => (b: RenderTreeBuilder) => void` — kleine, aber zentrale Typänderung; nicht
-nebenbei gemacht.
+(context: T) => (b: RenderTreeBuilder) => void` — a small but central type change; not
+done on the side.
 
-### 6. `RenderFragment` braucht einen Import, `EventCallback`/`Parameter` nicht
+### 6. `RenderFragment` needs an import, `EventCallback`/`Parameter` do not
 
-Uneinheitlich für Lernende: der Compiler importiert `Parameter`, `CascadingParameter`,
-`Bindable`, `inject`, (jetzt auch) `EventCallback` automatisch, `RenderFragment` nicht. Die
-Apps lösen es per `_Imports.tsazor`; das Tutorial zeigt `@import type { RenderFragment }` und
-später `_Imports`. Vorschlag: `RenderFragment` in die Auto-Import-Liste (reiner Typ, kostet nichts).
+Inconsistent for learners: the compiler auto-imports `Parameter`, `CascadingParameter`,
+`Bindable`, `inject`, (now also) `EventCallback`, but not `RenderFragment`. The
+apps solve it via `_Imports.tsazor`; the tutorial shows `@import type { RenderFragment }` and
+later `_Imports`. Proposal: add `RenderFragment` to the auto-import list (a pure type, costs nothing).
 
-### 7. Typen für `@ref`, `DynamicComponent`, `ErrorBoundary` brauchen `@import` (H.6 bestätigt)
+### 7. Types for `@ref`, `DynamicComponent`, `ErrorBoundary` need `@import` (H.6 confirmed)
 
-`<Editor @ref="editor" />` + `editor?: Editor` ⇒ TS2304 ohne `@import Editor from
-"./Editor.tsazor"`; `{ heading: Heading }` für `DynamicComponent` ⇒ zur Laufzeit
-`ReferenceError` ohne Import; `boundary?: ErrorBoundary` ⇒ TS2304. Für TS-Entwickler natürlich,
-für Blazor-Entwickler eine Stolperstelle (Lektionen erklären es). Der Vorschlag aus H.6 (Shadow
-typisiert ein `@ref`-Feld ohne Annotation) bleibt offen.
+`<Editor @ref="editor" />` + `editor?: Editor` ⇒ TS2304 without `@import Editor from
+"./Editor.tsazor"`; `{ heading: Heading }` for `DynamicComponent` ⇒ a runtime
+`ReferenceError` without the import; `boundary?: ErrorBoundary` ⇒ TS2304. Natural for TS developers,
+a stumbling block for Blazor developers (the lessons explain it). The proposal from H.6 (the shadow
+types an `@ref` field without an annotation) remains open.
 
-### 8. Unbenannte `@CascadingParameter()` ohne `type` nehmen jeden unbenannten Cascade
+### 8. Unnamed `@CascadingParameter()` without `type` takes any unnamed cascade
 
-Blazor matcht unbenannt per deklariertem Typ; Tsazor ohne `type`-Option den nächsten
-unbenannten Cascade — ein `string`- und ein `number`-Cascade kollidieren, wo Blazor sie trennt
-(gepinnt). Lektion „Names and types“ lehrt Namen bzw. `{ type }`. Denkbar: der Compiler leitet
-`type` aus der Annotation ab, wenn sie eine importierte Klasse ist.
+Blazor matches unnamed ones by declared type; Tsazor without the `type` option takes the nearest
+unnamed cascade — a `string` and a `number` cascade collide where Blazor separates them
+(pinned). Lesson "Names and types" teaches names or `{ type }`. Conceivable: the compiler derives
+`type` from the annotation when it is an imported class.
 
-### 9. Fehler ohne `ErrorBoundary` beenden die App nicht; Fehler im `ErrorContent` loopen
+### 9. Errors without an `ErrorBoundary` do not end the app; errors in `ErrorContent` loop
 
-Ohne Boundary loggt der Renderer und die App läuft weiter (Blazor: Circuit/App tot,
-`#blazor-error-ui`) — im Blazor-Track als Abweichung erklärt. Wirft der `ErrorContent` selbst,
-behandelt dieselbe Boundary den Fehler erneut, bis `maximumErrorCount` (100) erreicht ist —
-100 Konsolenzeilen, dann fatal. Mechanisch wie Blazor, aber laut; das Tutorial sagt nur „halte
-die Fehleransicht einfach“.
+Without a boundary the renderer logs and the app keeps running (Blazor: circuit/app dead,
+`#blazor-error-ui`) — explained as a deviation in the Blazor track. If the `ErrorContent` itself throws,
+the same boundary handles the error again until `maximumErrorCount` (100) is reached —
+100 console lines, then fatal. Mechanically like Blazor, but loud; the tutorial only says "keep
+the error view simple".
 
-### 10. `createTsazorApp().dispose()` disposed den Service-Provider nicht — **offen**
+### 10. `createTsazorApp().dispose()` does not dispose the service provider — **open**
 
-Beim Schreiben der Lifetimes-Lektion aufgefallen: `dispose()` räumt Komponenten, Head-Wurzel,
-NavigationManager und HMR-Brücke ab, ruft aber nicht `services.dispose()` — Singletons mit
-`dispose()` werden nie freigegeben (Blazor disposed den Root-Provider beim Herunterfahren).
-Klein, aber eine Verhaltensänderung für Apps mit eigenen Disposables; das Tutorial behauptet
-dazu nichts. Vorschlag: der App-eigene Provider wird in `dispose()` mit freigegeben.
+Noticed while writing the lifetimes lesson: `dispose()` tears down components, the head root,
+NavigationManager and the HMR bridge, but does not call `services.dispose()` — singletons with
+`dispose()` are never released (Blazor disposes the root provider on shutdown).
+Small, but a behavior change for apps with their own disposables; the tutorial makes no claim
+about it. Proposal: the app's own provider is released in `dispose()` as well.
 
-### 11. Code-behind: Markup-Member müssen `protected` sein
+### 11. Code-behind: markup members must be `protected`
 
-Weil der generierte Markup-Klasse *erbt*, ist ein `private` Member der Code-behind-Klasse im
-Markup TS2341. Logisch, aber für Blazor-Entwickler (partial class teilt `private`) neu — jetzt in
-`docs/code-behind.md` und in der Lektion „Code-behind“.
+Because the generated markup class *inherits*, a `private` member of the code-behind class is
+TS2341 in markup. Logical, but new for Blazor developers (a partial class shares `private`) — now in
+`docs/code-behind.md` and in the lesson "Code-behind".
 
-# Business-SPA-Port: Svelte 4 → Tsazor
+# Business SPA port: Svelte 4 → Tsazor
 
-Port einer proprietären Business-SPA (~4k Zeilen, Svelte 4 + TS, ~38 Komponenten, Hash-Router,
-Svelte-Stores, eigene i18n, Bestellformular mit Validierung), die als iframe in ein Portal
-eingebettet ist (Token per Query-String oder `postMessage`). Der Code der App liegt außerhalb
-dieses Repos; hier stehen nur generische Befunde. Verifikation: Original und Port gegen dasselbe
-Mock-Backend, Playwright (Edge) über 11 Flows / 21 Schritte mit Screenshot-Vergleich —
-19 Schritte pixelgleich, Requests und Bestell-Bodies identisch (Rest: siehe U).
+Port of a proprietary business SPA (~4k lines, Svelte 4 + TS, ~38 components, hash router,
+Svelte stores, custom i18n, order form with validation) that is embedded as an iframe in a portal
+(token via query string or `postMessage`). The app's code lives outside
+this repo; only generic findings are recorded here. Verification: original and port against the same
+mock backend, Playwright (Edge) over 11 flows / 21 steps with screenshot comparison —
+19 steps pixel-identical, requests and order bodies identical (rest: see U).
 
-## Q. Framework-Lücken (behoben, mit Tests)
+## Q. Framework gaps (fixed, with tests)
 
-### 1. Kein Hash-Routing — **hinzugefügt (Tsazor-Erweiterung)**
+### 1. No hash routing — **added (Tsazor extension)**
 
-Die App wird auf Hosting ohne `index.html`-Fallback betrieben und muss ihre URLs
-(`…?token=…#/route/1`) behalten. Neu: `createTsazorApp({ routing: { mode: "hash" } })` bzw.
-`new NavigationManager({ mode: "hash" })`. Der NavigationManager arbeitet mit einer *logischen*
-URI (Fragment-Route unter `baseUri`); Router, `@page`/Constraints, NavLink-Matching und
-SupplyParameterFromQuery bleiben unverändert, `location.search` wird nie geschrieben. NavLink
-rendert `#/…`-Hrefs (`toLinkHref`), `<a href="#/…">` wird abgefangen, popstate und ein nacktes
-`hashchange` navigieren genau einmal, `forceLoad` lädt explizit neu.
-Tests: `packages/conformance/test/runtime/hash-routing.test.ts`; Doku: language-reference
-„Hash routing“, getting-started „Hosting“.
+The app is run on hosting without an `index.html` fallback and must keep its URLs
+(`…?token=…#/route/1`). New: `createTsazorApp({ routing: { mode: "hash" } })` or
+`new NavigationManager({ mode: "hash" })`. The NavigationManager works with a *logical*
+URI (fragment route under `baseUri`); router, `@page`/constraints, NavLink matching and
+SupplyParameterFromQuery stay unchanged, `location.search` is never written. NavLink
+renders `#/…` hrefs (`toLinkHref`), `<a href="#/…">` is intercepted, popstate and a bare
+`hashchange` navigate exactly once, `forceLoad` reloads explicitly.
+Tests: `packages/conformance/test/runtime/hash-routing.test.ts`; docs: language-reference
+"Hash routing", getting-started "Hosting".
 
-### 2. `tsazor check` ohne Pfad prüfte nichts — **behoben**
+### 2. `tsazor check` without a path checked nothing — **fixed**
 
-`[project-root]` ist laut Usage optional, ohne Argument kam aber Exit 0 ohne Prüfung. Damit
-waren die `"build": "tsazor check && vite build"`-Gates der Apps (blazing-pizza, demo, gallery,
-sleipnir-ticker) wirkungslos. Root ist jetzt standardmäßig `.`; `--help` → Usage/Exit 0.
+`[project-root]` is optional according to the usage, but without an argument it exited 0 without checking. As a result
+the apps' `"build": "tsazor check && vite build"` gates (blazing-pizza, demo, gallery,
+sleipnir-ticker) had no effect. The root now defaults to `.`; `--help` → usage/exit 0.
 Test: `packages/cli/test/check-cli.test.ts`.
 
-### 3. `tsazor check` ignorierte Code-behind und importierte `.ts` — **behoben**
+### 3. `tsazor check` ignored code-behind and imported `.ts` — **fixed**
 
-Nur die Shadows wurden diagnostiziert; ein Typfehler in `X.tsazor.ts` (hier: ein
-Blazor-typisches `override onInitializedAsync`, siehe R.5) ging durchs Gate. Ein dritter Pass
-meldet jetzt die echten `.ts`-Quellen des Shadow-Graphen unter dem Root. Im selben Programm
-löst ein relativer `.tsazor`-Import aus einer `.ts`-Datei auf den Shadow auf
-(`import type Child from "./Child.tsazor"` typisiert ein `@ref`-Feld im Code-behind — vorher
-TS2749, weil nur die ambiente `ComponentType`-Deklaration sichtbar war), und die `.d.ts`-Dateien
-der tsconfig sind Programm-Roots (sonst TS2307 für virtuelle Module). Das breitere Gate fand
-einen echten Fehler in `apps/blazing-pizza/src/models.ts` (re-exportierte Typen ohne Import).
+Only the shadows were diagnosed; a type error in `X.tsazor.ts` (here: a
+Blazor-typical `override onInitializedAsync`, see R.5) passed the gate. A third pass
+now reports the real `.ts` sources of the shadow graph under the root. In the same program,
+a relative `.tsazor` import from a `.ts` file resolves to the shadow
+(`import type Child from "./Child.tsazor"` types an `@ref` field in code-behind — previously
+TS2749, because only the ambient `ComponentType` declaration was visible), and the tsconfig's `.d.ts` files
+are program roots (otherwise TS2307 for virtual modules). The broader gate found
+a real error in `apps/blazing-pizza/src/models.ts` (re-exported types without an import).
 Test: `packages/lsp/test/check-sources.test.ts`.
 
-### 4. `EditForm` mit `EditContext`-Parameter baute bei jedem Re-Render neu — **behoben**
+### 4. `EditForm` with an `EditContext` parameter rebuilt on every re-render — **fixed**
 
-`onParametersSet` verglich das (fehlende) `Model` mit dem Model des Kontexts und legte bei jedem
-Parent-Render `new EditContext(undefined)` an → Region-Neuaufbau, Inputs und
-`ValidationMessage`s hingen an einem leeren Kontext (Meldungen erschienen eine Interaktion zu
-spät und veraltet). Blazor vergleicht `Model` nur, wenn eines übergeben wird.
+`onParametersSet` compared the (missing) `Model` with the context's model and created
+`new EditContext(undefined)` on every parent render → region rebuild, inputs and
+`ValidationMessage`s were attached to an empty context (messages appeared one interaction too
+late and stale). Blazor compares `Model` only when one is passed.
 
-### 5. `InputBase`: `NotifyFieldChanged` vor `ValueChanged` — **behoben**
+### 5. `InputBase`: `NotifyFieldChanged` before `ValueChanged` — **fixed**
 
-Validatoren, die das Model lesen (feldübergreifende Regeln), sahen den alten Wert. Blazors
-Reihenfolge: erst `ValueChanged` (der synchrone Teil des `@bind`-Setters schreibt das Feld), dann
-`NotifyFieldChanged`. Tests zu 4 und 5: `packages/conformance/test/runtime/forms.test.ts`.
+Validators that read the model (cross-field rules) saw the old value. Blazor's
+order: first `ValueChanged` (the synchronous part of the `@bind` setter writes the field), then
+`NotifyFieldChanged`. Tests for 4 and 5: `packages/conformance/test/runtime/forms.test.ts`.
 
-## R. Reibungen und Lücken (dokumentiert, nicht behoben)
+## R. Friction and gaps (documented, not fixed)
 
-### 1. Keine Lokalisierung (E8)
+### 1. No localization (E8)
 
-Die App bringt i18n als Store mit; im Port ein DI-Service mit `observe()`. Anforderungen aus der
-realen Nutzung:
-- Locale als app-weiter, beobachtbarer Zustand. Heute muss **jede** übersetzende Komponente
-  `this.observe(loc)` aufrufen (Svelte: `$t` abonniert automatisch) — eine Framework-API sollte
-  Konsumenten ohne Boilerplate neu rendern (z. B. `@inject IStringLocalizer L` mit automatischer
-  Abo-Verwaltung, oder ein Baum-Re-Render beim Kulturwechsel).
-- Quellen mit Vorrang: explizit (URL-Parameter, Host-`postMessage`) > Benutzerprofil
-  (Token-Antwort) > Default; „explizit gesetzt sperrt spätere Profilwerte“.
-- Tabellen asynchron von einer URL laden, gebündelter Fallback; definierte Policy für fehlende
-  Keys/Locales (die App wirft — sinnvoller: Fallback-Kultur + Dev-Warnung).
-- Platzhalter (`{{name}}`), typisierte Keys (aus der JSON-Tabelle, geprüft von `tsazor check`).
-- Lokalisierte **Validierungsmeldungen**, siehe R.2.
-- Snapshot-Falle: Texte, die in Datenmodelle kopiert werden (Navigationseinträge), wechseln die
-  Sprache nicht mit — die API sollte Keys statt Strings speicherbar machen.
-- Nicht genutzt, aber naheliegend: Zahlen/Datum per Kultur (heute invariant, A5/B7).
+The app brings i18n as a store; in the port it is a DI service with `observe()`. Requirements from
+real-world use:
+- Locale as app-wide, observable state. Today **every** translating component has to call
+  `this.observe(loc)` (Svelte: `$t` subscribes automatically) — a framework API should
+  re-render consumers without boilerplate (e.g. `@inject IStringLocalizer L` with automatic
+  subscription management, or a tree re-render on culture change).
+- Sources with precedence: explicit (URL parameter, host `postMessage`) > user profile
+  (token response) > default; "explicitly set locks later profile values".
+- Load tables asynchronously from a URL, bundled fallback; a defined policy for missing
+  keys/locales (the app throws — more sensible: fallback culture + dev warning).
+- Placeholders (`{{name}}`), typed keys (from the JSON table, checked by `tsazor check`).
+- Localized **validation messages**, see R.2.
+- Snapshot trap: texts copied into data models (navigation entries) do not switch
+  language — the API should make keys storable instead of strings.
+- Not used, but obvious: numbers/dates per culture (currently invariant, A5/B7).
 
-### 2. Validierungs-Decorators sind nicht lokalisierbar
+### 2. Validation decorators are not localizable
 
-`@Required()` & Co. tragen feste .NET-Texte; es gibt kein `ErrorMessage`/Resource-Key/
-Message-Factory. Der Port deklariert die Regeln per Decorator (`@MinLength(1)`,
-`@RegularExpression(…)`) und bildet `rule.kind` über den `validators`-Adapter
-(`validationRulesOf`) auf Übersetzungs-Keys ab. Vorschlag: Option
-`{ message: string | ((context) => string) }` oder ein `ValidationMessageProvider`-Service.
+`@Required()` & co. carry fixed .NET texts; there is no `ErrorMessage`/resource key/
+message factory. The port declares the rules via decorators (`@MinLength(1)`,
+`@RegularExpression(…)`) and maps `rule.kind` to translation keys via the `validators` adapter
+(`validationRulesOf`). Proposal: an option
+`{ message: string | ((context) => string) }` or a `ValidationMessageProvider` service.
 
-### 3. Formular-UX der Vorlage passt nicht 1:1 auf EditForm
+### 3. The template's form UX does not map 1:1 onto EditForm
 
-Die Vorlage zeigt Feldmeldungen erst nach dem ersten Submit und aktualisiert sie dann pro
-Tastendruck; Blazor validiert bei `onchange` und zeigt sofort. Nachbau: `ValidationMessage`
-hinter einem Flag + eine kleine `InputBase`-Unterklasse mit `oninput` (InputText hat — wie in
-Blazor — keine Event-Option; ein `@bind-Value:event`-Äquivalent wäre nützlich).
-`ValidationMessage` rendert `<span>` statt des Original-`<div>` → `::deep .validation-message`.
+The template shows field messages only after the first submit and then updates them on every
+keystroke; Blazor validates on `onchange` and shows immediately. Replica: `ValidationMessage`
+behind a flag + a small `InputBase` subclass with `oninput` (InputText has — as in
+Blazor — no event option; a `@bind-Value:event` equivalent would be useful).
+`ValidationMessage` renders `<span>` instead of the original `<div>` → `::deep .validation-message`.
 
-### 4. `<select @bind>` mit nicht passendem Wert
+### 4. `<select @bind>` with a non-matching value
 
-Blazor/Tsazor lassen dann die erste Option ausgewählt (Browser-Default), Svelte zeigt ein leeres
-Select. Tsazor bleibt bei Blazor; der Port setzt `selectedIndex = -1` per `@ref`. Für den
-Migrationsguide (E7b).
+Blazor/Tsazor then leave the first option selected (browser default), Svelte shows an empty
+select. Tsazor sticks with Blazor; the port sets `selectedIndex = -1` via `@ref`. For the
+migration guide (E7b).
 
-### 5. Kein `onInitializedAsync`
+### 5. No `onInitializedAsync`
 
-Tsazor hat nur `onInitialized(): void | Promise<void>`. Ein Blazor-Entwickler schreibt
-`onInitializedAsync` — mit `override` meldet TS4117 den Fehler (seit Q.3 auch im Gate), **ohne**
-`override` wird die Methode still nie aufgerufen (die Seite hing im Ladezustand). Vorschlag:
-Warnung mit Quick-Fix, wenn eine Komponente `onInitializedAsync`/`onParametersSetAsync`/
-`onAfterRenderAsync` (oder PascalCase-Formen) deklariert; oder `noImplicitOverride` empfehlen.
+Tsazor only has `onInitialized(): void | Promise<void>`. A Blazor developer writes
+`onInitializedAsync` — with `override`, TS4117 reports the error (since Q.3 also in the gate); **without**
+`override` the method is silently never called (the page hung in the loading state). Proposal:
+a warning with a quick fix when a component declares `onInitializedAsync`/`onParametersSetAsync`/
+`onAfterRenderAsync` (or PascalCase forms); or recommend `noImplicitOverride`.
 
-### 6. Doppelte Anführungszeichen in Handler-Attributen
+### 6. Double quotes in handler attributes
 
-`@onkeydown="(e) => { if (e.key === "Enter") … }"` erzeugt eine Kaskade aus TZS009/TZS024/TS1109
-(Razor beendet den Attributwert ebenfalls am inneren `"`). Die Meldung könnte konkret auf
-einfache Anführungszeichen oder `@(...)` hinweisen.
+`@onkeydown="(e) => { if (e.key === "Enter") … }"` produces a cascade of TZS009/TZS024/TS1109
+(Razor also ends the attribute value at the inner `"`). The message could point specifically to
+single quotes or `@(...)`.
 
-### 7. `undefined` in gemischten Attributen und Defaults
+### 7. `undefined` in mixed attributes and defaults
 
-Svelte: ein explizit übergebenes `undefined` überschreibt den Prop-Default, und
-`style="--x:{undefined}"` rendert `undefined`; Tsazor rendert in gemischten Attributen `""`.
-Beides ergibt eine ungültige Custom Property — pixelgleich. Für den Guide: kein
-„undefined → Default“-Mapping einbauen (das hatte die Parität zunächst gebrochen).
+Svelte: an explicitly passed `undefined` overrides the prop default, and
+`style="--x:{undefined}"` renders `undefined`; Tsazor renders `""` in mixed attributes.
+Both result in an invalid custom property — pixel-identical. For the guide: do not build in an
+"undefined → default" mapping (that had initially broken parity).
 
-### 8. Narrowing in Deferred Content (H.3 bestätigt)
+### 8. Narrowing in deferred content (H.3 confirmed)
 
-In fast jeder Komponente mit Slots nötig: `@if (x) { const current = x; <Slot>@current…</Slot> }`
-bzw. Getter — auch für `<HeadContent>` und den `ChildContent` einfacher Wrapper (Tile, Button).
+Needed in almost every component with slots: `@if (x) { const current = x; <Slot>@current…</Slot> }`
+or a getter — also for `<HeadContent>` and the `ChildContent` of simple wrappers (Tile, Button).
 
-### 9. Svelte-Idiome ohne direkte Entsprechung
+### 9. Svelte idioms without a direct equivalent
 
-- CSS-Custom-Property-Props (`<Comp --pad="10px">`, Svelte wickelt in `display: contents`) →
-  Parameter, der die Property setzt.
-- `:global(...)` in Komponenten-CSS → globale Datei (Scoped CSS kennt nur `::deep`, wie Blazor).
-- `svelte:self` → der eigene Tag funktioniert; ein `@import` der eigenen Datei gibt TS2440 statt
-  eines Hinweises „Selbstreferenz braucht keinen Import“.
-- `$querystring`-Reaktivität → `@SupplyParameterFromQuery()` + `onParametersSet` (sauber).
+- CSS custom property props (`<Comp --pad="10px">`, Svelte wraps in `display: contents`) →
+  a parameter that sets the property.
+- `:global(...)` in component CSS → a global file (scoped CSS only knows `::deep`, like Blazor).
+- `svelte:self` → the component's own tag works; an `@import` of its own file gives TS2440 instead of
+  a hint "a self-reference needs no import".
+- `$querystring` reactivity → `@SupplyParameterFromQuery()` + `onParametersSet` (clean).
 
-### 10. npm + `file:`-Tarballs
+### 10. npm + `file:` tarballs
 
-npm cacht `file:`-Tarballs nach der Integrity im Lockfile; ein neu gepackter Tarball gleichen
-Namens wird **nicht** installiert. Für Konsumenten vor einer Registry-Veröffentlichung:
-versionierte Tarball-Namen oder Integrity entfernen.
+npm caches `file:` tarballs by the integrity in the lockfile; a newly packed tarball with the same
+name is **not** installed. For consumers before a registry release:
+versioned tarball names or remove the integrity.
 
-## S. Was reibungslos funktionierte
+## S. What worked smoothly
 
-Scoped CSS 1:1 (Svelte-Scoping → `X.tsazor.css`, pixelgleich), Named Slots als RenderFragments,
-`@Bindable` über zwei Ebenen (Scrollwert Kind → Enkel → Seite), `observe()` für Services,
-`@ref` auf Komponenten mit Methodenaufruf, `HeadContent`, `MarkupString`, DI mit
-Factory-Registrierungen, Code-behind für die größeren Komponenten, Back/Forward im Hash-Modus.
+Scoped CSS 1:1 (Svelte scoping → `X.tsazor.css`, pixel-identical), named slots as RenderFragments,
+`@Bindable` across two levels (scroll value child → grandchild → page), `observe()` for services,
+`@ref` on components with a method call, `HeadContent`, `MarkupString`, DI with
+factory registrations, code-behind for the larger components, back/forward in hash mode.
 
-## T. Aufwand (für E7/E7b)
+## T. Effort (for E7/E7b)
 
-- **Mechanisch** (geschätzt ~60 %): Markup (`{#if}`→`@if`, `{#each}`→`@foreach`,
-  `on:click`→`@onclick`, `{x}`→`@x`), Props → `@Parameter()`, `<style>` → `.tsazor.css`,
-  Stores → Service-Klassen mit `notify()`, `$store` → Service-Member + `observe`.
-- **Manuell** (~40 %): `$:`-Blöcke (Abhängigkeiten verstehen → Getter oder `onParametersSet`),
-  `onMount`-Mutationen, `bind:`-Ketten, Slot-Inhalte mit Narrowing, Formular-Validierung,
-  Timing-Eigenheiten der Vorlage (Messen beim `bind:this`, Reihenfolge Kind-/Eltern-`onMount`).
-- Ein Svelte→Tsazor-Markup-Codemod würde den mechanischen Teil abdecken.
+- **Mechanical** (estimated ~60 %): markup (`{#if}`→`@if`, `{#each}`→`@foreach`,
+  `on:click`→`@onclick`, `{x}`→`@x`), props → `@Parameter()`, `<style>` → `.tsazor.css`,
+  stores → service classes with `notify()`, `$store` → service member + `observe`.
+- **Manual** (~40 %): `$:` blocks (understand dependencies → getter or `onParametersSet`),
+  `onMount` mutations, `bind:` chains, slot contents with narrowing, form validation,
+  timing quirks of the template (measuring at `bind:this`, order of child/parent `onMount`).
+- A Svelte→Tsazor markup codemod would cover the mechanical part.
 
-## U. Verbleibende Unterschiede
+## U. Remaining differences
 
-- Detailseite: der scrollbare Bereich bekommt im Port das 10px-Rechts-Padding (Overflow nach dem
-  ersten Render gemessen); die Vorlage misst beim `bind:this`, bevor der Inhalt steht, und
-  bekommt es nie (~1,4 % Pixel). Bewusst nicht nachgebaut.
-- Bundle: ~58 kB gzip (Port) vs. ~43 kB gzip (Svelte-Original).
+- Detail page: in the port the scrollable area gets the 10px right padding (overflow measured after the
+  first render); the template measures at `bind:this`, before the content is there, and
+  never gets it (~1.4 % pixels). Deliberately not replicated.
+- Bundle: ~58 kB gzip (port) vs. ~43 kB gzip (Svelte original).

@@ -88,6 +88,11 @@ Track T (Tsazor) starts after the preview and works without U1/U2 at first.
 - Wire parameter documentation per parameter (today it falls back to the method,
   `DISCOVERY_REFERENCE.md` §6).
 - Event metadata: `resumable`.
+- **Enum wire form** (found in U3, PR #42): discovery does not say when an enum is serialized as
+  a string (`[JsonConverter(typeof(JsonStringEnumConverter))]`, per type or globally). In
+  `samples/01-notification-chat` the wire carries `"Inbox"` while discovery lists numeric members,
+  so the generated `0 | 1 | 2` type does not match. Add an additive per-enum field (e.g.
+  `"wire": "string" | "number"`) and let the TS emitter emit string literals for string enums.
 - **Deliberately not:** authorization in discovery (attack-surface oracle, roadmap §9).
 - Update `docs/discovery-schema.md` and `DISCOVERY_REFERENCE.md`; tests in
   `SleipnirDiscoveryServiceTests`/`SleipnirDiscoveryTypeRefTests`.
