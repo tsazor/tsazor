@@ -4,9 +4,9 @@ import { ServiceCollection, ServiceProvider, type Token } from "./di/service-col
 import type { ComponentBase } from "./components/component-base.js";
 import type { ComponentDefinition } from "./components/component-definition.js";
 import { RouteManifest, type RouteManifestEntry } from "./routing/route-data.js";
-import { HeadOutlet } from "./head/head-outlet.js";
-import { CultureService } from "./localization/culture-service.js";
-import { StringLocalizer, type StringTable, type StringTableSource } from "./localization/string-localizer.js";
+import { whenHeadOutlet } from "./head/head-support.js";
+import type { StringTable, StringTableSource } from "./localization/string-localizer.js";
+import { LocalizationSettings } from "./di/service-defaults.js";
 import { useCssomStyles } from "./renderer/dom-attributes.js";
 
 /**
@@ -94,16 +94,16 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   if (options.routes) {
     collection.registerValue(RouteManifest as unknown as Token<RouteManifest>, new RouteManifest(options.routes));
   }
-  // E8: CultureService and StringLocalizer always exist (an unconfigured app
-  // is invariant with an empty localizer whose `get` returns the key); the
-  // app's `services` callback runs after and may replace either — a typed
-  // localizer resolves the shared CultureService through the provider.
-  const cultureService = new CultureService(options.localization?.defaultCulture ?? "");
-  collection.registerValue(CultureService as unknown as Token<CultureService>, cultureService);
-  collection.register(
-    StringLocalizer as unknown as Token<StringLocalizer>,
-    () => new StringLocalizer({ culture: cultureService, tables: options.localization?.tables as Record<string, StringTableSource> | undefined, defaultCulture: options.localization?.defaultCulture }),
-  );
+  // E8: CultureService and StringLocalizer always exist (an unconfigured app is invariant with an
+  // empty localizer whose `get` returns the key). Their modules register them as service defaults
+  // (di/service-defaults.ts), so an app that never uses them does not bundle them; the settings
+  // reach them here. The app's `services` callback may still replace either.
+  if (options.localization) {
+    collection.registerValue(
+      LocalizationSettings as unknown as Token<LocalizationSettings>,
+      new LocalizationSettings(options.localization.defaultCulture ?? "", options.localization.tables as Record<string, StringTableSource> | undefined),
+    );
+  }
   options.services?.(collection);
   const services = collection.build();
 
@@ -114,9 +114,13 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
 
   const renderer = new Renderer(services);
   // Blazor's WebAssembly host renders <HeadOutlet> as a second root component
-  // in the document's <head>: HeadContent/PageTitle content lands there. The
-  // head root is tracked and disposed with the app.
-  const headState = renderer.renderInContainer(HeadOutlet, document.head);
+  // in the document's <head>: HeadContent/PageTitle content lands there. It is
+  // mounted once PageTitle or HeadContent is part of the app (head-support.ts),
+  // tracked and disposed with the app.
+  let headState: ReturnType<Renderer["renderInContainer"]> | undefined;
+  const stopWaitingForHead = whenHeadOutlet((outlet) => {
+    headState = renderer.renderInContainer(outlet as Parameters<Renderer["renderInContainer"]>[0], document.head);
+  });
   const state = renderer.renderInContainer(options.root, container);
 
   // HMR bridge: compiled .tsazor modules call this on import.meta.hot.accept.
@@ -144,8 +148,11 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
       disposed = true;
       // The head root first (it has no content providers of its own; the main
       // tree's PageTitle/HeadContent unregister with their own components).
-      renderer.disposeComponent(headState);
-      headState.range.remove();
+      stopWaitingForHead();
+      if (headState) {
+        renderer.disposeComponent(headState);
+        headState.range.remove();
+      }
       renderer.disposeComponent(state);
       state.range.remove();
       ownedNavigation?.dispose();

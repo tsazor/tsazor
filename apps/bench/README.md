@@ -64,40 +64,35 @@ node run.mjs --runs=10 --skip-build
 ## Results
 
 <!-- RESULTS-START -->
-Median of 5 cold loads / 5 op cycles each, Edge (headless) via `measure/run.mjs`:
+As of 2026-10-05. Median of 5 cold loads / 5 op cycles each, Edge (headless) via `measure/run.mjs`.
+Loads whose request the browser held back (`requestStart − fetchStart` > 100 ms, a cold-browser
+effect on this machine) are retried; the measurement starts after a warm-up.
 
 | App | App+FW JS (gz KB) | .NET runtime (gz KB) | CSS (gz KB) | Ready (ms) | create 10k (ms) | append 1k (ms) | upd every 10th (ms) | swap (ms) | select (ms) | remove (ms) | JS heap (MB) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Tsazor | **14.1** | – | 0.8 | **23.5** | **450** | 178 | 156 | 220 | 85 | 406 | **16.5** |
-| Svelte 5 | 15.1 | – | 0.8 | 23.7 | 570 | **77** | 130 | 180 | **10** | **208** | 23.8 |
-| Vue 3 | 26.3 | – | 0.8 | 24.2 | 425 | 124 | 99 | 198 | 37 | 222 | 18.8 |
-| React 19 | 69.2 | – | 0.8 | 40.1 | 551 | 121 | **92** | **180** | 26 | 218 | 25.2 |
-| Blazor WASM | 3,314.9 | 6,465.6 | 1.0 | 436.6 | 559 | 185 | 113 | 215 | 103 | 271 | 19.9 |
+| Tsazor | 25.4 | – | 0.8 | 80 | **280** | 82 | 72 | **151** | 20 | 313 | **15.4** |
+| Svelte 5 | **15.1** | – | 0.8 | 115 | 353 | **51** | 95 | 155 | **11** | 181 | 23.8 |
+| Vue 3 | 26.3 | – | 0.8 | **72** | 292 | 81 | 77 | 167 | 29 | **176** | 18.8 |
+| React 19 | 69.2 | – | 0.8 | 103 | 366 | 87 | **71** | 156 | 19 | 178 | 25.2 |
+| Blazor WASM | 5,427 | 10,660 | 1.0 | 339 | 311 | 101 | 63 | 153 | 54 | 196 | 19.8 |
 
 Reading notes:
 
-- **Runtime cost**: Tsazor ships in Svelte territory (14 KB gz, ~24 ms to
-  interactive), ~5× smaller than Vue, ~2× faster to load than React, ~235×
-  smaller than Blazor WASM's own code (Blazor additionally ships the 6.4 MB
-  gz .NET runtime).
-- **DOM ops** are in one league for the four JS frameworks — every median is
-  under half a second. The wins are situational: Vue the 10k mount, Svelte
-  append/select/remove, React the surgical updates; Tsazor's diff-based path
-  pays for the volumetric ones (create/remove build and diff the full 10k
-  frame tree, ~400–450 ms).
-- **Load**: FCP is only sporadically reported in this headless setup (60 ms
-  for Blazor in the current run, absent everywhere else); `ready` is the
-  app's own "first view rendered" marker, ~23–24 ms for Tsazor/Vue/Svelte,
-  40 ms React, 437 ms WASM start for Blazor.
-- **Heap** (retained live set after one full rows cycle, all apps measured with
-  forced GC): at 11k rows Tsazor's flat frame trees retain the least JS memory of
-  the four JS frameworks (16.5 MB vs 18.8–25 MB); Blazor's number barely moves
-  because row state lives in the .NET GC heap inside WASM, which this metric
-  does not see (a fair reading there must charge the WASM memory too). Caveat:
-  these numbers are Chromium-specific (`performance.memory` + forced GC in
-  headless Edge).
-- All 7 TodoMVC behavioral checks (add/edit/toggle/filters/toggle-all/clear-
-  completed/persistence) pass in all 5 apps; the harness asserts them on every run.
+- **Size**: Tsazor ships 25.4 KB gz for this app (framework + app), on a par with Vue and 2.7×
+  smaller than React; Svelte compiles to the least. Features an app does not use stay out of the
+  bundle (document head and sections, localization, error boundaries — R5, 2026-10-05:
+  29.4 → 25.4 KB).
+- **Load**: `ready` (the app's own "first view rendered" marker) is 70–115 ms for all four JS
+  frameworks in this run and varies by ±30 ms between runs on this machine — no ranking among
+  them; Blazor WASM needs ~340 ms to start the .NET runtime.
+- **DOM ops**: Tsazor is fastest at creating 10k rows and swapping, on a par at append and
+  update; it trails at **select** (20 vs 11 ms for Svelte) and clearly at **remove** (313 vs
+  ~180 ms): its component-level diff walks the whole frame tree where Svelte updates the one
+  binding. These are the targets of F1b (update hints, hoisting).
+- **Heap** (retained live set after one full rows cycle, forced GC): Tsazor's flat frame trees
+  retain the least JS memory (15.4 MB vs 18.8–25.2 MB). Blazor's row state lives in the .NET heap
+  inside WASM, which this metric does not see. Chromium-specific (`performance.memory` + forced GC).
+- All 7 TodoMVC behavioral checks pass in all 5 apps; the harness asserts them on every run.
 
 <!-- RESULTS-END -->
 

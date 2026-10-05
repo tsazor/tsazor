@@ -8,6 +8,9 @@
  * `registerValue` constants stay their owner's (an app-owned NavigationManager
  * would otherwise be disposed twice).
  */
+import { serviceDefaultFor } from "./service-defaults.js";
+
+/** A service key: the service's class (constructor), compared by identity — `@inject Cart cart` resolves `Cart`. */
 export type Token<T> = abstract new (...args: never[]) => T;
 
 /** Blazor's ServiceLifetime: AddSingleton / AddScoped / AddTransient. */
@@ -112,7 +115,16 @@ export class ServiceProvider {
       throw new Error(`Cannot access a disposed object. Service provider: ${describeToken(token)}`);
     }
     const tokenAny = token as unknown as Token<never>;
-    const registration = this.registrations.get(tokenAny);
+    let registration = this.registrations.get(tokenAny);
+    if (!registration) {
+      // A service its defining module provides by default (service-defaults.ts):
+      // registered on first use, a singleton of the root.
+      const fallback = serviceDefaultFor(token as Token<unknown>);
+      if (fallback) {
+        registration = { factory: () => fallback(this.root ?? this), lifetime: "singleton" };
+        this.registrations.set(tokenAny, registration);
+      }
+    }
     if (!registration) {
       if (required) {
         throw new Error(`Service not registered: ${describeToken(token)}`);

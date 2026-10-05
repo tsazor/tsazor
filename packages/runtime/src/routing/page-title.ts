@@ -3,7 +3,12 @@ import { defineComponent } from "../components/component-definition.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { SectionContent } from "../sections/section-content.js";
-import { titleSectionId } from "../head/head-content.js";
+import { titleSectionId } from "../head/head-ids.js";
+import { HeadOutlet } from "../head/head-outlet.js";
+import { provideHeadOutlet } from "../head/head-support.js";
+
+// Using PageTitle brings the document head into the app (head-support.ts).
+provideHeadOutlet(HeadOutlet);
 
 /**
  * Blazor's PageTitle: renders an HTML <title> into the title section of the

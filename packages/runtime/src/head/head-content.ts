@@ -4,10 +4,14 @@ import { Parameter } from "../components/parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { SectionContent } from "../sections/section-content.js";
 
-/** Blazor's HeadOutlet.HeadSectionId — the head-metadata section. */
-export const headSectionId: unique symbol = Symbol("HeadOutlet.HeadSectionId");
-/** Blazor's HeadOutlet.TitleSectionId — the document-title section. */
-export const titleSectionId: unique symbol = Symbol("HeadOutlet.TitleSectionId");
+import { headSectionId } from "./head-ids.js";
+import { HeadOutlet } from "./head-outlet.js";
+import { provideHeadOutlet } from "./head-support.js";
+
+export { headSectionId, titleSectionId } from "./head-ids.js";
+
+// Using HeadContent brings the document head into the app (head-support.ts).
+provideHeadOutlet(HeadOutlet);
 
 /**
  * Blazor's HeadContent: provides the content it wraps to the head-metadata

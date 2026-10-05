@@ -25,6 +25,7 @@
 import { DEV } from "../components/observe.js";
 import { markAutoRender } from "../di/service-provider.js";
 import { CultureService } from "./culture-service.js";
+import { LocalizationSettings, registerServiceDefault } from "../di/service-defaults.js";
 
 /** A flat key → message table. */
 export type StringTable = Record<string, string>;
@@ -252,3 +253,14 @@ export function formatMessage(template: string, params?: Record<string, unknown>
   }
   return result;
 }
+
+// Every app has a StringLocalizer over the shared CultureService (empty tables: `get` returns the
+// key) — registered on first use; `createTsazorApp({ localization })` provides its tables.
+registerServiceDefault(StringLocalizer, (services) => {
+  const settings = services.tryGet(LocalizationSettings);
+  return new StringLocalizer({
+    culture: services.get(CultureService),
+    tables: settings?.tables as Record<string, StringTableSource> | undefined,
+    defaultCulture: settings?.defaultCulture || undefined,
+  });
+});

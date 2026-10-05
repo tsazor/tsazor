@@ -3,7 +3,7 @@ import { defineComponent } from "../components/component-definition.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { SectionContent } from "../sections/section-content.js";
 import { SectionOutlet } from "../sections/section-outlet.js";
-import { headSectionId, titleSectionId } from "./head-content.js";
+import { headSectionId, titleSectionId } from "./head-ids.js";
 
 /**
  * Blazor's HeadOutlet: renders the title section and the head-metadata

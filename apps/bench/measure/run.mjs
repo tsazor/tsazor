@@ -255,6 +255,27 @@ async function measureForcedHeap(page) {
   }
 }
 
+/**
+ * A fresh browser spends its first seconds before navigations can even start their request
+ * (~0.9 s of `requestStart - fetchStart` per load, measured with a static page) — it hit whichever
+ * app ran first. Navigate until the request starts promptly (or 30 tries), then measure.
+ */
+async function warmUp(browser, url) {
+  for (let i = 0; i < 30; i++) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: "domcontentloaded" }).catch(() => {});
+    const stall = await page
+      .evaluate(() => {
+        const nav = performance.getEntriesByType("navigation")[0];
+        return nav ? nav.requestStart - nav.fetchStart : 0;
+      })
+      .catch(() => 0);
+    await context.close();
+    if (stall < 100) return;
+  }
+}
+
 async function measureLoad(browser, targetUrl, timeoutMs) {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -264,7 +285,8 @@ async function measureLoad(browser, targetUrl, timeoutMs) {
     .catch(() => {});
   const metrics = await page.evaluate(() => {
     const fcpEntry = performance.getEntriesByType("paint").find((p) => p.name === "first-contentful-paint");
-    return { fcp: fcpEntry ? fcpEntry.startTime : null, ready: window.__benchReadyAt ?? null };
+    const nav = performance.getEntriesByType("navigation")[0];
+    return { fcp: fcpEntry ? fcpEntry.startTime : null, ready: window.__benchReadyAt ?? null, stall: nav ? nav.requestStart - nav.fetchStart : 0 };
   });
   await context.close();
   return metrics;
@@ -283,7 +305,12 @@ async function benchmarkApp(browser, app, runs) {
   // -------- load (fresh context per run = cold) --------
   const loads = [];
   for (let i = 0; i < runs; i++) {
-    const metrics = await measureLoad(browser, `${app.url}${app.todoRoute}`, app.kind === "dotnet" ? 60000 : 20000);
+    // A load whose request was held back by the browser (stall, see warmUp) is not the app's: retry it.
+    let metrics = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      metrics = await measureLoad(browser, `${app.url}${app.todoRoute}`, app.kind === "dotnet" ? 60000 : 20000);
+      if (!metrics || metrics.stall < 100) break;
+    }
     if (metrics && metrics.ready !== null) loads.push(metrics);
   }
   if (loads.length > 0) {
@@ -445,6 +472,7 @@ for (const app of APPS) {
     browser = await chromium
       .launch({ channel: "msedge", headless: true, args: ["--js-flags=--expose-gc"] })
       .catch(() => chromium.launch({ headless: true, args: ["--js-flags=--expose-gc"] }));
+    await warmUp(browser, app.url);
   }
   const result = await benchmarkApp(browser, app, runs).catch((err) => ({
     name: app.name,

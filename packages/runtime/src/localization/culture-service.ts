@@ -16,6 +16,7 @@
  */
 import { markAutoRender } from "../di/service-provider.js";
 import { CultureInfo } from "./culture-info.js";
+import { LocalizationSettings, registerServiceDefault } from "../di/service-defaults.js";
 
 /** What a culture change notification carries (Blazor: an event with no payload). */
 export interface CultureChangedEventArgs {
@@ -108,3 +109,7 @@ export class CultureService {
     }
   }
 }
+
+// Every app has a CultureService (invariant unless configured) — registered on first use, so an
+// app that never uses one does not bundle it.
+registerServiceDefault(CultureService, (services) => new CultureService(services.tryGet(LocalizationSettings)?.defaultCulture ?? ""));

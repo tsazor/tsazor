@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: features an app does not use stay out of its bundle — the document head
+  (`HeadOutlet` and the sections it needs) is mounted once `PageTitle` or `HeadContent` is part of the
+  app, `CultureService`/`StringLocalizer` are service defaults their own modules register (still
+  resolvable without registration; `createTsazorApp({ localization })` unchanged), and the renderer's
+  error-boundary check no longer imports the `ErrorBoundary` components. The bench app: 29.4 → 25.4 KB gz.
 - `@tsazor/runtime`: `Router` gets Blazor's `OnNavigateAsync` (`NavigationContext { path, signal }`) and
   `<Navigating>`. Lazy routes (E5): `LazyRouteEntry { template, load, authorize }` in the manifest
   (`RouteManifestEntry`), loaded once on the first navigation; `RouteTable.match`/`matchRoute` return

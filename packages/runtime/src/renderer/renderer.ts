@@ -4,7 +4,7 @@ import { attributeMap, computeDiff, type DiffOptions, type RenderTreeDiff } from
 import { ParameterView } from "../components/parameter-view.js";
 import { toComponentDefinition, type ComponentDefinition } from "../components/component-definition.js";
 import { completedLifecycle, isPromiseLike, type ComponentBase } from "../components/component-base.js";
-import { isIErrorBoundary } from "../components/error-boundary.js";
+import { isIErrorBoundary } from "../components/error-boundary-contract.js";
 import { SectionRegistry } from "../sections/section-registry.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
