@@ -3,7 +3,7 @@ import { NavigationManager, type RoutingMode } from "./navigation/navigation-man
 import { ServiceCollection, ServiceProvider, type Token } from "./di/service-collection.js";
 import type { ComponentBase } from "./components/component-base.js";
 import type { ComponentDefinition } from "./components/component-definition.js";
-import { RouteManifest, type RouteEntry } from "./routing/route-data.js";
+import { RouteManifest, type RouteManifestEntry } from "./routing/route-data.js";
 import { HeadOutlet } from "./head/head-outlet.js";
 import { CultureService } from "./localization/culture-service.js";
 import { StringLocalizer, type StringTable, type StringTableSource } from "./localization/string-localizer.js";
@@ -18,8 +18,8 @@ export interface TsazorAppOptions {
   root: ComponentDefinition | (abstract new () => ComponentBase);
   /** DI registrations (Blazor's ConfigureServices analogue). */
   services?: (services: ServiceCollection) => void;
-  /** Route manifest (from `virtual:tsazor-routes`); Router falls back to it. */
-  routes?: RouteEntry[];
+  /** Route manifest (from `virtual:tsazor-routes`, eager and lazy entries); Router falls back to it. */
+  routes?: RouteManifestEntry[];
   /** DOM selector for the app root (default: #app). */
   selector?: string;
   /** Shared NavigationManager; a fresh one is created when omitted. */

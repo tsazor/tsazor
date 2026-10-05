@@ -19,6 +19,46 @@ export interface RouteEntry {
   readonly authorize?: AuthorizationRequirements;
 }
 
+/** What a lazy route entry loads: the page and its layout. */
+export interface LoadedRoute {
+  /** The @page component class. */
+  readonly type: abstract new (...args: never[]) => unknown;
+  /** The page's @layout, loaded with it. */
+  readonly layout?: abstract new (...args: never[]) => LayoutComponentBase;
+}
+
+/**
+ * A route whose page is loaded on the first navigation to it (Tsazor
+ * extension, E5 — Blazor lazy-loads assemblies in OnNavigateAsync instead).
+ * The template and the authorization requirements are known up front, so
+ * matching and AuthorizeRouteView decide before anything is loaded. The Vite
+ * plugin generates these for the pages its `lazyRoutes` option matches.
+ */
+export interface LazyRouteEntry {
+  /** The template from the component's @page directive. */
+  readonly template: string;
+  /** Loads the page (and its layout), once. A page with several templates shares one function. */
+  readonly load: () => Promise<LoadedRoute>;
+  /** Authorization requirements, as on RouteEntry. */
+  readonly authorize?: AuthorizationRequirements;
+}
+
+/** An entry of the route manifest: eager or lazy. */
+export type RouteManifestEntry = RouteEntry | LazyRouteEntry;
+
+/** Whether an entry is lazy (has `load` instead of `type`). */
+export function isLazyRoute(route: RouteManifestEntry): route is LazyRouteEntry {
+  return "load" in route && !("type" in route);
+}
+
+/** A route table match: the manifest entry (eager or lazy) and the typed values. */
+export interface RouteMatch {
+  /** The matched manifest entry. */
+  readonly route: RouteManifestEntry;
+  /** URL parameter values, typed per constraint (strings otherwise). */
+  readonly values: Record<string, RouteValue>;
+}
+
 /**
  * A route parameter value, typed per constraint: `int`/`double`/`float`/
  * `decimal` ⇒ number, `long` ⇒ bigint (no precision loss above 2^53),
@@ -44,7 +84,7 @@ export class RouteManifest {
   /** Wraps the app's route entries for registration in DI. */
   constructor(
     /** The routes, in manifest order (the Router sorts them by precedence). */
-    readonly entries: RouteEntry[],
+    readonly entries: RouteManifestEntry[],
   ) {}
 }
 
@@ -316,7 +356,7 @@ function splitConstraints(inner: string): string[] {
 /* Route table ------------------------------------------------------------------ */
 
 interface RouteTableEntry {
-  readonly route: RouteEntry;
+  readonly route: RouteManifestEntry;
   readonly template: ParsedRoute;
   /** Parameters of the page's other templates, reset to null on match. */
   readonly unusedParameterNames: readonly string[];
@@ -341,12 +381,12 @@ export class RouteTable {
    * routes keep their order). Throws on an invalid template or when two
    * routes are ambiguous.
    */
-  static create(routes: readonly RouteEntry[]): RouteTable {
+  static create(routes: readonly RouteManifestEntry[]): RouteTable {
     const parametersByType = new Map<unknown, Map<string, string>>();
     const parsed = routes.map((route) => {
       const template = parseRouteTemplate(route.template);
-      let names = parametersByType.get(route.type);
-      if (!names) parametersByType.set(route.type, (names = new Map()));
+      let names = parametersByType.get(pageKey(route));
+      if (!names) parametersByType.set(pageKey(route), (names = new Map()));
       for (const segment of template.segments) {
         if (segment.isParameter && !names.has(segment.value.toLowerCase())) {
           names.set(segment.value.toLowerCase(), segment.value);
@@ -356,7 +396,7 @@ export class RouteTable {
     });
     const entries: RouteTableEntry[] = parsed.map(({ route, template }) => {
       const own = new Set(template.segments.filter((s) => s.isParameter).map((s) => s.value.toLowerCase()));
-      const unused = [...parametersByType.get(route.type)!].filter(([key]) => !own.has(key)).map(([, name]) => name);
+      const unused = [...parametersByType.get(pageKey(route))!].filter(([key]) => !own.has(key)).map(([, name]) => name);
       return { route, template, unusedParameterNames: unused };
     });
     // Array.prototype.sort is stable: equal-precedence routes keep manifest order.
@@ -366,7 +406,7 @@ export class RouteTable {
   }
 
   /** Matches a base-relative path (like "/user/42"); query and hash are ignored. */
-  match(path: string): RouteData | null {
+  match(path: string): RouteMatch | null {
     const segments = splitPath(path);
     for (const entry of this.entries) {
       const values = matchTemplate(entry, segments);
@@ -423,7 +463,7 @@ function detectAmbiguousRoutes(entries: readonly RouteTableEntry[]): void {
         const y = entries[b]!;
         if (equivalent(x.template, y.template)) {
           throw new Error(
-            `The following routes are ambiguous:\n'${x.route.template}' in '${typeName(x.route.type)}'\n'${y.route.template}' in '${typeName(y.route.type)}'\n`,
+            `The following routes are ambiguous:\n'${x.route.template}' in '${typeName(pageKey(x.route))}'\n'${y.route.template}' in '${typeName(pageKey(y.route))}'\n`,
           );
         }
       }
@@ -432,14 +472,19 @@ function detectAmbiguousRoutes(entries: readonly RouteTableEntry[]): void {
   }
 }
 
+/** The page a route belongs to: its class, or its loader (shared by a lazy page's templates). */
+function pageKey(route: RouteManifestEntry): unknown {
+  return isLazyRoute(route) ? route.load : route.type;
+}
+
 function typeName(type: unknown): string {
   return (type as { name?: string }).name || "(anonymous)";
 }
 
-const tableCache = new WeakMap<readonly RouteEntry[], RouteTable>();
+const tableCache = new WeakMap<readonly RouteManifestEntry[], RouteTable>();
 
 /** The (cached) route table for a manifest array. Throws for ambiguous routes. */
-export function getRouteTable(routes: readonly RouteEntry[]): RouteTable {
+export function getRouteTable(routes: readonly RouteManifestEntry[]): RouteTable {
   let table = tableCache.get(routes);
   if (!table) {
     table = RouteTable.create(routes);
@@ -449,7 +494,7 @@ export function getRouteTable(routes: readonly RouteEntry[]): RouteTable {
 }
 
 /** Matches a base-relative path (like "/user/42") against the route manifest, by precedence. */
-export function matchRoute(routes: readonly RouteEntry[], path: string): RouteData | null {
+export function matchRoute(routes: readonly RouteManifestEntry[], path: string): RouteMatch | null {
   return getRouteTable(routes).match(path);
 }
 

@@ -467,15 +467,15 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "member": "field",
           "declaredBy": "Router",
           "default": "[]",
-          "type": "RouteEntry[]",
+          "type": "RouteManifestEntry[]",
           "references": [
             {
-              "name": "RouteEntry",
+              "name": "RouteManifestEntry",
               "kind": "runtime",
-              "imported": "RouteEntry"
+              "imported": "RouteManifestEntry"
             }
           ],
-          "doc": "The app's route manifest (template + component per @page)."
+          "doc": "The app's route manifest (template + component per @page; lazy entries load on first navigation)."
         },
         {
           "name": "found",
@@ -516,9 +516,53 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
             }
           ],
           "doc": "Content rendered when no route matches (Blazor's <NotFound>)."
+        },
+        {
+          "name": "onNavigateAsync",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Router",
+          "type": "EventCallback<NavigationContext> | ((context: NavigationContext) => void | Promise<void>)",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "NavigationContext",
+              "kind": "local",
+              "file": "src/routing/router.ts"
+            },
+            {
+              "name": "Promise",
+              "kind": "global"
+            }
+          ],
+          "doc": "Runs before each navigation renders (Blazor's OnNavigateAsync): load data or code the target needs.",
+          "typeArgument": "NavigationContext"
+        },
+        {
+          "name": "navigating",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Router",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Rendered while `OnNavigateAsync` runs (Blazor's <Navigating>)."
         }
       ],
-      "doc": "Blazor's Router: matches the current location against the route manifest\nand renders the found/not-found content. The manifest is an explicit list\nof RouteEntry values (M7's Vite plugin generates it from @page modules —\nBlazor uses assembly reflection, which TS does not have).",
+      "doc": "Blazor's Router: matches the current location against the route manifest\nand renders the found/not-found content. The manifest is an explicit list\nof RouteEntry values (M7's Vite plugin generates it from @page modules —\nBlazor uses assembly reflection, which TS does not have).\n\nWith `OnNavigateAsync`, every navigation (the first one included) runs it\nbefore the page renders; meanwhile the router renders `Navigating`, or —\nwithout it — keeps showing what it showed before (Blazor). A newer\nnavigation aborts the running one's `signal`; only the latest renders. A\nfailing `OnNavigateAsync` is a failure of the router (an ErrorBoundary\naround it shows it).",
       "base": {
         "name": "ComponentBase",
         "resolved": true

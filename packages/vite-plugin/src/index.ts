@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { compile, type TszDiagnostic } from "@tsazor/compiler";
-import type { EnvironmentModuleNode, ModuleNode, Plugin, ViteDevServer } from "vite";
+import { createFilter, type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
 import { isImportsFile, TransformRegistry } from "./invalidate.js";
 import { tsazorHotUpdate } from "./hot-update.js";
 import { generateRoutesModule, listTsazorFilesUnder, scanRoutes, scanRootOf, scanTsazorModules } from "./routes.js";
@@ -28,6 +28,13 @@ export interface TsazorPluginOptions {
   /** F1a: static subtrees as one markup block each (default true). `false` emits
    *  element frames throughout — an escape hatch for one release (design-static-markup.md D-S5). */
   staticMarkup?: boolean;
+  /**
+   * E5: pages loaded on the first navigation to them — `true` for every
+   * page, or globs relative to the project root (`["src/Pages/Admin/**"]`).
+   * Each lazy page becomes its own chunk (its layout loads with it); the
+   * router shows `<Navigating>` meanwhile. Default: every page is eager.
+   */
+  lazyRoutes?: boolean | string[];
 }
 
 /**
@@ -131,7 +138,7 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
     async load(id) {
       if (id !== RESOLVED_ROUTES_MODULE_ID) return null;
       const routes = await scanRoutes(projectRoot);
-      return generateRoutesModule(projectRoot, routes);
+      return generateRoutesModule(projectRoot, routes, lazyRouteFilter(options.lazyRoutes, projectRoot));
     },
 
     async transform(code, id) {
@@ -253,3 +260,10 @@ function reportDiagnostics(diagnostics: { all: readonly { code: string; message:
 }
 
 export default tsazor;
+/** The `lazyRoutes` option as a predicate over a page's absolute path. */
+export function lazyRouteFilter(lazyRoutes: boolean | string[] | undefined, root: string): (componentPath: string) => boolean {
+  if (lazyRoutes === true) return () => true;
+  if (!lazyRoutes || lazyRoutes.length === 0) return () => false;
+  const filter = createFilter(lazyRoutes, null, { resolve: root });
+  return (componentPath) => filter(componentPath);
+}

@@ -59,6 +59,38 @@ against the base. A link that only changes the fragment of the current page adds
 and scrolls, without `LocationChanging`/`LocationChanged`. Back/forward leaves the position to the
 browser. A deep link with a fragment scrolls once the Router rendered.
 
+### OnNavigateAsync and Navigating
+
+Blazor's `Router` hooks, unchanged: `OnNavigateAsync` runs before each navigation renders (the
+first one too) and receives `{ path, signal }` — `signal` is aborted when a newer navigation starts
+(Blazor's `CancellationToken`). Meanwhile the router renders `<Navigating>`; without it, the previous
+page stays until the hook finishes. A failing hook is a failure of the router (an `ErrorBoundary`
+around it shows it).
+
+```tsazor
+<Router OnNavigateAsync="prefetch">
+    <Found Context="routeData"><RouteView RouteData="@routeData" /></Found>
+    <Navigating><p role="status">Loading…</p></Navigating>
+</Router>
+```
+
+### Lazy routes (Tsazor extension)
+
+Pages can load on the first navigation to them — Blazor lazy-loads assemblies in `OnNavigateAsync`;
+Tsazor uses Vite's code splitting. Opt in per glob in the Vite plugin (design:
+[design-lazy-routes.md](design-lazy-routes.md)):
+
+```ts
+tsazor({ lazyRoutes: ["src/Pages/Admin/**"] })   // a feature folder; `true` = every page
+```
+
+The manifest then carries `{ template, load, authorize }` for those pages (`LazyRouteEntry`): the
+templates and the `@authorize` requirements are known up front, the page (and its `@layout`) loads
+once, as its own chunk, while the router shows `<Navigating>`. Grouping a feature into one chunk is
+Vite's `build.rollupOptions.output.manualChunks`. A chunk that fails to load (typically after a
+deploy) reloads the target URL once; a second failure is an error. Loading a page's code is no
+access control — the server enforces that ([auth.md](auth.md)).
+
 ### Hash routing (Tsazor extension)
 
 Blazor routes by the URL path (history routing), which needs a server that answers every deep link

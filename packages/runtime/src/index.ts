@@ -56,16 +56,21 @@ export { MemoryHistory } from "./navigation/memory-history.js";
 // Routing
 export {
   getRouteTable,
+  isLazyRoute,
   matchRoute,
   parseRouteTemplate,
   RouteManifest,
   RouteTable,
+  type LazyRouteEntry,
+  type LoadedRoute,
   type RouteData,
   type RouteEntry,
+  type RouteManifestEntry,
+  type RouteMatch,
   type RouteValue,
 } from "./routing/route-data.js";
 export { LayoutComponentBase } from "./routing/layout-component-base.js";
-export { Router } from "./routing/router.js";
+export { Router, type NavigationContext } from "./routing/router.js";
 export { RouteView } from "./routing/route-view.js";
 export { LayoutView } from "./routing/layout-view.js";
 export { SupplyParameterFromQuery, queryParametersOf, type QueryParameterType, type QueryParameterMeta } from "./routing/supply-parameter-from-query.js";

@@ -81,7 +81,9 @@ architecture and security take priority.
   `@tsazor/testing`.
 - **E5 — Lazy loading per feature or route** (router + vite plugin). **Decided (2026-10-05):** [design-lazy-routes.md](design-lazy-routes.md) —
   Blazor's `OnNavigateAsync`/`<Navigating>` first, then lazy manifest entries, opt-in per glob
-  (`lazyRoutes`), one chunk per page, the layout loads with the page, a failed chunk reloads once.
+  (`lazyRoutes`), one chunk per page, the layout loads with the page, a failed chunk reloads once. **Done
+  (2026-10-05):** runtime (`OnNavigateAsync`/`Navigating`, `LazyRouteEntry`), vite plugin (`lazyRoutes`),
+  the gallery's dashboard as the lazy feature (a build test checks its chunks).
 
 **Migration**
 - **E6 — Incremental migration:** run Blazor and Tsazor side by side, route by route (YARP in

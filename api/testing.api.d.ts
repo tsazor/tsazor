@@ -175,9 +175,15 @@ export interface FakeStore<T> {
 
 // isIErrorBoundary: re-exported from @tsazor/runtime
 
+// isLazyRoute: re-exported from @tsazor/runtime
+
 // LayoutComponentBase: re-exported from @tsazor/runtime
 
 // LayoutView: re-exported from @tsazor/runtime
+
+// LazyRouteEntry: re-exported from @tsazor/runtime
+
+// LoadedRoute: re-exported from @tsazor/runtime
 
 // LocalizationOptions: re-exported from @tsazor/runtime
 
@@ -198,6 +204,8 @@ export interface FakeStore<T> {
 // MinLength: re-exported from @tsazor/runtime
 
 // ModelValidator: re-exported from @tsazor/runtime
+
+// NavigationContext: re-exported from @tsazor/runtime
 
 // NavigationLock: re-exported from @tsazor/runtime
 
@@ -309,6 +317,10 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void): Promi
 // RouteEntry: re-exported from @tsazor/runtime
 
 // RouteManifest: re-exported from @tsazor/runtime
+
+// RouteManifestEntry: re-exported from @tsazor/runtime
+
+// RouteMatch: re-exported from @tsazor/runtime
 
 // Router: re-exported from @tsazor/runtime
 

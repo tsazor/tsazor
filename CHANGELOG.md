@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: `Router` gets Blazor's `OnNavigateAsync` (`NavigationContext { path, signal }`) and
+  `<Navigating>`. Lazy routes (E5): `LazyRouteEntry { template, load, authorize }` in the manifest
+  (`RouteManifestEntry`), loaded once on the first navigation; `RouteTable.match`/`matchRoute` return
+  a `RouteMatch` (eager or lazy entry); a failed chunk reloads the target once.
+- `@tsazor/vite-plugin`: `lazyRoutes: true | string[]` — the matched pages load lazily, each as its
+  own chunk, its layout with it.
 - `@tsazor/runtime`: `CultureService.setDefault` applies while the culture is still the previous
   default (it compared against the new default and never applied). Every public export and member
   of runtime, testing, dotnet and vite-plugin is documented (the reference's API pages).

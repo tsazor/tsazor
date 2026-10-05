@@ -1,6 +1,6 @@
 # Design: lazy loading per route or feature (E5)
 
-Status: **approved** (2026-10-05, D-L1…D-L5 as proposed). Roadmap step 4.
+Status: **done** (2026-10-05, D-L1…D-L5 as proposed). Roadmap step 4.
 
 ## Today
 
@@ -35,8 +35,9 @@ alternative to `type` (and `layout`):
 ```
 
 The router matches templates as before; for a lazy entry it awaits `load()` once (cached), shows
-`Navigating` meanwhile, then renders. `authorize` stays static in the manifest, so
-`AuthorizeRouteView` decides before anything is loaded (no code for a page the user may not see).
+`Navigating` meanwhile, then renders. `authorize` stays static in the manifest and reaches
+`AuthorizeRouteView` as before. (The page's code is loaded before it decides — loading code is no
+security boundary anyway; the server enforces access, see [auth.md](auth.md).)
 
 **3. Opt-in in the Vite plugin, by glob.**
 

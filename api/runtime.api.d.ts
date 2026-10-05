@@ -488,7 +488,7 @@ export declare const enum FrameType {
 }
 
 // getRouteTable
-export declare function getRouteTable(routes: readonly RouteEntry[]): RouteTable;
+export declare function getRouteTable(routes: readonly RouteManifestEntry[]): RouteTable;
 
 // HeadContent
 export declare class HeadContent extends ComponentBase {
@@ -592,6 +592,9 @@ export declare function isComponentDefinition(value: unknown): value is Componen
 // isIErrorBoundary
 export declare function isIErrorBoundary(component: unknown): component is ComponentBase & IErrorBoundary;
 
+// isLazyRoute
+export declare function isLazyRoute(route: RouteManifestEntry): route is LazyRouteEntry;
+
 // LayoutComponentBase
 export declare abstract class LayoutComponentBase extends ComponentBase {
     Body?: RenderFragment;
@@ -602,6 +605,19 @@ export declare class LayoutView extends ComponentBase {
     layout?: abstract new (...args: never[]) => ComponentBase;
     childContent?: RenderFragment;
     protected buildRenderTree(b: RenderTreeBuilder): void;
+}
+
+// LazyRouteEntry
+export interface LazyRouteEntry {
+    readonly template: string;
+    readonly load: () => Promise<LoadedRoute>;
+    readonly authorize?: AuthorizationRequirements;
+}
+
+// LoadedRoute
+export interface LoadedRoute {
+    readonly type: abstract new (...args: never[]) => unknown;
+    readonly layout?: abstract new (...args: never[]) => LayoutComponentBase;
 }
 
 // LocalizationOptions
@@ -638,7 +654,7 @@ export declare class MarkupString {
 }
 
 // matchRoute
-export declare function matchRoute(routes: readonly RouteEntry[], path: string): RouteData | null;
+export declare function matchRoute(routes: readonly RouteManifestEntry[], path: string): RouteMatch | null;
 
 // MaxLength
 export declare function MaxLength(length: number, override?: ValidationMessageOverride): FieldRuleDecorator;
@@ -668,6 +684,12 @@ export declare function MinLength(length: number, override?: ValidationMessageOv
 
 // ModelValidator
 export type ModelValidator = (value: unknown, model: unknown) => string | null;
+
+// NavigationContext
+export interface NavigationContext {
+    readonly path: string;
+    readonly signal: AbortSignal;
+}
 
 // NavigationLock
 export declare class NavigationLock extends ComponentBase {
@@ -1062,20 +1084,39 @@ export interface RouteEntry {
 
 // RouteManifest
 export declare class RouteManifest {
-    readonly entries: RouteEntry[];
-    constructor(entries: RouteEntry[]);
+    readonly entries: RouteManifestEntry[];
+    constructor(entries: RouteManifestEntry[]);
+}
+
+// RouteManifestEntry
+export type RouteManifestEntry = RouteEntry | LazyRouteEntry;
+
+// RouteMatch
+export interface RouteMatch {
+    readonly route: RouteManifestEntry;
+    readonly values: Record<string, RouteValue>;
 }
 
 // Router
 export declare class Router extends ComponentBase {
-    routes: RouteEntry[];
+    routes: RouteManifestEntry[];
     found?: (routeData: RouteData) => RenderFragment;
     notFound?: RenderFragment;
+    onNavigateAsync?: EventCallback<NavigationContext> | ((context: NavigationContext) => void | Promise<void>);
+    navigating?: RenderFragment;
     private readonly navigation;
     private unsubscribe?;
     private routeTable?;
+    private pending?;
+    private failure?;
     protected onInitialized(): void;
     protected onParametersSet(): void;
+    private navigate;
+    private run;
+    private load;
+    private reloadOnce;
+    private routeDataFor;
+    protected shouldRender(): boolean;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     protected onAfterRender(): void;
     dispose(): void;
@@ -1085,8 +1126,8 @@ export declare class Router extends ComponentBase {
 export declare class RouteTable {
     readonly entries: readonly RouteTableEntry[];
     private constructor();
-    static create(routes: readonly RouteEntry[]): RouteTable;
-    match(path: string): RouteData | null;
+    static create(routes: readonly RouteManifestEntry[]): RouteTable;
+    match(path: string): RouteMatch | null;
 }
 
 // RouteValue
@@ -1268,7 +1309,7 @@ export type Token<T> = abstract new (...args: never[]) => T;
 export interface TsazorAppOptions {
     root: ComponentDefinition | (abstract new () => ComponentBase);
     services?: (services: ServiceCollection) => void;
-    routes?: RouteEntry[];
+    routes?: RouteManifestEntry[];
     selector?: string;
     navigationManager?: NavigationManager;
     routing?: RoutingOptions;

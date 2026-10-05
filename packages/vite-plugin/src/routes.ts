@@ -103,30 +103,45 @@ export async function scanTsazorModules(root: string): Promise<string[]> {
 }
 
 /** Generates the `virtual:tsazor-routes` module content (RouteEntry[] literal). */
-export function generateRoutesModule(root: string, routes: ScannedRoute[]): string {
+export function generateRoutesModule(root: string, routes: ScannedRoute[], isLazy: (componentPath: string) => boolean = () => false): string {
   const rootPath = path.resolve(root);
   const lines: string[] = [];
   const entries: string[] = [];
   const usedLocals = new Set<string>();
-  // A page with several @page templates has several routes but one import.
+  // A page with several @page templates has several routes but one import (one loader).
   const componentLocals = new Map<string, string>();
   routes.forEach((route, index) => {
     const className = classNameForFile(route.componentPath);
     let local = componentLocals.get(route.componentPath);
     const firstRouteOfComponent = local === undefined;
+    const lazy = isLazy(route.componentPath);
     if (local === undefined) {
-      local = className;
+      local = lazy ? `load${className}` : className;
       let suffix = index;
       while (usedLocals.has(local)) {
-        local = `${className}${++suffix}`;
+        local = `${lazy ? `load${className}` : className}${++suffix}`;
       }
       usedLocals.add(local);
       componentLocals.set(route.componentPath, local);
       const componentSpec = toRootRelativeSpecifier(rootPath, route.componentPath);
-      lines.push(`import ${local} from "${componentSpec}";`);
+      if (lazy) {
+        // E5: one chunk per page; its layout loads with it (Vite dedupes a layout eager pages share).
+        const layoutSpec = route.layoutPath ? toRootRelativeSpecifier(rootPath, route.layoutPath) : undefined;
+        lines.push(
+          layoutSpec
+            ? `const ${local} = () => Promise.all([import("${componentSpec}"), import("${layoutSpec}")]).then(([page, layout]) => ({ type: page.default, layout: layout.default }));`
+            : `const ${local} = () => import("${componentSpec}").then((page) => ({ type: page.default }));`,
+        );
+      } else {
+        lines.push(`import ${local} from "${componentSpec}";`);
+      }
+    }
+    const authorizeSpec = route.authorize ? `, authorize: ${JSON.stringify(route.authorizeRequirements ?? {})}` : "";
+    if (lazy) {
+      entries.push(`  { template: ${JSON.stringify(route.template)}, load: ${local}${authorizeSpec} },`);
+      return;
     }
     const layoutSpec = route.layoutPath ? toRootRelativeSpecifier(rootPath, route.layoutPath) : undefined;
-    const authorizeSpec = route.authorize ? `, authorize: ${JSON.stringify(route.authorizeRequirements ?? {})}` : "";
     if (layoutSpec) {
       const layoutLocal = `${local}Layout`;
       if (firstRouteOfComponent) lines.push(`import ${layoutLocal} from "${layoutSpec}";`);

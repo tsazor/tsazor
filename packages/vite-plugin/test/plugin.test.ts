@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { tsazor } from "../src";
 import { generateRoutesModule } from "../src/routes";
+import { lazyRouteFilter } from "../src/index";
 import { processScopedCss, scopeHashFor, scopeSelector } from "../src/scoped-css";
 
 const COUNTER = /* tsazor */ `
@@ -204,6 +205,35 @@ describe("tsazor vite plugin", () => {
     ]);
     expect(module).toContain('{ template: "/myorders", type: MyOrders, authorize: {} },');
     expect(module).toContain('{ template: "/", type: Index },');
+  });
+
+  it("emits lazy entries (one loader per page, layout loaded with it) for pages lazyRoutes matches", () => {
+    const isLazy = lazyRouteFilter(["Pages/Admin/**"], root);
+    const module = generateRoutesModule(
+      root,
+      [
+        { template: "/", componentPath: path.join(root, "Pages", "Index.tsazor") },
+        { template: "/admin/orders", componentPath: path.join(root, "Pages", "Admin", "Orders.tsazor"), authorize: true, authorizeRequirements: { roles: ["Admin"] } },
+        { template: "/admin/orders/{id:int}", componentPath: path.join(root, "Pages", "Admin", "Orders.tsazor"), authorize: true, authorizeRequirements: { roles: ["Admin"] } },
+        { template: "/admin/users", componentPath: path.join(root, "Pages", "Admin", "Users.tsazor"), layoutPath: path.join(root, "Shared", "AdminLayout.tsazor") },
+      ],
+      isLazy,
+    );
+    expect(module).toContain('import Index from "/Pages/Index.tsazor";');
+    expect(module).toContain('const loadOrders = () => import("/Pages/Admin/Orders.tsazor").then((page) => ({ type: page.default }));');
+    expect(module.match(/const loadOrders/g)?.length).toBe(1);
+    expect(module).toContain('{ template: "/admin/orders", load: loadOrders, authorize: {"roles":["Admin"]} },');
+    expect(module).toContain('{ template: "/admin/orders/{id:int}", load: loadOrders, authorize: {"roles":["Admin"]} },');
+    expect(module).toContain(
+      'const loadUsers = () => Promise.all([import("/Pages/Admin/Users.tsazor"), import("/Shared/AdminLayout.tsazor")]).then(([page, layout]) => ({ type: page.default, layout: layout.default }));',
+    );
+    expect(module).not.toMatch(/import Orders|import Users|import AdminLayout/);
+  });
+
+  it("lazyRoutes: true makes every page lazy; absent, none", () => {
+    expect(lazyRouteFilter(true, root)(path.join(root, "Pages", "Index.tsazor"))).toBe(true);
+    expect(lazyRouteFilter(undefined, root)(path.join(root, "Pages", "Index.tsazor"))).toBe(false);
+    expect(lazyRouteFilter(["Pages/Admin/**"], root)(path.join(root, "Pages", "Index.tsazor"))).toBe(false);
   });
 
   it("emits the scoped-CSS import and scope attribute when a sidecar exists", async () => {

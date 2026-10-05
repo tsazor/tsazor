@@ -18,6 +18,9 @@ export interface InvalidationPlan {
 // isImportsFile
 export declare function isImportsFile(file: string): boolean;
 
+// lazyRouteFilter
+export declare function lazyRouteFilter(lazyRoutes: boolean | string[] | undefined, root: string): (componentPath: string) => boolean;
+
 // normalizeFileKey
 export declare function normalizeFileKey(file: string): string;
 
@@ -75,6 +78,7 @@ export interface TsazorPluginOptions {
     root?: string;
     check?: boolean;
     staticMarkup?: boolean;
+    lazyRoutes?: boolean | string[];
 }
 
 /* @tsazor/vite-plugin/client */

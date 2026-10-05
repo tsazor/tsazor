@@ -5,6 +5,9 @@
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@MainLayout" />
     </Found>
+    <Navigating>
+        <p class="navigating" role="status">Loading…</p>
+    </Navigating>
     <NotFound>
         <p class="not-found">Page not found.</p>
     </NotFound>
