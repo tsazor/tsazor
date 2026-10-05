@@ -168,7 +168,9 @@ architecture and security take priority.
   (2026-10-05):** [apps/bench/README.md](../apps/bench/README.md) — the bench measured 29.4 KB gz;
   the document head/sections, localization and error boundaries are now opt-in for the bundle (no
   API change), giving **25.4 KB gz** (Vue 26.3, Svelte 15.1, React 69.2). Tsazor leads at create 10k,
-  swap and heap, trails at select and remove (the F1b targets). The bench retries loads the cold
+  swap and heap, is on a par at append, update and remove, and trails at select (21 vs 10 ms for
+  Svelte — the F1b target). The bench now keys the Tsazor and Blazor rows like the others do
+  (without `@key` remove took 313 ms). The bench retries loads the cold
   browser held back (a ~0.9 s stall before the request that had made Tsazor look 20× slower to load).
 
 ## Order (proposal)

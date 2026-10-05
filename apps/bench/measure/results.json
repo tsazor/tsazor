@@ -8,19 +8,19 @@
     },
     "load": {
       "fcpMs": null,
-      "readyMs": 79.9
+      "readyMs": 63.3
     },
     "ops": {
-      "create10kMs": 280.4,
-      "append1kMs": 82.4,
-      "updateEvery10thMs": 71.5,
-      "swapMs": 151,
-      "selectMs": 19.7,
-      "removeMs": 312.8,
+      "create10kMs": 281.5,
+      "append1kMs": 88.1,
+      "updateEvery10thMs": 74.6,
+      "swapMs": 113.2,
+      "selectMs": 20.9,
+      "removeMs": 176.7,
       "removeWorked": true,
       "cycles": 5
     },
-    "memoryMB": 15.4,
+    "memoryMB": 15.1,
     "errors": [],
     "todoChecks": {
       "addsTodo": true,
@@ -41,15 +41,15 @@
     },
     "load": {
       "fcpMs": null,
-      "readyMs": 103.1
+      "readyMs": 62.8
     },
     "ops": {
-      "create10kMs": 365.5,
-      "append1kMs": 87.4,
-      "updateEvery10thMs": 71.1,
-      "swapMs": 156,
-      "selectMs": 19,
-      "removeMs": 177.5,
+      "create10kMs": 367.1,
+      "append1kMs": 90,
+      "updateEvery10thMs": 75.7,
+      "swapMs": 157.7,
+      "selectMs": 18.8,
+      "removeMs": 181.2,
       "removeWorked": true,
       "cycles": 5
     },
@@ -74,15 +74,15 @@
     },
     "load": {
       "fcpMs": null,
-      "readyMs": 71.5
+      "readyMs": 47.3
     },
     "ops": {
-      "create10kMs": 291.6,
-      "append1kMs": 81.1,
-      "updateEvery10thMs": 76.8,
-      "swapMs": 167.4,
-      "selectMs": 28.8,
-      "removeMs": 176.3,
+      "create10kMs": 288.4,
+      "append1kMs": 86.2,
+      "updateEvery10thMs": 78.7,
+      "swapMs": 160.9,
+      "selectMs": 28.9,
+      "removeMs": 184.1,
       "removeWorked": true,
       "cycles": 5
     },
@@ -106,16 +106,16 @@
       "cssGzipKB": 0.8
     },
     "load": {
-      "fcpMs": 140,
-      "readyMs": 114.7
+      "fcpMs": 88,
+      "readyMs": 45.9
     },
     "ops": {
-      "create10kMs": 353,
-      "append1kMs": 51.1,
-      "updateEvery10thMs": 95,
-      "swapMs": 154.9,
-      "selectMs": 10.7,
-      "removeMs": 180.7,
+      "create10kMs": 361.6,
+      "append1kMs": 52.5,
+      "updateEvery10thMs": 101.9,
+      "swapMs": 160.3,
+      "selectMs": 9.9,
+      "removeMs": 178.9,
       "removeWorked": true,
       "cycles": 5
     },
@@ -137,19 +137,19 @@
       "codeRawKB": 13795.8,
       "codeGzipKB": 5427,
       "cssGzipKB": 1,
-      "runtimeGzipKB": 10659.8
+      "runtimeGzipKB": 10743.2
     },
     "load": {
-      "fcpMs": 64,
-      "readyMs": 338.8
+      "fcpMs": 60,
+      "readyMs": 322.8
     },
     "ops": {
-      "create10kMs": 311.3,
-      "append1kMs": 100.8,
-      "updateEvery10thMs": 62.6,
-      "swapMs": 152.9,
-      "selectMs": 54.2,
-      "removeMs": 196.4,
+      "create10kMs": 327.9,
+      "append1kMs": 114.2,
+      "updateEvery10thMs": 71.4,
+      "swapMs": 170,
+      "selectMs": 62,
+      "removeMs": 166.5,
       "removeWorked": true,
       "cycles": 5
     },
