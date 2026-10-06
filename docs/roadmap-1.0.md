@@ -172,6 +172,10 @@ architecture and security take priority.
   Svelte — the F1b target). The bench now keys the Tsazor and Blazor rows like the others do
   (without `@key` remove took 313 ms). The bench retries loads the cold
   browser held back (a ~0.9 s stall before the request that had made Tsazor look 20× slower to load).
+  **After F1b (2026-10-06,** [design-render-hints.md](design-render-hints.md) **H1 + H2):** Tsazor leads
+  at create 10k (283 ms), update every 10th (66), swap (94), select (7.8 vs Svelte 9.9) and remove
+  (98) and in heap (15.3 MB); it trails only at append (68 vs Svelte 47 ms) and in size (26.2 KB gz
+  vs Svelte 15.1).
 
 ## Order (proposal)
 
