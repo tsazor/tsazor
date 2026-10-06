@@ -31,6 +31,14 @@ gets its tutorial chapter.
 Track U upstream (U1–U4) and track T `@tsazor/sleipnir` (T1–T7). Its open decisions (where the
 upstream work happens, where the emitter lives) need answers first.
 
+## 3b — Component library ([design-component-library.md](design-component-library.md))
+
+As important as the framework itself. **Decided (2026-10-06):** one behavior core, two skins —
+Bootstrap 5 first (every `dotnet new blazor` template ships it), Fluent 2 second. Proposal: core
+`@tsazor/ui` (behaviors as attachments, headless state models, field base), skins
+`@tsazor/bootstrap` and `@tsazor/fluent` on one shared vocabulary, a QuickGrid-shaped DataGrid, Tier 1
+scope for 1.0. Absorbs the open E9 keyboard patterns. Comes before R3 (`npm create tsazor --ui`).
+
 ## 4 — Stability promise and onboarding
 
 - **S1 — API contract:** a snapshot of the public `.d.ts` surface of every package, checked in CI.
