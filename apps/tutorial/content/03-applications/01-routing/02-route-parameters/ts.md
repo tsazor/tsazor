@@ -5,8 +5,9 @@ focus: Order.tsazor
 gate: click nav a:nth-child(2); click .orders a
 ---
 
-The orders page links to `/orders/101`, `/orders/102` and so on. Click one: "Nothing
-here." `Order.tsazor` is ready to show an order, but it has no `@page`, so the router
+Open **Orders** in the preview: the list links to `/orders/101`, `/orders/102` and so on. Click
+one, and the preview shows "Nothing here." — the `<NotFound>` content from `App.tsazor`: no page
+matches `/orders/101`. `Order.tsazor` is ready to show an order, but it has no `@page`, so the router
 doesn't know it's a page.
 
 One page should serve all of these URLs. Add a route with a placeholder for the number:

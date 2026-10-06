@@ -5,8 +5,9 @@ focus: Order.tsazor
 gate: click nav a:nth-child(2); click .orders a
 ---
 
-Click an order: "Nothing here." `Order.tsazor` has a parameter `id` but no `@page`. Give it
-the route you'd write in Blazor:
+Open **Orders** in the preview and click an order: it shows "Nothing here." — the router's
+`<NotFound>` content in `App.tsazor`, because no page matches `/orders/101`. `Order.tsazor` has
+a parameter `id` but no `@page`. Give it the route you'd write in Blazor:
 
 ```tsazor
 @page "/orders/{id:int}"
