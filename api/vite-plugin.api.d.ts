@@ -52,6 +52,8 @@ export interface TransformTsazorOptions {
     sourceMap?: boolean;
     hmr?: boolean;
     staticMarkup?: boolean;
+    renderHints?: boolean;
+    optimize?: boolean;
 }
 
 // TransformTsazorResult
@@ -78,6 +80,8 @@ export interface TsazorPluginOptions {
     root?: string;
     check?: boolean;
     staticMarkup?: boolean;
+    renderHints?: boolean;
+    optimize?: boolean;
     lazyRoutes?: boolean | string[];
 }
 

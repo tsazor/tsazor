@@ -159,6 +159,34 @@ describe("tsazor vite plugin", () => {
     expect(map.mappings.length).toBeGreaterThan(10);
   });
 
+  it("maps code inside a hoisted event handler (H1) back to its .tsazor position", async () => {
+    const source = "@foreach (const row of rows) {\n    <a @onclick=\"e => select(e, row)\">@row</a>\n}\n@code { rows = [1]; select(e: unknown, r: number) {} }\n";
+    const plugin = await createPlugin();
+    const result = await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Rows.tsazor"));
+    const code = result!.code as string;
+    expect(code).toContain("bindWith(this, Rows.prototype.__tsazor_h0, [row])");
+    const lines = code.split("\n");
+    const line = lines.findIndex((l) => l.includes("this.select(e, row)"));
+    expect(line).toBeGreaterThanOrEqual(0);
+    const { TraceMap, originalPositionFor } = await import("@jridgewell/trace-mapping");
+    const traced = originalPositionFor(new TraceMap(result!.map as string), { line: line + 1, column: lines[line]!.indexOf("select") });
+    // `select` in `@onclick="e => select(e, row)"`: line 2, column 22.
+    expect({ line: traced.line, column: traced.column }).toEqual({ line: 2, column: 22 });
+  });
+
+  it("renderHints: false and optimize: false emit a closure per render (D-R4)", async () => {
+    const source = "@foreach (const row of rows) {\n    <a @onclick=\"() => select(row)\">x</a>\n}\n<p><b>static</b></p>\n@code { rows = [1]; select(r: number) {} }\n";
+    for (const options of [{ renderHints: false }, { optimize: false }]) {
+      const plugin = tsazor({ root, ...options });
+      (plugin.configResolved as unknown as (config: { root: string }) => void)({ root });
+      const code = (await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Hints.tsazor")))!.code as string;
+      expect(code).toContain("bind(this, () => this.select(row))");
+      expect(code).not.toContain("__tsazor_h0");
+      // optimize: false turns static markup blocks off, too.
+      expect(code.includes("addMarkupContent")).toBe(!("optimize" in options));
+    }
+  });
+
   it("compiles _Imports.tsazor to an empty module", async () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, "@using ./Shared\n", path.join(root, "_Imports.tsazor"));

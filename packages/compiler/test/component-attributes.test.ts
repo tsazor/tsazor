@@ -82,7 +82,8 @@ describe("EventCallback parameters", () => {
   it.each([
     ['OnClick="handle"', "__tsazor_EventCallback.bind(this, this.handle)"],
     ['OnClick="@handle"', "__tsazor_EventCallback.bind(this, this.handle)"],
-    ['OnClick="() => a++"', "__tsazor_EventCallback.bind(this, () => this.a++)"],
+    // A lambda becomes a stable handler (H1 render hints).
+    ['OnClick="() => a++"', "__tsazor_EventCallback.bindWith(this, Demo.prototype.__tsazor_h0, [])"],
     // A method group on another receiver keeps it (A4/C18).
     ['OnClick="item.toggle"', "__tsazor_EventCallback.bind(this, __tsazor_bindMethod(this.item, this.item.toggle))"],
     // Any name: the category decides, not an On prefix.

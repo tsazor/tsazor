@@ -10,7 +10,8 @@ import { EventCallback } from "./event-callback.js";
  * EventCallback): string, number, boolean, bigint, symbol — compared with
  * `Object.is` (NaN equals NaN; unlike .NET's Double.Equals, 0 and -0 differ)
  * — and EventCallback, equal when receiver and delegate are the same
- * (EventCallback.equals). TS enums are numbers/strings and fall under the
+ * (EventCallback.equalsAsParameter: a compiler-hoisted handler that captures
+ * locals is a new closure in C# every render, so it counts as changed). TS enums are numbers/strings and fall under the
  * primitives. Deliberately NOT immutable: Date (unlike .NET's DateTime value
  * type, a JS Date is a mutable reference — an in-place setTime would go
  * unnoticed), functions (Blazor: delegates are not known immutable; a
@@ -32,7 +33,7 @@ export function mayHaveChanged(oldValue: unknown, newValue: unknown): boolean {
       return !Object.is(oldValue, newValue);
     case "object":
       if (oldValue instanceof EventCallback && newValue instanceof EventCallback) {
-        return !oldValue.equals(newValue as EventCallback<never>);
+        return !oldValue.equalsAsParameter(newValue as EventCallback<never>);
       }
       return true;
     default:

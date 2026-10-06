@@ -176,6 +176,26 @@ a `<div>`, `<table>` without `<tbody>`, `<pre>`, `<template>`, unknown camelCase
 Vite plugin's `staticMarkup: false` turns blocks off (an escape hatch for one release). Details:
 [design-static-markup.md](design-static-markup.md).
 
+**Stable event handlers (render hints, H1).** `@onclick="e => select(e, row)"` is a new closure on
+every render, in Blazor a new delegate — so every re-render would swap every handler. Tsazor
+chooses to compile an event-handler lambda (on an element event or a component `EventCallback`
+parameter) into a method of the component that creates the handler from the render-time values it
+captures (`row`), and binds those values: re-rendering with the same values keeps the handler, and
+the diff swaps nothing. A changed value swaps it, as before; `this.x` is read when the handler runs,
+as before. This applies only when every captured local stays constant — a `const` (local or
+`@foreach (const … of …)` variable) or a template `context` no code assigns; a `let`/`var`, a
+counting `@for` variable or anything else keeps the closure per render. Method groups
+(`@onclick="save"`) are bound as before. Nothing else is visible: a child component that gets such a
+handler as a parameter re-renders with its parent exactly as in Blazor — parameter change detection
+treats a handler that captures locals as changed, like C#'s `Delegate.Equals` does for a closure (a
+new target every render); only the DOM diff uses the stable form. The Vite plugin's
+`renderHints: false` emits a closure per render. Details: [design-render-hints.md](design-render-hints.md).
+
+**`optimize: false`.** One switch (compiler and Vite plugin) turns off every invisible compiler
+optimization — today `staticMarkup` and `renderHints`: the generated code is then what Razor would
+generate. It is a diagnostic and emergency switch (A/B measurements, isolating a suspected
+optimizer bug), not a recommended mode.
+
 ## @import
 
 `@import` is followed by the syntax of a TypeScript import declaration — the compiler parses

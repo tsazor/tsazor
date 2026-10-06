@@ -65,7 +65,9 @@ describe("codegen", () => {
     );
     expect(code).toContain('__builder.addAttribute(1, "OnDismissed", __tsazor_EventCallback.bind(this, this.alertGone));');
     expect(code).toContain('__builder.addAttribute(2, "OnClick", __tsazor_EventCallback.bind(this, this.poke));');
-    expect(code).toContain('__builder.addAttribute(3, "OnSelect", __tsazor_EventCallback.bind(this, () => this.picked()));');
+    // A lambda becomes a stable handler (H1 render hints: render-hints.test.ts).
+    expect(code).toContain('__builder.addAttribute(3, "OnSelect", __tsazor_EventCallback.bindWith(this, Demo.prototype.__tsazor_h0, []));');
+    expect(code).toContain("  __tsazor_h0() { return () => this.picked(); }");
     // Non-event attribute values stay plain (e.g. string/number fields).
     expect(code).toContain('__builder.addAttribute(4, "Variant", this.variant);');
   });

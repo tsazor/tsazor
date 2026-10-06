@@ -28,6 +28,15 @@ export interface TsazorPluginOptions {
   /** F1a: static subtrees as one markup block each (default true). `false` emits
    *  element frames throughout — an escape hatch for one release (design-static-markup.md D-S5). */
   staticMarkup?: boolean;
+  /** H1: event-handler lambdas become stable handlers — re-rendering an
+   *  unchanged row swaps no listener (default true). `false` emits a new
+   *  closure per render, as Razor does (design-render-hints.md D-R4). */
+  renderHints?: boolean;
+  /** Every invisible compiler optimization (default true). `false` turns
+   *  `staticMarkup` and `renderHints` (and later ones) off — the generated
+   *  code is then what Razor would generate: a diagnostic and emergency
+   *  switch (A/B measurements, a suspected optimizer bug), not a recommended mode. */
+  optimize?: boolean;
   /**
    * E5: pages loaded on the first navigation to them — `true` for every
    * page, or globs relative to the project root (`["src/Pages/Admin/**"]`).
@@ -173,7 +182,11 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         }
         return { code: "export default null;\n", map: null };
       }
-      const result = await transformTsazor(code, filePath, projectRoot, options.staticMarkup === false ? { staticMarkup: false } : {});
+      const result = await transformTsazor(code, filePath, projectRoot, {
+        ...(options.staticMarkup === false ? { staticMarkup: false } : {}),
+        ...(options.renderHints === false ? { renderHints: false } : {}),
+        ...(options.optimize === false ? { optimize: false } : {}),
+      });
       registry.recordTransform(filePath, result.metadata, result.componentFiles);
       reportImportsDiagnostics(result.importsDiagnostics);
       reportDiagnostics(result.diagnostics, filePath);

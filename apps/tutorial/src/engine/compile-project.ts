@@ -30,6 +30,8 @@ export interface BuildOptions {
   entry?: string;
   /** F1a static markup blocks (default on); `false` for the DOM-equality gate's reference build. */
   staticMarkup?: boolean;
+  /** H1 render hints — stable event handlers (default on); `false` for the DOM-equality gate's reference build. */
+  renderHints?: boolean;
 }
 
 const TRANSPILE_OPTIONS: ts.CompilerOptions = {
@@ -71,7 +73,7 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
         diagnoseImports(file, source, resolver, diagnostics);
         continue;
       }
-      const built = buildComponent(files, file, resolver, diagnostics, routes, options.staticMarkup);
+      const built = buildComponent(files, file, resolver, diagnostics, routes, options);
       if (built) modules[built.id] = built;
     } else if (file.endsWith(".ts")) {
       const built = transpile(files, file, source, undefined, diagnostics);
@@ -123,7 +125,7 @@ function buildComponent(
   resolver: ReturnType<typeof createResolver>,
   diagnostics: Diagnostic[],
   routes: RouteRequest[],
-  staticMarkup?: boolean,
+  options: Pick<BuildOptions, "staticMarkup" | "renderHints"> = {},
 ): CompiledModule | undefined {
   const className = classNameForFile(file);
   const extraImports: string[] = [];
@@ -140,7 +142,8 @@ function buildComponent(
       imports: extraImports,
       ...(codeBehindClass ? { codeBehindClass, codeBehindSource: files[codeBehindFile] } : {}),
       ...(scopeHash ? { scopeHash } : {}),
-      ...(staticMarkup === false ? { staticMarkup } : {}),
+      ...(options.staticMarkup === false ? { staticMarkup: false } : {}),
+      ...(options.renderHints === false ? { renderHints: false } : {}),
     });
   } catch (error) {
     diagnostics.push(internalError(file, error));

@@ -15,6 +15,10 @@ export interface TransformTsazorOptions {
   hmr?: boolean;
   /** F1a static markup blocks (default true). */
   staticMarkup?: boolean;
+  /** H1 render hints — stable event handlers (default true). */
+  renderHints?: boolean;
+  /** Every invisible compiler optimization (default true); `false` turns `staticMarkup` and `renderHints` off. */
+  optimize?: boolean;
 }
 
 /** What `transformTsazor` returns: the JS module, its sourcemap, the diagnostics and the HMR metadata. */
@@ -87,6 +91,8 @@ export async function transformTsazor(
     scopeHash,
     generateSourceMap: sourceMap,
     ...(options.staticMarkup === false ? { staticMarkup: false } : {}),
+    ...(options.renderHints === false ? { renderHints: false } : {}),
+    ...(options.optimize === false ? { optimize: false } : {}),
   });
 
   const importsDiagnostics = chain.layers.flatMap((layer) =>

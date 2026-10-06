@@ -85,6 +85,25 @@ export interface CodegenOptions {
    */
   staticMarkup?: boolean;
   /**
+   * H1 render hints (docs/design-render-hints.md): an event-handler lambda
+   * becomes a method of the component that creates it from the render-time
+   * values it captures (`EventCallback.bindWith`), so re-rendering with the
+   * same values keeps the handler — the diff swaps no listener. Applies only
+   * where every captured local is constant (`const`, a `const` loop variable,
+   * a template context that is never assigned). Default true; `false` emits
+   * `EventCallback.bind(this, lambda)` throughout (escape hatch).
+   * Typed-shadow builds never hoist.
+   */
+  renderHints?: boolean;
+  /**
+   * Umbrella switch for every invisible compiler optimization (today
+   * `staticMarkup` and `renderHints`). Default true; `false` turns them all
+   * off — the generated code is then what Razor would generate. A diagnostic
+   * and emergency switch (A/B measurements, isolating a suspected optimizer
+   * bug), not a recommended mode.
+   */
+  optimize?: boolean;
+  /**
    * Class name of the default export of the sibling `X.tsazor.ts` (code-behind).
    * When set, the generated class extends it — the code-behind class itself
    * declares its own base (usually ComponentBase). Takes precedence over
@@ -284,6 +303,13 @@ class Codegen {
   /** Locals declared by loops / inline code — emitted without a `this.` prefix —
    *  and how they were declared (a `@bind` cannot target the read-only ones). */
   private readonly locals = new Map<string, LocalKind>();
+  /** H1: the outer locals the snippet being rewritten references (callbackValue). */
+  private capturedLocals: Set<string> | undefined;
+  /** H1: event-handler lambdas hoisted into methods of the class. */
+  private readonly hoistedHandlers: Array<{ method: string; params: string[]; code: string; entries: PendingEntry[] }> = [];
+  /** H1: every name some code of the file assigns (computed on first need). */
+  private assignedNames: Set<string> | undefined;
+  private document: DocumentNode | undefined;
   private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [], unresolvedTags: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
   private readonly importedNames = new Set<string>();
@@ -319,6 +345,7 @@ class Codegen {
   ) {}
 
   run(document: DocumentNode): CodegenResult {
+    this.document = document;
     if (this.options.scopeHash) this.metadata.scopeHash = this.options.scopeHash;
     const directives = document.directives;
     // Imports first: @inject/@inherits types and tags consult the bound names.
@@ -534,6 +561,7 @@ class Codegen {
     const bodyStart = this.writer.lineCount;
     this.emitNodes(renderBody, { line: 0, column: 0 });
     this.line("  }");
+    this.emitHoistedHandlers();
     this.line("}");
     this.line("");
     // C18: a method group keeps its receiver (`item.toggle` runs on item); the
@@ -984,7 +1012,11 @@ class Codegen {
 
   /** The A4 rule for names no scope of the snippet binds. */
   private readonly resolver: NameResolver = {
-    isOuterLocal: (name) => this.locals.has(name),
+    isOuterLocal: (name) => {
+      if (!this.locals.has(name)) return false;
+      this.capturedLocals?.add(name);
+      return true;
+    },
     prefixFor: (name, thisRebound) => {
       // Statics are reached through the class (C# allows them bare, too).
       if (this.members.statics.has(name) && !this.members.instance.has(name)) return `${this.options.className}.`;
@@ -1074,12 +1106,73 @@ class Codegen {
    * a C# delegate. Pending entries are re-based to the returned text.
    */
   private callbackValue(code: string, start?: SourcePos): string {
+    const captured = new Set<string>();
+    this.capturedLocals = captured;
     const rewritten = this.exprRewrite(code, start);
+    this.capturedLocals = undefined;
     const baked = rewritten?.text ?? code.trim();
+    if (rewritten !== null && !rewritten.methodGroup) {
+      const hoisted = this.hoistedHandler(baked, captured);
+      if (hoisted !== null) return hoisted;
+    }
     const head = `${this.eventCallback()}.bind(this, `;
     const bound = rewritten?.methodGroup ? this.boundMethodGroup(rewritten, baked) : baked;
     this.pendingExprEntries = this.pendingExprEntries.map((e) => ({ ...e, outOffset: e.outOffset + head.length }));
     return `${head}${bound})`;
+  }
+
+  /**
+   * H1 render hints (docs/design-render-hints.md): an event-handler lambda
+   * becomes a prototype method returning it, with the render-time locals it
+   * captures as parameters — `__tsazor_h0(row) { return (e) => this.select(e, row); }`
+   * — bound as `EventCallback.bindWith(this, X.prototype.__tsazor_h0, [row])`,
+   * equal across renders while `row` is the same. Its pending entries move
+   * along into the method. null (keep the closure) unless every captured
+   * local is constant after the capture, the value is an arrow function and
+   * it uses nothing of the render method itself (`__builder`, the captured
+   * component of a non-arrow function, `arguments`); never in typed shadows.
+   */
+  private hoistedHandler(baked: string, captured: ReadonlySet<string>): string | null {
+    if (this.options.typedShadow !== undefined || this.options.optimize === false || this.options.renderHints === false) return null;
+    if (!isArrowFunction(baked)) return null;
+    if (new RegExp(`\\b(?:${BUILDER}|${THIS_ALIAS}|arguments)\\b`).test(baked)) return null;
+    const params = [...captured];
+    if (!params.every((name) => this.isConstantLocal(name))) return null;
+    const method = alias(`h${this.hoistedHandlers.length}`);
+    this.hoistedHandlers.push({ method, params, code: baked, entries: this.pendingExprEntries });
+    this.pendingExprEntries = [];
+    return `${this.eventCallback()}.bindWith(this, ${this.options.className}.prototype.${method}, [${params.join(", ")}])`;
+  }
+
+  /**
+   * A render-time local whose value cannot change after a handler captured
+   * it: a `const` (local or loop variable) — or a template context no code
+   * of the file assigns. `let`/`var`, counting-loop variables, catch
+   * parameters and function/class/enum declarations are not.
+   */
+  private isConstantLocal(name: string): boolean {
+    switch (this.locals.get(name)) {
+      case "const":
+      case "constLoop":
+        return true;
+      case "context":
+        this.assignedNames ??= assignedNamesOf(this.document);
+        return !this.assignedNames.has(name);
+      default:
+        return false;
+    }
+  }
+
+  /** The hoisted handler methods (H1), emitted after buildRenderTree. */
+  private emitHoistedHandlers(): void {
+    for (const handler of this.hoistedHandlers) {
+      const head = `  ${handler.method}(${handler.params.join(", ")}) { return `;
+      const first = handler.entries[0];
+      this.writer.line(`${head}${handler.code}; }`, [
+        ...(first !== undefined ? [{ offset: 2, srcLine: first.srcLine, srcCol: first.srcCol }] : []),
+        ...handler.entries.map((e) => ({ offset: head.length + e.outOffset, srcLine: e.srcLine, srcCol: e.srcCol })),
+      ]);
+    }
   }
 
   /**
@@ -1288,7 +1381,7 @@ class Codegen {
             this.emitComponent(node);
           }
         } else {
-          const markup = this.options.staticMarkup !== false && this.options.typedShadow === undefined ? staticMarkupOf(node, this.options.scopeHash) : null;
+          const markup = this.options.optimize !== false && this.options.staticMarkup !== false && this.options.typedShadow === undefined ? staticMarkupOf(node, this.options.scopeHash) : null;
           if (markup !== null) {
             // F1a: the whole static subtree as one markup block.
             this.stmt(`${BUILDER}.addMarkupContent(${this.seq()}, ${JSON.stringify(markup)});`, node.pos);
@@ -2596,6 +2689,53 @@ function endsWithJump(children: MarkupNode[]): boolean {
  * for…of/for…in (`constLoop`/`loop`), or a function/class/enum declaration.
  */
 type LocalKind = "assignable" | "const" | "constLoop" | "loop" | "function" | "class" | "enum" | "context";
+
+/** H1: the expression is one arrow function (`(e) => …`, `async () => { … }`). */
+function isArrowFunction(code: string): boolean {
+  const source = ts.createSourceFile("handler.tsazor.expr", code, ts.ScriptTarget.Latest, false);
+  if (source.statements.length !== 1) return false;
+  const statement = source.statements[0]!;
+  return ts.isExpressionStatement(statement) && ts.isArrowFunction(statement.expression) && statement.getEnd() === code.length;
+}
+
+/**
+ * H1: every identifier inside an assignment target (`x = …`, `x += …`,
+ * `x++`, destructuring targets, a for…in/of target) of any code in the
+ * document — a conservative over-approximation (a property `a.x = …` counts
+ * `x`, too). A template context in it is not constant.
+ */
+function assignedNamesOf(document: DocumentNode | undefined): Set<string> {
+  const names = new Set<string>();
+  const addTarget = (node: ts.Node): void => {
+    if (ts.isIdentifier(node)) names.add(node.text);
+    ts.forEachChild(node, addTarget);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+      addTarget(node.left);
+    } else if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken)) {
+      addTarget(node.operand);
+    } else if ((ts.isForOfStatement(node) || ts.isForInStatement(node)) && !ts.isVariableDeclarationList(node.initializer)) {
+      addTarget(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  };
+  const seen = new Set<object>();
+  const walk = (value: unknown): void => {
+    if (value === null || typeof value !== "object" || seen.has(value)) return;
+    seen.add(value);
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "code" && typeof child === "string") {
+        visit(ts.createSourceFile("code.tsazor.ts", child, ts.ScriptTarget.Latest, true));
+      } else {
+        walk(child);
+      }
+    }
+  };
+  walk(document);
+  return names;
+}
 
 /** A RenderFragment / RenderFragment<T> parameter: settable by a child content element. */
 function isFragment(parameter: ComponentParameter): boolean {

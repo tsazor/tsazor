@@ -5,6 +5,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`, `@tsazor/runtime`: stable event handlers (render hints H1,
+  docs/design-render-hints.md). An event-handler lambda that captures only constant render-time
+  locals (`const`, `@foreach (const …)` variables, an unassigned template `context`) compiles to a
+  method of the component plus `EventCallback.bindWith(this, factory, [captured])` (`@internal`
+  compiler API), equal across renders while the captured values are the same — re-rendering
+  unchanged rows swaps no handler. New options `renderHints` (default true) and the umbrella
+  `optimize` (default true; `false` turns `staticMarkup` and `renderHints` off) on the compiler's
+  `CodegenOptions`/`CompileOptions`, the Vite plugin and `TransformTsazorOptions`. Selecting a row
+  among 11k (A/B on one machine): ~25–30 → ~13–14 ms. Parameter change detection keeps Blazor's
+  rule (`EventCallback.equalsAsParameter`, `@internal`): a handler that captures locals counts as
+  changed, as a C# closure does, so child components re-render with their parent exactly as before.
 - `@tsazor/runtime`: replacing an event handler no longer checks the DOM for a leftover inline
   handler string (`hasAttribute`) — it cannot exist once the element had a handler. Selecting a row
   among 11k: 19 → 16 ms.

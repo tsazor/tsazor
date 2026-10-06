@@ -43,6 +43,11 @@ __builder.addEventHandler(8, "onclick", EventCallback.bindWith(this, Rows.__h0, 
 static __h0 = (self, row) => (e) => self.select(e, row);
 ```
 
+*Implemented (2026-10-06)* as a prototype method instead of a static factory — `this` and the
+class's type parameters stay valid inside the handler:
+`EventCallback.bindWith(this, Rows.prototype.__tsazor_h0, [row])` with
+`__tsazor_h0(row) { return (e) => this.select(e, row); }`; the handler is created on first use.
+
 Two callbacks are equal when receiver, factory and every bound value are identical (`Object.is`) —
 then the diff sees no change and no handler is swapped. **Only when it is the same behavior:** the
 compiler applies H1 only when every captured local is a `const` (loop variables of `@foreach

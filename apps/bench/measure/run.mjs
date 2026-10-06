@@ -428,7 +428,11 @@ const args = Object.fromEntries(
   process.argv
     .slice(2)
     .filter((a) => a.startsWith("--"))
-    .map((a) => a.replace(/^--/, "").split("=")),
+    .map((a) => {
+      // A bare flag (`--skip-build`) is true.
+      const [key, value = "true"] = a.replace(/^--/, "").split("=");
+      return [key, value];
+    }),
 );
 const only = args.app ? args.app.split(",") : null;
 const runs = Math.max(1, parseInt(args.runs ?? "5", 10));

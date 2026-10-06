@@ -11,7 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Renderer, type ComponentBase } from "@tsazor/runtime";
 import type { TszDiagnostic } from "@tsazor/compiler";
-import { transformTsazor } from "../../vite-plugin/src/transform.js";
+import { transformTsazor, type TransformTsazorOptions } from "../../vite-plugin/src/transform.js";
 
 const here = path.dirname(fileURLToPath(new URL(import.meta.url)));
 let caseCounter = 0;
@@ -31,7 +31,7 @@ export interface CompiledCase {
  * Non-.tsazor files (.ts helpers, code-behind, css) are written verbatim.
  * `_Imports.tsazor` defaults to empty.
  */
-export async function compileFiles(files: Files): Promise<CompiledCase> {
+export async function compileFiles(files: Files, options: TransformTsazorOptions = {}): Promise<CompiledCase> {
   const dir = path.resolve(here, ".build", `case-${process.pid}-${++caseCounter}`);
   await mkdir(dir, { recursive: true });
   const all: Files = { "_Imports.tsazor": "", ...files };
@@ -44,7 +44,7 @@ export async function compileFiles(files: Files): Promise<CompiledCase> {
   for (const [name, content] of Object.entries(all)) {
     if (!name.endsWith(".tsazor") || path.basename(name) === "_Imports.tsazor") continue;
     const filePath = path.join(dir, name);
-    const result = await transformTsazor(content, filePath, dir, { sourceMap: false, hmr: false });
+    const result = await transformTsazor(content, filePath, dir, { ...options, sourceMap: false, hmr: false });
     diagnostics[name] = result.diagnostics.all;
     // Sibling component imports point at the source (.tsazor); the harness
     // serves the compiled module next to it instead.
@@ -86,9 +86,11 @@ export interface Mounted<T extends ComponentBase = ComponentBase> {
 export async function mount<T extends ComponentBase = ComponentBase>(
   filesOrSource: Files | string,
   entry = "Test.tsazor",
+  /** Compiler options of the plugin pipeline (`renderHints`, `optimize`, …). */
+  options: TransformTsazorOptions = {},
 ): Promise<Mounted<T>> {
   const files = typeof filesOrSource === "string" ? { [entry]: filesOrSource } : filesOrSource;
-  const compiled = await compileFiles(files);
+  const compiled = await compileFiles(files, options);
   const errors = Object.entries(compiled.diagnostics).flatMap(([file, list]) =>
     list.filter((d) => d.severity === "error").map((d) => `${file}:${d.pos.line}:${d.pos.column} ${d.code} ${d.message}`),
   );

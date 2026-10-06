@@ -427,8 +427,11 @@ export declare abstract class ErrorBoundaryBase extends ComponentBase implements
 // EventCallback
 export declare class EventCallback<TArg = unknown> {
     private readonly receiver;
-    private readonly delegate;
+    private delegate;
+    private readonly factory;
+    private readonly args;
     private constructor();
+    static bindWith<TArg>(receiver: ComponentBase, factory: (...args: never[]) => (arg: TArg) => unknown, args: readonly unknown[]): EventCallback<TArg>;
     static bind<TArg>(receiver: ComponentBase, delegate: ((arg: TArg) => unknown) | EventCallback<TArg>): EventCallback<TArg>;
     static unbound<TArg>(delegate: (arg: TArg) => unknown): EventCallback<TArg>;
     static get empty(): EventCallback<never>;
@@ -439,6 +442,8 @@ export declare class EventCallback<TArg = unknown> {
     ]): Promise<void>;
     get hasDelegate(): boolean;
     equals(other: EventCallback<never>): boolean;
+    equalsAsParameter(other: EventCallback<never>): boolean;
+    private createDelegate;
 }
 
 // EventHandlerFlags

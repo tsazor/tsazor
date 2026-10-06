@@ -174,6 +174,8 @@ export interface CodegenOptions {
     fileName?: string;
     scopeHash?: string;
     staticMarkup?: boolean;
+    renderHints?: boolean;
+    optimize?: boolean;
     codeBehindClass?: string;
     codeBehindSource?: string;
     resolveComponentMetadata?: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
