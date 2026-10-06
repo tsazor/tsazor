@@ -2,8 +2,20 @@
 
 /* @tsazor/runtime */
 
+// addAnimate
+export declare function addAnimate<E extends Element = Element>(builder: RenderTreeBuilder, sequence: number, value: Animate<E> | null | undefined | false): void;
+
 // addAttachment
 export declare function addAttachment<E extends Element = Element>(builder: RenderTreeBuilder, sequence: number, name: string, value: Attachment<E> | null | undefined | false): void;
+
+// addTransition
+export declare function addTransition<E extends Element = Element>(builder: RenderTreeBuilder, sequence: number, name: "@transition" | "@in" | "@out" | "@transition:global" | "@in:global" | "@out:global", value: Transition<E> | null | undefined | false): void;
+
+// Animate
+export type Animate<E extends Element = Element> = (element: E, rects: {
+    readonly from: DOMRect;
+    readonly to: DOMRect;
+}) => TransitionConfig;
 
 // ANONYMOUS
 export declare const ANONYMOUS: AuthenticationState;
@@ -255,6 +267,9 @@ export type ComponentType<T extends ComponentBase = ComponentBase> = ComponentDe
 // computeDiff
 export declare function computeDiff(oldTree: RenderTreeFrame[], newTree: RenderTreeFrame[], options?: DiffOptions): RenderTreeDiff;
 
+// configureTransitions
+export declare function configureTransitions(settings: TransitionSettings): void;
+
 // createTsazorApp
 export declare function createTsazorApp(options: TsazorAppOptions): TsazorApp;
 
@@ -347,11 +362,16 @@ export declare class DomRenderer implements EventHandlerHost {
     private readonly journal;
     private applying;
     private attachmentWork;
+    private motionWork;
     constructor(renderer: Renderer);
     invokeEventHandler(state: ComponentState, callback: EventCallback<never>, event: Event): void;
     applyEdits(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[]): void;
     private applyEditsJournaled;
     private queueAttachment;
+    private queueDirective;
+    private queueMotion;
+    private measureLevel;
+    takeMotionWork(): MotionWork[] | null;
     takeAttachmentWork(): unknown[] | null;
     commitSlotChildren(state: ComponentState): void;
     private insertFrame;
@@ -935,6 +955,7 @@ export declare class Renderer {
     private readonly renderQueue;
     private scheduledBatch;
     private batchInProgress;
+    private firstBatchDone;
     private readonly batchStates;
     private readonly batchCompletedListeners;
     private readonly services;
@@ -966,6 +987,7 @@ export declare class Renderer {
     private disposeInstance;
     private enqueueRender;
     private processRenderQueue;
+    private readonly leftDom;
     private readonly attachmentFailed;
     private invokeAfterRender;
     private renderComponent;
@@ -1339,6 +1361,28 @@ export declare function toComponentDefinition(value: ComponentDefinition | (abst
 // Token
 export type Token<T> = abstract new (...args: never[]) => T;
 
+// Transition
+export type Transition<E extends Element = Element> = (element: E, options: TransitionOptions) => TransitionConfig | (() => TransitionConfig);
+
+// TransitionConfig
+export interface TransitionConfig {
+    readonly delay?: number;
+    readonly duration?: number;
+    readonly easing?: (t: number) => number;
+    readonly css?: (t: number, u: number) => string;
+    readonly tick?: (t: number, u: number) => void;
+}
+
+// TransitionOptions
+export interface TransitionOptions {
+    readonly direction: "in" | "out" | "both";
+}
+
+// TransitionSettings
+export interface TransitionSettings {
+    readonly reducedMotion?: "respect" | "ignore";
+}
+
 // TsazorAppOptions
 export interface TsazorAppOptions {
     root: ComponentDefinition | (abstract new () => ComponentBase);
@@ -1484,3 +1528,239 @@ export interface VirtualizeItemsProviderResult<TItem> {
 
 // watchAuthenticationState
 export declare function watchAuthenticationState(services: ServiceProviderLike | undefined, apply: (state: AuthenticationState) => void): () => void;
+
+/* @tsazor/runtime/transition */
+
+// blur
+export declare const blur: BuiltInTransition<BlurParams>;
+
+// BlurParams
+export interface BlurParams extends TransitionTiming {
+    amount?: number | string;
+    opacity?: number;
+}
+
+// BuiltInTransition
+export interface BuiltInTransition<P, E extends Element = Element> {
+    (element: E, options?: TransitionOptions): TransitionConfig;
+    (params?: P): Transition<E>;
+}
+
+// crossfade
+export declare function crossfade(options?: CrossfadeParams & {
+    fallback?: Transition;
+}): [
+    send: (params: CrossfadeKey) => Transition,
+    receive: (params: CrossfadeKey) => Transition
+];
+
+// CrossfadeKey
+export interface CrossfadeKey extends CrossfadeParams {
+    key: unknown;
+}
+
+// CrossfadeParams
+export interface CrossfadeParams {
+    delay?: number;
+    duration?: number | ((distance: number) => number);
+    easing?: (t: number) => number;
+}
+
+// draw
+export declare const draw: BuiltInTransition<DrawParams, SVGGeometryElement>;
+
+// DrawParams
+export interface DrawParams {
+    delay?: number;
+    speed?: number;
+    duration?: number | ((length: number) => number);
+    easing?: (t: number) => number;
+}
+
+// fade
+export declare const fade: BuiltInTransition<FadeParams>;
+
+// FadeParams
+export type FadeParams = TransitionTiming;
+
+// fly
+export declare const fly: BuiltInTransition<FlyParams>;
+
+// FlyParams
+export interface FlyParams extends TransitionTiming {
+    x?: number | string;
+    y?: number | string;
+    opacity?: number;
+}
+
+// scale
+export declare const scale: BuiltInTransition<ScaleParams>;
+
+// ScaleParams
+export interface ScaleParams extends TransitionTiming {
+    start?: number;
+    opacity?: number;
+}
+
+// slide
+export declare const slide: BuiltInTransition<SlideParams>;
+
+// SlideParams
+export interface SlideParams extends TransitionTiming {
+    axis?: "x" | "y";
+}
+
+// Transition
+export type Transition<E extends Element = Element> = (element: E, options: TransitionOptions) => TransitionConfig | (() => TransitionConfig);
+
+// TransitionConfig
+export interface TransitionConfig {
+    readonly delay?: number;
+    readonly duration?: number;
+    readonly easing?: (t: number) => number;
+    readonly css?: (t: number, u: number) => string;
+    readonly tick?: (t: number, u: number) => void;
+}
+
+// TransitionOptions
+export interface TransitionOptions {
+    readonly direction: "in" | "out" | "both";
+}
+
+// TransitionTiming
+export interface TransitionTiming {
+    delay?: number;
+    duration?: number;
+    easing?: (t: number) => number;
+}
+
+/* @tsazor/runtime/animate */
+
+// Animate
+export type Animate<E extends Element = Element> = (element: E, rects: {
+    readonly from: DOMRect;
+    readonly to: DOMRect;
+}) => TransitionConfig;
+
+// flip
+export declare const flip: Flip;
+
+// Flip
+export interface Flip {
+    (element: Element, rects: {
+        readonly from: DOMRect;
+        readonly to: DOMRect;
+    }): TransitionConfig;
+    (params?: FlipParams): Animate;
+}
+
+// FlipParams
+export interface FlipParams {
+    delay?: number;
+    duration?: number | ((distance: number) => number);
+    easing?: (t: number) => number;
+}
+
+// TransitionConfig
+export interface TransitionConfig {
+    readonly delay?: number;
+    readonly duration?: number;
+    readonly easing?: (t: number) => number;
+    readonly css?: (t: number, u: number) => string;
+    readonly tick?: (t: number, u: number) => void;
+}
+
+/* @tsazor/runtime/easing */
+
+// backIn
+export declare function backIn(t: number): number;
+
+// backInOut
+export declare function backInOut(t: number): number;
+
+// backOut
+export declare function backOut(t: number): number;
+
+// bounceIn
+export declare function bounceIn(t: number): number;
+
+// bounceInOut
+export declare function bounceInOut(t: number): number;
+
+// bounceOut
+export declare function bounceOut(t: number): number;
+
+// circIn
+export declare function circIn(t: number): number;
+
+// circInOut
+export declare function circInOut(t: number): number;
+
+// circOut
+export declare function circOut(t: number): number;
+
+// cubicIn
+export declare function cubicIn(t: number): number;
+
+// cubicInOut
+export declare function cubicInOut(t: number): number;
+
+// cubicOut
+export declare function cubicOut(t: number): number;
+
+// elasticIn
+export declare function elasticIn(t: number): number;
+
+// elasticInOut
+export declare function elasticInOut(t: number): number;
+
+// elasticOut
+export declare function elasticOut(t: number): number;
+
+// expoIn
+export declare function expoIn(t: number): number;
+
+// expoInOut
+export declare function expoInOut(t: number): number;
+
+// expoOut
+export declare function expoOut(t: number): number;
+
+// linear
+export declare function linear(t: number): number;
+
+// quadIn
+export declare function quadIn(t: number): number;
+
+// quadInOut
+export declare function quadInOut(t: number): number;
+
+// quadOut
+export declare function quadOut(t: number): number;
+
+// quartIn
+export declare function quartIn(t: number): number;
+
+// quartInOut
+export declare function quartInOut(t: number): number;
+
+// quartOut
+export declare function quartOut(t: number): number;
+
+// quintIn
+export declare function quintIn(t: number): number;
+
+// quintInOut
+export declare function quintInOut(t: number): number;
+
+// quintOut
+export declare function quintOut(t: number): number;
+
+// sineIn
+export declare function sineIn(t: number): number;
+
+// sineInOut
+export declare function sineInOut(t: number): number;
+
+// sineOut
+export declare function sineOut(t: number): number;

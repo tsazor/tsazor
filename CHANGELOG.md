@@ -5,6 +5,21 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`, `@tsazor/runtime`, `@tsazor/lsp`: transitions and animations (Tsazor
+  extensions, Svelte's; F4/F5 in docs/design-svelte-features.md). `@transition`, `@in` and
+  `@out` (with the valueless `:global` modifier) play a `Transition<E>` when an element enters
+  or leaves; a leaving element stays in the DOM until its outro ends (the applier's indexing
+  skips it). `@animate` on a keyed loop row plays an `Animate<E>` (FLIP) when the row moves.
+  New runtime API: the types `Transition`, `TransitionConfig`, `TransitionOptions`, `Animate`,
+  `TransitionSettings`, the functions `addTransition`, `addAnimate` (what the compiler emits;
+  they install the motion support, so apps without them don't bundle it) and
+  `configureTransitions` (reduced motion is respected by default). New entry points:
+  `@tsazor/runtime/transition` (`fade`, `blur`, `fly`, `slide`, `scale`, `draw`, `crossfade`),
+  `@tsazor/runtime/animate` (`flip`), `@tsazor/runtime/easing` (Svelte's easing set). Compiler
+  AST: attribute kinds `motion` and `motionGlobal`, type `MotionDirective`. Diagnostics TZS008
+  (duplicates, `@transition` with `@in`/`@out`, a misplaced or valued `:global`, `@animate`
+  outside a keyed loop row, motion on a component tag) and TZS009 (no value). LSP: completions
+  and hover. Tutorial: chapters *Transitions* (9 lessons) and *Animations*.
 - `@tsazor/compiler`, `@tsazor/runtime`, `@tsazor/lsp`: `@attach` (Tsazor extension, Svelte 5's
   attachments; F2 in docs/design-svelte-features.md). `@attach="fn"` and any number of
   `@attach:<name>="fn"` on an element run `fn(element)` once the element is in the DOM (at the

@@ -1,0 +1,7 @@
+@import { slide } from "@tsazor/runtime/transition"
+
+<div class="item" @transition="slide" @transition:global>@Text</div>
+
+@code {
+    @Parameter() Text = "";
+}

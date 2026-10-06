@@ -1,0 +1,27 @@
+@import type { Transition } from "@tsazor/runtime"
+
+<label>
+    <input type="checkbox" @bind="visible" />
+    visible
+</label>
+
+@if (visible) {
+    <p @in="typewriter()">The quick brown fox jumps over the lazy dog</p>
+}
+
+@code {
+    visible = false;
+
+    typewriter(speed = 1): Transition {
+        return (element) => {
+            const text = element.textContent ?? "";
+            const duration = text.length / (speed * 0.01);
+            return {
+                duration,
+                tick: (t) => {
+                    element.textContent = text.slice(0, Math.trunc(text.length * t));
+                },
+            };
+        };
+    }
+}

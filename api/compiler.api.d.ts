@@ -70,6 +70,14 @@ export type AttributeNode = (SourceSpan & {
     code: string;
     codeStart?: SourceSpan["pos"];
 }) | (SourceSpan & {
+    kind: "motion";
+    directive: MotionDirective;
+    code: string;
+    codeStart?: SourceSpan["pos"];
+}) | (SourceSpan & {
+    kind: "motionGlobal";
+    directive: Exclude<MotionDirective, "animate">;
+}) | (SourceSpan & {
     kind: "bind";
     expression?: string;
     bindTarget?: string;
@@ -541,6 +549,9 @@ export interface ModuleMetadata {
     }>;
     classes: ClassRecord[];
 }
+
+// MotionDirective
+export type MotionDirective = "transition" | "in" | "out" | "animate";
 
 // OVERRIDABLE_MEMBERS
 export declare const OVERRIDABLE_MEMBERS: ReadonlySet<string>;

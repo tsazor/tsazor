@@ -1,0 +1,10 @@
+.board {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+    max-width: 36em;
+}
+
+h2 {
+    font-size: 1.2em;
+}

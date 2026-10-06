@@ -185,6 +185,9 @@ export function childNodes(node: MarkupNode): MarkupNode[] {
   }
 }
 
+/** The motion directives: transitions (F4) and `@animate` (F5). */
+export type MotionDirective = "transition" | "in" | "out" | "animate";
+
 export type AttributeNode =
   | (SourceSpan & {
       kind: "static";
@@ -232,6 +235,10 @@ export type AttributeNode =
   /** `@attach="…"` (F2): `attachName` is `""`, or `name` of `@attach:name`
    *  (several attachments per element, told apart by name). */
   | (SourceSpan & { kind: "attach"; attachName: string; code: string; codeStart?: SourceSpan["pos"] })
+  /** `@transition`, `@in`, `@out` (F4) and `@animate` (F5) with their value. */
+  | (SourceSpan & { kind: "motion"; directive: MotionDirective; code: string; codeStart?: SourceSpan["pos"] })
+  /** The valueless `global` modifier of a transition: `@transition:global`, `@in:global`, `@out:global` (F4). */
+  | (SourceSpan & { kind: "motionGlobal"; directive: Exclude<MotionDirective, "animate"> })
   /** @bind and its modifiers. Modifier-only nodes (@bind:event etc.) carry exactly one detail field. */
   | (SourceSpan & {
       kind: "bind";

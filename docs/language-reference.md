@@ -382,6 +382,89 @@ unchanged in Tsazor. `@attach` ties the cleanup to the element's lifetime instea
 - Hand-written render code: `addAttachment(builder, sequence, "@attach", value)`; the attachment
   support is only bundled when used.
 
+## @transition, @in, @out (Tsazor extension)
+
+```razor
+@import { fade, fly } from "@tsazor/runtime/transition"
+
+@if (visible) {
+    <p @transition="fade">Fades in and out</p>
+    <p @in="fly({ y: 200, duration: 600 })" @out="fade">Flies in, fades out</p>
+    <p @transition="fade" @transition:global>Also when the component comes and goes</p>
+}
+```
+
+Svelte's transitions (F4 in [design-svelte-features.md](design-svelte-features.md)). Blazor has
+no counterpart; there you add and remove CSS classes yourself and delay the removal with a timer.
+
+- **Directives:** `@in` plays when the element enters the DOM, `@out` when it leaves,
+  `@transition` both — and it is reversible: removed during its intro, it plays back from where
+  it is. `@transition` together with `@in`/`@out`, or a directive twice ⇒ TZS008.
+- **Value:** a `Transition<E> = (element: E, options: { direction }) => TransitionConfig | (() =>
+  TransitionConfig)` (`@tsazor/runtime`), checked against the tag's interface like `@attach`.
+  Parameters are bound by a call: `fly({ y: 200 })`. The value is read when the transition
+  starts, so a new function every render costs nothing. `null`/`undefined`/`false`: none.
+- **Config** (Svelte's contract): `delay`, `duration` (default 300 ms), `easing`, and either
+  `css: (t, u) => string` — sampled into keyframes and played with the Web Animations API, off
+  the main thread — or `tick: (t, u) => void`, called every animation frame. `t` runs 0 → 1 for
+  an intro, 1 → 0 for an outro; `u` is `1 - t`. Returning a function defers the config until all
+  transitions of the render are known (`crossfade` pairs elements that way).
+- **Built-ins** (`@tsazor/runtime/transition`): `fade`, `blur`, `fly`, `slide`, `scale`, `draw`
+  (SVG strokes) and `crossfade`, which returns a `[send, receive]` pair: an element leaving with
+  `@out="send({ key })"` flies to the one entering with `@in="receive({ key })"`. Each built-in
+  works bare (`fade`) or with parameters (`fade({ duration: 200 })`). Easing functions:
+  `@tsazor/runtime/easing` (Svelte's set: `cubicOut`, `elasticOut`, `backIn`, …).
+- **Leaving:** an element with an outro stays in the DOM until the outro ends, then it is removed;
+  a removed parent element waits for the outros inside it. Renders meanwhile don't see it (the
+  diff's sibling indexing skips it). Its event handlers stay live.
+- **Local by default.** A transition plays when its own component's render adds or removes the
+  element — also as part of a larger removed block of that component — but not on the
+  component's first render, nor when the component itself is removed. With the valueless
+  modifier `:global` (`@in:global`, `@out:global`, `@transition:global`) it plays then too.
+  Deviation from Svelte, whose control-flow blocks are separate: Razor's `@if` emits flat frames,
+  so an inner block's local transition also plays when an outer `@if` of the same component
+  toggles. No intros play in the app's first render batch.
+- **Events:** `introstart`, `introend`, `outrostart`, `outroend` on the element, handled with
+  `@onintrostart="…"` etc.
+- **Reduced motion:** for users with `prefers-reduced-motion: reduce` every transition has
+  duration 0 (the end state at once; events still fire). `configureTransitions({ reducedMotion:
+  "ignore" })` opts out for motion that carries meaning.
+- **Timing:** transitions start at the batch end, after attachments, before `onAfterRender`.
+  Without the Web Animations API (test DOMs) `css` is skipped; timing, `tick` and events remain.
+- **Errors:** an exception from a transition function is a failure of its component (nearest
+  `ErrorBoundary`). On a component tag ⇒ TZS008; without a value ⇒ TZS009; `:global` without its
+  directive or with a value, or another modifier ⇒ TZS008.
+- **Render hints:** like `@attach` — no static markup block, a keyed row with one is always
+  built.
+- Hand-written render code: `addTransition(builder, sequence, "@in:global", value)`; the
+  transition support is only bundled when used.
+
+## @animate (Tsazor extension)
+
+```razor
+@import { flip } from "@tsazor/runtime/animate"
+
+<ul>
+    @foreach (var todo in todos) {
+        <li @key="todo.id" @animate="flip">@todo.text</li>
+    }
+</ul>
+```
+
+Svelte's animations (F5): when a keyed list changes, the rows that moved slide from their old
+place to the new one (FLIP).
+
+- **Where:** only on a keyed row of a loop — an element directly inside `@foreach` (or `@for`)
+  that has `@key`; anywhere else ⇒ TZS008.
+- **Value:** an `Animate<E> = (element: E, rects: { from: DOMRect; to: DOMRect }) =>
+  TransitionConfig`, the same config as a transition (played 0 → 1). `flip` from
+  `@tsazor/runtime/animate` is the built-in (`flip` or `flip({ duration: 300 })`).
+- **When:** a row's box is measured before the render changes its list and again after it; a
+  row whose box changed is animated. A new row or a leaving row doesn't animate — combine with
+  `@in`/`@out` for those. A leaving row with `@animate` is taken out of the flow (absolute, in
+  place) during its outro, so the others move into the gap at once.
+- Hand-written render code: `addAnimate(builder, sequence, value)`.
+
 ## Code contexts (code-first, like Razor)
 
 In `@{ … }` and in the bodies of `@if`/`else`, `@for`, `@foreach`, `@while`,

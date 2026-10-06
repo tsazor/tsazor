@@ -1,0 +1,13 @@
+.todos {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+li {
+    margin: 0 0 0.5em;
+    padding: 0.5em;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+}

@@ -31,7 +31,7 @@ import {
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AnalyzedFile } from "./analysis.js";
-import { ATTACH_DOC, nodeAt } from "./analysis.js";
+import { ATTACH_DOC, MOTION_DOCS, nodeAt } from "./analysis.js";
 import {
   chainAt,
   contextNameOf,
@@ -206,6 +206,10 @@ const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string; elementOnly?:
   { label: "@attributes", doc: "Attribute splat." },
   { label: "@attach", doc: ATTACH_DOC, elementOnly: true },
   { label: "@attach:", doc: `${ATTACH_DOC} The named form \`@attach:name="…"\` adds another, independent attachment to the same element.`, elementOnly: true },
+  { label: "@transition", doc: MOTION_DOCS.transition, elementOnly: true },
+  { label: "@in", doc: MOTION_DOCS.in, elementOnly: true },
+  { label: "@out", doc: MOTION_DOCS.out, elementOnly: true },
+  { label: "@animate", doc: MOTION_DOCS.animate, elementOnly: true },
 ];
 
 const ELEMENT_ATTRS: ReadonlyArray<{ label: string; doc?: string }> = [

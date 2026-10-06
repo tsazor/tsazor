@@ -43,7 +43,7 @@ export class LogicalRange {
   /** The logical children: DOM nodes, with nested ranges as their LogicalRange. */
   children(): Array<Node | LogicalRange> {
     const result: Array<Node | LogicalRange> = [];
-    for (let node: Node | null = this.start.nextSibling; node !== null && node !== this.end; node = nextLogicalSibling(node)) {
+    for (let node: Node | null = skipLeaving(this.start.nextSibling); node !== null && node !== this.end; node = nextLogicalSibling(node)) {
       result.push(LogicalRange.startingAt(node) ?? node);
     }
     return result;
@@ -99,10 +99,55 @@ export function lastNodeOf(node: Node): Node {
   return node.nodeType === COMMENT_NODE ? (rangesByStart.get(node)?.end ?? node) : node;
 }
 
-/** First DOM node of the logical child after the one starting at `node`. */
+/** First DOM node of the logical child after the one starting at `node` (leaving children skipped). */
 export function nextLogicalSibling(node: Node): Node | null {
-  return lastNodeOf(node).nextSibling;
+  return skipLeaving(lastNodeOf(node).nextSibling);
 }
+
+/* ------------------------------------------------------------------ */
+/* Leaving children (F4)                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * F4: a removed logical child whose outro transition still plays stays in
+ * the DOM until the outro ends, marked as leaving (by its first node).
+ * Logical child indexing skips leaving children, so the diff's sibling
+ * indices — which count the live tree without them — still resolve to the
+ * right nodes.
+ */
+const leaving = new WeakSet<Node>();
+let leavingCount = 0;
+
+/** Marks the logical child starting at `first` as leaving; a journaled pass unmarks it on rollback. */
+export function markLeaving(first: Node, journal: DomJournal | null): void {
+  if (leaving.has(first)) return;
+  leaving.add(first);
+  leavingCount++;
+  journal?.restore(first, unmarkLeaving, null);
+}
+
+/** Ends the leaving state of the logical child starting at `first` (it was removed, or the pass rolled back). */
+export function unmarkLeaving(first: Node): void {
+  if (leaving.delete(first)) leavingCount--;
+}
+
+/** `node`, or the first node after it that doesn't start a leaving child. */
+function skipLeaving(node: Node | null): Node | null {
+  if (leavingCount === 0) return node;
+  while (node !== null && leaving.has(node)) node = lastNodeOf(node).nextSibling;
+  return node;
+}
+
+/** Whether `node` lies inside the logical child starting at `first` (or is it). */
+export function logicalChildContains(first: Node, node: Node): boolean {
+  const range = LogicalRange.startingAt(first);
+  if (range === undefined) return first === node || first.contains(node);
+  // Between the markers: after the start, before the end.
+  return (range.start.compareDocumentPosition(node) & FOLLOWING) !== 0 && (range.end.compareDocumentPosition(node) & PRECEDING) !== 0;
+}
+
+const FOLLOWING = 4;
+const PRECEDING = 2;
 
 /** Moves the logical child starting at `first` before `before` in `parent`. */
 export function moveLogicalChild(first: Node, parent: Node, before: Node | null, journal: DomJournal | null): void {
@@ -139,10 +184,13 @@ export class LogicalChildren {
     this.node = this.first();
   }
 
+  /** F5: whether this pass already measured the level's animated children. */
+  measured = false;
+
   /** First DOM node of the first child (the boundary when empty). */
   first(): Node | null {
     const container = this.container;
-    return container instanceof LogicalRange ? container.start.nextSibling : container.firstChild;
+    return skipLeaving(container instanceof LogicalRange ? container.start.nextSibling : container.firstChild);
   }
 
   /** First DOM node of child `siblingIndex` (the boundary when past the end); moves the cursor. */
@@ -165,7 +213,7 @@ export class LogicalChildren {
   /** Points the cursor at child `index`, whose first node is `node`. */
   seek(index: number, node: Node | null): void {
     this.index = index;
-    this.node = node;
+    this.node = skipLeaving(node);
   }
 
   /** First DOM nodes of all children, in order. */

@@ -265,14 +265,31 @@ const DIRECTIVE_DOCS: Record<string, string> = {
 export const ATTACH_DOC =
   "`@attach` — runs a function (`Attachment<E>`) with the element once it is in the DOM, after the render like `onAfterRender`. A returned function is the cleanup: called when the element is removed, the component is disposed or the value changes (a new function identity re-attaches — keep factories in a field or memoize them).";
 
+/** F4/F5: hover and completion texts of the motion directives. */
+export const MOTION_DOCS: Readonly<Record<"transition" | "in" | "out" | "animate", string>> = {
+  transition:
+    "`@transition` — plays a transition (`Transition<E>`, e.g. `fade` from `@tsazor/runtime/transition`) when the element enters and when it leaves; a leaving element stays in the DOM until its outro ends. Reversible: removed during its intro, it plays back from where it is. Local: only when this component's render adds or removes the element — `@transition:global` also when the component itself appears or disappears.",
+  in: "`@in` — plays a transition (`Transition<E>`) when the element enters the DOM (not on the component's first render; `@in:global` also then). Parameters by a call: `@in=\"fly({ y: 200 })\"`.",
+  out: "`@out` — plays a transition (`Transition<E>`) when the element leaves the DOM; the element stays until the outro ends. Local by default; `@out:global` also when the component itself is removed.",
+  animate:
+    "`@animate` — animates a keyed loop row (`Animate<E>`, e.g. `flip` from `@tsazor/runtime/animate`) when the list changes and the row moves. Only on an element directly inside `@foreach` that has `@key`.",
+};
+
 /**
  * F2: hover on the name of an `@attach` / `@attach:name` attribute (its
- * value is TypeScript and gets the TS layer's hover), or null.
+ * value is TypeScript and gets the TS layer's hover), or null. F4/F5: the
+ * same for `@transition`, `@in`, `@out` (with `:global`) and `@animate`.
  */
 export function directiveAttributeHoverAt(analyzed: AnalyzedFile, line: number, character: number): HoverInfo | null {
   const node = nodeAt(analyzed.document, line, character);
   if (node === null || node.kind !== "element") return null;
   for (const attr of (node as ElementNode).attributes) {
+    if ((attr.kind === "motion" || attr.kind === "motionGlobal") && attr.pos.line - 1 === line) {
+      const label = attr.kind === "motion" ? `@${attr.directive}` : `@${attr.directive}:global`;
+      if (character < attr.pos.column || character >= attr.pos.column + label.length) continue;
+      const global = attr.kind === "motionGlobal" ? "\n\n`:global` — the transition also plays when the component itself appears or disappears (except on the app's first render)." : "";
+      return { markdown: `${MOTION_DOCS[attr.directive]}${global}` };
+    }
     if (attr.kind !== "attach" || attr.pos.line - 1 !== line) continue;
     const label = attr.attachName === "" ? "@attach" : `@attach:${attr.attachName}`;
     if (character < attr.pos.column || character >= attr.pos.column + label.length) continue;

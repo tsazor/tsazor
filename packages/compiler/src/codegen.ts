@@ -277,6 +277,8 @@ class Codegen {
   private readonly runtimeImports = new Set<string>();
   /** Runtime APIs of the generated code, imported under hygienic aliases. */
   private readonly runtimeAliases = new Set<string>();
+  /** F5: keyed rows of loops, where `@animate` may stand. */
+  private readonly animatableRows = new Set<ElementNode>();
   /** Component members, syntactically: `@code`, code-behind, `@inject` fields. */
   private readonly members = emptyMembers();
   /** A member reference sits in a non-arrow function: buildRenderTree captures `this`. */
@@ -1268,9 +1270,12 @@ class Codegen {
           if (!isRow || !sideEffectFree(attr.code, false)) return false;
           break;
         case "attach":
+        case "motion":
+        case "motionGlobal":
           // F2: rows with attachments are always built — a reused row would
           // keep the previous render's attachment frame and never see a
-          // changed attachment value.
+          // changed attachment value. The same for transitions and
+          // animations (F4/F5).
           return false;
         default:
           // @ref, @attributes, @bind, event modifiers.
@@ -1573,6 +1578,7 @@ class Codegen {
           this.stmt(text, node.pos, text.lastIndexOf(iterable));
           this.withScope(() => {
             for (const name of csharp.names) this.locals.set(name, "constLoop");
+            this.markAnimatableRows(node.children);
             for (const child of node.children) this.emitNode(child, node.pos);
           });
           this.stmt(`}`, node.pos);
@@ -1600,6 +1606,7 @@ class Codegen {
           const text = `for (${header}) {`;
           this.stmt(text, node.pos, text.indexOf(header));
           const row = node.isForEach && iterates ? this.reusableRow(node) : null;
+          this.markAnimatableRows(node.children);
           for (const child of node.children) {
             if (child === row) this.emitReusableRow(row);
             else this.emitNode(child, node.pos);
@@ -1620,7 +1627,7 @@ class Codegen {
     const key = node.attributes.find((a) => a.kind === "key");
     const refs = node.attributes.filter((a) => a.kind === "ref");
     const attachments = node.attributes.filter((a) => a.kind === "attach");
-    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref" && a.kind !== "attach");
+    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref" && a.kind !== "attach" && a.kind !== "motion" && a.kind !== "motionGlobal");
 
     const seq = this.seq();
     const raw = JSON.stringify(name);
@@ -1642,6 +1649,7 @@ class Codegen {
     for (const attach of attachments) {
       if (attach.kind === "attach") this.emitAttachStmt(attach, name);
     }
+    this.emitMotionStmts(node);
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
       if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
@@ -1691,6 +1699,65 @@ class Codegen {
     const typed = this.options.typedShadow !== undefined ? `<${elementRefCastTag(tag) ?? "Element"}>` : "";
     const text = `${alias("addAttachment")}${typed}(${BUILDER}, ${seq}, ${JSON.stringify(directive)}, ${value});`;
     this.stmt(text, attach.pos, text.lastIndexOf(value));
+  }
+
+  /**
+   * F4/F5: `@transition`, `@in`, `@out` → `addTransition(__builder, seq,
+   * "@in[:global]", value)`, `@animate` → `addAnimate(__builder, seq,
+   * value)`. Checked here: each directive at most once, `@transition` not
+   * together with `@in`/`@out`, a `:global` only next to its directive, and
+   * `@animate` only on a keyed row of a loop. Typed shadows pass the
+   * element's interface, as for `@attach`.
+   */
+  private emitMotionStmts(node: ElementNode): void {
+    const motions: Array<Extract<AttributeNode, { kind: "motion" }>> = [];
+    const globals = new Set<string>();
+    for (const attr of node.attributes) {
+      if (attr.kind === "motion") {
+        if (motions.some((m) => m.directive === attr.directive)) {
+          this.diagnostics.error("TZS008", attr, `Duplicate '@${attr.directive}' on one element.`);
+          continue;
+        }
+        motions.push(attr);
+      } else if (attr.kind === "motionGlobal") {
+        if (globals.has(attr.directive)) this.diagnostics.error("TZS008", attr, `Duplicate '@${attr.directive}:global'.`);
+        globals.add(attr.directive);
+        if (!node.attributes.some((a) => a.kind === "motion" && a.directive === attr.directive)) {
+          this.diagnostics.error("TZS008", attr, `'@${attr.directive}:global' without '@${attr.directive}' — the modifier belongs next to its transition: '@${attr.directive}="fade" @${attr.directive}:global'.`);
+        }
+      }
+    }
+    const both = motions.find((m) => m.directive === "transition");
+    const single = motions.find((m) => m.directive === "in" || m.directive === "out");
+    if (both !== undefined && single !== undefined) {
+      this.diagnostics.error("TZS008", single, `'@${single.directive}' next to '@transition': '@transition' is the intro and the outro — use either it or '@in'/'@out'.`);
+    }
+    const typed = this.options.typedShadow !== undefined ? `<${elementRefCastTag(node.tagName) ?? "Element"}>` : "";
+    for (const motion of motions) {
+      if (motion === single && both !== undefined) continue;
+      const seq = this.seq();
+      const value = this.delegateValue(motion.code, motion.codeStart);
+      let text: string;
+      if (motion.directive === "animate") {
+        if (!this.animatableRows.has(node)) {
+          this.diagnostics.error("TZS008", motion, "'@animate' applies to the rows of a keyed loop: an element directly inside '@foreach' that has '@key'.");
+        }
+        this.runtimeAliases.add("addAnimate");
+        text = `${alias("addAnimate")}${typed}(${BUILDER}, ${seq}, ${value});`;
+      } else {
+        const directive = `@${motion.directive}${globals.has(motion.directive) ? ":global" : ""}`;
+        this.runtimeAliases.add("addTransition");
+        text = `${alias("addTransition")}${typed}(${BUILDER}, ${seq}, ${JSON.stringify(directive)}, ${value});`;
+      }
+      this.stmt(text, motion.pos, text.lastIndexOf(value));
+    }
+  }
+
+  /** F5: marks the keyed element rows among a loop body's nodes (where `@animate` may stand). */
+  private markAnimatableRows(children: readonly MarkupNode[]): void {
+    for (const child of children) {
+      if (child.kind === "element" && child.attributes.some((a) => a.kind === "key")) this.animatableRows.add(child);
+    }
   }
 
   /** `@key="expr"` → `__builder.setKey(...)`, token-precise like attribute values. */
@@ -2268,6 +2335,14 @@ class Codegen {
       case "key":
       case "ref":
         break; // handled by emitElement/emitComponent
+      case "motion":
+      case "motionGlobal":
+        // Elements emit theirs in emitElement (F4/F5).
+        if (ctx?.isComponent) {
+          const label = attr.kind === "motion" ? `@${attr.directive}` : `@${attr.directive}:global`;
+          this.diagnostics.error("TZS008", attr, `'${label}' applies to elements, not to the component '<${ctx.tag}>'. Put it on an element inside the component.`);
+        }
+        break;
       case "attach":
         // Elements emit theirs in emitElement; a component has no element of its own.
         if (ctx?.isComponent) {

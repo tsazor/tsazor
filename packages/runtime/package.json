@@ -10,6 +10,18 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./transition": {
+      "types": "./dist/transition.d.ts",
+      "default": "./dist/transition.js"
+    },
+    "./animate": {
+      "types": "./dist/animate.d.ts",
+      "default": "./dist/animate.js"
+    },
+    "./easing": {
+      "types": "./dist/easing.d.ts",
+      "default": "./dist/easing.js"
+    },
     "./tsazor-components.json": "./dist/tsazor-components.json"
   },
   "sideEffects": [

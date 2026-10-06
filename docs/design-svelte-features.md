@@ -131,6 +131,43 @@ context is `unknown`; the parameters are write-only (setters), so the instance i
 - Events: `onintrostart`, `onintroend`, `onoutrostart`, `onoutroend`, as ordinary `@on…` handlers.
 - `prefers-reduced-motion` is respected by default (duration 0), with an opt-out.
 
+**Implemented** (2026-10-06): `@tsazor/runtime` + `/transition` + `/easing`
+([language reference](language-reference.md#transition-in-out-tsazor-extension), tutorial
+chapter *Transitions* in Advanced). Implementation decisions:
+
+- **Value form.** The directive's value is a `Transition<E>`: `(element, { direction }) =>
+  TransitionConfig | (() => TransitionConfig)`. Parameters are bound by a call:
+  `@in="fly({ y: 200 })"`. The built-ins are overloaded — `fade` is a transition, `fade({ duration:
+  400 })` returns one — so both spellings work. The value is read when the transition starts, so
+  a new function identity each render costs nothing (unlike `@attach`).
+- **`global` is a valueless modifier**, Razor's `@onclick:preventDefault` form:
+  `<p @transition="fade" @transition:global>`. Same for `@in:global` and `@out:global`.
+- **"Local" means local to the component.** Razor emits control flow as flat frames, so the
+  runtime cannot tell which `@if` removed an element. A local transition plays whenever its own
+  component's render adds or removes the element, also as part of a removed parent element; it
+  does not play on the component's first render or when the component itself is removed. A
+  `global` one plays in those cases too, except on the app's initial render. Deviation from
+  Svelte: toggling an outer `@if` of the same component plays an inner block's local transition.
+- **Leaving elements** stay in the DOM, marked as leaving; the applier's sibling indexing skips
+  them, so the diff never sees them. They are removed when their last outro ends. A pass that
+  rolls back unmarks them. Event handlers stay live until removal; the component may already
+  be disposed (`global` outro of a removed component), then its handlers no longer run.
+- **Timing.** Intros and outros start at the batch end, after attachments, before
+  `onAfterRender`. `css` runs on the Web Animations API (the `css` string sampled into
+  keyframes, as Svelte 5 does); `tick` runs on `requestAnimationFrame`. Without Web Animations
+  (test DOMs) `css` is skipped and only the timing and `tick` remain.
+- **Reversal.** An element with `@transition` that is removed during its intro runs its outro
+  from the current `t` (and the other way round never happens: a re-added element is a new
+  element). Separate `@in`/`@out` don't reverse; the intro is cancelled.
+- **Events** are DOM events on the element (`introstart`, `introend`, `outrostart`,
+  `outroend`), handled with `@onintrostart` etc.
+- **Reduced motion:** `configureTransitions({ reducedMotion: "ignore" })` opts out; by default a
+  `prefers-reduced-motion: reduce` user gets duration 0.
+- **Modules:** `@tsazor/runtime/transition` (`fade`, `fly`, `slide`, `scale`, `blur`, `draw`,
+  `crossfade`), `@tsazor/runtime/animate` (`flip`), `@tsazor/runtime/easing` (Svelte's easing
+  set). The transition support itself installs on the first transition frame (tree-shaken like
+  `@attach`).
+
 ## F5 — `@animate` (keyed list reordering)
 
 ```razor
@@ -142,6 +179,13 @@ context is `unknown`; the parameters are write-only (setters), so the instance i
 - FLIP animation when keyed items move. It is only valid on the direct child of a keyed loop, and
   is a diagnostic otherwise.
 - Built-in `flip`, custom ones with the same contract as F4.
+
+**Implemented** (2026-10-06): `addAnimate`, `Animate<E>`, `@tsazor/runtime/animate`
+([language reference](language-reference.md#animate-tsazor-extension), tutorial chapter
+*Animations*). Rows are measured before the first structural edit of their level in a pass and
+again at the batch end; a moved row plays its animation (0 → 1). A leaving row with `@animate`
+is taken out of the flow during its outro (Svelte's `fix_position`). "Directly inside a keyed
+loop" means an element child of a `@foreach`/`@for` body that has `@key`; elsewhere TZS008.
 
 ## F6 — `@State` (opt-in automatic re-render), **planned for v1** (D4)
 

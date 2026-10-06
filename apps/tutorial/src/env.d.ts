@@ -25,4 +25,8 @@ declare module "virtual:tutorial-bundles" {
   export const testing: string;
   /** The preview's test runner, served as "vitest". */
   export const vitest: string;
+  /** @tsazor/runtime/transition, /animate and /easing as ES modules. */
+  export const transition: string;
+  export const animate: string;
+  export const easing: string;
 }

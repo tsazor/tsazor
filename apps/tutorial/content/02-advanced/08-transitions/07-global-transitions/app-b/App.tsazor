@@ -1,0 +1,21 @@
+<label>
+    <input type="checkbox" @bind="showItems" />
+    show list
+</label>
+
+<label>
+    <input type="range" class="count" @bind="count" @bind:event="oninput" min="0" max="10" />
+    @count items
+</label>
+
+@if (showItems) {
+    @foreach (const item of items.slice(0, count)) {
+        <Item Text="@item" />
+    }
+}
+
+@code {
+    showItems = true;
+    count = 10;
+    items = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+}

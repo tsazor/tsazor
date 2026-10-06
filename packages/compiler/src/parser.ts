@@ -1201,6 +1201,37 @@ class Parser {
       return { kind: "attach", attachName, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
     }
 
+    // F4/F5: `@transition`, `@in`, `@out`, `@animate` with a value, and the
+    // valueless `global` modifier of a transition (Razor's
+    // `@onclick:preventDefault` form): `@in:global`.
+    const motion = /^(transition|in|out|animate)(?::(.*))?$/.exec(body);
+    if (motion !== null) {
+      const directive = motion[1] as "transition" | "in" | "out" | "animate";
+      const modifier = motion[2];
+      if (modifier !== undefined) {
+        const hasValue = src[this.i] === "=";
+        if (hasValue) {
+          this.i++;
+          this.parseAttributeValue();
+        }
+        if (modifier === "global" && directive !== "animate" && !hasValue) {
+          return { kind: "motionGlobal", directive, pos, endPos: this.locator(this.i) };
+        }
+        const message =
+          modifier === "global" && directive !== "animate"
+            ? `'@${body}' takes no value — write it on its own: '@${directive}="…" @${directive}:global'.`
+            : directive === "animate"
+              ? `'@animate' has no modifiers.`
+              : `Unknown modifier ':${modifier}' on '@${directive}' (expected ':global').`;
+        this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), message);
+        return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      }
+      const code = this.parseRequiredExpression(body, pos);
+      if (code === null) return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+      return { kind: "motion", directive, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
+    }
+
     // Event handler `@onclick="…"`, or one of its modifiers
     // `@onclick:preventDefault[="bool"]` / `@onclick:stopPropagation[="bool"]`.
     if (/^on[A-Za-z]/i.test(body)) {

@@ -815,3 +815,46 @@ describe("@attach (F2)", () => {
     expect(component.code).not.toContain("addAttachment");
   });
 });
+
+describe("@transition / @in / @out (F4) and @animate (F5)", () => {
+  const members = "@code { items = [{ id: 1 }]; visible = true; fade = (el: Element) => ({}); fly(params: object) { return (el: Element) => ({}); } flip = (el: Element) => ({}); }";
+  const errors = (source: string) => gen(`${source}\n${members}`).diagnostics.errors.map((d) => `${d.code} ${d.message}`);
+  const calls = (code: string) => code.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("__tsazor_add"));
+
+  it("emits a transition frame per directive, with :global folded into its name", () => {
+    const { code, diagnostics } = gen(`<p @in="fly({ y: 200 })" @out="fade" @out:global>x</p><div @transition="fade"></div>\n${members}`);
+    expect(diagnostics.errors).toEqual([]);
+    expect(code).toContain("addTransition as __tsazor_addTransition");
+    expect(calls(code)).toEqual([
+      '__tsazor_addTransition(__builder, 1, "@in", this.fly({ y: 200 }));',
+      '__tsazor_addTransition(__builder, 2, "@out:global", this.fade);',
+      '__tsazor_addTransition(__builder, 5, "@transition", this.fade);',
+    ]);
+  });
+
+  it("emits @animate on a keyed loop row, typed by the tag in typed shadows", () => {
+    const source = `<ul>@foreach (const item of items) {<li @key="item.id" @animate="flip">@item.id</li>}</ul>\n${members}`;
+    const { code, diagnostics } = gen(source);
+    expect(diagnostics.errors).toEqual([]);
+    expect(calls(code)).toEqual(["__tsazor_addAnimate(__builder, 2, this.flip);"]);
+    expect(gen(source, { typedShadow: {} }).code).toContain('__tsazor_addAnimate<HTMLElementTagNameMap["li"]>(__builder, 2, this.flip);');
+  });
+
+  it("reports @animate outside a keyed loop row", () => {
+    const message = "'@animate' applies to the rows of a keyed loop";
+    expect(errors(`<li @animate="flip"></li>`)).toEqual([expect.stringContaining(message)]);
+    expect(errors(`@foreach (const item of items) {<li @animate="flip"></li>}`)).toEqual([expect.stringContaining(message)]);
+    expect(errors(`@foreach (const item of items) {<li @key="item.id"><span @animate="flip"></span></li>}`)).toEqual([expect.stringContaining(message)]);
+  });
+
+  it("reports duplicates, @transition next to @in/@out, a lone or valued :global, unknown modifiers and component tags", () => {
+    expect(errors(`<p @in="fade" @in="fade"></p>`)).toEqual([expect.stringMatching(/^TZS008 .*Duplicate '@in'/)]);
+    expect(errors(`<p @transition="fade" @out="fade"></p>`)).toEqual([expect.stringMatching(/^TZS008 .*'@out' next to '@transition'/)]);
+    expect(errors(`<p @in:global></p>`)).toEqual([expect.stringMatching(/^TZS008 .*'@in:global' without '@in'/)]);
+    expect(errors(`<p @in="fade" @in:global="true"></p>`)).toEqual([expect.stringMatching(/^TZS008 .*'@in:global' takes no value/)]);
+    expect(errors(`<p @in:local="fade"></p>`)).toEqual([expect.stringMatching(/^TZS008 .*Unknown modifier ':local' on '@in'/)]);
+    expect(errors(`<p @in></p>`)).toEqual([expect.stringMatching(/^TZS009 /)]);
+    const component = gen(`<Child @transition="fade" />\n${members}`, { resolveComponent: () => ({ specifier: "./Child.tsazor" }) });
+    expect(component.diagnostics.errors.map((d) => d.message)).toEqual([expect.stringContaining("'@transition' applies to elements, not to the component '<Child>'")]);
+  });
+});

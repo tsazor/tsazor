@@ -38,6 +38,10 @@ export interface PackageBundles {
   testing: string;
   /** The preview's test runner (src/preview/mini-test.ts), imported as "vitest". */
   vitest: string;
+  /** F4/F5: @tsazor/runtime/transition, /animate and /easing (self-contained). */
+  transition: string;
+  animate: string;
+  easing: string;
 }
 
 export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
@@ -58,14 +62,17 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
     });
     return result.outputFiles[0]!.text;
   };
-  const [runtime, components, dotnet, testing, vitest] = await Promise.all([
+  const [runtime, components, dotnet, testing, vitest, transition, animate, easing] = await Promise.all([
     bundle("@tsazor/runtime", []),
     bundle("@tsazor/components", ["@tsazor/runtime"]),
     bundle("@tsazor/dotnet", ["@tsazor/runtime"]),
     bundle("@tsazor/testing", ["@tsazor/runtime"]),
     bundle(path.join(fromDir, "src", "preview", "mini-test.ts"), []),
+    bundle("@tsazor/runtime/transition", ["@tsazor/runtime"]),
+    bundle("@tsazor/runtime/animate", ["@tsazor/runtime"]),
+    bundle("@tsazor/runtime/easing", ["@tsazor/runtime"]),
   ]);
-  return { runtime, components, dotnet, testing, vitest };
+  return { runtime, components, dotnet, testing, vitest, transition, animate, easing };
 }
 
 export function tutorialPlugin(options: { root: string }): Plugin {

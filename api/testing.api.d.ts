@@ -2,7 +2,13 @@
 
 /* @tsazor/testing */
 
+// addAnimate: re-exported from @tsazor/runtime
+
 // addAttachment: re-exported from @tsazor/runtime
+
+// addTransition: re-exported from @tsazor/runtime
+
+// Animate: re-exported from @tsazor/runtime
 
 // ANONYMOUS: re-exported from @tsazor/runtime
 
@@ -59,6 +65,8 @@
 // ComponentType: re-exported from @tsazor/runtime
 
 // computeDiff: re-exported from @tsazor/runtime
+
+// configureTransitions: re-exported from @tsazor/runtime
 
 // createFakeLocalization
 export declare function createFakeLocalization(options?: FakeLocalizationOptions): FakeLocalization;
@@ -377,6 +385,14 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void): Promi
 // toComponentDefinition: re-exported from @tsazor/runtime
 
 // Token: re-exported from @tsazor/runtime
+
+// Transition: re-exported from @tsazor/runtime
+
+// TransitionConfig: re-exported from @tsazor/runtime
+
+// TransitionOptions: re-exported from @tsazor/runtime
+
+// TransitionSettings: re-exported from @tsazor/runtime
 
 // TsazorAppOptions: re-exported from @tsazor/runtime
 

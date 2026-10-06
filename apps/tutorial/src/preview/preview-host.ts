@@ -37,11 +37,14 @@ interface Bundles {
   dotnet: string;
   testing: string;
   vitest: string;
+  transition: string;
+  animate: string;
+  easing: string;
 }
 
 let bundles: Promise<Bundles> | undefined;
 const loadBundles = (): Promise<Bundles> =>
-  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest }) => ({ runtime, components, dotnet, testing, vitest })));
+  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest, transition, animate, easing }) => ({ runtime, components, dotnet, testing, vitest, transition, animate, easing })));
 
 const PREVIEW_STYLE = `
   :root { color-scheme: light; }
@@ -91,13 +94,16 @@ function srcdoc(baseHref: string): string {
   }
   addEventListener("message", (event) => {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
-    const { modules, runtime, components, dotnet, testing, vitest, css, entry, program, routes, tests } = event.data;
+    const { modules, runtime, components, dotnet, testing, vitest, transition, animate, easing, css, entry, program, routes, tests } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
     const imports = {
       "@tsazor/runtime": url(runtime),
       "@tsazor/components": url(components),
       "@tsazor/dotnet": url(dotnet),
       "@tsazor/testing": url(testing),
+      "@tsazor/runtime/transition": url(transition),
+      "@tsazor/runtime/animate": url(animate),
+      "@tsazor/runtime/easing": url(easing),
       vitest: url(vitest),
     };
     // A Program.ts starts the app itself, but it cannot know the preview's
@@ -217,7 +223,7 @@ export class PreviewHost {
   /** Runs a build in a fresh iframe; the old one stays visible until the new one is up. */
   async show(build: ProjectBuild): Promise<void> {
     const run = ++this.run;
-    const { runtime, components, dotnet, testing, vitest } = await loadBundles();
+    const { runtime, components, dotnet, testing, vitest, transition, animate, easing } = await loadBundles();
     if (run !== this.run || !build.entry) return;
     this.pending?.remove();
     const frame = document.createElement("iframe");
@@ -239,6 +245,9 @@ export class PreviewHost {
       dotnet,
       testing,
       vitest,
+      transition,
+      animate,
+      easing,
       css: build.css,
       entry: build.entry,
       program: build.program,

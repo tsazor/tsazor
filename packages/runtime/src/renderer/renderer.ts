@@ -14,6 +14,7 @@ import { ComponentState } from "./component-state.js";
 import { Dispatcher } from "./dispatcher.js";
 import { DomRenderer } from "./dom-renderer.js";
 import { attachmentHost } from "./attachment-host.js";
+import { motionHost } from "./motion-host.js";
 import { RenderQueue } from "./render-queue.js";
 
 /**
@@ -119,6 +120,8 @@ export class Renderer {
   /** The scheduled (not yet started) batch; null while none is scheduled. */
   private scheduledBatch: Promise<void> | null = null;
   private batchInProgress = false;
+  /** F4: whether a batch has completed (the first one plays no intros). */
+  private firstBatchDone = false;
   /** Components that ran a render pass in the current batch (loop-guard reset). */
   private readonly batchStates: ComponentState[] = [];
   private readonly batchCompletedListeners = new Set<(batch: RenderBatch) => void>();
@@ -478,9 +481,21 @@ export class Renderer {
     // after-render hooks or listeners start the next batch.
     const attachmentWork = this.dom.takeAttachmentWork();
     if (attachmentWork !== null) attachmentHost?.run(attachmentWork, this.attachmentFailed);
+    // F4/F5: transitions and animations start after the attachments.
+    const motionWork = this.dom.takeMotionWork();
+    if (motionWork !== null) motionHost?.run(motionWork, { initial: !this.firstBatchDone, fail: this.attachmentFailed, removed: this.leftDom });
+    this.firstBatchDone = true;
     this.invokeAfterRender(rendered);
     this.notifyBatchCompleted({ renderedComponents: rendered });
   }
+
+  /** F4: a leaving child left the DOM after its outros — the attachments in it are cleaned up. */
+  private readonly leftDom = (states: readonly ComponentState[]): void => {
+    if (attachmentHost === null) return;
+    const work: unknown[] = [];
+    for (const state of states) work.push(state, null, null, null);
+    attachmentHost.run(work, this.attachmentFailed);
+  };
 
   /** F2: an attachment or its cleanup threw — a failure of its component, routed like onAfterRender's. */
   private readonly attachmentFailed = (error: unknown, state: ComponentState): void => {

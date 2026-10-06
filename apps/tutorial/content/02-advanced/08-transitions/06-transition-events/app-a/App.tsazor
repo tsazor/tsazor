@@ -1,0 +1,17 @@
+@import { fade, fly } from "@tsazor/runtime/transition"
+
+<p class="status">status: @status</p>
+
+<label>
+    <input type="checkbox" @bind="visible" />
+    visible
+</label>
+
+@if (visible) {
+    <p @in="fly({ y: 200, duration: 2000 })" @out="fade">Flies in, fades out</p>
+}
+
+@code {
+    visible = true;
+    status = "waiting…";
+}

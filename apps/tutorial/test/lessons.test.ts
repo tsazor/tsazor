@@ -140,6 +140,8 @@ describe("tutorial lessons", () => {
       "Special components",
       "Organizing code",
       "Attachments",
+      "Transitions",
+      "Animations",
     ]);
     expect(content.parts[2]!.chapters.map((chapter) => chapter.title)).toEqual(["Routing", "Forms", "Auth", "Talking to a backend", "Testing", "Localization", "Next steps"]);
     const csharp = content.parts[0]!.chapters[0]!.lessons;

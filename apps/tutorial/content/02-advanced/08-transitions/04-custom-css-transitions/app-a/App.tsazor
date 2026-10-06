@@ -1,0 +1,24 @@
+@import { fade } from "@tsazor/runtime/transition"
+@import { elasticOut } from "@tsazor/runtime/easing"
+@import type { Transition } from "@tsazor/runtime"
+
+<label>
+    <input type="checkbox" @bind="visible" />
+    visible
+</label>
+
+@if (visible) {
+    <div class="centered">
+        <span>transitions!</span>
+    </div>
+}
+
+@code {
+    visible = true;
+
+    spin(duration: number): Transition {
+        return () => ({
+            duration,
+        });
+    }
+}

@@ -12,6 +12,16 @@ export type { ObserveSource, ObserveListener, ObserveTeardown, Subscribable } fr
 export { EventCallback } from "./components/event-callback.js";
 export { bindMethod } from "./components/bind-method.js";
 export { addAttachment, type Attachment } from "./components/attachment.js";
+export {
+  addAnimate,
+  addTransition,
+  configureTransitions,
+  type Animate,
+  type Transition,
+  type TransitionConfig,
+  type TransitionOptions,
+  type TransitionSettings,
+} from "./components/motion.js";
 export { defineComponent, toComponentDefinition, isComponentDefinition, type ComponentDefinition, type ComponentType } from "./components/component-definition.js";
 export { CascadingValue } from "./components/cascading-value.js";
 export { DynamicComponent } from "./components/dynamic-component.js";
