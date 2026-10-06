@@ -90,9 +90,11 @@ export interface CodegenOptions {
    * values it captures (`EventCallback.bindWith`), so re-rendering with the
    * same values keeps the handler — the diff swaps no listener. Applies only
    * where every captured local is constant (`const`, a `const` loop variable,
-   * a template context that is never assigned). Default true; `false` emits
-   * `EventCallback.bind(this, lambda)` throughout (escape hatch).
-   * Typed-shadow builds never hoist.
+   * a template context that is never assigned). H2: a keyed `@foreach` row
+   * evaluates its dynamic values first and is built only when they changed
+   * (`RenderTreeBuilder.reuseKeyed`). Default true; `false` emits
+   * `EventCallback.bind(this, lambda)` and plain rows throughout (escape hatch).
+   * Typed-shadow builds never hoist and never reuse rows.
    */
   renderHints?: boolean;
   /**
@@ -309,6 +311,10 @@ class Codegen {
   private readonly hoistedHandlers: Array<{ method: string; params: string[]; code: string; entries: PendingEntry[] }> = [];
   /** H1: every name some code of the file assigns (computed on first need). */
   private assignedNames: Set<string> | undefined;
+  /** H2: the keyed row being emitted with its dynamic values captured (emitReusableRow). */
+  private rowCapture: RowCapture | null = null;
+  /** H2: the value checks of each reusable row site, emitted as module constants after the class. */
+  private readonly reuseSites: number[][] = [];
   private document: DocumentNode | undefined;
   private readonly metadata: CodegenResult["metadata"] = { routeTemplates: [], usings: [], imports: [], injects: [], typeParams: [], unresolvedTags: [] };
   /** Local names bound by own and inherited `@import`s — free names, never baked to `this.X`. */
@@ -564,6 +570,10 @@ class Codegen {
     this.emitHoistedHandlers();
     this.line("}");
     this.line("");
+    // H2: one array per reusable row site — its identity names the site (a
+    // module re-evaluated by HMR gets new ones), its entries the value checks.
+    this.reuseSites.forEach((checks, index) => this.line(`const ${alias(`r${index}`)}: readonly number[] = [${checks.join(", ")}];`));
+    if (this.reuseSites.length > 0) this.line("");
     // C18: a method group keeps its receiver (`item.toggle` runs on item); the
     // runtime caches the bound function per (receiver, method).
     if (this.needsBindMethod) this.runtimeAliases.add("bindMethod");
@@ -1176,6 +1186,159 @@ class Codegen {
   }
 
   /**
+   * H2: inside a reusable row (emitReusableRow) a dynamic value is evaluated
+   * ahead of the row into a temporary — returned in its place, with the
+   * value's pending entries moved to the temporary's declaration. `check` is
+   * the runtime check of the value (see RenderTreeBuilder.reuseKeyed): 0
+   * compare only, 1 a child component parameter (primitives only), 2
+   * content (no fragment). Outside a row the value is returned as is.
+   */
+  private captured(value: string, check: 0 | 1 | 2): string {
+    const capture = this.rowCapture;
+    if (capture === null) return value;
+    const name = alias(`v${capture.values.length}`);
+    capture.values.push({ name, text: value, entries: this.pendingExprEntries, check });
+    this.pendingExprEntries = [];
+    return name;
+  }
+
+  /**
+   * H2 render hints (docs/design-render-hints.md): the row of a `@foreach`
+   * whose body is one element carrying `@key` can be reused unchanged —
+   * when every dynamic value in it can be evaluated ahead of the row without
+   * changing what the app sees. null (today's code) unless: render hints are
+   * on (never in typed shadows); the row and its descendants hold only
+   * elements, text, markup, `@expr` content and `<text>`, with attributes,
+   * expression values and event handlers (no `@ref`, `@attributes`, `@bind`,
+   * event modifiers, inner `@key`, control flow or code blocks); every
+   * expression is side-effect free (no assignment, `++`/`--`, `await`,
+   * `delete`, `yield` — calls are fine; a handler's function body is not
+   * run at render time); and child components get only value parameters
+   * (no child content, callbacks or delegates — at runtime the values must be
+   * primitives, see `captured`).
+   */
+  private reusableRow(node: ForNode): ElementNode | null {
+    if (this.options.typedShadow !== undefined || this.options.optimize === false || this.options.renderHints === false) return null;
+    const significant = node.children.filter((child) => !(child.kind === "text" && (child.content.length === 0 || (/^\s+$/.test(child.content) && child.content.includes("\n")))));
+    if (significant.length !== 1) return null;
+    const row = significant[0]!;
+    if (row.kind !== "element" || this.emitsComponent(row) || !row.attributes.some((a) => a.kind === "key")) return null;
+    return this.rowElementQualifies(row, true) ? row : null;
+  }
+
+  /** Whether emitNode emits the tag as a component (not an unresolved tag emitted as an element). */
+  private emitsComponent(node: ElementNode): boolean {
+    return node.isComponent && !this.diagnosedTags.has(node) && this.componentLocalNames.get(node.tagName) !== "__tsazor_unresolved";
+  }
+
+  /** H2: an element (or child component) of a reusable row and its contents (see reusableRow). */
+  private rowElementQualifies(node: ElementNode, isRow: boolean): boolean {
+    const component = this.emitsComponent(node);
+    const metadata = component ? this.componentTargetFor(node.tagName).metadata : null;
+    for (const attr of node.attributes) {
+      switch (attr.kind) {
+        case "static":
+        case "expression":
+        case "mixedValue": {
+          if (component) {
+            // As emitComponentAttribute lowers it: callbacks, delegates and
+            // child content are never primitives — such a row is not reused.
+            const parameter = metadata ? findParameter(metadata, attr.name) : undefined;
+            const category = parameter && !parameter.uncertain ? parameter.category : undefined;
+            if (category === undefined && attr.kind === "expression" && EVENT_ATTR_PATTERN.test(attr.name)) return false;
+            if (category !== undefined && category !== "string") {
+              if (category !== "value" || parameter!.delegate) return false;
+              // A declared object type: never a primitive — not reused (an
+              // unknown type is checked at runtime).
+              const type = parameter!.type ?? parameter!.inferredType;
+              if (type !== undefined && !isPrimitiveType(type)) return false;
+              const source = this.expressionValue(attr);
+              if (source !== null && !sideEffectFree(source.code, false)) return false;
+              break;
+            }
+          }
+          if (attr.kind === "expression" && !sideEffectFree(attr.code, false)) return false;
+          if (attr.kind === "mixedValue" && !attr.parts.every((part) => part.code === undefined || sideEffectFree(part.code, false))) return false;
+          break;
+        }
+        case "eventHandler":
+          if (component || !sideEffectFree(attr.code, true)) return false;
+          break;
+        case "key":
+          if (!isRow || !sideEffectFree(attr.code, false)) return false;
+          break;
+        default:
+          // @ref, @attributes, @bind, event modifiers.
+          return false;
+      }
+    }
+    if (component) return node.children.every(isWhitespaceText);
+    return node.children.every((child) => this.rowContentQualifies(child));
+  }
+
+  /** H2: one content node of a reusable row's element. */
+  private rowContentQualifies(node: MarkupNode): boolean {
+    switch (node.kind) {
+      case "text":
+        return true;
+      case "expression":
+        return sideEffectFree(node.code, false);
+      case "element":
+        return this.rowElementQualifies(node, false);
+      case "textTag":
+        return node.children.every((child) => this.rowContentQualifies(child));
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * H2: emits a reusable row (reusableRow) — its dynamic values first, in
+   * evaluation order, into temporaries; then the row as before, built only
+   * when the builder cannot reuse the previous render's row of the same key:
+   *
+   *     const __tsazor_v0 = row.id;
+   *     const __tsazor_v1 = this.rowClass(row);
+   *     if (!__builder.reuseKeyed(__tsazor_r0, __tsazor_v0, [__tsazor_v1])) {
+   *     __builder.openElement(0, "tr");
+   *     __builder.setKey(__tsazor_v0);
+   *     __builder.addAttribute(1, "class", __tsazor_v1);
+   *     …
+   *     }
+   *
+   * A handler closure that is new every render makes the row never equal:
+   * then the row is built every time (a plain block).
+   */
+  private emitReusableRow(row: ElementNode): void {
+    const at = this.writer.lineCount;
+    const capture: RowCapture = { values: [], fresh: false };
+    this.rowCapture = capture;
+    try {
+      this.emitNode(row, row.pos);
+    } finally {
+      this.rowCapture = null;
+    }
+    const indent = "    ";
+    const items = capture.values.map((value) => {
+      const head = `${indent}const ${value.name} = `;
+      return {
+        text: `${head}${value.text};`,
+        anchors: value.entries.map((e) => ({ offset: head.length + e.outOffset, srcLine: e.srcLine, srcCol: e.srcCol })),
+      };
+    });
+    if (capture.fresh || capture.key === undefined) {
+      items.push({ text: `${indent}{`, anchors: [] });
+    } else {
+      const values = capture.values.filter((value) => value.name !== capture.key);
+      const site = alias(`r${this.reuseSites.length}`);
+      this.reuseSites.push(values.map((value) => value.check));
+      items.push({ text: `${indent}if (!${BUILDER}.reuseKeyed(${site}, ${capture.key}, [${values.map((value) => value.name).join(", ")}])) {`, anchors: [] });
+    }
+    this.writer.insertAnchoredLines(at, items);
+    this.plumbingStmt("}");
+  }
+
+  /**
    * A value for a delegate parameter (a function type that is not an
    * EventCallback): a method group becomes a function bound to its receiver,
    * like a C# delegate — a member method (`isVisible` ⇒ bound to this
@@ -1315,12 +1478,13 @@ class Codegen {
         // expression is baked straight into a Markup frame.
         const markup = this.markupStringContent(node.code, origin);
         if (markup !== null) {
-          const baked = this.expr(markup.inner, markup.origin);
+          const baked = this.captured(this.expr(markup.inner, markup.origin), 0);
           const text = `${BUILDER}.addMarkupContent(${this.seq()}, ${baked});`;
           this.stmt(text, node.pos, text.indexOf(baked));
           break;
         }
-        const baked = this.expr(node.code, origin);
+        // H2: content that is a fragment builds frames of its own — never reused.
+        const baked = this.captured(this.expr(node.code, origin), 2);
         const text = `${BUILDER}.addContent(${this.seq()}, ${baked});`;
         this.stmt(text, node.pos, text.indexOf(baked));
         break;
@@ -1430,7 +1594,11 @@ class Codegen {
           for (const name of declares) this.locals.set(name, kind);
           const text = `for (${header}) {`;
           this.stmt(text, node.pos, text.indexOf(header));
-          for (const child of node.children) this.emitNode(child, node.pos);
+          const row = node.isForEach && iterates ? this.reusableRow(node) : null;
+          for (const child of node.children) {
+            if (child === row) this.emitReusableRow(row);
+            else this.emitNode(child, node.pos);
+          }
         });
         if (/^\s*var\b/.test(node.code)) for (const name of declares) this.locals.set(name, "assignable");
         this.stmt(`}`, node.pos);
@@ -1500,7 +1668,8 @@ class Codegen {
 
   /** `@key="expr"` → `__builder.setKey(...)`, token-precise like attribute values. */
   private emitKeyStmt(key: Extract<AttributeNode, { kind: "key" }>, pos: SourcePos): void {
-    const baked = this.expr(key.code, key.codeStart);
+    const baked = this.captured(this.expr(key.code, key.codeStart), 0);
+    if (this.rowCapture !== null) this.rowCapture.key ??= baked;
     const text = `${BUILDER}.setKey(${baked});`;
     this.stmt(text, pos, text.indexOf(baked));
   }
@@ -1984,9 +2153,13 @@ class Codegen {
         // front: the handler runs on the authoring component and its
         // StateHasChanged fires. With metadata, EventCallback parameters get
         // the same binding by category (emitComponentAttribute).
-        const value = ctx?.isComponent && ctx.category === undefined && EVENT_ATTR_PATTERN.test(attr.name)
-          ? this.callbackValue(attr.code, codeStart())
-          : this.expr(attr.code, codeStart());
+        // H2: a component parameter allows reuse only while it is a primitive.
+        const value = this.captured(
+          ctx?.isComponent && ctx.category === undefined && EVENT_ATTR_PATTERN.test(attr.name)
+            ? this.callbackValue(attr.code, codeStart())
+            : this.expr(attr.code, codeStart()),
+          ctx?.isComponent ? 1 : 0,
+        );
         const checked = ctx?.checkType !== undefined ? `(${value}) satisfies ${ctx.checkType}` : value;
         const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${checked});`;
         // Precise entries are relative to the value.
@@ -2015,6 +2188,13 @@ class Codegen {
             template += escapeTemplate(decodeHtmlEntities(part.text ?? ""));
           }
         }
+        if (this.rowCapture !== null) {
+          // H2: the template literal is one value; its entries are relative to it.
+          this.pendingExprEntries = precise.map((entry) => ({ ...entry, outOffset: entry.outOffset + 1 }));
+          const value = this.captured(`\`${template}\``, 0);
+          this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${value});`, pos);
+          break;
+        }
         this.pendingExprEntries = precise;
         const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, \`${template}\`);`;
         this.stmt(text, pos);
@@ -2023,7 +2203,10 @@ class Codegen {
       case "eventHandler": {
         // On a component `@onclick` sets the parameter of that name (Blazor).
         const parameter = ctx?.component ? this.componentParameter(ctx.component, attr.name, attr, { line: pos.line, column: pos.column + 1 }) : undefined;
-        const callback = this.callbackValue(attr.code, codeStart());
+        const handler = this.callbackValue(attr.code, codeStart());
+        // H2: a closure that is new every render (not hoisted by H1) makes the row never equal.
+        if (this.rowCapture !== null && !handler.includes(".bindWith(") && isFunctionLiteral(attr.code)) this.rowCapture.fresh = true;
+        const callback = this.captured(handler, ctx?.component ? 1 : 0);
         const text = `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(parameter?.name ?? attr.name)}, ${callback});`;
         this.stmt(text, pos, text.indexOf(callback));
         break;
@@ -2115,11 +2298,14 @@ class Codegen {
       this.diagnostics.error("TZS009", attr, `'${attr.name}' sets the ${category} parameter '${name}' of '<${target.tag}>' and needs a handler value.`);
       return;
     }
-    const value = isCallback
-      ? this.callbackValue(source.code, source.start)
-      : parameter!.delegate
-        ? this.delegateValue(source.code, source.start)
-        : this.expr(source.code, source.start);
+    const value = this.captured(
+      isCallback
+        ? this.callbackValue(source.code, source.start)
+        : parameter!.delegate
+          ? this.delegateValue(source.code, source.start)
+          : this.expr(source.code, source.start),
+      1,
+    );
     // 2.4: the shadow layer checks the value against the parameter's type.
     const checked = this.optionallyCheckedValue(value, target.metadata ? parameter! : undefined);
     const text = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, ${checked});`;
@@ -2696,6 +2882,85 @@ function isArrowFunction(code: string): boolean {
   if (source.statements.length !== 1) return false;
   const statement = source.statements[0]!;
   return ts.isExpressionStatement(statement) && ts.isArrowFunction(statement.expression) && statement.getEnd() === code.length;
+}
+
+/** H2: the dynamic values of the reusable row being emitted (Codegen.captured). */
+interface RowCapture {
+  values: Array<{ name: string; text: string; entries: PendingEntry[]; check: 0 | 1 | 2 }>;
+  /** The temporary holding the row's `@key`. */
+  key?: string;
+  /** A value is new every render (a handler closure H1 did not hoist): never reused. */
+  fresh: boolean;
+}
+
+/** The expression parsed on its own; null when it is not exactly one valid expression. */
+function parseExpression(code: string): ts.Expression | null {
+  const source = ts.createSourceFile("value.tsazor.expr", `(${code}\n)`, ts.ScriptTarget.Latest, true);
+  const syntaxErrors = (source as unknown as { parseDiagnostics?: readonly unknown[] }).parseDiagnostics ?? [];
+  const statement = source.statements[0];
+  if (syntaxErrors.length > 0 || source.statements.length !== 1 || statement === undefined || !ts.isExpressionStatement(statement)) return null;
+  let expression = statement.expression;
+  while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
+  return expression;
+}
+
+/** H2: a declared parameter type whose values are all primitives (`string`, `number | null`, `"a" | "b"`, …). */
+function isPrimitiveType(type: string): boolean {
+  const source = ts.createSourceFile("type.tsazor.ts", `type T = ${type};`, ts.ScriptTarget.Latest, true);
+  const statement = source.statements[0];
+  if (source.statements.length !== 1 || statement === undefined || !ts.isTypeAliasDeclaration(statement)) return false;
+  const primitive = (node: ts.TypeNode): boolean => {
+    if (ts.isParenthesizedTypeNode(node)) return primitive(node.type);
+    if (ts.isUnionTypeNode(node)) return node.types.every(primitive);
+    if (ts.isLiteralTypeNode(node)) return true;
+    switch (node.kind) {
+      case ts.SyntaxKind.StringKeyword:
+      case ts.SyntaxKind.NumberKeyword:
+      case ts.SyntaxKind.BooleanKeyword:
+      case ts.SyntaxKind.BigIntKeyword:
+      case ts.SyntaxKind.UndefinedKeyword:
+        return true;
+      default:
+        return false;
+    }
+  };
+  return primitive(statement.type);
+}
+
+/** H2: the expression is a function literal (an arrow function or a function expression). */
+function isFunctionLiteral(code: string): boolean {
+  const expression = parseExpression(code);
+  return expression !== null && (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression));
+}
+
+/**
+ * H2: evaluating the expression earlier cannot change what the app sees, as
+ * far as the compiler can tell: no assignment, `++`/`--`, `await`, `delete`
+ * or `yield` anywhere in it (also not in a nested function, which a call
+ * may run). Calls are allowed. For an event handler (`handler`) a function
+ * literal is free of effects as a whole — its body runs on the event, not
+ * at render time.
+ */
+function sideEffectFree(code: string, handler: boolean): boolean {
+  const expression = parseExpression(code);
+  if (expression === null) return false;
+  if (handler && (ts.isArrowFunction(expression) || ts.isFunctionExpression(expression))) return true;
+  let pure = true;
+  const visit = (node: ts.Node): void => {
+    if (!pure) return;
+    if (
+      (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) ||
+      ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+        (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken)) ||
+      ts.isAwaitExpression(node) || ts.isDeleteExpression(node) || ts.isYieldExpression(node)
+    ) {
+      pure = false;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(expression);
+  return pure;
 }
 
 /**

@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`, `@tsazor/runtime`: skipping unchanged keyed rows (render hints H2,
+  docs/design-render-hints.md). A `@foreach` row that is one element with `@key` evaluates its
+  dynamic values first and calls the new `RenderTreeBuilder.reuseKeyed(site, key, values)`
+  (`@internal`, with `setReuseSource`): when the values equal the previous render's for that key,
+  the previous frames are reused and the diff skips the row. Rows with control flow, code blocks,
+  `@ref`, `@attributes`, `@bind`, event modifiers, inner keys, expressions with effects or child
+  components getting anything but primitive values are built as before. Part of `renderHints`
+  (off with `renderHints: false` or `optimize: false`; never in typed shadows). Selecting a row
+  among 11k (A/B on one machine): ~13.5 → ~8–10 ms.
 - `@tsazor/compiler`, `@tsazor/runtime`: stable event handlers (render hints H1,
   docs/design-render-hints.md). An event-handler lambda that captures only constant render-time
   locals (`const`, `@foreach (const …)` variables, an unassigned template `context`) compiles to a

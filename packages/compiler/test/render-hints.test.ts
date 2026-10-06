@@ -128,3 +128,120 @@ describe("H1: stable event handlers", () => {
     expect(onLine).toContainEqual({ genLine, genCol: text.lastIndexOf("row"), srcLine: 1, srcCol: 32 });
   });
 });
+
+describe("H2: skipping unchanged keyed rows", () => {
+  const ROW = `@foreach (const row of rows) {\n    <tr @key="row.id" class="@rowClass(row)"><td @onclick="e => select(e, row)">@row.label</td><td>static</td></tr>\n}\n${MEMBERS}`;
+
+  it("evaluates the row's values first and builds the row only when they changed", () => {
+    const { code } = gen(ROW);
+    expect(code).toContain(
+      [
+        "    for (const row of this.rows) {",
+        "    const __tsazor_v0 = row.id;",
+        "    const __tsazor_v1 = this.rowClass(row);",
+        "    const __tsazor_v2 = __tsazor_EventCallback.bindWith(this, Rows.prototype.__tsazor_h0, [row]);",
+        "    const __tsazor_v3 = row.label;",
+        "    if (!__builder.reuseKeyed(__tsazor_r0, __tsazor_v0, [__tsazor_v1, __tsazor_v2, __tsazor_v3])) {",
+        '    __builder.openElement(0, "tr");',
+        "    __builder.setKey(__tsazor_v0);",
+        '    __builder.addAttribute(1, "class", __tsazor_v1);',
+        '    __builder.openElement(2, "td");',
+        '    __builder.addEventHandler(3, "onclick", __tsazor_v2);',
+        "    __builder.addContent(4, __tsazor_v3);",
+        "    __builder.closeElement();",
+        '    __builder.addMarkupContent(5, "<td>static</td>");',
+        "    __builder.closeElement();",
+        "    }",
+        "    }",
+      ].join("\n"),
+    );
+    // One check per value (the key is matched by the builder): content may not be a fragment (2).
+    expect(code).toContain("const __tsazor_r0: readonly number[] = [0, 0, 2];");
+  });
+
+  it("mixed attribute values are one value; a child component's parameters must be primitives (1)", () => {
+    const probe = metadataOf("Probe", { label: { category: "string", type: "string" }, count: { category: "value", type: "number | null" }, extra: "value" });
+    const { code } = gen(
+      `@foreach (const row of rows) { <li @key="row.id" class="row-@row.id"><Probe Label="@row.label" Count="5" Extra="@row" /></li> }\n${MEMBERS}`,
+      withComponents({ Probe: probe }),
+    );
+    expect(code).toContain("    const __tsazor_v1 = `row-${(row.id) ?? \"\"}`;");
+    expect(code).toContain("    if (!__builder.reuseKeyed(__tsazor_r0, __tsazor_v0, [__tsazor_v1, __tsazor_v2, __tsazor_v3, __tsazor_v4])) {");
+    expect(code).toContain('__builder.addAttribute(4, "count", __tsazor_v3);');
+    // `extra` has no declared type: checked at runtime.
+    expect(code).toContain("const __tsazor_r0: readonly number[] = [0, 1, 1, 1];");
+  });
+
+  it("a handler closure H1 cannot hoist makes the row never equal: built every time", () => {
+    const { code } = gen(`@foreach (let row of rows) { <tr @key="row.id"><td @onclick="() => pick(row)">x</td></tr> }\n${MEMBERS}`);
+    expect(code).toContain("    const __tsazor_v1 = __tsazor_EventCallback.bind(this, () => this.pick(row));\n    {\n");
+    expect(code).not.toContain("reuseKeyed");
+  });
+
+  const pick = metadataOf("Pick", { value: { category: "value", type: "number" }, item: { category: "value", type: "{ id: number }" }, onPick: "EventCallback", childContent: "RenderFragment" });
+  it.each([
+    ["no @key", `<tr><td>@row.label</td></tr>`],
+    ["the key on an inner element", `<tr><td @key="row.id">@row.label</td></tr>`],
+    ["two root elements", `<tr @key="row.id"></tr><tr></tr>`],
+    ["a component as the row", `<Pick @key="row.id" Value="@row.id" />`],
+    ["@ref", `<tr @key="row.id" @ref="last"></tr>`],
+    ["@attributes", `<tr @key="row.id" @attributes="extra"></tr>`],
+    ["@bind", `<tr @key="row.id"><td><input @bind="count" /></td></tr>`],
+    ["an event modifier", `<tr @key="row.id" @onclick="e => select(e, row)" @onclick:preventDefault></tr>`],
+    ["an assignment", `<tr @key="row.id">@(count = row.id)</tr>`],
+    ["an increment", `<tr @key="row.id" title="@(count++)"></tr>`],
+    ["an await", `<tr @key="row.id">@(await load(row))</tr>`],
+    ["a delete", `<tr @key="row.id">@(delete row.label)</tr>`],
+    ["an assignment in a nested function", `<tr @key="row.id">@rows.map((r) => (count = r.id))</tr>`],
+    ["a nested @if (with an inner key)", `<tr @key="row.id">@if (row.id > 1) { <td @key="row.id">x</td> }</tr>`],
+    ["a code block", `<tr @key="row.id">@{ const x = row.id; }<td>@x</td></tr>`],
+    ["a nested loop", `<tr @key="row.id">@foreach (const c of rows) { <td>@c.id</td> }</tr>`],
+    ["a component with an object parameter", `<tr @key="row.id"><td><Pick Item="@row" /></td></tr>`],
+    ["a component with a callback", `<tr @key="row.id"><td><Pick OnPick="() => pick(row)" /></td></tr>`],
+    ["a component with child content", `<tr @key="row.id"><td><Pick Value="@row.id">text</Pick></td></tr>`],
+    ["a component with a key", `<tr @key="row.id"><td><Pick @key="row.id" Value="@row.id" /></td></tr>`],
+  ])("today's code for %s", (_, body) => {
+    const source = `@foreach (const row of rows) { ${body} }\n@code { rows: Array<{ id: number; label: string }> = []; count = 0; last: unknown; extra = {}; select(e: unknown, r: unknown) {} pick(x: unknown) {} async load(x: unknown) { return x; } }`;
+    const diagnostics = new DiagnosticBag();
+    const result = generateCode(parseDocument(source, diagnostics), { className: "Rows", ...withComponents({ Pick: pick }) }, diagnostics);
+    expect(result.code).not.toContain("reuseKeyed");
+    expect(result.code).not.toContain("__tsazor_v0");
+  });
+
+  it("the same row with a primitive component parameter is reused (control for the cases above)", () => {
+    const source = `@foreach (const row of rows) { <tr @key="row.id"><td><Pick Value="@row.id" /></td></tr> }\n${MEMBERS}`;
+    const { code } = gen(source, withComponents({ Pick: pick }));
+    expect(code).toContain("if (!__builder.reuseKeyed(__tsazor_r0, __tsazor_v0, [__tsazor_v1])) {");
+    expect(code).toContain("const __tsazor_r0: readonly number[] = [1];");
+  });
+
+  it("only @foreach rows: a counting loop keeps today's code", () => {
+    const { code } = gen(`@for (let i = 0; i < 3; i++) { <tr @key="i">@i</tr> }\n${MEMBERS}`);
+    expect(code).not.toContain("reuseKeyed");
+  });
+
+  it("typed shadows, renderHints: false and optimize: false emit today's code", () => {
+    for (const options of [{ typedShadow: {} }, { renderHints: false }, { optimize: false }]) {
+      const { code } = gen(ROW, options);
+      expect(code).not.toContain("reuseKeyed");
+      expect(code).not.toContain("__tsazor_v0");
+      expect(code).not.toContain("__tsazor_r0");
+      expect(code).toContain("__builder.setKey(row.id);");
+    }
+  });
+
+  it("an expression moved ahead of the row maps to its .tsazor line and column", () => {
+    const { code, mappings } = compile(ROW, { className: "Rows" });
+    const lines = code.split("\n");
+    const genLine = lines.findIndex((l) => l.startsWith("    const __tsazor_v1 = ")) + 1;
+    expect(genLine).toBeGreaterThan(0);
+    const text = lines[genLine - 1]!;
+    const onLine = mappings!.filter((m) => m.genLine === genLine);
+    const source = ROW.split("\n")[1]!;
+    // `rowClass` (after its baked `this.`) on line 2 of the source.
+    expect(onLine).toContainEqual({ genLine, genCol: text.indexOf("rowClass"), srcLine: 1, srcCol: source.indexOf("rowClass") });
+    // The rows after the inserted lines keep their mappings: `label` of `@row.label`.
+    const contentLine = lines.findIndex((l) => l.startsWith("    const __tsazor_v3 = ")) + 1;
+    expect(mappings!.filter((m) => m.genLine === contentLine).some((m) => m.srcLine === 1 && m.srcCol === source.indexOf("@row.label") + 1)).toBe(true);
+  });
+});

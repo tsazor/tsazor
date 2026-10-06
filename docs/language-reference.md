@@ -191,6 +191,30 @@ treats a handler that captures locals as changed, like C#'s `Delegate.Equals` do
 new target every render); only the DOM diff uses the stable form. The Vite plugin's
 `renderHints: false` emits a closure per render. Details: [design-render-hints.md](design-render-hints.md).
 
+**Skipping unchanged keyed rows (render hints, H2).** A re-render builds every row of a list again
+and the diff walks each one, frame by frame — in Blazor, too. Tsazor chooses to skip a row that
+would come out the same: for a `@foreach` whose body is one element with `@key`, the compiler
+evaluates the row's dynamic values first — attribute values, `@` content, the key and the stable
+handlers of H1, in source order and each exactly once — and the runtime compares them with the
+previous render's values for the same key (`Object.is`, handlers by `EventCallback` equality). When
+all are the same, the previous render's frames of that row are reused and the diff skips it; a
+changed value builds and diffs the row as before. The DOM and every lifecycle call are the same as
+without it. The row qualifies only when nothing in it depends on more than those values:
+- only elements, text, `@` expressions and `<text>` — no `@if`/`@foreach`/`@switch` or `@{ … }` inside,
+  no `@ref`, `@attributes`, `@bind` or event modifiers, no `@key` below the row's own;
+- expressions without visible effects — no assignment, `++`/`--`, `await`, `delete` or `yield`
+  (calls are fine; they still run once per render, only before the row's frames are written);
+- child components in the row get only value parameters — no child content, callbacks, delegates or
+  `@key`/`@ref` — and a row is reused only while those values are primitives (`string`, `number`,
+  `boolean`, `bigint`, `null`, `undefined`; a declared object type rules the row out at compile
+  time). Blazor does not re-render a child whose primitive parameters are unchanged either, but it
+  does re-render one with an object parameter — so such a row is always built;
+- content that is a `RenderFragment` is never reused (a fragment builds frames of its own).
+
+A handler closure H1 cannot make stable (a `let` capture) is new every render, so its row is built
+every time. Typed shadows, `renderHints: false` and `optimize: false` emit today's code. Selecting
+one row among 11k: ~13.5 → ~8 ms.
+
 **`optimize: false`.** One switch (compiler and Vite plugin) turns off every invisible compiler
 optimization — today `staticMarkup` and `renderHints`: the generated code is then what Razor would
 generate. It is a diagnostic and emergency switch (A/B measurements, isolating a suspected

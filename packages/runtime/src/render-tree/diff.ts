@@ -367,7 +367,13 @@ function appendDiffEntriesForFramesWithSameSequence(ctx: DiffContext, oldFrameIn
     }
 
     case FrameType.Element: {
-      if (oldFrame.elementName === newFrame.elementName) {
+      if (oldFrame === newFrame) {
+        // H2: a keyed row the builder reused — the previous render's frames,
+        // unchanged. Its child components are retained as in a frame-by-frame
+        // walk (change detection then sees identical parameters).
+        retainComponentsOfReusedSubtree(ctx, oldFrameIndex, newFrameIndex, getFrameSubtreeLength(newFrame));
+        ctx.siblingIndex++;
+      } else if (oldFrame.elementName === newFrame.elementName) {
         const oldAttributesEndIndexExcl = attributesEndIndexExclusive(oldTree, oldFrameIndex);
         const newAttributesEndIndexExcl = attributesEndIndexExclusive(newTree, newFrameIndex);
 
@@ -494,6 +500,16 @@ function removeOldFrame(ctx: DiffContext, oldFrameIndex: number): void {
     case FrameType.ElementReferenceCapture:
     default:
       break;
+  }
+}
+
+/** H2: the child components of a reused subtree keep their instances (old and new index pairs). */
+function retainComponentsOfReusedSubtree(ctx: DiffContext, oldFrameIndex: number, newFrameIndex: number, subtreeLength: number): void {
+  const newTree = ctx.newTree;
+  for (let i = 1; i < subtreeLength; i++) {
+    if (newTree[newFrameIndex + i]!.frameType === FrameType.Component) {
+      ctx.components.push(oldFrameIndex + i, newFrameIndex + i);
+    }
   }
 }
 

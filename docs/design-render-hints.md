@@ -69,6 +69,22 @@ identical it copies that region's frames instead of building them and marks the 
 unchanged, so the diff skips it by its subtree length. A changed value builds and diffs the row
 as today.
 
+*Implemented (2026-10-06)* as `RenderTreeBuilder.reuseKeyed(site, key, values)` (`@internal`),
+called before the row's `openElement`; the body is built only when it returns false. `site` is a
+module constant per row site (one array per module evaluation, so an HMR update never reuses a
+stale row) holding a check per value: 1 for a child component parameter (reused only while it is a
+primitive), 2 for content (never a fragment). A reused row's frames are the previous render's frame
+objects (an element's frames are never changed after it closed); each builder of a component reads
+the other one's records, found by position (rows usually keep their order) or by key. The diff
+skips an element whose old and new frame are the same object — it still counts as one sibling, and
+its child components keep their instances (change detection then sees identical parameters).
+Beyond the guards below: no control flow or code blocks inside the row, no inner `@key`, no
+`yield`/`delete`; component parameters must be plain values (no child content, callbacks or
+delegates; a declared object type rules the row out at compile time); a handler closure H1 cannot
+hoist makes the row a plain block (never equal, so never compared). Bench (11k rows, Edge, A/B on
+one machine against H1 alone): select 13.5 → 8–10 ms, swap ~107 → ~97 ms, remove ~104 → ~95 ms;
+create, append and update every 10th unchanged within noise.
+
 **Guards (Blazor semantics):**
 - Only bodies **without child components** — or whose components get only primitive parameters
   (string, number, boolean, `null`), which Blazor itself does not re-render when unchanged. A

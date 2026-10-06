@@ -1,6 +1,6 @@
 import { FrameType, EventHandlerFlags } from "./frame-type.js";
 import type { ComponentType } from "../components/component-definition.js";
-import type { EventCallback } from "../components/event-callback.js";
+import { EventCallback } from "../components/event-callback.js";
 import type { ComponentBase } from "../components/component-base.js";
 import { MarkupString } from "../components/markup-string.js";
 
@@ -85,6 +85,14 @@ export type AttributeValue =
 export class RenderTreeBuilder {
   private readonly frames: RenderTreeFrame[] = [];
   private readonly openFrameStack: number[] = [];
+  /** H2: this pass's reusable keyed rows, flat in build order — site, key, values, start frame index. */
+  private readonly reuseRecords: unknown[] = [];
+  /** H2: where the next row is expected in the source's records (rows usually keep their order). */
+  private reuseCursor = 0;
+  /** H2: the builder holding the previous render's frames (the component's other builder). */
+  private reuseSource: RenderTreeBuilder | null = null;
+  /** H2: key → offset into reuseRecords, built when a row is not where the cursor expects it. */
+  private reuseIndex: Map<unknown, number> | null = null;
 
   /** Total number of frames written so far. */
   get count(): number {
@@ -253,10 +261,75 @@ export class RenderTreeBuilder {
     this.frames.push({ frameType: FrameType.ComponentReferenceCapture, sequence, componentReferenceCaptureAction: action });
   }
 
+  /**
+   * @internal H2 render hints (docs/design-render-hints.md), called by
+   * generated code before a keyed `@foreach` row: when the previous render
+   * built a row at the same `site` with the same `key` from the same
+   * `values` (every dynamic value of the row, in evaluation order), its
+   * frames are copied — the same frame objects, which are never changed
+   * after their element closed — and true is returned: the caller skips
+   * building the row, and the diff skips it as unchanged. Otherwise the row
+   * is recorded and false is returned: the caller builds it as usual.
+   *
+   * `site` identifies the row's source position (one array per compiled
+   * site and module evaluation) and holds a check per value: 0 compares
+   * only (`Object.is`, `EventCallback.equals`), 1 also requires a primitive
+   * (a child component parameter — Blazor re-renders a child whose
+   * parameter is an object), 2 rejects a function (content that is a
+   * fragment builds frames of its own).
+   */
+  reuseKeyed(site: readonly number[], key: unknown, values: readonly unknown[]): boolean {
+    const frames = this.frames;
+    const source = this.reuseSource;
+    if (source !== null && key !== null && key !== undefined) {
+      const records = source.reuseRecords;
+      let at = this.reuseCursor;
+      if (at >= records.length || records[at] !== site || records[at + 1] !== key) {
+        at = source.reuseRecordOf(key);
+        if (at >= 0 && records[at] !== site) at = -1;
+      }
+      if (at >= 0) {
+        this.reuseCursor = at + 4;
+        const previous = records[at + 2] as readonly unknown[];
+        const start = records[at + 3] as number;
+        const sourceFrames = source.frames;
+        const first = sourceFrames[start];
+        if (sameValues(site, previous, values) && first !== undefined && first.frameType === FrameType.Element && first.elementKey === key) {
+          const end = start + (first.elementSubtreeLength ?? 1);
+          this.reuseRecords.push(site, key, previous, frames.length);
+          for (let i = start; i < end; i++) frames.push(sourceFrames[i]!);
+          return true;
+        }
+      }
+    }
+    this.reuseRecords.push(site, key, values, frames.length);
+    return false;
+  }
+
+  /** @internal H2: the builder whose frames are the previous render (ComponentState pairs its two builders). */
+  setReuseSource(source: RenderTreeBuilder | null): void {
+    this.reuseSource = source;
+  }
+
+  /** H2: offset of the last record with `key` in this builder's records, or -1. */
+  private reuseRecordOf(key: unknown): number {
+    let index = this.reuseIndex;
+    if (index === null) {
+      index = new Map();
+      const records = this.reuseRecords;
+      for (let i = 0; i < records.length; i += 4) index.set(records[i + 1], i);
+      this.reuseIndex = index;
+    }
+    return index.get(key) ?? -1;
+  }
+
   /** Clears the builder for reuse. */
   clear(): void {
     this.frames.length = 0;
     this.openFrameStack.length = 0;
+    this.reuseRecords.length = 0;
+    this.reuseCursor = 0;
+    this.reuseIndex = null;
   }
 
   private closeOpenFrame(): void {
@@ -275,6 +348,26 @@ export class RenderTreeBuilder {
       frame.regionSubtreeLength = subtreeLength;
     }
   }
+}
+
+/** H2: whether a row's values equal the previous render's, under the site's checks (see reuseKeyed). */
+function sameValues(site: readonly number[], previous: readonly unknown[], values: readonly unknown[]): boolean {
+  const length = values.length;
+  if (previous.length !== length) return false;
+  for (let i = 0; i < length; i++) {
+    const value = values[i];
+    const check = site[i];
+    if (check === 1) {
+      if (value !== null && (typeof value === "object" || typeof value === "function")) return false;
+    } else if (check === 2) {
+      if (typeof value === "function") return false;
+    }
+    const old = previous[i];
+    if (Object.is(old, value)) continue;
+    if (old instanceof EventCallback && value instanceof EventCallback && old.equals(value as EventCallback<never>)) continue;
+    return false;
+  }
+  return true;
 }
 
 /** Attribute frames immediately follow an element/component start frame. */

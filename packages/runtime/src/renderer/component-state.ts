@@ -85,6 +85,10 @@ export class ComponentState {
     readonly parent: ComponentState | null,
   ) {
     this.definition = definition;
+    // H2: each builder reuses unchanged keyed rows from the other one, which
+    // holds the live tree while this one builds the next pass.
+    this.renderBuilders[0].setReuseSource(this.renderBuilders[1]);
+    this.renderBuilders[1].setReuseSource(this.renderBuilders[0]);
     this.depth = parent === null ? 0 : parent.depth + 1;
     this.range = new LogicalRange(`bl-tsazor:${id}`);
     this.renderHandle = {

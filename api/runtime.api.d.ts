@@ -987,6 +987,10 @@ export interface RenderHandle {
 export declare class RenderTreeBuilder {
     private readonly frames;
     private readonly openFrameStack;
+    private readonly reuseRecords;
+    private reuseCursor;
+    private reuseSource;
+    private reuseIndex;
     get count(): number;
     getFrames(): RenderTreeFrame[];
     openElement(sequence: number, elementName: string): void;
@@ -1003,6 +1007,9 @@ export declare class RenderTreeBuilder {
     addMarkupContent(sequence: number, markup: string | null): void;
     addElementReferenceCapture(sequence: number, action: (element: Element) => void): void;
     addComponentReferenceCapture(sequence: number, action: (component: ComponentBase) => void): void;
+    reuseKeyed(site: readonly number[], key: unknown, values: readonly unknown[]): boolean;
+    setReuseSource(source: RenderTreeBuilder | null): void;
+    private reuseRecordOf;
     clear(): void;
     private closeOpenFrame;
 }
