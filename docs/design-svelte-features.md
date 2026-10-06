@@ -64,8 +64,10 @@ This comes first: it has the largest benefit, no API, and no risk to ports.
   For factories with arguments (`tooltip('…')`) the call is re-evaluated each render, so the
   factory should memoize, or the component holds the attachment in a field. Svelte 5
   attachments behave the same way; the tutorial teaches it that way.
-- Several attachments per element are allowed (`@attach="a" @attach:b="b"`; exact syntax still
-  open).
+- Several attachments per element: **the named form** (decided 2026-10-06) — `@attach="autofocus"`
+  plus `@attach:tooltip="tooltip('Save')"`; the name after the colon only tells them apart
+  (Razor's directive-attribute grammar, as in `@bind:event`), and each one is updated and cleaned
+  up on its own.
 - Replaces most `@ref` + `onAfterRender` + `dispose` wrappers for imperative widgets.
 
 ## F3 — `<Await>` (Svelte `{#await}`)
