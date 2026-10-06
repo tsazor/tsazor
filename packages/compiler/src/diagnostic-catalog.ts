@@ -258,9 +258,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS030",
     severity: "error",
     description:
-      "`@Bindable()` decorates a plain field (or another member) instead of an auto-accessor. A standard field decorator cannot intercept assignments, so the change callback would never fire.",
+      "`@Bindable()` or `@State()` decorates a plain field (or another member) instead of an auto-accessor. A standard field decorator cannot intercept assignments, so the change callback would never fire (`@Bindable`) or the component never render (`@State`). Also `@State()` together with `@Parameter()`/`@Bindable()`: a parameter belongs to the parent, which overwrites it.",
     example: "@code {\n  @Bindable() value = 0;\n}\n",
-    fix: "Insert `accessor`: `@Bindable() accessor value = 0;`.",
+    fix: "Insert `accessor`: `@Bindable() accessor value = 0;`, `@State() accessor seconds = 0;`. Keep either `@State()` or the parameter decorator.",
     quickFix: true,
   },
   {

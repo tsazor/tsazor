@@ -336,7 +336,7 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
 }
 
 /** Runtime names the compiler imports itself when the file does not bind them. */
-const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "Bindable", "EventCallback", "RenderFragment"];
+const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "Bindable", "State", "EventCallback", "RenderFragment"];
 
 function emptyModule(file: string, kind: ModuleMetadata["kind"], runtimeInternal: boolean | undefined): ModuleMetadata {
   const module: ModuleMetadata = {

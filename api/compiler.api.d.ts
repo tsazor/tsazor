@@ -361,7 +361,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS027: "Unrecognized child content.";
     readonly TZS028: "Invalid child content element.";
     readonly TZS029: "Template context name conflict.";
-    readonly TZS030: "@Bindable() needs an auto-accessor.";
+    readonly TZS030: "@Bindable()/@State() needs an auto-accessor of its own.";
     readonly TZS031: "Name reserved by ComponentBase.";
 };
 

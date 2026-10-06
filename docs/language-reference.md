@@ -858,6 +858,31 @@ including `:after`, `:get`/`:set` and `:event`, behaves as with the hand-written
   refactoring "Convert 'x'/'xChanged' to @Bindable()". The codemod keeps emitting the Blazor
   pair.
 
+### Fields that render: `@State()` (Tsazor extension)
+
+```razor
+@code {
+    @State() accessor seconds = 0;
+
+    start() {
+        setInterval(() => this.seconds++, 1000);
+    }
+}
+```
+
+F6 ([design-state.md](design-state.md)). Assigning a `@State` field is `stateHasChanged()` after
+the assignment — so timers, callbacks and messages need no explicit call.
+
+- **Coalesced** like `stateHasChanged()`: a render is queued, several assignments render once,
+  `shouldRender()` is consulted; an `Object.is`-equal value does nothing.
+- **Shallow:** only assignment to the field counts; `this.items.push(x)` is not seen, write
+  `this.items = [...this.items, x]` (or call `stateHasChanged()`). No proxies.
+- **Quiet** before the component's first render and while it builds its render tree.
+- **`accessor` required** (a field decorator cannot intercept assignments): without it TZS030
+  with the fix "Insert 'accessor'"; at runtime the decorator throws. `@State()` together with
+  `@Parameter()`/`@Bindable()` is TZS030 too — a parameter is the parent's value.
+- Hot reload keeps the value. Blazor has no counterpart; `stateHasChanged()` keeps working.
+
 ### External sources: `observe` and `disposeSignal` (Tsazor extension)
 
 ```razor

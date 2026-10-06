@@ -28,6 +28,7 @@ export const RESERVED_MEMBERS: ReadonlySet<string> = new Set([
   "applyParameterValues",
   "stateHasChangedInternal",
   "forceRenderInternal",
+  "stateFieldChangedInternal",
   "onAfterRenderInternal",
   "notifyAfterRender",
   "pendingRender",

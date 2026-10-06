@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`, `@tsazor/compiler`: `@State()` (Tsazor extension; F6, docs/design-state.md).
+  `@State() accessor x = …` makes an assignment to `x` schedule a render of its component, like
+  `stateHasChanged()` (coalesced, `shouldRender()` consulted, equal values ignored, quiet before
+  the first render and during `buildRenderTree`). Shallow: only assignments count. New runtime
+  API: the decorator `State`. The compiler imports it itself (like `Bindable`) and reports TZS030
+  for `@State()` on a non-accessor (fix: insert `accessor`) or together with
+  `@Parameter()`/`@Bindable()`; TZS030's title now reads "@Bindable()/@State() needs an
+  auto-accessor of its own.". Tutorial: lesson *Fields that render*.
 - `@tsazor/compiler`, `@tsazor/runtime`, `@tsazor/lsp`: transitions and animations (Tsazor
   extensions, Svelte's; F4/F5 in docs/design-svelte-features.md). `@transition`, `@in` and
   `@out` (with the valueless `:global` modifier) play a `Transition<E>` when an element enters

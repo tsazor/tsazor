@@ -18,7 +18,7 @@ import { importStatements, parseImportDirective, type ImportInfo } from "./impor
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
 import { RUNTIME_MODULE, replaceIdentifiers } from "./metadata.js";
-import { bindableMembers } from "./bindable.js";
+import { bindableMembers, stateMembers } from "./bindable.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -457,6 +457,7 @@ class Codegen {
     if (/@Parameter\s*\(/.test(memberSource)) this.runtimeImports.add("Parameter");
     if (/@CascadingParameter\s*\(/.test(memberSource)) this.runtimeImports.add("CascadingParameter");
     if (/@Bindable\s*\(/.test(memberSource)) this.runtimeImports.add("Bindable");
+    if (/@State\s*\(/.test(memberSource)) this.runtimeImports.add("State");
     // `@Parameter() onPick?: EventCallback<T>` in a component without event
     // handlers: the type is used only by the member code.
     if (/\bEventCallback\b/.test(memberSource)) this.runtimeImports.add("EventCallback");
@@ -471,6 +472,7 @@ class Codegen {
     const declaredMembers = emptyMembers();
     for (const block of memberCode) collectBodyMembers(block.code, declaredMembers, false);
     const bindableDeclarations = this.checkBindables(memberCode, declaredMembers);
+    this.checkStates(memberCode);
     for (const inject of this.metadata.injects) this.members.instance.add(inject.name);
     this.checkRenderMethodConflict(memberCode);
     this.checkReservedMembers(memberCode);
@@ -731,6 +733,35 @@ class Codegen {
       }
     }
     return declarations;
+  }
+
+  /**
+   * F6: `@State()` in `@code`. On anything but an auto-accessor it is TZS030
+   * (fix: insert 'accessor'), as for `@Bindable()`; together with
+   * `@Parameter()`/`@Bindable()` also TZS030 — a parameter is the parent's
+   * value and would be overwritten.
+   */
+  private checkStates(memberCode: CodeBlockNode[]): void {
+    for (const block of memberCode) {
+      for (const state of stateMembers(block.code)) {
+        const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, state.nameOffset)) : block.pos;
+        const range = textRange(pos, state.name);
+        if (state.parameter !== undefined) {
+          this.diagnostics.error(
+            "TZS030",
+            range,
+            `@State() and @${state.parameter}() on '${state.name}': a parameter belongs to the parent, which overwrites it on its next render. Keep one of them.`,
+          );
+        } else if (!state.accessor) {
+          this.diagnostics.error(
+            "TZS030",
+            range,
+            `@State() needs an auto-accessor: write 'accessor ${state.name}'. A standard field decorator cannot intercept assignments, so the component would never render.`,
+            { title: "Insert 'accessor'", edits: [{ pos, endPos: pos, text: "accessor " }] },
+          );
+        }
+      }
+    }
   }
 
   /** Merges the `@authorize` directives into the route metadata. */

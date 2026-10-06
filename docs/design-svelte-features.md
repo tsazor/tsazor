@@ -192,8 +192,11 @@ loop" means an element child of a `@foreach`/`@for` body that has `@key`; elsewh
 `@State() accessor count = 0` would schedule a render on assignment, which would also work from
 timers. It is technically a superset (only extra, coalesced renders). **Deliberately not deep**: no
 proxies, no `items.push` detection (identity problems, conflicts with `#private`, cost, hard to
-debug). Svelte 5 itself moved away from implicit `$:` magic to explicit runes. Decide once
-`this.observe` has shown in the tutorial and the ticker how much need remains.
+debug). Svelte 5 itself moved away from implicit `$:` magic to explicit runes.
+
+**Implemented** (2026-10-06) as designed in [design-state.md](design-state.md): `State` in
+`@tsazor/runtime`, TZS030 for a non-accessor or a parameter, tutorial lesson *Fields that
+render* in *State & rendering*.
 
 ## Not planned
 

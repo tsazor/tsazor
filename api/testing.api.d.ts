@@ -366,6 +366,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void): Promi
 
 // ServiceProvider: re-exported from @tsazor/runtime
 
+// State: re-exported from @tsazor/runtime
+
 // StringLength: re-exported from @tsazor/runtime
 
 // StringLocalizer: re-exported from @tsazor/runtime

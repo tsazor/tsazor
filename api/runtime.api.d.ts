@@ -204,6 +204,7 @@ export declare abstract class ComponentBase {
     protected shouldRender(): boolean;
     protected stateHasChanged(): void;
     stateHasChangedInternal(): void;
+    stateFieldChangedInternal(): void;
     forceRenderInternal(): void;
     protected buildRenderTree(builder: RenderTreeBuilder): void;
     onAfterRenderInternal(callback: (firstRender: boolean) => void | Promise<void>): void;
@@ -1294,6 +1295,9 @@ export declare class ServiceProvider {
     private resolve;
     private construct;
 }
+
+// State
+export declare function State<This extends ComponentBase, V>(): (target: ClassAccessorDecoratorTarget<This, V>, context: ClassAccessorDecoratorContext<This, V>) => ClassAccessorDecoratorResult<This, V>;
 
 // StringLength
 export declare function StringLength(maximumLength: number, options?: {

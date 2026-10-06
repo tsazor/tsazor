@@ -1,6 +1,6 @@
 # Design draft — `@State` (F6): fields that render their component
 
-Status: **proposal** (2026-10-06). F6 in [design-svelte-features.md](design-svelte-features.md),
+Status: **implemented** (2026-10-06; S1–S3 as recommended — `State` in `@tsazor/runtime`, TZS030, tutorial lesson *Fields that render*). F6 in [design-svelte-features.md](design-svelte-features.md),
 planned for v1 (decision D4). A Tsazor extension under the v1 superset rule: markup untouched,
 nothing in Blazor changes meaning, and the Blazor form (`stateHasChanged()`) keeps working.
 

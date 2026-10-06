@@ -135,3 +135,21 @@ describe("generated code", () => {
     expect(result.code).toContain("this.ValueChanged");
   });
 });
+
+describe("@State (F6)", () => {
+  const errors = (code: string) => compile(code, { fileName: "Clock.tsazor" }).diagnostics.errors.map((d) => `${d.code} ${d.message}`);
+
+  it("imports State itself and compiles an accessor without diagnostics", () => {
+    const result = compile("<p>@seconds</p>\n@code { @State() accessor seconds = 0; }", { fileName: "Clock.tsazor" });
+    expect(result.diagnostics.errors).toEqual([]);
+    expect(result.code).toMatch(/import \{[^}]*\bState\b[^}]*\} from "@tsazor\/runtime"/);
+  });
+
+  it("reports a plain field (with the 'accessor' fix) and a parameter as TZS030", () => {
+    const plain = compile("@code { @State() seconds = 0; }", { fileName: "Clock.tsazor" }).diagnostics.errors;
+    expect(plain.map((d) => d.code)).toEqual(["TZS030"]);
+    expect(plain[0]!.message).toContain("write 'accessor seconds'");
+    expect(plain[0]!.fixes?.[0]?.title ?? (plain[0] as { fix?: { title: string } }).fix?.title).toBe("Insert 'accessor'");
+    expect(errors("@code { @State() @Parameter() accessor Seconds = 0; }")).toEqual([expect.stringMatching(/^TZS030 .*@State\(\) and @Parameter\(\) on 'Seconds'/)]);
+  });
+});

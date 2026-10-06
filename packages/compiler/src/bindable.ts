@@ -51,6 +51,38 @@ export interface BindableMember {
   expression?: string;
 }
 
+/** A member `@State()` decorates (F6). */
+export interface StateMember {
+  name: string;
+  /** Offset (in the body text) of the member name. */
+  nameOffset: number;
+  /** An auto-accessor (`accessor value`) — the only member form `@State()` works on. */
+  accessor: boolean;
+  /** Also a `@Parameter()` or `@Bindable()`: the decorator that clashes. */
+  parameter?: "Parameter" | "Bindable";
+}
+
+/** Every member `@State()` decorates in `@code` text (a class body). */
+export function stateMembers(body: string): StateMember[] {
+  if (!body.includes("State")) return [];
+  const { file, cls } = parseBody(body);
+  if (!cls) return [];
+  const result: StateMember[] = [];
+  for (const member of cls.members) {
+    const name = memberName(member);
+    if (!decoratorCall(member, "State") || name === undefined || !member.name) continue;
+    const entry: StateMember = {
+      name,
+      nameOffset: member.name.getStart(file) - PREFIX.length,
+      accessor: ts.isPropertyDeclaration(member) && hasModifier(member, ts.SyntaxKind.AccessorKeyword),
+    };
+    const parameter = decoratorCall(member, "Parameter") ? "Parameter" : decoratorCall(member, "Bindable") ? "Bindable" : undefined;
+    if (parameter !== undefined) entry.parameter = parameter;
+    result.push(entry);
+  }
+  return result;
+}
+
 /** Every member `@Bindable()` decorates in `@code` text (a class body). */
 export function bindableMembers(body: string): BindableMember[] {
   if (!body.includes("Bindable")) return [];

@@ -29,6 +29,8 @@ export abstract class ComponentBase {
   #initialized = false;
   #hasPendingRender = false;
   #firstRenderDone = false;
+  /** F6: buildRenderTree is running (a `@State` assignment there schedules nothing). */
+  #building = false;
   #hasCalledOnAfterRender = false;
   readonly #afterRenderCallbacks: Array<(firstRender: boolean) => void | Promise<void>> = [];
   #disposed = false;
@@ -158,6 +160,16 @@ export abstract class ComponentBase {
     }
   }
 
+  /**
+   * @internal F6: a `@State` field changed — stateHasChanged, except before
+   * the first render (it comes anyway) and while this component builds its
+   * render tree (it would render again and again).
+   */
+  stateFieldChangedInternal(): void {
+    if (!this.#firstRenderDone || this.#building) return;
+    this.stateHasChangedInternal();
+  }
+
   /** @internal Queues a render regardless of shouldRender (hot reload, Blazor's IsRenderingOnMetadataUpdate). */
   forceRenderInternal(): void {
     if (this.#hasPendingRender || !this.renderHandle) return;
@@ -204,7 +216,12 @@ export abstract class ComponentBase {
 
   /** @internal Renderer entry: builds the current output (wraps protected buildRenderTree). */
   renderCurrentOutput(builder: RenderTreeBuilder): void {
-    this.buildRenderTree(builder);
+    this.#building = true;
+    try {
+      this.buildRenderTree(builder);
+    } finally {
+      this.#building = false;
+    }
   }
 
   /** @internal */

@@ -78,7 +78,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS027: "Unrecognized child content.",
   TZS028: "Invalid child content element.",
   TZS029: "Template context name conflict.",
-  TZS030: "@Bindable() needs an auto-accessor.",
+  TZS030: "@Bindable()/@State() needs an auto-accessor of its own.",
   TZS031: "Name reserved by ComponentBase.",
 } as const;
 
