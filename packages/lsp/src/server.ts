@@ -26,7 +26,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { analyzeSource, bindableHoverAt, bindableRefactorsAt, definitionAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
+import { analyzeSource, bindableHoverAt, bindableRefactorsAt, definitionAt, directiveAttributeHoverAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
 import { completeAt, type CompletionKind } from "./completions.js";
 import { ProjectRegistry } from "./projects.js";
 import type { ShadowEntry } from "./ts-service.js";
@@ -235,6 +235,9 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     const current = await analyzed(document);
     // A @Bindable() member: the desugared pair, above the TS layer's own hover.
     const bindable = bindableHoverAt(current, pos.line, pos.character);
+    // F2: the name of an `@attach` attribute maps onto generated plumbing — its own text wins.
+    const directive = directiveAttributeHoverAt(current, pos.line, pos.character);
+    if (directive) return { contents: { kind: "markdown", value: directive.markdown } };
     const entry = await entryFor(document);
     if (entry) {
       const info = tsHover(registry.projectFor(uriToPath(document.uri)).service, entry, pos.line, pos.character);

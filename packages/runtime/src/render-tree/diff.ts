@@ -443,6 +443,8 @@ function insertNewFrame(ctx: DiffContext, newFrameIndex: number): void {
   switch (newFrame.frameType) {
     case FrameType.Attribute:
     case FrameType.EventHandler:
+    case FrameType.Attachment:
+      // F2: an added attachment is set like an attribute; the applier queues it.
       ctx.edits.push(edit(RenderTreeEditType.SetAttribute, ctx.siblingIndex, newFrameIndex, -1, null));
       break;
     case FrameType.Component:
@@ -477,6 +479,8 @@ function removeOldFrame(ctx: DiffContext, oldFrameIndex: number): void {
   switch (oldFrame.frameType) {
     case FrameType.Attribute:
     case FrameType.EventHandler:
+    case FrameType.Attachment:
+      // F2: a removed attachment's name starts with `@`; the applier detaches it.
       ctx.edits.push(edit(RenderTreeEditType.RemoveAttribute, ctx.siblingIndex, -1, -1, oldFrame.attributeName ?? null));
       break;
     case FrameType.Component:
@@ -620,10 +624,10 @@ export function attributeValueSame(oldFrame: RenderTreeFrame, newFrame: RenderTr
 export function attributesEndIndexExclusive(frames: RenderTreeFrame[], startIndex: number): number {
   const end = startIndex + getFrameSubtreeLength(frames[startIndex]!);
   let i = startIndex + 1;
-  // An element's own frames: attributes, event handlers and reference
-  // captures (Blazor's element frame order, e.g. InputFile) — children start
-  // after them.
-  while (i < end && (isAttribute(frames[i]!) || frames[i]!.frameType === FrameType.ElementReferenceCapture)) i++;
+  // An element's own frames: attributes, event handlers, attachments (F2)
+  // and reference captures (Blazor's element frame order, e.g. InputFile) —
+  // children start after them.
+  while (i < end && (isAttribute(frames[i]!) || frames[i]!.frameType === FrameType.ElementReferenceCapture || frames[i]!.frameType === FrameType.Attachment)) i++;
   return i;
 }
 

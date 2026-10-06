@@ -65,6 +65,11 @@ export type AttributeNode = (SourceSpan & {
     code: string;
     codeStart?: SourceSpan["pos"];
 }) | (SourceSpan & {
+    kind: "attach";
+    attachName: string;
+    code: string;
+    codeStart?: SourceSpan["pos"];
+}) | (SourceSpan & {
     kind: "bind";
     expression?: string;
     bindTarget?: string;

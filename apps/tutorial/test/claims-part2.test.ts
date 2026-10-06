@@ -1,7 +1,7 @@
 /**
- * Claims of the lesson texts of Part 2 (chapters 8–13: reusing content,
+ * Claims of the lesson texts of Part 2 (chapters 8–14: reusing content,
  * cascading values, services, element references, special components,
- * organizing code), pinned to the real compiler, runtime and type check —
+ * organizing code, attachments), pinned to the real compiler, runtime and type check —
  * run the way the preview runs them (test/harness.ts). Each `describe`
  * names the lesson whose text makes the claim.
  */
@@ -813,5 +813,68 @@ describe("containers", () => {
     expect(typeCodes(callback("EventCallback", ""))).toEqual([]);
     expect(typeCodes(callback("EventCallback<string>", ""))).toEqual(["TS2554"]);
     expect(typeCodes(callback("EventCallback<string>", '"x"'))).toEqual([]);
+  });
+});
+
+/* Chapter 14 — Attachments --------------------------------------------------------- */
+
+describe("attachments", () => {
+  const { a, b } = lesson("attachments");
+
+  it("the attachment focuses the input each time the @if brings it back; the start does not", async () => {
+    const start = await mount(a);
+    click(start, ".open");
+    await start.settle();
+    expect(document.activeElement).not.toBe(start.container.querySelector("input"));
+    expect(start.html()).toContain("Click the box first…");
+    start.dispose();
+    const m = await mount(b);
+    for (let round = 0; round < 2; round++) {
+      click(m, ".open");
+      await m.settle();
+      expect(document.activeElement).toBe(m.container.querySelector("input"));
+      expect(m.html()).toContain("Type away.");
+      click(m, ".close");
+      await m.settle();
+    }
+    m.dispose();
+  });
+
+  it("the tooltip shows on hover; removing the button runs the cleanup (tooltip and listeners gone)", async () => {
+    const m = await mount(b);
+    click(m, ".open");
+    await m.settle();
+    const close = m.container.querySelector(".close") as HTMLElement;
+    close.dispatchEvent(new MouseEvent("mouseenter"));
+    expect(document.body.querySelector(".tooltip")?.textContent).toBe("Close the search");
+    close.click();
+    await m.settle();
+    expect(document.body.querySelector(".tooltip")).toBeNull();
+    close.dispatchEvent(new MouseEvent("mouseenter"));
+    expect(document.body.querySelector(".tooltip")).toBeNull();
+    m.dispose();
+  });
+
+  it("a factory call in markup re-attaches every render; a field stays attached", async () => {
+    const counter = (markup: string): Files =>
+      app(`${markup}<button class="again" @onclick="() => renders++">@renders</button>`, `    renders = 0;\n    attaches = 0;\n    held = this.tip("x");\n    tip(text: string) { return (element: HTMLElement) => { this.attaches++; element.title = text; }; }`);
+    for (const [markup, expected] of [[`<p @attach="tip('x')">p</p>`, 3], [`<p @attach="held">p</p>`, 1]] as const) {
+      const m = await mount(counter(markup));
+      click(m, ".again");
+      await m.settle();
+      click(m, ".again");
+      await m.settle();
+      expect(m.instance["attaches"], markup).toBe(expected);
+      m.dispose();
+    }
+  });
+
+  it("several attachments per element; the check types the parameter by the tag", async () => {
+    const m = await mount(app(`<input @attach="one" @attach:shortcut="two" />`, `    log: string[] = [];\n    one = (input: HTMLInputElement) => { this.log.push("one " + input.tagName); };\n    two = (input: HTMLInputElement) => { this.log.push("two " + input.tagName); };`));
+    expect(m.instance["log"]).toEqual(["one INPUT", "two INPUT"]);
+    m.dispose();
+    expect(typeCodes(b)).toEqual([]);
+    expect(typeCodes({ ...b, "App.tsazor": b["App.tsazor"]!.replace('<button class="close" @onclick="close" @attach="closeTip">', '<button class="close" @onclick="close" @attach="autofocus">') })).toEqual(["TS2345"]);
+    expect(codes(app(`<input @attach="one" @attach="one" />`, "    one = () => {};"))).toEqual(["error:TZS008"]);
   });
 });

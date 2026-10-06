@@ -100,6 +100,14 @@ describe("hoverAt", () => {
     expect(inject?.markdown).toContain("UserService");
   });
 
+  it("describes @attach and @attach:name on the attribute name (F2)", async () => {
+    const filePath = path.join(root, "Pages", "Attach.tsazor");
+    const analyzed = await analyzeSource(filePath, '<input @attach="focus" @attach:tip="tip" />\n@code { focus = () => {}; tip = () => {}; }\n', root);
+    expect(hoverAt(analyzed, 0, 9)?.markdown).toContain("`@attach` — runs a function");
+    const named = hoverAt(analyzed, 0, 27)?.markdown;
+    expect(named).toContain("`@attach:tip` is one of several attachments");
+  });
+
   it("returns null inside plain text", async () => {
     const filePath = path.join(root, "Pages", "Plain.tsazor");
     const analyzed = await analyzeSource(filePath, "<p>hello</p>\n", root);

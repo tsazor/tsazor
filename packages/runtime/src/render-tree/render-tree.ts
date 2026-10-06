@@ -29,9 +29,9 @@ export interface RenderTreeFrame {
   readonly elementSubtreeLength?: number;
   /** Text frames */
   readonly textContent?: string | number | boolean | bigint;
-  /** Attribute frames */
+  /** Attribute frames; on attachment frames the directive (`@attach`, `@attach:name`). */
   readonly attributeName?: string;
-  /** The attribute's value: a primitive, an `EventCallback`, a function, a fragment or any object. */
+  /** The attribute's value: a primitive, an `EventCallback`, a function, a fragment or any object; on attachment frames the attachment (or null/undefined/false). */
   readonly attributeValue?: unknown;
   /** Event name of an attribute written by `addEventHandler` (equal to `attributeName`). */
   readonly eventHandlerName?: string;

@@ -5,6 +5,28 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`, `@tsazor/runtime`, `@tsazor/lsp`: `@attach` (Tsazor extension, Svelte 5's
+  attachments; F2 in docs/design-svelte-features.md). `@attach="fn"` and any number of
+  `@attach:<name>="fn"` on an element run `fn(element)` once the element is in the DOM (at the
+  batch end, before `onAfterRender`); a returned function is the cleanup, called when the element
+  is removed, the component disposed or the value changes (compared by identity; `null`,
+  `undefined`, `false` attach nothing; a member method is bound like a delegate). New runtime
+  API: the type `Attachment<E extends Element = Element>`, `addAttachment(builder, sequence,
+  name, value)` (what the compiler emits; it installs the attachment support, so apps without
+  `@attach` don't bundle it) and `FrameType.Attachment`. Exceptions go to the nearest
+  `ErrorBoundary` (phase `afterRender`). Typed shadows check the value as
+  `Attachment<HTMLInputElement>` etc. by tag. Diagnostics: no value TZS009; a duplicate name,
+  `@attach:` without a name and `@attach` on a component tag TZS008. Rows with `@attach` are
+  never reused (H2) or static blocks (F1a). LSP: completions and hover. Tutorial: chapter
+  *Attachments*.
+- `@tsazor/runtime`: `<Await>` (Tsazor extension, Svelte's `{#await}`; F3 in
+  docs/design-svelte-features.md) — the built-in templated component `Await<TValue>` with `For`
+  (a promise; a plain value counts as resolved, `null`/`undefined` as pending) and the
+  `<Pending>`, `<Then Context="…">` and `<Catch Context="…">` fragments. A new promise starts
+  over, a stale one is ignored, nothing renders after dispose; a rejection without `Catch` fails
+  the component (nearest `ErrorBoundary`). `@tsazor/lsp` (and the tutorial's checker) infer
+  `TValue` through the awaited type of `For`, so the `Then` context is typed; slot completions
+  are offered in PascalCase (`<Then>`, `<ErrorContent>`).
 - `@tsazor/compiler`, `@tsazor/runtime`: skipping unchanged keyed rows (render hints H2,
   docs/design-render-hints.md). A `@foreach` row that is one element with `@key` evaluates its
   dynamic values first and calls the new `RenderTreeBuilder.reuseKeyed(site, key, values)`

@@ -2,11 +2,17 @@
 
 /* @tsazor/runtime */
 
+// addAttachment
+export declare function addAttachment<E extends Element = Element>(builder: RenderTreeBuilder, sequence: number, name: string, value: Attachment<E> | null | undefined | false): void;
+
 // ANONYMOUS
 export declare const ANONYMOUS: AuthenticationState;
 
 // anonymousUser
 export declare function anonymousUser(): ClaimsPrincipal;
+
+// Attachment
+export type Attachment<E extends Element = Element> = (element: E) => void | (() => void);
 
 // AttributeValue
 export type AttributeValue = string | number | bigint | boolean | null | undefined | EventCallback<any> | RenderFragment | Record<string, unknown> | object | symbol;
@@ -80,6 +86,17 @@ export declare class AuthorizeView extends ComponentBase implements CascadingVal
     private requirements;
     private normalizedRoles;
     private authorizationService;
+}
+
+// Await
+export declare class Await<TValue = unknown> extends ComponentBase {
+    #private;
+    set for(source: PromiseLike<TValue> | TValue | null | undefined);
+    set pending(fragment: RenderFragment | undefined);
+    set then(fragment: ((value: TValue) => RenderFragment) | undefined);
+    set catch(fragment: ((error: unknown) => RenderFragment) | undefined);
+    protected onParametersSet(): void;
+    protected buildRenderTree(b: RenderTreeBuilder): void;
 }
 
 // Bindable
@@ -329,10 +346,13 @@ export declare class DomRenderer implements EventHandlerHost {
     private readonly renderer;
     private readonly journal;
     private applying;
+    private attachmentWork;
     constructor(renderer: Renderer);
     invokeEventHandler(state: ComponentState, callback: EventCallback<never>, event: Event): void;
     applyEdits(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[]): void;
     private applyEditsJournaled;
+    private queueAttachment;
+    takeAttachmentWork(): unknown[] | null;
     commitSlotChildren(state: ComponentState): void;
     private insertFrame;
     private insertChildFrames;
@@ -489,7 +509,8 @@ export declare const enum FrameType {
     ElementReferenceCapture = 6,
     Markup = 7,
     EventHandler = 8,
-    ComponentReferenceCapture = 9
+    ComponentReferenceCapture = 9,
+    Attachment = 10
 }
 
 // getRouteTable
@@ -945,6 +966,7 @@ export declare class Renderer {
     private disposeInstance;
     private enqueueRender;
     private processRenderQueue;
+    private readonly attachmentFailed;
     private invokeAfterRender;
     private renderComponent;
     onBatchCompleted(listener: (batch: RenderBatch) => void): () => void;

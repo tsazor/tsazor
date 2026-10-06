@@ -31,7 +31,7 @@ import {
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { AnalyzedFile } from "./analysis.js";
-import { nodeAt } from "./analysis.js";
+import { ATTACH_DOC, nodeAt } from "./analysis.js";
 import {
   chainAt,
   contextNameOf,
@@ -196,7 +196,7 @@ export function classifySlice(slice: string): TagRegion {
 
 /* Attribute candidates -------------------------------------------------------- */
 
-const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string }> = [
+const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string; elementOnly?: boolean }> = [
   { label: "@bind", doc: "Two-way value binding (input.value ↔ member)." },
   { label: "@onclick", doc: "Click event handler." },
   { label: "@onchange", doc: "Change event handler." },
@@ -204,6 +204,8 @@ const DIRECTIVE_ATTRS: ReadonlyArray<{ label: string; doc: string }> = [
   { label: "@ref", doc: "Capture the element's DOM reference." },
   { label: "@key", doc: "Diff key for stable element identity." },
   { label: "@attributes", doc: "Attribute splat." },
+  { label: "@attach", doc: ATTACH_DOC, elementOnly: true },
+  { label: "@attach:", doc: `${ATTACH_DOC} The named form \`@attach:name="…"\` adds another, independent attachment to the same element.`, elementOnly: true },
 ];
 
 const ELEMENT_ATTRS: ReadonlyArray<{ label: string; doc?: string }> = [
@@ -253,7 +255,10 @@ function attributeCandidates(analyzed: AnalyzedFile, element: ElementNode, prefi
       });
     }
   }
-  for (const attr of DIRECTIVE_ATTRS) push({ label: attr.label, kind: "attribute", detail: "directive attribute", doc: attr.doc });
+  for (const attr of DIRECTIVE_ATTRS) {
+    if (attr.elementOnly && element.isComponent) continue;
+    push({ label: attr.label, kind: "attribute", detail: "directive attribute", doc: attr.doc });
+  }
   if (!element.isComponent) {
     for (const attr of ELEMENT_ATTRS) push({ label: attr.label, kind: "attribute", detail: "HTML attribute", doc: attr.doc });
   }
@@ -348,26 +353,32 @@ function tagCandidates(analyzed: AnalyzedFile, chain: readonly MarkupNode[], tag
   return parameters
     .filter((parameter) => parameter.name.toLowerCase().startsWith(needle))
     .map((parameter) => ({
-    label: parameter.name,
+    label: slotTagName(parameter),
     kind: "slot" as const,
     detail: `slot of <${parent.tagName}> · ${parameter.category}`,
     doc:
       parameter.category === "RenderFragment<T>"
-        ? `\`<${parameter.name}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\`. RenderFragment<${parameter.typeArgument ?? "unknown"}> — \`${contextNameOf(parent) ?? "context"}\` is the body's context (own \`Context="…"\` renames it).`
-        : `\`<${parameter.name}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\` (RenderFragment).`,
+        ? `\`<${slotTagName(parameter)}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\`. RenderFragment<${parameter.typeArgument ?? "unknown"}> — \`${contextNameOf(parent) ?? "context"}\` is the body's context (own \`Context="…"\` renames it).`
+        : `\`<${slotTagName(parameter)}>\` sets \`${parameter.name}\` of \`<${parent.tagName}>\` (RenderFragment).`,
     snippet: parameterTagSnippet(parameter),
   }));
 }
 
+/** The slot's tag as markup writes it: PascalCase (slot tags match their
+ *  parameter case-insensitively), so `then` / `errorContent` are offered as
+ *  `<Then>` / `<ErrorContent>`. */
+const slotTagName = (parameter: ComponentParameter): string => parameter.name.charAt(0).toUpperCase() + parameter.name.slice(1);
+
 const parameterTagSnippet = (parameter: ComponentParameter): string => {
   const generic = parameter.category === "RenderFragment<T>";
   const context = generic && /^[A-Za-z_$][\w$]*$/.test(parameter.typeArgument ?? "") ? ` Context="${parameter.typeArgument}"` : "";
-  return `${parameter.name}${context}>\n\t$0\n</${parameter.name}>`;
+  const tag = slotTagName(parameter);
+  return `${tag}${context}>\n\t$0\n</${tag}>`;
 };
 
 /** Component list minus the labels the host's fragment parameters covered. */
 function notSlotTag(parameters: readonly ComponentParameter[]): (candidate: { label: string }) => boolean {
-  const tags = new Set(parameters.map((parameter) => parameter.name));
+  const tags = new Set(parameters.map((parameter) => slotTagName(parameter)));
   return (candidate) => !tags.has(candidate.label);
 }
 

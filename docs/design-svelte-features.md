@@ -70,6 +70,20 @@ This comes first: it has the largest benefit, no API, and no risk to ports.
   up on its own.
 - Replaces most `@ref` + `onAfterRender` + `dispose` wrappers for imperative widgets.
 
+**Implemented** (2026-10-06): `Attachment<E>` and `addAttachment` in `@tsazor/runtime`
+([language reference](language-reference.md#attach-tsazor-extension), tutorial chapter
+*Attachments* in Advanced). Decisions made on the way: an attachment frame (`FrameType.Attachment`)
+in the element's attribute run, diffed like an attribute by identity (the same function is no
+edit); the applier only queues attachment work — attaching and cleanup run at the batch end
+before the `onAfterRender` calls, so a rolled-back pass drops what it queued, and an element a
+later pass of the same batch removed is never attached; removal is found by checking the
+component's attached elements after a pass that removed something; the attachment support
+installs itself on the first `addAttachment` (apps without `@attach` don't bundle it). A member
+method is bound like a delegate parameter (stable identity). Typed shadows pass the tag's
+interface as the type argument. Diagnostics: no value TZS009; duplicate name, `@attach:` without
+a name and `@attach` on a component tag TZS008. Rows with `@attach` are excluded from H2 and
+static markup blocks.
+
 ## F3 — `<Await>` (Svelte `{#await}`)
 
 A built-in component, so the markup stays pure Razor and no D1 decision is needed:
@@ -86,6 +100,14 @@ A built-in component, so the markup stays pure Razor and no D1 decision is neede
   (latest wins).
 - Typed: `Then` gets `T` from `Promise<T>` through the 2.3 templated-component inference, with
   explicit `TItem` as the fallback.
+
+**Implemented** (2026-10-06): `Await<TValue>` in `@tsazor/runtime`
+([language reference](language-reference.md#await-tsazor-extension), tutorial lesson *Await*
+in Logic). Decisions made on the way: a rejection without `Catch` fails the component (nearest
+`ErrorBoundary`) instead of being swallowed; `null`/`undefined` renders `Pending` ("no promise
+yet"); an already settled promise renders `Pending` for one microtask (no synchronous peek);
+the type parameter is `TValue`, inferred through the awaited type of `For`; the `Catch`
+context is `unknown`; the parameters are write-only (setters), so the instance is no thenable.
 
 ## F4 — `@transition`, `@in`, `@out`
 

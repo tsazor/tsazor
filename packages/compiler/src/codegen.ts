@@ -1267,6 +1267,11 @@ class Codegen {
         case "key":
           if (!isRow || !sideEffectFree(attr.code, false)) return false;
           break;
+        case "attach":
+          // F2: rows with attachments are always built — a reused row would
+          // keep the previous render's attachment frame and never see a
+          // changed attachment value.
+          return false;
         default:
           // @ref, @attributes, @bind, event modifiers.
           return false;
@@ -1614,7 +1619,8 @@ class Codegen {
     const name = node.tagName;
     const key = node.attributes.find((a) => a.kind === "key");
     const refs = node.attributes.filter((a) => a.kind === "ref");
-    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref");
+    const attachments = node.attributes.filter((a) => a.kind === "attach");
+    const regular = node.attributes.filter((a) => a.kind !== "key" && a.kind !== "ref" && a.kind !== "attach");
 
     const seq = this.seq();
     const raw = JSON.stringify(name);
@@ -1633,6 +1639,9 @@ class Codegen {
     }
     if (key && key.kind === "key") this.emitKeyStmt(key, node.pos);
     for (const attr of regular) this.emitAttribute(attr, { tag: name, attributes: regular });
+    for (const attach of attachments) {
+      if (attach.kind === "attach") this.emitAttachStmt(attach, name);
+    }
     for (const ref of refs) {
       if (ref.kind !== "ref") continue;
       if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
@@ -1664,6 +1673,24 @@ class Codegen {
       });
     }
     this.stmt(text, pos);
+  }
+
+  /**
+   * F2: `@attach="expr"` / `@attach:name="expr"` → an attachment frame,
+   * `addAttachment(__builder, seq, "@attach:name", value)`. A method group
+   * is bound like a delegate (bindMethod: the same function every render, so
+   * it stays attached). Typed shadows (2.4) pass the element's interface as
+   * the type argument (as `@ref` casts to it), so the value is checked as —
+   * and a lambda's parameter typed by — `Attachment<HTMLInputElement>` etc.
+   */
+  private emitAttachStmt(attach: Extract<AttributeNode, { kind: "attach" }>, tag: string): void {
+    const seq = this.seq();
+    const value = this.delegateValue(attach.code, attach.codeStart);
+    const directive = attach.attachName === "" ? "@attach" : `@attach:${attach.attachName}`;
+    this.runtimeAliases.add("addAttachment");
+    const typed = this.options.typedShadow !== undefined ? `<${elementRefCastTag(tag) ?? "Element"}>` : "";
+    const text = `${alias("addAttachment")}${typed}(${BUILDER}, ${seq}, ${JSON.stringify(directive)}, ${value});`;
+    this.stmt(text, attach.pos, text.lastIndexOf(value));
   }
 
   /** `@key="expr"` → `__builder.setKey(...)`, token-precise like attribute values. */
@@ -2241,6 +2268,17 @@ class Codegen {
       case "key":
       case "ref":
         break; // handled by emitElement/emitComponent
+      case "attach":
+        // Elements emit theirs in emitElement; a component has no element of its own.
+        if (ctx?.isComponent) {
+          const label = attr.attachName === "" ? "@attach" : `@attach:${attr.attachName}`;
+          this.diagnostics.error(
+            "TZS008",
+            attr,
+            `'${label}' applies to elements, not to the component '<${ctx.tag}>'. Pass the attachment as a parameter (an \`Attachment\` value) and attach it to the component's own element.`,
+          );
+        }
+        break;
     }
   }
 

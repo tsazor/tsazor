@@ -166,6 +166,13 @@ describe("completeAt — attributes", () => {
     expect(labels).not.toContain("@bind-Name");
   });
 
+  it("offers @attach and @attach: on elements only (F2)", async () => {
+    expect(await complete("<input @att\n", 0, 11)).toEqual(["@attributes", "@attach", "@attach:"]);
+    const labels = await complete(GREETER_PAGE, 3, 4);
+    expect(labels).not.toContain("@attach");
+    expect(labels).toContain("@ref");
+  });
+
   it("returns nothing inside a quoted attribute value", async () => {
     const source = '<div class="\n';
     const labels = await complete(source, 0, 12);
@@ -260,6 +267,18 @@ describe("completeAt — slots (2.5)", () => {
   it("offers the context variable in a component's loose content (generic ChildContent)", async () => {
     const labels = await complete("<Looper>\n    @co\n</Looper>\n", 1, 6); // after "@co"
     expect(labels).toContain("context");
+  });
+
+  it("offers a runtime component's camelCase fragment parameters as PascalCase slot tags (<Await>)", async () => {
+    const slotsAfter = async (prefix: string) => {
+      const analyzed = await analyzeSource(path.join(root, "Pages", "Demo.tsazor"), `<Await For="@(1)">\n    <${prefix}\n</Await>\n`, root);
+      return completeAt(analyzed, 1, 5 + prefix.length).filter((c) => c.kind === "slot");
+    };
+    const then = await slotsAfter("Th");
+    expect(then.map((c) => c.label)).toEqual(["Then"]);
+    expect(then[0]!.snippet).toMatch(/^Then[^>]*>\n\t\$0\n<\/Then>$/);
+    expect((await slotsAfter("pe")).map((c) => c.label)).toEqual(["Pending"]);
+    expect((await slotsAfter("Ca")).map((c) => c.label)).toEqual(["Catch"]);
   });
 
   it("describes the context variable's type from the RenderFragment<T> argument", async () => {

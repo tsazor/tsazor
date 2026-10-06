@@ -21,6 +21,20 @@
 Directives are only valid at document level; inside elements or code blocks ⇒ TZS013.
 An unknown `@word` is not a directive but an implicit expression (Razor).
 
+### Directive attributes
+
+| Attribute | Example | Semantics |
+|---|---|---|
+| `@on<event>` (+ `:preventDefault`, `:stopPropagation`) | `@onclick="save"` | Event handler, see [Expressions](#expressions) |
+| `@bind`, `@bind-<Param>` (+ modifiers) | `@bind="name"` | Two-way binding, see [@bind](#bind-blazor-net-7-semantics) |
+| `@key` | `@key="item.id"` | Diff key of an element or component |
+| `@ref` | `@ref="input"` | Captures the element (or component instance) into a member |
+| `@attributes` | `@attributes="extra"` | Attribute splat |
+| `@attach`, `@attach:<name>` | `@attach="autofocus"` | Tsazor extension: runs a function with the element once it is in the DOM, with cleanup — see [@attach](#attach-tsazor-extension) |
+
+The `@` attribute namespace is reserved for directive attributes, as Microsoft treats it (Razor
+itself renders an unknown one as a literal attribute named `@x`); an unknown one ⇒ TZS001.
+
 ## Routes
 
 Templates work as in Blazor: literals (case-insensitive), `{name}`, `{name:constraint}` (several: `{id:int:regex(...)}`),
@@ -201,7 +215,7 @@ all are the same, the previous render's frames of that row are reused and the di
 changed value builds and diffs the row as before. The DOM and every lifecycle call are the same as
 without it. The row qualifies only when nothing in it depends on more than those values:
 - only elements, text, `@` expressions and `<text>` — no `@if`/`@foreach`/`@switch` or `@{ … }` inside,
-  no `@ref`, `@attributes`, `@bind` or event modifiers, no `@key` below the row's own;
+  no `@ref`, `@attach`, `@attributes`, `@bind` or event modifiers, no `@key` below the row's own;
 - expressions without visible effects — no assignment, `++`/`--`, `await`, `delete` or `yield`
   (calls are fine; they still run once per render, only before the row's frames are written);
 - child components in the row get only value parameters — no child content, callbacks, delegates or
@@ -324,6 +338,49 @@ the type layer — TS2339 in the language server and in `tsazor check`, see
   (`href=@("a" + id)`) are explicit expressions, as in Razor (Roslyn binds `@(`
   independently of the markup; 2.5 — previously a TZS009 cascade where the `(` remainder was
   interpreted as another attribute; unbalanced parentheses ⇒ TZS003).
+
+## @attach (Tsazor extension)
+
+```razor
+<input @attach="autofocus" />
+<button @attach="tooltip" @attach:shortcut="saveShortcut">Save</button>
+
+@code {
+    autofocus: Attachment<HTMLInputElement> = (input) => input.focus();
+}
+```
+
+Svelte 5's attachments (F2 in [design-svelte-features.md](design-svelte-features.md)): a function
+that receives the element once it is in the DOM and may return a cleanup. Blazor has no
+counterpart; there you write `@ref` + `OnAfterRenderAsync` + `IAsyncDisposable` — which works
+unchanged in Tsazor. `@attach` ties the cleanup to the element's lifetime instead.
+
+- **Type:** `Attachment<E extends Element = Element> = (element: E) => void | (() => void)`
+  (`@tsazor/runtime`). In typed shadows and `tsazor check` the value is checked against the tag's
+  interface (`Attachment<HTMLInputElement>` on `<input>`, `SVGElementTagNameMap` for SVG, `Element`
+  for unknown tags), so a lambda's parameter is typed and a wrong function is a type error.
+- **When:** after the render batch's DOM edits, in the same phase as `onAfterRender` (before those
+  calls), in document order within a component (parent passes before their children).
+- **Cleanup:** the returned function runs when the element is removed (also with an ancestor),
+  the component is disposed (before its `dispose`), or the attachment's value changes.
+- **Identity:** the value is compared by identity. The same function on the next render does
+  nothing; a different function cleans up the old attachment, then runs the new one;
+  `null`/`undefined`/`false` means no attachment. A member method (`@attach="select"`) is bound to
+  the component like a delegate parameter, the same bound function every render. A factory call
+  (`@attach="tooltip('Save')"`) creates a new function every render and therefore **re-attaches
+  every render** — as in Svelte 5: hold the attachment in a field
+  (`saveTip = this.tooltip("Save")`) or memoize the factory.
+- **Several per element:** `@attach` plus any number of `@attach:<name>` (Razor's
+  directive-attribute parameter syntax, as in `@bind:event`); each one has its own value and
+  cleanup. A name twice on one element ⇒ TZS008.
+- **Errors:** an exception from an attachment or its cleanup is a failure of the component,
+  routed like an `onAfterRender` error (nearest `ErrorBoundary`). `@attach` without a value ⇒
+  TZS009; on a component tag ⇒ TZS008 (attachments are for elements — a component takes an
+  `Attachment` parameter and attaches it to its own element).
+- **Render hints:** an element with `@attach` is never a static markup block (F1a), and a keyed
+  row containing one is always built (H2).
+- Hand-written render code: `addAttachment(builder, sequence, "@attach", value)`; the attachment
+  support is only bundled when used.
 
 ## Code contexts (code-first, like Razor)
 
@@ -892,6 +949,55 @@ it is no longer rendered as `ChildContent` or as a component:
   `<PageTitle>`, slots and templates). Capture the value first — `@if (user) { const current =
   user; <Card>@current.name</Card> }` — or read it through a getter.
 
+### Await (Tsazor extension)
+
+```razor
+<Await For="@user">
+    <Pending><p>Loading…</p></Pending>
+    <Then Context="u">Hello @u.name</Then>
+    <Catch Context="err">Failed: @err.message</Catch>
+</Await>
+
+@code {
+    user = getUser(1);   // a Promise<User>, no async hook needed
+}
+```
+
+Svelte's `{#await}` as a built-in templated component, so the markup stays Razor (D1 in
+[design-svelte-features.md](design-svelte-features.md)). Blazor has no counterpart; there you
+keep a field, load it in `OnInitializedAsync` and branch with `@if` — which works unchanged in
+Tsazor and stays the better fit when code needs the data too.
+
+- **Parameters:** `For` (`PromiseLike<TValue> | TValue | null`), `<Pending>` (`RenderFragment`),
+  `<Then>` (`(value: TValue) => RenderFragment`), `<Catch>` (`(error: unknown) =>
+  RenderFragment`). A missing fragment renders nothing (e.g. only `<Then>`).
+- **States:** `Pending` while the promise is pending, `Then` with the resolved value, `Catch`
+  with the rejection reason. A value that is no promise counts as already resolved (as in
+  Svelte); `null`/`undefined` means "no promise yet" and renders `Pending` (deviation from
+  Svelte, which renders `then` with `undefined`; it keeps `user?: Promise<User>` fields typed
+  as `User`).
+- **Identity:** a new promise starts over at `Pending`; a promise that settles after it was
+  replaced is ignored (latest wins). The same promise on a re-render changes nothing. After
+  the component is disposed, a settlement is ignored (no render).
+- **No synchronous peek:** a JavaScript promise's state can't be read synchronously, so an
+  already settled promise renders `Pending` for one microtask, then its result. The browser
+  doesn't paint in between (nothing flashes), but `Pending`'s content is built once. A promise
+  an `<Await>` has already seen settle renders its result immediately (a per-promise
+  `WeakMap`).
+- **Errors:** a rejection `Catch` renders is no component failure. **Without `Catch`, the
+  rejection fails the component** (phase `lifecycle`): the nearest `ErrorBoundary` shows it,
+  otherwise `renderer.errorHandler` gets it. Nothing is swallowed silently.
+- **Typing:** `TValue` is inferred from `For` through the awaited type (`Promise<User> |
+  undefined` → `User`), so the `Then` context is typed; `TValue="User"` on the tag is the
+  explicit fallback. The `Catch` context is `unknown`, TypeScript's `catch` semantics; like
+  `ErrorBoundary`'s `ErrorContent` context, the check leaves it unchecked, so narrow it yourself
+  (`@(err instanceof Error ? err.message : String(err))`) where the reason may not be an
+  `Error`.
+- **Idle:** the current pending promise counts for `renderer.waitUntilIdle()` (tests,
+  `@tsazor/testing`'s `settle`), like an async `onInitialized`; a replaced one stops counting.
+- **Not a thenable:** the parameters are write-only (setters), so an `Await` instance (`@ref`)
+  has no readable `then` and is never mistaken for a promise by `await` or `Promise.resolve`.
+
 ## Typed shadows and tsazor check (2.4)
 
 For every `.tsazor`, the type layer builds a **shadow module** (`<dir>/<Name>.tsazor.gen.ts`,
@@ -911,7 +1017,8 @@ typed:
 - **Typed slot contexts.** The slot body of a `RenderFragment<T>` parameter
   gets `context` (or `Context=...`) with the `typeArgument` as its type —
   `context: Person` instead of `any`, including `TItem` inference through the type layer:
-  exact or via `TItem[]`. If the
+  exact, via `TItem[]`, or via the awaited type (`For: PromiseLike<TValue> | TValue` ←
+  `Promise<User>`, [`<Await>`](#await-tsazor-extension)). If the
   runtime placeholder `typeArgument === "unknown"` is present (an untyped delegate, e.g.
   Virtualize `itemTemplate`), the context intentionally stays `any`.
 - **Typed `@ref`.** Element `@ref`s get their tag type via a cast through the
@@ -968,6 +1075,7 @@ typed:
 | `@inherits`, partials (code-behind) | `@inherits` yes; code-behind (`X.tsazor.ts`, via inheritance — [docs/code-behind.md](code-behind.md)) yes |
 | `@authorize` | yes (Tsazor extension replacing `[Authorize]`; bare or with `{ roles, policy }`; not inherited through `_Imports`) |
 | `@implements` | accepted, ignored (TS interfaces are structural) |
+| `@attach`, `@attach:<name>` | Tsazor extension ([@attach](#attach-tsazor-extension)); Razor renders an attribute literally named `@attach` |
 
 ## Codemod .razor → .tsazor (2.5)
 

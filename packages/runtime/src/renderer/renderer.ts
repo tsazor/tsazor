@@ -13,6 +13,7 @@ import { canSupplyValue, isCascadingValueSupplier, type CascadingParameterReques
 import { ComponentState } from "./component-state.js";
 import { Dispatcher } from "./dispatcher.js";
 import { DomRenderer } from "./dom-renderer.js";
+import { attachmentHost } from "./attachment-host.js";
 import { RenderQueue } from "./render-queue.js";
 
 /**
@@ -425,6 +426,8 @@ export class Renderer {
     // disposeSignal / track teardown first: the user's dispose already sees
     // an aborted disposeSignal. Never throws (subscription errors are routed).
     state.component.disposeInternal();
+    // F2: the component's attachments are cleaned up before its own dispose.
+    attachmentHost?.dispose(state, this.attachmentFailed);
     try {
       if (typeof component.disposeAsync === "function") {
         const pending = component.disposeAsync();
@@ -471,11 +474,18 @@ export class Renderer {
       for (const state of this.batchStates) state.batchRenderCount = 0;
       this.batchStates.length = 0;
     }
-    // After the batch flag is cleared: renders requested by after-render
-    // hooks or listeners start the next batch.
+    // After the batch flag is cleared: renders requested by attachments,
+    // after-render hooks or listeners start the next batch.
+    const attachmentWork = this.dom.takeAttachmentWork();
+    if (attachmentWork !== null) attachmentHost?.run(attachmentWork, this.attachmentFailed);
     this.invokeAfterRender(rendered);
     this.notifyBatchCompleted({ renderedComponents: rendered });
   }
+
+  /** F2: an attachment or its cleanup threw — a failure of its component, routed like onAfterRender's. */
+  private readonly attachmentFailed = (error: unknown, state: ComponentState): void => {
+    this.handleComponentError(error, state, "afterRender");
+  };
 
   /**
    * Blazor's InvokeRenderCompletedCalls: once the whole batch is rendered

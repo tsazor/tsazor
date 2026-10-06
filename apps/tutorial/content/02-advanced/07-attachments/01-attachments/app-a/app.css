@@ -1,0 +1,10 @@
+/* Global: a tooltip lives in <body>, outside every component. */
+.tooltip {
+    position: fixed;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    background: #1f2328;
+    color: #fff;
+    font-size: 0.85rem;
+    pointer-events: none;
+}

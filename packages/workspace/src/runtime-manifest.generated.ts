@@ -256,6 +256,101 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
+    "Await": {
+      "name": "Await",
+      "file": "src/components/await.ts",
+      "isComponent": true,
+      "typeParameters": [
+        {
+          "name": "TValue",
+          "default": "unknown"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "for",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "setter",
+          "declaredBy": "Await",
+          "type": "PromiseLike<TValue> | TValue | null | undefined",
+          "references": [
+            {
+              "name": "PromiseLike",
+              "kind": "global"
+            },
+            {
+              "name": "TValue",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "The promise to wait for (`For=\"@user\"`). A value that is no promise\ncounts as resolved; `null`/`undefined` renders `Pending`. Its resolved\ntype is the `Then` context's type."
+        },
+        {
+          "name": "pending",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "setter",
+          "declaredBy": "Await",
+          "type": "RenderFragment | undefined",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Rendered while the promise is pending (`<Pending>`)."
+        },
+        {
+          "name": "then",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "setter",
+          "declaredBy": "Await",
+          "type": "((value: TValue) => RenderFragment) | undefined",
+          "references": [
+            {
+              "name": "TValue",
+              "kind": "typeParameter"
+            },
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Rendered with the resolved value (`<Then Context=\"value\">`). Write-only,\nso the component is never a thenable.",
+          "typeArgument": "TValue"
+        },
+        {
+          "name": "catch",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "setter",
+          "declaredBy": "Await",
+          "type": "((error: unknown) => RenderFragment) | undefined",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Rendered with the rejection reason (`<Catch Context=\"error\">`). The reason\nis `unknown`, as in a TypeScript `catch` clause. Without it a rejection\nfails the component (nearest ErrorBoundary).",
+          "typeArgument": "unknown"
+        }
+      ],
+      "doc": "Tsazor extension (Svelte's `{#await}`; Blazor has no counterpart): renders\nthe state of a promise.\n\n```razor\n<Await For=\"@user\">\n    <Pending><p>Loading…</p></Pending>\n    <Then Context=\"u\">Hello @u.name</Then>\n    <Catch Context=\"err\">Failed: @err.message</Catch>\n</Await>\n```\n\n- `Pending` renders while the promise is pending, `Then` with its value,\n  `Catch` with the rejection reason. A missing fragment renders nothing.\n- A value that is no promise counts as already resolved (`Then` renders\n  it at once); `null`/`undefined` means \"no promise yet\" and renders\n  `Pending`.\n- A new promise identity starts over at `Pending`; a promise that settles\n  after it was replaced is ignored (the latest one wins). The same\n  promise on a re-render changes nothing. After the component is disposed,\n  a settlement is ignored.\n- A promise's state cannot be read synchronously: an already settled\n  promise renders `Pending` for one microtask (the browser does not paint\n  in between, so nothing flashes). A promise an `<Await>` already saw\n  settle renders its result immediately.\n- A rejection without `Catch` is not swallowed: it fails the component\n  (phase `lifecycle`), so the nearest `ErrorBoundary` shows it.\n- The current pending promise counts for `renderer.waitUntilIdle()`, like\n  an async `onInitialized` (a replaced one stops counting).\n\nThe parameters are write-only (setters): `then` as a readable function\nwould make an `Await` instance look like a thenable to `await` and\n`Promise.resolve`.",
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
     "SectionOutlet": {
       "name": "SectionOutlet",
       "file": "src/sections/section-outlet.ts",

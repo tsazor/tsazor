@@ -185,6 +185,8 @@ describe("H2: skipping unchanged keyed rows", () => {
     ["two root elements", `<tr @key="row.id"></tr><tr></tr>`],
     ["a component as the row", `<Pick @key="row.id" Value="@row.id" />`],
     ["@ref", `<tr @key="row.id" @ref="last"></tr>`],
+    ["@attach", `<tr @key="row.id" @attach="pick"></tr>`],
+    ["@attach on an inner element", `<tr @key="row.id"><td @attach:tip="pick">x</td></tr>`],
     ["@attributes", `<tr @key="row.id" @attributes="extra"></tr>`],
     ["@bind", `<tr @key="row.id"><td><input @bind="count" /></td></tr>`],
     ["an event modifier", `<tr @key="row.id" @onclick="e => select(e, row)" @onclick:preventDefault></tr>`],

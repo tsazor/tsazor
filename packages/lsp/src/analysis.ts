@@ -261,10 +261,33 @@ const DIRECTIVE_DOCS: Record<string, string> = {
   typeparam: "`@typeparam` — declares a generic type parameter.",
 };
 
+/** F2: hover and completion text of `@attach`. */
+export const ATTACH_DOC =
+  "`@attach` — runs a function (`Attachment<E>`) with the element once it is in the DOM, after the render like `onAfterRender`. A returned function is the cleanup: called when the element is removed, the component is disposed or the value changes (a new function identity re-attaches — keep factories in a field or memoize them).";
+
+/**
+ * F2: hover on the name of an `@attach` / `@attach:name` attribute (its
+ * value is TypeScript and gets the TS layer's hover), or null.
+ */
+export function directiveAttributeHoverAt(analyzed: AnalyzedFile, line: number, character: number): HoverInfo | null {
+  const node = nodeAt(analyzed.document, line, character);
+  if (node === null || node.kind !== "element") return null;
+  for (const attr of (node as ElementNode).attributes) {
+    if (attr.kind !== "attach" || attr.pos.line - 1 !== line) continue;
+    const label = attr.attachName === "" ? "@attach" : `@attach:${attr.attachName}`;
+    if (character < attr.pos.column || character >= attr.pos.column + label.length) continue;
+    const named = attr.attachName === "" ? "" : `\n\n\`${label}\` is one of several attachments of this element, told apart by its name.`;
+    return { markdown: `${ATTACH_DOC}${named}` };
+  }
+  return null;
+}
+
 /** Hover for the position, or null. Prefers component tags and directives. */
 export function hoverAt(analyzed: AnalyzedFile, line: number, character: number): HoverInfo | null {
   const node = nodeAt(analyzed.document, line, character);
   if (!node) return null;
+  const attach = directiveAttributeHoverAt(analyzed, line, character);
+  if (attach !== null) return attach;
 
   if (node.kind === "element" && (node as ElementNode).isComponent) {
     const element = node as ElementNode;

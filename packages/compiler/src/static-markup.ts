@@ -98,6 +98,7 @@ function write(node: ElementNode, ancestors: readonly string[], scopeHash: strin
   const attributes: string[] = [];
   if (scopeHash) attributes.push(` ${scopeHash}=""`);
   for (const attribute of node.attributes) {
+    // Directive attributes (`@attach`, `@ref`, `@onclick`, …) need frames of their own.
     if (attribute.kind !== "static") return false;
     const name = attribute.name;
     const key = name.toLowerCase();

@@ -770,3 +770,48 @@ describe("empty attribute values (A7)", () => {
     expect(code).toContain('__builder.addAttribute(4, "Href", "");');
   });
 });
+describe("@attach (F2)", () => {
+  const members = "@code { autofocus = (el: HTMLElement) => el.focus(); select(el: HTMLInputElement) {} tooltip(text: string) { return (el: Element) => {}; } }";
+  const errors = (source: string) => gen(`${source}\n${members}`).diagnostics.errors.map((d) => `${d.code} ${d.message}`);
+
+  it("emits an attachment frame per @attach after the attributes, before @ref", () => {
+    const { code, diagnostics } = gen(`<input class="q" @ref="box" @attach="autofocus" @attach:tip="tooltip('Save')" />\n${members.replace("}", "box: unknown; }")}`);
+    expect(diagnostics.errors).toEqual([]);
+    expect(code).toContain("addAttachment as __tsazor_addAttachment");
+    const lines = code.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("__"));
+    expect(lines.slice(0, 5)).toEqual([
+      '__builder.openElement(0, "input");',
+      '__builder.addAttribute(1, "class", "q");',
+      '__tsazor_addAttachment(__builder, 2, "@attach", this.autofocus);',
+      "__tsazor_addAttachment(__builder, 3, \"@attach:tip\", this.tooltip('Save'));",
+      "__builder.addElementReferenceCapture(4, (el) => { this.box = el; });",
+    ]);
+  });
+
+  it("binds a method group (the same function every render) and keeps lambdas as written", () => {
+    expect(gen(`<input @attach="select" />\n${members}`).code).toContain('__tsazor_addAttachment(__builder, 1, "@attach", __tsazor_bindMethod(this, this.select));');
+    expect(gen(`<input @attach="(el) => el.focus()" />\n${members}`).code).toContain('__tsazor_addAttachment(__builder, 1, "@attach", (el) => el.focus());');
+  });
+
+  it("types the value by the tag in typed shadows", () => {
+    const shadow = (tag: string) => gen(`<${tag} @attach="autofocus"></${tag}>\n${members}`, { typedShadow: {} }).code;
+    expect(shadow("input")).toContain('__tsazor_addAttachment<HTMLElementTagNameMap["input"]>(__builder, 1, "@attach", this.autofocus);');
+    expect(shadow("circle")).toContain('__tsazor_addAttachment<SVGElementTagNameMap["circle"]>(');
+    expect(shadow("my-widget")).toContain("__tsazor_addAttachment<Element>(");
+  });
+
+  it("reports a missing value, a duplicate name, an empty name and a component tag", () => {
+    expect(errors(`<input @attach />`)).toEqual(["TZS009 Missing attribute value. Attribute '@attach' requires a value."]);
+    expect(errors(`<input @attach="autofocus" @attach="select" />`)).toEqual([
+      expect.stringMatching(/^TZS008 .*Duplicate attachment '@attach' — use '@attach:<name>' for several attachments on one element\.$/),
+    ]);
+    expect(errors(`<input @attach:a="autofocus" @attach:b="select" @attach:a="select" />`)).toEqual([
+      expect.stringMatching(/^TZS008 .*Duplicate attachment '@attach:a'/),
+    ]);
+    expect(errors(`<input @attach:="autofocus" />`)).toEqual([expect.stringMatching(/^TZS008 .*'@attach:' needs a name after the colon/)]);
+    const component = gen(`<Child @attach="autofocus" />\n${members}`, { resolveComponent: () => ({ specifier: "./Child.tsazor" }) });
+    expect(component.diagnostics.errors.map((d) => d.code)).toEqual(["TZS008"]);
+    expect(component.diagnostics.errors[0]!.message).toContain("applies to elements, not to the component '<Child>'");
+    expect(component.code).not.toContain("addAttachment");
+  });
+});

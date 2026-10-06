@@ -53,6 +53,9 @@ beforeAll(async () => {
       "  addElementReferenceCapture(seq: number, action: (element: Element) => void): void;",
       "  addComponentReferenceCapture(seq: number, action: (component: unknown) => void): void;",
       "}",
+      "export type Attachment<E extends Element = Element> = (element: E) => void | (() => void);",
+      "export declare function addAttachment<E extends Element = Element>(builder: RenderTreeBuilder, seq: number, name: string, value: Attachment<E> | null | undefined | false): void;",
+      "export declare function bindMethod<T>(receiver: unknown, method: T): T;",
       "export declare class ComponentBase {",
       "  protected buildRenderTree(b: RenderTreeBuilder): void {}",
       "}",
@@ -117,6 +120,36 @@ beforeAll(async () => {
     ].join("\n"),
   );
 
+  // F2: `@attach` is checked as `Attachment<tag interface>` — a lambda's
+  // parameter is the tag's interface, a method group binds and typechecks.
+  await writeFile(
+    path.join(root, "Attach.tsazor"),
+    [
+      '<input @attach="selectAll" @attach:focus="focusInput" />',
+      "<canvas @attach=\"(canvas) => { canvas.getContext('2d'); }\"></canvas>",
+      '<svg @attach="(svg) => { svg.createSVGPoint(); }"></svg>',
+      "",
+      "@code {",
+      "    focusInput = (input: HTMLInputElement) => input.focus();",
+      "    selectAll(input: HTMLInputElement): () => void { input.select(); return () => input.blur(); }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  // An input attachment on a <div> (TS2345), a missing member on the input (TS2339).
+  await writeFile(
+    path.join(root, "AttachBad.tsazor"),
+    [
+      '<div @attach="focusInput"></div>',
+      '<input @attach="(input) => input.nope()" />',
+      "",
+      "@code {",
+      "    focusInput = (input: HTMLInputElement) => input.focus();",
+      "}",
+      "",
+    ].join("\n"),
+  );
+
   // The RedirectToLogin pattern: a typo'd member (`this.nav` vs the injected
   // `this.Navigator`) surfaces through the shadow's TS2339.
   await writeFile(
@@ -174,6 +207,13 @@ describe("typed checks through the shadow program (2.4)", () => {
     expect(await codes("Ref.tsazor")).toEqual([]);
     const entry = await service.ensureTsazor(path.join(root, "Ref.tsazor"));
     expect(entry!.shadow.code).toContain('el as HTMLElementTagNameMap["input"]');
+  });
+
+  it("@attach is typed as Attachment<tag interface> (F2)", async () => {
+    expect(await codes("Attach.tsazor")).toEqual([]);
+    const entry = await service.ensureTsazor(path.join(root, "Attach.tsazor"));
+    expect(entry!.shadow.code).toContain('addAttachment<HTMLElementTagNameMap["input"]>');
+    expect(await codes("AttachBad.tsazor")).toEqual(expect.arrayContaining([2345, 2339]));
   });
 
   it("a typo'd member surfaces as TS2339 through the shadow", async () => {

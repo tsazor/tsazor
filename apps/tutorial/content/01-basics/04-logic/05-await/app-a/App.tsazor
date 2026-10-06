@@ -1,0 +1,13 @@
+@import { getForecast, type Forecast } from "./weather"
+
+<h1>Weather</h1>
+
+<ul>
+    @foreach (const forecast of forecasts) {
+        <li>@forecast.day: @forecast.summary, @forecast.temperature °C</li>
+    }
+</ul>
+
+@code {
+    forecasts: Forecast[] = [];
+}

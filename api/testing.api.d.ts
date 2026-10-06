@@ -2,9 +2,13 @@
 
 /* @tsazor/testing */
 
+// addAttachment: re-exported from @tsazor/runtime
+
 // ANONYMOUS: re-exported from @tsazor/runtime
 
 // anonymousUser: re-exported from @tsazor/runtime
+
+// Attachment: re-exported from @tsazor/runtime
 
 // AttributeValue: re-exported from @tsazor/runtime
 
@@ -21,6 +25,8 @@
 // AuthorizeRouteView: re-exported from @tsazor/runtime
 
 // AuthorizeView: re-exported from @tsazor/runtime
+
+// Await: re-exported from @tsazor/runtime
 
 // Bindable: re-exported from @tsazor/runtime
 

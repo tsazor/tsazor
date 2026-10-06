@@ -1,0 +1,23 @@
+@import { getForecast } from "./weather"
+
+<h1>Weather</h1>
+
+<Await For="@forecasts">
+    <Pending>
+        <p>Loading…</p>
+    </Pending>
+    <Then Context="week">
+        <ul>
+            @foreach (const forecast of week) {
+                <li>@forecast.day: @forecast.summary, @forecast.temperature °C</li>
+            }
+        </ul>
+    </Then>
+    <Catch Context="error">
+        <p>Could not load the forecast: @error.message</p>
+    </Catch>
+</Await>
+
+@code {
+    forecasts = getForecast();
+}

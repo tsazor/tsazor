@@ -309,7 +309,8 @@ export class TsazorTypeService {
   /** Resolves the requested type parameters from the shadow program: the
    *  attribute value's real type, unifying against the parameter's declared
    *  type — exactly (`Items: TItem`) or through the array element (`Items:
-   *  TItem[]` ← `Person[]`). Unresolvable requests stay absent. */
+   *  TItem[]` ← `Person[]`) or the awaited type (`For: PromiseLike<T> | T`
+   *  ← `Promise<User>`). Unresolvable requests stay absent. */
   private inferTypeArguments(entry: ShadowEntry, requests: readonly TypedTagInferenceRequest[]): Map<string, Map<string, string>> {
     const result = new Map<string, Map<string, string>>();
     const program = this.ls.getProgram();
@@ -339,6 +340,9 @@ export class TsazorTypeService {
         if (declared.endsWith("[]") && element === request.typeParameter && checker.isArrayType(type)) {
           const [item] = checker.getTypeArguments(type as ts.TypeReference);
           if (item !== undefined) argument = checker.typeToString(item, node, ts.TypeFormatFlags.NoTruncation);
+        } else if (isAwaitableOf(declared, request.typeParameter)) {
+          // `For: PromiseLike<T> | T | null` (<Await>) ← `Promise<User> | undefined`: T = User.
+          argument = checker.typeToString(checker.getAwaitedType(checker.getNonNullableType(type)) ?? type, node, ts.TypeFormatFlags.NoTruncation);
         }
       }
       if (argument === undefined || argument.trim().length === 0) continue;
@@ -701,6 +705,15 @@ export function findTsazorFiles(root: string): string[] {
   };
   walk(path.resolve(root));
   return files;
+}
+
+/** True when a declared parameter type wraps the type parameter in a promise:
+ *  a union of `T`, `Promise<T>`, `PromiseLike<T>`, `null` and `undefined`
+ *  with at least one promise member (`<Await>`'s `for`). */
+function isAwaitableOf(declared: string, typeParameter: string): boolean {
+  const parts = declared.split("|").map((part) => part.replace(/\s+/g, ""));
+  const promises = new Set([`Promise<${typeParameter}>`, `PromiseLike<${typeParameter}>`]);
+  return parts.some((part) => promises.has(part)) && parts.every((part) => promises.has(part) || part === typeParameter || part === "null" || part === "undefined");
 }
 
 /** The deepest node covering `offset` (public-API stand-in for the internal

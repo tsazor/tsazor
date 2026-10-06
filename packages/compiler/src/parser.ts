@@ -1061,6 +1061,12 @@ class Parser {
           continue;
         }
       }
+      // F2: each attachment name at most once per element.
+      if (attr.kind === "attach" && attributes.some((a) => a.kind === "attach" && a.attachName === attr.attachName)) {
+        const label = attr.attachName === "" ? "@attach" : `@attach:${attr.attachName}`;
+        this.diagnostics.error("TZS008", attr, `Duplicate attachment '${label}' — use '@attach:<name>' for several attachments on one element.`);
+        continue;
+      }
       // Fold @bind modifiers (@bind:event, @bind:format, @bind:get, …) into the
       // preceding bind attribute; @bind-Target modifiers fold onto that target.
       // A modifier with no host is kept as a latent host: Blazor allows
@@ -1177,6 +1183,22 @@ class Parser {
       const kind = body === "key" ? "key" : body === "ref" ? "ref" : "attributes";
       const codeStart = code.start === undefined ? undefined : this.locator(code.start);
       return { kind, code: code.code, codeStart, pos, endPos: this.locator(this.i) } as AttributeNode;
+    }
+
+    // F2: `@attach="…"` and `@attach:<name>="…"` (Razor's directive-attribute
+    // parameter syntax, as `@bind:event`); the name only tells several apart.
+    if (body === "attach" || body.startsWith("attach:")) {
+      const attachName = body.slice("attach:".length);
+      if (body !== "attach" && !/^[A-Za-z0-9_.-]+$/.test(attachName)) {
+        if (src[this.i] === "=") this.i++;
+        this.parseAttributeValue();
+        this.diagnostics.error("TZS008", this.rangeFrom(pos, this.i), `'@${body}' needs a name after the colon (letters, digits, '_', '.', '-'), e.g. '@attach:tooltip'.`);
+        return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      }
+      const code = this.parseRequiredExpression(body, pos);
+      if (code === null) return { kind: "static", name, value: "", pos, endPos: this.locator(this.i) };
+      const codeStart = code.start === undefined ? undefined : this.locator(code.start);
+      return { kind: "attach", attachName, code: code.code, codeStart, pos, endPos: this.locator(this.i) };
     }
 
     // Event handler `@onclick="…"`, or one of its modifiers

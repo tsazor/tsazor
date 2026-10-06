@@ -237,7 +237,7 @@ function buildShadow(
   return { code, map: new TsazorGenMap(compiled.mappings ?? []), requests: compiled.typedInference ?? [], expressionValues: compiled.expressionValues };
 }
 
-/** One inference pass over a shadow (the LSP's `inferTypeArguments`): exact (`T`) or through the array element (`T[]`). */
+/** One inference pass over a shadow (the LSP's `inferTypeArguments`): exact (`T`), through the array element (`T[]`) or the awaited type (`PromiseLike<T> | T`). */
 function inferRequests(sourceFile: ts.SourceFile, checker: ts.TypeChecker, entry: ShadowEntry): Map<string, Map<string, string>> {
   const result = new Map<string, Map<string, string>>();
   for (const request of entry.requests) {
@@ -256,6 +256,9 @@ function inferRequests(sourceFile: ts.SourceFile, checker: ts.TypeChecker, entry
     } else if (declared.endsWith("[]") && declared.slice(0, -2).trim() === request.typeParameter && checker.isArrayType(type)) {
       const [item] = checker.getTypeArguments(type as ts.TypeReference);
       if (item !== undefined) argument = checker.typeToString(item, node, ts.TypeFormatFlags.NoTruncation);
+    } else if (isAwaitableOf(declared, request.typeParameter)) {
+      // `For: PromiseLike<T> | T | null` (<Await>) ← `Promise<User> | undefined`: T = User.
+      argument = checker.typeToString(checker.getAwaitedType(checker.getNonNullableType(type)) ?? type, node, ts.TypeFormatFlags.NoTruncation);
     }
     if (argument === undefined || argument.trim().length === 0) continue;
     const args = result.get(request.tagId) ?? new Map<string, string>();
@@ -263,6 +266,13 @@ function inferRequests(sourceFile: ts.SourceFile, checker: ts.TypeChecker, entry
     result.set(request.tagId, args);
   }
   return result;
+}
+
+/** The LSP's `isAwaitableOf`: a union of `T`, `Promise<T>`, `PromiseLike<T>`, `null`, `undefined` with a promise member. */
+function isAwaitableOf(declared: string, typeParameter: string): boolean {
+  const parts = declared.split("|").map((part) => part.replace(/\s+/g, ""));
+  const promises = new Set([`Promise<${typeParameter}>`, `PromiseLike<${typeParameter}>`]);
+  return parts.some((part) => promises.has(part)) && parts.every((part) => promises.has(part) || part === typeParameter || part === "null" || part === "undefined");
 }
 
 function descendTo(sourceFile: ts.SourceFile, offset: number): ts.Node {

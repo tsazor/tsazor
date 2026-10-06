@@ -36,7 +36,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
       "Reported for an `@inject` without both a type and a name, for a continuation keyword without its statement (`@else`, `@case`, `@catch` in markup; `else`/`catch`/`finally` without a matching `if`/`try`, `case`/`default` outside a `@switch`), for statements in a `@switch` before the first label, and for an unknown directive attribute such as `@foo=\"…\"`.",
     example: "@inject CounterService\n\n<p>@Counter.value</p>\n",
     fix:
-      "Complete or move the construct: `@inject CounterService Counter` (type, then name), put `else`/`case` directly after its `if`/`switch`, and use a known directive attribute (`@onclick`, `@bind`, `@key`, `@ref`, `@attributes`).",
+      "Complete or move the construct: `@inject CounterService Counter` (type, then name), put `else`/`case` directly after its `if`/`switch`, and use a known directive attribute (`@onclick`, `@bind`, `@key`, `@ref`, `@attributes`, `@attach`).",
   },
   {
     code: "TZS002",
@@ -86,16 +86,16 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS008",
     severity: "error or warning",
     description:
-      "A directive attribute is used wrongly. Errors: an event handler without a value (`@onclick`), an unknown or duplicate event or bind modifier, `@bind-` without a parameter name, an invalid `:get`/`:set`/`:after` combination (Blazor .NET 7 rules), a bind target that cannot be assigned (`a?.b`, `f()`, a `const` or loop variable), a non-identifier `:event` on a component bind, and `@ref` without a bare property name. Warnings: `:format` or `:culture` that has no effect — on a component bind, `:format` on anything but a date or number input, `:culture` on anything but a number input.",
+      "A directive attribute is used wrongly. Errors: an event handler without a value (`@onclick`), an unknown or duplicate event or bind modifier, `@bind-` without a parameter name, an invalid `:get`/`:set`/`:after` combination (Blazor .NET 7 rules), a bind target that cannot be assigned (`a?.b`, `f()`, a `const` or loop variable), a non-identifier `:event` on a component bind, `@ref` without a bare property name, and an `@attach` on a component tag, twice with the same name on one element, or as `@attach:` without a name. Warnings: `:format` or `:culture` that has no effect — on a component bind, `:format` on anything but a date or number input, `:culture` on anything but a number input.",
     example: "<button @onclick>Save</button>\n",
     fix:
-      "Give the attribute the form Blazor accepts: `@onclick=\"save\"`, `@bind:get=\"value\" @bind:set=\"setValue\"`, `@ref=\"input\"` (a member name), a known modifier (`:preventDefault`, `:stopPropagation`, `:event`, `:format`, `:culture`, `:get`, `:set`, `:after`); remove a `:format`/`:culture` that has no effect.",
+      "Give the attribute the form Blazor accepts: `@onclick=\"save\"`, `@bind:get=\"value\" @bind:set=\"setValue\"`, `@ref=\"input\"` (a member name), `@attach:tooltip=\"…\"` for a second attachment (a component takes an `Attachment` parameter instead), a known modifier (`:preventDefault`, `:stopPropagation`, `:event`, `:format`, `:culture`, `:get`, `:set`, `:after`); remove a `:format`/`:culture` that has no effect.",
   },
   {
     code: "TZS009",
     severity: "error",
     description:
-      "An attribute has no usable value: a directive attribute without one (`@bind`, `@key`, `@ref`, `@attributes`) or with mixed text and code, an `=` without a value, a quoted value that never closes, or an invalid attribute name. Also a component parameter of a non-string type set to empty text, an `EventCallback` parameter without a handler, and an empty type argument (`TItem=\"\"`).",
+      "An attribute has no usable value: a directive attribute without one (`@bind`, `@key`, `@ref`, `@attributes`, `@attach`) or with mixed text and code, an `=` without a value, a quoted value that never closes, or an invalid attribute name. Also a component parameter of a non-string type set to empty text, an `EventCallback` parameter without a handler, and an empty type argument (`TItem=\"\"`).",
     example: "<input @bind />\n",
     fix: "Give the attribute one expression: `@bind=\"name\"`, `@key=\"item.id\"`, `TItem=\"Person\"`; close the quoted value.",
   },

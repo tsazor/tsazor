@@ -21,6 +21,12 @@ export const enum FrameType {
   EventHandler = 8,
   /** Captures a reference to the child component instance (Blazor's ComponentReferenceCapture). */
   ComponentReferenceCapture = 9,
+  /**
+   * An `@attach` on the enclosing element (F2): `attributeName` is the
+   * directive (`@attach`, `@attach:name`), `attributeValue` the attachment.
+   * Sits in the element's attribute run; written by `addAttachment`.
+   */
+  Attachment = 10,
 }
 
 /** Flags carried on attribute frames for event handler directives. */

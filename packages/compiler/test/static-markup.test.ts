@@ -35,6 +35,7 @@ describe("F1a — which subtrees become a block", () => {
 
   it("directive attributes, components, expressions and mixed values are not static", () => {
     expect(blocks(`<button @onclick="inc">x</button>`)).toEqual([]);
+    expect(blocks(`<div><p @attach="inc">x</p><i>static</i></div>`)).toEqual(["<i>static</i>"]);
     expect(blocks(`<p class="a @count">x</p>`)).toEqual([]);
     expect(blocks(`<p title="@count">x</p>`)).toEqual([]);
     expect(blocks(`<Child />`)).toEqual([]);

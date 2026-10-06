@@ -229,6 +229,9 @@ export type AttributeNode =
   | (SourceSpan & { kind: "key"; code: string; codeStart?: SourceSpan["pos"] })
   | (SourceSpan & { kind: "ref"; code: string; codeStart?: SourceSpan["pos"] })
   | (SourceSpan & { kind: "attributes"; code: string; codeStart?: SourceSpan["pos"] })
+  /** `@attach="…"` (F2): `attachName` is `""`, or `name` of `@attach:name`
+   *  (several attachments per element, told apart by name). */
+  | (SourceSpan & { kind: "attach"; attachName: string; code: string; codeStart?: SourceSpan["pos"] })
   /** @bind and its modifiers. Modifier-only nodes (@bind:event etc.) carry exactly one detail field. */
   | (SourceSpan & {
       kind: "bind";

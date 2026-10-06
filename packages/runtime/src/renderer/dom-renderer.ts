@@ -6,6 +6,7 @@ import type { EventCallback } from "../components/event-callback.js";
 import type { ComponentState } from "./component-state.js";
 import { selectOf, setAttributeValue, syncSelectValue, type EventHandlerHost } from "./dom-attributes.js";
 import { DomJournal } from "./dom-journal.js";
+import { attachmentHost } from "./attachment-host.js";
 import { LogicalChildren, LogicalRange, removeLogicalChild } from "./logical-range.js";
 import type { Renderer } from "./renderer.js";
 
@@ -29,6 +30,13 @@ import type { Renderer } from "./renderer.js";
 export class DomRenderer implements EventHandlerHost {
   private readonly journal = new DomJournal();
   private applying = false;
+  /**
+   * F2: the batch's attachment work, flat `(state, element, name, value)`
+   * entries (see AttachmentHost.run); null while there is none. Attachments
+   * run at the batch end, so applying edits only queues them — a pass that
+   * rolls back drops what it queued.
+   */
+  private attachmentWork: unknown[] | null = null;
 
   /** @internal Created by `Renderer`, which owns exactly one DomRenderer. */
   constructor(private readonly renderer: Renderer) {}
@@ -54,12 +62,14 @@ export class DomRenderer implements EventHandlerHost {
     // journal keeps a nested call safe anyway.
     const nested = this.applying;
     const journal = nested ? new DomJournal() : this.journal;
+    const queued = this.attachmentWork?.length ?? 0;
     this.applying = true;
     try {
       this.applyEditsJournaled(state, frames, edits, journal);
       journal.clear();
     } catch (error) {
       journal.rollback();
+      if (this.attachmentWork !== null) this.attachmentWork.length = queued;
       throw error;
     } finally {
       this.applying = nested;
@@ -71,6 +81,8 @@ export class DomRenderer implements EventHandlerHost {
     let level = new LogicalChildren(state.range);
     /** Selects whose options this pass changed: their value is re-synced at the end. */
     let selects: HTMLSelectElement[] | null = null;
+    /** F2: whether this pass already queued the check for removed attached elements. */
+    let removed = false;
 
     for (let i = 0; i < edits.length; i++) {
       const edit = edits[i]!;
@@ -84,16 +96,27 @@ export class DomRenderer implements EventHandlerHost {
         case RenderTreeEditType.RemoveFrame:
           level.seek(edit.siblingIndex, removeLogicalChild(level.at(edit.siblingIndex)!, journal));
           selects = touchSelect(selects, level.parent);
+          // F2: the removed subtree may hold attached elements — checked once per pass.
+          if (attachmentHost !== null && !removed) {
+            removed = true;
+            this.queueAttachment(state, null, null, null);
+          }
           break;
         case RenderTreeEditType.SetAttribute: {
           const frame = frames[edit.referenceFrameIndex]!;
           const element = level.at(edit.siblingIndex) as Element;
-          setAttributeValue(this, state, element, frame.attributeName!, frame.attributeValue, frame.eventHandlerFlags ?? 0, journal);
+          if (frame.frameType === FrameType.Attachment) this.queueAttachment(state, element, frame.attributeName!, frame.attributeValue);
+          else setAttributeValue(this, state, element, frame.attributeName!, frame.attributeValue, frame.eventHandlerFlags ?? 0, journal);
           break;
         }
-        case RenderTreeEditType.RemoveAttribute:
-          setAttributeValue(this, state, level.at(edit.siblingIndex) as Element, edit.removedAttributeName!, null, 0, journal);
+        case RenderTreeEditType.RemoveAttribute: {
+          const name = edit.removedAttributeName!;
+          const element = level.at(edit.siblingIndex) as Element;
+          // F2: `@attach…` is an attachment frame's name (the `@` namespace is reserved).
+          if (name.charCodeAt(0) === 64) this.queueAttachment(state, element, name, null);
+          else setAttributeValue(this, state, element, name, null, 0, journal);
           break;
+        }
         case RenderTreeEditType.UpdateText: {
           const node = level.at(edit.siblingIndex)!;
           const text = String(frames[edit.referenceFrameIndex]!.textContent);
@@ -134,6 +157,18 @@ export class DomRenderer implements EventHandlerHost {
     }
   }
 
+  /** F2: queues an attachment change of `element` (`element === null`: check for removed attached elements). */
+  private queueAttachment(state: ComponentState, element: Element | null, name: string | null, value: unknown): void {
+    (this.attachmentWork ??= []).push(state, element, name, value);
+  }
+
+  /** @internal F2: hands the batch's attachment work over (null when there is none) and starts a new list. */
+  takeAttachmentWork(): unknown[] | null {
+    const work = this.attachmentWork;
+    this.attachmentWork = null;
+    return work;
+  }
+
   /** @internal Replaces the slot-children map after a render pass. */
   commitSlotChildren(state: ComponentState): void {
     state.slotChildren.clear();
@@ -154,16 +189,22 @@ export class DomRenderer implements EventHandlerHost {
         const element = createElementIn(frame.elementName!, parent);
         const end = index + getFrameSubtreeLength(frame);
         let i = index + 1;
-        // The element's own preamble: attributes, event handlers and reference
-        // captures (Blazor's InputFile order) — children start after it. The
-        // capture action fires here, on the fresh element.
-        for (; i < end && (frames[i]!.frameType === FrameType.Attribute || frames[i]!.frameType === FrameType.ElementReferenceCapture); i++) {
+        // The element's own preamble: attributes, event handlers, attachments
+        // and reference captures (Blazor's InputFile order) — children start
+        // after it. The capture action fires here, on the fresh element; an
+        // attachment is queued for the batch end (F2).
+        for (; i < end; i++) {
           const attribute = frames[i]!;
-          if (attribute.frameType === FrameType.ElementReferenceCapture) {
+          const type = attribute.frameType;
+          if (type === FrameType.Attribute) {
+            setAttributeValue(this, state, element, attribute.attributeName!, attribute.attributeValue, attribute.eventHandlerFlags ?? 0, null);
+          } else if (type === FrameType.ElementReferenceCapture) {
             attribute.elementReferenceCaptureAction?.(element);
-            continue;
+          } else if (type === FrameType.Attachment) {
+            if (typeof attribute.attributeValue === "function") this.queueAttachment(state, element, attribute.attributeName!, attribute.attributeValue);
+          } else {
+            break;
           }
-          setAttributeValue(this, state, element, attribute.attributeName!, attribute.attributeValue, attribute.eventHandlerFlags ?? 0, null);
         }
         // Build the fresh subtree into the detached element first, then insert
         // the completed tree in one shot: mass creates then cost one insertion
@@ -202,6 +243,7 @@ export class DomRenderer implements EventHandlerHost {
       switch (frame.frameType) {
         case FrameType.Attribute:
         case FrameType.EventHandler:
+        case FrameType.Attachment:
           break;
         case FrameType.Region:
           this.insertChildFrames(state, frames, i + 1, i + getFrameSubtreeLength(frame), parent);
