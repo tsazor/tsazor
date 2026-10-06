@@ -78,7 +78,7 @@ describe("child-content", () => {
   it("narrowing from @if doesn't reach deferred child content; a local does", () => {
     const narrowed = (body: string) => ({ "App.tsazor": `@if (user) {\n${body}\n}\n@code {\n    user?: { name: string } = { name: "Ada" };\n}\n`, "Card.tsazor": card });
     const lost = types(narrowed(`    <Card title="Profile">\n        <p>@user.name</p>\n    </Card>`));
-    expect(lost.map((d) => `${d.line} ${d.code} ${d.message}`)).toEqual(["3 TS2532 Object is possibly 'undefined'."]);
+    expect(lost.map((d) => `${d.line} ${d.code} ${d.message}`)).toEqual([expect.stringMatching(/^3 TS2532 Object is possibly 'undefined'. Hint: /)]);
     expect(typeCodes(narrowed(`    const current = user;\n    <Card title="Profile">\n        <p>@current.name</p>\n    </Card>`))).toEqual([]);
   });
 });
@@ -455,7 +455,7 @@ describe("component-refs", () => {
 
   it("the type needs an @import: without it TS2304", () => {
     const found = types({ ...b, "App.tsazor": b["App.tsazor"]!.replace('@import Editor from "./Editor.tsazor"\n', "") });
-    expect(found.map((d) => `${d.code} ${d.message}`)).toEqual(["TS2304 Cannot find name 'Editor'."]);
+    expect(found.map((d) => `${d.code} ${d.message}`)).toEqual([expect.stringMatching(/^TS2304 Cannot find name 'Editor'. Hint: /)]);
   });
 });
 

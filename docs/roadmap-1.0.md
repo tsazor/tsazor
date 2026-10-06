@@ -49,7 +49,9 @@ upstream work happens, where the emitter lives) need answers first.
   findings (`dev-check.ts`); the build fails on them.
 - **S4 — Quick fix for missing types:** TS7006 (implicit `any`) in `.tsazor` files gets
   "infer parameter types from usage" in the LSP. Plain-language hints for the most common TS
-  errors in `.tsazor` files.
+  errors in `.tsazor` files. **Done (2026-10-06):** the LSP offers TypeScript's "Infer parameter types
+  from usage" for TS7006 & co. (mapped into `@code`, usages in the markup count); `explainTypeScriptError`
+  appends a `Hint:` to the common TS errors in the LSP, `tsazor check` and the tutorial.
 - **S5 — Reserved-name diagnostic:** a component member that shadows a `ComponentBase` member
   (`observe`, `dispose`, `stateHasChanged`, …) gets a Tsazor diagnostic instead of a cryptic
   TS2416 (port-findings M.1). **Done (2026-10-04):** `TZS031`, the list checked against the

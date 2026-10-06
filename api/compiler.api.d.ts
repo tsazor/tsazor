@@ -426,6 +426,9 @@ export interface ElementNode extends SourceSpan {
 // explainExpressionValue
 export declare function explainExpressionValue(code: number, message: string, position: SourcePos, values: readonly ExpressionValue[] | undefined): string;
 
+// explainTypeScriptError
+export declare function explainTypeScriptError(code: number, message: string): string;
+
 // ExpressionNode
 export interface ExpressionNode extends SourceSpan {
     kind: "expression";

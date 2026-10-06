@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`, `@tsazor/lsp`: S4. New `explainTypeScriptError(code, message)` appends a plain-language
+  `Hint:` to the common TypeScript errors (implicit any, possibly null/undefined, unknown names and
+  members, types that don't fit); the language server, `tsazor check` and the tutorial use it, so
+  their TS messages now end with the hint. The language server offers TypeScript's "Infer
+  parameter types from usage" quick fix for implicit-any errors in `@code`.
 - `@tsazor/lsp`, `@tsazor/cli`, `@tsazor/vite-plugin`: `tsazor check` warns `TSZSTRICT` (once per tsconfig) when the
   tsconfig of checked files leaves `strict` off or switches one of its flags off again — strict
   TypeScript is the only supported configuration (S2). A warning: exit code and builds are unaffected.

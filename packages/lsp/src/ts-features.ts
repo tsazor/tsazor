@@ -9,10 +9,11 @@
  * worse, it only covers @code and expressions, which v1 does not.
  */
 import * as ts from "typescript";
-import { explainExpressionValue } from "@tsazor/compiler";
+import { explainExpressionValue, explainTypeScriptError } from "@tsazor/compiler";
 import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   shadowOffsetToPos,
   TsazorTypeService,
@@ -465,14 +466,89 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
       endLine,
       endCharacter,
       code: diag.code,
-      message: explainExpressionValue(
+      // S4: a plain-language hint for the common errors, unless the value explanation already applies.
+      message: explainTypeScriptError(
         diag.code,
-        ts.flattenDiagnosticMessageText(diag.messageText, " "),
-        { line: src.line + 1, column: src.character },
-        entry.shadow.expressionValues,
+        explainExpressionValue(
+          diag.code,
+          ts.flattenDiagnosticMessageText(diag.messageText, " "),
+          { line: src.line + 1, column: src.character },
+          entry.shadow.expressionValues,
+        ),
       ),
     });
     if (results.length >= cap) break;
   }
   return results;
+}
+/* ------------------------------------------------------------------ */
+/* S4: "infer parameter types from usage"                              */
+/* ------------------------------------------------------------------ */
+
+/** Implicit-any codes TypeScript's "infer from usage" fix handles for parameters and members. */
+const IMPLICIT_ANY_CODES = [7006, 7031, 7019, 7008, 7005, 7034];
+
+/** A TS code fix translated to .tsazor coordinates (0-based). */
+export interface TsQuickFix {
+  title: string;
+  /** The diagnostic it fixes (its code and .tsazor start), to attach the action to. */
+  code: number;
+  line: number;
+  character: number;
+  edits: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; newText: string }>;
+}
+
+/**
+ * S4: for an implicit-any diagnostic (TS7006 & co.) in the given .tsazor
+ * range, TypeScript's "Infer parameter types from usage" fix run on the
+ * shadow — usages in the markup count, since the markup is code there. A
+ * fix is offered only when every edit lands in the .tsazor file itself (a
+ * position that maps back exactly, inside `@code`); fixes that would touch
+ * the generated plumbing or other files are dropped.
+ */
+export function tsInferTypeFixes(
+  service: TsazorTypeService,
+  entry: ShadowEntry,
+  range: { start: { line: number; character: number }; end: { line: number; character: number } },
+): TsQuickFix[] {
+  const map = entry.shadow.map;
+  const code = entry.shadow.code;
+  const toSrc = (offset: number): { line: number; character: number } | null => {
+    const gen = shadowOffsetToPos(code, offset);
+    const src = map.genToSrc(gen.line, gen.column);
+    if (!src) return null;
+    // Exact: the source position maps back to the same generated one (no plumbing in between).
+    const back = map.srcToGen(src.line, src.character);
+    return back && back.line === gen.line && back.column === gen.column ? src : null;
+  };
+  const fixes: TsQuickFix[] = [];
+  for (const diagnostic of service.semanticDiagnosticsOnShadow(entry)) {
+    if (diagnostic.start === undefined || !IMPLICIT_ANY_CODES.includes(diagnostic.code)) continue;
+    const start = toSrc(diagnostic.start);
+    // The fix belongs to the lines the editor asks about.
+    if (!start || start.line < range.start.line || start.line > range.end.line) continue;
+    for (const action of service.codeFixesOnShadow(entry, diagnostic.start, diagnostic.start + (diagnostic.length ?? 0), [diagnostic.code])) {
+      if (action.fixName !== "inferFromUsage") continue;
+      const edits: TsQuickFix["edits"] = [];
+      let mappable = true;
+      for (const change of action.changes) {
+        if (path.resolve(change.fileName).toLowerCase() !== path.resolve(entry.shadow.virtualPath).toLowerCase()) {
+          mappable = false;
+          break;
+        }
+        for (const text of change.textChanges) {
+          const from = toSrc(text.span.start);
+          const to = text.span.length === 0 ? from : toSrc(text.span.start + text.span.length);
+          if (!from || !to || from.line !== to.line) {
+            mappable = false;
+            break;
+          }
+          edits.push({ range: { start: from, end: to }, newText: text.newText });
+        }
+        if (!mappable) break;
+      }
+      if (mappable && edits.length > 0) fixes.push({ title: action.description, code: diagnostic.code, line: start.line, character: start.character, edits });
+    }
+  }
+  return fixes;
 }

@@ -434,6 +434,15 @@ export class TsazorTypeService {
     return this.ls.getSemanticDiagnostics(entry.shadow.virtualPath) as ts.DiagnosticWithLocation[];
   }
 
+  /** TypeScript's own code fixes for a diagnostic span of the shadow (S4: "infer from usage"). */
+  codeFixesOnShadow(entry: ShadowEntry, start: number, end: number, errorCodes: readonly number[]): readonly ts.CodeFixAction[] {
+    try {
+      return this.ls.getCodeFixesAtPosition(entry.shadow.virtualPath, start, end, errorCodes, {}, {});
+    } catch {
+      return [];
+    }
+  }
+
   /** Parse errors (e.g. from a typo like `private pass word`) come as
    *  syntactic diagnostics — a bucket the semantic query never includes. */
   syntacticDiagnosticsOnShadow(entry: ShadowEntry): readonly ts.DiagnosticWithLocation[] {

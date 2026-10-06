@@ -4,6 +4,7 @@
  * (TS syntactic + semantic diagnostics, filtered like the LSP layer). The
  * gate form of the same pipeline the language server runs live.
  */
+import { explainTypeScriptError } from "@tsazor/compiler";
 import { analyzeSource } from "./analysis.js";
 import { ProjectRegistry } from "./projects.js";
 import { tsDiagnostics } from "./ts-features.js";
@@ -101,7 +102,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
               column: diagnostic.character + 1,
               code: `TS${diagnostic.code}`,
               severity: "error",
-              message: diagnostic.message,
+              message: explainTypeScriptError(diagnostic.code, diagnostic.message),
             });
           }
         }

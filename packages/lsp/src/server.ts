@@ -36,6 +36,7 @@ import {
   tsDefinition,
   tsDiagnostics,
   tsHover,
+  tsInferTypeFixes,
 } from "./ts-features.js";
 
 /** Pure candidates → LSP items. */
@@ -373,7 +374,17 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       kind: CodeActionKind.RefactorRewrite,
       edit: { changes: { [document.uri]: refactor.edits } },
     }));
-    return [...fixes, ...refactors];
+    // S4: TypeScript's "Infer parameter types from usage" for implicit-any errors (TS7006 & co.).
+    const entry = await entryFor(document);
+    const inferred = entry
+      ? tsInferTypeFixes(registry.projectFor(uriToPath(document.uri)).service, entry, params.range).map((fix): CodeAction => ({
+          title: fix.title,
+          kind: CodeActionKind.QuickFix,
+          diagnostics: params.context.diagnostics.filter((d) => d.code === fix.code && d.range.start.line === fix.line),
+          edit: { changes: { [document.uri]: fix.edits } },
+        }))
+      : [];
+    return [...fixes, ...inferred, ...refactors];
   });
 
   return {

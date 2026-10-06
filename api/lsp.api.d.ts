@@ -149,6 +149,7 @@ export declare class TsazorTypeService {
     quickInfoOnShadow(entry: ShadowEntry, genLine0: number, genCol: number): ts.QuickInfo | undefined;
     definitionOnShadow(entry: ShadowEntry, genLine0: number, genCol: number): readonly ts.DefinitionInfo[];
     semanticDiagnosticsOnShadow(entry: ShadowEntry): readonly ts.DiagnosticWithLocation[];
+    codeFixesOnShadow(entry: ShadowEntry, start: number, end: number, errorCodes: readonly number[]): readonly ts.CodeFixAction[];
     syntacticDiagnosticsOnShadow(entry: ShadowEntry): readonly ts.DiagnosticWithLocation[];
     projectSourceFiles(root: string): string[];
     sourceFileDiagnostics(fileName: string): {

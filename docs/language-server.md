@@ -38,7 +38,8 @@ The server covers **every** workspace folder, not the first one. A
 | Diagnostics | Compiler diagnostics as you type, published on open and every edit (error + warning, TZS codes, `source: "tsazor"`) plus the mapped TS layer (`tsazor-ts`, toggleable); dependents re-checked on file changes. |
 | Hover | Component tags (resolved source, or "not resolvable → TZS005"), directives (`@page`, `@inject` with the resolved type module), **slot tags** (named slot of the parent, its fragment parameter and context, 2.5), not inside `@code`. |
 | Go-to-definition | Component tags → the `.tsazor` file resolved through `@using`; `@inject` types → local `.ts`/`.tsazor` modules. Built-ins resolve into `@tsazor/runtime`, so they produce nothing (the package is not a file). |
-| Code actions | The mechanical compiler fixes (A7 payloads) as QuickFixes — `@foreach (var …)`, `var`, C# interpolated strings, `where T : …`, attribute map. |
+| Code actions | The mechanical compiler fixes (A7 payloads) as QuickFixes — `@foreach (var …)`, `var`, C# interpolated strings, `where T : …`, attribute map. S4: TypeScript's "Infer parameter types from usage" for implicit-any errors (TS7006, TS7031, TS7005, …) in `@code` — usages in the markup count; offered only when every edit lands in the `.tsazor` file. |
+| Plain-language hints | S4: the TS layer (and `tsazor check`, the tutorial) appends one sentence (`Hint: …`) to the common TypeScript errors — implicit any, possibly null/undefined, unknown names and members, types that don't fit (`explainTypeScriptError` in `@tsazor/compiler`). |
 | Completion | See below. |
 
 ## Completion

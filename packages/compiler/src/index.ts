@@ -15,6 +15,7 @@ export {
 export { DIAGNOSTIC_CATALOG, RETIRED_DIAGNOSTIC_CODES, type DiagnosticInfo } from "./diagnostic-catalog.js";
 export { buildSourceMap, type SourceMapEntry } from "./source-map.js";
 export { explainExpressionValue, type ExpressionValue } from "./expression-values.js";
+export { explainTypeScriptError } from "./ts-hints.js";
 export { RESERVED_MEMBERS, OVERRIDABLE_MEMBERS } from "./reserved-members.js";
 export { parseImportDirective, importStatements, scanModuleExports, type ImportInfo, type ImportBinding, type ParsedImport, type ModuleExports } from "./imports.js";
 export {

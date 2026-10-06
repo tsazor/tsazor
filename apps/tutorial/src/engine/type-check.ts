@@ -12,7 +12,7 @@
  * (TsazorGenMap, the LSP's own class); diagnostics in unmapped generated
  * plumbing are dropped, exactly like `tsDiagnostics` in the LSP.
  */
-import { compile, explainExpressionValue, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { compile, explainExpressionValue, explainTypeScriptError, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { TsazorGenMap } from "@tsazor/lsp/ts-mapping";
 import ts from "typescript";
 import { basename, createResolver, dirname, joinPath, relativeSpecifier } from "./resolve.js";
@@ -121,7 +121,7 @@ export class TypeChecker {
           ...located,
           severity: diagnostic.category === ts.DiagnosticCategory.Error ? "error" : "warning",
           code: `TS${diagnostic.code}`,
-          message: explainExpressionValue(diagnostic.code, message, { line: located.line, column: located.column }, shadow?.expressionValues),
+          message: explainTypeScriptError(diagnostic.code, explainExpressionValue(diagnostic.code, message, { line: located.line, column: located.column }, shadow?.expressionValues)),
           source: "types",
         });
       }
