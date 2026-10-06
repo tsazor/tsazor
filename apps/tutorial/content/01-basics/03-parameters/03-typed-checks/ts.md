@@ -23,6 +23,15 @@ editor:
 Both problems point at the exact spot in the `.tsazor` file, and the squiggles in the editor
 are the same diagnostics.
 
+Notice what you *didn't* write: not a single type. `user = { name: "Ada" }` is known to have a
+`name`, `@Parameter() count = 0` is known to be a number — TypeScript **infers** the types from
+the values. That's the deal: you write ordinary code, and the types come along for free and
+keep the app stable as it grows. Rename a field, change a parameter, and every place that no
+longer fits lights up before anyone opens the page. You add a type yourself only where
+inference can't see far enough — a function parameter, an empty array that will hold orders
+later. That's also why Tsazor projects run TypeScript in **strict** mode: it's what lets the
+checks catch a missing value or an untyped parameter instead of letting it slide.
+
 In your own project, run `npx tsazor check` (it exits with an error code, so it fits right
 into CI), or set `check: true` in the Vite plugin to make the production build fail on type
 errors. The editor extension shows the same diagnostics while you work.

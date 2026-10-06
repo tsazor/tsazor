@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/lsp`, `@tsazor/cli`, `@tsazor/vite-plugin`: `tsazor check` warns `TSZSTRICT` (once per tsconfig) when the
+  tsconfig of checked files leaves `strict` off or switches one of its flags off again — strict
+  TypeScript is the only supported configuration (S2). A warning: exit code and builds are unaffected.
 - `@tsazor/runtime`, `@tsazor/compiler`: `@State()` (Tsazor extension; F6, docs/design-state.md).
   `@State() accessor x = …` makes an assignment to `x` schedule a render of its component, like
   `stateHasChanged()` (coalesced, `shouldRender()` consulted, equal values ignored, quiet before

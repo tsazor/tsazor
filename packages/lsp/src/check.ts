@@ -10,6 +10,7 @@ import { tsDiagnostics } from "./ts-features.js";
 import { findTsazorFiles } from "./ts-service.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import * as ts from "typescript";
 
 export interface CheckDiagnostic {
   /** Absolute path of the .tsazor file (or of a .ts source it pulls in: code-behind, imported modules). */
@@ -17,7 +18,7 @@ export interface CheckDiagnostic {
   /** 1-based line / column of the diagnostic (source coordinates). */
   line: number;
   column: number;
-  /** Diagnostic code: `TZS…` (compiler) or `TS…` (type layer). */
+  /** Diagnostic code: `TZS…` (compiler), `TS…` (type layer) or `TSZ…` (the check itself: `TSZSTRICT`, `TSZECHECK`). */
   code: string;
   severity: "error" | "warning";
   message: string;
@@ -67,6 +68,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
       entries.set(file, await registry.ensureTsazor(file, source));
     }
     if (options?.tsDiagnostics !== false) {
+      diagnostics.push(...strictWarnings(files));
       // Pass 2: the type layer over the complete graph.
       for (const [file, entry] of entries) {
         if (!entry) continue;
@@ -109,4 +111,38 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
     registry.dispose();
   }
   return { files: files.length, diagnostics };
+}
+/** The strict family: `strict` turns them on; each can still be switched off on its own. */
+const STRICT_FLAGS = ["noImplicitAny", "strictNullChecks", "strictFunctionTypes", "strictBindCallApply", "strictPropertyInitialization", "noImplicitThis", "useUnknownInCatchVariables", "alwaysStrict"] as const;
+
+/**
+ * S2: Tsazor supports strict TypeScript only — the docs, templates, the
+ * tutorial and the typed shadows assume it. One warning (`TSZSTRICT`) per
+ * tsconfig of the checked files that leaves `strict` (or one of its flags)
+ * off. A file without a tsconfig is checked with Tsazor's strict defaults.
+ */
+function strictWarnings(files: readonly string[]): CheckDiagnostic[] {
+  const configs = new Set<string>();
+  for (const file of files) {
+    const config = ts.findConfigFile(path.dirname(file), ts.sys.fileExists, "tsconfig.json");
+    if (config) configs.add(path.resolve(config));
+  }
+  const warnings: CheckDiagnostic[] = [];
+  for (const config of configs) {
+    const read = ts.readConfigFile(config, ts.sys.readFile);
+    if (read.error) continue;
+    const options = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(config)).options;
+    const off = options.strict === true ? STRICT_FLAGS.filter((flag) => options[flag] === false) : [];
+    if (options.strict === true && off.length === 0) continue;
+    const what = options.strict === true ? `${off.map((flag) => `'${flag}'`).join(", ")} ${off.length === 1 ? "is" : "are"} switched off` : "'strict' is not on";
+    warnings.push({
+      file: config,
+      line: 1,
+      column: 1,
+      code: "TSZSTRICT",
+      severity: "warning",
+      message: `${what}. Tsazor supports strict TypeScript only: set "strict": true in compilerOptions (and drop the overrides). Without it, null checks and implicit-any errors go unreported and the typed checks of the markup lose their guarantees.`,
+    });
+  }
+  return warnings;
 }

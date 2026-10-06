@@ -18,6 +18,12 @@ runs it live; the problems panel shows:
 - **TS1360** — `Badge`'s `count` is a `number`; `unread` is the string `"1"`, so
   `count === 1` is false and the badge says "messages". Make `unread` a number.
 
+There isn't a type annotation in either file: TypeScript infers `{ name: string }` and
+`number` from the values, as `var` does in C# — only further. Types keep the app stable, and
+inference does most of the work; annotate parameters and empty arrays. Tsazor projects run
+strict TypeScript (`"strict": true`, the counterpart of nullable reference types with warnings
+as errors); `tsazor check` warns when a tsconfig isn't strict.
+
 > **Coming from Blazor:** treat `tsazor check` like the C# compiler step you no longer get
 > for free. Run `npx tsazor check` in CI (it exits non-zero on errors), set `check: true` in
 > the Vite plugin to fail production builds, and rely on the VS Code extension while

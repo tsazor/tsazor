@@ -38,7 +38,10 @@ upstream work happens, where the emitter lives) need answers first.
   **Done (2026-10-04):** `scripts/api-snapshot.mjs` → `api/<package>.api.d.ts`, `pnpm api:check` in
   CI, `pnpm api:update` + `CHANGELOG.md` for deliberate changes.
 - **S2 — Strict only:** `getting-started`, templates and `npm create tsazor` use `strict: true`.
-  `tsazor check` documents strict as the supported configuration.
+  `tsazor check` documents strict as the supported configuration. **Done (2026-10-06):** `tsazor check`
+  (and the Vite plugin's check) warns `TSZSTRICT` for a tsconfig that leaves `strict` or one of its
+  flags off; getting-started states strict as the only supported configuration. The templates follow
+  with R3.
 - **S3 — Never block development:** verify, and pin in tests, that the dev server and HMR keep
   running with TS type errors (shown as an overlay or console output, not as a failed module).
   Production builds keep failing on errors. **Done (2026-10-04):** the transform never type-checks
@@ -52,7 +55,7 @@ upstream work happens, where the emitter lives) need answers first.
   TS2416 (port-findings M.1). **Done (2026-10-04):** `TZS031`, the list checked against the
   runtime by a test.
 - **S6 — Tutorial:** the TS track's "Typed checks" lesson carries the message "types keep your app
-  stable, and inference does most of the work".
+  stable, and inference does most of the work". **Done (2026-10-06)** (both tracks).
 
 ## 5 — Enterprise readiness
 
