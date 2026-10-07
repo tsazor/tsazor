@@ -98,6 +98,16 @@ Billing & plans. After that, re-run the latest run (or push) to get a real CI re
 
 ## Next steps
 
+0. **Test as much as possible locally (owner, 2026-10-07)** — WSL has Ubuntu 24.04 (32 cores, 31 GB),
+   without Node yet; Docker Desktop runs too.
+   - **One-time setup, needs the owner's okay:** install Node 22 (the CI version) in WSL, and pnpm via
+     corepack.
+   - **`scripts/ci-local.sh`:** run the CI check job in WSL on a fresh clone of HEAD in the Linux file
+     system: `pnpm install --frozen-lockfile`, build, test, `api:check`, smoke. This catches what only
+     CI catches: case-sensitive paths, clean installs, and the committed lockfile without the owner's WIP.
+   - **`pnpm gates` (Windows):** every browser gate (tutorial, gallery, demo, skins, pizza, migration) in
+     Edge, Firefox and WebKit, with one command.
+   - **Then decide** whether the Ubuntu check on push becomes manual too.
 1. **`npm create tsazor --ui <package>`** (R3): accept any package; Bootstrap/Fluent appear as examples in
    an open list, not hard-coded favorites.
 2. **Release preparation (R2/E3/E10)** — open questions for the owner:
