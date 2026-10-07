@@ -1,0 +1,46 @@
+/* ButtonGroup — the buttons join into one bar: shared borders, outer corners only. */
+
+.fui-button-group {
+  display: inline-flex;
+}
+
+.fui-button-group--vertical {
+  flex-direction: column;
+}
+
+.fui-button-group > .fui-button {
+  position: relative;
+  border-radius: 0;
+}
+
+.fui-button-group > .fui-button:focus-visible {
+  z-index: 1;
+}
+
+.fui-button-group:not(.fui-button-group--vertical) > .fui-button + .fui-button {
+  margin-left: -1px;
+}
+
+.fui-button-group--vertical > .fui-button + .fui-button {
+  margin-top: -1px;
+}
+
+.fui-button-group:not(.fui-button-group--vertical) > .fui-button:first-child {
+  border-start-start-radius: var(--fui-radius-md);
+  border-end-start-radius: var(--fui-radius-md);
+}
+
+.fui-button-group:not(.fui-button-group--vertical) > .fui-button:last-child {
+  border-start-end-radius: var(--fui-radius-md);
+  border-end-end-radius: var(--fui-radius-md);
+}
+
+.fui-button-group--vertical > .fui-button:first-child {
+  border-start-start-radius: var(--fui-radius-md);
+  border-start-end-radius: var(--fui-radius-md);
+}
+
+.fui-button-group--vertical > .fui-button:last-child {
+  border-end-start-radius: var(--fui-radius-md);
+  border-end-end-radius: var(--fui-radius-md);
+}

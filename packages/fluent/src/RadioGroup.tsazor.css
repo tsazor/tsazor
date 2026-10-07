@@ -44,13 +44,6 @@
   cursor: not-allowed;
 }
 
-.fui-input__help {
-  display: block;
-  margin-top: var(--fui-spacing-xs);
-  font-size: var(--fui-font-size-caption);
-  color: var(--fui-foreground-3);
-}
-
 .fui-radio-group .fui-input__message {
   display: block;
   color: var(--fui-color-red-1);

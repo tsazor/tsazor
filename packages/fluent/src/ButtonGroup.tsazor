@@ -1,0 +1,22 @@
+@** Groups related buttons into one control (`role="group"`): put Buttons inside; name the group with
+    `ariaLabel`. The buttons join into one bar; `orientation` stacks them vertically. *@
+@import type { Orientation } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.groupAttributes">@childContent</div>
+
+@code {
+    /** Names the group for screen readers ("Text alignment"). */
+    @Parameter() ariaLabel?: string;
+    /** horizontal (default) or vertical. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** The buttons. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get groupAttributes(): Record<string, unknown> {
+        const cls = this.orientation === "vertical" ? "fui-button-group fui-button-group--vertical" : "fui-button-group";
+        return withAttributes({ class: cls, role: "group", "aria-label": this.ariaLabel }, this.additionalAttributes);
+    }
+}

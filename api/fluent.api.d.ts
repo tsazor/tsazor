@@ -64,6 +64,14 @@ export default class Button extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// ButtonGroup
+export default class ButtonGroup extends ComponentBase {
+    ariaLabel?: string;
+    orientation: Orientation;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Card
 export default class Card extends ComponentBase {
     appearance: "standard" | "filled";
@@ -126,6 +134,17 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// DateInput
+export default class DateInput extends InputBase<string> {
+    label?: string;
+    help?: string;
+    min?: string;
+    max?: string;
+    disabled: boolean;
+    required: boolean;
+    id?: string;
+}
+
 // Dialog
 export default class Dialog extends ComponentBase {
     isOpen: boolean;
@@ -178,6 +197,17 @@ export default class MenuItem extends ComponentBase {
     menu?: Menu;
 }
 
+// FileInput
+export default class FileInput extends ComponentBase {
+    label?: string;
+    help?: string;
+    accept?: string;
+    multiple: boolean;
+    disabled: boolean;
+    id?: string;
+    onChange?: EventCallback<InputFileChangeEventArgs>;
+}
+
 // FluentForm
 export default class FluentForm extends ComponentBase {
     model: object;
@@ -194,6 +224,16 @@ export default class FluentProvider extends ComponentBase {
     tokenOverrides?: Record<string, string>;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
+}
+
+// FormField
+export default class FormField extends ComponentBase {
+    label?: string;
+    id: string;
+    help?: string;
+    for?: string;
+    childContent?: RenderFragment;
+    editContext?: EditContext;
 }
 
 // Grid
@@ -267,6 +307,15 @@ export default class MenuItem extends ComponentBase {
     menu?: Menu;
 }
 
+// Navbar
+export default class Navbar extends ComponentBase {
+    brand?: string;
+    theme: "light" | "dark";
+    ariaLabel?: string;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // NumberInput
 export default class NumberInput extends InputBase<number> {
     label?: string;
@@ -301,6 +350,18 @@ export default class Paginator extends ComponentBase {
 }
 
 // Placement: re-exported from @tsazor/ui
+
+// Popover
+export default class Popover extends ComponentBase {
+    label: string;
+    title?: string;
+    ariaLabel?: string;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
+    placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
+    childContent?: RenderFragment;
+}
 
 // Progress
 export default class Progress extends ComponentBase {
@@ -365,6 +426,15 @@ export default class SidebarNav extends ComponentBase {
 }
 
 // Size: re-exported from @tsazor/ui
+
+// Skeleton
+export default class Skeleton extends ComponentBase {
+    shape: "text" | "circle" | "rect";
+    lines: number;
+    width?: string;
+    height?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
 
 // SortDirection: re-exported from @tsazor/ui
 

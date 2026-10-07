@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- The rest of Tier 1 in both skins, with the same parameters: `ButtonGroup`, `DateInput` (the value is the ISO date
+  text `"2026-10-07"` — no time zone to shift the day), `FileInput` (around the runtime's `InputFile`), `FormField`
+  (label, help and the field's validation message around a control of your own), `Skeleton`, `Popover` (a
+  non-modal dialog by its button); `@tsazor/fluent` adds `Navbar`, `@tsazor/bootstrap` `Grid` and `Typography`. Gallery
+  page `/more`; the demo's components page shows them. The a11y gates wait for each page's heading before axe:
+  a page that failed to load is empty, and axe found nothing wrong with it.
 - Tier 1 parity of the two skins: `@tsazor/fluent` adds `RadioGroup`, `Accordion`/`AccordionItem` (panels as regions
   labelled by their header), `Collapse`, `Progress` and `ListGroup`/`ListGroupItem`; `@tsazor/bootstrap` adds `Switch`,
   `Stack` and `Divider` — each with the parameters of its counterpart in the other skin. Gallery page `/structure`;

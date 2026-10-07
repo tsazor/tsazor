@@ -1,0 +1,42 @@
+@** A Fluent UI 2 file field around the runtime's InputFile, with an optional label and help text.
+    `onChange` receives the chosen files (`InputFileChangeEventArgs`: `file`, `getMultipleFiles()`);
+    `accept` and `multiple` work as on the native input. *@
+@import { InputFile, type InputFileChangeEventArgs } from "@tsazor/runtime"
+@import { uniqueId } from "@tsazor/ui"
+
+<div class="fui-input-wrapper">
+    @if (label) {
+        <label class="fui-input__label" for="@inputId">@label</label>
+    }
+    <InputFile OnChange="@onChange" id="@inputId" class="fui-input fui-file-input" accept="@accept" multiple="@multiple" disabled="@disabled" aria-describedby="@helpId" />
+    @if (help) {
+        <span class="fui-input__help" id="@helpId">@help</span>
+    }
+</div>
+
+@code {
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the input, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** The accepted file types (".csv", "image/*"). */
+    @Parameter() accept?: string;
+    /** Lets the user choose several files. */
+    @Parameter() multiple: boolean = false;
+    /** Disables the input. */
+    @Parameter() disabled: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** Fired with the chosen files. */
+    @Parameter() onChange?: EventCallback<InputFileChangeEventArgs>;
+
+    private readonly generatedId = uniqueId("fui-file");
+
+    private get inputId(): string {
+        return this.id ?? this.generatedId;
+    }
+
+    private get helpId(): string | null {
+        return this.help ? `${this.inputId}-help` : null;
+    }
+}

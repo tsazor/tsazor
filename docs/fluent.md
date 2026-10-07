@@ -152,6 +152,10 @@ Notes on the important ones:
 - **RadioGroup, Accordion/AccordionItem, Collapse, Progress, ListGroup/ListGroupItem**: the parameters of
   their `@tsazor/bootstrap` counterparts (`options`/`inline`/`help`; one open item at a time; `isOpen`;
   `value`/`intent`/`label`/`ariaLabel`; `flush`/`horizontal`, items with `href`/`onClick`/`active`/`disabled`).
+- **ButtonGroup, DateInput, FileInput, FormField, Skeleton, Popover, Navbar**: the parameters of their
+  `@tsazor/bootstrap` counterparts. `DateInput` binds the ISO date text (`"2026-10-07"`); `FormField` puts a
+  label, help and the validation message (after a submit attempt) around a control of your own;
+  `Popover` is a non-modal dialog by its button (focus in, Escape returns it).
 - **SidebarNav**: wraps runtime `NavLink` (`aria-current="page"` on the active
   link for free from the router).
 

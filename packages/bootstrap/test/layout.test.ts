@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { EventCallback, type RenderFragment } from "@tsazor/runtime";
-import { Divider, Stack, Switch } from "../dist/index.js";
+import { Divider, Grid, Stack, Switch, Typography } from "../dist/index.js";
 
 const text = (content: string): RenderFragment => (b) => b.addContent(0, content);
 
@@ -66,5 +66,45 @@ describe("Divider", () => {
     const vr = between.container.querySelector("[role=separator]")!;
     expect(vr.className).toBe("vr opacity-75");
     expect(vr.getAttribute("aria-orientation")).toBe("vertical");
+  });
+});
+
+describe("Grid, Typography", () => {
+  it("lays out equal columns or auto-fill tracks with a gap", async () => {
+    const fixed = await renderTree((b) => {
+      b.openComponent(0, Grid);
+      b.addAttribute(1, "columns", 2);
+      b.addAttribute(2, "gap", "l");
+      b.closeComponent();
+    });
+    const grid = fixed.container.firstElementChild as HTMLElement;
+    expect(grid.className).toBe("d-grid gap-4");
+    expect(grid.style.gridTemplateColumns).toBe("repeat(2, 1fr)");
+    const fluid = await renderTree((b) => {
+      b.openComponent(0, Grid);
+      b.addAttribute(1, "minChildWidth", "240px");
+      b.closeComponent();
+    });
+    expect((fluid.container.firstElementChild as HTMLElement).style.gridTemplateColumns).toBe("repeat(auto-fill, minmax(240px, 1fr))");
+  });
+
+  it("picks the element by variant and the weight by class", async () => {
+    const heading = await renderTree((b) => {
+      b.openComponent(0, Typography);
+      b.addAttribute(1, "variant", "h2");
+      b.addAttribute(2, "weight", "bold");
+      b.addAttribute(3, "childContent", text("Orders"));
+      b.closeComponent();
+    });
+    const h2 = heading.container.querySelector("h2")!;
+    expect(h2.textContent).toBe("Orders");
+    expect(h2.className).toBe("fw-bold");
+    const caption = await renderTree((b) => {
+      b.openComponent(0, Typography);
+      b.addAttribute(1, "variant", "caption");
+      b.addAttribute(2, "childContent", text("Updated 5 min ago"));
+      b.closeComponent();
+    });
+    expect(caption.container.querySelector("small")!.className).toBe("d-block text-body-secondary");
   });
 });

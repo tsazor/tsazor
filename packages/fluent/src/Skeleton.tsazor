@@ -1,0 +1,44 @@
+@** A Fluent UI 2 loading placeholder with a shimmer: lines of text, a circle (an avatar) or a rectangle
+    (an image), shown while the real content loads. It is hidden from screen readers — mark the region
+    that loads with `aria-busy="true"` instead. The shimmer stops for reduced motion. *@
+@import { withAttributes } from "./attributes"
+
+@if (shape === "text") {
+    <div @attributes="@this.rootAttributes">
+        @for (let i = 0; i < lines; i++) {
+            <span class="@lineClass(i)"></span>
+        }
+    </div>
+} else {
+    <span @attributes="@this.rootAttributes"></span>
+}
+
+@code {
+    /** text (default: lines), circle or rect. */
+    @Parameter() shape: "text" | "circle" | "rect" = "text";
+    /** How many lines of text; the last one is shorter. */
+    @Parameter() lines: number = 3;
+    /** Width of a circle or rect (CSS length; default 100% for a rect, 48px for a circle). */
+    @Parameter() width?: string;
+    /** Height of a circle or rect (CSS length; default 8rem for a rect, the width for a circle). */
+    @Parameter() height?: string;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private lineClass(index: number): string {
+        const last = index === this.lines - 1 && this.lines > 1;
+        return last ? "fui-skeleton__line fui-skeleton__line--last" : "fui-skeleton__line";
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        if (this.shape === "text") return withAttributes({ class: "fui-skeleton fui-skeleton--text", "aria-hidden": "true" }, this.additionalAttributes);
+        const circle = this.shape === "circle";
+        const width = this.width ?? (circle ? "48px" : "100%");
+        const height = this.height ?? (circle ? width : "8rem");
+        return withAttributes({
+            class: `fui-skeleton fui-skeleton__block fui-skeleton--${this.shape}`,
+            style: `width: ${width}; height: ${height}`,
+            "aria-hidden": "true",
+        }, this.additionalAttributes);
+    }
+}

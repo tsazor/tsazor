@@ -1,0 +1,56 @@
+/* Navbar — Fluent 2 top bar: brand at the start, links in a row; links inside get the subtle look. */
+
+.fui-navbar {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-l);
+  min-height: 48px;
+  padding: 0 var(--fui-spacing-l);
+  background: var(--fui-background-2, var(--fui-background-1));
+  border-bottom: 1px solid var(--fui-stroke-2);
+  color: var(--fui-foreground-1);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+}
+
+.fui-navbar--dark {
+  background: var(--fui-neutral-160, #292929);
+  border-bottom-color: transparent;
+  color: #FFFFFF;
+}
+
+.fui-navbar__brand {
+  font-weight: var(--fui-font-weight-semibold);
+  font-size: var(--fui-font-size-body-lg, 16px);
+}
+
+.fui-navbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+}
+
+.fui-navbar__nav a {
+  padding: var(--fui-spacing-xs) var(--fui-spacing-s);
+  border-radius: var(--fui-radius-md);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fui-navbar__nav a:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-navbar--dark .fui-navbar__nav a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.fui-navbar__nav a:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+}
+
+.fui-navbar__nav a[aria-current="page"],
+.fui-navbar__nav a.active {
+  font-weight: var(--fui-font-weight-semibold);
+  box-shadow: inset 0 -2px 0 var(--fui-brand-background);
+}

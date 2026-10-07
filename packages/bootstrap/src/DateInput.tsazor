@@ -1,0 +1,56 @@
+@** A Bootstrap date field (the browser's date picker, `.form-control`; InputBase — bind it with
+    @bind) with an optional label and help text. The value is the ISO date text `"2026-10-07"`
+    (empty when cleared): a plain string has no time zone to shift the day. Validation state and
+    message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<string>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <input id="@field.id(id)" type="date" class="@inputClass" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The field's label (clicking it focuses the input). */
+    @Parameter() label?: string;
+    /** A hint below the input, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** The earliest date, as ISO text ("2026-01-01"). */
+    @Parameter() min?: string;
+    /** The latest date, as ISO text. */
+    @Parameter() max?: string;
+    /** Disables the input. */
+    @Parameter() disabled: boolean = false;
+    /** Marks the input as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-date");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).value;
+    }
+}

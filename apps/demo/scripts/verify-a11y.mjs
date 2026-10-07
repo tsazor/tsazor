@@ -70,6 +70,8 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   for (const route of ROUTES) {
     await page.goto(`${APP}${route}`, { waitUntil: "networkidle" });
+    // A page that failed to load is empty, and axe finds nothing wrong with nothing.
+    await page.waitForSelector("h1", { timeout: 15_000 });
     const violations = await axe(page);
     check(violations.length === 0, `axe ${route}${violations.length ? `: ${violations.join(" | ")}` : ""}`);
   }
@@ -160,6 +162,21 @@ try {
   await page.getByRole("switch", { name: "Deliver tomorrow" }).check();
   await page.waitForFunction(() => document.querySelector(".delivery-state")?.textContent === "Delivery tomorrow");
   check(true, "switch: toggling it updates the page (@bind-Value)");
+
+  // Popover: a non-modal dialog by the button; focus in, Escape returns it.
+  const opener = page.getByRole("button", { name: "Opening hours" });
+  await opener.click();
+  await page.waitForSelector(".popover[role=dialog]");
+  check(await page.evaluate(() => document.activeElement?.classList.contains("popover") ?? false), "popover: focus moves into it");
+  const popoverViolations = await axe(page);
+  check(popoverViolations.length === 0, `axe /components with the popover open${popoverViolations.length ? `: ${popoverViolations.join(" | ")}` : ""}`);
+  await page.keyboard.press("Escape");
+  await page.waitForSelector(".popover", { state: "detached" });
+  check(await opener.evaluate((el) => el === document.activeElement), "popover: Escape closes it and focus returns to the button");
+  await page.getByLabel("Delivery date").fill("2026-10-09");
+  await page.getByLabel("Delivery date").dispatchEvent("change");
+  await page.waitForFunction(() => document.querySelector(".delivery-echo")?.textContent === "Delivery: 2026-10-09");
+  check(true, "date field: the ISO date text binds (@bind-Value)");
 
   // DataGrid: sorting by keyboard (aria-sort), paging, row selection.
   const grid = page.locator("table[aria-label=Orders]");

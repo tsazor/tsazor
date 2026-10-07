@@ -200,6 +200,38 @@
 
 <div class="mt-3">
     <Card>
+        <CardHeader>More components</CardHeader>
+        <CardBody>
+            <Typography Variant="h5" Weight="semibold">Today's bakery</Typography>
+            <Typography Variant="caption">Updated a minute ago</Typography>
+            <Stack Gap="m" Align="center" Wrap="@true">
+                <ButtonGroup AriaLabel="View">
+                    <Button Intent="@(view === "day" ? "primary" : "secondary")" OnClick="@(() => this.view = "day")">Day</Button>
+                    <Button Intent="@(view === "week" ? "primary" : "secondary")" OnClick="@(() => this.view = "week")">Week</Button>
+                </ButtonGroup>
+                <span class="view-choice">View: @view</span>
+                <Popover Label="Opening hours" Title="Opening hours">
+                    <p class="mb-0">Mon–Fri 6–18, Sat 7–13.</p>
+                </Popover>
+            </Stack>
+            <Grid MinChildWidth="220px" Gap="m">
+                <DateInput Label="Delivery date" Min="2026-01-01" @bind-Value="deliveryDate" />
+                <FileInput Label="Order list" Accept=".csv" Help="One order per line." />
+                <FormField Label="Crust" Id="crust" Help="How dark the crust should be.">
+                    <input id="crust" type="range" class="form-range" min="1" max="5" aria-describedby="crust-help" />
+                </FormField>
+            </Grid>
+            <p class="delivery-echo">Delivery: @(deliveryDate || "not set")</p>
+            <div class="d-flex gap-3 align-items-start" role="region" aria-busy="true" aria-label="Loading the customer">
+                <Skeleton Shape="circle" Width="48px" />
+                <div class="flex-grow-1"><Skeleton Lines="3" /></div>
+            </div>
+        </CardBody>
+    </Card>
+</div>
+
+<div class="mt-3">
+    <Card>
         <CardHeader>DataGrid</CardHeader>
         <CardBody>
             <DataGrid Items="@orders" Pagination="@pagination" SelectionMode="multiple" @bind-SelectedItems="selectedOrders" AriaLabel="Orders" Striped="@true" Small="@true">
@@ -228,6 +260,8 @@
     private readonly pagination = new PaginationState();
     private selectedOrders: GridOrder[] = [];
     private deliverTomorrow = false;
+    private view = "week";
+    private deliveryDate = "";
     private readonly byStatus = GridSort.byAscending((o: GridOrder) => o.status).thenAscending((o) => o.id);
 
     private statusClass(order: GridOrder): string {

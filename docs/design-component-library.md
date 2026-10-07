@@ -81,7 +81,9 @@ Literal-union types everywhere (strict TS, completion in the editor).
 
 ## 4. Scope for 1.0
 
-**Tier 1 — in 1.0, both skins:**
+**Tier 1 — in 1.0, both skins** (status 2026-10-07: all in both skins, same parameters; the
+DataGrid with sorting, paging, selection, an ItemsProvider and virtualization; filter slot and
+density are open):
 
 - Actions: Button, ButtonGroup, Dropdown/Menu (keyboard, typeahead), Tooltip
 - Forms: TextInput, TextArea, NumberInput, Select, Checkbox, Switch, RadioGroup, DateInput

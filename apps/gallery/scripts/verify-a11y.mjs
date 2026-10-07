@@ -21,7 +21,7 @@ import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 const APP = "http://localhost:5321";
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/structure", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
+const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/structure", "/more", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
 
 const spawned = [];
 async function reachable(url) {
@@ -101,6 +101,8 @@ async function main() {
     for (const theme of ["light", "dark"]) {
         for (const route of ROUTES) {
             await gotoRetried(page, `${APP}${route}`);
+            // A page that failed to load is empty, and axe finds nothing wrong with nothing.
+            await page.waitForSelector("h1", { timeout: 15_000 });
             const current = await page.getAttribute("html", "data-fluent-theme");
             if ((current ?? "light") !== theme) {
                 // A programmatic click: a toast or an overlay may cover the toggle.
@@ -228,6 +230,25 @@ async function main() {
     check((await page.locator(".fui-button", { hasText: "Details" }).getAttribute("aria-expanded")) === "true", "collapse: the toggle says it is expanded");
     const structureViolations = await axe(page);
     check(structureViolations.length === 0, `axe /structure with a panel and the details open${structureViolations.length ? `: ${structureViolations.join(" | ")}` : ""}`);
+
+    /* 6 — popover, button group, date field (the "more" page) */
+    await page.goto(`${APP}/more`, { waitUntil: "networkidle" });
+    const opener = page.getByRole("button", { name: "Opening hours" });
+    await opener.click();
+    await page.waitForSelector(".fui-popover");
+    check(await page.evaluate(() => document.activeElement?.classList.contains("fui-popover") ?? false), "popover: focus moves into it");
+    const popoverViolations = await axe(page);
+    check(popoverViolations.length === 0, `axe /more with the popover open${popoverViolations.length ? `: ${popoverViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("Escape");
+    await page.waitForSelector(".fui-popover", { state: "detached" });
+    check(await opener.evaluate((el) => el === document.activeElement), "popover: Escape closes it and focus returns to the button");
+    check((await page.getByRole("group", { name: "View" }).locator("button").count()) === 3, "button group: a named group of three buttons");
+    await page.getByRole("button", { name: "Month" }).click();
+    await page.waitForFunction(() => document.querySelector(".view-choice")?.textContent === "View: month");
+    await page.getByLabel("Delivery date").fill("2026-10-09");
+    await page.getByLabel("Delivery date").dispatchEvent("change");
+    await page.waitForFunction(() => document.querySelector(".delivery-echo")?.textContent === "Delivery: 2026-10-09");
+    check(true, "date field: the ISO date text binds (@bind-Value)");
 
     check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
     await browser.close();

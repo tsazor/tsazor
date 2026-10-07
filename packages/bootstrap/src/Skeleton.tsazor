@@ -1,0 +1,41 @@
+@** A loading placeholder (Bootstrap's `.placeholder` with the glow animation): lines of text, a
+    circle (an avatar) or a rectangle (an image), shown while the real content loads. It is hidden
+    from screen readers — mark the region that loads with `aria-busy="true"` instead. *@
+@if (shape === "text") {
+    <div class="placeholder-glow" aria-hidden="true" @attributes="additionalAttributes">
+        @for (let i = 0; i < lines; i++) {
+            <span class="@lineClass(i)"></span>
+        }
+    </div>
+} else {
+    <span class="@blockClass" aria-hidden="true" @attributes="additionalAttributes"><span class="placeholder d-block" style="@blockStyle"></span></span>
+}
+
+@code {
+    /** text (default: lines), circle or rect. */
+    @Parameter() shape: "text" | "circle" | "rect" = "text";
+    /** How many lines of text; the last one is shorter. */
+    @Parameter() lines: number = 3;
+    /** Width of a circle or rect (CSS length; default 100% for a rect, 48px for a circle). */
+    @Parameter() width?: string;
+    /** Height of a circle or rect (CSS length; default 8rem for a rect, the width for a circle). */
+    @Parameter() height?: string;
+    /** Further attributes for the placeholder element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private lineClass(index: number): string {
+        const last = index === this.lines - 1 && this.lines > 1;
+        return `placeholder d-block mb-2 ${last ? "col-7" : "col-12"}`;
+    }
+
+    private get blockClass(): string {
+        return this.shape === "circle" ? "placeholder-glow d-inline-block" : "placeholder-glow d-block";
+    }
+
+    private get blockStyle(): string {
+        const circle = this.shape === "circle";
+        const width = this.width ?? (circle ? "48px" : "100%");
+        const height = this.height ?? (circle ? width : "8rem");
+        return `width: ${width}; height: ${height}; border-radius: ${circle ? "50%" : "var(--bs-border-radius)"};`;
+    }
+}

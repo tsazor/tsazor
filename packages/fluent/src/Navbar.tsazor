@@ -1,0 +1,28 @@
+@** A Fluent UI 2 top bar (a `<nav>`) with an optional brand text and an area for the navigation links —
+    the same parameters as the Bootstrap skin's Navbar. (SidebarNav is the vertical alternative.) *@
+@import { withAttributes } from "./attributes"
+
+<nav @attributes="@this.navAttributes">
+    @if (brand) {
+        <span class="fui-navbar__brand">@brand</span>
+    }
+    <div class="fui-navbar__nav">@childContent</div>
+</nav>
+
+@code {
+    /** Brand text at the left edge; omit to hide. */
+    @Parameter() brand?: string;
+    /** light (default) or dark bar. */
+    @Parameter() theme: "light" | "dark" = "light";
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** The navigation links. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get navAttributes(): Record<string, unknown> {
+        const cls = this.theme === "dark" ? "fui-navbar fui-navbar--dark" : "fui-navbar";
+        return withAttributes({ class: cls, "aria-label": this.ariaLabel }, this.additionalAttributes);
+    }
+}

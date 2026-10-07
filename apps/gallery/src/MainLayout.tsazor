@@ -40,6 +40,7 @@
         { href: "/dialog", label: "Dialog" },
         { href: "/overlays", label: "Menu, Drawer, Tooltip" },
         { href: "/structure", label: "Accordion, List, Progress" },
+        { href: "/more", label: "More components" },
         { href: "/feedback", label: "Feedback" },
         { href: "/primitives", label: "Layout" },
         { href: "/theme", label: "Theme" },

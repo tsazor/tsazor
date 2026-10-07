@@ -6,7 +6,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { EventCallback, type RenderFragment } from "@tsazor/runtime";
-import { Accordion, AccordionItem, Collapse, ListGroup, ListGroupItem, Progress, RadioGroup } from "../dist/index.js";
+import { Accordion, AccordionItem, Collapse, ListGroup, ListGroupItem, Navbar, Progress, RadioGroup } from "../dist/index.js";
 
 const text = (content: string): RenderFragment => (b) => b.addContent(0, content);
 
@@ -145,5 +145,28 @@ describe("ListGroup + ListGroupItem", () => {
     items[1]!.querySelector("button")!.click();
     await settle(renderer);
     expect(clicked).toBe(1);
+  });
+});
+
+describe("Navbar", () => {
+  it("is a named nav with the brand and the links", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Navbar);
+      b.addAttribute(1, "brand", "Bakery");
+      b.addAttribute(2, "theme", "dark");
+      b.addAttribute(3, "ariaLabel", "Main");
+      b.addAttribute(4, "childContent", (inner: typeof b) => {
+        inner.openElement(0, "a");
+        inner.addAttribute(1, "href", "/orders");
+        inner.addContent(2, "Orders");
+        inner.closeElement();
+      });
+      b.closeComponent();
+    });
+    const nav = container.querySelector("nav")!;
+    expect(nav.className).toBe("fui-navbar fui-navbar--dark");
+    expect(nav.getAttribute("aria-label")).toBe("Main");
+    expect(nav.querySelector(".fui-navbar__brand")!.textContent).toBe("Bakery");
+    expect(nav.querySelector(".fui-navbar__nav a")!.textContent).toBe("Orders");
   });
 });

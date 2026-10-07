@@ -127,3 +127,17 @@
 .fui-input__message {
   min-height: var(--fui-line-height-caption);
 }
+
+/* Help text below a field (DateInput, FileInput, RadioGroup, FormField). */
+.fui-input__help {
+  display: block;
+  margin-top: var(--fui-spacing-xs);
+  font-size: var(--fui-font-size-caption);
+  color: var(--fui-foreground-3);
+}
+
+/* The native file picker in the field look. */
+.fui-file-input {
+  padding: var(--fui-spacing-xs);
+  cursor: pointer;
+}

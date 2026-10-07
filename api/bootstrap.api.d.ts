@@ -57,6 +57,15 @@ export default class Button extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// ButtonGroup
+export default class ButtonGroup extends ComponentBase {
+    ariaLabel?: string;
+    orientation: Orientation;
+    size: Size;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Card
 export default class Card extends ComponentBase {
     childContent?: RenderFragment;
@@ -125,6 +134,17 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// DateInput
+export default class DateInput extends InputBase<string> {
+    label?: string;
+    help?: string;
+    min?: string;
+    max?: string;
+    disabled: boolean;
+    required: boolean;
+    id?: string;
+}
+
 // Dialog
 export default class Dialog extends ComponentBase {
     isOpen: boolean;
@@ -178,6 +198,17 @@ export default class DropdownItem extends ComponentBase {
     dropdown?: Dropdown;
 }
 
+// FileInput
+export default class FileInput extends ComponentBase {
+    label?: string;
+    help?: string;
+    accept?: string;
+    multiple: boolean;
+    disabled: boolean;
+    id?: string;
+    onChange?: EventCallback<InputFileChangeEventArgs>;
+}
+
 // Form
 export default class Form extends ComponentBase {
     model: object;
@@ -185,6 +216,25 @@ export default class Form extends ComponentBase {
     onValidSubmit?: EventCallback<EditContext>;
     onInvalidSubmit?: EventCallback<EditContext>;
     childContent?: (context: EditContext) => RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// FormField
+export default class FormField extends ComponentBase {
+    label?: string;
+    id: string;
+    help?: string;
+    for?: string;
+    childContent?: RenderFragment;
+    editContext?: EditContext;
+}
+
+// Grid
+export default class Grid extends ComponentBase {
+    columns: number;
+    gap?: "xs" | "s" | "m" | "l" | "xl";
+    minChildWidth?: string;
+    childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -292,6 +342,18 @@ export default class Paginator extends ComponentBase {
 
 // Placement: re-exported from @tsazor/ui
 
+// Popover
+export default class Popover extends ComponentBase {
+    label: string;
+    title?: string;
+    ariaLabel?: string;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
+    placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
+    childContent?: RenderFragment;
+}
+
 // Progress
 export default class Progress extends ComponentBase {
     value: number;
@@ -344,6 +406,15 @@ export default class Select extends InputBase<string> {
 // SelectionMode: re-exported from @tsazor/ui
 
 // Size: re-exported from @tsazor/ui
+
+// Skeleton
+export default class Skeleton extends ComponentBase {
+    shape: "text" | "circle" | "rect";
+    lines: number;
+    width?: string;
+    height?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
 
 // SortDirection: re-exported from @tsazor/ui
 
@@ -458,4 +529,12 @@ export default class Tooltip extends ComponentBase {
     text: string;
     placement: Placement;
     childContent?: RenderFragment;
+}
+
+// Typography
+export default class Typography extends ComponentBase {
+    variant: "h1" | "h2" | "h3" | "h4" | "h5" | "body" | "caption";
+    weight?: "semibold" | "bold";
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
