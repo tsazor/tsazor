@@ -5,6 +5,7 @@
  */
 import content from "virtual:tutorial-content";
 import type { ChapterContent, LessonContent, LessonFiles, PartContent, Track } from "./content-types";
+import { STARTER } from "./playground";
 
 export const TRACK_LABELS: Record<Track, string> = {
   blazor: "Blazor developer",
@@ -28,6 +29,8 @@ export function isTrack(value: string): value is Track {
 export class TutorialState {
   readonly content = content;
   private readonly workspaces = new Map<string, LessonFiles>();
+  /** The playground's files (in memory, like the lesson workspaces). */
+  playground: LessonFiles = { ...STARTER };
 
   /** The track last visited (localStorage), default "ts". */
   get preferredTrack(): Track {

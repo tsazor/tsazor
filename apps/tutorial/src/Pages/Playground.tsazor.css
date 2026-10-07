@@ -1,0 +1,125 @@
+.playground {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100vh;
+    height: 100dvh;
+}
+
+.workbench {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: 0;
+}
+
+.editor-pane {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    min-height: 0;
+    background: var(--editor-bg);
+    border-right: 1px solid var(--border);
+}
+
+.toolbar {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    min-width: 0;
+}
+
+.actions,
+.naming {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: none;
+}
+
+.actions {
+    padding: 0 0.6rem;
+}
+
+.name-input {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    width: 12rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--fg);
+}
+
+.name-input[aria-invalid="true"] {
+    border-color: var(--danger);
+}
+
+.name-problem {
+    margin: 0;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.82rem;
+    color: var(--danger);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.action {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--fg);
+    cursor: pointer;
+}
+
+.action:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.action:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.action--primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+}
+
+.action--primary:hover:not(:disabled) {
+    background: var(--accent-strong);
+    color: var(--accent-fg);
+}
+
+.editor-host {
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Phones and narrow windows: editor and preview stack. */
+@media (max-width: 860px) {
+    .playground {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .workbench {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: 70vh 60vh;
+    }
+
+    .editor-pane {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .toolbar {
+        flex-wrap: wrap;
+    }
+}

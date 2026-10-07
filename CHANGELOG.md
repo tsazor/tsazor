@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- Tutorial: a **Playground** (`/playground`, linked in the site bar): a free project with the lesson
+  workbench — editor, problems, type check, preview — where files can be added, renamed and deleted;
+  "Playground" on a lesson continues there with the lesson's files. Nothing is saved yet (the files
+  live until the page reloads).
 - DataGrid (QuickGrid-shaped). `@tsazor/ui`: `DataGridModel` (columns collected on every render, sort,
   rows of the page, `ItemsProvider` requests with an AbortSignal), `GridSort` (`byAscending(…).thenDescending(…)`),
   `PaginationState`, `toggleSelection`/`toggleAll`, `propertyTitle`/`propertyPath`. `@tsazor/bootstrap`: `DataGrid`

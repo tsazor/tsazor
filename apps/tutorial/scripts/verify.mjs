@@ -231,6 +231,28 @@ async function main() {
     await page.waitForURL(/\/reference\/api\/runtime\/NavigationManager$/);
     check((await page.locator(".member").count()) > 10 && (await page.textContent(".member:has-text('navigateTo')")) !== null, "an API page shows the export's members with their signatures");
 
+    /* Playground: the start project runs; files can be added (named like components) and used; a lesson continues there */
+    await page.goto(`${APP}/playground`);
+    check((await waitForPreview(page, "h1", "Hello world!")).includes("Hello world!"), "playground: the start project runs in the preview");
+    await page.click("button.new-file");
+    await page.keyboard.type("counter.tsazor");
+    check(((await page.textContent(".name-problem")) ?? "").includes("capital letter"), "playground: a component's file name must start with a capital letter");
+    await page.fill(".name-input", "Counter.tsazor");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector(".tab--active:has-text('Counter.tsazor')");
+    await page.click("[role=tab]:has-text('App.tsazor') >> nth=0");
+    await page.click(".cm-content");
+    await page.keyboard.press("Control+Home");
+    await page.keyboard.insertText("<Counter />\n");
+    check((await waitForPreview(page, "p", "Counter")).includes("Counter"), "playground: a new component file is usable in App.tsazor");
+    await page.click("button.reset");
+    check((await page.locator("[role=tab]").count()) === 2, "playground: Reset brings back the start project");
+    await page.goto(`${APP}/ts/off-the-main-thread`);
+    await page.click("button.open-playground");
+    await page.waitForURL(/\/playground$/);
+    await page.waitForSelector("[role=tab]:has-text('orders.worker.ts')");
+    check(true, "a lesson continues in the playground with its files");
+
     /* 6d — cross-links: lesson code → reference → "Learn it in" → lesson; the index search finds reference entries */
     await page.goto(`${APP}/ts/nav-link`);
     await page.waitForSelector(".prose a.ref-link");

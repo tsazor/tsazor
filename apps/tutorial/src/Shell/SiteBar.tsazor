@@ -10,12 +10,13 @@
         <a href="@lessonsHref">@lessonsLabel</a>
         <a href="index" aria-current="@(current === "index" ? "page" : null)">Index</a>
         <a href="reference" aria-current="@(current === "reference" ? "page" : null)">Reference</a>
+        <a href="playground" aria-current="@(current === "playground" ? "page" : null)">Playground</a>
     </nav>
 </header>
 
 @code {
     /** The page showing the bar (marked with aria-current). */
-    @Parameter() current: "home" | "index" | "reference" = "home";
+    @Parameter() current: "home" | "index" | "reference" | "playground" = "home";
 
     /** Back into the lessons: the last one visited in the reader's track, else the track's first. */
     private get lessonsHref(): string {
