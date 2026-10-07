@@ -87,7 +87,8 @@ async function main() {
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
 
-    await page.goto(`${GATEWAY}/`);
+    // The first request warms up both apps behind the gateway (JIT, Razor) — slow on a cold CI runner.
+    await page.goto(`${GATEWAY}/`, { timeout: 120_000 });
     await page.waitForSelector(".shell[data-app='blazor']");
     check((await page.textContent("h1"))?.includes("Bakery admin"), "the gateway serves the Blazor home page");
 
