@@ -4,7 +4,9 @@ keywords: component library, @tsazor/bootstrap, @tsazor/fluent, Button, Card, in
 focus: App.tsazor
 ---
 
-The card's buttons are styled by hand. Bring in the component library — `@using`, as in Razor:
+The card's buttons are styled by hand. A component library is one option — vanilla Tsazor with your
+own markup and CSS is another, and any library built for Tsazor plugs in the same way. This chapter
+uses `@tsazor/bootstrap` as the example. Bring it in — `@using`, as in Razor:
 
 ```tsazor
 @using @tsazor/bootstrap
@@ -26,8 +28,8 @@ and replace the markup:
 
 Then drop the hand-written rules from `App.tsazor.css`.
 
-> **Coming from Blazor:** this is your MudBlazor, Radzen or Fluent UI Blazor. Tsazor ships two skins
-> with the same components and parameters — `@tsazor/bootstrap` and `@tsazor/fluent` — so switching
-> is the `@using` line and the stylesheet. Parameters are typed literal unions: `Intent="primary"`,
+> **Coming from Blazor:** the place of MudBlazor, Radzen or Fluent UI Blazor — a package you choose,
+> not part of the framework. `@tsazor/bootstrap` and `@tsazor/fluent` are two such libraries with the
+> same components and parameters, so switching between them is the `@using` line and the stylesheet. Parameters are typed literal unions: `Intent="primary"`,
 > `Appearance="outline"`, `Size="small"`, with completion in the editor. In an app, `npm install
 > @tsazor/bootstrap bootstrap` and import the stylesheet in `Program.ts`.
