@@ -15,7 +15,7 @@ import { TsazorGenMap } from "./ts-mapping.js";
  *   A. imports of other .tsazor components → that component's own shadow
  *      (`./Sparkline.tsazor` → `./Sparkline.tsazor.gen`), chaining types through
  *      real component sources instead of surface d.ts.
- *   B. bare-package components (`@tsazor/components`) → the component's shipped
+ *   B. bare-package components (`@tsazor/bootstrap`) → the component's shipped
  *      .tsazor source shadow (the package's dist d.ts is deliberately `any`).
  */
 
@@ -151,7 +151,7 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
     return line;
   }
 
-  // Rewrite B: bare package specifier (e.g. @tsazor/components) → the package's
+  // Rewrite B: bare package specifier (e.g. @tsazor/bootstrap) → the package's
   // shipped .tsazor sources when the named import is a component file there.
   // Names can come from DIFFERENT component files (e.g. Accordion + AccordionItem
   // in one @import) — each name whose source exists is rebound to its own shadow;

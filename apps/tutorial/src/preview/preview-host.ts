@@ -5,7 +5,7 @@
  * The parent posts the compiled modules and the prebuilt runtime/components
  * bundles; the iframe turns each into a blob URL (blob URLs are origin-bound,
  * so they must be created inside the opaque origin), installs an import map
- * (`@tsazor/runtime`, `@tsazor/components`, `$app/…`), injects the CSS and
+ * (`@tsazor/runtime`, `@tsazor/bootstrap`, `$app/…`), injects the CSS and
  * mounts `App` with createTsazorApp — or imports the lesson's `Program.ts`,
  * which starts the app itself (with its services; a runtime shim adds the
  * routes and the History below). A routing project gets
@@ -98,7 +98,7 @@ function srcdoc(baseHref: string): string {
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
     const imports = {
       "@tsazor/runtime": url(runtime),
-      "@tsazor/components": url(components),
+      "@tsazor/bootstrap": url(components),
       "@tsazor/dotnet": url(dotnet),
       "@tsazor/testing": url(testing),
       "@tsazor/runtime/transition": url(transition),

@@ -37,7 +37,7 @@ const PACKAGES: ReadonlyArray<Omit<ReferencePackage, "components"> & { dir: stri
     description: "The built-in components: routing, forms and inputs, validation, auth, sections, head content, error boundaries.",
     exclude: ["SectionOutletContentRenderer"],
   },
-  { slug: "components", name: "@tsazor/components", dir: "components", description: "Bootstrap 5 components, written in .tsazor." },
+  { slug: "bootstrap", name: "@tsazor/bootstrap", dir: "bootstrap", description: "Bootstrap 5 components, written in .tsazor." },
   { slug: "fluent", name: "@tsazor/fluent", dir: "fluent", description: "Fluent UI 2 components with theme tokens, written in .tsazor." },
 ];
 

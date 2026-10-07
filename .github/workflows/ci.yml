@@ -66,7 +66,7 @@ jobs:
         run: pnpm --filter demo verify:csp
       - name: Accessibility — @tsazor/fluent (E9)
         run: pnpm --filter gallery verify:a11y
-      - name: Accessibility — @tsazor/components (E9)
+      - name: Accessibility — @tsazor/bootstrap (E9)
         run: pnpm --filter demo verify:a11y
       - name: Incremental migration — Blazor Server + Tsazor behind YARP (E6)
         run: pnpm --filter migration-sample verify

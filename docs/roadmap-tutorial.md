@@ -33,7 +33,7 @@ Gate: no German left in the listed files, all relative links resolve.
   `app-b` solution (only changed files). Shared `content/<part>/common/` base files.
   Front-matter: `title`, `focus` (file opened first). Track-only lessons have only one `.md`.
 - **In-browser pipeline**: `@tsazor/compiler` → `typescript.transpileModule` → ES module blob URLs;
-  preview in a sandboxed `<iframe>` with an import map for `@tsazor/runtime`/`@tsazor/components`
+  preview in a sandboxed `<iframe>` with an import map for `@tsazor/runtime`/`@tsazor/bootstrap`
   (prebuilt bundles), scoped CSS injected, sourcemapped errors + compiler diagnostics shown inline.
   Compile in a Web Worker so typing stays responsive.
 - **Editor**: CodeMirror 6, `.tsazor` mode (Razor markup + embedded TS), file tabs.

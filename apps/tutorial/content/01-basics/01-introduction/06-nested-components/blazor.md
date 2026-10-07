@@ -18,7 +18,7 @@ though both are `<p>` elements: CSS isolation at work.
 Tag resolution follows Blazor's rules, with folders standing in for namespaces: a tag that
 starts with an uppercase letter is a component, and components in the same folder are visible
 without further ado. For components elsewhere you write `@using ./Shared` (a folder, relative
-to the file) or `@using @tsazor/components` (a package).
+to the file) or `@using @tsazor/bootstrap` (a package).
 
 > **Coming from Blazor:** `@using` only brings in components (and `@inject` types). Values
 > and types you use in *code* are imported explicitly with `@import` — a real TypeScript

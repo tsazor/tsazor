@@ -2,11 +2,11 @@
  * Component/type resolution over an in-memory file set — the browser
  * counterpart of @tsazor/workspace's file-system resolver (which needs
  * node:fs). Same rules, reduced to what a tutorial project has: one flat-ish
- * folder of files, the runtime built-ins and the @tsazor/components package.
+ * folder of files, the runtime built-ins and the @tsazor/bootstrap package.
  *
  * - A tag resolves to a `.tsazor` file in the file's own folder or the project
  *   root (enclosing folders), then to `@using` sources: runtime built-ins and
- *   bare packages with a manifest (`@using @tsazor/components`).
+ *   bare packages with a manifest (`@using @tsazor/bootstrap`).
  * - Parameter metadata comes from the compiler's syntactic extractor
  *   (`extractTsazorMetadata` / `extractModuleMetadata`) over the in-memory
  *   sources, plus the package manifests.
@@ -29,13 +29,13 @@ import {
   type ResolvedType,
 } from "@tsazor/compiler";
 import { RUNTIME_COMPONENTS, RUNTIME_MANIFEST, RUNTIME_PACKAGE, RUNTIME_TYPES } from "@tsazor/workspace/builtins";
-import componentsManifest from "@tsazor/components/tsazor-components.json";
+import componentsManifest from "@tsazor/bootstrap/tsazor-components.json";
 
 import type { Files } from "./types.js";
 
 export type { Files };
 
-export const COMPONENTS_PACKAGE = "@tsazor/components";
+export const COMPONENTS_PACKAGE = "@tsazor/bootstrap";
 
 const PACKAGE_MANIFESTS: Record<string, ComponentManifest> = {
   [RUNTIME_PACKAGE]: RUNTIME_MANIFEST,

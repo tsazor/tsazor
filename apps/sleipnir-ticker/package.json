@@ -14,7 +14,7 @@
     "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
-    "@tsazor/components": "workspace:*",
+    "@tsazor/bootstrap": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8",

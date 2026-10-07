@@ -1,7 +1,7 @@
 /**
  * @tsazor/fluent primitive tests: every component renders through the real
  * compiled pipeline (dist/*.js built by build.mjs) and mounts via
- * @tsazor/testing's happy-dom renderer — same approach as @tsazor/components.
+ * @tsazor/testing's happy-dom renderer — same approach as @tsazor/bootstrap.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";

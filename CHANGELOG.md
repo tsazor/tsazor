@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Renamed:** `@tsazor/components` is now `@tsazor/bootstrap` (the Bootstrap 5 skin of the component
+  library, D-C2 in docs/design-component-library.md). Write `@using @tsazor/bootstrap`; the API is
+  unchanged so far. The tutorial reference lists it under `reference/components/bootstrap`.
 - New package `@tsazor/ui` (component library core, docs/design-component-library.md): unstyled behaviors
   as attachments — `focusTrap`, `dismissable` (Escape, outside press; only the topmost layer reacts),
   `scrollLock`, `rovingFocus` (arrows, Home/End, typeahead), `anchoredPosition` (fixed positioning with

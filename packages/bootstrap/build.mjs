@@ -1,5 +1,5 @@
 /**
- * Library build for @tsazor/components: compiles every src/*.tsazor through the
+ * Library build for @tsazor/bootstrap: compiles every src/*.tsazor through the
  * real compiler + workspace resolution, transpiles with esbuild and rewrites
  * sibling .tsazor imports to the built .js outputs. The bundle itself is
  * esbuild-bundled to a scratch runner first (raw node ESM cannot load the

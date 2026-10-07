@@ -151,9 +151,9 @@ importers:
 
   apps/demo:
     dependencies:
-      '@tsazor/components':
+      '@tsazor/bootstrap':
         specifier: workspace:*
-        version: link:../../packages/components
+        version: link:../../packages/bootstrap
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -229,9 +229,9 @@ importers:
 
   apps/sleipnir-ticker:
     dependencies:
-      '@tsazor/components':
+      '@tsazor/bootstrap':
         specifier: workspace:*
-        version: link:../../packages/components
+        version: link:../../packages/bootstrap
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -302,9 +302,9 @@ importers:
       '@tsazor/compiler':
         specifier: workspace:*
         version: link:../../packages/compiler
-      '@tsazor/components':
+      '@tsazor/bootstrap':
         specifier: workspace:*
-        version: link:../../packages/components
+        version: link:../../packages/bootstrap
       '@tsazor/dotnet':
         specifier: workspace:*
         version: link:../../packages/dotnet
@@ -381,7 +381,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
-  packages/components:
+  packages/bootstrap:
     devDependencies:
       '@tsazor/compiler':
         specifier: workspace:*

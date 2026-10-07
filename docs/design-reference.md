@@ -56,7 +56,7 @@ and the fix — the place error messages can link to.
   manifests.**
 - **D-R3 — Doc coverage as a gate.** A test fails when a public component
   parameter or API export has no doc comment. Today that means writing ~70
-  missing parameter docs (mostly `@tsazor/components`) first. **Proposal:
+  missing parameter docs (mostly `@tsazor/bootstrap`) first. **Proposal:
   yes, gate from the start; fill the gaps as part of this work.**
 - **D-R4 — Cross-links.** Front-matter `keywords` already name APIs. A
   keyword that matches a reference entry (`NavLink`, `@bind:after`,

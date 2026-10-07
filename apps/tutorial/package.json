@@ -28,7 +28,7 @@
     "@jridgewell/trace-mapping": "^0.3.31",
     "@lezer/highlight": "^1.2.5",
     "@tsazor/compiler": "workspace:*",
-    "@tsazor/components": "workspace:*",
+    "@tsazor/bootstrap": "workspace:*",
     "@tsazor/dotnet": "workspace:*",
     "@tsazor/lsp": "workspace:*",
     "@tsazor/runtime": "workspace:*",

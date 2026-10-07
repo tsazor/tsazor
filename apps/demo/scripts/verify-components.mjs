@@ -1,5 +1,5 @@
 /**
- * Real-browser verification for the @tsazor/components POC page
+ * Real-browser verification for the @tsazor/bootstrap POC page
  * (/components). Uses msedge via playwright-core (no Chromium download).
  */
 import { chromium } from "playwright-core";

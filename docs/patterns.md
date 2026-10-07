@@ -9,7 +9,7 @@ piece. If you know Blazor: almost all of it carries over unchanged — the diffe
 ```text
 Pages            @page components: routing, composition, loading data          src/Pages/…
 Feature UI       components of one feature (forms, lists, dialogs)              src/Features/<feature>/…
-Shared UI        design-system components (@tsazor/fluent, @tsazor/components, your own)
+Shared UI        design-system components (@tsazor/fluent, @tsazor/bootstrap, your own)
 Services         state and use cases, plain TypeScript classes, via DI           src/Features/<feature>/*.ts
 Backend client   typed HTTP client generated from the backend's OpenAPI          src/Api/… (@tsazor/dotnet)
 ```

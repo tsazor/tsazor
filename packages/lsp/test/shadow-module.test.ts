@@ -41,7 +41,7 @@ beforeAll(async () => {
     ].join("\n"),
   );
   // Bare-package component stub: @fake/ui ships .tsazor sources (like
-  // @tsazor/components) — the v2 rewrite must shadow from source.
+  // @tsazor/bootstrap) — the v2 rewrite must shadow from source.
   const pkg = path.join(root, "node_modules", "@fake", "ui");
   await mkdir(path.join(pkg, "src"), { recursive: true });
   // Its entry exports Badge — bare-package tags resolve only against the export list.

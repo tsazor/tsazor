@@ -131,7 +131,7 @@ with a real `ts.LanguageService` (volar-style "shadow modules"):
   the real `compile()` pipeline mirrored from the vite plugin — import
   collection, `_Imports`, code-behind sidecar import — plus two rewrites:
   component `.tsazor` imports resolve to their own shadows (typed across
-  files), bare-package components (`@tsazor/components`, whose `dist` d.ts is
+  files), bare-package components (`@tsazor/bootstrap`, whose `dist` d.ts is
   deliberately `any`) resolve to the package's shipped `src/*.tsazor` source.
 - **One `ts.LanguageService` per workspace**, custom host: virtual shadow
   paths are served from memory, everything else (sidecars, project TS,

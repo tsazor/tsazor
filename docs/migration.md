@@ -107,7 +107,7 @@ fixes.
 | Razor markup, directives, components, `@bind`, events, `EditForm` — unchanged (it *is* Razor) | C# in `@code` → TypeScript ([csharp-to-typescript.md](csharp-to-typescript.md)) |
 | `@foreach (var x in xs)` → `const x of xs` | `(MarkupString)x`, `new { … }`, `out var`, `is null` in markup (TZS024) |
 | `$"…{x}…"` → template literal | DataAnnotations `[Required]` → `@Required()` decorators |
-| `@attribute [Authorize]` / `[Route]` → `@authorize` / `@page` | Third-party component libraries → `@tsazor/fluent`, `@tsazor/components` or your own |
+| `@attribute [Authorize]` / `[Route]` → `@authorize` / `@page` | Third-party component libraries → `@tsazor/fluent`, `@tsazor/bootstrap` or your own |
 | `where T : I` → `extends I`, `var` → `let` | JS interop (`IJSRuntime`) → direct DOM/TS calls |
 | `.ToString()`, `.Length`, `.ToLower()` in markup | `[CascadingTypeParameter]`, `DynamicComponent` slots (TZS005) |
 
@@ -133,7 +133,7 @@ So the markup is largely mechanical. The work of a migration is elsewhere:
 2. **The API boundary** of a Blazor Server app (above) — once per service, shared by all pages
    that use it.
 3. **Component libraries** (MudBlazor, Radzen, Fluent UI Blazor): their tags have no Tsazor
-   counterpart; map them to `@tsazor/fluent` / `@tsazor/components` or wrap your own.
+   counterpart; map them to `@tsazor/fluent` / `@tsazor/bootstrap` or wrap your own.
 
 Effort per page in hours has not been measured yet; figures from the FluentCMS-admin port will be
 added here.

@@ -1,5 +1,5 @@
 @layout MainLayout
-@using @tsazor/components
+@using @tsazor/bootstrap
 @* Standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). Unused imports are dropped by the build. *@
 @import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, RenderTreeBuilder, inject } from "@tsazor/runtime"
 @import { NavigationManager, Router, RouteView, AuthorizeRouteView, LayoutView, NavLink, NavLinkMatch } from "@tsazor/runtime"

@@ -128,10 +128,10 @@ architecture and security take priority.
   `Decimal` with `@bind:culture`): an `IStringLocalizer` counterpart, `CultureInfo` over `Intl`,
   `@bind:culture`, culture-aware formatting for display and input. Revisit the invariant-only policy
   (A5/B7): keep it for routing and data values, replace it for display and input.
-- **E9 — Accessibility:** audit `@tsazor/components` and `@tsazor/fluent` against WCAG 2.2 AA (EU
+- **E9 — Accessibility:** audit `@tsazor/bootstrap` and `@tsazor/fluent` against WCAG 2.2 AA (EU
   Accessibility Act / BFSG since June 2025), and add automated a11y checks to the E2E gates.
   **Decided (2026-10-04), staged:** now axe-core in the E2E gates (gallery: every `@tsazor/fluent`
-  component; demo: `@tsazor/components`) plus keyboard/focus tests for the interactive components
+  component; demo: `@tsazor/bootstrap`) plus keyboard/focus tests for the interactive components
   (dialog, tabs, select); the manual screen-reader audit is its own item before the 1.0 release.
   **Automated part done (2026-10-04):** `apps/gallery/scripts/verify-a11y.mjs` (axe on all 14 routes
   in light and dark, the open dialog, dialog and tabs keyboard behavior) and
@@ -139,7 +139,7 @@ architecture and security take priority.
   fills behind white text (`--fui-brand-background*`, `--fui-color-*-filled`), the light subtle brand
   badge, the dialog's Shift+Tab trap, `Progress` without a name (`ariaLabel`), `Badge` text on
   warning (`text-bg-*`), `ListGroupItem` (an `<a>` in the `<ul>`, a clickable `<li>` the keyboard
-  couldn't reach), and the demo's own labels and colors. **Open — `@tsazor/components` keyboard
+  couldn't reach), and the demo's own labels and colors. **Open — `@tsazor/bootstrap` keyboard
   patterns** (the Bootstrap POC set; to be done with the planned component-library work): `Modal`
   (role dialog, aria-modal/labelledby, Escape, focus trap and restore), `Dropdown` (arrow keys,
   Escape, focus return), `Tabs` (roving tabindex, arrow keys, tab–panel ids).

@@ -59,7 +59,7 @@ Share design tokens as CSS custom properties, not component code:
 - With **Fluent UI Blazor** in the admin, `@tsazor/fluent` gives the public app the same Fluent 2
   design language; map brand colors to the tokens both read (`--fui-*` in Tsazor, the Fluent
   design tokens in Blazor) in one `tokens.css`.
-- With **Bootstrap** in the admin, `@tsazor/components` renders Bootstrap 5 markup: one theme file
+- With **Bootstrap** in the admin, `@tsazor/bootstrap` renders Bootstrap 5 markup: one theme file
   for both.
 - Serve the shared stylesheet from one place (the API host or a shared static folder), so a brand
   change lands in both apps at once.

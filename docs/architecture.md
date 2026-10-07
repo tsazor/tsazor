@@ -311,7 +311,7 @@ built-ins, packages); `resolutionOptions` passes it as
 LSP. Since 2.2, codegen lowers component attributes based on it (the parameter's category,
 TZS025/TZS026 — [language-reference.md](language-reference.md#component-attributes-by-parameter-type)).
 
-**Manifests:** `@tsazor/runtime`, `@tsazor/components` and `@tsazor/fluent` generate
+**Manifests:** `@tsazor/runtime`, `@tsazor/bootstrap` and `@tsazor/fluent` generate
 `dist/tsazor-components.json` at build time (`{ tsazorComponentManifest: 1,
 package, components: { Tag: ComponentMetadata } }`, parameters already flattened, paths
 package-relative; `package.json` → `tsazor.components` and the export

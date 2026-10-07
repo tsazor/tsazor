@@ -114,7 +114,7 @@ createTsazorApp({ root: App, routes });
 | `@tsazor/runtime` | RenderTree (flat frame array as in Blazor), Renderer/DomRenderer, diff, ComponentBase lifecycle, parameters + cascading values, DI, navigation/router, forms/@bind (EditForm, Input* family, validation), data (Virtualize, TsazorHttp) |
 | `@tsazor/compiler` | `.tsazor` → TS module: lexer/parser/codegen with source maps, diagnostics (`TZS001…`), scoped CSS scope hash, code-behind detection, `@authorize` |
 | `@tsazor/vite-plugin` | Vite plugin: transform + route manifest (`virtual:tsazor-routes`) + HMR with state retention + compiler errors in the dev overlay + scoped CSS rewriter (postcss) |
-| `@tsazor/components` | Bootstrap 5 UI library, itself written in `.tsazor` (dogfooding) |
+| `@tsazor/bootstrap` | Bootstrap 5 UI library, itself written in `.tsazor` (dogfooding) |
 | `@tsazor/fluent` | Fluent 2 design system: token-driven, accessible components written in `.tsazor` ([docs/fluent.md](docs/fluent.md)) |
 | `@tsazor/dotnet` | .NET backend bridge: OpenAPI ⇒ typed TS client (`tsazor-dotnet generate`), `HttpResult`/ProblemDetails, DataAnnotations decorators, cookie/JWT auth ([README](packages/dotnet/README.md)) |
 | `@tsazor/cli` | `tsazor check` (typed component-usage gate) and `tsazor codemod` (`.razor` → `.tsazor`) |
@@ -157,7 +157,7 @@ Phases 0–5 of the [roadmap](docs/roadmap.md) are implemented (as of 2026-10-02
   lifetimes with cycle detection.
 - **Dev server and component library** (Phase 4): HMR with invalidation and state retention,
   the reworked Fluent library (`@tsazor/fluent`) next to the Bootstrap 5 components
-  (`@tsazor/components`).
+  (`@tsazor/bootstrap`).
 - **External use and .NET bridge** (Phase 5): `exports`-complete packages verified by a
   tarball smoke gate (`node scripts/tarball-smoke.mjs`), and `@tsazor/dotnet`.
 - **Real-world ports**: Blazing Pizza (configurator, checkout, orders; gaps and learnings in

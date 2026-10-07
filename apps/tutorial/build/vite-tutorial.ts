@@ -4,7 +4,7 @@
  * - `virtual:tutorial-content` — the content tree (build/content.ts), lesson
  *   text rendered to HTML at build time; reloads when content/ changes.
  * - `virtual:tutorial-bundles` — prebuilt ES-module bundles of
- *   `@tsazor/runtime`, `@tsazor/components` and `@tsazor/dotnet` (the latter
+ *   `@tsazor/runtime`, `@tsazor/bootstrap` and `@tsazor/dotnet` (the latter
  *   two with the runtime external), as strings: the preview iframe turns them into blob URLs and
  *   maps the bare specifiers to them with an import map.
  * - `virtual:tutorial-types` — the type environment of the in-browser
@@ -64,7 +64,7 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
   };
   const [runtime, components, dotnet, testing, vitest, transition, animate, easing] = await Promise.all([
     bundle("@tsazor/runtime", []),
-    bundle("@tsazor/components", ["@tsazor/runtime"]),
+    bundle("@tsazor/bootstrap", ["@tsazor/runtime"]),
     bundle("@tsazor/dotnet", ["@tsazor/runtime"]),
     bundle("@tsazor/testing", ["@tsazor/runtime"]),
     bundle(path.join(fromDir, "src", "preview", "mini-test.ts"), []),

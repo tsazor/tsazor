@@ -1,5 +1,5 @@
 /**
- * @tsazor/components behavioral tests: every component renders through the
+ * @tsazor/bootstrap behavioral tests: every component renders through the
  * real compiled pipeline (dist/*.js built by build.mjs from the .tsazor
  * sources) and mounts via @tsazor/testing's happy-dom renderer.
  */

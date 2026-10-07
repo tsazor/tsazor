@@ -75,7 +75,7 @@ if (errors.length > 0) {
 // package.json `tsazor.components` points here.
 const manifest = buildPackageManifest({
   packageDir,
-  packageName: "@tsazor/components",
+  packageName: "@tsazor/bootstrap",
   entries: files.map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
 });
 

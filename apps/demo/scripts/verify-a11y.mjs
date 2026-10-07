@@ -1,5 +1,5 @@
 /**
- * E9 — accessibility gate for @tsazor/components (WCAG 2.2 AA, automated
+ * E9 — accessibility gate for @tsazor/bootstrap (WCAG 2.2 AA, automated
  * part): axe-core on every demo route of the production build, and the
  * keyboard/focus behavior of the interactive components on /components.
  *

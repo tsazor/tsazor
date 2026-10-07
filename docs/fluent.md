@@ -95,7 +95,7 @@ Notes on the important ones:
   pass `ariaLabel` for `role="img"`.
 - **Indicator**: semantic dot or status chip (`color` success/danger/warning/
   info/neutral); `visible` is false-or-nothing semantics.
-- **Alert** (ported from `@tsazor/components`): `variant` in the fluent
+- **Alert** (ported from `@tsazor/bootstrap`): `variant` in the fluent
   vocabulary `"info" | "success" | "danger" | "warning" | "neutral"`
   (4.2 dropped the legacy Bootstrap names — an API break, tests live),
   `dismissible`, `onDismissed`, `role="alert"`.

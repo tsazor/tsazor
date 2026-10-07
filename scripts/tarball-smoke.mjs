@@ -7,7 +7,7 @@
  * the resolution an external user sees) and runs these checks there:
  *
  *   1. `vite build` against a minimal .tsazor project (plugin + compiler +
- *      runtime + routes manifest, @tsazor/components via `@using`),
+ *      runtime + routes manifest, @tsazor/bootstrap via `@using`),
  *   2. a Vitest run that renders a .tsazor component via @tsazor/testing,
  *   3. `tsazor check` (the @tsazor/cli bin of the installed tarball),
  *   4. the @tsazor/dotnet entry points, CLI generation and a type check of
@@ -99,7 +99,7 @@ for (const pkg of SHIPPED) {
 
 const tarballOf = (name) => tarballByPkg.get(name) ?? (() => { throw new Error(`tarball for ${name} is missing`); })();
 const deps = {};
-for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/components", "@tsazor/fluent", "@tsazor/dotnet"]) {
+for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/bootstrap", "@tsazor/fluent", "@tsazor/dotnet"]) {
   deps[name] = tarballOf(name);
 }
 const overrides = {};
@@ -179,7 +179,7 @@ writeFileSync(join(app, "src", "_Imports.tsazor"), `@import { ComponentBase, Par
 @import { Router, RouteView, NavLink, PageTitle } from "@tsazor/runtime"
 @import { TsazorHttp, EditContext } from "@tsazor/runtime"
 @import type { RenderFragment, RouteData } from "@tsazor/runtime"
-@using @tsazor/components
+@using @tsazor/bootstrap
 `);
 
 writeFileSync(join(app, "src", "App.tsazor"), `@import Home from "./Pages/Home.tsazor"
@@ -188,10 +188,10 @@ writeFileSync(join(app, "src", "App.tsazor"), `@import Home from "./Pages/Home.t
 `);
 
 // A page that uses a Bootstrap building block from the installed
-// @tsazor/components tarball (component resolution via the package manifest)
+// @tsazor/bootstrap tarball (component resolution via the package manifest)
 writeFileSync(join(app, "src", "Pages", "Home.tsazor"), `@page "/"
 
-@import { Accordion, AccordionItem } from "@tsazor/components"
+@import { Accordion, AccordionItem } from "@tsazor/bootstrap"
 
 <h1>Smoke</h1>
 

@@ -12,7 +12,7 @@
     "verify:a11y": "node scripts/verify-a11y.mjs"
   },
   "dependencies": {
-    "@tsazor/components": "workspace:*",
+    "@tsazor/bootstrap": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "bootstrap": "^5.3.8"

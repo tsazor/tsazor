@@ -67,7 +67,7 @@ exit 1 on errors, otherwise 0. The Vite plugin gets `check: true` (end of build)
 
 ## 6. Package types
 
-`@tsazor/fluent` and `@tsazor/components` build a `.d.ts` per component with
+`@tsazor/fluent` and `@tsazor/bootstrap` build a `.d.ts` per component with
 typed parameters (from the manifest) instead of `export const X: any`. Ambient
 types for `*.tsazor` and `virtual:tsazor-routes` move into
 `@tsazor/vite-plugin/client` — the apps' copied `types.d.ts` files go away.
