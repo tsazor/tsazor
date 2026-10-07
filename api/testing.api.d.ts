@@ -46,6 +46,8 @@
 
 // CascadingParameter: re-exported from @tsazor/runtime
 
+// CascadingTypeParameter: re-exported from @tsazor/runtime
+
 // CascadingValue: re-exported from @tsazor/runtime
 
 // CascadingValueSupplier: re-exported from @tsazor/runtime

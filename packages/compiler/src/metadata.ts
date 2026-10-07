@@ -120,6 +120,8 @@ export interface ComponentMetadata {
   abstract?: boolean;
   /** `@typeparam`s / class type parameters. */
   typeParameters: TypeParameterInfo[];
+  /** `@CascadingTypeParameter("T")`: type parameters that flow to same-named ones of the components inside its content. */
+  cascadingTypeParameters?: string[];
   /** Direct base class as written (`codeBehind` for a .tsazor's X.tsazor.ts class). */
   base?: { name: string; typeArguments?: string[]; resolved: boolean; codeBehind?: boolean };
   /** All parameters, inherited first (runtime order: a re-declaration keeps the base's slot). */
@@ -172,6 +174,8 @@ export interface ClassRecord {
   doc?: string;
   abstract: boolean;
   typeParameters: TypeParameterInfo[];
+  /** `@CascadingTypeParameter("T", …)` names (own type parameters only). */
+  cascadingTypeParameters?: string[];
   /** `extends` clause; `codeBehind`: the default class of the sibling X.tsazor.ts. */
   base?: { name: string; typeArguments: string[]; codeBehind?: boolean };
   parameters: OwnParameter[];
@@ -286,12 +290,15 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
   const usings: string[] = [];
   let inherits: string | undefined;
   const typeParameterTexts: string[] = [];
+  const decorators: string[] = [];
   for (const directive of document.directives) {
     if (directive.name === "import") {
       const parsed = parseImportDirective(directive.value);
       if (parsed.ok) own.push(parsed.info);
     } else if (directive.name === "using") usings.push(directive.value.trim());
     else if (directive.name === "inherits") inherits = directive.value.trim();
+    // `@attribute @decorator(…)` decorates the generated class (`@CascadingTypeParameter("T")`).
+    else if (directive.name === "attribute" && directive.value.trim().startsWith("@")) decorators.push(directive.value.trim());
     else if (directive.name === "typeparam") typeParameterTexts.push(directive.value.replace(/\s+where\s[\s\S]*$/, "").trim());
   }
   // The file shadows the chain (the compiler's merge rule).
@@ -310,7 +317,7 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
     .join("\n");
   const typeParameters = typeParameterTexts.length > 0 ? `<${typeParameterTexts.join(", ")}>` : "";
   const heritage = inherits ? ` extends ${inherits}` : "";
-  const text = `class ${options.className}${typeParameters}${heritage} {\n${body}\n}`;
+  const text = `${decorators.map((decorator) => `${decorator}\n`).join("")}class ${options.className}${typeParameters}${heritage} {\n${body}\n}`;
   const file = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const cls = file.statements.find(ts.isClassDeclaration);
   const record: ClassRecord = cls
@@ -336,7 +343,7 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
 }
 
 /** Runtime names the compiler imports itself when the file does not bind them. */
-const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "Bindable", "State", "EventCallback", "RenderFragment"];
+const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "CascadingTypeParameter", "Bindable", "State", "EventCallback", "RenderFragment"];
 
 function emptyModule(file: string, kind: ModuleMetadata["kind"], runtimeInternal: boolean | undefined): ModuleMetadata {
   const module: ModuleMetadata = {
@@ -375,6 +382,19 @@ function runtimeName(module: ModuleMetadata, expression: ts.Expression | ts.Enti
   return binding?.imported === "*" && isRuntimeSpecifier(module, binding.specifier) ? right.text : undefined;
 }
 
+/** The own type parameters named by `@CascadingTypeParameter("T", …)` on the class (string literals). */
+function cascadingTypeParametersOf(cls: ts.ClassDeclaration, module: ModuleMetadata, typeParameters: readonly TypeParameterInfo[]): string[] {
+  const names: string[] = [];
+  for (const decorator of ts.getDecorators(cls) ?? []) {
+    const call = decorator.expression;
+    if (!ts.isCallExpression(call) || runtimeName(module, call.expression) !== "CascadingTypeParameter") continue;
+    for (const argument of call.arguments) {
+      if (ts.isStringLiteralLike(argument) && typeParameters.some((p) => p.name === argument.text) && !names.includes(argument.text)) names.push(argument.text);
+    }
+  }
+  return names;
+}
+
 function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile, module: ModuleMetadata): ClassRecord {
   const record: ClassRecord = {
     name,
@@ -384,6 +404,8 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
   };
   const doc = jsDocOf(cls);
   if (doc) record.doc = doc;
+  const cascading = cascadingTypeParametersOf(cls, module, record.typeParameters);
+  if (cascading.length > 0) record.cascadingTypeParameters = cascading;
   const extendsClause = cls.heritageClauses?.find((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword)?.types[0];
   if (extendsClause) {
     record.base = {
@@ -616,6 +638,7 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
   const result: ComponentMetadata = { name: record.name, file: module.file, isComponent: false, typeParameters: record.typeParameters, parameters: [] };
   if (record.doc) result.doc = record.doc;
   if (record.abstract) result.abstract = true;
+  if (record.cascadingTypeParameters) result.cascadingTypeParameters = record.cascadingTypeParameters;
   const parameters = new Map<string, ComponentParameter>();
   if (visiting.has(key) || visiting.size > MAX_DEPTH) {
     result.incomplete = true;

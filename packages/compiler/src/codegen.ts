@@ -331,6 +331,8 @@ class Codegen {
   private tagTypeArgs?: ReadonlyMap<string, string>;
   /** The component's type-parameter order (for `Local<A, B>` suffixes). */
   private tagTypeArgsOrder: readonly string[] | undefined;
+  /** `@CascadingTypeParameter`: the type arguments the enclosing component tags pass down, by name. */
+  private cascadedTypeArgs: ReadonlyMap<string, string> = new Map();
   /** `import type` lines the shadow module needs for the parameter types. */
   private readonly shadowTypeImports = new Map<string, { specifier: string; imported?: string }>();
   private readonly inferenceRequests: TypedTagInferenceRequest[] = [];
@@ -432,6 +434,7 @@ class Codegen {
       }
     }
     this.resolveAuthorization();
+    this.checkCascadingTypeParameters();
 
     if (this.metadata.inherits) {
       const base = this.metadata.inherits;
@@ -647,6 +650,30 @@ class Codegen {
           ? { title: `Remove '@attribute [${attribute.written}]'`, edits: [{ pos: d.pos, endPos: { line: d.pos.line + 1, column: 0 }, text: "" }] }
           : { title: `Use '${replacement}'`, edits: [{ ...range, text: replacement }] };
       this.diagnostics.error("TZS021", range, `C# attribute '[${attribute.written}]' — use ${typescriptFormOf(attribute)}.`, fix);
+    }
+  }
+
+  /**
+   * `@attribute @CascadingTypeParameter("T", …)`: the runtime decorator is
+   * imported, and every name must be one of the file's `@typeparam`s (string
+   * literals — the compiler reads them statically).
+   */
+  private checkCascadingTypeParameters(): void {
+    const own = new Set(this.metadata.typeParams.map((text) => text.split(/\s|=/)[0]!));
+    for (const d of this.decorators) {
+      const value = d.value.trim();
+      const call = /^@CascadingTypeParameter\s*\(([\s\S]*)\)\s*$/.exec(value);
+      if (!call) continue;
+      this.runtimeImports.add("CascadingTypeParameter");
+      const args = call[1]!.split(",").map((arg) => arg.trim()).filter((arg) => arg.length > 0);
+      for (const arg of args) {
+        const name = /^(["'])([A-Za-z_$][\w$]*)\1$/.exec(arg)?.[2];
+        if (name === undefined) {
+          this.diagnostics.error("TZS019", directiveValueRange(d), `@CascadingTypeParameter takes the type parameter names as string literals ('@CascadingTypeParameter("TItem")'), not '${arg}'.`);
+        } else if (!own.has(name)) {
+          this.diagnostics.error("TZS019", directiveValueRange(d), `'${name}' is not a type parameter of this component — declare it with '@typeparam ${name}'.`);
+        }
+      }
     }
   }
 
@@ -1825,12 +1852,22 @@ class Codegen {
       }
     }
 
+    // Blazor's [CascadingTypeParameter]: what an enclosing tag cascades fills
+    // the same-named parameters this tag neither sets nor infers itself.
+    for (const typeParameter of metadata.typeParameters) {
+      const cascaded = this.cascadedTypeArgs.get(typeParameter.name);
+      if (!args.has(typeParameter.name) && cascaded !== undefined) args.set(typeParameter.name, cascaded);
+    }
+
     // 2.4 inference: an unresolved type parameter anchors on the attribute
     // whose declared type uses it (`Items: TItem[]` ← `Items="this.people"`).
     for (const typeParameter of metadata.typeParameters) {
       if (args.has(typeParameter.name)) continue;
       const parameter = metadata.parameters.find((p) => p.category === "value" && !p.uncertain && (p.references ?? []).some((ref) => ref.kind === "typeParameter" && ref.name === typeParameter.name) && (p.type !== undefined || p.inferredType !== undefined));
       if (!parameter) continue;
+      // The value's type is read once its other type parameters are known: a
+      // lambda (`Property: (item: TGridItem) => TProp`) is typed by them.
+      if ((parameter.references ?? []).some((ref) => ref.kind === "typeParameter" && ref.name !== typeParameter.name && !args.has(ref.name))) continue;
       const attr = regularAttributeFor(parameter.name);
       const value = attr !== undefined ? this.expressionValue(attr) : null;
       if (attr === undefined || value === null || value.start === undefined) continue;
@@ -1887,12 +1924,17 @@ class Codegen {
     if (raw === undefined) return undefined;
 
     const substitution = new Map<string, { text: string }>();
+    // Unresolved type arguments: no check — unless another one of the type is
+    // known; then the open ones are `any`, so `Property="(o) => o.customer"`
+    // still types `o` (`(item: Order) => any`) and the next pass infers TProp.
+    const typeRefs = (parameter.references ?? []).filter((ref) => ref.kind === "typeParameter");
+    const partial = typeRefs.some((ref) => this.tagTypeArgs?.get(ref.name) !== undefined);
     for (const ref of parameter.references ?? []) {
       switch (ref.kind) {
         case "typeParameter": {
           const arg = this.tagTypeArgs?.get(ref.name);
-          if (arg === undefined) return undefined; // unresolved type argument: no check
-          substitution.set(ref.name, { text: arg });
+          if (arg === undefined && !partial) return undefined;
+          substitution.set(ref.name, { text: arg ?? "any" });
           break;
         }
         case "runtime": {
@@ -1919,7 +1961,8 @@ class Codegen {
       }
     }
     let text = substitution.size > 0 ? replaceIdentifiers(raw, substitution) : raw;
-    if (parameter.optional) text = `${text} | undefined`;
+    // A function type binds `| undefined` into its return type: parenthesize it.
+    if (parameter.optional) text = text.includes("=>") ? `(${text}) | undefined` : `${text} | undefined`;
     return text;
   }
 
@@ -1997,6 +2040,19 @@ class Codegen {
     const previousOrder = this.tagTypeArgsOrder;
     this.tagTypeArgs = tagTypeArgs;
     this.tagTypeArgsOrder = component.metadata?.typeParameters.map((t) => t.name);
+    // Its content sees the tag's cascading type arguments; an unresolved one
+    // hides an outer cascade of the same name (that one is not this grid's).
+    const previousCascade = this.cascadedTypeArgs;
+    const cascading = component.metadata?.cascadingTypeParameters ?? [];
+    if (cascading.length > 0) {
+      const next = new Map(previousCascade);
+      for (const name of cascading) {
+        const text = tagTypeArgs?.get(name);
+        if (text !== undefined) next.set(name, text);
+        else next.delete(name);
+      }
+      this.cascadedTypeArgs = next;
+    }
 
     const seq = this.seq();
     const open = `${BUILDER}.openComponent(${seq}, ${local});`;
@@ -2057,6 +2113,7 @@ class Codegen {
     this.plumbingStmt(`${BUILDER}.closeComponent();`);
     this.tagTypeArgs = previousTagArgs;
     this.tagTypeArgsOrder = previousOrder;
+    this.cascadedTypeArgs = previousCascade;
   }
 
   /**

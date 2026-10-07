@@ -107,9 +107,9 @@ fixes.
 | Razor markup, directives, components, `@bind`, events, `EditForm` — unchanged (it *is* Razor) | C# in `@code` → TypeScript ([csharp-to-typescript.md](csharp-to-typescript.md)) |
 | `@foreach (var x in xs)` → `const x of xs` | `(MarkupString)x`, `new { … }`, `out var`, `is null` in markup (TZS024) |
 | `$"…{x}…"` → template literal | DataAnnotations `[Required]` → `@Required()` decorators |
-| `@attribute [Authorize]` / `[Route]` → `@authorize` / `@page` | Third-party component libraries → `@tsazor/fluent`, `@tsazor/bootstrap` or your own |
+| `@attribute [Authorize]` / `[Route]` / `[CascadingTypeParameter]` → `@authorize` / `@page` / `@CascadingTypeParameter("T")` | Third-party component libraries → `@tsazor/fluent`, `@tsazor/bootstrap` or your own |
 | `where T : I` → `extends I`, `var` → `let` | JS interop (`IJSRuntime`) → direct DOM/TS calls |
-| `.ToString()`, `.Length`, `.ToLower()` in markup | `[CascadingTypeParameter]`, `DynamicComponent` slots (TZS005) |
+| `.ToString()`, `.Length`, `.ToLower()` in markup | `DynamicComponent` slots (TZS005) |
 
 ## What to expect
 

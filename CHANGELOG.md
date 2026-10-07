@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- Cascading type parameters (Blazor's `[CascadingTypeParameter]`): `@attribute
+  @CascadingTypeParameter("TGridItem")` on a generic component passes its type argument to the
+  same-named type parameters of the components inside its content, so a column's
+  `Property="(o) => o.customer"` is typed by its grid. `@tsazor/runtime`: the `CascadingTypeParameter`
+  decorator (compile-time only); `@tsazor/compiler`: `ComponentMetadata.cascadingTypeParameters`, the
+  Blazor form is TZS021 with the rewrite as its fix. The type layer infers a type parameter from a
+  lambda's return type (`Property: (item: TGridItem) => TProp`). **Fix** (typed shadows): an optional
+  function-typed parameter was checked against `(…) => T | undefined` instead of `((…) => T) | undefined`.
 - `@tsazor/ui`: `Toaster` (the app's toasts as a DI service: `show({ title, message, intent, timeout })`,
   `dismiss`, `pause`/`resume` for WCAG 2.2.1, `subscribe`) and the `tooltip(text, options)` attachment
   (hover and focus, hoverable, Escape, `aria-describedby`, WCAG 1.4.13; the same text gives the same

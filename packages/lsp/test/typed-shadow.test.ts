@@ -48,6 +48,7 @@ beforeAll(async () => {
       "  openRegion(seq: number): void;",
       "  closeRegion(): void;",
       "  addAttribute(seq: number, name: string, value?: unknown): void;",
+      "  addContent(seq: number, value: (builder: RenderTreeBuilder) => void): void;",
       "  addContent(seq: number, value: unknown): void;",
       "  addMarkupContent(seq: number, value: string | null): void;",
       "  addElementReferenceCapture(seq: number, action: (element: Element) => void): void;",
@@ -60,6 +61,8 @@ beforeAll(async () => {
       "  protected buildRenderTree(b: RenderTreeBuilder): void {}",
       "}",
       "export declare function Parameter(options?: { captureUnmatchedValues?: boolean }): (value: unknown, context: ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext) => void;",
+      "export declare function CascadingTypeParameter(...names: string[]): (value: abstract new (...args: never[]) => unknown, context: ClassDecoratorContext) => void;",
+      "export type RenderFragment = (builder: RenderTreeBuilder) => void;",
       "",
     ].join("\n"),
   );
@@ -104,6 +107,49 @@ beforeAll(async () => {
       "",
     ].join("\n"),
   );
+
+  // Blazor's [CascadingTypeParameter]: the table's TGridItem (inferred from
+  // Items) flows to the columns inside it; TProp follows from the lambda.
+  await writeFile(
+    path.join(root, "Shared", "Table.tsazor"),
+    [
+      "@typeparam TGridItem",
+      '@attribute @CascadingTypeParameter("TGridItem")',
+      "<table>@ChildContent</table>",
+      "@code {",
+      "    @Parameter() Items: TGridItem[] = [];",
+      "    @Parameter() ChildContent?: RenderFragment;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(
+    path.join(root, "Shared", "Column.tsazor"),
+    [
+      "@typeparam TGridItem",
+      "@typeparam TProp",
+      "<th>column</th>",
+      "@code {",
+      "    @Parameter() Property!: (item: TGridItem) => TProp;",
+      "    @Parameter() Format?: (value: TProp) => string;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  const cascade = (property: string, format: string): string =>
+    [
+      `<Table Items="people"><Column Property="${property}" Format="${format}" /></Table>`,
+      "",
+      '@import { Person } from "./Models";',
+      "@code {",
+      '    private people: Person[] = [{ name: "a", age: 1 }];',
+      "}",
+      "",
+    ].join("\n");
+  await writeFile(path.join(root, "Cascade.tsazor"), cascade("(p) => p.name", "(v) => v.toUpperCase()"));
+  // A missing member on the row (TS2339); a string method on the number column (TS2339).
+  await writeFile(path.join(root, "CascadeBad.tsazor"), cascade("(p) => p.nickname", "(v) => v"));
+  await writeFile(path.join(root, "CascadeBadProp.tsazor"), cascade("(p) => p.age", "(v) => v.toUpperCase()"));
 
   // TS2740 regression: `@ref` on `<input>` must type the capture as the
   // tag's interface so the field typechecks.
@@ -201,6 +247,17 @@ describe("typed checks through the shadow program (2.4)", () => {
     // No diagnostics on `@context.name`: the context is a Person.
     expect(await codes("Infer.tsazor")).toEqual([]);
     expect(entry!.shadow.code).toContain("(context: Person) =>");
+  });
+
+  it("@CascadingTypeParameter: the columns take TGridItem from their table, TProp from the lambda", async () => {
+
+    expect(await codes("Cascade.tsazor")).toEqual([]);
+    const entry = await service.ensureTsazor(path.join(root, "Cascade.tsazor"));
+    expect(entry!.shadow.code).toContain("satisfies (item: Person) => string");
+    expect(entry!.shadow.code).toContain("satisfies ((value: string) => string) | undefined");
+    // TProp stays open after the row error: the Format lambda adds a follow-on 7006.
+    expect(await codes("CascadeBad.tsazor")).toEqual(expect.arrayContaining([2339]));
+    expect(await codes("CascadeBadProp.tsazor")).toEqual([2339]);
   });
 
   it("@ref on an element casts to the tag's interface (no TS2740)", async () => {

@@ -156,7 +156,8 @@ and `@attribute @decorator(…)` (a real class decorator):
 | `@attribute @tracked("x")` (TS form: value starts with `@`) | A real class decorator, emitted verbatim above `export default class` (standard TC39 decorator, like `@Parameter`: `(value, context: ClassDecoratorContext)`); names come in via `@import` |
 | `@attribute [Authorize]`, `[Authorize(Roles = "A, B", Policy = "P")]`, `[Authorize("P")]` | Error TZS021 with the TS form (`@authorize`, `@authorize({ roles: ["A", "B"], policy: "P" })`) |
 | `@attribute [AllowAnonymous]` | Error TZS021: remove it — a page is anonymous as long as it declares no `@authorize` |
-| Any other C# attribute (`[CascadingTypeParameter(nameof(TItem))]`, `[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Error TZS021: remove it or write it as a TS decorator |
+| `@attribute @CascadingTypeParameter("TItem")` | The type parameter cascades to the components inside (see [templated components](#templated-components-named-slots-and-template-contexts-23)); `[CascadingTypeParameter(nameof(TItem))]` ⇒ TZS021 with this form as its fix |
+| Any other C# attribute (`[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Error TZS021: remove it or write it as a TS decorator |
 
 - The argument of `@authorize` is a TS object literal (read with the TS parser, may span
   multiple lines) containing only `roles` (an array of string literals) and `policy`
@@ -1034,6 +1035,17 @@ it is no longer rendered as `ChildContent` or as a component:
   attribute per `@typeparam`) are template syntax — not an attribute at runtime:
   the value must be a TypeScript type (otherwise TZS024; empty or mixed: TZS009)
   and is matched against the component's `@typeparam`s.
+- **Cascading type parameters** (Blazor's `[CascadingTypeParameter]`): a generic component
+  declares `@attribute @CascadingTypeParameter("TGridItem")`, and the components inside its
+  content that have a type parameter of the same name, and neither set nor infer it themselves,
+  take the grid's. The grid infers `TGridItem` from `Items`; in a column,
+  `Property="(o) => o.customer"` then sees `o` as the row type, and `TProp` follows from the
+  lambda's return type. The names are string literals of the component's own
+  `@typeparam`s (otherwise TZS019). An enclosing tag whose argument stays unresolved hides
+  an outer cascade of the same name. The Blazor form
+  `@attribute [CascadingTypeParameter(nameof(TGridItem))]` is TZS021 with this rewrite as its
+  fix. The decorator does nothing at run time; the cascade is a compile-time matter of the
+  typed shadows (`tsazor check`, the editor).
 - Loose content next to child content elements (whitespace between
   them does not count) ⇒ TZS027; a slot set twice, or also set
   via an attribute ⇒ TZS028; attributes on the slot other than `Context` (and that only on
@@ -1226,8 +1238,8 @@ there is left untouched and is ported by hand):
 components, `DynamicComponent` …), TZS024 without a mechanical counterpart
 (`(MarkupString)x`, `new { … }`, `out var`, `is (not) null`) and unmapped
 `@attribute` lists (among them DataAnnotations — rewrite them by hand as the validation
-decorators, `@Required()` etc.;
-`[CascadingTypeParameter]` is removed by hand per decision A6), and C# in `@code`.
+decorators, `@Required()` etc.), and C# in `@code`. (`[CascadingTypeParameter]` has a
+mechanical form since 2026-10-07: `@attribute @CascadingTypeParameter("T")`.)
 A known limitation of the template literal fix: a ternary written without parentheses
 in an interpolation hole — `$"{x ? "a" : "b"}` is read as in C# (the `:` as the
 format separator) and stays truncated (`${x ? "a"}`) — C# itself requires

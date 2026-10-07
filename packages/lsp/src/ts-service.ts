@@ -330,6 +330,9 @@ export class TsazorTypeService {
       while (node.parent !== undefined && ts.isExpression(node.parent) && node.parent.getStart(sourceFile) === node.getStart(sourceFile)) {
         node = node.parent;
       }
+      // A value without a token mapping at its start (a lambda: `(p) => …`)
+      // lands on its statement: the value is the `addAttribute` call's third argument.
+      node = attributeValueOf(node) ?? node;
       const type = checker.getTypeAtLocation(node);
       const declared = request.parameterType.trim();
       let argument: string | undefined;
@@ -343,6 +346,11 @@ export class TsazorTypeService {
         } else if (isAwaitableOf(declared, request.typeParameter)) {
           // `For: PromiseLike<T> | T | null` (<Await>) ← `Promise<User> | undefined`: T = User.
           argument = checker.typeToString(checker.getAwaitedType(checker.getNonNullableType(type)) ?? type, node, ts.TypeFormatFlags.NoTruncation);
+        } else if (returnsTypeParameter(declared, request.typeParameter)) {
+          // `Property: (item: TGridItem) => TProp` ← `(o) => o.customer` (o: Order): TProp = string.
+          const [signature] = checker.getNonNullableType(type).getCallSignatures();
+          const returned = signature !== undefined ? checker.getReturnTypeOfSignature(signature) : undefined;
+          if (returned !== undefined && (returned.flags & ts.TypeFlags.Any) === 0) argument = checker.typeToString(returned, node, ts.TypeFormatFlags.NoTruncation);
         }
       }
       if (argument === undefined || argument.trim().length === 0) continue;
@@ -723,6 +731,25 @@ function isAwaitableOf(declared: string, typeParameter: string): boolean {
   const parts = declared.split("|").map((part) => part.replace(/\s+/g, ""));
   const promises = new Set([`Promise<${typeParameter}>`, `PromiseLike<${typeParameter}>`]);
   return parts.some((part) => promises.has(part)) && parts.every((part) => promises.has(part) || part === typeParameter || part === "null" || part === "undefined");
+}
+
+/** The value of the `__builder.addAttribute(seq, name, value)` call around `node` — without the shadow's `(…) satisfies T` wrap. */
+function attributeValueOf(node: ts.Node): ts.Node | undefined {
+  let current: ts.Node | undefined = node;
+  while (current !== undefined && !(ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression) && current.expression.name.text === "addAttribute")) {
+    if (ts.isStatement(current) && !ts.isExpressionStatement(current)) return undefined;
+    current = current.parent;
+  }
+  let value: ts.Node | undefined = current?.arguments[2];
+  while (value !== undefined && (ts.isSatisfiesExpression(value) || ts.isParenthesizedExpression(value))) value = value.expression;
+  return value;
+}
+
+/** `(item: TGridItem) => TProp` for `TProp`: a function type returning exactly the type parameter. */
+function returnsTypeParameter(declared: string, typeParameter: string): boolean {
+  const type = ts.createSourceFile("declared.ts", `type T = ${declared};`, ts.ScriptTarget.Latest).statements[0];
+  const node = type !== undefined && ts.isTypeAliasDeclaration(type) ? type.type : undefined;
+  return node !== undefined && ts.isFunctionTypeNode(node) && ts.isTypeReferenceNode(node.type) && ts.isIdentifier(node.type.typeName) && node.type.typeName.text === typeParameter;
 }
 
 /** The deepest node covering `offset` (public-API stand-in for the internal

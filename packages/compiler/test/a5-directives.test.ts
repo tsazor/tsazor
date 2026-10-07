@@ -249,7 +249,7 @@ describe("@attribute (C19)", () => {
     // One error per attribute of a list; nothing reaches the route metadata.
     const { diagnostics, metadata, code } = gen('@page "/x"\n@attribute [CascadingTypeParameter(nameof(TItem)), Microsoft.AspNetCore.Authorization.AuthorizeAttribute]\n<p/>');
     expect(diagnostics.errors.map((d) => d.code)).toEqual(["TZS021", "TZS021"]);
-    expect(diagnostics.errors[0]!.message).toContain("'[CascadingTypeParameter]' — use a TS class decorator");
+    expect(diagnostics.errors[0]!.message).toContain("'[CascadingTypeParameter]' — use '@attribute @CascadingTypeParameter(\"TItem\")'");
     expect(metadata.authorize).toBeUndefined();
     expect(code).not.toContain("CascadingTypeParameter");
   });
@@ -258,6 +258,23 @@ describe("@attribute (C19)", () => {
     const { code, diagnostics } = gen('@import { tracked } from "./decorators"\n@attribute @tracked("x")\n<p/>');
     expect(diagnostics.all).toEqual([]);
     expect(code).toContain('@tracked("x")\nexport default class Demo');
+  });
+
+  it("[CascadingTypeParameter] has a mechanical fix to the decorator", () => {
+    const { diagnostics } = gen("@typeparam TItem\n@attribute [CascadingTypeParameter(nameof(TItem))]\n<p/>");
+    expect(diagnostics.errors.map((d) => d.code)).toEqual(["TZS021"]);
+    expect(diagnostics.errors[0]!.fix?.edits[0]!.text).toBe('@attribute @CascadingTypeParameter("TItem")');
+  });
+
+  it("@CascadingTypeParameter imports the runtime decorator and names own type parameters only", () => {
+    const { code, diagnostics } = gen('@typeparam TItem\n@attribute @CascadingTypeParameter("TItem")\n<p/>');
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toMatch(/import \{[^}]*\bCascadingTypeParameter\b[^}]*\} from "@tsazor\/runtime"/);
+    expect(code).toContain('@CascadingTypeParameter("TItem")\nexport default class Demo<TItem>');
+    const wrong = gen('@typeparam TItem\n@attribute @CascadingTypeParameter("TRow")\n<p/>').diagnostics.errors;
+    expect(wrong.map((d) => d.code)).toEqual(["TZS019"]);
+    expect(wrong[0]!.message).toContain("'TRow' is not a type parameter of this component — declare it with '@typeparam TRow'.");
+    expect(gen("@typeparam TItem\n@attribute @CascadingTypeParameter(TItem)\n<p/>").diagnostics.errors.map((d) => d.code)).toEqual(["TZS019"]);
   });
 
   it("reports an invalid form", () => {

@@ -158,6 +158,7 @@ export interface ClassRecord {
     doc?: string;
     abstract: boolean;
     typeParameters: TypeParameterInfo[];
+    cascadingTypeParameters?: string[];
     base?: {
         name: string;
         typeArguments: string[];
@@ -282,6 +283,7 @@ export interface ComponentMetadata {
     isComponent: boolean;
     abstract?: boolean;
     typeParameters: TypeParameterInfo[];
+    cascadingTypeParameters?: string[];
     base?: {
         name: string;
         typeArguments?: string[];

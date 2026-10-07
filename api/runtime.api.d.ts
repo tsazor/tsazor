@@ -150,6 +150,9 @@ export declare function CascadingParameter(options?: {
     type?: abstract new (...args: never[]) => unknown;
 }): (value: unknown, context: ParameterDecoratorContext) => void;
 
+// CascadingTypeParameter
+export declare function CascadingTypeParameter(...names: string[]): (value: abstract new (...args: never[]) => unknown, context: ClassDecoratorContext) => void;
+
 // CascadingValue
 export declare class CascadingValue extends ComponentBase implements CascadingValueSupplier {
     value?: unknown;

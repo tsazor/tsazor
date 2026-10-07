@@ -9,6 +9,7 @@ export { ParameterView } from "./components/parameter-view.js";
 export { Parameter, CascadingParameter, defineParameter, type ParameterMeta } from "./components/parameter-metadata.js";
 export { Bindable, type BindableOptions } from "./components/bindable.js";
 export { State } from "./components/state.js";
+export { CascadingTypeParameter } from "./components/cascading-type-parameter.js";
 export type { ObserveSource, ObserveListener, ObserveTeardown, Subscribable } from "./components/observe.js";
 export { EventCallback } from "./components/event-callback.js";
 export { bindMethod } from "./components/bind-method.js";

@@ -127,6 +127,10 @@ export function typescriptFormOf(attribute: CSharpAttribute): string {
       return "no directive — a page is anonymous unless it declares @authorize (which is not inherited)";
     case "Route":
       return "'@page \"…\"'";
+    case "CascadingTypeParameter": {
+      const form = cascadingTypeParameterDirectiveOf(attribute);
+      return form === null ? "'@attribute @CascadingTypeParameter(\"T\")'" : `'${form}'`;
+    }
     default:
       return "a TS class decorator ('@attribute @decorator(…)'), or remove it";
   }
@@ -148,9 +152,18 @@ export function directiveReplacementOf(attribute: CSharpAttribute): string | nul
       const template = attribute.args.length === 1 && attribute.args[0]!.name === undefined ? csharpString(attribute.args[0]!.value) : null;
       return template === null ? null : `@page ${JSON.stringify(template)}`;
     }
+    case "CascadingTypeParameter":
+      return cascadingTypeParameterDirectiveOf(attribute);
     default:
       return null;
   }
+}
+
+/** `@attribute @CascadingTypeParameter("TItem")` for `[CascadingTypeParameter(nameof(TItem))]` (or a string literal), else null. */
+function cascadingTypeParameterDirectiveOf(attribute: CSharpAttribute): string | null {
+  const names = attribute.args.map((arg) => (arg.name === undefined ? (/^nameof\(\s*([A-Za-z_]\w*)\s*\)$/.exec(arg.value)?.[1] ?? csharpString(arg.value)) : null));
+  if (names.length === 0 || names.some((name) => name === null || name === undefined)) return null;
+  return `@attribute @CascadingTypeParameter(${names.map((name) => JSON.stringify(name)).join(", ")})`;
 }
 
 /** `@authorize` / `@authorize({ roles: […], policy: "…" })` for `[Authorize(…)]` with literal values, else null. */
