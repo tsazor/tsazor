@@ -53,9 +53,9 @@ async function ensureServers() {
     spawned.push(spawn("dotnet", ["run", "--project", "Gateway", "--no-build"], { cwd: ROOT, stdio: "ignore", shell: true }));
     console.log("started the gateway on :5410");
   }
-  const deadline = Date.now() + 60_000;
+  const deadline = Date.now() + 180_000; // dotnet build + JIT on a cold CI runner
   while (!(await reachable(`${LEGACY}/auth/user`)) || !(await reachable(`${GATEWAY}/auth/user`))) {
-    if (Date.now() > deadline) throw new Error("servers did not come up within 60s (a stale process on :5410/:5411?)");
+    if (Date.now() > deadline) throw new Error("servers did not come up within 180s (a stale process on :5410/:5411?)");
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 }
