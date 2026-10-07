@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- The skins' shared parameters line up (found by comparing their manifests): `@tsazor/fluent` gets `help` on
+  TextInput, TextArea, NumberInput, Select, Checkbox and Switch, the search/tel/url TextInput types, `Form`
+  (alias of FluentForm), `CardBody` and `CardTitle`, and a Spinner `label`; `@tsazor/bootstrap` gets `ariaLabel` on
+  Button, the inputs and Navbar, and its Spinner `label`, `ariaLabel` and `size="large"` (**Changed**: `text` ⇒ `label`).
+  **Fix** (Bootstrap Spinner): the `role="status"` element was `aria-hidden` and its text outside it — screen
+  readers announced nothing; now the status region carries the name. What still differs is skin-specific
+  on purpose (Fluent `shape`, Bootstrap `pill`, …) — and `Table`, whose two APIs remain different.
 - The rest of Tier 1 in both skins, with the same parameters: `ButtonGroup`, `DateInput` (the value is the ISO date
   text `"2026-10-07"` — no time zone to shift the day), `FileInput` (around the runtime's `InputFile`), `FormField`
   (label, help and the field's validation message around a control of your own), `Skeleton`, `Popover` (a

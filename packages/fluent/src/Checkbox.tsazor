@@ -12,6 +12,9 @@
     @if (this.label) {
         <label class="fui-checkbox__label" for="@this.elementId">@this.label</label>
     }
+    @if (this.help) {
+        <span class="fui-input__help" id="@this.helpId">@this.help</span>
+    }
     @if (this.message) {
         <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
     }
@@ -20,6 +23,8 @@
 @code {
     /** Label rendered to the right of the box. */
     @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
     /** true disables the native checkbox. */
     @Parameter() disabled: boolean = false;
     /** true sets the native required attribute. */
@@ -53,8 +58,18 @@
             required: this.required ? true : undefined,
             "aria-label": this.ariaLabel,
             "aria-invalid": this.message ? "true" : undefined,
-            "aria-describedby": this.message ? this.messageId : undefined,
+            "aria-describedby": this.describedBy,
         }, this.additionalAttributes);
+    }
+
+    private get helpId(): string {
+        return `${this.elementId}-help`;
+    }
+
+    /** The help text and (once shown) the message describe the field. */
+    private get describedBy(): string | undefined {
+        const ids = [this.help ? this.helpId : null, this.message ? this.messageId : null].filter((id): id is string => id !== null);
+        return ids.length > 0 ? ids.join(" ") : undefined;
     }
 
     private get messageId(): string {

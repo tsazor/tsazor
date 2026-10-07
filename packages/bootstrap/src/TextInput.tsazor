@@ -10,7 +10,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <input id="@field.id(id)" type="@type" class="@inputClass" value="@(currentValue ?? "")" placeholder="@placeholder" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    <input id="@field.id(id)" type="@type" class="@inputClass" value="@(currentValue ?? "")" placeholder="@placeholder" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="inputAttributes" @onchange="handleChange" />
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -20,6 +20,8 @@
 </div>
 
 @code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
     /** The field's label (clicking it focuses the input). */
     @Parameter() label?: string;
     /** A hint below the input, linked to it for screen readers. */

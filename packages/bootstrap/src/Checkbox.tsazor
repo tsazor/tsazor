@@ -6,7 +6,7 @@
 @inherits InputBase<boolean>
 
 <div class="@wrapperClass">
-    <input id="@field.id(id)" type="checkbox" class="@inputClass" role="@switchRole" checked="@(currentValue === true)" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    <input id="@field.id(id)" type="checkbox" class="@inputClass" role="@switchRole" checked="@(currentValue === true)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="inputAttributes" @onchange="handleChange" />
     @if (label) {
         <label class="form-check-label" for="@field.id(id)">@label</label>
     }
@@ -19,6 +19,8 @@
 </div>
 
 @code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
     /** The label to the right of the box. */
     @Parameter() label?: string;
     /** A hint below, linked to the box for screen readers. */

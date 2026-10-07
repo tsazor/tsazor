@@ -1,6 +1,6 @@
 @** Renders Bootstrap's `.navbar` with an optional brand text and a `.navbar-nav` area for the
     navigation links. It does not collapse into a toggler on small screens. *@
-<nav class="navbar navbar-expand-lg @background" data-bs-theme="@theme">
+<nav class="navbar navbar-expand-lg @background" data-bs-theme="@theme" aria-label="@ariaLabel">
     <div class="container-fluid">
         @if (brand) {
             <span class="navbar-brand">@brand</span>
@@ -14,6 +14,8 @@
     @Parameter() brand?: string;
     /** Light (default) or dark navbar (Bootstrap 5.3 color modes). */
     @Parameter() theme: "light" | "dark" = "light";
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel?: string;
     /** The navigation links, placed inside `.navbar-nav`. */
     @Parameter() childContent?: RenderFragment;
 

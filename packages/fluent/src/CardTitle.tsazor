@@ -1,0 +1,15 @@
+@** A Card's title, an `<h3>` (the same as @tsazor/bootstrap's CardTitle). Use inside CardBody or CardHeader. *@
+@import { withAttributes } from "./attributes"
+
+<h3 @attributes="@this.titleAttributes">@childContent</h3>
+
+@code {
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** The title text. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get titleAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-card__title" }, this.additionalAttributes);
+    }
+}

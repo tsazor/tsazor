@@ -47,6 +47,7 @@ export default class BreadcrumbItem extends ComponentBase {
 
 // Button
 export default class Button extends ComponentBase {
+    ariaLabel?: string;
     intent: Intent;
     appearance: Appearance;
     size: Size;
@@ -93,6 +94,7 @@ export default class CardTitle extends ComponentBase {
 
 // Checkbox
 export default class Checkbox extends InputBase<boolean> {
+    ariaLabel?: string;
     label?: string;
     help?: string;
     switch: boolean;
@@ -303,11 +305,13 @@ export default class Dialog extends ComponentBase {
 export default class Navbar extends ComponentBase {
     brand?: string;
     theme: "light" | "dark";
+    ariaLabel?: string;
     childContent?: RenderFragment;
 }
 
 // NumberInput
 export default class NumberInput extends InputBase<number> {
+    ariaLabel?: string;
     label?: string;
     help?: string;
     placeholder?: string;
@@ -395,6 +399,7 @@ export default class RadioGroup extends InputBase<string> {
 
 // Select
 export default class Select extends InputBase<string> {
+    ariaLabel?: string;
     label?: string;
     help?: string;
     disabled: boolean;
@@ -424,8 +429,9 @@ export default class Skeleton extends ComponentBase {
 export default class Spinner extends ComponentBase {
     intent: Intent;
     kind: "border" | "grow";
-    size: "small" | "medium";
-    text?: string;
+    size: "small" | "medium" | "large";
+    label?: string;
+    ariaLabel: string | null;
 }
 
 // Stack
@@ -490,6 +496,7 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
 
 // TextArea
 export default class TextArea extends InputBase<string> {
+    ariaLabel?: string;
     label?: string;
     help?: string;
     placeholder?: string;
@@ -501,6 +508,7 @@ export default class TextArea extends InputBase<string> {
 
 // TextInput
 export default class TextInput extends InputBase<string> {
+    ariaLabel?: string;
     label?: string;
     help?: string;
     placeholder?: string;

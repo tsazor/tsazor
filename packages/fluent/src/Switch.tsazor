@@ -1,5 +1,6 @@
 @** A Fluent UI 2 toggle switch for a boolean value: a native checkbox with role="switch"
-    (InputBase; bind it with @bind) inside a clickable label. It shows no validation message. *@
+    (InputBase; bind it with @bind) inside a clickable label, with an optional help text. It shows no
+    validation message. *@
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
 
@@ -12,10 +13,15 @@
         <span class="fui-switch__label">@this.label</span>
     }
 </label>
+@if (this.help) {
+    <span class="fui-input__help" id="@this.helpId">@this.help</span>
+}
 
 @code {
     /** Label rendered to the right of the switch. */
     @Parameter() label?: string;
+    /** A hint below the switch, linked to it for screen readers. */
+    @Parameter() help?: string;
     /** true disables the native checkbox and dims the switch. */
     @Parameter() disabled: boolean = false;
     /** Element id; generated automatically when omitted (label `for` association). */
@@ -42,7 +48,12 @@
             class: "fui-switch__native",
             disabled: this.disabled ? true : undefined,
             "aria-label": this.ariaLabel,
+            "aria-describedby": this.help ? this.helpId : undefined,
         }, this.additionalAttributes);
+    }
+
+    private get helpId(): string {
+        return `${this.elementId}-help`;
     }
 
     private handleChange(e: Event): void {

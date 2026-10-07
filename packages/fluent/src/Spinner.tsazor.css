@@ -44,3 +44,8 @@
     animation-duration: 3s;
   }
 }
+.fui-spinner__label {
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-2);
+}

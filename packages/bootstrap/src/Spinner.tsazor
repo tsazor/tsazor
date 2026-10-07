@@ -1,25 +1,35 @@
-@** Renders Bootstrap's `.spinner-border` or `.spinner-grow` loading indicator, with optional
-    visible text next to it. The spinner itself is `aria-hidden`; use `text` to give it a readable label. *@
+@** Renders Bootstrap's `.spinner-border` or `.spinner-grow` loading indicator in a `role="status"`
+    region named by `ariaLabel` ("Loading…" by default), with optional visible `label` text next to it —
+    the same parameters as the Fluent skin's Spinner; `intent` and `kind` are Bootstrap extras. *@
 @import type { Intent } from "@tsazor/ui"
 @import { textColor } from "./vocabulary"
-<span class="@spinnerClass" role="status" aria-hidden="true"></span>
-@if (text) {
-    <span class="ms-1">@text</span>
-}
+<span class="d-inline-flex align-items-center gap-2" role="status" aria-label="@ariaLabel">
+    <span class="@spinnerClass" style="@spinnerStyle" aria-hidden="true"></span>
+    @if (label) {
+        <span>@label</span>
+    }
+</span>
 
 @code {
     /** The color role: primary (default), secondary, success, danger, warning, info or neutral. */
     @Parameter() intent: Intent = "primary";
     /** A rotating border (default) or a growing dot. */
     @Parameter() kind: "border" | "grow" = "border";
-    /** small or medium (default). */
-    @Parameter() size: "small" | "medium" = "medium";
-    /** Optional visible label rendered next to the spinner. */
-    @Parameter() text?: string;
+    /** small, medium (default) or large. */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** Visible text next to the spinner ("Loading orders…"). */
+    @Parameter() label?: string;
+    /** The status region's accessible name. */
+    @Parameter() ariaLabel: string | null = "Loading…";
 
     private get spinnerClass(): string {
         const base = this.kind === "grow" ? "spinner-grow" : "spinner-border";
         const size = this.size === "small" ? ` ${base}-sm` : "";
         return `${base} text-${textColor(this.intent)}${size}`;
+    }
+
+    /** Bootstrap has no large spinner: 3rem across. */
+    private get spinnerStyle(): string | null {
+        return this.size === "large" ? "width: 3rem; height: 3rem" : null;
     }
 }

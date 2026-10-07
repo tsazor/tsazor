@@ -3,9 +3,11 @@
     Enter or Space. *@
 @import type { Appearance, Intent, Size } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
-<button type="@type" class="@buttonClass" disabled="@disabled" @attributes="additionalAttributes" @onclick="handleClick">@childContent</button>
+<button type="@type" class="@buttonClass" disabled="@disabled" aria-label="@ariaLabel" @attributes="additionalAttributes" @onclick="handleClick">@childContent</button>
 
 @code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
     /** The color role: primary, secondary, success, danger, warning, info or neutral. */
     @Parameter() intent: Intent = "primary";
     /** Visual weight: solid (default), outline, subtle or transparent (a link-styled button). */

@@ -39,3 +39,16 @@
   font-size: var(--fui-font-size-caption);
   color: var(--fui-foreground-3);
 }
+/* CardBody / CardTitle (the names both skins share): the card already pads its content. */
+.fui-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-s);
+}
+
+.fui-card__title {
+  margin: 0;
+  font-size: var(--fui-font-size-body-lg);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-1);
+}

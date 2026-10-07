@@ -688,8 +688,11 @@ describe("Navbar, Spinner, Collapse", () => {
       b.addAttribute(2, "kind", "grow");
       b.closeComponent();
     });
-    const spinner = container.querySelector('[role="status"]')!;
-    expect(spinner.className).toBe("spinner-grow text-danger");
+    // The status region carries the name; the animated element is decoration.
+    const status = container.querySelector('[role="status"]')!;
+    expect(status.getAttribute("aria-label")).toBe("Loading…");
+    expect(status.querySelector(".spinner-grow")!.className).toBe("spinner-grow text-danger");
+    expect(status.querySelector(".spinner-grow")!.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("collapses and expands", async () => {

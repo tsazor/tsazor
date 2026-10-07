@@ -2,11 +2,13 @@
     size small | medium | large. Optional child content renders next to it. *@
 @import { withAttributes } from "./attributes"
 
-<span role="status" @attributes="@this.spinnerAttributes">@childContent</span>
+<span role="status" @attributes="@this.spinnerAttributes">@if (label) {<span class="fui-spinner__label">@label</span>}@childContent</span>
 
 @code {
     /** small | medium (default) | large (24/32/40 px on the control grid). */
     @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** Visible text next to the spinner ("Loading orders…"). */
+    @Parameter() label?: string;
     /** Accessible label announcing the busy state (defaults to "Loading…"). */
     @Parameter() ariaLabel: string | null = "Loading…";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */

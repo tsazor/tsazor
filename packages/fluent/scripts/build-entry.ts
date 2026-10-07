@@ -33,8 +33,8 @@ try {
 /** Compiled for the components that use them, not exported (DataGrid's Defer). */
 const INTERNAL: ReadonlySet<string> = new Set(["Defer"]);
 
-/** Extra export names (the shared vocabulary): Bootstrap's name for the menu button. */
-const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem" };
+/** Extra export names (the shared vocabulary): Bootstrap's names for the menu button and the form. */
+const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem", Form: "FluentForm" };
 
 const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
 

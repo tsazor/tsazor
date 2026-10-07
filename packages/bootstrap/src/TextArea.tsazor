@@ -8,7 +8,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <textarea id="@field.id(id)" class="@inputClass" rows="@rows" placeholder="@placeholder" disabled="@disabled" required="@required" value="@(currentValue ?? "")" @attributes="inputAttributes" @onchange="handleChange"></textarea>
+    <textarea id="@field.id(id)" class="@inputClass" rows="@rows" placeholder="@placeholder" disabled="@disabled" required="@required" value="@(currentValue ?? "")" aria-label="@ariaLabel" @attributes="inputAttributes" @onchange="handleChange"></textarea>
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -18,6 +18,8 @@
 </div>
 
 @code {
+    /** The accessible name when there is no visible label. */
+    @Parameter() ariaLabel?: string;
     /** The field's label. */
     @Parameter() label?: string;
     /** A hint below the field, linked to it for screen readers. */

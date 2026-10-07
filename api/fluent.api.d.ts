@@ -80,6 +80,12 @@ export default class Card extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// CardBody
+export default class CardBody extends ComponentBase {
+    additionalAttributes?: Record<string, unknown>;
+    childContent?: RenderFragment;
+}
+
 // CardFooter
 export default class CardFooter extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
@@ -92,9 +98,16 @@ export default class CardHeader extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// CardTitle
+export default class CardTitle extends ComponentBase {
+    additionalAttributes?: Record<string, unknown>;
+    childContent?: RenderFragment;
+}
+
 // Checkbox
 export default class Checkbox extends InputBase<boolean> {
     label?: string;
+    help?: string;
     disabled: boolean;
     required: boolean;
     id?: string;
@@ -226,6 +239,16 @@ export default class FluentProvider extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// Form
+export default class FluentForm extends ComponentBase {
+    model: object;
+    validators?: Record<string, unknown>;
+    onValidSubmit?: EventCallback<EditContext>;
+    onInvalidSubmit?: EventCallback<EditContext>;
+    additionalAttributes?: Record<string, unknown>;
+    childContent?: (context: EditContext) => RenderFragment;
+}
+
 // FormField
 export default class FormField extends ComponentBase {
     label?: string;
@@ -319,6 +342,7 @@ export default class Navbar extends ComponentBase {
 // NumberInput
 export default class NumberInput extends InputBase<number> {
     label?: string;
+    help?: string;
     placeholder?: string;
     disabled: boolean;
     required: boolean;
@@ -403,6 +427,7 @@ export default class RadioGroup extends InputBase<string> {
 // Select
 export default class Select extends InputBase<string> {
     label?: string;
+    help?: string;
     disabled: boolean;
     required: boolean;
     id?: string;
@@ -450,6 +475,7 @@ export default class Spacer extends ComponentBase {
 // Spinner
 export default class Spinner extends ComponentBase {
     size: "small" | "medium" | "large";
+    label?: string;
     ariaLabel: string | null;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
@@ -469,6 +495,7 @@ export default class Stack extends ComponentBase {
 // Switch
 export default class Switch extends InputBase<boolean> {
     label?: string;
+    help?: string;
     disabled: boolean;
     id?: string;
     ariaLabel?: string;
@@ -522,6 +549,7 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
 // TextArea
 export default class TextArea extends InputBase<string> {
     label?: string;
+    help?: string;
     placeholder?: string;
     rows: number;
     disabled: boolean;
@@ -533,8 +561,9 @@ export default class TextArea extends InputBase<string> {
 // TextInput
 export default class TextInput extends InputBase<string> {
     label?: string;
+    help?: string;
     placeholder?: string;
-    type: "text" | "password" | "email";
+    type: "text" | "password" | "email" | "search" | "tel" | "url";
     disabled: boolean;
     required: boolean;
     id?: string;
