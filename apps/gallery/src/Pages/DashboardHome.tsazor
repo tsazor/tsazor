@@ -7,22 +7,22 @@
     <div class="kpi">
         <div class="kpi__label">Orders today</div>
         <div class="kpi__value">@this.kpiOrders</div>
-        <div class="kpi__delta"><Badge color="success">+12%</Badge></div>
+        <div class="kpi__delta"><Badge intent="success">+12%</Badge></div>
     </div>
     <div class="kpi">
         <div class="kpi__label">Volume</div>
         <div class="kpi__value">@this.kpiVolume</div>
-        <div class="kpi__delta"><Badge color="success">+8%</Badge></div>
+        <div class="kpi__delta"><Badge intent="success">+8%</Badge></div>
     </div>
     <div class="kpi">
         <div class="kpi__label">Open tickets</div>
         <div class="kpi__value">@this.kpiTickets</div>
-        <div class="kpi__delta"><Badge color="warning">2 due</Badge></div>
+        <div class="kpi__delta"><Badge intent="warning">2 due</Badge></div>
     </div>
     <div class="kpi">
         <div class="kpi__label">Uptime</div>
         <div class="kpi__value">@this.kpiUptime</div>
-        <div class="kpi__delta"><Badge color="success">99.9%</Badge></div>
+        <div class="kpi__delta"><Badge intent="success">99.9%</Badge></div>
     </div>
 </div>
 

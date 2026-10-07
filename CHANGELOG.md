@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Changed** `@tsazor/fluent` adopts the shared vocabulary of `@tsazor/ui` (pre-1.0 API break): `Button`
+  `intent` + `appearance` (solid/outline/subtle/transparent; `appearance="primary"` ⇒ `intent="primary"`),
+  `Badge` `intent` (`color` ⇒ `intent`, `error` ⇒ `danger`, `brand` ⇒ `primary`; `filled` ⇒ `solid`), `Alert`/`Toast`/
+  `Indicator` `intent` (`variant`/`severity`/`color`), `Pagination` `pageCount` + `onPageChanged`. `ToastProvider`
+  is replaced by `ToastRegion` on the shared `Toaster` service (re-exported, with the vocabulary types).
+  Dialog, Tabs, ids and the submit-attempt state run on the `@tsazor/ui` behaviors: nested dialogs
+  close one at a time; tabs always link to their panels.
 - **Changed** `@tsazor/runtime` `Virtualize`: like Blazor's, it renders no wrapper element — the spacers and
   items go into the parent; `SpacerElement` (default `div`) sets the spacers' tag; the captured extra
   attributes (which went onto the wrapper) are gone: style the scrolling container around it. A

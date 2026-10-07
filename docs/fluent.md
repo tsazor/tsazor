@@ -24,7 +24,7 @@ package loads cleanly in node/vitest without a CSS import trap.
 ```bash
 npx @tsazor/fluent list
 npx @tsazor/fluent add Dialog
-npx @tsazor/fluent add ToastProvider --root apps/my-app --print
+npx @tsazor/fluent add ToastRegion --root apps/my-app --print
 ```
 
 Copy-in mode writes `src/components/<Name>.tsazor` (+ sidecar CSS) plus every
@@ -64,7 +64,7 @@ override model.
 Provider + 25: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,
 `Divider`, `Badge`, `Spinner`, `TextInput`, `TextArea`, `NumberInput`,
 `Checkbox`, `Switch`, `Select`, `FluentForm`, `Tabs`/`Tab`, `Dialog`,
-`Toast` + `ToastProvider`, `Table`, `DataGrid`, `SidebarNav`,
+`Toast` + `ToastRegion`, `Table`, `DataGrid`, `SidebarNav`,
 plus the W1 fill: `Stack`, `Grid`, `Spacer`, `Typography`, `Icon`, `Indicator`,
 `Alert`, `Breadcrumb` + `BreadcrumbItem`, `Pagination`.
 
@@ -72,16 +72,21 @@ Every component takes `additionalAttributes` (`@attributes` /
 `captureUnmatchedValues`) — anything the library does not declare is forwarded
 to the root element (the `withAttributes` merge: `class` appends, the rest
 overwrites; `aria-*` and `data-*` land where they belong). All enum-like
-parameters are string-literal unions with one fluent-wide vocabulary: sizes
-`"small" | "medium" | "large"`, Spacing `"xs" | "s" | "m" | "l" | "xl"`, the
-semantic colors for `Badge`/`Indicator`, severities for `Alert`/`Toast`.
+parameters are string-literal unions in the vocabulary both skins share
+(`@tsazor/ui`, design-component-library.md §3): `intent` (`primary | secondary |
+success | danger | warning | info | neutral` — primary is the brand color,
+secondary/neutral the gray palette, primary reads as info on status surfaces),
+`appearance` (`solid | outline | subtle | transparent`), `size` (`small | medium |
+large`); Fluent-only extras stay on top (`shape`, the spacing scale
+`"xs" | "s" | "m" | "l" | "xl"`).
 Members stay camelCase; markup may write PascalCase attributes — the compiler
 matches case-insensitively (the PascalCase decision, roadmap 4.2).
 
 Notes on the important ones:
 
-- **Button**: renders `aria-label`/`aria-describedby` (`ariaLabel`,
-  `ariaDescribedBy` parameters) onto the native button.
+- **Button**: `intent` (default `secondary`, Fluent's neutral button; `primary` is
+  the brand button) and `appearance` (default `solid`); renders
+  `aria-label`/`aria-describedby` (`ariaLabel`, `ariaDescribedBy`) onto the native button.
 
 - **Layout primitives**: `Stack` (flex axis + token gap), `Grid` (fixed
   `columns` or responsive `minChildWidth` minmax tracks — CSS grid, no JS),
@@ -93,15 +98,12 @@ Notes on the important ones:
 - **Icon**: a small inline-SVG path set (`chevron-*, close, check, arrow-*,
   search, add, remove`), no icon package. `aria-hidden="true"` by default;
   pass `ariaLabel` for `role="img"`.
-- **Indicator**: semantic dot or status chip (`color` success/danger/warning/
-  info/neutral); `visible` is false-or-nothing semantics.
-- **Alert** (ported from `@tsazor/bootstrap`): `variant` in the fluent
-  vocabulary `"info" | "success" | "danger" | "warning" | "neutral"`
-  (4.2 dropped the legacy Bootstrap names — an API break, tests live),
+- **Indicator**: semantic dot or status chip (`intent`, default neutral); `visible` is false-or-nothing semantics.
+- **Alert**: `intent` (default `info`),
   `dismissible`, `onDismissed`, `role="alert"`.
 - **Breadcrumb/BreadcrumbItem**: item slots, `aria-label="breadcrumb"`,
   items with `active` render linkless with `aria-current="page"`.
-- **Pagination**: controlled — `page` + `totalPages` + `onPageChange`, the
+- **Pagination**: controlled — `page` + `pageCount` + `onPageChanged`, the
   component keeps no page state. First/Prev/Next/Last + a ±2 number window
   with edge ellipses; all buttons carry `aria-label`s, the `nav` landmark
   takes `ariaLabel` (default `"Pagination"`).
@@ -118,15 +120,19 @@ Notes on the important ones:
 - **FluentForm** wraps the runtime `EditForm` (`Model`, `Validators`,
   `onValidSubmit` + `onInvalidSubmit` — fluent marks the submit attempt so the
   field rows know) and renders `class="fui-form"`; put a
-  `<Button type="submit" appearance="primary">` inside.
+  `<Button type="submit" intent="primary">` inside.
 - **Tabs/Tab**: `Tab` panels self-register against the `FluentTabs` cascade;
-  roving tabindex, Arrow/Home/End keyboard nav, `onSelected`.
-- **Dialog**: in-place fixed overlay — focus trap (Tab/Shift+Tab), Escape,
-  backdrop dismissal, body scroll lock with nesting counter and focus restore.
-- **Toast/ToastProvider**: the provider is a cascading service
-  (`cascadeName: "FluentToasts"`); any child calls `show({ title, message,
-  severity, timeout })`. Error toasts announce as `role="alert"`, others as
-  `role="status"`, inside an `aria-live="polite"` region.
+  roving tabindex, Arrow/Home/End keyboard nav (`rovingFocus` from `@tsazor/ui`),
+  generated tab/panel ids, `onSelected`.
+- **Dialog**: in-place fixed overlay on the `@tsazor/ui` behaviors — focus trap
+  (Tab/Shift+Tab), Escape and backdrop dismissal for the top dialog only (nested
+  dialogs close one at a time), body scroll lock and focus restore.
+- **ToastRegion/Toast**: the app's toasts are the `Toaster` service (`@tsazor/ui`,
+  re-exported): register it (`services.registerType(Toaster, { singleton: true })`),
+  inject it anywhere and call `show({ title, message, intent, timeout })`; one
+  `ToastRegion` (`position`: top/bottom-start/end) shows them, pausing while the
+  pointer or focus is on a toast. Danger toasts announce as `role="alert"`, inside an
+  `aria-live="polite"` region. `Toast` alone is one toast you place yourself.
 - **Table**: generic via `@typeparam TRow`; you own filter/sort/paging and pass
   `items` + `headerContent` + `rowContent`
   (`(row: TRow) => RenderFragment` — the 2.4 templated-component standard; see

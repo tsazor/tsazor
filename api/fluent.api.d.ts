@@ -4,17 +4,19 @@
 
 // Alert
 export default class Alert extends ComponentBase {
-    variant: "info" | "success" | "danger" | "warning" | "neutral";
+    intent: Intent;
     dismissible: boolean;
     additionalAttributes?: Record<string, unknown>;
     onDismissed?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
 }
 
+// Appearance: re-exported from @tsazor/ui
+
 // Badge
 export default class Badge extends ComponentBase {
-    appearance: "filled" | "subtle";
-    color: "brand" | "success" | "warning" | "error";
+    intent: Intent;
+    appearance: Appearance;
     size: "small" | "medium";
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
@@ -36,9 +38,10 @@ export default class BreadcrumbItem extends ComponentBase {
 
 // Button
 export default class Button extends ComponentBase {
-    appearance: "primary" | "secondary" | "subtle" | "transparent";
+    intent: Intent;
+    appearance: Appearance;
     shape: "rounded" | "circular";
-    size: "small" | "medium" | "large";
+    size: Size;
     disabled: boolean;
     type: "button" | "submit" | "reset";
     ariaLabel?: string;
@@ -147,11 +150,13 @@ export default class Icon extends ComponentBase {
 
 // Indicator
 export default class Indicator extends ComponentBase {
-    color: "success" | "danger" | "warning" | "info" | "neutral";
+    intent: Intent;
     visible: boolean;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
 }
+
+// Intent: re-exported from @tsazor/ui
 
 // NumberInput
 export default class NumberInput extends InputBase<number> {
@@ -166,14 +171,18 @@ export default class NumberInput extends InputBase<number> {
     ariaLabel?: string;
 }
 
+// Orientation: re-exported from @tsazor/ui
+
 // Pagination
 export default class Pagination extends ComponentBase {
     page: number;
-    totalPages: number;
+    pageCount: number;
     ariaLabel: string;
     additionalAttributes?: Record<string, unknown>;
-    onPageChange?: EventCallback<number>;
+    onPageChanged?: EventCallback<number>;
 }
+
+// Placement: re-exported from @tsazor/ui
 
 // Select
 export default class Select extends InputBase<string> {
@@ -197,6 +206,8 @@ export default class SidebarNav extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
 }
+
+// Size: re-exported from @tsazor/ui
 
 // Spacer
 export default class Spacer extends ComponentBase {
@@ -256,6 +267,7 @@ export default class Table<TRow> extends ComponentBase {
 // Tabs
 export default class Tabs extends ComponentBase {
     id?: string;
+    ariaLabel?: string;
     additionalAttributes?: Record<string, unknown>;
     onSelected?: EventCallback<number>;
     childContent?: RenderFragment;
@@ -285,7 +297,7 @@ export default class TextInput extends InputBase<string> {
 
 // Toast
 export default class Toast extends ComponentBase {
-    severity: "info" | "success" | "warning" | "error";
+    intent: Intent;
     title?: string;
     childContent?: RenderFragment;
     dismissible: boolean;
@@ -293,10 +305,13 @@ export default class Toast extends ComponentBase {
     onDismissed?: EventCallback<MouseEvent>;
 }
 
-// ToastProvider
-export default class ToastProvider extends ComponentBase {
-    childContent?: RenderFragment;
-    position: "bottom-right" | "top-right";
+// Toaster: re-exported from @tsazor/ui
+
+// ToastOptions: re-exported from @tsazor/ui
+
+// ToastRegion
+export default class ToastRegion extends ComponentBase {
+    position: "top-start" | "top-end" | "bottom-start" | "bottom-end";
     additionalAttributes?: Record<string, unknown>;
 }
 

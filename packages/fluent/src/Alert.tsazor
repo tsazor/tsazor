@@ -1,7 +1,9 @@
-@** A Fluent UI 2 message bar (role="alert") with a severity icon; variant info | success | danger |
-    warning | neutral. With dismissible it shows a Close button that hides the alert and then
+@** A Fluent UI 2 message bar (role="alert") with a status icon; `intent` info (default) | success |
+    danger | warning | neutral (primary reads as info, secondary as neutral). With dismissible it shows a Close button that hides the alert and then
     raises onDismissed. *@
+@import type { Intent } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { statusColor } from "./vocabulary"
 
 @if (this.visible) {
 <div role="alert" @attributes="@this.alertAttributes">
@@ -18,8 +20,8 @@
 }
 
 @code {
-    /** Severity: info (default) | success | danger | warning | neutral. */
-    @Parameter() variant: "info" | "success" | "danger" | "warning" | "neutral" = "info";
+    /** The status: info (default), success, danger, warning or neutral. */
+    @Parameter() intent: Intent = "info";
     /** Shows a dismiss button. */
     @Parameter() dismissible: boolean = false;
     /** `@attributes` pass-through onto the alert div (class appends; see src/attributes.ts). */
@@ -32,7 +34,7 @@
     private visible = true;
 
     private get alertClass(): string {
-        return `fui-alert fui-alert--${this.variant}`;
+        return `fui-alert fui-alert--${statusColor(this.intent)}`;
     }
 
     /** Fluent classes + role + `@attributes` pass-through. */
@@ -45,7 +47,7 @@
             "success": "check", "danger": "close",
             "warning": "remove", "info": "remove", "neutral": "remove",
         };
-        return icons[this.variant] ?? "remove";
+        return icons[statusColor(this.intent)] ?? "remove";
     }
 
     private async dismiss(e: MouseEvent): Promise<void> {

@@ -5,7 +5,7 @@
  *
  *   npx @tsazor/fluent list
  *   npx @tsazor/fluent add Dialog
- *   npx @tsazor/fluent add ToastProvider --root path/to/app --overwrite --print
+ *   npx @tsazor/fluent add ToastRegion --root path/to/app --overwrite --print
  *
  * Copy-in mode: writes <target>/src/components/<Name>.tsazor (+ sidecar CSS +
  * every sibling component the markup needs). The design tokens go once into

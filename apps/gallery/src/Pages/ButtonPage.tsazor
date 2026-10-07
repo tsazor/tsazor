@@ -6,7 +6,7 @@
 <section class="demo">
     <h2>Appearance</h2>
     <div class="demo-row">
-        <Button appearance="primary" onClick="@(() => this.bump())">Primary</Button>
+        <Button intent="primary" onClick="@(() => this.bump())">Primary</Button>
         <Button>Secondary</Button>
         <Button appearance="subtle">Subtle</Button>
         <Button appearance="transparent">Transparent</Button>
@@ -17,10 +17,10 @@
 <section class="demo">
     <h2>Shape &amp; size</h2>
     <div class="demo-row">
-        <Button appearance="primary">Rounded</Button>
-        <Button shape="circular" appearance="primary">Circular</Button>
-        <Button size="small" appearance="primary">Small</Button>
-        <Button size="large" appearance="primary">Large</Button>
+        <Button intent="primary">Rounded</Button>
+        <Button shape="circular" intent="primary">Circular</Button>
+        <Button size="small" intent="primary">Small</Button>
+        <Button size="large" intent="primary">Large</Button>
     </div>
 </section>
 
@@ -28,7 +28,7 @@
     <h2>Disabled</h2>
     <div class="demo-row">
         <Button disabled="true">Disabled</Button>
-        <Button disabled="true" appearance="primary">Primary disabled</Button>
+        <Button disabled="true" intent="primary">Primary disabled</Button>
     </div>
 </section>
 

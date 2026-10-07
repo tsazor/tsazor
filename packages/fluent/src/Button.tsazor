@@ -1,17 +1,22 @@
-@** A Fluent UI 2 native button; appearance primary | secondary | subtle | transparent, shape
-    rounded | circular, size small | medium | large. Raises onClick unless disabled; use
-    type="submit" inside a FluentForm. *@
+@** A Fluent UI 2 native button. `intent` picks the color (secondary, the default, is Fluent's
+    neutral button; primary is the brand button; success, danger, warning, info), `appearance` the
+    weight (solid, outline, subtle, transparent); shape rounded | circular, size small | medium |
+    large. Raises onClick unless disabled; use type="submit" inside a FluentForm. *@
+@import type { Appearance, Intent, Size } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { fluentColor } from "./vocabulary"
 
 <button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</button>
 
 @code {
-    /** Fluent 2 appearance: primary | secondary (default) | subtle | transparent. */
-    @Parameter() appearance: "primary" | "secondary" | "subtle" | "transparent" = "secondary";
+    /** The color: secondary (default, Fluent's neutral button), primary (brand), success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "secondary";
+    /** The visual weight: solid (default), outline, subtle or transparent. */
+    @Parameter() appearance: Appearance = "solid";
     /** rounded (default) | circular. */
     @Parameter() shape: "rounded" | "circular" = "rounded";
     /** small | medium (default) | large. */
-    @Parameter() size: "small" | "medium" | "large" = "medium";
+    @Parameter() size: Size = "medium";
     /** true disables the native button and suppresses onClick. */
     @Parameter() disabled: boolean = false;
     /** Native button role in a form: button (default) | submit | reset. */
@@ -28,7 +33,16 @@
     @Parameter() childContent?: RenderFragment;
 
     private get buttonClass(): string {
-        let cls = `fui-button fui-button--${this.appearance}`;
+        const color = fluentColor(this.intent);
+        let cls = "fui-button";
+        if (this.appearance === "solid") {
+            // Neutral is Fluent's default button; brand and the status colors fill it.
+            if (color === "brand") cls += " fui-button--primary";
+            else if (color !== "neutral") cls += ` fui-button--primary fui-button--${color}`;
+        } else {
+            cls += ` fui-button--${this.appearance}`;
+            if (color !== "neutral") cls += ` fui-button--ink-${color}`;
+        }
         if (this.shape === "circular") cls += " fui-button--circular";
         if (this.size === "small") cls += " fui-button--small";
         else if (this.size === "large") cls += " fui-button--large";

@@ -1,6 +1,6 @@
 @** A controlled page navigator (nav landmark): First/Previous/Next/Last buttons and the page
     numbers within 2 of the current page, plus the first and last page with an ellipsis where
-    numbers are skipped. It keeps no page state; clicks raise onPageChange and the parent updates
+    numbers are skipped. It keeps no page state; clicks raise onPageChanged and the parent updates
     page. *@
 @import { withAttributes } from "./attributes"
 
@@ -22,20 +22,20 @@
     <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page"
             disabled="@this.atLast" @onclick="() => this.go(this.page + 1)">›</button>
     <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page"
-            disabled="@this.atLast" @onclick="() => this.go(this.totalPages)">»</button>
+            disabled="@this.atLast" @onclick="() => this.go(this.pageCount)">»</button>
 </nav>
 
 @code {
     /** Current page (1-based) — controlled: the component keeps no page state. */
     @Parameter() page: number = 1;
     /** Total number of pages. */
-    @Parameter() totalPages: number = 1;
+    @Parameter() pageCount: number = 1;
     /** Accessible nav name. */
     @Parameter() ariaLabel: string = "Pagination";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Fired when a button targets another valid page; receives the new 1-based page number. */
-    @Parameter() onPageChange?: EventCallback<number>;
+    @Parameter() onPageChanged?: EventCallback<number>;
 
     private get paginationAttributes(): Record<string, unknown> {
         return withAttributes({ class: "fui-pagination" }, this.additionalAttributes);
@@ -46,13 +46,13 @@
     }
 
     private get atLast(): boolean {
-        return this.page >= this.totalPages;
+        return this.page >= this.pageCount;
     }
 
     /** Number window around the current page (±2), ellipses at the trimmed edges
      * (pre-clarified local decision — no hidden "jump 5" ellipsis behavior). */
     private get windowItems(): Array<number | "gap"> {
-        const total = Math.max(this.totalPages, 1);
+        const total = Math.max(this.pageCount, 1);
         const window: number[] = [];
         for (let i = Math.max(1, this.page - 2); i <= Math.min(total, this.page + 2); i++) window.push(i);
         if (window[0] !== undefined && window[0] > 1) {
@@ -76,7 +76,7 @@
     }
 
     private async go(next: number): Promise<void> {
-        if (next < 1 || next > this.totalPages || next === this.page) return;
-        await this.onPageChange?.invokeAsync(next);
+        if (next < 1 || next > this.pageCount || next === this.page) return;
+        await this.onPageChanged?.invokeAsync(next);
     }
 }

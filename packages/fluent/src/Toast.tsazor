@@ -1,7 +1,9 @@
 @** A single Fluent UI 2 toast: optional title, message and Close button, announced politely
-    (role="alert" for severity error, otherwise role="status"). Usually created through
-    ToastProvider.show() rather than placed directly. *@
+    (role="alert" for intent danger, otherwise role="status"). App-wide toasts go through the
+    `Toaster` service and a ToastRegion; this one is for placing a toast yourself. *@
+@import type { Intent } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { statusColor } from "./vocabulary"
 
 <div @attributes="@this.toastAttributes">
     <div class="fui-toast__content">
@@ -18,26 +20,26 @@
 </div>
 
 @code {
-    /** Severity: info (default) | success | warning | error. */
-    @Parameter() severity: "info" | "success" | "warning" | "error" = "info";
+    /** The status: info (default), success, warning, danger or neutral. */
+    @Parameter() intent: Intent = "info";
     /** Optional headline. */
     @Parameter() title?: string;
     /** Message body. */
     @Parameter() childContent?: RenderFragment;
-    /** Shows the close button (toasts inside ToastProvider are dismissible by default). */
+    /** Shows the close button. */
     @Parameter() dismissible: boolean = true;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Fired when the user closes the toast. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
 
-    /** role=alert for error (assertive), otherwise status. */
+    /** role=alert for danger (assertive), otherwise status. */
     private get liveRole(): string {
-        return this.severity === "error" ? "alert" : "status";
+        return this.intent === "danger" ? "alert" : "status";
     }
 
     private get toastClass(): string {
-        return `fui-toast fui-toast--${this.severity}`;
+        return `fui-toast fui-toast--${statusColor(this.intent)}`;
     }
 
     private get toastAttributes(): Record<string, unknown> {

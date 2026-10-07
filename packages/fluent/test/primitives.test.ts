@@ -25,11 +25,11 @@ async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer
 }
 
 describe("Button", () => {
-  it("renders Fluent appearance classes and fires onClick", async () => {
+  it("renders the brand button for intent primary and fires onClick", async () => {
     let clicks = 0;
     const { container, renderer } = await renderTree((b) => {
       b.openComponent(0, Button);
-      b.addAttribute(1, "appearance", "primary");
+      b.addAttribute(1, "intent", "primary");
       b.addAttribute(2, "size", "large");
       b.addAttribute(3, "childContent", text("Go"));
       b.addAttribute(4, "onClick", EventCallback.unbound(() => {
@@ -92,22 +92,22 @@ describe("Button", () => {
       b.closeComponent();
     });
     const button = container.querySelector("button")!;
-    expect(button.className).toBe("fui-button fui-button--secondary cta cta--tight");
+    expect(button.className).toBe("fui-button cta cta--tight");
     expect(button.getAttribute("data-testid")).toBe("save");
   });
 });
 
 describe("Badge", () => {
-  it("composes appearance and color classes", async () => {
+  it("composes appearance and intent classes (danger = Fluent red)", async () => {
     const { container } = await renderTree((b) => {
       b.openComponent(0, Badge);
       b.addAttribute(1, "appearance", "subtle");
-      b.addAttribute(2, "color", "error");
+      b.addAttribute(2, "intent", "danger");
       b.addAttribute(3, "childContent", text("3"));
       b.closeComponent();
     });
     const badge = container.querySelector(".fui-badge")!;
-    expect(badge.className).toBe("fui-badge fui-badge--subtle fui-badge--error");
+    expect(badge.className).toBe("fui-badge fui-badge--subtle fui-badge--danger");
     expect(badge.textContent).toBe("3");
   });
 });

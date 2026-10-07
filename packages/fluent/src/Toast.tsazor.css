@@ -1,4 +1,4 @@
-/* Toast — Fluent 2 notifications: positioned stack (ToastProvider) + toast. */
+/* Toast — Fluent 2 notifications: positioned stack (ToastRegion) + toast. */
 
 .fui-toasts {
   position: fixed;
@@ -14,6 +14,11 @@
 .fui-toasts--top {
   top: var(--fui-spacing-l);
   bottom: auto;
+}
+
+.fui-toasts--start {
+  left: var(--fui-spacing-l);
+  right: auto;
 }
 
 .fui-toast {
@@ -90,7 +95,12 @@
   border-start-start-width: 4px;
 }
 
-.fui-toast--error {
+.fui-toast--neutral {
+  border-start-start-color: var(--fui-foreground-2);
+  border-start-start-width: 4px;
+}
+
+.fui-toast--danger {
   border-start-start-color: var(--fui-color-red-1);
   border-start-start-width: 4px;
 }

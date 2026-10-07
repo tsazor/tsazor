@@ -233,7 +233,7 @@ async function main() {
 
     /* 10 — toast: aria-live region, severity role, auto-dismiss */
     await page.click("a[href='/feedback']");
-    await page.waitForSelector(".fui-toasts");
+    await page.waitForSelector(".fui-toasts", { state: "attached" }); // empty until a toast shows
     check((await page.locator(".fui-toasts").getAttribute("aria-live")) === "polite", "toast region is aria-live=polite");
     await page.locator(".fui-button", { hasText: "Error toast" }).click();
     await page.waitForSelector(".fui-toast");

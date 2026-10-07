@@ -1,0 +1,54 @@
+@** Shows the app's toasts (the `Toaster` service from @tsazor/ui) as Fluent UI 2 toasts in a corner of
+    the page. Place it once, in the layout; any component then injects `Toaster` and calls
+    `show({ title, message, intent })`. Toasts close themselves after their timeout, pause while the
+    pointer is over them or focus is in them (WCAG 2.2.1), and can be closed with their button. The
+    region is a polite live region; `danger` toasts are announced as alerts. *@
+@import { Toaster, type Toast } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { statusColor } from "./vocabulary"
+@inject Toaster toaster
+
+<div @attributes="@this.regionAttributes">
+    @foreach (const toast of toaster.toasts) {
+        <div @key="toast.id" class="@toastClass(toast)" role="@roleOf(toast)" aria-atomic="true"
+             @onmouseenter="() => toaster.pause(toast.id)" @onmouseleave="() => toaster.resume(toast.id)"
+             @onfocusin="() => toaster.pause(toast.id)" @onfocusout="() => toaster.resume(toast.id)">
+            <div class="fui-toast__content">
+                @if (toast.title) {
+                    <div class="fui-toast__title">@toast.title</div>
+                }
+                @if (toast.message) {
+                    <div class="fui-toast__message">@toast.message</div>
+                }
+            </div>
+            <button type="button" class="fui-toast__close" aria-label="Close" @onclick="() => toaster.dismiss(toast.id)">&times;</button>
+        </div>
+    }
+</div>
+
+@code {
+    /** The corner the toasts appear in. */
+    @Parameter() position: "top-start" | "top-end" | "bottom-start" | "bottom-end" = "bottom-end";
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    override onInitialized() {
+        this.observe(this.toaster);
+    }
+
+    private get regionAttributes(): Record<string, unknown> {
+        const [vertical, horizontal] = this.position.split("-");
+        const classes = ["fui-toasts"];
+        if (vertical === "top") classes.push("fui-toasts--top");
+        if (horizontal === "start") classes.push("fui-toasts--start");
+        return withAttributes({ class: classes.join(" "), "aria-live": "polite" }, this.additionalAttributes);
+    }
+
+    private toastClass(toast: Toast): string {
+        return `fui-toast fui-toast--${statusColor(toast.intent)}`;
+    }
+
+    private roleOf(toast: Toast): string | null {
+        return toast.intent === "danger" ? "alert" : null;
+    }
+}

@@ -75,7 +75,7 @@ describe("Indicator", () => {
   it("renders a status chip with the semantic color", async () => {
     const result = await renderTree((b) => {
       b.openComponent(0, Indicator);
-      b.addAttribute(1, "color", "success");
+      b.addAttribute(1, "intent", "success");
       b.addAttribute(2, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Online"));
       b.closeComponent();
     });
@@ -95,10 +95,10 @@ describe("Indicator", () => {
 });
 
 describe("Alert", () => {
-  it("renders the union vocabulary as severity classes (4.2: legacy names dropped)", async () => {
+  it("renders the intents as status classes (primary reads as info)", async () => {
     const rendered: string[] = [];
-    for (const variant of ["info", "success", "danger", "warning", "neutral"]) {
-      const result = await renderOne(Alert, (b) => b.addAttribute(1, "variant", variant));
+    for (const variant of ["info", "success", "danger", "warning", "neutral", "primary", "secondary"]) {
+      const result = await renderOne(Alert, (b) => b.addAttribute(1, "intent", variant));
       rendered.push(result.container.querySelector(".fui-alert")!.className);
       result.dispose();
     }
@@ -108,6 +108,8 @@ describe("Alert", () => {
       "fui-alert fui-alert--danger",
       "fui-alert fui-alert--warning",
       "fui-alert fui-alert--neutral",
+      "fui-alert fui-alert--info",
+      "fui-alert fui-alert--neutral",
     ]);
   });
 
@@ -115,7 +117,7 @@ describe("Alert", () => {
     let dismissed = false;
     const result = await renderTree((b) => {
       b.openComponent(0, Alert);
-      b.addAttribute(1, "variant", "success");
+      b.addAttribute(1, "intent", "success");
       b.addAttribute(2, "dismissible", true);
       b.addAttribute(3, "onDismissed", EventCallback.unbound(async () => { dismissed = true; }));
       b.addAttribute(4, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "Saved."));
@@ -195,7 +197,7 @@ describe("Pagination", () => {
   it("labels all controls accessibly and marks the current page", async () => {
     const result = await renderOne(Pagination, (b) => {
       b.addAttribute(1, "page", 2);
-      b.addAttribute(2, "totalPages", 10);
+      b.addAttribute(2, "pageCount", 10);
     });
     expect(result.container.querySelector("button[aria-label='First page']")).not.toBeNull();
     expect(result.container.querySelector("button[aria-label='Last page']")).not.toBeNull();
@@ -211,12 +213,12 @@ describe("Pagination", () => {
     result.dispose();
   });
 
-  it("fires onPageChange with the clicked page and never keeps its own state", async () => {
+  it("fires onPageChanged with the clicked page and never keeps its own state", async () => {
     const seen: number[] = [];
     const result = await renderOne(Pagination, (b) => {
       b.addAttribute(1, "page", 1);
-      b.addAttribute(2, "totalPages", 5);
-      b.addAttribute(3, "onPageChange", EventCallback.unbound(async (n: number) => { seen.push(n); }));
+      b.addAttribute(2, "pageCount", 5);
+      b.addAttribute(3, "onPageChanged", EventCallback.unbound(async (n: number) => { seen.push(n); }));
     });
     // First page: prev/first disabled, clicking does nothing on its own.
     click(result.container, "button[aria-label='First page']");

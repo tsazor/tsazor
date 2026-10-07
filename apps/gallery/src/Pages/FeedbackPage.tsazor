@@ -2,20 +2,20 @@
 
 <h1>Feedback</h1>
 <p class="intro">
-    <code>ToastProvider</code> is a cascading service — any child grabs it and calls
-    <code>show()</code>. Toasts auto-dismiss after their timeout; error toasts use
-    <code>role="alert"</code>. ToastPanel below is a real nested component using the cascade.
+    Toasts come from the <code>Toaster</code> service: any component injects it and calls
+    <code>show()</code>; one <code>ToastRegion</code> shows them. Toasts auto-dismiss after their
+    timeout (paused while the pointer is over them); danger toasts use <code>role="alert"</code>.
+    ToastPanel below is a real nested component injecting the service.
 </p>
 
-<ToastProvider position="top-right">
     <div class="demo">
         <h2>Badges</h2>
         <div class="demo-row">
             <Badge>Filled</Badge>
             <Badge appearance="subtle">Subtle</Badge>
-            <Badge color="success">Success</Badge>
-            <Badge color="warning">Warning</Badge>
-            <Badge color="error">Error</Badge>
+            <Badge intent="success">Success</Badge>
+            <Badge intent="warning">Warning</Badge>
+            <Badge intent="danger">Error</Badge>
             <Badge size="small">Small</Badge>
         </div>
     </div>
@@ -34,11 +34,11 @@
                 <Divider appearance="subtle" />
                 <div class="demo-row">
                     <Button appearance="subtle">Later</Button>
-                    <Button appearance="primary">Do it</Button>
+                    <Button intent="primary">Do it</Button>
                 </div>
             </CardFooter>
         </Card>
     </div>
 
-    <ToastPanel />
-</ToastProvider>
+<ToastPanel />
+<ToastRegion position="top-end" />

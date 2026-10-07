@@ -2,6 +2,7 @@ import { createTsazorApp } from "@tsazor/runtime";
 import App from "./App.tsazor";
 import routes from "virtual:tsazor-routes";
 import { ThemeState } from "./ThemeState";
+import { Toaster } from "@tsazor/fluent";
 import "@tsazor/fluent/fluent.css";
 import "./theme.css";
 
@@ -15,6 +16,8 @@ const app = createTsazorApp({
   routes,
   services: (services) => {
     services.registerValue(ThemeState, themeState);
+    // The app's toasts: components inject it, the Feedback page's ToastRegion shows them.
+    services.registerType(Toaster, { singleton: true });
   },
 });
 

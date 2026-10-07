@@ -16,7 +16,7 @@ import "@tsazor/fluent/fluent.css";
 
 ```html
 <FluentProvider theme="@this.theme">
-    <Button appearance="primary" onClick="@(() => this.save())">Save</Button>
+    <Button intent="primary" onClick="@(() => this.save())">Save</Button>
 </FluentProvider>
 ```
 

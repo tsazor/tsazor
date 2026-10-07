@@ -120,11 +120,14 @@ const declarations = componentTypeDeclarations(manifest, { packageDir, declarati
 for (const [exportName, declaration] of Object.entries(declarations)) {
   await writeFile(path.join(distDir, `${exportName}.d.ts`), declaration);
 }
+// The toast service comes with the skin: register it, inject it, call show() (as in @tsazor/bootstrap).
+exports.push('export { Toaster } from "@tsazor/ui"');
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
-await writeFile(path.join(distDir, "index.d.ts"), index);
+// The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, Intent, Orientation, Placement, Size, Toast, ToastOptions } from "@tsazor/ui";\n`);
 await writeFile(path.join(distDir, "fluent.css"), `${cssChunks.join("\n")}\n`);
 
 console.log(`[tsazor/fluent] built ${files.length} components + fluent.css -> dist/`);

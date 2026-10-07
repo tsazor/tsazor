@@ -1,14 +1,17 @@
-@** A small Fluent UI 2 pill (span) for a count or short status label; appearance filled | subtle,
-    color brand | success | warning | error, size small | medium. *@
+@** A small Fluent UI 2 pill (span) for a count or short status label: `intent` picks the color
+    (primary = brand, secondary/neutral = gray, success, warning, danger, info), `appearance` the
+    weight (solid, outline, subtle, transparent), size small | medium. *@
+@import type { Appearance, Intent } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { fluentAppearance, fluentColor } from "./vocabulary"
 
 <span @attributes="@this.badgeAttributes">@childContent</span>
 
 @code {
-    /** Fills the badge pill: filled (default) | subtle. */
-    @Parameter() appearance: "filled" | "subtle" = "filled";
-    /** Semantic color: brand (default) | success | warning | error. */
-    @Parameter() color: "brand" | "success" | "warning" | "error" = "brand";
+    /** The color: primary (default, the brand color), secondary, success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "primary";
+    /** The visual weight: solid (default), outline, subtle (tinted) or transparent. */
+    @Parameter() appearance: Appearance = "solid";
     /** small | medium (default). */
     @Parameter() size: "small" | "medium" = "medium";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
@@ -17,7 +20,7 @@
     @Parameter() childContent?: RenderFragment;
 
     private get badgeClass(): string {
-        return `fui-badge fui-badge--${this.appearance} fui-badge--${this.color}` +
+        return `fui-badge fui-badge--${fluentAppearance(this.appearance)} fui-badge--${fluentColor(this.intent)}` +
             (this.size === "small" ? " fui-badge--small" : "");
     }
 

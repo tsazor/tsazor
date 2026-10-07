@@ -18,10 +18,10 @@
         <div class="field">
             <Switch @bind="this.model.beta" label="Opt in to beta features" id="settings-beta" />
         </div>
-        <Button type="submit" appearance="primary">Save</Button>
+        <Button type="submit" intent="primary">Save</Button>
     </FluentForm>
     @if (this.saved) {
-        <p class="form-done"><Badge color="success">Saved</Badge> Settings were applied.</p>
+        <p class="form-done"><Badge intent="success">Saved</Badge> Settings were applied.</p>
     }
 </div>
 
@@ -36,7 +36,7 @@
     </ChildContent>
     <Footer>
         <Button appearance="subtle" onClick="@(() => this.cancel())">Cancel</Button>
-        <Button appearance="primary" onClick="@(() => this.apply())">Apply</Button>
+        <Button intent="primary" onClick="@(() => this.apply())">Apply</Button>
     </Footer>
 </Dialog>
 

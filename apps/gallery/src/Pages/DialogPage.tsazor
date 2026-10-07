@@ -8,7 +8,7 @@
     backdrop.
 </p>
 
-<Button appearance="primary" onClick="@(() => this.openDialog())">Open dialog</Button>
+<Button intent="primary" onClick="@(() => this.openDialog())">Open dialog</Button>
 
 <p class="echo">Confirmations: <strong>@this.confirmed</strong></p>
 
@@ -21,7 +21,7 @@
     </ChildContent>
     <Footer>
         <Button appearance="subtle" onClick="@(() => this.handleClosed())">Cancel</Button>
-        <Button appearance="primary" onClick="@(() => this.confirm())">Delete</Button>
+        <Button intent="primary" onClick="@(() => this.confirm())">Delete</Button>
     </Footer>
 </Dialog>
 
