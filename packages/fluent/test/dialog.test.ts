@@ -157,14 +157,14 @@ describe("Dialog", () => {
     result.dispose();
   });
 
-  it("closes on backdrop click (target=currentTarget) but not inside the dialog", async () => {
+  it("closes on a press on the backdrop but not inside the dialog", async () => {
     const result = await renderHost();
 
-    result.container.querySelector(".fui-dialog")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    result.container.querySelector(".fui-dialog__body")!.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
     await settle(result.renderer);
     expect(result.instance.closes).toBe(0);
 
-    result.container.querySelector(".fui-dialog-overlay")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    result.container.querySelector(".fui-dialog-overlay")!.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
     await settle(result.renderer);
     expect(result.instance.closes).toBe(1);
     expect(result.container.querySelector(".fui-dialog-overlay")).toBeNull();
@@ -186,16 +186,20 @@ describe("Dialog", () => {
     await settle(nested.renderer);
     expect(document.body.style.overflow).toBe("hidden");
 
-    // Closing the host dialog leaves the nested one holding the lock.
+    // Escape belongs to the top dialog (the nested one) only: the host stays open.
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await settle(result.renderer);
+    expect(result.instance.closes).toBe(0);
+
+    // Removing the nested dialog leaves the host holding the lock.
+    nested.dispose();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    // Now Escape closes the host, and the original overflow comes back.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     await settle(result.renderer);
     expect(result.instance.closes).toBe(1);
     expect(result.container.querySelector(".fui-dialog-overlay")).toBeNull();
-    expect(document.body.style.overflow).toBe("hidden");
-
-    // Disposing the nested tree drops the depth to 0 and restores the
-    // original body overflow ("" in happy-dom terms reads as the saved value).
-    nested.dispose();
     expect(document.body.style.overflow).toBe("auto");
     result.dispose();
   });

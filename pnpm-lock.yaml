@@ -456,6 +456,10 @@ importers:
         version: 5.9.3
 
   packages/fluent:
+    dependencies:
+      '@tsazor/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       '@tsazor/compiler':
         specifier: workspace:*

@@ -5,7 +5,7 @@
 @using @tsazor/runtime
 @import type { EditContext } from "@tsazor/runtime"
 @import { withAttributes } from "./attributes"
-@import { markSubmitAttempt } from "./form-state"
+@import { markSubmitAttempt } from "@tsazor/ui"
 
 <EditForm @attributes="@this.formAttributes" Model="@model" Validators="@validators" OnValidSubmit="@this.handleSubmit" OnInvalidSubmit="@this.handleInvalidSubmit" Context="formContext">@childContent(formContext)</EditForm>
 

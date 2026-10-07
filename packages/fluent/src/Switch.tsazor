@@ -1,7 +1,7 @@
 @** A Fluent UI 2 toggle switch for a boolean value: a native checkbox with role="switch"
     (InputBase; bind it with @bind) inside a clickable label. It shows no validation message. *@
 @import { withAttributes } from "./attributes"
-@import { nextFieldId } from "./ids"
+@import { uniqueId } from "@tsazor/ui"
 
 @inherits InputBase<boolean>
 
@@ -26,7 +26,7 @@
     private generatedId?: string;
 
     private get elementId(): string {
-        return this.id ?? (this.generatedId ??= nextFieldId("fui-switch"));
+        return this.id ?? (this.generatedId ??= uniqueId("fui-switch"));
     }
 
     private get isChecked(): boolean {

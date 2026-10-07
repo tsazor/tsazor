@@ -3,11 +3,11 @@
     focus returns to the previous element on close. Escape, a backdrop click or the header's Close
     button raise onClosed; the parent then sets isOpen to false. *@
 @import { withAttributes } from "./attributes"
-@import { nextFieldId } from "./ids"
+@import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 
 @if (this.isOpen) {
-    <div class="fui-dialog-overlay" tabindex="-1" @onclick="this.handleBackdrop" @onkeydown="this.handleKeydown" @ref="overlayElement">
-        <div role="dialog" aria-modal="true" @attributes="@this.dialogAttributes">
+    <div class="fui-dialog-overlay" @attach="trap" @attach:lock="lock">
+        <div role="dialog" aria-modal="true" @attributes="@this.dialogAttributes" @attach="dismiss">
             @if (this.title) {
                 <div class="fui-dialog__header">
                     <h2 class="fui-dialog__title" id="@this.labelledBy">@this.title</h2>
@@ -44,14 +44,16 @@
     /** Footer content (e.g. Cancel/Confirm buttons). */
     @Parameter() footer?: RenderFragment;
 
-    /** Keeps body scroll locked across nested dialogs. */
-    private static scrollLocks = 0;
-    private static scrollLockRestore = "";
+    /** The trap and the dismiss handling are one overlay layer (nested dialogs close one at a time). */
+    private readonly layer = createLayer();
+    private readonly trap = focusTrap({ layer: this.layer });
+    private readonly lock = scrollLock;
+    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
     private generatedId?: string;
 
     private get elementId(): string {
-        return this.id ?? (this.generatedId ??= nextFieldId("fui-dialog"));
+        return this.id ?? (this.generatedId ??= uniqueId("fui-dialog"));
     }
 
     private get labelledBy(): string | null {
@@ -66,87 +68,8 @@
         }, this.additionalAttributes);
     }
 
-    private overlayElement?: HTMLElement;
-    private restoreFocusTo: HTMLElement | null = null;
-    private wasOpen = false;
-    private escapeHandler?: (e: KeyboardEvent) => void;
-
-    protected override onAfterRender(firstRender: boolean): void {
-        if (this.isOpen && !this.wasOpen) {
-            this.wasOpen = true;
-            this.attachOpen();
-        } else if (!this.isOpen && this.wasOpen) {
-            this.wasOpen = false;
-            this.detachOpen();
-        }
-    }
-
-    dispose(): void {
-        this.detachOpen();
-    }
-
-    /** @internal Wires Escape, focus and the scroll lock when the dialog opens. */
-    private attachOpen(): void {
-        this.restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        Dialog.scrollLocks++;
-        if (Dialog.scrollLocks === 1) {
-            Dialog.scrollLockRestore = document.body.style.overflow;
-            document.body.style.overflow = "hidden";
-        }
-        if (this.closeOnEscape) {
-            document.addEventListener("keydown", this.handleDocumentKeydown, true);
-        }
-        this.overlayElement?.focus();
-    }
-
-    /** @internal Unwires one open's listeners; the last unlock restores scroll. */
-    private detachOpen(): void {
-        document.removeEventListener("keydown", this.handleDocumentKeydown, true);
-        if (this.wasOpen || this.overlayElement) {
-            Dialog.scrollLocks = Math.max(0, Dialog.scrollLocks - 1);
-            if (Dialog.scrollLocks === 0) {
-                document.body.style.overflow = Dialog.scrollLockRestore;
-            }
-        }
-        const target = this.restoreFocusTo;
-        if (target && target.isConnected) target.focus();
-        this.restoreFocusTo = null;
-        this.overlayElement = undefined;
-    }
-
-    private handleDocumentKeydown = (e: KeyboardEvent): void => {
-        if (e.key === "Escape") this.requestClose();
-    };
-
-    private handleKeydown(e: KeyboardEvent): void {
-        if (e.key !== "Tab") return;
-        const overlay = this.overlayElement;
-        if (!overlay) return;
-        const focusables = [...overlay.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        )].filter((el) => !el.hasAttribute("disabled"));
-        if (focusables.length === 0) {
-            e.preventDefault();
-            return;
-        }
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        const active = document.activeElement;
-        // The direction first: Shift+Tab from the last element just goes back
-        // (the browser does that); only the edges wrap.
-        if (e.shiftKey) {
-            if (active === first || active === overlay) {
-                last.focus();
-                e.preventDefault();
-            }
-        } else if (active === last || active === overlay) {
-            first.focus();
-            e.preventDefault();
-        }
-    }
-
-    private handleBackdrop(e: MouseEvent): void {
-        if (this.closeOnBackdrop && e.target === e.currentTarget) this.requestClose();
+    private dismissed(reason: DismissReason): void {
+        if (reason === "escape" ? this.closeOnEscape : this.closeOnBackdrop) this.requestClose();
     }
 
     private requestClose(): void {

@@ -2,8 +2,8 @@
     FluentForm it shows the field's first validation message (role="alert", aria-invalid,
     aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
-@import { nextFieldId } from "./ids"
-@import { hasSubmitAttempt } from "./form-state"
+@import { uniqueId } from "@tsazor/ui"
+@import { hasSubmitAttempt } from "@tsazor/ui"
 
 @inherits InputBase<boolean>
 
@@ -32,7 +32,7 @@
     private generatedId?: string;
 
     private get elementId(): string {
-        return this.id ?? (this.generatedId ??= nextFieldId("fui-checkbox"));
+        return this.id ?? (this.generatedId ??= uniqueId("fui-checkbox"));
     }
 
     private get isChecked(): boolean {

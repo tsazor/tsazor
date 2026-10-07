@@ -25,6 +25,9 @@
     "build": "node build.mjs",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@tsazor/ui": "workspace:*"
+  },
   "peerDependencies": {
     "@tsazor/runtime": "workspace:*"
   },

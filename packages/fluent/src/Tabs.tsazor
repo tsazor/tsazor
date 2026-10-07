@@ -2,9 +2,10 @@
     The first tab starts active; clicking a tab or using ArrowLeft/ArrowRight/Home/End selects
     and focuses it (roving tabindex) and raises onSelected. *@
 @import { withAttributes } from "./attributes"
+@import { rovingFocus, uniqueId } from "@tsazor/ui"
 
 <div @attributes="@this.tabsAttributes">
-    <div class="fui-tabs__list" role="tablist" @onkeydown="this.handleKeydown" @ref="listElement">
+    <div class="fui-tabs__list" role="tablist" aria-label="@ariaLabel" @attach="keys">
         @for (let i = 0; i < this.tabs.length; i++) {
             <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabIdFor(i)" aria-selected="@this.selectedText(i)" aria-controls="@this.panelIdFor(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@this.tabs[i]!.title</button>
         }
@@ -13,8 +14,10 @@
 </div>
 
 @code {
-    /** Base for the tab and panel ids (`<id>-tab-<i>`, `<id>-panel-<i>`) behind aria-controls / aria-labelledby; omitted ids skip those attributes. */
+    /** Base for the tab and panel ids (`<id>-tab-<i>`, `<id>-panel-<i>`) behind aria-controls / aria-labelledby; generated when omitted. */
     @Parameter() id?: string;
+    /** Names the tab list for screen readers. */
+    @Parameter() ariaLabel?: string;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Invoked after the selected tab changes (for stateful hosts). */
@@ -37,7 +40,9 @@
 
     private tabs: { title: string; setIndex(index: number): void }[] = [];
     private activeIndexInternal = 0;
-    private listElement?: HTMLElement;
+    private readonly generatedId = uniqueId("fui-tabs");
+    /** Arrow keys, Home and End move the selection; only the active tab is a Tab stop (roving tabindex). */
+    private readonly keys = rovingFocus({ items: "[role=tab]", onMove: (index) => this.select(index) });
 
     get activeIndex(): number {
         return this.activeIndexInternal;
@@ -61,23 +66,6 @@
         this.onSelected?.invokeAsync(index);
     }
 
-    private handleKeydown(e: KeyboardEvent): void {
-        let next = -1;
-        if (e.key === "ArrowRight") {
-            next = (this.activeIndexInternal + 1) % this.tabs.length;
-        } else if (e.key === "ArrowLeft") {
-            next = (this.activeIndexInternal - 1 + this.tabs.length) % this.tabs.length;
-        } else if (e.key === "Home") {
-            next = 0;
-        } else if (e.key === "End") {
-            next = this.tabs.length - 1;
-        }
-        if (next < 0) return;
-        e.preventDefault();
-        this.select(next);
-        this.listElement?.querySelectorAll("button")[next]?.focus();
-    }
-
     /** aria-selected as a literal attribute text value. */
     private selectedText(index: number): string {
         return this.activeIndexInternal === index ? "true" : "false";
@@ -92,11 +80,13 @@
         return this.activeIndexInternal === index ? "0" : "-1";
     }
 
-    private tabIdFor(index: number): string | null {
-        return this.id ? `${this.id}-tab-${index}` : null;
+    /** @internal The id of tab `index`'s button. */
+    tabIdFor(index: number): string {
+        return `${this.id ?? this.generatedId}-tab-${index}`;
     }
 
-    private panelIdFor(index: number): string | null {
-        return this.id ? `${this.id}-panel-${index}` : null;
+    /** @internal The id of tab `index`'s panel. */
+    panelIdFor(index: number): string {
+        return `${this.id ?? this.generatedId}-panel-${index}`;
     }
 }

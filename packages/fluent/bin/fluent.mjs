@@ -159,6 +159,8 @@ Next steps:
        import "./src/styles/tokens.css";
        import "./src/styles/controls.css";
      (tokens.css defines the --fui-* design tokens, controls.css the component chrome.)
-  2. Use <${entry.name} /> in your markup — app components resolve by name.
-  3. The copy is yours: edit it freely. npm-shipped and copied components
+  2. The components use the behavior core (focus trap, Escape, roving focus, ids):
+       npm install @tsazor/ui
+  3. Use <${entry.name} /> in your markup — app components resolve by name.
+  4. The copy is yours: edit it freely. npm-shipped and copied components
      coexist because all classes are globally unique (fui-*).`);

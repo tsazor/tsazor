@@ -85,14 +85,16 @@ describe("Tabs", () => {
     const list = container.querySelector(".fui-tabs__list")!;
     const buttons = [...list.querySelectorAll(".fui-tab")];
 
-    list.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    // The keys come from the focused tab (roving focus).
+    (buttons[0] as HTMLElement).focus();
+    buttons[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     await settle(renderer);
     expect(container.querySelector(".fui-tab-panel")!.textContent).toBe("Second body");
     expect(buttons[0]!.getAttribute("tabindex")).toBe("-1");
     // Focus rode along to the newly selected tab.
     expect(document.activeElement).toBe(buttons[1]!);
 
-    list.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    buttons[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
     await settle(renderer);
     expect(container.querySelector(".fui-tab-panel")!.textContent).toBe("First body");
   });
