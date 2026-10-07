@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/worker`: `WORKER_SCOPE` — the host hook through which a worker module loaded in-process (a
+  test runner, the tutorial's lesson gate) gets its scope. Tutorial: chapter *Heavy work* (two
+  lessons); the preview runs lesson workers as classic workers (a sandboxed frame can't start module
+  workers).
 - New package `@tsazor/worker` (docs/design-worker.md): heavy work off the main thread.
   `exposeWorker(api)` in the worker module; `class X extends defineWorker<Api>(() => new Worker(…)) {}` on
   the main thread — the class is the DI token (`services.registerType(X, { singleton: true })`,

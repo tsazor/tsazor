@@ -40,11 +40,13 @@ interface Bundles {
   transition: string;
   animate: string;
   easing: string;
+  worker: string;
+  workerCjs: string;
 }
 
 let bundles: Promise<Bundles> | undefined;
 const loadBundles = (): Promise<Bundles> =>
-  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest, transition, animate, easing }) => ({ runtime, components, dotnet, testing, vitest, transition, animate, easing })));
+  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs }) => ({ runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs })));
 
 const PREVIEW_STYLE = `
   :root { color-scheme: light; }
@@ -94,7 +96,7 @@ function srcdoc(baseHref: string): string {
   }
   addEventListener("message", (event) => {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
-    const { modules, runtime, components, dotnet, testing, vitest, transition, animate, easing, css, entry, program, routes, tests } = event.data;
+    const { modules, runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs, css, entry, program, routes, tests } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
     const imports = {
       "@tsazor/runtime": url(runtime),
@@ -104,6 +106,7 @@ function srcdoc(baseHref: string): string {
       "@tsazor/runtime/transition": url(transition),
       "@tsazor/runtime/animate": url(animate),
       "@tsazor/runtime/easing": url(easing),
+      "@tsazor/worker": url(worker),
       vitest: url(vitest),
     };
     // A Program.ts starts the app itself, but it cannot know the preview's
@@ -135,6 +138,56 @@ function srcdoc(baseHref: string): string {
       urls[imports[module.id]] = module.id;
     }
     send({ type: "urls", urls });
+    // @tsazor/worker: this sandboxed, opaque-origin frame can't start module
+    // workers (Chromium refuses them; classic ones work). So a lesson worker
+    // runs as a classic worker: its module graph, from the CommonJS versions
+    // the engine emits (workerCode) and @tsazor/worker as CommonJS, bundled
+    // into one script with a tiny require. The engine compiles the worker's
+    // new URL("./x.worker.ts", import.meta.url) into __tsazorWorkerUrl(id);
+    // the Worker constructor starts those URLs without { type: "module" }.
+    const workerPackages = { "@tsazor/worker": workerCjs };
+    const classicWorkerUrls = new Set();
+    const NativeWorker = globalThis.Worker;
+    globalThis.Worker = class extends NativeWorker {
+      constructor(scriptUrl, options) {
+        super(scriptUrl, classicWorkerUrls.has(String(scriptUrl)) ? { ...options, type: "classic" } : options);
+      }
+    };
+    globalThis.__tsazorWorkerUrl = (entry) => {
+      const definitions = [];
+      const seen = new Set();
+      const candidates = [...modules.map((candidate) => candidate.id), ...Object.keys(workerPackages), ...Object.keys(imports)];
+      const add = (id) => {
+        if (seen.has(id)) return;
+        seen.add(id);
+        const module = modules.find((candidate) => candidate.id === id);
+        const code = module ? module.workerCode : workerPackages[id];
+        if (code === undefined) {
+          definitions.push(JSON.stringify(id) + ": function () { throw new Error(" + JSON.stringify(id + " can't be used in a worker in the tutorial preview.") + "); }");
+          return;
+        }
+        definitions.push(JSON.stringify(id) + ": function (require, exports, module) {\\n" + code + "\\n}");
+        for (const candidate of candidates) {
+          if (code.includes('require("' + candidate + '")') || code.includes("require('" + candidate + "')")) add(candidate);
+        }
+      };
+      add(entry);
+      const script =
+        "const definitions = {\\n" + definitions.join(",\\n") + "\\n};\\n" +
+        "const cache = {};\\n" +
+        "function require(id) {\\n" +
+        "  if (cache[id]) return cache[id].exports;\\n" +
+        "  const module = { exports: {} };\\n" +
+        "  cache[id] = module;\\n" +
+        "  definitions[id](require, module.exports, module);\\n" +
+        "  return module.exports;\\n" +
+        "}\\n" +
+        "require(" + JSON.stringify(entry) + ");\\n" +
+        "//# sourceURL=" + entry + " (worker)";
+      const result = url(script);
+      classicWorkerUrls.add(result);
+      return result;
+    };
     const map = document.createElement("script");
     map.type = "importmap";
     map.textContent = JSON.stringify({ imports });
@@ -223,7 +276,7 @@ export class PreviewHost {
   /** Runs a build in a fresh iframe; the old one stays visible until the new one is up. */
   async show(build: ProjectBuild): Promise<void> {
     const run = ++this.run;
-    const { runtime, components, dotnet, testing, vitest, transition, animate, easing } = await loadBundles();
+    const { runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs } = await loadBundles();
     if (run !== this.run || !build.entry) return;
     this.pending?.remove();
     const frame = document.createElement("iframe");
@@ -239,7 +292,7 @@ export class PreviewHost {
     this.idsByUrl = {};
     const payload = {
       type: "run",
-      modules: Object.values(build.modules).map(({ id, code }) => ({ id, code })),
+      modules: Object.values(build.modules).map(({ id, code, workerCode }) => ({ id, code, workerCode })),
       runtime,
       components,
       dotnet,
@@ -248,6 +301,8 @@ export class PreviewHost {
       transition,
       animate,
       easing,
+      worker,
+      workerCjs,
       css: build.css,
       entry: build.entry,
       program: build.program,

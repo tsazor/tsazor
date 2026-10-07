@@ -222,11 +222,27 @@ function transpile(files: Files, file: string, source: string, innerMap: string 
     : undefined;
   const module: CompiledModule = { id: moduleIdFor(file), file, code };
   if (map) module.map = map;
+  if (innerMap === undefined) module.workerCode = ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }, fileName: `${fileName}.js` }).outputText;
   return module;
+}
+
+/**
+ * A worker's module URL (`new URL("./x.worker.ts", import.meta.url)`, the form
+ * Vite bundles) → `globalThis.__tsazorWorkerUrl("<module id>")`: in the
+ * preview a module's `import.meta.url` is a blob URL (no base for a relative
+ * path), and a worker needs a module graph of its own (workers don't inherit
+ * the import map). The preview and the lesson gate provide the function.
+ */
+function rewriteWorkerUrls(files: Files, file: string, code: string): string {
+  return code.replace(/new\s+URL\(\s*(["'])(\.{1,2}\/[^"']*)\1\s*,\s*import\.meta\.url\s*\)/g, (match, _quote: string, specifier: string) => {
+    const target = resolveModuleFile(files, specifier, file);
+    return target ? `globalThis.__tsazorWorkerUrl(${JSON.stringify(moduleIdFor(target))})` : match;
+  });
 }
 
 /** Relative specifiers → module ids; unknown relative imports stay (and fail loudly at load). */
 function rewriteSpecifiers(files: Files, file: string, code: string): string {
+  code = rewriteWorkerUrls(files, file, code);
   return code.replace(/(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(["'])(\.{1,2}\/[^"']*)\2/g, (match, lead: string, quote: string, specifier: string) => {
     const target = resolveModuleFile(files, specifier, file);
     if (!target) return match;

@@ -31,6 +31,12 @@ export interface CompiledModule {
   code: string;
   /** JS → original source map (JSON), when the file maps back to a source. */
   map?: string;
+  /**
+   * The same module as CommonJS (`.ts` files only): the preview runs lesson
+   * workers as classic workers — a sandboxed, opaque-origin frame can't start
+   * module workers — and bundles their module graph from these.
+   */
+  workerCode?: string;
 }
 
 export interface ProjectBuild {

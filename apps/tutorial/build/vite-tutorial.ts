@@ -42,15 +42,19 @@ export interface PackageBundles {
   transition: string;
   animate: string;
   easing: string;
+  /** @tsazor/worker (self-contained). */
+  worker: string;
+  /** @tsazor/worker as CommonJS: lesson workers run as classic workers in the preview. */
+  workerCjs: string;
 }
 
 export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
   const require = createRequire(path.join(fromDir, "package.json"));
-  const bundle = async (entry: string, external: string[]): Promise<string> => {
+  const bundle = async (entry: string, external: string[], format: "esm" | "cjs" = "esm"): Promise<string> => {
     const result = await build({
       entryPoints: [path.isAbsolute(entry) ? entry : require.resolve(entry)],
       bundle: true,
-      format: "esm",
+      format,
       platform: "browser",
       target: "es2022",
       minify: true,
@@ -62,7 +66,7 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
     });
     return result.outputFiles[0]!.text;
   };
-  const [runtime, components, dotnet, testing, vitest, transition, animate, easing] = await Promise.all([
+  const [runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs] = await Promise.all([
     bundle("@tsazor/runtime", []),
     bundle("@tsazor/bootstrap", ["@tsazor/runtime"]),
     bundle("@tsazor/dotnet", ["@tsazor/runtime"]),
@@ -71,8 +75,10 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
     bundle("@tsazor/runtime/transition", ["@tsazor/runtime"]),
     bundle("@tsazor/runtime/animate", ["@tsazor/runtime"]),
     bundle("@tsazor/runtime/easing", ["@tsazor/runtime"]),
+    bundle("@tsazor/worker", []),
+    bundle("@tsazor/worker", [], "cjs"),
   ]);
-  return { runtime, components, dotnet, testing, vitest, transition, animate, easing };
+  return { runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs };
 }
 
 export function tutorialPlugin(options: { root: string }): Plugin {

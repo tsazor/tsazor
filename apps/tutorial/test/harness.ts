@@ -40,6 +40,49 @@ export function createTsazorApp(options) {
 `;
 
 /** Writes the modules as files; module ids become relative file imports. */
+/**
+ * @tsazor/worker in the gate: Node has no Web Worker, so a worker module
+ * runs in-process over a MessageChannel — loaded with @tsazor/worker's host
+ * scope set (WORKER_SCOPE), once per worker (a query string makes each its
+ * own module instance). Cloning, callbacks and cancellation behave as in a
+ * browser; only the thread is the same.
+ */
+const WORKER_SCOPE = Symbol.for("tsazor.worker.scope");
+let workerLoads: Promise<void> = Promise.resolve();
+let workerCount = 0;
+class GateWorker {
+  private readonly port: MessagePort;
+  constructor(url: string | URL) {
+    const channel = new MessageChannel();
+    this.port = channel.port1;
+    const scope = {
+      postMessage: (message: unknown, transfer?: Transferable[]) => channel.port2.postMessage(message, transfer ?? []),
+      addEventListener: (type: string, listener: EventListener) => channel.port2.addEventListener(type, listener),
+    };
+    workerLoads = workerLoads.then(async () => {
+      (globalThis as Record<symbol, unknown>)[WORKER_SCOPE] = scope;
+      try {
+        await import(`${String(url)}?worker=${++workerCount}`);
+      } finally {
+        delete (globalThis as Record<symbol, unknown>)[WORKER_SCOPE];
+      }
+      channel.port2.start();
+    });
+    channel.port1.start();
+  }
+  postMessage(message: unknown, transfer?: Transferable[]): void {
+    this.port.postMessage(message, transfer ?? []);
+  }
+  addEventListener(type: string, listener: EventListener): void {
+    if (type === "message") this.port.addEventListener("message", listener);
+  }
+  terminate(): void {
+    this.port.close();
+  }
+}
+(globalThis as Record<string, unknown>).Worker = GateWorker;
+(globalThis as Record<string, unknown>).__tsazorWorkerUrl = (url: string) => url;
+
 export function writeModules(build: ProjectBuild, dir: string): void {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
@@ -49,7 +92,11 @@ export function writeModules(build: ProjectBuild, dir: string): void {
       const rel = path.posix.relative(fileDir === "." ? "" : fileDir, target);
       return rel.startsWith(".") ? rel : `./${rel}`;
     };
-    let code = module.code.replace(/(["'])\$app\/([^"']+)\1/g, (_match, quote: string, target: string) => `${quote}${relative(target)}.js${quote}`);
+    // A worker module's URL: absolute (the GateWorker below imports it).
+    let code = module.code.replace(/__tsazorWorkerUrl\((["'])\$app\/([^"']+)\1\)/g, (_match, _quote: string, target: string) =>
+      `__tsazorWorkerUrl(${JSON.stringify(pathToFileURL(path.join(dir, `${target}.js`)).href)})`,
+    );
+    code = code.replace(/(["'])\$app\/([^"']+)\1/g, (_match, quote: string, target: string) => `${quote}${relative(target)}.js${quote}`);
     code = code.replace(/(["'])vitest\1/g, JSON.stringify(MINI_TEST));
     if (build.program && module.id === build.program) {
       code = code.replace(/(["'])@tsazor\/runtime\1/g, `$1${relative("__gate-runtime.mjs")}$1`);

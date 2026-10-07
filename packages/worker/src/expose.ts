@@ -33,7 +33,7 @@ export interface WorkerScope {
  * export type ImportApi = typeof api;
  * ```
  */
-export function exposeWorker<Api extends object>(api: Api, scope: WorkerScope = globalThis as unknown as WorkerScope): Api {
+export function exposeWorker<Api extends object>(api: Api, scope: WorkerScope = defaultScope()): Api {
   const signals = new Map<number, AbortController>();
   const post = (message: FromWorker, transfer: Transferable[] = []): void => scope.postMessage(message, transfer);
 
@@ -95,4 +95,17 @@ function collectSignals(value: unknown, into: number[]): void {
   const marker = markerOf(value);
   if (marker?.$tsazorWorker === "signal") into.push(marker.id);
   else if (marker === undefined && isPlainObject(value)) for (const property of Object.values(value)) collectSignals(property, into);
+}
+
+/**
+ * The key under which a host that runs a worker module in-process (the
+ * tutorial's lesson gate, a test runner) offers the module its scope:
+ * `globalThis[Symbol.for("tsazor.worker.scope")] = scope` while the module
+ * loads. In a real worker it is unset and the worker's global scope is used.
+ */
+export const WORKER_SCOPE = Symbol.for("tsazor.worker.scope");
+
+function defaultScope(): WorkerScope {
+  const hosted = (globalThis as Record<symbol, unknown>)[WORKER_SCOPE];
+  return (hosted as WorkerScope | undefined) ?? (globalThis as unknown as WorkerScope);
 }

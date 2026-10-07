@@ -12,7 +12,7 @@ import path from "node:path";
 import { LIB_ROOT, type TypeEnvironment } from "../src/engine/type-paths.js";
 
 const ROOT_LIBS = ["lib.es2023.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"];
-const PACKAGES = ["@tsazor/runtime", "@tsazor/bootstrap", "@tsazor/dotnet", "@tsazor/testing"];
+const PACKAGES = ["@tsazor/runtime", "@tsazor/bootstrap", "@tsazor/dotnet", "@tsazor/testing", "@tsazor/worker"];
 
 export function loadTypeEnvironment(fromDir: string): TypeEnvironment {
   const require = createRequire(path.join(fromDir, "package.json"));

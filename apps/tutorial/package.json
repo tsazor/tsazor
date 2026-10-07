@@ -27,12 +27,13 @@
     "@jridgewell/gen-mapping": "^0.3.13",
     "@jridgewell/trace-mapping": "^0.3.31",
     "@lezer/highlight": "^1.2.5",
-    "@tsazor/compiler": "workspace:*",
     "@tsazor/bootstrap": "workspace:*",
+    "@tsazor/compiler": "workspace:*",
     "@tsazor/dotnet": "workspace:*",
     "@tsazor/lsp": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
+    "@tsazor/worker": "workspace:*",
     "@tsazor/workspace": "workspace:*"
   },
   "devDependencies": {

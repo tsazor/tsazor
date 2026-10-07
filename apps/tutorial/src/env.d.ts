@@ -29,4 +29,8 @@ declare module "virtual:tutorial-bundles" {
   export const transition: string;
   export const animate: string;
   export const easing: string;
+  /** @tsazor/worker as one ES module. */
+  export const worker: string;
+  /** @tsazor/worker as CommonJS (classic workers in the preview). */
+  export const workerCjs: string;
 }

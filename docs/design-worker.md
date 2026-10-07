@@ -98,6 +98,16 @@ component renders; a callback between (progress) renders with `@State` or `state
   specific. CSP: `worker-src 'self'` (docs/csp.md).
 - **Zero dependencies**, like every Tsazor package (no Comlink); the layer is small (~2 KB).
 
+## Tutorial (implemented 2026-10-07)
+
+Chapter *Heavy work* in Part 3: *Off the main thread* and *Progress and cancel*. Findings on the
+way: the preview's sandboxed, opaque-origin frame can't start **module** workers at all
+(Chromium refuses them; classic workers run), so the preview runs a lesson's worker as a classic
+worker — the engine emits a CommonJS version of every `.ts` module, the preview bundles the
+worker's graph with `@tsazor/worker` as CommonJS and a tiny `require`. The lesson gate (Node) runs
+the worker module in-process over a MessageChannel through the `WORKER_SCOPE` host hook. Real apps
+are unaffected: they use module workers, as Vite bundles them.
+
 ## Not in v1
 
 `SharedArrayBuffer`/`Atomics` helpers (they need cross-origin isolation), async iterators and

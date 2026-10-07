@@ -302,12 +302,12 @@ importers:
       '@lezer/highlight':
         specifier: ^1.2.5
         version: 1.2.5
-      '@tsazor/compiler':
-        specifier: workspace:*
-        version: link:../../packages/compiler
       '@tsazor/bootstrap':
         specifier: workspace:*
         version: link:../../packages/bootstrap
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../../packages/compiler
       '@tsazor/dotnet':
         specifier: workspace:*
         version: link:../../packages/dotnet
@@ -320,6 +320,9 @@ importers:
       '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
+      '@tsazor/worker':
+        specifier: workspace:*
+        version: link:../../packages/worker
       '@tsazor/workspace':
         specifier: workspace:*
         version: link:../../packages/workspace

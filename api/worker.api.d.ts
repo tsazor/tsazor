@@ -14,6 +14,9 @@ export declare function inProcessWorker<Api extends object>(api: Api, options?: 
 // transfer
 export declare function transfer<T>(value: T, transferables: readonly Transferable[]): T;
 
+// WORKER_SCOPE
+export declare const WORKER_SCOPE: unique symbol;
+
 // WorkerClient
 export type WorkerClient<Api> = WorkerProxy<Api> & WorkerControl;
 

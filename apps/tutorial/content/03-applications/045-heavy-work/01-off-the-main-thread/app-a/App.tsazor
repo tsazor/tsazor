@@ -1,0 +1,21 @@
+@import { parseOrders, sampleOrders } from "./orders"
+
+<p class="clock">The page is alive: @ticks</p>
+
+<button class="import" @onclick="runImport">Import today's orders</button>
+<p class="result">@status</p>
+
+@code {
+    @State() accessor ticks = 0;
+    status = "No import yet.";
+
+    override onInitialized() {
+        const timer = setInterval(() => this.ticks++, 100);
+        this.disposeSignal.addEventListener("abort", () => clearInterval(timer));
+    }
+
+    runImport() {
+        const result = parseOrders(sampleOrders(400_000));
+        this.status = `Imported ${result.orders} orders, ${result.loaves} loaves.`;
+    }
+}
