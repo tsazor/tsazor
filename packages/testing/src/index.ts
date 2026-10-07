@@ -159,15 +159,16 @@ export async function render<TComponent extends ComponentBase>(
 
 /**
  * Builds a small test component in place — handy for builder-API checks
- * without writing a whole class.
+ * without writing a whole class. `options.services` registers services, as
+ * for `render`.
  */
-export function renderTree(build: (b: RenderTreeBuilder) => void): Promise<RenderResult> {
+export function renderTree(build: (b: RenderTreeBuilder) => void, options?: Pick<RenderOptions, "services">): Promise<RenderResult> {
   class TestComponent extends ComponentBase {
     protected override buildRenderTree(b: RenderTreeBuilder): void {
       build(b);
     }
   }
-  return render<ComponentBase>(TestComponent);
+  return render<ComponentBase>(TestComponent, options);
 }
 
 /**

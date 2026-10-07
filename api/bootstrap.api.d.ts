@@ -113,6 +113,19 @@ export default class Dialog extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// Drawer
+export default class Drawer extends ComponentBase {
+    isOpen: boolean;
+    placement: "start" | "end" | "top" | "bottom";
+    title?: string;
+    ariaLabel?: string;
+    closeOnBackdrop: boolean;
+    closeOnEscape: boolean;
+    onClosed?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Dropdown
 export default class Dropdown extends ComponentBase {
     label: string;
@@ -296,4 +309,25 @@ export default class TextInput extends InputBase<string> {
     disabled: boolean;
     required: boolean;
     id?: string;
+}
+
+// Toast: re-exported from @tsazor/ui
+
+// Toaster: re-exported from @tsazor/ui
+
+// ToastOptions: re-exported from @tsazor/ui
+
+// ToastRegion
+export default class ToastRegion extends ComponentBase {
+    position: "top-start" | "top-end" | "bottom-start" | "bottom-end";
+}
+
+// tooltip
+export declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;
+
+// Tooltip
+export default class Tooltip extends ComponentBase {
+    text: string;
+    placement: Placement;
+    childContent?: RenderFragment;
 }

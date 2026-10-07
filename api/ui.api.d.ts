@@ -116,5 +116,47 @@ export declare const scrollLock: Attachment<HTMLElement>;
 // Size
 export type Size = "small" | "medium" | "large";
 
+// Toast
+export interface Toast {
+    readonly id: number;
+    readonly title?: string;
+    readonly message?: string;
+    readonly intent: Intent;
+}
+
+// Toaster
+export declare class Toaster {
+    private entries;
+    private next;
+    private readonly listeners;
+    get toasts(): readonly Toast[];
+    show(options: ToastOptions): number;
+    dismiss(id: number): void;
+    pause(id: number): void;
+    resume(id: number): void;
+    subscribe(listener: () => void): () => void;
+    private start;
+    private changed;
+}
+
+// ToastOptions
+export interface ToastOptions {
+    title?: string;
+    message?: string;
+    intent?: Intent;
+    timeout?: number;
+}
+
+// tooltip
+export declare function tooltip(text: string, options?: TooltipOptions): Attachment<HTMLElement>;
+
+// TooltipOptions
+export interface TooltipOptions {
+    placement?: Placement;
+    className?: string;
+    innerClassName?: string;
+    delay?: number;
+}
+
 // uniqueId
 export declare function uniqueId(prefix?: string): string;

@@ -114,6 +114,31 @@ try {
   );
   check((await page.locator("[role=tabpanel]").textContent())?.trim() === "Content of tab 2.", "tabs: the panel follows the selection");
 
+  // Drawer: a modal panel — focus moves in, Escape closes it and returns focus.
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.waitForSelector(".offcanvas[role=dialog]");
+  check(await page.evaluate(() => document.querySelector(".offcanvas")?.contains(document.activeElement) ?? false), "drawer: focus moves into the panel");
+  const drawerViolations = await axe(page);
+  check(drawerViolations.length === 0, `axe /components with the drawer open${drawerViolations.length ? `: ${drawerViolations.join(" | ")}` : ""}`);
+  await page.keyboard.press("Escape");
+  await page.waitForSelector(".offcanvas", { state: "detached" });
+  check((await focused()) === "Filters", "drawer: Escape closes it and focus returns to the opener");
+
+  // Toast: shown through the Toaster service, in a polite live region.
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.waitForSelector(".toast");
+  check((await page.locator(".toast").textContent())?.includes("The order list is up to date.") === true, "toast: Save shows a toast");
+  const toastViolations = await axe(page);
+  check(toastViolations.length === 0, `axe /components with a toast${toastViolations.length ? `: ${toastViolations.join(" | ")}` : ""}`);
+
+  // Tooltip: shows on focus, describes the button, Escape hides it.
+  await page.locator(".print").focus();
+  await page.waitForSelector("[role=tooltip]");
+  const described = await page.locator(".print").evaluate((button) => document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent);
+  check(described === "Print the order list", `tooltip: describes the button (${described})`);
+  await page.keyboard.press("Escape");
+  check((await page.locator("[role=tooltip]").count()) === 0, "tooltip: Escape hides it");
+
   // Form: messages only after a submit, linked to their inputs; axe with the errors showing.
   await page.getByRole("button", { name: "Reserve" }).click();
   await page.waitForSelector(".invalid-feedback");

@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/ui`: `Toaster` (the app's toasts as a DI service: `show({ title, message, intent, timeout })`,
+  `dismiss`, `pause`/`resume` for WCAG 2.2.1, `subscribe`) and the `tooltip(text, options)` attachment
+  (hover and focus, hoverable, Escape, `aria-describedby`, WCAG 1.4.13; the same text gives the same
+  attachment). `@tsazor/bootstrap`: `ToastRegion`, `Drawer` (offcanvas, a modal panel) and `Tooltip`,
+  plus the `tooltip` attachment and `Toaster` re-exported. `@tsazor/testing`: `renderTree` takes
+  `{ services }`.
 - Browser support documented (docs/browser-support.md): the current Chrome/Edge, Firefox and Safari. CI
   runs the browser gates (tutorial, Pages, Pizza, gallery, demo) in Firefox and WebKit too. **Fix**
   (tutorial preview): errors in the console panel lost their message in Firefox and Safari, whose

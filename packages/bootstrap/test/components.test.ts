@@ -20,6 +20,10 @@ import {
   CardHeader,
   CardTitle,
   Dialog,
+  Drawer,
+  ToastRegion,
+  Toaster,
+  Tooltip,
   Form,
   RadioGroup,
   TextInput,
@@ -303,6 +307,75 @@ describe("Form + inputs (FieldState from @tsazor/ui)", () => {
     radios[1]!.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
     expect(model.size).toBe("l");
+  });
+});
+
+describe("Drawer, ToastRegion, Tooltip", () => {
+  it("Drawer is a modal dialog sliding in from its edge, closing on Escape", async () => {
+    let closed = 0;
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, Drawer);
+      b.addAttribute(1, "isOpen", true);
+      b.addAttribute(2, "placement", "end");
+      b.addAttribute(3, "title", "Filters");
+      b.addAttribute(4, "onClosed", EventCallback.unbound(() => {
+        closed++;
+      }));
+      b.addAttribute(5, "childContent", text("Only open orders"));
+      b.closeComponent();
+    });
+    await settle(renderer);
+    const panel = container.querySelector<HTMLElement>(".offcanvas")!;
+    expect(panel.className).toContain("offcanvas-end");
+    expect(panel.getAttribute("aria-modal")).toBe("true");
+    expect(document.getElementById(panel.getAttribute("aria-labelledby")!)!.textContent).toBe("Filters");
+    expect(panel.contains(document.activeElement)).toBe(true);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle(renderer);
+    expect(closed).toBe(1);
+  });
+
+  it("ToastRegion renders the Toaster's toasts and closes one with its button", async () => {
+    const toaster = new Toaster();
+    const { container, renderer } = await renderTree(
+      (b) => {
+        b.openComponent(0, ToastRegion);
+        b.closeComponent();
+      },
+      { services: (services) => services.registerValue(Toaster, toaster) },
+    );
+    toaster.show({ title: "Saved", message: "Order 101", intent: "success", timeout: 0 });
+    toaster.show({ message: "Offline", intent: "danger", timeout: 0 });
+    await settle(renderer);
+    const toasts = [...container.querySelectorAll<HTMLElement>(".toast")];
+    expect(toasts.map((toast) => toast.className.includes("text-bg-success") || toast.className.includes("text-bg-danger"))).toEqual([true, true]);
+    expect(toasts[0]!.textContent).toContain("Saved");
+    expect(toasts[1]!.getAttribute("role")).toBe("alert");
+    expect(container.querySelector(".toast-container")!.getAttribute("aria-live")).toBe("polite");
+    toasts[0]!.querySelector<HTMLElement>(".btn-close")!.click();
+    await settle(renderer);
+    expect(toaster.toasts.map((toast) => toast.message)).toEqual(["Offline"]);
+  });
+
+  it("Tooltip describes the element inside it", async () => {
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, Tooltip);
+      b.addAttribute(1, "text", "Save the order");
+      b.addAttribute(2, "childContent", (inner: typeof b) => {
+        inner.openElement(0, "button");
+        inner.addContent(1, "💾");
+        inner.closeElement();
+      });
+      b.closeComponent();
+    });
+    await settle(renderer);
+    const button = container.querySelector("button")!;
+    button.dispatchEvent(new FocusEvent("focusin"));
+    const tip = document.getElementById(button.getAttribute("aria-describedby")!)!;
+    expect(tip.className).toBe("tooltip show");
+    expect(tip.querySelector(".tooltip-inner")!.textContent).toBe("Save the order");
+    button.dispatchEvent(new FocusEvent("focusout"));
+    expect(document.querySelector(".tooltip")).toBeNull();
   });
 });
 

@@ -16,8 +16,10 @@
         <NavLink Href="/auth">Auth</NavLink>
         <NavLink Href="/components">Components</NavLink>
         <NavLink Href="/csp">Strict CSP</NavLink>
+        <NavLink Href="/worker">Worker</NavLink>
     </nav>
     <main class="main page">
         @Body
     </main>
 </div>
+<ToastRegion />

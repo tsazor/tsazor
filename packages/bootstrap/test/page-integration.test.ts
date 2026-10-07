@@ -13,7 +13,11 @@ import { transformSync } from "esbuild";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Renderer } from "@tsazor/runtime";
+import { Renderer, ServiceCollection } from "@tsazor/runtime";
+import { Toaster } from "@tsazor/ui";
+
+/** The services the page injects (the demo's Program.ts registers them). */
+const services = () => new ServiceCollection().registerType(Toaster, { singleton: true }).build();
 
 /* Anchor on this test file, not on CWD: the root vitest projects config runs
  * packages from the repo root, so relative paths would resolve there. */
@@ -49,7 +53,7 @@ describe("compiled page integration (ComponentsDemo)", () => {
   it("swaps the alert branch to the restore button after self-dismissal", async () => {
     const file = await compilePage();
     const { default: ComponentsDemo } = await import(/* @vite-ignore */ path.resolve(file));
-    const renderer = new Renderer();
+    const renderer = new Renderer(services());
     const container = document.createElement("div");
     document.body.appendChild(container);
     renderer.renderInContainer(ComponentsDemo, container);
@@ -67,7 +71,7 @@ describe("compiled page integration (ComponentsDemo)", () => {
   it("keeps all interactive components live after the swap (clicks still re-render)", async () => {
     const file = await compilePage();
     const { default: ComponentsDemo } = await import(/* @vite-ignore */ path.resolve(file));
-    const renderer = new Renderer();
+    const renderer = new Renderer(services());
     const container = document.createElement("div");
     document.body.appendChild(container);
     renderer.renderInContainer(ComponentsDemo, container);

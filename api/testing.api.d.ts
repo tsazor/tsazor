@@ -306,7 +306,7 @@ export interface RenderResult<TComponent extends ComponentBase = ComponentBase> 
 }
 
 // renderTree
-export declare function renderTree(build: (b: RenderTreeBuilder) => void): Promise<RenderResult>;
+export declare function renderTree(build: (b: RenderTreeBuilder) => void, options?: Pick<RenderOptions, "services">): Promise<RenderResult>;
 
 // RenderTreeBuilder: re-exported from @tsazor/runtime
 
