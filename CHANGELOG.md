@@ -5,6 +5,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/bootstrap`: `Dialog`, `Dropdown` and `Tabs` follow the WAI-ARIA patterns, built on `@tsazor/ui`
+  (new dependency). **`Modal` is now `Dialog`** (`Modal` stays as an alias, D-C3); it traps focus and
+  restores it, locks the page scroll, closes on Escape (new `closeOnEscape`), has `role="dialog"`,
+  `aria-modal`, `aria-labelledby` (new `ariaLabel` without a title) and `additionalAttributes`; **`size`
+  is now `"small" | "medium" | "large" | "xlarge"`** (was `"" | "sm" | "lg" | "xl"`). `Dropdown`: menu
+  button pattern (arrow keys open and move, typeahead, Escape returns focus, Tab and outside clicks
+  close), positioned by `anchoredPosition` (new `placement`); `DropdownItem` gets `role="menuitem"` and
+  `disabled`. `Tabs`: roving tabindex, arrow keys, tab–panel ids, new `ariaLabel` and `onSelected`;
+  `Tab` renders `role="tabpanel"`. `@tsazor/ui`: `createLayer()` and the `layer` option of `focusTrap`
+  and `dismissable` (one overlay's behaviors share a layer); `anchoredPosition`'s `placement` may be a
+  function.
 - **Renamed:** `@tsazor/components` is now `@tsazor/bootstrap` (the Bootstrap 5 skin of the component
   library, D-C2 in docs/design-component-library.md). Write `@using @tsazor/bootstrap`; the API is
   unchanged so far. The tutorial reference lists it under `reference/components/bootstrap`.

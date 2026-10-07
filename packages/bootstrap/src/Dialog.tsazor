@@ -1,0 +1,79 @@
+@** Renders Bootstrap's `.modal` dialog with a backdrop while `isOpen` is true, with an optional
+    header (title and close button) and footer — the modal dialog pattern: focus moves into the
+    dialog and stays there (Tab wraps), the page behind it doesn't scroll, and focus returns when it
+    closes. It does not close itself: Escape, a backdrop click or the close button raise onClosed,
+    and the parent sets `isOpen` to false. Also available as `Modal`, Bootstrap's name for it. *@
+@import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+
+@if (isOpen) {
+    <div class="modal-backdrop show"></div>
+    <div class="modal d-block" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="additionalAttributes" @attach="trap" @attach:lock="lock">
+        <div class="@dialogClass">
+            <div class="modal-content" @attach="dismiss">
+                @if (title) {
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="@titleId">@title</h5>
+                        <button type="button" class="btn-close" aria-label="Close" @onclick="requestClose"></button>
+                    </div>
+                }
+                <div class="modal-body">@childContent</div>
+                @if (footer) {
+                    <div class="modal-footer">@footer</div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /** Whether the dialog is visible; the parent flips this in response to onClosed. */
+    @Parameter() isOpen: boolean = false;
+    /** Optional heading; it also names the dialog for screen readers. Omitting it hides the header row. */
+    @Parameter() title?: string;
+    /** The dialog's accessible name when it has no title. */
+    @Parameter() ariaLabel?: string;
+    /** Dialog width: small, medium (default), large, or Bootstrap's extra large. */
+    @Parameter() size: "small" | "medium" | "large" | "xlarge" = "medium";
+    /** Vertically centers the dialog. */
+    @Parameter() centered: boolean = true;
+    /** Closes when the backdrop is clicked. */
+    @Parameter() closeOnBackdrop: boolean = true;
+    /** Closes when the user presses Escape. */
+    @Parameter() closeOnEscape: boolean = true;
+    /** Optional footer content (e.g. action buttons). */
+    @Parameter() footer?: RenderFragment;
+    /** Fired when the user asks to close (Escape, backdrop or the close button). */
+    @Parameter() onClosed?: EventCallback<MouseEvent>;
+    /** The dialog's body. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the `.modal` element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly titleId = uniqueId("tz-dialog-title");
+    /** The trap and the dismiss handling are one overlay layer. */
+    private readonly layer = createLayer();
+    private readonly trap = focusTrap({ layer: this.layer });
+    private readonly lock = scrollLock;
+    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
+
+    private get labelledBy(): string | null {
+        return this.title ? this.titleId : null;
+    }
+
+    private get dialogClass(): string {
+        const parts = ["modal-dialog"];
+        if (this.size === "small") parts.push("modal-sm");
+        else if (this.size === "large") parts.push("modal-lg");
+        else if (this.size === "xlarge") parts.push("modal-xl");
+        if (this.centered) parts.push("modal-dialog-centered");
+        return parts.join(" ");
+    }
+
+    private dismissed(reason: DismissReason): void {
+        if (reason === "escape" ? this.closeOnEscape : this.closeOnBackdrop) this.requestClose();
+    }
+
+    private requestClose(): void {
+        this.onClosed?.invokeAsync();
+    }
+}

@@ -1,12 +1,17 @@
-@** Renders Bootstrap's `.dropdown`: a toggle button (with `aria-expanded`) and a `.dropdown-menu`
-    that is rendered only while open. Fill the menu with DropdownItem children; it cascades itself to
-    them, and selecting an item or clicking the toggle again closes the menu. *@
+@** Renders Bootstrap's `.dropdown`: a toggle button and a `.dropdown-menu` that is rendered only
+    while open — the menu button pattern. Fill the menu with DropdownItem children. The toggle opens
+    it on click, Enter, Space or the arrow keys (Up starts at the last item); inside, the arrow keys,
+    Home, End and typing move between items. Choosing an item or pressing Escape closes the menu and
+    returns focus to the toggle; Tab or a click outside closes it too. The menu is positioned next to
+    the toggle and flips up when there is no room below. *@
+@import { anchoredPosition, dismissable, rovingFocus, uniqueId, type DismissReason } from "@tsazor/ui"
+
 <div class="dropdown">
-    <button class="@toggleClass" type="button" aria-expanded="@open" @onclick="toggle">
+    <button class="@toggleClass" type="button" id="@toggleId" aria-haspopup="menu" aria-expanded="@expandedText" aria-controls="@menuControls" @ref="toggleButton" @onclick="toggle" @onkeydown="toggleKeydown">
         @label
     </button>
     @if (open) {
-        <div class="dropdown-menu show">@childContent</div>
+        <ul class="dropdown-menu show" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
     }
 </div>
 
@@ -17,10 +22,10 @@
     @Parameter() variant: string = "primary";
     /** Renders the outline variant of the color. */
     @Parameter() outline: boolean = false;
+    /** Where the menu opens relative to the toggle. */
+    @Parameter() placement: "bottom-start" | "bottom-end" | "top-start" | "top-end" = "bottom-start";
     /** The menu's DropdownItem children. */
     @Parameter() childContent?: RenderFragment;
-
-    private open = false;
 
     readonly isCascadingValueSupplier = true;
     readonly isFixed = false;
@@ -29,19 +34,65 @@
         return this;
     }
 
+    private open = false;
+    /** Opened with ArrowUp: focus starts at the last item. */
+    private openAtEnd = false;
+    private toggleButton?: HTMLButtonElement;
+    private readonly toggleId = uniqueId("tz-dropdown");
+    private readonly menuId = `${this.toggleId}-menu`;
+
+    private readonly keys = rovingFocus({ items: "[role=menuitem]", orientation: "vertical", typeahead: true });
+    private readonly dismiss = dismissable({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
+    private readonly position = anchoredPosition({ anchor: () => this.toggleButton, placement: () => this.placement });
+    private readonly focusFirst = (menu: HTMLElement): void => {
+        const items = menu.querySelectorAll<HTMLElement>("[role=menuitem]:not([disabled])");
+        (this.openAtEnd ? items[items.length - 1] : items[0])?.focus({ preventScroll: true });
+    };
+
     private get toggleClass(): string {
         const base = this.outline ? `btn-outline-${this.variant}` : `btn-${this.variant}`;
         return `btn ${base} dropdown-toggle`;
     }
 
-    private toggle(): void {
-        this.open = !this.open;
+    private get expandedText(): string {
+        return this.open ? "true" : "false";
     }
 
-    /** @internal Called by DropdownItem after selection. */
-    close(): void {
+    private get menuControls(): string | null {
+        return this.open ? this.menuId : null;
+    }
+
+    private toggle(): void {
+        if (this.open) this.close(true);
+        else this.show(false);
+    }
+
+    private show(atEnd: boolean): void {
+        this.openAtEnd = atEnd;
+        this.open = true;
+    }
+
+    private toggleKeydown(e: KeyboardEvent): void {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            this.show(e.key === "ArrowUp");
+        }
+    }
+
+    private menuKeydown(e: KeyboardEvent): void {
+        // Tab leaves the menu: close it and let focus move on.
+        if (e.key === "Tab") this.close(false);
+    }
+
+    private dismissed(reason: DismissReason): void {
+        this.close(reason === "escape");
+    }
+
+    /** @internal Closes the menu; `returnFocus` puts focus back on the toggle (DropdownItem passes true). */
+    close(returnFocus = true): void {
         if (!this.open) return;
         this.open = false;
+        if (returnFocus) this.toggleButton?.focus({ preventScroll: true });
         this.stateHasChangedInternal();
     }
 }

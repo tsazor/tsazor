@@ -1,13 +1,16 @@
-@** One entry of a Dropdown menu (Bootstrap's `.dropdown-item`) rendered as a button. Place it inside
-    a Dropdown; clicking it raises onSelect and then closes the parent menu. *@
+@** One entry of a Dropdown menu (Bootstrap's `.dropdown-item`, `role="menuitem"`). Place it inside a
+    Dropdown; choosing it (click, Enter or Space) raises onSelect, then closes the menu and returns
+    focus to the toggle. *@
 @import type Dropdown from "./Dropdown.tsazor"
-<li>
-    <button class="dropdown-item" type="button" @onclick="handleClick">@childContent</button>
+<li role="none">
+    <button class="dropdown-item" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@childContent</button>
 </li>
 
 @code {
-    /** Fired when the item is clicked. */
+    /** Fired when the item is chosen. */
     @Parameter() onSelect?: EventCallback<MouseEvent>;
+    /** Greys the item out; the arrow keys skip it. */
+    @Parameter() disabled: boolean = false;
     /** The item's label. */
     @Parameter() childContent?: RenderFragment;
 
@@ -16,6 +19,6 @@
 
     private handleClick(e: MouseEvent): void {
         this.onSelect?.invokeAsync(e);
-        this.dropdown?.close();
+        this.dropdown?.close(true);
     }
 }

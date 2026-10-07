@@ -19,6 +19,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Dialog,
   Collapse,
   Dropdown,
   DropdownItem,
@@ -197,6 +198,48 @@ describe("Modal", () => {
   });
 });
 
+describe("Dialog (the modal dialog pattern, on @tsazor/ui)", () => {
+  async function open(onClosed: () => void) {
+    return renderTree((b) => {
+      b.openComponent(0, Dialog);
+      b.addAttribute(1, "isOpen", true);
+      b.addAttribute(2, "title", "Delete order");
+      b.addAttribute(3, "onClosed", EventCallback.unbound(onClosed));
+      b.addAttribute(4, "childContent", (c: Parameters<RenderFragment>[0]) => {
+        c.openElement(0, "input");
+        c.closeElement();
+      });
+      b.closeComponent();
+    });
+  }
+
+  it("is a labelled modal dialog that takes focus and locks the page scroll", async () => {
+    const { container, renderer } = await open(() => {});
+    await settle(renderer);
+    const dialog = container.querySelector<HTMLElement>("[role=dialog]")!;
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby")!)!.textContent).toBe("Delete order");
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+  });
+
+  it("asks to close on Escape and on a press on the backdrop, not inside", async () => {
+    let closed = 0;
+    const { container, renderer } = await open(() => closed++);
+    await settle(renderer);
+    container.querySelector(".modal-body")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(closed).toBe(0);
+    container.querySelector(".modal")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle(renderer);
+    expect(closed).toBe(2);
+  });
+
+  it("is also exported as Modal", () => {
+    expect(Modal).toBe(Dialog);
+  });
+});
+
 describe("Tabs + Tab", () => {
   function build(b: ReturnType<typeof Object.getPrototypeOf> & never): void {
     throw new Error("unused");
@@ -234,6 +277,38 @@ describe("Tabs + Tab", () => {
     expect(panes).toHaveLength(1);
     expect(panes[0]!.textContent).toBe("Second pane");
     expect(container.querySelectorAll(".nav-link")[1]!.className).toContain("active");
+  });
+
+  it("follows the tabs pattern: roving tabindex, arrow keys, ids linking tab and panel", async () => {
+    const selected: number[] = [];
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, Tabs);
+      b.addAttribute(1, "onSelected", EventCallback.unbound((index: number) => {
+        selected.push(index);
+      }));
+      b.addAttribute(2, "childContent", (inner: typeof b) => {
+        for (const [seq, title] of [[0, "One"], [3, "Two"], [6, "Three"]] as const) {
+          inner.openComponent(seq, Tab);
+          inner.addAttribute(seq + 1, "title", title);
+          inner.addAttribute(seq + 2, "childContent", text(`${title} pane`));
+          inner.closeComponent();
+        }
+      });
+      b.closeComponent();
+    });
+    await settle(renderer);
+    const tabs = () => [...container.querySelectorAll<HTMLElement>("[role=tab]")];
+    expect(tabs().map((tab) => tab.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
+    tabs()[0]!.focus();
+    tabs()[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    await settle(renderer);
+    expect(document.activeElement).toBe(tabs()[2]);
+    expect(tabs().map((tab) => tab.getAttribute("tabindex"))).toEqual(["-1", "-1", "0"]);
+    expect(selected).toEqual([2]);
+    const panel = container.querySelector<HTMLElement>("[role=tabpanel]")!;
+    expect(panel.textContent).toBe("Three pane");
+    expect(panel.getAttribute("aria-labelledby")).toBe(tabs()[2]!.id);
+    expect(tabs()[2]!.getAttribute("aria-controls")).toBe(panel.id);
   });
 });
 
@@ -293,6 +368,36 @@ describe("Dropdown + DropdownItem", () => {
     await settle(renderer);
     expect(selected).toBe(1);
     expect(container.querySelector(".dropdown-menu")).toBeNull();
+  });
+
+  it("follows the menu button pattern: arrow keys open and move, Escape closes and returns focus", async () => {
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, Dropdown);
+      b.addAttribute(1, "label", "Order");
+      b.addAttribute(2, "childContent", (inner: typeof b) => {
+        for (const [seq, label] of [[0, "Copy"], [2, "Paste"], [4, "Print"]] as const) {
+          inner.openComponent(seq, DropdownItem);
+          inner.addAttribute(seq + 1, "childContent", text(label));
+          inner.closeComponent();
+        }
+      });
+      b.closeComponent();
+    });
+    const toggle = container.querySelector<HTMLElement>(".dropdown-toggle")!;
+    expect(toggle.getAttribute("aria-haspopup")).toBe("menu");
+    toggle.focus();
+    toggle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    await settle(renderer);
+    const menu = container.querySelector<HTMLElement>("[role=menu]")!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(menu.getAttribute("aria-labelledby")).toBe(toggle.id);
+    expect(document.activeElement?.textContent).toBe("Print");
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(document.activeElement?.textContent).toBe("Copy");
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector("[role=menu]")).toBeNull();
+    expect(document.activeElement).toBe(toggle);
   });
 });
 

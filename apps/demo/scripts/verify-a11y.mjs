@@ -43,7 +43,7 @@ const check = (ok, label) => {
 };
 
 async function axe(page, context = "document") {
-  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished)));
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: AXE });
   return page.evaluate(
     async ([selector, tags]) => {
@@ -65,6 +65,47 @@ try {
     const violations = await axe(page);
     check(violations.length === 0, `axe ${route}${violations.length ? `: ${violations.join(" | ")}` : ""}`);
   }
+  // Keyboard patterns (WAI-ARIA APG) of the interactive components, on @tsazor/ui.
+  await page.goto(`${APP}/components`, { waitUntil: "networkidle" });
+  const focused = () => page.evaluate(() => document.activeElement?.textContent?.trim() ?? "");
+
+  // Dialog: focus moves in, Tab stays inside, Escape closes and returns focus.
+  await page.getByRole("button", { name: "Open modal" }).click();
+  await page.waitForSelector("[role=dialog]");
+  check(await page.evaluate(() => document.querySelector("[role=dialog]")?.contains(document.activeElement) ?? false), "dialog: focus moves into the dialog");
+  for (let i = 0; i < 4; i++) await page.keyboard.press("Tab");
+  check(await page.evaluate(() => document.querySelector("[role=dialog]")?.contains(document.activeElement) ?? false), "dialog: Tab stays inside");
+  const openViolations = await axe(page);
+  check(openViolations.length === 0, `axe /components with the dialog open${openViolations.length ? `: ${openViolations.join(" | ")}` : ""}`);
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("[role=dialog]", { state: "detached" });
+  check((await focused()) === "Open modal", "dialog: Escape closes it and focus returns to the opener");
+
+  // Dropdown: ArrowDown opens on the first item, arrows move, Escape returns focus.
+  const toggle = page.locator(".dropdown-toggle").first();
+  await toggle.focus();
+  await page.keyboard.press("ArrowDown");
+  await page.waitForSelector("[role=menu]");
+  check((await focused()) === "Open", "menu: ArrowDown opens it on the first item");
+  await page.keyboard.press("ArrowDown");
+  check((await focused()) === "Save", "menu: ArrowDown moves to the next item");
+  const menuViolations = await axe(page);
+  check(menuViolations.length === 0, `axe /components with the menu open${menuViolations.length ? `: ${menuViolations.join(" | ")}` : ""}`);
+  await page.keyboard.press("Escape");
+  await page.waitForSelector("[role=menu]", { state: "detached" });
+  check(await toggle.evaluate((element) => element === document.activeElement), "menu: Escape closes it and focus returns to the toggle");
+
+  // Tabs: arrows move the selection, only the active tab is a Tab stop.
+  const firstTab = page.locator("[role=tab]").first();
+  await firstTab.focus();
+  await page.keyboard.press("ArrowRight");
+  check((await focused()) === "Second", "tabs: ArrowRight moves to the next tab");
+  check(
+    (await page.locator("[role=tab]").evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute("tabindex")).join(","))) === "-1,0,-1",
+    "tabs: roving tabindex follows the selection",
+  );
+  check((await page.locator("[role=tabpanel]").textContent())?.trim() === "Content of tab 2.", "tabs: the panel follows the selection");
+
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 } catch (error) {
   console.error(error);

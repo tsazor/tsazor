@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { anchoredPosition, computePosition, dismissable, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
+import { anchoredPosition, computePosition, createLayer, dismissable, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -78,6 +78,26 @@ describe("dismissable", () => {
     closeMenu();
     key(document.body, "Escape");
     expect([menuDismiss.mock.calls.length, dialogDismiss.mock.calls.length]).toEqual([1, 1]);
+  });
+});
+
+describe("layers", () => {
+  it("a trap and a dismiss of one overlay share a layer; a menu inside still comes first", () => {
+    const host = html(`<div id="dialog"><button id="a">a</button><input id="b"><ul id="menu"></ul></div>`);
+    const dialog = host.querySelector<HTMLElement>("#dialog")!;
+    const layer = createLayer();
+    const dialogDismiss = vi.fn();
+    focusTrap({ layer })(dialog);
+    dismissable({ layer, onDismiss: dialogDismiss })(dialog);
+    // The trap still wraps: the dismiss of the same overlay doesn't sit above it.
+    host.querySelector<HTMLElement>("#b")!.focus();
+    expect(key(document.activeElement!, "Tab").defaultPrevented).toBe(true);
+    const closeMenu = dismissable({ onDismiss: vi.fn() })(host.querySelector<HTMLElement>("#menu")!) as () => void;
+    key(document.body, "Escape");
+    expect(dialogDismiss).not.toHaveBeenCalled();
+    closeMenu();
+    key(document.body, "Escape");
+    expect(dialogDismiss).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -5,6 +5,11 @@ import { isTopLayer, openLayer } from "../layers.js";
 /** Options of `focusTrap`. */
 export interface FocusTrapOptions {
   /**
+   * The overlay this belongs to (`createLayer()`): a dialog's focus trap and its dismiss handling
+   * share one, so they count as one layer. Default: a layer of its own.
+   */
+  layer?: object;
+  /**
    * What gets focus when the trap starts: `"first"` (default) the first
    * focusable element, `"container"` the element itself, or a function that
    * picks one (null: the default).
@@ -33,7 +38,7 @@ export function focusTrap(options: FocusTrapOptions = {}): Attachment<HTMLElemen
   return (element) => {
     const document = element.ownerDocument;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const layer = {};
+    const layer = options.layer ?? {};
     const closeLayer = openLayer(layer);
 
     const initial = options.initialFocus ?? "first";

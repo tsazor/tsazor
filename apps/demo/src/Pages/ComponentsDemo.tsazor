@@ -50,7 +50,7 @@
             <CardHeader>Modal</CardHeader>
             <CardBody>
                 <Button Variant="primary" OnClick="@openModal">Open modal</Button>
-                <Modal IsOpen="@modalOpen" Title="Confirm">
+                <Modal IsOpen="@modalOpen" Title="Confirm" OnClosed="@closeModal">
                     <ChildContent>
                         Modal content — the Tsazor renderer patches the DOM without a VDOM.
                     </ChildContent>

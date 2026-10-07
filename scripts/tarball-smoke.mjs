@@ -38,7 +38,8 @@ const SHIPPED = [
   "cli",
   "vite-plugin",
   "testing",
-  "components",
+  "ui",
+  "bootstrap",
   "fluent",
   "dotnet",
 ];
@@ -99,7 +100,7 @@ for (const pkg of SHIPPED) {
 
 const tarballOf = (name) => tarballByPkg.get(name) ?? (() => { throw new Error(`tarball for ${name} is missing`); })();
 const deps = {};
-for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/bootstrap", "@tsazor/fluent", "@tsazor/dotnet"]) {
+for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/ui", "@tsazor/bootstrap", "@tsazor/fluent", "@tsazor/dotnet"]) {
   deps[name] = tarballOf(name);
 }
 const overrides = {};

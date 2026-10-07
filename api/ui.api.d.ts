@@ -8,7 +8,7 @@ export declare function anchoredPosition(options: AnchoredPositionOptions): Atta
 // AnchoredPositionOptions
 export interface AnchoredPositionOptions {
     anchor: () => Element | null | undefined;
-    placement?: Placement;
+    placement?: Placement | (() => Placement);
     offset?: number;
     flip?: boolean;
     padding?: number;
@@ -27,11 +27,15 @@ export declare function computePosition(anchor: DOMRectReadOnly, floating: {
     top: number;
 };
 
+// createLayer
+export declare function createLayer(): object;
+
 // dismissable
 export declare function dismissable(options: DismissableOptions): Attachment<HTMLElement>;
 
 // DismissableOptions
 export interface DismissableOptions {
+    layer?: object;
     onDismiss: (reason: DismissReason) => void;
     escape?: boolean;
     outside?: boolean;
@@ -52,6 +56,7 @@ export declare function focusTrap(options?: FocusTrapOptions): Attachment<HTMLEl
 
 // FocusTrapOptions
 export interface FocusTrapOptions {
+    layer?: object;
     initialFocus?: "first" | "container" | ((element: HTMLElement) => HTMLElement | null);
     restoreFocus?: boolean;
 }
@@ -60,10 +65,10 @@ export interface FocusTrapOptions {
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
 
 // isTopLayer
-export declare function isTopLayer(layer: object): boolean;
+export declare function isTopLayer(key: object): boolean;
 
 // openLayer
-export declare function openLayer(layer: object): () => void;
+export declare function openLayer(key: object): () => void;
 
 // Orientation
 export type Orientation = "horizontal" | "vertical";

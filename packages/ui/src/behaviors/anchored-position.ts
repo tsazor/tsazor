@@ -5,8 +5,8 @@ import type { Placement } from "../vocabulary.js";
 export interface AnchoredPositionOptions {
   /** The element to sit next to (a toggle button, an input). */
   anchor: () => Element | null | undefined;
-  /** Preferred place. Default `"bottom-start"`. */
-  placement?: Placement;
+  /** Preferred place, or a function read when the element appears (a component parameter). Default `"bottom-start"`. */
+  placement?: Placement | (() => Placement);
   /** Gap between anchor and element, in pixels. Default 4. */
   offset?: number;
   /** Switch to the opposite side when the preferred one has no room. Default true. */
@@ -64,7 +64,7 @@ export function anchoredPosition(options: AnchoredPositionOptions): Attachment<H
     if (!window) return;
     const offset = options.offset ?? 4;
     const padding = options.padding ?? 8;
-    const preferred = options.placement ?? "bottom-start";
+    const preferred = (typeof options.placement === "function" ? options.placement() : options.placement) ?? "bottom-start";
     element.style.position = "fixed";
     element.style.margin = "0";
 

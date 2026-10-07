@@ -139,10 +139,11 @@ architecture and security take priority.
   fills behind white text (`--fui-brand-background*`, `--fui-color-*-filled`), the light subtle brand
   badge, the dialog's Shift+Tab trap, `Progress` without a name (`ariaLabel`), `Badge` text on
   warning (`text-bg-*`), `ListGroupItem` (an `<a>` in the `<ul>`, a clickable `<li>` the keyboard
-  couldn't reach), and the demo's own labels and colors. **Open — `@tsazor/bootstrap` keyboard
-  patterns** (the Bootstrap POC set; to be done with the planned component-library work): `Modal`
-  (role dialog, aria-modal/labelledby, Escape, focus trap and restore), `Dropdown` (arrow keys,
-  Escape, focus return), `Tabs` (roving tabindex, arrow keys, tab–panel ids).
+  couldn't reach), and the demo's own labels and colors. **`@tsazor/bootstrap` keyboard patterns done
+  (2026-10-07,** on the `@tsazor/ui` core): `Dialog`/`Modal` (role dialog, aria-modal/labelledby, Escape,
+  focus trap and restore, scroll lock), `Dropdown` (menu button: arrow keys, typeahead, Escape and
+  focus return, positioning), `Tabs` (roving tabindex, arrow keys, tab–panel ids); the demo gate checks
+  them in Edge, with axe on the open dialog and menu.
 - **E12 — Feel-at-home packages** ([design-extensions-primitives.md](design-extensions-primitives.md)):
   `@tsazor/primitives` (`Decimal` first, since money in `number` drifts; then
   `TimeSpan`/`DateOnly`/`TimeOnly`/`Guid`) and `@tsazor/extensions` (`HttpClient` + factory +

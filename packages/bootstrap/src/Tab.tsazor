@@ -1,8 +1,9 @@
-@** One panel of a Tabs component (Bootstrap's `.tab-pane`). Place it inside Tabs: its title appears
-    in the parent's nav, and its content is rendered only while it is the active tab. *@
+@** One panel of a Tabs component (Bootstrap's `.tab-pane`, `role="tabpanel"`). Place it inside
+    Tabs: its title appears in the parent's nav, and its content is rendered only while it is the
+    active tab. *@
 @import type Tabs from "./Tabs.tsazor"
 @if (isActive) {
-    <div class="tab-pane fade show active">@childContent</div>
+    <div class="tab-pane fade show active" role="tabpanel" id="@panelId" aria-labelledby="@tabId" tabindex="0">@childContent</div>
 }
 
 @code {
@@ -24,6 +25,14 @@
 
     private get isActive(): boolean {
         return this.tabs?.activeIndex === this.index;
+    }
+
+    private get panelId(): string | null {
+        return this.tabs?.panelId(this.index) ?? null;
+    }
+
+    private get tabId(): string | null {
+        return this.tabs?.tabId(this.index) ?? null;
     }
 
     protected override onInitialized(): void {

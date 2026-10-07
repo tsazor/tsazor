@@ -83,17 +83,34 @@ export default class Collapse extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// Dialog
+export default class Dialog extends ComponentBase {
+    isOpen: boolean;
+    title?: string;
+    ariaLabel?: string;
+    size: "small" | "medium" | "large" | "xlarge";
+    centered: boolean;
+    closeOnBackdrop: boolean;
+    closeOnEscape: boolean;
+    footer?: RenderFragment;
+    onClosed?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Dropdown
 export default class Dropdown extends ComponentBase {
     label: string;
     variant: string;
     outline: boolean;
+    placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
     childContent?: RenderFragment;
 }
 
 // DropdownItem
 export default class DropdownItem extends ComponentBase {
     onSelect?: EventCallback<MouseEvent>;
+    disabled: boolean;
     childContent?: RenderFragment;
     dropdown?: Dropdown;
 }
@@ -115,15 +132,18 @@ export default class ListGroupItem extends ComponentBase {
 }
 
 // Modal
-export default class Modal extends ComponentBase {
+export default class Dialog extends ComponentBase {
     isOpen: boolean;
     title?: string;
-    size: string;
+    ariaLabel?: string;
+    size: "small" | "medium" | "large" | "xlarge";
     centered: boolean;
     closeOnBackdrop: boolean;
+    closeOnEscape: boolean;
     footer?: RenderFragment;
     onClosed?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Navbar
@@ -180,4 +200,6 @@ export default class Table extends ComponentBase {
 // Tabs
 export default class Tabs extends ComponentBase {
     childContent?: RenderFragment;
+    ariaLabel?: string;
+    onSelected?: EventCallback<number>;
 }

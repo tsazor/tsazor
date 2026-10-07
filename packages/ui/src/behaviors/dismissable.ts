@@ -6,6 +6,11 @@ export type DismissReason = "escape" | "outside";
 
 /** Options of `dismissable`. */
 export interface DismissableOptions {
+  /**
+   * The overlay this belongs to (`createLayer()`): a dialog's focus trap and its dismiss handling
+   * share one, so they count as one layer. Default: a layer of its own.
+   */
+  layer?: object;
   /** Called when the user asks to close the layer; the component then closes it (or not). */
   onDismiss: (reason: DismissReason) => void;
   /** React to Escape. Default true. */
@@ -36,7 +41,7 @@ export interface DismissableOptions {
 export function dismissable(options: DismissableOptions): Attachment<HTMLElement> {
   return (element) => {
     const document = element.ownerDocument;
-    const layer = {};
+    const layer = options.layer ?? {};
     const closeLayer = openLayer(layer);
 
     const onKeydown = (event: KeyboardEvent): void => {

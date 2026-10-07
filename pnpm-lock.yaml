@@ -382,6 +382,10 @@ importers:
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
   packages/bootstrap:
+    dependencies:
+      '@tsazor/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       '@tsazor/compiler':
         specifier: workspace:*

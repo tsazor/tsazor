@@ -1,11 +1,15 @@
 @** Renders Bootstrap's `.nav-tabs`: a `role="tablist"` nav with one button per Tab child, and a
     `.tab-content` area that shows the active Tab. It cascades itself to the Tab children; the first
-    tab is active initially and clicking a tab button activates it. *@
+    tab is active initially. Clicking a tab or moving with the arrow keys (Home and End jump to the
+    ends) activates it; only the active tab is in the Tab order (roving tabindex), and each tab is
+    linked to its panel through ids. *@
 @import type Tab from "./Tab.tsazor"
-<ul class="nav nav-tabs" role="tablist">
+@import { rovingFocus, uniqueId } from "@tsazor/ui"
+
+<ul class="nav nav-tabs" role="tablist" aria-label="@ariaLabel" @attach="keys">
     @for (let i = 0; i < this.tabs.length; i++) {
         <li class="nav-item" role="presentation">
-            <button class="@this.tabClassFor(i)" type="button" role="tab" aria-selected="@this.isActive(i)" @onclick="() => this.select(i)">@this.tabs[i]!.title</button>
+            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@this.tabs[i]!.title</button>
         </li>
     }
 </ul>
@@ -14,6 +18,10 @@
 @code {
     /** The Tab children. */
     @Parameter() childContent?: RenderFragment;
+    /** Names the tab list for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Fired with the index of the newly active tab. */
+    @Parameter() onSelected?: EventCallback<number>;
 
     readonly isCascadingValueSupplier = true;
     /** The active index changes — the Tab children must re-render. */
@@ -24,13 +32,24 @@
         return this;
     }
 
+    private readonly idBase = uniqueId("tz-tabs");
+    private readonly keys = rovingFocus({ items: "[role=tab]", onMove: (index) => this.select(index) });
     private tabs: Tab[] = [];
+    private activeIndexInternal = 0;
 
     get activeIndex(): number {
         return this.activeIndexInternal;
     }
 
-    private activeIndexInternal = 0;
+    /** @internal The id of tab `index`'s button. */
+    tabId(index: number): string {
+        return `${this.idBase}-tab-${index}`;
+    }
+
+    /** @internal The id of tab `index`'s panel. */
+    panelId(index: number): string {
+        return `${this.idBase}-panel-${index}`;
+    }
 
     /** @internal Called by Tab during its initialization. */
     registerTab(tab: Tab): void {
@@ -47,10 +66,16 @@
         if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return;
         this.activeIndexInternal = index;
         this.stateHasChangedInternal();
+        this.onSelected?.invokeAsync(index);
     }
 
-    private isActive(index: number): boolean {
-        return this.activeIndexInternal === index;
+    private selectedText(index: number): string {
+        return this.activeIndexInternal === index ? "true" : "false";
+    }
+
+    /** Roving tabindex: only the active tab is in the Tab order. */
+    private tabIndexOf(index: number): string {
+        return this.activeIndexInternal === index ? "0" : "-1";
     }
 
     private tabClassFor(index: number): string {

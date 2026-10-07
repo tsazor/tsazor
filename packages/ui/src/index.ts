@@ -4,7 +4,7 @@
 export type { Appearance, Intent, Orientation, Placement, Size } from "./vocabulary.js";
 export { uniqueId } from "./ids.js";
 export { focusableElements, focusElement } from "./focus.js";
-export { isTopLayer, openLayer } from "./layers.js";
+export { createLayer, isTopLayer, openLayer } from "./layers.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";
 export { dismissable, type DismissableOptions, type DismissReason } from "./behaviors/dismissable.js";
 export { scrollLock } from "./behaviors/scroll-lock.js";

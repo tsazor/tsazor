@@ -13,6 +13,9 @@ interface CompileError {
   details: string;
 }
 
+/** Extra export names for a component (D-C3): Bootstrap calls the dialog a modal. */
+const ALIASES: Readonly<Record<string, string>> = { Modal: "Dialog" };
+
 const errors: CompileError[] = [];
 const exports: string[] = [];
 
@@ -65,7 +68,7 @@ for (const file of files) {
 
 if (errors.length > 0) {
   for (const error of errors) {
-    console.error(`[tsazor/components] compile errors in ${error.file}\n${error.details}`);
+    console.error(`[tsazor/bootstrap] compile errors in ${error.file}\n${error.details}`);
   }
   process.exit(1);
 }
@@ -76,7 +79,10 @@ if (errors.length > 0) {
 const manifest = buildPackageManifest({
   packageDir,
   packageName: "@tsazor/bootstrap",
-  entries: files.map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+  entries: [
+    ...files.map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+    ...Object.entries(ALIASES).map(([alias, target]) => ({ exportName: alias, file: path.join(srcDir, `${target}.tsazor`) })),
+  ],
 });
 
 // Real per-component type declarations (2.4, replacement for the permissive
@@ -88,6 +94,7 @@ for (const [exportName, declaration] of Object.entries(declarations)) {
   await writeFile(path.join(distDir, `${exportName}.d.ts`), declaration);
 }
 
+for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js";`);
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.
@@ -95,4 +102,4 @@ await writeFile(path.join(distDir, "index.js"), index);
 await writeFile(path.join(distDir, "index.d.ts"), index);
 await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
-console.log(`[tsazor/components] built ${files.length} components -> dist/`);
+console.log(`[tsazor/bootstrap] built ${files.length} components -> dist/`);
