@@ -1,6 +1,6 @@
 # Design draft — the component library: one core, two skins
 
-Status: **proposal** (2026-10-06). Direction decided by the user on 2026-10-06: **one behavior
+Status: **accepted** (2026-10-07; D-C1…D-C7 as recommended, see §8). Direction decided by the user on 2026-10-06: **one behavior
 core, two skins** — Bootstrap 5 and Fluent 2 — with Bootstrap first, because every
 `dotnet new blazor` template ships Bootstrap and migration starts there. This document turns the
 direction into a package cut, a shared vocabulary, a 1.0 scope and an order of work; the
@@ -133,7 +133,7 @@ it on Blazor's QuickGrid**, which every Blazor team can use today:
 
 ## 8. Decisions needed
 
-| # | Question | Recommendation |
+| # | Question | Decision (2026-10-07, as recommended) |
 |---|---|---|
 | D-C1 | Package cut | `@tsazor/ui` (core) + `@tsazor/bootstrap` + `@tsazor/fluent` |
 | D-C2 | Rename `@tsazor/components` → `@tsazor/bootstrap` | yes (nothing is published yet; the name says what it is) |
