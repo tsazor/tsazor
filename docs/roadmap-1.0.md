@@ -174,6 +174,11 @@ architecture and security take priority.
 - **R2 — npm publishing:** versioning, changelog, provenance, and the publish workflow.
 - **R3 — `npm create tsazor`:** project starter (strict, Vite, `_Imports.tsazor`, a sample
   component and test, optional `@tsazor/dotnet`).
+- **R6 — Browser support** (added 2026-10-07): [browser-support.md](browser-support.md) — the current
+  Chrome/Edge, Firefox and Safari; CI runs the browser gates in Firefox and WebKit (job `engines`).
+  The first runs found three real differences: Virtualize rendered every item in a scrolling panel
+  (all browsers), focus didn't return to a mouse-opened dialog in Safari, the tutorial's console
+  panel lost error messages in Firefox/Safari — all fixed.
 - **R4 — Docs site:** the tutorial plus user docs, statically deployed. **Decided (2026-10-04):**
   GitHub Pages. The repository is private (Pages needs a paid plan there, and the site would be
   public): the static build with an SPA fallback and a deploy workflow are prepared now; it runs

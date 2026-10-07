@@ -76,3 +76,42 @@ jobs:
         run: |
           dotnet build apps/sleipnir-ticker/api
           pnpm --filter sleipnir-ticker verify
+
+  # The browser gates in Firefox and WebKit (Playwright's builds; WebKit is
+  # close to Safari, not Safari) — docs/browser-support.md.
+  engines:
+    needs: check
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    env:
+      TSAZOR_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - name: Install ${{ matrix.browser }}
+        run: pnpm --filter demo exec playwright-core install ${{ matrix.browser }}
+      - name: Tutorial
+        run: pnpm --filter tutorial verify
+      - name: Blazing Pizza
+        run: pnpm --filter blazing-pizza verify
+      - name: Gallery
+        run: pnpm --filter gallery verify
+      - name: Demo under a strict CSP
+        run: pnpm --filter demo verify:csp
+      - name: Web Workers
+        run: pnpm --filter demo verify:worker
+      - name: Accessibility — @tsazor/fluent
+        run: pnpm --filter gallery verify:a11y
+      - name: Accessibility — @tsazor/bootstrap
+        run: pnpm --filter demo verify:a11y

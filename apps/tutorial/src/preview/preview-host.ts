@@ -75,17 +75,24 @@ function srcdoc(baseHref: string): string {
 <script>
 (() => {
   const send = (message) => parent.postMessage({ source: "tsazor-preview", ...message }, "*");
+  // Chromium's error.stack starts with "Name: message"; Firefox's and
+  // Safari's are only the frames — so the head is added where it's missing.
+  const describe = (error) => {
+    const head = error.name + ": " + error.message;
+    if (!error.stack) return head;
+    return error.stack.startsWith(head) ? error.stack : head + "\\n" + error.stack;
+  };
   const show = (value) => {
-    if (value instanceof Error) return value.stack || String(value);
+    if (value instanceof Error) return describe(value);
     if (typeof value === "string") return value;
     try { return JSON.stringify(value); } catch { return String(value); }
   };
   addEventListener("error", (event) => {
-    send({ type: "error", text: event.error && event.error.stack ? event.error.stack : String(event.message) });
+    send({ type: "error", text: event.error instanceof Error ? describe(event.error) : String(event.message) });
   });
   addEventListener("unhandledrejection", (event) => {
     const reason = event.reason;
-    send({ type: "error", text: reason && reason.stack ? reason.stack : "Unhandled rejection: " + show(reason) });
+    send({ type: "error", text: reason instanceof Error ? describe(reason) : "Unhandled rejection: " + show(reason) });
   });
   for (const level of ["log", "info", "warn", "error"]) {
     const original = console[level].bind(console);

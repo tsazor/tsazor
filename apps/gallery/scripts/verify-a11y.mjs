@@ -43,6 +43,18 @@ async function ensureServer() {
         await new Promise((r) => setTimeout(r, 500));
     }
 }
+/** page.goto, retried: a freshly started Vite may drop the first requests while it optimizes dependencies. */
+async function gotoRetried(page, url) {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            return await page.goto(url, { waitUntil: "networkidle" });
+        } catch (error) {
+            if (attempt >= 3) throw error;
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+    }
+}
+
 function stopSpawned() {
     for (const child of spawned) {
         try {
@@ -88,7 +100,7 @@ async function main() {
     /* 1 — axe on every route, light and dark */
     for (const theme of ["light", "dark"]) {
         for (const route of ROUTES) {
-            await page.goto(`${APP}${route}`, { waitUntil: "networkidle" });
+            await gotoRetried(page, `${APP}${route}`);
             const current = await page.getAttribute("html", "data-fluent-theme");
             if ((current ?? "light") !== theme) {
                 // A programmatic click: a toast or an overlay may cover the toggle.
@@ -175,5 +187,6 @@ main()
     .finally(() => {
         stopSpawned();
         console.log(failed === 0 ? "ALL PASS" : `${failed} FAILED`);
-        process.exitCode = failed === 0 ? 0 : 1;
+        // Exit now: a browser left open by a failure would keep the process alive.
+        process.exit(failed === 0 ? 0 : 1);
     });

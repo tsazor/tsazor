@@ -128,8 +128,13 @@ async function main() {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    page.on("console", (m) => {
-        if (m.type() === "error") errors.push(m.text());
+    page.on("console", async (m) => {
+        if (m.type() !== "error") return;
+        // Firefox renders an Error argument as just "Error" in text(): describe it from the value.
+        const parts = await Promise.all(
+            m.args().map((arg) => arg.evaluate((value) => (value instanceof Error ? `${value.name}: ${value.message}` : String(value))).catch(() => "")),
+        );
+        errors.push(parts.some(Boolean) ? parts.join(" ") : m.text());
     });
 
     /* 1 — the start page: introduction, track choice, chapters; Start opens the track's first lesson */

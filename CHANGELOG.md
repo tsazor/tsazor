@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- Browser support documented (docs/browser-support.md): the current Chrome/Edge, Firefox and Safari. CI
+  runs the browser gates (tutorial, Pages, Pizza, gallery, demo) in Firefox and WebKit too. **Fix**
+  (tutorial preview): errors in the console panel lost their message in Firefox and Safari, whose
+  `error.stack` has no "Name: message" head.
 - **Fix** `@tsazor/runtime` `Virtualize`: the visible window is measured against the nearest scrolling
   ancestor (or the window), as in Blazor — a list without a height of its own inside a scrolling panel
   rendered every item (the demo: 30,033 DOM nodes for 10,000 items, now 105). Found by running the

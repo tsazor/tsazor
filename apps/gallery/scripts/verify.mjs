@@ -41,6 +41,18 @@ async function ensureServer() {
     }
 }
 
+/** page.goto, retried: a freshly started Vite may drop the first requests while it optimizes dependencies. */
+async function gotoRetried(page, url) {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            return await page.goto(url, { waitUntil: "networkidle" });
+        } catch (error) {
+            if (attempt >= 3) throw error;
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+    }
+}
+
 function stopSpawned() {
     for (const child of spawned) {
         try {
@@ -69,7 +81,7 @@ async function main() {
     page.on("pageerror", (e) => errors.push(e.message));
 
     /* 1 — tokens light vs dark (computed, not attribute-string) */
-    await page.goto(`${APP}/`, { waitUntil: "networkidle" });
+    await gotoRetried(page, `${APP}/`);
     const sidebarBg = () => page.evaluate(() => getComputedStyle(document.querySelector(".sidebar")).backgroundColor);
     const bgLight = await sidebarBg();
     check(bgLight.length > 0, "fluent tokens resolve (light sidebar background computed)");
@@ -279,5 +291,6 @@ try {
 } catch (err) {
     console.error(err && err.message);
     stopSpawned();
-    process.exitCode = 1;
+    // Exit now: a browser left open by the failure would keep the process alive.
+    process.exit(1);
 }
