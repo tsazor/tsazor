@@ -1,0 +1,54 @@
+@** Pages a DataGrid through a shared PaginationState (QuickGrid's Paginator) in Fluent UI 2 style:
+    the row count, "Page 2 of 7", and buttons for the first, previous, next and last page. Pass the
+    same state to the grid: `<DataGrid Pagination="pagination">` … `<Paginator State="pagination" />`. *@
+@import { PaginationState } from "@tsazor/ui"
+
+@if (state.totalItemCount !== undefined) {
+    <nav class="fui-paginator" aria-label="@ariaLabel">
+        <span class="fui-paginator__count">
+            @if (summaryContent) { @summaryContent } else { <text>@state.totalItemCount items</text> }
+        </span>
+        <div class="fui-pagination">
+            <button type="button" class="fui-pagination__button" aria-label="First page" title="First page" disabled="@(!canGoBack)" @onclick="() => go(0)">«</button>
+            <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)">‹</button>
+            <span class="fui-paginator__page" aria-current="page">Page @(state.currentPageIndex + 1) of @(lastPage + 1)</span>
+            <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)">›</button>
+            <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page" disabled="@(!canGoForward)" @onclick="() => go(lastPage)">»</button>
+        </div>
+    </nav>
+}
+
+@code {
+    /** The paging state, shared with the grid. */
+    @Parameter() state!: PaginationState;
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel: string = "Pages";
+    /** Replaces the row count ("120 items"). */
+    @Parameter() summaryContent?: RenderFragment;
+
+    private observed?: PaginationState;
+    private stopObserving?: () => void;
+
+    protected override onParametersSet(): void {
+        if (this.state === this.observed) return;
+        this.stopObserving?.();
+        this.observed = this.state;
+        this.stopObserving = this.observe(this.state);
+    }
+
+    private get lastPage(): number {
+        return this.state.lastPageIndex ?? 0;
+    }
+
+    private get canGoBack(): boolean {
+        return this.state.currentPageIndex > 0;
+    }
+
+    private get canGoForward(): boolean {
+        return this.state.currentPageIndex < this.lastPage;
+    }
+
+    private go(pageIndex: number): Promise<void> {
+        return this.state.setCurrentPageIndexAsync(pageIndex);
+    }
+}

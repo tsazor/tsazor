@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Changed** `@tsazor/fluent` `DataGrid` takes the QuickGrid shape of `@tsazor/bootstrap`'s (pre-1.0 API break: the
+  `columns` array, `cellContent`, `compact` and `emptyText` give way to `PropertyColumn`/`TemplateColumn`, `small`
+  and `EmptyContent`), with sorting, paging (`Paginator`, new), selection, an ItemsProvider and virtualization;
+  `GridSort`/`PaginationState` re-exported. **Fix** (Fluent tokens, light theme): `--fui-color-amber-1` is
+  #9C4D04 — #B75C06 had 4.19:1 on the amber glass (subtle warning badges), below WCAG's 4.5:1.
 - **Changed** `@tsazor/fluent` adopts the shared vocabulary of `@tsazor/ui` (pre-1.0 API break): `Button`
   `intent` + `appearance` (solid/outline/subtle/transparent; `appearance="primary"` ⇒ `intent="primary"`),
   `Badge` `intent` (`color` ⇒ `intent`, `error` ⇒ `danger`, `brand` ⇒ `primary`; `filled` ⇒ `solid`), `Alert`/`Toast`/

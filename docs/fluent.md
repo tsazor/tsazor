@@ -64,7 +64,7 @@ override model.
 Provider + 25: `FluentProvider`, `Button`, `Card`/`CardHeader`/`CardFooter`,
 `Divider`, `Badge`, `Spinner`, `TextInput`, `TextArea`, `NumberInput`,
 `Checkbox`, `Switch`, `Select`, `FluentForm`, `Tabs`/`Tab`, `Dialog`,
-`Toast` + `ToastRegion`, `Table`, `DataGrid`, `SidebarNav`,
+`Toast` + `ToastRegion`, `Table`, `DataGrid` + `PropertyColumn`/`TemplateColumn` + `Paginator`, `SidebarNav`,
 plus the W1 fill: `Stack`, `Grid`, `Spacer`, `Typography`, `Icon`, `Indicator`,
 `Alert`, `Breadcrumb` + `BreadcrumbItem`, `Pagination`.
 
@@ -137,12 +137,13 @@ Notes on the important ones:
   `items` + `headerContent` + `rowContent`
   (`(row: TRow) => RenderFragment` — the 2.4 templated-component standard; see
   the gallery's orders page).
-- **DataGrid** (4.2): the opinionated sibling — you own the columns, the grid
-  builds the table. `columns: DataGridColumn<TRow>[]` (`field`, optional
-  `title`, `format` for the cell text, `align` `"start" | "center" | "end"`)
-  produce header and body; per-cell escape hatch via `cellContent`
-  (`(row, column) => RenderFragment`, e.g. link rows). `striped`, `hover`,
-  `compact`, `emptyText`. A column without `title` shows the field name.
+- **DataGrid**: shaped like Blazor's QuickGrid and the same as `@tsazor/bootstrap`'s (the logic is
+  `DataGridModel` in `@tsazor/ui`): `PropertyColumn` (`Property="(o) => o.total"`, `Format`, `Title`
+  — default: the property's name —, `Sortable`, `IsDefaultSortColumn`, `Align`) and `TemplateColumn`
+  (the row as context, `SortBy="GridSort.byAscending(…)"`) as child components, typed by the grid
+  (cascading type parameter); `Items` or an `ItemsProvider`; `Pagination` with a `Paginator`;
+  `SelectionMode` + `@bind-SelectedItems`; `Virtualize`; `EmptyContent`/`LoadingContent`;
+  `striped`, `hover`, `bordered`, `small` (compact rows), `responsive`, `stickyHeader`.
 - **SidebarNav**: wraps runtime `NavLink` (`aria-current="page"` on the active
   link for free from the router).
 

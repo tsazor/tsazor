@@ -1,12 +1,84 @@
-/* DataGrid — reuses the Table surface (see Table.tsazor.css); only the
-   column alignment adds its own classes here. */
+/* DataGrid — the Table surface (Table.tsazor.css) plus sorting, selection and alignment. */
 
-.fui-datagrid__head--center,
 .fui-datagrid__cell--center {
   text-align: center;
 }
 
-.fui-datagrid__head--end,
 .fui-datagrid__cell--end {
   text-align: end;
+}
+
+.fui-datagrid__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-gap-xs, 4px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fui-datagrid__sort:hover {
+  color: var(--fui-brand-background);
+}
+
+.fui-datagrid__sort:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+  border-radius: var(--fui-radius-sm);
+}
+
+.fui-datagrid__sort-indicator {
+  font-size: 0.75em;
+  color: var(--fui-foreground-3);
+}
+
+th[aria-sort] .fui-datagrid__sort-indicator {
+  color: var(--fui-brand-background);
+}
+
+.fui-datagrid__select {
+  width: 1%;
+}
+
+.fui-datagrid__check {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--fui-brand-background);
+  cursor: pointer;
+}
+
+.fui-datagrid__row--selected {
+  background: var(--fui-control-fill-selected);
+}
+
+.fui-table--bordered th,
+.fui-table--bordered td {
+  border: 1px solid var(--fui-stroke-1);
+}
+
+.fui-table-wrap--scroll {
+  overflow-x: auto;
+}
+
+.fui-table__head--sticky th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--fui-background-1);
+}
+
+.fui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

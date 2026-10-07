@@ -90,7 +90,7 @@
   /* Semantic status colors (shared across themes; dark uses brighter ramps). */
   --fui-color-green-1: #0E700E;
   --fui-color-glass-green: #B7F3B7;
-  --fui-color-amber-1: #B75C06;
+  --fui-color-amber-1: #9C4D04; /* darker than Fluent's B75C06: 4.5:1 on the amber glass (WCAG 1.4.3) */
   --fui-color-glass-amber: #FBF7B5;
   --fui-color-red-1: #B10E1C;
   --fui-color-glass-red: #FDC6C6;

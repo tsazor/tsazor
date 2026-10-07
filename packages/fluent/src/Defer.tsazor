@@ -1,0 +1,9 @@
+@** Internal (not exported): renders its content after the components before it. Siblings render
+    in markup order, so DataGrid's table, inside a Defer after the columns, sees every column that
+    registered in this render (QuickGrid's Defer). *@
+@childContent
+
+@code {
+    /** Rendered after the earlier siblings. */
+    @Parameter() childContent?: RenderFragment;
+}

@@ -30,6 +30,9 @@ try {
   throw new Error("[tsazor/fluent] src/styles/tokens.css is required (the token layer ships in fluent.css).");
 }
 
+/** Compiled for the components that use them, not exported (DataGrid's Defer). */
+const INTERNAL: ReadonlySet<string> = new Set(["Defer"]);
+
 const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
 
 for (const file of files) {
@@ -76,7 +79,7 @@ for (const file of files) {
       return `${from}${spec}.js${quote}`;
     });
     await writeFile(path.join(distDir, `${className}.js`), js);
-    exports.push(`export { default as ${className} } from "./${className}.js";`);
+    if (!INTERNAL.has(className)) exports.push(`export { default as ${className} } from "./${className}.js";`);
   } catch (error) {
     errors.push({ file, details: `  ${error instanceof Error ? error.stack : String(error)}` });
   }
@@ -108,7 +111,7 @@ for (const name of (await readdir(srcDir)).filter((name) => name.endsWith(".ts")
 const manifest = buildPackageManifest({
   packageDir,
   packageName: "@tsazor/fluent",
-  entries: files.map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+  entries: files.filter((file) => !INTERNAL.has(path.basename(file, ".tsazor"))).map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
 });
 await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -122,12 +125,14 @@ for (const [exportName, declaration] of Object.entries(declarations)) {
 }
 // The toast service comes with the skin: register it, inject it, call show() (as in @tsazor/bootstrap).
 exports.push('export { Toaster } from "@tsazor/ui"');
+// The DataGrid's sorting and paging state come with the skin too.
+exports.push('export { GridSort, PaginationState } from "@tsazor/ui"');
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, Intent, Orientation, Placement, Size, Toast, ToastOptions } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions } from "@tsazor/ui";\n`);
 await writeFile(path.join(distDir, "fluent.css"), `${cssChunks.join("\n")}\n`);
 
 console.log(`[tsazor/fluent] built ${files.length} components + fluent.css -> dist/`);

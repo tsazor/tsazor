@@ -207,16 +207,28 @@ async function main() {
     const firstRow = (await page.textContent(".orders-row")).trim();
     check(firstRow.includes("#104"), "sorting by total puts Dilan (>8) first (asc)");
 
-    /* 8b — datagrid: the column list builds header and body (4.2) */
+    /* 8b — datagrid (QuickGrid-shaped): column components, sorting, paging, selection */
     await page.click("a[href='/datagrid']");
-    await page.waitForSelector(".fui-datagrid");
-    const gridHeads = await page.locator(".fui-datagrid thead th").allTextContents();
-    check(JSON.stringify(gridHeads) === JSON.stringify(["Customer", "Placed", "Total (€)"]),
-        "datagrid headers come from the columns");
+    await page.waitForSelector(".fui-datagrid tbody tr");
+    const gridHeads = (await page.locator(".fui-datagrid thead th button").allTextContents()).map((text) => text.replace(/[▲▼↕]/g, "").trim());
+    check(JSON.stringify(gridHeads) === JSON.stringify(["Customer", "Placed", "Total (€)", "Status"]),
+        `datagrid headers come from the column components (${gridHeads.join(", ")})`);
+    check((await page.locator(".fui-datagrid th[aria-sort=ascending]").textContent()).includes("Customer"),
+        "datagrid sorts by its default column (aria-sort)");
     check((await page.textContent(".fui-datagrid tbody tr")).includes("42.50"),
-        "datagrid format() shapes the cell text");
-    check((await page.locator(".fui-datagrid td.fui-datagrid__cell--end").count()) === 4,
-        "datagrid aligns the money column right");
+        "datagrid Format shapes the cell text");
+    check((await page.locator(".fui-datagrid td.fui-datagrid__cell--end").count()) === 5,
+        "datagrid aligns the money column right, five rows per page");
+    await page.locator(".fui-datagrid th button", { hasText: "Total" }).click();
+    await page.waitForFunction(() => document.querySelector(".fui-datagrid th[aria-sort]")?.textContent?.includes("Total"));
+    check((await page.locator(".fui-datagrid tbody tr").first().textContent()).includes("8.00"),
+        "a header click sorts by that column");
+    await page.locator(".fui-paginator button[aria-label='Next page']").click();
+    await page.waitForFunction(() => document.querySelector(".fui-paginator__page")?.textContent === "Page 2 of 2");
+    check((await page.locator(".fui-datagrid tbody tr").count()) === 2, "the paginator shows the last two rows");
+    await page.locator(".fui-datagrid tbody input[type=checkbox]").first().check();
+    await page.waitForFunction(() => document.querySelector(".echo")?.textContent?.startsWith("1 selected"));
+    check(true, "a row checkbox selects the row (@bind-SelectedItems)");
 
     /* 9 — row click opens the detail dialog (back from the datagrid page) */
     await page.click("a[href='/dashboard']");

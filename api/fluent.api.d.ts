@@ -80,15 +80,30 @@ export default class Checkbox extends InputBase<boolean> {
     ariaLabel?: string;
 }
 
+// ColumnAlign: re-exported from @tsazor/ui
+
 // DataGrid
-export default class DataGrid<TRow> extends ComponentBase {
-    items: TRow[];
-    columns: DataGridColumn<TRow>[];
-    cellContent?: (row: TRow, column: DataGridColumn<TRow>) => RenderFragment;
+export default class DataGrid<TGridItem> extends ComponentBase {
+    items?: TGridItem[];
+    itemsProvider?: GridItemsProvider<TGridItem>;
+    pagination?: PaginationState;
+    itemKey?: (item: TGridItem) => unknown;
+    childContent?: RenderFragment;
+    emptyContent?: RenderFragment;
+    loadingContent?: RenderFragment;
+    selectionMode: SelectionMode;
+    selectedItems: TGridItem[];
+    selectedItemsChanged?: EventCallback<TGridItem[]>;
+    ariaLabel?: string;
     striped: boolean;
     hover: boolean;
-    compact: boolean;
-    emptyText: string;
+    bordered: boolean;
+    small: boolean;
+    responsive: boolean;
+    virtualize: boolean;
+    itemSize: number;
+    overscanCount: number;
+    stickyHeader: boolean;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -140,6 +155,16 @@ export default class Grid extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// GridColumn: re-exported from @tsazor/ui
+
+// GridItemsProvider: re-exported from @tsazor/ui
+
+// GridItemsProviderRequest: re-exported from @tsazor/ui
+
+// GridItemsProviderResult: re-exported from @tsazor/ui
+
+// GridSort: re-exported from @tsazor/ui
+
 // Icon
 export default class Icon extends ComponentBase {
     name?: string;
@@ -182,7 +207,31 @@ export default class Pagination extends ComponentBase {
     onPageChanged?: EventCallback<number>;
 }
 
+// PaginationState: re-exported from @tsazor/ui
+
+// Paginator
+export default class Paginator extends ComponentBase {
+    state: PaginationState;
+    ariaLabel: string;
+    summaryContent?: RenderFragment;
+}
+
 // Placement: re-exported from @tsazor/ui
+
+// PropertyColumn
+export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
+    grid?: DataGridModel<TGridItem>;
+    property: (item: TGridItem) => TProp;
+    format?: (value: TProp) => string;
+    title?: string;
+    sortable: boolean;
+    sortKey?: string;
+    initialSortDirection?: "ascending" | "descending";
+    isDefaultSortColumn: boolean;
+    align?: ColumnAlign;
+    class?: string;
+    headerContent?: RenderFragment;
+}
 
 // Select
 export default class Select extends InputBase<string> {
@@ -193,6 +242,8 @@ export default class Select extends InputBase<string> {
     ariaLabel?: string;
     childContent?: RenderFragment;
 }
+
+// SelectionMode: re-exported from @tsazor/ui
 
 // SidebarNav
 export default class SidebarNav extends ComponentBase {
@@ -208,6 +259,10 @@ export default class SidebarNav extends ComponentBase {
 }
 
 // Size: re-exported from @tsazor/ui
+
+// SortDirection: re-exported from @tsazor/ui
+
+// SortedProperty: re-exported from @tsazor/ui
 
 // Spacer
 export default class Spacer extends ComponentBase {
@@ -271,6 +326,21 @@ export default class Tabs extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     onSelected?: EventCallback<number>;
     childContent?: RenderFragment;
+}
+
+// TemplateColumn
+export default class TemplateColumn<TGridItem> extends ComponentBase {
+    grid?: DataGridModel<TGridItem>;
+    childContent?: (item: TGridItem) => RenderFragment;
+    title: string;
+    sortBy?: GridSort<TGridItem>;
+    sortable?: boolean;
+    sortKey?: string;
+    initialSortDirection?: "ascending" | "descending";
+    isDefaultSortColumn: boolean;
+    align?: ColumnAlign;
+    class?: string;
+    headerContent?: RenderFragment;
 }
 
 // TextArea
