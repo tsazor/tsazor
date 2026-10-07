@@ -156,6 +156,11 @@ try {
   await page.waitForFunction(() => document.querySelector(".order-status")?.textContent?.includes("Reserved"));
   check((await page.locator(".invalid-feedback").count()) === 0, "form: fixed and submitted, no messages left");
 
+  // Switch: a role=switch checkbox bound to the page.
+  await page.getByRole("switch", { name: "Deliver tomorrow" }).check();
+  await page.waitForFunction(() => document.querySelector(".delivery-state")?.textContent === "Delivery tomorrow");
+  check(true, "switch: toggling it updates the page (@bind-Value)");
+
   // DataGrid: sorting by keyboard (aria-sort), paging, row selection.
   const grid = page.locator("table[aria-label=Orders]");
   const sortState = () => grid.locator("th").evaluateAll((ths) => ths.map((th) => th.getAttribute("aria-sort") ?? "").join(","));

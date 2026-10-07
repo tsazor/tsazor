@@ -149,6 +149,9 @@ Notes on the important ones:
   `size`. **Drawer**: a modal panel on an edge (`placement` start/end/top/bottom), like Dialog.
   **Tooltip** (and the `tooltip(text, placement)` attachment): hover and focus, hoverable, Escape,
   `aria-describedby`.
+- **RadioGroup, Accordion/AccordionItem, Collapse, Progress, ListGroup/ListGroupItem**: the parameters of
+  their `@tsazor/bootstrap` counterparts (`options`/`inline`/`help`; one open item at a time; `isOpen`;
+  `value`/`intent`/`label`/`ariaLabel`; `flush`/`horizontal`, items with `href`/`onClick`/`active`/`disabled`).
 - **SidebarNav**: wraps runtime `NavLink` (`aria-current="page"` on the active
   link for free from the router).
 

@@ -1,0 +1,51 @@
+@** A Bootstrap toggle switch (`.form-check.form-switch`, `role="switch"`; InputBase<boolean> — bind it
+    with @bind) with its label to the right. The same as `<Checkbox Switch="true">`, under the name
+    both skins share. Validation state and message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<boolean>
+
+<div class="form-check form-switch mb-3">
+    <input id="@field.id(id)" type="checkbox" class="@inputClass" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" @attributes="inputAttributes" @onchange="handleChange" />
+    @if (label) {
+        <label class="form-check-label" for="@field.id(id)">@label</label>
+    }
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The label to the right of the switch. */
+    @Parameter() label?: string;
+    /** A hint below, linked to the switch for screen readers. */
+    @Parameter() help?: string;
+    /** Disables the switch. */
+    @Parameter() disabled: boolean = false;
+    /** The switch's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** The accessible name when there is no label. */
+    @Parameter() ariaLabel?: string;
+
+    private readonly field = new FieldState("tz-switch");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-check-input is-invalid" : validity === "valid" ? "form-check-input is-valid" : "form-check-input";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).checked;
+    }
+}

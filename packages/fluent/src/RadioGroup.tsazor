@@ -1,0 +1,70 @@
+@** A Fluent UI 2 radio group (a `fieldset` with a `legend`; InputBase — bind it with @bind) for one
+    string value out of `options`. The arrow keys move between the options, as browsers do for
+    radio groups. Inside a FluentForm it shows the field's first validation message once a submit
+    was attempted. *@
+@import { FieldState } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+@inherits InputBase<string>
+
+<fieldset @attributes="@this.groupAttributes">
+    @if (label) {
+        <legend class="fui-input__label">@label</legend>
+    }
+    <div class="@optionsClass">
+        @for (let i = 0; i < options.length; i++) {
+            <div class="fui-radio">
+                <input id="@optionId(i)" type="radio" class="fui-radio__native" name="@field.id(id)" value="@options[i]!.value" checked="@(currentValue === options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" @onchange="handleChange" />
+                <label class="fui-checkbox__label" for="@optionId(i)">@options[i]!.label</label>
+            </div>
+        }
+    </div>
+    @if (help) {
+        <span class="fui-input__help" id="@field.helpId(id)">@help</span>
+    }
+    @if (message) {
+        <span class="fui-input__message" role="alert" id="@field.messageId(id)">@message</span>
+    }
+</fieldset>
+
+@code {
+    /** The group's caption (the fieldset's legend). */
+    @Parameter() label?: string;
+    /** The choices: value, visible label, and optionally disabled. */
+    @Parameter() options: { value: string; label: string; disabled?: boolean }[] = [];
+    /** Lays the options out in one row. */
+    @Parameter() inline: boolean = false;
+    /** A hint below the group, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Disables every option. */
+    @Parameter() disabled: boolean = false;
+    /** The group's id (also the radios' name); generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("fui-radio");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get optionsClass(): string {
+        return this.inline ? "fui-radio-group__options fui-radio-group__options--inline" : "fui-radio-group__options";
+    }
+
+    private get groupAttributes(): Record<string, unknown> {
+        const invalid = this.field.validity(this.fieldClass) === "invalid";
+        return withAttributes({
+            class: invalid ? "fui-radio-group fui-radio-group--invalid" : "fui-radio-group",
+            id: this.field.id(this.id),
+            ...this.field.aria(this.message, !!this.help, this.id),
+        }, this.additionalAttributes);
+    }
+
+    private optionId(index: number): string {
+        return `${this.field.id(this.id)}-${index}`;
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).value;
+    }
+}

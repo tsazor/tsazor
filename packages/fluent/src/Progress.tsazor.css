@@ -1,0 +1,50 @@
+/* Progress — Fluent 2 progress bar: a thin rounded track with a colored bar. */
+
+.fui-progress-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fui-spacing-xs);
+  font-family: var(--fui-font-family);
+}
+
+.fui-progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-control-fill-active);
+}
+
+.fui-progress__bar {
+  height: 100%;
+  border-radius: inherit;
+  transition: width var(--fui-duration-gentle) var(--fui-ease-standard);
+}
+
+.fui-progress__bar--brand {
+  background: var(--fui-brand-background);
+}
+
+.fui-progress__bar--neutral {
+  background: var(--fui-foreground-2);
+}
+
+.fui-progress__bar--success {
+  background: var(--fui-color-green-filled);
+}
+
+.fui-progress__bar--warning {
+  background: var(--fui-color-amber-filled);
+}
+
+.fui-progress__bar--danger {
+  background: var(--fui-color-red-filled);
+}
+
+.fui-progress__bar--info {
+  background: var(--fui-color-blue-1);
+}
+
+.fui-progress__label {
+  font-size: var(--fui-font-size-caption);
+  color: var(--fui-foreground-3);
+}

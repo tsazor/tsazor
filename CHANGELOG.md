@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- Tier 1 parity of the two skins: `@tsazor/fluent` adds `RadioGroup`, `Accordion`/`AccordionItem` (panels as regions
+  labelled by their header), `Collapse`, `Progress` and `ListGroup`/`ListGroupItem`; `@tsazor/bootstrap` adds `Switch`,
+  `Stack` and `Divider` — each with the parameters of its counterpart in the other skin. Gallery page `/structure`;
+  the demo's components page shows Switch, Stack and Divider.
 - `@tsazor/fluent`: `Menu`/`MenuItem` (the menu button pattern on `@tsazor/ui`, also exported as `Dropdown`/`DropdownItem`),
   `Drawer`, `Tooltip` and the `tooltip` attachment; `@tsazor/bootstrap` exports `Menu`/`MenuItem` as aliases of
   `Dropdown`/`DropdownItem`, so both names work in both skins. Gallery page `/overlays`. **Fix** (type layer):

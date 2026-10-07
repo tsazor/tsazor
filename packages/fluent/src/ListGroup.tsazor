@@ -1,0 +1,19 @@
+@** A Fluent UI 2 list (a `<ul>`) of ListGroupItem children — plain rows, links or buttons; optionally
+    flush (no outer border) or horizontal. *@
+<ul class="@listClass">@childContent</ul>
+
+@code {
+    /** Removes the outer border and corners (inside a card). */
+    @Parameter() flush: boolean = false;
+    /** Lays the items out in a row. */
+    @Parameter() horizontal: boolean = false;
+    /** The ListGroupItem children. */
+    @Parameter() childContent?: RenderFragment;
+
+    private get listClass(): string {
+        const parts = ["fui-list"];
+        if (this.flush) parts.push("fui-list--flush");
+        if (this.horizontal) parts.push("fui-list--horizontal");
+        return parts.join(" ");
+    }
+}

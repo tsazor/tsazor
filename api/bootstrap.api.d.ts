@@ -140,6 +140,13 @@ export default class Dialog extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// Divider
+export default class Divider extends ComponentBase {
+    orientation: "horizontal" | "vertical";
+    appearance: "default" | "subtle" | "stronger";
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Drawer
 export default class Drawer extends ComponentBase {
     isOpen: boolean;
@@ -348,6 +355,26 @@ export default class Spinner extends ComponentBase {
     kind: "border" | "grow";
     size: "small" | "medium";
     text?: string;
+}
+
+// Stack
+export default class Stack extends ComponentBase {
+    direction: "horizontal" | "vertical";
+    gap?: "xs" | "s" | "m" | "l" | "xl";
+    align?: "start" | "center" | "end" | "stretch" | "baseline";
+    justify?: "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly";
+    wrap: boolean;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// Switch
+export default class Switch extends InputBase<boolean> {
+    label?: string;
+    help?: string;
+    disabled: boolean;
+    id?: string;
+    ariaLabel?: string;
 }
 
 // Tab

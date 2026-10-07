@@ -2,6 +2,19 @@
 
 /* @tsazor/fluent */
 
+// Accordion
+export default class Accordion extends ComponentBase {
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// AccordionItem
+export default class AccordionItem extends ComponentBase {
+    title: string;
+    childContent?: RenderFragment;
+    accordion?: Accordion;
+}
+
 // Alert
 export default class Alert extends ComponentBase {
     intent: Intent;
@@ -78,6 +91,12 @@ export default class Checkbox extends InputBase<boolean> {
     required: boolean;
     id?: string;
     ariaLabel?: string;
+}
+
+// Collapse
+export default class Collapse extends ComponentBase {
+    isOpen: boolean;
+    childContent?: RenderFragment;
 }
 
 // ColumnAlign: re-exported from @tsazor/ui
@@ -214,6 +233,22 @@ export default class Indicator extends ComponentBase {
 
 // Intent: re-exported from @tsazor/ui
 
+// ListGroup
+export default class ListGroup extends ComponentBase {
+    flush: boolean;
+    horizontal: boolean;
+    childContent?: RenderFragment;
+}
+
+// ListGroupItem
+export default class ListGroupItem extends ComponentBase {
+    active: boolean;
+    disabled: boolean;
+    href?: string;
+    onClick?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+}
+
 // Menu
 export default class Menu extends ComponentBase {
     label: string;
@@ -267,6 +302,14 @@ export default class Paginator extends ComponentBase {
 
 // Placement: re-exported from @tsazor/ui
 
+// Progress
+export default class Progress extends ComponentBase {
+    value: number;
+    intent?: Intent;
+    label?: string;
+    ariaLabel?: string;
+}
+
 // PropertyColumn
 export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     grid?: DataGridModel<TGridItem>;
@@ -280,6 +323,20 @@ export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     align?: ColumnAlign;
     class?: string;
     headerContent?: RenderFragment;
+}
+
+// RadioGroup
+export default class RadioGroup extends InputBase<string> {
+    label?: string;
+    options: {
+        value: string;
+        label: string;
+        disabled?: boolean;
+    }[];
+    inline: boolean;
+    help?: string;
+    disabled: boolean;
+    id?: string;
 }
 
 // Select

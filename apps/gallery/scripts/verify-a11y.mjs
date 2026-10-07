@@ -21,7 +21,7 @@ import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 const APP = "http://localhost:5321";
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
+const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/structure", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
 
 const spawned = [];
 async function reachable(url) {
@@ -209,6 +209,25 @@ async function main() {
     check(tooltipViolations.length === 0, `axe /overlays with a tooltip${tooltipViolations.length ? `: ${tooltipViolations.join(" | ")}` : ""}`);
     await page.keyboard.press("Escape");
     check((await page.locator("[role=tooltip]").count()) === 0, "tooltip: Escape hides it");
+
+    /* 5 — accordion, radio group, collapse (the structure page) */
+    await page.goto(`${APP}/structure`, { waitUntil: "networkidle" });
+    const headers = page.locator(".fui-accordion__button");
+    await headers.nth(1).focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.querySelectorAll(".fui-accordion__button")[1]?.getAttribute("aria-expanded") === "true");
+    check((await page.locator(".fui-accordion__panel").textContent())?.includes("Invoice") === true && (await headers.nth(0).getAttribute("aria-expanded")) === "false",
+        "accordion: Enter on a header opens its panel and closes the other");
+    await page.getByLabel("Sliced", { exact: true }).focus();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() => document.querySelector(".echo")?.textContent === "Slicing: thin");
+    check(true, "radio group: the arrow keys move the choice (@bind-Value)");
+    await page.locator(".fui-button", { hasText: "Details" }).click();
+    await page.waitForSelector(".fui-collapse");
+    check((await page.locator(".fui-button", { hasText: "Details" }).getAttribute("aria-expanded")) === "true", "collapse: the toggle says it is expanded");
+    const structureViolations = await axe(page);
+    check(structureViolations.length === 0, `axe /structure with a panel and the details open${structureViolations.length ? `: ${structureViolations.join(" | ")}` : ""}`);
 
     check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
     await browser.close();

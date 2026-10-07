@@ -1,0 +1,80 @@
+/* ListGroup — Fluent 2 list: bordered rows on the card surface; links and buttons fill the row. */
+
+.fui-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-background-1);
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+  overflow: hidden;
+}
+
+.fui-list--flush {
+  border: none;
+  border-radius: 0;
+}
+
+.fui-list--horizontal {
+  display: flex;
+}
+
+.fui-list__item {
+  padding: var(--fui-spacing-s) var(--fui-spacing-m);
+}
+
+.fui-list__item + .fui-list__item {
+  border-top: 1px solid var(--fui-stroke-1);
+}
+
+.fui-list--horizontal .fui-list__item + .fui-list__item {
+  border-top: none;
+  border-left: 1px solid var(--fui-stroke-1);
+}
+
+.fui-list__item--action {
+  padding: 0;
+}
+
+.fui-list__action {
+  display: block;
+  width: 100%;
+  padding: var(--fui-spacing-s) var(--fui-spacing-m);
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fui-list__action:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-list__action:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+.fui-list__item--active {
+  background: var(--fui-brand-background);
+  color: var(--fui-foreground-on-brand);
+}
+
+.fui-list__item--active .fui-list__action:hover {
+  background: var(--fui-brand-background-hover);
+}
+
+/* A disabled row is still text for its reader: muted, but readable (4.5:1). */
+.fui-list__item--disabled {
+  color: var(--fui-foreground-3);
+}
+
+.fui-list__item--disabled .fui-list__action {
+  cursor: not-allowed;
+}

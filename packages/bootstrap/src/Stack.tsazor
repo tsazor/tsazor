@@ -1,0 +1,32 @@
+@** A flexbox layout (Bootstrap's `d-flex` utilities) that lines up its children horizontally or
+    vertically, with a gap from the spacing scale and optional align, justify and wrap — the same
+    parameters as the Fluent skin's Stack. *@
+<div class="@stackClass" @attributes="additionalAttributes">@childContent</div>
+
+@code {
+    /** Layout axis: horizontal (default) | vertical. */
+    @Parameter() direction: "horizontal" | "vertical" = "horizontal";
+    /** Gap between children: xs | s | m | l | xl (Bootstrap's gap-1 … gap-5); no gap when omitted. */
+    @Parameter() gap?: "xs" | "s" | "m" | "l" | "xl";
+    /** flex align-items. */
+    @Parameter() align?: "start" | "center" | "end" | "stretch" | "baseline";
+    /** flex justify-content. */
+    @Parameter() justify?: "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly";
+    /** Wraps on overflow. */
+    @Parameter() wrap: boolean = false;
+    /** The items to lay out. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the element (a class here replaces the stack's: put it on a wrapper instead). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private static readonly GAPS = { xs: 1, s: 2, m: 3, l: 4, xl: 5 } as const;
+
+    private get stackClass(): string {
+        const parts = ["d-flex", this.direction === "vertical" ? "flex-column" : "flex-row"];
+        if (this.gap) parts.push(`gap-${Stack.GAPS[this.gap]}`);
+        if (this.align) parts.push(`align-items-${this.align}`);
+        if (this.justify) parts.push(`justify-content-${this.justify.replace("space-", "")}`);
+        if (this.wrap) parts.push("flex-wrap");
+        return parts.join(" ");
+    }
+}

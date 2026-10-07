@@ -1,0 +1,29 @@
+@** A separator line (`role="separator"` with `aria-orientation`): an `<hr>` across, or Bootstrap's `.vr`
+    between items in a row; appearance default | subtle | stronger — the same parameters as the
+    Fluent skin's Divider. *@
+@if (orientation === "vertical") {
+    <div class="@verticalClass" role="separator" aria-orientation="vertical" @attributes="additionalAttributes"></div>
+} else {
+    <hr class="@horizontalClass" role="separator" aria-orientation="horizontal" @attributes="additionalAttributes" />
+}
+
+@code {
+    /** Axis: horizontal (default) | vertical. */
+    @Parameter() orientation: "horizontal" | "vertical" = "horizontal";
+    /** Stroke strength: default | subtle | stronger. */
+    @Parameter() appearance: "default" | "subtle" | "stronger" = "default";
+    /** Further attributes for the element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get strength(): string | null {
+        return this.appearance === "subtle" ? "opacity-25" : this.appearance === "stronger" ? "opacity-75" : null;
+    }
+
+    private get horizontalClass(): string {
+        return ["my-3", this.strength].filter(Boolean).join(" ");
+    }
+
+    private get verticalClass(): string {
+        return ["vr", this.strength].filter(Boolean).join(" ");
+    }
+}

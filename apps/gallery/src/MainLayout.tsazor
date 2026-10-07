@@ -39,6 +39,7 @@
         { href: "/datagrid", label: "DataGrid" },
         { href: "/dialog", label: "Dialog" },
         { href: "/overlays", label: "Menu, Drawer, Tooltip" },
+        { href: "/structure", label: "Accordion, List, Progress" },
         { href: "/feedback", label: "Feedback" },
         { href: "/primitives", label: "Layout" },
         { href: "/theme", label: "Theme" },
