@@ -1,12 +1,13 @@
 ---
 title: Off the main thread
 keywords: Web Worker, @tsazor/worker, exposeWorker, defineWorker, main thread, Task.Run
-focus: App.tsazor
+focus: orders.worker.ts
 gate: click .import; look
 ---
 
 Click **Import**: the counter stops — the 400,000-line import blocks the page's only thread.
-Move the work into a **Web Worker** with `@tsazor/worker`. The worker module exposes it:
+Move the work into a **Web Worker** with `@tsazor/worker`. The worker module, `orders.worker.ts`
+(open in the editor), exposes it:
 
 ```ts
 import { parseOrders, sampleOrders } from "./orders";
@@ -18,14 +19,14 @@ const api = {
 };
 ```
 
-`OrdersWorker` (in `orders-worker.ts`) is the typed client. Register it and inject it:
+`OrdersWorker` (in `orders-client.ts`) is the typed client. Register it and inject it:
 
 ```ts
 services.registerType(OrdersWorker, { singleton: true });
 ```
 
 ```tsazor
-@import { OrdersWorker } from "./orders-worker"
+@import { OrdersWorker } from "./orders-client"
 @inject OrdersWorker worker
 ```
 

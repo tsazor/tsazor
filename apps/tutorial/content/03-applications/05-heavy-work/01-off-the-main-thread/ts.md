@@ -1,7 +1,7 @@
 ---
 title: Off the main thread
 keywords: Web Worker, @tsazor/worker, exposeWorker, defineWorker, main thread
-focus: App.tsazor
+focus: orders.worker.ts
 gate: click .import; look
 ---
 
@@ -13,8 +13,8 @@ not even the next tick of the clock, because everything a page does runs on one 
 A **Web Worker** is a second thread. It can't touch the page, but it can compute.
 `@tsazor/worker` lets you call a function in a worker as if it were a service method.
 
-First, give the worker something to do. In `orders.worker.ts`, which runs in the worker, put the
-import into the `api` object:
+First, give the worker something to do. `orders.worker.ts`, open in the editor, runs in the
+worker — the `.worker.ts` ending marks such modules. Put the import into its `api` object:
 
 ```ts
 import { parseOrders, sampleOrders } from "./orders";
@@ -26,7 +26,7 @@ const api = {
 };
 ```
 
-`orders-worker.ts` is the page's side: `OrdersWorker` is a class whose methods call the
+`orders-client.ts` is the page's side: `OrdersWorker` is a class whose methods call the
 worker. Register it in `Program.ts`, like any service:
 
 ```ts
@@ -36,7 +36,7 @@ services.registerType(OrdersWorker, { singleton: true });
 Then inject it in `App.tsazor` and await the result:
 
 ```tsazor
-@import { OrdersWorker } from "./orders-worker"
+@import { OrdersWorker } from "./orders-client"
 @inject OrdersWorker worker
 ```
 

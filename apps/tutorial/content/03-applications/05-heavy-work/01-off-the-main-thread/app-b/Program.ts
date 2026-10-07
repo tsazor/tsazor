@@ -1,6 +1,6 @@
 import { createTsazorApp } from "@tsazor/runtime";
 import App from "./App.tsazor";
-import { OrdersWorker } from "./orders-worker";
+import { OrdersWorker } from "./orders-client";
 
 createTsazorApp({
     root: App,
