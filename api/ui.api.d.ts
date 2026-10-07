@@ -45,6 +45,22 @@ export interface DismissableOptions {
 // DismissReason
 export type DismissReason = "escape" | "outside";
 
+// FieldState
+export declare class FieldState {
+    private readonly prefix;
+    private generated;
+    constructor(prefix?: string);
+    id(explicit?: string | null): string;
+    helpId(explicit?: string | null): string;
+    messageId(explicit?: string | null): string;
+    message(context: EditContext | null | undefined, expression: string | null | undefined): string;
+    validity(fieldClass: string | null | undefined): FieldValidity;
+    aria(message: string, hasHelp?: boolean, explicitId?: string | null): Record<string, string | undefined>;
+}
+
+// FieldValidity
+export type FieldValidity = "invalid" | "valid" | "none";
+
 // focusableElements
 export declare function focusableElements(container: ParentNode): HTMLElement[];
 
@@ -61,11 +77,17 @@ export interface FocusTrapOptions {
     restoreFocus?: boolean;
 }
 
+// hasSubmitAttempt
+export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
+
 // Intent
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
 
 // isTopLayer
 export declare function isTopLayer(key: object): boolean;
+
+// markSubmitAttempt
+export declare function markSubmitAttempt(context: EditContext): void;
 
 // openLayer
 export declare function openLayer(key: object): () => void;

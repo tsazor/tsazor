@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { anchoredPosition, computePosition, createLayer, dismissable, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
+import { anchoredPosition, computePosition, createLayer, dismissable, FieldState, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -170,5 +170,24 @@ describe("anchoredPosition", () => {
 describe("uniqueId", () => {
   it("is unique per call", () => {
     expect(uniqueId("tab")).not.toBe(uniqueId("tab"));
+  });
+});
+
+describe("FieldState", () => {
+  it("keeps one generated id and describes the input by help and message", () => {
+    const field = new FieldState("tz-input");
+    const id = field.id();
+    expect(field.id()).toBe(id);
+    expect(field.id("explicit")).toBe("explicit");
+    expect(field.aria("", true)).toEqual({ "aria-invalid": undefined, "aria-describedby": `${id}-help` });
+    expect(field.aria("Required", true)).toEqual({ "aria-invalid": "true", "aria-describedby": `${id}-help ${id}-message` });
+  });
+
+  it("reads Blazor's field classes: only a modified valid field is valid", () => {
+    const field = new FieldState();
+    expect(field.validity("valid")).toBe("none");
+    expect(field.validity("modified valid")).toBe("valid");
+    expect(field.validity("modified invalid")).toBe("invalid");
+    expect(field.validity("invalid")).toBe("invalid");
   });
 });

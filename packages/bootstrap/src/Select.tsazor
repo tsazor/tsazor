@@ -1,0 +1,53 @@
+@** A Bootstrap dropdown list (`select.form-select`; InputBase — bind it with @bind) for a string
+    value, with an optional label and help text; the `<option>`s come from the child content.
+    Validation state and message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<string>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <select id="@field.id(id)" class="@inputClass" value="@(currentValue ?? "")" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange">@childContent</select>
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the list, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Disables the list. */
+    @Parameter() disabled: boolean = false;
+    /** Marks the list as required. */
+    @Parameter() required: boolean = false;
+    /** The list's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** The `<option>` elements. */
+    @Parameter() childContent?: RenderFragment;
+
+    private readonly field = new FieldState("tz-select");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-select is-invalid" : validity === "valid" ? "form-select is-valid" : "form-select";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLSelectElement).value;
+    }
+}

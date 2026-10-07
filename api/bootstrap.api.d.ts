@@ -82,6 +82,16 @@ export default class CardTitle extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// Checkbox
+export default class Checkbox extends InputBase<boolean> {
+    label?: string;
+    help?: string;
+    switch: boolean;
+    disabled: boolean;
+    required: boolean;
+    id?: string;
+}
+
 // Collapse
 export default class Collapse extends ComponentBase {
     isOpen: boolean;
@@ -119,6 +129,16 @@ export default class DropdownItem extends ComponentBase {
     disabled: boolean;
     childContent?: RenderFragment;
     dropdown?: Dropdown;
+}
+
+// Form
+export default class Form extends ComponentBase {
+    model: object;
+    validators?: Record<string, unknown>;
+    onValidSubmit?: EventCallback<EditContext>;
+    onInvalidSubmit?: EventCallback<EditContext>;
+    childContent?: (context: EditContext) => RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Intent: re-exported from @tsazor/ui
@@ -161,6 +181,19 @@ export default class Navbar extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// NumberInput
+export default class NumberInput extends InputBase<number> {
+    label?: string;
+    help?: string;
+    placeholder?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    disabled: boolean;
+    required: boolean;
+    id?: string;
+}
+
 // Orientation: re-exported from @tsazor/ui
 
 // Pagination
@@ -182,6 +215,30 @@ export default class Progress extends ComponentBase {
     intent?: Intent;
     label?: string;
     ariaLabel?: string;
+}
+
+// RadioGroup
+export default class RadioGroup extends InputBase<string> {
+    label?: string;
+    options: {
+        value: string;
+        label: string;
+        disabled?: boolean;
+    }[];
+    inline: boolean;
+    help?: string;
+    disabled: boolean;
+    id?: string;
+}
+
+// Select
+export default class Select extends InputBase<string> {
+    label?: string;
+    help?: string;
+    disabled: boolean;
+    required: boolean;
+    id?: string;
+    childContent?: RenderFragment;
 }
 
 // Size: re-exported from @tsazor/ui
@@ -217,4 +274,26 @@ export default class Tabs extends ComponentBase {
     childContent?: RenderFragment;
     ariaLabel?: string;
     onSelected?: EventCallback<number>;
+}
+
+// TextArea
+export default class TextArea extends InputBase<string> {
+    label?: string;
+    help?: string;
+    placeholder?: string;
+    rows: number;
+    disabled: boolean;
+    required: boolean;
+    id?: string;
+}
+
+// TextInput
+export default class TextInput extends InputBase<string> {
+    label?: string;
+    help?: string;
+    placeholder?: string;
+    type: "text" | "password" | "email" | "search" | "tel" | "url";
+    disabled: boolean;
+    required: boolean;
+    id?: string;
 }

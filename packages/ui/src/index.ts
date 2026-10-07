@@ -10,3 +10,4 @@ export { dismissable, type DismissableOptions, type DismissReason } from "./beha
 export { scrollLock } from "./behaviors/scroll-lock.js";
 export { rovingFocus, type RovingFocusOptions } from "./behaviors/roving-focus.js";
 export { anchoredPosition, computePosition, type AnchoredPositionOptions } from "./behaviors/anchored-position.js";
+export { FieldState, hasSubmitAttempt, markSubmitAttempt, type FieldValidity } from "./forms.js";

@@ -20,6 +20,9 @@ import {
   CardHeader,
   CardTitle,
   Dialog,
+  Form,
+  RadioGroup,
+  TextInput,
   Collapse,
   Dropdown,
   DropdownItem,
@@ -237,6 +240,69 @@ describe("Dialog (the modal dialog pattern, on @tsazor/ui)", () => {
 
   it("is also exported as Modal", () => {
     expect(Modal).toBe(Dialog);
+  });
+});
+
+describe("Form + inputs (FieldState from @tsazor/ui)", () => {
+  it("links label, help and message; shows the message only after a submit; turns valid when fixed", async () => {
+    const model = { name: "", size: "" };
+    let invalidSubmits = 0;
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, Form);
+      b.addAttribute(1, "model", model);
+      b.addAttribute(2, "validators", { name: (value: unknown) => (value ? null : "Name is required") });
+      b.addAttribute(3, "onInvalidSubmit", EventCallback.unbound(() => {
+        invalidSubmits++;
+      }));
+      b.addAttribute(4, "childContent", () => (c: Parameters<RenderFragment>[0]) => {
+        c.openComponent(0, TextInput);
+        c.addAttribute(1, "label", "Name");
+        c.addAttribute(2, "help", "As on the order");
+        c.addAttribute(3, "Value", model.name);
+        c.addAttribute(4, "ValueChanged", EventCallback.unbound((value: string) => {
+          model.name = value;
+        }));
+        c.addAttribute(5, "ValueExpression", "name");
+        c.closeComponent();
+        c.openComponent(6, RadioGroup);
+        c.addAttribute(7, "label", "Size");
+        c.addAttribute(8, "options", [{ value: "s", label: "Small" }, { value: "l", label: "Large" }]);
+        c.addAttribute(9, "Value", model.size);
+        c.addAttribute(10, "ValueChanged", EventCallback.unbound((value: string) => {
+          model.size = value;
+        }));
+        c.addAttribute(11, "ValueExpression", "size");
+        c.closeComponent();
+      });
+      b.closeComponent();
+    });
+    await settle(renderer);
+    const input = container.querySelector<HTMLInputElement>("input.form-control")!;
+    expect(container.querySelector("label")!.getAttribute("for")).toBe(input.id);
+    expect(input.getAttribute("aria-describedby")).toBe(`${input.id}-help`);
+    expect(container.querySelector(".invalid-feedback")).toBeNull();
+
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    expect(invalidSubmits).toBe(1);
+    const message = container.querySelector(".invalid-feedback")!;
+    expect(message.textContent).toBe("Name is required");
+    expect(input.className).toContain("is-invalid");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBe(`${input.id}-help ${message.id}`);
+
+    input.value = "Marta";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector(".invalid-feedback")).toBeNull();
+    expect(input.className).toContain("is-valid");
+
+    const radios = container.querySelectorAll<HTMLInputElement>("input[type=radio]");
+    expect(container.querySelector("legend")!.textContent).toBe("Size");
+    radios[1]!.checked = true;
+    radios[1]!.dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(renderer);
+    expect(model.size).toBe("l");
   });
 });
 

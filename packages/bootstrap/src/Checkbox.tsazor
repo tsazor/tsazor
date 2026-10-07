@@ -1,0 +1,61 @@
+@** A Bootstrap checkbox (`.form-check`; InputBase<boolean> — bind it with @bind) with its label to the
+    right; `switch` renders it as a toggle switch (`.form-switch`, `role="switch"`). Validation state
+    and message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<boolean>
+
+<div class="@wrapperClass">
+    <input id="@field.id(id)" type="checkbox" class="@inputClass" role="@switchRole" checked="@(currentValue === true)" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    @if (label) {
+        <label class="form-check-label" for="@field.id(id)">@label</label>
+    }
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The label to the right of the box. */
+    @Parameter() label?: string;
+    /** A hint below, linked to the box for screen readers. */
+    @Parameter() help?: string;
+    /** Renders a toggle switch instead of a box. */
+    @Parameter() switch: boolean = false;
+    /** Disables the box. */
+    @Parameter() disabled: boolean = false;
+    /** Marks the box as required (it must be ticked). */
+    @Parameter() required: boolean = false;
+    /** The box's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-check");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get wrapperClass(): string {
+        return this.switch ? "form-check form-switch mb-3" : "form-check mb-3";
+    }
+
+    private get switchRole(): string | null {
+        return this.switch ? "switch" : null;
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-check-input is-invalid" : validity === "valid" ? "form-check-input is-valid" : "form-check-input";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).checked;
+    }
+}

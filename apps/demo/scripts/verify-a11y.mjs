@@ -106,6 +106,23 @@ try {
   );
   check((await page.locator("[role=tabpanel]").textContent())?.trim() === "Content of tab 2.", "tabs: the panel follows the selection");
 
+  // Form: messages only after a submit, linked to their inputs; axe with the errors showing.
+  await page.getByRole("button", { name: "Reserve" }).click();
+  await page.waitForSelector(".invalid-feedback");
+  const name = page.getByLabel("Name", { exact: true });
+  check((await name.getAttribute("aria-invalid")) === "true", "form: an invalid input says so (aria-invalid)");
+  const describedBy = (await name.getAttribute("aria-describedby")) ?? "";
+  const description = await page.evaluate((ids) => ids.split(" ").map((id) => document.getElementById(id)?.textContent?.trim()).join(" | "), describedBy);
+  check(description.includes("Enter a name."), `form: the message describes the input (${description})`);
+  const formViolations = await axe(page);
+  check(formViolations.length === 0, `axe /components with form errors${formViolations.length ? `: ${formViolations.join(" | ")}` : ""}`);
+  await name.fill("Marta");
+  await name.dispatchEvent("change");
+  await page.getByLabel("Bread").selectOption("rye");
+  await page.getByRole("button", { name: "Reserve" }).click();
+  await page.waitForFunction(() => document.querySelector(".order-status")?.textContent?.includes("Reserved"));
+  check((await page.locator(".invalid-feedback").count()) === 0, "form: fixed and submitted, no messages left");
+
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 } catch (error) {
   console.error(error);

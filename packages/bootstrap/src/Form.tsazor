@@ -1,0 +1,34 @@
+@** A form around the runtime's EditForm, for the Bootstrap inputs: it cascades the EditContext to
+    the inputs inside, validates on submit and raises onValidSubmit or onInvalidSubmit. It also
+    records the submit attempt, from which on the inputs show their validation messages. Put a
+    Button with type="submit" inside. *@
+@using @tsazor/runtime
+@import type { EditContext } from "@tsazor/runtime"
+@import { markSubmitAttempt } from "@tsazor/ui"
+
+<EditForm @attributes="additionalAttributes" Model="@model" Validators="@validators" OnValidSubmit="@handleValidSubmit" OnInvalidSubmit="@handleInvalidSubmit" Context="formContext" novalidate>@childContent(formContext)</EditForm>
+
+@code {
+    /** The model to edit and validate. */
+    @Parameter() model!: object;
+    /** Form-specific rules: field name → validator (EditForm's `Validators`). */
+    @Parameter() validators?: Record<string, unknown>;
+    /** Fired after a submit that passed validation, with the EditContext. */
+    @Parameter() onValidSubmit?: EventCallback<EditContext>;
+    /** Fired after a submit that failed validation, with the EditContext. */
+    @Parameter() onInvalidSubmit?: EventCallback<EditContext>;
+    /** The form's contents (inputs and a submit button); receives the EditContext. */
+    @Parameter() childContent?: (context: EditContext) => RenderFragment;
+    /** Further attributes for the `<form>`. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly handleValidSubmit = EventCallback.bind(this, (context: EditContext) => {
+        markSubmitAttempt(context);
+        this.onValidSubmit?.invokeAsync(context);
+    });
+
+    private readonly handleInvalidSubmit = EventCallback.bind(this, (context: EditContext) => {
+        markSubmitAttempt(context);
+        this.onInvalidSubmit?.invokeAsync(context);
+    });
+}

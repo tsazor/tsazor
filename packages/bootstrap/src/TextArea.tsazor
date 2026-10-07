@@ -1,0 +1,54 @@
+@** A Bootstrap multi-line text field (`textarea.form-control`; InputBase — bind it with @bind) with an
+    optional label and help text; validation state and message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<string>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <textarea id="@field.id(id)" class="@inputClass" rows="@rows" placeholder="@placeholder" disabled="@disabled" required="@required" value="@(currentValue ?? "")" @attributes="inputAttributes" @onchange="handleChange"></textarea>
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    /** Visible lines. */
+    @Parameter() rows: number = 3;
+    /** Disables the field. */
+    @Parameter() disabled: boolean = false;
+    /** Marks the field as required. */
+    @Parameter() required: boolean = false;
+    /** The field's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-textarea");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLTextAreaElement).value;
+    }
+}

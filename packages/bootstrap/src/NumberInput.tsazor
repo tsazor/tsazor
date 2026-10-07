@@ -1,0 +1,62 @@
+@** A Bootstrap number field (`input[type=number].form-control`; InputBase<number> — bind it with
+    @bind) with an optional label and help text; validation state and message as with TextInput. An
+    empty field or text that is no number is handed to validation as it is. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<number>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <input id="@field.id(id)" type="number" class="@inputClass" value="@(currentValue ?? "")" min="@min" max="@max" step="@step" placeholder="@placeholder" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    /** The smallest allowed value. */
+    @Parameter() min?: number;
+    /** The largest allowed value. */
+    @Parameter() max?: number;
+    /** The step of the spinner buttons. */
+    @Parameter() step?: number;
+    /** Disables the field. */
+    @Parameter() disabled: boolean = false;
+    /** Marks the field as required. */
+    @Parameter() required: boolean = false;
+    /** The field's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-number");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        const raw = (e.target as HTMLInputElement).value;
+        const parsed = Number(raw);
+        // Empty or not a number: validation sees what was typed.
+        this.currentValue = (raw === "" || Number.isNaN(parsed) ? raw : parsed) as never;
+    }
+}

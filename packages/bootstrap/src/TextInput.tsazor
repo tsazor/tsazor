@@ -1,0 +1,56 @@
+@** A Bootstrap text field (`.form-control`; InputBase — bind it with @bind) with an optional label
+    and help text. Inside a Form it turns red or green with the field's validation state, and after
+    a submit attempt it shows the first message below (`.invalid-feedback`, linked with
+    aria-describedby, aria-invalid). *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<string>
+
+<div class="mb-3">
+    @if (label) {
+        <label class="form-label" for="@field.id(id)">@label</label>
+    }
+    <input id="@field.id(id)" type="@type" class="@inputClass" value="@(currentValue ?? "")" placeholder="@placeholder" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</div>
+
+@code {
+    /** The field's label (clicking it focuses the input). */
+    @Parameter() label?: string;
+    /** A hint below the input, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Placeholder text. */
+    @Parameter() placeholder?: string;
+    /** The native input type. */
+    @Parameter() type: "text" | "password" | "email" | "search" | "tel" | "url" = "text";
+    /** Disables the input. */
+    @Parameter() disabled: boolean = false;
+    /** Marks the input as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The input's id; generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-input");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).value;
+    }
+}

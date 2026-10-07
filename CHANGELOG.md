@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/ui`: the form core — `FieldState` (input, help and message ids; validity from InputBase's
+  field classes; the message only after a submit attempt; `aria-invalid`/`aria-describedby`) and
+  `markSubmitAttempt`/`hasSubmitAttempt`. `@tsazor/bootstrap`: `Form` (EditForm that records submit
+  attempts), `TextInput`, `TextArea`, `NumberInput`, `Select`, `Checkbox` (also as a `switch`) and
+  `RadioGroup` (fieldset/legend), all on InputBase (`@bind-Value`) with label, help text and Bootstrap's
+  validation styles. The demo gate checks the form in Edge (messages linked to their inputs, axe
+  with errors showing).
 - `@tsazor/bootstrap`: the shared vocabulary (design-component-library.md §3). **`variant` → `intent`**
   (`Intent`: primary, secondary, success, danger, warning, info, neutral) on Button, Alert (default now
   `info`), Badge, Spinner, Progress, Dropdown; **`outline` → `appearance`** (`solid`, `outline`, `subtle`,

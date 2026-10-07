@@ -1,0 +1,66 @@
+@** A group of Bootstrap radio buttons (`.form-check`, in a `fieldset` with a `legend`; InputBase —
+    bind it with @bind) for one string value out of `options`. The arrow keys move between the
+    options, as browsers do for radio groups. Validation state and message as with TextInput. *@
+@import { FieldState } from "@tsazor/ui"
+
+@inherits InputBase<string>
+
+<fieldset class="mb-3" @attributes="groupAttributes">
+    @if (label) {
+        <legend class="form-label fs-6">@label</legend>
+    }
+    @for (let i = 0; i < options.length; i++) {
+        <div class="@checkClass">
+            <input id="@optionId(i)" type="radio" class="@inputClass" name="@field.id(id)" value="@options[i]!.value" checked="@(currentValue === options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" @onchange="handleChange" />
+            <label class="form-check-label" for="@optionId(i)">@options[i]!.label</label>
+        </div>
+    }
+    @if (help) {
+        <div class="form-text" id="@field.helpId(id)">@help</div>
+    }
+    @if (message) {
+        <div class="invalid-feedback d-block" id="@field.messageId(id)">@message</div>
+    }
+</fieldset>
+
+@code {
+    /** The group's caption (the fieldset's legend). */
+    @Parameter() label?: string;
+    /** The choices: value, visible label, and optionally disabled. */
+    @Parameter() options: { value: string; label: string; disabled?: boolean }[] = [];
+    /** Lays the options out in one row. */
+    @Parameter() inline: boolean = false;
+    /** A hint below the group, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** Disables every option. */
+    @Parameter() disabled: boolean = false;
+    /** The group's id (also the radios' name); generated when omitted. */
+    @Parameter() id?: string;
+
+    private readonly field = new FieldState("tz-radio");
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get checkClass(): string {
+        return this.inline ? "form-check form-check-inline" : "form-check";
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-check-input is-invalid" : validity === "valid" ? "form-check-input is-valid" : "form-check-input";
+    }
+
+    private get groupAttributes(): Record<string, unknown> {
+        return { id: this.field.id(this.id), ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private optionId(index: number): string {
+        return `${this.field.id(this.id)}-${index}`;
+    }
+
+    private handleChange(e: Event): void {
+        this.currentValue = (e.target as HTMLInputElement).value;
+    }
+}

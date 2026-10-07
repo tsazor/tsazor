@@ -138,6 +138,28 @@
     </Card>
 </div>
 
+<div class="mt-3">
+    <Card>
+        <CardHeader>Form</CardHeader>
+        <CardBody>
+            <Form Model="@order" Validators="@orderRules" OnValidSubmit="@placeOrder">
+                <TextInput Label="Name" Help="As it should appear on the order." @bind-Value="order.name" />
+                <Select Label="Bread" @bind-Value="order.bread">
+                    <option value="">Choose…</option>
+                    <option value="sourdough">Sourdough</option>
+                    <option value="rye">Rye</option>
+                </Select>
+                <NumberInput Label="Loaves" Min="1" Max="10" @bind-Value="order.loaves" />
+                <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="order.slicing" />
+                <TextArea Label="Note" Rows="2" @bind-Value="order.note" />
+                <Checkbox Label="Send me a reminder" Switch="@true" @bind-Value="order.reminder" />
+                <Button Type="submit">Reserve</Button>
+                <span class="ms-2 order-status">@orderStatus</span>
+            </Form>
+        </CardBody>
+    </Card>
+</div>
+
 @code {
     private clicks = 0;
     private progress = 40;
@@ -193,6 +215,18 @@
 
     private goToPage(next: number): void {
         this.page = next;
+    }
+
+    private order = { name: "", bread: "", loaves: 1, slicing: "whole", note: "", reminder: false };
+    private orderStatus = "";
+    private readonly slicing = [{ value: "whole", label: "Whole" }, { value: "sliced", label: "Sliced" }];
+    private readonly orderRules = {
+        name: (value: unknown) => (value ? null : "Enter a name."),
+        bread: (value: unknown) => (value ? null : "Choose a bread."),
+    };
+
+    private placeOrder(): void {
+        this.orderStatus = `Reserved: ${this.order.loaves} × ${this.order.bread} for ${this.order.name}.`;
     }
 
     private listClick(): void {
