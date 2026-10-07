@@ -10,6 +10,13 @@ Since `06d18dc` GitHub doesn't start the jobs: *"The job was not started because
 have failed or your spending limit needs to be increased."* → **Owner action:** GitHub → Settings →
 Billing & plans. After that, re-run the latest run (or push) to get a real CI result for everything since.
 
+- **Cost (owner decision, 2026-10-07):** GitHub Actions came to about €5/day (34 runs that day, each with
+  three Windows jobs). Since then:
+  - a push or PR runs only the Ubuntu `check` job;
+  - the Windows browser gates (`e2e`, `engines`) run **only when started by hand** (Actions → CI → Run
+    workflow);
+  - a newer push cancels the running check;
+  - pushes are batched: at the end of a session or at a milestone, not after every commit.
 - The last real CI failure (`341a4ee`) was a missing `pnpm api:update` (Fluent API); the next commit
   updated the snapshots, and `pnpm api:check` passes locally.
 - Every commit since was gated locally: `pnpm -r --filter '!fluentcms-admin' build` and `… test`,
