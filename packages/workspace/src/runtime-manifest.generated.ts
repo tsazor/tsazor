@@ -1034,23 +1034,18 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "unknown"
         },
         {
-          "name": "additionalAttributes",
-          "category": "captureUnmatchedValues",
-          "optional": true,
-          "hasInitializer": false,
+          "name": "spacerElement",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
           "member": "field",
           "declaredBy": "Virtualize",
-          "type": "Record<string, unknown>",
-          "references": [
-            {
-              "name": "Record",
-              "kind": "global"
-            }
-          ],
-          "doc": "Pass-through attributes (class, style, …)."
+          "default": "\"div\"",
+          "inferredType": "string",
+          "doc": "The spacer elements' tag (Blazor's SpacerElement): `tr` inside a `<tbody>`, `li` in a list."
         }
       ],
-      "doc": "Blazor's Virtualize<TItem>: renders only the visible window of a large list\nusing the spacer strategy — two height-allocating spacer divs around the\nrendered slice, so the scrollbar geometry matches the full list.\n\nv1: the per-item template is passed via `itemTemplate` (the .tsazor child\ncontent sugar comes with the Vite plugin milestone).",
+      "doc": "Blazor's Virtualize<TItem>: renders only the visible window of a large list\nusing the spacer strategy — two height-allocating spacer divs around the\nrendered slice, so the scrollbar geometry matches the full list.\n\nLike Blazor, it renders no element of its own — the spacers and items go\ninto the parent, and the visible window is measured against the nearest\nscrolling ancestor (or the window). The per-item template is `itemTemplate`.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

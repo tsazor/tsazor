@@ -202,3 +202,60 @@ describe("DataGrid", () => {
     expect(container.querySelector("tbody")!.textContent!.trim()).toBe("No entries");
   });
 });
+
+describe("DataGrid virtualize", () => {
+  const many: Order[] = Array.from({ length: 1_000 }, (_, i) => ({ id: i + 1, customer: `C${String(1000 - i).padStart(4, "0")}`, total: i }));
+
+  it("renders only the rows in view between tr spacers, and says how many rows there are", async () => {
+    const { container, renderer } = await renderTree(
+      grid({ items: many, virtualize: true, itemSize: 40 }, (b) => {
+        component(b, 0, PropertyColumn, { property: (o: Order) => o.id, sortable: true });
+        component(b, 10, PropertyColumn, { property: customer, sortable: true });
+      }),
+    );
+    await settle(renderer);
+    const rows = [...container.querySelectorAll("tbody > tr")];
+    expect(rows[0]!.className).toBe("virtualize-spacer");
+    expect(rows.at(-1)!.className).toBe("virtualize-spacer");
+    const data = rows.slice(1, -1);
+    // happy-dom's viewport: 768 px / 40 px = 20 rows, plus 3 overscan below.
+    expect(data.length).toBeLessThan(30);
+    expect(data[0]!.querySelector("td")!.textContent).toBe("1");
+    expect(data[0]!.getAttribute("aria-rowindex")).toBe("2");
+    expect(container.querySelector("table")!.getAttribute("aria-rowcount")).toBe("1001");
+    expect((rows.at(-1) as HTMLElement).style.height).toBe(`${(1_000 - data.length) * 40}px`);
+
+    container.querySelectorAll<HTMLButtonElement>("th button")[1]!.click();
+    await settle(renderer);
+    expect(container.querySelector("tbody > tr:nth-child(2) td:nth-child(2)")!.textContent).toBe("C0001");
+  });
+
+  it("asks the ItemsProvider for the window in view, sorted", async () => {
+    const requests: GridItemsProviderRequest<Order>[] = [];
+    const provider = (request: GridItemsProviderRequest<Order>) => {
+      requests.push(request);
+      const sorted = request.applySorting(many);
+      return { items: sorted.slice(request.startIndex, request.startIndex + request.count!), totalItemCount: many.length };
+    };
+    const { container, renderer } = await renderTree(
+      grid({ itemsProvider: provider, virtualize: true, itemSize: 40 }, (b) => {
+        component(b, 0, PropertyColumn, { property: customer, sortable: true });
+      }),
+    );
+    await settle(renderer);
+    expect(requests[0]!.startIndex).toBe(0);
+    expect(container.querySelector("tbody > tr:nth-child(2) td")!.textContent).toBe("C1000");
+    expect(container.querySelector("table")!.getAttribute("aria-rowcount")).toBe("1001");
+
+    container.querySelector<HTMLButtonElement>("th button")!.click();
+    await settle(renderer);
+    expect(requests.at(-1)!.getSortByProperties()).toEqual([{ propertyName: "customer", direction: "ascending" }]);
+    expect(container.querySelector("tbody > tr:nth-child(2) td")!.textContent).toBe("C0001");
+  });
+
+  it("refuses virtualize together with pagination", async () => {
+    await expect(
+      renderTree(grid({ items: many, virtualize: true, pagination: new PaginationState() }, (b) => component(b, 0, PropertyColumn, { property: customer }))),
+    ).rejects.toThrow(/Virtualize and Pagination/);
+  });
+});

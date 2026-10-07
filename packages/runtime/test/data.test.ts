@@ -72,12 +72,32 @@ class ProviderPage extends ComponentBase {
 
 let currentInstance: VirtualizePage | ProviderPage | null = null;
 
+/** Mounts `page` in a scrolling panel of `height` px; `scrollTo(px)` scrolls the list by `px`. */
+async function mountInPanel(page: new () => ComponentBase, height: number) {
+  const host = document.createElement("div");
+  host.style.overflowY = "auto";
+  document.body.appendChild(host);
+  Object.defineProperty(host, "clientHeight", { value: height, configurable: true });
+  Object.defineProperty(host, "scrollHeight", { value: 500_000, configurable: true });
+  const renderer = new Renderer();
+  renderer.renderInContainer(page, host);
+  await renderer.waitUntilIdle();
+  const rect = (top: number) => ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON() {} }) as DOMRect;
+  host.getBoundingClientRect = () => rect(0);
+  const scrollTo = async (px: number) => {
+    // The list starts at its top spacer: scrolled by `px`, it sits `px` above the panel's top.
+    (host.querySelector(".virtualize-spacer") as HTMLElement).getBoundingClientRect = () => rect(-px);
+    host.dispatchEvent(new Event("scroll"));
+    await renderer.waitUntilIdle();
+  };
+  return { host, renderer, scrollTo };
+}
+
 describe("Virtualize", () => {
   it("renders only the visible window of 10k items with correct spacer geometry", async () => {
     const { renderer, container } = await mount(VirtualizePage);
     const page = currentInstance as VirtualizePage;
 
-    const wrapper = container.querySelector(".virtualize") as HTMLElement;
     // No scrolling container: the window is the viewport (happy-dom: 768 px) = 16 rows + 4 overscan.
     const items = [...container.querySelectorAll(".virtualize-item")];
     expect(items.length).toBe(20);
@@ -92,43 +112,25 @@ describe("Virtualize", () => {
     void renderer;
   });
 
-  it("measures against a scrolling ancestor, not its own growing element (Blazor)", async () => {
-    const host = document.createElement("div");
-    host.style.overflowY = "auto";
-    document.body.appendChild(host);
-    Object.defineProperty(host, "clientHeight", { value: 400, configurable: true });
-    Object.defineProperty(host, "scrollHeight", { value: 500_000, configurable: true });
-    const renderer = new Renderer();
-    renderer.renderInContainer(VirtualizePage, host);
-    await renderer.waitUntilIdle();
-    const list = host.querySelector(".virtualize") as HTMLElement;
-    const rect = (top: number) => ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON() {} }) as DOMRect;
-    // Scrolled by 100 rows: the list's top is 5,000 px above the panel's.
-    host.getBoundingClientRect = () => rect(0);
-    list.getBoundingClientRect = () => rect(-5_000);
-    host.dispatchEvent(new Event("scroll"));
-    await renderer.waitUntilIdle();
-    const items = [...host.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
-    // 400 px = 8 rows, plus 2 × 2 overscan.
-    expect(items[0]).toBe("Item 98");
-    expect(items.length).toBe(12);
-    host.remove();
+  it("renders no element of its own: spacers and items sit in the parent (Blazor)", async () => {
+    const { container } = await mount(VirtualizePage);
+    const children = [...container.children];
+    expect(children[0]!.className).toBe("virtualize-spacer");
+    expect(children[0]!.getAttribute("aria-hidden")).toBe("true");
+    expect(children[1]!.className).toBe("virtualize-item");
+    expect(children.at(-1)!.className).toBe("virtualize-spacer");
   });
 
-  it("shifts the window when the host scrolls", async () => {
-    const { renderer, container } = await mount(VirtualizePage);
-
-    const wrapper = container.querySelector(".virtualize") as HTMLElement;
-    Object.defineProperty(wrapper, "clientHeight", { value: 500, configurable: true });
-    wrapper.scrollTop = 5_000; // row 100
-    wrapper.dispatchEvent(new Event("scroll"));
-    await renderer.waitUntilIdle();
-
-    const items = [...container.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
-    // startIndex = 100 - overscan(2) = 98
+  it("measures against a scrolling ancestor and shifts the window when it scrolls", async () => {
+    const { host, scrollTo } = await mountInPanel(VirtualizePage, 400);
+    await scrollTo(5_000); // row 100
+    const items = [...host.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
+    // 400 px = 8 rows, plus 2 × 2 overscan; startIndex = 100 - overscan(2) = 98.
     expect(items[0]).toBe("Item 98");
-    const spacers = [...container.querySelectorAll(".virtualize-spacer")] as HTMLElement[];
+    expect(items.length).toBe(12);
+    const spacers = [...host.querySelectorAll(".virtualize-spacer")] as HTMLElement[];
     expect(spacers[0]?.style.height).toBe("4900px"); // 98 * 50
+    host.remove();
   });
 
   it("requests windows from the items provider and updates on scroll", async () => {
@@ -139,24 +141,48 @@ describe("Virtualize", () => {
     await renderer.waitUntilIdle();
     expect(page.providerCalls.length).toBeGreaterThan(0);
     expect(page.providerCalls[0]).toEqual({ startIndex: 0, count: 20 });
-
-    let items = [...container.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
+    const items = [...container.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
     expect(items[0]).toBe("P0");
     expect(items.length).toBe(20);
+  });
 
-    const wrapper = container.querySelector(".virtualize") as HTMLElement;
-    Object.defineProperty(wrapper, "clientHeight", { value: 400, configurable: true });
-    wrapper.scrollTop = 10_000; // row 200
-    wrapper.dispatchEvent(new Event("scroll"));
-    await renderer.waitUntilIdle();
-
+  it("requests the scrolled-to window from the items provider", async () => {
+    const { host, scrollTo } = await mountInPanel(ProviderPage, 400);
+    const page = currentInstance as ProviderPage;
+    await scrollTo(10_000); // row 200
     const last = page.providerCalls[page.providerCalls.length - 1]!;
     expect(last).toEqual({ startIndex: 198, count: 12 });
-    items = [...container.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
+    const items = [...host.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
     expect(items[0]).toBe("P198");
-    const spacers = [...container.querySelectorAll(".virtualize-spacer")] as HTMLElement[];
+    const spacers = [...host.querySelectorAll(".virtualize-spacer")] as HTMLElement[];
     expect(spacers[0]?.style.height).toBe("9900px");
     expect(spacers[1]?.style.height).toBe(`${(1000 - 210) * 50}px`);
+    host.remove();
+  });
+
+  it("renders the spacers as the given element (a tr inside a tbody)", async () => {
+    class TablePage extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "table");
+        b.openElement(1, "tbody");
+        b.openComponent(2, defineComponent(Virtualize));
+        b.addAttribute(3, "Items", ["a", "b"]);
+        b.addAttribute(4, "SpacerElement", "tr");
+        b.addAttribute(5, "ItemTemplate", (item: unknown) => (inner: RenderTreeBuilder) => {
+          inner.openElement(0, "tr");
+          inner.openElement(1, "td");
+          inner.addContent(2, String(item));
+          inner.closeElement();
+          inner.closeElement();
+        });
+        b.closeComponent();
+        b.closeElement();
+        b.closeElement();
+      }
+    }
+    const { container } = await mount(TablePage);
+    const rows = [...container.querySelectorAll("tbody > tr")];
+    expect(rows.map((row) => row.className || row.textContent)).toEqual(["virtualize-spacer", "a", "b", "virtualize-spacer"]);
   });
 });
 

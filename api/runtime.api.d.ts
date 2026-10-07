@@ -1494,7 +1494,7 @@ export declare class Virtualize extends ComponentBase {
     itemSize: number;
     overscan: number;
     itemTemplate?: (item: unknown) => RenderFragment;
-    additionalAttributes?: Record<string, unknown>;
+    spacerElement: string;
     private rootElement?;
     private unsubscribeScroll?;
     private resizeObserver?;
@@ -1504,6 +1504,7 @@ export declare class Virtualize extends ComponentBase {
     private loadedItems;
     private lastRequestedStart;
     private lastRequestedCount;
+    private requestTicket;
     protected onInitialized(): void;
     protected onParametersSet(): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;

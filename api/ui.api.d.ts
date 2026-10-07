@@ -50,6 +50,8 @@ export declare class DataGridModel<T> {
     private loadingNow;
     private abort;
     private unsubscribe;
+    private virtualRefresh;
+    private sortedView;
     constructor(onChange: () => void);
     get columns(): readonly GridColumn<T>[];
     startCollectingColumns(): void;
@@ -62,6 +64,10 @@ export declare class DataGridModel<T> {
     get loading(): boolean;
     get rows(): readonly T[];
     refreshDataAsync(): Promise<void>;
+    setVirtualization(refresh: (() => Promise<void>) | undefined): void;
+    get sortedItems(): readonly T[];
+    provideRange(startIndex: number, count: number): Promise<GridItemsProviderResult<T>>;
+    private request;
     dispose(): void;
 }
 

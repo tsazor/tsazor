@@ -118,6 +118,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     bordered: boolean;
     small: boolean;
     responsive: boolean;
+    virtualize: boolean;
+    itemSize: number;
+    overscanCount: number;
     stickyHeader: boolean;
     additionalAttributes?: Record<string, unknown>;
 }

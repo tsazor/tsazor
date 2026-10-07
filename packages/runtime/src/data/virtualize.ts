@@ -28,8 +28,9 @@ export type VirtualizeItemsProvider<TItem> = (
  * using the spacer strategy — two height-allocating spacer divs around the
  * rendered slice, so the scrollbar geometry matches the full list.
  *
- * v1: the per-item template is passed via `itemTemplate` (the .tsazor child
- * content sugar comes with the Vite plugin milestone).
+ * Like Blazor, it renders no element of its own — the spacers and items go
+ * into the parent, and the visible window is measured against the nearest
+ * scrolling ancestor (or the window). The per-item template is `itemTemplate`.
  */
 export class Virtualize extends ComponentBase {
   /** In-memory items (alternative to itemsProvider). */
@@ -42,8 +43,8 @@ export class Virtualize extends ComponentBase {
   @Parameter() overscan = 3;
   /** Fragment factory rendered once per visible item. */
   @Parameter() itemTemplate?: (item: unknown) => RenderFragment;
-  /** Pass-through attributes (class, style, …). */
-  @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+  /** The spacer elements' tag (Blazor's SpacerElement): `tr` inside a `<tbody>`, `li` in a list. */
+  @Parameter() spacerElement = "div";
 
   private rootElement?: HTMLElement;
   private unsubscribeScroll?: () => void;
@@ -56,6 +57,7 @@ export class Virtualize extends ComponentBase {
   private loadedItems: unknown[] = [];
   private lastRequestedStart = -1;
   private lastRequestedCount = -1;
+  private requestTicket = 0;
 
   protected override onInitialized(): void {
     if (this.items) {
@@ -71,24 +73,19 @@ export class Virtualize extends ComponentBase {
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     this.beginRender();
-    b.openElement(this.nextSequence(), "div");
-    b.addAttribute(this.nextSequence(), "class", `virtualize${this.additionalAttributes?.["class"] ? ` ${this.additionalAttributes["class"]}` : ""}`);
-    b.addAttribute(this.nextSequence(), "style", "overflow-y: auto;");
-    for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
-      if (name === "class" || name === "style") continue;
-      b.addAttribute(this.nextSequence(), name, value as never);
-    }
+    // Blazor renders no element of its own: the spacers and the items sit
+    // directly in the parent (a `<tbody>` with `spacerElement="tr"`).
+    const topHeight = this.startIndex * this.itemSize;
+    b.openElement(this.nextSequence(), this.spacerElement);
+    b.addAttribute(this.nextSequence(), "class", "virtualize-spacer");
+    b.addAttribute(this.nextSequence(), "aria-hidden", "true");
+    b.addAttribute(this.nextSequence(), "style", `height: ${topHeight}px; flex-shrink: 0;`);
     b.addElementReferenceCapture(this.nextSequence(), (el) => {
       this.rootElement = el as HTMLElement;
     });
-
-    const topHeight = this.startIndex * this.itemSize;
-    b.openElement(this.nextSequence(), "div");
-    b.addAttribute(this.nextSequence(), "class", "virtualize-spacer");
-    b.addAttribute(this.nextSequence(), "style", `height: ${topHeight}px;`);
     b.closeElement();
 
-    for (const [offset, item] of this.visibleItems().entries()) {
+    for (const item of this.visibleItems()) {
       const template = this.itemTemplate;
       if (template) {
         b.addContent(this.nextSequence(), template(item));
@@ -98,16 +95,14 @@ export class Virtualize extends ComponentBase {
         b.addContent(this.nextSequence(), String(item));
         b.closeElement();
       }
-      void offset;
     }
 
     const rendered = this.visibleItems().length;
     const bottomHeight = Math.max(0, (this.totalItemCount - this.startIndex - rendered) * this.itemSize);
-    b.openElement(this.nextSequence(), "div");
+    b.openElement(this.nextSequence(), this.spacerElement);
     b.addAttribute(this.nextSequence(), "class", "virtualize-spacer");
-    b.addAttribute(this.nextSequence(), "style", `height: ${bottomHeight}px;`);
-    b.closeElement();
-
+    b.addAttribute(this.nextSequence(), "aria-hidden", "true");
+    b.addAttribute(this.nextSequence(), "style", `height: ${bottomHeight}px; flex-shrink: 0;`);
     b.closeElement();
   }
 
@@ -161,7 +156,16 @@ export class Virtualize extends ComponentBase {
     this.lastRequestedStart = startIndex;
     this.lastRequestedCount = count;
     if (!this.itemsProvider) return;
-    const result = await this.itemsProvider({ startIndex, count });
+    // A newer request supersedes this one: its result (or failure) is dropped (Blazor cancels it).
+    const ticket = ++this.requestTicket;
+    let result: VirtualizeItemsProviderResult<never>;
+    try {
+      result = await this.itemsProvider({ startIndex, count });
+    } catch (error) {
+      if (ticket !== this.requestTicket) return;
+      throw error;
+    }
+    if (ticket !== this.requestTicket) return;
     this.startIndex = startIndex;
     this.renderedCount = result.items?.length ?? count;
     this.totalItemCount = result.totalItemCount ?? this.totalItemCount;

@@ -211,6 +211,8 @@ export class DataGridModel<T> {
   private loadingNow = false;
   private abort: AbortController | undefined;
   private unsubscribe: (() => void) | undefined;
+  private virtualRefresh: (() => Promise<void>) | undefined;
+  private sortedView: { key: readonly unknown[]; rows: readonly T[] } | undefined;
 
   constructor(private readonly onChange: () => void) {}
 
@@ -320,6 +322,11 @@ export class DataGridModel<T> {
    * `Items`, a render. Call it when the provider's data changed.
    */
   async refreshDataAsync(): Promise<void> {
+    if (this.virtualRefresh !== undefined) {
+      this.onChange();
+      await this.virtualRefresh();
+      return;
+    }
     const provider = this.source.itemsProvider;
     if (provider === undefined) {
       this.view = undefined;
@@ -330,17 +337,7 @@ export class DataGridModel<T> {
     const abort = new AbortController();
     this.abort = abort;
     const pagination = this.source.pagination;
-    const column = this.sortColumn;
-    const ascending = this.ascending;
-    const request: GridItemsProviderRequest<T> = {
-      startIndex: pagination ? pagination.currentPageIndex * pagination.itemsPerPage : 0,
-      count: pagination?.itemsPerPage,
-      sortByColumn: column,
-      sortByAscending: ascending,
-      signal: abort.signal,
-      applySorting: (source) => (column?.sortBy ? column.sortBy.apply(source, ascending) : [...source]),
-      getSortByProperties: () => (column?.sortKey ? [{ propertyName: column.sortKey, direction: ascending ? "ascending" : "descending" }] : []),
-    };
+    const request = this.request(pagination ? pagination.currentPageIndex * pagination.itemsPerPage : 0, pagination?.itemsPerPage, abort.signal);
     this.loadingNow = true;
     this.onChange();
     try {
@@ -358,6 +355,61 @@ export class DataGridModel<T> {
         this.onChange();
       }
     }
+  }
+
+  /* Virtualization --------------------------------------------------------- */
+
+  /**
+   * Turns virtualization on (`refresh` re-requests the visible window — the
+   * skin's Virtualize) or off. A virtualized grid has no pages: it shows all
+   * rows, rendering the visible ones.
+   */
+  setVirtualization(refresh: (() => Promise<void>) | undefined): void {
+    if (refresh !== undefined && this.source.pagination !== undefined) {
+      throw new Error("DataGrid: Virtualize and Pagination don't combine — a virtualized grid scrolls through all rows.");
+    }
+    this.virtualRefresh = refresh;
+  }
+
+  /** All rows of `Items`, sorted (a virtualized grid renders a window of them). */
+  get sortedItems(): readonly T[] {
+    const items = this.source.items ?? [];
+    const column = this.sortColumn;
+    const key = [items, items.length, column?.owner, this.ascending];
+    if (this.sortedView === undefined || key.some((part, index) => !Object.is(part, this.sortedView!.key[index]))) {
+      this.sortedView = { key, rows: column?.sortBy ? column.sortBy.apply(items, this.ascending) : [...items] };
+    }
+    return this.sortedView.rows;
+  }
+
+  /** One window of rows from the `ItemsProvider`, sorted like the grid (a running window request is aborted). */
+  async provideRange(startIndex: number, count: number): Promise<GridItemsProviderResult<T>> {
+    const provider = this.source.itemsProvider;
+    if (provider === undefined) return { items: [], totalItemCount: 0 };
+    this.abort?.abort();
+    const abort = new AbortController();
+    this.abort = abort;
+    try {
+      const result = await provider(this.request(startIndex, count, abort.signal));
+      abort.signal.throwIfAborted();
+      return result;
+    } finally {
+      if (this.abort === abort) this.abort = undefined;
+    }
+  }
+
+  private request(startIndex: number, count: number | undefined, signal: AbortSignal): GridItemsProviderRequest<T> {
+    const column = this.sortColumn;
+    const ascending = this.ascending;
+    return {
+      startIndex,
+      count,
+      sortByColumn: column,
+      sortByAscending: ascending,
+      signal,
+      applySorting: (source) => (column?.sortBy ? column.sortBy.apply(source, ascending) : [...source]),
+      getSortByProperties: () => (column?.sortKey ? [{ propertyName: column.sortKey, direction: ascending ? "ascending" : "descending" }] : []),
+    };
   }
 
   /** Stops following the pagination state and aborts a running request. */

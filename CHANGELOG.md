@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Changed** `@tsazor/runtime` `Virtualize`: like Blazor's, it renders no wrapper element — the spacers and
+  items go into the parent; `SpacerElement` (default `div`) sets the spacers' tag; the captured extra
+  attributes (which went onto the wrapper) are gone: style the scrolling container around it. A
+  superseded `ItemsProvider` result (or failure) is dropped. DataGrid: `Virtualize` (with `ItemSize`,
+  `OverscanCount`) renders only the rows in view, with `aria-rowcount`/`aria-rowindex`, from Items or an
+  ItemsProvider; it doesn't combine with pagination. `DataGridModel.sortedItems`, `provideRange`,
+  `setVirtualization`.
 - Tutorial: a **Playground** (`/playground`, linked in the site bar): a free project with the lesson
   workbench — editor, problems, type check, preview — where files can be added, renamed and deleted;
   "Playground" on a lesson continues there with the lesson's files. Nothing is saved yet (the files

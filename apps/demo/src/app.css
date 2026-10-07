@@ -165,6 +165,13 @@ p {
   overflow-y: auto;
 }
 
+.virtual-grid {
+  height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
 .virtual-item {
   display: flex;
   justify-content: space-between;

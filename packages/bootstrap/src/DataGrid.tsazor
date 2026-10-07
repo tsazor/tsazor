@@ -7,6 +7,7 @@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
+@import { Virtualize } from "@tsazor/runtime"
 @import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode } from "@tsazor/ui"
 
 <CascadingValue Value="model">
@@ -15,7 +16,7 @@
     <Defer>
         @{ this.finishColumns(); }
         <div class="@wrapperClass">
-            <table class="@tableClass" aria-label="@ariaLabel" aria-busy="@busy" @attributes="otherAttributes">
+            <table class="@tableClass" aria-label="@ariaLabel" aria-busy="@busy" aria-rowcount="@rowCount" @attributes="otherAttributes">
                 <thead class="@headClass">
                     <tr>
                         @if (selectionMode === "multiple") {
@@ -40,6 +41,25 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @if (virtualize) {
+                        @if (this.items !== undefined && this.items.length === 0) {
+                            <tr class="tz-grid-placeholder"><td colspan="@this.columnCount" class="text-center text-body-secondary py-3">@if (emptyContent) { @emptyContent } else { <span>No entries</span> }</td></tr>
+                        }
+                        <Virtualize Items="@virtualItems" ItemsProvider="@virtualProvider" ItemSize="@itemSize" Overscan="@overscanCount" SpacerElement="tr" @ref="virtualizer">
+                            <ItemTemplate Context="row">
+                                <tr class="@this.rowClass(row)" aria-rowindex="@(this.virtualIndexOf(row) + 2)" style="@rowStyle">
+                                    @if (selectionMode === "multiple") {
+                                        <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
+                                    } else if (selectionMode === "single") {
+                                        <td class="tz-grid-select"><input type="radio" class="form-check-input" name="@groupName" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
+                                    }
+                                    @foreach (const column of this.model.columns) {
+                                        <td class="@this.cellClass(column)">@column.cell(row)</td>
+                                    }
+                                </tr>
+                            </ItemTemplate>
+                        </Virtualize>
+                    } else {
                     @if (this.rows.length === 0) {
                         <tr class="tz-grid-placeholder">
                             <td colspan="@this.columnCount" class="text-center text-body-secondary py-3">
@@ -65,6 +85,7 @@
                                 <td class="@this.cellClass(column)">@column.cell(item)</td>
                             }
                         </tr>
+                    }
                     }
                 </tbody>
             </table>
@@ -103,6 +124,15 @@
     @Parameter() small: boolean = false;
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
+    /**
+     * Renders only the rows in view (runtime Virtualize): for thousands of rows. Put the grid in a
+     * scrolling container with a height; it doesn't combine with pagination.
+     */
+    @Parameter() virtualize: boolean = false;
+    /** A row's height in pixels when virtualized (rows get this height). */
+    @Parameter() itemSize: number = 41;
+    /** Rows rendered above and below the visible ones when virtualized. */
+    @Parameter() overscanCount: number = 3;
     /** Keeps the header row visible while the page (or a scrolling parent) scrolls. */
     @Parameter() stickyHeader: boolean = false;
     /** Further attributes for the table element (class adds to the table's classes). */
@@ -111,6 +141,10 @@
     private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
     private readonly groupName = uniqueId("tz-grid-select");
     private rendered = false;
+    private virtualizer?: Virtualize;
+    /** Provider mode: the rows of the loaded window with their positions (for aria-rowindex and labels). */
+    private readonly windowIndex = new Map<unknown, number>();
+    private totalCount?: number;
 
     protected override onInitialized(): void {
         this.disposeSignal.addEventListener("abort", () => this.model.dispose());
@@ -118,14 +152,48 @@
 
     protected override onParametersSet(): void {
         const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
+        this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshData() ?? Promise.resolve() : undefined);
         if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+    }
+
+    /** Virtualized rows of Items: all of them, sorted. */
+    private get virtualItems(): unknown[] | undefined {
+        return this.items === undefined ? undefined : (this.model.sortedItems as unknown[]);
+    }
+
+    /** Virtualized rows of an ItemsProvider: the grid's request for the window in view. */
+    private readonly virtualProvider = async (request: { startIndex: number; count: number }) => {
+        const result = await this.model.provideRange(request.startIndex, request.count);
+        this.windowIndex.clear();
+        result.items.forEach((item, offset) => this.windowIndex.set(item, request.startIndex + offset));
+        if (this.totalCount !== result.totalItemCount) {
+            this.totalCount = result.totalItemCount;
+            this.stateHasChanged();
+        }
+        return result;
+    };
+
+    private virtualIndexOf(row: TGridItem): number {
+        return this.items !== undefined ? this.model.sortedItems.indexOf(row) : this.windowIndex.get(row) ?? 0;
+    }
+
+    /** A virtualized table says how many rows it has (screen readers see only the rendered ones). */
+    private get rowCount(): number | null {
+        if (!this.virtualize) return null;
+        const total = this.items !== undefined ? this.items.length : this.totalCount;
+        return total === undefined ? null : total + 1;
+    }
+
+    private get rowStyle(): string {
+        return `height: ${this.itemSize}px;`;
     }
 
     protected override onAfterRender(firstRender: boolean): void {
         if (!firstRender) return;
         // The columns (and the default sort) are known now: the first request can go out.
         this.rendered = true;
-        if (this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+        // (Virtualized, the Virtualize requests its window itself.)
+        if (this.itemsProvider !== undefined && !this.virtualize) void this.model.refreshDataAsync();
     }
 
     /** Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed. */

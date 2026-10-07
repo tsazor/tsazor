@@ -679,6 +679,11 @@ entries) does not change language on a culture switch. Store the **key**, transl
 <Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
 ```
 
+- `Virtualize` renders no element of its own (Blazor): two spacers and the visible items go into the
+  parent, and the window is measured against the nearest scrolling ancestor (or the window) — put it
+  in a container with a height and `overflow-y: auto`. `SpacerElement` sets the spacers' tag (`tr`
+  inside a `<tbody>`, as the DataGrid does). A superseded `ItemsProvider` result is dropped.
+
 - `ErrorBoundary` (3.1) catches errors in its own subtree — render, diff, DOM application,
   lifecycle, synchronous and async `@onclick` handling, `onAfterRender` (Blazor's
   `HandleExceptionViaErrorBoundary`; dispose and batch errors stay fatal, as there). When healthy it
