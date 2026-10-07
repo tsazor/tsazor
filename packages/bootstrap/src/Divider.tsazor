@@ -1,10 +1,11 @@
 @** A separator line (`role="separator"` with `aria-orientation`): an `<hr>` across, or Bootstrap's `.vr`
     between items in a row; appearance default | subtle | stronger — the same parameters as the
     Fluent skin's Divider. *@
+@import { withClass } from "./attributes"
 @if (orientation === "vertical") {
-    <div class="@verticalClass" role="separator" aria-orientation="vertical" @attributes="additionalAttributes"></div>
+    <div role="separator" aria-orientation="vertical" @attributes="@withClass(verticalClass, additionalAttributes)"></div>
 } else {
-    <hr class="@horizontalClass" role="separator" aria-orientation="horizontal" @attributes="additionalAttributes" />
+    <hr role="separator" aria-orientation="horizontal" @attributes="@withClass(horizontalClass, additionalAttributes)" />
 }
 
 @code {

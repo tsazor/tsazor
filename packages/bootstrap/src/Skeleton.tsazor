@@ -1,14 +1,15 @@
 @** A loading placeholder (Bootstrap's `.placeholder` with the glow animation): lines of text, a
     circle (an avatar) or a rectangle (an image), shown while the real content loads. It is hidden
     from screen readers — mark the region that loads with `aria-busy="true"` instead. *@
+@import { withClass } from "./attributes"
 @if (shape === "text") {
-    <div class="placeholder-glow" aria-hidden="true" @attributes="additionalAttributes">
+    <div aria-hidden="true" @attributes="@withClass("placeholder-glow", additionalAttributes)">
         @for (let i = 0; i < lines; i++) {
             <span class="@lineClass(i)"></span>
         }
     </div>
 } else {
-    <span class="@blockClass" aria-hidden="true" @attributes="additionalAttributes"><span class="placeholder d-block" style="@blockStyle"></span></span>
+    <span aria-hidden="true" @attributes="@withClass(blockClass, additionalAttributes)"><span class="placeholder d-block" style="@blockStyle"></span></span>
 }
 
 @code {

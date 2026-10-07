@@ -32,9 +32,11 @@
     "@tsazor/dotnet": "workspace:*",
     "@tsazor/lsp": "workspace:*",
     "@tsazor/runtime": "workspace:*",
+    "@tsazor/ui": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
     "@tsazor/worker": "workspace:*",
-    "@tsazor/workspace": "workspace:*"
+    "@tsazor/workspace": "workspace:*",
+    "bootstrap": "^5.3.8"
   },
   "devDependencies": {
     "@tsazor/cli": "workspace:*",

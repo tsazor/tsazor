@@ -50,6 +50,9 @@ async function render(files: Files, renderHints: boolean): Promise<{ html: strin
   }
 }
 
+/** Generated element ids (`tz-input-13`) count on across the two renders in this process: compare them by shape. */
+const sameIds = (html: string): string => html.replace(/\b((?:tz|fui)-[a-z]+(?:-[a-z]+)*)-\d+\b/g, "$1-n");
+
 describe("H1 — stable event handlers render the same DOM as a closure per render", () => {
   let hoistedTotal = 0;
   let projects = 0;
@@ -71,11 +74,11 @@ describe("H1 — stable event handlers render the same DOM as a closure per rend
         // up to three times — a real difference is the same every time, a timing one isn't.
         let hinted = withHints.html;
         let plain = reference.html;
-        for (let attempt = 1; attempt < 3 && hinted !== plain; attempt++) {
+        for (let attempt = 1; attempt < 3 && sameIds(hinted) !== sameIds(plain); attempt++) {
           hinted = (await render(files, true))!.html;
           plain = (await render(files, false))!.html;
         }
-        expect(hinted).toBe(plain);
+        expect(sameIds(hinted)).toBe(sameIds(plain));
       });
     }
   }

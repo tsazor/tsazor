@@ -2,11 +2,12 @@
     with @bind) with its label to the right. The same as `<Checkbox Switch="true">`, under the name
     both skins share. Validation state and message as with TextInput. *@
 @import { FieldState } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
 @inherits InputBase<boolean>
 
 <div class="form-check form-switch mb-3">
-    <input id="@field.id(id)" type="checkbox" class="@inputClass" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" @attributes="inputAttributes" @onchange="handleChange" />
+    <input id="@field.id(id)" type="checkbox" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
     @if (label) {
         <label class="form-check-label" for="@field.id(id)">@label</label>
     }

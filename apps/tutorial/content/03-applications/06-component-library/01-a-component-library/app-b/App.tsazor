@@ -1,0 +1,23 @@
+@using @tsazor/bootstrap
+
+<Card>
+    <CardBody>
+        <CardTitle>Order 101</CardTitle>
+        <p>Two sourdough loaves and one rye, for Marta, tomorrow at 7.</p>
+        <Button Intent="primary" OnClick="save">Save</Button>
+        <Button Intent="secondary" Appearance="outline" OnClick="cancel">Cancel</Button>
+        <p class="status">@status</p>
+    </CardBody>
+</Card>
+
+@code {
+    status = "Not saved yet.";
+
+    save() {
+        this.status = "Saved.";
+    }
+
+    cancel() {
+        this.status = "Changes dropped.";
+    }
+}

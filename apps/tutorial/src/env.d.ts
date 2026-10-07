@@ -33,4 +33,6 @@ declare module "virtual:tutorial-bundles" {
   export const worker: string;
   /** @tsazor/worker as CommonJS (classic workers in the preview). */
   export const workerCjs: string;
+  /** Bootstrap's stylesheet (for lessons that use @tsazor/bootstrap). */
+  export const bootstrapCss: string;
 }

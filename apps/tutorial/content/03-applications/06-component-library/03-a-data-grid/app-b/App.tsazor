@@ -1,0 +1,19 @@
+@using @tsazor/bootstrap
+@import { PaginationState } from "@tsazor/bootstrap"
+@import { todaysOrders } from "./orders"
+
+<DataGrid Items="@orders" Pagination="@pagination" AriaLabel="Today's orders">
+    <PropertyColumn Property="(o) => o.id" Title="#" />
+    <PropertyColumn Property="(o) => o.customer" Title="Customer" Sortable="@true" IsDefaultSortColumn="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Sortable="@true" />
+</DataGrid>
+<Paginator State="@pagination" />
+
+@code {
+    orders = todaysOrders;
+    pagination = new PaginationState();
+
+    override onInitialized() {
+        this.pagination.itemsPerPage = 5;
+    }
+}

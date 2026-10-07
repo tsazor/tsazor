@@ -1,0 +1,12 @@
+@using @tsazor/bootstrap
+@import { todaysOrders } from "./orders"
+
+<DataGrid Items="@orders" AriaLabel="Today's orders">
+    <PropertyColumn Property="(o) => o.id" />
+    <PropertyColumn Property="(o) => o.customer" />
+    <PropertyColumn Property="(o) => o.total" />
+</DataGrid>
+
+@code {
+    orders = todaysOrders;
+}

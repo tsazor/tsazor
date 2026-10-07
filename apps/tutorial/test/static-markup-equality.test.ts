@@ -38,6 +38,9 @@ async function render(files: Files, staticMarkup: boolean): Promise<{ html: stri
   }
 }
 
+/** Generated element ids (`tz-input-13`) count on across the two renders in this process: compare them by shape. */
+const sameIds = (html: string): string => html.replace(/\b((?:tz|fui)-[a-z]+(?:-[a-z]+)*)-\d+\b/g, "$1-n");
+
 describe("F1a — static markup blocks render the same DOM as element frames", () => {
   let blocksTotal = 0;
   let projects = 0;
@@ -58,11 +61,11 @@ describe("F1a — static markup blocks render the same DOM as element frames", (
         // up to three times — a real difference is the same every time, a timing one isn't.
         let blocked = withBlocks.html;
         let plain = reference.html;
-        for (let attempt = 1; attempt < 3 && blocked !== plain; attempt++) {
+        for (let attempt = 1; attempt < 3 && sameIds(blocked) !== sameIds(plain); attempt++) {
           blocked = (await render(files, true))!.html;
           plain = (await render(files, false))!.html;
         }
-        expect(blocked).toBe(plain);
+        expect(sameIds(blocked)).toBe(sameIds(plain));
       });
     }
   }

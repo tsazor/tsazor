@@ -3,7 +3,8 @@
     Enter or Space. *@
 @import type { Appearance, Intent, Size } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
-<button type="@type" class="@buttonClass" disabled="@disabled" aria-label="@ariaLabel" @attributes="additionalAttributes" @onclick="handleClick">@childContent</button>
+@import { withClass } from "./attributes"
+<button type="@type" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(buttonClass, additionalAttributes)" @onclick="handleClick">@childContent</button>
 
 @code {
     /** The accessible name when there is no visible label. */

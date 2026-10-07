@@ -2,8 +2,9 @@
     its intent. When dismissible, a close button hides the alert and raises onDismissed. *@
 @import type { Intent } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
+@import { withClass } from "./attributes"
 @if (visible) {
-    <div class="@alertClass" role="alert" @attributes="additionalAttributes">
+    <div role="alert" @attributes="@withClass(alertClass, additionalAttributes)">
         @childContent
         @if (dismissible) {
             <button type="button" class="btn-close" aria-label="Close" @onclick="dismiss"></button>

@@ -4,10 +4,11 @@
     Escape, a click on the backdrop or the close button raise onClosed, and the parent sets `isOpen`
     to false. *@
 @import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
 @if (isOpen) {
     <div class="offcanvas-backdrop fade show"></div>
-    <div class="@panelClass" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="additionalAttributes" @attach="trap" @attach:lock="lock" @attach:dismiss="dismiss">
+    <div tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass(panelClass, additionalAttributes)" @attach="trap" @attach:lock="lock" @attach:dismiss="dismiss">
         <div class="offcanvas-header">
             @if (title) {
                 <h5 class="offcanvas-title" id="@titleId">@title</h5>

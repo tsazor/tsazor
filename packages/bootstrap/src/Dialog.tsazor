@@ -4,10 +4,11 @@
     closes. It does not close itself: Escape, a backdrop click or the close button raise onClosed,
     and the parent sets `isOpen` to false. Also available as `Modal`, Bootstrap's name for it. *@
 @import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
 @if (isOpen) {
     <div class="modal-backdrop show"></div>
-    <div class="modal d-block" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="additionalAttributes" @attach="trap" @attach:lock="lock">
+    <div role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass("modal d-block", additionalAttributes)" @attach="trap" @attach:lock="lock">
         <div class="@dialogClass">
             <div class="modal-content" @attach="dismiss">
                 @if (title) {

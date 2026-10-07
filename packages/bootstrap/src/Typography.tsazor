@@ -1,13 +1,14 @@
 @** Text on Bootstrap's type scale — the same parameters as the Fluent skin's Typography: `variant` picks
     the element (h1 to h5, p for body, small for caption) and its style; `weight` sets semibold or
     bold. *@
-@if (variant === "h1") { <h1 class="@textClass" @attributes="additionalAttributes">@childContent</h1> }
-else if (variant === "h2") { <h2 class="@textClass" @attributes="additionalAttributes">@childContent</h2> }
-else if (variant === "h3") { <h3 class="@textClass" @attributes="additionalAttributes">@childContent</h3> }
-else if (variant === "h4") { <h4 class="@textClass" @attributes="additionalAttributes">@childContent</h4> }
-else if (variant === "h5") { <h5 class="@textClass" @attributes="additionalAttributes">@childContent</h5> }
-else if (variant === "caption") { <small class="@textClass" @attributes="additionalAttributes">@childContent</small> }
-else { <p class="@textClass" @attributes="additionalAttributes">@childContent</p> }
+@import { withClass } from "./attributes"
+@if (variant === "h1") { <h1 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h1> }
+else if (variant === "h2") { <h2 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h2> }
+else if (variant === "h3") { <h3 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h3> }
+else if (variant === "h4") { <h4 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h4> }
+else if (variant === "h5") { <h5 @attributes="@withClass(textClass, additionalAttributes)">@childContent</h5> }
+else if (variant === "caption") { <small @attributes="@withClass(textClass, additionalAttributes)">@childContent</small> }
+else { <p @attributes="@withClass(textClass, additionalAttributes)">@childContent</p> }
 
 @code {
     /** h1 | h2 | h3 | h4 | h5 | body (default) | caption — also picks the element. */

@@ -3,8 +3,9 @@
     all. *@
 @import type { Orientation, Size } from "@tsazor/ui"
 @import { sizeSuffix } from "./vocabulary"
+@import { withClass } from "./attributes"
 
-<div class="@groupClass" role="group" aria-label="@ariaLabel" @attributes="additionalAttributes">@childContent</div>
+<div role="group" aria-label="@ariaLabel" @attributes="@withClass(groupClass, additionalAttributes)">@childContent</div>
 
 @code {
     /** Names the group for screen readers ("Text alignment"). */

@@ -12,7 +12,7 @@
  * (TsazorGenMap, the LSP's own class); diagnostics in unmapped generated
  * plumbing are dropped, exactly like `tsDiagnostics` in the LSP.
  */
-import { compile, explainExpressionValue, explainTypeScriptError, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { compile, explainExpressionValue, explainTypeScriptError, inferTypeArgument, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { TsazorGenMap } from "@tsazor/lsp/ts-mapping";
 import ts from "typescript";
 import { basename, createResolver, dirname, joinPath, relativeSpecifier } from "./resolve.js";
@@ -237,51 +237,19 @@ function buildShadow(
   return { code, map: new TsazorGenMap(compiled.mappings ?? []), requests: compiled.typedInference ?? [], expressionValues: compiled.expressionValues };
 }
 
-/** One inference pass over a shadow (the LSP's `inferTypeArguments`): exact (`T`), through the array element (`T[]`) or the awaited type (`PromiseLike<T> | T`). */
+/** One inference pass over a shadow — the compiler's `inferTypeArgument`, as in the language server. */
 function inferRequests(sourceFile: ts.SourceFile, checker: ts.TypeChecker, entry: ShadowEntry): Map<string, Map<string, string>> {
   const result = new Map<string, Map<string, string>>();
   for (const request of entry.requests) {
     const gen = entry.map.srcToGen(request.value.line - 1, request.value.column);
     if (!gen) continue;
-    const offset = sourceFile.getPositionOfLineAndCharacter(gen.line, gen.column);
-    if (offset >= sourceFile.text.length) continue;
-    // The outermost expression starting at the value's position is the attribute value.
-    let node: ts.Node = descendTo(sourceFile, offset);
-    while (node.parent !== undefined && ts.isExpression(node.parent) && node.parent.getStart(sourceFile) === node.getStart(sourceFile)) node = node.parent;
-    const type = checker.getTypeAtLocation(node);
-    const declared = request.parameterType.trim();
-    let argument: string | undefined;
-    if (declared === request.typeParameter) {
-      argument = checker.typeToString(type, node, ts.TypeFormatFlags.NoTruncation);
-    } else if (declared.endsWith("[]") && declared.slice(0, -2).trim() === request.typeParameter && checker.isArrayType(type)) {
-      const [item] = checker.getTypeArguments(type as ts.TypeReference);
-      if (item !== undefined) argument = checker.typeToString(item, node, ts.TypeFormatFlags.NoTruncation);
-    } else if (isAwaitableOf(declared, request.typeParameter)) {
-      // `For: PromiseLike<T> | T | null` (<Await>) ← `Promise<User> | undefined`: T = User.
-      argument = checker.typeToString(checker.getAwaitedType(checker.getNonNullableType(type)) ?? type, node, ts.TypeFormatFlags.NoTruncation);
-    }
-    if (argument === undefined || argument.trim().length === 0) continue;
+    const argument = inferTypeArgument(sourceFile, checker, sourceFile.getPositionOfLineAndCharacter(gen.line, gen.column), request);
+    if (argument === undefined) continue;
     const args = result.get(request.tagId) ?? new Map<string, string>();
     args.set(request.typeParameter, argument);
     result.set(request.tagId, args);
   }
   return result;
-}
-
-/** The LSP's `isAwaitableOf`: a union of `T`, `Promise<T>`, `PromiseLike<T>`, `null`, `undefined` with a promise member. */
-function isAwaitableOf(declared: string, typeParameter: string): boolean {
-  const parts = declared.split("|").map((part) => part.replace(/\s+/g, ""));
-  const promises = new Set([`Promise<${typeParameter}>`, `PromiseLike<${typeParameter}>`]);
-  return parts.some((part) => promises.has(part)) && parts.every((part) => promises.has(part) || part === typeParameter || part === "null" || part === "undefined");
-}
-
-function descendTo(sourceFile: ts.SourceFile, offset: number): ts.Node {
-  let current: ts.Node = sourceFile;
-  for (;;) {
-    const next = current.getChildren(sourceFile).find((child) => child.getStart(sourceFile) <= offset && offset < child.getEnd());
-    if (next === undefined) return current;
-    current = next;
-  }
 }
 
 type Located = Pick<Diagnostic, "file" | "line" | "column" | "endLine" | "endColumn">;

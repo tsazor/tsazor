@@ -2,10 +2,11 @@
     bind it with @bind) for one string value out of `options`. The arrow keys move between the
     options, as browsers do for radio groups. Validation state and message as with TextInput. *@
 @import { FieldState } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
 @inherits InputBase<string>
 
-<fieldset class="mb-3" @attributes="groupAttributes">
+<fieldset @attributes="@withClass("mb-3", groupAttributes)">
     @if (label) {
         <legend class="form-label fs-6">@label</legend>
     }

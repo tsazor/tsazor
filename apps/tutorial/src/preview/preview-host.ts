@@ -42,11 +42,12 @@ interface Bundles {
   easing: string;
   worker: string;
   workerCjs: string;
+  bootstrapCss: string;
 }
 
 let bundles: Promise<Bundles> | undefined;
 const loadBundles = (): Promise<Bundles> =>
-  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs }) => ({ runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs })));
+  (bundles ??= import("virtual:tutorial-bundles").then(({ runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs, bootstrapCss }) => ({ runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs, bootstrapCss })));
 
 const PREVIEW_STYLE = `
   :root { color-scheme: light; }
@@ -283,7 +284,7 @@ export class PreviewHost {
   /** Runs a build in a fresh iframe; the old one stays visible until the new one is up. */
   async show(build: ProjectBuild): Promise<void> {
     const run = ++this.run;
-    const { runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs } = await loadBundles();
+    const { runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs, bootstrapCss } = await loadBundles();
     if (run !== this.run || !build.entry) return;
     this.pending?.remove();
     const frame = document.createElement("iframe");
@@ -310,7 +311,8 @@ export class PreviewHost {
       easing,
       worker,
       workerCjs,
-      css: build.css,
+      // A lesson with the component library gets the skin's stylesheet first, as an app's Program.ts would import it.
+      css: Object.values(build.modules).some((module) => module.code.includes('"@tsazor/bootstrap"')) ? `${bootstrapCss}\n${build.css}` : build.css,
       entry: build.entry,
       program: build.program,
       routes: build.routes,

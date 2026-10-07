@@ -351,6 +351,9 @@ importers:
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@tsazor/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
@@ -360,6 +363,9 @@ importers:
       '@tsazor/workspace':
         specifier: workspace:*
         version: link:../../packages/workspace
+      bootstrap:
+        specifier: ^5.3.8
+        version: 5.3.8(@popperjs/core@2.11.8)
     devDependencies:
       '@tsazor/cli':
         specifier: workspace:*

@@ -504,6 +504,9 @@ export interface ImportInfo {
 // importStatements
 export declare function importStatements(info: ImportInfo): string[];
 
+// inferTypeArgument
+export declare function inferTypeArgument(sourceFile: ts.SourceFile, checker: ts.TypeChecker, offset: number, request: TypedTagInferenceRequest): string | undefined;
+
 // MapEntry
 interface MapEntry {
     genLine: number;

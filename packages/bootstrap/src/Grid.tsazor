@@ -1,7 +1,8 @@
 @** A CSS grid layout (`d-grid`): a fixed number of equal columns, or responsive auto-fill tracks when
     `minChildWidth` is set; the gap from the spacing scale — the same parameters as the Fluent skin's
     Grid. (Bootstrap's 12-column `.row`/`.col` system stays available for page layout.) *@
-<div class="@gridClass" style="@gridStyle" @attributes="additionalAttributes">@childContent</div>
+@import { withClass } from "./attributes"
+<div style="@gridStyle" @attributes="@withClass(gridClass, additionalAttributes)">@childContent</div>
 
 @code {
     /** Column count when no minChildWidth is given. */

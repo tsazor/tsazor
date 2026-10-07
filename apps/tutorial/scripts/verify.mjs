@@ -83,6 +83,20 @@ async function previewFrame(page) {
     return handle.contentFrame();
 }
 
+/** A computed style of an element in the preview, once the element exists (polls; "" after 20 s). */
+async function previewStyle(page, selector, property) {
+    const deadline = Date.now() + 20_000;
+    while (Date.now() < deadline) {
+        try {
+            const frame = await previewFrame(page);
+            return await frame.$eval(selector, (el, name) => getComputedStyle(el)[name], property);
+        } catch {
+            await page.waitForTimeout(250);
+        }
+    }
+    return "";
+}
+
 async function previewText(page, selector) {
     const deadline = Date.now() + 20_000;
     let last = "";
@@ -230,6 +244,13 @@ async function main() {
     await page.click(".symbols a:has-text('NavigationManager')");
     await page.waitForURL(/\/reference\/api\/runtime\/NavigationManager$/);
     check((await page.locator(".member").count()) > 10 && (await page.textContent(".member:has-text('navigateTo')")) !== null, "an API page shows the export's members with their signatures");
+
+    /* Component library: a lesson with @tsazor/bootstrap gets Bootstrap's stylesheet in the preview */
+    await page.goto(`${APP}/ts/a-component-library`);
+    await page.waitForSelector(".cm-content");
+    await page.click("button:has-text('Solve')");
+    const primaryBg = await previewStyle(page, ".btn-primary", "backgroundColor");
+    check(primaryBg === "rgb(13, 110, 253)", `component library: the preview styles Bootstrap's components (${primaryBg})`);
 
     /* Playground: the start project runs; files can be added (named like components) and used; a lesson continues there */
     await page.goto(`${APP}/playground`);

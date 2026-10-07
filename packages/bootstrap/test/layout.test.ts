@@ -108,3 +108,21 @@ describe("Grid, Typography", () => {
     expect(caption.container.querySelector("small")!.className).toBe("d-block text-body-secondary");
   });
 });
+
+describe("class on a component", () => {
+  it("adds to the component's own classes instead of replacing them", async () => {
+    const { Button: SkinButton, TextInput: SkinTextInput } = await import("../dist/index.js");
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, SkinButton);
+      b.addAttribute(1, "intent", "danger");
+      b.addAttribute(2, "class", "delete");
+      b.addAttribute(3, "childContent", text("Delete"));
+      b.closeComponent();
+      b.openComponent(4, SkinTextInput);
+      b.addAttribute(5, "class", "wide");
+      b.closeComponent();
+    });
+    expect(container.querySelector("button")!.className).toBe("btn btn-danger delete");
+    expect(container.querySelector("input")!.className).toBe("form-control wide");
+  });
+});

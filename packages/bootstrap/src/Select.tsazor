@@ -2,6 +2,7 @@
     value, with an optional label and help text; the `<option>`s come from the child content.
     Validation state and message as with TextInput. *@
 @import { FieldState } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
 @inherits InputBase<string>
 
@@ -9,7 +10,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <select id="@field.id(id)" class="@inputClass" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="inputAttributes" @onchange="handleChange">@childContent</select>
+    <select id="@field.id(id)" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange">@childContent</select>
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }

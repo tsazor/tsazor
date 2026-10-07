@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- Tutorial: chapter *Component library* (Part 3, chapter 06; Testing, Localization and Next steps move one
+  on): a skin and its vocabulary, forms with the library, a DataGrid, toasts and a dialog. The preview adds
+  Bootstrap's stylesheet for lessons that use `@tsazor/bootstrap`; the in-browser type check knows `@tsazor/ui`.
+  The type-argument inference (`inferTypeArgument`, new in `@tsazor/compiler`) is one function for the language
+  server and the tutorial — the tutorial's copy lacked the lambda return type, so a DataGrid column's
+  `Format="(v) => …"` typed `v` wrongly there. **Fix** `@tsazor/bootstrap`: `class` on a component replaced its
+  Bootstrap classes (`<Button class="delete">` lost `btn`); it adds to them now, as in the Fluent skin.
 - New app `apps/skins`: one set of pages built with both skins (`@using @tsazor/bootstrap`; the fluent build
   aliases the package and loads `fluent.css`), with a link to the same page in the other build; its gate
   runs the same 30 checks (axe on every page, the behaviors by role and label) on both, in CI too. Found

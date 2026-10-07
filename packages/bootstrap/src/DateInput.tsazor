@@ -3,6 +3,7 @@
     (empty when cleared): a plain string has no time zone to shift the day. Validation state and
     message as with TextInput. *@
 @import { FieldState } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
 @inherits InputBase<string>
 
@@ -10,7 +11,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <input id="@field.id(id)" type="date" class="@inputClass" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="inputAttributes" @onchange="handleChange" />
+    <input id="@field.id(id)" type="date" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }

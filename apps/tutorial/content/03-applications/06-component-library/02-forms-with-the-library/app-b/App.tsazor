@@ -1,0 +1,27 @@
+@using @tsazor/bootstrap
+
+<Form Model="@order" Validators="@rules" OnValidSubmit="reserve">
+    <TextInput Label="Name" Help="As it should appear on the order." @bind-Value="order.name" />
+    <Select Label="Bread" @bind-Value="order.bread">
+        <option value="">Choose…</option>
+        <option value="sourdough">Sourdough</option>
+        <option value="rye">Rye</option>
+    </Select>
+    <NumberInput Label="Loaves" Min="1" Max="10" @bind-Value="order.loaves" />
+    <Button Type="submit" Intent="primary">Reserve</Button>
+</Form>
+<p class="status">@status</p>
+
+@code {
+    order = { name: "", bread: "", loaves: 1 };
+    status = "";
+
+    rules = {
+        name: (value: unknown) => (value ? null : "Enter a name."),
+        bread: (value: unknown) => (value ? null : "Choose a bread."),
+    };
+
+    reserve() {
+        this.status = `Reserved: ${this.order.loaves} × ${this.order.bread} for ${this.order.name}.`;
+    }
+}

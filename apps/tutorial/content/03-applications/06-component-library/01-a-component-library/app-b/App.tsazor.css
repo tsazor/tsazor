@@ -1,0 +1,4 @@
+/* The library brings the look; only the page's own touches stay. */
+.status {
+    margin: 1rem 0 0;
+}

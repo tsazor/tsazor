@@ -1,9 +1,10 @@
 @** Renders Bootstrap's `.badge`, a small label for counts or status, colored by its intent
     (`text-bg-*`) and optionally pill-shaped. *@
+@import { withClass } from "./attributes"
 @* text-bg-*: Bootstrap picks a text color with enough contrast for the background (WCAG 1.4.3). *@
 @import type { Intent } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
-<span class="@badgeClass" @attributes="additionalAttributes">@childContent</span>
+<span @attributes="@withClass(badgeClass, additionalAttributes)">@childContent</span>
 
 @code {
     /** The color role: primary, secondary (default), success, danger, warning, info or neutral. */

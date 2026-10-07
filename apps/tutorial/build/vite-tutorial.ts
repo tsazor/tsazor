@@ -15,6 +15,7 @@
  *   docs/language-reference.md changes.
  */
 import { build } from "esbuild";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { Plugin, ViteDevServer } from "vite";
@@ -46,6 +47,8 @@ export interface PackageBundles {
   worker: string;
   /** @tsazor/worker as CommonJS: lesson workers run as classic workers in the preview. */
   workerCjs: string;
+  /** Bootstrap's stylesheet: the preview adds it for lessons that use @tsazor/bootstrap. */
+  bootstrapCss: string;
 }
 
 export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
@@ -78,7 +81,8 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
     bundle("@tsazor/worker", []),
     bundle("@tsazor/worker", [], "cjs"),
   ]);
-  return { runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs };
+  const bootstrapCss = readFileSync(require.resolve("bootstrap/dist/css/bootstrap.min.css"), "utf8");
+  return { runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs, bootstrapCss };
 }
 
 export function tutorialPlugin(options: { root: string }): Plugin {

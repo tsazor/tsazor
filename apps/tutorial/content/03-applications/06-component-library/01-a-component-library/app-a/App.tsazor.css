@@ -1,0 +1,28 @@
+.order {
+    max-width: 28rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+}
+
+.save,
+.cancel {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #0969da;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.save {
+    background: #0969da;
+    color: #fff;
+}
+
+.cancel {
+    background: #fff;
+    color: #0969da;
+}
+
+.status {
+    color: #57606a;
+}

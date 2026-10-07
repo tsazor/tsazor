@@ -1,7 +1,8 @@
 @** A flexbox layout (Bootstrap's `d-flex` utilities) that lines up its children horizontally or
     vertically, with a gap from the spacing scale and optional align, justify and wrap — the same
     parameters as the Fluent skin's Stack. *@
-<div class="@stackClass" @attributes="additionalAttributes">@childContent</div>
+@import { withClass } from "./attributes"
+<div @attributes="@withClass(stackClass, additionalAttributes)">@childContent</div>
 
 @code {
     /** Layout axis: horizontal (default) | vertical. */
