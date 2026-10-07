@@ -45,9 +45,6 @@ export class Virtualize extends ComponentBase {
   /** Pass-through attributes (class, style, …). */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
-  /** Viewport fallback when the host is not measurable yet (SSR/tests). */
-  private static readonly fallbackViewportHeight = 600;
-
   private rootElement?: HTMLElement;
   private unsubscribeScroll?: () => void;
   private resizeObserver?: { disconnect: () => void; observe: (target: Element) => void };
@@ -121,11 +118,22 @@ export class Virtualize extends ComponentBase {
       // Track the async load so renderer.waitUntilIdle includes it.
       this.renderHandle.track(this.handleScroll()).catch(() => undefined);
     };
-    element.addEventListener("scroll", onScroll);
-    this.unsubscribeScroll = () => element.removeEventListener("scroll", onScroll);
+    // Blazor measures against the nearest scrolling ancestor (or the
+    // window), not the list's own element: a list without a height of its
+    // own — the usual case, inside a scrolling panel — grows with its
+    // content and would otherwise render every item.
+    const container = scrollContainerOf(element);
+    const target: EventTarget = container ?? window;
+    target.addEventListener("scroll", onScroll, { passive: true });
+    if (container !== element) element.addEventListener("scroll", onScroll, { passive: true });
+    this.unsubscribeScroll = () => {
+      target.removeEventListener("scroll", onScroll);
+      element.removeEventListener("scroll", onScroll);
+    };
     if (typeof ResizeObserver === "function") {
       this.resizeObserver = new ResizeObserver(onScroll);
       this.resizeObserver.observe(element);
+      if (container && container !== element) this.resizeObserver.observe(container);
     }
     await this.handleScroll();
   }
@@ -136,8 +144,7 @@ export class Virtualize extends ComponentBase {
     // Provider mode: the total is unknown before the first result — treat it
     // as unbounded so the initial request covers the full viewport window.
     const knownTotal = this.totalItemCount > 0 ? this.totalItemCount : Number.POSITIVE_INFINITY;
-    const viewportHeight = element.clientHeight || Virtualize.fallbackViewportHeight;
-    const scrollTop = element.scrollTop;
+    const { viewportHeight, scrollTop } = visibleArea(element);
     const first = Math.floor(scrollTop / this.itemSize);
     const visibleCount = Math.ceil(viewportHeight / this.itemSize);
     const startIndex = Math.max(0, first - this.overscan);
@@ -191,4 +198,46 @@ export class Virtualize extends ComponentBase {
   private nextSequence(): number {
     return this.sequenceCounter++;
   }
+}
+/** Viewport height when nothing can be measured yet (SSR, test DOMs). */
+const FALLBACK_HEIGHT = 600;
+
+/**
+ * The element whose scrolling moves the list: the list's own element when it
+ * scrolls itself (it has a height of its own and overflows), else the
+ * nearest ancestor that scrolls; null for the window.
+ */
+function scrollContainerOf(element: HTMLElement): HTMLElement | null {
+  if (scrolls(element)) return element;
+  for (let current = element.parentElement; current; current = current.parentElement) {
+    if (scrolls(current)) return current;
+  }
+  return null;
+}
+
+function scrolls(element: HTMLElement): boolean {
+  const overflow = getComputedStyle(element).overflowY;
+  if (overflow !== "auto" && overflow !== "scroll" && overflow !== "overlay") return false;
+  // An element without a height of its own grows with its content and never scrolls.
+  return element.scrollHeight > element.clientHeight || element.scrollTop > 0;
+}
+
+/**
+ * How much of the list is in view: the viewport's height, and how far the
+ * list's top has scrolled past the viewport's top (0 while it is below).
+ * Measured against the scroll container; when nothing can be measured yet
+ * (not laid out, or a test DOM), the fallback height from the top.
+ */
+function visibleArea(element: HTMLElement): { viewportHeight: number; scrollTop: number } {
+  const container = scrollContainerOf(element);
+  if (container === element) {
+    return { viewportHeight: element.clientHeight || FALLBACK_HEIGHT, scrollTop: element.scrollTop };
+  }
+  const listTop = element.getBoundingClientRect().top;
+  if (container) {
+    const box = container.getBoundingClientRect();
+    return { viewportHeight: container.clientHeight || FALLBACK_HEIGHT, scrollTop: Math.max(0, box.top + container.clientTop - listTop) };
+  }
+  const height = typeof window !== "undefined" ? window.innerHeight : 0;
+  return { viewportHeight: height || FALLBACK_HEIGHT, scrollTop: Math.max(0, -listTop) };
 }

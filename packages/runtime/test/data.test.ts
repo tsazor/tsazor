@@ -78,11 +78,11 @@ describe("Virtualize", () => {
     const page = currentInstance as VirtualizePage;
 
     const wrapper = container.querySelector(".virtualize") as HTMLElement;
-    // No measurable viewport in happy-dom → 600px fallback = 12 rows + 4 overscan.
+    // No scrolling container: the window is the viewport (happy-dom: 768 px) = 16 rows + 4 overscan.
     const items = [...container.querySelectorAll(".virtualize-item")];
-    expect(items.length).toBeLessThanOrEqual(20);
+    expect(items.length).toBe(20);
     expect(items[0]?.textContent).toBe("Item 0");
-    expect(items[items.length - 1]?.textContent).toBe("Item 15");
+    expect(items[items.length - 1]?.textContent).toBe("Item 19");
     expect(page.items.length).toBe(10_000);
 
     const spacers = [...container.querySelectorAll(".virtualize-spacer")] as HTMLElement[];
@@ -90,6 +90,29 @@ describe("Virtualize", () => {
     const renderedCount = items.length;
     expect(spacers[1]?.style.height).toBe(`${(10_000 - renderedCount) * 50}px`);
     void renderer;
+  });
+
+  it("measures against a scrolling ancestor, not its own growing element (Blazor)", async () => {
+    const host = document.createElement("div");
+    host.style.overflowY = "auto";
+    document.body.appendChild(host);
+    Object.defineProperty(host, "clientHeight", { value: 400, configurable: true });
+    Object.defineProperty(host, "scrollHeight", { value: 500_000, configurable: true });
+    const renderer = new Renderer();
+    renderer.renderInContainer(VirtualizePage, host);
+    await renderer.waitUntilIdle();
+    const list = host.querySelector(".virtualize") as HTMLElement;
+    const rect = (top: number) => ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON() {} }) as DOMRect;
+    // Scrolled by 100 rows: the list's top is 5,000 px above the panel's.
+    host.getBoundingClientRect = () => rect(0);
+    list.getBoundingClientRect = () => rect(-5_000);
+    host.dispatchEvent(new Event("scroll"));
+    await renderer.waitUntilIdle();
+    const items = [...host.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
+    // 400 px = 8 rows, plus 2 × 2 overscan.
+    expect(items[0]).toBe("Item 98");
+    expect(items.length).toBe(12);
+    host.remove();
   });
 
   it("shifts the window when the host scrolls", async () => {
@@ -112,14 +135,14 @@ describe("Virtualize", () => {
     const { renderer, container } = await mount(ProviderPage);
     const page = currentInstance as ProviderPage;
 
-    // Initial load: fallback viewport 600px → 12 visible + 2*2 overscan.
+    // Initial load: the window as viewport (happy-dom: 768 px) → 16 visible + 2*2 overscan.
     await renderer.waitUntilIdle();
     expect(page.providerCalls.length).toBeGreaterThan(0);
-    expect(page.providerCalls[0]).toEqual({ startIndex: 0, count: 16 });
+    expect(page.providerCalls[0]).toEqual({ startIndex: 0, count: 20 });
 
     let items = [...container.querySelectorAll(".virtualize-item")].map((el) => el.textContent);
     expect(items[0]).toBe("P0");
-    expect(items.length).toBe(16);
+    expect(items.length).toBe(20);
 
     const wrapper = container.querySelector(".virtualize") as HTMLElement;
     Object.defineProperty(wrapper, "clientHeight", { value: 400, configurable: true });

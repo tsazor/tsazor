@@ -14,7 +14,8 @@
  * Run: node scripts/verify.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const APP = "http://localhost:5311";
 const API = "http://localhost:5310";
@@ -81,7 +82,7 @@ async function main() {
     );
     check(envelope.data?.mode === "synthetic", "verify runs against the synthetic feed");
 
-    const browser = await chromium.launch({ channel: "msedge", headless: true });
+    const browser = await launchBrowser(playwright);
     const page = await browser.newPage();
     const errors = [];
     page.on("console", (m) => {

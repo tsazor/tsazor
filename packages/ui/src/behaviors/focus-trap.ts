@@ -35,9 +35,11 @@ export interface FocusTrapOptions {
  * ```
  */
 export function focusTrap(options: FocusTrapOptions = {}): Attachment<HTMLElement> {
+  // Watch presses from now on — before the click that opens the dialog.
+  if (typeof document !== "undefined") trackPresses(document);
   return (element) => {
     const document = element.ownerDocument;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previous = invokerOf(document);
     const layer = options.layer ?? {};
     const closeLayer = openLayer(layer);
 
@@ -83,4 +85,35 @@ export function focusTrap(options: FocusTrapOptions = {}): Attachment<HTMLElemen
       if (active === null || active === document.body || element.contains(active) || !active.isConnected) focusElement(previous);
     };
   };
+}
+
+/**
+ * The element focus returns to: the focused one, or — when nothing is
+ * focused — the focusable element pressed within the last second. Safari
+ * doesn't focus a button on click, so a dialog opened with the mouse would
+ * otherwise have nowhere to return to.
+ */
+function invokerOf(document: Document): HTMLElement | null {
+  trackPresses(document);
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) return active;
+  const pressed = lastPress.get(document);
+  return pressed && Date.now() - pressed.at < 1000 && pressed.element.isConnected ? pressed.element : null;
+}
+
+const lastPress = new WeakMap<Document, { element: HTMLElement; at: number }>();
+const tracked = new WeakSet<Document>();
+
+/** Starts remembering the last pressed focusable element of `document` (once). */
+function trackPresses(document: Document): void {
+  if (tracked.has(document)) return;
+  tracked.add(document);
+  document.addEventListener(
+    "pointerdown",
+    (event) => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("a[href], button, input, select, textarea, summary, [tabindex]") : null;
+      if (target) lastPress.set(document, { element: target, at: Date.now() });
+    },
+    true,
+  );
 }

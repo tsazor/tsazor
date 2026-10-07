@@ -191,3 +191,17 @@ describe("FieldState", () => {
     expect(field.validity("invalid")).toBe("invalid");
   });
 });
+
+describe("focusTrap in Safari's click model", () => {
+  it("returns focus to the pressed button when a click didn't focus it", () => {
+    const host = html(`<button id="opener">open</button><div id="dialog"><button>ok</button></div>`);
+    const trap = focusTrap();
+    const opener = host.querySelector<HTMLElement>("#opener")!;
+    // Safari: the press doesn't focus the button.
+    opener.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    (document.activeElement as HTMLElement | null)?.blur();
+    const cleanup = trap(host.querySelector<HTMLElement>("#dialog")!) as () => void;
+    cleanup();
+    expect(document.activeElement).toBe(opener);
+  });
+});

@@ -11,7 +11,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -43,7 +44,14 @@ const check = (ok, label) => {
 };
 
 async function axe(page, context = "document") {
-  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => undefined))));
+  // Settle finite animations first (a cancelled one counts as done) — at most 3 s: a headless
+  // engine that doesn't advance animations (WebKit) must not hold the gate.
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => undefined))),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]),
+  );
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: AXE });
   return page.evaluate(
     async ([selector, tags]) => {
@@ -55,7 +63,7 @@ async function axe(page, context = "document") {
   );
 }
 
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const browser = await launchBrowser(playwright);
 try {
   const page = await browser.newPage();
   const errors = [];

@@ -14,7 +14,8 @@
 import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GATEWAY = "http://localhost:5410";
@@ -80,7 +81,7 @@ const servedBy = (page) => page.getAttribute(".shell", "data-app");
 
 async function main() {
   await ensureServers();
-  const browser = await chromium.launch({ channel: "msedge", headless: true });
+  const browser = await launchBrowser(playwright);
   try {
     const page = await browser.newPage();
     const errors = [];

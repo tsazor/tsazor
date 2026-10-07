@@ -1492,7 +1492,6 @@ export declare class Virtualize extends ComponentBase {
     overscan: number;
     itemTemplate?: (item: unknown) => RenderFragment;
     additionalAttributes?: Record<string, unknown>;
-    private static readonly fallbackViewportHeight;
     private rootElement?;
     private unsubscribeScroll?;
     private resizeObserver?;

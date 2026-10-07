@@ -10,7 +10,8 @@ import http from "node:http";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -38,7 +39,7 @@ const check = (ok, label) => {
   if (!ok) failed++;
 };
 
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const browser = await launchBrowser(playwright);
 try {
   const page = await browser.newPage();
   const errors = [];

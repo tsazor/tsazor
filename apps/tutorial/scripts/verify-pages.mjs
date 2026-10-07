@@ -11,7 +11,8 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const BASE = "/Tsazor/";
@@ -46,7 +47,7 @@ const check = (ok, label) => {
   if (!ok) failed++;
 };
 
-const browser = await chromium.launch({ channel: "msedge", headless: true });
+const browser = await launchBrowser(playwright);
 try {
   const page = await browser.newPage();
   const errors = [];

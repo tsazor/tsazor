@@ -15,7 +15,8 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const APP = "http://localhost:5321";
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
@@ -79,7 +80,7 @@ const focused = (page) => page.evaluate(() => {
 
 async function main() {
     await ensureServer();
-    const browser = await chromium.launch({ channel: "msedge", headless: true });
+    const browser = await launchBrowser(playwright);
     const page = await browser.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
@@ -106,7 +107,14 @@ async function main() {
     await page.keyboard.press("Enter");
     await page.waitForSelector("[role=dialog]");
     // Measure the settled dialog, not a frame of its fade-in.
-    await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished)));
+    // Settle finite animations first (a cancelled one counts as done) — at most 3 s: a headless
+  // engine that doesn't advance animations (WebKit) must not hold the gate.
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => undefined))),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]),
+  );
     const openViolations = await axe(page, "[role=dialog]");
     check(openViolations.length === 0, `axe on the open dialog${openViolations.length ? `: ${openViolations.join(" | ")}` : ""}`);
     check(await page.evaluate(() => document.querySelector("[role=dialog]")?.closest(".fui-dialog-overlay")?.contains(document.activeElement)), "opening moves focus into the dialog");

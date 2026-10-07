@@ -10,7 +10,8 @@
 import { spawn, spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
 let APP = "http://localhost:5330";
@@ -122,7 +123,7 @@ async function shot(page, name) {
 
 async function main() {
     await ensureServer();
-    const browser = await chromium.launch({ channel: "msedge", headless: true });
+    const browser = await launchBrowser(playwright);
     const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
     const page = await context.newPage();
     const errors = [];

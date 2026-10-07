@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/runtime` `Virtualize`: the visible window is measured against the nearest scrolling
+  ancestor (or the window), as in Blazor — a list without a height of its own inside a scrolling panel
+  rendered every item (the demo: 30,033 DOM nodes for 10,000 items, now 105). Found by running the
+  gates in WebKit.
+- **Fix** `@tsazor/ui` `focusTrap`: focus returns to the opener also when a click didn't focus it
+  (Safari doesn't focus buttons on click): the trap remembers the last pressed focusable element.
+- Gate scripts: `TSAZOR_BROWSER=edge|firefox|webkit` (`scripts/browsers.mjs`); the a11y gates' wait for
+  animations is capped at 3 s.
 - `@tsazor/worker`: `WORKER_SCOPE` — the host hook through which a worker module loaded in-process (a
   test runner, the tutorial's lesson gate) gets its scope. Tutorial: chapter *Heavy work* (two
   lessons); the preview runs lesson workers as classic workers (a sandboxed frame can't start module

@@ -12,7 +12,8 @@
  * Run: node scripts/verify-pizza.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
-import { chromium } from "playwright-core";
+import * as playwright from "playwright-core";
+import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
 const APP = "http://localhost:5301";
 const API = "http://localhost:5300";
@@ -64,7 +65,7 @@ function check(condition, label) {
 async function main() {
   await ensureServices();
 
-  const browser = await chromium.launch({ channel: "msedge", headless: true });
+  const browser = await launchBrowser(playwright);
   const page = await browser.newPage();
   const errors = [];
   page.on("console", (m) => {
