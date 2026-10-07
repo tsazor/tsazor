@@ -1,0 +1,56 @@
+@page "/overlays"
+@import { Toaster, tooltip } from "@tsazor/fluent"
+@inject Toaster toaster
+
+<h1>Menu, Drawer, Tooltip</h1>
+<p class="intro">
+    The same behaviors as the Bootstrap skin, from <code>@@tsazor/ui</code>: the menu follows the
+    menu button pattern (arrow keys, typeahead, Escape returns focus); the drawer is a modal panel
+    on an edge of the page; a tooltip shows on hover and focus and describes its element.
+    <code>Menu</code> is also exported as <code>Dropdown</code>, Bootstrap's name for it.
+</p>
+
+<section class="demo">
+    <h2>Menu</h2>
+    <div class="demo-row">
+        <Menu Label="Order actions" Intent="primary">
+            <MenuItem OnSelect="@(() => this.chose("Copy"))">Copy</MenuItem>
+            <MenuItem OnSelect="@(() => this.chose("Print"))">Print</MenuItem>
+            <MenuItem Disabled="@true">Refund</MenuItem>
+            <MenuItem OnSelect="@(() => this.chose("Archive"))">Archive</MenuItem>
+        </Menu>
+        <span class="echo menu-choice">@choice</span>
+    </div>
+</section>
+
+<section class="demo">
+    <h2>Drawer</h2>
+    <div class="demo-row">
+        <Button OnClick="@(() => this.drawerOpen = true)">Filters</Button>
+    </div>
+    <Drawer IsOpen="@drawerOpen" Title="Filters" Placement="end" OnClosed="@(() => this.drawerOpen = false)">
+        <Switch Label="Only open orders" @bind-Value="onlyOpen" />
+        <p>Only open orders: @(onlyOpen ? "yes" : "no")</p>
+        <Button Intent="primary" OnClick="@(() => this.drawerOpen = false)">Apply</Button>
+    </Drawer>
+</section>
+
+<section class="demo">
+    <h2>Tooltip</h2>
+    <div class="demo-row">
+        <Tooltip Text="Print the order list">
+            <Button Appearance="subtle" AriaLabel="Print">🖨</Button>
+        </Tooltip>
+        <button type="button" class="fui-button tooltip-attach" @attach="tooltip('Saved a minute ago', 'bottom')">Attachment</button>
+    </div>
+</section>
+
+@code {
+    private choice = "Nothing chosen yet.";
+    private drawerOpen = false;
+    private onlyOpen = false;
+
+    private chose(action: string): void {
+        this.choice = `Chose ${action}.`;
+    }
+}

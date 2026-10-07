@@ -144,6 +144,11 @@ Notes on the important ones:
   (cascading type parameter); `Items` or an `ItemsProvider`; `Pagination` with a `Paginator`;
   `SelectionMode` + `@bind-SelectedItems`; `Virtualize`; `EmptyContent`/`LoadingContent`;
   `striped`, `hover`, `bordered`, `small` (compact rows), `responsive`, `stickyHeader`.
+- **Menu/MenuItem** (also `Dropdown`/`DropdownItem`): the menu button pattern — arrow keys, Home/End,
+  typeahead, Escape returns focus, a click outside or Tab closes; the toggle takes `intent`, `appearance`,
+  `size`. **Drawer**: a modal panel on an edge (`placement` start/end/top/bottom), like Dialog.
+  **Tooltip** (and the `tooltip(text, placement)` attachment): hover and focus, hoverable, Escape,
+  `aria-describedby`.
 - **SidebarNav**: wraps runtime `NavLink` (`aria-current="page"` on the active
   link for free from the router).
 

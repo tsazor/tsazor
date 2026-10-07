@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`: `Menu`/`MenuItem` (the menu button pattern on `@tsazor/ui`, also exported as `Dropdown`/`DropdownItem`),
+  `Drawer`, `Tooltip` and the `tooltip` attachment; `@tsazor/bootstrap` exports `Menu`/`MenuItem` as aliases of
+  `Dropdown`/`DropdownItem`, so both names work in both skins. Gallery page `/overlays`. **Fix** (type layer):
+  a package export whose name differs from a component file only in case (`tooltip` next to `Tooltip.tsazor`)
+  was bound to the component's shadow on case-insensitive file systems.
 - **Changed** `@tsazor/fluent` `DataGrid` takes the QuickGrid shape of `@tsazor/bootstrap`'s (pre-1.0 API break: the
   `columns` array, `cellContent`, `compact` and `emptyText` give way to `PropertyColumn`/`TemplateColumn`, `small`
   and `EmptyContent`), with sorting, paging (`Paginator`, new), selection, an ItemsProvider and virtualization;

@@ -1,6 +1,6 @@
 import { compile, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { TsazorGenMap } from "./ts-mapping.js";
@@ -170,7 +170,7 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
       const plain: NamedBinding[] = [];
       for (const binding of bindings) {
         const source = path.join(pkgDir, "src", `${binding.imported}.tsazor`);
-        if (existsSync(source)) {
+        if (existsWithCase(source)) {
           rebased.push({ binding, shadow: toPosix(shadowPathFor(source)) });
         } else {
           plain.push(binding);
@@ -188,6 +188,20 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
     }
   }
   return line;
+}
+
+/**
+ * The file exists under exactly this name. Windows and macOS file systems
+ * ignore case: `tooltip` (a helper export) would otherwise find the
+ * component `Tooltip.tsazor` and bind to its shadow.
+ */
+function existsWithCase(file: string): boolean {
+  if (!existsSync(file)) return false;
+  try {
+    return readdirSync(path.dirname(file)).includes(path.basename(file));
+  } catch {
+    return false;
+  }
 }
 
 /** One named import binding: imported name and (aliased) local name. */

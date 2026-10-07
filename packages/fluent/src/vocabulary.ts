@@ -4,7 +4,7 @@
  * `primary`, the neutral palette for `secondary`/`neutral`, and the status
  * colors (Bootstrap's skin maps the same intents to its own classes).
  */
-import type { Appearance, Intent } from "@tsazor/ui";
+import type { Appearance, Intent, Size } from "@tsazor/ui";
 
 /** Fluent's color roles. */
 export type FluentColor = "brand" | "neutral" | "success" | "warning" | "danger" | "info";
@@ -31,4 +31,21 @@ export function statusColor(intent: Intent): Exclude<FluentColor, "brand"> {
 /** Fluent's name for an appearance: `solid` is Fluent's "filled". */
 export function fluentAppearance(appearance: Appearance): "filled" | "outline" | "subtle" | "transparent" {
     return appearance === "solid" ? "filled" : appearance;
+}
+
+/** The classes of a Fluent button (Button, a Menu's toggle) for an intent, an appearance and a size. */
+export function buttonClasses(intent: Intent, appearance: Appearance, size: Size): string {
+    const color = fluentColor(intent);
+    let cls = "fui-button";
+    if (appearance === "solid") {
+        // Neutral is Fluent's default button; brand and the status colors fill it.
+        if (color === "brand") cls += " fui-button--primary";
+        else if (color !== "neutral") cls += ` fui-button--primary fui-button--${color}`;
+    } else {
+        cls += ` fui-button--${appearance}`;
+        if (color !== "neutral") cls += ` fui-button--ink-${color}`;
+    }
+    if (size === "small") cls += " fui-button--small";
+    else if (size === "large") cls += " fui-button--large";
+    return cls;
 }

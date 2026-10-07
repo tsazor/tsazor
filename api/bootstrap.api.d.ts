@@ -209,6 +209,24 @@ export default class ListGroupItem extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// Menu
+export default class Dropdown extends ComponentBase {
+    label: string;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
+    placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
+    childContent?: RenderFragment;
+}
+
+// MenuItem
+export default class DropdownItem extends ComponentBase {
+    onSelect?: EventCallback<MouseEvent>;
+    disabled: boolean;
+    childContent?: RenderFragment;
+    dropdown?: Dropdown;
+}
+
 // Modal
 export default class Dialog extends ComponentBase {
     isOpen: boolean;

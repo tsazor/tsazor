@@ -4,7 +4,7 @@
     large. Raises onClick unless disabled; use type="submit" inside a FluentForm. *@
 @import type { Appearance, Intent, Size } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
-@import { fluentColor } from "./vocabulary"
+@import { buttonClasses } from "./vocabulary"
 
 <button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</button>
 
@@ -33,19 +33,8 @@
     @Parameter() childContent?: RenderFragment;
 
     private get buttonClass(): string {
-        const color = fluentColor(this.intent);
-        let cls = "fui-button";
-        if (this.appearance === "solid") {
-            // Neutral is Fluent's default button; brand and the status colors fill it.
-            if (color === "brand") cls += " fui-button--primary";
-            else if (color !== "neutral") cls += ` fui-button--primary fui-button--${color}`;
-        } else {
-            cls += ` fui-button--${this.appearance}`;
-            if (color !== "neutral") cls += ` fui-button--ink-${color}`;
-        }
+        let cls = buttonClasses(this.intent, this.appearance, this.size);
         if (this.shape === "circular") cls += " fui-button--circular";
-        if (this.size === "small") cls += " fui-button--small";
-        else if (this.size === "large") cls += " fui-button--large";
         if (this.disabled) cls += " fui-button--disabled";
         return cls;
     }

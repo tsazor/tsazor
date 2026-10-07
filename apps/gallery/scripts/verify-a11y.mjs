@@ -21,7 +21,7 @@ import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 const APP = "http://localhost:5321";
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
+const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
 
 const spawned = [];
 async function reachable(url) {
@@ -174,6 +174,41 @@ async function main() {
         return label?.getAttribute("role") ?? null;
     });
     check(panelLabel === "tab", "the visible panel is labelled by its tab");
+
+    /* 4 — menu, drawer, tooltip (the @tsazor/ui behaviors in the Fluent skin) */
+    await page.goto(`${APP}/overlays`, { waitUntil: "networkidle" });
+    const focusedText = () => page.evaluate(() => document.activeElement?.textContent?.trim() ?? "");
+    const toggle = page.locator(".fui-menu-button__toggle");
+    await toggle.focus();
+    await page.keyboard.press("ArrowDown");
+    await page.waitForSelector("[role=menu]");
+    check((await focusedText()) === "Copy", "menu: ArrowDown opens it on the first item");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    check((await focusedText()) === "Archive", "menu: the arrow keys skip the disabled item");
+    const menuViolations = await axe(page);
+    check(menuViolations.length === 0, `axe /overlays with the menu open${menuViolations.length ? `: ${menuViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("[role=menu]", { state: "detached" });
+    check((await page.textContent(".menu-choice")) === "Chose Archive." && (await toggle.evaluate((el) => el === document.activeElement)), "menu: Enter chooses the item, closes the menu and returns focus");
+
+    await page.locator(".fui-button", { hasText: "Filters" }).click();
+    await page.waitForSelector(".fui-drawer");
+    check(await page.evaluate(() => document.querySelector(".fui-drawer")?.contains(document.activeElement) ?? false), "drawer: focus moves into the panel");
+    const drawerViolations = await axe(page);
+    check(drawerViolations.length === 0, `axe /overlays with the drawer open${drawerViolations.length ? `: ${drawerViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("Escape");
+    await page.waitForSelector(".fui-drawer", { state: "detached" });
+    check((await focusedText()) === "Filters", "drawer: Escape closes it and focus returns to the opener");
+
+    await page.locator("[aria-label=Print]").focus();
+    await page.waitForSelector("[role=tooltip]");
+    const described = await page.locator("[aria-label=Print]").evaluate((el) => document.getElementById(el.getAttribute("aria-describedby") ?? "")?.textContent);
+    check(described === "Print the order list", `tooltip: describes the button (${described})`);
+    const tooltipViolations = await axe(page);
+    check(tooltipViolations.length === 0, `axe /overlays with a tooltip${tooltipViolations.length ? `: ${tooltipViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("Escape");
+    check((await page.locator("[role=tooltip]").count()) === 0, "tooltip: Escape hides it");
 
     check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
     await browser.close();

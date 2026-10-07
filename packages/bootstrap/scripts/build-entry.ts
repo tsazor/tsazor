@@ -14,7 +14,7 @@ interface CompileError {
 }
 
 /** Extra export names for a component (D-C3): Bootstrap calls the dialog a modal. */
-const ALIASES: Readonly<Record<string, string>> = { Modal: "Dialog" };
+const ALIASES: Readonly<Record<string, string>> = { Modal: "Dialog", Menu: "Dropdown", MenuItem: "DropdownItem" };
 
 /** Compiled for the components that use them, not exported (DataGrid's Defer). */
 const INTERNAL: ReadonlySet<string> = new Set(["Defer"]);

@@ -128,6 +128,37 @@ export default class Divider extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// Drawer
+export default class Drawer extends ComponentBase {
+    isOpen: boolean;
+    placement: "start" | "end" | "top" | "bottom";
+    title?: string;
+    ariaLabel?: string;
+    closeOnBackdrop: boolean;
+    closeOnEscape: boolean;
+    onClosed?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// Dropdown
+export default class Menu extends ComponentBase {
+    label: string;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
+    placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
+    childContent?: RenderFragment;
+}
+
+// DropdownItem
+export default class MenuItem extends ComponentBase {
+    onSelect?: EventCallback<MouseEvent>;
+    disabled: boolean;
+    childContent?: RenderFragment;
+    menu?: Menu;
+}
+
 // FluentForm
 export default class FluentForm extends ComponentBase {
     model: object;
@@ -182,6 +213,24 @@ export default class Indicator extends ComponentBase {
 }
 
 // Intent: re-exported from @tsazor/ui
+
+// Menu
+export default class Menu extends ComponentBase {
+    label: string;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
+    placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
+    childContent?: RenderFragment;
+}
+
+// MenuItem
+export default class MenuItem extends ComponentBase {
+    onSelect?: EventCallback<MouseEvent>;
+    disabled: boolean;
+    childContent?: RenderFragment;
+    menu?: Menu;
+}
 
 // NumberInput
 export default class NumberInput extends InputBase<number> {
@@ -383,6 +432,16 @@ export default class Toast extends ComponentBase {
 export default class ToastRegion extends ComponentBase {
     position: "top-start" | "top-end" | "bottom-start" | "bottom-end";
     additionalAttributes?: Record<string, unknown>;
+}
+
+// tooltip
+export declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;
+
+// Tooltip
+export default class Tooltip extends ComponentBase {
+    text: string;
+    placement: Placement;
+    childContent?: RenderFragment;
 }
 
 // Typography

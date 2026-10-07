@@ -1,0 +1,107 @@
+/* Drawer — Fluent 2 overlay drawer: a panel on an edge of the page over a scrim. */
+
+.fui-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--fui-scrim-backdrop);
+  z-index: var(--fui-z-dialog);
+}
+
+.fui-drawer {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  box-shadow: var(--fui-shadow-16);
+  font-family: var(--fui-font-family);
+  z-index: var(--fui-z-dialog);
+  outline: none;
+  animation: fui-drawer-enter var(--fui-duration-gentle, 250ms) var(--fui-ease-standard, ease-out);
+}
+
+.fui-drawer--start,
+.fui-drawer--end {
+  top: 0;
+  bottom: 0;
+  width: min(320px, 85vw);
+}
+
+.fui-drawer--start {
+  left: 0;
+  --fui-drawer-from: translateX(-100%);
+}
+
+.fui-drawer--end {
+  right: 0;
+  --fui-drawer-from: translateX(100%);
+}
+
+.fui-drawer--top,
+.fui-drawer--bottom {
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+}
+
+.fui-drawer--top {
+  top: 0;
+  --fui-drawer-from: translateY(-100%);
+}
+
+.fui-drawer--bottom {
+  bottom: 0;
+  --fui-drawer-from: translateY(100%);
+}
+
+.fui-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fui-gap-sm);
+  padding: var(--fui-spacing-l) var(--fui-spacing-l) var(--fui-spacing-s);
+}
+
+.fui-drawer__title {
+  margin: 0;
+  font-size: var(--fui-font-size-subtitle, 20px);
+  font-weight: var(--fui-font-weight-semibold);
+}
+
+.fui-drawer__close {
+  width: 32px;
+  height: 32px;
+  margin-inline-start: auto;
+  border: none;
+  border-radius: var(--fui-radius-md);
+  background: transparent;
+  color: var(--fui-foreground-2);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.fui-drawer__close:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+.fui-drawer__close:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+}
+
+.fui-drawer__body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--fui-spacing-s) var(--fui-spacing-l) var(--fui-spacing-l);
+}
+
+@keyframes fui-drawer-enter {
+  from {
+    transform: var(--fui-drawer-from);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fui-drawer {
+    animation: none;
+  }
+}

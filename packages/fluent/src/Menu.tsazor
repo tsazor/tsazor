@@ -1,0 +1,101 @@
+@** A Fluent UI 2 menu button: a toggle button and a menu popover rendered only while open — the
+    menu button pattern. Fill the menu with MenuItem children. Also available as `Dropdown` (the
+    name @tsazor/bootstrap uses). The toggle opens
+    it on click, Enter, Space or the arrow keys (Up starts at the last item); inside, the arrow keys,
+    Home, End and typing move between items. Choosing an item or pressing Escape closes the menu and
+    returns focus to the toggle; Tab or a click outside closes it too. The menu is positioned next to
+    the toggle and flips up when there is no room below. *@
+@import { anchoredPosition, dismissable, rovingFocus, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { buttonClasses } from "./vocabulary"
+
+<div class="fui-menu-button">
+    <button class="@toggleClass" type="button" id="@toggleId" aria-haspopup="menu" aria-expanded="@expandedText" aria-controls="@menuControls" @ref="toggleButton" @onclick="toggle" @onkeydown="toggleKeydown">
+        @label
+    </button>
+    @if (open) {
+        <ul class="fui-menu" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
+    }
+</div>
+
+@code {
+    /** Toggle button label. */
+    @Parameter() label: string = "";
+    /** The toggle's color role (secondary: Fluent's neutral button). */
+    @Parameter() intent: Intent = "secondary";
+    /** The toggle's visual weight. */
+    @Parameter() appearance: Appearance = "solid";
+    /** The toggle's size. */
+    @Parameter() size: Size = "medium";
+    /** Where the menu opens relative to the toggle. */
+    @Parameter() placement: "bottom-start" | "bottom-end" | "top-start" | "top-end" = "bottom-start";
+    /** The menu's MenuItem children. */
+    @Parameter() childContent?: RenderFragment;
+
+    readonly isCascadingValueSupplier = true;
+    readonly isFixed = false;
+    readonly cascadeName = "FluentMenu";
+    get cascadeValue(): unknown {
+        return this;
+    }
+
+    private open = false;
+    /** Opened with ArrowUp: focus starts at the last item. */
+    private openAtEnd = false;
+    private toggleButton?: HTMLButtonElement;
+    private readonly toggleId = uniqueId("fui-menu");
+    private readonly menuId = `${this.toggleId}-menu`;
+
+    private readonly keys = rovingFocus({ items: "[role=menuitem]", orientation: "vertical", typeahead: true });
+    private readonly dismiss = dismissable({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
+    private readonly position = anchoredPosition({ anchor: () => this.toggleButton, placement: () => this.placement });
+    private readonly focusFirst = (menu: HTMLElement): void => {
+        const items = menu.querySelectorAll<HTMLElement>("[role=menuitem]:not([disabled])");
+        (this.openAtEnd ? items[items.length - 1] : items[0])?.focus({ preventScroll: true });
+    };
+
+    private get toggleClass(): string {
+        return `${buttonClasses(this.intent, this.appearance, this.size)} fui-menu-button__toggle`;
+    }
+
+    private get expandedText(): string {
+        return this.open ? "true" : "false";
+    }
+
+    private get menuControls(): string | null {
+        return this.open ? this.menuId : null;
+    }
+
+    private toggle(): void {
+        if (this.open) this.close(true);
+        else this.show(false);
+    }
+
+    private show(atEnd: boolean): void {
+        this.openAtEnd = atEnd;
+        this.open = true;
+    }
+
+    private toggleKeydown(e: KeyboardEvent): void {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            this.show(e.key === "ArrowUp");
+        }
+    }
+
+    private menuKeydown(e: KeyboardEvent): void {
+        // Tab leaves the menu: close it and let focus move on.
+        if (e.key === "Tab") this.close(false);
+    }
+
+    private dismissed(reason: DismissReason): void {
+        this.close(reason === "escape");
+    }
+
+    /** @internal Closes the menu; `returnFocus` puts focus back on the toggle (MenuItem passes true). */
+    close(returnFocus = true): void {
+        if (!this.open) return;
+        this.open = false;
+        if (returnFocus) this.toggleButton?.focus({ preventScroll: true });
+        this.stateHasChangedInternal();
+    }
+}

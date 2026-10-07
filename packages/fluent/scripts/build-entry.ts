@@ -33,6 +33,9 @@ try {
 /** Compiled for the components that use them, not exported (DataGrid's Defer). */
 const INTERNAL: ReadonlySet<string> = new Set(["Defer"]);
 
+/** Extra export names (the shared vocabulary): Bootstrap's name for the menu button. */
+const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem" };
+
 const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
 
 for (const file of files) {
@@ -111,7 +114,10 @@ for (const name of (await readdir(srcDir)).filter((name) => name.endsWith(".ts")
 const manifest = buildPackageManifest({
   packageDir,
   packageName: "@tsazor/fluent",
-  entries: files.filter((file) => !INTERNAL.has(path.basename(file, ".tsazor"))).map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+  entries: [
+    ...files.filter((file) => !INTERNAL.has(path.basename(file, ".tsazor"))).map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+    ...Object.entries(ALIASES).map(([alias, target]) => ({ exportName: alias, file: path.join(srcDir, `${target}.tsazor`) })),
+  ],
 });
 await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -127,12 +133,20 @@ for (const [exportName, declaration] of Object.entries(declarations)) {
 exports.push('export { Toaster } from "@tsazor/ui"');
 // The DataGrid's sorting and paging state come with the skin too.
 exports.push('export { GridSort, PaginationState } from "@tsazor/ui"');
+// Plain helpers the package exports besides its components.
+exports.push('export { tooltip } from "./tooltip-attachment.js"');
+for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js"`);
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
 await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions } from "@tsazor/ui";\n`);
+// The plain helpers' declarations (they are transpiled without .d.ts).
+await writeFile(
+  path.join(distDir, "tooltip-attachment.d.ts"),
+  `import type { Attachment } from "@tsazor/runtime";\nimport type { Placement } from "@tsazor/ui";\n/** A Fluent tooltip on any element: \`<button @attach="tooltip('Save')">\`; the same text gives the same attachment. */\nexport declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;\n`,
+);
 await writeFile(path.join(distDir, "fluent.css"), `${cssChunks.join("\n")}\n`);
 
 console.log(`[tsazor/fluent] built ${files.length} components + fluent.css -> dist/`);

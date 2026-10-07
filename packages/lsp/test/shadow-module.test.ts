@@ -123,6 +123,19 @@ describe("buildShadowModule", () => {
     expect(code).not.toContain('from "@fake/ui"');
   });
 
+  it("binds a helper whose name differs from a component only in case to the package, not the component", async () => {
+    // `tooltip` (a function) next to `Tooltip.tsazor`: on a case-insensitive file
+    // system the existence check found the component and bound the helper to its shadow.
+    writeFileSync(path.join(root, "node_modules", "@fake", "ui", "src", "Tooltip.tsazor"), "<span>@ChildContent</span>\n\n@code {\n    @Parameter() ChildContent?: RenderFragment;\n}\n");
+    const shadow = await buildShadowModule(
+      path.join(root, "Pages", "T.tsazor"),
+      '@import { tooltip } from "@fake/ui"\n<p>x</p>\n',
+      root,
+    );
+    const importLine = shadow!.code.split("\n").find((l) => l.includes("tooltip"))!;
+    expect(importLine).toBe('import { tooltip } from "@fake/ui";');
+  });
+
   it("keeps the real sidecar .ts import untouched (resolves to the real file)", async () => {
     const shadow = await build();
     expect(shadow!.code).toContain('from "./Demo.tsazor.ts";');
