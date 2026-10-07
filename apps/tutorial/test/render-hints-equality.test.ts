@@ -67,12 +67,15 @@ describe("H1 — stable event handlers render the same DOM as a closure per rend
         projects++;
         hoistedTotal += withHints.hoisted;
         expect(reference.hoisted).toBe(0);
-        if (withHints.html !== reference.html) {
-          // A lesson whose output changes by itself (a clock, a random roll, a timer) is not comparable.
-          const again = await render(files, false);
-          if (again!.html !== reference.html) return;
+        // A lesson whose output changes by itself (a clock, a timer) may differ by timing: compare
+        // up to three times — a real difference is the same every time, a timing one isn't.
+        let hinted = withHints.html;
+        let plain = reference.html;
+        for (let attempt = 1; attempt < 3 && hinted !== plain; attempt++) {
+          hinted = (await render(files, true))!.html;
+          plain = (await render(files, false))!.html;
         }
-        expect(withHints.html).toBe(reference.html);
+        expect(hinted).toBe(plain);
       });
     }
   }

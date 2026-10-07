@@ -54,12 +54,15 @@ describe("F1a — static markup blocks render the same DOM as element frames", (
         }
         projects++;
         blocksTotal += withBlocks.blocks;
-        if (withBlocks.html !== reference.html) {
-          // A lesson whose first render changes by itself (a clock, a random roll) is not comparable.
-          const again = await render(files, false);
-          if (again!.html !== reference.html) return;
+        // A lesson whose output changes by itself (a clock, a timer) may differ by timing: compare
+        // up to three times — a real difference is the same every time, a timing one isn't.
+        let blocked = withBlocks.html;
+        let plain = reference.html;
+        for (let attempt = 1; attempt < 3 && blocked !== plain; attempt++) {
+          blocked = (await render(files, true))!.html;
+          plain = (await render(files, false))!.html;
         }
-        expect(withBlocks.html).toBe(reference.html);
+        expect(blocked).toBe(plain);
       });
     }
   }
