@@ -309,6 +309,13 @@ export default class Navbar extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// NavbarLink
+export default class NavbarLink extends ComponentBase {
+    href: string;
+    match: NavLinkMatch;
+    childContent?: RenderFragment;
+}
+
 // NumberInput
 export default class NumberInput extends InputBase<number> {
     ariaLabel?: string;

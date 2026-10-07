@@ -5,11 +5,11 @@
 @import { sizeSuffix } from "./vocabulary"
 <nav aria-label="@ariaLabel">
     <ul class="@this.listClass">
-        <li class="@this.prevClass"><button class="page-link" @onclick="goPrev">Previous</button></li>
+        <li class="@this.prevClass"><button type="button" class="page-link" aria-label="Previous page" disabled="@(page <= 1)" @onclick="goPrev">Previous</button></li>
         @for (let i = 1; i <= pageCount; i++) {
-            <li class="@this.itemClass(i)"><button class="page-link" @onclick="() => this.select(i)">@i</button></li>
+            <li class="@this.itemClass(i)"><button type="button" class="page-link" aria-label="@(`Go to page ${i}`)" aria-current="@this.currentText(i)" @onclick="() => this.select(i)">@i</button></li>
         }
-        <li class="@this.nextClass"><button class="page-link" @onclick="goNext">Next</button></li>
+        <li class="@this.nextClass"><button type="button" class="page-link" aria-label="Next page" disabled="@(page >= pageCount)" @onclick="goNext">Next</button></li>
     </ul>
 </nav>
 
@@ -43,6 +43,10 @@
         const suffix = sizeSuffix(this.size);
         if (suffix) parts.push(`pagination-${suffix}`);
         return parts.join(" ");
+    }
+
+    private currentText(page: number): string | null {
+        return page === this.page ? "page" : null;
     }
 
     private itemClass(page: number): string {

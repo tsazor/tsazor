@@ -339,6 +339,13 @@ export default class Navbar extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// NavbarLink
+export default class NavbarLink extends ComponentBase {
+    href: string;
+    match: NavLinkMatch;
+    childContent?: RenderFragment;
+}
+
 // NumberInput
 export default class NumberInput extends InputBase<number> {
     label?: string;

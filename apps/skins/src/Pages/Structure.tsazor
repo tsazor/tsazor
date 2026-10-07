@@ -1,0 +1,54 @@
+@page "/structure"
+
+<Typography Variant="h1">Structure</Typography>
+
+<Breadcrumb>
+    <BreadcrumbItem Href="/">Overview</BreadcrumbItem>
+    <BreadcrumbItem Active="@true">Structure</BreadcrumbItem>
+</Breadcrumb>
+
+<section class="demo">
+    <Typography Variant="h2">Tabs and accordion</Typography>
+    <Tabs AriaLabel="Order details">
+        <Tab Title="Items">Two sourdough loaves, one rye.</Tab>
+        <Tab Title="Delivery">Tomorrow, 7:00.</Tab>
+        <Tab Title="Invoice">Sent on delivery.</Tab>
+    </Tabs>
+    <Accordion>
+        <AccordionItem Title="Delivery">We bake at 4 and deliver from 6 in the morning.</AccordionItem>
+        <AccordionItem Title="Payment">Invoice, card or cash on delivery.</AccordionItem>
+    </Accordion>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Feedback</Typography>
+    <Stack Gap="s" Wrap="@true" Align="center">
+        <Badge Intent="primary">New</Badge>
+        <Badge Intent="success">Paid</Badge>
+        <Badge Intent="warning">Open</Badge>
+        <Badge Intent="danger">Overdue</Badge>
+        <Spinner Size="small" />
+        <Spinner Label="Loading orders…" />
+    </Stack>
+    <Alert Intent="warning" Dismissible="@true">The oven is being serviced on Monday.</Alert>
+    <div class="demo-row" role="region" aria-busy="true" aria-label="Loading the customer">
+        <Skeleton Shape="circle" Width="48px" />
+        <div style="flex: 1"><Skeleton Lines="2" /></div>
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Pagination and collapse</Typography>
+    <Pagination Page="@currentPage" PageCount="7" OnPageChanged="@((p: number) => this.currentPage = p)" />
+    <Typography Variant="caption"><span class="page-echo">Page @currentPage of 7</span></Typography>
+    <Divider />
+    <Button Appearance="outline" OnClick="@(() => this.detailsOpen = !this.detailsOpen)" aria-expanded="@(detailsOpen ? "true" : "false")">Details</Button>
+    <Collapse IsOpen="@detailsOpen">
+        <p class="details">Sourdough rests 18 hours; rye 12.</p>
+    </Collapse>
+</section>
+
+@code {
+    private currentPage = 2;
+    private detailsOpen = false;
+}

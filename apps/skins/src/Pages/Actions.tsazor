@@ -1,0 +1,59 @@
+@page "/actions"
+@import { Toaster, tooltip } from "@tsazor/bootstrap"
+@inject Toaster toaster
+
+<Typography Variant="h1">Actions</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">Buttons</Typography>
+    <div class="demo-row">
+        <Button Intent="primary" OnClick="@(() => this.clicks++)">Primary</Button>
+        <Button Intent="secondary">Secondary</Button>
+        <Button Intent="success">Success</Button>
+        <Button Intent="danger">Danger</Button>
+        <Button Intent="primary" Appearance="outline">Outline</Button>
+        <Button Intent="primary" Appearance="subtle">Subtle</Button>
+        <Button Intent="primary" Appearance="transparent">Transparent</Button>
+        <Button Size="small">Small</Button>
+        <Button Size="large">Large</Button>
+        <Button Disabled="@true">Disabled</Button>
+    </div>
+    <Typography Variant="caption">Primary clicked <span class="clicks">@clicks</span> times.</Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Button group, menu, tooltip, popover</Typography>
+    <div class="demo-row">
+        <ButtonGroup AriaLabel="View">
+            <Button Intent="@(view === "day" ? "primary" : "secondary")" OnClick="@(() => this.view = "day")">Day</Button>
+            <Button Intent="@(view === "week" ? "primary" : "secondary")" OnClick="@(() => this.view = "week")">Week</Button>
+            <Button Intent="@(view === "month" ? "primary" : "secondary")" OnClick="@(() => this.view = "month")">Month</Button>
+        </ButtonGroup>
+        <span class="view-choice">View: @view</span>
+        <Dropdown Label="Order actions" Intent="secondary">
+            <DropdownItem OnSelect="@(() => this.chose("Copy"))">Copy</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Print"))">Print</DropdownItem>
+            <DropdownItem Disabled="@true">Refund</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Archive"))">Archive</DropdownItem>
+        </Dropdown>
+        <Tooltip Text="Print the order list">
+            <Button Appearance="subtle" AriaLabel="Print">🖨</Button>
+        </Tooltip>
+        <button type="button" class="tooltip-attached" @attach="tooltip('Saved a minute ago', 'bottom')">Attachment tooltip</button>
+        <Popover Label="Opening hours" Title="Opening hours">
+            <p>Mon–Fri 6–18, Sat 7–13.</p>
+        </Popover>
+    </div>
+    <Typography Variant="caption"><span class="menu-choice">@choice</span></Typography>
+</section>
+
+@code {
+    private clicks = 0;
+    private view = "week";
+    private choice = "Nothing chosen yet.";
+
+    private chose(action: string): void {
+        this.choice = `Chose ${action}.`;
+        this.toaster.show({ message: `${action}: done.`, intent: "success" });
+    }
+}

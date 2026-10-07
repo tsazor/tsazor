@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+@import { otherSkin, otherSkinUrl, skin, skinLabel } from "./skin"
+@inject NavigationManager navigation
+
+<div class="shell">
+    <Navbar Brand="@(`Tsazor · ${skinLabel(skin)}`)" AriaLabel="Pages">
+        <NavbarLink Href="/" Match="@NavLinkMatch.All">Overview</NavbarLink>
+        <NavbarLink Href="/actions">Actions</NavbarLink>
+        <NavbarLink Href="/forms">Forms</NavbarLink>
+        <NavbarLink Href="/data">Data</NavbarLink>
+        <NavbarLink Href="/overlays">Overlays</NavbarLink>
+        <NavbarLink Href="/structure">Structure</NavbarLink>
+    </Navbar>
+    <div class="skin-switch">
+        <a class="skin-switch__link" href="@switchHref">Show this page with @skinLabel(otherSkin)</a>
+    </div>
+    <main class="page">
+        @Body
+    </main>
+</div>
+<ToastRegion />
+
+@code {
+    /** The same page in the other skin's build (the layout renders again on every navigation). */
+    private get switchHref(): string {
+        const path = new URL(this.navigation.uri).pathname;
+        return `${otherSkinUrl}${path}`;
+    }
+}

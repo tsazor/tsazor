@@ -1,0 +1,28 @@
+{
+  "name": "skins",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "One set of pages, two component skins: the same .tsazor sources built with @tsazor/bootstrap and with @tsazor/fluent.",
+  "scripts": {
+    "build": "tsazor check && vite build --mode bootstrap --outDir dist/bootstrap && vite build --mode fluent --outDir dist/fluent",
+    "check": "tsazor check",
+    "dev": "vite --mode bootstrap --port 5323",
+    "dev:fluent": "vite --mode fluent --port 5324",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@tsazor/bootstrap": "workspace:*",
+    "@tsazor/fluent": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/ui": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "bootstrap": "^5.3.8"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  }
+}

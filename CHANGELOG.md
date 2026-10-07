@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- New app `apps/skins`: one set of pages built with both skins (`@using @tsazor/bootstrap`; the fluent build
+  aliases the package and loads `fluent.css`), with a link to the same page in the other build; its gate
+  runs the same 30 checks (axe on every page, the behaviors by role and label) on both, in CI too. Found
+  and fixed on the way: `NavbarLink` (new, both skins) — plain links in Bootstrap's navbar had 4.26:1;
+  **Fix** Bootstrap `AccordionItem` rendered `aria-expanded=""` (a boolean attribute) instead of "true"/"false";
+  Bootstrap `Pagination` buttons get `type="button"` (they submitted an enclosing form), the labels "Previous
+  page"/"Next page"/"Go to page n" and `aria-current` on the current page.
 - The skins' shared parameters line up (found by comparing their manifests): `@tsazor/fluent` gets `help` on
   TextInput, TextArea, NumberInput, Select, Checkbox and Switch, the search/tel/url TextInput types, `Form`
   (alias of FluentForm), `CardBody` and `CardTitle`, and a Spinner `label`; `@tsazor/bootstrap` gets `ariaLabel` on

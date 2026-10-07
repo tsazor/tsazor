@@ -186,7 +186,7 @@ try {
   await page.keyboard.press("Enter");
   await page.waitForFunction(() => document.querySelectorAll("table[aria-label=Orders] th")[4]?.getAttribute("aria-sort") === "ascending");
   check((await grid.locator("tbody tr").first().locator("td").nth(4).textContent())?.trim() === "3.40", "grid: Enter on a header sorts by it");
-  await page.getByRole("button", { name: "Next page" }).click();
+  await page.locator(".tz-paginator").getByRole("button", { name: "Next page" }).click();
   await page.waitForFunction(() => document.querySelector(".tz-paginator-page")?.textContent === "Page 2 of 3");
   check((await grid.locator("tbody tr").count()) === 10, "grid: the paginator shows the next page");
   await grid.getByRole("checkbox", { name: "Select row 11" }).check();

@@ -1,0 +1,48 @@
+@page "/forms"
+@import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+
+<Typography Variant="h1">Forms</Typography>
+<Typography>
+    Every input binds with <code>@@bind-Value</code>, takes <code>Label</code> and <code>Help</code>, and shows its field's
+    first validation message once the form was submitted. Submit the empty form to see them.
+</Typography>
+
+<Form Model="@order" Validators="@rules" OnValidSubmit="@reserve">
+    <TextInput Label="Name" Help="As it should appear on the order." @bind-Value="order.name" />
+    <Select Label="Bread" @bind-Value="order.bread">
+        <option value="">Choose…</option>
+        <option value="sourdough">Sourdough</option>
+        <option value="rye">Rye</option>
+    </Select>
+    <NumberInput Label="Loaves" Min="1" Max="10" @bind-Value="order.loaves" />
+    <DateInput Label="Pick-up date" Min="2026-01-01" @bind-Value="order.pickup" />
+    <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="order.slicing" />
+    <TextArea Label="Note" Rows="2" @bind-Value="order.note" />
+    <Checkbox Label="I accept the terms" @bind-Value="order.terms" />
+    <Switch Label="Send me a reminder" Help="One day before pick-up." @bind-Value="order.reminder" />
+    <FileInput Label="Delivery list (optional)" Accept=".csv" OnChange="@fileChosen" />
+    <Button Type="submit" Intent="primary">Reserve</Button>
+</Form>
+<p class="order-status">@status</p>
+
+@code {
+    private order = { name: "", bread: "", loaves: 1, pickup: "", slicing: "whole", note: "", terms: false, reminder: false };
+    private status = "";
+    private readonly slicing = [
+        { value: "whole", label: "Whole" },
+        { value: "sliced", label: "Sliced" },
+    ];
+    private readonly rules = {
+        name: (value: unknown) => (value ? null : "Enter a name."),
+        bread: (value: unknown) => (value ? null : "Choose a bread."),
+        terms: (value: unknown) => (value === true ? null : "Accept the terms."),
+    };
+
+    private reserve(): void {
+        this.status = `Reserved: ${this.order.loaves} × ${this.order.bread} for ${this.order.name}.`;
+    }
+
+    private fileChosen(e: InputFileChangeEventArgs): void {
+        this.status = `Delivery list: ${e.file.name}.`;
+    }
+}

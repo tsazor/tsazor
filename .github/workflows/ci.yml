@@ -70,6 +70,8 @@ jobs:
         run: pnpm --filter gallery verify:a11y
       - name: Accessibility — @tsazor/bootstrap (E9)
         run: pnpm --filter demo verify:a11y
+      - name: One set of pages, two skins — the same checks on both
+        run: pnpm --filter skins verify
       - name: Incremental migration — Blazor Server + Tsazor behind YARP (E6)
         run: pnpm --filter migration-sample verify
       - name: Sleipnir ticker (synthetic mode)
@@ -115,3 +117,5 @@ jobs:
         run: pnpm --filter gallery verify:a11y
       - name: Accessibility — @tsazor/bootstrap
         run: pnpm --filter demo verify:a11y
+      - name: One set of pages, two skins
+        run: pnpm --filter skins verify

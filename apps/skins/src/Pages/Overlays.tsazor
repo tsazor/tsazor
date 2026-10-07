@@ -1,0 +1,50 @@
+@page "/overlays"
+@import { Toaster } from "@tsazor/bootstrap"
+@inject Toaster toaster
+
+<Typography Variant="h1">Overlays</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">Dialog and drawer</Typography>
+    <div class="demo-row">
+        <Button Intent="danger" OnClick="@(() => this.dialogOpen = true)">Delete order</Button>
+        <Button OnClick="@(() => this.drawerOpen = true)">Filters</Button>
+        <span class="overlay-result">@result</span>
+    </div>
+    <Dialog IsOpen="@dialogOpen" Title="Delete order 101?" OnClosed="@(() => this.dialogOpen = false)">
+        <ChildContent>The order and its lines are removed. This cannot be undone.</ChildContent>
+        <Footer>
+            <Button Appearance="subtle" OnClick="@(() => this.dialogOpen = false)">Cancel</Button>
+            <Button Intent="danger" OnClick="@confirmDelete">Delete</Button>
+        </Footer>
+    </Dialog>
+    <Drawer IsOpen="@drawerOpen" Title="Filters" Placement="end" OnClosed="@(() => this.drawerOpen = false)">
+        <Switch Label="Only open orders" @bind-Value="onlyOpen" />
+        <Button Intent="primary" OnClick="@applyFilters">Apply</Button>
+    </Drawer>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Toasts</Typography>
+    <div class="demo-row">
+        <Button OnClick="@(() => this.toaster.show({ title: "Saved", message: "The order list is up to date.", intent: "success" }))">Success toast</Button>
+        <Button OnClick="@(() => this.toaster.show({ message: "Upload failed.", intent: "danger" }))">Error toast</Button>
+    </div>
+</section>
+
+@code {
+    private dialogOpen = false;
+    private drawerOpen = false;
+    private onlyOpen = false;
+    private result = "";
+
+    private confirmDelete(): void {
+        this.dialogOpen = false;
+        this.result = "Order 101 deleted.";
+    }
+
+    private applyFilters(): void {
+        this.drawerOpen = false;
+        this.result = this.onlyOpen ? "Showing open orders." : "Showing all orders.";
+    }
+}

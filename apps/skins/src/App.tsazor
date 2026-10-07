@@ -1,0 +1,9 @@
+@import MainLayout from "./MainLayout.tsazor"
+<Router>
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@MainLayout" />
+    </Found>
+    <NotFound>
+        <p>Page not found.</p>
+    </NotFound>
+</Router>

@@ -1,0 +1,14 @@
+@** A link in a Navbar: the runtime's NavLink, marked active (`aria-current="page"`) while its href is the
+    current page. The same component exists in the Bootstrap skin. *@
+@import { NavLink, NavLinkMatch } from "@tsazor/runtime"
+
+<NavLink Href="@href" Match="@match" CssClass="fui-navbar__link">@childContent</NavLink>
+
+@code {
+    /** The target, as for NavLink. */
+    @Parameter() href: string = "";
+    /** Prefix (default) or All: when the link counts as the current page. */
+    @Parameter() match: NavLinkMatch = NavLinkMatch.Prefix;
+    /** The link text. */
+    @Parameter() childContent?: RenderFragment;
+}
