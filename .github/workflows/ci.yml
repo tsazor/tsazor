@@ -64,6 +64,8 @@ jobs:
         run: pnpm --filter gallery verify
       - name: Demo under a strict CSP (E1)
         run: pnpm --filter demo verify:csp
+      - name: Web Workers — @tsazor/worker
+        run: pnpm --filter demo verify:worker
       - name: Accessibility — @tsazor/fluent (E9)
         run: pnpm --filter gallery verify:a11y
       - name: Accessibility — @tsazor/bootstrap (E9)

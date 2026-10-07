@@ -1,6 +1,6 @@
 # Design draft — `@tsazor/worker`: heavy work off the main thread
 
-Status: **proposal** (2026-10-07). A core extension the user asked for: "eine eigene hilfreiche
+Status: **accepted** (2026-10-07; W1–W5 as recommended). A core extension the user asked for: "eine eigene hilfreiche
 Schicht über Worker". Superset only — nothing in Blazor changes meaning; it is an opt-in package.
 
 ## Problem
@@ -55,7 +55,7 @@ export class ImportWorker extends defineWorker<ImportApi>(
 }
 ```
 
-`Program.ts`: `services.addWorker(ImportWorker)` (a singleton), or `new ImportWorker()` where DI
+`Program.ts`: `services.registerType(ImportWorker, { singleton: true })` — the existing DI API — or `new ImportWorker()` where DI
 isn't wanted (then `terminate()` it in `dispose`).
 
 ## How results come back
@@ -70,7 +70,7 @@ component renders; a callback between (progress) renders with `@State` or `state
 
 - **Typed proxy.** `defineWorker<Api>(factory)` returns a class whose instances have one method
   per function of `Api`, each returning a promise of the (awaited) result. `tsazor check` checks
-  calls like any method call. `terminate` is reserved (it stops the worker).
+  calls like any method call. `terminate` and `dispose` are reserved (both stop the worker; DI calls `dispose` when its scope ends), and `then` (so the instance is no thenable).
 - **Arguments and results** are copied with the structured clone algorithm (what
   `postMessage` does). Functions and `AbortSignal`s are the exceptions:
   - **Callbacks** — a function argument (also a function property of a plain-object argument,
@@ -89,7 +89,7 @@ component renders; a callback between (progress) renders with `@State` or `state
   lives as long as the app; `terminate()` stops it and rejects pending calls.
 - **Pool** — `defineWorker(factory, { pool: n })` (or `"auto"`: `hardwareConcurrency - 1`)
   spreads calls over up to `n` workers, each call to the least busy one.
-- **Tests** — `inProcessWorker(api)` from `@tsazor/testing` gives a client that calls the api in
+- **Tests** — `inProcessWorker(api)` (from `@tsazor/worker` itself, so `@tsazor/testing` doesn't depend on it) gives a client that calls the api in
   the same thread, through the same cloning (a non-cloneable argument fails like in the
   browser). Register it in a test in place of the real one:
   `services.registerValue(ImportWorker, inProcessWorker<ImportApi>(api))`.
@@ -113,10 +113,10 @@ into one blob, rewrite `new URL("./x.worker…", import.meta.url)` to it).
 
 ## Decisions needed
 
-| # | Question | Recommendation |
+| # | Question | Decision (2026-10-07, as recommended) |
 |---|---|---|
 | W1 | Where it lives | its own opt-in package `@tsazor/worker` (runtime stays small) |
 | W2 | Own layer or Comlink | own (zero-dependency policy; DI, `AbortSignal`, test double are Tsazor-specific) |
-| W3 | Main-side shape | `class X extends defineWorker<Api>(factory) {}` — the class is the DI token and the typed proxy; `services.addWorker(X)` |
+| W3 | Main-side shape | `class X extends defineWorker<Api>(factory) {}` — the class is the DI token and the typed proxy; registered with `services.registerType(X, { singleton: true })` |
 | W4 | v1 scope | as above: calls, callbacks, cancellation, transfer, errors, lazy start, pool, test double |
 | W5 | Tutorial | the Part 3 chapter with preview support for workers |

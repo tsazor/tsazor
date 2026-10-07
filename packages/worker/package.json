@@ -1,0 +1,28 @@
+{
+  "name": "@tsazor/worker",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Heavy work off the main thread: typed calls into Web Workers with callbacks, cancellation (AbortSignal), transfer, errors, pools and an in-process test double — Tsazor's answer to Task.Run.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "happy-dom": "^18.0.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

@@ -160,6 +160,9 @@ importers:
       '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
+      '@tsazor/worker':
+        specifier: workspace:*
+        version: link:../../packages/worker
       bootstrap:
         specifier: ^5.3.8
         version: 5.3.8(@popperjs/core@2.11.8)
@@ -589,6 +592,18 @@ importers:
       vscode-languageclient:
         specifier: ^9.0.1
         version: 9.0.1
+
+  packages/worker:
+    devDependencies:
+      happy-dom:
+        specifier: ^18.0.1
+        version: 18.0.1
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
   packages/workspace:
     dependencies:

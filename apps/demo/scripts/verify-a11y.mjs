@@ -19,7 +19,7 @@ const PORT = 5396;
 const APP = `http://localhost:${PORT}`;
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const ROUTES = ["/", "/counter", "/counter-persistent", "/form", "/validation", "/format", "/upload", "/query", "/virtualize", "/fetchdata", "/auth", "/components", "/csp", "/code-behind-demo", "/scoped-demo"];
+const ROUTES = ["/", "/counter", "/counter-persistent", "/form", "/validation", "/format", "/upload", "/query", "/virtualize", "/fetchdata", "/auth", "/components", "/csp", "/code-behind-demo", "/scoped-demo", "/worker"];
 
 if (!existsSync(path.join(DIST, "index.html"))) {
   const build = spawnSync("npx", ["vite", "build"], { cwd: ROOT, stdio: "inherit", shell: true });

@@ -5,6 +5,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- New package `@tsazor/worker` (docs/design-worker.md): heavy work off the main thread.
+  `exposeWorker(api)` in the worker module; `class X extends defineWorker<Api>(() => new Worker(…)) {}` on
+  the main thread — the class is the DI token (`services.registerType(X, { singleton: true })`,
+  `@inject X x`) and a typed proxy whose methods return promises. Callbacks (also inside an options
+  object) are called back on the main thread; an `AbortSignal` cancels (the call rejects at once with
+  an AbortError); `transfer(value, [buffer])` moves buffers; errors keep their name and message; the
+  worker starts on the first call; `{ pool: n | "auto" }` spreads calls; `terminate()`/`dispose()`;
+  `inProcessWorker(api)` is the test double over a real MessageChannel. Under Trusted Types it
+  installs a same-origin-only `default` policy (CSP: `trusted-types tsazor default`, docs/csp.md).
+  Zero dependencies. The demo's /worker page and `verify:worker` check it in Edge, also under the
+  strict CSP.
 - `@tsazor/ui`: the form core — `FieldState` (input, help and message ids; validity from InputBase's
   field classes; the message only after a submit attempt; `aria-invalid`/`aria-describedby`) and
   `markSubmitAttempt`/`hasSubmitAttempt`. `@tsazor/bootstrap`: `Form` (EditForm that records submit

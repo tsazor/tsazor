@@ -3,6 +3,7 @@ import App from "./App.tsazor";
 import routes from "virtual:tsazor-routes";
 import { DemoAuthProvider } from "./DemoAuthProvider";
 import { CounterState } from "./CounterState";
+import { CsvWorker } from "./workers/csv-worker";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./app.css";
 
@@ -21,6 +22,8 @@ const app = createTsazorApp({
     services.registerValue(AuthenticationStateProvider as Token<AuthenticationStateProvider>, authProvider);
     // App-wide state that outlives page navigation (/counter-persistent).
     services.registerValue(CounterState, new CounterState());
+    // The CSV worker (/worker): one client for the app; the worker starts on the first call.
+    services.registerType(CsvWorker, { singleton: true });
   },
 });
 

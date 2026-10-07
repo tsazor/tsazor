@@ -20,6 +20,7 @@ import type { ApiKind, ApiMember, ApiPackage, ApiSymbol } from "../src/reference
 const PACKAGES: ReadonlyArray<{ slug: string; dir: string; description: string }> = [
   { slug: "runtime", dir: "runtime", description: "Components, rendering, routing and navigation, forms and validation, DI, auth, HTTP, localization." },
   { slug: "testing", dir: "testing", description: "bUnit-style component tests: render, find, click, change, settle." },
+  { slug: "worker", dir: "worker", description: "Heavy work off the main thread: typed calls into Web Workers, callbacks, cancellation, pools, a test double." },
   { slug: "dotnet", dir: "dotnet", description: "Typed clients for ASP.NET Core backends: ProblemDetails, results, generated contracts." },
   { slug: "vite-plugin", dir: "vite-plugin", description: "The Vite plugin: compiles .tsazor files, routes, scoped CSS, the dev-time type check." },
 ];

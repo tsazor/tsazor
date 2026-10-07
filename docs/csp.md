@@ -23,7 +23,14 @@ require-trusted-types-for 'script';
 trusted-types tsazor
 ```
 
-Send it as a response header from the server that serves the built files. Add your API's
+Send it as a response header from the server that serves the built files. An app that uses
+`@tsazor/worker` adds `default` to the last line — `trusted-types tsazor default`: starting a
+module worker is a Trusted Types sink, and Vite only bundles a worker written as
+`new Worker(new URL("./x.worker.ts", import.meta.url))`, so the URL can't be wrapped in a policy
+call. `@tsazor/worker` installs the `default` policy on its first worker start; it passes
+same-origin script URLs only (the app's own chunks) and refuses everything else — no HTML, no
+scripts, no other origins. Workers are `'self'` under `default-src`; a separate `worker-src` is not
+needed. Add your API's
 origin to `connect-src` if it isn't the same origin. `img-src data:` is there for CSS libraries
 that embed small icons (Bootstrap does).
 

@@ -39,6 +39,12 @@ Bootstrap 5 first (every `dotnet new blazor` template ships it), Fluent 2 second
 `@tsazor/bootstrap` and `@tsazor/fluent` on one shared vocabulary, a QuickGrid-shaped DataGrid, Tier 1
 scope for 1.0. Absorbs the open E9 keyboard patterns. Comes before R3 (`npm create tsazor --ui`).
 
+## 3c — Heavy work off the main thread ([design-worker.md](design-worker.md))
+
+`@tsazor/worker`, Tsazor's answer to `Task.Run`: typed calls into Web Workers, callbacks on the main
+thread, cancellation, transfer, pools, a test double. **Decided and implemented (2026-10-07,** W1–W5;
+the tutorial chapter with worker support in the preview follows).
+
 ## 4 — Stability promise and onboarding
 
 - **S1 — API contract:** a snapshot of the public `.d.ts` surface of every package, checked in CI.

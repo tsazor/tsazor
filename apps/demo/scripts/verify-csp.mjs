@@ -29,7 +29,8 @@ export const CSP = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "require-trusted-types-for 'script'",
-  "trusted-types tsazor",
+  // 'default': @tsazor/worker's policy, same-origin worker scripts only (docs/csp.md).
+  "trusted-types tsazor default",
 ].join("; ");
 
 if (!existsSync(path.join(DIST, "index.html"))) {
@@ -94,6 +95,13 @@ try {
   await page.goto(`http://localhost:${PORT}/components`);
   await page.waitForSelector(".progress-bar");
   check(true, "the components page renders");
+
+  // @tsazor/worker under the policy: starting a module worker is a Trusted Types sink.
+  await page.goto(`http://localhost:${PORT}/worker`);
+  await page.click("button.parse");
+  await page.waitForFunction(() => document.querySelector(".result")?.textContent !== "Parsing…", null, { timeout: 30000 });
+  const workerStatus = await page.textContent(".result");
+  check(workerStatus?.startsWith("Parsed") === true, `a worker runs under the policy (${workerStatus})`);
 
   check(violations.length === 0, `no CSP violations${violations.length ? `: ${violations.join(" | ")}` : ""}`);
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
