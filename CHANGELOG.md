@@ -5,6 +5,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/bootstrap`: the shared vocabulary (design-component-library.md §3). **`variant` → `intent`**
+  (`Intent`: primary, secondary, success, danger, warning, info, neutral) on Button, Alert (default now
+  `info`), Badge, Spinner, Progress, Dropdown; **`outline` → `appearance`** (`solid`, `outline`, `subtle`,
+  `transparent`) on Button and Dropdown; **`size` → `"small" | "medium" | "large"`** on Button, Dropdown,
+  Pagination, Spinner (was `"sm"`/`"lg"`); Spinner `kind` typed; Navbar **`variant` → `theme`** (`light`/`dark`,
+  Bootstrap 5.3 color modes); Pagination gets `ariaLabel`; Button, Alert, Badge take `additionalAttributes`.
+  The skin re-exports the vocabulary types (`@import type { Intent } from "@tsazor/bootstrap"`).
+- `@tsazor/workspace`: component metadata follows type aliases into packages' declaration files
+  (`MetadataCache.resolveDeclarationFile`), so a parameter typed with a package's string-literal alias
+  (`Intent` from `@tsazor/ui`) is a string parameter instead of an uncertain one (TZS026).
 - `@tsazor/bootstrap`: `Dialog`, `Dropdown` and `Tabs` follow the WAI-ARIA patterns, built on `@tsazor/ui`
   (new dependency). **`Modal` is now `Dialog`** (`Modal` stays as an alias, D-C3); it traps focus and
   restores it, locks the page scroll, closes on Escape (new `closeOnEscape`), has `role="dialog"`,

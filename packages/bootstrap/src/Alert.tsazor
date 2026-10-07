@@ -1,7 +1,9 @@
-@** Renders Bootstrap's `.alert` with `role="alert"` for a contextual feedback message. When
-    dismissible, a close button hides the alert and raises onDismissed. *@
+@** Renders Bootstrap's `.alert` with `role="alert"` for a contextual feedback message, colored by
+    its intent. When dismissible, a close button hides the alert and raises onDismissed. *@
+@import type { Intent } from "@tsazor/ui"
+@import { backgroundColor } from "./vocabulary"
 @if (visible) {
-    <div class="@alertClass" role="alert">
+    <div class="@alertClass" role="alert" @attributes="additionalAttributes">
         @childContent
         @if (dismissible) {
             <button type="button" class="btn-close" aria-label="Close" @onclick="dismiss"></button>
@@ -10,19 +12,22 @@
 }
 
 @code {
-    /** Bootstrap color variant: primary | secondary | success | danger | warning | info | light | dark. */
-    @Parameter() variant: string = "primary";
-    /** Renders the dismiss button; the alert closes itself and fires OnDismissed. */
+    /** The color role: primary, secondary, success, danger, warning, info (default) or neutral. */
+    @Parameter() intent: Intent = "info";
+    /** Renders the dismiss button; the alert closes itself and fires onDismissed. */
     @Parameter() dismissible: boolean = false;
     /** Fired after the close button hides the alert, with the button's click event. */
     @Parameter() onDismissed?: EventCallback<MouseEvent>;
     /** The alert's body. */
     @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the alert element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private visible = true;
 
     private get alertClass(): string {
-        return `alert alert-${this.variant} alert-dismissible fade show`;
+        const dismiss = this.dismissible ? " alert-dismissible" : "";
+        return `alert alert-${backgroundColor(this.intent)}${dismiss} fade show`;
     }
 
     private dismiss(e: MouseEvent): void {

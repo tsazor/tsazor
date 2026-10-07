@@ -56,9 +56,9 @@ describe("Button", () => {
     let clicks = 0;
     const { container, renderer } = await renderTree((b) => {
       b.openComponent(0, Button);
-      b.addAttribute(1, "variant", "success");
-      b.addAttribute(2, "outline", true);
-      b.addAttribute(3, "size", "lg");
+      b.addAttribute(1, "intent", "success");
+      b.addAttribute(2, "appearance", "outline");
+      b.addAttribute(3, "size", "large");
       b.addAttribute(4, "childContent", text("Go"));
       b.addAttribute(5, "onClick", EventCallback.unbound(() => {
         clicks++;
@@ -88,7 +88,7 @@ describe("Badge", () => {
   it("renders the variant and pill shape", async () => {
     const { container } = await renderTree((b) => {
       b.openComponent(0, Badge);
-      b.addAttribute(1, "variant", "danger");
+      b.addAttribute(1, "intent", "danger");
       b.addAttribute(2, "pill", true);
       b.addAttribute(3, "childContent", text("3"));
       b.closeComponent();
@@ -105,7 +105,7 @@ describe("Alert", () => {
     let dismissed = 0;
     const { container, renderer } = await renderTree((b) => {
       b.openComponent(0, Alert);
-      b.addAttribute(1, "variant", "warning");
+      b.addAttribute(1, "intent", "warning");
       b.addAttribute(2, "dismissible", true);
       b.addAttribute(3, "onDismissed", EventCallback.unbound(() => {
         dismissed++;
@@ -407,7 +407,7 @@ describe("Progress", () => {
       b.openComponent(0, Progress);
       b.addAttribute(1, "value", 250);
       b.addAttribute(2, "striped", true);
-      b.addAttribute(3, "variant", "success");
+      b.addAttribute(3, "intent", "success");
       b.closeComponent();
     });
     const bar = container.querySelector(".progress-bar")!;
@@ -538,13 +538,14 @@ describe("Navbar, Spinner, Collapse", () => {
       b.closeComponent();
     });
     expect(container.querySelector(".navbar-brand")!.textContent).toBe("Tsazor");
-    expect(container.querySelector(".navbar")!.className).toContain("navbar-light");
+    expect(container.querySelector(".navbar")!.className).toContain("bg-body-tertiary");
+    expect(container.querySelector(".navbar")!.getAttribute("data-bs-theme")).toBe("light");
   });
 
   it("renders the spinner variant", async () => {
     const { container } = await renderTree((b) => {
       b.openComponent(0, Spinner);
-      b.addAttribute(1, "variant", "danger");
+      b.addAttribute(1, "intent", "danger");
       b.addAttribute(2, "kind", "grow");
       b.closeComponent();
     });

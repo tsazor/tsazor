@@ -1,23 +1,25 @@
 @** Renders Bootstrap's `.spinner-border` or `.spinner-grow` loading indicator, with optional
     visible text next to it. The spinner itself is `aria-hidden`; use `text` to give it a readable label. *@
+@import type { Intent } from "@tsazor/ui"
+@import { textColor } from "./vocabulary"
 <span class="@spinnerClass" role="status" aria-hidden="true"></span>
 @if (text) {
     <span class="ms-1">@text</span>
 }
 
 @code {
-    /** Bootstrap color variant (as text color): primary | secondary | success | danger | warning | info | light | dark. */
-    @Parameter() variant: string = "primary";
-    /** border (default) or grow. */
-    @Parameter() kind: string = "border";
-    /** Optional size: sm. */
-    @Parameter() size: string = "";
+    /** The color role: primary (default), secondary, success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "primary";
+    /** A rotating border (default) or a growing dot. */
+    @Parameter() kind: "border" | "grow" = "border";
+    /** small or medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
     /** Optional visible label rendered next to the spinner. */
     @Parameter() text?: string;
 
     private get spinnerClass(): string {
         const base = this.kind === "grow" ? "spinner-grow" : "spinner-border";
-        const size = this.size === "sm" ? ` ${base}-sm` : "";
-        return `${base} text-${this.variant}${size}`;
+        const size = this.size === "small" ? ` ${base}-sm` : "";
+        return `${base} text-${textColor(this.intent)}${size}`;
     }
 }

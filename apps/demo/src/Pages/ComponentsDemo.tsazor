@@ -1,7 +1,8 @@
 @page "/components"
+@import type { Intent } from "@tsazor/bootstrap"
 
 <h1>Components POC (Bootstrap 5)</h1>
-<p class="text-muted">All components come from the @@components package — each one is a real .tsazor file, compiled with the Tsazor compiler.</p>
+<p class="text-muted">All components come from the @@tsazor/bootstrap package — each one is a real .tsazor file, compiled with the Tsazor compiler.</p>
 
 <div class="row g-3">
     <div class="col-lg-6">
@@ -10,11 +11,11 @@
             <CardBody>
                 <CardTitle>Counter via EventCallbacks</CardTitle>
                 <p class="d-flex gap-2 align-items-center">
-                    <Button Variant="primary" OnClick="@poke">Count</Button>
-                    <Button Variant="success" Outline="@true" Size="sm" OnClick="@poke">Outline sm</Button>
-                    <Button Variant="danger" Disabled="@true">Disabled</Button>
-                    <Badge Variant="danger" Pill="@true">@clicks</Badge>
-                    <Spinner Variant="primary" Size="sm" />
+                    <Button Intent="primary" OnClick="@poke">Count</Button>
+                    <Button Intent="success" Appearance="outline" Size="small" OnClick="@poke">Outline sm</Button>
+                    <Button Intent="danger" Disabled="@true">Disabled</Button>
+                    <Badge Intent="danger" Pill="@true">@clicks</Badge>
+                    <Spinner Intent="primary" Size="small" />
                 </p>
             </CardBody>
         </Card>
@@ -22,10 +23,10 @@
         <Card>
             <CardHeader>Progress</CardHeader>
             <CardBody>
-                <Progress Value="@progress" Variant="success" Striped="@true" Animated="@true" AriaLabel="Demo progress" />
+                <Progress Value="@progress" Intent="success" Striped="@true" Animated="@true" AriaLabel="Demo progress" />
                 <p class="d-flex gap-2 mt-2">
-                    <Button Variant="secondary" Size="sm" OnClick="@moreProgress">+10 %</Button>
-                    <Button Variant="secondary" Size="sm" OnClick="@resetProgress">Reset</Button>
+                    <Button Intent="secondary" Size="small" OnClick="@moreProgress">+10 %</Button>
+                    <Button Intent="secondary" Size="small" OnClick="@resetProgress">Reset</Button>
                     <span class="text-muted">@progress %</span>
                 </p>
             </CardBody>
@@ -35,11 +36,11 @@
             <CardHeader>Alert (dismissible)</CardHeader>
             <CardBody>
                 @if (alertVisible) {
-                    <Alert Variant="warning" Dismissible="@true" OnDismissed="@alertGone">
+                    <Alert Intent="warning" Dismissible="@true" OnDismissed="@alertGone">
                         Warning — the × closes the alert by itself.
                     </Alert>
                 } else {
-                    <Button Variant="outline-secondary" Size="sm" OnClick="@restoreAlert">Show alert again</Button>
+                    <Button Intent="secondary" Appearance="outline" Size="small" OnClick="@restoreAlert">Show alert again</Button>
                 }
             </CardBody>
         </Card>
@@ -49,7 +50,7 @@
         <Card>
             <CardHeader>Modal</CardHeader>
             <CardBody>
-                <Button Variant="primary" OnClick="@openModal">Open modal</Button>
+                <Button Intent="primary" OnClick="@openModal">Open modal</Button>
                 <Modal IsOpen="@modalOpen" Title="Confirm" OnClosed="@closeModal">
                     <ChildContent>
                         Modal content — the Tsazor renderer patches the DOM without a VDOM.
@@ -88,7 +89,7 @@
                         <DropdownItem OnSelect="@(() => choose('Delete'))">Delete</DropdownItem>
                     </Dropdown>
                 </p>
-                <Button Variant="outline-secondary" Size="sm" OnClick="@toggleCollapse">Toggle collapse</Button>
+                <Button Intent="secondary" Appearance="outline" Size="small" OnClick="@toggleCollapse">Toggle collapse</Button>
                 <Collapse IsOpen="@collapseOpen">
                     <div class="border rounded p-2 mt-2">Hidden content, visible only when IsOpen.</div>
                 </Collapse>
@@ -109,14 +110,14 @@
 
             <Table Striped="@true" Hover="@true" Responsive="@true">
                 <thead>
-                    <tr><th>#</th><th>Component</th><th>Variant</th></tr>
+                    <tr><th>#</th><th>Component</th><th>Intent</th></tr>
                 </thead>
                 <tbody>
                     @for (const item of tableRows) {
                         <tr>
                             <td>@item.n</td>
                             <td>@item.name</td>
-                            <td><Badge Variant="@item.variant">@item.variant</Badge></td>
+                            <td><Badge Intent="@item.variant">@item.variant</Badge></td>
                         </tr>
                     }
                 </tbody>
@@ -148,7 +149,7 @@
     private listClicks = 0;
     private alertVisible = true;
 
-    private tableRows = [
+    private tableRows: { n: number; name: string; variant: Intent }[] = [
         { n: 1, name: "Button", variant: "primary" },
         { n: 2, name: "Alert", variant: "warning" },
         { n: 3, name: "Modal", variant: "secondary" },

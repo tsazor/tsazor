@@ -3,14 +3,14 @@
 
 <div class="ticker-page">
     @if (this.Store.lastError !== null) {
-        <Alert Variant="danger">@this.Store.lastError</Alert>
+        <Alert Intent="danger">@this.Store.lastError</Alert>
     }
 
     <Card>
         <CardBody>
             <p class="ticker-price" role="status">
                 <span class="price">@this.Store.priceText</span>
-                <Badge Variant="@this.Store.changeVariant">@this.Store.changeText</Badge>
+                <Badge Intent="@this.Store.changeVariant">@this.Store.changeText</Badge>
             </p>
             <div class="ticker-stats">
                 <Card>

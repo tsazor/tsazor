@@ -173,6 +173,45 @@ export class MetadataCache {
     return candidates.find((candidate) => /\.(tsazor|[mc]?tsx?)$/.test(candidate) && !candidate.endsWith(".d.ts") && isFile(candidate));
   }
 
+  /**
+   * The declaration file of a package specifier (`@tsazor/ui`, `pkg/sub`)
+   * — its `exports` types entry, else `types`/`typings` — or, inside a
+   * declaration file, the `.d.ts` behind a relative `./x.js`. Only type
+   * information is read from it (aliases, re-exports); components of packages
+   * still come from their manifests. `@tsazor/runtime` has its own path.
+   */
+  resolveDeclarationFile(specifier: string, fromFile: string): string | undefined {
+    if (specifier.startsWith(".")) {
+      if (!fromFile.endsWith(".d.ts")) return undefined;
+      const base = path.resolve(path.dirname(fromFile), specifier).replace(/\.[mc]?js$/, "");
+      const candidate = `${base}.d.ts`;
+      return isFile(candidate) ? candidate : undefined;
+    }
+    if (specifier === RUNTIME_MODULE || path.isAbsolute(specifier)) return undefined;
+    const parts = specifier.split("/");
+    const nameLength = specifier.startsWith("@") ? 2 : 1;
+    const name = parts.slice(0, nameLength).join("/");
+    const subpath = parts.length > nameLength ? `./${parts.slice(nameLength).join("/")}` : ".";
+    const packageDir = findPackageDir(name, path.dirname(fromFile));
+    if (!packageDir) return undefined;
+    let manifest: { exports?: unknown; types?: unknown; typings?: unknown };
+    try {
+      manifest = JSON.parse(readFileSync(path.join(packageDir, "package.json"), "utf8"));
+    } catch {
+      return undefined;
+    }
+    let types: unknown;
+    const exportsField = manifest.exports;
+    if (exportsField && typeof exportsField === "object") {
+      const entry = (exportsField as Record<string, unknown>)[subpath];
+      types = entry && typeof entry === "object" ? (entry as { types?: unknown }).types : undefined;
+    }
+    if (types === undefined && subpath === ".") types = manifest.types ?? manifest.typings;
+    if (typeof types !== "string") return undefined;
+    const file = path.resolve(packageDir, types);
+    return file.endsWith(".d.ts") && isFile(file) ? file : undefined;
+  }
+
   private moduleEntry(file: string): ModuleEntry {
     const cached = this.modules.get(file);
     if (cached && stillValid(cached.stamps)) return cached;
@@ -218,7 +257,9 @@ export class MetadataCache {
     return {
       moduleAt: (file) => record(file),
       resolveModule: (specifier, fromFile) => {
-        const file = this.resolveFile(specifier, fromFile);
+        // Packages: their declaration files, so a parameter typed with a
+        // package's type alias (`Intent` from `@tsazor/ui`) can be categorized.
+        const file = this.resolveFile(specifier, fromFile) ?? this.resolveDeclarationFile(specifier, fromFile);
         return file ? record(file) : undefined;
       },
       packageComponent: (specifier, exportName, fromFile) => {

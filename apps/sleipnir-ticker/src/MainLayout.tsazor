@@ -7,7 +7,7 @@
         <NavLink Href="/" Match="@NavLinkMatch.All">Live</NavLink>
         <NavLink Href="/history">History</NavLink>
         <span class="status-slot">
-            <Badge Variant="@this.Store.statusVariant">@this.Store.statusText</Badge>
+            <Badge Intent="@this.Store.statusVariant">@this.Store.statusText</Badge>
         </span>
     </nav>
     <main class="main page">

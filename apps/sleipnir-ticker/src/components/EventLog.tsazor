@@ -7,7 +7,7 @@
                 <ListGroupItem>
                     <span class="at">@this.clock(entry.at)</span>
                     <span class="pt">@this.price(entry.snapshot.lastPrice)</span>
-                    <Badge Variant="@entry.changeVariant">@entry.changeText</Badge>
+                    <Badge Intent="@entry.changeVariant">@entry.changeText</Badge>
                 </ListGroupItem>
             }
         </ListGroup>

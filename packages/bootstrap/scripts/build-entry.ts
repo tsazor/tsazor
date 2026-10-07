@@ -56,9 +56,14 @@ for (const file of files) {
       tsconfigRaw: { compilerOptions: { target: "es2022" } },
     });
 
-    // Sibling component imports point at .tsazor sources; the built library
-    // ships compiled .js siblings, so rewrite the specifiers.
-    const js = transpiled.code.replace(/(from\s*")(\.\.?\/[^"]*)\.tsazor(")/g, "$1$2.js$3");
+    // Sibling imports point at sources (components, plain .ts helpers); the
+    // built library ships compiled .js siblings, so rewrite the specifiers:
+    // `./Tab.tsazor` -> `./Tab.js`, `./vocabulary` -> `./vocabulary.js`.
+    const js = transpiled.code.replace(/(from\s*")(\.\.?\/[^"]*)(")/g, (_, from: string, spec: string, quote: string) => {
+      if (spec.endsWith(".tsazor")) return `${from}${spec.slice(0, -".tsazor".length)}.js${quote}`;
+      if (spec.endsWith(".ts")) return `${from}${spec.slice(0, -".ts".length)}.js${quote}`;
+      return `${from}${spec}.js${quote}`;
+    });
     await writeFile(path.join(distDir, `${className}.js`), js);
     exports.push(`export { default as ${className} } from "./${className}.js";`);
   } catch (error) {
@@ -71,6 +76,14 @@ if (errors.length > 0) {
     console.error(`[tsazor/bootstrap] compile errors in ${error.file}\n${error.details}`);
   }
   process.exit(1);
+}
+
+// Plain-TS helpers (vocabulary mapping) that compiled components import:
+// transpiled beside them so the dist imports ("./vocabulary") resolve.
+for (const name of (await readdir(srcDir)).filter((name) => name.endsWith(".ts")).sort()) {
+  const source = await readFile(path.join(srcDir, name), "utf8");
+  const transpiled = transformSync(source, { loader: "ts", sourcefile: path.join(srcDir, name), tsconfigRaw: { compilerOptions: { target: "es2022" } } });
+  await writeFile(path.join(distDir, `${name.slice(0, -".ts".length)}.js`), transpiled.code);
 }
 
 // Parameter metadata of every component (roadmap 2.1): consumers (tag
@@ -99,7 +112,8 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
-await writeFile(path.join(distDir, "index.d.ts"), index);
+// The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, Intent, Orientation, Placement, Size } from "@tsazor/ui";\n`);
 await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 
 console.log(`[tsazor/bootstrap] built ${files.length} components -> dist/`);

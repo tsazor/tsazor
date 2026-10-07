@@ -1,17 +1,21 @@
-@** Renders Bootstrap's `.badge`, a small label for counts or status, colored with `text-bg-{variant}`
-    and optionally pill-shaped. *@
+@** Renders Bootstrap's `.badge`, a small label for counts or status, colored by its intent
+    (`text-bg-*`) and optionally pill-shaped. *@
 @* text-bg-*: Bootstrap picks a text color with enough contrast for the background (WCAG 1.4.3). *@
-<span class="badge @pillClass text-bg-@variant">@childContent</span>
+@import type { Intent } from "@tsazor/ui"
+@import { backgroundColor } from "./vocabulary"
+<span class="@badgeClass" @attributes="additionalAttributes">@childContent</span>
 
 @code {
-    /** Bootstrap color variant: primary | secondary | success | danger | warning | info. */
-    @Parameter() variant: string = "secondary";
+    /** The color role: primary, secondary (default), success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "secondary";
     /** Rounded pill shape. */
     @Parameter() pill: boolean = false;
     /** The badge text. */
     @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the badge element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
-    private get pillClass(): string {
-        return this.pill ? "rounded-pill" : "";
+    private get badgeClass(): string {
+        return `badge${this.pill ? " rounded-pill" : ""} text-bg-${backgroundColor(this.intent)}`;
     }
 }

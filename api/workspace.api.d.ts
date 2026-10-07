@@ -130,6 +130,7 @@ export declare class MetadataCache {
     dependentsOf(file: string): string[];
     invalidate(file: string): string[];
     resolveFile(specifier: string, fromFile: string): string | undefined;
+    resolveDeclarationFile(specifier: string, fromFile: string): string | undefined;
     private moduleEntry;
     private recordingHost;
     private isRuntimeInternal;

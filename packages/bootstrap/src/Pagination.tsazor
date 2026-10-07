@@ -1,7 +1,9 @@
 @** Renders Bootstrap's `.pagination`: Previous, one button per page, and Next, with the current
     page marked active. It does not change the page itself: it raises onPageChanged, and the parent
     updates `page`. *@
-<nav>
+@import type { Size } from "@tsazor/ui"
+@import { sizeSuffix } from "./vocabulary"
+<nav aria-label="@ariaLabel">
     <ul class="@this.listClass">
         <li class="@this.prevClass"><button class="page-link" @onclick="goPrev">Previous</button></li>
         @for (let i = 1; i <= pageCount; i++) {
@@ -16,8 +18,10 @@
     @Parameter() page: number = 1;
     /** Total number of pages. */
     @Parameter() pageCount: number = 1;
-    /** Optional size: sm | lg. */
-    @Parameter() size: string = "";
+    /** small, medium (default) or large. */
+    @Parameter() size: Size = "medium";
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel: string = "Pagination";
     /** Fired when the user picks a different page, with the new page number (1-based). */
     @Parameter() onPageChanged?: EventCallback<number>;
 
@@ -36,8 +40,8 @@
 
     private get listClass(): string {
         const parts = ["pagination"];
-        if (this.size === "sm") parts.push("pagination-sm");
-        if (this.size === "lg") parts.push("pagination-lg");
+        const suffix = sizeSuffix(this.size);
+        if (suffix) parts.push(`pagination-${suffix}`);
         return parts.join(" ");
     }
 

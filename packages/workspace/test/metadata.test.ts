@@ -195,3 +195,18 @@ describe("runtime manifest", () => {
     for (const name of ["ComponentBase", "InputBase", "LayoutComponentBase"]) expect(RUNTIME_MANIFEST.components[name]?.abstract).toBe(true);
   });
 });
+
+describe("type aliases from packages (component library vocabulary)", () => {
+  it("categorizes a parameter typed with a package's string-literal alias as a string", async () => {
+    const vocab = path.join(root, "node_modules", "@fake", "vocab");
+    await mkdir(path.join(vocab, "dist"), { recursive: true });
+    await writeFile(path.join(vocab, "package.json"), JSON.stringify({ name: "@fake/vocab", exports: { ".": { types: "./dist/index.d.ts", default: "./dist/index.js" } } }));
+    await writeFile(path.join(vocab, "dist", "index.d.ts"), 'export type { Intent } from "./vocabulary.js";\n');
+    await writeFile(path.join(vocab, "dist", "vocabulary.d.ts"), 'export type Intent = "primary" | "danger";\n');
+    await writeFile(path.join(root, "Shared", "Tag.tsazor"), '@import type { Intent } from "@fake/vocab"\n<span></span>\n@code {\n  @Parameter() intent: Intent = "primary";\n}\n');
+    const metadata = componentMetadataForTag(await contextFor("Pages/Probe.tsazor"), "Tag", [], [], new MetadataCache());
+    const intent = metadata?.parameters.find((p) => p.name === "intent");
+    expect(intent?.category).toBe("string");
+    expect(intent?.uncertain).toBeUndefined();
+  });
+});

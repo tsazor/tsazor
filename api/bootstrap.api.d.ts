@@ -16,17 +16,21 @@ export default class AccordionItem extends ComponentBase {
 
 // Alert
 export default class Alert extends ComponentBase {
-    variant: string;
+    intent: Intent;
     dismissible: boolean;
     onDismissed?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
+
+// Appearance: re-exported from @tsazor/ui
 
 // Badge
 export default class Badge extends ComponentBase {
-    variant: string;
+    intent: Intent;
     pill: boolean;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Breadcrumb
@@ -43,13 +47,14 @@ export default class BreadcrumbItem extends ComponentBase {
 
 // Button
 export default class Button extends ComponentBase {
-    variant: string;
-    outline: boolean;
-    size: string;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
     disabled: boolean;
-    type: string;
+    type: "button" | "submit" | "reset";
     onClick?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Card
@@ -101,8 +106,9 @@ export default class Dialog extends ComponentBase {
 // Dropdown
 export default class Dropdown extends ComponentBase {
     label: string;
-    variant: string;
-    outline: boolean;
+    intent: Intent;
+    appearance: Appearance;
+    size: Size;
     placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
     childContent?: RenderFragment;
 }
@@ -114,6 +120,8 @@ export default class DropdownItem extends ComponentBase {
     childContent?: RenderFragment;
     dropdown?: Dropdown;
 }
+
+// Intent: re-exported from @tsazor/ui
 
 // ListGroup
 export default class ListGroup extends ComponentBase {
@@ -149,33 +157,40 @@ export default class Dialog extends ComponentBase {
 // Navbar
 export default class Navbar extends ComponentBase {
     brand?: string;
-    variant: string;
+    theme: "light" | "dark";
     childContent?: RenderFragment;
 }
+
+// Orientation: re-exported from @tsazor/ui
 
 // Pagination
 export default class Pagination extends ComponentBase {
     page: number;
     pageCount: number;
-    size: string;
+    size: Size;
+    ariaLabel: string;
     onPageChanged?: EventCallback<number>;
 }
+
+// Placement: re-exported from @tsazor/ui
 
 // Progress
 export default class Progress extends ComponentBase {
     value: number;
     striped: boolean;
     animated: boolean;
-    variant: string;
+    intent?: Intent;
     label?: string;
     ariaLabel?: string;
 }
 
+// Size: re-exported from @tsazor/ui
+
 // Spinner
 export default class Spinner extends ComponentBase {
-    variant: string;
-    kind: string;
-    size: string;
+    intent: Intent;
+    kind: "border" | "grow";
+    size: "small" | "medium";
     text?: string;
 }
 

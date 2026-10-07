@@ -4,7 +4,8 @@
     Home, End and typing move between items. Choosing an item or pressing Escape closes the menu and
     returns focus to the toggle; Tab or a click outside closes it too. The menu is positioned next to
     the toggle and flips up when there is no room below. *@
-@import { anchoredPosition, dismissable, rovingFocus, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { anchoredPosition, dismissable, rovingFocus, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { buttonClasses } from "./vocabulary"
 
 <div class="dropdown">
     <button class="@toggleClass" type="button" id="@toggleId" aria-haspopup="menu" aria-expanded="@expandedText" aria-controls="@menuControls" @ref="toggleButton" @onclick="toggle" @onkeydown="toggleKeydown">
@@ -18,10 +19,12 @@
 @code {
     /** Toggle button label. */
     @Parameter() label: string = "";
-    /** Toggle button color variant. */
-    @Parameter() variant: string = "primary";
-    /** Renders the outline variant of the color. */
-    @Parameter() outline: boolean = false;
+    /** The toggle's color role. */
+    @Parameter() intent: Intent = "primary";
+    /** The toggle's visual weight. */
+    @Parameter() appearance: Appearance = "solid";
+    /** The toggle's size. */
+    @Parameter() size: Size = "medium";
     /** Where the menu opens relative to the toggle. */
     @Parameter() placement: "bottom-start" | "bottom-end" | "top-start" | "top-end" = "bottom-start";
     /** The menu's DropdownItem children. */
@@ -50,8 +53,7 @@
     };
 
     private get toggleClass(): string {
-        const base = this.outline ? `btn-outline-${this.variant}` : `btn-${this.variant}`;
-        return `btn ${base} dropdown-toggle`;
+        return `${buttonClasses(this.intent, this.appearance, this.size)} dropdown-toggle`;
     }
 
     private get expandedText(): string {
