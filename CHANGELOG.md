@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- New package `@tsazor/ui` (component library core, docs/design-component-library.md): unstyled behaviors
+  as attachments — `focusTrap`, `dismissable` (Escape, outside press; only the topmost layer reacts),
+  `scrollLock`, `rovingFocus` (arrows, Home/End, typeahead), `anchoredPosition` (fixed positioning with
+  flip and shift, no dependencies) — plus `uniqueId`, focus helpers, the layer stack and the shared
+  vocabulary types `Intent`, `Appearance`, `Size`, `Placement`, `Orientation`.
 - `@tsazor/compiler`, `@tsazor/lsp`: S4. New `explainTypeScriptError(code, message)` appends a plain-language
   `Hint:` to the common TypeScript errors (implicit any, possibly null/undefined, unknown names and
   members, types that don't fit); the language server, `tsazor check` and the tutorial use it, so
