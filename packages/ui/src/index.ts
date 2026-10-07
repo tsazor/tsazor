@@ -13,3 +13,23 @@ export { anchoredPosition, computePosition, type AnchoredPositionOptions } from 
 export { FieldState, hasSubmitAttempt, markSubmitAttempt, type FieldValidity } from "./forms.js";
 export { tooltip, type TooltipOptions } from "./behaviors/tooltip.js";
 export { Toaster, type Toast, type ToastOptions } from "./toaster.js";
+export {
+  DataGridModel,
+  GridSort,
+  PaginationState,
+  compareValues,
+  propertyPath,
+  propertyTitle,
+  toggleAll,
+  toggleSelection,
+  type ColumnAlign,
+  type GridColumn,
+  type GridItemsProvider,
+  type GridItemsProviderRequest,
+  type GridItemsProviderResult,
+  type GridSource,
+  type PaginationChange,
+  type SelectionMode,
+  type SortDirection,
+  type SortedProperty,
+} from "./data-grid.js";

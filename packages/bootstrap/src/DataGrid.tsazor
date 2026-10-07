@@ -1,0 +1,234 @@
+@** A data grid on Bootstrap's `.table`, shaped like Blazor's QuickGrid: the columns are child
+    components (PropertyColumn, TemplateColumn) and take the row type from the grid. Rows come
+    from `items` (sorted and paged here) or an `itemsProvider` (sorted and paged by your code or a
+    server, with an AbortSignal). Sortable columns sort on a click on their header (`aria-sort`);
+    with a `pagination` state, a Paginator pages the grid. `selectionMode` adds a selection column
+    (checkboxes or radio buttons) bound to `selectedItems`. *@
+@typeparam TGridItem
+@attribute @CascadingTypeParameter("TGridItem")
+@import Defer from "./Defer.tsazor"
+@import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode } from "@tsazor/ui"
+
+<CascadingValue Value="model">
+    @{ this.model.startCollectingColumns(); }
+    @childContent
+    <Defer>
+        @{ this.finishColumns(); }
+        <div class="@wrapperClass">
+            <table class="@tableClass" aria-label="@ariaLabel" aria-busy="@busy" @attributes="otherAttributes">
+                <thead class="@headClass">
+                    <tr>
+                        @if (selectionMode === "multiple") {
+                            <th scope="col" class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="Select all rows" checked="@allSelected" @onchange="selectAll" /></th>
+                        } else if (selectionMode === "single") {
+                            <th scope="col" class="tz-grid-select"><span class="visually-hidden">Selected</span></th>
+                        }
+                        @foreach (const column of this.model.columns) {
+                            <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
+                                @if (column.sortable) {
+                                    <button type="button" class="p-0 border-0 bg-transparent text-reset fw-semibold tz-grid-sort" @onclick="() => this.sort(column)">
+                                        @if (column.headerContent) { @column.headerContent } else { @column.title }
+                                        <span class="ms-1 tz-grid-sort-indicator" aria-hidden="true">@this.indicator(column)</span>
+                                    </button>
+                                } else if (column.headerContent) {
+                                    @column.headerContent
+                                } else {
+                                    @column.title
+                                }
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (this.rows.length === 0) {
+                        <tr class="tz-grid-placeholder">
+                            <td colspan="@this.columnCount" class="text-center text-body-secondary py-3">
+                                @if (this.model.loading) {
+                                    @if (loadingContent) { @loadingContent } else { <span>Loading…</span> }
+                                } else if (emptyContent) {
+                                    @emptyContent
+                                } else {
+                                    <span>No entries</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @for (let i = 0; i < this.rows.length; i++) {
+                        const item = this.rows[i]!;
+                        <tr @key="this.keyOf(item)" class="@this.rowClass(item)">
+                            @if (selectionMode === "multiple") {
+                                <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                            } else if (selectionMode === "single") {
+                                <td class="tz-grid-select"><input type="radio" class="form-check-input" name="@groupName" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                            }
+                            @foreach (const column of this.model.columns) {
+                                <td class="@this.cellClass(column)">@column.cell(item)</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </Defer>
+</CascadingValue>
+
+@code {
+    /** The rows, sorted and paged by the grid. Set this or itemsProvider. */
+    @Parameter() items?: TGridItem[];
+    /** Loads the rows of a page on demand (server-side paging and sorting). Set this or items. */
+    @Parameter() itemsProvider?: GridItemsProvider<TGridItem>;
+    /** Paging state shared with a Paginator; without it, the grid shows all rows. */
+    @Parameter() pagination?: PaginationState;
+    /** A row's identity for `@key` (default: the item itself); keeps row state across sorting. */
+    @Parameter() itemKey?: (item: TGridItem) => unknown;
+    /** The columns: PropertyColumn and TemplateColumn. */
+    @Parameter() childContent?: RenderFragment;
+    /** Shown when there are no rows (default "No entries"). */
+    @Parameter() emptyContent?: RenderFragment;
+    /** Shown while an itemsProvider loads and no rows are shown yet (default "Loading…"). */
+    @Parameter() loadingContent?: RenderFragment;
+    /** none (default), single (radio buttons) or multiple (checkboxes, with "select all"). */
+    @Parameter() selectionMode: SelectionMode = "none";
+    /** The selected rows; bind it with `@bind-selectedItems`. */
+    @Bindable() accessor selectedItems: TGridItem[] = [];
+    /** Names the table for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Shades alternating rows (table-striped). */
+    @Parameter() striped: boolean = false;
+    /** Highlights the row under the pointer (table-hover). */
+    @Parameter() hover: boolean = false;
+    /** Draws borders on all cells (table-bordered). */
+    @Parameter() bordered: boolean = false;
+    /** The compact table-sm variant. */
+    @Parameter() small: boolean = false;
+    /** Wraps the table in .table-responsive for horizontal scrolling. */
+    @Parameter() responsive: boolean = false;
+    /** Keeps the header row visible while the page (or a scrolling parent) scrolls. */
+    @Parameter() stickyHeader: boolean = false;
+    /** Further attributes for the table element (class adds to the table's classes). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
+    private readonly groupName = uniqueId("tz-grid-select");
+    private rendered = false;
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => this.model.dispose());
+    }
+
+    protected override onParametersSet(): void {
+        const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
+        if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+    }
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (!firstRender) return;
+        // The columns (and the default sort) are known now: the first request can go out.
+        this.rendered = true;
+        if (this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+    }
+
+    /** Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed. */
+    refreshDataAsync(): Promise<void> {
+        return this.model.refreshDataAsync();
+    }
+
+    /** Sorts by a column, as a click on its header does (QuickGrid's SortByColumnAsync). */
+    sortByColumnAsync(column: GridColumn<TGridItem>, direction: "auto" | "ascending" | "descending" = "auto"): Promise<void> {
+        return this.model.sortByColumnAsync(column, direction);
+    }
+
+    private finishColumns(): void {
+        if (this.model.finishCollectingColumns() && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
+    }
+
+    private get rows(): readonly TGridItem[] {
+        return this.model.rows;
+    }
+
+    private get columnCount(): number {
+        return this.model.columns.length + (this.selectionMode === "none" ? 0 : 1);
+    }
+
+    private get busy(): string | null {
+        return this.model.loading ? "true" : null;
+    }
+
+    private get wrapperClass(): string | null {
+        return this.responsive ? "table-responsive" : null;
+    }
+
+    private get tableClass(): string {
+        const parts = ["table", "tz-grid"];
+        if (this.striped) parts.push("table-striped");
+        if (this.hover) parts.push("table-hover");
+        if (this.bordered) parts.push("table-bordered");
+        if (this.small) parts.push("table-sm");
+        const extra = this.additionalAttributes?.["class"];
+        if (typeof extra === "string" && extra.length > 0) parts.push(extra);
+        return parts.join(" ");
+    }
+
+    /** The captured attributes without class (that one joins tableClass). */
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+
+    private get headClass(): string | null {
+        return this.stickyHeader ? "sticky-top" : null;
+    }
+
+    private alignClass(column: GridColumn<TGridItem>): string | null {
+        return column.align === "center" ? "text-center" : column.align === "end" ? "text-end" : null;
+    }
+
+    private cellClass(column: GridColumn<TGridItem>): string | null {
+        const parts = [this.alignClass(column), column.className].filter((part): part is string => !!part);
+        return parts.length > 0 ? parts.join(" ") : null;
+    }
+
+    private ariaSort(column: GridColumn<TGridItem>): string | null {
+        return this.model.sortDirectionOf(column) ?? null;
+    }
+
+    private indicator(column: GridColumn<TGridItem>): string {
+        const direction = this.model.sortDirectionOf(column);
+        return direction === "ascending" ? "▲" : direction === "descending" ? "▼" : "↕";
+    }
+
+    private sort(column: GridColumn<TGridItem>): Promise<void> {
+        return this.model.sortByColumnAsync(column);
+    }
+
+    private keyOf(item: TGridItem): unknown {
+        return this.itemKey ? this.itemKey(item) : item;
+    }
+
+    private isSelected(item: TGridItem): boolean {
+        return this.selectedItems.includes(item);
+    }
+
+    private rowClass(item: TGridItem): string | null {
+        return this.selectionMode !== "none" && this.isSelected(item) ? "table-active" : null;
+    }
+
+    private selectLabel(index: number): string {
+        const pagination = this.pagination;
+        const row = (pagination ? pagination.currentPageIndex * pagination.itemsPerPage : 0) + index + 1;
+        return `Select row ${row}`;
+    }
+
+    private get allSelected(): boolean {
+        return this.rows.length > 0 && this.rows.every((row) => this.selectedItems.includes(row));
+    }
+
+    private select(item: TGridItem): void {
+        this.selectedItems = toggleSelection(this.selectedItems, item, this.selectionMode);
+    }
+
+    private selectAll(): void {
+        this.selectedItems = toggleAll(this.selectedItems, this.rows);
+    }
+}

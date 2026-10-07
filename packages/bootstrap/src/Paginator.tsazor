@@ -1,0 +1,66 @@
+@** Pages a DataGrid through a shared PaginationState (QuickGrid's Paginator): the row count,
+    "Page 2 of 7", and buttons for the first, previous, next and last page. Pass the same state to
+    the grid: `<DataGrid Pagination="pagination">` … `<Paginator State="pagination" />`. *@
+@import { PaginationState, type Size } from "@tsazor/ui"
+@import { sizeSuffix } from "./vocabulary"
+
+@if (state.totalItemCount !== undefined) {
+    <nav class="d-flex flex-wrap align-items-center gap-3 tz-paginator" aria-label="@ariaLabel">
+        <span class="text-body-secondary tz-paginator-count">
+            @if (summaryContent) { @summaryContent } else { <text>@state.totalItemCount items</text> }
+        </span>
+        <ul class="@listClass">
+            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="First page" disabled="@(!canGoBack)" @onclick="() => go(0)">«</button></li>
+            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="Previous page" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)">‹</button></li>
+            <li class="page-item active" aria-current="page"><span class="page-link tz-paginator-page">Page @(state.currentPageIndex + 1) of @(lastPage + 1)</span></li>
+            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="Next page" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)">›</button></li>
+            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="Last page" disabled="@(!canGoForward)" @onclick="() => go(lastPage)">»</button></li>
+        </ul>
+    </nav>
+}
+
+@code {
+    /** The paging state, shared with the grid. */
+    @Parameter() state!: PaginationState;
+    /** Names the navigation for screen readers. */
+    @Parameter() ariaLabel: string = "Pages";
+    /** Replaces the row count ("120 items"). */
+    @Parameter() summaryContent?: RenderFragment;
+    /** small, medium (default) or large. */
+    @Parameter() size: Size = "medium";
+
+    private observed?: PaginationState;
+    private stopObserving?: () => void;
+
+    protected override onParametersSet(): void {
+        if (this.state === this.observed) return;
+        this.stopObserving?.();
+        this.observed = this.state;
+        this.stopObserving = this.observe(this.state);
+    }
+
+    private get lastPage(): number {
+        return this.state.lastPageIndex ?? 0;
+    }
+
+    private get canGoBack(): boolean {
+        return this.state.currentPageIndex > 0;
+    }
+
+    private get canGoForward(): boolean {
+        return this.state.currentPageIndex < this.lastPage;
+    }
+
+    private go(pageIndex: number): Promise<void> {
+        return this.state.setCurrentPageIndexAsync(pageIndex);
+    }
+
+    private get listClass(): string {
+        const suffix = sizeSuffix(this.size);
+        return suffix ? `pagination mb-0 pagination-${suffix}` : "pagination mb-0";
+    }
+
+    private itemClass(disabled: boolean): string {
+        return disabled ? "page-item disabled" : "page-item";
+    }
+}

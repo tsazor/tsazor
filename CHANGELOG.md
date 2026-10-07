@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- DataGrid (QuickGrid-shaped). `@tsazor/ui`: `DataGridModel` (columns collected on every render, sort,
+  rows of the page, `ItemsProvider` requests with an AbortSignal), `GridSort` (`byAscending(…).thenDescending(…)`),
+  `PaginationState`, `toggleSelection`/`toggleAll`, `propertyTitle`/`propertyPath`. `@tsazor/bootstrap`: `DataGrid`
+  (Items or ItemsProvider, sortable headers with `aria-sort`, row selection bound to `selectedItems`, empty
+  and loading content, striped/hover/bordered/small/responsive/sticky header), `PropertyColumn`,
+  `TemplateColumn` and `Paginator`; the columns take the row type from the grid (cascading type
+  parameter). **Fix** (type layer): the "read as a TypeScript expression, not as text" note no longer
+  lands on values that are plainly code (a lambda, a call, a member access).
 - Cascading type parameters (Blazor's `[CascadingTypeParameter]`): `@attribute
   @CascadingTypeParameter("TGridItem")` on a generic component passes its type argument to the
   same-named type parameters of the components inside its content, so a column's

@@ -2483,7 +2483,8 @@ class Codegen {
       this.diagnostics.error("TZS009", attr, `'${attr.name}' sets the ${category} parameter '${name}' of '<${target.tag}>': its value is a TypeScript expression, not empty text.`);
       return;
     }
-    if (this.options.typedShadow !== undefined && category === "value" && attr.kind !== "expression" && attr.raw !== undefined && !attr.raw.text.startsWith("@")) {
+    // (Not for values that are plainly code — a lambda, a call, a member access: no one meant those as text.)
+    if (this.options.typedShadow !== undefined && category === "value" && attr.kind !== "expression" && attr.raw !== undefined && !attr.raw.text.startsWith("@") && !/=>|[().[\]{}]/.test(attr.raw.text)) {
       // Plain text read as code: the tooling explains unknown names in it.
       const type = parameter!.type ?? parameter!.inferredType;
       this.expressionValues.push({

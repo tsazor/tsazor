@@ -98,6 +98,30 @@ export default class Collapse extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// ColumnAlign: re-exported from @tsazor/ui
+
+// DataGrid
+export default class DataGrid<TGridItem> extends ComponentBase {
+    items?: TGridItem[];
+    itemsProvider?: GridItemsProvider<TGridItem>;
+    pagination?: PaginationState;
+    itemKey?: (item: TGridItem) => unknown;
+    childContent?: RenderFragment;
+    emptyContent?: RenderFragment;
+    loadingContent?: RenderFragment;
+    selectionMode: SelectionMode;
+    selectedItems: TGridItem[];
+    selectedItemsChanged?: EventCallback<TGridItem[]>;
+    ariaLabel?: string;
+    striped: boolean;
+    hover: boolean;
+    bordered: boolean;
+    small: boolean;
+    responsive: boolean;
+    stickyHeader: boolean;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Dialog
 export default class Dialog extends ComponentBase {
     isOpen: boolean;
@@ -153,6 +177,16 @@ export default class Form extends ComponentBase {
     childContent?: (context: EditContext) => RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
+
+// GridColumn: re-exported from @tsazor/ui
+
+// GridItemsProvider: re-exported from @tsazor/ui
+
+// GridItemsProviderRequest: re-exported from @tsazor/ui
+
+// GridItemsProviderResult: re-exported from @tsazor/ui
+
+// GridSort: re-exported from @tsazor/ui
 
 // Intent: re-exported from @tsazor/ui
 
@@ -218,6 +252,16 @@ export default class Pagination extends ComponentBase {
     onPageChanged?: EventCallback<number>;
 }
 
+// PaginationState: re-exported from @tsazor/ui
+
+// Paginator
+export default class Paginator extends ComponentBase {
+    state: PaginationState;
+    ariaLabel: string;
+    summaryContent?: RenderFragment;
+    size: Size;
+}
+
 // Placement: re-exported from @tsazor/ui
 
 // Progress
@@ -228,6 +272,21 @@ export default class Progress extends ComponentBase {
     intent?: Intent;
     label?: string;
     ariaLabel?: string;
+}
+
+// PropertyColumn
+export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
+    grid?: DataGridModel<TGridItem>;
+    property: (item: TGridItem) => TProp;
+    format?: (value: TProp) => string;
+    title?: string;
+    sortable: boolean;
+    sortKey?: string;
+    initialSortDirection?: "ascending" | "descending";
+    isDefaultSortColumn: boolean;
+    align?: ColumnAlign;
+    class?: string;
+    headerContent?: RenderFragment;
 }
 
 // RadioGroup
@@ -254,7 +313,13 @@ export default class Select extends InputBase<string> {
     childContent?: RenderFragment;
 }
 
+// SelectionMode: re-exported from @tsazor/ui
+
 // Size: re-exported from @tsazor/ui
+
+// SortDirection: re-exported from @tsazor/ui
+
+// SortedProperty: re-exported from @tsazor/ui
 
 // Spinner
 export default class Spinner extends ComponentBase {
@@ -287,6 +352,21 @@ export default class Tabs extends ComponentBase {
     childContent?: RenderFragment;
     ariaLabel?: string;
     onSelected?: EventCallback<number>;
+}
+
+// TemplateColumn
+export default class TemplateColumn<TGridItem> extends ComponentBase {
+    grid?: DataGridModel<TGridItem>;
+    childContent?: (item: TGridItem) => RenderFragment;
+    title: string;
+    sortBy?: GridSort<TGridItem>;
+    sortable?: boolean;
+    sortKey?: string;
+    initialSortDirection?: "ascending" | "descending";
+    isDefaultSortColumn: boolean;
+    align?: ColumnAlign;
+    class?: string;
+    headerContent?: RenderFragment;
 }
 
 // TextArea

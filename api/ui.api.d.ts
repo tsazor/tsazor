@@ -18,6 +18,12 @@ export interface AnchoredPositionOptions {
 // Appearance
 export type Appearance = "solid" | "outline" | "subtle" | "transparent";
 
+// ColumnAlign
+export type ColumnAlign = "start" | "center" | "end";
+
+// compareValues
+export declare function compareValues(a: unknown, b: unknown): number;
+
 // computePosition
 export declare function computePosition(anchor: DOMRectReadOnly, floating: {
     width: number;
@@ -29,6 +35,35 @@ export declare function computePosition(anchor: DOMRectReadOnly, floating: {
 
 // createLayer
 export declare function createLayer(): object;
+
+// DataGridModel
+export declare class DataGridModel<T> {
+    private readonly onChange;
+    private collecting;
+    private current;
+    private sortOwner;
+    private ascending;
+    private defaultSortApplied;
+    private source;
+    private view;
+    private provided;
+    private loadingNow;
+    private abort;
+    private unsubscribe;
+    constructor(onChange: () => void);
+    get columns(): readonly GridColumn<T>[];
+    startCollectingColumns(): void;
+    addColumn(column: GridColumn<T>): void;
+    finishCollectingColumns(): boolean;
+    get sortColumn(): GridColumn<T> | undefined;
+    sortDirectionOf(column: GridColumn<T>): "ascending" | "descending" | undefined;
+    sortByColumnAsync(column: GridColumn<T>, direction?: SortDirection): Promise<void>;
+    setSource(source: GridSource<T>): boolean;
+    get loading(): boolean;
+    get rows(): readonly T[];
+    refreshDataAsync(): Promise<void>;
+    dispose(): void;
+}
 
 // dismissable
 export declare function dismissable(options: DismissableOptions): Attachment<HTMLElement>;
@@ -77,6 +112,59 @@ export interface FocusTrapOptions {
     restoreFocus?: boolean;
 }
 
+// GridColumn
+export interface GridColumn<T> {
+    readonly owner: object;
+    title: string;
+    headerContent?: RenderFragment;
+    cell: (item: T) => RenderFragment;
+    sortable: boolean;
+    sortBy?: GridSort<T>;
+    sortKey?: string;
+    initialSortDirection?: "ascending" | "descending";
+    isDefaultSortColumn?: boolean;
+    align?: ColumnAlign;
+    className?: string;
+}
+
+// GridItemsProvider
+export type GridItemsProvider<T> = (request: GridItemsProviderRequest<T>) => Promise<GridItemsProviderResult<T>> | GridItemsProviderResult<T>;
+
+// GridItemsProviderRequest
+export interface GridItemsProviderRequest<T> {
+    startIndex: number;
+    count: number | undefined;
+    sortByColumn: GridColumn<T> | undefined;
+    sortByAscending: boolean;
+    signal: AbortSignal;
+    applySorting(source: readonly T[]): T[];
+    getSortByProperties(): SortedProperty[];
+}
+
+// GridItemsProviderResult
+export interface GridItemsProviderResult<T> {
+    items: T[];
+    totalItemCount: number;
+}
+
+// GridSort
+export declare class GridSort<T> {
+    private readonly steps;
+    private constructor();
+    static byAscending<T>(key: (item: T) => unknown): GridSort<T>;
+    static byDescending<T>(key: (item: T) => unknown): GridSort<T>;
+    thenAscending(key: (item: T) => unknown): GridSort<T>;
+    thenDescending(key: (item: T) => unknown): GridSort<T>;
+    apply(items: readonly T[], ascending?: boolean): T[];
+}
+
+// GridSource
+export interface GridSource<T> {
+    items?: readonly T[];
+    itemsProvider?: GridItemsProvider<T>;
+    pagination?: PaginationState;
+}
+
 // hasSubmitAttempt
 export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
 
@@ -95,8 +183,32 @@ export declare function openLayer(key: object): () => void;
 // Orientation
 export type Orientation = "horizontal" | "vertical";
 
+// PaginationChange
+export type PaginationChange = "page" | "total";
+
+// PaginationState
+export declare class PaginationState {
+    itemsPerPage: number;
+    private pageIndex;
+    private total;
+    private readonly listeners;
+    get currentPageIndex(): number;
+    get totalItemCount(): number | undefined;
+    get lastPageIndex(): number | undefined;
+    setCurrentPageIndexAsync(pageIndex: number): Promise<void>;
+    setTotalItemCount(count: number): void;
+    subscribe(listener: (change?: PaginationChange) => void): () => void;
+    private notify;
+}
+
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
+
+// propertyPath
+export declare function propertyPath(property: (item: never) => unknown): string | undefined;
+
+// propertyTitle
+export declare function propertyTitle(property: (item: never) => unknown): string | undefined;
 
 // rovingFocus
 export declare function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement>;
@@ -113,8 +225,20 @@ export interface RovingFocusOptions {
 // scrollLock
 export declare const scrollLock: Attachment<HTMLElement>;
 
+// SelectionMode
+export type SelectionMode = "none" | "single" | "multiple";
+
 // Size
 export type Size = "small" | "medium" | "large";
+
+// SortDirection
+export type SortDirection = "auto" | "ascending" | "descending";
+
+// SortedProperty
+export interface SortedProperty {
+    propertyName: string;
+    direction: "ascending" | "descending";
+}
 
 // Toast
 export interface Toast {
@@ -146,6 +270,12 @@ export interface ToastOptions {
     intent?: Intent;
     timeout?: number;
 }
+
+// toggleAll
+export declare function toggleAll<T>(selected: readonly T[], rows: readonly T[]): T[];
+
+// toggleSelection
+export declare function toggleSelection<T>(selected: readonly T[], item: T, mode: SelectionMode): T[];
 
 // tooltip
 export declare function tooltip(text: string, options?: TooltipOptions): Attachment<HTMLElement>;

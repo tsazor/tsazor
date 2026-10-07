@@ -16,6 +16,9 @@ interface CompileError {
 /** Extra export names for a component (D-C3): Bootstrap calls the dialog a modal. */
 const ALIASES: Readonly<Record<string, string>> = { Modal: "Dialog" };
 
+/** Compiled for the components that use them, not exported (DataGrid's Defer). */
+const INTERNAL: ReadonlySet<string> = new Set(["Defer"]);
+
 const errors: CompileError[] = [];
 const exports: string[] = [];
 
@@ -65,6 +68,7 @@ for (const file of files) {
       return `${from}${spec}.js${quote}`;
     });
     await writeFile(path.join(distDir, `${className}.js`), js);
+    if (INTERNAL.has(className)) continue;
     exports.push(`export { default as ${className} } from "./${className}.js";`);
   } catch (error) {
     errors.push({ file, details: `  ${error instanceof Error ? error.stack : String(error)}` });
@@ -93,7 +97,7 @@ const manifest = buildPackageManifest({
   packageDir,
   packageName: "@tsazor/bootstrap",
   entries: [
-    ...files.map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
+    ...files.filter((file) => !INTERNAL.has(path.basename(file, ".tsazor"))).map((file) => ({ exportName: path.basename(file, ".tsazor"), file: path.join(srcDir, file) })),
     ...Object.entries(ALIASES).map(([alias, target]) => ({ exportName: alias, file: path.join(srcDir, `${target}.tsazor`) })),
   ],
 });
@@ -111,13 +115,15 @@ for (const [exportName, declaration] of Object.entries(declarations)) {
 exports.push('export { tooltip } from "./tooltip-attachment.js";');
 // The toast service comes with the skin: register it, inject it, call show().
 exports.push('export { Toaster } from "@tsazor/ui";');
+// The DataGrid's sorting and paging state come with the skin too.
+exports.push('export { GridSort, PaginationState } from "@tsazor/ui";');
 for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js";`);
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, Intent, Orientation, Placement, Size, Toast, ToastOptions } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions } from "@tsazor/ui";\n`);
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),

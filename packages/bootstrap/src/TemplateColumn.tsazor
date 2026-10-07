@@ -1,0 +1,52 @@
+@** A DataGrid column with your own cell content; the row is the template's context:
+    `<TemplateColumn Title="Actions" Context="order"><button @onclick="() => open(order)">Open</button></TemplateColumn>`.
+    It sorts when it has a `sortBy` (`GridSort.byAscending((o) => o.total)`). Place it inside a
+    DataGrid: it takes the grid's row type. *@
+@typeparam TGridItem
+@import { DataGridModel, type ColumnAlign, type GridSort } from "@tsazor/ui"
+@{ this.register(); }
+
+@code {
+    /** The grid this column belongs to. */
+    @CascadingParameter({ type: DataGridModel }) grid?: DataGridModel<TGridItem>;
+    /** The cell content for a row (the context). */
+    @Parameter() childContent?: (item: TGridItem) => RenderFragment;
+    /** The header text. */
+    @Parameter() title: string = "";
+    /** How the column sorts; it is sortable when set. */
+    @Parameter() sortBy?: GridSort<TGridItem>;
+    /** Turns sorting off although sortBy is set. */
+    @Parameter() sortable?: boolean;
+    /** The property name an itemsProvider gets in getSortByProperties(). */
+    @Parameter() sortKey?: string;
+    /** The direction of the first click (and of the default sort). */
+    @Parameter() initialSortDirection?: "ascending" | "descending";
+    /** Sorts the grid by this column from the start. */
+    @Parameter() isDefaultSortColumn: boolean = false;
+    /** Cell and header alignment: start, center or end. */
+    @Parameter() align?: ColumnAlign;
+    /** Extra class for the cells. */
+    @Parameter() class?: string;
+    /** Header content instead of the title text. */
+    @Parameter() headerContent?: RenderFragment;
+
+    private register(): void {
+        const grid = this.grid;
+        if (grid === undefined) throw new Error("TemplateColumn must be placed inside a DataGrid.");
+        const content = this.childContent;
+        const sortable = this.sortable ?? this.sortBy !== undefined;
+        grid.addColumn({
+            owner: this,
+            title: this.title,
+            headerContent: this.headerContent,
+            cell: (item) => (content ? content(item) : () => undefined),
+            sortable: sortable && this.sortBy !== undefined,
+            sortBy: this.sortBy,
+            sortKey: this.sortKey,
+            initialSortDirection: this.initialSortDirection,
+            isDefaultSortColumn: this.isDefaultSortColumn,
+            align: this.align,
+            className: this.class,
+        });
+    }
+}

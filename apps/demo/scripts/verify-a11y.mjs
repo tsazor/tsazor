@@ -156,6 +156,23 @@ try {
   await page.waitForFunction(() => document.querySelector(".order-status")?.textContent?.includes("Reserved"));
   check((await page.locator(".invalid-feedback").count()) === 0, "form: fixed and submitted, no messages left");
 
+  // DataGrid: sorting by keyboard (aria-sort), paging, row selection.
+  const grid = page.locator("table[aria-label=Orders]");
+  const sortState = () => grid.locator("th").evaluateAll((ths) => ths.map((th) => th.getAttribute("aria-sort") ?? "").join(","));
+  check((await sortState()) === ",,ascending,,,", `grid: the default sort column says so (${await sortState()})`);
+  await grid.getByRole("button", { name: /Total/ }).focus();
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.querySelectorAll("table[aria-label=Orders] th")[4]?.getAttribute("aria-sort") === "ascending");
+  check((await grid.locator("tbody tr").first().locator("td").nth(4).textContent())?.trim() === "3.40", "grid: Enter on a header sorts by it");
+  await page.getByRole("button", { name: "Next page" }).click();
+  await page.waitForFunction(() => document.querySelector(".tz-paginator-page")?.textContent === "Page 2 of 3");
+  check((await grid.locator("tbody tr").count()) === 10, "grid: the paginator shows the next page");
+  await grid.getByRole("checkbox", { name: "Select row 11" }).check();
+  await page.waitForFunction(() => document.querySelector(".grid-selection")?.textContent?.startsWith("1 selected"));
+  check(true, "grid: a row checkbox selects the row (@bind-SelectedItems)");
+  const gridViolations = await axe(page);
+  check(gridViolations.length === 0, `axe /components with a sorted, paged, selected grid${gridViolations.length ? `: ${gridViolations.join(" | ")}` : ""}`);
+
   check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
 } catch (error) {
   console.error(error);
