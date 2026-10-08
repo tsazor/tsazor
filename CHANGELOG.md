@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`: a value named like a directive in markup text (`@foreach (const layout of layouts) { @layout.name }`)
+  is still read as the directive, as Razor does, but TZS013 now says so and offers `@(layout.name)` as a quick fix, and
+  parsing goes on. It swallowed the rest of the line, and the unclosed elements after it buried the cause under
+  dozens of follow-up errors (62 in FluentCMS's site form). A bare `Page @page of 7` gets the fix `@(page)`.
 - `@tsazor/fluent`: **CheckboxGroup**, several values out of `options` in a fieldset, bound as `string[]`. Its options
   are RadioGroup's (`value`, `label`, `disabled`); the bound array follows their order, and values it doesn't show
   stay in it. FluentCMS assigns a user's roles with it.

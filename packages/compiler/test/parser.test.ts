@@ -324,4 +324,28 @@ describe("parser — markup fidelity (A2)", () => {
     const { diagnostics } = parse('<div>@page "/x"</div>\n@{ @inject X y }');
     expect(diagnostics.all.filter((d) => d.code === "TZS013")).toHaveLength(2);
   });
+
+  it("a value named like a directive (`@layout.name`) is TZS013 with the way out, and parsing goes on", () => {
+    const { doc, diagnostics } = parse("@foreach (const layout of layouts) {\n    <option value=\"@layout.id\">@layout.name</option>\n}\n<p>after</p>");
+    const found = diagnostics.all.filter((d) => d.code === "TZS013");
+    // In the attribute value it is an expression already; in the text it is the directive.
+    expect(found.map((d) => d.message)).toEqual([
+      "Directive not allowed here. '@layout' is a directive, so '@layout.name' doesn't read a value named 'layout'. Write '@(layout.name)'.",
+    ]);
+    expect(found[0]!.fix).toEqual({
+      title: "Write '@(layout.name)'",
+      edits: [{ pos: { line: 2, column: 31 }, endPos: { line: 2, column: 43 }, text: "@(layout.name)" }],
+    });
+    // No cascade: the element closes, and the markup after the loop is there.
+    expect(diagnostics.all.filter((d) => d.code !== "TZS013")).toEqual([]);
+    expect(JSON.stringify(doc.body)).toContain("after");
+  });
+
+  it("a bare directive word in markup offers @(word); @attribute[…] stays the directive", () => {
+    const { diagnostics } = parse("<p>Page @page of 7</p>");
+    expect(diagnostics.all[0]!.message).toContain("To output a value named 'page', write '@(page)'.");
+    expect(diagnostics.all[0]!.fix?.edits[0]?.text).toBe("@(page)");
+    const attribute = parse("@attribute[Authorize]\n<p>x</p>");
+    expect(attribute.diagnostics.all.filter((d) => d.code === "TZS013")).toEqual([]);
+  });
 });

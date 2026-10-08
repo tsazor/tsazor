@@ -378,15 +378,37 @@ class Parser {
       this.diagnostics.error(
         "TZS012",
         this.rangeFrom(pos, this.i),
-        "'@await' in markup is not supported: buildRenderTree is synchronous. Await in a lifecycle method (e.g. onInitializedAsync) and render the stored result.",
+        "'@await' in markup is not supported: buildRenderTree is synchronous. Await in a lifecycle method (e.g. an async onInitialized) and render the stored result.",
       );
       return;
     }
 
     if (DIRECTIVES[word] !== undefined) {
+      // A value named like a directive (`@foreach (const layout of …) { @layout.name }`): Razor
+      // reads the directive too, so the error stays — with the way out, and parsing goes on.
+      // (`(` is not a sign: `@authorize({ … })` takes it; `@attribute[…]` takes `[`.)
+      if (".[?!".includes(src[idEnd] ?? " ") && !(word === "attribute" && src[idEnd] === "[")) {
+        const end = Math.max(this.ts.scanImplicitExpression(idStart), idEnd);
+        const expression = src.slice(idStart, end);
+        const range = this.rangeFrom(pos, end);
+        this.diagnostics.error(
+          "TZS013",
+          range,
+          `'@${word}' is a directive, so '@${expression}' doesn't read a value named '${word}'. Write '@(${expression})'.`,
+          { title: `Write '@(${expression})'`, edits: [{ ...range, text: `@(${expression})` }] },
+        );
+        this.i = end;
+        return;
+      }
       if (this.nesting > 0) {
         this.i = this.lineEnd(idEnd);
-        this.diagnostics.error("TZS013", this.rangeFrom(pos, this.trimmedEnd(idEnd, this.i)), `'@${word}' is a directive and is only allowed at document level.`);
+        const range = this.rangeFrom(pos, this.trimmedEnd(idEnd, this.i));
+        this.diagnostics.error(
+          "TZS013",
+          range,
+          `'@${word}' is a directive and is only allowed at document level. To output a value named '${word}', write '@(${word})'.`,
+          { title: `Write '@(${word})'`, edits: [{ ...this.rangeFrom(pos, idEnd), text: `@(${word})` }] },
+        );
         return;
       }
       this.parseDirective(word, idEnd, pos, out);
