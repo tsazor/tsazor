@@ -52,8 +52,8 @@ tests our library on a real app.
    - a catch-all page resolves the URL through `Page.GetByUrl`;
    - the page's sections render their plugins through `DynamicComponent`, each in an `ErrorBoundary`;
    - sub-screens are the same plugin under another view name (`?pluginId=…&viewName=…`).
-5. **Layouts:** the seeded layouts (Admin, Auth) become Tsazor layout components with Fluent. Layouts
-   edited in the CMS (HTML with component tags) come with the public-site part.
+5. **Layouts:** the seeded layouts (Admin, Auth) become Tsazor layout components with Fluent. Every other
+   layout is the HTML stored in the CMS, rendered as it is (`Shell/StoredLayout.tsazor`, phase 5).
 6. **Forms:** the static SSR forms (`[SupplyParameterFromForm]`, `FormName`, `Enhance`) become interactive
    `EditForm`s. `@rendermode` goes away (TZS warning, no effect in an SPA).
 
@@ -80,7 +80,23 @@ tests our library on a real app.
 | 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | Done, except the file picker (`FileSelectorModal`): the content type fields use it, so it comes with phase 4 |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | Done: content types and their fields (each type's settings form through a DynamicComponent, the settings under FluentCMS's keys); contents, their list and forms built from 27 field views, the rich text editor (Quill), the autocomplete and the file pickers among them |
-| 5 | Public site (optional) | The view plugins, layouts with component tags | |
+| 5 | Public site | 5a: layouts stored in the CMS (HTML with component tags and Scriban expressions); 5b: the view plugins (HTML, rich text, block, iframe, contact form, content list and detail) and their settings | In progress |
+
+**Phase 5: the question it asks.** A FluentCMS layout is HTML in the database. A component tag in it
+(`<PluginsSection Name="Main" fluentcms />`) names a component, its attributes are the parameters, and
+Scriban expressions (`{{ user.user_name }}`) are filled in first. Blazor renders it with
+`RenderTreeBuilder` at run time: HTML segments as `MarkupString`, each tag through `OpenComponent`
+with a type found by reflection. So the question is: **can a Tsazor app turn markup it only gets at run
+time into a render tree with live components, without a compiler in the browser?**
+
+- Blazor's segments only work because static SSR streams them as text. In an SPA, each `MarkupString`
+  is parsed alone, so a `<main>` opened before a component and closed after it would not contain it.
+  The port parses the whole layout once and builds elements down to each component.
+- No reflection: the component tags resolve through a registry, the pattern of the plugins.
+- Scripts in the layout: the original runs them on a full page load and raises `fluentcms:init`, then
+  `fluentcms:afterenhanced` after each enhanced navigation. The port loads each script once and raises
+  the same events.
+- Out of scope: the site builder (drag and drop, 10 files), the inline editor, the Tailwind style builder.
 
 **Codemod, per screen** (`tsazor codemod` over the original `.razor` files):
 
@@ -150,6 +166,8 @@ built; better components are a side effect.
 | 4a | Content types and their fields (8 settings forms) | 3 (F30–F32) | 2 (`Dialog.size` in `@tsazor/fluent`; `ImportsChain.root`) |
 | 4b | Contents: list and forms built from 21 field views | 2 (F33, F34) | 2 (`InputDate.type` and `DateInput.type`; .NET date formats in `@bind:format`) |
 | 4c | The field views of track B: rich text, autocomplete (single and several), file pickers and file links | 1 (F35, testing DX) | 1 (`Autocomplete`, new in `@tsazor/fluent`) |
+| 5a | Layouts stored in the CMS: Scriban expressions, component tags in head and body, their scripts | 1 (F36, docs) | 0 |
+| 5b | The view plugins: HTML, rich text, block (and its picker), iframe, contact form, content list and detail | 0 | 0 |
 
 ## Findings
 
@@ -190,6 +208,9 @@ built; better components are a side effect.
 | F33 | Runtime, skins (parity) | FluentCMS's date fields edit a date, a time or a date-time (Blazor's `InputDate Type`). Tsazor's `InputDate` and the skins' `DateInput` had `date` only. `InputDate` also wrote a `Date` through `toISOString()`, so a local midnight east of Greenwich showed the day before, and turned a bound string into a `Date`; `InputNumber` showed `null` as "null" | Fixed: `type` (date, datetime-local, month, time) on `InputDate` and both `DateInput`s; local time both ways; a bound string stays a string; null shows empty |
 | F34 | Runtime (parity) | FluentCMS stores a date field's display format as a .NET format (`dddd, dd MMMM yyyy`, `hh:mm tt`, `yyyy'-'MM'-'dd'T'…fffffffK`) and writes the value with `DateTime.ToString(format)`. Tsazor's `@bind:format` knew `yyyy MM dd HH mm ss` and read every other letter as text: `dddd, dd MMMM yyyy` gave `dddd, 12 0606 2024` | Fixed: .NET's whole custom and standard date grammar, invariant, both ways; the port formats with the runtime's `formatValue` |
 | F35 | `@tsazor/testing` (DX) | `renderer.waitUntilIdle()` waits for the event handlers' tasks. A test that answers a pending search only after it settles (the autocomplete's "newest wins" test) hangs until vitest's 5 s timeout, with no hint which handler is still running | Open (small): a timeout on `waitUntilIdle`, naming the component whose handler is pending |
+| F36 | Docs | A layout from the database with component tags in it needs a render tree built in code from data at run time. The public `RenderTreeBuilder` does it (no change was needed), but neither the tutorial nor the docs show it; Blazor documents it as "manual RenderTreeBuilder logic". The questions a reader meets: sequence numbers for a tree that comes from data, why markup segments around components lose their nesting in the browser, scripts in markup | Open: a tutorial lesson |
+| U4 | FluentCMS (upstream) | The contact form stores every visitor's message empty (`{"Email":null,…}`): for visitors the page is static SSR, and the form's model isn't `[SupplyParameterFromForm]`, so the post binds nothing. Signed in as an admin the page is interactive and it works. Found by driving FluentCMS's own UI | Upstream. The port's form is interactive for everyone; migration.md names the pattern |
+| U3 | FluentCMS (upstream) | The template's `app.js` binds the theme toggle again on every `fluentcms:afterenhanced`. After an enhanced navigation within one layout the button survives, so a click toggles twice and nothing changes | Upstream; the port raises the same events and behaves the same |
 | U2 | FluentCMS (upstream) | A content's dates come back as `DateTime.ToString()` in the server's culture (`06.06.2024 17:04:05` on a German machine). Its Blazor Server UI parsed them on the same server; a browser can't know that culture, and `new Date()` read the 12th of June as the 6th of December | Upstream. The port runs the backend with invariant globalization (`MM/dd/yyyy HH:mm:ss`, parsed as .NET's `G` with F34); migration.md names the pattern |
 | U1 | FluentCMS (upstream) | `File/Download?url=` looks a file's folder up by `uri.AbsolutePath`, which is escaped: a folder or file name with a space isn't served (500, `Folder.NotFound`). The port links files as the original does; the gate uses names without spaces | Upstream; not a Tsazor finding |
 
@@ -199,3 +220,15 @@ built; better components are a side effect.
   value of the second. Blazor behaves the same. `FilesTable.load()` shows the pattern.
 - The port's folder picker shows the API's error (`File.AlreadyExists`, a folder moved into itself); FluentCMS's
   own had no place for it.
+
+**Notes from phase 5**
+- **The answer to its question is yes, with no framework change.** A layout parsed once into elements, markup
+  and component tags builds through the public `RenderTreeBuilder` (`Shell/layout-markup.ts`). Components work
+  in the head part too (`PageHead`, inside `HeadContent`). Sequence numbers come from a node's place among its
+  siblings, and all of an element's attributes share one, so a changed text keeps the components.
+- **Upstream as the oracle.** The backend process also serves FluentCMS's own Blazor UI, for a request with the
+  site's host. So the verify script compares each public plugin's HTML with FluentCMS's own render, character
+  for character, and a small proxy with that host (`:5343`) drives FluentCMS's UI in a browser (U3, U4). The
+  Scriban subset's expected values come from Scriban 5.12 itself, run on the same templates. That found what a
+  reading of the templates wouldn't: FluentCMS's API client makes a `DateTime` of every string that parses as
+  one, Scriban writes it as `09 Jun 2024`, and it indents a block's lines by the spaces before its statement.

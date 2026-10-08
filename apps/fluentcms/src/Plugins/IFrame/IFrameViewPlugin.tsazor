@@ -1,0 +1,16 @@
+@* Another page in a frame, by its address or by the embed code a site gives out (FluentCMS's IFrameViewPlugin). *@
+@inherits BasePlugin
+
+<div class="f-iframe-content" style="@(`height: ${this.setting("Height") || "auto"};`)">
+    @if (this.setting("EmbedCode") === "") {
+        <iframe src="@this.setting("Src")" title="@this.plugin.definition?.name"></iframe>
+    } else {
+        @(new MarkupString(this.setting("EmbedCode")))
+    }
+</div>
+
+@code {
+    private setting(key: string): string {
+        return this.plugin.settings?.[key] ?? "";
+    }
+}

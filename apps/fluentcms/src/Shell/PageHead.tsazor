@@ -1,0 +1,48 @@
+@* The page's meta tags, from the page's settings or else the site's, and the stylesheets its plugins
+   bring (FluentCMS's PageHead, which layouts name in their head: <PageHead fluentcms />).
+   - No <title>: the catch-all page's PageTitle sets it, and a second one would compete with it.
+   - No Google tag script: markup doesn't run scripts. *@
+@inject ViewState ViewState
+
+<meta name="title" content="@this.setting("MetaTitle")" />
+<meta name="description" content="@this.setting("MetaDescription")" />
+<meta name="robots" content="@this.robots()" />
+
+<meta property="og:title" content="@this.setting("MetaTitle")" />
+<meta property="og:description" content="@this.setting("MetaDescription")" />
+<meta property="og:type" content="@this.setting("OgType")" />
+
+<meta property="twitter:title" content="@this.setting("MetaTitle")" />
+<meta property="twitter:description" content="@this.setting("MetaDescription")" />
+<meta property="twitter:type" content="@this.setting("OgType")" />
+
+@if (this.setting("Head") !== "") {
+    @(new MarkupString(this.setting("Head")))
+}
+@foreach (const stylesheet of this.stylesheets()) {
+    <link @key="stylesheet" rel="stylesheet" href="@stylesheet" />
+}
+
+@code {
+    protected override onInitialized(): void {
+        this.observe(this.ViewState);
+    }
+
+    private setting(key: string): string {
+        return this.ViewState.page.settings?.[key] ?? this.ViewState.site.settings?.[key] ?? "";
+    }
+
+    private robots(): string {
+        const settings = this.ViewState.page.settings ?? {};
+        return `${settings["Index"] === "true" ? "index" : "noindex"}, ${settings["Follow"] === "true" ? "follow" : "nofollow"}`;
+    }
+
+    /** Each plugin definition's stylesheets, served from its assembly's static files (`_content/<assembly>/…`). */
+    private stylesheets(): string[] {
+        const paths = this.ViewState.plugins.flatMap((plugin) => {
+            const assembly = (plugin.definition?.assembly ?? "").replace(/\.dll$/, "");
+            return (plugin.definition?.stylesheets ?? []).map((stylesheet) => `/_content/${assembly}/${stylesheet.replace(/^\/+/, "")}`);
+        });
+        return [...new Set(paths)];
+    }
+}

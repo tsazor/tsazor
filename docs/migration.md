@@ -97,6 +97,21 @@ API already — they skip this step.
   German server, and `new Date()` reads that as the 6th of June only by luck. Send ISO dates and
   invariant numbers (System.Text.Json does for typed DTOs); look out for `object` and
   `Dictionary<string, object>` payloads that pass through `ToString()`.
+- **Services the server ran.** A Blazor Server UI can use anything registered in its process.
+  FluentCMS's contact form mails each message through an email provider it injects, and its
+  content lists fill Scriban templates there. Neither is in the API. Each such service becomes an
+  endpoint, or moves to the browser when it has a JavaScript counterpart. The port fills the
+  templates with a Scriban subset (`apps/fluentcms/src/Shell/scriban.ts`, checked against Scriban
+  itself) and leaves the mail out.
+- **Markup the server streamed.** Static SSR writes a page as one text, so a CMS layout cut into
+  `MarkupString` segments around its component tags still nests (a `<main>` opened before a
+  component and closed after it contains it). In the browser each markup is parsed alone. Parse
+  the whole layout once and build the elements down to each component with `RenderTreeBuilder`
+  (`apps/fluentcms/src/Shell/layout-markup.ts`). Scripts in such markup never run; load them.
+- **Static SSR forms.** A page that is static for visitors and interactive for admins runs its
+  forms two ways. FluentCMS's contact form binds no model in static SSR (no
+  `[SupplyParameterFromForm]`), so every visitor's message is stored empty, while it works for a
+  signed-in admin. In the SPA every form is interactive and behaves as the admin saw it.
 
 ## The codemod
 

@@ -17,7 +17,9 @@ using Yarp.ReverseProxy.Transforms;
 //   gets the user without the token.
 // - /api/** is proxied to FluentCMS with the API token, and with the user's JWT as Bearer.
 // - GET /bff/user says who is signed in (CookieAuthenticationStateProvider); POST /bff/logout signs out.
-// - /files/** are FluentCMS's files (uploads, the template's images).
+// - /files/** are FluentCMS's files (uploads, the template's images, CSS and scripts).
+// - /_content/** are the static files of FluentCMS's own UI assemblies: the stylesheets that the stored
+//   layouts and the plugin definitions name (its component library's theme, a plugin's CSS).
 // - Everything else is the built app (dist/), with index.html for the app's routes.
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +53,7 @@ builder.Services.AddReverseProxy()
         [
             new RouteConfig { RouteId = "api", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/api/{**rest}" } },
             new RouteConfig { RouteId = "files", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/files/{**rest}" } },
+            new RouteConfig { RouteId = "content", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/_content/{**rest}" } },
         ],
         [
             new ClusterConfig

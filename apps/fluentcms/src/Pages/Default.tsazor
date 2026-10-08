@@ -1,8 +1,9 @@
 @page "/{**route:nonfile}"
-@* Every CMS page (FluentCMS's Default.razor): the URL resolves to a page of the site, which names its layout and plugins. *@
+@* Every CMS page (FluentCMS's Default.razor): the URL resolves to a page of the site, which names its layout and plugins.
+   The admin and auth layouts are the port's own components (with @tsazor/fluent); every other layout is the HTML stored in the CMS. *@
 @import AdminLayout from "../Shell/AdminLayout.tsazor"
 @import AuthLayout from "../Shell/AuthLayout.tsazor"
-@import CmsLayout from "../Shell/CmsLayout.tsazor"
+@import type { LayoutDetailResponse } from "../api/models"
 @inject ViewState ViewState
 @inject FluentCmsClient Api
 @inject NavigationManager Navigation
@@ -15,10 +16,16 @@
     <div class="cms-message"><Alert intent="info">The site builder is not ported.</Alert></div>
 } else {
     <PageTitle>@this.ViewState.page.title</PageTitle>
-    @if (this.ViewState.page.hasViewAccess) {
-        <DynamicComponent Type="@this.layout()" />
-    } else {
+    const layout = this.layout();
+    const ownLayout = this.ownLayout();
+    @if (!this.ViewState.page.hasViewAccess) {
         <h1>You have No Access to view this page.</h1>
+    } else if (ownLayout !== undefined) {
+        <DynamicComponent Type="@ownLayout" />
+    } else if (layout !== undefined) {
+        <StoredLayout layout="@layout" />
+    } else {
+        <div class="cms-message"><Alert intent="danger">The page has no layout.</Alert></div>
     }
 }
 
@@ -37,15 +44,18 @@
     }
 
     /** The layout of the current view: the page's, or the edit or detail layout for a plugin's view. */
-    private layout(): ComponentType {
-        const layout =
-            this.ViewState.type === "pluginEdit" ? this.ViewState.editLayout
+    private layout(): LayoutDetailResponse | undefined {
+        return this.ViewState.type === "pluginEdit" ? this.ViewState.editLayout
             : this.ViewState.type === "pluginDetail" ? this.ViewState.detailLayout
             : this.ViewState.layout;
-        switch (layout?.name) {
+    }
+
+    /** The port's own component for the admin and auth layouts. */
+    private ownLayout(): ComponentType | undefined {
+        switch (this.layout()?.name) {
             case "AdminLayout": return AdminLayout;
             case "AuthLayout": return AuthLayout;
-            default: return CmsLayout;
+            default: return undefined;
         }
     }
 }

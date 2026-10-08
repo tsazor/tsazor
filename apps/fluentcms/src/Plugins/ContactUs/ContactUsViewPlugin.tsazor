@@ -1,0 +1,37 @@
+@* The contact form (FluentCMS's ContactUsViewPlugin): a visitor's message, stored as the plugin's content.
+   FluentCMS also mails it to the plugin's address, through the email provider its server runs in process.
+   The API offers no such call, so the port only stores it (migration.md: "Services the server ran"). *@
+@inherits BasePlugin
+@import { ensureOk } from "../../api/api-result"
+
+<FluentForm model="@this.model" onValidSubmit="@this.send">
+    <div class="contact-us">
+        <TextInput @bind-Value="this.model.email" label="Email" placeholder="Enter your email address" type="email" />
+        <TextInput @bind-Value="this.model.subject" label="Subject" placeholder="Let us know how we can help you" />
+        <TextArea @bind-Value="this.model.message" label="Message" placeholder="Leave a comment..." />
+        @if (this.status !== undefined) {
+            const status = this.status;
+            <Alert intent="@status.intent">@status.text</Alert>
+        }
+        <div>
+            <Button intent="primary" type="submit">Send Message</Button>
+        </div>
+    </div>
+</FluentForm>
+
+@code {
+    private model = { email: "", subject: "", message: "" };
+    private status?: { intent: "success" | "danger"; text: string };
+
+    private async send(): Promise<void> {
+        try {
+            // Stored under ContactUsContent's property names, which FluentCMS's data view reads.
+            const { email, subject, message } = this.model;
+            ensureOk(await this.api.pluginContentCreate("ContactUsContent", this.plugin.id, { Email: email, Subject: subject, Message: message }));
+            this.model = { email: "", subject: "", message: "" };
+            this.status = { intent: "success", text: "Thank you, your message was sent." };
+        } catch (error) {
+            this.status = { intent: "danger", text: error instanceof Error ? error.message : String(error) };
+        }
+    }
+}

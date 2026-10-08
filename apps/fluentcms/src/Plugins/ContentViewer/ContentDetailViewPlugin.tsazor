@@ -1,0 +1,37 @@
+@* One content through the plugin's Scriban template (FluentCMS's ContentDetailViewPlugin): the one the
+   rest of the URL names by id (`/blogs/detail/<id>`), or else the type's last. *@
+@inherits BasePlugin
+@import { ensureOk } from "../../api/api-result"
+@import { renderTemplate } from "../../Shell/scriban"
+@import type { ContentDetailResponse } from "../../api/models"
+@import { templateData } from "./template-data"
+
+@if (this.rendered !== undefined) {
+    <div class="f-content-detail">
+        @(new MarkupString(this.rendered))
+    </div>
+} else {
+    <div class="f-content-detail f-content-detail-empty">
+        This plugin doesn't have any content.
+    </div>
+}
+
+@code {
+    private static readonly GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    private rendered?: string;
+
+    protected override async onInitialized(): Promise<void> {
+        const slug = this.plugin.settings?.["ContentTypeSlug"];
+        if (!slug) return;
+        const id = this.viewState.page.slug ?? "";
+        let item: ContentDetailResponse | undefined;
+        if (ContentDetailViewPlugin.GUID.test(id)) {
+            item = ensureOk(await this.api.contentGetById(slug, id, { siteId: this.viewState.site.id }));
+        } else {
+            item = (ensureOk(await this.api.contentGetAll(slug, { siteId: this.viewState.site.id })) ?? []).at(-1);
+        }
+        if (item === undefined) return;
+        this.rendered = renderTemplate(this.plugin.settings?.["Template"] ?? "No Template", { Item: templateData(item.data) });
+    }
+}

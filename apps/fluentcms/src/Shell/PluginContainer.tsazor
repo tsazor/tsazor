@@ -3,12 +3,17 @@
 @import type { PluginDetailResponse } from "../api/models"
 @inject ViewState ViewState
 
-<div class="f-plugin-container" data-id="@this.plugin.id" data-order="@this.plugin.order" data-cols="@this.plugin.cols">
+<div class="f-plugin-container" data-id="@this.plugin.id" data-order="@this.plugin.order" data-cols="@this.plugin.cols" data-cols-md="@this.plugin.colsMd" data-cols-lg="@this.plugin.colsLg">
     <ErrorBoundary>
         <ChildContent>
-            <div class="f-plugin-container-content @this.setting("Class")">
+            <div class="f-plugin-container-content">
                 @if (this.problem !== undefined) {
                     <Alert intent="warning">@this.problem</Alert>
+                } else if (this.pluginType !== null && this.showsPage()) {
+                    @* On the page, the plugin's settings style it: classes on a wrapper, and inline styles. *@
+                    <div class="f-plugin-container-content-wrapper @this.setting("Class")" style="@this.setting("Style")">
+                        <DynamicComponent Type="@this.pluginType" Parameters="@this.parameters" />
+                    </div>
                 } else if (this.pluginType !== null) {
                     <DynamicComponent Type="@this.pluginType" Parameters="@this.parameters" />
                 }
@@ -45,10 +50,13 @@
     /** The plugin's default type, or the type named by the view (`viewName`). */
     private typeName(): string | undefined {
         const types = this.plugin.definition?.types ?? [];
-        const showsPage = this.ViewState.type === "default" || this.ViewState.type === "pagePreview";
         const viewName = this.ViewState.pluginViewName?.toLowerCase();
-        const type = showsPage ? types.find((t) => t.isDefault) : types.find((t) => t.name?.toLowerCase() === viewName);
+        const type = this.showsPage() ? types.find((t) => t.isDefault) : types.find((t) => t.name?.toLowerCase() === viewName);
         return type?.type ?? undefined;
+    }
+
+    private showsPage(): boolean {
+        return this.ViewState.type === "default" || this.ViewState.type === "pagePreview";
     }
 
     private setting(key: string): string {

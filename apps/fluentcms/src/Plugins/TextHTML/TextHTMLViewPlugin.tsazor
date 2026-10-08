@@ -1,0 +1,17 @@
+@* HTML stored as the plugin's content (FluentCMS's TextHTMLViewPlugin). The site builder's inline editor is not ported. *@
+@inherits BasePlugin
+@import { contentText, pluginContents, type PluginContentItem } from "../Base/plugin-content"
+
+@if (this.item !== undefined) {
+    <div class="f-html-content">
+        @(new MarkupString(contentText(this.item, "Content")))
+    </div>
+}
+
+@code {
+    private item?: PluginContentItem;
+
+    protected override async onInitialized(): Promise<void> {
+        [this.item] = await pluginContents(this.api, "TextHTMLContent", this.plugin.id);
+    }
+}

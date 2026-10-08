@@ -2,6 +2,8 @@
  * The FluentCMS port, end to end: upstream FluentCMS (:5340), the BFF (:5341) serving the built app,
  * and the app in a browser.
  *
+ *   the public site, signed out: the stored layouts (Scriban, component tags, scripts), the view
+ *   plugins rendering what FluentCMS renders, the contact form →
  *   signed out, an admin page says so → the login form shows the API's error for a wrong password →
  *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
  *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
@@ -15,6 +17,7 @@
  * Run: node scripts/verify.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
+import http from "node:http";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -78,7 +81,29 @@ function check(condition, label) {
   if (!condition) failed++;
 }
 
-async function axe(page) {
+/** What FluentCMS's own UI renders at `route` (static SSR, so the backend answers it for the site's host). */
+function upstreamHtml(route) {
+  return new Promise((resolve, reject) => {
+    const { hostname, port } = new URL(BACKEND);
+    http.get({ hostname, port, path: route, headers: { host: new URL(APP).host } }, (response) => {
+      let body = "";
+      response.setEncoding("utf8").on("data", (chunk) => (body += chunk)).on("end", () => resolve(body));
+    }).on("error", reject);
+  });
+}
+
+/** The inner HTML of every `selector` match: in FluentCMS's own render, and in the port's page as it stands. */
+async function renderedLikeUpstream(page, route, selector) {
+  const html = await upstreamHtml(route);
+  const parser = await page.context().newPage();
+  await parser.setContent(html.replace(/<script[\s\S]*?<\/script>/g, ""));
+  const upstream = await parser.evaluate((s) => [...document.querySelectorAll(s)].map((e) => e.innerHTML), selector);
+  await parser.close();
+  const port = await page.evaluate((s) => [...document.querySelectorAll(s)].map((e) => e.innerHTML.replace(/<!--\/?bl-tsazor:[^>]*-->/g, "")), selector);
+  return { upstream, port, same: upstream.length > 0 && JSON.stringify(upstream) === JSON.stringify(port) };
+}
+
+async function axe(page, include) {
   // Fluent fades content in; mid-animation, axe measures the faded colours.
   await page.evaluate(() =>
     Promise.race([
@@ -87,10 +112,10 @@ async function axe(page) {
     ]),
   );
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: AXE });
-  return page.evaluate(async (tags) => {
-    const result = await window.axe.run(document, { runOnly: { type: "tag", values: tags } });
+  return page.evaluate(async ([tags, selector]) => {
+    const result = await window.axe.run(selector ? { include: [selector] } : document, { runOnly: { type: "tag", values: tags } });
     return result.violations.map((v) => `${v.id} (${v.impact}, ${v.nodes.length}×) ${v.nodes[0]?.target.join(" ")}`);
-  }, WCAG_TAGS);
+  }, [WCAG_TAGS, include]);
 }
 
 async function main() {
@@ -105,6 +130,49 @@ async function main() {
   page.on("pageerror", (error) => errors.push(error.message));
 
   try {
+    // The public site, signed out: pages in the layouts stored in the CMS (HTML with Scriban expressions and component tags).
+    await page.goto(`${APP}/`);
+    await page.locator(".f-html-content").first().waitFor({ timeout: 15_000 });
+    const layout = await page.evaluate(() => ({
+      login: document.querySelector("header a[href='/auth/login']")?.textContent?.trim(),
+      section: document.querySelector("section > .container-xl > .f-section[data-name=Main] .f-html-content") !== null,
+      description: document.head.querySelector("meta[name=description]")?.getAttribute("content") ?? "",
+      stylesheet: document.head.querySelector("link[href='/_content/FluentCMS.Web.UI.Components/css/app.min.css']") !== null,
+      scripted: document.documentElement.hasAttribute("data-bs-theme"),
+    }));
+    check(layout.login === "Log In", "a stored layout's Scriban expression: a visitor sees Log In");
+    check(layout.section, "a stored layout's component tag renders its section, with its plugins, inside the layout's own elements");
+    check(layout.description.startsWith("FluentCMS is"), "the layout's head has its components too: PageHead writes the site's meta tags");
+    check(layout.stylesheet && layout.scripted, "the layout's stylesheets load, and its scripts ran (app.js set the theme)");
+    const htmlPlugins = await renderedLikeUpstream(page, "/", ".f-html-content");
+    check(htmlPlugins.same, `the HTML plugins render what FluentCMS renders (${htmlPlugins.port.length} of them)`);
+    const homeViolations = await axe(page, ".contact-us");
+    check(homeViolations.length === 0, `axe on the contact form${homeViolations.length ? `: ${homeViolations.join(" | ")}` : ""}`);
+
+    // A visitor's message (FluentCMS stores it empty: its form is static SSR without a bound model, U4).
+    const visitor = `visitor-${Date.now()}`;
+    await page.getByLabel("Email").fill(`${visitor}@example.com`);
+    await page.getByLabel("Subject").fill(visitor);
+    await page.getByLabel("Message").fill("Hello");
+    await page.getByRole("button", { name: "Send Message" }).click();
+    await page.getByText("Thank you, your message was sent.").waitFor({ timeout: 10_000 });
+    const messages = await page.evaluate(async () => {
+      const home = await (await fetch(`/api/Page/GetByUrl?url=${encodeURIComponent(location.origin + "/")}`)).json();
+      const plugin = Object.values(home.data.current.sections).flat().find((p) => p.definition.name === "Contact Us Plugin");
+      return (await (await fetch(`/api/PluginContent/ContactUsContent/GetAll/${plugin.id}`)).json()).data.map((item) => item.data);
+    });
+    check(messages.some((m) => m.Subject === visitor && m.Email === `${visitor}@example.com` && m.Message === "Hello"), "a visitor's message is stored, under FluentCMS's property names");
+
+    // Into another stored layout, without a page load: the blogs, a content list through its Scriban template.
+    await page.getByRole("link", { name: "Blogs" }).first().click();
+    await page.locator(".f-content-list .blog-post").first().waitFor({ timeout: 10_000 });
+    const list = await renderedLikeUpstream(page, "/blogs", ".f-content-list");
+    check(list.same, "the content list fills its Scriban template as FluentCMS does, character for character (loops, conditions, dates, auto-indent)");
+    await page.locator(".f-content-list .blog-post").first().click();
+    await page.locator(".f-content-detail .card").waitFor({ timeout: 10_000 });
+    const detail = await renderedLikeUpstream(page, new URL(page.url()).pathname, ".f-content-detail");
+    check(detail.same, "a content's detail page, by the id in the rest of its URL, renders as FluentCMS renders it");
+
     // Signed out: the admin pages are for Administrators.
     await page.goto(`${APP}/admin/roles`);
     await page.getByRole("heading", { name: "You have No Access to view this page." }).waitFor({ timeout: 15_000 });

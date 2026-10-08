@@ -1,0 +1,56 @@
+@* The site's blocks to choose from, by category, each shown as it will look (FluentCMS's BlockSelectModal).
+   A preview is a button here: the original's are clickable divs, out of the keyboard's reach. *@
+@import { ensureOk } from "../../api/api-result"
+@import type { BlockDetailResponse } from "../../api/models"
+@inject ViewState ViewState
+@inject FluentCmsClient Api
+
+<Dialog isOpen="@open" title="Choose Block" size="xlarge" onClosed="@this.close">
+    <div class="block-select">
+        <nav class="block-select-categories" aria-label="Block categories">
+            @foreach (const category of ["", ...this.categories()]) {
+                <button type="button" class="block-select-category" aria-pressed="@(this.category === category)" @onclick="() => this.category = category">
+                    @(category || "All")
+                </button>
+            }
+        </nav>
+        <div class="block-select-previews">
+            @foreach (const block of this.filtered()) {
+                <button type="button" class="block-select-preview" @key="block.id" @onclick="() => this.choose(block)">
+                    <span class="block-select-preview-title">@block.category - @block.name</span>
+                    <span class="block-select-preview-content">@(new MarkupString(block.content ?? ""))</span>
+                </button>
+            }
+        </div>
+    </div>
+</Dialog>
+
+@code {
+    @Parameter() open = false;
+    @Parameter() onClose?: EventCallback;
+    @Parameter() onBlockSelected?: EventCallback<BlockDetailResponse>;
+
+    private blocks: BlockDetailResponse[] = [];
+    /** The category shown; "" for all. */
+    private category = "";
+
+    protected override async onInitialized(): Promise<void> {
+        this.blocks = ensureOk(await this.Api.blockGetAllForSite({ siteId: this.ViewState.site.id })) ?? [];
+    }
+
+    private categories(): string[] {
+        return [...new Set(this.blocks.map((block) => block.category ?? ""))];
+    }
+
+    private filtered(): BlockDetailResponse[] {
+        return this.category === "" ? this.blocks : this.blocks.filter((block) => block.category === this.category);
+    }
+
+    private async choose(block: BlockDetailResponse): Promise<void> {
+        await this.onBlockSelected?.invokeAsync(block);
+    }
+
+    private async close(): Promise<void> {
+        await this.onClose?.invokeAsync();
+    }
+}
