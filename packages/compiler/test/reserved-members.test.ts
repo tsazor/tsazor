@@ -30,3 +30,21 @@ describe("TZS031 — names reserved by ComponentBase", () => {
     expect(found.map((d) => d.code)).not.toContain("TZS031");
   });
 });
+
+describe("TZS032 — Blazor's lifecycle names", () => {
+  it("a member under Blazor's lifecycle name is an error with a rename fix, override or not", () => {
+    const source = `<p>@text</p>\n@code {\n    text = "";\n    protected async onInitializedAsync() {}\n    protected override OnParametersSet() {}\n    Dispose() {}\n}`;
+    const found = compile(source, { className: "Demo", generateSourceMap: false }).diagnostics.all.filter((d) => d.code === "TZS032");
+    expect(found.map((d) => [d.pos.line, d.pos.column])).toEqual([[4, 20], [5, 23], [6, 4]]);
+    expect(found[0]!.message).toBe(
+      "Blazor lifecycle name — Tsazor never calls it. 'onInitializedAsync' is Blazor's name. Tsazor calls 'onInitialized', which may be async (`protected override async onInitialized()`).",
+    );
+    expect(found.map((d) => d.fix?.title)).toEqual(["Rename to 'onInitialized'", "Rename to 'onParametersSet'", "Rename to 'dispose'"]);
+    expect(found[0]!.fix!.edits).toEqual([{ pos: { line: 4, column: 20 }, endPos: { line: 4, column: 38 }, text: "onInitialized" }]);
+  });
+
+  it("Tsazor's own hooks are fine", () => {
+    const found = diagnose(`<p>x</p>\n@code {\n    protected override async onInitialized() {}\n    override onAfterRender() {}\n    dispose() {}\n    async disposeAsync() {}\n}`);
+    expect(found.map((d) => d.code)).not.toContain("TZS032");
+  });
+});

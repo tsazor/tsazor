@@ -271,4 +271,12 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     example: "@code {\n  isInitialized = false;\n}\n",
     fix: "Rename the member or the injected service: `loaded = false` instead of `isInitialized = false`, `@inject Injector injector` instead of `@inject Injector inject`.",
   },
+  {
+    code: "TZS032",
+    severity: "error",
+    description:
+      "A `@code` member is named like one of Blazor's lifecycle methods (`onInitializedAsync`, `OnParametersSet`, `OnAfterRenderAsync`, `Dispose`, …). Tsazor never calls it, so its code never runs. Tsazor has one hook for each step, and the hook may be async: `onInitialized`, `onParametersSet`, `onAfterRender`.",
+    example: "<p>@text</p>\n\n@code {\n  text = \"\";\n  protected async onInitializedAsync() {\n    this.text = \"loaded\";\n  }\n}\n",
+    fix: "Rename it to Tsazor's hook (quick fix): `protected override async onInitialized(): Promise<void>`.",
+  },
 ];

@@ -34,7 +34,7 @@ import {
 } from "./rewrite.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 import type { ExpressionValue } from "./expression-values.js";
-import { bodyMemberNames, RESERVED_MEMBERS } from "./reserved-members.js";
+import { BLAZOR_LIFECYCLE_NAMES, bodyMemberNames, RESERVED_MEMBERS } from "./reserved-members.js";
 import { staticMarkupOf } from "./static-markup.js";
 import * as ts from "typescript";
 
@@ -721,9 +721,21 @@ class Codegen {
   private checkReservedMembers(memberCode: CodeBlockNode[]): void {
     for (const block of memberCode) {
       for (const { name, offset } of bodyMemberNames(block.code)) {
-        if (!RESERVED_MEMBERS.has(name)) continue;
         const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, offset)) : block.pos;
-        this.diagnostics.error("TZS031", textRange(pos, name), reservedMessage(name, "a member"));
+        if (RESERVED_MEMBERS.has(name)) {
+          this.diagnostics.error("TZS031", textRange(pos, name), reservedMessage(name, "a member"));
+          continue;
+        }
+        // TZS032: a member under Blazor's lifecycle name (`onInitializedAsync`) is never called.
+        const hook = BLAZOR_LIFECYCLE_NAMES.get(name);
+        if (hook === undefined) continue;
+        const range = textRange(pos, name);
+        this.diagnostics.error(
+          "TZS032",
+          range,
+          `'${name}' is Blazor's name. Tsazor calls '${hook}', which may be async (\`protected override async ${hook}()\`).`,
+          { title: `Rename to '${hook}'`, edits: [{ ...range, text: hook }] },
+        );
       }
     }
   }

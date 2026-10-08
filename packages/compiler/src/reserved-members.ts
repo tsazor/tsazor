@@ -45,6 +45,26 @@ export const RESERVED_MEMBERS: ReadonlySet<string> = new Set([
   "disposeInternal",
 ]);
 
+/**
+ * Blazor's lifecycle method names → Tsazor's hook (TZS032). Tsazor has one hook for each step, and
+ * the hook may be async; a member under Blazor's name is never called.
+ */
+export const BLAZOR_LIFECYCLE_NAMES: ReadonlyMap<string, string> = new Map([
+  ["onInitializedAsync", "onInitialized"],
+  ["OnInitialized", "onInitialized"],
+  ["OnInitializedAsync", "onInitialized"],
+  ["onParametersSetAsync", "onParametersSet"],
+  ["OnParametersSet", "onParametersSet"],
+  ["OnParametersSetAsync", "onParametersSet"],
+  ["onAfterRenderAsync", "onAfterRender"],
+  ["OnAfterRender", "onAfterRender"],
+  ["OnAfterRenderAsync", "onAfterRender"],
+  ["ShouldRender", "shouldRender"],
+  ["SetParametersAsync", "setParametersAsync"],
+  ["Dispose", "dispose"],
+  ["DisposeAsync", "disposeAsync"],
+]);
+
 /** The ComponentBase members a component overrides on purpose (lifecycle hooks). */
 export const OVERRIDABLE_MEMBERS: ReadonlySet<string> = new Set([
   "onInitialized",

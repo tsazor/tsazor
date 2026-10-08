@@ -80,6 +80,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS029: "Template context name conflict.",
   TZS030: "@Bindable()/@State() needs an auto-accessor of its own.",
   TZS031: "Name reserved by ComponentBase.",
+  TZS032: "Blazor lifecycle name — Tsazor never calls it.",
 } as const;
 
 const CODES = DIAGNOSTIC_MESSAGES;

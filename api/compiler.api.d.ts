@@ -365,6 +365,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS029: "Template context name conflict.";
     readonly TZS030: "@Bindable()/@State() needs an auto-accessor of its own.";
     readonly TZS031: "Name reserved by ComponentBase.";
+    readonly TZS032: "Blazor lifecycle name — Tsazor never calls it.";
 };
 
 // DiagnosticBag

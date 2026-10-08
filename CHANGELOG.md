@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler` **TZS032**: a `@code` member under one of Blazor's lifecycle names (`onInitializedAsync`,
+  `OnParametersSet`, `OnAfterRenderAsync`, `Dispose`, …) is an error, with a quick fix that renames it to
+  Tsazor's hook. Tsazor has one hook for each step, and the hook may be async; without `override`, a member
+  called `onInitializedAsync` compiled without a word and never ran. Found while porting FluentCMS.
 - **Fix** `@tsazor/bootstrap`, `@tsazor/fluent`: components await the callbacks they invoke, as Blazor's
   `await OnClick.InvokeAsync(e)` does. Button, Form, Dialog, Drawer, Tabs, Menu/Dropdown items, list
   items, Pagination, Alert and Toast dropped the promise. Two consequences are fixed:
