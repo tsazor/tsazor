@@ -54,6 +54,8 @@ pnpm install
 pnpm demo:dev        # demo app (Vite dev server with HMR)
 pnpm -r build        # build all packages
 pnpm -r test         # run all tests (Vitest + happy-dom)
+pnpm gates           # every browser gate in Edge, Firefox and WebKit (Windows, as CI's browser jobs)
+pnpm ci:local        # CI's check job on a fresh clone of HEAD in Linux (in WSL on Windows)
 ```
 
 Real-world stress test 1: **[Blazing Pizza](apps/blazing-pizza)** (a port of the Blazor workshop

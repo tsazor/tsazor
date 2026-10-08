@@ -31,7 +31,10 @@ Content-Security-Policy, accessibility with keyboard patterns, the Web Worker), 
 Blazing Pizza port — run in all three engines:
 
 ```bash
-TSAZOR_BROWSER=edge    node apps/demo/scripts/verify-a11y.mjs   # default
+pnpm gates                       # every gate in Edge, Firefox and WebKit, one after the other
+pnpm gates firefox --only demo   # one engine, one app's gates
+
+TSAZOR_BROWSER=edge    node apps/demo/scripts/verify-a11y.mjs   # one gate; edge is the default
 TSAZOR_BROWSER=firefox node apps/demo/scripts/verify-a11y.mjs
 TSAZOR_BROWSER=webkit  node apps/demo/scripts/verify-a11y.mjs
 ```

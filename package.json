@@ -14,6 +14,8 @@
     "demo:dev": "pnpm --filter demo dev",
     "demo:build": "pnpm --filter demo build",
     "smoke": "node scripts/tarball-smoke.mjs",
+    "ci:local": "node scripts/ci-local.mjs",
+    "gates": "node scripts/gates.mjs",
     "probe": "node scripts/probe-razor-corpus.mjs",
     "tutorial:dev": "pnpm --filter tutorial dev",
     "api:check": "node scripts/api-snapshot.mjs --check",
