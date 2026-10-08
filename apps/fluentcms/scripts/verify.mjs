@@ -413,17 +413,23 @@ async function main() {
     await contentTypes.filter({ hasText: typeTitle }).getByRole("link", { name: `Fields of ${typeTitle}` }).click();
     await page.getByRole("heading", { name: "Content Type Fields" }).waitFor({ timeout: 10_000 });
 
-    const addField = async (typeName, values, advanced = {}) => {
+    const addField = async (typeName, values, advanced = {}, selects = {}) => {
       await page.getByRole("button", { name: "New Field" }).click();
       await page.getByRole("dialog", { name: "Select a field type" }).getByRole("button", { name: new RegExp(`^${typeName}`) }).click();
       const form = page.getByRole("dialog", { name: "Create New Field" });
       await form.waitFor({ timeout: 10_000 });
       for (const [label, value] of Object.entries(values)) await form.getByLabel(label, { exact: true }).fill(value);
-      if (Object.keys(advanced).length > 0) {
+      if (Object.keys(advanced).length + Object.keys(selects).length > 0) {
         await form.getByRole("tab", { name: "Advanced" }).click();
         for (const [label, value] of Object.entries(advanced)) await form.getByLabel(label, { exact: true }).fill(value);
+        for (const [label, value] of Object.entries(selects)) await form.getByLabel(label, { exact: true }).selectOption(value);
       }
       return form;
+    };
+    const addAndSubmit = async (...args) => {
+      const form = await addField(...args);
+      await form.getByRole("button", { name: "Submit" }).click();
+      await form.waitFor({ state: "detached", timeout: 10_000 });
     };
     const title = await addField("String", { Name: "title", Label: "Title", Description: "The title", "Maximum Length": "80" });
     const settingsViolations = await axe(page);
@@ -448,12 +454,57 @@ async function main() {
     await page.waitForFunction(() => [...document.querySelectorAll("table[aria-label=Fields] tbody tr")].some((row) => row.textContent?.includes("title") && row.textContent.includes("YES")), null, { timeout: 10_000 });
     check(true, "an updated field is saved (required)");
 
+    // Contents: a field of each simple type, then a content through the forms built from them (phase 4b).
+    await addAndSubmit("Number", { Name: "count", Label: "Count", Description: "How many" });
+    await addAndSubmit("Boolean", { Name: "done", Label: "Done", Description: "Finished" });
+    await addAndSubmit("Date Time", { Name: "due", Label: "Due", Description: "When" }, {}, { Format: "dddd, dd MMMM yyyy" });
+    await addAndSubmit("Multi Select", { Name: "tags", Label: "Tags", Description: "Tags" }, { Options: "news\nevents" });
+    await fields.filter({ hasText: "tags" }).waitFor({ timeout: 10_000 });
+    await page.getByRole("button", { name: "Back" }).click();
+    await contentTypes.filter({ hasText: typeTitle }).getByRole("link", { name: `Contents of ${typeTitle}` }).click();
+    await page.getByRole("table", { name: "Contents" }).waitFor({ timeout: 15_000 });
+    const contents = table("Contents");
+    await page.getByRole("link", { name: "New Content" }).click();
+    await page.getByLabel("Title").waitFor({ timeout: 10_000 });
+    await page.getByLabel("Title").fill("First post");
+    await page.getByLabel("Color").selectOption("green");
+    await page.getByLabel("Count").fill("3");
+    await page.locator("label", { hasText: "Done" }).click();
+    await page.getByLabel("Due").fill("2024-06-12");
+    await page.getByRole("group", { name: "Tags" }).getByLabel("news").check();
+    const contentViolations = await axe(page);
+    check(contentViolations.length === 0, `axe on a content form built from its fields${contentViolations.length ? `: ${contentViolations.join(" | ")}` : ""}`);
+    await page.getByRole("button", { name: "Submit" }).click();
+    const row = contents.filter({ hasText: "First post" });
+    await row.waitFor({ timeout: 10_000 });
+    const rowText = await row.innerText();
+    check(
+      ["green", "3", "True", "Wednesday, 12 June 2024", "news"].every((text) => rowText.includes(text)),
+      `a content in the list, each field through its list view and the date in its .NET format (${rowText.replace(/\s+/g, " ")})`,
+    );
+    await row.getByRole("link", { name: "Edit First post" }).click();
+    await page.waitForFunction(() => (document.querySelector("input[type=date]")?.value ?? "") !== "", null, { timeout: 10_000 });
+    check(
+      (await page.getByLabel("Title").inputValue()) === "First post" && (await page.getByLabel("Due").inputValue()) === "2024-06-12" && (await page.getByRole("group", { name: "Tags" }).getByLabel("news").isChecked()),
+      "the update form loads a content's values into each field's view",
+    );
+    await page.getByLabel("Title").fill("First post, edited");
+    await page.getByRole("button", { name: "Submit" }).click();
+    await contents.filter({ hasText: "First post, edited" }).waitFor({ timeout: 10_000 });
+    await contents.filter({ hasText: "First post, edited" }).getByRole("button", { name: "Delete First post, edited" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await contents.filter({ hasText: "First post" }).waitFor({ state: "detached", timeout: 10_000 });
+    check(true, "a content is updated and deleted");
+    await page.getByRole("button", { name: "Back" }).click();
+    await contentTypes.filter({ hasText: typeTitle }).getByRole("link", { name: `Fields of ${typeTitle}` }).click();
+    await fields.filter({ hasText: "color" }).waitFor({ timeout: 10_000 });
+
     await fields.filter({ hasText: "color" }).getByRole("button", { name: "Delete color" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
     await fields.filter({ hasText: "color" }).waitFor({ state: "detached", timeout: 10_000 });
     await page.getByRole("button", { name: "Back" }).click();
     await contentTypes.filter({ hasText: typeTitle }).waitFor({ timeout: 10_000 });
-    check((await contentTypes.filter({ hasText: typeTitle }).innerText()).includes("1"), "a field is deleted; the list counts the rest");
+    check((await contentTypes.filter({ hasText: typeTitle }).innerText()).includes("5"), "a field is deleted; the list counts the rest");
     await contentTypes.filter({ hasText: typeTitle }).getByRole("button", { name: `Delete ${typeTitle}` }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
     await contentTypes.filter({ hasText: typeTitle }).waitFor({ state: "detached", timeout: 10_000 });

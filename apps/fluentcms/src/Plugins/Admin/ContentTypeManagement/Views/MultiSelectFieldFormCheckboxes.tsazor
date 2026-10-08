@@ -1,0 +1,12 @@
+@* A multi-select field as checkboxes (FluentCMS's MultiSelectFieldFormCheckboxes). *@
+@inherits BaseFieldValueView<string[], MultiSelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import { selectOptions, type MultiSelectFieldModel } from "../field-models"
+
+<CheckboxGroup @bind-Value="fieldValue.value" label="@field.label" options="@this.options" />
+
+@code {
+    private get options(): { value: string; label: string }[] {
+        return selectOptions(this.field.options).map((option) => ({ value: option, label: option }));
+    }
+}

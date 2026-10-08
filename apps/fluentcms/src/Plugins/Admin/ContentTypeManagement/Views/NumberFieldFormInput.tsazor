@@ -1,0 +1,6 @@
+@* A number field as a number input (FluentCMS's NumberFieldFormInput), within its minimum and maximum. *@
+@inherits BaseFieldValueView<number | null, NumberFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { NumberFieldModel } from "../field-models"
+
+<NumberInput @bind-Value="fieldValue.value" label="@field.label" placeholder="@(field.placeholder ?? undefined)" required="@field.required" min="@field.minimumValue" max="@field.maximumValue" />

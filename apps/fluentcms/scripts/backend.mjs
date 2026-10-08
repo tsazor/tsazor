@@ -130,6 +130,10 @@ async function main() {
         ASPNETCORE_URLS: BACKEND,
         ClientSettings__Url: BACKEND,
         Logging__LogLevel__Default: "Warning",
+        // FluentCMS writes a content's dates with DateTime.ToString(), in the server's culture ("06.06.2024
+        // 17:04:05" on a German machine). Its Blazor Server UI parsed them back on the same server; a browser
+        // can't know that culture. Invariant: "06/06/2024 17:04:05" everywhere (port-fluentcms.md, U2).
+        DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "true",
       },
     });
     child.on("exit", (code) => process.exit(code ?? 0));

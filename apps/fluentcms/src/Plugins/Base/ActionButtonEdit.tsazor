@@ -1,11 +1,12 @@
-@* The "edit" link in a list's row (FluentCMS's ActionButtonEdit). *@
+@* The "edit" link in a list's row (FluentCMS's ActionButtonEdit). Its other attributes (aria-label) go onto the link. *@
 
 @if (visible) {
-    <Button href="@href" appearance="subtle" size="small">@label</Button>
+    <Button href="@href" appearance="subtle" size="small" @attributes="@additionalAttributes">@label</Button>
 }
 
 @code {
     @Parameter() href = "";
     @Parameter() label = "Edit";
     @Parameter() visible = true;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 }

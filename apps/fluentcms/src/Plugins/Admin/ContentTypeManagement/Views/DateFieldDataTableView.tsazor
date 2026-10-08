@@ -1,0 +1,7 @@
+@* A date field in the content list, in the field's .NET format (FluentCMS's DateFieldDataTableView). *@
+@inherits BaseFieldValueView<string | null, DateFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { DateFieldModel } from "../field-models"
+@import { dateText } from "../date-values"
+
+@dateText(fieldValue.value, field.format)

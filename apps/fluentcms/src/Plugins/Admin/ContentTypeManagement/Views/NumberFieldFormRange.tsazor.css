@@ -1,0 +1,11 @@
+.range-field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    align-items: center;
+}
+
+.range-field label {
+    grid-column: 1 / -1;
+    font-weight: 600;
+}

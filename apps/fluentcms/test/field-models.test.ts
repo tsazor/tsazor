@@ -9,6 +9,7 @@ import {
     toContentTypeField,
     toFieldModel,
 } from "../src/Plugins/Admin/ContentTypeManagement/field-models";
+import { contentData, fieldValueOf } from "../src/Plugins/Admin/ContentTypeManagement/field-values";
 
 describe("a content type's fields (FluentCMS's FieldModel)", () => {
     it("lists the eight field types in FluentCMS's order", () => {
@@ -61,5 +62,21 @@ describe("a content type's fields (FluentCMS's FieldModel)", () => {
 
     it("splits a select's options by line", () => {
         expect(selectOptions(" red \n\ngreen\r\nblue ")).toEqual(["red", "green", "blue"]);
+    });
+});
+
+describe("a content's values (FluentCMS's FieldValue)", () => {
+    it("reads each type out of the stored data, and a new content's from the defaults", () => {
+        const title = Object.assign(newFieldModel("string"), { name: "title", defaultValue: "Untitled" });
+        const count = Object.assign(newFieldModel("number"), { name: "count" });
+        const done = Object.assign(newFieldModel("bool"), { name: "done" });
+        const tags = Object.assign(newFieldModel("multi-select"), { name: "tags" });
+        const data = { title: "Hello", count: 3, done: true, tags: ["a", 1] };
+        const values = [title, count, done, tags].map((field) => fieldValueOf(field, data));
+        expect(values.map((value) => value.value)).toEqual(["Hello", 3, true, ["a", "1"]]);
+        expect(contentData(values)).toEqual({ title: "Hello", count: 3, done: true, tags: ["a", "1"] });
+        expect([title, count, done, tags].map((field) => fieldValueOf(field).value)).toEqual(["Untitled", null, false, []]);
+        // Data of the wrong shape reads as empty, not as garbage.
+        expect(fieldValueOf(count, { count: "3" }).value).toBeNull();
     });
 });

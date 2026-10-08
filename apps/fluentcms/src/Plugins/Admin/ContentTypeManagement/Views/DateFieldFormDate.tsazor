@@ -1,0 +1,6 @@
+@* A date field as a date picker (FluentCMS's DateFieldFormDate). *@
+@inherits BaseFieldValueView<string | null, DateFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { DateFieldModel } from "../field-models"
+
+<DateFieldInput kind="date" field="@field" fieldValue="@fieldValue" />

@@ -1,0 +1,14 @@
+@* A number field as a slider (FluentCMS's NumberFieldFormRange): a plain range input, bound with @bind. *@
+@inherits BaseFieldValueView<number | null, NumberFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { NumberFieldModel } from "../field-models"
+
+<div class="range-field">
+    <label for="@this.inputId">@field.label</label>
+    <input id="@this.inputId" type="range" min="@(field.minimumValue ?? 0)" max="@(field.maximumValue ?? 100)" required="@field.required" @bind="fieldValue.value" />
+    <output for="@this.inputId">@fieldValue.value</output>
+</div>
+
+@code {
+    private readonly inputId = `range-${Math.random().toString(36).slice(2)}`;
+}

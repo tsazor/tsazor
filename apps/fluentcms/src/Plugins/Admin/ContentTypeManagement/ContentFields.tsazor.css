@@ -1,0 +1,11 @@
+.content-fields {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (max-width: 640px) {
+    .content-field {
+        grid-column: 1 / -1 !important;
+    }
+}

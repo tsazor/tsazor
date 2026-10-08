@@ -1,0 +1,8 @@
+@* A single-select field in the content list as a badge (FluentCMS's SelectFieldDataTableBadge). *@
+@inherits BaseFieldValueView<string | null, SelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { SelectFieldModel } from "../field-models"
+
+@if (fieldValue.value) {
+    <Badge intent="info">@fieldValue.value</Badge>
+}

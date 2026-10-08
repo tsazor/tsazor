@@ -1,0 +1,10 @@
+@* A multi-select field in the content list as badges (FluentCMS's MultiSelectFieldDataTableBadges). *@
+@inherits BaseFieldValueView<string[], MultiSelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { MultiSelectFieldModel } from "../field-models"
+
+<Stack direction="horizontal" gap="xs">
+    @foreach (const item of fieldValue.value) {
+        <Badge intent="info">@item</Badge>
+    }
+</Stack>

@@ -1,0 +1,10 @@
+@* In place of a field view that isn't ported yet (the ones that need track B's components). *@
+@inherits BaseFieldValueView<unknown, AnyFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { AnyFieldModel } from "../field-models"
+
+<span class="not-ported">@field.label: @viewName is not ported yet.</span>
+
+@code {
+    @Parameter() viewName = "";
+}

@@ -1,0 +1,6 @@
+@* A yes/no field as a switch (FluentCMS's BooleanFieldFormSwitch). *@
+@inherits BaseFieldValueView<boolean, BooleanFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { BooleanFieldModel } from "../field-models"
+
+<Switch @bind-Value="fieldValue.value" label="@field.label" />

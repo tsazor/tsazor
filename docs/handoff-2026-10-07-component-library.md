@@ -19,8 +19,10 @@ everything pushed.
 > - **Gates:** `pnpm --filter fluentcms verify` (in `pnpm gates` and CI's e2e job).
 > - **Track B's purpose (owner):** proving that complex components *can* be built, not better components; pick
 >   by the capability a component proves (see port-fluentcms.md).
-> - **Next:** phase 4 (content types, with the file picker `FileSelectorModal`); open: track B's upload drop
->   zone and progress.
+> - **Phase 4 so far:** 4a content types and their field settings, 4b contents (list and forms built from the
+>   fields' views); findings F30–F34, upstream U2 (dates in the server's culture: the port's backend runs invariant).
+> - **Next:** 4c, the field views that need track B (rich text as a JS widget, markdown, autocomplete, the file
+>   pickers with `FileSelectorModal`); open: track B's upload drop zone and progress.
 
 ## CI: blocked by GitHub billing, not by the code
 

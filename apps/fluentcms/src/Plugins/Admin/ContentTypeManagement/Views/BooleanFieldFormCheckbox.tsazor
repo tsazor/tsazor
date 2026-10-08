@@ -1,0 +1,6 @@
+@* A yes/no field as a checkbox (FluentCMS's BooleanFieldFormCheckbox). *@
+@inherits BaseFieldValueView<boolean, BooleanFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { BooleanFieldModel } from "../field-models"
+
+<Checkbox @bind-Value="fieldValue.value" label="@field.label" />

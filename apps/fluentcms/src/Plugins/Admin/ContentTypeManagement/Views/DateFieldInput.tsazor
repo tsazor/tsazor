@@ -1,0 +1,16 @@
+@* A date field's picker (FluentCMS's DateFieldFormDate, Time and DateTime share it): the stored .NET DateTime as
+   the text the input edits, and back. *@
+@inherits BaseFieldValueView<string | null, DateFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { DateFieldModel } from "../field-models"
+@import { dateInputText, fromDateInput, type DateInputKind } from "../date-values"
+
+<DateInput type="@kind" Value="@dateInputText(fieldValue.value, kind)" ValueChanged="@this.changed" label="@field.label" required="@field.required" />
+
+@code {
+    @Parameter() kind: DateInputKind = "date";
+
+    private changed(text: string | null): void {
+        this.fieldValue.value = fromDateInput(text ?? "", this.kind, this.fieldValue.value);
+    }
+}

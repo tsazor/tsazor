@@ -85,6 +85,18 @@ API already — they skip this step.
 - **Contracts.** Expose the endpoints with OpenAPI (`AddOpenApi()`) and generate the client with
   `@tsazor/dotnet`: DTO changes on the server become compile errors in the pages. Sleipnir
   commands are an alternative for teams that use it ([roadmap-sleipnir.md](roadmap-sleipnir.md)).
+- **Secrets the server held.** A Blazor Server app may call a backend with credentials the browser
+  never saw: an API token, the user's JWT. The browser must not hold them either. Put a BFF in
+  front: it keeps the user's token in an HttpOnly session cookie and adds both tokens to the
+  calls it passes on. If the backend keys anything on the host (a multi-site CMS finds the site,
+  and serves its files, by it), the proxy must pass the browser's host on (YARP:
+  `AddOriginalHost`). Example: `apps/fluentcms/bff`, a YARP BFF in front of FluentCMS.
+- **Culture in strings.** On the server, a value written with `ToString()` and parsed back ran in
+  one culture, so a culture-specific string never showed. Across the boundary the browser can't
+  know the server's culture: FluentCMS returns a content's dates as `06.06.2024 17:04:05` on a
+  German server, and `new Date()` reads that as the 6th of June only by luck. Send ISO dates and
+  invariant numbers (System.Text.Json does for typed DTOs); look out for `object` and
+  `Dictionary<string, object>` payloads that pass through `ToString()`.
 
 ## The codemod
 
