@@ -69,7 +69,7 @@ for (const file of files) {
     });
     await writeFile(path.join(distDir, `${className}.js`), js);
     if (INTERNAL.has(className)) continue;
-    exports.push(`export { default as ${className} } from "./${className}.js";`);
+    exports.push(`export { default as ${className} } from "./${className}.js"`);
   } catch (error) {
     errors.push({ file, details: `  ${error instanceof Error ? error.stack : String(error)}` });
   }
@@ -112,14 +112,14 @@ for (const [exportName, declaration] of Object.entries(declarations)) {
 }
 
 // Plain helpers the package exports besides its components.
-exports.push('export { tooltip } from "./tooltip-attachment.js";');
+exports.push('export { tooltip } from "./tooltip-attachment.js"');
 // The services the components use, in one call (package.json `tsazor.setup` names it).
-exports.push('export { addBootstrap } from "./services.js";');
+exports.push('export { addBootstrap } from "./services.js"');
 // The toast service comes with the skin: register it, inject it, call show().
-exports.push('export { Toaster } from "@tsazor/ui";');
+exports.push('export { Toaster } from "@tsazor/ui"');
 // The DataGrid's sorting and paging state come with the skin too.
-exports.push('export { GridSort, PaginationState } from "@tsazor/ui";');
-for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js";`);
+exports.push('export { GridSort, PaginationState } from "@tsazor/ui"');
+for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js"`);
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
 // sibling `.d.ts` written above.

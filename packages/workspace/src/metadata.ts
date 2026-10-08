@@ -470,6 +470,8 @@ export function componentTypeDeclaration(
   const runtimeNames = new Set<string>();
   /** type imports keyed by rebased specifier → names */
   const typeImports = new Map<string, Set<string>>();
+  /** default type imports (another component, `@import Menu from "./Menu.tsazor"`) keyed by specifier → local name */
+  const defaultImports = new Map<string, string>();
 
   const declaringDirOf = (file: string | undefined): string | undefined => {
     if (file === undefined || options?.packageDir === undefined) return undefined;
@@ -486,10 +488,18 @@ export function componentTypeDeclaration(
       } else if (reference.kind === "import" && reference.specifier !== undefined && reference.file !== undefined) {
         const fromDir = declaringDirOf(reference.file);
         const declarationDir = options?.declarationDir;
-        const specifier =
-          fromDir !== undefined && isPathLike(reference.specifier)
+        // Another component of the library: its declaration lands next to this one
+        // (`Menu.d.ts`, imported as `./Menu.js`), not the `.tsazor` the package doesn't ship.
+        const sibling = declarationDir !== undefined && reference.specifier.endsWith(".tsazor") && isPathLike(reference.specifier);
+        const specifier = sibling
+          ? `./${path.basename(reference.specifier, ".tsazor")}.js`
+          : fromDir !== undefined && isPathLike(reference.specifier)
             ? rebaseSpecifier(reference.specifier, fromDir, declarationDir ?? fromDir)
             : reference.specifier;
+        if (reference.imported === "default") {
+          defaultImports.set(specifier, reference.name);
+          continue;
+        }
         const names = typeImports.get(specifier) ?? new Set<string>();
         names.add(reference.imported ?? reference.name);
         typeImports.set(specifier, names);
@@ -520,6 +530,9 @@ export function componentTypeDeclaration(
   const lines: string[] = [];
   if (runtimeNames.size > 0) {
     lines.push(`import type { ${[...runtimeNames].sort().join(", ")} } from "${runtimeTypes}";`);
+  }
+  for (const [specifier, name] of [...defaultImports].sort(([a], [b]) => a.localeCompare(b))) {
+    lines.push(`import type ${name} from "${specifier}";`);
   }
   for (const [specifier, names] of [...typeImports].sort(([a], [b]) => a.localeCompare(b))) {
     lines.push(`import type { ${[...names].sort().join(", ")} } from "${specifier}";`);

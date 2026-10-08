@@ -82,7 +82,7 @@ for (const file of files) {
       return `${from}${spec}.js${quote}`;
     });
     await writeFile(path.join(distDir, `${className}.js`), js);
-    if (!INTERNAL.has(className)) exports.push(`export { default as ${className} } from "./${className}.js";`);
+    if (!INTERNAL.has(className)) exports.push(`export { default as ${className} } from "./${className}.js"`);
   } catch (error) {
     errors.push({ file, details: `  ${error instanceof Error ? error.stack : String(error)}` });
   }
@@ -143,7 +143,7 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),

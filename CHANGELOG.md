@@ -5,6 +5,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/bootstrap`, `@tsazor/fluent`: the published declarations type-check without `skipLibCheck`:
+  - a component that names another component's type (MenuItem's `Menu`, Tab's `Tabs`) imported it as
+    `import type { default } from "../src/Menu.tsazor"`, which is invalid TypeScript and points into source the
+    package doesn't ship; with `skipLibCheck` the type silently became `any`. It is `import type Menu from "./Menu.js"` now
+    (`@tsazor/workspace`'s `componentTypeDeclaration`);
+  - `index.d.ts` had empty statements (`;;`);
+  - `@tsazor/fluent` exported two things as `Toast`, the component and `@tsazor/ui`'s toast type; it exports the
+    component, and the type comes from `@tsazor/ui`.
+
+  A test per skin checks every declaration as a consumer sees it.
 - `@tsazor/fluent`: **TreeView** (Fluent UI Blazor's FluentTreeView): `items` in nested levels, `@bind-selectedItem`. It
   follows the ARIA tree pattern: one node takes Tab, the arrow keys move and open or close, Home and End jump, Enter and
   Space select; the selection's ancestors start open. `@tsazor/ui` has the model both skins can share: `TreeViewItem`
