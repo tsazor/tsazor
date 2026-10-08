@@ -34,6 +34,7 @@ const GATES = [
   { name: "Accessibility — @tsazor/fluent", run: [["--filter", "gallery", "verify:a11y"]] },
   { name: "Accessibility — @tsazor/bootstrap", run: [["--filter", "demo", "verify:a11y"]] },
   { name: "One set of pages, two skins", run: [["--filter", "skins", "verify"]] },
+  { name: "The starter (npm create tsazor)", run: [["--filter", "starter", "verify"]] },
   { name: "Incremental migration", engines: false, run: [["--filter", "migration-sample", "verify"]] },
   {
     name: "Sleipnir ticker (synthetic mode)",
@@ -105,11 +106,11 @@ const started = Date.now();
 const seconds = (since) => Math.round((Date.now() - since) / 1000);
 
 if (!flag("--skip-build")) {
-  // The gates' apps and the packages they use, in dependency order (`app...`). Some gates
-  // build their own dist only when it is missing, so a stale one would pass unnoticed.
+  // Every package (the starter gate packs them all) and the gates' apps, in dependency order.
+  // Some gates build their own dist only when it is missing, so a stale one would pass unnoticed.
   const apps = [...new Set(selectedGates.map(appOf))];
-  console.log(`\n::: build ${apps.join(", ")} and their packages`);
-  if (!run("pnpm", ["-r", ...apps.flatMap((app) => ["--filter", `${app}...`]), "build"])) {
+  console.log(`\n::: build the packages and ${apps.join(", ")}`);
+  if (!run("pnpm", ["-r", "--filter", "./packages/*", ...apps.flatMap((app) => ["--filter", `${app}...`]), "build"])) {
     console.error("\ngates: the build failed — no gate ran.");
     process.exit(1);
   }

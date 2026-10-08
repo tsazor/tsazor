@@ -2,13 +2,14 @@
 /**
  * Phase 5.1 gate: tarball smoke test.
  *
- * Packs every shipped package (`pnpm pack`), installs the tarballs into a
- * scratch project with its own node_modules (no workspace linking — exactly
- * the resolution an external user sees) and runs these checks there:
+ * Packs every shipped package (`pnpm pack`), lets the packed `create-tsazor`
+ * write a new app (`--ui` the @tsazor/bootstrap tarball, `--dotnet`), installs
+ * the tarballs there with its own node_modules (no workspace linking — exactly
+ * the resolution an external user sees) and runs these checks:
  *
- *   1. `vite build` against a minimal .tsazor project (plugin + compiler +
- *      runtime + routes manifest, @tsazor/bootstrap via `@using`),
- *   2. a Vitest run that renders a .tsazor component via @tsazor/testing,
+ *   1. `vite build` of the starter's app (plugin + compiler + runtime + routes
+ *      manifest, the library's setup: @using, styles, services, layout),
+ *   2. the starter's Vitest test, which renders a page via @tsazor/testing,
  *   3. `tsazor check` (the @tsazor/cli bin of the installed tarball),
  *   4. the @tsazor/dotnet entry points, CLI generation and a type check of
  *      the generated output.
@@ -25,6 +26,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, relative } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -43,6 +45,7 @@ const SHIPPED = [
   "bootstrap",
   "fluent",
   "dotnet",
+  "create-tsazor",
 ];
 
 const keep = process.argv.includes("--keep");
@@ -97,146 +100,57 @@ for (const pkg of SHIPPED) {
   console.log(`  ${manifest.name} -> ${file}`);
 }
 
-// 2. Scratch project ----------------------------------------------------------
+// 2. Scratch project — written by the packed starter, as a user gets it --------
 
 const tarballOf = (name) => tarballByPkg.get(name) ?? (() => { throw new Error(`tarball for ${name} is missing`); })();
-const deps = {};
-for (const name of ["@tsazor/runtime", "@tsazor/compiler", "@tsazor/workspace", "@tsazor/lsp", "@tsazor/cli", "@tsazor/vite-plugin", "@tsazor/testing", "@tsazor/ui", "@tsazor/worker", "@tsazor/bootstrap", "@tsazor/fluent", "@tsazor/dotnet"]) {
-  deps[name] = tarballOf(name);
+const tarballFile = (name) => join(tarballs, tarballOf(name).replace("file:../tarballs/", ""));
+
+step("create-tsazor (packed) app --ui <the @tsazor/bootstrap tarball> --dotnet");
+const starter = join(scratchRoot, "starter");
+extractTarball(tarballFile("create-tsazor"), starter);
+rmSync(app, { recursive: true, force: true });
+run("node", [join(starter, "package", "dist", "index.js"), "app", "--ui", tarballFile("@tsazor/bootstrap"), "--dotnet", "--no-install"], scratchRoot);
+
+// What npm pack drops or renames (.gitignore, dot folders) must arrive in the app.
+for (const file of [".gitignore", ".vscode/extensions.json", "src/Pages/Counter.test.ts", "public/sample-data/weather.json"]) {
+  if (!existsSync(join(app, file))) failures.push(`starter: ${file} is missing`);
 }
+
+// Every shipped package from its tarball — the starter's @tsazor/* ranges are not in the
+// registry yet, and the transitive ones (@tsazor/testing -> @tsazor/runtime) need overrides.
+const manifest = JSON.parse(readFileSync(join(app, "package.json"), "utf8"));
 const overrides = {};
-for (const [name, spec] of Object.entries(deps)) overrides[name] = spec;
-
-const scratchManifest = {
-  name: "tsazor-tarball-smoke",
-  private: true,
-  version: "0.0.0",
-  type: "module",
-  dependencies: deps,
-  // Point transitive @tsazor dependencies (e.g. @tsazor/testing -> @tsazor/runtime,
-  // @tsazor/lsp -> @tsazor/compiler) at the same tarballs — they are not in
-  // the registry.
-  pnpm: { overrides },
-  devDependencies: {
-    vite: "^7.1.7",
-    vitest: "^3.2.7",
-    "happy-dom": "^18.0.1",
-    typescript: "^5.9.2",
-    "@types/node": "^20.17.0",
-  },
-};
-writeFileSync(join(app, "package.json"), JSON.stringify(scratchManifest, null, 2) + "\n");
-
-const tsconfig = {
-  compilerOptions: {
-    target: "ES2022",
-    module: "ESNext",
-    moduleResolution: "bundler",
-    strict: true,
-    skipLibCheck: true,
-    noEmit: true,
-    types: ["vite/client", "@tsazor/vite-plugin/client"],
-  },
-  include: ["src", "vite.config.ts", "vitest.config.ts"],
-};
-writeFileSync(join(app, "tsconfig.json"), JSON.stringify(tsconfig, null, 2) + "\n");
-
-// vite.config.ts — exactly the Getting Started form
-writeFileSync(join(app, "vite.config.ts"), `import { defineConfig } from "vite";
-import { tsazor } from "@tsazor/vite-plugin";
-
-export default defineConfig({
-  plugins: [tsazor()],
-});
-`);
-
-// vitest.config.ts — .tsazor imports in the test go through the same plugin call
-writeFileSync(join(app, "vitest.config.ts"), `import { defineConfig } from "vitest/config";
-import tsazor from "@tsazor/vite-plugin";
-
-export default defineConfig({
-  plugins: [tsazor()],
-  test: { environment: "happy-dom" },
-});
-`);
-
-mkdirSync(join(app, "src", "Pages"), { recursive: true });
-mkdirSync(join(app, ".vscode"), { recursive: true });
-
-writeFileSync(join(app, "index.html"), `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Tsazor tarball smoke</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/Program.ts"></script>
-  </body>
-</html>
-`);
-
-// _Imports.tsazor — the standard imports (Getting Started) plus a package @using
-writeFileSync(join(app, "src", "_Imports.tsazor"), `@import { ComponentBase, Parameter, CascadingParameter, EventCallback, RenderTreeBuilder, inject } from "@tsazor/runtime"
-@import { Router, RouteView, NavLink, PageTitle } from "@tsazor/runtime"
-@import { TsazorHttp, EditContext } from "@tsazor/runtime"
-@import type { RenderFragment, RouteData } from "@tsazor/runtime"
-@using @tsazor/bootstrap
-`);
-
-writeFileSync(join(app, "src", "App.tsazor"), `@import Home from "./Pages/Home.tsazor"
-
-<Home />
-`);
-
-// A page that uses a Bootstrap building block from the installed
-// @tsazor/bootstrap tarball (component resolution via the package manifest)
-writeFileSync(join(app, "src", "Pages", "Home.tsazor"), `@page "/"
-
-@import { Accordion, AccordionItem } from "@tsazor/bootstrap"
-
-<h1>Smoke</h1>
-
-<Accordion>
-    <AccordionItem Title="A">a</AccordionItem>
-    <AccordionItem Title="B">b</AccordionItem>
-</Accordion>
-
-<p role="status">Count: <strong>@count</strong></p>
-<button class="smoke-add" @onclick="increment">+</button>
-
-@code {
-    private count = 0;
-
-    private increment() {
-        this.count++;
-    }
+for (const name of tarballByPkg.keys()) {
+  if (name === "create-tsazor") continue;
+  overrides[name] = tarballOf(name);
+  if (!manifest.devDependencies[name]) manifest.dependencies[name] = tarballOf(name);
+  else manifest.devDependencies[name] = tarballOf(name);
 }
-`);
+manifest.pnpm = { overrides };
+manifest.devDependencies["@types/node"] = "^20.17.0";
+writeFileSync(join(app, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
 
-writeFileSync(join(app, "src", "Program.ts"), `import { createTsazorApp } from "@tsazor/runtime";
-import App from "./App.tsazor";
-import routes from "virtual:tsazor-routes";
-
-createTsazorApp({ root: App, routes });
-`);
-
-// A Vitest test via the installed @tsazor/testing tarball
-mkdirSync(join(app, "src", "test"), { recursive: true });
-writeFileSync(join(app, "src", "test", "counter.test.ts"), `import { describe, expect, it } from "vitest";
-import { render } from "@tsazor/testing";
-import Home from "../Pages/Home.tsazor";
-
-describe("tarball smoke", () => {
-    it("renders the Home page and increments the counter", async () => {
-        const { container, renderer } = await render(Home as never);
-        container.querySelector("button.smoke-add")!.click();
-        await renderer.waitUntilIdle();
-        expect(container.querySelector("strong")?.textContent).toBe("1");
-        expect(container.textContent).toContain("Smoke");
-    });
-});
-`);
+/** Extracts a package tarball (`package/…`) into `dir` — no tar binary needed. */
+function extractTarball(file, dir) {
+  const tar = gunzipSync(readFileSync(file));
+  for (let offset = 0; offset + 512 <= tar.length; ) {
+    const header = tar.subarray(offset, offset + 512);
+    if (header.every((byte) => byte === 0)) break;
+    const text = (start, length) => {
+      const raw = header.subarray(start, start + length);
+      const end = raw.indexOf(0);
+      return raw.subarray(0, end < 0 ? raw.length : end).toString("utf8");
+    };
+    const name = [text(345, 155), text(0, 100)].filter(Boolean).join("/");
+    const size = parseInt(text(124, 12).trim() || "0", 8);
+    const start = offset + 512;
+    if (text(156, 1) === "0" || text(156, 1) === "") {
+      mkdirSync(dirname(join(dir, name)), { recursive: true });
+      writeFileSync(join(dir, name), tar.subarray(start, start + size));
+    }
+    offset = start + Math.ceil(size / 512) * 512;
+  }
+}
 
 // The @tsazor/dotnet smoke: a mini OpenAPI document ...
 writeFileSync(join(app, "dotnet-openapi.json"), JSON.stringify({

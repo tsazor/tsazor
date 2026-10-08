@@ -8,6 +8,7 @@
     { "path": "packages/cli" },
     { "path": "packages/dotnet" },
     { "path": "packages/ui" },
-    { "path": "packages/worker" }
+    { "path": "packages/worker" },
+    { "path": "packages/create-tsazor" }
   ]
 }

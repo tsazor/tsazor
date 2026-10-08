@@ -79,6 +79,8 @@ jobs:
         run: pnpm --filter demo verify:a11y
       - name: One set of pages, two skins — the same checks on both
         run: pnpm --filter skins verify
+      - name: The starter — npm create tsazor with each library, from the packed packages (R3)
+        run: pnpm --filter starter verify
       - name: Incremental migration — Blazor Server + Tsazor behind YARP (E6)
         run: pnpm --filter migration-sample verify
       - name: Sleipnir ticker (synthetic mode)
@@ -126,3 +128,5 @@ jobs:
         run: pnpm --filter demo verify:a11y
       - name: One set of pages, two skins
         run: pnpm --filter skins verify
+      - name: The starter
+        run: pnpm --filter starter verify

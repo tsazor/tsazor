@@ -79,11 +79,17 @@ pnpm --filter sleipnir-ticker codegen   # regenerate the generated TS client in 
 node apps/sleipnir-ticker/scripts/verify.mjs   # E2E (synthetic feed, self-starting)
 ```
 
-Your own app:
+Your own app, in the shape of `dotnet new blazorwasm` (layout, nav menu, Home, Counter, Weather, a test):
 
 ```bash
-npm create vite@latest my-app -- --template vanilla-ts
-cd my-app && npm install @tsazor/runtime @tsazor/vite-plugin
+npm create tsazor@latest my-app                            # optional: -- --ui <any component library>
+cd my-app && npm run dev
+```
+
+By hand, in an existing Vite project:
+
+```bash
+npm install @tsazor/runtime @tsazor/vite-plugin
 ```
 
 ```ts

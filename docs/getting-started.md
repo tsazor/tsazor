@@ -4,6 +4,23 @@ Coming from C#? The [C# to TypeScript cheat sheet](csharp-to-typescript.md) maps
 and the base class library, and the interactive tutorial's Blazor track opens with a short
 chapter, "TypeScript for C# developers".
 
+## A new app
+
+```bash
+npm create tsazor@latest my-app                          # pnpm create tsazor, yarn create tsazor, bun create tsazor
+npm create tsazor@latest my-app -- --ui @tsazor/bootstrap  # with a component library
+```
+
+The starter writes the app `dotnet new blazorwasm` would:
+- `Program.ts`, `App.tsazor` with the Router, and `Layout/MainLayout` and `NavMenu`;
+- the pages Home, Counter and Weather, plus a Counter test;
+- strict TypeScript, and the VS Code extension recommended.
+
+`--ui` takes any component library. It reads the library's setup from its `package.json` and
+writes it into the app: the stylesheets, the services and the layout components
+([component-libraries.md](component-libraries.md)). `--dotnet` adds `@tsazor/dotnet` for an
+ASP.NET Core backend. Without options, the starter asks for what is missing.
+
 ## Setup
 
 Tsazor apps run on Vite (dev server, build, HMR). The plugin compiles every `.tsazor` file to an

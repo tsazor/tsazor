@@ -17,6 +17,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **Fix** `@tsazor/bootstrap`, `@tsazor/fluent`: `sideEffects` in `package.json`. An app that uses a few
   components no longer bundles the whole library. The starter's app with Bootstrap went from 66.7 KB gz
   to 30.7 KB gz.
+- New package `create-tsazor` (R3, [design-create-tsazor.md](docs/design-create-tsazor.md)):
+  - `npm create tsazor@latest my-app` writes an app in the shape of `dotnet new blazorwasm`: MainLayout
+    and NavMenu, Home, Counter, Weather, a Counter test, and strict TypeScript.
+  - `--ui <package>` sets up any component library from its `tsazor.setup`.
+  - `--dotnet` adds `@tsazor/dotnet`.
+  - The tarball smoke now builds and tests the app the packed starter writes.
 - `@tsazor/bootstrap` `addBootstrap` and `@tsazor/fluent` `addFluent`: they register the services the
   components use (the `Toaster`) in one call, `createTsazorApp({ services: addBootstrap })`. This is
   Blazor's `AddMudServices()`.

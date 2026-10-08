@@ -3,7 +3,7 @@
 Status (2026-10-08): **steps 1–4 of the order below are done**, and of step 5 the Svelte-style features,
 the component library (Tier 1, both skins) and `@tsazor/worker`. **Scope cut (owner, 2026-10-08):** E12
 and the Sleipnir integration move after 1.0, E12 first. Both are separate, additive packages; neither
-changes the API of the runtime or the compiler. **Left for 1.0:** R3, R2, E3, E10, the E9 screen-reader
+changes the API of the runtime or the compiler. **Left for 1.0:** R2, E3, E10, the E9 screen-reader
 audit, the known follow-ups, then going public (R4, provenance). The repository stays private until then.
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
 
@@ -58,8 +58,8 @@ the tutorial chapter with worker support in the preview follows).
 - **S2 — Strict only:** `getting-started`, templates and `npm create tsazor` use `strict: true`.
   `tsazor check` documents strict as the supported configuration. **Done (2026-10-06):** `tsazor check`
   (and the Vite plugin's check) warns `TSZSTRICT` for a tsconfig that leaves `strict` or one of its
-  flags off; getting-started states strict as the only supported configuration. The templates follow
-  with R3.
+  flags off; getting-started states strict as the only supported configuration. The starter's template
+  is strict too (R3, 2026-10-08).
 - **S3 — Never block development:** verify, and pin in tests, that the dev server and HMR keep
   running with TS type errors (shown as an overlay or console output, not as a failed module).
   Production builds keep failing on errors. **Done (2026-10-04):** the transform never type-checks
@@ -178,7 +178,14 @@ architecture and security take priority.
   checkout, the scope hash of backslash paths), both fixed.
 - **R2 — npm publishing:** versioning, changelog, provenance, and the publish workflow.
 - **R3 — `npm create tsazor`:** project starter (strict, Vite, `_Imports.tsazor`, a sample
-  component and test, optional `@tsazor/dotnet`).
+  component and test, optional `@tsazor/dotnet`). **Done (2026-10-08,**
+  [design-create-tsazor.md](design-create-tsazor.md)): the package `create-tsazor` writes the shape of
+  `dotnet new blazorwasm` (MainLayout, NavMenu, Home, Counter, Weather, a test). `--ui` sets up any
+  library from its `tsazor.setup` ([component-libraries.md](component-libraries.md)); the skins declare
+  theirs like any third party. The tarball smoke builds the packed starter's app. The `starter` gate
+  drives it in three engines, with Bootstrap, with Fluent and without a library. Found on the way:
+  `NavLink` didn't take `class` (Blazor parity), and the skins lacked `sideEffects` (the app was
+  66.7 KB gz instead of 30.7).
 - **R6 — Browser support** (added 2026-10-07): [browser-support.md](browser-support.md) — the current
   Chrome/Edge, Firefox and Safari; CI runs the browser gates in Firefox and WebKit (job `engines`).
   The first runs found three real differences: Virtualize rendered every item in a scrolling panel
@@ -224,7 +231,7 @@ architecture and security take priority.
    components and API pages, cross-linked with the lessons and the index (see the design doc).
 4. E4–E7 architecture and migration (incremental migration E6 is the main sales argument).
 5. ~~Sleipnir integration;~~ the remaining Svelte-style features with their chapters (done).
-6. R3 (with the S2 templates), R2, E3, E10, the E9 screen-reader audit, the follow-ups → 1.0 release
+6. ~~R3 (with the S2 templates)~~ (done 2026-10-08), R2, E3, E10, the E9 screen-reader audit, the follow-ups → 1.0 release
    candidate → public repository, docs site (R4), npm with provenance → 1.0.
 
 After 1.0: E12 (`@tsazor/primitives`, `@tsazor/extensions`, `Decimal` with `@bind:culture`), then the

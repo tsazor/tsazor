@@ -26,6 +26,7 @@ export default defineConfig({
       "packages/bootstrap",
       "packages/conformance",
       "packages/dotnet",
+      "packages/create-tsazor",
     ],
   },
 });
