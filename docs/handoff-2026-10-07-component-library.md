@@ -4,6 +4,19 @@
 [design-component-library.md](design-component-library.md). Branch `roadmap/phase-0`, HEAD `92f2b89`,
 everything pushed.
 
+> **Update 2026-10-08, evening — the main track is now the FluentCMS port: [port-fluentcms.md](port-fluentcms.md).**
+> - **The decision:** quality isn't 1.0-ready yet; the API still moved a lot.
+>   - Before R2/1.0, a real Blazor app is ported: FluentCMS's admin, with `@tsazor/fluent`.
+>   - Every gap becomes a framework fix with a test.
+>   - A week of porting without a public-API change is the signal for the freeze.
+> - **Track B (owner):** complex components are a port of their own (reference: Fluent UI Blazor).
+> - **Done so far:**
+>   - phases 0–2: backend script, BFF, shell, sign-in, every management screen but files and content types;
+>   - 23 findings, most of them fixed in the framework;
+>   - in `@tsazor/fluent`: CheckboxGroup, TreeView and `Button href`.
+> - **Gates:** `pnpm --filter fluentcms verify` (in `pnpm gates` and CI's e2e job).
+> - **Next:** phase 3 (files: folders, multipart upload — F5), then phase 4 (content types).
+
 ## CI: blocked by GitHub billing, not by the code
 
 Since `06d18dc` GitHub doesn't start the jobs: *"The job was not started because recent account payments
