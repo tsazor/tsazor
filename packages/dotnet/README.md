@@ -49,6 +49,17 @@ ran their own HTTP helpers).
 | optional, not nullable | `?: T` |
 | optional, nullable | `?: T \| null` |
 
+**In responses, value types are present.** Swashbuckle lists no `required` unless the C# code says
+so, but ASP.NET Core writes every property (System.Text.Json's default). In a schema that appears
+only in responses, these properties count as present:
+- a property that isn't nullable and has a type: `Guid`, `int`, `bool`, `DateTime`, a non-nullable
+  `string` or list;
+- a property whose `$ref` points to an enum.
+
+So `Guid Id` reads as `id = ""`, not `id?: string`. A `$ref` to an object keeps the schema's rule,
+because OpenAPI 3.0 cannot mark it nullable. Schemas that are also request bodies keep the schema's
+rules as well.
+
 Documented subset (the deviations are intentional):
 
 - `integer`/`number`/`int64` ⇒ `number` — JS has one number format; the Int64 precision limit

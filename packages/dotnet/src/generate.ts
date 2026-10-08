@@ -20,6 +20,7 @@ import {
   flattenAllOf,
   HTTP_METHODS,
   resolveSchemaLike,
+  resolveSchemaRef,
   schemaNullable,
   schemaType,
   type OpenApiDocument,
@@ -85,6 +86,7 @@ class Generator {
 
   private models(): string {
     const schemas = this.document.components?.schemas ?? {};
+    const responseOnly = this.responseOnlySchemas();
     const body: string[] = [];
     for (const [name, schema] of Object.entries(schemas)) {
       const resolved = resolveSchemaLike(this.document, schema);
@@ -98,7 +100,7 @@ class Generator {
         this.warn(`Schema "${name}" (${schemaType(flat) ?? "undetermined"}) is neither an object nor an enum — skipped.`);
         continue;
       }
-      this.modelClass(body, className, flat);
+      this.modelClass(body, className, flat, responseOnly.has(name));
     }
     const header: string[] = [
       "// GENERATED CODE — do not edit by hand.",
@@ -126,7 +128,12 @@ class Generator {
     out.push("");
   }
 
-  private modelClass(out: string[], className: string, schema: OpenApiSchema): void {
+  /**
+   * `responseOnly`: the schema appears only in responses. ASP.NET Core writes every property
+   * there (System.Text.Json's default), so a value-typed property that isn't nullable (`Guid`,
+   * `int`, `bool`, an enum) is always present — even when Swashbuckle lists no `required`.
+   */
+  private modelClass(out: string[], className: string, schema: OpenApiSchema, responseOnly: boolean): void {
     const doc = docComment("", schema.description);
     if (doc) out.push(doc);
     out.push(`export class ${className} {`);
@@ -141,10 +148,54 @@ class Generator {
       }
       const fieldDoc = docComment("    ", property.description);
       if (fieldDoc) out.push(fieldDoc);
-      out.push(this.fieldLine(name, property, schemaNullable(property), required.has(name)));
+      const present = required.has(name) || (responseOnly && this.isValueType(property));
+      out.push(this.fieldLine(name, property, schemaNullable(property), present));
     }
     if (Object.keys(properties).length === 0) out.push("    // (empty schema)");
     out.push("}", "");
+  }
+
+  /**
+   * True when the property can't be null: it has a type and isn't nullable, or it refers to an
+   * enum. A `$ref` to an object can't say whether it is nullable in OpenAPI 3.0, so it doesn't count.
+   */
+  private isValueType(property: OpenApiSchema): boolean {
+    if (property.$ref !== undefined) return resolveSchemaRef(this.document, property.$ref).enum !== undefined;
+    return schemaType(property) !== undefined && !schemaNullable(property);
+  }
+
+  /** The component schemas that appear in responses and nowhere else (not in a request body or parameter). */
+  private responseOnlySchemas(): Set<string> {
+    const inResponses = new Set<string>();
+    const elsewhere = new Set<string>();
+    const visit = (value: unknown, into: Set<string>): void => {
+      if (value === null || typeof value !== "object") return;
+      if (Array.isArray(value)) {
+        for (const item of value) visit(item, into);
+        return;
+      }
+      const ref = (value as { $ref?: unknown }).$ref;
+      if (typeof ref === "string") {
+        const name = ref.slice(ref.lastIndexOf("/") + 1);
+        if (into.has(name)) return;
+        into.add(name);
+        visit(this.document.components?.schemas?.[name], into);
+        return;
+      }
+      for (const child of Object.values(value)) visit(child, into);
+    };
+    for (const pathItem of Object.values(this.document.paths ?? {})) {
+      const item = pathItem as Record<string, unknown>;
+      visit(item.parameters, elsewhere);
+      for (const method of HTTP_METHODS) {
+        const operation = item[method] as OpenApiOperation | undefined;
+        if (operation === undefined || operation === null) continue;
+        visit(operation.responses, inResponses);
+        visit(operation.parameters, elsewhere);
+        visit(operation.requestBody, elsewhere);
+      }
+    }
+    return new Set([...inResponses].filter((name) => !elsewhere.has(name)));
   }
 
   private fieldLine(name: string, property: OpenApiSchema, nullable: boolean, isRequired: boolean): string {
@@ -208,6 +259,8 @@ class Generator {
       }
       case undefined:
       default:
+        // A schema without any type keyword is "any value" (`object?` in C#): unknown, as intended.
+        if (type === undefined && !ANY_TYPE_KEYWORDS.some((keyword) => keyword in property)) return `unknown${nullSuffix}`;
         this.warn(`Schema "${owner}": type "${type ?? ""}" not supported → unknown`);
         return `unknown${nullSuffix}`;
     }
@@ -475,6 +528,9 @@ function pascal(name: string): string {
 function kebab(name: string): string {
   return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2").toLowerCase();
 }
+
+/** Keywords that give a schema a shape; a schema with none of them accepts any value. */
+const ANY_TYPE_KEYWORDS = ["type", "$ref", "properties", "items", "enum", "allOf", "oneOf", "anyOf", "format"];
 
 /** A path's literal segments, without parameters and the conventional `api`/`v1` prefix. */
 function nameSegments(path: string): string[] {

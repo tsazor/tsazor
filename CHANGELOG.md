@@ -16,6 +16,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     It was `HTTP 500`.
   - An envelope error object `{ code, description }` reads as its description, or as its code when that
     is empty. It was `code: …` plus `description: …`.
+  - **Value types in responses are present.** In a schema that appears only in responses, a property
+    that can't be null is no longer optional: `Guid Id` reads as `id: string`, not `id?: string`.
+    Swashbuckle lists no `required` by default, but ASP.NET Core writes every property. Blazing Pizza's
+    generated `Marker.showPopup` changes accordingly.
+  - A schema without a type (C#'s `object?`) maps to `unknown` without a warning.
 - **Fix (Blazor parity)** `@tsazor/runtime` `NavLink`: every other attribute goes onto the anchor, as
   Blazor's `AdditionalAttributes` does.
   - `<NavLink class="nav-link" href="counter">` renders `class="nav-link active"` while the link is

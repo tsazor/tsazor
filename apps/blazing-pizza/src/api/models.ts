@@ -64,7 +64,7 @@ export class Marker {
     description = "";
     x = 0;
     y = 0;
-    showPopup?: boolean;
+    showPopup = false;
 }
 
 export class Order {

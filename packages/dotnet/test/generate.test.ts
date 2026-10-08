@@ -168,6 +168,22 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
     ]);
   });
 
+  it("maps a schema without a type (C#'s object?) to unknown, without a warning", async () => {
+    const models = (await generate()).files.find((f) => f.path === "models.ts")!.content;
+    expect(classBodyOf(models, "UserDto")).toContain("    data!: Record<string, unknown>;");
+  });
+
+  it("reads a response-only model's value types as present, as ASP.NET Core writes them", async () => {
+    const models = (await generate()).files.find((f) => f.path === "models.ts")!.content;
+    const user = classBodyOf(models, "UserDto");
+    // A Guid is always there; a nullable string may be null.
+    expect(user).toContain(`    id = "";`);
+    expect(user).toContain("    userName?: string | null;");
+    // OrderDto is a request body too: the schema's own rules (no required ⇒ optional).
+    expect(classBodyOf(models, "OrderDto")).toContain("    id?: number;");
+    expect(classBodyOf(models, "UserCreateRequest")).toContain(`    userName = "";`);
+  });
+
   it("says once that the names are derived, with an example and the fix", async () => {
     expect((await generate()).warnings).toEqual([
       "11 operation(s) without operationId: method names derived from the paths (GET /api/User/GetAll → userGetAll). " +

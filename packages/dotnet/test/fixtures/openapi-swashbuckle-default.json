@@ -125,7 +125,8 @@
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "userName": { "type": "string", "nullable": true }
+          "userName": { "type": "string", "nullable": true },
+          "data": { "type": "object", "additionalProperties": { "nullable": true } }
         },
         "additionalProperties": false
       },
