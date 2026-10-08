@@ -156,6 +156,13 @@ describe("codegen", () => {
     expect(code).toContain("__builder.addElementReferenceCapture(1, (el) => { this.listItem = el; });");
   });
 
+  it("takes @ref as this.name too, as markup writes members elsewhere; anything else is TZS008", () => {
+    const { code } = gen('<li @ref="this.listItem">x</li>');
+    expect(code).toContain("__builder.addElementReferenceCapture(1, (el) => { this.listItem = el; });");
+    const { diagnostics } = gen('<li @ref="items[0]">x</li>');
+    expect(diagnostics.all.find((d) => d.code === "TZS008")?.message).toBe("Unsupported directive attribute. @ref requires a property name (`name` or `this.name`).");
+  });
+
   it("emits if/else chains inside buildRenderTree", () => {
     const { code } = gen("@if (a) { <p>yes</p> } else { <p>no</p> }");
     expect(code).toContain("if (this.a) {");

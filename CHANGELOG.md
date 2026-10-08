@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity** `@tsazor/runtime`: an unset optional callback can be forwarded (`onCancel="@onCancel"`).
+  `EventCallback.bind` passes `undefined` through, so the child sees no callback, and an element gets no handler, as
+  Blazor skips the attribute of an EventCallback without a delegate. It didn't type-check (`EventCallback | undefined`).
+- **Fix (Blazor parity)** `@tsazor/runtime`: `InputFile` returns the task of `onChange`, as Blazor does. An async upload
+  in the handler was not awaited, and its error missed the ErrorBoundary.
+- `@tsazor/compiler`: `@ref` takes `this.name` as well as `name`, as markup writes members elsewhere. It was TZS008.
 - `@tsazor/dotnet`: **file uploads** (`multipart/form-data`). An operation with a multipart body, such as an ASP.NET Core
   action that takes `IFormFile` or `IEnumerable<IFormFile>`, gets a body type of its own (`FileUploadForm = { files?: Blob[] }`)
   and sends a `FormData`. A schema string with `format: binary` is a `Blob`, which a `File` from an input is. The new

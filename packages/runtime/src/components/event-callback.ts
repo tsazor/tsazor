@@ -46,8 +46,19 @@ export class EventCallback<TArg = unknown> {
   static bind<TArg>(
     receiver: ComponentBase,
     delegate: ((arg: TArg) => unknown) | EventCallback<TArg>,
-  ): EventCallback<TArg> {
-    if (delegate instanceof EventCallback) return delegate;
+  ): EventCallback<TArg>;
+  /** A forwarded optional callback that is unset (`onCancel="@onCancel"` without a parent handler) stays
+   *  unset: the child sees no callback, and an element gets no handler (Blazor skips the attribute of an
+   *  EventCallback without a delegate). Blazor's EventCallback is a struct, never null. */
+  static bind<TArg>(
+    receiver: ComponentBase,
+    delegate: ((arg: TArg) => unknown) | EventCallback<TArg> | undefined,
+  ): EventCallback<TArg> | undefined;
+  static bind<TArg>(
+    receiver: ComponentBase,
+    delegate: ((arg: TArg) => unknown) | EventCallback<TArg> | undefined,
+  ): EventCallback<TArg> | undefined {
+    if (delegate === undefined || delegate instanceof EventCallback) return delegate;
     return new EventCallback(receiver, delegate);
   }
 

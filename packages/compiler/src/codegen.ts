@@ -1722,10 +1722,11 @@ class Codegen {
       if (attach.kind === "attach") this.emitAttachStmt(attach, name);
     }
     this.emitMotionStmts(node);
-    for (const ref of refs) {
-      if (ref.kind !== "ref") continue;
-      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
-        this.diagnostics.error("TZS008", ref, "@ref requires a bare property name.");
+    for (const raw of refs) {
+      if (raw.kind !== "ref") continue;
+      const ref = refMember(raw);
+      if (ref === undefined) {
+        this.diagnostics.error("TZS008", raw, "@ref requires a property name (`name` or `this.name`).");
         continue;
       }
       this.emitRefStmt(ref, node.pos, name);
@@ -2111,10 +2112,11 @@ class Codegen {
     // Blazor order: the reference capture follows every attribute, child
     // content included. The parameter view is the run of attribute frames
     // after the component frame — a capture before a fragment cut it off.
-    for (const ref of refs) {
-      if (ref.kind !== "ref") continue;
-      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(ref.code)) {
-        this.diagnostics.error("TZS008", ref, "@ref on components requires a bare property name.");
+    for (const raw of refs) {
+      if (raw.kind !== "ref") continue;
+      const ref = refMember(raw);
+      if (ref === undefined) {
+        this.diagnostics.error("TZS008", raw, "@ref on components requires a property name (`name` or `this.name`).");
         continue;
       }
       this.emitComponentRefStmt(
@@ -3337,3 +3339,15 @@ function escapeTemplate(text: string): string {
 }
 
 export type { MapEntry };
+
+/**
+ * The member an `@ref` captures into: `name`, or `this.name` as markup writes members elsewhere (Razor takes
+ * any assignable expression). The result names the bare member, its source start moved past `this.`.
+ */
+function refMember(ref: Extract<AttributeNode, { kind: "ref" }>): Extract<AttributeNode, { kind: "ref" }> | undefined {
+  const match = /^(this\.)?([A-Za-z_$][A-Za-z0-9_$]*)$/.exec(ref.code);
+  if (match === null) return undefined;
+  if (match[1] === undefined) return ref;
+  const codeStart = ref.codeStart === undefined ? undefined : { ...ref.codeStart, column: ref.codeStart.column + "this.".length };
+  return { ...ref, code: match[2]!, codeStart };
+}

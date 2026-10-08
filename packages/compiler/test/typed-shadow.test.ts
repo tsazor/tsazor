@@ -195,6 +195,11 @@ describe("typed @ref captures", () => {
     expect(result.code).toContain("this.grid = comp as __tsazor_comp_Grid<Person>;");
   });
 
+  it("captures a component into this.name as well", () => {
+    const { result } = gen('<Grid TItem="Person" Items="people" @ref="this.grid" />', undefined, typedShadow);
+    expect(result.code).toContain("this.grid = comp as __tsazor_comp_Grid<Person>;");
+  });
+
   it("casts to `never` without resolvable type arguments (in both builds)", () => {
     const shadow = gen('<Grid Items="people" @ref="grid" />', undefined, typedShadow).result.code;
     expect(shadow).toContain("this.grid = comp as unknown as never;");

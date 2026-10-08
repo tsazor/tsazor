@@ -479,6 +479,7 @@ export declare class EventCallback<TArg = unknown> {
     private constructor();
     static bindWith<TArg>(receiver: ComponentBase, factory: (...args: never[]) => (arg: TArg) => unknown, args: readonly unknown[]): EventCallback<TArg>;
     static bind<TArg>(receiver: ComponentBase, delegate: ((arg: TArg) => unknown) | EventCallback<TArg>): EventCallback<TArg>;
+    static bind<TArg>(receiver: ComponentBase, delegate: ((arg: TArg) => unknown) | EventCallback<TArg> | undefined): EventCallback<TArg> | undefined;
     static unbound<TArg>(delegate: (arg: TArg) => unknown): EventCallback<TArg>;
     static get empty(): EventCallback<never>;
     invokeAsync(...args: unknown extends TArg ? [
@@ -1058,7 +1059,7 @@ export declare class RenderTreeBuilder {
     closeRegion(): void;
     setKey(key: string | number | null | undefined | object): void;
     addAttribute(sequence: number, name: string, value: AttributeValue): void;
-    addEventHandler(sequence: number, name: string, callback: EventCallback<any>, flags?: EventHandlerFlags | number): void;
+    addEventHandler(sequence: number, name: string, callback: EventCallback<any> | undefined, flags?: EventHandlerFlags | number): void;
     addMultipleAttributes(sequence: number, attributes: Readonly<Record<string, unknown>> | null | undefined): void;
     addContent(sequence: number, textOrFragment: string | number | boolean | bigint | null | undefined | RenderFragment | MarkupString): void;
     addMarkupContent(sequence: number, markup: string | null): void;

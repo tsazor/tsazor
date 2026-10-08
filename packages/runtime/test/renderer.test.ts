@@ -176,6 +176,38 @@ describe("Renderer", () => {
     expect(container.querySelector("span")?.textContent).toBe("1");
   });
 
+  it("forwards an unset optional callback as unset: the child sees none, an element gets no handler", async () => {
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    let seen: unknown = "not set";
+
+    class Child extends ComponentBase {
+      @Parameter() onCancel?: EventCallback;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        seen = this.onCancel;
+        b.openElement(0, "button");
+        b.addEventHandler(1, "onclick", EventCallback.bind(this, this.onCancel));
+        b.closeElement();
+      }
+    }
+    class Middle extends ComponentBase {
+      @Parameter() onCancel?: EventCallback;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Child));
+        b.addAttribute(1, "onCancel", EventCallback.bind(this, this.onCancel));
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(Middle, container);
+    await renderer.waitUntilIdle();
+
+    expect(seen).toBeUndefined();
+    // No handler on the button: a click is a plain click.
+    container.querySelector("button")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await renderer.waitUntilIdle();
+    expect(container.querySelector("button")!.outerHTML).toBe("<button></button>");
+  });
+
   it("sets parameters case-insensitively on child components", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();

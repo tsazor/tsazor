@@ -77,6 +77,23 @@ describe("InputFile (3.7)", () => {
     expect(many.getMultipleFiles(2)).toHaveLength(2);
   });
 
+  it("hands OnChange's task to the renderer, as Blazor returns OnChange.InvokeAsync (an async upload is awaited)", async () => {
+    const done: string[] = [];
+    const h = await host((b: RenderTreeBuilder) => {
+      b.openComponent(0, defineComponent(InputFile));
+      b.addAttribute(1, "OnChange", EventCallback.unbound(async (args: InputFileChangeEventArgs) => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        done.push(args.file.name);
+      }));
+      b.closeComponent();
+    });
+    const input = h.container.querySelector("input")!;
+    Object.defineProperty(input, "files", { value: [file("upload.txt")], configurable: true });
+    input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    await h.settle();
+    expect(done).toEqual(["upload.txt"]);
+  });
+
   it("a reference capture between the attributes does not shadow its following handlers, across re-renders", async () => {
     // InputFile's frame order (Blazor's InputFile.cs): multipleAttributes,
     // type, reference capture, onchange. The capture is part of the element's

@@ -164,8 +164,11 @@ export class RenderTreeBuilder {
   /** Adds an event-handler attribute carrying its directive flags (used by generated code).
    *  `any` (not `never`!): the generated code types inline handlers by inference
    *  (`(e) => …` in `@bind`), and a contextual `EventCallback<never>` would make
-   *  TS infer the lambda parameter as `never` — `e.target` then fails with 2339. */
-  addEventHandler(sequence: number, name: string, callback: EventCallback<any>, flags: EventHandlerFlags | number = EventHandlerFlags.None): void {
+   *  TS infer the lambda parameter as `never` — `e.target` then fails with 2339.
+   *  No callback (a forwarded optional one that is unset) adds no handler, as Blazor skips the attribute
+   *  of an EventCallback without a delegate. */
+  addEventHandler(sequence: number, name: string, callback: EventCallback<any> | undefined, flags: EventHandlerFlags | number = EventHandlerFlags.None): void {
+    if (callback === undefined) return;
     this.frames.push({
       frameType: FrameType.Attribute,
       sequence,

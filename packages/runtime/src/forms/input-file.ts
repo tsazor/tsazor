@@ -39,8 +39,9 @@ export class InputFile extends ComponentBase {
         (__event: Event) => {
           const args = new InputFileChangeEventArgs(Array.from(((__event.target as HTMLInputElement).files ?? []) as File[]));
           // Blazor raises OnChange with the args (the DOM change event arrives
-          // through the input element's interop in .NET).
-          void this.onChange?.invokeAsync(args);
+          // through the input element's interop in .NET) and returns its task:
+          // the renderer awaits an async handler, and its error reaches the ErrorBoundary.
+          return this.onChange?.invokeAsync(args);
         },
       ),
     );
