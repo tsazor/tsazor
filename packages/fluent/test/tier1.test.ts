@@ -73,6 +73,22 @@ describe("DateInput", () => {
   });
 });
 
+describe("DateInput type", () => {
+  it("edits a date-time, a month or a time with type, as Blazor's InputDateType", async () => {
+    const types: string[] = [];
+    for (const type of ["datetime-local", "month", "time"]) {
+      const { container } = await renderTree((b) => {
+        b.openComponent(0, DateInput);
+        b.addAttribute(1, "label", "When");
+        b.addAttribute(2, "type", type);
+        b.closeComponent();
+      });
+      types.push(container.querySelector("input")!.type);
+    }
+    expect(types).toEqual(["datetime-local", "month", "time"]);
+  });
+});
+
 describe("FileInput", () => {
   it("labels the runtime's file input and links its help text", async () => {
     const { container } = await renderTree((b) => {

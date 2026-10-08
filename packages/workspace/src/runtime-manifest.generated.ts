@@ -1618,9 +1618,27 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
             }
           ],
           "doc": "Pass-through attributes (class, style, placeholder, …)."
+        },
+        {
+          "name": "type",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "InputDate",
+          "default": "\"date\"",
+          "type": "InputDateType",
+          "references": [
+            {
+              "name": "InputDateType",
+              "kind": "local",
+              "file": "src/forms/input-text.ts"
+            }
+          ],
+          "doc": "Blazor's `Type`: date (the default), datetime-local, month or time."
         }
       ],
-      "doc": "Blazor's InputDate: date input; parses to Date when valid.",
+      "doc": "Blazor's InputDate: a date, date-time, month or time input (`type`, Blazor's InputDateType). A Date is\nwritten and read in local time, as .NET's DateTime carries no zone (`yyyy-MM-dd`, `yyyy-MM-ddTHH:mm:ss`,\n`yyyy-MM`, `HH:mm:ss`, Blazor's formats). A string value stays a string: the input's text. A time has\nno date, so it is always the text.",
       "base": {
         "name": "InputBase",
         "resolved": true,

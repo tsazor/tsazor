@@ -170,6 +170,7 @@ export default class DataGrid<TGridItem> extends ComponentBase {
 export default class DateInput extends InputBase<string> {
     label?: string;
     help?: string;
+    type: "date" | "datetime-local" | "month" | "time";
     min?: string;
     max?: string;
     disabled: boolean;

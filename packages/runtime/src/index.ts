@@ -106,7 +106,7 @@ export { TsazorHttp, TsazorHttpError, type TsazorHttpOptions, type RequestInterc
 export { EditContext, ValidationMessageStore, type FieldIdentifier, type DataAnnotationsValidationSubscription } from "./forms/edit-context.js";
 export type { ModelValidator } from "./forms/edit-form.js";
 export { InputBase } from "./forms/input-base.js";
-export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect } from "./forms/input-text.js";
+export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect, type InputDateType } from "./forms/input-text.js";
 export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";

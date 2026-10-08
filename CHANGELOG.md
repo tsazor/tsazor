@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity** `@tsazor/runtime`: `InputDate` takes `type` (Blazor's InputDateType: `date`, `datetime-local`,
+  `month`, `time`). `@tsazor/fluent`, `@tsazor/bootstrap`: `DateInput` takes the same `type`.
+- **Fix** `@tsazor/runtime`: `InputDate` writes and reads a `Date` in local time, as .NET's DateTime has no zone. It
+  wrote it through `toISOString()`, so a local midnight east of Greenwich showed the day before, and read a date as
+  UTC midnight. A bound string now stays a string (it became a `Date`).
+- **Fix** `@tsazor/runtime`: `InputNumber` shows a `null` value as an empty input; it showed `null`.
 - **Blazor parity** `@tsazor/workspace` (tags in every tool): every directory above a component, up to the project root,
   is an enclosing namespace, as in C#. A component in `Admin/` is in scope in `Admin/Fields/` without `@using`; only
   the directories with an `_Imports.tsazor` were. `ImportsChain` records its `root`.

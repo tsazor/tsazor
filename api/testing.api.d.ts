@@ -173,6 +173,8 @@ export interface FakeStore<T> {
 
 // InputDate: re-exported from @tsazor/runtime
 
+// InputDateType: re-exported from @tsazor/runtime
+
 // InputFile: re-exported from @tsazor/runtime
 
 // InputFileChangeEventArgs: re-exported from @tsazor/runtime

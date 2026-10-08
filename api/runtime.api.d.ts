@@ -595,8 +595,12 @@ export declare class InputCheckbox extends InputBase<boolean> {
 
 // InputDate
 export declare class InputDate extends InputBase<Date | string> {
+    type: InputDateType;
     protected buildRenderTree(b: RenderTreeBuilder): void;
 }
+
+// InputDateType
+export type InputDateType = "date" | "datetime-local" | "month" | "time";
 
 // InputFile
 export declare class InputFile extends ComponentBase {

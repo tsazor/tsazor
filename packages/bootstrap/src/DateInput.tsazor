@@ -1,6 +1,7 @@
 @** A Bootstrap date field (the browser's date picker, `.form-control`; InputBase — bind it with
-    @bind) with an optional label and help text. The value is the ISO date text `"2026-10-07"`
-    (empty when cleared): a plain string has no time zone to shift the day. Validation state and
+    @bind) with an optional label and help text. The value is the ISO text the input edits (empty when
+    cleared): `"2026-10-07"`, or with `type` (Blazor's InputDateType) `"2026-10-07T09:30"`, `"2026-10"`
+    or `"09:30"`; a plain string has no time zone to shift the day. Validation state and
     message as with TextInput. *@
 @import { FieldState } from "@tsazor/ui"
 @import { withClass } from "./attributes"
@@ -11,7 +12,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <input id="@field.id(id)" type="date" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    <input id="@field.id(id)" type="@type" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -25,6 +26,8 @@
     @Parameter() label?: string;
     /** A hint below the input, linked to it for screen readers. */
     @Parameter() help?: string;
+    /** What the input edits (Blazor's InputDateType): date, datetime-local, month or time. */
+    @Parameter() type: "date" | "datetime-local" | "month" | "time" = "date";
     /** The earliest date, as ISO text ("2026-01-01"). */
     @Parameter() min?: string;
     /** The latest date, as ISO text. */

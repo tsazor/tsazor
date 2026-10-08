@@ -1,5 +1,6 @@
 @** A Fluent UI 2 date field (the browser's date picker; InputBase — bind it with @bind) with an optional
-    label and help text. The value is the ISO date text `"2026-10-07"` (empty when cleared): a plain
+    label and help text. The value is the ISO text the input edits (empty when cleared): `"2026-10-07"`,
+    or with `type` (Blazor's InputDateType) `"2026-10-07T09:30"`, `"2026-10"` or `"09:30"`; a plain
     string has no time zone to shift the day. Inside a FluentForm it shows the field's first
     validation message once a submit was attempted. *@
 @import { FieldState } from "@tsazor/ui"
@@ -11,7 +12,7 @@
     @if (label) {
         <label class="fui-input__label" for="@field.id(id)">@label</label>
     }
-    <input id="@field.id(id)" type="date" value="@(currentValue ?? "")" @attributes="@this.inputAttributes" @onchange="handleChange" />
+    <input id="@field.id(id)" type="@type" value="@(currentValue ?? "")" @attributes="@this.inputAttributes" @onchange="handleChange" />
     @if (help) {
         <span class="fui-input__help" id="@field.helpId(id)">@help</span>
     }
@@ -25,6 +26,8 @@
     @Parameter() label?: string;
     /** A hint below the input, linked to it for screen readers. */
     @Parameter() help?: string;
+    /** What the input edits (Blazor's InputDateType): date, datetime-local, month or time. */
+    @Parameter() type: "date" | "datetime-local" | "month" | "time" = "date";
     /** The earliest date, as ISO text ("2026-01-01"). */
     @Parameter() min?: string;
     /** The latest date, as ISO text. */
