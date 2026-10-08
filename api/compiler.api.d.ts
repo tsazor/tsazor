@@ -231,6 +231,7 @@ export interface CodegenResult {
     };
     typedInference?: readonly TypedTagInferenceRequest[];
     expressionValues?: readonly ExpressionValue[];
+    importSuggestions?: readonly ImportSuggestion[];
 }
 
 // CodemodResult
@@ -266,6 +267,7 @@ export interface CompileResult {
     metadata: CodegenResult["metadata"];
     typedInference?: readonly TypedTagInferenceRequest[];
     expressionValues?: readonly ExpressionValue[];
+    importSuggestions?: readonly ImportSuggestion[];
 }
 
 // ComponentManifest
@@ -504,6 +506,13 @@ export interface ImportInfo {
 
 // importStatements
 export declare function importStatements(info: ImportInfo): string[];
+
+// ImportSuggestion
+export interface ImportSuggestion {
+    readonly name: string;
+    readonly directive: string;
+    readonly insertLine: number;
+}
 
 // inferTypeArgument
 export declare function inferTypeArgument(sourceFile: ts.SourceFile, checker: ts.TypeChecker, offset: number, request: TypedTagInferenceRequest): string | undefined;
@@ -780,6 +789,9 @@ export interface TypeReference {
     imported?: string;
     file?: string;
 }
+
+// unresolvedName
+export declare function unresolvedName(message: string): string | undefined;
 
 // WhileNode
 export interface WhileNode extends SourceSpan {

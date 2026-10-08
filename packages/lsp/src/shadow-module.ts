@@ -1,4 +1,4 @@
-import { compile, type ExpressionValue, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { compile, type ExpressionValue, type ImportSuggestion, type TypedTagInferenceRequest } from "@tsazor/compiler";
 import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -34,6 +34,8 @@ export interface ShadowModule {
   typedInference?: readonly TypedTagInferenceRequest[];
   /** 2.4: plain-text values of non-string parameters — unknown names in them get a note. */
   expressionValues?: readonly ExpressionValue[];
+  /** F29: the `@import` each unbound name in `@code` would need (TS2304's hint and quick fix). */
+  importSuggestions?: readonly ImportSuggestion[];
 }
 
 /** Synthetic path of a shadow module: `X.tsazor` → `X.tsazor.gen.ts`. */
@@ -119,6 +121,7 @@ export async function buildShadowModule(
       className: context.className,
       ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),
       ...(compiled.expressionValues !== undefined ? { expressionValues: compiled.expressionValues } : {}),
+      ...(compiled.importSuggestions !== undefined ? { importSuggestions: compiled.importSuggestions } : {}),
     };
   } catch {
     // Compiler-level failures (TSZE000-style) → no type layer; the v1 layer

@@ -34,6 +34,7 @@ import {
 } from "./rewrite.js";
 import { advancePos, CodeWriter, type WriterAnchor } from "./writer.js";
 import type { ExpressionValue } from "./expression-values.js";
+import { importDirective, namesUsedInMembers, type ImportSuggestion } from "./import-suggestions.js";
 import { BLAZOR_LIFECYCLE_NAMES, bodyMemberNames, RESERVED_MEMBERS } from "./reserved-members.js";
 import { staticMarkupOf } from "./static-markup.js";
 import * as ts from "typescript";
@@ -201,6 +202,8 @@ export interface CodegenResult {
   typedInference?: readonly TypedTagInferenceRequest[];
   /** 2.4: plain-text values read as expressions (shadow layer only) — see expression-values.ts. */
   expressionValues?: readonly ExpressionValue[];
+  /** F29: the `@import` each unbound name in `@code` would need (shadow layer only) — see import-suggestions.ts. */
+  importSuggestions?: readonly ImportSuggestion[];
 }
 
 interface MapEntry {
@@ -338,6 +341,7 @@ class Codegen {
   private readonly inferenceRequests: TypedTagInferenceRequest[] = [];
   /** 2.4: plain-text values of non-string parameters (typed-shadow builds only). */
   private readonly expressionValues: ExpressionValue[] = [];
+  private readonly importSuggestions: ImportSuggestion[] = [];
   /** The subset of importedNames bound to runtime values (usable as component tags). */
   private readonly importedValues = new Set<string>();
   /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
@@ -483,6 +487,7 @@ class Codegen {
     // Pre-resolve component tags so imports come out once, before the class.
     this.classifyChildContent(document.body);
     this.preResolve(document.body, this.metadata.usings);
+    if (this.options.typedShadow !== undefined) this.suggestImports(memberCode, document.directives);
 
     // --- Emit the module -------------------------------------------------
     this.runtimeImports.add("ComponentBase");
@@ -619,6 +624,7 @@ class Codegen {
       metadata: this.metadata,
       ...(this.options.typedShadow !== undefined && this.inferenceRequests.length > 0 ? { typedInference: this.inferenceRequests } : {}),
       ...(this.expressionValues.length > 0 ? { expressionValues: this.expressionValues } : {}),
+      ...(this.importSuggestions.length > 0 ? { importSuggestions: this.importSuggestions } : {}),
     };
   }
 
@@ -1036,6 +1042,26 @@ class Codegen {
     const resolved = this.options.resolveType?.(root, this.metadata.usings) ?? null;
     if (resolved) this.typeImports.set(root, root);
     return name;
+  }
+
+  /**
+   * F29 (typed shadow only): for each name `@code` uses that no import binds but the file's resolution
+   * finds (a component through `@using` or its folder, a type in a `.ts` file there), the `@import`
+   * that binds it, placed after the last directive. The build itself imports nothing: in TypeScript code
+   * a type comes from an import; tooling offers this one for TS2304.
+   */
+  private suggestImports(memberCode: ReadonlyArray<{ code: string }>, directives: readonly DirectiveNode[]): void {
+    const used = new Map<string, "type" | "value">();
+    for (const block of memberCode) {
+      for (const [name, use] of namesUsedInMembers(block.code)) if (used.get(name) !== "value") used.set(name, use);
+    }
+    const insertLine = directives.reduce((line, directive) => Math.max(line, directive.endPos.line), 0);
+    for (const [name, use] of used) {
+      if (name === this.options.className || this.importedNames.has(name) || this.typeImports.has(name)) continue;
+      const resolved = this.options.resolveType?.(name, this.metadata.usings) ?? null;
+      if (resolved === null) continue;
+      this.importSuggestions.push({ name, directive: importDirective(name, resolved, use), insertLine });
+    }
   }
 
   private seq(): number {

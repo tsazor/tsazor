@@ -4,6 +4,7 @@ import { generateCode, type CodegenOptions, type CodegenResult, type MapEntry, t
 import { parseDocument } from "./parser.js";
 import { buildSourceMap } from "./source-map.js";
 import type { ExpressionValue } from "./expression-values.js";
+import type { ImportSuggestion } from "./import-suggestions.js";
 
 export interface CompileOptions extends CodegenOptions {
   /** Disable sourcemap generation. */
@@ -22,13 +23,15 @@ export interface CompileResult {
   typedInference?: readonly TypedTagInferenceRequest[];
   /** 2.4: plain-text values read as expressions (typed-shadow builds only). */
   expressionValues?: readonly ExpressionValue[];
+  /** F29: the `@import` each unbound name in `@code` would need (typed-shadow builds only). */
+  importSuggestions?: readonly ImportSuggestion[];
 }
 
 /** Compiles one .tsazor source file into a TS module (+ sourcemap, + diagnostics). */
 export function compile(source: string, options: CompileOptions): CompileResult {
   const diagnostics = new DiagnosticBag();
   const document: DocumentNode = parseDocument(source, diagnostics);
-  const { code, metadata, mappings, typedInference, expressionValues } = generateCode(document, options, diagnostics);
+  const { code, metadata, mappings, typedInference, expressionValues, importSuggestions } = generateCode(document, options, diagnostics);
   const result: CompileResult = {
     code,
     diagnostics,
@@ -36,6 +39,7 @@ export function compile(source: string, options: CompileOptions): CompileResult 
     mappings,
     ...(typedInference !== undefined ? { typedInference } : {}),
     ...(expressionValues !== undefined ? { expressionValues } : {}),
+    ...(importSuggestions !== undefined ? { importSuggestions } : {}),
   };
   if (options.generateSourceMap !== false) {
     const sourceFile = options.fileName ?? "component.tsazor";

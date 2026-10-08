@@ -9,7 +9,7 @@
  * worse, it only covers @code and expressions, which v1 does not.
  */
 import * as ts from "typescript";
-import { explainExpressionValue, explainTypeScriptError } from "@tsazor/compiler";
+import { explainExpressionValue, explainTypeScriptError, unresolvedName, type ImportSuggestion } from "@tsazor/compiler";
 import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
 import { readFileSync } from "node:fs";
@@ -471,7 +471,7 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
         diag.code,
         explainExpressionValue(
           diag.code,
-          ts.flattenDiagnosticMessageText(diag.messageText, " "),
+          withImportHint(diag.code, ts.flattenDiagnosticMessageText(diag.messageText, " "), entry),
           { line: src.line + 1, column: src.character },
           entry.shadow.expressionValues,
         ),
@@ -481,6 +481,54 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
   }
   return results;
 }
+/* ------------------------------------------------------------------ */
+/* F29: the @import a name in @code lacks                              */
+/* ------------------------------------------------------------------ */
+
+/** The suggestion for a TS2304 message, when the name has one. */
+function importSuggestionFor(entry: ShadowEntry, message: string): ImportSuggestion | undefined {
+  const name = unresolvedName(message);
+  return name === undefined ? undefined : entry.shadow.importSuggestions?.find((suggestion) => suggestion.name === name);
+}
+
+/**
+ * TS2304 for a name markup would find (a component through `@using` or its folder): the hint names the
+ * exact `@import`. In TypeScript code a type comes from an import; a Blazor `@ref` field meets this.
+ */
+function withImportHint(code: number, message: string, entry: ShadowEntry): string {
+  const suggestion = code === 2304 ? importSuggestionFor(entry, message) : undefined;
+  if (suggestion === undefined) return message;
+  return `${message} Hint: markup finds \`${suggestion.name}\` by name, but in \`@code\` a type comes from an import, as in any TypeScript: \`${suggestion.directive}\` (quick fix).`;
+}
+
+/** F29: "Add `@import …`" for each TS2304 in the range whose name has a suggestion. */
+export function tsImportFixes(
+  service: TsazorTypeService,
+  entry: ShadowEntry,
+  range: { start: { line: number; character: number }; end: { line: number; character: number } },
+): TsQuickFix[] {
+  const fixes: TsQuickFix[] = [];
+  const seen = new Set<string>();
+  for (const diagnostic of service.semanticDiagnosticsOnShadow(entry)) {
+    if (diagnostic.code !== 2304 || diagnostic.start === undefined) continue;
+    const suggestion = importSuggestionFor(entry, ts.flattenDiagnosticMessageText(diagnostic.messageText, " "));
+    if (suggestion === undefined) continue;
+    const gen = shadowOffsetToPos(entry.shadow.code, diagnostic.start);
+    const start = entry.shadow.map.genToSrc(gen.line, gen.column);
+    if (!start || start.line < range.start.line || start.line > range.end.line || seen.has(suggestion.name)) continue;
+    seen.add(suggestion.name);
+    const at = { line: suggestion.insertLine, character: 0 };
+    fixes.push({
+      title: `Add ${suggestion.directive}`,
+      code: 2304,
+      line: start.line,
+      character: start.character,
+      edits: [{ range: { start: at, end: at }, newText: `${suggestion.directive}\n` }],
+    });
+  }
+  return fixes;
+}
+
 /* ------------------------------------------------------------------ */
 /* S4: "infer parameter types from usage"                              */
 /* ------------------------------------------------------------------ */

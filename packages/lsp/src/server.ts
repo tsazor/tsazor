@@ -36,6 +36,7 @@ import {
   tsDefinition,
   tsDiagnostics,
   tsHover,
+  tsImportFixes,
   tsInferTypeFixes,
 } from "./ts-features.js";
 
@@ -384,7 +385,17 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
           edit: { changes: { [document.uri]: fix.edits } },
         }))
       : [];
-    return [...fixes, ...inferred, ...refactors];
+    // F29: the `@import` a name in `@code` lacks (TS2304), when markup would find it.
+    const imports = entry
+      ? tsImportFixes(registry.projectFor(uriToPath(document.uri)).service, entry, params.range).map((fix): CodeAction => ({
+          title: fix.title,
+          kind: CodeActionKind.QuickFix,
+          isPreferred: true,
+          diagnostics: params.context.diagnostics.filter((d) => d.code === fix.code && d.range.start.line === fix.line),
+          edit: { changes: { [document.uri]: fix.edits } },
+        }))
+      : [];
+    return [...fixes, ...imports, ...inferred, ...refactors];
   });
 
   return {

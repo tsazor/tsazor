@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`, `@tsazor/lsp`: TS2304 for a name in `@code` that markup finds by name (a component through
+  `@using` or its folder, a type in a `.ts` file there) names the exact `@import`, and the language server inserts it
+  after the directives as a quick fix (`@import type` when only types use the name). `tsazor check` shows the hint. In
+  TypeScript code a type comes from an import; a Blazor `@ref` field (`private FilesTable? table`) meets this first.
 - **Blazor parity** `@tsazor/runtime`: an unset optional callback can be forwarded (`onCancel="@onCancel"`).
   `EventCallback.bind` passes `undefined` through, so the child sees no callback, and an element gets no handler, as
   Blazor skips the attribute of an EventCallback without a delegate. It didn't type-check (`EventCallback | undefined`).
