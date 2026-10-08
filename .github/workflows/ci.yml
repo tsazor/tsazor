@@ -16,7 +16,8 @@ concurrency:
 jobs:
   check:
     name: Build, test, API snapshot, tarball smoke
-    runs-on: ubuntu-latest
+    # Pinned: the same Ubuntu as `pnpm ci:local` (WSL), not whatever ubuntu-latest becomes.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
