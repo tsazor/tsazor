@@ -1,12 +1,18 @@
 @** A Fluent UI 2 native button. `intent` picks the color (secondary, the default, is Fluent's
     neutral button; primary is the brand button; success, danger, warning, info), `appearance` the
     weight (solid, outline, subtle, transparent); shape rounded | circular, size small | medium |
-    large. Raises onClick unless disabled; use type="submit" inside a FluentForm. *@
+    large. Raises onClick unless disabled; use type="submit" inside a FluentForm. With `href` it is a
+    link that looks like a button (Fluent UI Blazor's FluentAnchor): it navigates, opens in a new tab,
+    and screen readers announce a link. *@
 @import type { Appearance, Intent, Size } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { buttonClasses } from "./vocabulary"
 
-<button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</button>
+@if (href !== undefined) {
+    <a href="@(disabled ? null : href)" aria-disabled="@(disabled ? "true" : null)" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</a>
+} else {
+    <button type="@type" disabled="@disabled" @attributes="@this.buttonAttributes" @onclick="handleClick">@childContent</button>
+}
 
 @code {
     /** The color: secondary (default, Fluent's neutral button), primary (brand), success, danger, warning, info or neutral. */
@@ -21,6 +27,8 @@
     @Parameter() disabled: boolean = false;
     /** Native button role in a form: button (default) | submit | reset. */
     @Parameter() type: "button" | "submit" | "reset" = "button";
+    /** Renders a link styled as the button (`<a href>`); a disabled one has no href. */
+    @Parameter() href?: string;
     /** Accessible label for icon-only buttons (rendered as aria-label). */
     @Parameter() ariaLabel?: string;
     /** Associates the button with an id-list for screen readers (rendered as aria-describedby). */

@@ -1,10 +1,14 @@
 @** Renders a native `<button>` styled with Bootstrap's `.btn` classes: an intent (its color role),
     an appearance (solid, outline, subtle or transparent) and a size. It raises onClick on click,
-    Enter or Space. *@
+    Enter or Space. With `href` it is a link that looks like a button (Bootstrap's `<a class="btn">`). *@
 @import type { Appearance, Intent, Size } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
 @import { withClass } from "./attributes"
-<button type="@type" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(buttonClass, additionalAttributes)" @onclick="handleClick">@childContent</button>
+@if (href !== undefined) {
+    <a href="@(disabled ? null : href)" aria-disabled="@(disabled ? "true" : null)" aria-label="@ariaLabel" @attributes="@withClass(disabled ? `${buttonClass} disabled` : buttonClass, additionalAttributes)" @onclick="handleClick">@childContent</a>
+} else {
+    <button type="@type" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(buttonClass, additionalAttributes)" @onclick="handleClick">@childContent</button>
+}
 
 @code {
     /** The accessible name when there is no visible label. */
@@ -19,6 +23,8 @@
     @Parameter() disabled: boolean = false;
     /** The button's `type` attribute. */
     @Parameter() type: "button" | "submit" | "reset" = "button";
+    /** Renders a link styled as the button (`<a href class="btn">`); a disabled one has no href. */
+    @Parameter() href?: string;
     /** Fired when the button is clicked, with the click event. */
     @Parameter() onClick?: EventCallback<MouseEvent>;
     /** The button's label. */
@@ -31,6 +37,8 @@
     }
 
     private handleClick(e: MouseEvent): Promise<void> | undefined {
+        // A native button ignores clicks while disabled; a link doesn't.
+        if (this.disabled) return undefined;
         return this.onClick?.invokeAsync(e);
     }
 }

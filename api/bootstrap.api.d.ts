@@ -56,6 +56,7 @@ export default class Button extends ComponentBase {
     size: Size;
     disabled: boolean;
     type: "button" | "submit" | "reset";
+    href?: string;
     onClick?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;

@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/bootstrap`, `@tsazor/fluent`: `Button` takes `href` and is then a link that looks like the button (Fluent UI Blazor's
+  `FluentAnchor`, Bootstrap's `<a class="btn">`): it navigates, opens in a new tab, and is announced as a link. A disabled
+  one has no `href`. FluentCMS's buttons for "Add Role", "Edit" and "Cancel" are links.
 - `@tsazor/compiler` **TZS032**: a `@code` member under one of Blazor's lifecycle names (`onInitializedAsync`,
   `OnParametersSet`, `OnAfterRenderAsync`, `Dispose`, …) is an error, with a quick fix that renames it to
   Tsazor's hook. Tsazor has one hook for each step, and the hook may be async; without `override`, a member

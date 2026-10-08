@@ -198,3 +198,27 @@ describe("callbacks are awaited (Blazor: await OnClick.InvokeAsync)", () => {
     expect(container.textContent).toBe("caught: save failed");
   });
 });
+
+describe("Button with href", () => {
+  it("is a link that looks like the button; disabled, it has no href", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Button);
+      b.addAttribute(1, "href", "/admin/roles?viewName=Create%20Role");
+      b.addAttribute(2, "intent", "primary");
+      b.addAttribute(3, "childContent", text("Add Role"));
+      b.closeComponent();
+      b.openComponent(4, Button);
+      b.addAttribute(5, "href", "/elsewhere");
+      b.addAttribute(6, "disabled", true);
+      b.addAttribute(7, "childContent", text("Off"));
+      b.closeComponent();
+    });
+    const [link, off] = [...container.querySelectorAll("a")];
+    expect(container.querySelector("button")).toBeNull();
+    expect(link!.getAttribute("href")).toBe("/admin/roles?viewName=Create%20Role");
+    expect(link!.className).toContain("fui-button");
+    expect(link!.textContent).toBe("Add Role");
+    expect(off!.hasAttribute("href")).toBe(false);
+    expect(off!.getAttribute("aria-disabled")).toBe("true");
+  });
+});

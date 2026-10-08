@@ -60,6 +60,7 @@ export default class Button extends ComponentBase {
     size: Size;
     disabled: boolean;
     type: "button" | "submit" | "reset";
+    href?: string;
     ariaLabel?: string;
     ariaDescribedBy?: string;
     additionalAttributes?: Record<string, unknown>;
