@@ -112,12 +112,18 @@ Sign in as `admin` / `Admin123!`. A plugin that isn't ported yet shows "… is n
 
 Complex components are a port of their own (owner, 2026-10-08): a library author must be able to build them
 with Tsazor, or the framework has a gap.
+
+**The purpose is the proof, not the components** (owner): track B makes sure complex components *can* be
+built; better components are a side effect.
+- **Choosing:** a component is next when it tests a capability nothing has proven yet (the second column).
+  Whether FluentCMS needs it decides the order among those, not the choice. A second component that asks for
+  the same capability adds nothing.
+- **Done means:** the capability is proven by a test; the component is honest (keyboard, axe), and every
+  gap it hit is fixed in the framework. Feature parity with Fluent UI Blazor is not a goal.
 - **Reference:** the complex components of Microsoft's Fluent UI Blazor (MIT), the Blazor counterpart of
   `@tsazor/fluent`. The question for each one: can its API and behavior be built in Tsazor?
 - **Placement:** the logic goes in `@tsazor/ui`, the Fluent skin comes first, with tests and axe. Bootstrap
-  follows.
-- **Order:** the components FluentCMS needs come first, so two ports check them. The rest follow, so that
-  no capability goes untested.
+  follows when its skin needs the component, not to prove the capability twice.
 
 | Component | What it asks of the framework | FluentCMS needs it for |
 |---|---|---|
@@ -174,7 +180,9 @@ with Tsazor, or the framework has a gap.
 | F26 | Compiler | `@ref="this.filesTable"` was TZS008 ("requires a bare property name"), although markup writes members with `this.` everywhere else; Razor takes any assignable expression | Fixed: `this.name` is taken too |
 | F27 | Runtime (parity) | Forwarding an optional callback (`onCancel="@onCancel"`) didn't type-check: the value is `EventCallback \| undefined`. In Blazor an EventCallback is a struct, and forwarding an unset one is normal | Fixed: `EventCallback.bind` passes `undefined` through, so the child sees no callback; on an element no handler is added, as Blazor skips the attribute of an EventCallback without a delegate |
 | F28 | Runtime | `InputFile` dropped the promise of `onChange`: an async upload wasn't awaited, and its error missed the ErrorBoundary (the class of bug the skins had, see the CHANGELOG) | Fixed, with a conformance test; Blazor returns `OnChange.InvokeAsync` |
-| F29 | Tooling (DX) | `private filesTable?: FilesTable` for an `@ref` is TS2304: the tag resolves through `@using`, but a type in `@code` needs an `@import`, as in any TypeScript. That is by design (code is TS; the tutorial's component-refs lesson says so), and a first fix that resolved such names in the compiler was reverted. But every Blazor `@ref` field meets it, and the hint is generic | Open: the hint could name the exact `@import` (the component resolves through `@using`) and offer it as a quick fix |
+| F29 | Tooling (DX) | `private filesTable?: FilesTable` for an `@ref` is TS2304: the tag resolves through `@using`, but a type in `@code` needs an `@import`, as in any TypeScript. That is by design (code is TS; the tutorial's component-refs lesson says so), and a first fix that resolved such names in the compiler was reverted. But every Blazor `@ref` field meets it, and the hint was generic | Fixed: the typed shadow records the `@import` each unbound name in `@code` needs (when the file's resolution finds it); TS2304 names it, and the language server inserts it after the directives as a quick fix (`@import type` when only types use the name) |
+| F30 | Runtime (DX) | FluentCMS cascades a `ContentTypeDetailResponse` by type. In Tsazor by type is `instanceof` (documented: TypeScript has no runtime types), and the generated client returns parsed JSON, never an instance of the model class, although the model *is* a class. So `@CascadingParameter({ type: ContentTypeDetailResponse })` compiles and stays unset without a word | Fixed: a dev warning, once per parameter, when a by-type parameter passes a plain-object cascade, naming the way out (by name); the tutorial's named-cascades lesson says so. The port cascades by name |
+| F31 | `@tsazor/fluent` | `Dialog` had a fixed width (560px); Bootstrap's takes `size`. The skins were meant to share their parameters, and FluentCMS edits a field's settings (three tabs) in a large dialog | Fixed: `size` in the Fluent dialog, Bootstrap's four sizes |
 | U1 | FluentCMS (upstream) | `File/Download?url=` looks a file's folder up by `uri.AbsolutePath`, which is escaped: a folder or file name with a space isn't served (500, `Folder.NotFound`). The port links files as the original does; the gate uses names without spaces | Upstream; not a Tsazor finding |
 
 **Notes from phase 3**

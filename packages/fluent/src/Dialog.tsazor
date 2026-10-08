@@ -27,6 +27,8 @@
     @Parameter() isOpen: boolean = false;
     /** Optional heading; omitting it hides the header row. */
     @Parameter() title?: string;
+    /** The width: small 400px, medium 560px, large 800px, xlarge 1140px (at most the viewport's); Bootstrap's sizes. */
+    @Parameter() size: "small" | "medium" | "large" | "xlarge" = "medium";
     /** Overrides the dialog's accessible name (when unheaded). */
     @Parameter() ariaLabel?: string;
     /** Element id (the title's id for aria-labelledby); generated automatically when omitted. */
@@ -62,7 +64,7 @@
 
     private get dialogAttributes(): Record<string, unknown> {
         return withAttributes({
-            class: "fui-dialog",
+            class: this.size === "medium" ? "fui-dialog" : `fui-dialog fui-dialog--${this.size}`,
             "aria-label": this.ariaLabel,
             "aria-labelledby": this.labelledBy,
         }, this.additionalAttributes);

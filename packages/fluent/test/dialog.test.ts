@@ -116,6 +116,23 @@ describe("Dialog", () => {
     result.dispose();
   });
 
+  it("takes Bootstrap's sizes: medium is the plain dialog, the others add their class", async () => {
+    const classes: string[] = [];
+    for (const size of ["small", "medium", "large", "xlarge"]) {
+      const result = await renderTree((b) => {
+        b.openComponent(0, Dialog);
+        b.addAttribute(1, "isOpen", true);
+        b.addAttribute(2, "size", size);
+        b.addAttribute(3, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "x"));
+        b.closeComponent();
+      });
+      await settle(result.renderer);
+      classes.push(result.container.querySelector("[role=dialog]")!.className);
+      result.dispose();
+    }
+    expect(classes).toEqual(["fui-dialog fui-dialog--small", "fui-dialog", "fui-dialog fui-dialog--large", "fui-dialog fui-dialog--xlarge"]);
+  });
+
   it("closes via Escape and restores body scroll + previously focused element", async () => {
     const sentinel = document.createElement("button");
     document.body.appendChild(sentinel);

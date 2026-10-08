@@ -17,8 +17,10 @@ everything pushed.
 >     `BreadcrumbItem.onClick`, `@ref="this.x"`, forwarding an unset callback, `InputFile` awaiting `onChange`);
 >   - in `@tsazor/fluent`: CheckboxGroup, TreeView, `Button href`, five file icons.
 > - **Gates:** `pnpm --filter fluentcms verify` (in `pnpm gates` and CI's e2e job).
-> - **Next:** phase 4 (content types, with the file picker `FileSelectorModal`); open: F29 (a TS2304 hint that
->   names the `@import`), track B's upload drop zone and progress.
+> - **Track B's purpose (owner):** proving that complex components *can* be built, not better components; pick
+>   by the capability a component proves (see port-fluentcms.md).
+> - **Next:** phase 4 (content types, with the file picker `FileSelectorModal`); open: track B's upload drop
+>   zone and progress.
 
 ## CI: blocked by GitHub billing, not by the code
 

@@ -181,6 +181,7 @@ export default class DateInput extends InputBase<string> {
 export default class Dialog extends ComponentBase {
     isOpen: boolean;
     title?: string;
+    size: "small" | "medium" | "large" | "xlarge";
     ariaLabel?: string;
     id?: string;
     additionalAttributes?: Record<string, unknown>;

@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`: `Dialog` takes `size` (`small`, `medium`, `large`, `xlarge`), as Bootstrap's does. Its width was
+  fixed at 560px; FluentCMS edits a field's settings in a large dialog.
 - `@tsazor/runtime`: in development, a by-type cascading parameter (`@CascadingParameter({ type: X })`) that finds no `X`
   but passes a cascade whose value is a plain object warns once. By type matches instances, and API data (parsed JSON)
   is never an instance of its generated model class, so such a parameter stayed unset without a word; the warning says
