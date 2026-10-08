@@ -77,10 +77,16 @@ tests our library on a real app.
 |---|---|---|---|
 | 0 | Infrastructure | Backend script, BFF, app skeleton, generated client, an E2E gate that logs in | Done |
 | 1 | Shell | Setup, catch-all page, sections and plugins, admin and auth layouts, login/logout | Done except setup, register and password pages |
-| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | |
+| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Roles done |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | |
 | 5 | Public site (optional) | The view plugins, layouts with component tags | |
+
+**Codemod, per screen** (`tsazor codemod` over the original `.razor` files):
+
+| Screen | Files | Automatic fixes | Left by hand |
+|---|---|---|---|
+| Roles | 3 | 0 | The library's components (20 tags), `@rendermode`, a C# anonymous object (`new { id = … }`), the code-behind (C#), DTO members in PascalCase (`context.Name` → `context.name`) |
 
 **Method, per screen:**
 1. Run the codemod over the original files and record what compiles as it is.
@@ -125,6 +131,7 @@ with Tsazor, or the framework has a gap.
 | Phase | Screens | Framework gaps found | Commits that changed the public API |
 |---|---|---|---|
 | 0–1 | Login, logout, the admin and auth layouts | 16 (F1–F16) | 2 (`ea66e86` runtime, `23ac0fb` compiler) |
+| 2 | Roles (list, create, update) | 5 (F17–F21) | 2 (Button `href`; `InputBase.Value` nullable) |
 
 ## Findings
 
@@ -146,3 +153,8 @@ with Tsazor, or the framework has a gap.
 | F14 | Compiler | `protected async onInitializedAsync()` (C# habit) compiled without a word and never ran | Fixed `23ac0fb` (TZS032 with a rename fix) |
 | F15 | Compiler | `@if (model !== undefined)` doesn't narrow inside child content (port-findings H.3). The first real form hit it at once; the port writes `model!` | Open: re-evaluate H.3 |
 | F16 | `create-tsazor` | With `--ui`, the starter still writes the Blazor template's `app.css`. Its Helvetica body font beats the library's typeface for text outside the components; it doesn't fight the components (Fluent maps the runtime's `invalid` class to its own and doesn't style links). The port sets `var(--fui-font-family)`. Option: the library ships a zero-weight `:where(body)` rule, and the starter leaves the font out when a library is chosen | Open |
+| F17 | `@tsazor/fluent` | The icon set has 11 icons; FluentCMS uses about 22 (folder, eye, download, delete, edit, …). Fluent UI Blazor ships the Fluent System Icons as typed values that tree-shake | Open (track B) |
+| F18 | Runtime | A `string | null` field (every string Swashbuckle generates without nullable reference types) didn't bind to a text input: `Value?: TValue`. Blazor's `Value` is `TValue?` | Fixed: `InputBase.Value` may be null; the input hands back a string |
+| F19 | Compiler | `RoleListPlugin.types` (a static through the component's own class, fine in Razor) became `this.RoleListPlugin` | Fixed: the own class name stays free |
+| F20 | Runtime | `@SupplyParameterFromQuery` worked only on pages and only with `@Parameter()` (Blazor 6/7). Since Blazor 8 it works in any component, and FluentCMS's plugins rely on it (14 files): the update form loaded with an empty id | Fixed: the renderer supplies it like a cascading value, and again after a navigation |
+| F21 | `@tsazor/fluent` | `Dialog.onClosed` is typed `EventCallback<MouseEvent>`, but Escape and the backdrop close it without an event | Open (small) |

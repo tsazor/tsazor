@@ -1,0 +1,11 @@
+@* The "delete" button in a list's row (FluentCMS's ActionButtonDelete). Its @onclick goes onto the button, as in Blazor. *@
+
+@if (visible) {
+    <Button appearance="subtle" intent="danger" size="small" @attributes="@additionalAttributes">@label</Button>
+}
+
+@code {
+    @Parameter() label = "Delete";
+    @Parameter() visible = true;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

@@ -4,7 +4,8 @@
  *
  *   signed out, an admin page says so → the login form shows the API's error for a wrong password →
  *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
- *   page in the admin layout, its sidebar link current → axe on both layouts → signing out
+ *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
+ *   a confirmation → axe on both layouts and the dialog → signing out
  *
  * Starts what isn't running (the backend clones and builds FluentCMS the first time), builds the
  * app and the BFF, and fails on every console error but the one a wrong password causes.
@@ -139,9 +140,48 @@ async function main() {
     const current = page.getByRole("navigation", { name: "Administration" }).getByRole("link", { name: "Roles" });
     check((await current.getAttribute("aria-current")) === "page", "the sidebar marks the current page");
     check((await page.getByRole("button", { name: ADMIN.username }).count()) === 1, "the header's menu shows the signed-in user");
-    await page.locator(".f-plugin-container").first().waitFor({ timeout: 15_000 });
+    await page.getByRole("table", { name: "Roles" }).waitFor({ timeout: 15_000 });
     const adminViolations = await axe(page);
-    check(adminViolations.length === 0, `axe on an admin page${adminViolations.length ? `: ${adminViolations.join(" | ")}` : ""}`);
+    check(adminViolations.length === 0, `axe on an admin page (the roles)${adminViolations.length ? `: ${adminViolations.join(" | ")}` : ""}`);
+
+    // Roles: the CRUD pattern of every management screen.
+    const rows = page.getByRole("table", { name: "Roles" }).locator("tbody tr");
+    const administrators = rows.filter({ hasText: "Administrators" }).first();
+    check(
+      (await administrators.getByRole("link", { name: "Edit" }).count()) === 1 && (await administrators.getByRole("button", { name: /Delete/ }).count()) === 0,
+      "a built-in role can be edited, not deleted",
+    );
+    const name = `Editors ${Date.now() % 100000}`;
+    await page.getByRole("link", { name: "Add Role" }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Description").fill("People who edit pages");
+    await page.getByRole("button", { name: "Submit" }).click();
+    await page.waitForURL(`${APP}/admin/roles`, { timeout: 10_000 });
+    await rows.filter({ hasText: name }).waitFor({ timeout: 10_000 });
+    check(true, "a new role, then back to the list (redirectTo)");
+
+    await rows.filter({ hasText: name }).getByRole("link", { name: "Edit" }).click();
+    await page.getByRole("heading", { name: "Update Role" }).waitFor({ timeout: 10_000 });
+    await page.waitForFunction(() => document.querySelector("input")?.value !== "", null, { timeout: 10_000 });
+    check(
+      (await page.getByLabel("Name").inputValue()) === name && (await page.getByLabel("Description").inputValue()) === "People who edit pages",
+      "the update form loads the role named by ?id= (@SupplyParameterFromQuery in a plugin)",
+    );
+    await page.getByLabel("Name").fill(`${name} (renamed)`);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await page.waitForURL(`${APP}/admin/roles`, { timeout: 10_000 });
+    await rows.filter({ hasText: `${name} (renamed)` }).waitFor({ timeout: 10_000 });
+    check(true, "the update is in the list");
+
+    await rows.filter({ hasText: `${name} (renamed)` }).getByRole("button", { name: /Delete/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor({ timeout: 10_000 });
+    check((await dialog.textContent())?.includes(`"${name} (renamed)"`) === true, "deleting asks first, naming the role");
+    const dialogViolations = await axe(page);
+    check(dialogViolations.length === 0, `axe with the dialog open${dialogViolations.length ? `: ${dialogViolations.join(" | ")}` : ""}`);
+    await dialog.getByRole("button", { name: "Yes, I'm sure" }).click();
+    await rows.filter({ hasText: name }).waitFor({ state: "detached", timeout: 10_000 });
+    check(true, "the role is gone");
 
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();

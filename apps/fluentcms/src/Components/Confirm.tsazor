@@ -1,0 +1,25 @@
+@* Asks before something can't be undone (FluentCMS's Confirm): the question, then "Yes, I'm sure" or "No, cancel". *@
+
+<Dialog isOpen="@visible" title="@title" onClosed="@this.cancel">
+    <ChildContent>@childContent</ChildContent>
+    <Footer>
+        <Button intent="danger" onClick="@this.confirm">Yes, I'm sure</Button>
+        <Button onClick="@this.cancel">No, cancel</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @Parameter() visible = false;
+    @Parameter() title = "Are you sure?";
+    @Parameter() onConfirm?: EventCallback;
+    @Parameter() onCancel?: EventCallback;
+    @Parameter() childContent?: RenderFragment;
+
+    private confirm(): Promise<void> | undefined {
+        return this.onConfirm?.invokeAsync();
+    }
+
+    private cancel(): Promise<void> | undefined {
+        return this.onCancel?.invokeAsync();
+    }
+}

@@ -1,0 +1,22 @@
+@inherits BasePlugin
+@import { RoleCreateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Create New Role" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter Name" required />
+    <TextArea @bind-Value="this.model.description" label="Description" placeholder="Enter Description" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = new RoleCreateRequest();
+
+    protected override onInitialized(): void {
+        this.model.siteId = this.viewState.site.id;
+    }
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.roleCreate(this.model));
+        this.navigateBack();
+    }
+}

@@ -1,0 +1,11 @@
+@* The "edit" link in a list's row (FluentCMS's ActionButtonEdit). *@
+
+@if (visible) {
+    <Button href="@href" appearance="subtle" size="small">@label</Button>
+}
+
+@code {
+    @Parameter() href = "";
+    @Parameter() label = "Edit";
+    @Parameter() visible = true;
+}

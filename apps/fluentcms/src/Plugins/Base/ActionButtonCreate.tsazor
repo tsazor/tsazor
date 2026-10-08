@@ -1,0 +1,11 @@
+@* The "add" link above a list (FluentCMS's ActionButtonCreate). *@
+
+@if (visible) {
+    <Button href="@href" intent="primary"><Icon name="add" /> @label</Button>
+}
+
+@code {
+    @Parameter() href = "";
+    @Parameter() label = "Add";
+    @Parameter() visible = true;
+}
