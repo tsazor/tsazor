@@ -166,6 +166,34 @@ describe("Router + RouteView + NavLink", () => {
     expect(links.map((a) => a.getAttribute("aria-current"))).toEqual([null, "page", null]);
   });
 
+  it("puts every other attribute on the anchor and joins class with the active class (Blazor's AdditionalAttributes)", async () => {
+    const navigation = freshNavigation();
+    navigation.navigateTo("/counter");
+    const renderer = buildApp(navigation);
+
+    class Menu extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        for (const [index, href] of ["/", "/counter"].entries()) {
+          b.openComponent(index * 10, defineComponent(NavLink));
+          b.addAttribute(index * 10 + 1, "class", "nav-link");
+          b.addAttribute(index * 10 + 2, "Href", href);
+          b.addAttribute(index * 10 + 3, "Match", NavLinkMatch.All);
+          b.addAttribute(index * 10 + 4, "title", `Go to ${href}`);
+          b.addAttribute(index * 10 + 5, "data-test", "nav");
+          b.closeComponent();
+        }
+      }
+    }
+    renderer.renderInContainer(Menu, container());
+    await renderer.waitUntilIdle();
+
+    const links = [...document.querySelectorAll("a")];
+    expect(links.map((a) => a.className)).toEqual(["nav-link", "nav-link active"]);
+    expect(links.map((a) => a.getAttribute("title"))).toEqual(["Go to /", "Go to /counter"]);
+    expect(links.map((a) => a.dataset.test)).toEqual(["nav", "nav"]);
+    expect(links.map((a) => a.getAttribute("aria-current"))).toEqual([null, "page"]);
+  });
+
   it("passes URL parameters into the page component", async () => {
     const navigation = freshNavigation();
     navigation.navigateTo("/user/17");

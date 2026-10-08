@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix (Blazor parity)** `@tsazor/runtime` `NavLink`: every other attribute goes onto the anchor, as
+  Blazor's `AdditionalAttributes` does.
+  - `<NavLink class="nav-link" href="counter">` renders `class="nav-link active"` while the link is
+    active.
+  - `title`, `target` and `aria-*` pass through as well. Without this, the Blazor template's nav menu
+    didn't compile (TZS025).
+  - `cssClass` still works, but is deprecated in favor of `class`.
+  - A link with neither a class nor the active state now renders no `class` attribute (it was
+    `class=""`).
 - `@tsazor/bootstrap` `addBootstrap` and `@tsazor/fluent` `addFluent`: they register the services the
   components use (the `Toaster`) in one call, `createTsazorApp({ services: addBootstrap })`. This is
   Blazor's `AddMudServices()`.

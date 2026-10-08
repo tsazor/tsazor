@@ -21,6 +21,10 @@ export enum NavLinkMatch {
  * matches URIs below the href at a separator (`/abc` covers `/abc/def` and
  * `/abc?x`, not `/abcdef`). So a Prefix link to the base (`""`, `"/"` without
  * a `<base>`) is active everywhere — the home link takes `NavLinkMatch.All`.
+ *
+ * Every other attribute goes onto the anchor, as in Blazor
+ * (`CaptureUnmatchedValues`): `<NavLink class="nav-link" href="counter">`
+ * renders `class="nav-link active"` while the link is active.
  */
 export class NavLink extends ComponentBase {
   /** Target href: relative to the base URI ("counter"), root-relative ("/app/counter") or absolute. */
@@ -29,8 +33,13 @@ export class NavLink extends ComponentBase {
   @Parameter() match: NavLinkMatch = NavLinkMatch.Prefix;
   /** Class added while active. */
   @Parameter() activeClass = "active";
-  /** Static classes always present on the anchor. */
+  /**
+   * Static classes always present on the anchor.
+   * @deprecated Write `class="…"` as in Blazor; the active class joins it.
+   */
   @Parameter() cssClass = "";
+  /** Any other attribute (`class`, `target`, `title`, `aria-*` …) goes onto the anchor: Blazor's `AdditionalAttributes`. */
+  @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
   /** Link content (markup between the NavLink tags). */
   @Parameter() childContent?: RenderFragment;
 
@@ -49,20 +58,20 @@ export class NavLink extends ComponentBase {
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     // Hash routing (Tsazor extension) renders route hrefs as fragments (`#/orders`).
     const href = this.navigation.toLinkHref(this.href);
-    if (navLinkMatches(this.navigation.toAbsoluteUri(this.href), this.navigation.uri, this.match)) {
-      b.openElement(0, "a");
-      b.addAttribute(1, "href", href);
-      b.addAttribute(2, "class", joinClasses(this.cssClass, this.activeClass));
-      b.addAttribute(3, "aria-current", "page");
-      b.addContent(4, this.childContent);
-      b.closeElement();
-    } else {
-      b.openElement(0, "a");
-      b.addAttribute(1, "href", href);
-      b.addAttribute(2, "class", this.cssClass);
-      b.addContent(3, this.childContent);
-      b.closeElement();
+    const active = navLinkMatches(this.navigation.toAbsoluteUri(this.href), this.navigation.uri, this.match);
+    const attributes = this.additionalAttributes ?? {};
+    const userClass = typeof attributes["class"] === "string" ? attributes["class"] : "";
+    b.openElement(0, "a");
+    for (const [name, value] of Object.entries(attributes)) {
+      if (name !== "class") b.addAttribute(1, name, value as never);
     }
+    b.addAttribute(2, "href", href);
+    // Blazor's CssClass: the class attribute and, while active, the active class; no attribute when both are empty.
+    const cssClass = joinClasses(userClass, this.cssClass, active ? this.activeClass : "");
+    if (cssClass !== "") b.addAttribute(3, "class", cssClass);
+    if (active) b.addAttribute(4, "aria-current", "page");
+    b.addContent(5, this.childContent);
+    b.closeElement();
   }
 
 }

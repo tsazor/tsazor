@@ -5,13 +5,13 @@
         <img src="img/logo.svg" />
     </a>
 
-    <NavLink Href="/" Match="@NavLinkMatch.All" CssClass="nav-tab">
+    <NavLink Href="/" Match="@NavLinkMatch.All" class="nav-tab">
         <img src="img/pizza-slice.svg" />
         <div>Get Pizza</div>
     </NavLink>
 
     <AuthorizeView>
-        <NavLink Href="/myorders" CssClass="nav-tab">
+        <NavLink Href="/myorders" class="nav-tab">
             <img src="img/bike.svg" />
             <div>My Orders</div>
         </NavLink>

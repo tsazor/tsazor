@@ -159,7 +159,7 @@ describe("nav-link", () => {
     click(m, "nav a:nth-child(2)");
     await m.settle();
     expect(m.html()).toContain('<a href="/orders" class="active" aria-current="page">Orders</a>');
-    expect(m.html()).toContain('<a href="/" class="">Home</a>');
+    expect(m.html()).toContain('<a href="/">Home</a>');
     m.dispose();
     // Plain anchors (the start state) never light up.
     const start = await mount(a);

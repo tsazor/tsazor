@@ -840,6 +840,7 @@ export declare class NavLink extends ComponentBase {
     match: NavLinkMatch;
     activeClass: string;
     cssClass: string;
+    additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
     private readonly navigation;
     private unsubscribe?;

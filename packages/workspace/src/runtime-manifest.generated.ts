@@ -812,7 +812,23 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "declaredBy": "NavLink",
           "default": "\"\"",
           "inferredType": "string",
-          "doc": "Static classes always present on the anchor."
+          "doc": "Static classes always present on the anchor.\n@deprecated Write `class=\"…\"` as in Blazor; the active class joins it."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "NavLink",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Any other attribute (`class`, `target`, `title`, `aria-*` …) goes onto the anchor: Blazor's `AdditionalAttributes`."
         },
         {
           "name": "childContent",
@@ -832,7 +848,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Link content (markup between the NavLink tags)."
         }
       ],
-      "doc": "Blazor's NavLink: an <a> that gains the active class when the current\nlocation matches its href. Re-renders on every location change.\n\nMatching is Blazor's (.NET 8): the href is resolved against the base URI\nand compared with the absolute current URI, case-insensitively. `All`\nmatches the URI exactly — also with a trailing slash only on the href, and\nignoring the current URI's query and fragment; `Prefix` additionally\nmatches URIs below the href at a separator (`/abc` covers `/abc/def` and\n`/abc?x`, not `/abcdef`). So a Prefix link to the base (`\"\"`, `\"/\"` without\na `<base>`) is active everywhere — the home link takes `NavLinkMatch.All`.",
+      "doc": "Blazor's NavLink: an <a> that gains the active class when the current\nlocation matches its href. Re-renders on every location change.\n\nMatching is Blazor's (.NET 8): the href is resolved against the base URI\nand compared with the absolute current URI, case-insensitively. `All`\nmatches the URI exactly — also with a trailing slash only on the href, and\nignoring the current URI's query and fragment; `Prefix` additionally\nmatches URIs below the href at a separator (`/abc` covers `/abc/def` and\n`/abc?x`, not `/abcdef`). So a Prefix link to the base (`\"\"`, `\"/\"` without\na `<base>`) is active everywhere — the home link takes `NavLinkMatch.All`.\n\nEvery other attribute goes onto the anchor, as in Blazor\n(`CaptureUnmatchedValues`): `<NavLink class=\"nav-link\" href=\"counter\">`\nrenders `class=\"nav-link active\"` while the link is active.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
