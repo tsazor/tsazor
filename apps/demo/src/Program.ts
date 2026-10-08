@@ -1,4 +1,4 @@
-import { createTsazorApp, AuthenticationStateProvider, type Token } from "@tsazor/runtime";
+import { createTsazorApp, AuthenticationStateProvider } from "@tsazor/runtime";
 import App from "./App.tsazor";
 import routes from "virtual:tsazor-routes";
 import { DemoAuthProvider } from "./DemoAuthProvider";
@@ -20,7 +20,7 @@ const app = createTsazorApp({
   // AddScoped<AuthenticationStateProvider, MyProvider>().
   services: (services) => {
     services.registerValue(DemoAuthProvider, authProvider);
-    services.registerValue(AuthenticationStateProvider as Token<AuthenticationStateProvider>, authProvider);
+    services.registerValue(AuthenticationStateProvider, authProvider);
     // App-wide state that outlives page navigation (/counter-persistent).
     services.registerValue(CounterState, new CounterState());
     // The CSV worker (/worker): one client for the app; the worker starts on the first call.

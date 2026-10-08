@@ -1,4 +1,4 @@
-import { AuthenticationStateProvider, createTsazorApp, TsazorHttp, type Token } from "@tsazor/runtime";
+import { AuthenticationStateProvider, createTsazorApp, TsazorHttp } from "@tsazor/runtime";
 import { CookieAuthenticationStateProvider } from "@tsazor/dotnet";
 import routes from "virtual:tsazor-routes";
 import App from "./App.tsazor";
@@ -12,7 +12,7 @@ createTsazorApp({
     routes,
     services: (services) => {
         services.registerValue(TsazorHttp, http);
-        services.registerValue(AuthenticationStateProvider as Token<AuthenticationStateProvider>, new CookieAuthenticationStateProvider(http));
+        services.registerValue(AuthenticationStateProvider, new CookieAuthenticationStateProvider(http));
         services.register(OrdersClient, (s) => new OrdersClient(s.get(TsazorHttp)));
     },
 });

@@ -1,4 +1,4 @@
-import { createTsazorApp, AuthenticationStateProvider, type Token } from "@tsazor/runtime";
+import { createTsazorApp, AuthenticationStateProvider } from "@tsazor/runtime";
 import App from "./App.tsazor";
 import routes from "virtual:tsazor-routes";
 import { AuthProvider } from "./AuthProvider";
@@ -17,7 +17,7 @@ const app = createTsazorApp({
   // AddScoped<AuthenticationStateProvider, MyProvider>().
   services: (services) => {
     services.registerValue(AuthProvider, authProvider);
-    services.registerValue(AuthenticationStateProvider as Token<AuthenticationStateProvider>, authProvider);
+    services.registerValue(AuthenticationStateProvider, authProvider);
     services.registerValue(OrderState, new OrderState());
     services.registerValue(OrdersClient, new OrdersClient());
   },
