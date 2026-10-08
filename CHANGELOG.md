@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity** `@tsazor/workspace` (tags in every tool): every directory above a component, up to the project root,
+  is an enclosing namespace, as in C#. A component in `Admin/` is in scope in `Admin/Fields/` without `@using`; only
+  the directories with an `_Imports.tsazor` were. `ImportsChain` records its `root`.
 - `@tsazor/fluent`: `Dialog` takes `size` (`small`, `medium`, `large`, `xlarge`), as Bootstrap's does. Its width was
   fixed at 560px; FluentCMS edits a field's settings in a large dialog.
 - `@tsazor/runtime`: in development, a by-type cascading parameter (`@CascadingParameter({ type: X })`) that finds no `X`

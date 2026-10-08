@@ -52,8 +52,8 @@ export function classNameForFile(filePath: string): string {
 
 /**
  * Builds the resolution context for one .tsazor file. Component tags resolve
- * like C# type names: the file's own directory and the _Imports layer
- * directories are enclosing namespaces (nearest wins); every @using source —
+ * like C# type names: the file's own directory and every directory above it
+ * up to the project root are enclosing namespaces (nearest wins); every @using source —
  * path directories, the runtime built-ins and bare packages (only names the
  * package really exports) — is searched as a whole, and a tag found in more
  * than one of them is ambiguous (TZS017).

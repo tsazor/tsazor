@@ -83,6 +83,7 @@ export interface ImportsChain {
     layers: ImportsLayer[];
     usings: string[];
     layout?: string;
+    root?: string;
 }
 
 // ImportsLayer

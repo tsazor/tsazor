@@ -146,6 +146,24 @@ describe("createFileContext", () => {
     }
   });
 
+  it("searches every directory above the file, with or without an _Imports, as C#'s enclosing namespaces", async () => {
+    // Pages/Admin has no _Imports: a component in Pages/Admin is in scope in Pages/Admin/Fields, and one at
+    // the root in both.
+    await mkdir(path.join(root, "Pages", "Admin", "Fields"), { recursive: true });
+    await writeFile(path.join(root, "Pages", "Admin", "FieldBasics.tsazor"), "<div></div>\n");
+    await writeFile(path.join(root, "RootOnly.tsazor"), "<div></div>\n");
+    try {
+      const context = await contextFor("Pages/Admin/Fields/StringFieldSettings.tsazor");
+      expect(context.resolveComponent("FieldBasics", [])).toEqual({ specifier: "../FieldBasics.tsazor" });
+      expect(context.resolveComponent("RootOnly", [])).toEqual({ specifier: "../../../RootOnly.tsazor" });
+      // Not sideways: a sibling folder's component still needs a @using.
+      expect(context.resolveComponent("Panel", [])).toBeNull();
+    } finally {
+      await rm(path.join(root, "Pages", "Admin", "FieldBasics.tsazor"));
+      await rm(path.join(root, "RootOnly.tsazor"));
+    }
+  });
+
   it("imports @inject types the way the target file really exports them (I3)", async () => {
     const context = await contextFor("Pages/Index.tsazor");
     expect(context.resolveType("UserService", [])).toEqual({ specifier: "../UserService" });

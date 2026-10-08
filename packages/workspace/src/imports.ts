@@ -25,6 +25,8 @@ export interface ImportsChain {
   usings: string[];
   /** Default layout from the nearest _Imports that declares one. */
   layout?: string;
+  /** The project root the chain was collected up to: the outermost enclosing namespace. */
+  root?: string;
 }
 
 const IMPORTS_FILE = "_Imports.tsazor";
@@ -103,7 +105,7 @@ export function collectImportsSync(fileDir: string, root: string): ImportsChain 
       layout = layer.layout;
     }
   }
-  return { layers, usings, layout };
+  return { layers, usings, layout, root: stop };
 }
 
 /**
@@ -180,9 +182,20 @@ export function candidateDirs(fileDir: string, chain: ImportsChain): string[] {
   return dirs;
 }
 
-/** The file's own directory plus every _Imports layer directory (Blazor: enclosing namespaces). */
+/** The file's own directory, every directory above it up to the project root, and every _Imports layer directory (Blazor: enclosing namespaces), nearest first. */
 export function enclosingDirs(fileDir: string, chain: ImportsChain): string[] {
   const dirs = [path.resolve(fileDir)];
+  // C#'s enclosing namespaces: every directory above the file up to the project root, whether or not it
+  // has an _Imports (a component in Admin/ is in scope in Admin/Fields/, as in Razor).
+  const root = chain.root === undefined ? undefined : path.resolve(chain.root);
+  if (root !== undefined && isInside(dirs[0]!, root)) {
+    for (let current = dirs[0]!; !samePath(current, root); ) {
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      dirs.push(parent);
+      current = parent;
+    }
+  }
   for (const layer of chain.layers) {
     if (!dirsInclude(dirs, layer.dir)) dirs.push(path.resolve(layer.dir));
   }
@@ -201,6 +214,16 @@ export function usingDirs(chain: ImportsChain): string[] {
     }
   }
   return dirs;
+}
+
+function samePath(a: string, b: string): boolean {
+  return path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
+}
+
+/** `dir` is `root` or below it. */
+function isInside(dir: string, root: string): boolean {
+  const relative = path.relative(root, dir);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 export function dirsInclude(dirs: string[], candidate: string): boolean {
