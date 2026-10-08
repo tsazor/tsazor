@@ -610,7 +610,25 @@ describe("Breadcrumb + BreadcrumbItem", () => {
     expect(items).toHaveLength(2);
     expect(items[0]!.querySelector("a")!.getAttribute("href")).toBe("/home");
     expect(items[1]!.className).toContain("active");
+    expect(items[1]!.getAttribute("aria-current")).toBe("page");
+    expect(items[0]!.getAttribute("aria-current")).toBeNull();
     expect(items[1]!.querySelector("a")).toBeNull();
+  });
+
+  it("renders an entry with onClick as a button that raises it", async () => {
+    let clicks = 0;
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, BreadcrumbItem);
+      b.addAttribute(1, "onClick", EventCallback.unbound(() => { clicks++; }));
+      b.addAttribute(2, "childContent", text("images"));
+      b.closeComponent();
+    });
+    const button = container.querySelector(".breadcrumb-item > button")!;
+    expect(button.getAttribute("type")).toBe("button");
+    expect(container.querySelector("a")).toBeNull();
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await settle(renderer);
+    expect(clicks).toBe(1);
   });
 });
 

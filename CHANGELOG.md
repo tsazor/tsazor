@@ -11,6 +11,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **Fix (Blazor parity)** `@tsazor/runtime`: `InputFile` returns the task of `onChange`, as Blazor does. An async upload
   in the handler was not awaited, and its error missed the ErrorBoundary.
 - `@tsazor/compiler`: `@ref` takes `this.name` as well as `name`, as markup writes members elsewhere. It was TZS008.
+- `@tsazor/fluent`, `@tsazor/bootstrap`: `BreadcrumbItem` takes `onClick` and is then a button: for a trail kept in
+  state, not in the URL (FluentCMS's folder picker). **Fix** `@tsazor/bootstrap`: the active item has
+  `aria-current="page"`.
+- `@tsazor/fluent`: the icons `folder`, `folder-up`, `document`, `image` and `download`.
 - `@tsazor/dotnet`: **file uploads** (`multipart/form-data`). An operation with a multipart body, such as an ASP.NET Core
   action that takes `IFormFile` or `IEnumerable<IFormFile>`, gets a body type of its own (`FileUploadForm = { files?: Blob[] }`)
   and sends a `FormData`. A schema string with `format: binary` is a `Blob`, which a `File` from an input is. The new

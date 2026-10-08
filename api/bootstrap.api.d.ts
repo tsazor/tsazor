@@ -46,6 +46,7 @@ export default class BreadcrumbItem extends ComponentBase {
     childContent?: RenderFragment;
     href: string;
     active: boolean;
+    onClick?: EventCallback<MouseEvent>;
 }
 
 // Button

@@ -58,6 +58,16 @@ describe("Icon", () => {
     result.dispose();
   });
 
+  it("draws each file icon with its own path, not the fallback", async () => {
+    const paths = new Set<string>();
+    for (const name of ["check", "folder", "folder-up", "document", "image", "download"]) {
+      const result = await renderOne(Icon, (b) => b.addAttribute(1, "name", name));
+      paths.add(result.container.querySelector("path")!.getAttribute("d")!);
+      result.dispose();
+    }
+    expect(paths.size).toBe(6);
+  });
+
   it("exposes role=img with an accessible label when one is given", async () => {
     const result = await renderOne(Icon, (b) => {
       b.addAttribute(1, "name", "check");
@@ -177,6 +187,22 @@ describe("Breadcrumb", () => {
     const current = result.container.querySelector(".fui-breadcrumb__current")!;
     expect(current.getAttribute("aria-current")).toBe("page");
     expect(current.querySelector("a")).toBeNull();
+    result.dispose();
+  });
+
+  it("renders an item with onClick as a button that raises it, without a link", async () => {
+    let clicks = 0;
+    const result = await renderOne(BreadcrumbItem, (b) => {
+      b.addAttribute(1, "onClick", EventCallback.unbound(() => { clicks++; }));
+      b.addAttribute(2, "childContent", (c: RenderTreeBuilder) => c.addContent(0, "images"));
+    });
+    const button = result.container.querySelector("button.fui-breadcrumb__link")!;
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.textContent).toBe("images");
+    expect(result.container.querySelector("a")).toBeNull();
+    click(result.container, "button");
+    await settle(result);
+    expect(clicks).toBe(1);
     result.dispose();
   });
 

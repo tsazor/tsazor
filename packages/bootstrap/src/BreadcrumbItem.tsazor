@@ -1,8 +1,11 @@
-@** One entry of a Breadcrumb (Bootstrap's `.breadcrumb-item`): a link to `href`, or plain text
-    with the `active` class when it is the current page. Place it inside a Breadcrumb. *@
-<li class="@itemClass">
+@** One entry of a Breadcrumb (Bootstrap's `.breadcrumb-item`): a link to `href`, a button when
+    `onClick` is set, or plain text with the `active` class and `aria-current="page"` when it is the
+    current page. Place it inside a Breadcrumb. *@
+<li class="@itemClass" aria-current="@ariaCurrent">
     @if (active) {
         @childContent
+    } else if (onClick) {
+        <button type="button" class="btn btn-link p-0 align-baseline" @onclick="click">@childContent</button>
     } else {
         <a href="@href">@childContent</a>
     }
@@ -15,6 +18,17 @@
     @Parameter() href: string = "#";
     /** The current (last) breadcrumb entry: plain text, no link. */
     @Parameter() active: boolean = false;
+    /** Makes the entry a button that raises this instead of a link: for a trail kept in state, not in the
+        URL (the folders of a file picker). */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+
+    private get ariaCurrent(): string | null {
+        return this.active ? "page" : null;
+    }
+
+    private click(event: MouseEvent): Promise<void> | undefined {
+        return this.onClick?.invokeAsync(event);
+    }
 
     private get itemClass(): string {
         return this.active ? "breadcrumb-item active" : "breadcrumb-item";
