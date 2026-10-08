@@ -268,32 +268,28 @@ class Generator {
   }
 
   private operations(): OperationGen[] {
-    const generated: OperationGen[] = [];
+    const entries: OperationEntry[] = [];
     for (const [path, pathItem] of Object.entries(this.document.paths ?? {})) {
       const item = pathItem as Record<string, unknown>;
-      const pathParameters = (Array.isArray(item.parameters) ? item.parameters : []) as (OpenApiParameter | { $ref: string })[];
+      const pathItemParameters = (Array.isArray(item.parameters) ? item.parameters : []) as (OpenApiParameter | { $ref: string })[];
       for (const method of HTTP_METHODS) {
         const operation = item[method] as OpenApiOperation | undefined;
         if (operation === undefined || operation === null) continue;
-        generated.push(this.operation(method as OpenApiMethod, path, operation, pathParameters));
+        const parameters = [...pathItemParameters, ...(operation.parameters ?? [])].map(
+          (p) => resolveSchemaLike(this.document, p as unknown as OpenApiSchema) as unknown as OpenApiParameter,
+        );
+        entries.push({ method: method as OpenApiMethod, path, operation, parameters });
       }
     }
-    return generated;
+    const names = this.methodNames(entries);
+    return entries.map((entry, index) => this.operation(entry, names[index]!));
   }
 
-  private operation(
-    method: OpenApiMethod,
-    path: string,
-    operation: OpenApiOperation,
-    pathItemParameters: (OpenApiParameter | { $ref: string })[],
-  ): OperationGen {
-    const parameters = [...pathItemParameters, ...(operation.parameters ?? [])].map(
-      (p) => resolveSchemaLike(this.document, p as unknown as OpenApiSchema) as unknown as OpenApiParameter,
-    );
+  private operation(entry: OperationEntry, name: string): OperationGen {
+    const { method, path, operation, parameters } = entry;
     const pathParameters = parameters.filter((p) => p.in === "path");
     const queryParameters = parameters.filter((p) => p.in === "query");
 
-    const name = this.methodName(operation, method, path);
     const responseType = this.responseType(operation, name);
     const bodyType = this.bodyType(operation, name);
 
@@ -330,14 +326,58 @@ class Generator {
     };
   }
 
-  private methodName(operation: OpenApiOperation, method: OpenApiMethod, path: string): string {
-    if (operation.operationId) return camel(operation.operationId);
-    const segments = path.split("/").filter((s) => s.length > 0 && !/[$()&:]/.test(s)).map(pascal).join("");
-    this.warn(`Operation ${method.toUpperCase()} ${path} without operationId → derived method name "${method}${segments}".`);
-    return `${method}${segments}`;
+  /**
+   * One method name per operation: its operationId, or — Swashbuckle's default
+   * emits none — a name from the path's literal segments without the `api`/`v1`
+   * prefix (`POST /api/User/Create` → `userCreate`). Derived names that collide
+   * get the HTTP method (`getOrders`/`postOrders`), then their path parameters
+   * (`getOrdersById`), then a counter.
+   */
+  private methodNames(entries: OperationEntry[]): string[] {
+    const derived = entries.map((entry) => !entry.operation.operationId);
+    const names = entries.map(
+      (entry) => camel(entry.operation.operationId ?? nameSegments(entry.path).join("_")) || entry.method,
+    );
+    const rename = (stage: (index: number, group: number[]) => string | undefined): void => {
+      const groups = new Map<string, number[]>();
+      names.forEach((name, index) => groups.set(name, [...(groups.get(name) ?? []), index]));
+      for (const group of groups.values()) {
+        if (group.length < 2) continue;
+        for (const index of group) {
+          if (!derived[index]) continue;
+          names[index] = stage(index, group) ?? names[index]!;
+        }
+      }
+    };
+    rename((index, group) =>
+      new Set(group.map((i) => entries[i]!.method)).size > 1 ? camel(`${entries[index]!.method}_${names[index]}`) : undefined,
+    );
+    rename((index) => {
+      const pathParameters = entries[index]!.parameters.filter((p) => p.in === "path").map((p) => upperFirst(camel(p.name)));
+      return pathParameters.length > 0 ? `${names[index]}By${pathParameters.join("And")}` : undefined;
+    });
+    rename((index, group) => {
+      const position = group.filter((i) => derived[i]).indexOf(index);
+      return position > 0 ? `${names[index]}${position + 1}` : undefined;
+    });
+
+    const first = derived.indexOf(true);
+    if (first >= 0) {
+      const count = derived.filter(Boolean).length;
+      const example = `${entries[first]!.method.toUpperCase()} ${entries[first]!.path} → ${names[first]}`;
+      this.warn(
+        `${count} operation(s) without operationId: method names derived from the paths (${example}). ` +
+          "For names of your own, set operationIds on the server (Swashbuckle: CustomOperationIds).",
+      );
+    }
+    return names;
   }
 
-  /** First 2xx response with a JSON schema (204 or no schema ⇒ void = undefined body). */
+  /**
+   * First 2xx response with a JSON schema (204 or no schema ⇒ void = undefined body).
+   * With an envelope, the type is the envelope's `data` property: that is what
+   * the client returns as `body` (`unwrapEnvelope`).
+   */
   private responseType(operation: OpenApiOperation, opName: string): { type: string } | undefined {
     if (operation.responses === undefined) return undefined;
     for (const [code, raw] of Object.entries(operation.responses)) {
@@ -346,9 +386,20 @@ class Generator {
       const content = response?.content;
       const json = content?.["application/json"] ?? (content ? Object.values(content)[0] : undefined);
       if (json?.schema === undefined) continue;
+      const data = this.envelopeData(json.schema as OpenApiSchema);
+      if (data !== undefined) return { type: this.typeText(data, opName, schemaNullable(data)) };
       return { type: this.typeText(json.schema as OpenApiSchema, opName) };
     }
     return undefined;
+  }
+
+  /** The schema of the envelope's `data` property, when the response schema is such an envelope. */
+  private envelopeData(schema: OpenApiSchema): OpenApiSchema | undefined {
+    const key = this.envelope?.data;
+    if (key === undefined) return undefined;
+    const envelope = flattenAllOf(this.document, resolveSchemaLike(this.document, schema));
+    if (schemaType(envelope) !== "object") return undefined;
+    return envelope.properties?.[key] as OpenApiSchema | undefined;
   }
 
   private bodyType(operation: OpenApiOperation, opName: string): { type: string } | undefined {
@@ -385,6 +436,14 @@ class Generator {
   }
 }
 
+interface OperationEntry {
+  method: OpenApiMethod;
+  path: string;
+  operation: OpenApiOperation;
+  /** Path-item and operation parameters, resolved. */
+  parameters: OpenApiParameter[];
+}
+
 interface OperationGen {
   lines: string[];
   responseType?: { type: string };
@@ -417,11 +476,24 @@ function kebab(name: string): string {
   return name.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2").toLowerCase();
 }
 
+/** A path's literal segments, without parameters and the conventional `api`/`v1` prefix. */
+function nameSegments(path: string): string[] {
+  const segments = path.split("/").filter((segment) => segment.length > 0 && !segment.includes("{"));
+  while (segments.length > 0 && /^(api|v\d+(\.\d+)?)$/i.test(segments[0]!)) segments.shift();
+  return segments;
+}
+
+function upperFirst(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 function camel(name: string): string {
   // "List_Orders" → "listOrders"; PascalCase is kept and only lowercased
   // at the start ("ListOrders" → "listOrders").
-  const clean = name.replace(/[^A-Za-z0-9]+(.)/g, (_m, c: string) => c.toUpperCase());
-  return clean.length === 0 ? "op" : clean.charAt(0).toLowerCase() + clean.slice(1);
+  const clean = name.replace(/[^A-Za-z0-9]+(.)/g, (_m, c: string) => c.toUpperCase()).replace(/[^A-Za-z0-9]/g, "");
+  if (clean.length === 0) return "";
+  // An identifier cannot start with a digit ("2fa" → "op2fa").
+  return /^[0-9]/.test(clean) ? `op${clean}` : clean.charAt(0).toLowerCase() + clean.slice(1);
 }
 
 /** Property key as a field (quoted when not a TS identifier). */

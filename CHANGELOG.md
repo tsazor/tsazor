@@ -5,6 +5,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/dotnet`, found by porting FluentCMS against its real OpenAPI document:
+  - **Without `operationId`** (Swashbuckle's default), method names come from the path:
+    `POST /api/User/Create` → `userCreate`. They were `postapiUserCreate`, and a path parameter made the
+    output invalid TypeScript (`deleteapiUserDeleteId}`). Names that collide get the HTTP method, then
+    the path parameters (`getOrdersById`). One warning replaces one warning per operation.
+  - **`--envelope`:** the generated return type is the envelope's `data`. It was the envelope itself,
+    while the client returned `data` as the body.
+  - **Envelope errors on an error status** (FluentCMS answers 500 with them) are the result's message.
+    It was `HTTP 500`.
+  - An envelope error object `{ code, description }` reads as its description, or as its code when that
+    is empty. It was `code: …` plus `description: …`.
 - **Fix (Blazor parity)** `@tsazor/runtime` `NavLink`: every other attribute goes onto the anchor, as
   Blazor's `AdditionalAttributes` does.
   - `<NavLink class="nav-link" href="counter">` renders `class="nav-link active"` while the link is

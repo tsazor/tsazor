@@ -16,8 +16,19 @@ ran their own HTTP helpers).
   can be read: RFC 9457 ProblemDetails and ValidationProblemDetails
   (`errors: Record<string, string[]>`) are values on the result.
 - **Envelope unwrapping.** APIs that wrap responses in `{ data: T, errors: [...] }`
-  (FluentCMS style) are supported with `--envelope data,errors`; a non-empty envelope error
-  turns a 2xx into an `ok:false` result.
+  (FluentCMS style) are supported with `--envelope data,errors`:
+  - the generated return type is the envelope's `data`, the same value the client returns as `body`;
+  - a non-empty envelope error turns a 2xx into an `ok:false` result;
+  - on an error status, the envelope's errors become the message, unless the body is a ProblemDetails
+    with a `title` or `detail`;
+  - an error object such as `{ code, description }` reads as its text, or as its code when the text
+    is empty.
+- **Method names.** A method is named after its operation's `operationId`. Swashbuckle's default
+  emits none. Then the name comes from the path, without the `api`/`v1` prefix:
+  - `POST /api/User/Create` becomes `userCreate`;
+  - names that collide get the HTTP method (`getOrders`, `postOrders`), and then the path
+    parameters (`getOrdersById`);
+  - one warning names the fix: set operationIds on the server (Swashbuckle: `CustomOperationIds`).
 - **Schema ⇒ DataAnnotations.** Constraints from the schema are emitted as 3.6 decorators on the
   generated model *classes* (`@Required()`, `@MinLength`, `@MaxLength`, `@StringLength`,
   `@Range`, `@EmailAddress`, `@RegularExpression`) — EditContext +

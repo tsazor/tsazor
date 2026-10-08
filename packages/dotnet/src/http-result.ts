@@ -156,11 +156,19 @@ export function envelopeErrorMessages(body: unknown, envelope: EnvelopeOptions |
   return flattenErrors(errors);
 }
 
+/** The keys an error object keeps its text under, in order of preference. */
+const ERROR_TEXT_KEYS = ["message", "description", "detail", "title", "error"];
+
 function flattenErrors(errors: unknown): string[] {
   if (typeof errors === "string") return errors.length > 0 ? [errors] : [];
   if (Array.isArray(errors)) return errors.flatMap(flattenErrors);
   if (typeof errors === "object" && errors !== null) {
-    // `{ field: ["msg"] }` (ValidationProblemDetails-Stil im Envelope) or `{ field: { ...message } }`
+    // An error object (`{ code, description }`, `{ message }`): its text, else its code.
+    const record = errors as Record<string, unknown>;
+    const text = ERROR_TEXT_KEYS.map((key) => record[key]).find((value) => typeof value === "string" && value.length > 0);
+    if (typeof text === "string") return [text];
+    if (typeof record["code"] === "string" && record["code"].length > 0) return [record["code"]];
+    // `{ field: ["msg"] }` (ValidationProblemDetails style in the envelope) or `{ field: { ...message } }`
     return Object.entries(errors).flatMap(([field, value]) => {
       const messages = flattenErrors(value);
       if (messages.length === 0) return [];
@@ -195,10 +203,9 @@ export function buildResult<T>(
 ): HttpResult<T> {
   const body = parseBodyText(text);
   const headers = response.headers;
-  if (!response.ok) {
-    return failureResult(response, body, headers);
-  }
-  if (envelopeHasErrors(body, envelope)) {
+  // Envelope errors fail the call on a 2xx, and carry the message on an error
+  // status too (FluentCMS answers 500 with them) — unless a ProblemDetails says more.
+  if (envelopeHasErrors(body, envelope) && (response.ok || !hasProblemText(body))) {
     return {
       ok: false,
       status: response.status,
@@ -209,7 +216,16 @@ export function buildResult<T>(
       response,
     };
   }
+  if (!response.ok) {
+    return failureResult(response, body, headers);
+  }
   return { ok: true, status: response.status, body: unwrapEnvelope(body, envelope) as T, headers, response };
+}
+
+/** True when the body is a ProblemDetails with a text of its own (`title` or `detail`). */
+function hasProblemText(body: unknown): boolean {
+  const problem = asProblemDetails(body);
+  return problem !== null && (problem.title !== undefined || problem.detail !== undefined);
 }
 
 function failureResult(response: Response, body: unknown, headers: Headers): HttpResult<never> {
@@ -225,7 +241,7 @@ function failureResult(response: Response, body: unknown, headers: Headers): Htt
   };
 }
 
-/** A synthetic ProblemDetails for an envelope failure (the server kept 2xx). */
+/** A synthetic ProblemDetails for an envelope failure: its messages as the `detail`. */
 function envelopeErrorMessageBody(body: unknown, envelope: EnvelopeOptions | undefined, status: number): unknown {
   const messages = envelopeErrorMessages(body, envelope);
   return { type: "about:blank", title: "Request failed (envelope)", status, detail: messages.join("; ") || undefined };

@@ -134,50 +134,96 @@ describe("generateClient — client", () => {
   });
 
   it("type-checks the generated output against the package types (no TS error)", async () => {
-    // For the check, the generated files land on disk (real module
-    // resolution, real tsconfig): a test/.out scratch dir with paths to the
-    // package's own dist types — exactly a user's situation.
     const generation = generateClient(await document, { clientName: "ContosoOrders", baseUrl: "https://api.contoso.example" });
-    const outDir = path.resolve(import.meta.dirname, ".out-generate");
-    await mkdir(outDir, { recursive: true });
-    for (const file of generation.files) {
-      await writeFile(path.join(outDir, file.path), file.content, "utf8");
-    }
-    await writeFile(
-      path.join(outDir, "tsconfig.json"),
-      JSON.stringify(
-        {
-          compilerOptions: {
-            target: "ES2022",
-            module: "ESNext",
-            moduleResolution: "bundler",
-            strict: true,
-            noUncheckedIndexedAccess: true,
-            exactOptionalPropertyTypes: false,
-            lib: ["ES2022", "DOM", "DOM.Iterable"],
-            types: [],
-            noEmit: true,
-            // No self-link for @tsazor/dotnet in pnpm — types point straight at dist.
-            paths: { "@tsazor/dotnet": ["../../dist/index.d.ts"] },
-          },
-          files: generation.files.map((f) => f.path),
-        },
-        null,
-        2,
-      ),
-      "utf8",
-    );
-    const configPath = path.join(outDir, "tsconfig.json");
-    const parsed = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, outDir);
-    expect(parsed.errors, parsed.errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n")).toEqual([]);
-    const program = ts.createProgram(parsed.fileNames, parsed.options);
-    const diagnostics = ts.getPreEmitDiagnostics(program).filter((entry) => entry.file === undefined || !entry.file.fileName.includes("node_modules"));
-    const errors = diagnostics.filter((entry) => entry.category === ts.DiagnosticCategory.Error);
-    expect(
-      errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n"),
-      errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n"),
-    ).toBe("");
+    expect(await typeErrors(generation.files, "contoso")).toBe("");
     // Warnings: only the documented subset (inline object in the fixture).
     expect(generation.warnings).toEqual([`Schema "metadata": inline object without $ref → Record<string, unknown>`]);
   });
 });
+
+describe("generateClient — Swashbuckle's defaults (no operationId, an envelope)", () => {
+  const defaults: Promise<OpenApiDocument> = loadOpenApiDocument(
+    path.join(import.meta.dirname, "fixtures", "openapi-swashbuckle-default.json").replace(/\\/g, "/"),
+  );
+  const generate = async () =>
+    generateClient(await defaults, { clientName: "Cms", envelope: { data: "data", errors: "errors" } });
+  const signatures = (client: string) => [...client.matchAll(/^ {4}(\w+)\((.*)\): Promise<HttpResult<(.*)>> \{$/gm)].map((m) => `${m[1]}(${m[2]}): ${m[3]}`);
+
+  it("derives the method names from the path, without the api/v1 prefix", async () => {
+    const client = (await generate()).files.find((f) => f.path === "cms.ts")!.content;
+    expect(signatures(client)).toEqual([
+      "userGetAll(): UserDto[] | null",
+      "userCreate(body: UserCreateRequest): UserDto",
+      "userDelete(id: string): boolean",
+      // Same name, same method: the path parameter tells them apart.
+      "fileDownloadById(id: string): void",
+      "fileDownload(query?: FileDownloadQuery): void",
+      "contentGetAll(contentTypeSlug: string, query?: ContentGetAllQuery): UserDto[] | null",
+      // REST style: the method, then the parameter.
+      "getOrders(): OrderDto[]",
+      "postOrders(body: OrderDto): void",
+      "getOrdersById(id: number): OrderDto",
+      "deleteOrders(id: number): void",
+      "robotsTxt(): string",
+    ]);
+  });
+
+  it("says once that the names are derived, with an example and the fix", async () => {
+    expect((await generate()).warnings).toEqual([
+      "11 operation(s) without operationId: method names derived from the paths (GET /api/User/GetAll → userGetAll). " +
+        "For names of your own, set operationIds on the server (Swashbuckle: CustomOperationIds).",
+    ]);
+  });
+
+  it("types the body as the envelope's data — what the client returns", async () => {
+    const plain = generateClient(await defaults, { clientName: "Cms" }).files.find((f) => f.path === "cms.ts")!.content;
+    expect(signatures(plain)[0]).toBe("userGetAll(): UserDtoIApiPagingResult");
+    expect(await typeErrors((await generate()).files, "swashbuckle")).toBe("");
+  });
+});
+
+/**
+ * TypeScript errors of generated files. They land on disk (real module
+ * resolution, real tsconfig): a test/.out scratch dir with paths to the
+ * package's own dist types — exactly a user's situation.
+ */
+async function typeErrors(files: { path: string; content: string }[], name: string): Promise<string> {
+  const outDir = path.resolve(import.meta.dirname, ".out-generate", name);
+  await mkdir(outDir, { recursive: true });
+  for (const file of files) {
+    await writeFile(path.join(outDir, file.path), file.content, "utf8");
+  }
+  await writeFile(
+    path.join(outDir, "tsconfig.json"),
+    JSON.stringify(
+      {
+        compilerOptions: {
+          target: "ES2022",
+          module: "ESNext",
+          moduleResolution: "bundler",
+          strict: true,
+          noUncheckedIndexedAccess: true,
+          exactOptionalPropertyTypes: false,
+          lib: ["ES2022", "DOM", "DOM.Iterable"],
+          types: [],
+          noEmit: true,
+          // No self-link for @tsazor/dotnet in pnpm — types point straight at dist.
+          paths: { "@tsazor/dotnet": ["../../../dist/index.d.ts"] },
+        },
+        files: files.map((f) => f.path),
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  const configPath = path.join(outDir, "tsconfig.json");
+  const parsed = ts.parseJsonConfigFileContent(ts.readConfigFile(configPath, ts.sys.readFile).config, ts.sys, outDir);
+  expect(parsed.errors, parsed.errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n")).join("\n")).toEqual([]);
+  const program = ts.createProgram(parsed.fileNames, parsed.options);
+  const diagnostics = ts.getPreEmitDiagnostics(program).filter((entry) => entry.file === undefined || !entry.file.fileName.includes("node_modules"));
+  return diagnostics
+    .filter((entry) => entry.category === ts.DiagnosticCategory.Error)
+    .map((error) => ts.flattenDiagnosticMessageText(error.messageText, "\n"))
+    .join("\n");
+}

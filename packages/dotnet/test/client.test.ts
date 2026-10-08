@@ -70,6 +70,10 @@ beforeAll(async () => {
       response.end(JSON.stringify({ data: null, errors: ["Order could not be persisted."] }));
     } else if (url === `/envelope/orders/validation`) {
       response.end(JSON.stringify({ data: null, errors: { customerName: ["The customerName field is required."] } }));
+    } else if (url === `/envelope/orders/server-error`) {
+      // FluentCMS: an error status with the envelope, its errors as { code, description }.
+      response.statusCode = 500;
+      response.end(JSON.stringify({ errors: [{ code: "Order.Locked", description: "" }, { code: "Order.Late", description: "Too late to change." }], status: 500, data: null, isSuccess: false }));
     } else {
       response.statusCode = 500;
       response.end(JSON.stringify({ title: "Unknown route" }));
@@ -103,6 +107,9 @@ class EnvelopeClient extends OpenApiClient {
   }
   validation() {
     return this.call<{ id: number }>("GET", "/envelope/orders/validation");
+  }
+  serverError() {
+    return this.call<{ id: number }>("GET", "/envelope/orders/server-error");
   }
 }
 
@@ -174,5 +181,13 @@ describe("OpenApiClient over a Node HTTP server", () => {
 
     expect(envelopeHasErrors({ data: null, errors: [] }, envelope)).toBe(false);
     expect(asProblemDetails({ title: "x", status: 500 })?.title).toBe("x");
+  });
+
+  it("reads the envelope's errors on an error status, each error object by its text or code", async () => {
+    const client = new EnvelopeClient(new TsazorHttp(), { baseUrl, envelope: { data: "data", errors: "errors" } });
+    const failed = await client.serverError();
+    expect(failed.ok).toBe(false);
+    expect(failed.status).toBe(500);
+    expect(problemMessage(failed)).toBe("Order.Locked; Too late to change.");
   });
 });
