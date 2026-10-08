@@ -43,8 +43,8 @@
     @Parameter() closeOnEscape: boolean = true;
     /** Optional footer content (e.g. action buttons). */
     @Parameter() footer?: RenderFragment;
-    /** Fired when the user asks to close (Escape, backdrop or the close button). */
-    @Parameter() onClosed?: EventCallback<MouseEvent>;
+    /** Fired when the user asks to close (Escape, the backdrop or the close button). It carries no event: Escape and the backdrop have none to give. */
+    @Parameter() onClosed?: EventCallback;
     /** The dialog's body. */
     @Parameter() childContent?: RenderFragment;
     /** Further attributes for the `.modal` element. */

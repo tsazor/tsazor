@@ -185,7 +185,7 @@ export class Renderer {
     component.componentServices = this.services;
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);
-    (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.track(promise);
+    (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.track(promise, `${componentName(state)}: tracked work`);
     (state.renderHandle as { reportError?: unknown }).reportError = (error: unknown, phase: RenderErrorPhase) => this.handleComponentError(error, state, phase);
     (state.renderHandle as { sectionRegistry?: unknown }).sectionRegistry = this.sectionRegistry;
     Object.defineProperty(state.renderHandle, "isRenderingInProgress", { get: () => this.batchInProgress });
@@ -321,17 +321,24 @@ export class Renderer {
       return;
     }
     if (lifecycle === completedLifecycle) return;
-    this.track(lifecycle.catch((error) => this.handleComponentError(error, state, "lifecycle")));
+    this.track(
+      lifecycle.catch((error) => this.handleComponentError(error, state, "lifecycle")),
+      `${componentName(state)}: onInitialized / onParametersSet`,
+    );
   }
 
-  /** Tracks an in-flight async operation so waitUntilIdle can await it. */
-  track<T>(promise: Promise<T>): Promise<T> {
-    this.inFlight.add(promise);
+  /**
+   * Tracks an in-flight async operation so waitUntilIdle can await it. `label` says what it is,
+   * for waitUntilIdle's timeout.
+   */
+  track<T>(promise: Promise<T>, label = "tracked work"): Promise<T> {
+    this.inFlight.set(promise, label);
     void promise.finally(() => this.inFlight.delete(promise)).catch(() => undefined);
     return promise;
   }
 
-  private readonly inFlight = new Set<Promise<unknown>>();
+  /** The async work in flight, with what it is (`Autocomplete: input handler`). */
+  private readonly inFlight = new Map<Promise<unknown>, string>();
 
   private buildParameterView(state: ComponentState, direct: ReadonlyMap<string, unknown>): ParameterView {
     const { cascading } = state.component.getParameterInfo();
@@ -381,7 +388,7 @@ export class Renderer {
       // After the navigation's own renders (the Router re-renders the page): a component its parent
       // already gave the new values to has nothing left to change, so it isn't set twice.
       this.queryNavigationUnsubscribe = navigation.addLocationChanged(() => {
-        this.track(Promise.resolve().then(() => this.notifyQuerySubscribers()));
+        this.track(Promise.resolve().then(() => this.notifyQuerySubscribers()), "the query parameters' subscribers");
       });
     }
     const byLowerKey = new Map<string, string[]>();
@@ -531,7 +538,7 @@ export class Renderer {
       if (typeof component.disposeAsync === "function") {
         const pending = component.disposeAsync();
         if (isPromiseLike(pending)) {
-          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "dispose")));
+          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "dispose")), `${componentName(state)}: disposeAsync`);
         }
       } else if (typeof component.dispose === "function") {
         component.dispose();
@@ -623,7 +630,7 @@ export class Renderer {
       try {
         const pending = state.component.notifyAfterRender();
         if (isPromiseLike(pending)) {
-          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "afterRender")));
+          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "afterRender")), `${componentName(state)}: onAfterRender`);
         }
       } catch (error) {
         this.handleComponentError(error, state, "afterRender");
@@ -792,22 +799,45 @@ export class Renderer {
   /**
    * Resolves once this renderer is idle: no batch scheduled and no tracked
    * async work (lifecycle hooks, after-render, event handlers, disposeAsync)
-   * in flight.
+   * in flight. With `timeout` (ms) it rejects when it isn't idle by then,
+   * naming the work still pending: a test that waits on a handler it never
+   * lets finish fails with the handler's name instead of hanging.
    */
-  async waitUntilIdle(): Promise<void> {
+  async waitUntilIdle(options: { timeout?: number } = {}): Promise<void> {
+    const deadline = options.timeout === undefined ? undefined : Date.now() + options.timeout;
     let guard = 0;
     while (guard < 1000) {
       guard++;
       if (this.scheduledBatch !== null) {
-        await this.scheduledBatch;
+        await this.beforeDeadline(this.scheduledBatch, deadline, options.timeout);
         continue;
       }
       if (this.inFlight.size > 0) {
-        await Promise.all([...this.inFlight]);
+        await this.beforeDeadline(Promise.all([...this.inFlight.keys()]), deadline, options.timeout);
         continue;
       }
       break;
     }
+  }
+
+  private beforeDeadline(work: Promise<unknown>, deadline: number | undefined, timeout: number | undefined): Promise<unknown> {
+    if (deadline === undefined) return work;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const pending = [...new Set(this.inFlight.values())];
+        reject(new Error(`waitUntilIdle: not idle after ${timeout} ms. Still pending: ${pending.length > 0 ? pending.join("; ") : "a render batch"}.`));
+      }, Math.max(0, deadline - Date.now()));
+      work.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error: unknown) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+    });
   }
 
   // #region HMR (Blazor's hot-reload analogue)
@@ -922,4 +952,9 @@ function defaultErrorHandler({ error, component, phase }: RenderError): void {
   const target = component === null ? "" : ` of component #${component.id}${name ? ` (${name})` : ""}`;
   // eslint-disable-next-line no-console
   console.error(`[tsazor] ${PHASE_LABELS[phase]}${target} failed:`, error);
+}
+
+/** A component's class name, for messages. */
+function componentName(state: ComponentState): string {
+  return state.component.constructor.name || "a component";
 }

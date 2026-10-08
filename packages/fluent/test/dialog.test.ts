@@ -25,6 +25,8 @@ async function settle(renderer: Renderer): Promise<void> {
 class DialogHost extends ComponentBase {
   open = true;
   closes = 0;
+  /** What each onClosed carried (F21: nothing — Escape and the backdrop have no event to give). */
+  closeArguments: unknown[] = [];
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     b.openComponent(0, Dialog);
@@ -34,8 +36,9 @@ class DialogHost extends ComponentBase {
     b.addAttribute(
       4,
       "onClosed",
-      EventCallback.bind(this, () => {
+      EventCallback.bind(this, (argument: unknown) => {
         this.closes++;
+        this.closeArguments.push(argument);
         this.open = false;
         this.stateHasChanged();
       }),
@@ -185,6 +188,15 @@ describe("Dialog", () => {
     await settle(result.renderer);
     expect(result.instance.closes).toBe(1);
     expect(result.container.querySelector(".fui-dialog-overlay")).toBeNull();
+    result.dispose();
+  });
+
+  it("raises onClosed without an event, from the close button as from Escape and the backdrop", async () => {
+    const result = await renderHost();
+    result.container.querySelector<HTMLButtonElement>(".fui-dialog__close")!.click();
+    await settle(result.renderer);
+    expect(result.instance.closes).toBe(1);
+    expect(result.instance.closeArguments).toEqual([undefined]);
     result.dispose();
   });
 

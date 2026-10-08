@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: `Renderer.waitUntilIdle({ timeout })` rejects when the renderer isn't idle in time, naming the work
+  still pending (`Still pending: Search: input handler.`); without `timeout` it waits as before. `track(promise, label)`
+  names tracked work. `@tsazor/testing`: `render`, `click`, `change`, `settle` and `rerender` wait 4 s, under vitest's
+  5 s test timeout, so a test that waits on a handler it never lets finish fails naming the handler instead of timing
+  out without a hint.
+- **Fix** `@tsazor/fluent`, `@tsazor/bootstrap`: `Dialog.onClosed` and `Drawer.onClosed` are `EventCallback`, without
+  an argument. They were typed `EventCallback<MouseEvent>` but never passed an event: Escape and the backdrop have
+  none, and the close button didn't pass its click. A handler that reads the event is now a type error instead of a
+  failure at run time.
 - **Blazor parity** `@tsazor/runtime`: `RenderTreeBuilder.addComponentParameter` (Blazor 8's AddComponentParameter): a
   parameter of the open component, right after `openComponent` or another parameter; anywhere else it throws Blazor's
   error. Builder code ported from Blazor calls it: FluentCMS renders the component tags of its stored layouts this way.

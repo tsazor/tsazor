@@ -989,7 +989,7 @@ export declare class Renderer {
         frame: RenderTreeFrame;
     }>): void;
     private supplyParameters;
-    track<T>(promise: Promise<T>): Promise<T>;
+    track<T>(promise: Promise<T>, label?: string): Promise<T>;
     private readonly inFlight;
     private buildParameterView;
     private queryValues;
@@ -1013,7 +1013,10 @@ export declare class Renderer {
     private notifyBatchCompleted;
     handleComponentError(error: unknown, component: ComponentState | null, phase: RenderErrorPhase): void;
     private routeToErrorBoundary;
-    waitUntilIdle(): Promise<void>;
+    waitUntilIdle(options?: {
+        timeout?: number;
+    }): Promise<void>;
+    private beforeDeadline;
     private readonly hmrSwappedNames;
     hmrSwap(oldType: unknown, newComponentType: unknown): number;
     wasHmrSwapped(className: string): boolean;

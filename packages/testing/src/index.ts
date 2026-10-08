@@ -22,6 +22,12 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
   : Partial<Omit<TComponent, keyof ComponentBase>>;
 
 /**
+ * How long the helpers wait for the renderer to be idle: under vitest's 5 s test timeout, so a test
+ * that waits on a handler it never lets finish fails naming the handler instead of hanging.
+ */
+const IDLE_TIMEOUT = 4_000;
+
+/**
  * Blazor's bUnit-style render result: the rendered component in a container
  * attached to the document, its live instance, and helpers that act like a
  * user and wait for the render (bUnit's Find / Click / Change / SetParametersAndRender).
@@ -104,12 +110,12 @@ export async function render<TComponent extends ComponentBase>(
     }
   }
   const host = renderer.renderInContainer(TestHost, container);
-  await renderer.waitUntilIdle();
+  await renderer.waitUntilIdle({ timeout: IDLE_TIMEOUT });
   rethrow();
 
   const settle = async (): Promise<void> => {
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await renderer.waitUntilIdle();
+    await renderer.waitUntilIdle({ timeout: IDLE_TIMEOUT });
     rethrow();
   };
   const find = (selector: string): HTMLElement => {
@@ -146,7 +152,7 @@ export async function render<TComponent extends ComponentBase>(
     settle,
     rerender: async () => {
       instance!.stateHasChangedInternal();
-      await renderer.waitUntilIdle();
+      await renderer.waitUntilIdle({ timeout: IDLE_TIMEOUT });
       rethrow();
     },
     dispose: () => {

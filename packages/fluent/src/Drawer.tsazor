@@ -31,8 +31,8 @@
     @Parameter() closeOnBackdrop: boolean = true;
     /** Closes when the user presses Escape. */
     @Parameter() closeOnEscape: boolean = true;
-    /** Fired when the user asks to close (Escape, backdrop or the close button). */
-    @Parameter() onClosed?: EventCallback<MouseEvent>;
+    /** Fired when the user asks to close (Escape, the backdrop or the close button). It carries no event: Escape and the backdrop have none to give. */
+    @Parameter() onClosed?: EventCallback;
     /** The panel's content. */
     @Parameter() childContent?: RenderFragment;
     /** Further attributes for the panel element. */

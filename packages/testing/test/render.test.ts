@@ -136,4 +136,16 @@ describe("component failures fail the test (bUnit-style)", () => {
     const fragile = await render(Fragile);
     await expect(fragile.click("button")).rejects.toThrow("Handler broke");
   });
+
+  it("a handler that never finishes fails the wait naming it, before vitest's own timeout", async () => {
+    class Stuck extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "button");
+        b.addAttribute(1, "onclick", EventCallback.bind(this, () => new Promise<void>(() => undefined)));
+        b.closeElement();
+      }
+    }
+    const stuck = await render(Stuck);
+    await expect(stuck.click("button")).rejects.toThrow("waitUntilIdle: not idle after 4000 ms. Still pending: Stuck: click handler.");
+  }, 10_000);
 });

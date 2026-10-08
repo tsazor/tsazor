@@ -163,7 +163,7 @@ export default class Dialog extends ComponentBase {
     closeOnBackdrop: boolean;
     closeOnEscape: boolean;
     footer?: RenderFragment;
-    onClosed?: EventCallback<MouseEvent>;
+    onClosed?: EventCallback;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -183,7 +183,7 @@ export default class Drawer extends ComponentBase {
     ariaLabel?: string;
     closeOnBackdrop: boolean;
     closeOnEscape: boolean;
-    onClosed?: EventCallback<MouseEvent>;
+    onClosed?: EventCallback;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -302,7 +302,7 @@ export default class Dialog extends ComponentBase {
     closeOnBackdrop: boolean;
     closeOnEscape: boolean;
     footer?: RenderFragment;
-    onClosed?: EventCallback<MouseEvent>;
+    onClosed?: EventCallback;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }

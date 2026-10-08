@@ -39,8 +39,8 @@
     @Parameter() closeOnBackdrop: boolean = true;
     /** Closes when the user presses Escape. */
     @Parameter() closeOnEscape: boolean = true;
-    /** Fired when the user requests a close (Esc, backdrop or X button). */
-    @Parameter() onClosed?: EventCallback<MouseEvent>;
+    /** Fired when the user asks to close (Escape, the backdrop or the close button). It carries no event: Escape and the backdrop have none to give. */
+    @Parameter() onClosed?: EventCallback;
     /** Dialog body. */
     @Parameter() childContent?: RenderFragment;
     /** Footer content (e.g. Cancel/Confirm buttons). */

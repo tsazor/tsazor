@@ -148,6 +148,29 @@ describe("Renderer", () => {
     expect(spanAfter).toBe(spanBefore); // DOM node preserved by the diff
   });
 
+  it("waitUntilIdle with a timeout rejects naming the work still pending (a handler the test never lets finish)", async () => {
+    let finish!: () => void;
+    class Search extends ComponentBase {
+      protected override async onInitialized(): Promise<void> {
+        await Promise.resolve();
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "input");
+        b.addEventHandler(1, "oninput", EventCallback.bind(this, () => new Promise<void>((resolve) => (finish = resolve))));
+        b.closeElement();
+      }
+    }
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(Search, container);
+    await renderer.waitUntilIdle({ timeout: 1000 });
+    container.querySelector("input")!.dispatchEvent(new Event("input"));
+    await expect(renderer.waitUntilIdle({ timeout: 20 })).rejects.toThrow("waitUntilIdle: not idle after 20 ms. Still pending: Search: input handler.");
+    // Without a timeout it waits, as before; the work done, it is idle.
+    finish();
+    await renderer.waitUntilIdle();
+  });
+
   it("invokes unbound method references with the receiver as 'this'", async () => {
     const container = document.createElement("div");
     const renderer = new Renderer();

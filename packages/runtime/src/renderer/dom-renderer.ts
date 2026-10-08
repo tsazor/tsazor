@@ -53,7 +53,7 @@ export class DomRenderer implements EventHandlerHost {
     const invocation = callback
       .invokeAsync(event as never)
       .catch((error) => this.renderer.handleComponentError(error, state, "event"));
-    this.renderer.track(invocation);
+    this.renderer.track(invocation, `${state.component.constructor.name || "a component"}: ${event.type} handler`);
   }
 
   /**
