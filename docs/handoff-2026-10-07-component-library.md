@@ -109,13 +109,27 @@ Billing & plans. After that, re-run the latest run (or push) to get a real CI re
    - The check job is pinned to `ubuntu-24.04`, the same as WSL; `ubuntu-latest` becomes 26 on 2026-10-19.
    - **All of CI runs only by hand now** (owner, 2026-10-08): the repo stays private until it is mature,
      every minute costs, and the local checks run automatically. Start CI before a merge to main or a release.
-1. **`npm create tsazor --ui <package>`** (R3): accept any package; Bootstrap/Fluent appear as examples in
-   an open list, not hard-coded favorites.
-2. **Release preparation (R2/E3/E10)** — open questions for the owner:
-   - npm scope;
-   - version scheme (lockstep 0.x?);
-   - public repo / provenance;
-   - LTS policy.
+1. **R3 `npm create tsazor` — done 2026-10-08** ([design-create-tsazor.md](design-create-tsazor.md), D-N1–D-N4).
+   - The package `create-tsazor` writes the shape of `dotnet new blazorwasm`.
+   - `--ui` takes any library through its `tsazor.setup` ([component-libraries.md](component-libraries.md)).
+   - Tested by the tarball smoke (CI check job) and the `starter` gate (three engines, three variants).
+   - Found and fixed on the way:
+     - `NavLink` takes `class` and other attributes (Blazor parity);
+     - the skins lacked `sideEffects` (the starter app's bundle went from 66.7 to 30.7 KB gz).
+   - All 30 gates and `ci:local` were green for `5fa9c3d`.
+2. **Release preparation (R2/E3/E10)**. Decided by the owner on 2026-10-08:
+   - E12 and Sleipnir come after 1.0;
+   - the repo stays private until 1.0;
+   - the npm org `tsazor` exists;
+   - the GitHub org `tsazor` with an empty private repo `tsazor/tsazor` exists;
+   - the release starts there with a curated first commit.
+
+   Still open:
+   - the version scheme (lockstep 0.x?);
+   - the LTS policy;
+   - the publish workflow (Trusted Publishing; provenance needs the public repo);
+   - a rehearsal against a local Verdaccio registry;
+   - which files go public.
 3. **DataGrid extras:** a filter slot and density. Tier 2 after 1.0: resize/reorder, grouping, inline
    editing, export.
 4. **A shared `Table` API for both skins**, or document it as skin-specific.
