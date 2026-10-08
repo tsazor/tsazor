@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`: **CheckboxGroup**, several values out of `options` in a fieldset, bound as `string[]`. Its options
+  are RadioGroup's (`value`, `label`, `disabled`); the bound array follows their order, and values it doesn't show
+  stay in it. FluentCMS assigns a user's roles with it.
 - **Blazor parity (Blazor 8)** `@tsazor/runtime`: `@SupplyParameterFromQuery()` works in any component, not only in a
   page, and needs no `@Parameter()` (still allowed alongside). The renderer supplies the value like a cascading value
   and again when a navigation changes it. FluentCMS reads `?id=` this way in components that aren't pages (its

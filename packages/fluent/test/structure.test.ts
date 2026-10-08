@@ -6,7 +6,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { EventCallback, type RenderFragment } from "@tsazor/runtime";
-import { Accordion, AccordionItem, Collapse, ListGroup, ListGroupItem, Navbar, Progress, RadioGroup } from "../dist/index.js";
+import { Accordion, AccordionItem, CheckboxGroup, Collapse, ListGroup, ListGroupItem, Navbar, Progress, RadioGroup } from "../dist/index.js";
 
 const text = (content: string): RenderFragment => (b) => b.addContent(0, content);
 
@@ -45,6 +45,33 @@ describe("RadioGroup", () => {
     radios[1]!.dispatchEvent(new Event("change", { bubbles: true }));
     await settle(renderer);
     expect(chosen).toEqual(["sliced"]);
+  });
+});
+
+describe("CheckboxGroup", () => {
+  it("checks the bound values, reports the new array in the options' order, and keeps values it doesn't show", async () => {
+    const reported: string[][] = [];
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, CheckboxGroup);
+      b.addAttribute(1, "label", "Roles");
+      b.addAttribute(2, "options", [{ value: "admins", label: "Administrators" }, { value: "editors", label: "Editors" }, { value: "guests", label: "Guests", disabled: true }]);
+      // "authenticated" is the user's but not an option here.
+      b.addAttribute(3, "value", ["authenticated", "editors"]);
+      b.addAttribute(4, "valueChanged", EventCallback.unbound((value: string[]) => {
+        reported.push(value);
+      }));
+      b.closeComponent();
+    });
+    await settle(renderer);
+    expect(container.querySelector("fieldset legend")!.textContent).toBe("Roles");
+    const boxes = [...container.querySelectorAll<HTMLInputElement>("input[type=checkbox]")];
+    expect(boxes.map((box) => box.checked)).toEqual([false, true, false]);
+    expect(boxes[2]!.disabled).toBe(true);
+    expect(container.querySelector(`label[for="${boxes[0]!.id}"]`)!.textContent).toBe("Administrators");
+    boxes[0]!.checked = true;
+    boxes[0]!.dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(renderer);
+    expect(reported).toEqual([["authenticated", "admins", "editors"]]);
   });
 });
 

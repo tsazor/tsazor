@@ -118,6 +118,20 @@ export default class Checkbox extends InputBase<boolean> {
     ariaLabel?: string;
 }
 
+// CheckboxGroup
+export default class CheckboxGroup extends InputBase<string[]> {
+    label?: string;
+    options: {
+        value: string;
+        label: string;
+        disabled?: boolean;
+    }[];
+    inline: boolean;
+    help?: string;
+    disabled: boolean;
+    id?: string;
+}
+
 // Collapse
 export default class Collapse extends ComponentBase {
     isOpen: boolean;
