@@ -1,0 +1,28 @@
+@inherits BasePlugin
+@import type { LayoutDetailResponse, PageDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { pageModel, pageRequest, pageSettings } from "./page-model"
+
+<PluginForm model="@this.model" title="Create Page" onSubmit="@this.submit">
+    <PageFields model="@this.model" pages="@this.pages" layouts="@this.layouts" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = pageModel();
+    private pages: PageDetailResponse[] = [];
+    private layouts: LayoutDetailResponse[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        const siteId = this.viewState.site.id;
+        this.layouts = ensureOk(await this.api.layoutGetBySiteId({ siteId })) ?? [];
+        // The admin and auth pages are locked; the home page can't be a parent.
+        this.pages = (ensureOk(await this.api.pageGetAll(siteId)) ?? []).filter((page) => !page.locked && page.fullPath !== "/");
+    }
+
+    private async submit(): Promise<void> {
+        const page = ensureOk(await this.api.pageCreate(pageRequest(this.model, this.viewState.site.id)));
+        ensureOk(await this.api.settingsUpdate(pageSettings(this.model, page.id)));
+        this.navigateBack();
+    }
+}

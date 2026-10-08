@@ -1,0 +1,61 @@
+@* The page form's fields, shared by "Create Page" and "Update Page" (the original repeats them). *@
+@import type { LayoutDetailResponse, PageDetailResponse } from "../../../api/models"
+@import type { PageModel } from "./page-model"
+@inject ViewState ViewState
+
+<Grid columns="2" gap="m">
+    <TextInput @bind-Value="model.title" label="Title" placeholder="Enter Title" required />
+    <TextInput @bind-Value="model.path" label="Path" placeholder="Enter url path" help="Url slug of the page, should not be nested." />
+</Grid>
+<ParentPageSelector @bind-value="model.parentId" pages="@pages" />
+<Grid columns="2" gap="m">
+    <Select @bind-Value="model.layoutId" label="Layout">
+        <option value="">(default)</option>
+        @foreach (const layout of layouts) {
+            <option value="@layout.id">@(layout.name)</option>
+        }
+    </Select>
+    <Select @bind-Value="model.editLayoutId" label="Edit Layout">
+        <option value="">(default)</option>
+        @foreach (const layout of layouts) {
+            <option value="@layout.id">@(layout.name)</option>
+        }
+    </Select>
+    <Select @bind-Value="model.detailLayoutId" label="Detail Layout">
+        <option value="">(default)</option>
+        @foreach (const layout of layouts) {
+            <option value="@layout.id">@(layout.name)</option>
+        }
+    </Select>
+    <NumberInput @bind-Value="model.order" label="Order" help="Order of page in Menus." />
+</Grid>
+<TextArea @bind-Value="model.head" label="Head" placeholder="Enter Head content" />
+<TextInput @bind-Value="model.metaTitle" label="Meta Title" placeholder="Enter Meta Title" />
+<TextArea @bind-Value="model.metaDescription" label="Meta Description" placeholder="Enter Meta Description" />
+<Select @bind-Value="model.ogType" label="Og Type">
+    <option value="">(default)</option>
+    <option value="website">Website</option>
+    <option value="article">Article</option>
+    <option value="product">Product</option>
+    <option value="video">Video</option>
+</Select>
+<Grid columns="2" gap="m">
+    <Checkbox @bind-Value="model.index" label="Index" help="Add this page to sitemap" />
+    <Checkbox @bind-Value="model.follow" label="Follow" help="Search engines will follow links of this page" />
+</Grid>
+<CheckboxGroup @bind-Value="model.viewRoleIds" label="ViewRoles" options="@this.roles(false)" help="Roles which can view the page." />
+<CheckboxGroup @bind-Value="model.adminRoleIds" label="AdminRoles" options="@this.roles(true)" help="Roles which are able to manage page." />
+
+@code {
+    @Parameter() model!: PageModel;
+    /** The pages that can be the parent. */
+    @Parameter() pages: PageDetailResponse[] = [];
+    @Parameter() layouts: LayoutDetailResponse[] = [];
+
+    /** The site's roles; for managing, without "All Users" and "Guests". */
+    private roles(manage: boolean): { value: string; label: string }[] {
+        return (this.ViewState.site.allRoles ?? [])
+            .filter((role) => !manage || (role.type !== "AllUsers" && role.type !== "Guest"))
+            .map((role) => ({ value: role.id, label: role.name ?? "" }));
+    }
+}

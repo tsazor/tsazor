@@ -291,15 +291,13 @@ async function main() {
     await token.getByRole("button", { name: /Show the token/ }).click();
     const secret = await token.locator(".token").innerText();
     await token.getByRole("button", { name: /Re-Generate/ }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    // (FluentCMS's secret is a JWT stamped in seconds: re-generated within the second it is the same.)
+    const [regenerated] = await Promise.all([
+      page.waitForResponse((response) => response.url().includes("/api/ApiToken/RegenerateSecret")),
+      page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click(),
+    ]);
     await page.getByRole("dialog").waitFor({ state: "detached", timeout: 10_000 });
-    // The list reloads; the token stays shown, as in the original.
-    await page.waitForFunction(([name, before]) => {
-      const row = [...document.querySelectorAll("tbody tr")].find((r) => r.textContent?.includes(name));
-      const shown = row?.querySelector(".token")?.textContent ?? before;
-      return shown !== before;
-    }, [tokenName, secret], { timeout: 10_000 });
-    check(secret.includes(":"), "a token's secret is shown on request, and re-generated");
+    check(secret.includes(":") && regenerated.ok() && (await token.locator(".token").innerText()).includes(":"), "a token's secret is shown on request, and re-generated");
     await token.getByRole("link", { name: "Edit" }).click();
     await page.waitForFunction(() => (document.querySelector("input[type=date]")?.value ?? "") !== "", null, { timeout: 10_000 });
     check(
@@ -310,6 +308,29 @@ async function main() {
     await token.getByRole("button", { name: /Delete/ }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
     await token.waitFor({ state: "detached", timeout: 10_000 });
+
+    // Pages: the parent picked in a TreeView (track B), the page under it.
+    const pagesTable = table("Pages");
+    const pageTitle = `News ${stamp}`;
+    await page.goto(`${APP}/admin/pages`);
+    await pagesTable.first().waitFor({ timeout: 15_000 });
+    await page.getByRole("link", { name: "Add Page" }).click();
+    await page.getByRole("tree").waitFor({ timeout: 10_000 });
+    await page.getByLabel("Title", { exact: true }).fill(pageTitle);
+    await page.getByLabel("Path").fill(`news-${stamp}`);
+    await page.getByRole("treeitem", { name: "Blogs" }).click();
+    const createViolations = await axe(page);
+    check(createViolations.length === 0, `axe on the page form with its tree${createViolations.length ? `: ${createViolations.join(" | ")}` : ""}`);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await pagesTable.filter({ hasText: pageTitle }).waitFor({ timeout: 10_000 });
+    check((await pagesTable.filter({ hasText: pageTitle }).innerText()).includes(`/blogs/news-${stamp}`), "a new page goes under the parent picked in the tree");
+    await pagesTable.filter({ hasText: pageTitle }).getByRole("link", { name: "Edit" }).click();
+    await page.locator("[role=treeitem][aria-selected=true]").waitFor({ timeout: 10_000 });
+    check((await page.locator("[role=treeitem][aria-selected=true]").getAttribute("data-tree-id")) !== "" && (await page.locator("[role=treeitem][aria-selected=true] .fui-tree__text").first().innerText()) === "Blogs", "the page's update form shows its parent selected");
+    await page.getByRole("link", { name: "Cancel" }).click();
+    await pagesTable.filter({ hasText: pageTitle }).getByRole("button", { name: /Delete/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await pagesTable.filter({ hasText: pageTitle }).waitFor({ state: "detached", timeout: 10_000 });
 
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();

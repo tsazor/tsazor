@@ -1,0 +1,36 @@
+@inherits BasePlugin
+@import type { LayoutDetailResponse, PageDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { pageModel, pageRequest, pageSettings, type PageModel } from "./page-model"
+
+<PluginForm model="@this.model" title="Update Page" onSubmit="@this.submit">
+    <PageFields model="@this.model!" pages="@this.pages" layouts="@this.layouts" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private model?: PageModel;
+    private pages: PageDetailResponse[] = [];
+    private layouts: LayoutDetailResponse[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        const siteId = this.viewState.site.id;
+        const pageId = this.id ?? "";
+        this.layouts = ensureOk(await this.api.layoutGetBySiteId({ siteId })) ?? [];
+        // Not the page itself, not its children, nothing locked, not the home page.
+        this.pages = (ensureOk(await this.api.pageGetAll(siteId)) ?? []).filter(
+            (page) => !page.locked && page.fullPath !== "/" && page.id !== pageId && page.parentId !== pageId,
+        );
+        this.model = pageModel(ensureOk(await this.api.pageGetById(pageId)));
+    }
+
+    private async submit(): Promise<void> {
+        const pageId = this.id ?? "";
+        ensureOk(await this.api.pageUpdate({ ...pageRequest(this.model!, this.viewState.site.id), id: pageId }));
+        ensureOk(await this.api.settingsUpdate(pageSettings(this.model!, pageId)));
+        // The original reloads: menus and the page's own layout may have changed.
+        this.navigateBack(true);
+    }
+}

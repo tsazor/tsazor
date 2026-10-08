@@ -1,0 +1,55 @@
+@* The parent page (FluentCMS's ParentPageSelector): the site's pages as a tree, "(none)" for the top level. *@
+@import type { TreeViewItem } from "@tsazor/fluent"
+@import type { PageDetailResponse } from "../../../api/models"
+
+<div class="parent-page">
+    <span class="parent-page-label" id="@this.labelId">Parent Page</span>
+    <div class="parent-page-tree">
+        <TreeView items="@this.tree" selectedItem="@this.selected" selectedItemChanged="@this.pick" aria-labelledby="@this.labelId" />
+    </div>
+</div>
+
+@code {
+    private static readonly NONE = "";
+
+    /** The parent page's id; "" for none. */
+    @Parameter() value = "";
+    @Parameter() valueChanged?: EventCallback<string>;
+    /** The pages that can be the parent. */
+    @Parameter() pages: PageDetailResponse[] = [];
+
+    private readonly labelId = `parent-page-${Math.random().toString(36).slice(2)}`;
+    private tree: TreeViewItem[] = [];
+
+    protected override onParametersSet(): void {
+        // Each page under its parent; a page whose parent isn't offered goes to the top.
+        const byId = new Map<string, { id: string; text: string; items: TreeViewItem[] }>(
+            this.pages.map((page) => [page.id, { id: page.id, text: page.title ?? "", items: [] }]),
+        );
+        const top: TreeViewItem[] = [{ id: ParentPageSelector.NONE, text: "(none)" }];
+        for (const page of this.pages) {
+            const node = byId.get(page.id)!;
+            const parent = page.parentId ? byId.get(page.parentId) : undefined;
+            if (parent !== undefined) parent.items.push(node);
+            else top.push(node);
+        }
+        this.tree = top;
+    }
+
+    private get selected(): TreeViewItem | null {
+        const find = (items: readonly TreeViewItem[]): TreeViewItem | null => {
+            for (const item of items) {
+                if (item.id === this.value) return item;
+                const below = find(item.items ?? []);
+                if (below !== null) return below;
+            }
+            return null;
+        };
+        return find(this.tree);
+    }
+
+    private pick(item: TreeViewItem | null): Promise<void> | undefined {
+        this.value = item?.id ?? ParentPageSelector.NONE;
+        return this.valueChanged?.invokeAsync(this.value);
+    }
+}

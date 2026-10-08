@@ -77,7 +77,7 @@ tests our library on a real app.
 |---|---|---|---|
 | 0 | Infrastructure | Backend script, BFF, app skeleton, generated client, an E2E gate that logs in | Done |
 | 1 | Shell | Setup, catch-all page, sections and plugins, admin and auth layouts, login/logout | Done except setup, register and password pages |
-| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done but pages |
+| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | |
 | 5 | Public site (optional) | The view plugins, layouts with component tags | |
@@ -120,7 +120,7 @@ with Tsazor, or the framework has a gap.
 
 | Component | What it asks of the framework | FluentCMS needs it for |
 |---|---|---|
-| TreeView / tree selector | Recursive generic templates, children loaded on demand, keyboard in a tree | The parent page picker |
+| TreeView / tree selector | Recursive generic templates, children loaded on demand, keyboard in a tree | The parent page picker. **TreeView done in `@tsazor/fluent`** (a recursive node component, the ARIA tree's keyboard; the model in `@tsazor/ui`). Still open: children loaded on demand, the selector as a dropdown |
 | Autocomplete / Combobox | Generic `TItem`/`TValue`, async search with cancellation, multiple selection, a virtual option list | Selects with search |
 | Rich text / Markdown editor | Embedding a JS widget, two-way binding, cleanup | Content fields, the rich text plugin |
 | File upload | Drag and drop, progress, streams | File management |
@@ -138,6 +138,7 @@ with Tsazor, or the framework has a gap.
 | 2 | Users (list, create, update with three forms) | 0 | 1 (`CheckboxGroup`, new in `@tsazor/fluent`) |
 | 2 | Plugin definitions, global settings, layouts, blocks, sites | 1 (F22) | 0 |
 | 2 | API tokens (policies, show the secret, re-generate) | 1 (F23) | 0 |
+| 2 | Pages (the parent in a tree) | 0 | 1 (`TreeView`, new in `@tsazor/fluent`) |
 
 ## Findings
 
