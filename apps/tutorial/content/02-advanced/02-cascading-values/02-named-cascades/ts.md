@@ -36,5 +36,6 @@ other plain values.
 
 finds the nearest unnamed cascade whose value is a `Session` (an `instanceof` check — a
 subclass counts too). TypeScript's types disappear when the code runs, so the class is passed
-as a value. The forms chapter uses exactly this: every input finds its form's `EditContext` with
+as a value. Data from an API is a plain object, never an instance of its model class, so
+cascade it by name; in development, Tsazor warns when a by-type parameter passes one. The forms chapter uses exactly this: every input finds its form's `EditContext` with
 `@CascadingParameter({ type: EditContext })`.

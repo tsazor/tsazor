@@ -9,7 +9,8 @@ import { SectionRegistry } from "../sections/section-registry.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
 import { mayHaveChanged } from "../components/change-detection.js";
-import { canSupplyValue, isCascadingValueSupplier, type CascadingParameterRequest, type CascadingValueSupplier } from "./cascading-value.js";
+import { canSupplyValue, isCascadingValueSupplier, type CascadingValueSupplier } from "./cascading-value.js";
+import { DEV } from "../components/observe.js";
 import { NavigationManager } from "../navigation/navigation-manager.js";
 import { queryParameterValue } from "../routing/supply-parameter-from-query.js";
 import type { ParameterMeta } from "../components/parameter-metadata.js";
@@ -433,15 +434,20 @@ export class Renderer {
    * supplier it resolves to, and "pending" by-type candidates it passes (no
    * value yet), are added to `subscriptions`.
    */
-  private resolveCascade(state: ComponentState, meta: CascadingParameterRequest, subscriptions: ComponentState[]): CascadingValueSupplier | null {
+  private resolveCascade(state: ComponentState, meta: ParameterMeta, subscriptions: ComponentState[]): CascadingValueSupplier | null {
+    let plainObject = false;
     for (let current = state.parent; current !== null; current = current.parent) {
       const supplier = current.component;
       if (!isCascadingValueSupplier(supplier)) continue;
       const match = canSupplyValue(supplier, meta);
-      if (match === "no") continue;
+      if (match === "no") {
+        plainObject ||= DEV && meta.cascadingType !== undefined && isPlainObjectCascade(supplier);
+        continue;
+      }
       if (!supplier.isFixed && !subscriptions.includes(current)) subscriptions.push(current);
       if (match === "yes") return supplier;
     }
+    if (plainObject) warnPlainObjectCascade(state.component, meta);
     return null;
   }
 
@@ -882,6 +888,35 @@ const PHASE_LABELS: Record<RenderErrorPhase, string> = {
 };
 
 /** The renderer's default error handler: logs with the component's id and type. */
+/** An unnamed supplier without a declared type whose value is a plain object (parsed JSON, a literal). */
+function isPlainObjectCascade(supplier: CascadingValueSupplier): boolean {
+  if (supplier.cascadeName !== undefined && supplier.cascadeName !== null) return false;
+  if (supplier.cascadeType !== undefined) return false;
+  const value = supplier.cascadeValue;
+  if (value === null || typeof value !== "object") return false;
+  const prototype = Object.getPrototypeOf(value) as unknown;
+  return prototype === Object.prototype || prototype === null;
+}
+
+const warnedPlainObjectCascades = new Set<string>();
+
+/**
+ * Dev only: a by-type cascading parameter passed a plain object. It matches with `instanceof`, and API
+ * data (parsed JSON) is never an instance of its model class, even when the generated model is a class:
+ * the parameter stays unset without a word. Once per component and parameter.
+ */
+function warnPlainObjectCascade(component: ComponentBase, meta: ParameterMeta): void {
+  const type = meta.cascadingType?.name ?? "the type";
+  const key = `${component.constructor.name}.${meta.propertyName}`;
+  if (warnedPlainObjectCascades.has(key)) return;
+  warnedPlainObjectCascades.add(key);
+  console.warn(
+    `[tsazor] ${key}: @CascadingParameter({ type: ${type} }) found no ${type}, but passed a cascade whose value is a plain object. ` +
+      `By type matches instances (instanceof), and API data (parsed JSON) is never an instance of its model class. ` +
+      `Cascade it by name: <CascadingValue Value="…" Name="…"> and @CascadingParameter({ name: "…" }).`,
+  );
+}
+
 function defaultErrorHandler({ error, component, phase }: RenderError): void {
   const name = (component?.definition.type as { name?: string } | undefined)?.name;
   const target = component === null ? "" : ` of component #${component.id}${name ? ` (${name})` : ""}`;

@@ -30,4 +30,6 @@ Name matching is Blazor's: case-insensitive, and named and unnamed never mix.
 > declared type — `EditForm` and `CascadingAuthenticationState` declare theirs). An unnamed
 > parameter **without** `type` takes the nearest unnamed cascade, whatever its value — so in
 > Tsazor even a `string` and a `number` cascade collide where Blazor's types would keep them
-> apart. Name them, or pass `type`.
+> apart. Name them, or pass `type`. API data is the case to watch: System.Text.Json gives you a
+> `ContentTypeDetailResponse`, but parsed JSON is a plain object, so `type:
+> ContentTypeDetailResponse` never matches it — cascade it by name (Tsazor warns in development).

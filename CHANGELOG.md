@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: in development, a by-type cascading parameter (`@CascadingParameter({ type: X })`) that finds no `X`
+  but passes a cascade whose value is a plain object warns once. By type matches instances, and API data (parsed JSON)
+  is never an instance of its generated model class, so such a parameter stayed unset without a word; the warning says
+  to cascade it by name. The tutorial's named-cascades lesson says so too.
 - `@tsazor/compiler`, `@tsazor/lsp`: TS2304 for a name in `@code` that markup finds by name (a component through
   `@using` or its folder, a type in a `.ts` file there) names the exact `@import`, and the language server inserts it
   after the directives as a quick fix (`@import type` when only types use the name). `tsazor check` shows the hint. In

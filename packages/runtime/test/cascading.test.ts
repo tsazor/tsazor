@@ -4,7 +4,7 @@
  * intermediate re-renders; IsFixed skips the subscription; disposal
  * unsubscribes.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CascadingParameter,
   CascadingValue,
@@ -116,6 +116,26 @@ function descendants(state: ComponentState): ComponentState[] {
   for (const child of state.slotChildren.values()) result.push(child, ...descendants(child));
   return result;
 }
+
+describe("by type, a plain object (API data) never matches", () => {
+  it("warns once in dev, naming the parameter and the way out; an instance doesn't warn", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      // Parsed JSON: shaped like a Box, but not one.
+      const plain = await mount((b) => cascade(b, { Value: { n: 7 } }, component(BoxConsumer)));
+      expect(plain.container.textContent).toBe("none");
+      await plain.update();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]![0])).toMatch(/^\[tsazor\] BoxConsumer\.box: @CascadingParameter\(\{ type: Box \}\) found no Box, but passed a cascade whose value is a plain object\..*Cascade it by name/);
+      warn.mockClear();
+      const instance = await mount((b) => cascade(b, { Value: new Box(3) }, component(BoxConsumer)));
+      expect(instance.container.textContent).toBe("3");
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
 
 describe("B5 — matching", () => {
   it("Name matches CascadingParameter({ name }) case-insensitively", async () => {
