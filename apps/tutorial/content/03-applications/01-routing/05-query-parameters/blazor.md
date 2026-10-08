@@ -13,13 +13,12 @@ change: nothing reads the query string. That's what `[SupplyParameterFromQuery]`
 ```
 
 ```ts
-@Parameter() @SupplyParameterFromQuery() state: string | null = null;
+@SupplyParameterFromQuery() state: string | null = null;
 ```
 
 Then add a `shown` getter that filters `orders` by `state`, and loop over it in the markup.
 
-> **Coming from Blazor:** two differences. The field also needs `@Parameter()`, because
-> query values arrive the same way route values do (the runtime throws a clear error if you
-> forget it). And the decorator is a value, so it needs the `@import`. The options are
-> Blazor's in lowercase: `name`, plus `type: "int"` instead of the property type, and
-> `multiple: true` for arrays — TypeScript types don't exist at runtime.
+> **Coming from Blazor:** it works as in .NET 8: no `[Parameter]`, and in any component. The
+> decorator is a value, so it needs the `@import`. The options are Blazor's in lowercase:
+> `name`, plus `type: "int"` instead of the property type, and `multiple: true` for
+> arrays — TypeScript types don't exist at runtime.

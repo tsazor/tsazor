@@ -784,9 +784,11 @@ entries) does not change language on a culture switch. Store the **key**, transl
     treat attributes, handlers and captures as the element's preamble range; captures
     only fire on a fresh element insertion).
 
-  - `[SupplyParameterFromQuery]` (decorator form `@SupplyParameterFromQuery()`) supplies the
-    value of a route/page component from the query string — only when declared with `@Parameter`
-    (Blazor's message for a missing `[Parameter]`). Blazor reads the target data type from the
+  - `[SupplyParameterFromQuery]` (decorator form `@SupplyParameterFromQuery()`) supplies a field
+    from the query string, as in Blazor 8: in any component, not only in a page, and without
+    `@Parameter()` (allowed alongside). The renderer supplies it like a cascading value and again
+    when a navigation changes it; a component whose value didn't change isn't set again, and one
+    its parent re-renders with the new value isn't set twice. Blazor reads the target data type from the
     parameter type; TypeScript does not know the runtime type, hence the option: `{ type: "int" |
     "long" | "bool" | "double" | "float" | "decimal" | "datetime" | "guid" }` (default
     `string`, the same conversions as the route constraints) and `{ multiple: true }`
@@ -796,8 +798,7 @@ entries) does not change language on a culture switch. Store the **key**, transl
     field name (case-insensitive), absent ⇒ `null`, multiple values ⇒ the first, route values
     beat query values for the same field, a failed conversion is Blazor's
     error `Cannot parse the value 'X' as type 'T' for 'Y'.`, an unsupported type is
-    `Querystring values cannot be parsed as type 'X'.`. RouteView re-supplies the parameters on
-    every navigation change (NavigationManager subscription, as in Blazor).
+    `Querystring values cannot be parsed as type 'X'.`.
 
 - `NavLink` compares absolute URIs as Blazor (.NET 8) does: `Href` is resolved against the base
   URI (relative `counter`, root-relative `/app/counter` under `<base href="/app/">`, absolute
@@ -1196,7 +1197,7 @@ typed:
 | DataAnnotations validation | Decorators as the counterpart (`@Required()`, `@MaxLength(n)`, … on the model + `DataAnnotationsValidator`); the `validators` map remains as an adapter; a subset of the attributes (3.6) |
 | `@bind:format` | Subset (3.7) — number masks `F<n>`/`N<n>`/`0.00`, date tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); a plain-text value is a string literal, `@expr` an expression; on string/component binds warning TZS008 (Blazor's BindConverter behavior); `@bind:culture` on anything but a number bind warns TZS008 too |
 | `<InputFile>` | yes (3.7) — `InputFileChangeEventArgs` with native `File` objects instead of `IBrowserFile` (`OpenReadStream` does not exist) |
-| `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; only when declared with `@Parameter()`; key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
+| `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; any component, no `@Parameter()` needed (Blazor 8); key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
 | Named child slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identical (2.3 — see [Templated components](#templated-components-named-slots-and-template-contexts-23)) |
 | `@inherits`, partials (code-behind) | `@inherits` yes; code-behind (`X.tsazor.ts`, via inheritance — [docs/code-behind.md](code-behind.md)) yes |
 | `@authorize` | yes (Tsazor extension replacing `[Authorize]`; bare or with `{ roles, policy }`; not inherited through `_Imports`) |

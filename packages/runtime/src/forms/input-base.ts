@@ -14,8 +14,11 @@ import { EditContext } from "./edit-context.js";
  * key on the same string.
  */
 export abstract class InputBase<TValue> extends ComponentBase {
-  /** The bound value (two-way via ValueChanged). */
-  @Parameter() Value?: TValue;
+  /**
+   * The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a
+   * `string | null` field binds to a text input, which hands back a string.
+   */
+  @Parameter() Value?: TValue | null;
   /** Invoked when the user edits the input (compiler @bind-Value emits this). */
   @Parameter() ValueChanged?: EventCallback<TValue>;
   /** Field name used for EditContext registration and validation. */
@@ -28,7 +31,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
   private editContextUnsubscribe?: () => void;
 
   /** Blazor's CurrentValue. */
-  get currentValue(): TValue | undefined {
+  get currentValue(): TValue | null | undefined {
     return this.Value;
   }
 

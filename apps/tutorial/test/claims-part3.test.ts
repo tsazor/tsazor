@@ -275,16 +275,22 @@ describe("query-parameters", () => {
     m.dispose();
   });
 
-  it("a @SupplyParameterFromQuery field without @Parameter() throws the documented error", async () => {
-    const files = { ...b, "Orders.tsazor": b["Orders.tsazor"]!.replace("@Parameter() @SupplyParameterFromQuery()", "@SupplyParameterFromQuery()") };
-    const errors: RenderError[] = [];
-    const m = await mount(files, (error) => errors.push(error));
-    click(m, "nav a:nth-child(2)");
-    await m.settle();
-    expect(errors.map((e) => (e.error as Error).message)).toContain(
-      "The field 'state' on 'Orders' is marked @SupplyParameterFromQuery() but not declared as @Parameter().",
-    );
-    m.dispose();
+  it("the field needs no @Parameter() (Blazor 8), and @Parameter() alongside still works", async () => {
+    expect(b["Orders.tsazor"]).not.toContain("@Parameter() @SupplyParameterFromQuery()");
+    const files = { ...b, "Orders.tsazor": b["Orders.tsazor"]!.replace("@SupplyParameterFromQuery() state", "@Parameter() @SupplyParameterFromQuery() state") };
+    for (const variant of [b, files]) {
+      const errors: RenderError[] = [];
+      const m = await mount(variant, (error) => errors.push(error));
+      click(m, "nav a:nth-child(2)");
+      await m.settle();
+      click(m, ".filters a:nth-child(2)");
+      await m.settle();
+      expect(errors).toEqual([]);
+      // Open: Marta and Bea, not Jonas (picked up).
+      expect(m.html()).toContain("#101 Marta (open)");
+      expect(m.html()).not.toContain("#102 Jonas");
+      m.dispose();
+    }
   });
 });
 

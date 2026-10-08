@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity (Blazor 8)** `@tsazor/runtime`: `@SupplyParameterFromQuery()` works in any component, not only in a
+  page, and needs no `@Parameter()` (still allowed alongside). The renderer supplies the value like a cascading value
+  and again when a navigation changes it. FluentCMS reads `?id=` this way in components that aren't pages (its
+  plugins). It was RouteView's job and threw without `@Parameter()`.
+- **Blazor parity** `@tsazor/runtime`: an input's `Value` may be null (Blazor's `TValue? Value`). A `string | null`
+  field (every string Swashbuckle generates without nullable reference types) binds to a text input, which hands
+  back a string; a `string` field stays strict.
+- `@tsazor/compiler`: the component's own class name stays free in markup, so `RoleList.types` reaches a static,
+  as in Razor. It was rewritten to `this.RoleList`.
 - `@tsazor/bootstrap`, `@tsazor/fluent`: `Button` takes `href` and is then a link that looks like the button (Fluent UI Blazor's
   `FluentAnchor`, Bootstrap's `<a class="btn">`): it navigates, opens in a new tab, and is announced as a link. A disabled
   one has no `href`. FluentCMS's buttons for "Add Role", "Edit" and "Cancel" are links.

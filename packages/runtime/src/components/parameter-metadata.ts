@@ -1,3 +1,5 @@
+import type { QueryParameterMeta } from "../routing/supply-parameter-from-query.js";
+
 /**
  * Parameter metadata, filled by the @Parameter / @CascadingParameter
  * decorators. Mirrors Blazor's [Parameter] / [CascadingParameter] attributes.
@@ -19,6 +21,11 @@ export interface ParameterMeta {
   readonly cascadingType?: abstract new (...args: never[]) => unknown;
   /** Captures attributes the parent passed that have no matching parameter. */
   readonly captureUnmatchedValues?: boolean;
+  /**
+   * `@SupplyParameterFromQuery()`: the renderer supplies the value from the current URL's query
+   * (Blazor 8's query value provider), for any component. Listed with the cascading parameters.
+   */
+  readonly query?: QueryParameterMeta;
   /**
    * @internal `@Bindable()`: the instance slot behind the accessor. The
    * runtime writes parameter values there directly, so setting parameters
@@ -184,7 +191,11 @@ export function register(context: ParameterDecoratorContext, decorator: string, 
     throw new Error(`${decorator}: decorator metadata is unavailable (Symbol.metadata was not installed before the class was defined).`);
   }
   const propertyName = name ?? context.name;
-  ownParameterMap(context.metadata).set(propertyName, { propertyName, ...meta });
+  const map = ownParameterMap(context.metadata);
+  // `@Parameter() @SupplyParameterFromQuery() id`: decorators run inside out, so @Parameter()
+  // registers second — it keeps the query supply.
+  const query = meta.query ?? map.get(propertyName)?.query;
+  map.set(propertyName, { propertyName, ...meta, ...(query !== undefined ? { query, cascading: true } : {}) });
 }
 
 /** [Parameter]-equivalent field decorator (`@Parameter() title = "";`). */

@@ -259,6 +259,7 @@ export declare class ComponentState {
     subscribers: Set<ComponentState> | null;
     lastCascadeValue: unknown;
     directParameters: ReadonlyMap<string, unknown> | null;
+    lastQueryValues: Map<string, unknown> | null;
     definition: ComponentDefinition;
     readonly renderHandle: RenderHandle;
     get startMarker(): Comment;
@@ -568,13 +569,13 @@ export declare function inject<T>(token: Token<T>): T;
 
 // InputBase
 export declare abstract class InputBase<TValue> extends ComponentBase {
-    Value?: TValue;
+    Value?: TValue | null;
     ValueChanged?: EventCallback<TValue>;
     ValueExpression?: string;
     editContext?: EditContext;
     additionalAttributes?: Record<string, unknown>;
     private editContextUnsubscribe?;
-    get currentValue(): TValue | undefined;
+    get currentValue(): TValue | null | undefined;
     set currentValue(value: TValue);
     protected onInitialized(): void;
     dispose(): void;
@@ -894,6 +895,7 @@ export interface ParameterMeta {
     readonly cascadingName?: string;
     readonly cascadingType?: abstract new (...args: never[]) => unknown;
     readonly captureUnmatchedValues?: boolean;
+    readonly query?: QueryParameterMeta;
     readonly store?: symbol;
 }
 
@@ -985,6 +987,11 @@ export declare class Renderer {
     track<T>(promise: Promise<T>): Promise<T>;
     private readonly inFlight;
     private buildParameterView;
+    private queryValues;
+    private readonly querySubscribers;
+    private queryNavigation;
+    private queryNavigationUnsubscribe;
+    private notifyQuerySubscribers;
     private resolveCascade;
     private updateCascadingSubscriptions;
     private removeCascadingSubscriptions;
@@ -1200,7 +1207,6 @@ export declare class RouteView extends ComponentBase {
     routeData: RouteData;
     defaultLayout?: abstract new (...args: never[]) => ComponentBase;
     protected buildRenderTree(b: RenderTreeBuilder): void;
-    private queryParameterValues;
 }
 
 // RoutingMode

@@ -237,6 +237,10 @@ describe("codegen integration (A4)", () => {
     expect(gen("<p>@Max</p>\n@code { static Max = 3; }")).toContain("__builder.addContent(1, Demo.Max);");
   });
 
+  it("the component's own class name stays free: `Demo.Max` reaches the static, as in Razor", () => {
+    expect(gen("<p>@Demo.Max</p>\n@code { static Max = 3; }")).toContain("__builder.addContent(1, Demo.Max);");
+  });
+
   it("captures the component for member references in local functions", () => {
     const code = gen("@{ function twice() { return factor * 2; } }<p>@twice()</p>\n@code { private factor = 2; }");
     expect(code).toContain("    const __tsazor_this = this;\n");

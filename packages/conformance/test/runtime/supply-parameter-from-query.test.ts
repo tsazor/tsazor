@@ -135,21 +135,20 @@ describe("SupplyParameterFromQuery — RouteView interactions", () => {
     expect(document.body.querySelector("div")!.textContent).toBe("9");
   });
 
-  it("a field marked @SupplyParameterFromQuery but not @Parameter is an error", async () => {
+  it("@SupplyParameterFromQuery needs no @Parameter (Blazor 8)", async () => {
     class UndeclaredPage extends ComponentBase {
       @SupplyParameterFromQuery() name: string | null = null;
       protected override buildRenderTree(b: RenderTreeBuilder): void {
         b.addContent(0, String(this.name));
       }
     }
-    await expect(renderQueryView(UndeclaredPage, "/", "/", "/")).rejects.toThrow(
-      "is marked @SupplyParameterFromQuery() but not declared as @Parameter()",
-    );
+    await renderQueryView(UndeclaredPage, "/?name=ada", "/", "/");
+    expect(document.body.querySelector("div")!.textContent).toBe("ada");
   });
 
-  it("a RouteView without a NavigationManager service is an error", async () => {
+  it("without a NavigationManager service it is an error", async () => {
     await expect(renderQueryView(QueryPage, "/", "/", "/", null)).rejects.toThrow(
-      "RouteView requires a NavigationManager service",
+      "@SupplyParameterFromQuery() needs a NavigationManager service",
     );
   });
 
@@ -242,4 +241,59 @@ describe("SupplyParameterFromQuery — RouteView interactions", () => {
       app.dispose();
     });
   }
+});
+
+describe("SupplyParameterFromQuery on any component (Blazor 8)", () => {
+  it("a component that is not a page gets the values, and new ones after a navigation its parent doesn't render for", async () => {
+    const calls: string[] = [];
+    class Editor extends ComponentBase {
+      @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+      protected override onParametersSet(): void {
+        calls.push(`set ${this.id}`);
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "output");
+        b.addContent(1, String(this.id));
+        b.closeElement();
+      }
+    }
+    // A page that renders once: only the query supply can bring the editor a new id.
+    class Shell extends ComponentBase {
+      protected override shouldRender(): boolean {
+        return false;
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Editor));
+        b.closeComponent();
+      }
+    }
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Router));
+        b.addAttribute(1, "Found", (routeData: RouteData) => (inner: RenderTreeBuilder) => {
+          inner.openComponent(0, defineComponent(RouteView));
+          inner.addAttribute(1, "RouteData", routeData);
+          inner.closeComponent();
+        });
+        b.closeComponent();
+      }
+    }
+    history.replaceState(null, "", "/roles?id=7");
+    const root = document.createElement("div");
+    root.id = "app";
+    document.body.appendChild(root);
+    const app = createTsazorApp({ root: App, routes: [{ template: "/roles", type: Shell } as RouteEntry] });
+    await app.renderer.waitUntilIdle();
+    expect(root.querySelector("output")?.textContent).toBe("7");
+
+    app.navigationManager.navigateTo("/roles?id=8");
+    await app.renderer.waitUntilIdle();
+    expect(root.querySelector("output")?.textContent).toBe("8");
+
+    // A navigation that leaves its value alone doesn't set it again.
+    app.navigationManager.navigateTo("/roles?id=8&tab=2");
+    await app.renderer.waitUntilIdle();
+    expect(calls).toEqual(["set 7", "set 8"]);
+    app.dispose();
+  });
 });

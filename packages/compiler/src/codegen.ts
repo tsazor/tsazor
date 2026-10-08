@@ -1102,6 +1102,8 @@ class Codegen {
     prefixFor: (name, thisRebound) => {
       // Statics are reached through the class (C# allows them bare, too).
       if (this.members.statics.has(name) && !this.members.instance.has(name)) return `${this.options.className}.`;
+      // The component's own class: `RoleList.types` reaches a static, as in Razor.
+      if (name === this.options.className && !this.members.instance.has(name)) return null;
       const receiver = (): string => {
         if (!thisRebound) return "this.";
         this.needsThisAlias = true;

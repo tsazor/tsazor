@@ -10,6 +10,9 @@ import { ServiceCollection, ServiceProvider, type Token } from "../di/service-co
 import { withServices } from "../di/service-provider.js";
 import { mayHaveChanged } from "../components/change-detection.js";
 import { canSupplyValue, isCascadingValueSupplier, type CascadingParameterRequest, type CascadingValueSupplier } from "./cascading-value.js";
+import { NavigationManager } from "../navigation/navigation-manager.js";
+import { queryParameterValue } from "../routing/supply-parameter-from-query.js";
+import type { ParameterMeta } from "../components/parameter-metadata.js";
 import { ComponentState } from "./component-state.js";
 import { Dispatcher } from "./dispatcher.js";
 import { DomRenderer } from "./dom-renderer.js";
@@ -25,6 +28,13 @@ import { RenderQueue } from "./render-queue.js";
 const MAX_RENDERS_PER_BATCH = 100;
 
 const EMPTY_PARAMETERS: ReadonlyMap<string, unknown> = new Map();
+
+/** Query values compare by content: an array (`multiple`) or a Date is a fresh object on every read. */
+function sameQueryValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((item, i) => sameQueryValue(item, b[i]));
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  return Object.is(a, b);
+}
 
 /** Blazor's AddToRenderQueue(boundary, empty) — an empty render tree. */
 const emptyRenderFragment: RenderFragment = () => {};
@@ -327,14 +337,93 @@ export class Renderer {
     if (cascading.length === 0) return ParameterView.fromAttributes(direct.entries());
     const values = new Map(direct);
     const subscriptions: ComponentState[] = [];
+    const queryFields: ParameterMeta[] = [];
     for (const meta of cascading) {
+      if (meta.query !== undefined) {
+        queryFields.push(meta);
+        continue;
+      }
       const supplier = this.resolveCascade(state, meta, subscriptions);
       if (supplier !== null) values.set(meta.propertyName, supplier.cascadeValue);
+    }
+    if (queryFields.length > 0) {
+      const queryValues = this.queryValues(state, queryFields, direct);
+      for (const [field, value] of queryValues) values.set(field, value);
+      state.lastQueryValues = queryValues.size > 0 ? queryValues : null;
     }
     // Only components with cascading parameters keep the snapshot (Blazor).
     state.directParameters = direct;
     this.updateCascadingSubscriptions(state, subscriptions);
     return ParameterView.fromAttributes(values.entries());
+  }
+
+  /**
+   * Blazor 8's SupplyParameterFromQueryValueProvider: the `@SupplyParameterFromQuery` fields'
+   * values from the current URL's query (keys case-insensitive, a repeated key an array for
+   * `multiple`, an absent key null). A field the parent passes directly keeps that value (a page's
+   * route value wins over the query). The first such component subscribes the renderer to
+   * navigations.
+   */
+  private queryValues(state: ComponentState, fields: readonly ParameterMeta[], direct: ReadonlyMap<string, unknown>): Map<string, unknown> {
+    const values = new Map<string, unknown>();
+    const passed = new Set([...direct.keys()].map((name) => name.toLowerCase()));
+    const supplied = fields.filter((meta) => !passed.has(meta.propertyName.toLowerCase()));
+    if (supplied.length === 0) return values;
+    const services = state.component.componentServices as ServiceProvider | undefined;
+    const navigation = services?.tryGet(NavigationManager as unknown as Token<NavigationManager>);
+    if (navigation === undefined || navigation === null) {
+      throw new Error("@SupplyParameterFromQuery() needs a NavigationManager service to read the query from.");
+    }
+    if (this.queryNavigation !== navigation) {
+      this.queryNavigationUnsubscribe?.();
+      this.queryNavigation = navigation;
+      // After the navigation's own renders (the Router re-renders the page): a component its parent
+      // already gave the new values to has nothing left to change, so it isn't set twice.
+      this.queryNavigationUnsubscribe = navigation.addLocationChanged(() => {
+        this.track(Promise.resolve().then(() => this.notifyQuerySubscribers()));
+      });
+    }
+    const byLowerKey = new Map<string, string[]>();
+    for (const [key, value] of new URL(navigation.uri).searchParams) {
+      const list = byLowerKey.get(key.toLowerCase());
+      if (list) list.push(value);
+      else byLowerKey.set(key.toLowerCase(), [value]);
+    }
+    for (const meta of supplied) {
+      const query = meta.query!;
+      const name = query.queryName ?? meta.propertyName;
+      values.set(meta.propertyName, queryParameterValue(byLowerKey.get(name.toLowerCase()) ?? [], query, name));
+    }
+    this.querySubscribers.add(state);
+    return values;
+  }
+
+  private readonly querySubscribers = new Set<ComponentState>();
+  private queryNavigation: NavigationManager | null = null;
+  private queryNavigationUnsubscribe: (() => void) | null = null;
+
+  /**
+   * After a navigation: every component whose query values changed gets its last direct
+   * parameters and the fresh values set again (Blazor's provider notifies its subscribers).
+   */
+  private notifyQuerySubscribers(): void {
+    for (const state of [...this.querySubscribers]) {
+      const previous = state.lastQueryValues;
+      if (state.disposed || previous === null) {
+        this.querySubscribers.delete(state);
+        continue;
+      }
+      let current: Map<string, unknown>;
+      try {
+        const fields = state.component.getParameterInfo().cascading.filter((meta) => meta.query !== undefined);
+        current = this.queryValues(state, fields, state.directParameters ?? EMPTY_PARAMETERS);
+      } catch (error) {
+        this.handleComponentError(error, state, "lifecycle");
+        continue;
+      }
+      const changed = [...current].some(([field, value]) => !sameQueryValue(previous.get(field), value));
+      if (changed) this.supplyParameters(state, state.directParameters ?? EMPTY_PARAMETERS);
+    }
   }
 
   /**
@@ -416,6 +505,7 @@ export class Renderer {
       this.states.delete(state.id);
       // Blazor's RemoveCascadingParameterSubscriptions (subscribers are descendants, disposed below).
       this.removeCascadingSubscriptions(state);
+      this.querySubscribers.delete(state);
       state.subscribers = null;
       this.disposeInstance(state);
       for (const child of state.slotChildren.values()) {

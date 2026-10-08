@@ -704,7 +704,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Fallback layout when the page has no @layout."
         }
       ],
-      "doc": "Blazor's RouteView: renders the matched page inside its layout. The layout\nwins in order routeData (from @layout) → defaultLayout parameter.\n\nQuery parameters (3.7): the page's `@SupplyParameterFromQuery()` fields\nreceive the current URI's query values as attributes, appended to the route\nvalues (a field that is also a route parameter keeps the route value).\nBlazor does this through an internal cascading-value provider; Tsazor\nsupplies attributes directly, so the field is `@Parameter()` too. Values\nrefresh on every render — the Router re-renders after each navigation, so\na changed query string reaches the page in that pass. Absent keys supply\nnull (Blazor's provider nulls the value) with the parameter type's\ninvariant-culture conversion.",
+      "doc": "Blazor's RouteView: renders the matched page inside its layout. The layout\nwins in order routeData (from @layout) → defaultLayout parameter.\n\nQuery parameters: the renderer supplies `@SupplyParameterFromQuery()` fields\nto every component (Blazor 8); a route value passed here wins over the query.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -1084,14 +1084,14 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "TValue",
+          "type": "TValue | null",
           "references": [
             {
               "name": "TValue",
               "kind": "typeParameter"
             }
           ],
-          "doc": "The bound value (two-way via ValueChanged)."
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",
@@ -1182,8 +1182,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "string",
-          "doc": "The bound value (two-way via ValueChanged)."
+          "type": "string | null",
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",
@@ -1272,8 +1272,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "string",
-          "doc": "The bound value (two-way via ValueChanged)."
+          "type": "string | null",
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",
@@ -1362,8 +1362,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "number | string",
-          "doc": "The bound value (two-way via ValueChanged)."
+          "type": "number | string | null",
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",
@@ -1452,8 +1452,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "boolean",
-          "doc": "The bound value (two-way via ValueChanged)."
+          "type": "boolean | null",
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",
@@ -1542,14 +1542,14 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "Date | string",
+          "type": "Date | string | null",
           "references": [
             {
               "name": "Date",
               "kind": "global"
             }
           ],
-          "doc": "The bound value (two-way via ValueChanged)."
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",
@@ -1642,8 +1642,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "InputBase",
-          "type": "string",
-          "doc": "The bound value (two-way via ValueChanged)."
+          "type": "string | null",
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
           "name": "ValueChanged",

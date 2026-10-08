@@ -13,7 +13,7 @@
 </ul>
 
 @code {
-    @Parameter() @SupplyParameterFromQuery() state: string | null = null;
+    @SupplyParameterFromQuery() state: string | null = null;
     orders = [
         { id: 101, customer: "Marta", state: "open" },
         { id: 102, customer: "Jonas", state: "picked-up" },

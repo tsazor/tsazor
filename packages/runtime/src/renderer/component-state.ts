@@ -56,6 +56,12 @@ export class ComponentState {
    * parameters so a cascade notification can re-set them.
    */
   directParameters: ReadonlyMap<string, unknown> | null = null;
+  /**
+   * @internal `@SupplyParameterFromQuery` fields: the values last supplied from the URL's query,
+   * null when the component has none (or the parent passes them all). A navigation re-sets the
+   * parameters when one of them changes.
+   */
+  lastQueryValues: Map<string, unknown> | null = null;
   /** Mutable so HMR can replace the definition in place. */
   definition: ComponentDefinition;
 

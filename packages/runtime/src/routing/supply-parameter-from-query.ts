@@ -4,10 +4,11 @@
  * (roadmap 3.7): page parameters supplied from the current URL's query
  * string, refreshed on navigation.
  *
- * Mechanism (deviation from Blazor's internal cascading-value provider,
- * documented): RouteView appends the query values to the page's attributes —
- * the same supply model the route values use — so the field must be declared
- * `@Parameter()` as well (`@Parameter() @SupplyParameterFromQuery() id = "";`).
+ * As in Blazor 8, it works on any component, not only on pages, and needs no
+ * `@Parameter()`: the renderer supplies the value like a cascading value
+ * (Blazor's SupplyParameterFromQueryValueProvider) and supplies it again when a
+ * navigation changes it. A value the parent passes directly (a route value of
+ * the same name) wins.
  * Query keys match case-insensitively (Blazor); a field declared with
  * `multiple: true` (Tsazor's substitute for an array type) converts one value
  * per repeated key, every other field takes the first value.
@@ -16,7 +17,7 @@
  * `type` option (the route-constraint names; invariant culture like all
  * routing data). Default "string".
  */
-import { ensureDecoratorMetadata } from "../components/parameter-metadata.js";
+import { ensureDecoratorMetadata, register } from "../components/parameter-metadata.js";
 import { convertRouteRawValue } from "./route-data.js";
 
 const METADATA: symbol = ensureDecoratorMetadata();
@@ -49,11 +50,10 @@ export function SupplyParameterFromQuery(options?: { name?: string; type?: Query
     }
     const metadata = context.metadata as Record<PropertyKey, unknown>;
     if (!Object.hasOwn(metadata, QUERY_PARAMETERS)) metadata[QUERY_PARAMETERS] = new Map<string, QueryParameterMeta>();
-    (metadata[QUERY_PARAMETERS] as Map<string, QueryParameterMeta>).set(context.name, {
-      queryName: options?.name,
-      queryType: options?.type,
-      multiple: options?.multiple,
-    });
+    const query: QueryParameterMeta = { queryName: options?.name, queryType: options?.type, multiple: options?.multiple };
+    (metadata[QUERY_PARAMETERS] as Map<string, QueryParameterMeta>).set(context.name, query);
+    // A parameter the renderer supplies (Blazor 8): no @Parameter() needed, any component.
+    register(context as unknown as Parameters<typeof register>[0], "@SupplyParameterFromQuery()", { cascading: true, query });
   };
 }
 

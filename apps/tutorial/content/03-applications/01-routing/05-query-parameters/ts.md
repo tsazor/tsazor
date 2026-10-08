@@ -11,15 +11,15 @@ doesn't, because the page never reads the query.
 
 Query strings are the place for things like filters, search terms and page numbers. They're
 optional, and they still end up in the URL, so a link keeps them. To read one, add a
-parameter with a second decorator:
+field with a decorator:
 
 ```tsazor
-@Parameter() @SupplyParameterFromQuery() state: string | null = null;
+@SupplyParameterFromQuery() state: string | null = null;
 ```
 
-`@Parameter()` makes `state` a parameter, and `@SupplyParameterFromQuery()` fills it from
-`?state=…`. Like any value you use in code, the decorator needs an import at the top of the
-file:
+`@SupplyParameterFromQuery()` fills `state` from `?state=…`, and fills it again when the
+URL changes. It works in any component, not only in a page. Like any value you use in code,
+the decorator needs an import at the top of the file:
 
 ```tsazor
 @import { SupplyParameterFromQuery } from "@tsazor/runtime"
