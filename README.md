@@ -62,12 +62,13 @@ Real-world stress test 1: **[Blazing Pizza](apps/blazing-pizza)** (a port of the
 app, details in [docs/port-findings.md](docs/port-findings.md)):
 
 ```bash
-pnpm --filter blazing-pizza server   # API on :5300
-pnpm --filter blazing-pizza dev      # app on :5301
-node apps/blazing-pizza/scripts/verify-pizza.mjs   # E2E (starts/kills the server itself)
+pnpm --filter blazing-pizza api      # the backend on :5300
+pnpm --filter blazing-pizza dev      # the app on :5301
+pnpm --filter blazing-pizza verify   # E2E (starts and stops the servers itself)
 ```
 
-Seed login: `test@example.com` / `test1234`.
+Seed login: `test@example.com` / `test1234`. More (the build, the generated API client) in the
+[app's README](apps/blazing-pizza/README.md).
 
 Real-world stress test 2: **[Sleipnir Ticker](apps/sleipnir-ticker)** — live data instead of
 forms: an ASP.NET Core API relays Binance WebSocket ticker data as a Sleipnir command API, and the
