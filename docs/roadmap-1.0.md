@@ -1,8 +1,10 @@
 # Roadmap — Tsazor 1.0
 
-Status (2026-10-04): **steps 1 and 2 of the order below are done** — the tutorial's three parts
-(M4 without the static deploy, whose target is still to decide), S3, S5, R1 CI and the S1 API
-snapshot; E8 and E11 done; decisions D1–D4 and X1–X4 taken. Next: step 3.
+Status (2026-10-08): **steps 1–4 of the order below are done**, and of step 5 the Svelte-style features,
+the component library (Tier 1, both skins) and `@tsazor/worker`. **Scope cut (owner, 2026-10-08):** E12
+and the Sleipnir integration move after 1.0, E12 first. Both are separate, additive packages; neither
+changes the API of the runtime or the compiler. **Left for 1.0:** R3, R2, E3, E10, the E9 screen-reader
+audit, the known follow-ups, then going public (R4, provenance). The repository stays private until then.
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
 
 **Goal of 1.0:** a single-page-app framework with **Blazor parity** (markup and semantics),
@@ -27,6 +29,8 @@ reserved (D1), `@attach` (D2), the Svelte transition set (D3), `@State` in v1 (D
 gets its tutorial chapter.
 
 ## 3 — Sleipnir integration ([roadmap-sleipnir.md](roadmap-sleipnir.md))
+
+**After 1.0, after E12 (owner, 2026-10-08):** nice to have, not needed for 1.0.
 
 Track U upstream (U1–U4) and track T `@tsazor/sleipnir` (T1–T7). Its open decisions (where the
 upstream work happens, where the emitter lives) need answers first.
@@ -151,6 +155,7 @@ architecture and security take priority.
   focus return, positioning), `Tabs` (roving tabindex, arrow keys, tab–panel ids); the demo gate checks
   them in Edge, with axe on the open dialog and menu.
 - **E12 — Feel-at-home packages** ([design-extensions-primitives.md](design-extensions-primitives.md)):
+  **After 1.0, before Sleipnir (owner, 2026-10-08)** — new packages, so they don't touch the 1.0 API.
   `@tsazor/primitives` (`Decimal` first, since money in `number` drifts; then
   `TimeSpan`/`DateOnly`/`TimeOnly`/`Guid`) and `@tsazor/extensions` (`HttpClient` + factory +
   handler pipeline, `Logger<T>`, `Options<T>`). Opt-in and idiomatic TS; no BCL clones. Decided: two packages (X1); an `HttpClient` alias in the
@@ -218,5 +223,9 @@ architecture and security take priority.
    one document, shown as one page. **Done (2026-10-05):** the reference with language, diagnostics,
    components and API pages, cross-linked with the lessons and the index (see the design doc).
 4. E4–E7 architecture and migration (incremental migration E6 is the main sales argument).
-5. Sleipnir integration; the remaining Svelte-style features with their chapters.
-6. S2, S4, E3, E10, R2, R3, R4, R5 → 1.0 release candidate.
+5. ~~Sleipnir integration;~~ the remaining Svelte-style features with their chapters (done).
+6. R3 (with the S2 templates), R2, E3, E10, the E9 screen-reader audit, the follow-ups → 1.0 release
+   candidate → public repository, docs site (R4), npm with provenance → 1.0.
+
+After 1.0: E12 (`@tsazor/primitives`, `@tsazor/extensions`, `Decimal` with `@bind:culture`), then the
+Sleipnir integration; SSR and fine-grained reactivity as planned.
