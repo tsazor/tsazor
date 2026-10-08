@@ -4,6 +4,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* A Button with href is an <a>: no link underline. */
+  text-decoration: none;
   gap: var(--fui-gap-sm);
   height: var(--fui-height);
   padding: 0 var(--fui-spacing-l);
