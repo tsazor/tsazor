@@ -83,6 +83,8 @@ jobs:
         run: pnpm --filter starter verify
       - name: Incremental migration — Blazor Server + Tsazor behind YARP (E6)
         run: pnpm --filter migration-sample verify
+      - name: The FluentCMS port — upstream FluentCMS, the BFF and the app (docs/port-fluentcms.md)
+        run: pnpm --filter fluentcms verify
       - name: Sleipnir ticker (synthetic mode)
         run: |
           dotnet build apps/sleipnir-ticker/api
