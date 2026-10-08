@@ -1,0 +1,20 @@
+@inherits BasePlugin
+@import type { PluginDefinitionDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginBody title="Plugins">
+    <DataGrid items="@this.definitions" ariaLabel="Plugins">
+        <PropertyColumn property="(definition) => definition.name" title="Title" />
+        <PropertyColumn property="(definition) => definition.description" title="Description" />
+        <PropertyColumn property="(definition) => definition.assembly" title="Assembly" />
+        <PropertyColumn property="(definition) => definition.category" title="Category" />
+    </DataGrid>
+</PluginBody>
+
+@code {
+    private definitions: PluginDefinitionDetailResponse[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        this.definitions = ensureOk(await this.api.pluginDefinitionGetAll()) ?? [];
+    }
+}

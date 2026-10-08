@@ -1,0 +1,59 @@
+@inherits BasePlugin
+@import type { LayoutDetailResponse, SiteDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginBody title="Sites">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create Site")" label="Add Site" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.sites" ariaLabel="Sites">
+            <PropertyColumn property="(site) => site.name" title="Name" />
+            <PropertyColumn property="(site) => site.description" title="Description" />
+            <TemplateColumn title="Url" Context="site">
+                <Stack direction="horizontal" gap="xs" wrap>
+                    @foreach (const url of site.urls ?? []) {
+                        <Badge intent="primary">@url</Badge>
+                    }
+                </Stack>
+            </TemplateColumn>
+            <PropertyColumn property="(site) => this.layoutName(site.layoutId)" title="Layout" />
+            <PropertyColumn property="(site) => this.layoutName(site.detailLayoutId)" title="Detail Layout" />
+            <PropertyColumn property="(site) => this.layoutName(site.editLayoutId)" title="Edit Layout" />
+            <TemplateColumn title="Actions" Context="site">
+                <ActionButtonEdit href="@this.getUrl("Update Site", { id: site.id })" />
+                <ActionButtonDelete visible="@(site.id !== this.viewState.site.id)" @onclick="() => this.selected = site" aria-label="@(`Delete ${site.name}`)" />
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete <b>"@this.selected?.name"</b> site?
+</Confirm>
+
+@code {
+    private sites: SiteDetailResponse[] = [];
+    private layouts: LayoutDetailResponse[] = [];
+    private selected?: SiteDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        this.layouts = ensureOk(await this.api.layoutGetAll()) ?? [];
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        this.sites = ensureOk(await this.api.siteGetAll()) ?? [];
+    }
+
+    private layoutName(id: string): string {
+        return this.layouts.find((layout) => layout.id === id)?.name ?? "";
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.siteDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

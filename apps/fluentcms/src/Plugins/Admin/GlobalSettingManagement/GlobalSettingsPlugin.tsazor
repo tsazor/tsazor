@@ -1,0 +1,26 @@
+@inherits BasePlugin
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Global Setting" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model!.superAdminUserNames" label="Super Admin User Names" placeholder="Comma-separated usernames" required />
+    <FormActions>
+        <Button intent="primary" type="submit">Submit</Button>
+        <Button href="/admin">Cancel</Button>
+    </FormActions>
+</PluginForm>
+
+@code {
+    /** The form's model (FluentCMS's GlobalSettingsUpdateModel): the super admins as one comma-separated text. */
+    private model?: { superAdminUserNames: string };
+
+    protected override async onInitialized(): Promise<void> {
+        const settings = ensureOk(await this.api.globalSettingsGet());
+        this.model = { superAdminUserNames: (settings.superAdmins ?? []).join(",") };
+    }
+
+    private async submit(): Promise<void> {
+        const superAdmins = this.model!.superAdminUserNames.split(",").map((name) => name.trim()).filter((name) => name !== "");
+        ensureOk(await this.api.globalSettingsUpdate({ superAdmins }));
+        this.navigation.navigateTo("/admin");
+    }
+}

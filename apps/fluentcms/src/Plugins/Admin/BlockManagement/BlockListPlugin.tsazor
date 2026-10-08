@@ -1,0 +1,44 @@
+@inherits BasePlugin
+@import type { BlockDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginBody title="Blocks">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create Block")" label="Add Block" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.blocks" ariaLabel="Blocks">
+            <PropertyColumn property="(block) => block.name" title="Name" />
+            <PropertyColumn property="(block) => block.category" title="Category" />
+            <PropertyColumn property="(block) => block.description" title="Description" />
+            <TemplateColumn title="Actions" Context="block">
+                <ActionButtonEdit href="@this.getUrl("Update Block", { id: block.id })" />
+                <ActionButtonDelete @onclick="() => this.selected = block" aria-label="@(`Delete ${block.name}`)" />
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete <b>"@this.selected?.name"</b> block?
+</Confirm>
+
+@code {
+    private blocks: BlockDetailResponse[] = [];
+    private selected?: BlockDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        this.blocks = ensureOk(await this.api.blockGetAllForSite({ siteId: this.viewState.site.id })) ?? [];
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.blockDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

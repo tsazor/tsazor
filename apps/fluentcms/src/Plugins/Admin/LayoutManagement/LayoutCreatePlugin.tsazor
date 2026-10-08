@@ -1,0 +1,26 @@
+@inherits BasePlugin
+@import { LayoutCreateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Create New Layout" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter layout name" required />
+    <TextArea @bind-Value="this.model.head" rows="15" label="Layout Head" placeholder="Enter layout head section" required />
+    <Alert intent="info">
+        For templating Guide you can refer to <a href="https://github.com/scriban/scriban/blob/master/doc/language.md">Scriban's Documentation</a>
+    </Alert>
+    <TextArea @bind-Value="this.model.body" rows="25" label="Layout Body" placeholder="Enter layout body section" required />
+    <Alert intent="warning">
+        You can use <b>@("<PluginsSection fluentcms Name=\"...\" />")</b> anywhere to allow dropping plugins there.
+    </Alert>
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = new LayoutCreateRequest();
+
+    private async submit(): Promise<void> {
+        this.model.siteId = this.viewState.site.id;
+        ensureOk(await this.api.layoutCreate(this.model));
+        this.navigateBack();
+    }
+}

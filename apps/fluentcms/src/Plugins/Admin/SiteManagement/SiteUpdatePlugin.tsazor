@@ -1,0 +1,104 @@
+@inherits BasePlugin
+@import type { LayoutDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { siteModel } from "./site-model"
+
+<PluginForm model="@this.model" title="Update Site" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model!.name" label="Name" placeholder="Enter Name" required />
+    <TextArea @bind-Value="this.model!.description" label="Description" placeholder="Enter Description" />
+    <Grid columns="2" gap="m">
+        <TextInput @bind-Value="this.model!.urls" label="Urls" placeholder="Enter each url in new line" help="Comma separated Urls without http(s)" />
+        <Select @bind-Value="this.model!.layoutId" label="Default Layout">
+            @foreach (const layout of this.layouts) {
+                <option value="@layout.id">@(layout.name)</option>
+            }
+        </Select>
+        <Select @bind-Value="this.model!.editLayoutId" label="EditView Layout">
+            @foreach (const layout of this.layouts) {
+                <option value="@layout.id">@(layout.name)</option>
+            }
+        </Select>
+        <Select @bind-Value="this.model!.detailLayoutId" label="SingleView Layout">
+            @foreach (const layout of this.layouts) {
+                <option value="@layout.id">@(layout.name)</option>
+            }
+        </Select>
+    </Grid>
+    <TextArea @bind-Value="this.model!.head" label="Head" placeholder="Enter Head content for all pages" />
+    <Alert intent="info">These SEO Fields will be used as default values. when page doesn't have any of the values.</Alert>
+    <TextInput @bind-Value="this.model!.metaTitle" label="Meta Title" placeholder="Enter Meta Title" />
+    <TextArea @bind-Value="this.model!.metaDescription" label="Meta Description" placeholder="Enter Meta Description" />
+    <TextArea @bind-Value="this.model!.robotsTxt" label="Content of robots.txt" placeholder="Enter content for robots.txt file" />
+    <TextArea @bind-Value="this.model!.theme" label="Theme" placeholder="Enter css variables to override teme" />
+    <TextInput @bind-Value="this.model!.googleTagsId" label="Google Tags id" placeholder="Enter Google Tags Id" />
+    <Select @bind-Value="this.model!.ogType" label="default type of Pages">
+        <option value="">Choose default page type</option>
+        @foreach (const option of SiteUpdatePlugin.ogTypes) {
+            <option value="@option.key">@option.title</option>
+        }
+    </Select>
+    <Grid columns="2" gap="m">
+        <Checkbox @bind-Value="this.model!.index" label="Index" help="Default option for index option of pages." />
+        <Checkbox @bind-Value="this.model!.follow" label="Follow" help="Default option for Follow option of pages." />
+    </Grid>
+    <CheckboxGroup @bind-Value="this.model!.contributorRoleIds" label="Contributor Roles" options="@this.roleOptions" help="Roles which can manage pages of site." />
+    <CheckboxGroup @bind-Value="this.model!.adminRoleIds" label="Admin Roles" options="@this.roleOptions" help="Roles which are able to manage site." />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private static readonly ogTypes = [
+        { title: "Website", key: "website" },
+        { title: "Article", key: "article" },
+        { title: "Product", key: "product" },
+        { title: "Video", key: "video" },
+    ];
+
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    /** The form's model (FluentCMS's SiteUpdateModel): the site, its settings, the urls as one text. */
+    private model?: ReturnType<typeof siteModel>;
+    private layouts: LayoutDetailResponse[] = [];
+    private roleOptions: { value: string; label: string }[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        const siteId = this.id ?? "";
+        const site = ensureOk(await this.api.siteGetById(siteId));
+        this.model = siteModel(site);
+        const roles = ensureOk(await this.api.roleGetAll({ siteId })) ?? [];
+        this.roleOptions = roles
+            .filter((role) => role.type !== "AllUsers" && role.type !== "Guest")
+            .map((role) => ({ value: role.id, label: role.name ?? "" }));
+        this.layouts = ensureOk(await this.api.layoutGetBySiteId({ siteId })) ?? [];
+    }
+
+    private async submit(): Promise<void> {
+        const model = this.model!;
+        ensureOk(await this.api.siteUpdate({
+            id: model.id,
+            name: model.name,
+            description: model.description,
+            layoutId: model.layoutId,
+            detailLayoutId: model.detailLayoutId,
+            editLayoutId: model.editLayoutId,
+            adminRoleIds: model.adminRoleIds,
+            contributorRoleIds: model.contributorRoleIds,
+            urls: model.urls.split(","),
+        }));
+        ensureOk(await this.api.settingsUpdate({
+            id: model.id,
+            settings: {
+                MetaTitle: model.metaTitle,
+                MetaDescription: model.metaDescription,
+                GoogleTagsId: model.googleTagsId,
+                Index: model.index ? "true" : "false",
+                Follow: model.follow ? "true" : "false",
+                RobotsTxt: model.robotsTxt,
+                Theme: model.theme,
+                OgType: model.ogType,
+                Head: model.head,
+            },
+        }));
+        this.navigateBack();
+    }
+}

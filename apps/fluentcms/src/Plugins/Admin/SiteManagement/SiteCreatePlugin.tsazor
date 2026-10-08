@@ -1,0 +1,49 @@
+@inherits BasePlugin
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Create New Site" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter Name" required />
+    <TextArea @bind-Value="this.model.description" label="Description" placeholder="Enter Description" />
+    <Grid columns="2" gap="m">
+        <TextInput @bind-Value="this.model.url" label="Urls" placeholder="www.example.com" />
+        <Select @bind-Value="this.model.template" label="Template">
+            @foreach (const template of this.templates) {
+                <option value="@template">@template</option>
+            }
+        </Select>
+    </Grid>
+    <TextInput @bind-Value="this.model.metaTitle" label="Meta Title" placeholder="Enter Meta Title" help="Page's MetaTitle will replace this value." />
+    <TextArea @bind-Value="this.model.metaDescription" label="Meta Description" placeholder="Enter Meta Description" help="Page's MetaDescription will replace this value." />
+    <TextArea @bind-Value="this.model.robotsTxt" label="Content of robots.txt" placeholder="Enter content for robots.txt file" />
+    <TextArea @bind-Value="this.model.head" label="Head" placeholder="Enter Head content for all pages" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    /** The form's model (FluentCMS's SiteCreateModel): the site and its first settings. */
+    private model = { name: "", description: "", url: "", template: "", metaTitle: "", metaDescription: "", robotsTxt: "", head: "" };
+    private templates: string[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        this.templates = ensureOk(await this.api.setupGetTemplates()) ?? [];
+        this.model.template = this.templates[0] ?? "";
+    }
+
+    private async submit(): Promise<void> {
+        const { name, description, template, url } = this.model;
+        const site = ensureOk(await this.api.siteCreate({ name, description, template, url }));
+        ensureOk(await this.api.settingsUpdate({
+            id: site.id,
+            settings: {
+                MetaTitle: this.model.metaTitle,
+                MetaDescription: this.model.metaDescription,
+                Head: this.model.head,
+                Robots: "index,follow",
+                RobotsTxt: this.model.robotsTxt,
+                OgType: "website",
+                GoogleTagsId: "",
+            },
+        }));
+        this.navigateBack();
+    }
+}

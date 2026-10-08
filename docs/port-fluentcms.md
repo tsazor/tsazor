@@ -77,7 +77,7 @@ tests our library on a real app.
 |---|---|---|---|
 | 0 | Infrastructure | Backend script, BFF, app skeleton, generated client, an E2E gate that logs in | Done |
 | 1 | Shell | Setup, catch-all page, sections and plugins, admin and auth layouts, login/logout | Done except setup, register and password pages |
-| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Roles, users done |
+| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done but API tokens and pages |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | |
 | 5 | Public site (optional) | The view plugins, layouts with component tags | |
@@ -136,6 +136,7 @@ with Tsazor, or the framework has a gap.
 | 0–1 | Login, logout, the admin and auth layouts | 16 (F1–F16) | 2 (`ea66e86` runtime, `23ac0fb` compiler) |
 | 2 | Roles (list, create, update) | 5 (F17–F21) | 2 (Button `href`; `InputBase.Value` nullable) |
 | 2 | Users (list, create, update with three forms) | 0 | 1 (`CheckboxGroup`, new in `@tsazor/fluent`) |
+| 2 | Plugin definitions, global settings, layouts, blocks, sites | 1 (F22) | 0 |
 
 ## Findings
 
@@ -162,3 +163,4 @@ with Tsazor, or the framework has a gap.
 | F19 | Compiler | `RoleListPlugin.types` (a static through the component's own class, fine in Razor) became `this.RoleListPlugin` | Fixed: the own class name stays free |
 | F20 | Runtime | `@SupplyParameterFromQuery` worked only on pages and only with `@Parameter()` (Blazor 6/7). Since Blazor 8 it works in any component, and FluentCMS's plugins rely on it (14 files): the update form loaded with an empty id | Fixed: the renderer supplies it like a cascading value, and again after a navigation |
 | F21 | `@tsazor/fluent` | `Dialog.onClosed` is typed `EventCallback<MouseEvent>`, but Escape and the backdrop close it without an event | Open (small) |
+| F22 | Compiler | `@foreach (const layout of layouts) { @layout.name }`: Razor reads `@layout` as the directive too, but the parser swallowed the rest of the line, and 62 follow-up errors buried the cause | Fixed `8e921af`: one TZS013 with the quick fix `@(layout.name)` |

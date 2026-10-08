@@ -5,8 +5,9 @@
  *   signed out, an admin page says so → the login form shows the API's error for a wrong password →
  *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
  *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
- *   a confirmation → the users: add, assign a role (checkbox group), delete → axe on both layouts,
- *   the dialog and the forms → signing out
+ *   a confirmation → the users: add, assign a role (checkbox group), delete → plugins, global
+ *   settings, layouts, blocks, a site's settings → axe on both layouts, the dialog and the forms →
+ *   signing out
  *
  * Starts what isn't running (the backend clones and builds FluentCMS the first time), builds the
  * app and the BFF, and fails on every console error but the one a wrong password causes.
@@ -219,6 +220,56 @@ async function main() {
     await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
     await users.filter({ hasText: userName }).waitFor({ state: "detached", timeout: 10_000 });
     check(true, "the user is gone");
+
+    // The other management screens, each once around.
+    const table = (name) => page.getByRole("table", { name }).locator("tbody tr");
+    const stamp = Date.now() % 100000;
+    await page.goto(`${APP}/admin/plugins`);
+    await table("Plugins").first().waitFor({ timeout: 15_000 });
+    check((await table("Plugins").count()) > 10, "the plugin definitions are listed");
+
+    await page.goto(`${APP}/admin/globalsettings`);
+    await page.waitForFunction(() => (document.querySelector("input")?.value ?? "") !== "", null, { timeout: 15_000 });
+    check((await page.getByLabel("Super Admin User Names").inputValue()).split(",").includes(ADMIN.username), "the global settings name the super admins");
+    await page.getByRole("button", { name: "Submit" }).click();
+    await page.waitForURL(`${APP}/admin`, { timeout: 10_000 });
+
+    for (const screen of [
+      { list: "Layouts", add: "Add Layout", name: `Layout ${stamp}`, fields: { "Layout Head": "<title>t</title>", "Layout Body": '<PluginsSection Name="Main" fluentcms />' }, check: "Layout Body" },
+      { list: "Blocks", add: "Add Block", name: `Block ${stamp}`, fields: { Category: "Headers", Description: "A header", Content: "<h1>Hi</h1>" }, check: "Content" },
+    ]) {
+      await page.goto(`${APP}/admin/${screen.list.toLowerCase()}`);
+      await page.getByRole("table", { name: screen.list }).waitFor({ timeout: 15_000 });
+      await page.getByRole("link", { name: screen.add }).click();
+      await page.getByLabel("Name").fill(screen.name);
+      for (const [label, value] of Object.entries(screen.fields)) await page.getByLabel(label).fill(value);
+      await page.getByRole("button", { name: "Submit" }).click();
+      await table(screen.list).filter({ hasText: screen.name }).getByRole("link", { name: "Edit" }).click();
+      await page.waitForFunction((label) => [...document.querySelectorAll("label")].some((l) => l.textContent === label && (document.getElementById(l.htmlFor)?.value ?? "") !== ""), screen.check, { timeout: 10_000 });
+      const loaded = await page.getByLabel(screen.check).inputValue();
+      await page.getByRole("link", { name: "Cancel" }).click();
+      await table(screen.list).filter({ hasText: screen.name }).getByRole("button", { name: /Delete/ }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+      await table(screen.list).filter({ hasText: screen.name }).waitFor({ state: "detached", timeout: 10_000 });
+      check(loaded === screen.fields[screen.check], `${screen.list}: add, open the update form (it loads), delete`);
+    }
+
+    await page.goto(`${APP}/admin/sites`);
+    const editSite = async () => {
+      await table("Sites").first().getByRole("link", { name: "Edit" }).click();
+      await page.waitForFunction(() => (document.querySelector("select")?.value ?? "") !== "", null, { timeout: 15_000 });
+    };
+    await editSite();
+    const before = await page.getByLabel("Meta Title").inputValue();
+    await page.getByLabel("Meta Title").fill(`Title ${stamp}`);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await page.waitForURL(`${APP}/admin/sites`, { timeout: 10_000 });
+    await editSite();
+    const saved = await page.getByLabel("Meta Title").inputValue();
+    await page.getByLabel("Meta Title").fill(before);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await page.waitForURL(`${APP}/admin/sites`, { timeout: 10_000 });
+    check(saved === `Title ${stamp}`, "a site's settings are saved (site and settings, two calls)");
 
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();
