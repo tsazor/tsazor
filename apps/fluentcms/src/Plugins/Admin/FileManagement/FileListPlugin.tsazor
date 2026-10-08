@@ -1,0 +1,132 @@
+@inherits BasePlugin
+@import { FileRenameRequest, FolderRenameRequest, type FileUploadConfig, type FolderCreateRequest, type FolderDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { DEFAULT_UPLOAD_CONFIG, downloadUrl, splitExtension, type AssetDetail } from "../../Base/assets"
+@* The tag resolves through @using; the type of the @ref field, like any type in TypeScript code, comes from an import. *@
+@import FilesTable from "../../Base/FilesTable.tsazor"
+
+<PluginBody title="@(`File Management (${this.folder?.name ?? "..."})`)">
+    <ActionsFragment>
+        <ActionButton icon="add" label="Add Folder" @onclick="() => this.folderCreateOpen = true" />
+        <ActionButtonCreate label="Upload File" @onclick="() => this.uploadOpen = true" />
+    </ActionsFragment>
+    <SubtitleFragment>
+        <FolderBreadcrumb folders="@this.breadcrumbItems" current="@this.folderId" rootId="@this.rootFolder?.id" onNavigate="@this.navigateFolder" />
+    </SubtitleFragment>
+    <ChildContent>
+        <FilesTable @ref="this.filesTable" @bind-folderId="this.folderId" @bind-rootFolder="this.rootFolder" @bind-folder="this.folder" @bind-parentFolders="this.breadcrumbItems">
+            <ActionsFragment>
+                <ActionButton visible="@(!context.isFolder)" icon="download" label="Download" intent="primary" href="@downloadUrl(this.breadcrumbItems, context)" download="@context.name" target="_blank" aria-label="@(`Download ${context.name}`)" />
+                <ActionButton visible="@context.isFolder" label="Open" aria-label="@(`Open ${context.name}`)" @onclick="() => this.navigateFolder(context.id)" />
+                @if (!context.isParentFolder) {
+                    <ActionButton label="Rename" intent="primary" aria-label="@(`Rename ${context.name}`)" @onclick="() => this.openRename(context)" />
+                    <ActionButton label="Move" aria-label="@(`Move ${context.name}`)" @onclick="() => this.moving = context" />
+                    <ActionButtonDelete aria-label="@(`Delete ${context.name}`)" @onclick="() => this.selected = context" />
+                }
+            </ActionsFragment>
+        </FilesTable>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    @if (this.selected?.isFolder) {
+        <span>Are you sure to delete <b>"@this.selected?.name"</b> folder with all of its files and folders?</span>
+    } else {
+        <span>Are you sure to delete <b>"@this.selected?.name"</b> file?</span>
+    }
+</Confirm>
+
+<FolderCreateModal folderId="@this.folderId" visible="@this.folderCreateOpen" onSubmit="@this.createFolder" onCancel="() => this.folderCreateOpen = false" />
+
+<FileUploadModal config="@this.uploadConfig" visible="@this.uploadOpen" onSubmit="@this.upload" onCancel="() => this.uploadOpen = false" />
+
+@if (this.folderRenameModel !== undefined) {
+    <FolderRenameModal model="@this.folderRenameModel" onSubmit="@this.renameFolder" onCancel="() => this.folderRenameModel = undefined" />
+}
+
+@if (this.fileRenameModel !== undefined) {
+    <FileRenameModal model="@this.fileRenameModel" onSubmit="@this.renameFile" onCancel="() => this.fileRenameModel = undefined" />
+}
+
+@if (this.moving !== undefined) {
+    <FolderSelectorModal model="@this.folderId" disabledFolder="@(this.moving.isFolder ? this.moving.id : null)" onSubmit="@this.move" onCancel="() => this.moving = undefined" />
+}
+
+@code {
+    /** The open folder; FluentCMS opens a folder by `?folderId=` too, and in place without changing the URL. */
+    @SupplyParameterFromQuery({ name: "folderId" }) folderId: string | null = null;
+
+    private folder?: FolderDetailResponse;
+    private rootFolder?: FolderDetailResponse;
+    private breadcrumbItems: FolderDetailResponse[] = [];
+    private filesTable?: FilesTable;
+    private uploadConfig: FileUploadConfig = DEFAULT_UPLOAD_CONFIG;
+    private uploadOpen = false;
+    private folderCreateOpen = false;
+    private folderRenameModel?: FolderRenameRequest;
+    private fileRenameModel?: FileRenameRequest;
+    /** The renamed file's extension, kept out of the name the user edits. */
+    private fileExtension = "";
+    private moving?: AssetDetail;
+    private selected?: AssetDetail;
+
+    protected override async onInitialized(): Promise<void> {
+        const settings = ensureOk(await this.api.globalSettingsGet());
+        this.uploadConfig = settings.fileUpload ?? DEFAULT_UPLOAD_CONFIG;
+    }
+
+    private navigateFolder(id: string): void {
+        this.folderId = id;
+    }
+
+    private async upload(files: File[]): Promise<void> {
+        ensureOk(await this.api.fileUpload({ files }, { folderId: this.folderId ?? this.rootFolder?.id }));
+        this.uploadOpen = false;
+        await this.filesTable?.load();
+    }
+
+    private async createFolder(request: FolderCreateRequest): Promise<void> {
+        ensureOk(await this.api.folderCreate(request));
+        this.folderCreateOpen = false;
+        await this.filesTable?.load();
+    }
+
+    private openRename(item: AssetDetail): void {
+        if (item.isFolder) {
+            this.folderRenameModel = Object.assign(new FolderRenameRequest(), { id: item.id, name: item.name });
+        } else {
+            const { name, extension } = splitExtension(item.name);
+            this.fileExtension = extension;
+            this.fileRenameModel = Object.assign(new FileRenameRequest(), { id: item.id, name });
+        }
+    }
+
+    private async renameFile(request: FileRenameRequest): Promise<void> {
+        ensureOk(await this.api.fileRename({ ...request, name: `${request.name ?? ""}${this.fileExtension}` }));
+        this.fileRenameModel = undefined;
+        await this.filesTable?.load();
+    }
+
+    private async renameFolder(request: FolderRenameRequest): Promise<void> {
+        ensureOk(await this.api.folderRename(request));
+        this.folderRenameModel = undefined;
+        await this.filesTable?.load();
+    }
+
+    private async move(parentId: string): Promise<void> {
+        const item = this.moving;
+        if (item === undefined) return;
+        if (item.isFolder) ensureOk(await this.api.folderMove({ id: item.id, parentId }));
+        else ensureOk(await this.api.fileMove({ id: item.id, folderId: parentId }));
+        this.moving = undefined;
+        await this.filesTable?.load();
+    }
+
+    private async delete(): Promise<void> {
+        const item = this.selected;
+        if (item === undefined) return;
+        ensureOk(item.isFolder ? await this.api.folderDelete(item.id) : await this.api.fileDelete(item.id));
+        this.selected = undefined;
+        await this.filesTable?.load();
+    }
+}

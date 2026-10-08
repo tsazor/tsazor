@@ -1,0 +1,21 @@
+@* A button or link in a list's row or above it (FluentCMS's ActionButton): an icon and a label. Its @onclick,
+   aria-label, download and target go onto it, as in Blazor. *@
+@import type { Intent } from "@tsazor/fluent"
+
+@if (visible) {
+    <Button href="@href" appearance="subtle" size="small" intent="@intent" @attributes="@additionalAttributes">
+        @if (icon) {
+            <Icon name="@icon" />
+        }
+        @label
+    </Button>
+}
+
+@code {
+    @Parameter() label = "";
+    @Parameter() icon?: string;
+    @Parameter() href?: string;
+    @Parameter() intent: Intent = "secondary";
+    @Parameter() visible = true;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

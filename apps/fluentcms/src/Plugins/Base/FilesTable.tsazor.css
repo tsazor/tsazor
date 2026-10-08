@@ -1,0 +1,11 @@
+.asset-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.asset-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}

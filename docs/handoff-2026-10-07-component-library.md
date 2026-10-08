@@ -12,10 +12,13 @@ everything pushed.
 > - **Track B (owner):** complex components are a port of their own (reference: Fluent UI Blazor).
 > - **Done so far:**
 >   - phases 0–2: backend script, BFF, shell, sign-in, every management screen but files and content types;
->   - 23 findings, most of them fixed in the framework;
->   - in `@tsazor/fluent`: CheckboxGroup, TreeView and `Button href`.
+>   - phase 3: file management (folders, multipart upload through the BFF, rename, move, delete);
+>   - 29 findings, most of them fixed in the framework (phase 3: F5 multipart in `@tsazor/dotnet`,
+>     `BreadcrumbItem.onClick`, `@ref="this.x"`, forwarding an unset callback, `InputFile` awaiting `onChange`);
+>   - in `@tsazor/fluent`: CheckboxGroup, TreeView, `Button href`, five file icons.
 > - **Gates:** `pnpm --filter fluentcms verify` (in `pnpm gates` and CI's e2e job).
-> - **Next:** phase 3 (files: folders, multipart upload — F5), then phase 4 (content types).
+> - **Next:** phase 4 (content types, with the file picker `FileSelectorModal`); open: F29 (a TS2304 hint that
+>   names the `@import`), track B's upload drop zone and progress.
 
 ## CI: blocked by GitHub billing, not by the code
 

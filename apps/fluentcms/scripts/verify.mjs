@@ -6,8 +6,9 @@
  *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
  *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
  *   a confirmation → the users: add, assign a role (checkbox group), delete → plugins, global
- *   settings, layouts, blocks, a site's settings → axe on both layouts, the dialog and the forms →
- *   signing out
+ *   settings, layouts, blocks, a site's settings → API tokens, pages (a TreeView) → files: a folder,
+ *   an upload (multipart), the file served, rename, move in the folder picker, delete → axe on both
+ *   layouts, the dialogs and the forms → signing out
  *
  * Starts what isn't running (the backend clones and builds FluentCMS the first time), builds the
  * app and the BFF, and fails on every console error but the one a wrong password causes.
@@ -331,6 +332,72 @@ async function main() {
     await pagesTable.filter({ hasText: pageTitle }).getByRole("button", { name: /Delete/ }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
     await pagesTable.filter({ hasText: pageTitle }).waitFor({ state: "detached", timeout: 10_000 });
+
+    // Files: a folder, an upload (multipart through the BFF), the file served, rename, move, delete.
+    const files = table("Files");
+    // (No spaces: FluentCMS looks a file's folder up by the URL's escaped path, so `a%20b` isn't found.)
+    const folderName = `folder-${stamp}`;
+    const [hello, notes] = [`hello-${stamp}`, `notes-${stamp}.md`];
+    await page.goto(`${APP}/admin/files`);
+    await files.filter({ hasText: "images" }).first().waitFor({ timeout: 15_000 });
+    check((await page.getByRole("heading", { level: 2 }).first().textContent()) === "File Management (files)", "the file management opens the root folder");
+    await page.getByRole("button", { name: "Add Folder" }).click();
+    await page.getByRole("dialog").getByLabel("Name").fill(folderName);
+    await page.getByRole("dialog").getByRole("button", { name: "Submit" }).click();
+    await files.filter({ hasText: folderName }).waitFor({ timeout: 10_000 });
+    await files.filter({ hasText: folderName }).getByRole("button", { name: folderName, exact: true }).click();
+    await page.getByRole("heading", { name: `File Management (${folderName})` }).waitFor({ timeout: 10_000 });
+    const trail = page.getByRole("navigation", { name: "Folder path" });
+    check(
+      (await files.first().innerText()).includes("(parent)") && (await trail.innerText()).includes("files") && (await trail.locator("[aria-current=page]").innerText()) === folderName,
+      "a new folder opens in place, with the way up and the trail",
+    );
+
+    await page.getByRole("button", { name: "Upload File" }).click();
+    const [upload] = await Promise.all([
+      page.waitForRequest((request) => request.url().includes("/api/File/Upload")),
+      page.getByRole("dialog").getByLabel("Files").setInputFiles([
+        { name: `${hello}.txt`, mimeType: "text/plain", buffer: Buffer.from(`hello ${stamp}`) },
+        { name: notes, mimeType: "text/markdown", buffer: Buffer.from("# notes") },
+      ]),
+    ]);
+    await files.filter({ hasText: notes }).waitFor({ timeout: 10_000 });
+    check((upload.headers()["content-type"] ?? "").startsWith("multipart/form-data; boundary="), "an upload goes as multipart/form-data (F5)");
+    const href = await files.filter({ hasText: `${hello}.txt` }).getByRole("link", { name: `Download ${hello}.txt` }).getAttribute("href");
+    const served = await page.evaluate((url) => fetch(url).then((response) => response.text()), href);
+    check(served === `hello ${stamp}`, `an uploaded file is served at its folder path (${href})`);
+    const filesViolations = await axe(page);
+    check(filesViolations.length === 0, `axe on the files${filesViolations.length ? `: ${filesViolations.join(" | ")}` : ""}`);
+
+    await files.filter({ hasText: `${hello}.txt` }).getByRole("button", { name: `Rename ${hello}.txt` }).click();
+    check((await page.getByRole("dialog").getByLabel("Name").inputValue()) === hello, "renaming a file edits its name without the extension");
+    const renameViolations = await axe(page);
+    check(renameViolations.length === 0, `axe with the rename dialog open${renameViolations.length ? `: ${renameViolations.join(" | ")}` : ""}`);
+    await page.getByRole("dialog").getByLabel("Name").fill(`greeting-${stamp}`);
+    await page.getByRole("dialog").getByRole("button", { name: "Submit" }).click();
+    await files.filter({ hasText: `greeting-${stamp}.txt` }).waitFor({ timeout: 10_000 });
+    check(true, "the renamed file keeps its extension");
+
+    await files.filter({ hasText: notes }).getByRole("button", { name: `Move ${notes}` }).click();
+    const chooser = page.getByRole("dialog", { name: "Choose Folder" });
+    await chooser.getByRole("table", { name: "Folders" }).locator("tbody tr").first().waitFor({ timeout: 10_000 });
+    await chooser.getByRole("navigation", { name: "Folder path" }).getByRole("button", { name: "files", exact: true }).click();
+    await chooser.getByRole("table", { name: "Folders" }).locator("tbody tr", { hasText: "images" }).waitFor({ timeout: 10_000 });
+    await chooser.getByRole("button", { name: "Move Here" }).click();
+    await files.filter({ hasText: notes }).waitFor({ state: "detached", timeout: 10_000 });
+    await trail.getByRole("button", { name: "files", exact: true }).click();
+    await page.getByRole("heading", { name: "File Management (files)" }).waitFor({ timeout: 10_000 });
+    await files.filter({ hasText: notes }).waitFor({ timeout: 10_000 });
+    check(true, "a file moves to the folder picked in the folder chooser");
+
+    await files.filter({ hasText: notes }).getByRole("button", { name: `Delete ${notes}` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await files.filter({ hasText: notes }).waitFor({ state: "detached", timeout: 10_000 });
+    await files.filter({ hasText: folderName }).getByRole("button", { name: `Delete ${folderName}` }).click();
+    check((await page.getByRole("dialog").textContent())?.includes("with all of its files and folders") === true, "deleting a folder warns about its contents");
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await files.filter({ hasText: folderName }).waitFor({ state: "detached", timeout: 10_000 });
+    check(true, "a file and a folder are deleted");
 
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();

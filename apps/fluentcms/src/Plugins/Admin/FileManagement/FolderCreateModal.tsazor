@@ -1,0 +1,33 @@
+@* Creates a folder in the open one (FluentCMS's FolderCreateModal). *@
+@import { FolderCreateRequest } from "../../../api/models"
+@inject ViewState ViewState
+
+<FormModal visible="@visible" title="Create New Folder" model="@this.model" onSubmit="@this.submit" onCancel="@this.cancel">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter Folder Name" required />
+</FormModal>
+
+@code {
+    @Parameter() visible = false;
+    /** The folder the new one goes into. */
+    @Parameter() folderId: string | null = null;
+    @Parameter() onSubmit?: EventCallback<FolderCreateRequest>;
+    @Parameter() onCancel?: EventCallback;
+
+    private model = new FolderCreateRequest();
+
+    protected override onParametersSet(): void {
+        // Before validation: the request requires both.
+        this.model.siteId = this.ViewState.site.id;
+        this.model.parentId = this.folderId ?? "";
+    }
+
+    private async submit(): Promise<void> {
+        await this.onSubmit?.invokeAsync(this.model);
+        this.model = new FolderCreateRequest();
+    }
+
+    private async cancel(): Promise<void> {
+        await this.onCancel?.invokeAsync();
+        this.model = new FolderCreateRequest();
+    }
+}

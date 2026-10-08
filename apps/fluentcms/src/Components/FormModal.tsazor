@@ -1,0 +1,49 @@
+@* A form in a dialog (the modals of FluentCMS's file management): the fields, validated by the model's
+   DataAnnotations, the API's error when a submit fails, then Submit and Cancel. *@
+@import { DataAnnotationsValidator } from "@tsazor/runtime"
+
+<Dialog isOpen="@visible" title="@title" onClosed="@this.cancel">
+    <ChildContent>
+        @if (model !== undefined) {
+            <FluentForm model="@model!" onValidSubmit="@this.submit">
+                <DataAnnotationsValidator />
+                <div class="form-modal">
+                    @childContent
+                    @if (this.error !== undefined) {
+                        <Alert intent="danger">@this.error</Alert>
+                    }
+                    <Stack direction="horizontal" gap="s">
+                        <Button intent="primary" type="submit">Submit</Button>
+                        <Button onClick="@this.cancel">Cancel</Button>
+                    </Stack>
+                </div>
+            </FluentForm>
+        }
+    </ChildContent>
+</Dialog>
+
+@code {
+    @Parameter() visible = false;
+    @Parameter() title = "";
+    @Parameter() model?: object;
+    @Parameter() onSubmit?: EventCallback<EditContext>;
+    @Parameter() onCancel?: EventCallback;
+    @Parameter() childContent?: RenderFragment;
+
+    private error?: string;
+
+    private async submit(context: EditContext): Promise<void> {
+        this.error = undefined;
+        try {
+            await this.onSubmit?.invokeAsync(context);
+        } catch (error) {
+            // An ApiError carries the API's message (ensureOk); anything else shows its own.
+            this.error = error instanceof Error ? error.message : String(error);
+        }
+    }
+
+    private cancel(): Promise<void> | undefined {
+        this.error = undefined;
+        return this.onCancel?.invokeAsync();
+    }
+}

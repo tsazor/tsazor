@@ -78,7 +78,7 @@ tests our library on a real app.
 | 0 | Infrastructure | Backend script, BFF, app skeleton, generated client, an E2E gate that logs in | Done |
 | 1 | Shell | Setup, catch-all page, sections and plugins, admin and auth layouts, login/logout | Done except setup, register and password pages |
 | 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done |
-| 3 | Files | Folders, upload (multipart), rename, move, the file picker | |
+| 3 | Files | Folders, upload (multipart), rename, move, the file picker | Done, except the file picker (`FileSelectorModal`): the content type fields use it, so it comes with phase 4 |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | |
 | 5 | Public site (optional) | The view plugins, layouts with component tags | |
 
@@ -88,6 +88,7 @@ tests our library on a real app.
 |---|---|---|---|
 | Roles | 3 | 0 | The library's components (20 tags), `@rendermode`, a C# anonymous object (`new { id = … }`), the code-behind (C#), DTO members in PascalCase (`context.Name` → `context.name`) |
 | Users | 3 | 0 | The same; the static SSR forms (three on one view) become three interactive ones |
+| Files | 6 | 6 (`@code` C# forms) | The library's components (77 tags), `@rendermode` (TZS014), the code-behinds (C#). The three form modals share one `FormModal` in the port |
 
 The codemod helps little when the component library is swapped: the markup's tags and parameters are the library's. A port that keeps its library would show what it can do.
 
@@ -123,7 +124,7 @@ with Tsazor, or the framework has a gap.
 | TreeView / tree selector | Recursive generic templates, children loaded on demand, keyboard in a tree | The parent page picker. **TreeView done in `@tsazor/fluent`** (a recursive node component, the ARIA tree's keyboard; the model in `@tsazor/ui`). Still open: children loaded on demand, the selector as a dropdown |
 | Autocomplete / Combobox | Generic `TItem`/`TValue`, async search with cancellation, multiple selection, a virtual option list | Selects with search |
 | Rich text / Markdown editor | Embedding a JS widget, two-way binding, cleanup | Content fields, the rich text plugin |
-| File upload | Drag and drop, progress, streams | File management |
+| File upload | Drag and drop, progress, streams | File management. **Phase 3 uses `FileInput`** (several files, FluentCMS's limits checked as Blazor's `GetMultipleFiles(maxCount)` does). Still open: the drop zone and progress. Upload progress needs `XMLHttpRequest`, since `fetch` reports none, so the generated client can't report it yet |
 | Confirm dialog, checkbox group | Composition on Dialog and Checkbox | Every delete; roles and policies. **CheckboxGroup done in `@tsazor/fluent`** (options as RadioGroup's, `string[]` bound, values it doesn't show kept) |
 | DatePicker | Culture, keyboard in a grid, popover placement | Date fields |
 | Toolbar with overflow | Measuring after render (ResizeObserver) | — |
@@ -139,6 +140,7 @@ with Tsazor, or the framework has a gap.
 | 2 | Plugin definitions, global settings, layouts, blocks, sites | 1 (F22) | 0 |
 | 2 | API tokens (policies, show the secret, re-generate) | 1 (F23) | 0 |
 | 2 | Pages (the parent in a tree) | 0 | 1 (`TreeView`, new in `@tsazor/fluent`) |
+| 3 | Files (folders, upload, rename, move, delete) | 6 (F5, F25–F29) | 3 (`formData` in `@tsazor/dotnet`; `BreadcrumbItem.onClick` in both skins; `EventCallback.bind` takes `undefined`) |
 
 ## Findings
 
@@ -148,7 +150,7 @@ with Tsazor, or the framework has a gap.
 | F2 | `@tsazor/dotnet` | With `--envelope`, the return type was the envelope while the client returned its `data` | Fixed `7941cd7` |
 | F3 | `@tsazor/dotnet` | Envelope errors on an HTTP 500 were lost (`HTTP 500`); `{ code, description }` read as two lines | Fixed `7941cd7` |
 | F4 | Migration | A Blazor Server UI holds the API's secrets (API token, user JWT) on the server; an SPA needs a BFF for them. Behind the BFF's proxy the backend must still see the browser's host (FluentCMS finds the site, and serves its files, by host; YARP: `AddOriginalHost`). `migration.md` should say both in its Blazor Server step | Open (`apps/fluentcms/bff` is the example) |
-| F5 | `@tsazor/dotnet` | A `multipart/form-data` body (file upload) is typed `Record<string, unknown>` and sent as JSON | Open (phase 3) |
+| F5 | `@tsazor/dotnet` | A `multipart/form-data` body (file upload) is typed `Record<string, unknown>` and sent as JSON | Fixed: a body type of its own (`FileUploadForm = { files?: Blob[] }`, `format: binary` is a `Blob`), sent as `FormData` (`formData()`); the gate checks the request's content type and reads the uploaded file back |
 | F6 | Runtime | The `nonfile` route constraint (`@page "/{**Route:nonfile}"`) was not supported | Fixed `1a049ed` |
 | F7 | `@tsazor/dotnet` | Swashbuckle lists no `required`, so every response property was optional (`id?: string`, `order?: number`) though ASP.NET Core writes them all | Fixed `4d35c52` (value types in responses are present) |
 | F8 | `@tsazor/dotnet` | A schema without a type (C#'s `object?`) warned, though `unknown` is right | Fixed `4d35c52` |
@@ -160,7 +162,7 @@ with Tsazor, or the framework has a gap.
 | F14 | Compiler | `protected async onInitializedAsync()` (C# habit) compiled without a word and never ran | Fixed `23ac0fb` (TZS032 with a rename fix) |
 | F15 | Compiler | `@if (model !== undefined)` doesn't narrow inside child content (port-findings H.3). The first real form hit it at once; the port writes `model!` | Open: re-evaluate H.3 |
 | F16 | `create-tsazor` | With `--ui`, the starter still writes the Blazor template's `app.css`. Its Helvetica body font beats the library's typeface for text outside the components; it doesn't fight the components (Fluent maps the runtime's `invalid` class to its own and doesn't style links). The port sets `var(--fui-font-family)`. Option: the library ships a zero-weight `:where(body)` rule, and the starter leaves the font out when a library is chosen | Open |
-| F17 | `@tsazor/fluent` | The icon set has 11 icons; FluentCMS uses about 22 (folder, eye, download, delete, edit, …). Fluent UI Blazor ships the Fluent System Icons as typed values that tree-shake | Open (track B) |
+| F17 | `@tsazor/fluent` | The icon set has 11 icons; FluentCMS uses about 22 (folder, eye, download, delete, edit, …). Fluent UI Blazor ships the Fluent System Icons as typed values that tree-shake | Open (track B). Phase 3 added five to the built-in set (`folder`, `folder-up`, `document`, `image`, `download`); an app still can't bring its own |
 | F18 | Runtime | A `string | null` field (every string Swashbuckle generates without nullable reference types) didn't bind to a text input: `Value?: TValue`. Blazor's `Value` is `TValue?` | Fixed: `InputBase.Value` may be null; the input hands back a string |
 | F19 | Compiler | `RoleListPlugin.types` (a static through the component's own class, fine in Razor) became `this.RoleListPlugin` | Fixed: the own class name stays free |
 | F20 | Runtime | `@SupplyParameterFromQuery` worked only on pages and only with `@Parameter()` (Blazor 6/7). Since Blazor 8 it works in any component, and FluentCMS's plugins rely on it (14 files): the update form loaded with an empty id | Fixed: the renderer supplies it like a cascading value, and again after a navigation |
@@ -168,3 +170,16 @@ with Tsazor, or the framework has a gap.
 | F22 | Compiler | `@foreach (const layout of layouts) { @layout.name }`: Razor reads `@layout` as the directive too, but the parser swallowed the rest of the line, and 62 follow-up errors buried the cause | Fixed `8e921af`: one TZS013 with the quick fix `@(layout.name)` |
 | F23 | Compiler (parity question) | `onClick="() => this.confirm(token, "delete")"`: a `"` inside a bare lambda ends the attribute value (12 follow-up errors). With `@`, nested quotes work. Check Razor: does it read a non-string component parameter's value as C# with C# strings inside? | Open; the port writes `'delete'` |
 | F24 | Skins, `@tsazor/workspace` | The published declarations didn't type-check without `skipLibCheck`: `import type { default } from "../src/Menu.tsazor"` (invalid, and not shipped), `;;` in `index.d.ts`, and Fluent exported two things as `Toast`. Behind `skipLibCheck` the types were silently `any`. Found by running `tsc` on an app instead of `tsazor check` | Fixed `19e418e`, with a test per skin |
+| F25 | Skins | `BreadcrumbItem` was a link only. The folder trail over a file list is state, not a URL (in the folder picker it lives in a dialog), so its items must be buttons. Bootstrap's active item had no `aria-current` | Fixed: `onClick` renders a button, in both skins; Bootstrap's active item has `aria-current="page"` |
+| F26 | Compiler | `@ref="this.filesTable"` was TZS008 ("requires a bare property name"), although markup writes members with `this.` everywhere else; Razor takes any assignable expression | Fixed: `this.name` is taken too |
+| F27 | Runtime (parity) | Forwarding an optional callback (`onCancel="@onCancel"`) didn't type-check: the value is `EventCallback \| undefined`. In Blazor an EventCallback is a struct, and forwarding an unset one is normal | Fixed: `EventCallback.bind` passes `undefined` through, so the child sees no callback; on an element no handler is added, as Blazor skips the attribute of an EventCallback without a delegate |
+| F28 | Runtime | `InputFile` dropped the promise of `onChange`: an async upload wasn't awaited, and its error missed the ErrorBoundary (the class of bug the skins had, see the CHANGELOG) | Fixed, with a conformance test; Blazor returns `OnChange.InvokeAsync` |
+| F29 | Tooling (DX) | `private filesTable?: FilesTable` for an `@ref` is TS2304: the tag resolves through `@using`, but a type in `@code` needs an `@import`, as in any TypeScript. That is by design (code is TS; the tutorial's component-refs lesson says so), and a first fix that resolved such names in the compiler was reverted. But every Blazor `@ref` field meets it, and the hint is generic | Open: the hint could name the exact `@import` (the component resolves through `@using`) and offer it as a quick fix |
+| U1 | FluentCMS (upstream) | `File/Download?url=` looks a file's folder up by `uri.AbsolutePath`, which is escaped: a folder or file name with a space isn't served (500, `Folder.NotFound`). The port links files as the original does; the gate uses names without spaces | Upstream; not a Tsazor finding |
+
+**Notes from phase 3**
+- A component that raises two bound callbacks in a row (`folderChanged`, then `parentFoldersChanged`) must pass
+  the new values, not its fields: the parent re-renders after the first callback and hands the child its old
+  value of the second. Blazor behaves the same. `FilesTable.load()` shows the pattern.
+- The port's folder picker shows the API's error (`File.AlreadyExists`, a folder moved into itself); FluentCMS's
+  own had no place for it.

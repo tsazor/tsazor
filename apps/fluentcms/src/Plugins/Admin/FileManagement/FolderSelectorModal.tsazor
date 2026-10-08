@@ -1,0 +1,55 @@
+@* Picks the folder a file or folder moves to (FluentCMS's FolderSelectorModal): the folders, opened one at a
+   time; "Move Here" takes the open one. The folder being moved can't be opened. *@
+@import type { FolderDetailResponse } from "../../../api/models"
+
+<Dialog isOpen title="Choose Folder" onClosed="@this.cancel">
+    <ChildContent>
+        <div class="folder-selector">
+            <FolderBreadcrumb folders="@this.parentFolders" current="@model" rootId="@this.rootFolder?.id" onNavigate="@this.navigateFolder" />
+            <FilesTable ariaLabel="Folders" hideFiles disabledFolder="@disabledFolder" @bind-folderId="model" @bind-rootFolder="this.rootFolder" @bind-parentFolders="this.parentFolders">
+                <ActionsFragment>
+                    <ActionButton visible="@(context.isFolder && context.id !== disabledFolder)" label="Open" aria-label="@(`Open ${context.name}`)" @onclick="() => this.navigateFolder(context.id)" />
+                </ActionsFragment>
+            </FilesTable>
+        </div>
+        @if (this.error !== undefined) {
+            <Alert intent="danger">@this.error</Alert>
+        }
+    </ChildContent>
+    <Footer>
+        <Button intent="primary" onClick="@this.choose">Move Here</Button>
+        <Button onClick="@this.cancel">Cancel</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    /** The open folder: at first the one the list shows. */
+    @Parameter() model: string | null = null;
+    /** The folder being moved. */
+    @Parameter() disabledFolder: string | null = null;
+    @Parameter() onSubmit?: EventCallback<string>;
+    @Parameter() onCancel?: EventCallback;
+
+    private parentFolders: FolderDetailResponse[] = [];
+    private rootFolder?: FolderDetailResponse;
+    private error?: string;
+
+    private navigateFolder(id: string): void {
+        this.model = id;
+    }
+
+    private async choose(): Promise<void> {
+        if (this.model === null) return;
+        this.error = undefined;
+        try {
+            await this.onSubmit?.invokeAsync(this.model);
+        } catch (error) {
+            // FluentCMS's own modal had no place for the API's error (a folder moved into itself).
+            this.error = error instanceof Error ? error.message : String(error);
+        }
+    }
+
+    private cancel(): Promise<void> | undefined {
+        return this.onCancel?.invokeAsync();
+    }
+}

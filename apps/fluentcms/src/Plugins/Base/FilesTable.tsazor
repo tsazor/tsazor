@@ -1,0 +1,105 @@
+@* A folder's contents as a table (FluentCMS's FilesTable): "(parent)", the folders, then the files, each with
+   the caller's actions. A folder's name opens it. The open folder, the root and the trail are two-way
+   bound; `load()` (through @ref) shows the open folder again after a change. *@
+@import type { FolderDetailResponse } from "../../api/models"
+@import { ensureOk } from "../../api/api-result"
+@import { assetIcon, folderAssets, humanizeFileSize, type AssetDetail } from "./assets"
+@inject FluentCmsClient Api
+@inject ViewState ViewState
+
+<DataGrid items="@this.items" itemKey="(item) => item.id" ariaLabel="@ariaLabel">
+    <TemplateColumn title="Name" Context="item">
+        <span class="asset-name">
+            <Icon name="@assetIcon(item)" size="20" />
+            <Button appearance="transparent" size="small" disabled="@(item.id === disabledFolder)" onClick="() => this.rowClick(item)">@item.name</Button>
+        </span>
+    </TemplateColumn>
+    <TemplateColumn title="Type" Context="item">
+        @if (item.isFolder) {
+            <Indicator intent="info">Folder</Indicator>
+        } else {
+            <Indicator intent="success">@(item.contentType || "Unknown")</Indicator>
+        }
+    </TemplateColumn>
+    <TemplateColumn title="Size" Context="item">@humanizeFileSize(item.size)</TemplateColumn>
+    <TemplateColumn title="Actions" Context="item">
+        @if (actionsFragment !== undefined) {
+            <span class="asset-actions">@actionsFragment(item)</span>
+        }
+    </TemplateColumn>
+</DataGrid>
+
+@code {
+    /** The table's accessible name. */
+    @Parameter() ariaLabel = "Files";
+    /** The buttons of a row. */
+    @Parameter() actionsFragment?: (item: AssetDetail) => RenderFragment;
+    /** Folders only (the folder picker). */
+    @Parameter() hideFiles = false;
+    @Parameter() onRowClick?: EventCallback<AssetDetail>;
+    /** A folder that can't be opened: the one being moved. */
+    @Parameter() disabledFolder: string | null = null;
+    @Parameter() parentFolders: FolderDetailResponse[] = [];
+    @Parameter() parentFoldersChanged?: EventCallback<FolderDetailResponse[]>;
+    @Parameter() folder?: FolderDetailResponse;
+    @Parameter() folderChanged?: EventCallback<FolderDetailResponse>;
+    /** The open folder; null opens the root. */
+    @Parameter() folderId: string | null = null;
+    @Parameter() folderIdChanged?: EventCallback<string | null>;
+    @Parameter() rootFolder?: FolderDetailResponse;
+    @Parameter() rootFolderChanged?: EventCallback<FolderDetailResponse>;
+
+    private items: AssetDetail[] = [];
+    /** The folder shown or being loaded: a newer navigation wins over an older load. */
+    private shown?: string;
+
+    protected override async onInitialized(): Promise<void> {
+        const root = ensureOk(await this.Api.folderGetAll(this.ViewState.site.id));
+        this.rootFolder = root;
+        await this.rootFolderChanged?.invokeAsync(root);
+        if (this.folderId === null) {
+            this.folderId = root.id;
+            await this.folderIdChanged?.invokeAsync(root.id);
+        }
+    }
+
+    protected override async onParametersSet(): Promise<void> {
+        const id = this.folderId ?? this.rootFolder?.id;
+        if (id !== undefined && id !== this.shown) await this.show(id);
+    }
+
+    /** Shows the open folder again: its rows, the folder itself and the trail to it (FluentCMS's `Load()`). */
+    async load(): Promise<void> {
+        const id = this.shown;
+        if (id === undefined) return;
+        const [folder, parents] = await Promise.all([this.Api.folderGetById(id), this.Api.folderGetParentFolders(id)]);
+        if (id !== this.shown) return;
+        const loaded = ensureOk(folder);
+        const trail = ensureOk(parents) ?? [];
+        this.folder = loaded;
+        this.parentFolders = trail;
+        this.items = folderAssets(loaded, this.rootFolder?.id, this.hideFiles);
+        this.stateHasChanged();
+        // The loaded values, not the fields: the parent re-renders after the first callback and hands this
+        // table its old value of the second.
+        await this.folderChanged?.invokeAsync(loaded);
+        await this.parentFoldersChanged?.invokeAsync(trail);
+    }
+
+    private async show(id: string): Promise<void> {
+        this.shown = id;
+        await this.load();
+    }
+
+    private async rowClick(item: AssetDetail): Promise<void> {
+        if (item.id === this.disabledFolder) return;
+        if (item.isFolder) await this.navigateFolder(item.id);
+        await this.onRowClick?.invokeAsync(item);
+    }
+
+    private async navigateFolder(id: string): Promise<void> {
+        this.folderId = id;
+        await this.folderIdChanged?.invokeAsync(id);
+        if (id !== this.shown) await this.show(id);
+    }
+}
