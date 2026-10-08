@@ -625,6 +625,17 @@ export default class Tooltip extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// TreeView
+export default class TreeView extends ComponentBase {
+    items: TreeViewItem[];
+    selectedItem?: TreeViewItem | null;
+    selectedItemChanged?: EventCallback<TreeViewItem | null>;
+    ariaLabel?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// TreeViewItem: re-exported from @tsazor/ui
+
 // Typography
 export default class Typography extends ComponentBase {
     variant: "h1" | "h2" | "h3" | "h4" | "h5" | "body" | "caption";

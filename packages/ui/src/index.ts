@@ -14,6 +14,16 @@ export { FieldState, hasSubmitAttempt, markSubmitAttempt, type FieldValidity } f
 export { tooltip, type TooltipOptions } from "./behaviors/tooltip.js";
 export { Toaster, type Toast, type ToastOptions } from "./toaster.js";
 export {
+  hasChildren,
+  initiallyExpanded,
+  treeKeyAction,
+  treePath,
+  visibleTreeItems,
+  type TreeKeyAction,
+  type TreeViewItem,
+  type VisibleTreeItem,
+} from "./tree.js";
+export {
   DataGridModel,
   GridSort,
   PaginationState,

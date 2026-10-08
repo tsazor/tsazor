@@ -1,0 +1,56 @@
+@** One node of a TreeView, and — rendering itself — its open subtree. *@
+@import { hasChildren, type TreeViewItem } from "@tsazor/ui"
+@import type { TreeHost } from "./tree-host"
+
+<li role="treeitem" class="@this.nodeClass" data-tree-id="@item.id" aria-level="@level" aria-expanded="@this.expandedText" aria-selected="@(tree.isSelected(item) ? "true" : "false")" aria-disabled="@(item.disabled ? "true" : null)" tabindex="@(tree.isFocusable(item) ? 0 : -1)" @onclick="select" @onclick:stopPropagation="true">
+    <div class="fui-tree__row" style="@this.indent">
+        @if (this.branch) {
+            <span class="fui-tree__chevron" aria-hidden="true" @onclick="toggle" @onclick:stopPropagation="true"></span>
+        } else {
+            <span class="fui-tree__chevron fui-tree__chevron--leaf" aria-hidden="true"></span>
+        }
+        <span class="fui-tree__text">@item.text</span>
+    </div>
+    @if (this.branch && tree.isExpanded(item)) {
+        <ul role="group" class="fui-tree__group">
+            @foreach (const child of item.items ?? []) {
+                <TreeViewNode @key="child.id" item="@child" level="@(level + 1)" tree="@tree" />
+            }
+        </ul>
+    }
+</li>
+
+@code {
+    @Parameter() item!: TreeViewItem;
+    /** The depth, 1 at the top (aria-level). */
+    @Parameter() level = 1;
+    @Parameter() tree!: TreeHost;
+
+    private get branch(): boolean {
+        return hasChildren(this.item);
+    }
+
+    private get expandedText(): string | null {
+        return this.branch ? (this.tree.isExpanded(this.item) ? "true" : "false") : null;
+    }
+
+    private get nodeClass(): string {
+        let cls = "fui-tree__node";
+        if (this.tree.isSelected(this.item)) cls += " fui-tree__node--selected";
+        if (this.item.disabled) cls += " fui-tree__node--disabled";
+        if (this.branch && this.tree.isExpanded(this.item)) cls += " fui-tree__node--open";
+        return cls;
+    }
+
+    private get indent(): string {
+        return `padding-inline-start: calc(${this.level - 1} * var(--fui-spacing-xl))`;
+    }
+
+    private select(): Promise<void> | undefined {
+        return this.tree.select(this.item);
+    }
+
+    private toggle(): void {
+        this.tree.toggle(this.item);
+    }
+}

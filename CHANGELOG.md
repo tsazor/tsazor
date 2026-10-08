@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`: **TreeView** (Fluent UI Blazor's FluentTreeView): `items` in nested levels, `@bind-selectedItem`. It
+  follows the ARIA tree pattern: one node takes Tab, the arrow keys move and open or close, Home and End jump, Enter and
+  Space select; the selection's ancestors start open. `@tsazor/ui` has the model both skins can share: `TreeViewItem`
+  and the keyboard as pure functions (`treeKeyAction`, `visibleTreeItems`, `treePath`, `initiallyExpanded`). FluentCMS
+  picks a page's parent with it.
 - `@tsazor/compiler`: a value named like a directive in markup text (`@foreach (const layout of layouts) { @layout.name }`)
   is still read as the directive, as Razor does, but TZS013 now says so and offers `@(layout.name)` as a quick fix, and
   parsing goes on. It swallowed the rest of the line, and the unclosed elements after it buried the cause under

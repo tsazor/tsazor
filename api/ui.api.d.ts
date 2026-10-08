@@ -171,8 +171,14 @@ export interface GridSource<T> {
     pagination?: PaginationState;
 }
 
+// hasChildren
+export declare function hasChildren(item: TreeViewItem): boolean;
+
 // hasSubmitAttempt
 export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
+
+// initiallyExpanded
+export declare function initiallyExpanded(items: readonly TreeViewItem[]): Set<string>;
 
 // Intent
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
@@ -294,5 +300,45 @@ export interface TooltipOptions {
     delay?: number;
 }
 
+// treeKeyAction
+export declare function treeKeyAction(items: readonly TreeViewItem[], expanded: ReadonlySet<string>, focusedId: string, key: string): TreeKeyAction | null;
+
+// TreeKeyAction
+export type TreeKeyAction = {
+    readonly kind: "focus";
+    readonly id: string;
+} | {
+    readonly kind: "expand";
+    readonly id: string;
+} | {
+    readonly kind: "collapse";
+    readonly id: string;
+} | {
+    readonly kind: "select";
+    readonly id: string;
+};
+
+// treePath
+export declare function treePath(items: readonly TreeViewItem[], id: string): string[] | undefined;
+
+// TreeViewItem
+export interface TreeViewItem {
+    readonly id: string;
+    readonly text: string;
+    readonly items?: readonly TreeViewItem[] | null;
+    readonly expanded?: boolean;
+    readonly disabled?: boolean;
+}
+
 // uniqueId
 export declare function uniqueId(prefix?: string): string;
+
+// VisibleTreeItem
+export interface VisibleTreeItem {
+    readonly item: TreeViewItem;
+    readonly level: number;
+    readonly parentId: string | undefined;
+}
+
+// visibleTreeItems
+export declare function visibleTreeItems(items: readonly TreeViewItem[], expanded: ReadonlySet<string>): VisibleTreeItem[];

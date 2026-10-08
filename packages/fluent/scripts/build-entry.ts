@@ -31,7 +31,7 @@ try {
 }
 
 /** Compiled for the components that use them, not exported (DataGrid's Defer). */
-const INTERNAL: ReadonlySet<string> = new Set(["Defer"]);
+const INTERNAL: ReadonlySet<string> = new Set(["Defer", "TreeViewNode"]);
 
 /** Extra export names (the shared vocabulary): Bootstrap's names for the menu button and the form. */
 const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem", Form: "FluentForm" };
@@ -143,7 +143,7 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),
