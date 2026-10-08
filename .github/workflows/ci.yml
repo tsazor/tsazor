@@ -1,16 +1,14 @@
 name: CI
 
+# Only when started by hand (Actions → CI → Run workflow): the repository is private, so every
+# minute costs, and every check runs locally first — `pnpm ci:local` (this check job in WSL) and
+# `pnpm gates` (the browser jobs). Start it before a merge to main or a release.
 on:
-  push:
-    branches: [main, "roadmap/**"]
-  pull_request:
-  # The Windows browser gates (e2e, engines) cost the most: they run only when started by hand
-  # (Actions → CI → Run workflow). Every gate also runs locally before a push.
   workflow_dispatch:
 
-# A newer push makes the running check of the same branch obsolete (a manual run is its own group).
+# A newer run of the same branch makes the running one obsolete.
 concurrency:
-  group: ci-${{ github.ref }}-${{ github.event_name }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -42,7 +40,6 @@ jobs:
   e2e:
     name: E2E gates (real browser)
     needs: check
-    if: github.event_name == 'workflow_dispatch'
     # The verify scripts are written for Windows (Edge channel, taskkill
     # cleanup) — run them where they are developed.
     runs-on: windows-latest
@@ -93,7 +90,6 @@ jobs:
   # close to Safari, not Safari) — docs/browser-support.md.
   engines:
     needs: check
-    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     strategy:
       fail-fast: false

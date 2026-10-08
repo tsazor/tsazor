@@ -107,8 +107,8 @@ Billing & plans. After that, re-run the latest run (or push) to get a real CI re
      every browser gate of CI's `e2e` and `engines` jobs, with a summary at the end. It fails when its list
      no longer matches `ci.yml`. All 27 were green for `7de26b8`, in about 12 minutes.
    - The check job is pinned to `ubuntu-24.04`, the same as WSL; `ubuntu-latest` becomes 26 on 2026-10-19.
-   - **Open for the owner:** should the Ubuntu check on push become manual too, now that `pnpm ci:local`
-     covers it?
+   - **All of CI runs only by hand now** (owner, 2026-10-08): the repo stays private until it is mature,
+     every minute costs, and the local checks run automatically. Start CI before a merge to main or a release.
 1. **`npm create tsazor --ui <package>`** (R3): accept any package; Bootstrap/Fluent appear as examples in
    an open list, not hard-coded favorites.
 2. **Release preparation (R2/E3/E10)** — open questions for the owner:
