@@ -158,6 +158,7 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
       // Same name, same method: the path parameter tells them apart.
       "fileDownloadById(id: string): void",
       "fileDownload(query?: FileDownloadQuery): void",
+      "fileUpload(body: FileUploadForm, query?: FileUploadQuery): boolean",
       "contentGetAll(contentTypeSlug: string, query?: ContentGetAllQuery): UserDto[] | null",
       // REST style: the method, then the parameter.
       "getOrders(): OrderDto[]",
@@ -186,9 +187,21 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
 
   it("says once that the names are derived, with an example and the fix", async () => {
     expect((await generate()).warnings).toEqual([
-      "11 operation(s) without operationId: method names derived from the paths (GET /api/User/GetAll → userGetAll). " +
+      "12 operation(s) without operationId: method names derived from the paths (GET /api/User/GetAll → userGetAll). " +
         "For names of your own, set operationIds on the server (Swashbuckle: CustomOperationIds).",
     ]);
+  });
+
+  it("sends a multipart/form-data body (file uploads) as FormData, its files as Blobs", async () => {
+    const client = (await generate()).files.find((f) => f.path === "cms.ts")!.content;
+    expect(client).toContain('import { OpenApiClient, formData, queryString, type HttpResult } from "@tsazor/dotnet";');
+    expect(client).toContain(
+      ["export type FileUploadForm = {", "    files?: Blob[];", "    note: string;", "    cover?: Blob;", "};"].join("\n"),
+    );
+    expect(client).toContain('return this.call("POST", `/api/File/Upload${queryString(query)}`, formData(body));');
+    // Without a multipart operation there is nothing to import.
+    const json = generateClient(await document, { clientName: "ContosoOrders" }).files.find((f) => f.path === "contoso-orders.ts")!.content;
+    expect(json).not.toContain("formData");
   });
 
   it("types the body as the envelope's data — what the client returns", async () => {

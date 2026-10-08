@@ -29,6 +29,16 @@ ran their own HTTP helpers).
   - names that collide get the HTTP method (`getOrders`, `postOrders`), and then the path
     parameters (`getOrdersById`);
   - one warning names the fix: set operationIds on the server (Swashbuckle: `CustomOperationIds`).
+- **File uploads.** An operation with a `multipart/form-data` body (an ASP.NET Core `IFormFile` or
+  `IEnumerable<IFormFile>` parameter) takes a body type of its own, `<Operation>Form`, in the client file:
+  - `format: binary` is a `Blob`, so a `File` from `<input type="file">` (or `InputFile`) goes in as it is;
+  - the client sends a `FormData` built by `formData(fields)` and leaves the content type to the browser,
+    which adds the boundary;
+  - an array becomes one part per item, a file keeps its name, and null or undefined fields are left out.
+
+  ```ts
+  await client.fileUpload({ files: [...input.files] }, { folderId });
+  ```
 - **Schema ⇒ DataAnnotations.** Constraints from the schema are emitted as 3.6 decorators on the
   generated model *classes* (`@Required()`, `@MinLength`, `@MaxLength`, `@StringLength`,
   `@Range`, `@EmailAddress`, `@RegularExpression`) — EditContext +

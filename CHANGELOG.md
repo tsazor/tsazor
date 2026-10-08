@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/dotnet`: **file uploads** (`multipart/form-data`). An operation with a multipart body, such as an ASP.NET Core
+  action that takes `IFormFile` or `IEnumerable<IFormFile>`, gets a body type of its own (`FileUploadForm = { files?: Blob[] }`)
+  and sends a `FormData`. A schema string with `format: binary` is a `Blob`, which a `File` from an input is. The new
+  `formData(fields)` builds the body: one part per array item and file name, null left out. The generator used to send
+  the files as JSON. FluentCMS uploads its files this way.
 - **Fix** `@tsazor/bootstrap`, `@tsazor/fluent`: the published declarations type-check without `skipLibCheck`:
   - a component that names another component's type (MenuItem's `Menu`, Tab's `Tabs`) imported it as
     `import type { default } from "../src/Menu.tsazor"`, which is invalid TypeScript and points into source the

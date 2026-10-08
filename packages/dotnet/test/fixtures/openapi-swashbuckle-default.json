@@ -53,6 +53,29 @@
         "responses": { "200": { "description": "OK" } }
       }
     },
+    "/api/File/Upload": {
+      "post": {
+        "tags": ["File"],
+        "parameters": [{ "name": "folderId", "in": "query", "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": ["note"],
+                "type": "object",
+                "properties": {
+                  "files": { "type": "array", "items": { "type": "string", "format": "binary" } },
+                  "note": { "type": "string" },
+                  "cover": { "type": "string", "format": "binary" }
+                }
+              },
+              "encoding": { "files": { "style": "form" }, "note": { "style": "form" }, "cover": { "style": "form" } }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "type": "boolean" } } } } }
+      }
+    },
     "/api/Content/{contentTypeSlug}/GetAll": {
       "get": {
         "tags": ["Content"],

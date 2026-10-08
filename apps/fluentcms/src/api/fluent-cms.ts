@@ -2,7 +2,7 @@
 
 import type { AccountChangePasswordRequest, AccountUpdateRequest, ApiTokenCreateRequest, ApiTokenDetailResponse, ApiTokenUpdateRequest, BlockCreateRequest, BlockDetailResponse, BlockUpdateRequest, ContentDetailResponse, ContentTypeCreateRequest, ContentTypeDetailResponse, ContentTypeField, ContentTypeUpdateRequest, FileDetailResponse, FileMoveRequest, FileRenameRequest, FolderCreateRequest, FolderDetailResponse, FolderMoveRequest, FolderRenameRequest, GlobalSettingsResponse, GlobalSettingsUpdateRequest, LayoutCreateRequest, LayoutDetailResponse, LayoutUpdateRequest, PageCreateRequest, PageDetailResponse, PageParentDetailResponse, PageUpdateRequest, PluginContentDetailResponse, PluginDefinitionCreateRequest, PluginDefinitionDetailResponse, PluginDetailResponse, PluginInitialCreateRequest, PluginUpdateColsRequest, PluginUpdateOrdersRequest, Policy, RoleCreateRequest, RoleDetailResponse, RoleUpdateRequest, SettingsDetailResponse, SettingsUpdateRequest, SetupRequest, SiteCreateRequest, SiteDetailResponse, SiteUpdateRequest, UserCreateRequest, UserDetailResponse, UserLoginRequest, UserLoginResponse, UserRegisterRequest, UserRoleUpdateRequest, UserSendPasswordResetTokenRequest, UserSetPasswordRequest, UserUpdateRequest, UserValidatePasswordResetTokenRequest } from "./models";
 
-import { OpenApiClient, queryString, type HttpResult } from "@tsazor/dotnet";
+import { OpenApiClient, formData, queryString, type HttpResult } from "@tsazor/dotnet";
 import { TsazorHttp } from "@tsazor/runtime";
 
 /** Query parameters of the apiTokenRegenerateSecret operation. */
@@ -43,6 +43,11 @@ export type ContentTypeGetBySlugQuery = {
 /** Query parameters of the contentTypeGetAll operation. */
 export type ContentTypeGetAllQuery = {
     siteId?: string;
+};
+
+/** The multipart/form-data body of the fileUpload operation. */
+export type FileUploadForm = {
+    files?: Blob[];
 };
 
 /** Query parameters of the fileUpload operation. */
@@ -223,8 +228,8 @@ export class FluentCmsClient extends OpenApiClient {
         return this.call("GET", `/api/File/GetById/${encodeURIComponent(id)}`);
     }
 
-    fileUpload(body: Record<string, unknown>, query?: FileUploadQuery): Promise<HttpResult<FileDetailResponse[] | null>> {
-        return this.call("POST", `/api/File/Upload${queryString(query)}`, body);
+    fileUpload(body: FileUploadForm, query?: FileUploadQuery): Promise<HttpResult<FileDetailResponse[] | null>> {
+        return this.call("POST", `/api/File/Upload${queryString(query)}`, formData(body));
     }
 
     fileDownloadById(id: string): Promise<HttpResult<void>> {

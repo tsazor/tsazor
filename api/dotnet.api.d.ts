@@ -39,6 +39,9 @@ export interface EnvelopeOptions {
     errors?: string;
 }
 
+// formData
+export declare function formData(fields: Record<string, unknown>): FormData;
+
 // HTTP_METHOD
 export declare const HTTP_METHOD: readonly [
     "GET",

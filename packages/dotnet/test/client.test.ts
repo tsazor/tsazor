@@ -11,7 +11,7 @@
  */
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { OpenApiClient } from "../src/index.js";
+import { OpenApiClient, formData } from "../src/index.js";
 import { asProblemDetails, envelopeHasErrors, problemMessage, type EnvelopeOptions, type HttpResult } from "../src/http-result.js";
 import { TsazorHttp } from "@tsazor/runtime";
 
@@ -30,7 +30,12 @@ beforeAll(async () => {
     requests++;
     const url = request.url ?? "";
     response.setHeader("content-type", "application/json");
-    if (url === "/api/orders/1") {
+    if (url === "/api/upload") {
+      // Echoes what arrived: the content type and the raw multipart body.
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => response.end(JSON.stringify({ contentType: request.headers["content-type"], body: Buffer.concat(chunks).toString("utf8") })));
+    } else if (url === "/api/orders/1") {
       response.end(JSON.stringify({ id: 1, customerName: "Ada", note: null }));
     } else if (url === "/api/orders/404") {
       response.statusCode = 404;
@@ -98,6 +103,12 @@ class DemoClient extends OpenApiClient {
   }
   textError() {
     return this.call<never>("GET", "/api/text-error");
+  }
+}
+
+class UploadClient extends OpenApiClient {
+  upload(body: { files?: Blob[]; note: string; skipped?: string | null }) {
+    return this.call<{ contentType: string; body: string }>("POST", "/api/upload", formData(body));
   }
 }
 
@@ -189,5 +200,36 @@ describe("OpenApiClient over a Node HTTP server", () => {
     expect(failed.ok).toBe(false);
     expect(failed.status).toBe(500);
     expect(problemMessage(failed)).toBe("Order.Locked; Too late to change.");
+  });
+});
+
+describe("multipart/form-data (file uploads)", () => {
+  it("sends FormData with the browser's multipart content type, one part per file", async () => {
+    const client = new UploadClient(new TsazorHttp(), { baseUrl });
+    const result = await client.upload({
+      files: [new File(["alpha"], "a.txt", { type: "text/plain" }), new Blob(["beta"])],
+      note: "two files",
+      skipped: null,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Not application/json: the multipart type with its boundary.
+    expect(result.body.contentType).toMatch(/^multipart\/form-data; boundary=/);
+    const body = result.body.body;
+    expect(body).toContain('name="files"; filename="a.txt"');
+    expect(body).toContain('name="files"; filename="blob"');
+    expect(body).toContain("alpha");
+    expect(body).toContain('name="note"');
+    expect(body).toContain("two files");
+    // null/undefined fields are left out, as ASP.NET Core would bind them as missing anyway.
+    expect(body).not.toContain("skipped");
+  });
+
+  it("appends an array once per item and writes an object as JSON", () => {
+    const form = formData({ tags: ["a", "b"], meta: { size: 2 }, count: 3, flag: false });
+    expect(form.getAll("tags")).toEqual(["a", "b"]);
+    expect(form.get("meta")).toBe('{"size":2}');
+    expect(form.get("count")).toBe("3");
+    expect(form.get("flag")).toBe("false");
   });
 });

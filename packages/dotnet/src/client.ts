@@ -43,11 +43,13 @@ export abstract class OpenApiClient {
   /** Runs the operation and reads the body itself (non-throwing). */
   protected call<T>(method: HttpMethod, url: string, body?: unknown): Promise<HttpResult<T>> {
     const headers: Record<string, string> = { accept: "application/json" };
-    if (body !== undefined) headers["content-type"] = "application/json";
+    // A multipart body (file uploads) goes as it is: the browser writes its content type with the boundary.
+    const form = body instanceof FormData;
+    if (body !== undefined && !form) headers["content-type"] = "application/json";
     const request = new Request(this.resolveUrl(url), {
       method,
       headers,
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined ? { body: form ? body : JSON.stringify(body) } : {}),
     });
     return sendForResult<T>(this.http, request, this.envelope);
   }
@@ -57,6 +59,25 @@ export abstract class OpenApiClient {
     const base = this.baseUrl?.replace(/\/$/, "") ?? "";
     return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
   }
+}
+
+/**
+ * A `multipart/form-data` body for the generated methods (an ASP.NET Core `IFormFile` /
+ * `IEnumerable<IFormFile>` parameter): a Blob or File keeps its file name, an array appends one
+ * part per item, null/undefined is left out, anything else goes as text (an object as JSON).
+ */
+export function formData(fields: Record<string, unknown>): FormData {
+  const form = new FormData();
+  const append = (name: string, value: unknown): void => {
+    if (value === null || value === undefined) return;
+    if (value instanceof Blob) form.append(name, value, value instanceof File ? value.name : "blob");
+    else form.append(name, typeof value === "object" ? JSON.stringify(value) : String(value));
+  };
+  for (const [name, value] of Object.entries(fields)) {
+    if (Array.isArray(value)) for (const item of value) append(name, item);
+    else append(name, value);
+  }
+  return form;
 }
 
 /**

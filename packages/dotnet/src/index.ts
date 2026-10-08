@@ -10,6 +10,7 @@
  */
 export {
   OpenApiClient,
+  formData,
   queryString,
   HTTP_METHOD,
   type OpenApiClientOptions,

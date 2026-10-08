@@ -227,6 +227,8 @@ class Generator {
     const nullSuffix = withNull && schemaNullable(property) ? " | null" : "";
     switch (type) {
       case "string": {
+        // A file (ASP.NET Core's IFormFile): a Blob, which a File is.
+        if (property.format === "binary") return `Blob${nullSuffix}`;
         const enumType = this.enumText(property);
         return enumType ? `${enumType}${nullSuffix}` : `string${nullSuffix}`;
       }
@@ -290,12 +292,14 @@ class Generator {
     // Package imports: base class + result type always, queryString only with
     // query operations, TsazorHttp as the constructor type always.
     const usesQuery = operations.some((op) => op.queryInterface !== undefined);
+    const usesForm = operations.some((op) => op.bodyType?.form !== undefined);
     out.push(
-      `import { OpenApiClient${usesQuery ? ", queryString" : ""}, type HttpResult } from "@tsazor/dotnet";`,
+      `import { OpenApiClient${usesForm ? ", formData" : ""}${usesQuery ? ", queryString" : ""}, type HttpResult } from "@tsazor/dotnet";`,
       'import { TsazorHttp } from "@tsazor/runtime";',
       "",
     );
     for (const op of operations) {
+      if (op.bodyType?.form) out.push(...op.bodyType.form, "");
       if (op.queryInterface) out.push(...op.queryInterface, "");
     }
     const httpDefault = this.baseUrl ?? "";
@@ -368,7 +372,7 @@ class Generator {
     if (doc) lines.push(doc);
     lines.push(
       `    ${name}(${signatureParts.join(", ")}): Promise<HttpResult<${responseType?.type ?? "void"}>> {`,
-      `        return this.call(${JSON.stringify(method.toUpperCase())}, ${url}${bodyType ? ", body" : ""});`,
+      `        return this.call(${JSON.stringify(method.toUpperCase())}, ${url}${bodyType ? (bodyType.form ? ", formData(body)" : ", body") : ""});`,
       "    }",
     );
     return {
@@ -455,16 +459,40 @@ class Generator {
     return envelope.properties?.[key] as OpenApiSchema | undefined;
   }
 
-  private bodyType(operation: OpenApiOperation, opName: string): { type: string } | undefined {
+  /**
+   * The request body's type. A `multipart/form-data` body (file uploads) gets a type of its own,
+   * `<Operation>Form`, written into the client, and is sent as FormData.
+   */
+  private bodyType(operation: OpenApiOperation, opName: string): { type: string; form?: string[] } | undefined {
     const requestBody = operation.requestBody;
     if (requestBody === undefined || requestBody === null) return undefined;
     const content = (resolveSchemaLike(this.document, requestBody as unknown as OpenApiSchema) as unknown as {
       content?: Record<string, { schema?: OpenApiSchema | { $ref: string } }>;
     }).content;
     if (content === undefined) return undefined;
+    const multipart = content["multipart/form-data"];
+    if (content["application/json"] === undefined && multipart?.schema !== undefined) {
+      return this.formType(multipart.schema as OpenApiSchema, opName);
+    }
     const json = content["application/json"] ?? Object.values(content)[0];
     if (json?.schema === undefined) return undefined;
     return { type: this.typeText(json.schema as OpenApiSchema, opName) };
+  }
+
+  /** A multipart body's fields as a type alias (a field the schema requires is required). */
+  private formType(schema: OpenApiSchema, opName: string): { type: string; form: string[] } {
+    const resolved = flattenAllOf(this.document, resolveSchemaLike(this.document, schema));
+    const name = `${opName.charAt(0).toUpperCase()}${opName.slice(1)}Form`;
+    const required = new Set(resolved.required ?? []);
+    const fields = Object.entries(resolved.properties ?? {}).map(([field, raw]) => {
+      const property = raw as OpenApiSchema;
+      const optional = required.has(field) ? "" : "?";
+      return `    ${fieldKey(field)}${optional}: ${this.typeText(property, field, schemaNullable(property))};`;
+    });
+    return {
+      type: name,
+      form: [docComment("", `The multipart/form-data body of the ${opName} operation.`), `export type ${name} = {`, ...fields, "};"],
+    };
   }
 
   private queryEntry(name: string, parameters: OpenApiParameter[]): OperationQuery {
@@ -500,7 +528,7 @@ interface OperationEntry {
 interface OperationGen {
   lines: string[];
   responseType?: { type: string };
-  bodyType?: { type: string };
+  bodyType?: { type: string; form?: string[] };
   queryInterface?: string[];
 }
 
