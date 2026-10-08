@@ -14,6 +14,9 @@ export default class AccordionItem extends ComponentBase {
     accordion?: Accordion;
 }
 
+// addBootstrap
+export declare function addBootstrap(services: ServiceCollection): void;
+
 // Alert
 export default class Alert extends ComponentBase {
     intent: Intent;

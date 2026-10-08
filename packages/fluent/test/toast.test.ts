@@ -5,7 +5,8 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { ToastRegion, Toaster, Toast } from "../dist/index.js";
+import { ServiceCollection } from "@tsazor/runtime";
+import { addFluent, ToastRegion, Toaster, Toast } from "../dist/index.js";
 
 type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
 
@@ -31,6 +32,14 @@ afterEach(() => {
 });
 
 describe("ToastRegion", () => {
+  it("gets its Toaster from addFluent, one for the app (package.json tsazor.setup names it)", () => {
+    const services = new ServiceCollection();
+    addFluent(services);
+    const provider = services.build();
+    expect(provider.get(Toaster)).toBeInstanceOf(Toaster);
+    expect(provider.get(Toaster)).toBe(provider.get(Toaster));
+  });
+
   it("shows the Toaster's toasts in a polite live region, colored by intent", async () => {
     const toaster = new Toaster();
     const { container, renderer } = await renderRegion(toaster);

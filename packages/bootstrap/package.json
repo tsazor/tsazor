@@ -4,6 +4,12 @@
   "license": "MIT",
   "type": "module",
   "description": "Bootstrap 5 UI component library for Tsazor — written in .tsazor (dogfooding the compiler and runtime).",
+  "keywords": [
+    "tsazor",
+    "tsazor-components",
+    "components",
+    "ui"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,7 +20,16 @@
     "./tsazor-components.json": "./dist/tsazor-components.json"
   },
   "tsazor": {
-    "components": "./dist/tsazor-components.json"
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": [
+        "bootstrap/dist/css/bootstrap.min.css"
+      ],
+      "services": "addBootstrap",
+      "layout": [
+        "ToastRegion"
+      ]
+    }
   },
   "files": [
     "dist",
@@ -28,7 +43,8 @@
     "@tsazor/ui": "workspace:*"
   },
   "peerDependencies": {
-    "@tsazor/runtime": "workspace:*"
+    "@tsazor/runtime": "workspace:*",
+    "bootstrap": "^5.3.0"
   },
   "devDependencies": {
     "@tsazor/compiler": "workspace:*",

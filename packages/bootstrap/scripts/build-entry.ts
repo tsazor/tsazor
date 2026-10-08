@@ -113,6 +113,8 @@ for (const [exportName, declaration] of Object.entries(declarations)) {
 
 // Plain helpers the package exports besides its components.
 exports.push('export { tooltip } from "./tooltip-attachment.js";');
+// The services the components use, in one call (package.json `tsazor.setup` names it).
+exports.push('export { addBootstrap } from "./services.js";');
 // The toast service comes with the skin: register it, inject it, call show().
 exports.push('export { Toaster } from "@tsazor/ui";');
 // The DataGrid's sorting and paging state come with the skin too.
@@ -128,6 +130,10 @@ await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appeara
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),
   `import type { Attachment } from "@tsazor/runtime";\nimport type { Placement } from "@tsazor/ui";\n/** A Bootstrap tooltip on any element: \`<button @attach="tooltip('Save')">\`; the same text gives the same attachment. */\nexport declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;\n`,
+);
+await writeFile(
+  path.join(distDir, "services.d.ts"),
+  'import type { ServiceCollection } from "@tsazor/runtime";\n/** Registers the services the Bootstrap components use (the `Toaster`): `createTsazorApp({ services: addBootstrap })`. */\nexport declare function addBootstrap(services: ServiceCollection): void;\n',
 );
 await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 

@@ -4,6 +4,12 @@
   "license": "MIT",
   "type": "module",
   "description": "Fluent 2 design system for Tsazor — token-driven, accessible components written in .tsazor. Install via npm or copy the sources: the components belong to you.",
+  "keywords": [
+    "tsazor",
+    "tsazor-components",
+    "components",
+    "ui"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -15,7 +21,16 @@
     "./tsazor-components.json": "./dist/tsazor-components.json"
   },
   "tsazor": {
-    "components": "./dist/tsazor-components.json"
+    "components": "./dist/tsazor-components.json",
+    "setup": {
+      "styles": [
+        "@tsazor/fluent/fluent.css"
+      ],
+      "services": "addFluent",
+      "layout": [
+        "ToastRegion"
+      ]
+    }
   },
   "files": [
     "dist",

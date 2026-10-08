@@ -135,6 +135,8 @@ exports.push('export { Toaster } from "@tsazor/ui"');
 exports.push('export { GridSort, PaginationState } from "@tsazor/ui"');
 // Plain helpers the package exports besides its components.
 exports.push('export { tooltip } from "./tooltip-attachment.js"');
+// The services the components use, in one call (package.json `tsazor.setup` names it).
+exports.push('export { addFluent } from "./services.js"');
 for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js"`);
 const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // index.d.ts mirrors index.js — the type half of each re-export reads the
@@ -146,6 +148,10 @@ await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appeara
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),
   `import type { Attachment } from "@tsazor/runtime";\nimport type { Placement } from "@tsazor/ui";\n/** A Fluent tooltip on any element: \`<button @attach="tooltip('Save')">\`; the same text gives the same attachment. */\nexport declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;\n`,
+);
+await writeFile(
+  path.join(distDir, "services.d.ts"),
+  'import type { ServiceCollection } from "@tsazor/runtime";\n/** Registers the services the Fluent components use (the `Toaster`): `createTsazorApp({ services: addFluent })`. */\nexport declare function addFluent(services: ServiceCollection): void;\n',
 );
 await writeFile(path.join(distDir, "fluent.css"), `${cssChunks.join("\n")}\n`);
 

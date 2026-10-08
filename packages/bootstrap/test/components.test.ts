@@ -5,8 +5,9 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { EventCallback, type RenderFragment } from "@tsazor/runtime";
+import { EventCallback, ServiceCollection, type RenderFragment } from "@tsazor/runtime";
 import {
+  addBootstrap,
   Accordion,
   AccordionItem,
   Alert,
@@ -355,6 +356,14 @@ describe("Drawer, ToastRegion, Tooltip", () => {
     toasts[0]!.querySelector<HTMLElement>(".btn-close")!.click();
     await settle(renderer);
     expect(toaster.toasts.map((toast) => toast.message)).toEqual(["Offline"]);
+  });
+
+  it("addBootstrap registers one Toaster for the app (package.json tsazor.setup names it)", () => {
+    const services = new ServiceCollection();
+    addBootstrap(services);
+    const provider = services.build();
+    expect(provider.get(Toaster)).toBeInstanceOf(Toaster);
+    expect(provider.get(Toaster)).toBe(provider.get(Toaster));
   });
 
   it("Tooltip describes the element inside it", async () => {

@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/bootstrap` `addBootstrap` and `@tsazor/fluent` `addFluent`: they register the services the
+  components use (the `Toaster`) in one call, `createTsazorApp({ services: addBootstrap })`. This is
+  Blazor's `AddMudServices()`.
+- **The setup contract for component libraries** ([component-libraries.md](docs/component-libraries.md)):
+  - A library's `package.json` declares `tsazor.setup`: its stylesheets, its services function and the
+    components its layout needs once.
+  - The keyword `tsazor-components` makes it findable.
+  - `npm create tsazor --ui <package>` reads the contract for any library.
+  - Both skins declare it. `@tsazor/bootstrap` has `bootstrap` (its CSS) as a peer dependency.
 - Tutorial: chapter *Component library* (Part 3, chapter 06; Testing, Localization and Next steps move one
   on): a skin and its vocabulary, forms with the library, a DataGrid, toasts and a dialog. The preview adds
   Bootstrap's stylesheet for lessons that use `@tsazor/bootstrap`; the in-browser type check knows `@tsazor/ui`.

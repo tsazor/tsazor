@@ -15,6 +15,9 @@ export default class AccordionItem extends ComponentBase {
     accordion?: Accordion;
 }
 
+// addFluent
+export declare function addFluent(services: ServiceCollection): void;
+
 // Alert
 export default class Alert extends ComponentBase {
     intent: Intent;
