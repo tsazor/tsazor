@@ -1,0 +1,214 @@
+@** A Fluent UI 2 autocomplete (Fluent UI Blazor's FluentAutocomplete; the ARIA combobox pattern with a listbox
+    popup). Typing searches `items` (filtered by their text) or raises `onOptionsSearch`, whose handler sets
+    `args.items`; a newer search aborts the older one (`args.signal`) and its late answer is dropped. The
+    arrow keys move through the options, Enter picks one, Escape closes the list. With `multiple` (the
+    default) the picked options are removable chips, bound with `@bind-selectedOptions`; Backspace in the
+    empty input removes the last. Without it, one option, bound with `@bind-selectedOption`. *@
+@typeparam TOption
+@import { SearchRunner, anchoredPosition, comboboxKeyAction, dismissable, filterOptions, toggleOption, uniqueId } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { OptionsSearchEventArgs } from "./autocomplete-search"
+
+<div @attributes="@this.rootAttributes">
+    @if (label) {
+        <label class="fui-input__label" for="@this.inputId">@label</label>
+    }
+    <div class="fui-autocomplete__field" @ref="field">
+        @if (multiple) {
+            @foreach (const option of selectedOptions) {
+                <span class="fui-autocomplete__chip" @key="this.keyOf(option)">
+                    @optionText(option)
+                    <button type="button" class="fui-autocomplete__remove" aria-label="@(`Remove ${optionText(option)}`)" disabled="@disabled" @onclick="() => this.remove(option)">&times;</button>
+                </span>
+            }
+        }
+        <input id="@this.inputId" class="fui-autocomplete__input" type="text" role="combobox" autocomplete="off"
+               aria-autocomplete="list" aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId"
+               aria-activedescendant="@this.activeId" aria-label="@ariaLabel" placeholder="@placeholder" disabled="@disabled"
+               value="@this.inputText" @oninput="this.input" @onkeydown="this.keydown" />
+    </div>
+    @if (this.open) {
+        <ul class="fui-autocomplete__list" role="listbox" id="@this.listId" aria-label="@(label ?? ariaLabel)" aria-multiselectable="@(multiple ? "true" : null)" @attach="position" @attach:dismiss="dismiss">
+            @for (let i = 0; i < this.options.length; i++) {
+                <li class="@this.optionClass(i)" role="option" id="@this.optionId(i)" aria-selected="@(this.isSelected(this.options[i]!) ? "true" : "false")" @onmousedown:preventDefault @onclick="() => this.pick(this.options[i]!)">
+                    @if (optionTemplate !== undefined) {
+                        @optionTemplate(this.options[i]!)
+                    } else {
+                        @optionText(this.options[i]!)
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** The input's accessible name when there is no label. */
+    @Parameter() ariaLabel?: string;
+    @Parameter() placeholder?: string;
+    /** The options, searched by their text; or leave it out and answer `onOptionsSearch`. */
+    @Parameter() items?: TOption[];
+    /** Raised with the search text; the handler sets `args.items` (Fluent UI Blazor's OnOptionsSearch). */
+    @Parameter() onOptionsSearch?: EventCallback<OptionsSearchEventArgs<TOption>>;
+    /** An option's text, shown and searched. */
+    @Parameter() optionText: (option: TOption) => string = (option) => String(option);
+    /** What makes two options the same (by default their text). */
+    @Parameter() optionKey?: (option: TOption) => unknown;
+    /** How an option looks in the list. */
+    @Parameter() optionTemplate?: (option: TOption) => RenderFragment;
+    /** Several values (chips), the default; false for one. */
+    @Parameter() multiple: boolean = true;
+    @Parameter() selectedOptions: TOption[] = [];
+    @Parameter() selectedOptionsChanged?: EventCallback<TOption[]>;
+    @Parameter() selectedOption: TOption | null = null;
+    @Parameter() selectedOptionChanged?: EventCallback<TOption | null>;
+    /** At most this many values. */
+    @Parameter() maximumSelectedOptions?: number;
+    /** At most this many options in the list (Fluent UI Blazor's MaximumOptionsSearch). */
+    @Parameter() maximumOptionsSearch: number = 9;
+    @Parameter() disabled: boolean = false;
+    @Parameter() id?: string;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly generatedId = uniqueId("fui-autocomplete");
+    private field?: HTMLElement;
+    private open = false;
+    private active = -1;
+    private options: readonly TOption[] = [];
+    /** What the user typed; null shows the selected option (one value). */
+    private typed: string | null = null;
+
+    private readonly runner = new SearchRunner<TOption>((text, signal) => this.search(text, signal));
+    private readonly position = anchoredPosition({ anchor: () => this.field, placement: () => "bottom-start" });
+    private readonly dismiss = dismissable({ onDismiss: () => this.close(), ignore: () => [this.field] });
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => this.runner.cancel());
+    }
+
+    private get inputId(): string {
+        return this.id ?? this.generatedId;
+    }
+
+    private get listId(): string {
+        return `${this.inputId}-list`;
+    }
+
+    private optionId(index: number): string {
+        return `${this.inputId}-option-${index}`;
+    }
+
+    private get activeId(): string | null {
+        return this.open && this.active >= 0 ? this.optionId(this.active) : null;
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-autocomplete" }, this.additionalAttributes);
+    }
+
+    private get inputText(): string {
+        if (this.typed !== null) return this.typed;
+        return !this.multiple && this.selectedOption !== null ? this.optionText(this.selectedOption) : "";
+    }
+
+    private keyOf(option: TOption): unknown {
+        return (this.optionKey ?? this.optionText)(option);
+    }
+
+    private isSelected(option: TOption): boolean {
+        const key = this.keyOf(option);
+        const selected = this.multiple ? this.selectedOptions : this.selectedOption === null ? [] : [this.selectedOption];
+        return selected.some((candidate) => this.keyOf(candidate) === key);
+    }
+
+    private optionClass(index: number): string {
+        return index === this.active ? "fui-autocomplete__option fui-autocomplete__option--active" : "fui-autocomplete__option";
+    }
+
+    private async search(text: string, signal: AbortSignal): Promise<readonly TOption[]> {
+        if (this.onOptionsSearch === undefined) return filterOptions(this.items ?? [], text, this.optionText);
+        const args = new OptionsSearchEventArgs<TOption>(text, signal);
+        await this.onOptionsSearch.invokeAsync(args);
+        return args.items;
+    }
+
+    private async input(e: Event): Promise<void> {
+        this.typed = (e.target as HTMLInputElement).value;
+        await this.refresh(this.typed);
+    }
+
+    private async refresh(text: string): Promise<void> {
+        const options = await this.runner.run(text);
+        if (options === undefined) return;
+        this.options = options.slice(0, this.maximumOptionsSearch);
+        this.active = -1;
+        this.open = this.options.length > 0;
+    }
+
+    private async keydown(e: KeyboardEvent): Promise<void> {
+        const action = comboboxKeyAction(e.key, {
+            open: this.open,
+            active: this.active,
+            count: this.options.length,
+            inputEmpty: this.inputText === "",
+            multiple: this.multiple,
+        });
+        if (action.kind === "none") {
+            // Opening with the arrows before anything was typed: search for everything.
+            if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !this.open) {
+                e.preventDefault();
+                await this.refresh(this.typed ?? "");
+                if (this.open) this.active = e.key === "ArrowDown" ? 0 : this.options.length - 1;
+            }
+            return;
+        }
+        e.preventDefault();
+        switch (action.kind) {
+            case "open":
+            case "move":
+                this.open = true;
+                this.active = action.active;
+                break;
+            case "select":
+                await this.pick(this.options[action.index]!);
+                break;
+            case "close":
+                this.close();
+                break;
+            case "remove-last":
+                if (this.selectedOptions.length > 0) await this.remove(this.selectedOptions[this.selectedOptions.length - 1]!);
+                break;
+        }
+    }
+
+    private async pick(option: TOption): Promise<void> {
+        if (this.multiple) {
+            const next = toggleOption(this.selectedOptions, option, { multiple: true, maximum: this.maximumSelectedOptions, key: (o) => this.keyOf(o) });
+            this.selectedOptions = next;
+            this.typed = "";
+            this.close();
+            await this.selectedOptionsChanged?.invokeAsync(next);
+        } else {
+            this.selectedOption = option;
+            this.typed = null;
+            this.close();
+            await this.selectedOptionChanged?.invokeAsync(option);
+        }
+    }
+
+    private async remove(option: TOption): Promise<void> {
+        const key = this.keyOf(option);
+        const next = this.selectedOptions.filter((candidate) => this.keyOf(candidate) !== key);
+        this.selectedOptions = next;
+        await this.selectedOptionsChanged?.invokeAsync(next);
+    }
+
+    private close(): void {
+        if (!this.open) return;
+        this.open = false;
+        this.active = -1;
+        this.stateHasChangedInternal();
+    }
+}

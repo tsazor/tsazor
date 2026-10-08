@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`: **Autocomplete** (Fluent UI Blazor's FluentAutocomplete, the ARIA combobox pattern with a listbox
+  popup), generic over `TOption`. It searches `items` by `optionText`, or raises `onOptionsSearch` (Blazor's
+  `OptionsSearchEventArgs`: the handler sets `args.items`; `args.signal` aborts when a newer search starts, and an older
+  answer that still arrives is dropped). The arrow keys, Home, End, Enter and Escape work in the input
+  (`aria-activedescendant`). With `multiple` (the default) the values are removable chips, bound with
+  `@bind-selectedOptions`, and Backspace in the empty input removes the last; without it, `@bind-selectedOption`. Also
+  `optionTemplate`, `optionKey`, `maximumSelectedOptions` and `maximumOptionsSearch`. `@tsazor/ui` has the model both
+  skins can share: `SearchRunner`, `comboboxKeyAction`, `filterOptions`, `toggleOption`. FluentCMS picks select values
+  with it.
 - **Blazor parity** `@tsazor/runtime`: `@bind:format` (and `formatValue`/`parseValue`) take .NET's whole date and time
   format grammar in the invariant culture: `ddd`/`dddd`, `MMM`/`MMMM`, `h`/`hh` with `t`/`tt`, `f`…`fffffff`, `F`…, `K`,
   `z`/`zz`/`zzz`, `g`, quoted text, `\` escapes, `%`, and the standard formats (`d`, `D`, `f`, `F`, `g`, `G`, `M`, `o`,

@@ -43,3 +43,4 @@ export {
   type SortDirection,
   type SortedProperty,
 } from "./data-grid.js";
+export { SearchRunner, comboboxKeyAction, filterOptions, toggleOption, type ComboboxKeyAction } from "./combobox.js";

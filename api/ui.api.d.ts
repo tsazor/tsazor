@@ -21,6 +21,33 @@ export type Appearance = "solid" | "outline" | "subtle" | "transparent";
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
 
+// comboboxKeyAction
+export declare function comboboxKeyAction(key: string, state: {
+    open: boolean;
+    active: number;
+    count: number;
+    inputEmpty: boolean;
+    multiple: boolean;
+}): ComboboxKeyAction;
+
+// ComboboxKeyAction
+export type ComboboxKeyAction = {
+    kind: "open";
+    active: number;
+} | {
+    kind: "move";
+    active: number;
+} | {
+    kind: "select";
+    index: number;
+} | {
+    kind: "close";
+} | {
+    kind: "remove-last";
+} | {
+    kind: "none";
+};
+
 // compareValues
 export declare function compareValues(a: unknown, b: unknown): number;
 
@@ -101,6 +128,9 @@ export declare class FieldState {
 
 // FieldValidity
 export type FieldValidity = "invalid" | "valid" | "none";
+
+// filterOptions
+export declare function filterOptions<TOption>(options: readonly TOption[], text: string, optionText: (option: TOption) => string): TOption[];
 
 // focusableElements
 export declare function focusableElements(container: ParentNode): HTMLElement[];
@@ -237,6 +267,15 @@ export interface RovingFocusOptions {
 // scrollLock
 export declare const scrollLock: Attachment<HTMLElement>;
 
+// SearchRunner
+export declare class SearchRunner<TOption> {
+    private readonly search;
+    private current?;
+    constructor(search: (text: string, signal: AbortSignal) => Promise<readonly TOption[]> | readonly TOption[]);
+    run(text: string): Promise<readonly TOption[] | undefined>;
+    cancel(): void;
+}
+
 // SelectionMode
 export type SelectionMode = "none" | "single" | "multiple";
 
@@ -285,6 +324,13 @@ export interface ToastOptions {
 
 // toggleAll
 export declare function toggleAll<T>(selected: readonly T[], rows: readonly T[]): T[];
+
+// toggleOption
+export declare function toggleOption<TOption>(selected: readonly TOption[], option: TOption, options: {
+    multiple: boolean;
+    maximum?: number;
+    key: (option: TOption) => unknown;
+}): TOption[];
 
 // toggleSelection
 export declare function toggleSelection<T>(selected: readonly T[], item: T, mode: SelectionMode): T[];

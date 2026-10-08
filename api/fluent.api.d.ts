@@ -29,6 +29,28 @@ export default class Alert extends ComponentBase {
 
 // Appearance: re-exported from @tsazor/ui
 
+// Autocomplete
+export default class Autocomplete<TOption> extends ComponentBase {
+    label?: string;
+    ariaLabel?: string;
+    placeholder?: string;
+    items?: TOption[];
+    onOptionsSearch?: EventCallback<OptionsSearchEventArgs<TOption>>;
+    optionText: (option: TOption) => string;
+    optionKey?: (option: TOption) => unknown;
+    optionTemplate?: (option: TOption) => RenderFragment;
+    multiple: boolean;
+    selectedOptions: TOption[];
+    selectedOptionsChanged?: EventCallback<TOption[]>;
+    selectedOption: TOption | null;
+    selectedOptionChanged?: EventCallback<TOption | null>;
+    maximumSelectedOptions?: number;
+    maximumOptionsSearch: number;
+    disabled: boolean;
+    id?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Badge
 export default class Badge extends ComponentBase {
     intent: Intent;
@@ -379,6 +401,14 @@ export default class NumberInput extends InputBase<number> {
     step: number | null;
     id?: string;
     ariaLabel?: string;
+}
+
+// OptionsSearchEventArgs
+export declare class OptionsSearchEventArgs<TOption> {
+    items: readonly TOption[];
+    readonly text: string;
+    readonly signal: AbortSignal;
+    constructor(text: string, signal: AbortSignal);
 }
 
 // Orientation: re-exported from @tsazor/ui
