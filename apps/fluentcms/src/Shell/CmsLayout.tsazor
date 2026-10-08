@@ -1,0 +1,17 @@
+@* The public pages' layouts (Default, Single, Edit) until they are ported: their sections, one below the other. *@
+@inject ViewState ViewState
+
+<div class="cms-page">
+    @foreach (const name of this.sections()) {
+        <PluginsSection @key="name" name="@name" />
+    }
+</div>
+
+@code {
+    /** The template's section order first, then any other section that has plugins. */
+    private sections(): string[] {
+        const known = ["Main", "Dark", "Bottom", "BottomGray"];
+        const used = this.ViewState.plugins.map((plugin) => plugin.section ?? "Main");
+        return [...new Set([...known, ...used])];
+    }
+}

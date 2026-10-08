@@ -1,0 +1,40 @@
+@* A plugin's form (FluentCMS's PluginForm): a card with the title, the fields, and the API's error when a submit fails. *@
+
+<PluginBody title="@title">
+    @if (model !== undefined) {
+        <CardBody>
+            @* `!`: the @if above checked it, but TypeScript's narrowing doesn't reach child content (port-findings H.3). *@
+            <FluentForm model="@model!" onValidSubmit="@this.handleSubmit">
+                <div class="plugin-form">
+                    @if (description) {
+                        <Typography>@description</Typography>
+                    }
+                    @childContent
+                    @if (this.error !== undefined) {
+                        <Alert intent="danger">@this.error</Alert>
+                    }
+                </div>
+            </FluentForm>
+        </CardBody>
+    }
+</PluginBody>
+
+@code {
+    @Parameter() title?: string;
+    @Parameter() description?: string;
+    @Parameter() model?: object;
+    @Parameter() onSubmit?: EventCallback<EditContext>;
+    @Parameter() childContent?: RenderFragment;
+
+    private error?: string;
+
+    private async handleSubmit(context: EditContext): Promise<void> {
+        this.error = undefined;
+        try {
+            await this.onSubmit?.invokeAsync(context);
+        } catch (error) {
+            // An ApiError carries the API's message (ensureOk); anything else shows its own.
+            this.error = error instanceof Error ? error.message : String(error);
+        }
+    }
+}

@@ -1,0 +1,23 @@
+@* A plugin's frame (FluentCMS's PluginBody): the title with its actions, an optional subtitle, and the content in a card. *@
+
+<section class="plugin-body">
+    @if (title) {
+        <div class="plugin-body-header">
+            <h2 class="plugin-body-title">@title</h2>
+            @if (actionsFragment !== undefined) {
+                <Stack direction="horizontal" gap="s">@actionsFragment</Stack>
+            }
+        </div>
+    }
+    @subtitleFragment
+    @if (childContent !== undefined) {
+        <Card>@childContent</Card>
+    }
+</section>
+
+@code {
+    @Parameter() title?: string;
+    @Parameter() actionsFragment?: RenderFragment;
+    @Parameter() subtitleFragment?: RenderFragment;
+    @Parameter() childContent?: RenderFragment;
+}

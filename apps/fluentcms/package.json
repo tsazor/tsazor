@@ -1,0 +1,32 @@
+{
+  "name": "fluentcms",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The FluentCMS admin UI (Blazor Server) ported to Tsazor with @tsazor/fluent, against FluentCMS's unchanged API — the 1.0 test vehicle (docs/port-fluentcms.md).",
+  "scripts": {
+    "backend": "node scripts/backend.mjs",
+    "bff": "dotnet run --project bff",
+    "dev": "vite",
+    "build": "tsazor check && vite build",
+    "check": "tsazor check",
+    "test": "vitest run",
+    "codegen": "node scripts/codegen.mjs",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@tsazor/dotnet": "workspace:*",
+    "@tsazor/fluent": "workspace:*",
+    "@tsazor/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/testing": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "happy-dom": "^18.0.1",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.7"
+  }
+}

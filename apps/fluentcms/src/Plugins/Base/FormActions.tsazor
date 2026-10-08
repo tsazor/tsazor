@@ -1,0 +1,23 @@
+@* The buttons under a plugin's form (FluentCMS's FormActions): Submit, and Cancel back to where the form was opened from. *@
+@inject NavigationManager Navigation
+
+<Stack direction="horizontal" gap="s">
+    @childContent
+    @if (submit) {
+        <Button intent="primary" type="submit">Submit</Button>
+    }
+    @if (cancel) {
+        <Button onClick="() => this.Navigation.navigateTo(this.backUrl())">Cancel</Button>
+    }
+</Stack>
+
+@code {
+    @Parameter() submit = false;
+    @Parameter() cancel = false;
+    @Parameter() childContent?: RenderFragment;
+
+    private backUrl(): string {
+        const url = new URL(this.Navigation.uri);
+        return url.searchParams.get("redirectTo") ?? url.pathname;
+    }
+}

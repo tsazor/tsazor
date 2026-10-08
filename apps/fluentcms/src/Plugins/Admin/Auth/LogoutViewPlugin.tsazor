@@ -1,0 +1,10 @@
+@inherits BasePlugin
+@import { signOut } from "../../../api/api-result"
+@inject TsazorHttp Http
+
+@code {
+    protected override async onInitialized(): Promise<void> {
+        await signOut(this.Http);
+        this.navigation.navigateTo("/", true);
+    }
+}

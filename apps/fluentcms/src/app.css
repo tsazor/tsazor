@@ -1,0 +1,14 @@
+/* Global styles (Blazor: wwwroot/css/app.css). @tsazor/fluent styles the components; a component's own styles go into its X.tsazor.css. */
+html,
+body {
+    margin: 0;
+}
+
+h1:focus {
+    outline: none;
+}
+
+/* The page's state while it loads or fails (Pages/Default.tsazor). */
+.cms-message {
+    padding: 24px;
+}

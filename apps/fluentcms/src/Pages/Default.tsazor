@@ -1,0 +1,51 @@
+@page "/{**route:nonfile}"
+@* Every CMS page (FluentCMS's Default.razor): the URL resolves to a page of the site, which names its layout and plugins. *@
+@import AdminLayout from "../Shell/AdminLayout.tsazor"
+@import AuthLayout from "../Shell/AuthLayout.tsazor"
+@import CmsLayout from "../Shell/CmsLayout.tsazor"
+@inject ViewState ViewState
+@inject FluentCmsClient Api
+@inject NavigationManager Navigation
+
+@if (this.ViewState.error !== undefined) {
+    <div class="cms-message"><Alert intent="danger">@this.ViewState.error</Alert></div>
+} else if (!this.ViewState.loaded) {
+    <div class="cms-message"><Spinner label="Loading…" /></div>
+} else if (this.ViewState.type === "pageEdit" || this.ViewState.type === "pagePreview") {
+    <div class="cms-message"><Alert intent="info">The site builder is not ported.</Alert></div>
+} else {
+    <PageTitle>@this.ViewState.page.title</PageTitle>
+    @if (this.ViewState.page.hasViewAccess) {
+        <DynamicComponent Type="@this.layout()" />
+    } else {
+        <h1>You have No Access to view this page.</h1>
+    }
+}
+
+@code {
+    @Parameter() route?: string | null;
+
+    protected override async onInitialized(): Promise<void> {
+        this.observe(this.ViewState);
+        // A fresh install goes to the setup page first.
+        const initialized = await this.Api.setupIsInitialized();
+        if (initialized.ok && !initialized.body) {
+            this.Navigation.navigateTo("/setup", true);
+            return;
+        }
+        if (!this.ViewState.loaded) await this.ViewState.reload();
+    }
+
+    /** The layout of the current view: the page's, or the edit or detail layout for a plugin's view. */
+    private layout(): ComponentType {
+        const layout =
+            this.ViewState.type === "pluginEdit" ? this.ViewState.editLayout
+            : this.ViewState.type === "pluginDetail" ? this.ViewState.detailLayout
+            : this.ViewState.layout;
+        switch (layout?.name) {
+            case "AdminLayout": return AdminLayout;
+            case "AuthLayout": return AuthLayout;
+            default: return CmsLayout;
+        }
+    }
+}

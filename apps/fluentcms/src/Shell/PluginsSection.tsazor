@@ -1,0 +1,29 @@
+@* One section of a layout: its plugins in order, or, when the URL opens one plugin's view, that plugin in "Main". *@
+@inject ViewState ViewState
+
+@if (this.ViewState.type === "default" || this.ViewState.type === "pagePreview") {
+    <div class="f-section f-section-row" data-name="@this.name">
+        @foreach (const plugin of this.sectionPlugins()) {
+            <PluginContainer @key="plugin.id" plugin="@plugin" />
+        }
+    </div>
+}
+@if (this.ViewState.plugin !== undefined && (this.ViewState.type === "pluginEdit" || this.ViewState.type === "pluginDetail") && this.name.toLowerCase() === "main") {
+    <div class="f-section" data-name="@this.name">
+        <PluginContainer @key="this.ViewState.plugin.id" plugin="@this.ViewState.plugin" />
+    </div>
+}
+
+@code {
+    @Parameter() name = "";
+
+    protected override onInitialized(): void {
+        this.observe(this.ViewState);
+    }
+
+    private sectionPlugins() {
+        return this.ViewState.plugins
+            .filter((plugin) => (plugin.section ?? "").toLowerCase() === this.name.toLowerCase())
+            .sort((a, b) => a.order - b.order);
+    }
+}

@@ -1,0 +1,57 @@
+@* One plugin: its component for the current view, inside an ErrorBoundary so that a failing plugin doesn't take the page down. *@
+@import { loadPluginType } from "./plugin-types"
+@import type { PluginDetailResponse } from "../api/models"
+@inject ViewState ViewState
+
+<div class="f-plugin-container" data-id="@this.plugin.id" data-order="@this.plugin.order" data-cols="@this.plugin.cols">
+    <ErrorBoundary>
+        <ChildContent>
+            <div class="f-plugin-container-content @this.setting("Class")">
+                @if (this.problem !== undefined) {
+                    <Alert intent="warning">@this.problem</Alert>
+                } else if (this.pluginType !== null) {
+                    <DynamicComponent Type="@this.pluginType" Parameters="@this.parameters" />
+                }
+            </div>
+        </ChildContent>
+        <ErrorContent Context="error">
+            <div class="f-plugin-container-error">
+                <Alert intent="danger">@error.message</Alert>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+</div>
+
+@code {
+    @Parameter() plugin!: PluginDetailResponse;
+
+    private pluginType: ComponentType | null = null;
+    private parameters: Record<string, unknown> = {};
+    /** Why the plugin can't render: no type for the view, or a type not ported yet. */
+    private problem?: string;
+
+    protected override async onParametersSet(): Promise<void> {
+        this.parameters = { plugin: this.plugin };
+        const typeName = this.typeName();
+        if (typeName === undefined) {
+            this.problem = `Plugin "${this.plugin.definition?.name}" has no view "${this.ViewState.pluginViewName ?? "(default)"}".`;
+            return;
+        }
+        const type = await loadPluginType(typeName);
+        this.problem = type === undefined ? `${typeName} (${this.plugin.definition?.name}) is not ported yet.` : undefined;
+        this.pluginType = type ?? null;
+    }
+
+    /** The plugin's default type, or the type named by the view (`viewName`). */
+    private typeName(): string | undefined {
+        const types = this.plugin.definition?.types ?? [];
+        const showsPage = this.ViewState.type === "default" || this.ViewState.type === "pagePreview";
+        const viewName = this.ViewState.pluginViewName?.toLowerCase();
+        const type = showsPage ? types.find((t) => t.isDefault) : types.find((t) => t.name?.toLowerCase() === viewName);
+        return type?.type ?? undefined;
+    }
+
+    private setting(key: string): string {
+        return this.plugin.settings?.[key] ?? "";
+    }
+}

@@ -1,0 +1,66 @@
+.admin-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--fui-background-2);
+}
+
+.admin-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--fui-background-1);
+    border-bottom: 1px solid var(--fui-stroke-2);
+}
+
+.admin-brand {
+    display: inline-flex;
+}
+
+.admin-body {
+    display: flex;
+    flex: 1;
+}
+
+.admin-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 240px;
+    flex-shrink: 0;
+    padding: 12px 8px;
+    background: var(--fui-background-1);
+    border-right: 1px solid var(--fui-stroke-2);
+}
+
+.admin-api-docs {
+    padding: 8px 12px;
+    color: var(--fui-foreground-2);
+    font-size: var(--fui-font-size-caption);
+}
+
+.admin-main {
+    flex: 1;
+    min-width: 0;
+    padding: 24px;
+}
+
+@media (max-width: 768px) {
+    .admin-body {
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        width: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--fui-stroke-2);
+    }
+
+    .admin-main {
+        padding: 16px;
+    }
+}
