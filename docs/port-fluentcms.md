@@ -152,7 +152,7 @@ with Tsazor, or the framework has a gap.
 | F6 | Runtime | The `nonfile` route constraint (`@page "/{**Route:nonfile}"`) was not supported | Fixed `1a049ed` |
 | F7 | `@tsazor/dotnet` | Swashbuckle lists no `required`, so every response property was optional (`id?: string`, `order?: number`) though ASP.NET Core writes them all | Fixed `4d35c52` (value types in responses are present) |
 | F8 | `@tsazor/dotnet` | A schema without a type (C#'s `object?`) warned, though `unknown` is right | Fixed `4d35c52` |
-| F9 | Samples | Pizza, demo and the migration sample register `AuthenticationStateProvider as Token<…>`; the cast isn't needed (`Token` takes abstract classes), but users copy it | Open (cleanup) |
+| F9 | Samples | Pizza, demo and the migration sample register `AuthenticationStateProvider as Token<…>`; the cast isn't needed (`Token` takes abstract classes), but users copy it | Fixed `7866040` |
 | F10 | `@tsazor/dotnet` | `CookieAuthenticationStateProvider` has no public way to ask again after signing in or out (`notifyAuthenticationStateChanged` is protected) | Open (FluentCMS reloads after sign-in, as the original redirects) |
 | F11 | Skins | 20 places in both skins dropped the promise of the callback they invoke: an async handler's error never reached the ErrorBoundary, and `render().click()` didn't wait for it | Fixed `ea66e86` |
 | F12 | Runtime | Blazor's `DispatchExceptionAsync` was missing (errors from callbacks outside the renderer) | Fixed `ea66e86` |
@@ -167,3 +167,4 @@ with Tsazor, or the framework has a gap.
 | F21 | `@tsazor/fluent` | `Dialog.onClosed` is typed `EventCallback<MouseEvent>`, but Escape and the backdrop close it without an event | Open (small) |
 | F22 | Compiler | `@foreach (const layout of layouts) { @layout.name }`: Razor reads `@layout` as the directive too, but the parser swallowed the rest of the line, and 62 follow-up errors buried the cause | Fixed `8e921af`: one TZS013 with the quick fix `@(layout.name)` |
 | F23 | Compiler (parity question) | `onClick="() => this.confirm(token, "delete")"`: a `"` inside a bare lambda ends the attribute value (12 follow-up errors). With `@`, nested quotes work. Check Razor: does it read a non-string component parameter's value as C# with C# strings inside? | Open; the port writes `'delete'` |
+| F24 | Skins, `@tsazor/workspace` | The published declarations didn't type-check without `skipLibCheck`: `import type { default } from "../src/Menu.tsazor"` (invalid, and not shipped), `;;` in `index.d.ts`, and Fluent exported two things as `Toast`. Behind `skipLibCheck` the types were silently `any`. Found by running `tsc` on an app instead of `tsazor check` | Fixed `19e418e`, with a test per skin |
