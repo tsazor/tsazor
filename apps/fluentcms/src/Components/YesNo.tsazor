@@ -1,0 +1,9 @@
+@* A yes/no cell (FluentCMS's pairs of Indicators): green for the good answer, red for the other. *@
+
+<Indicator intent="@(value === good ? "success" : "danger")">@(value ? "YES" : "NO")</Indicator>
+
+@code {
+    @Parameter() value = false;
+    /** The good answer: true for "enabled", false for "locked". */
+    @Parameter() good = true;
+}

@@ -5,7 +5,8 @@
  *   signed out, an admin page says so → the login form shows the API's error for a wrong password →
  *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
  *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
- *   a confirmation → axe on both layouts and the dialog → signing out
+ *   a confirmation → the users: add, assign a role (checkbox group), delete → axe on both layouts,
+ *   the dialog and the forms → signing out
  *
  * Starts what isn't running (the backend clones and builds FluentCMS the first time), builds the
  * app and the BFF, and fails on every console error but the one a wrong password causes.
@@ -182,6 +183,42 @@ async function main() {
     await dialog.getByRole("button", { name: "Yes, I'm sure" }).click();
     await rows.filter({ hasText: name }).waitFor({ state: "detached", timeout: 10_000 });
     check(true, "the role is gone");
+
+    // Users: three forms on one view, and a role assigned through a checkbox group.
+    const userName = `ann${Date.now() % 100000}`;
+    await page.goto(`${APP}/admin/users`);
+    const users = page.getByRole("table", { name: "Users" }).locator("tbody tr");
+    await users.first().waitFor({ timeout: 15_000 });
+    await page.getByRole("link", { name: "Add User" }).click();
+    await page.getByLabel("Username").fill(userName);
+    await page.getByLabel("Password").fill("Secret123!");
+    await page.getByLabel("Email").fill(`${userName}@example.com`);
+    await page.getByLabel("Enabled").check();
+    await page.getByRole("button", { name: "Submit" }).click();
+    await users.filter({ hasText: userName }).waitFor({ timeout: 10_000 });
+    check(true, "a new user is in the list");
+    const usersViolations = await axe(page);
+    check(usersViolations.length === 0, `axe on the users${usersViolations.length ? `: ${usersViolations.join(" | ")}` : ""}`);
+
+    const openUser = async () => {
+      await users.filter({ hasText: userName }).getByRole("link", { name: "Edit" }).click();
+      await page.getByRole("group", { name: "Roles" }).getByRole("checkbox").first().waitFor({ timeout: 10_000 });
+    };
+    await openUser();
+    check((await page.getByLabel("Username").inputValue()) === userName, "the user's update view loads the user");
+    const updateViolations = await axe(page);
+    check(updateViolations.length === 0, `axe on the user's three forms${updateViolations.length ? `: ${updateViolations.join(" | ")}` : ""}`);
+    await page.getByRole("group", { name: "Roles" }).getByLabel("Administrators").check();
+    await page.locator("form").nth(1).getByRole("button", { name: "Submit" }).click();
+    await page.waitForURL(`${APP}/admin/users`, { timeout: 10_000 });
+    await openUser();
+    check(await page.getByRole("group", { name: "Roles" }).getByLabel("Administrators").isChecked(), "an assigned role is checked when the user opens again");
+    await page.getByRole("link", { name: "Cancel" }).first().click();
+    await page.waitForURL(`${APP}/admin/users`, { timeout: 10_000 });
+    await users.filter({ hasText: userName }).getByRole("button", { name: /Delete/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await users.filter({ hasText: userName }).waitFor({ state: "detached", timeout: 10_000 });
+    check(true, "the user is gone");
 
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();

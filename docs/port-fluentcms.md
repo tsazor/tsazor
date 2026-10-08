@@ -77,7 +77,7 @@ tests our library on a real app.
 |---|---|---|---|
 | 0 | Infrastructure | Backend script, BFF, app skeleton, generated client, an E2E gate that logs in | Done |
 | 1 | Shell | Setup, catch-all page, sections and plugins, admin and auth layouts, login/logout | Done except setup, register and password pages |
-| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Roles done |
+| 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Roles, users done |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | |
 | 5 | Public site (optional) | The view plugins, layouts with component tags | |
@@ -87,6 +87,9 @@ tests our library on a real app.
 | Screen | Files | Automatic fixes | Left by hand |
 |---|---|---|---|
 | Roles | 3 | 0 | The library's components (20 tags), `@rendermode`, a C# anonymous object (`new { id = … }`), the code-behind (C#), DTO members in PascalCase (`context.Name` → `context.name`) |
+| Users | 3 | 0 | The same; the static SSR forms (three on one view) become three interactive ones |
+
+The codemod helps little when the component library is swapped: the markup's tags and parameters are the library's. A port that keeps its library would show what it can do.
 
 **Method, per screen:**
 1. Run the codemod over the original files and record what compiles as it is.
@@ -121,7 +124,7 @@ with Tsazor, or the framework has a gap.
 | Autocomplete / Combobox | Generic `TItem`/`TValue`, async search with cancellation, multiple selection, a virtual option list | Selects with search |
 | Rich text / Markdown editor | Embedding a JS widget, two-way binding, cleanup | Content fields, the rich text plugin |
 | File upload | Drag and drop, progress, streams | File management |
-| Confirm dialog, checkbox group | Composition on Dialog and Checkbox | Every delete; roles and policies |
+| Confirm dialog, checkbox group | Composition on Dialog and Checkbox | Every delete; roles and policies. **CheckboxGroup done in `@tsazor/fluent`** (options as RadioGroup's, `string[]` bound, values it doesn't show kept) |
 | DatePicker | Culture, keyboard in a grid, popover placement | Date fields |
 | Toolbar with overflow | Measuring after render (ResizeObserver) | — |
 | Wizard / Stepper | Parent-child registration through cascading values | — |
@@ -132,6 +135,7 @@ with Tsazor, or the framework has a gap.
 |---|---|---|---|
 | 0–1 | Login, logout, the admin and auth layouts | 16 (F1–F16) | 2 (`ea66e86` runtime, `23ac0fb` compiler) |
 | 2 | Roles (list, create, update) | 5 (F17–F21) | 2 (Button `href`; `InputBase.Value` nullable) |
+| 2 | Users (list, create, update with three forms) | 0 | 1 (`CheckboxGroup`, new in `@tsazor/fluent`) |
 
 ## Findings
 

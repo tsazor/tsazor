@@ -2,6 +2,8 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    /* One plugin body after another (a page with several forms) keeps its distance. */
+    margin-bottom: 24px;
 }
 
 .plugin-body-header {
