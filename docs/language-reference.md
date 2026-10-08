@@ -51,6 +51,7 @@ Query string and hash do not take part in matching. Invalid templates and unknow
 | `datetime` | `Date` | ISO `yyyy-MM-dd`, optionally `THH:mm[:ss[.f]]` and `Z`/`±hh:mm`; without an offset, local time |
 | `guid` | `string` | Formats D, N, B, P; value = URL text |
 | `alpha`, `alphaNumeric` | `string` | |
+| `nonfile` | `string` | The path does not end in a file name (`app.css`, `favicon.ico`). On a catch-all it checks the whole remainder, not each segment: `@page "/{**route:nonfile}"` |
 | `regex(...)` | `string` | Anchored as `^(?:…)$`, case-insensitive; `{{`/`}}` for curly braces |
 
 Every constraint is anchored and grouped (`regex(a|b)` matches only `a` or `b`). Segments are URL-decoded,

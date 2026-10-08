@@ -97,6 +97,8 @@ interface RouteConstraint {
   readonly text: string;
   /** Typed constraints convert (int ⇒ number); string-valued ones (alpha, regex) do not. */
   readonly converts: boolean;
+  /** Checks a catch-all's whole value, not each of its segments (`nonfile`). */
+  readonly wholeValue?: boolean;
   match(raw: string): RouteValue | typeof NO_MATCH;
 }
 
@@ -181,7 +183,19 @@ const CONSTRAINT_FACTORIES: Record<string, (text: string) => RouteConstraint> = 
     }),
   alpha: (text) => pattern(text, /^(?:[a-z]*)$/i),
   alphaNumeric: (text) => pattern(text, /^(?:[a-z0-9]*)$/i),
+  // Blazor's `{**path:nonfile}`: the path does not end in a file name (`app.css`, `favicon.ico`).
+  nonfile: (text) => ({ text, converts: false, wholeValue: true, match: (raw) => (isFileName(raw) ? NO_MATCH : raw) }),
 };
+
+/**
+ * ASP.NET Core's FileNameRouteConstraint: the last segment has a dot with something other than
+ * dots after it ("a.pdf" is a file name, "a." and "v1" are not).
+ */
+function isFileName(raw: string): boolean {
+  const last = raw.slice(raw.lastIndexOf("/") + 1);
+  const dot = last.indexOf(".");
+  return dot !== -1 && /[^.]/.test(last.slice(dot + 1));
+}
 
 const CONSTRAINT_NAMES = new Map(Object.keys(CONSTRAINT_FACTORIES).map((name) => [name.toLowerCase(), name]));
 
@@ -195,7 +209,7 @@ export function convertRouteRawValue(raw: string, constraint: string): RouteValu
   const name = CONSTRAINT_NAMES.get(constraint.toLowerCase());
   if (!name) {
     throw new Error(
-      `Unsupported constraint '${constraint}' (use one of: int, long, bool, double, float, decimal, datetime, guid, alpha, alphaNumeric).`,
+      `Unsupported constraint '${constraint}' (use one of: int, long, bool, double, float, decimal, datetime, guid, alpha, alphaNumeric, nonfile).`,
     );
   }
   const value = CONSTRAINT_FACTORIES[name]!(constraint).match(raw);
@@ -535,13 +549,17 @@ function matchTemplate(entry: RouteTableEntry, path: string[]): Record<string, R
       continue;
     }
     if (segment.isCatchAll) {
-      // The rest of the path, each segment checked against the constraints;
-      // the value is the decoded segments joined with "/".
+      // The rest of the path, each segment checked against the constraints (`nonfile`: the
+      // whole rest); the value is the decoded segments joined with "/".
       const rest = path.slice(pathIndex);
-      for (const value of rest) {
-        if (matchConstraints(segment, value) === NO_MATCH) return null;
+      const joined = rest.join("/");
+      for (const constraint of segment.constraints) {
+        const matches = constraint.wholeValue
+          ? constraint.match(joined) !== NO_MATCH
+          : rest.every((value) => constraint.match(value) !== NO_MATCH);
+        if (!matches) return null;
       }
-      values[segment.value] = rest.join("/");
+      values[segment.value] = joined;
       pathIndex = path.length;
       templateIndex++;
       break;

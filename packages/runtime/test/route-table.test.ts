@@ -96,6 +96,17 @@ describe("matching", () => {
     expect(matchRoute(entries, "/n/1/2/3")?.values.nums).toBe("1/2/3");
     expect(matchRoute(entries, "/n/1/x")).toBeNull();
   });
+
+  it("{**path:nonfile}: the whole rest must not end in a file name (Blazor)", () => {
+    const entries = table(["/{**route:nonfile}", A]);
+    expect(matchRoute(entries, "/admin/roles")?.values.route).toBe("admin/roles");
+    expect(matchRoute(entries, "/")?.values.route).toBeNull();
+    expect(matchRoute(entries, "/files/report.pdf")).toBeNull();
+    expect(matchRoute(entries, "/favicon.ico")).toBeNull();
+    // Only the last segment counts, and a trailing dot is not an extension.
+    expect(matchRoute(entries, "/v1.2/page")?.values.route).toBe("v1.2/page");
+    expect(matchRoute(entries, "/notes/draft.")?.values.route).toBe("notes/draft.");
+  });
 });
 
 describe("constraints", () => {

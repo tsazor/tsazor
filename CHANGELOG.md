@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity** `@tsazor/runtime`: the route constraint `nonfile`. `@page "/{**route:nonfile}"` takes every
+  path that doesn't end in a file name, which is FluentCMS's page for all CMS URLs. On a catch-all it checks
+  the whole remainder, as ASP.NET Core does.
 - **Fix** `@tsazor/dotnet`, found by porting FluentCMS against its real OpenAPI document:
   - **Without `operationId`** (Swashbuckle's default), method names come from the path:
     `POST /api/User/Create` → `userCreate`. They were `postapiUserCreate`, and a path parameter made the
