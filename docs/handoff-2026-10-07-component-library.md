@@ -98,16 +98,17 @@ Billing & plans. After that, re-run the latest run (or push) to get a real CI re
 
 ## Next steps
 
-0. **Test as much as possible locally (owner, 2026-10-07)** — WSL has Ubuntu 24.04 (32 cores, 31 GB),
-   without Node yet; Docker Desktop runs too.
-   - **One-time setup, needs the owner's okay:** install Node 22 (the CI version) in WSL, and pnpm via
-     corepack.
-   - **`scripts/ci-local.sh`:** run the CI check job in WSL on a fresh clone of HEAD in the Linux file
-     system: `pnpm install --frozen-lockfile`, build, test, `api:check`, smoke. This catches what only
-     CI catches: case-sensitive paths, clean installs, and the committed lockfile without the owner's WIP.
-   - **`pnpm gates` (Windows):** every browser gate (tutorial, gallery, demo, skins, pizza, migration) in
-     Edge, Firefox and WebKit, with one command.
-   - **Then decide** whether the Ubuntu check on push becomes manual too.
+0. **Test as much as possible locally — done 2026-10-08.**
+   - WSL Ubuntu-24.04 has Node 22.23.3 and pnpm 10.34.5 in `~/.local` (user space, no sudo).
+   - **`pnpm ci:local [ref]`** (`scripts/ci-local.sh`, on Windows via WSL): CI's check job on a fresh clone
+     in `~/tsazor-ci`. The steps come from the commit's own `ci.yml`. It takes about 130 s and was green for
+     `7de26b8`.
+   - **`pnpm gates [edge|firefox|webkit] [--only app,…] [--skip-build]`** (`scripts/gates.mjs`, Windows):
+     every browser gate of CI's `e2e` and `engines` jobs, with a summary at the end. It fails when its list
+     no longer matches `ci.yml`. All 27 were green for `7de26b8`, in about 12 minutes.
+   - The check job is pinned to `ubuntu-24.04`, the same as WSL; `ubuntu-latest` becomes 26 on 2026-10-19.
+   - **Open for the owner:** should the Ubuntu check on push become manual too, now that `pnpm ci:local`
+     covers it?
 1. **`npm create tsazor --ui <package>`** (R3): accept any package; Bootstrap/Fluent appear as examples in
    an open list, not hard-coded favorites.
 2. **Release preparation (R2/E3/E10)** — open questions for the owner:
@@ -149,7 +150,7 @@ Billing & plans. After that, re-run the latest run (or push) to get a real CI re
   | 5323 | skins, Bootstrap build |
   | 5324 | skins, Fluent build |
 
-- **Gates:**
+- **Gates:** `pnpm gates` runs all of them in all three engines; one at a time:
   - `pnpm --filter tutorial test` and `… verify`
   - `pnpm --filter gallery verify` and `… verify:a11y`
   - `pnpm --filter demo verify:a11y`
