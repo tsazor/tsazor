@@ -2,6 +2,9 @@
 html,
 body {
     margin: 0;
+    /* Text outside the components in Fluent's typeface and colour (the components set their own). */
+    font-family: var(--fui-font-family);
+    color: var(--fui-foreground-1);
 }
 
 h1:focus {

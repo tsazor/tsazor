@@ -124,7 +124,7 @@ with Tsazor, or the framework has a gap.
 
 | Phase | Screens | Framework gaps found | Commits that changed the public API |
 |---|---|---|---|
-| 0–1 | Login, logout, the admin and auth layouts | 15 (F1–F15) | 2 (`ea66e86` runtime, `23ac0fb` compiler) |
+| 0–1 | Login, logout, the admin and auth layouts | 16 (F1–F16) | 2 (`ea66e86` runtime, `23ac0fb` compiler) |
 
 ## Findings
 
@@ -145,3 +145,4 @@ with Tsazor, or the framework has a gap.
 | F13 | `@tsazor/dotnet` | Code ported from NSwag clients expects a throwing call (FluentCMS's forms catch `ApiClientException`). The port has a two-line `ensureOk(result)` | Watch: into the package if more ports need it |
 | F14 | Compiler | `protected async onInitializedAsync()` (C# habit) compiled without a word and never ran | Fixed `23ac0fb` (TZS032 with a rename fix) |
 | F15 | Compiler | `@if (model !== undefined)` doesn't narrow inside child content (port-findings H.3). The first real form hit it at once; the port writes `model!` | Open: re-evaluate H.3 |
+| F16 | `create-tsazor` | With `--ui`, the starter still writes the Blazor template's `app.css`. Its Helvetica body font beats the library's typeface for text outside the components; it doesn't fight the components (Fluent maps the runtime's `invalid` class to its own and doesn't style links). The port sets `var(--fui-font-family)`. Option: the library ships a zero-weight `:where(body)` rule, and the starter leaves the font out when a library is chosen | Open |
