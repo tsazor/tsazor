@@ -80,7 +80,7 @@ tests our library on a real app.
 | 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | Done, except the file picker (`FileSelectorModal`): the content type fields use it, so it comes with phase 4 |
 | 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | Done: content types and their fields (each type's settings form through a DynamicComponent, the settings under FluentCMS's keys); contents, their list and forms built from 27 field views, the rich text editor (Quill), the autocomplete and the file pickers among them |
-| 5 | Public site | 5a: layouts stored in the CMS (HTML with component tags and Scriban expressions); 5b: the view plugins (HTML, rich text, block, iframe, contact form, content list and detail) and their settings | In progress |
+| 5 | Public site | 5a: layouts stored in the CMS (HTML with component tags and Scriban expressions); 5b: the view plugins (HTML, rich text, block, iframe, contact form, content list and detail) | Done. The plugins' edit and settings dialogs are not ported: FluentCMS opens them only from the site builder's design mode |
 
 **Phase 5: the question it asks.** A FluentCMS layout is HTML in the database. A component tag in it
 (`<PluginsSection Name="Main" fluentcms />`) names a component, its attributes are the parameters, and
@@ -96,7 +96,9 @@ time into a render tree with live components, without a compiler in the browser?
 - Scripts in the layout: the original runs them on a full page load and raises `fluentcms:init`, then
   `fluentcms:afterenhanced` after each enhanced navigation. The port loads each script once and raises
   the same events.
-- Out of scope: the site builder (drag and drop, 10 files), the inline editor, the Tailwind style builder.
+- Out of scope: the site builder (design mode: the preview in an iframe, drag and drop, each plugin's settings,
+  edit and data dialogs, the admin toolbar; 10 files), the inline editor, the Tailwind style builder. Its one
+  capability that is new to the port, a sortable list (drag and drop with a keyboard way), is a track B candidate.
 
 **Codemod, per screen** (`tsazor codemod` over the original `.razor` files):
 
