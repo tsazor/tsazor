@@ -287,6 +287,16 @@ export abstract class ComponentBase {
   }
 
   /**
+   * Hands an exception to the component's error handling as if the component had thrown it: the
+   * nearest ErrorBoundary shows it (Blazor's DispatchExceptionAsync). For failures the renderer
+   * can't see — a callback from a DOM listener, a timer or a behavior the component set up itself.
+   */
+  protected dispatchExceptionAsync(error: unknown): Promise<void> {
+    this.reportErrorInternal(error, "event");
+    return Promise.resolve();
+  }
+
+  /**
    * Tsazor extension: subscribes to an external source for the component's
    * lifetime. Every notification runs `onNext` (if given) and then requests
    * a render through the render queue, so a burst of notifications renders

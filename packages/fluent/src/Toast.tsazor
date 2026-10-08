@@ -51,7 +51,7 @@
         }, this.additionalAttributes);
     }
 
-    private close(e: MouseEvent): void {
-        this.onDismissed?.invokeAsync(e);
+    private close(e: MouseEvent): Promise<void> | undefined {
+        return this.onDismissed?.invokeAsync(e);
     }
 }

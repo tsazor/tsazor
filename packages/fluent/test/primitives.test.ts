@@ -5,7 +5,7 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { EventCallback, type RenderFragment } from "@tsazor/runtime";
+import { ErrorBoundary, EventCallback, type RenderFragment } from "@tsazor/runtime";
 import { Badge, Button, Card, CardFooter, CardHeader, Divider, Spinner } from "../dist/index.js";
 
 /** A fragment rendering one text node. */
@@ -171,5 +171,30 @@ describe("Divider", () => {
     const divider = container.querySelector("hr")!;
     expect(divider.className).toBe("fui-divider fui-divider--vertical fui-divider--stronger");
     expect(divider.getAttribute("aria-orientation")).toBe("vertical");
+  });
+});
+describe("callbacks are awaited (Blazor: await OnClick.InvokeAsync)", () => {
+  it("a Button waits for an async onClick, and its failure reaches the ErrorBoundary", async () => {
+    let finished = false;
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, ErrorBoundary);
+      b.addAttribute(1, "childContent", ((inner) => {
+        inner.openComponent(0, Button);
+        inner.addAttribute(1, "childContent", text("Save"));
+        inner.addAttribute(2, "onClick", EventCallback.unbound(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          finished = true;
+          throw new Error("save failed");
+        }));
+        inner.closeComponent();
+      }) as RenderFragment);
+      b.addAttribute(2, "errorContent", ((error: unknown) => (inner) => inner.addContent(0, `caught: ${(error as Error).message}`)) as unknown as RenderFragment);
+      b.closeComponent();
+    });
+    container.querySelector("button")!.click();
+    // The renderer tracks the click until the handler is done (render().click() in tests waits on this).
+    await renderer.waitUntilIdle();
+    expect(finished).toBe(true);
+    expect(container.textContent).toBe("caught: save failed");
   });
 });

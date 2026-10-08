@@ -39,7 +39,7 @@
         return this.active ? "true" : null;
     }
 
-    private handleClick(e: MouseEvent): void {
-        if (!this.disabled) this.onClick?.invokeAsync(e);
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        return this.disabled ? undefined : this.onClick?.invokeAsync(e);
     }
 }

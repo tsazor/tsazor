@@ -423,3 +423,39 @@ describe("observe", () => {
     expect(shapes).toHaveLength(4);
   });
 });
+
+describe("dispatchExceptionAsync (Blazor parity)", () => {
+  it("hands an error from outside the renderer to the nearest ErrorBoundary", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let fail: (error: unknown) => Promise<void> = async () => {};
+    class Widget extends ComponentBase {
+      protected override onInitialized(): void {
+        // A callback the renderer doesn't see (a timer, a DOM listener of the component's own).
+        fail = (error) => this.dispatchExceptionAsync(error);
+      }
+    }
+    class Host extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, ErrorBoundary);
+        const content: RenderFragment = (inner) => {
+          inner.openComponent(0, defineComponent(Widget));
+          inner.closeComponent();
+        };
+        b.addAttribute(1, "childContent", content);
+        b.addAttribute(2, "errorContent", (error: unknown) => ((inner: RenderTreeBuilder) => inner.addContent(0, `caught: ${(error as Error).message}`)) as RenderFragment);
+        b.closeComponent();
+      }
+    }
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderer = new Renderer();
+    const errors: string[] = [];
+    renderer.errorHandler = ({ phase }) => errors.push(phase);
+    renderer.renderInContainer(Host, container);
+    await renderer.waitUntilIdle();
+    await fail(new Error("closed too late"));
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("caught: closed too late");
+    expect(errors).toEqual([]);
+  });
+});

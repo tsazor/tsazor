@@ -223,6 +223,7 @@ export declare abstract class ComponentBase {
     protected renderFragment(builder: RenderTreeBuilder, fragment: RenderFragment): void;
     protected inject<T>(token: abstract new (...args: never[]) => T): T;
     get disposeSignal(): AbortSignal;
+    protected dispatchExceptionAsync(error: unknown): Promise<void>;
     protected observe<T>(source: ObserveSource<T>, onNext?: (value: T) => void): () => void;
     autoObserveInternal(source: unknown): void;
     reportErrorInternal(error: unknown, phase: RenderErrorPhase): void;

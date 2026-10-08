@@ -30,7 +30,7 @@
         return buttonClasses(this.intent, this.appearance, this.size);
     }
 
-    private handleClick(e: MouseEvent): void {
-        this.onClick?.invokeAsync(e);
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        return this.onClick?.invokeAsync(e);
     }
 }

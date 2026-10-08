@@ -31,8 +31,8 @@
         return `alert alert-${backgroundColor(this.intent)}${dismiss} fade show`;
     }
 
-    private dismiss(e: MouseEvent): void {
+    private dismiss(e: MouseEvent): Promise<void> | undefined {
         this.visible = false;
-        this.onDismissed?.invokeAsync(e);
+        return this.onDismissed?.invokeAsync(e);
     }
 }

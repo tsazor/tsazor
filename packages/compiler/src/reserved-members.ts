@@ -20,6 +20,7 @@ export const RESERVED_MEMBERS: ReadonlySet<string> = new Set([
   "stateHasChanged",
   "inject",
   "observe",
+  "dispatchExceptionAsync",
   "disposeSignal",
   "renderFragment",
   // The renderer's plumbing.

@@ -17,8 +17,9 @@
     /** Resolved from the nearest Dropdown ancestor; selection closes the menu. */
     @CascadingParameter({ name: "Dropdown" }) dropdown?: Dropdown;
 
-    private handleClick(e: MouseEvent): void {
-        this.onSelect?.invokeAsync(e);
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        const selected = this.onSelect?.invokeAsync(e);
         this.dropdown?.close(true);
+        return selected;
     }
 }

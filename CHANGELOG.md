@@ -5,6 +5,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/bootstrap`, `@tsazor/fluent`: components await the callbacks they invoke, as Blazor's
+  `await OnClick.InvokeAsync(e)` does. Button, Form, Dialog, Drawer, Tabs, Menu/Dropdown items, list
+  items, Pagination, Alert and Toast dropped the promise. Two consequences are fixed:
+  - an error in an async `onClick` or `onValidSubmit` reaches the ErrorBoundary, instead of being an
+    unhandled rejection;
+  - `render().click()` in tests waits for an async handler behind a library button.
+- **Blazor parity** `@tsazor/runtime`: `ComponentBase.dispatchExceptionAsync(error)` (Blazor's
+  `DispatchExceptionAsync`). It hands an error from outside the renderer to the nearest ErrorBoundary, for
+  example an error from a callback of a DOM listener, a timer or a behavior. The skins use it for Escape and
+  backdrop dismissal.
 - **Blazor parity** `@tsazor/runtime`: the route constraint `nonfile`. `@page "/{**route:nonfile}"` takes every
   path that doesn't end in a file name, which is FluentCMS's page for all CMS URLs. On a catch-all it checks
   the whole remainder, as ASP.NET Core does.

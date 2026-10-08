@@ -42,7 +42,7 @@
     private activeIndexInternal = 0;
     private readonly generatedId = uniqueId("fui-tabs");
     /** Arrow keys, Home and End move the selection; only the active tab is a Tab stop (roving tabindex). */
-    private readonly keys = rovingFocus({ items: "[role=tab]", onMove: (index) => this.select(index) });
+    private readonly keys = rovingFocus({ items: "[role=tab]", onMove: (index) => void this.select(index)?.catch((error) => this.dispatchExceptionAsync(error)) });
 
     get activeIndex(): number {
         return this.activeIndexInternal;
@@ -59,11 +59,11 @@
     }
 
     /** @internal Switches the active tab (no-op out of range or same index). */
-    select(index: number): void {
-        if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return;
+    select(index: number): Promise<void> | undefined {
+        if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return undefined;
         this.activeIndexInternal = index;
         this.stateHasChangedInternal();
-        this.onSelected?.invokeAsync(index);
+        return this.onSelected?.invokeAsync(index);
     }
 
     /** aria-selected as a literal attribute text value. */

@@ -48,8 +48,8 @@
         }, this.additionalAttributes);
     }
 
-    private handleClick(e: MouseEvent): void {
-        if (this.disabled) return;
-        this.onClick?.invokeAsync(e);
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        if (this.disabled) return undefined;
+        return this.onClick?.invokeAsync(e);
     }
 }

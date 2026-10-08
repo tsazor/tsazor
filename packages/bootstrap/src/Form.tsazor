@@ -24,11 +24,11 @@
 
     private readonly handleValidSubmit = EventCallback.bind(this, (context: EditContext) => {
         markSubmitAttempt(context);
-        this.onValidSubmit?.invokeAsync(context);
+        return this.onValidSubmit?.invokeAsync(context);
     });
 
     private readonly handleInvalidSubmit = EventCallback.bind(this, (context: EditContext) => {
         markSubmitAttempt(context);
-        this.onInvalidSubmit?.invokeAsync(context);
+        return this.onInvalidSubmit?.invokeAsync(context);
     });
 }

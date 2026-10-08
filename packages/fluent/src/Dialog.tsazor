@@ -69,10 +69,11 @@
     }
 
     private dismissed(reason: DismissReason): void {
-        if (reason === "escape" ? this.closeOnEscape : this.closeOnBackdrop) this.requestClose();
+        // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
+        if (reason === "escape" ? this.closeOnEscape : this.closeOnBackdrop) this.requestClose()?.catch((error) => this.dispatchExceptionAsync(error));
     }
 
-    private requestClose(): void {
-        this.onClosed?.invokeAsync();
+    private requestClose(): Promise<void> | undefined {
+        return this.onClosed?.invokeAsync();
     }
 }

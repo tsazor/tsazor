@@ -17,8 +17,9 @@
     /** Resolved from the nearest Menu ancestor; selection closes the menu. */
     @CascadingParameter({ name: "FluentMenu" }) menu?: Menu;
 
-    private handleClick(e: MouseEvent): void {
-        this.onSelect?.invokeAsync(e);
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        const selected = this.onSelect?.invokeAsync(e);
         this.menu?.close(true);
+        return selected;
     }
 }

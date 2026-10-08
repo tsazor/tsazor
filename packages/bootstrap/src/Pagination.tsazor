@@ -25,17 +25,17 @@
     /** Fired when the user picks a different page, with the new page number (1-based). */
     @Parameter() onPageChanged?: EventCallback<number>;
 
-    private select(page: number): void {
-        if (page === this.page) return;
-        this.onPageChanged?.invokeAsync(page);
+    private select(page: number): Promise<void> | undefined {
+        if (page === this.page) return undefined;
+        return this.onPageChanged?.invokeAsync(page);
     }
 
-    private goPrev(): void {
-        if (this.page > 1) this.onPageChanged?.invokeAsync(this.page - 1);
+    private goPrev(): Promise<void> | undefined {
+        return this.page > 1 ? this.onPageChanged?.invokeAsync(this.page - 1) : undefined;
     }
 
-    private goNext(): void {
-        if (this.page < this.pageCount) this.onPageChanged?.invokeAsync(this.page + 1);
+    private goNext(): Promise<void> | undefined {
+        return this.page < this.pageCount ? this.onPageChanged?.invokeAsync(this.page + 1) : undefined;
     }
 
     private get listClass(): string {
