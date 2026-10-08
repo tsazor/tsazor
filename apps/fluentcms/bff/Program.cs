@@ -131,6 +131,12 @@ app.MapGet("/bff/user", (ClaimsPrincipal user) => user.Identity?.IsAuthenticated
     })
     : Results.Ok(new { user = (object?)null }));
 
+// Which API token this host calls FluentCMS with — its key, never its secret. FluentCMS's token
+// list hides "delete" for it, so an admin can't lock the UI out (the original reads its own
+// ClientSettings:Key; the app can't, by design).
+app.MapGet("/bff/client", (HttpContext http) => Results.Ok(new { apiTokenKey = ApiKey(http).Split(':')[0] }))
+    .RequireAuthorization();
+
 app.MapPost("/bff/logout", async (HttpContext http) =>
 {
     await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

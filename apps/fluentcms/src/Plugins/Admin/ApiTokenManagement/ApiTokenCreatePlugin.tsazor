@@ -1,0 +1,28 @@
+@inherits BasePlugin
+@import type { Policy } from "../../../api/models"
+@import { ApiTokenCreateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Create New API Token" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model.name" label="Name" placeholder="Enter Name" required />
+    <TextArea @bind-Value="this.model.description" label="Description" placeholder="Enter Description" />
+    <DateInput @bind-Value="this.model.expireAt" label="Expire At" />
+    <Switch @bind-Value="this.model.enabled" label="Enabled" />
+    <PluginFormPolicies value="@this.model.policies" policies="@this.policies" label="Policies" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = new ApiTokenCreateRequest();
+    private policies: Policy[] = [];
+
+    protected override async onInitialized(): Promise<void> {
+        this.policies = ensureOk(await this.api.apiTokenGetPolicies()) ?? [];
+        this.model.policies = this.policies.map((policy) => ({ area: policy.area, actions: [] }));
+    }
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.apiTokenCreate(this.model));
+        this.navigateBack();
+    }
+}

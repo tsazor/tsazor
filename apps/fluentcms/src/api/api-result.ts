@@ -13,6 +13,12 @@ export function ensureOk<T>(result: HttpResult<T>): T {
     return result.body;
 }
 
+/** The key (not the secret) of the API token the BFF calls FluentCMS with. */
+export async function bffApiTokenKey(http: TsazorHttp): Promise<string> {
+    const { apiTokenKey } = await http.getJson<{ apiTokenKey: string }>(new URL("/bff/client", document.baseURI).href);
+    return apiTokenKey;
+}
+
 /** Signs out at the BFF, which drops the session cookie (and with it the user's JWT). */
 export async function signOut(http: TsazorHttp): Promise<void> {
     await http.send(new Request(new URL("/bff/logout", document.baseURI), { method: "POST" }));

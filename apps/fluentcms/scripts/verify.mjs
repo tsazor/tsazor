@@ -271,6 +271,46 @@ async function main() {
     await page.waitForURL(`${APP}/admin/sites`, { timeout: 10_000 });
     check(saved === `Title ${stamp}`, "a site's settings are saved (site and settings, two calls)");
 
+    // API tokens: policies per area, the secret shown on request, re-generated, and the BFF's own
+    // token protected (the BFF names its key, never its secret).
+    const tokens = table("API Tokens");
+    const tokenName = `Token ${stamp}`;
+    await page.goto(`${APP}/admin/api-tokens`);
+    await tokens.first().waitFor({ timeout: 15_000 });
+    // "Full Access" is the token FluentCMS's setup made, the one the BFF uses.
+    const own = tokens.filter({ hasText: "Full Access" });
+    await own.getByRole("link", { name: "Edit" }).waitFor({ timeout: 15_000 });
+    check((await own.getByRole("button", { name: /Delete/ }).count()) === 0, "the BFF's own API token can't be deleted");
+    await page.getByRole("link", { name: "Add API Token" }).click();
+    await page.getByLabel("Name").fill(tokenName);
+    await page.getByLabel("Expire At").fill("2027-12-31");
+    await page.locator("label", { hasText: "Enabled" }).click();
+    await page.getByRole("group", { name: "Page Management" }).getByLabel("Read").check();
+    await page.getByRole("button", { name: "Submit" }).click();
+    const token = tokens.filter({ hasText: tokenName });
+    await token.getByRole("button", { name: /Show the token/ }).click();
+    const secret = await token.locator(".token").innerText();
+    await token.getByRole("button", { name: /Re-Generate/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await page.getByRole("dialog").waitFor({ state: "detached", timeout: 10_000 });
+    // The list reloads; the token stays shown, as in the original.
+    await page.waitForFunction(([name, before]) => {
+      const row = [...document.querySelectorAll("tbody tr")].find((r) => r.textContent?.includes(name));
+      const shown = row?.querySelector(".token")?.textContent ?? before;
+      return shown !== before;
+    }, [tokenName, secret], { timeout: 10_000 });
+    check(secret.includes(":"), "a token's secret is shown on request, and re-generated");
+    await token.getByRole("link", { name: "Edit" }).click();
+    await page.waitForFunction(() => (document.querySelector("input[type=date]")?.value ?? "") !== "", null, { timeout: 10_000 });
+    check(
+      (await page.getByLabel("Expire At").inputValue()) === "2027-12-31" && (await page.getByRole("group", { name: "Page Management" }).getByLabel("Read").isChecked()),
+      "the token's update form loads its date and policies",
+    );
+    await page.getByRole("link", { name: "Cancel" }).click();
+    await token.getByRole("button", { name: /Delete/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await token.waitFor({ state: "detached", timeout: 10_000 });
+
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();
     await page.getByRole("menuitem", { name: "Logout" }).click();
@@ -285,6 +325,12 @@ async function main() {
       errors.filter(wrongPassword).length <= 1 && unexpected.length === 0,
       `no console errors besides the wrong password's${unexpected.length ? `: ${unexpected.join(" | ")}` : ""}`,
     );
+  } catch (error) {
+    // The page as the failing step left it.
+    const shot = path.join(ROOT, ".tmp", "verify-failure.png");
+    await page.screenshot({ path: shot, fullPage: true }).catch(() => undefined);
+    console.error(`verify-fluentcms: the page at the failure is ${shot} (${page.url()}); console errors: ${JSON.stringify(errors)}`);
+    throw error;
   } finally {
     await browser.close();
   }
