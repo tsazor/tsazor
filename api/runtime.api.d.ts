@@ -1063,6 +1063,7 @@ export declare class RenderTreeBuilder {
     closeRegion(): void;
     setKey(key: string | number | null | undefined | object): void;
     addAttribute(sequence: number, name: string, value: AttributeValue): void;
+    addComponentParameter(sequence: number, name: string, value: unknown): void;
     addEventHandler(sequence: number, name: string, callback: EventCallback<any> | undefined, flags?: EventHandlerFlags | number): void;
     addMultipleAttributes(sequence: number, attributes: Readonly<Record<string, unknown>> | null | undefined): void;
     addContent(sequence: number, textOrFragment: string | number | boolean | bigint | null | undefined | RenderFragment | MarkupString): void;

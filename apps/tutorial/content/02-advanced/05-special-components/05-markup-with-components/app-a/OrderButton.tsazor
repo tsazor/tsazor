@@ -1,0 +1,6 @@
+<button class="order-button" @onclick="() => count++">Order @product (@count)</button>
+
+@code {
+    @Parameter() product = "";
+    count = 0;
+}

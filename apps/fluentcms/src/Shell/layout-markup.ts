@@ -118,7 +118,7 @@ export function buildLayout(
                 return;
             }
             builder.openComponent(sequence, type);
-            for (const [name, value] of Object.entries(node.component.attributes)) builder.addAttribute(0, name, value);
+            for (const [name, value] of Object.entries(node.component.attributes)) builder.addComponentParameter(0, name, value);
             builder.closeComponent();
         }
     });

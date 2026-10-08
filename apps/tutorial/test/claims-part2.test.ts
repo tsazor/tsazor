@@ -704,6 +704,47 @@ describe("sections", () => {
   });
 });
 
+describe("markup-with-components", () => {
+  const { a, b } = lesson("markup-with-components");
+  const strip = (html: string): string => html.replace(/<!--[^>]*-->/g, "");
+
+  it("the start writes the tag as an empty element; the solution makes it a live component, inside the HTML's own elements", async () => {
+    const start = await mount(a);
+    expect(strip(start.html())).toContain('<div class="order">\n    <order-button product="Sourdough"></order-button>\n  </div>');
+    expect(start.container.querySelector("button")).toBeNull();
+    start.dispose();
+    const m = await mount(b);
+    expect(m.container.querySelector("article.post > div.order > button.order-button")?.textContent).toBe("Order Sourdough (0)");
+    click(m, ".order-button");
+    await m.settle();
+    expect(m.container.querySelector(".order-button")?.textContent).toBe("Order Sourdough (1)");
+    m.dispose();
+  });
+
+  it("the same HTML, built again, keeps its components (a node's place among its siblings is its sequence)", async () => {
+    const m = await mount({
+      ...b,
+      "App.tsazor": `@import { html } from "./page"\n@import { fromHtml } from "./markup"\n@import OrderButton from "./OrderButton.tsazor"\n<button class="again" @onclick="() => renders++">again</button>\n@fromHtml(html, { "order-button": OrderButton })\n@code {\n    renders = 0;\n}\n`,
+    });
+    click(m, ".order-button");
+    await m.settle();
+    click(m, ".again");
+    await m.settle();
+    expect(m.container.querySelector(".order-button")?.textContent).toBe("Order Sourdough (1)");
+    m.dispose();
+  });
+
+  it("MarkupStrings cut around a component are parsed one by one: the element around it ends up empty", async () => {
+    const m = await mount({
+      ...b,
+      "App.tsazor": `@import { MarkupString } from "@tsazor/runtime"\n@(new MarkupString('<div class="order">'))<OrderButton product="Rye" />@(new MarkupString("</div>"))\n`,
+    });
+    expect(strip(m.container.querySelector(".order")!.innerHTML)).toBe("");
+    expect(m.container.querySelector(".order + button.order-button")).not.toBeNull();
+    m.dispose();
+  });
+});
+
 /* Chapter 13 — Organizing code ------------------------------------------------------------------ */
 
 describe("code-behind", () => {

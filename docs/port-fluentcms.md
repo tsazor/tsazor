@@ -166,7 +166,7 @@ built; better components are a side effect.
 | 4a | Content types and their fields (8 settings forms) | 3 (F30–F32) | 2 (`Dialog.size` in `@tsazor/fluent`; `ImportsChain.root`) |
 | 4b | Contents: list and forms built from 21 field views | 2 (F33, F34) | 2 (`InputDate.type` and `DateInput.type`; .NET date formats in `@bind:format`) |
 | 4c | The field views of track B: rich text, autocomplete (single and several), file pickers and file links | 1 (F35, testing DX) | 1 (`Autocomplete`, new in `@tsazor/fluent`) |
-| 5a | Layouts stored in the CMS: Scriban expressions, component tags in head and body, their scripts | 1 (F36, docs) | 0 |
+| 5a | Layouts stored in the CMS: Scriban expressions, component tags in head and body, their scripts | 2 (F36 docs, F37) | 1 (`RenderTreeBuilder.addComponentParameter`) |
 | 5b | The view plugins: HTML, rich text, block (and its picker), iframe, contact form, content list and detail | 0 | 0 |
 
 ## Findings
@@ -208,7 +208,8 @@ built; better components are a side effect.
 | F33 | Runtime, skins (parity) | FluentCMS's date fields edit a date, a time or a date-time (Blazor's `InputDate Type`). Tsazor's `InputDate` and the skins' `DateInput` had `date` only. `InputDate` also wrote a `Date` through `toISOString()`, so a local midnight east of Greenwich showed the day before, and turned a bound string into a `Date`; `InputNumber` showed `null` as "null" | Fixed: `type` (date, datetime-local, month, time) on `InputDate` and both `DateInput`s; local time both ways; a bound string stays a string; null shows empty |
 | F34 | Runtime (parity) | FluentCMS stores a date field's display format as a .NET format (`dddd, dd MMMM yyyy`, `hh:mm tt`, `yyyy'-'MM'-'dd'T'…fffffffK`) and writes the value with `DateTime.ToString(format)`. Tsazor's `@bind:format` knew `yyyy MM dd HH mm ss` and read every other letter as text: `dddd, dd MMMM yyyy` gave `dddd, 12 0606 2024` | Fixed: .NET's whole custom and standard date grammar, invariant, both ways; the port formats with the runtime's `formatValue` |
 | F35 | `@tsazor/testing` (DX) | `renderer.waitUntilIdle()` waits for the event handlers' tasks. A test that answers a pending search only after it settles (the autocomplete's "newest wins" test) hangs until vitest's 5 s timeout, with no hint which handler is still running | Open (small): a timeout on `waitUntilIdle`, naming the component whose handler is pending |
-| F36 | Docs | A layout from the database with component tags in it needs a render tree built in code from data at run time. The public `RenderTreeBuilder` does it (no change was needed), but neither the tutorial nor the docs show it; Blazor documents it as "manual RenderTreeBuilder logic". The questions a reader meets: sequence numbers for a tree that comes from data, why markup segments around components lose their nesting in the browser, scripts in markup | Open: a tutorial lesson |
+| F36 | Docs | A layout from the database with component tags in it needs a render tree built in code from data at run time. The public `RenderTreeBuilder` does it (no change was needed), but neither the tutorial nor the docs show it; Blazor documents it as "manual RenderTreeBuilder logic". The questions a reader meets: sequence numbers for a tree that comes from data, why markup segments around components lose their nesting in the browser, scripts in markup | Fixed: the tutorial's lesson "Markup with components" (special components) builds a render tree from HTML with a component tag in it, with claims tests for its sequence numbers and the MarkupString pitfall |
+| F37 | Runtime (parity) | FluentCMS's `RenderDynamicContent` passes each tag's attributes with `AddComponentParameter`, Blazor 8's call for a component's parameters. Tsazor's builder had `addAttribute` only, so ported builder code didn't compile | Fixed: `addComponentParameter`, with Blazor's check that it follows `openComponent` (or another parameter); the port's layouts use it |
 | U4 | FluentCMS (upstream) | The contact form stores every visitor's message empty (`{"Email":null,…}`): for visitors the page is static SSR, and the form's model isn't `[SupplyParameterFromForm]`, so the post binds nothing. Signed in as an admin the page is interactive and it works. Found by driving FluentCMS's own UI | Upstream. The port's form is interactive for everyone; migration.md names the pattern |
 | U3 | FluentCMS (upstream) | The template's `app.js` binds the theme toggle again on every `fluentcms:afterenhanced`. After an enhanced navigation within one layout the button survives, so a click toggles twice and nothing changes | Upstream; the port raises the same events and behaves the same |
 | U2 | FluentCMS (upstream) | A content's dates come back as `DateTime.ToString()` in the server's culture (`06.06.2024 17:04:05` on a German machine). Its Blazor Server UI parsed them on the same server; a browser can't know that culture, and `new Date()` read the 12th of June as the 6th of December | Upstream. The port runs the backend with invariant globalization (`MM/dd/yyyy HH:mm:ss`, parsed as .NET's `G` with F34); migration.md names the pattern |
@@ -222,8 +223,9 @@ built; better components are a side effect.
   own had no place for it.
 
 **Notes from phase 5**
-- **The answer to its question is yes, with no framework change.** A layout parsed once into elements, markup
-  and component tags builds through the public `RenderTreeBuilder` (`Shell/layout-markup.ts`). Components work
+- **The answer to its question is yes.** The capability needed no framework change; only Blazor 8's name for one
+  builder call was missing (F37), and the docs didn't show the technique (F36). A layout parsed once into
+  elements, markup and component tags builds through the public `RenderTreeBuilder` (`Shell/layout-markup.ts`). Components work
   in the head part too (`PageHead`, inside `HeadContent`). Sequence numbers come from a node's place among its
   siblings, and all of an element's attributes share one, so a changed text keeps the components.
 - **Upstream as the oracle.** The backend process also serves FluentCMS's own Blazor UI, for a request with the

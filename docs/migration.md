@@ -107,7 +107,8 @@ API already — they skip this step.
   `MarkupString` segments around its component tags still nests (a `<main>` opened before a
   component and closed after it contains it). In the browser each markup is parsed alone. Parse
   the whole layout once and build the elements down to each component with `RenderTreeBuilder`
-  (`apps/fluentcms/src/Shell/layout-markup.ts`). Scripts in such markup never run; load them.
+  (the tutorial's lesson "Markup with components"; `apps/fluentcms/src/Shell/layout-markup.ts`).
+  Scripts in such markup never run; load them.
 - **Static SSR forms.** A page that is static for visitors and interactive for admins runs its
   forms two ways. FluentCMS's contact form binds no model in static SSR (no
   `[SupplyParameterFromForm]`), so every visitor's message is stored empty, while it works for a

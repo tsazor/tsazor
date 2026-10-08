@@ -161,6 +161,23 @@ export class RenderTreeBuilder {
     this.frames.push({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value });
   }
 
+  /**
+   * Blazor's AddComponentParameter (.NET 8): a parameter of the open component, right after
+   * `openComponent` or another parameter. Throws Blazor's error anywhere else.
+   */
+  addComponentParameter(sequence: number, name: string, value: unknown): void {
+    const last = this.frames[this.frames.length - 1];
+    const open = this.openFrameStack[this.openFrameStack.length - 1];
+    const afterComponent =
+      open !== undefined &&
+      this.frames[open]!.frameType === FrameType.Component &&
+      (last === this.frames[open] || last?.frameType === FrameType.Attribute);
+    if (!afterComponent) {
+      throw new Error("Component parameters may only be added immediately after frames of type Component");
+    }
+    this.frames.push({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value as AttributeValue });
+  }
+
   /** Adds an event-handler attribute carrying its directive flags (used by generated code).
    *  `any` (not `never`!): the generated code types inline handlers by inference
    *  (`(e) => …` in `@bind`), and a contextual `EventCallback<never>` would make

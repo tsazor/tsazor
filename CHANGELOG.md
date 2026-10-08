@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity** `@tsazor/runtime`: `RenderTreeBuilder.addComponentParameter` (Blazor 8's AddComponentParameter): a
+  parameter of the open component, right after `openComponent` or another parameter; anywhere else it throws Blazor's
+  error. Builder code ported from Blazor calls it: FluentCMS renders the component tags of its stored layouts this way.
+  The tutorial's new lesson "Markup with components" builds a render tree from HTML that holds a component tag.
 - `@tsazor/fluent`: **Autocomplete** (Fluent UI Blazor's FluentAutocomplete, the ARIA combobox pattern with a listbox
   popup), generic over `TOption`. It searches `items` by `optionText`, or raises `onOptionsSearch` (Blazor's
   `OptionsSearchEventArgs`: the handler sets `args.items`; `args.signal` aborts when a newer search starts, and an older

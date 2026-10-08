@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RenderTreeBuilder, FrameType, getFrameChildren, getFrameSubtreeLength } from "../src/render-tree/render-tree";
-import { ComponentBase, Renderer } from "../src/index";
+import { ComponentBase, Parameter, Renderer } from "../src/index";
 
 describe("RenderTreeBuilder", () => {
   it("builds a flat tree with resolved subtree lengths", () => {
@@ -28,6 +28,45 @@ describe("RenderTreeBuilder", () => {
     b.closeElement();
     const frames = b.getFrames();
     expect(frames.map((frame) => frame.attributeName ?? frame.elementName)).toEqual(["button", "title", "disabled"]);
+  });
+
+  it("adds a component's parameters with addComponentParameter (Blazor 8), only right after openComponent", async () => {
+    class Greeting extends ComponentBase {
+      @Parameter() name = "";
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, `Hello ${this.name}`);
+      }
+    }
+    const b = new RenderTreeBuilder();
+    b.openComponent(0, Greeting);
+    b.addComponentParameter(1, "Name", "Ada");
+    b.closeComponent();
+    expect(b.getFrames().map((frame) => frame.attributeName ?? frame.frameType)).toEqual([FrameType.Component, "Name"]);
+
+    const message = "Component parameters may only be added immediately after frames of type Component";
+    const element = new RenderTreeBuilder();
+    element.openElement(0, "div");
+    expect(() => element.addComponentParameter(1, "name", "x")).toThrow(message);
+    const afterContent = new RenderTreeBuilder();
+    afterContent.openElement(0, "div");
+    afterContent.openComponent(1, Greeting);
+    afterContent.addContent(2, "child");
+    expect(() => afterContent.addComponentParameter(3, "name", "x")).not.toThrow();
+    expect(() => new RenderTreeBuilder().addComponentParameter(0, "name", "x")).toThrow(message);
+
+    // It renders like a tag's attribute: the name matched case-insensitively.
+    class Host extends ComponentBase {
+      protected override buildRenderTree(builder: RenderTreeBuilder): void {
+        builder.openComponent(0, Greeting);
+        builder.addComponentParameter(1, "Name", "Grace");
+        builder.closeComponent();
+      }
+    }
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(Host, container);
+    await renderer.waitUntilIdle();
+    expect(container.textContent).toBe("Hello Grace");
   });
 
   it("wraps RenderFragment content in a region frame", () => {

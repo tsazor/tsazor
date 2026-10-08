@@ -1,0 +1,8 @@
+@import { html } from "./page"
+@import { fromHtml } from "./markup"
+
+@content
+
+@code {
+    readonly content = fromHtml(html);
+}
