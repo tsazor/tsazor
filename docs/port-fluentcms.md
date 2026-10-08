@@ -79,7 +79,7 @@ tests our library on a real app.
 | 1 | Shell | Setup, catch-all page, sections and plugins, admin and auth layouts, login/logout | Done except setup, register and password pages |
 | 2 | CRUD screens | Roles first (the pattern), then users, sites, layouts, blocks, API tokens, pages, plugin definitions, global settings | Done |
 | 3 | Files | Folders, upload (multipart), rename, move, the file picker | Done, except the file picker (`FileSelectorModal`): the content type fields use it, so it comes with phase 4 |
-| 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | |
+| 4 | Content types | Fields per type (8 types), content lists and forms built from the fields | 4a done: content types and their fields (each type's settings form through a DynamicComponent, the settings under FluentCMS's keys). Next: 4b contents, 4c the fields that need track B |
 | 5 | Public site (optional) | The view plugins, layouts with component tags | |
 
 **Codemod, per screen** (`tsazor codemod` over the original `.razor` files):
@@ -147,6 +147,7 @@ built; better components are a side effect.
 | 2 | API tokens (policies, show the secret, re-generate) | 1 (F23) | 0 |
 | 2 | Pages (the parent in a tree) | 0 | 1 (`TreeView`, new in `@tsazor/fluent`) |
 | 3 | Files (folders, upload, rename, move, delete) | 6 (F5, F25–F29) | 3 (`formData` in `@tsazor/dotnet`; `BreadcrumbItem.onClick` in both skins; `EventCallback.bind` takes `undefined`) |
+| 4a | Content types and their fields (8 settings forms) | 3 (F30–F32) | 2 (`Dialog.size` in `@tsazor/fluent`; `ImportsChain.root`) |
 
 ## Findings
 
@@ -183,6 +184,7 @@ built; better components are a side effect.
 | F29 | Tooling (DX) | `private filesTable?: FilesTable` for an `@ref` is TS2304: the tag resolves through `@using`, but a type in `@code` needs an `@import`, as in any TypeScript. That is by design (code is TS; the tutorial's component-refs lesson says so), and a first fix that resolved such names in the compiler was reverted. But every Blazor `@ref` field meets it, and the hint was generic | Fixed: the typed shadow records the `@import` each unbound name in `@code` needs (when the file's resolution finds it); TS2304 names it, and the language server inserts it after the directives as a quick fix (`@import type` when only types use the name) |
 | F30 | Runtime (DX) | FluentCMS cascades a `ContentTypeDetailResponse` by type. In Tsazor by type is `instanceof` (documented: TypeScript has no runtime types), and the generated client returns parsed JSON, never an instance of the model class, although the model *is* a class. So `@CascadingParameter({ type: ContentTypeDetailResponse })` compiles and stays unset without a word | Fixed: a dev warning, once per parameter, when a by-type parameter passes a plain-object cascade, naming the way out (by name); the tutorial's named-cascades lesson says so. The port cascades by name |
 | F31 | `@tsazor/fluent` | `Dialog` had a fixed width (560px); Bootstrap's takes `size`. The skins were meant to share their parameters, and FluentCMS edits a field's settings (three tabs) in a large dialog | Fixed: `size` in the Fluent dialog, Bootstrap's four sizes |
+| F32 | `@tsazor/workspace` (parity) | Tags resolved in the file's own directory and the `_Imports` directories only. In C# every enclosing namespace counts, so a Razor component in `ContentTypeManagement/Fields/` sees `ContentTypeManagement/FieldBasics` without `@using`; here it was TZS025 | Fixed: every directory up to the project root is an enclosing namespace (nearest wins) |
 | U1 | FluentCMS (upstream) | `File/Download?url=` looks a file's folder up by `uri.AbsolutePath`, which is escaped: a folder or file name with a space isn't served (500, `Folder.NotFound`). The port links files as the original does; the gate uses names without spaces | Upstream; not a Tsazor finding |
 
 **Notes from phase 3**

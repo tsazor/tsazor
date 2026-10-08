@@ -1,0 +1,25 @@
+@inherits BasePlugin
+@import { ContentTypeUpdateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="Update Content Type" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model!.title" label="Title" placeholder="Enter Title" required />
+    <TextArea @bind-Value="this.model!.description" label="Description" placeholder="Enter Description" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private model?: ContentTypeUpdateRequest;
+
+    protected override async onInitialized(): Promise<void> {
+        const contentType = ensureOk(await this.api.contentTypeGetById(this.id ?? ""));
+        this.model = Object.assign(new ContentTypeUpdateRequest(), { id: contentType.id, title: contentType.title ?? "", description: contentType.description });
+    }
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.contentTypeUpdate(this.model!));
+        this.navigateBack();
+    }
+}

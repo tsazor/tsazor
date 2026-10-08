@@ -1,0 +1,15 @@
+@* Deletes a field after asking (FluentCMS's ContentTypeFieldDelete). *@
+@inherits BaseContentTypeField
+@import { ensureOk } from "../../../api/api-result"
+@import { BaseContentTypeField } from "./BaseContentTypeField"
+
+<Confirm visible onConfirm="@this.confirm" onCancel="@onComplete">
+    Are you sure to delete <b>"@contentTypeField?.name"</b> field?
+</Confirm>
+
+@code {
+    private async confirm(): Promise<void> {
+        ensureOk(await this.api.contentTypeDeleteField(this.contentType!.id, this.contentTypeField!.name ?? ""));
+        await this.onComplete?.invokeAsync();
+    }
+}

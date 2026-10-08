@@ -1,0 +1,15 @@
+@* A single-file field's settings (FluentCMS's SingleFileFieldSettings). *@
+@inherits BaseFieldSettingView<SingleFileFieldModel>
+@import { BaseFieldSettingView } from "../BaseFieldSettingView"
+@import type { SingleFileFieldModel } from "../field-models"
+
+<FormModal visible title="@this.formTitle" size="large" model="@model" onSubmit="@this.submitForm" onCancel="@onCancel">
+    <Tabs ariaLabel="Field settings">
+        <Tab title="Basic">
+            <FieldBasics model="@model" />
+        </Tab>
+        <Tab title="View">
+            <FieldViewSettings model="@model" />
+        </Tab>
+    </Tabs>
+</FormModal>

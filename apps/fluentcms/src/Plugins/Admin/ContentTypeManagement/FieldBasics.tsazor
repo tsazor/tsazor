@@ -1,0 +1,18 @@
+@* What every field's Basic tab has (FluentCMS's field settings): the name (fixed once the field exists), the label
+   and whether it's required, then the type's own settings, then the description. *@
+@import type { AnyFieldModel } from "./field-models"
+@import { FIELD_STATE_CASCADE, type FieldManagementState } from "./BaseFieldSettingView"
+
+<div class="field-settings">
+    <TextInput @bind-Value="model.name" label="Name" placeholder="Enter Field Name" required disabled="@(this.currentState !== "create")" />
+    <TextInput @bind-Value="model.label" label="Label" placeholder="Enter Field Label" required />
+    <Switch @bind-Value="model.required" label="Required" />
+    @childContent
+    <TextArea @bind-Value="model.description" label="Description" placeholder="Enter Field Description" required />
+</div>
+
+@code {
+    @Parameter() model!: AnyFieldModel;
+    @Parameter() childContent?: RenderFragment;
+    @CascadingParameter({ name: FIELD_STATE_CASCADE }) currentState: FieldManagementState = "list";
+}

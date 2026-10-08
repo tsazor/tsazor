@@ -399,6 +399,65 @@ async function main() {
     await files.filter({ hasText: folderName }).waitFor({ state: "detached", timeout: 10_000 });
     check(true, "a file and a folder are deleted");
 
+    // Content types: a type, its fields through each type's settings form (a DynamicComponent), the settings
+    // stored under FluentCMS's keys and read back, a field and the type deleted.
+    const contentTypes = table("Content Types");
+    const fields = table("Fields");
+    const typeTitle = `Articles ${stamp}`;
+    await page.goto(`${APP}/admin/content-types`);
+    await page.getByRole("table", { name: "Content Types" }).waitFor({ timeout: 15_000 });
+    await page.getByRole("link", { name: "New Content Type" }).click();
+    await page.getByLabel("Slug").fill(`articles-${stamp}`);
+    await page.getByLabel("Title").fill(typeTitle);
+    await page.getByRole("button", { name: "Submit" }).click();
+    await contentTypes.filter({ hasText: typeTitle }).getByRole("link", { name: `Fields of ${typeTitle}` }).click();
+    await page.getByRole("heading", { name: "Content Type Fields" }).waitFor({ timeout: 10_000 });
+
+    const addField = async (typeName, values, advanced = {}) => {
+      await page.getByRole("button", { name: "New Field" }).click();
+      await page.getByRole("dialog", { name: "Select a field type" }).getByRole("button", { name: new RegExp(`^${typeName}`) }).click();
+      const form = page.getByRole("dialog", { name: "Create New Field" });
+      await form.waitFor({ timeout: 10_000 });
+      for (const [label, value] of Object.entries(values)) await form.getByLabel(label, { exact: true }).fill(value);
+      if (Object.keys(advanced).length > 0) {
+        await form.getByRole("tab", { name: "Advanced" }).click();
+        for (const [label, value] of Object.entries(advanced)) await form.getByLabel(label, { exact: true }).fill(value);
+      }
+      return form;
+    };
+    const title = await addField("String", { Name: "title", Label: "Title", Description: "The title", "Maximum Length": "80" });
+    const settingsViolations = await axe(page);
+    check(settingsViolations.length === 0, `axe on a field's settings form${settingsViolations.length ? `: ${settingsViolations.join(" | ")}` : ""}`);
+    await title.getByRole("button", { name: "Submit" }).click();
+    await fields.filter({ hasText: "title" }).waitFor({ timeout: 10_000 });
+    const color = await addField("Single Select", { Name: "color", Label: "Color", Description: "A color" }, { Options: "red\ngreen" });
+    await color.getByRole("button", { name: "Submit" }).click();
+    await fields.filter({ hasText: "color" }).waitFor({ timeout: 10_000 });
+    check((await fields.filter({ hasText: "color" }).innerText()).includes("Single Select"), "fields of two types, each through its own settings form");
+
+    await fields.filter({ hasText: "title" }).getByRole("button", { name: "Edit title" }).click();
+    const update = page.getByRole("dialog", { name: "Update Field" });
+    await update.waitFor({ timeout: 10_000 });
+    check(
+      (await update.getByLabel("Name", { exact: true }).isDisabled()) && (await update.getByLabel("Maximum Length").inputValue()) === "80",
+      "a field's settings come back from FluentCMS's keys (MaximumLength), its name fixed",
+    );
+    await update.locator("label", { hasText: "Required" }).click();
+    await update.getByRole("button", { name: "Submit" }).click();
+    await update.waitFor({ state: "detached", timeout: 10_000 });
+    await page.waitForFunction(() => [...document.querySelectorAll("table[aria-label=Fields] tbody tr")].some((row) => row.textContent?.includes("title") && row.textContent.includes("YES")), null, { timeout: 10_000 });
+    check(true, "an updated field is saved (required)");
+
+    await fields.filter({ hasText: "color" }).getByRole("button", { name: "Delete color" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await fields.filter({ hasText: "color" }).waitFor({ state: "detached", timeout: 10_000 });
+    await page.getByRole("button", { name: "Back" }).click();
+    await contentTypes.filter({ hasText: typeTitle }).waitFor({ timeout: 10_000 });
+    check((await contentTypes.filter({ hasText: typeTitle }).innerText()).includes("1"), "a field is deleted; the list counts the rest");
+    await contentTypes.filter({ hasText: typeTitle }).getByRole("button", { name: `Delete ${typeTitle}` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
+    await contentTypes.filter({ hasText: typeTitle }).waitFor({ state: "detached", timeout: 10_000 });
+
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();
     await page.getByRole("menuitem", { name: "Logout" }).click();

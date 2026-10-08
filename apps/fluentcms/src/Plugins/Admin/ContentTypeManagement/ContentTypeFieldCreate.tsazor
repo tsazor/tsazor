@@ -1,0 +1,29 @@
+@* A new field (FluentCMS's ContentTypeFieldCreate): first its type, then that type's settings form, shown through a
+   DynamicComponent. *@
+@inherits BaseContentTypeField
+@import type { ContentTypeField } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { BaseContentTypeField } from "./BaseContentTypeField"
+@import { newFieldModel, type FieldTypeKey } from "./field-models"
+@import { SETTINGS_VIEWS } from "./field-types"
+
+@if (this.settingsView === null) {
+    <ContentTypeFieldSelector onSelect="@this.selectType" onCancel="@onComplete" />
+} else {
+    <DynamicComponent Type="@this.settingsView" Parameters="@this.parameters" />
+}
+
+@code {
+    private settingsView: ComponentType | null = null;
+    private parameters: Record<string, unknown> = {};
+
+    private selectType(type: FieldTypeKey): void {
+        this.settingsView = SETTINGS_VIEWS[type];
+        this.parameters = { model: newFieldModel(type), onCancel: this.onComplete, onSubmit: EventCallback.bind(this, this.save) };
+    }
+
+    private async save(field: ContentTypeField): Promise<void> {
+        ensureOk(await this.api.contentTypeSetField(this.contentType!.id, field));
+        await this.onComplete?.invokeAsync();
+    }
+}

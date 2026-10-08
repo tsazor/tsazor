@@ -1,0 +1,28 @@
+@* What every field's View tab has (FluentCMS's field settings): whether and where the content list shows it, and
+   how; where the content form shows it, and how. *@
+@import { FIELD_TYPES, type AnyFieldModel, type FieldTypeInfo } from "./field-models"
+
+<div class="field-settings">
+    <Switch @bind-Value="model.dataTableVisible" label="Show in content list" />
+    <NumberInput @bind-Value="model.dataTableColumnOrder" label="Column order in list" placeholder="Enter column order number" required disabled="@(!model.dataTableVisible)" />
+    <Select @bind-Value="model.dataTableViewComponent" label="List view type" required>
+        @foreach (const option of this.fieldType.dataTableViews) {
+            <option value="@option.name">@option.title</option>
+        }
+    </Select>
+    <NumberInput @bind-Value="model.formColWidth" min="1" max="12" label="Column width (1-12)" placeholder="Enter column width" required />
+    <NumberInput @bind-Value="model.formViewOrder" label="View order in edit" placeholder="Enter view order in edit mode" required />
+    <Select @bind-Value="model.formViewComponent" label="Form view type" required>
+        @foreach (const option of this.fieldType.formViews) {
+            <option value="@option.name">@option.title</option>
+        }
+    </Select>
+</div>
+
+@code {
+    @Parameter() model!: AnyFieldModel;
+
+    private get fieldType(): FieldTypeInfo {
+        return FIELD_TYPES[this.model.type];
+    }
+}

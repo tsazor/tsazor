@@ -1,0 +1,24 @@
+@* A number field's settings (FluentCMS's NumberFieldSettings). *@
+@inherits BaseFieldSettingView<NumberFieldModel>
+@import { BaseFieldSettingView } from "../BaseFieldSettingView"
+@import type { NumberFieldModel } from "../field-models"
+
+<FormModal visible title="@this.formTitle" size="large" model="@model" onSubmit="@this.submitForm" onCancel="@onCancel">
+    <Tabs ariaLabel="Field settings">
+        <Tab title="Basic">
+            <FieldBasics model="@model">
+                <NumberInput @bind-Value="model.minimumValue" label="Minimum Value" placeholder="Enter Minimum value" />
+                <NumberInput @bind-Value="model.maximumValue" label="Maximum Value" placeholder="Enter Maximum value" />
+                <TextInput @bind-Value="model.placeholder" label="Placeholder" placeholder="Enter Field Placeholder" />
+            </FieldBasics>
+        </Tab>
+        <Tab title="View">
+            <FieldViewSettings model="@model" />
+        </Tab>
+        <Tab title="Advanced">
+            <FieldAdvanced model="@model">
+                <NumberInput @bind-Value="model.defaultValue" label="Default Value" placeholder="Enter default value" />
+            </FieldAdvanced>
+        </Tab>
+    </Tabs>
+</FormModal>

@@ -1,0 +1,77 @@
+@inherits BasePlugin
+@import type { ContentTypeDetailResponse, ContentTypeField } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+@import { CONTENT_TYPE_CASCADE, FIELD_STATE_CASCADE, type FieldManagementState } from "./BaseFieldSettingView"
+@import { FIELD_TYPES, isFieldType } from "./field-models"
+
+<PluginBody title="Content Type Fields">
+    <ActionsFragment>
+        <ActionButton icon="arrow-left" label="Back" @onclick="() => this.navigateBack()" />
+        <ActionButtonCreate label="New Field" @onclick="@this.createField" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.fields" ariaLabel="Fields">
+            <PropertyColumn property="(field) => field.name" title="Name" />
+            <PropertyColumn property="(field) => field.label" title="Label" />
+            <TemplateColumn title="Type" Context="field">
+                <Badge>@ContentTypeDetailPlugin.typeTitle(field)</Badge>
+            </TemplateColumn>
+            <TemplateColumn title="Required" Context="field"><YesNo value="@(field.required ?? false)" /></TemplateColumn>
+            <TemplateColumn title="Unique" Context="field"><YesNo value="@(field.unique ?? false)" /></TemplateColumn>
+            <PropertyColumn property="(field) => field.description" title="Description" />
+            <TemplateColumn title="Actions" Context="field">
+                <ActionButton label="Edit" intent="primary" aria-label="@(`Edit ${field.name}`)" @onclick="() => this.open('edit', field)" />
+                <ActionButtonDelete aria-label="@(`Delete ${field.name}`)" @onclick="() => this.open('delete', field)" />
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+@if (this.contentType !== undefined) {
+    <CascadingValue Value="@this.contentType" Name="@CONTENT_TYPE_CASCADE">
+        <CascadingValue Value="@this.state" Name="@FIELD_STATE_CASCADE">
+            @if (this.state === "create") {
+                <ContentTypeFieldCreate onComplete="@this.loadList" />
+            } else if (this.state === "edit") {
+                <ContentTypeFieldUpdate contentTypeField="@this.field" onComplete="@this.loadList" />
+            } else if (this.state === "delete") {
+                <ContentTypeFieldDelete contentTypeField="@this.field" onComplete="@this.loadList" />
+            }
+        </CascadingValue>
+    </CascadingValue>
+}
+
+@code {
+    @SupplyParameterFromQuery({ name: "id" }) id: string | null = null;
+
+    private contentType?: ContentTypeDetailResponse;
+    private state: FieldManagementState = "list";
+    private field?: ContentTypeField;
+
+    private get fields(): ContentTypeField[] {
+        return this.contentType?.fields ?? [];
+    }
+
+    private static typeTitle(field: ContentTypeField): string {
+        return isFieldType(field.type) ? FIELD_TYPES[field.type].title : field.type ?? "";
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        await this.loadList();
+    }
+
+    private async loadList(): Promise<void> {
+        this.state = "list";
+        this.field = undefined;
+        this.contentType = ensureOk(await this.api.contentTypeGetById(this.id ?? ""));
+    }
+
+    private createField(): void {
+        this.state = "create";
+    }
+
+    private open(state: "edit" | "delete", field: ContentTypeField): void {
+        this.field = field;
+        this.state = state;
+    }
+}

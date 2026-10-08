@@ -1,0 +1,20 @@
+@* A multi-select field's settings (FluentCMS's MultiSelectFieldSettings): its options, one per line. *@
+@inherits BaseFieldSettingView<MultiSelectFieldModel>
+@import { BaseFieldSettingView } from "../BaseFieldSettingView"
+@import type { MultiSelectFieldModel } from "../field-models"
+
+<FormModal visible title="@this.formTitle" size="large" model="@model" onSubmit="@this.submitForm" onCancel="@onCancel">
+    <Tabs ariaLabel="Field settings">
+        <Tab title="Basic">
+            <FieldBasics model="@model" />
+        </Tab>
+        <Tab title="View">
+            <FieldViewSettings model="@model" />
+        </Tab>
+        <Tab title="Advanced">
+            <FieldAdvanced model="@model">
+                <TextArea @bind-Value="model.options" label="Options" placeholder="Enter Select options (each item in new line)" required />
+            </FieldAdvanced>
+        </Tab>
+    </Tabs>
+</FormModal>

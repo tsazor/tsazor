@@ -1,0 +1,47 @@
+@inherits BasePlugin
+@import type { ContentTypeDetailResponse } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginBody title="Content Types">
+    <ActionsFragment>
+        <ActionButtonCreate href="@this.getUrl("Create ContentType")" label="New Content Type" />
+    </ActionsFragment>
+    <ChildContent>
+        <DataGrid items="@this.contentTypes" ariaLabel="Content Types">
+            <PropertyColumn property="(type) => type.slug" title="Slug" />
+            <PropertyColumn property="(type) => type.title" title="Title" />
+            <PropertyColumn property="(type) => type.description" title="Description" />
+            <PropertyColumn property="(type) => type.fields?.length ?? 0" title="Fields" />
+            <TemplateColumn title="Actions" Context="type">
+                <ActionButtonEdit href="@this.getUrl("Update ContentType", { id: type.id })" />
+                <ActionButton label="Fields" intent="success" href="@this.getUrl("View ContentType", { id: type.id })" aria-label="@(`Fields of ${type.title}`)" />
+                <ActionButton label="Contents" href="@this.getUrl("Contents List", { slug: type.slug ?? "" })" aria-label="@(`Contents of ${type.title}`)" />
+                <ActionButtonDelete aria-label="@(`Delete ${type.title}`)" @onclick="() => this.selected = type" />
+            </TemplateColumn>
+        </DataGrid>
+    </ChildContent>
+</PluginBody>
+
+<Confirm visible="@(this.selected !== undefined)" onConfirm="@this.delete" onCancel="() => this.selected = undefined">
+    Are you sure to delete this content type?
+</Confirm>
+
+@code {
+    private contentTypes: ContentTypeDetailResponse[] = [];
+    private selected?: ContentTypeDetailResponse;
+
+    protected override async onInitialized(): Promise<void> {
+        await this.load();
+    }
+
+    private async load(): Promise<void> {
+        this.contentTypes = ensureOk(await this.api.contentTypeGetAll({ siteId: this.viewState.site.id })) ?? [];
+    }
+
+    private async delete(): Promise<void> {
+        if (this.selected === undefined) return;
+        ensureOk(await this.api.contentTypeDelete(this.selected.id));
+        await this.load();
+        this.selected = undefined;
+    }
+}

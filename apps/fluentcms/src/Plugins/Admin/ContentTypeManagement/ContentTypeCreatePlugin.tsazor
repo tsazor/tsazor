@@ -1,0 +1,23 @@
+@inherits BasePlugin
+@import { ContentTypeCreateRequest } from "../../../api/models"
+@import { ensureOk } from "../../../api/api-result"
+
+<PluginForm model="@this.model" title="New Content Type" onSubmit="@this.submit">
+    <TextInput @bind-Value="this.model.slug" label="Slug" placeholder="Enter Slug" required />
+    <TextInput @bind-Value="this.model.title" label="Title" placeholder="Enter Title" />
+    <TextArea @bind-Value="this.model.description" label="Description" placeholder="Enter Description" />
+    <FormActions cancel submit />
+</PluginForm>
+
+@code {
+    private model = new ContentTypeCreateRequest();
+
+    protected override onInitialized(): void {
+        this.model.siteId = this.viewState.site.id;
+    }
+
+    private async submit(): Promise<void> {
+        ensureOk(await this.api.contentTypeCreate(this.model));
+        this.navigateBack();
+    }
+}

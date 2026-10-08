@@ -2,7 +2,7 @@
    DataAnnotations, the API's error when a submit fails, then Submit and Cancel. *@
 @import { DataAnnotationsValidator } from "@tsazor/runtime"
 
-<Dialog isOpen="@visible" title="@title" onClosed="@this.cancel">
+<Dialog isOpen="@visible" title="@title" size="@size" onClosed="@this.cancel">
     <ChildContent>
         @if (model !== undefined) {
             <FluentForm model="@model!" onValidSubmit="@this.submit">
@@ -25,6 +25,7 @@
 @code {
     @Parameter() visible = false;
     @Parameter() title = "";
+    @Parameter() size: "small" | "medium" | "large" | "xlarge" = "medium";
     @Parameter() model?: object;
     @Parameter() onSubmit?: EventCallback<EditContext>;
     @Parameter() onCancel?: EventCallback;
