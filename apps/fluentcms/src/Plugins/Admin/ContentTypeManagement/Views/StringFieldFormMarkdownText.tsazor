@@ -1,0 +1,8 @@
+@* A text field as Markdown (FluentCMS's StringFieldFormMarkdownText, which embeds EasyMDE). A JS widget would
+   prove what the rich text editor proves already (track B: one capability, one proof), so it is a text area
+   that says what it takes. *@
+@inherits BaseFieldValueView<string | null, StringFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { StringFieldModel } from "../field-models"
+
+<TextArea @bind-Value="fieldValue.value" label="@field.label" help="Markdown" placeholder="@(field.placeholder ?? undefined)" required="@field.required" minlength="@field.minimumLength" maxlength="@field.maximumLength" />

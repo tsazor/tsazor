@@ -1,0 +1,34 @@
+@* A field of several files (FluentCMS's MultiFileFieldFormFilesPicker): the chosen files, each removable, and Choose
+   File, which adds one through the file selector. *@
+@inherits BaseFieldValueView<string[], MultiFileFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { MultiFileFieldModel } from "../field-models"
+@import type { AssetDetail } from "../../../Base/assets"
+
+<fieldset class="file-picker">
+    <legend>@field.label</legend>
+    @foreach (const fileId of fieldValue.value) {
+        <div class="file-picker-file" @key="fileId">
+            <FileLink fileId="@fileId" />
+            <Button appearance="subtle" intent="danger" size="small" aria-label="Remove this file" onClick="() => this.remove(fileId)">Remove</Button>
+        </div>
+    }
+    <Button onClick="() => this.choosing = true">Choose File</Button>
+</fieldset>
+
+@if (this.choosing) {
+    <FileSelectorModal onSubmit="@this.chosen" onCancel="() => this.choosing = false" />
+}
+
+@code {
+    private choosing = false;
+
+    private chosen(file: AssetDetail): void {
+        if (!this.fieldValue.value.includes(file.id)) this.fieldValue.value = [...this.fieldValue.value, file.id];
+        this.choosing = false;
+    }
+
+    private remove(fileId: string): void {
+        this.fieldValue.value = this.fieldValue.value.filter((id) => id !== fileId);
+    }
+}

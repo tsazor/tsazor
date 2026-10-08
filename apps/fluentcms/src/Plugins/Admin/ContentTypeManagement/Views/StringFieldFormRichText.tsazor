@@ -1,0 +1,6 @@
+@* A text field as rich text (FluentCMS's StringFieldFormRichText): HTML, edited in Quill. *@
+@inherits BaseFieldValueView<string | null, StringFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { StringFieldModel } from "../field-models"
+
+<RichTextEditor @bind-value="fieldValue.value" label="@field.label" placeholder="@(field.placeholder ?? undefined)" />

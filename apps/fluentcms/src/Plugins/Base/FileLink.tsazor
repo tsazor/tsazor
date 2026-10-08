@@ -1,0 +1,30 @@
+@* A file by its id, as a link to where the site serves it (FluentCMS's file views load the file and the folders
+   above it for the path). *@
+@import { ensureOk } from "../../api/api-result"
+@import { downloadUrl } from "./assets"
+@inject FluentCmsClient Api
+
+@if (this.name !== undefined) {
+    <a href="@this.url" target="_blank" rel="noopener">@this.name</a>
+}
+
+@code {
+    @Parameter() fileId: string | null = null;
+
+    private name?: string;
+    private url = "";
+    private loaded: string | null = null;
+
+    protected override async onParametersSet(): Promise<void> {
+        if (this.fileId === this.loaded) return;
+        this.loaded = this.fileId;
+        this.name = undefined;
+        if (this.fileId === null) return;
+        const id = this.fileId;
+        const file = ensureOk(await this.Api.fileGetById(id));
+        const parents = ensureOk(await this.Api.folderGetParentFolders(file.folderId)) ?? [];
+        if (id !== this.loaded) return;
+        this.name = file.name ?? "";
+        this.url = downloadUrl(parents, { id, name: this.name, isFolder: false });
+    }
+}

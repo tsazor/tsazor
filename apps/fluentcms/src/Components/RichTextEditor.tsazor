@@ -1,0 +1,76 @@
+@* A rich text editor around Quill (FluentCMS's FormRichTextEditor; track B's proof that a component can embed a
+   JS widget). Quill owns the DOM inside the host element: an attachment creates it once, the value goes in
+   when it changes from outside, the user's edits come back through valueChanged (two-way), and the cleanup
+   lets it go with the element. *@
+@import Quill from "quill"
+@import "quill/dist/quill.snow.css"
+
+<div class="rich-text">
+    @if (label) {
+        <span class="rich-text-label" id="@this.labelId">@label</span>
+    }
+    <div class="rich-text-host" @attach="this.editor"></div>
+</div>
+
+@code {
+    /** The HTML. */
+    @Parameter() value: string | null = null;
+    @Parameter() valueChanged?: EventCallback<string | null>;
+    @Parameter() label?: string;
+    @Parameter() placeholder?: string;
+
+    private static readonly TOOLBAR = [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline", "strike"],
+        ["blockquote", "code-block"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link"],
+        ["clean"],
+    ];
+
+    private readonly labelId = `rich-text-${Math.random().toString(36).slice(2)}`;
+    private quill?: Quill;
+    /** The HTML the editor holds: a value equal to it came from the editor and isn't written back. */
+    private shown: string | null = null;
+
+    /** One function for the component's life: the same attachment every render, so Quill is made once. */
+    private readonly editor = (host: HTMLElement): (() => void) => {
+        // Quill puts its toolbar before the element it edits: give it one of its own inside the host.
+        const element = document.createElement("div");
+        host.append(element);
+        const quill = new Quill(element, { theme: "snow", placeholder: this.placeholder, modules: { toolbar: RichTextEditor.TOOLBAR } });
+        quill.root.setAttribute("role", "textbox");
+        quill.root.setAttribute("aria-multiline", "true");
+        if (this.label) quill.root.setAttribute("aria-labelledby", this.labelId);
+        // Quill's pickers are buttons without a name (axe: aria-command-name): name each after its format.
+        for (const picker of host.querySelectorAll<HTMLElement>(".ql-picker")) {
+            const format = [...picker.classList].find((name) => name.startsWith("ql-") && name !== "ql-picker")?.slice(3) ?? "format";
+            picker.querySelector(".ql-picker-label")?.setAttribute("aria-label", format === "header" ? "Heading" : format);
+        }
+        this.quill = quill;
+        this.write(this.value);
+        const changed = (): void => {
+            // The editor's HTML as FluentCMS's editor stores it (getSemanticHTML would turn spaces into &nbsp;).
+            const html = quill.getLength() <= 1 ? null : quill.root.innerHTML;
+            this.shown = html;
+            // Outside the renderer: an error in the handler goes to the ErrorBoundary by hand.
+            this.valueChanged?.invokeAsync(html).catch((error: unknown) => this.dispatchExceptionAsync(error));
+        };
+        quill.on("text-change", changed);
+        return () => {
+            quill.off("text-change", changed);
+            this.quill = undefined;
+            host.replaceChildren();
+        };
+    };
+
+    protected override onParametersSet(): void {
+        if (this.quill !== undefined && this.value !== this.shown) this.write(this.value);
+    }
+
+    /** The value into the editor, without raising text-change (it isn't the user's edit). */
+    private write(html: string | null): void {
+        this.shown = html;
+        this.quill?.setContents(this.quill.clipboard.convert({ html: html ?? "" }), "silent");
+    }
+}

@@ -413,12 +413,16 @@ async function main() {
     await contentTypes.filter({ hasText: typeTitle }).getByRole("link", { name: `Fields of ${typeTitle}` }).click();
     await page.getByRole("heading", { name: "Content Type Fields" }).waitFor({ timeout: 10_000 });
 
-    const addField = async (typeName, values, advanced = {}, selects = {}) => {
+    const addField = async (typeName, values, advanced = {}, selects = {}, view = {}) => {
       await page.getByRole("button", { name: "New Field" }).click();
       await page.getByRole("dialog", { name: "Select a field type" }).getByRole("button", { name: new RegExp(`^${typeName}`) }).click();
       const form = page.getByRole("dialog", { name: "Create New Field" });
       await form.waitFor({ timeout: 10_000 });
       for (const [label, value] of Object.entries(values)) await form.getByLabel(label, { exact: true }).fill(value);
+      if (Object.keys(view).length > 0) {
+        await form.getByRole("tab", { name: "View" }).click();
+        for (const [label, value] of Object.entries(view)) await form.getByLabel(label, { exact: true }).selectOption({ label: value });
+      }
       if (Object.keys(advanced).length + Object.keys(selects).length > 0) {
         await form.getByRole("tab", { name: "Advanced" }).click();
         for (const [label, value] of Object.entries(advanced)) await form.getByLabel(label, { exact: true }).fill(value);
@@ -459,7 +463,11 @@ async function main() {
     await addAndSubmit("Boolean", { Name: "done", Label: "Done", Description: "Finished" });
     await addAndSubmit("Date Time", { Name: "due", Label: "Due", Description: "When" }, {}, { Format: "dddd, dd MMMM yyyy" });
     await addAndSubmit("Multi Select", { Name: "tags", Label: "Tags", Description: "Tags" }, { Options: "news\nevents" });
-    await fields.filter({ hasText: "tags" }).waitFor({ timeout: 10_000 });
+    // Phase 4c: the views that need track B — rich text (Quill), an autocomplete, a file picker.
+    await addAndSubmit("String", { Name: "body", Label: "Body", Description: "The text" }, {}, {}, { "Form view type": "Rich Text Editor" });
+    await addAndSubmit("Multi Select", { Name: "topics", Label: "Topics", Description: "Topics" }, { Options: "design\ndevelopment\nevents" }, {}, { "Form view type": "Autocomplete" });
+    await addAndSubmit("Single File", { Name: "image", Label: "Image", Description: "An image" });
+    await fields.filter({ hasText: "image" }).waitFor({ timeout: 10_000 });
     await page.getByRole("button", { name: "Back" }).click();
     await contentTypes.filter({ hasText: typeTitle }).getByRole("link", { name: `Contents of ${typeTitle}` }).click();
     await page.getByRole("table", { name: "Contents" }).waitFor({ timeout: 15_000 });
@@ -472,14 +480,34 @@ async function main() {
     await page.locator("label", { hasText: "Done" }).click();
     await page.getByLabel("Due").fill("2024-06-12");
     await page.getByRole("group", { name: "Tags" }).getByLabel("news").check();
+    // Rich text: Quill, made by an @attach, hands the edit back through valueChanged.
+    await page.locator(".ql-editor").click();
+    await page.keyboard.type("Hello rich text");
+    // The autocomplete: type, pick with the keyboard, a chip.
+    const topics = page.getByRole("combobox", { name: "Topics" });
+    await topics.fill("even");
+    await page.getByRole("listbox", { name: "Topics" }).waitFor({ timeout: 10_000 });
+    const comboboxViolations = await axe(page);
+    check(comboboxViolations.length === 0, `axe with the autocomplete's listbox open${comboboxViolations.length ? `: ${comboboxViolations.join(" | ")}` : ""}`);
+    await topics.press("ArrowDown");
+    await topics.press("Enter");
+    await page.getByRole("button", { name: "Remove events" }).waitFor({ timeout: 10_000 });
+    // The file picker: the file selector dialog, a folder opened, a file picked.
+    await page.getByRole("group", { name: "Image" }).getByRole("button", { name: "Choose File" }).click();
+    const selector = page.getByRole("dialog", { name: "Choose File" });
+    await selector.getByRole("button", { name: "Open images" }).click();
+    await selector.getByRole("button", { name: "Select logo.svg" }).click();
+    await selector.waitFor({ state: "detached", timeout: 10_000 });
+    await page.getByRole("group", { name: "Image" }).getByRole("link", { name: "logo.svg" }).waitFor({ timeout: 10_000 });
     const contentViolations = await axe(page);
     check(contentViolations.length === 0, `axe on a content form built from its fields${contentViolations.length ? `: ${contentViolations.join(" | ")}` : ""}`);
     await page.getByRole("button", { name: "Submit" }).click();
     const row = contents.filter({ hasText: "First post" });
     await row.waitFor({ timeout: 10_000 });
+    await row.getByRole("link", { name: "logo.svg" }).waitFor({ timeout: 10_000 });
     const rowText = await row.innerText();
     check(
-      ["green", "3", "True", "Wednesday, 12 June 2024", "news"].every((text) => rowText.includes(text)),
+      ["green", "3", "True", "Wednesday, 12 June 2024", "news", "events", "Hello rich text"].every((text) => rowText.includes(text)),
       `a content in the list, each field through its list view and the date in its .NET format (${rowText.replace(/\s+/g, " ")})`,
     );
     await row.getByRole("link", { name: "Edit First post" }).click();
@@ -487,6 +515,13 @@ async function main() {
     check(
       (await page.getByLabel("Title").inputValue()) === "First post" && (await page.getByLabel("Due").inputValue()) === "2024-06-12" && (await page.getByRole("group", { name: "Tags" }).getByLabel("news").isChecked()),
       "the update form loads a content's values into each field's view",
+    );
+    await page.locator(".ql-editor").waitFor({ timeout: 10_000 });
+    check(
+      (await page.locator(".ql-editor").innerText()).includes("Hello rich text") &&
+        (await page.getByRole("button", { name: "Remove events" }).count()) === 1 &&
+        (await page.getByRole("group", { name: "Image" }).getByRole("link", { name: "logo.svg" }).count()) === 1,
+      "the value goes into Quill from outside; the autocomplete and the file picker show theirs",
     );
     await page.getByLabel("Title").fill("First post, edited");
     await page.getByRole("button", { name: "Submit" }).click();
@@ -504,7 +539,8 @@ async function main() {
     await fields.filter({ hasText: "color" }).waitFor({ state: "detached", timeout: 10_000 });
     await page.getByRole("button", { name: "Back" }).click();
     await contentTypes.filter({ hasText: typeTitle }).waitFor({ timeout: 10_000 });
-    check((await contentTypes.filter({ hasText: typeTitle }).innerText()).includes("5"), "a field is deleted; the list counts the rest");
+    // Slug, Title, Description, Fields: the fourth cell counts them.
+    check((await contentTypes.filter({ hasText: typeTitle }).locator("td").nth(3).innerText()).trim() === "8", "a field is deleted; the list counts the rest");
     await contentTypes.filter({ hasText: typeTitle }).getByRole("button", { name: `Delete ${typeTitle}` }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Yes, I'm sure" }).click();
     await contentTypes.filter({ hasText: typeTitle }).waitFor({ state: "detached", timeout: 10_000 });

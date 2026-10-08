@@ -1,0 +1,15 @@
+.rich-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rich-text-label {
+    font-weight: 600;
+}
+
+.rich-text-host ::deep .ql-container {
+    min-height: 160px;
+    font-family: inherit;
+    font-size: inherit;
+}

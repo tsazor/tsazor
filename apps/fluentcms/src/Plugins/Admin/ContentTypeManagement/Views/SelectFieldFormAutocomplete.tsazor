@@ -1,0 +1,6 @@
+@* A single-select field as an autocomplete (FluentCMS's SelectFieldFormAutocomplete). *@
+@inherits BaseFieldValueView<string | null, SelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import { selectOptions, type SelectFieldModel } from "../field-models"
+
+<Autocomplete TOption="string" items="@selectOptions(field.options)" multiple="false" label="@field.label" placeholder="@(field.placeholder ?? undefined)" @bind-selectedOption="fieldValue.value" />

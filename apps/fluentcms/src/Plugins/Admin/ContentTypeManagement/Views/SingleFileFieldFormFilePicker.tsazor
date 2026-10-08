@@ -1,0 +1,31 @@
+@* A file field (FluentCMS's SingleFileFieldFormFilePicker): the chosen file, or Choose File, which opens the file
+   selector. *@
+@inherits BaseFieldValueView<string | null, SingleFileFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import type { SingleFileFieldModel } from "../field-models"
+@import type { AssetDetail } from "../../../Base/assets"
+
+<fieldset class="file-picker">
+    <legend>@field.label</legend>
+    @if (fieldValue.value === null) {
+        <Button onClick="() => this.choosing = true">Choose File</Button>
+    } else {
+        <div class="file-picker-file">
+            <FileLink fileId="@fieldValue.value" />
+            <Button appearance="subtle" intent="danger" size="small" aria-label="@(`Remove the file of ${field.label}`)" onClick="() => this.fieldValue.value = null">Remove</Button>
+        </div>
+    }
+</fieldset>
+
+@if (this.choosing) {
+    <FileSelectorModal onSubmit="@this.chosen" onCancel="() => this.choosing = false" />
+}
+
+@code {
+    private choosing = false;
+
+    private chosen(file: AssetDetail): void {
+        this.fieldValue.value = file.id;
+        this.choosing = false;
+    }
+}

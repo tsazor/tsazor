@@ -1,0 +1,6 @@
+@* A multi-select field as an autocomplete with chips (FluentCMS's MultiSelectFieldFormAutocomplete). *@
+@inherits BaseFieldValueView<string[], MultiSelectFieldModel>
+@import { BaseFieldValueView } from "../BaseFieldValueView"
+@import { selectOptions, type MultiSelectFieldModel } from "../field-models"
+
+<Autocomplete TOption="string" items="@selectOptions(field.options)" label="@field.label" placeholder="@(field.placeholder || undefined)" @bind-selectedOptions="fieldValue.value" />

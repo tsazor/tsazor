@@ -20,15 +20,23 @@ import DateFieldFormDate from "./Views/DateFieldFormDate.tsazor";
 import DateFieldFormDateTime from "./Views/DateFieldFormDateTime.tsazor";
 import DateFieldFormTime from "./Views/DateFieldFormTime.tsazor";
 import FieldViewNotPorted from "./Views/FieldViewNotPorted.tsazor";
+import MultiFileFieldDataTableFiles from "./Views/MultiFileFieldDataTableFiles.tsazor";
+import MultiFileFieldFormFilesPicker from "./Views/MultiFileFieldFormFilesPicker.tsazor";
 import MultiSelectFieldDataTableBadges from "./Views/MultiSelectFieldDataTableBadges.tsazor";
+import MultiSelectFieldFormAutocomplete from "./Views/MultiSelectFieldFormAutocomplete.tsazor";
 import MultiSelectFieldFormCheckboxes from "./Views/MultiSelectFieldFormCheckboxes.tsazor";
 import NumberFieldDataTableView from "./Views/NumberFieldDataTableView.tsazor";
 import NumberFieldFormInput from "./Views/NumberFieldFormInput.tsazor";
 import NumberFieldFormRange from "./Views/NumberFieldFormRange.tsazor";
 import SelectFieldDataTableBadge from "./Views/SelectFieldDataTableBadge.tsazor";
+import SelectFieldFormAutocomplete from "./Views/SelectFieldFormAutocomplete.tsazor";
 import SelectFieldFormRadioGroup from "./Views/SelectFieldFormRadioGroup.tsazor";
 import SelectFieldFormSelect from "./Views/SelectFieldFormSelect.tsazor";
+import SingleFileFieldDataTableFile from "./Views/SingleFileFieldDataTableFile.tsazor";
+import SingleFileFieldFormFilePicker from "./Views/SingleFileFieldFormFilePicker.tsazor";
 import StringFieldDataTableView from "./Views/StringFieldDataTableView.tsazor";
+import StringFieldFormMarkdownText from "./Views/StringFieldFormMarkdownText.tsazor";
+import StringFieldFormRichText from "./Views/StringFieldFormRichText.tsazor";
 import StringFieldFormText from "./Views/StringFieldFormText.tsazor";
 import StringFieldFormTextArea from "./Views/StringFieldFormTextArea.tsazor";
 
@@ -51,6 +59,8 @@ export const SETTINGS_VIEWS: Readonly<Record<FieldTypeKey, ComponentType>> = {
 const FORM_VIEWS: Readonly<Record<string, ComponentType>> = {
     StringFieldFormText,
     StringFieldFormTextArea,
+    StringFieldFormRichText,
+    StringFieldFormMarkdownText,
     NumberFieldFormInput,
     NumberFieldFormRange,
     BooleanFieldFormSwitch,
@@ -60,7 +70,11 @@ const FORM_VIEWS: Readonly<Record<string, ComponentType>> = {
     DateFieldFormDateTime,
     SelectFieldFormSelect,
     SelectFieldFormRadioGroup,
+    SelectFieldFormAutocomplete,
     MultiSelectFieldFormCheckboxes,
+    MultiSelectFieldFormAutocomplete,
+    SingleFileFieldFormFilePicker,
+    MultiFileFieldFormFilesPicker,
 };
 
 /** The content list's views by the name a field stores (FluentCMS's FieldType.DataTableComponents). */
@@ -74,6 +88,8 @@ const DATA_TABLE_VIEWS: Readonly<Record<string, ComponentType>> = {
     DateFieldDataTableView,
     SelectFieldDataTableBadge,
     MultiSelectFieldDataTableBadges,
+    SingleFileFieldDataTableFile,
+    MultiFileFieldDataTableFiles,
 };
 
 /** A field view for a DynamicComponent: its type and its parameters. */

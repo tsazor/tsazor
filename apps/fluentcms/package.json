@@ -17,7 +17,8 @@
   "dependencies": {
     "@tsazor/dotnet": "workspace:*",
     "@tsazor/fluent": "workspace:*",
-    "@tsazor/runtime": "workspace:*"
+    "@tsazor/runtime": "workspace:*",
+    "quill": "^2.0.3"
   },
   "devDependencies": {
     "@tsazor/cli": "workspace:*",
