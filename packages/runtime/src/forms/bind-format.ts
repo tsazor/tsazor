@@ -22,31 +22,15 @@
  * - numbers: `F<n>` (fixed), `N<n>` (grouped), and the digit masks `0`,
  *   `0.00`, `#,##0.0` (decimal count from the mask, grouping when the mask
  *   holds a `,`). Anything else formats as the number's string.
- * - dates: the tokens `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`, `ss`, `M`, `d`,
- *   `H`, `m`, `s`; every other character is literal text.
+ * - dates: .NET's whole date and time format grammar, custom and standard,
+ *   in the invariant culture (date-format.ts).
  */
 import { CultureInfo, toCultureInfo } from "../localization/culture-info.js";
+import { formatDateTime, parseDateTime } from "./date-format.js";
 
 const NUMBER_MASK = /^[\d#,]*(?:\.[\d#]*)?$/;
 const FIXED = /^F(\d)?$/;
 const GROUPED = /^N(\d)?$/;
-
-type DatePart = "year" | "year2" | "month" | "day" | "hour" | "minute" | "second";
-
-const DATE_TOKENS: readonly (readonly [token: string, type: DatePart, pattern: string])[] = [
-  ["yyyy", "year", "([0-9]{4})"],
-  ["yy", "year2", "([0-9]{2})"],
-  ["MM", "month", "([0-9]{2})"],
-  ["dd", "day", "([0-9]{2})"],
-  ["HH", "hour", "([0-9]{2})"],
-  ["mm", "minute", "([0-9]{2})"],
-  ["ss", "second", "([0-9]{2})"],
-  ["M", "month", "([0-9]{1,2})"],
-  ["d", "day", "([0-9]{1,2})"],
-  ["H", "hour", "([0-9]{1,2})"],
-  ["m", "minute", "([0-9]{1,2})"],
-  ["s", "second", "([0-9]{1,2})"],
-];
 
 /**
  * .NET's BindConverter.FormatValue for the number/date subset; null/undefined → "".
@@ -67,7 +51,7 @@ export function formatValue(value: unknown, format: string | undefined, culture?
     const grouped = format.includes(",") || GROUPED.test(format) ? group(integral!) : integral!;
     return `${sign}${grouped}${fraction ? `.${fraction}` : ""}`;
   }
-  if (value instanceof Date) return formatDate(value, format ?? "yyyy-MM-dd");
+  if (value instanceof Date) return formatDateTime(value, format ?? "yyyy-MM-dd");
   return String(value);
 }
 
@@ -100,42 +84,6 @@ function group(integral: string): string {
   return integral.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-/** Formats a Date with the token subset (every other character literal). */
-function formatDate(date: Date, format: string): string {
-  const getters: Record<DatePart, string> = {
-    year: String(date.getFullYear()).padStart(4, "0"),
-    year2: String(date.getFullYear() % 100).padStart(2, "0"),
-    month: String(date.getMonth() + 1).padStart(2, "0"),
-    day: String(date.getDate()).padStart(2, "0"),
-    hour: String(date.getHours()).padStart(2, "0"),
-    minute: String(date.getMinutes()).padStart(2, "0"),
-    second: String(date.getSeconds()).padStart(2, "0"),
-  };
-  const singles: Record<DatePart, string> = {
-    year: String(date.getFullYear()),
-    year2: String(date.getFullYear() % 100).padStart(2, "0"),
-    month: String(date.getMonth() + 1),
-    day: String(date.getDate()),
-    hour: String(date.getHours()),
-    minute: String(date.getMinutes()),
-    second: String(date.getSeconds()),
-  };
-  let result = "";
-  let i = 0;
-  while (i < format.length) {
-    const token = DATE_TOKENS.find(([t]) => format.startsWith(t, i));
-    if (token) {
-      const [name, part] = token;
-      result += name === "M" || name === "d" || name === "H" || name === "m" || name === "s" ? singles[part]! : getters[part]!;
-      i += name.length;
-    } else {
-      result += format[i]!;
-      i++;
-    }
-  }
-  return result;
-}
-
 /**
  * .NET's BindConverter.TryParse for the subset: numbers parse invariant
  * (thousands separators and whitespace removed), dates parse by the format's
@@ -160,7 +108,7 @@ export function parseValue(text: string, format: string | undefined, culture?: s
     const parsed = Number(text.replace(/[,\s]/g, ""));
     return Number.isNaN(parsed) ? null : parsed;
   }
-  return parseDate(text, format);
+  return parseDateTime(text, format);
 }
 
 /** A number in the culture's grammar (separators from Intl); null when the text does not match it. */
@@ -193,34 +141,4 @@ function parseNumberCulture(text: string, info: CultureInfo): string | number | 
     .join(".");
   const parsed = Number(normalized);
   return Number.isNaN(parsed) ? null : parsed;
-}
-
-/** Parses a date by building a regex from the format's tokens (order mapped per group). */
-function parseDate(text: string, format: string): Date | null {
-  let source = "^";
-  const parts: DatePart[] = [];
-  let i = 0;
-  while (i < format.length) {
-    const token = DATE_TOKENS.find(([t]) => format.startsWith(t, i));
-    if (token) {
-      source += token[2];
-      parts.push(token[1]);
-      i += token[0].length;
-    } else {
-      source += format[i]!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      i++;
-    }
-  }
-  const match = new RegExp(`${source}$`).exec(text.trim());
-  if (!match) return null;
-  const values: Partial<Record<DatePart, number>> = {};
-  for (let j = 0; j < parts.length; j++) {
-    values[parts[j]!] = Number(match[j + 1]);
-  }
-  const year = values.year !== undefined ? values.year : values.year2 !== undefined ? 2000 + values.year2 : NaN;
-  const month = (values.month ?? 1) - 1;
-  const day = values.day ?? 1;
-  const date = new Date(year, month, day, values.hour ?? 0, values.minute ?? 0, values.second ?? 0);
-  if (Number.isNaN(date.getTime()) || date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
-  return date;
 }

@@ -53,8 +53,61 @@ describe("formatValue — dates", () => {
     expect(formatValue(new Date(2024, 11, 20), "M/d/yy")).toBe("12/20/24");
   });
 
-  it("every other character is literal text", () => {
-    expect(formatValue(date, "Tag yyyy/jahr?")).toContain("Tag 2024");
+  it("quoted text and escapes are literal; letters are specifiers, as in .NET", () => {
+    expect(formatValue(date, "'Tag' yyyy/\\j\\a\\h\\r?")).toBe("Tag 2024/jahr?");
+    expect(formatValue(date, '"at" h tt, g')).toBe("at 2 PM, A.D.");
+    expect(formatValue(date, "%d")).toBe("5");
+  });
+});
+
+describe("formatValue — .NET's whole date grammar, invariant (FluentCMS's date formats)", () => {
+  // DateFieldSettings' example date, and what .NET writes for it.
+  const example = new Date(2024, 5, 12, 19, 23, 40);
+  const offset = -example.getTimezoneOffset();
+  const zone = `${offset < 0 ? "-" : "+"}${String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0")}:${String(Math.abs(offset) % 60).padStart(2, "0")}`;
+
+  it("writes names, 12-hour clocks, fractions and offsets", () => {
+    const cases: Array<[string, string]> = [
+      ["MM/dd/yyyy", "06/12/2024"],
+      ["yyyy-MM-dd", "2024-06-12"],
+      ["dddd, dd MMMM yyyy", "Wednesday, 12 June 2024"],
+      ["MM/dd/yyyy HH:mm", "06/12/2024 19:23"],
+      ["MM/dd/yyyy hh:mm tt", "06/12/2024 07:23 PM"],
+      ["MMMM dd", "June 12"],
+      ["yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffffK", `2024-06-12T19:23:40.0000000${zone}`],
+      ["ddd, dd MMM yyy HH':'mm':'ss 'GMT'", "Wed, 12 Jun 2024 19:23:40 GMT"],
+      ["yyyy'-'MM'-'dd'T'HH':'mm':'ss", "2024-06-12T19:23:40"],
+      ["HH:mm", "19:23"],
+      ["hh:mm tt", "07:23 PM"],
+      ["H:mm", "19:23"],
+      ["h:mm tt", "7:23 PM"],
+      ["HH:mm:ss", "19:23:40"],
+      ["yyyy MMMM", "2024 June"],
+    ];
+    expect(cases.map(([format]) => formatValue(example, format))).toEqual(cases.map(([, text]) => text));
+  });
+
+  it("takes the standard one-letter formats, R and u in UTC", () => {
+    expect(formatValue(example, "D")).toBe("Wednesday, 12 June 2024");
+    expect(formatValue(example, "g")).toBe("06/12/2024 19:23");
+    expect(formatValue(example, "s")).toBe("2024-06-12T19:23:40");
+    expect(formatValue(example, "Y")).toBe("2024 June");
+    const instant = new Date(Date.UTC(2024, 5, 12, 17, 23, 40, 120));
+    expect(formatValue(instant, "u")).toBe("2024-06-12 17:23:40Z");
+    expect(formatValue(instant, "R")).toBe("Wed, 12 Jun 2024 17:23:40 GMT");
+    expect(formatValue(instant, "HH:mm:ss.fff FFFFFFF")).toMatch(/:23:40\.120 12$/);
+  });
+
+  it("parses them back: names, AM/PM, offsets and instants; a date that doesn't exist is null", () => {
+    expect(parseValue("Wednesday, 12 June 2024", "D")).toEqual(new Date(2024, 5, 12));
+    expect(parseValue("06/12/2024 07:23 PM", "MM/dd/yyyy hh:mm tt")).toEqual(new Date(2024, 5, 12, 19, 23));
+    expect(parseValue("12 jun 2024", "dd MMM yyyy")).toEqual(new Date(2024, 5, 12));
+    expect((parseValue("2024-06-12T19:23:40.1230000+02:00", "o") as Date).toISOString()).toBe("2024-06-12T17:23:40.123Z");
+    expect((parseValue("2024-06-12 17:23:40Z", "u") as Date).toISOString()).toBe("2024-06-12T17:23:40.000Z");
+    const time = parseValue("7:05 AM", "h:mm tt") as Date;
+    expect([time.getHours(), time.getMinutes(), time.getDate()]).toEqual([7, 5, new Date().getDate()]);
+    expect(parseValue("February 30", "MMMM dd")).toBeNull();
+    expect(parseValue("06/12/2024", "dddd")).toBeNull();
   });
 });
 

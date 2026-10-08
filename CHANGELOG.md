@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor parity** `@tsazor/runtime`: `@bind:format` (and `formatValue`/`parseValue`) take .NET's whole date and time
+  format grammar in the invariant culture: `ddd`/`dddd`, `MMM`/`MMMM`, `h`/`hh` with `t`/`tt`, `f`…`fffffff`, `F`…, `K`,
+  `z`/`zz`/`zzz`, `g`, quoted text, `\` escapes, `%`, and the standard formats (`d`, `D`, `f`, `F`, `g`, `G`, `M`, `o`,
+  `R`, `s`, `t`, `T`, `u`, `U`, `Y`). The subset knew `yyyy MM dd HH mm ss` and read every other letter as text, so
+  `dddd, dd MMMM yyyy` came out as `dddd, 05 0101 2024`. **Behavior change:** a letter that is a specifier in .NET
+  (`g`, `h`, `t`, …) now formats; quote literal text as in .NET.
 - **Blazor parity** `@tsazor/runtime`: `InputDate` takes `type` (Blazor's InputDateType: `date`, `datetime-local`,
   `month`, `time`). `@tsazor/fluent`, `@tsazor/bootstrap`: `DateInput` takes the same `type`.
 - **Fix** `@tsazor/runtime`: `InputDate` writes and reads a `Date` in local time, as .NET's DateTime has no zone. It
