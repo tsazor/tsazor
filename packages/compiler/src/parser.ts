@@ -1489,10 +1489,57 @@ class Parser {
       this.i = src.length;
       return null;
     }
+    const cut = this.cutAttributeValue(quoteAt, this.i, quote);
+    if (cut !== null) return cut;
     this.i++;
     pushText();
     if (parts.length === 0) return { kind: "code", code: "" };
     return { kind: "parts", parts };
+  }
+
+  /**
+   * F23: a quote inside an expression ends the attribute's value, as in Razor:
+   * `onClick="() => go(id, "x")"` ends after `go(id, `. When the value stops with a bracket
+   * still open and text follows the quote, that is the cause of everything after it: one
+   * error with the way out (single quotes around the attribute, or `@(…)`), and parsing goes
+   * on after the value that was meant. Returns null for a value that ends normally.
+   */
+  private cutAttributeValue(open: number, close: number, quote: string): { kind: "parts"; parts: ValuePart[] } | null {
+    const src = this.source;
+    const after = src[close + 1];
+    if (after === undefined || /[\s>]/.test(after) || (after === "/" && src[close + 2] === ">")) return null;
+    // The outermost bracket the value leaves open.
+    const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+    const openers: number[] = [];
+    for (let i = open + 1; i < close; i++) {
+      const ch = src[i]!;
+      if (pairs[ch] !== undefined) openers.push(i);
+      else if (")]}".includes(ch)) openers.pop();
+    }
+    const outermost = openers[0];
+    if (outermost === undefined) return null;
+    const balanced = this.ts.scanBalanced(outermost, src[outermost]!, pairs[src[outermost]!]!);
+    const end = balanced < 0 ? -1 : src.indexOf(quote, balanced);
+    if (end < 0) return null;
+    const value = src.slice(open + 1, end);
+    const other = quote === '"' ? "'" : '"';
+    const fix = value.includes(other)
+      ? { title: "Write the value as '@(…)'", edits: [{ ...this.range(open + 1, end), text: `@(${value})` }] }
+      : {
+          title: `Put the attribute in ${other === "'" ? "single" : "double"} quotes`,
+          edits: [
+            { ...this.range(open, open + 1), text: other },
+            { ...this.range(end, end + 1), text: other },
+          ],
+        };
+    this.diagnostics.error(
+      "TZS024",
+      this.range(close, close + 1),
+      `This ${quote} ends the attribute's value inside its expression (as in Razor). Put the attribute in ${other === "'" ? "single" : "double"} quotes, or write the value as '@(…)'.`,
+      fix,
+    );
+    this.i = end + 1;
+    return { kind: "parts", parts: [{ text: value, start: open + 1 }] };
   }
 
   /* ------------------------------------------------------------------ */

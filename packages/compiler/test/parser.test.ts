@@ -341,6 +341,30 @@ describe("parser — markup fidelity (A2)", () => {
     expect(JSON.stringify(doc.body)).toContain("after");
   });
 
+  it("a quote inside an expression ends the attribute's value, as in Razor: one TZS024 with the way out, no cascade", () => {
+    const { doc, diagnostics } = parse('<Child onClick="() => this.confirm(this.token, "delete")" />\n<p>after</p>');
+    expect(diagnostics.all.map((d) => `${d.code} ${d.message}`)).toEqual([
+      `TZS024 Invalid TypeScript expression. This " ends the attribute's value inside its expression (as in Razor). Put the attribute in single quotes, or write the value as '@(…)'.`,
+    ]);
+    expect(diagnostics.all[0]!.pos).toEqual({ line: 1, column: 47 });
+    expect(diagnostics.all[0]!.fix).toEqual({
+      title: "Put the attribute in single quotes",
+      edits: [
+        { pos: { line: 1, column: 15 }, endPos: { line: 1, column: 16 }, text: "'" },
+        { pos: { line: 1, column: 56 }, endPos: { line: 1, column: 57 }, text: "'" },
+      ],
+    });
+    // Parsing goes on after the value that was meant: the attribute holds it, the next element is there.
+    expect(JSON.stringify(doc.body)).toContain('() => this.confirm(this.token, \\"delete\\")');
+    expect(JSON.stringify(doc.body)).toContain("after");
+
+    // A value with both quotes in it gets '@(…)'; an ordinary value next to an attribute stays as it was.
+    const both = parse(`<button @onclick="() => go("it's")">x</button>`);
+    expect(both.diagnostics.all[0]!.fix?.edits[0]?.text).toBe(`@(() => go("it's"))`);
+    expect(parse('<p class="a"id="b">x</p>').diagnostics.all.filter((d) => d.code === "TZS024")).toEqual([]);
+    expect(parse(`<Child onClick='() => this.confirm(this.token, "delete")' />`).diagnostics.all).toEqual([]);
+  });
+
   it("a bare directive word in markup offers @(word); @attribute[…] stays the directive", () => {
     const { diagnostics } = parse("<p>Page @page of 7</p>");
     expect(diagnostics.all[0]!.message).toContain("To output a value named 'page', write '@(page)'.");

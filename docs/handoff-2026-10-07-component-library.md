@@ -22,8 +22,16 @@ everything pushed.
 > - **Phase 4 done:** content types and their field settings, contents built from 27 field views (rich text as an
 >   embedded Quill, `@tsazor/fluent`'s new Autocomplete, file pickers); findings F30–F35, upstream U2 (dates in the
 >   server's culture: the port's backend runs invariant).
-> - **Next:** the small open findings (F21, F23, F35); phase 5 (the public site) is optional. The freeze signal: four
->   phases in, the public API still grows with every phase (see the metrics), mostly as additions.
+> - **Phase 5 done (the public site):** the layouts stored in the CMS render in the browser (HTML with component
+>   tags, Scriban expressions, their scripts), with the seven view plugins. Their HTML is compared with FluentCMS's
+>   own render, character for character (the backend serves it for the site's host). The Scriban subset is checked
+>   against Scriban 5.12 itself. Findings: F36 (a tutorial lesson, "Markup with components"), F37
+>   (`addComponentParameter`), upstream U3 and U4. The site builder stays out of scope.
+> - **Small findings closed:** F21 (`onClosed` carries no event), F23 (Razor parity confirmed; one TZS024 with a quick
+>   fix instead of a cascade), F35 (`waitUntilIdle({ timeout })` names the pending work).
+> - **Next:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
+>   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
+>   three small API types, so the API still moves, but by now in small corrections.
 
 ## CI: blocked by GitHub billing, not by the code
 

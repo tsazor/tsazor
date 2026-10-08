@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler`: a `"` inside an expression ends a `"`-quoted attribute value, as in Razor
+  (`onClick="() => go(id, "x")"` ends after `go(id, `). That cut produced a cascade of TZS009 "Invalid attribute name"
+  errors. Now it is one TZS024 at the quote, saying so, with a quick fix (single quotes around the attribute, or
+  `@(…)` when the value holds both quotes), and parsing goes on after the value that was meant.
 - `@tsazor/runtime`: `Renderer.waitUntilIdle({ timeout })` rejects when the renderer isn't idle in time, naming the work
   still pending (`Still pending: Search: input handler.`); without `timeout` it waits as before. `track(promise, label)`
   names tracked work. `@tsazor/testing`: `render`, `click`, `change`, `settle` and `rerender` wait 4 s, under vitest's
