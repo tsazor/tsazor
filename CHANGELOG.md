@@ -14,6 +14,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - `cssClass` still works, but is deprecated in favor of `class`.
   - A link with neither a class nor the active state now renders no `class` attribute (it was
     `class=""`).
+- **Fix** `@tsazor/bootstrap`, `@tsazor/fluent`: `sideEffects` in `package.json`. An app that uses a few
+  components no longer bundles the whole library. The starter's app with Bootstrap went from 66.7 KB gz
+  to 30.7 KB gz.
 - `@tsazor/bootstrap` `addBootstrap` and `@tsazor/fluent` `addFluent`: they register the services the
   components use (the `Toaster`) in one call, `createTsazorApp({ services: addBootstrap })`. This is
   Blazor's `AddMudServices()`.

@@ -20,6 +20,9 @@
     "./fluent.css": "./dist/fluent.css",
     "./tsazor-components.json": "./dist/tsazor-components.json"
   },
+  "sideEffects": [
+    "*.css"
+  ],
   "tsazor": {
     "components": "./dist/tsazor-components.json",
     "setup": {

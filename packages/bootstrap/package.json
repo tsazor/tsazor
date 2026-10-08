@@ -19,6 +19,7 @@
     },
     "./tsazor-components.json": "./dist/tsazor-components.json"
   },
+  "sideEffects": false,
   "tsazor": {
     "components": "./dist/tsazor-components.json",
     "setup": {
