@@ -47,6 +47,7 @@
     @Parameter() label?: string;
     /** The input's accessible name when there is no label. */
     @Parameter() ariaLabel?: string;
+    /** The input's hint while it's empty. */
     @Parameter() placeholder?: string;
     /** The options, searched by their text; or leave it out and answer `onOptionsSearch`. */
     @Parameter() items?: TOption[];
@@ -60,16 +61,23 @@
     @Parameter() optionTemplate?: (option: TOption) => RenderFragment;
     /** Several values (chips), the default; false for one. */
     @Parameter() multiple: boolean = true;
+    /** The values, with `multiple` (bind with `@bind-selectedOptions`). */
     @Parameter() selectedOptions: TOption[] = [];
+    /** Raised with the values when the user adds or removes one. */
     @Parameter() selectedOptionsChanged?: EventCallback<TOption[]>;
+    /** The value, without `multiple` (bind with `@bind-selectedOption`). */
     @Parameter() selectedOption: TOption | null = null;
+    /** Raised with the value when the user picks one. */
     @Parameter() selectedOptionChanged?: EventCallback<TOption | null>;
     /** At most this many values. */
     @Parameter() maximumSelectedOptions?: number;
     /** At most this many options in the list (Fluent UI Blazor's MaximumOptionsSearch). */
     @Parameter() maximumOptionsSearch: number = 9;
+    /** Disables the input and the chips' remove buttons. */
     @Parameter() disabled: boolean = false;
+    /** The input's id; generated when omitted. */
     @Parameter() id?: string;
+    /** `@attributes` pass-through to the root (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private readonly generatedId = uniqueId("fui-autocomplete");
