@@ -25,9 +25,15 @@ know first.
    and added again (F38).
 5. **Test in Edge, Firefox and WebKit.** Blazor's own suites run in Chrome only. WebKit found two bugs that Blazor
    11 has too (Virtualize A11, A12; [design-virtualize.md](design-virtualize.md) §6), and Safari users meet them.
+   Firefox and WebKit found a third that Edge's timing hid (A16: a live feed pulled the reader back to the bottom).
 6. **Port the original's tests where they exist.** Blazor's Virtualize suite became Tsazor's parity gate
    (`apps/blazor-parity`). A test that fails only sometimes can be a real race: run it in a loop before you call
-   it flaky (A12).
+   it flaky (A12, A15).
+   - Port the skipped and quarantined tests too, and run them. Two of Blazor's marked real bugs (#66509,
+     #68777), fixed in Tsazor (A6, A13).
+7. **Debug a race with a log, not a debugger.** Stopping the code changes the timing, and the race goes away. Push
+   the events (observer reports, decisions, scroll positions) into an array on `globalThis` and print it in the
+   test's failure message. One failing run then shows the cause: that found A13, A14 and A15.
 
 ## From static SSR to an SPA
 
@@ -75,10 +81,14 @@ render in the browser.
   never class instances. Cascade such values by name (F30).
 - **Value equality.** C# records and `IEquatable` compare by value; TypeScript compares objects by reference.
   Where Blazor relies on equality, give a key: `ItemKey` for rows, `ItemComparer: (a, b) => a.id === b.id` for a
-  virtualized provider list. A provider that returns fresh objects otherwise looks like a prepend every time.
+  virtualized provider list. With fresh objects from the provider and no comparer, every load that changes the
+  count looks like a prepend, and rows deleted above the viewport go unnoticed (A6).
 - **Cancellation and tasks.** `CancellationToken` is `AbortSignal` (`request.signal`), and `Task` is `Promise`.
   Tsazor keeps Blazor's semantics: a superseded `scrollToItem` resolves, and only the caller's own abort rejects.
 - **Enums** stay enums, and `[Flags]` combinations with `|` work (`VirtualizeAnchorMode.Start | End`).
+- **Generic components infer like Razor.** `TGridItem` comes from `Items` or from `ItemsProvider` (a
+  `GridItemsProvider<Person>` field), and cascades to the columns. Where nothing can be inferred, the errors in the
+  columns carry Razor's RZ10001 as their hint: set the type argument on the grid (`TGridItem="Person"`).
 - **Attribute values.** A `"` inside a bare lambda attribute ends the value: write `@(...)` (F23).
 - **What just works:**
   - a static through the component's own class name (F19);
@@ -91,10 +101,17 @@ render in the browser.
 - **Map the component library** (Fluent UI Blazor, MudBlazor) to `@tsazor/fluent` or `@tsazor/bootstrap`. A
   missing component is a finding: the completeness plan ([design-library-completeness.md](design-library-completeness.md))
   closes the gaps before 1.0. Icons are the first wall (F17).
+- **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then
+  `new Icons.Regular.Size20.Save()` becomes `Icons.Regular.Size20.Save`: a shared value, not an instance per use.
+  `<FluentIcon Value="…" Width="24px" />` becomes `<Icon Value="…" size="24" />`. An app's own icon is
+  `icon("name", svg)` from `@tsazor/ui` (Fluent UI Blazor's `new Icon(name, variant, size, content)`). Only the
+  icons a page uses reach its bundle.
 - **Virtualize and QuickGrid** take Blazor 11's parameters.
   - `Items` is an array, and an `ItemsProvider` gets `request.signal`.
   - Rows may differ in height: they are measured.
   - `AnchorMode.End` follows a feed or a chat.
+  - `await scrollToItem(i)` resolves once the rows around the target fill the viewport (A15), so code after the
+    `await` sees the final rows.
   - The DataGrid passes the same parameters as QuickGrid 11.
 - **Await the callbacks you invoke.** Return or await an `EventCallback`'s promise, so an async handler's error
   reaches the `ErrorBoundary` and a test can wait for it (F11, F28).

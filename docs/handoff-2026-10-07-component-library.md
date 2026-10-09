@@ -67,17 +67,33 @@ everything pushed.
 >   dogfood's feed and chat are parity work. Decided for Virtualize: aliases for `Overscan`/`ItemTemplate`, fix all of
 >   Blazor's probable bugs (each a test), port all of Blazor's tests (new gate app `apps/blazor-parity`), DataGrid as
 >   QuickGrid 11.
-> - **Virtualize at Blazor 11 parity (2026-10-09, in progress):**
+> - **Virtualize at Blazor 11 parity (2026-10-09, done):**
 >   - Committed: `5c6062b` (the port, both DataGrids as QuickGrid 11, `@tsazor/testing` renders like bUnit, Blazor's
 >     47 unit tests) and `cd74706` (the new gate app `apps/blazor-parity` with Blazor's own E2E suite).
 >     Groups A–F, I and J are green in Edge, Firefox and WebKit, 128 cases each.
->   - Tsazor fixes twelve Blazor bugs (A1–A12, design-virtualize.md §6). The gate found A11 (WebKit drift in the
+>   - Tsazor fixes sixteen Blazor bugs (A1–A16, design-virtualize.md §6). The gate found A11 (WebKit drift in the
 >     manual anchoring Safari always uses) and A12 (Home soon after End was pulled back to the bottom).
->   - Open:
->     - groups G, H, K, M and the 33 QuickGrid tests (L) against both skins (an agent was porting them);
->     - the tutorial lessons "Long lists" and "A live feed" (ch12 Special components, flag `layoutOnly`) are
->       written with claims tests and browser checks, but not yet run in the tutorial gate or committed;
->     - then icons (F17) and Markdown.
+>   - **Groups G, H, K, M and QuickGrid (L, both skins) ported (2026-10-09, late):** 513 cases per browser. They
+>     found four more component bugs, fixed with unit tests: A6 with a provider (a delete above wasn't found), A13 (a
+>     user scroll didn't cancel a pending `scrollToItem`; quarantined in Blazor), A14 (rows replacing placeholders
+>     moved the visible row), A15 (an Edge race: `scrollToItem` grew the window once and ran away from its target).
+>     And a compiler gap: `TGridItem` wasn't inferred from `ItemsProvider` (`e983d1e`; where nothing can be
+>     inferred, the errors now carry Razor's RZ10001 as their hint). Commits `88e11a5`, `c0de536`.
+>   - The tutorial lessons "Long lists" and "A live feed" (ch12, flag `layoutOnly`; `d4998a4`). The feed's browser
+>     check found A16 in Firefox and WebKit (`955c9bb`): a reader who scrolled up was pulled back to the bottom,
+>     because a scroll during a convergence, or after a pin that didn't move, was swallowed.
+> - **Icons (F17, wave A; [design-icons.md](design-icons.md)), 2026-10-09 night:** steps 1–3 of 6 done.
+>   - `c497ae8`: `IconValue` and `icon()` in `@tsazor/ui` (an app's own icons); both skins' `Icon` take `value`,
+>     `color`, `title`; `@tsazor/bootstrap` got `Icon`.
+>   - `15c1001`: `@tsazor/fluent-icons` (20,786 Fluent System Icons, `Icons.Regular.Size20.Save`, generated from
+>     `@fluentui/svg-icons`); `35a1c3f`: `@tsazor/bootstrap-icons` (2,078, `Icons.Alarm`). Tree-shaking proved by a
+>     Vite build test (nested `export * as` namespaces: Rollup keeps only the reached icon).
+>   - Next: step 4 (icon slots `IconStart`/`IconEnd` on Button, MenuItem, NavLink, Tab, TreeItem, Badge; the skins'
+>     own icons from the generated sets — D-I3), 5 (gallery icon browser, codemod rule
+>     `new Icons.X.Y.Z()` → `Icons.X.Y.Z`), 6 (FluentCMS uses the original's icons; F17 closes). Then Markdown.
+>   - Lockfile: a new external dependency is staged as HEAD's `pnpm-lock.yaml` plus its importer block and its
+>     `packages:` and `snapshots:` entries (written to a temp file, `git hash-object -w`, `git update-index
+>     --cacheinfo`), so the owner's `fluentcms-admin` WIP stays out.
 > - **Before that:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
