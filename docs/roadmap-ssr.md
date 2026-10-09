@@ -55,6 +55,14 @@ scale"). That needs fast first paint, SEO and small per-page JavaScript, which S
 ### S4 — .NET integration
 - Templates: the SSR service behind YARP, or as an Aspire resource next to the ASP.NET API.
 - `@tsazor/dotnet` clients usable during SSR (server-side fetch, cookie/JWT passthrough).
+- **Option: rendering inside the ASP.NET process** (owner, 2026-10-09; post-1.0, to be decided after S2).
+  ASP.NET runs no TypeScript, but it can run the compiled JS in an embedded engine: ClearScript
+  (Microsoft's V8 binding for .NET, which ReactJS.NET used for React SSR) or Jint (a JS interpreter in
+  .NET, slower). One process, as with Blazor, and no Node in production.
+  - Cost: native V8 binaries per platform, a pool of engines for parallel requests, and no Node API.
+    `fetch` and streams need a bridge into .NET.
+  - In return, that bridge can call the ASP.NET endpoints in-process, without HTTP.
+  - Microsoft's own Node bridge (`NodeServices`/`SpaServices`) was removed in .NET 5, so it is not an option.
 
 ## Gates
 - Hydration conformance suite: for every conformance component, the SSR output hydrates
