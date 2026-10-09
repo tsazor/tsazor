@@ -171,6 +171,16 @@ export interface TypedTagInferenceRequest {
   value: SourcePos;
 }
 
+/** A generic tag whose type arguments stay open: neither set, inferred nor cascaded (Razor's RZ10001). */
+export interface UninferredTypeArguments {
+  tagName: string;
+  /** The open type parameters (those without a default). */
+  typeParameters: string[];
+  /** The element, from `<Tag` to its end: errors inside it get the hint. */
+  start: SourcePos;
+  end: SourcePos;
+}
+
 export interface CodegenResult {
   code: string;
   mappings: Array<{ genLine: number; genCol: number; srcLine: number; srcCol: number }>;
@@ -201,6 +211,8 @@ export interface CodegenResult {
   };
   /** 2.4: the tag-level TItem inference requests (shadow layer only). */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** The generic tags with open type arguments (shadow layer only). */
+  uninferredTypeArguments?: readonly UninferredTypeArguments[];
   /** 2.4: plain-text values read as expressions (shadow layer only) — see expression-values.ts. */
   expressionValues?: readonly ExpressionValue[];
   /** F29: the `@import` each unbound name in `@code` would need (shadow layer only) — see import-suggestions.ts. */
@@ -345,9 +357,12 @@ class Codegen {
   private tagTypeArgsOrder: readonly string[] | undefined;
   /** `@CascadingTypeParameter`: the type arguments the enclosing component tags pass down, by name. */
   private cascadedTypeArgs: ReadonlyMap<string, string> = new Map();
+  /** Cascading type parameters an enclosing tag left open: that tag, not the ones inside, gets the RZ10001 hint. */
+  private openCascadedTypeArgs: ReadonlySet<string> = new Set();
   /** `import type` lines the shadow module needs for the parameter types. */
   private readonly shadowTypeImports = new Map<string, { specifier: string; imported?: string }>();
   private readonly inferenceRequests: TypedTagInferenceRequest[] = [];
+  private readonly uninferredTypeArguments: UninferredTypeArguments[] = [];
   /** 2.4: plain-text values of non-string parameters (typed-shadow builds only). */
   private readonly expressionValues: ExpressionValue[] = [];
   private readonly importSuggestions: ImportSuggestion[] = [];
@@ -639,6 +654,7 @@ class Codegen {
       mappings: this.takeMappings(),
       metadata: this.metadata,
       ...(this.options.typedShadow !== undefined && this.inferenceRequests.length > 0 ? { typedInference: this.inferenceRequests } : {}),
+      ...(this.uninferredTypeArguments.length > 0 ? { uninferredTypeArguments: this.uninferredTypeArguments } : {}),
       ...(this.expressionValues.length > 0 ? { expressionValues: this.expressionValues } : {}),
       ...(this.importSuggestions.length > 0 ? { importSuggestions: this.importSuggestions } : {}),
     };
@@ -1918,17 +1934,19 @@ class Codegen {
     }
 
     // 2.4 inference: an unresolved type parameter anchors on the attribute
-    // whose declared type uses it (`Items: TItem[]` ← `Items="this.people"`).
+    // whose declared type uses it (`Items: TItem[]` ← `Items="this.people"`):
+    // the first such parameter the tag sets, as Razor takes any of them (a
+    // grid with `ItemsProvider` instead of `Items`).
     for (const typeParameter of metadata.typeParameters) {
       if (args.has(typeParameter.name)) continue;
-      const parameter = metadata.parameters.find((p) => p.category === "value" && !p.uncertain && (p.references ?? []).some((ref) => ref.kind === "typeParameter" && ref.name === typeParameter.name) && (p.type !== undefined || p.inferredType !== undefined));
+      const parameter = metadata.parameters.find((p) => p.category === "value" && !p.uncertain && (p.references ?? []).some((ref) => ref.kind === "typeParameter" && ref.name === typeParameter.name) && (p.type !== undefined || p.inferredType !== undefined) && regularAttributeFor(p.name) !== undefined);
       if (!parameter) continue;
       // The value's type is read once its other type parameters are known: a
       // lambda (`Property: (item: TGridItem) => TProp`) is typed by them.
       if ((parameter.references ?? []).some((ref) => ref.kind === "typeParameter" && ref.name !== typeParameter.name && !args.has(ref.name))) continue;
-      const attr = regularAttributeFor(parameter.name);
-      const value = attr !== undefined ? this.expressionValue(attr) : null;
-      if (attr === undefined || value === null || value.start === undefined) continue;
+      const attr = regularAttributeFor(parameter.name)!;
+      const value = this.expressionValue(attr);
+      if (value === null || value.start === undefined) continue;
       this.inferenceRequests.push({
         tagId: `${node.pos.line}:${node.pos.column}`,
         tagName: node.tagName,
@@ -1937,6 +1955,12 @@ class Codegen {
         parameterType: parameter.type ?? parameter.inferredType!,
         value: value.start,
       });
+    }
+
+    // What stays open after this pass: the type layer's errors inside the tag get Razor's RZ10001 as a hint.
+    const open = metadata.typeParameters.filter((typeParameter) => !args.has(typeParameter.name) && typeParameter.default === undefined);
+    if (open.length > 0 && !open.some((typeParameter) => this.openCascadedTypeArgs.has(typeParameter.name))) {
+      this.uninferredTypeArguments.push({ tagName: node.tagName, typeParameters: open.map((typeParameter) => typeParameter.name), start: node.pos, end: node.endPos });
     }
 
     return args;
@@ -2101,6 +2125,7 @@ class Codegen {
     // Its content sees the tag's cascading type arguments; an unresolved one
     // hides an outer cascade of the same name (that one is not this grid's).
     const previousCascade = this.cascadedTypeArgs;
+    const previousOpenCascade = this.openCascadedTypeArgs;
     const cascading = component.metadata?.cascadingTypeParameters ?? [];
     if (cascading.length > 0) {
       const next = new Map(previousCascade);
@@ -2110,6 +2135,12 @@ class Codegen {
         else next.delete(name);
       }
       this.cascadedTypeArgs = next;
+      const open = new Set(previousOpenCascade);
+      for (const name of cascading) {
+        if (tagTypeArgs?.get(name) === undefined) open.add(name);
+        else open.delete(name);
+      }
+      this.openCascadedTypeArgs = open;
     }
 
     const seq = this.seq();
@@ -2173,6 +2204,7 @@ class Codegen {
     this.tagTypeArgs = previousTagArgs;
     this.tagTypeArgsOrder = previousOrder;
     this.cascadedTypeArgs = previousCascade;
+    this.openCascadedTypeArgs = previousOpenCascade;
   }
 
   /**

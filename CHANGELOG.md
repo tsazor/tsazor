@@ -24,6 +24,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     scrollTop in whole pixels), and Home pressed soon after End reaches the top.
   - `@tsazor/testing` renders a Virtualize's rows up to `MaxItemCount` as bUnit does, since a test DOM has no
     layout.
+- `@tsazor/compiler`: a generic component's type argument is inferred from whichever parameter the tag sets, and
+  from a type argument of a generic type, as Razor infers it: `<DataGrid ItemsProvider="@provider">` with a
+  `GridItemsProvider<Person>` field gives `TGridItem` = `Person`, and the columns inside get it. Before, only the
+  first parameter that uses the type parameter was tried (`Items`), so such a grid needed `TGridItem="Person"`.
+  Where a tag's type arguments can't be inferred, the type errors inside it say so and name the fix, as Razor's
+  RZ10001 does (new in the compile result: `uninferredTypeArguments`). Before, a column's lambda showed its row as a
+  `RenderTreeBuilder` without a word about the cause.
 - `@tsazor/bootstrap`, `@tsazor/fluent`: the virtualized DataGrid passes `AnchorMode`, `ItemComparer` and
   `InitialItemIndex` as QuickGrid 11 does, and has `scrollToItem`.
   - Rows keep their element when the window slides (`@key`).

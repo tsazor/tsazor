@@ -9,7 +9,7 @@
  * worse, it only covers @code and expressions, which v1 does not.
  */
 import * as ts from "typescript";
-import { explainExpressionValue, explainTypeScriptError, unresolvedName, type ImportSuggestion } from "@tsazor/compiler";
+import { explainExpressionValue, explainTypeScriptError, unresolvedName, type ImportSuggestion, type UninferredTypeArguments } from "@tsazor/compiler";
 import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
 import { readFileSync } from "node:fs";
@@ -467,7 +467,7 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
       endCharacter,
       code: diag.code,
       // S4: a plain-language hint for the common errors, unless the value explanation already applies.
-      message: explainTypeScriptError(
+      message: withUninferredHint(
         diag.code,
         explainExpressionValue(
           diag.code,
@@ -475,12 +475,30 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
           { line: src.line + 1, column: src.character },
           entry.shadow.expressionValues,
         ),
+        { line: src.line + 1, column: src.character },
+        entry,
       ),
     });
     if (results.length >= cap) break;
   }
   return results;
 }
+/**
+ * Razor's RZ10001 as the hint: an error inside a generic tag whose type arguments stay open (a grid's columns typed
+ * without the row type) names the cause and the fix, instead of S4's general hint. The innermost such tag wins.
+ */
+function withUninferredHint(code: number, message: string, at: { line: number; column: number }, entry: ShadowEntry): string {
+  const before = (a: { line: number; column: number }, b: { line: number; column: number }): boolean =>
+    a.line < b.line || (a.line === b.line && a.column <= b.column);
+  const tag = (entry.shadow.uninferredTypeArguments ?? [])
+    .filter((candidate) => before(candidate.start, at) && before(at, candidate.end))
+    .reduce<UninferredTypeArguments | undefined>((inner, candidate) => (inner === undefined || before(inner.start, candidate.start) ? candidate : inner), undefined);
+  if (tag === undefined) return explainTypeScriptError(code, message);
+  const names = tag.typeParameters.map((name) => `'${name}'`).join(", ");
+  const example = tag.typeParameters.map((name) => `${name}="…"`).join(" ");
+  return `${message} Hint: the type arguments of <${tag.tagName}> (${names}) can't be inferred from the values given (Razor's RZ10001). Set them on the tag: <${tag.tagName} ${example}>.`;
+}
+
 /* ------------------------------------------------------------------ */
 /* F29: the @import a name in @code lacks                              */
 /* ------------------------------------------------------------------ */

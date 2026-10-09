@@ -230,6 +230,7 @@ export interface CodegenResult {
         codeBehindClass?: string;
     };
     typedInference?: readonly TypedTagInferenceRequest[];
+    uninferredTypeArguments?: readonly UninferredTypeArguments[];
     expressionValues?: readonly ExpressionValue[];
     importSuggestions?: readonly ImportSuggestion[];
 }
@@ -266,6 +267,7 @@ export interface CompileResult {
     diagnostics: DiagnosticBag;
     metadata: CodegenResult["metadata"];
     typedInference?: readonly TypedTagInferenceRequest[];
+    uninferredTypeArguments?: readonly UninferredTypeArguments[];
     expressionValues?: readonly ExpressionValue[];
     importSuggestions?: readonly ImportSuggestion[];
 }
@@ -788,6 +790,14 @@ export interface TypeReference {
     specifier?: string;
     imported?: string;
     file?: string;
+}
+
+// UninferredTypeArguments
+export interface UninferredTypeArguments {
+    tagName: string;
+    typeParameters: string[];
+    start: SourcePos;
+    end: SourcePos;
 }
 
 // unresolvedName

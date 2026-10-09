@@ -11,9 +11,10 @@ import type { TypedTagInferenceRequest } from "./codegen.js";
  * The type text of `request.typeParameter`, from the attribute value whose
  * generated code starts at `offset` in `sourceFile`: exactly (`Items: TItem`),
  * through the array element (`Items: TItem[]` ← `Person[]`), the awaited type
- * (`For: PromiseLike<T> | T` ← `Promise<User>`) or a function's return type
- * (`Property: (item: TGridItem) => TProp` ← `(o) => o.customer`). Undefined
- * when it can't be read (yet).
+ * (`For: PromiseLike<T> | T` ← `Promise<User>`), a function's return type
+ * (`Property: (item: TGridItem) => TProp` ← `(o) => o.customer`) or a type
+ * argument of the same generic type (`ItemsProvider: GridItemsProvider<TGridItem>`
+ * ← a `GridItemsProvider<Person>` field). Undefined when it can't be read (yet).
  */
 export function inferTypeArgument(sourceFile: ts.SourceFile, checker: ts.TypeChecker, offset: number, request: TypedTagInferenceRequest): string | undefined {
   if (offset >= sourceFile.text.length) return undefined;
@@ -41,6 +42,11 @@ export function inferTypeArgument(sourceFile: ts.SourceFile, checker: ts.TypeChe
     const [signature] = checker.getNonNullableType(type).getCallSignatures();
     const returned = signature !== undefined ? checker.getReturnTypeOfSignature(signature) : undefined;
     if (returned !== undefined && (returned.flags & ts.TypeFlags.Any) === 0) argument = text(returned);
+  } else {
+    const position = typeArgumentPosition(declared, request.typeParameter);
+    const typeArguments = position !== undefined ? typeArgumentsOf(checker, checker.getNonNullableType(type), position.name) : undefined;
+    const item = position !== undefined ? typeArguments?.[position.index] : undefined;
+    if (item !== undefined && (item.flags & ts.TypeFlags.Any) === 0) argument = text(item);
   }
   return argument !== undefined && argument.trim().length > 0 ? argument : undefined;
 }
@@ -54,9 +60,42 @@ function isAwaitableOf(declared: string, typeParameter: string): boolean {
 
 /** `(item: TGridItem) => TProp` for `TProp`: a function type returning exactly the type parameter. */
 function returnsTypeParameter(declared: string, typeParameter: string): boolean {
+  const node = declaredTypeNode(declared);
+  return node !== undefined && ts.isFunctionTypeNode(node) && isTypeParameterReference(node.type, typeParameter);
+}
+
+/**
+ * `GridItemsProvider<TGridItem>` for `TGridItem`: a generic type (an alias, an
+ * interface or a class) that takes the type parameter itself as an argument, and where.
+ */
+function typeArgumentPosition(declared: string, typeParameter: string): { name: string; index: number } | undefined {
+  let node = declaredTypeNode(declared);
+  // An optional parameter's `X<T> | undefined`: the generic member.
+  if (node !== undefined && ts.isUnionTypeNode(node)) {
+    const members = node.types.filter((member) => !(ts.isLiteralTypeNode(member) && member.literal.kind === ts.SyntaxKind.NullKeyword) && member.kind !== ts.SyntaxKind.UndefinedKeyword);
+    node = members.length === 1 ? members[0] : undefined;
+  }
+  if (node === undefined || !ts.isTypeReferenceNode(node) || node.typeArguments === undefined) return undefined;
+  const index = node.typeArguments.findIndex((argument) => isTypeParameterReference(argument, typeParameter));
+  if (index < 0) return undefined;
+  return { name: ts.isIdentifier(node.typeName) ? node.typeName.text : node.typeName.right.text, index };
+}
+
+/** The type arguments `type` was instantiated with, when it is the generic type named `name` (by alias or by reference). */
+function typeArgumentsOf(checker: ts.TypeChecker, type: ts.Type, name: string): readonly ts.Type[] | undefined {
+  if (type.aliasSymbol?.name === name) return type.aliasTypeArguments;
+  const isReference = (type.flags & ts.TypeFlags.Object) !== 0 && ((type as ts.ObjectType).objectFlags & ts.ObjectFlags.Reference) !== 0;
+  if (isReference && (type as ts.TypeReference).target.symbol?.name === name) return checker.getTypeArguments(type as ts.TypeReference);
+  return undefined;
+}
+
+function isTypeParameterReference(node: ts.TypeNode, typeParameter: string): boolean {
+  return ts.isTypeReferenceNode(node) && node.typeArguments === undefined && ts.isIdentifier(node.typeName) && node.typeName.text === typeParameter;
+}
+
+function declaredTypeNode(declared: string): ts.TypeNode | undefined {
   const statement = ts.createSourceFile("declared.ts", `type T = ${declared};`, ts.ScriptTarget.Latest).statements[0];
-  const node = statement !== undefined && ts.isTypeAliasDeclaration(statement) ? statement.type : undefined;
-  return node !== undefined && ts.isFunctionTypeNode(node) && ts.isTypeReferenceNode(node.type) && ts.isIdentifier(node.type.typeName) && node.type.typeName.text === typeParameter;
+  return statement !== undefined && ts.isTypeAliasDeclaration(statement) ? statement.type : undefined;
 }
 
 /** The value of the `__builder.addAttribute(seq, name, value)` call around `node` — without the shadow's `(…) satisfies T` wrap. */

@@ -1095,7 +1095,9 @@ it is no longer rendered as `ChildContent` or as a component:
 - **Cascading type parameters** (Blazor's `[CascadingTypeParameter]`): a generic component
   declares `@attribute @CascadingTypeParameter("TGridItem")`, and the components inside its
   content that have a type parameter of the same name, and neither set nor infer it themselves,
-  take the grid's. The grid infers `TGridItem` from `Items`; in a column,
+  take the grid's. The grid infers `TGridItem` from whichever parameter the tag sets that uses
+  it: from `Items` (`Person[]`), or from `ItemsProvider` (a `GridItemsProvider<Person>` value: a
+  type argument of the same generic type). In a column,
   `Property="(o) => o.customer"` then sees `o` as the row type, and `TProp` follows from the
   lambda's return type. The names are string literals of the component's own
   `@typeparam`s (otherwise TZS019). An enclosing tag whose argument stays unresolved hides
@@ -1194,8 +1196,13 @@ typed:
 - **Typed slot contexts.** The slot body of a `RenderFragment<T>` parameter
   gets `context` (or `Context=...`) with the `typeArgument` as its type —
   `context: Person` instead of `any`, including `TItem` inference through the type layer:
-  exact, via `TItem[]`, or via the awaited type (`For: PromiseLike<TValue> | TValue` ←
-  `Promise<User>`, [`<Await>`](#await-tsazor-extension)). If the
+  exact, via `TItem[]`, via the awaited type (`For: PromiseLike<TValue> | TValue` ←
+  `Promise<User>`, [`<Await>`](#await-tsazor-extension)), via a function's return type, or as a
+  type argument of the same generic type (`ItemsProvider: GridItemsProvider<TGridItem>` ←
+  `GridItemsProvider<Person>`). The first parameter the tag sets that uses the type parameter
+  is the one inferred from. When a type argument stays open (not set, inferred or cascaded, and
+  without a default), the type errors inside the tag get Razor's RZ10001 as their hint, on the
+  outermost open tag of a cascade: set it there (`TGridItem="Person"`). If the
   runtime placeholder `typeArgument === "unknown"` is present (an untyped delegate, e.g.
   Virtualize `itemTemplate`), the context intentionally stays `any`.
 - **Typed `@ref`.** Element `@ref`s get their tag type via a cast through the

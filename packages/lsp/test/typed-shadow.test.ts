@@ -151,6 +151,42 @@ beforeAll(async () => {
   await writeFile(path.join(root, "CascadeBad.tsazor"), cascade("(p) => p.nickname", "(v) => v"));
   await writeFile(path.join(root, "CascadeBadProp.tsazor"), cascade("(p) => p.age", "(v) => v.toUpperCase()"));
 
+  // QuickGrid's ItemsProvider: TGridItem from a type argument of the provider's own generic type (the
+  // grid's Items, declared first, isn't set).
+  await writeFile(path.join(root, "Shared", "provider.ts"), "export type RowsProvider<T> = (start: number) => Promise<T[]>;\n");
+  await writeFile(
+    path.join(root, "Shared", "ProviderTable.tsazor"),
+    [
+      "@typeparam TGridItem",
+      '@attribute @CascadingTypeParameter("TGridItem")',
+      '@import type { RowsProvider } from "./provider"',
+      "<table>@ChildContent</table>",
+      "@code {",
+      "    @Parameter() Items?: TGridItem[];",
+      "    @Parameter() ItemsProvider?: RowsProvider<TGridItem>;",
+      "    @Parameter() ChildContent?: RenderFragment;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(
+    path.join(root, "CascadeUninferred.tsazor"),
+    ['<ProviderTable><Column Property="(p) => p.name" /></ProviderTable>', ""].join("\n"),
+  );
+  await writeFile(
+    path.join(root, "CascadeProvider.tsazor"),
+    [
+      '<ProviderTable ItemsProvider="provider"><Column Property="(p) => p.name" Format="(v) => v.toUpperCase()" /></ProviderTable>',
+      "",
+      '@import { Person } from "./Models";',
+      '@import type { RowsProvider } from "./Shared/provider";',
+      "@code {",
+      "    private provider!: RowsProvider<Person>;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+
   // TS2740 regression: `@ref` on `<input>` must type the capture as the
   // tag's interface so the field typechecks.
   await writeFile(
@@ -258,6 +294,19 @@ describe("typed checks through the shadow program (2.4)", () => {
     // TProp stays open after the row error: the Format lambda adds a follow-on 7006.
     expect(await codes("CascadeBad.tsazor")).toEqual(expect.arrayContaining([2339]));
     expect(await codes("CascadeBadProp.tsazor")).toEqual([2339]);
+  });
+
+  it("TGridItem is inferred from a type argument of the provider's generic type, as Razor infers it", async () => {
+    expect(await codes("CascadeProvider.tsazor")).toEqual([]);
+    const entry = await service.ensureTsazor(path.join(root, "CascadeProvider.tsazor"));
+    expect(entry!.shadow.code).toContain("satisfies (item: Person) => string");
+  });
+
+  it("an error inside a grid whose TGridItem stays open names Razor's RZ10001 and the fix", async () => {
+    const entry = await service.ensureTsazor(path.join(root, "CascadeUninferred.tsazor"));
+    const messages = tsDiagnostics(service, entry!).map((d) => d.message);
+    expect(messages.length).toBeGreaterThan(0);
+    expect(messages.every((m) => m.includes("Razor's RZ10001") && m.includes('<ProviderTable TGridItem="…">'))).toBe(true);
   });
 
   it("@ref on an element casts to the tag's interface (no TS2740)", async () => {

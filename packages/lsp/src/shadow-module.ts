@@ -1,4 +1,4 @@
-import { compile, type ExpressionValue, type ImportSuggestion, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { compile, type ExpressionValue, type ImportSuggestion, type TypedTagInferenceRequest, type UninferredTypeArguments } from "@tsazor/compiler";
 import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -32,6 +32,8 @@ export interface ShadowModule {
   /** 2.4: the tag-level `TItem` inference requests when the shadow was built
    *  without resolved type arguments for all generic tags. */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** The generic tags whose type arguments stay open (Razor's RZ10001): errors inside them get a hint. */
+  uninferredTypeArguments?: readonly UninferredTypeArguments[];
   /** 2.4: plain-text values of non-string parameters — unknown names in them get a note. */
   expressionValues?: readonly ExpressionValue[];
   /** F29: the `@import` each unbound name in `@code` would need (TS2304's hint and quick fix). */
@@ -120,6 +122,7 @@ export async function buildShadowModule(
       map: new TsazorGenMap(compiled.mappings ?? []),
       className: context.className,
       ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),
+      ...(compiled.uninferredTypeArguments !== undefined ? { uninferredTypeArguments: compiled.uninferredTypeArguments } : {}),
       ...(compiled.expressionValues !== undefined ? { expressionValues: compiled.expressionValues } : {}),
       ...(compiled.importSuggestions !== undefined ? { importSuggestions: compiled.importSuggestions } : {}),
     };
