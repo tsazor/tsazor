@@ -3,7 +3,8 @@
  * and the app in a browser.
  *
  *   the public site, signed out: the stored layouts (Scriban, component tags, scripts), the view
- *   plugins rendering what FluentCMS renders, the contact form →
+ *   plugins rendering what FluentCMS renders, the contact form, navigating with latency (no half-loaded
+ *   frame, a quick second click followed) →
  *   signed out, an admin page says so → the login form shows the API's error for a wrong password →
  *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
  *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
@@ -103,6 +104,63 @@ async function renderedLikeUpstream(page, route, selector) {
   return { upstream, port, same: upstream.length > 0 && JSON.stringify(upstream) === JSON.stringify(port) };
 }
 
+/**
+ * Navigates between Home and Blogs with a network's latency and records the frames the browser
+ * paints (CDP screencast): how many show a dark band mid-screen. The template's footer is
+ * dark, so a page that collapses for a frame while its plugins load shows it there (F39).
+ */
+async function paintedNavigation(page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Network.enable");
+  await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 40, downloadThroughput: -1, uploadThroughput: -1 });
+  const frames = [];
+  cdp.on("Page.screencastFrame", ({ data, sessionId }) => {
+    frames.push(data);
+    void cdp.send("Page.screencastFrameAck", { sessionId }).catch(() => undefined);
+  });
+  await cdp.send("Page.startScreencast", { format: "png", maxWidth: 320, maxHeight: 200, everyNthFrame: 1 });
+  for (const name of ["Blogs", "Home", "Blogs", "Home"]) {
+    await page.getByRole("link", { name, exact: true }).first().click();
+    await page.waitForTimeout(700);
+  }
+  await cdp.send("Page.stopScreencast");
+
+  // Clicks as a person makes them, while the previous page is held: the second one is followed too.
+  const click = async (name) => {
+    const box = await page.getByRole("link", { name, exact: true }).first().boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  };
+  const before = await page.evaluate(() => history.length);
+  await click("Blogs");
+  await page.waitForTimeout(100);
+  await click("Home");
+  await page.waitForTimeout(1500);
+  const quick = { path: new URL(page.url()).pathname, entries: (await page.evaluate(() => history.length)) - before };
+  await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await cdp.detach();
+
+  const analyzer = await page.context().newPage();
+  const shares = await analyzer.evaluate(async (images) => {
+    const out = [];
+    for (const data of images) {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const canvas = new OffscreenCanvas(img.width, img.height);
+      const g = canvas.getContext("2d");
+      g.drawImage(img, 0, 0);
+      const top = Math.floor(img.height * 0.4);
+      const { data: px } = g.getImageData(0, top, img.width, Math.floor(img.height * 0.85) - top);
+      let dark = 0;
+      for (let i = 0; i < px.length; i += 4) if (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2] < 60) dark++;
+      out.push(dark / (px.length / 4));
+    }
+    return out;
+  }, frames);
+  await analyzer.close();
+  return { frames: frames.length, darkFrames: shares.filter((share) => share > 0.2).length, quick };
+}
+
 async function axe(page, include) {
   // Fluent fades content in; mid-animation, axe measures the faded colours.
   await page.evaluate(() =>
@@ -177,6 +235,13 @@ async function main() {
     await page.locator(".f-content-detail .card").waitFor({ timeout: 10_000 });
     const detail = await renderedLikeUpstream(page, new URL(page.url()).pathname, ".f-content-detail");
     check(detail.same, "a content's detail page, by the id in the rest of its URL, renders as FluentCMS renders it");
+
+    // Navigating as over a network: the previous page stays until the next one has its plugins' data (F39).
+    await page.goto(`${APP}/`);
+    await page.locator(".f-html-content").first().waitFor({ timeout: 15_000 });
+    const painted = await paintedNavigation(page);
+    check(painted.darkFrames === 0, `navigating with 40 ms latency paints no half-loaded page: the dark footer never shows mid-screen (${painted.darkFrames} of ${painted.frames} frames, F39)`);
+    check(painted.quick.path === "/" && painted.quick.entries === 2, `a click while the previous page is held is followed: Blogs, then at once Home, ends on Home (${painted.quick.path}, ${painted.quick.entries} history entries)`);
 
     // Signed out: the admin pages are for Administrators.
     await page.goto(`${APP}/admin/roles`);

@@ -41,7 +41,7 @@ describe("ViewState", () => {
         history.replaceState(null, "", "/admin/roles");
         const admin = new ViewState(client(async () => ok({ current: adminPage([ADMINS]) } as PageParentDetailResponse)), new NavigationManager());
         await admin.reload();
-        expect([admin.loaded, admin.page.title, admin.layout?.name, admin.plugins.map((p) => p.id)]).toEqual([true, "Roles", "AdminLayout", ["p1"]]);
+        expect([admin.page.title, admin.layout?.name, admin.plugins.map((p) => p.id)]).toEqual(["Roles", "AdminLayout", ["p1"]]);
         expect([admin.site.hasAdminAccess, admin.page.hasAdminAccess, admin.page.hasViewAccess]).toEqual([true, true, true]);
 
         const guest = new ViewState(client(async () => ok({ current: adminPage([]) } as PageParentDetailResponse)), new NavigationManager());
@@ -68,7 +68,7 @@ describe("ViewState", () => {
         expect([state.type, state.plugin]).toEqual(["default", undefined]);
     });
 
-    it("loads again on every navigation, tells its subscribers, and the newest navigation wins", async () => {
+    it("loads the current URL's page (the Router's OnNavigateAsync calls it), tells its subscribers, and the newest load wins", async () => {
         history.replaceState(null, "", "/admin/roles");
         const pending = new Map<string, (result: HttpResult<PageParentDetailResponse>) => void>();
         const navigation = new NavigationManager();
@@ -77,13 +77,15 @@ describe("ViewState", () => {
         state.subscribe(() => notified++);
 
         navigation.navigateTo("/admin/users");
+        const first = state.reload();
         navigation.navigateTo("/admin/sites");
+        const second = state.reload();
         const users = { ...adminPage([ADMINS]), title: "Users" };
         const sites = { ...adminPage([ADMINS]), title: "Sites" };
         pending.get("/admin/sites")!(ok({ current: sites } as PageParentDetailResponse));
         await Promise.resolve();
         pending.get("/admin/users")!(ok({ current: users } as PageParentDetailResponse));
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await Promise.all([first, second]);
         expect([state.page.title, notified]).toEqual(["Sites", 1]);
     });
 
@@ -98,6 +100,6 @@ describe("ViewState", () => {
         } as unknown as HttpResult<PageParentDetailResponse>;
         const state = new ViewState(client(async () => failed), new NavigationManager());
         await state.reload();
-        expect([state.loaded, state.error]).toEqual([true, "Page.NotFound"]);
+        expect(state.error).toBe("Page.NotFound");
     });
 });

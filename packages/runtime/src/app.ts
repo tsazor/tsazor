@@ -29,6 +29,8 @@ export interface TsazorAppOptions {
    * extension) keeps the route in the URL fragment (`#/orders/5`) for hosting
    * without an index.html fallback; the default is Blazor's history routing.
    * With a shared `navigationManager`, configure the mode there instead.
+   * `holdPreviousPage` (Tsazor extension): how long an in-app navigation keeps
+   * the previous page on screen while the new one loads.
    */
   routing?: RoutingOptions;
   /**
@@ -53,6 +55,17 @@ export interface TsazorAppOptions {
 export interface RoutingOptions {
   /** "history" (default, Blazor) or "hash" (Tsazor extension). */
   readonly mode?: RoutingMode;
+  /**
+   * Tsazor extension: an in-app navigation keeps the previous page on screen
+   * until the new one has rendered and its async work is done — lifecycle
+   * methods, the Router's OnNavigateAsync — at most this many ms (default
+   * 1000), then shows it in one step, as Blazor's enhanced navigation does.
+   * Without it, every render shows at once, as in Blazor's interactive render
+   * modes: a page whose data is still loading shows empty for a few frames.
+   * Needs view transitions in the browser (without them: `false`); `false`
+   * turns it off.
+   */
+  readonly holdPreviousPage?: number | false;
 }
 
 /** App-level localization options (`createTsazorApp({ localization })`). */
@@ -113,6 +126,11 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   }
 
   const renderer = new Renderer(services);
+  const holdPreviousPage = options.routing?.holdPreviousPage ?? 1000;
+  if (holdPreviousPage !== false && !(holdPreviousPage > 0)) {
+    throw new Error(`createTsazorApp: routing.holdPreviousPage must be a positive number of ms or false, not ${String(holdPreviousPage)}.`);
+  }
+  const releaseHold = holdPreviousPage === false ? undefined : services.get(NavigationManager as unknown as Token<NavigationManager>).addNavigationHold(renderer, holdPreviousPage);
   // Blazor's WebAssembly host renders <HeadOutlet> as a second root component
   // in the document's <head>: HeadContent/PageTitle content lands there. It is
   // mounted once PageTitle or HeadContent is part of the app (head-support.ts),
@@ -155,6 +173,7 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
       }
       renderer.disposeComponent(state);
       state.range.remove();
+      releaseHold?.();
       ownedNavigation?.dispose();
       if (globals.__tsazor === hmrBridge) delete globals.__tsazor;
     },

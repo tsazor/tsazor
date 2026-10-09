@@ -24,3 +24,8 @@ stays. Add the fragment next to `<Found>` in `App.tsazor`:
 > (`tsazor({ lazyRoutes: ["src/Pages/Admin/**"] })`) turns matching pages into chunks loaded on the
 > first visit, and the router shows `<Navigating>` meanwhile — the route templates and `@authorize`
 > requirements stay known up front. No hook to write.
+
+> **Coming from Blazor:** without `<Navigating>`, Tsazor keeps the previous page until the new one
+> has also finished its `OnInitializedAsync` (at most a second), as enhanced navigation does in
+> static SSR; interactive Blazor would show the half-loaded page. `routing.holdPreviousPage: false`
+> in `createTsazorApp` turns it off.

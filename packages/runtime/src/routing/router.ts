@@ -127,9 +127,11 @@ export class Router extends ComponentBase {
     this.pending = controller;
     const context: NavigationContext = { path: this.navigation.baseRelativePath, signal: controller.signal };
     // Shows Navigating (or keeps the current output) meanwhile; the first
-    // render follows initialization anyway.
+    // render follows initialization anyway. Without Navigating a held
+    // navigation waits for it too; with it, the app shows its own waiting state.
     if (!initial) this.stateHasChangedInternal();
-    void this.run(handler, lazy, context, controller);
+    const running = this.run(handler, lazy, context, controller);
+    if (this.navigating === undefined) this.navigation.holdFor(running);
   }
 
   private async run(

@@ -15,7 +15,8 @@ import { scrollToElement } from "./dom-wrapper.js";
  * - popstate (back/forward): with handlers registered, the history move is
  *   reverted first, the handlers are asked, and only if none prevents it the
  *   move is re-applied; a cancelled back/forward leaves the old URL.
- * Without handlers every navigation completes synchronously.
+ * Without handlers every navigation completes synchronously — a frame later
+ * when the previous page is held (below).
  *
  * Routing modes: "history" (default) is Blazor's model — the route is the URL
  * path below the base URI. "hash" is a Tsazor extension (Blazor has no
@@ -32,6 +33,17 @@ import { scrollToElement } from "./dom-wrapper.js";
  * fragment's element (`orders#total`) or to the top; a link that only
  * changes the fragment of the current page just adds a history entry and
  * scrolls — no LocationChanging/LocationChanged.
+ *
+ * Holding the previous page (Tsazor extension, createTsazorApp's
+ * `routing.holdPreviousPage`): in a browser with view transitions, an in-app
+ * navigation announces LocationChanged inside one, so the browser keeps
+ * showing the previous page until the new one has rendered and its async work
+ * is done (or the hold's time is up), then shows it without animation — the
+ * page changes in one step, as with Blazor's enhanced navigation. The URL
+ * changes with LocationChanged, a frame later (once the browser captured the
+ * previous page; a back/forward move has changed it already). A navigation while
+ * the previous page is held joins that hold, and a click on a link of the held
+ * page follows the link (the browser doesn't hit-test meanwhile).
  */
 export class NavigationManager {
   private readonly locationChangedHandlers = new Set<(sender: NavigationManager, event: LocationChangedEventArgs) => void>();
@@ -64,6 +76,10 @@ export class NavigationManager {
    * the browser restores it).
    */
   private scrollTarget: string | undefined;
+  /** The renderers a navigation waits for (createTsazorApp), with how long at most (ms). */
+  private readonly holds = new Map<NavigationHold, number>();
+  /** The navigation the browser holds the previous page for, while it does. */
+  private held: HeldNavigation | undefined;
 
   /**
    * `new NavigationManager()` (history mode, window.history),
@@ -225,7 +241,7 @@ export class NavigationManager {
    * Navigates to a (base-relative or absolute) URI. Blazor overloads:
    * `navigateTo(uri, forceLoad?, replace?)` and `navigateTo(uri, options)`.
    * Registered location-changing handlers can cancel it; without handlers it
-   * completes synchronously.
+   * completes synchronously (held: once the browser captured the previous page).
    */
   navigateTo(uri: string, forceLoadOrOptions?: boolean | NavigationOptions, replace?: boolean): void {
     const options: NavigationOptions =
@@ -294,6 +310,24 @@ export class NavigationManager {
     this.locks.delete(lockId);
   }
 
+  /**
+   * @internal createTsazorApp: each in-app navigation waits for `hold` (the app's renderer) to
+   * settle, at most `timeout` ms, while the browser keeps showing the previous page. Returns the
+   * unregistration.
+   */
+  addNavigationHold(hold: NavigationHold, timeout: number): () => void {
+    this.holds.set(hold, timeout);
+    return () => this.holds.delete(hold);
+  }
+
+  /**
+   * @internal The Router: the navigation being announced also waits for `work` (OnNavigateAsync, a
+   * lazy page's chunk), which no renderer tracks. Ignored when the navigation isn't held.
+   */
+  holdFor(work: Promise<unknown>): void {
+    this.held?.work.push(work);
+  }
+
   private interceptionEnabled = false;
 
   /**
@@ -337,33 +371,65 @@ export class NavigationManager {
   }
 
   private onDocumentClick = (event: MouseEvent): void => {
-    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
-      return;
-    }
+    if (event.defaultPrevented) return;
     const anchor = (event.target as Element | null)?.closest?.("a") as HTMLAnchorElement | null;
     if (!anchor) return;
+    const absolute = this.interceptedTarget(anchor, event);
+    if (absolute === undefined) return;
+    event.preventDefault();
+    this.followLink(absolute);
+  };
+
+  /** Where a click on `anchor` navigates in the app, or undefined when the browser handles it (Blazor's rules). */
+  private interceptedTarget(anchor: HTMLAnchorElement, event: MouseEvent): string | undefined {
+    if (event.button !== 0 || event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return undefined;
     const target = anchor.getAttribute("target");
-    if (target && target !== "_self") return;
-    if (anchor.hasAttribute("download")) return;
-    if (anchor.getAttribute("rel")?.split(/\s+/).includes("external")) return;
+    if (target && target !== "_self") return undefined;
+    if (anchor.hasAttribute("download")) return undefined;
+    if (anchor.getAttribute("rel")?.split(/\s+/).includes("external")) return undefined;
     const href = anchor.getAttribute("href");
-    if (!href) return;
+    if (!href) return undefined;
     if (this.isHashMode) {
       // Hash mode intercepts route fragments only; other hrefs are real
       // document navigations (the route space is the fragment).
-      if (!href.startsWith("#/")) return;
+      if (!href.startsWith("#/")) return undefined;
     } else if (href.startsWith("#")) {
-      return;
+      return undefined;
     }
     const absolute = this.toAbsoluteUri(href);
-    if (!this.isWithinBaseUriSpace(absolute)) return;
-    event.preventDefault();
+    return this.isWithinBaseUriSpace(absolute) ? absolute : undefined;
+  }
+
+  /** An intercepted link click: a scroll on the same page, or an in-app navigation. */
+  private followLink(absolute: string): void {
     if (this.isSamePageWithHash(absolute)) {
       this.scrollOnSamePage(absolute, false, undefined);
       return;
     }
     this.runLocationChanging(absolute, undefined, true, () => this.performInternalNavigation(absolute, true, false, undefined));
-  };
+  }
+
+  /**
+   * A click while the browser holds the previous page lands on the root element (it doesn't
+   * hit-test meanwhile): a click on one of that page's links follows the link, as it would have —
+   * an in-app one through the interception, any other as a click on it.
+   */
+  private followHeldLink(event: MouseEvent, links: readonly HeldLink[]): void {
+    if (event.target !== document.documentElement) return;
+    // The last one in document order: of two links on one spot, the later one is drawn on top.
+    let link: HeldLink | undefined;
+    for (const candidate of links) {
+      const { rect } = candidate;
+      if (event.clientX >= rect.left && event.clientX < rect.right && event.clientY >= rect.top && event.clientY < rect.bottom) link = candidate;
+    }
+    if (link === undefined) return;
+    const absolute = this.interceptionEnabled ? this.interceptedTarget(link.anchor, event) : undefined;
+    if (absolute !== undefined) {
+      this.followLink(absolute);
+    } else if (link.anchor.isConnected) {
+      link.anchor.dispatchEvent(new MouseEvent("click", event));
+    }
+  }
 
   /** Blazor's isWithinBaseUriSpace: same origin and below the base path. */
   private isWithinBaseUriSpace(absolute: string): boolean {
@@ -443,10 +509,13 @@ export class NavigationManager {
   }
 
   private performInternalNavigation(absolute: string, isIntercepted: boolean, replace: boolean, state: string | undefined): void {
-    this.saveToHistory(absolute, replace, state);
     // Blazor's resetScrollAfterNextBatch — to the fragment's element, if any.
-    if (typeof window !== "undefined") this.scrollTarget = this.isHashMode ? "" : fragmentOf(absolute);
-    this.notifyLocationChanged(absolute, isIntercepted, state);
+    const scrollTarget = typeof window === "undefined" ? undefined : this.isHashMode ? "" : fragmentOf(absolute);
+    // Held, the URL changes with the page: once the browser captured the previous one.
+    this.announce(() => {
+      this.saveToHistory(absolute, replace, state);
+      this.raiseLocationChanged(absolute, isIntercepted, state, scrollTarget);
+    });
   }
 
   private saveToHistory(absolute: string, replace: boolean, state: string | undefined): void {
@@ -618,12 +687,101 @@ export class NavigationManager {
   }
 
   private notifyLocationChanged(uri: string, isIntercepted: boolean, historyEntryState: string | undefined): void {
+    this.announce(() => this.raiseLocationChanged(uri, isIntercepted, historyEntryState, undefined));
+  }
+
+  private raiseLocationChanged(uri: string, isIntercepted: boolean, historyEntryState: string | undefined, scrollTarget: string | undefined): void {
     this.lastLocation = uri;
+    if (scrollTarget !== undefined) this.scrollTarget = scrollTarget;
     const event: LocationChangedEventArgs = { location: uri, isNavigationIntercepted: isIntercepted, isIntercepted, historyEntryState };
     for (const handler of [...this.locationChangedHandlers]) {
       handler(this, event);
     }
   }
+
+  /**
+   * Runs `announce` (a navigation's history entry and its LocationChanged) — held when an app
+   * registered a hold and the browser has view transitions: inside one, which keeps the previous
+   * page on screen until the renderers settled and the Router's OnNavigateAsync finished (or the
+   * time is up). The transition is then skipped, so the new page shows as it is, without animation.
+   * Navigations meanwhile join the hold; a click on a link of the held page follows it.
+   */
+  private announce(announce: () => void): void {
+    const held = this.held;
+    if (held !== undefined) {
+      if (held.queued !== undefined) held.queued.push(announce);
+      else this.announceHeld(announce);
+      return;
+    }
+    if (this.holds.size === 0 || typeof document === "undefined" || typeof document.startViewTransition !== "function") {
+      announce();
+      return;
+    }
+    const hold: HeldNavigation = { work: [], queued: [announce] };
+    this.held = hold;
+    // What the held page shows: its links, where they are.
+    const links = visibleLinks();
+    const onClick = (event: MouseEvent) => this.followHeldLink(event, links);
+    window.addEventListener("click", onClick, true);
+    const transition = document.startViewTransition(async () => {
+      try {
+        const renderers = [...this.holds].map(([renderer, timeout]) => ({ renderer, mark: renderer.markWork(), deadline: Date.now() + timeout }));
+        const queued = hold.queued ?? [];
+        hold.queued = undefined;
+        for (const announceQueued of queued) this.announceHeld(announceQueued);
+        // A navigation that joins while the renderers settle adds the Router's work: wait again.
+        let waitedFor: number;
+        do {
+          waitedFor = hold.work.length;
+          await Promise.all(renderers.map(({ renderer, mark, deadline }) => renderer.settledSince(mark, deadline, hold.work)));
+        } while (hold.work.length > waitedFor && renderers.some(({ deadline }) => Date.now() < deadline));
+      } finally {
+        this.held = undefined;
+        window.removeEventListener("click", onClick, true);
+      }
+    });
+    // Skipped transitions reject `ready`: there is no animation to be ready for.
+    transition.ready.catch(() => undefined);
+    void transition.updateCallbackDone.then(() => transition.skipTransition(), () => undefined);
+  }
+
+  /** Runs held LocationChanged handlers; an error is reported as uncaught, as from an event listener. */
+  private announceHeld(announce: () => void): void {
+    if (this.disposed) return;
+    try {
+      announce();
+    } catch (error) {
+      queueMicrotask(() => {
+        throw error;
+      });
+    }
+  }
+}
+
+/** A navigation the browser holds the previous page for. */
+interface HeldNavigation {
+  /** The work it waits for besides the renderers' (the Router's OnNavigateAsync). */
+  readonly work: Promise<unknown>[];
+  /** Announcements until the browser captured the previous page; undefined after. */
+  queued: (() => void)[] | undefined;
+}
+
+/** A link of the held page, where it is on screen. */
+interface HeldLink {
+  readonly anchor: HTMLAnchorElement;
+  readonly rect: DOMRect;
+}
+
+/** The links on screen and where they are: what a held page shows. */
+function visibleLinks(): HeldLink[] {
+  const links: HeldLink[] = [];
+  for (const anchor of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
+    const rect = anchor.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < window.innerHeight && rect.left < window.innerWidth) {
+      links.push({ anchor, rect });
+    }
+  }
+  return links;
 }
 
 /**
@@ -632,6 +790,16 @@ export class NavigationManager {
  * fragment (`#/orders/5?tab=2`) — for hosting without an index.html fallback.
  */
 export type RoutingMode = "history" | "hash";
+
+/**
+ * @internal What a held navigation waits for: an app's renderer (createTsazorApp). `markWork` marks
+ * the work in flight before the navigation; `settledSince` resolves once the renders and the work
+ * started since, plus `navigationWork`, are done — or at `deadline` (a `Date.now()` time).
+ */
+export interface NavigationHold {
+  markWork(): number;
+  settledSince(mark: number, deadline: number, navigationWork?: readonly Promise<unknown>[]): Promise<void>;
+}
 
 /** Options of `new NavigationManager({ … })`. */
 export interface NavigationManagerOptions {

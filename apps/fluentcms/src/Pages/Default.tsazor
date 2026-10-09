@@ -10,8 +10,6 @@
 
 @if (this.ViewState.error !== undefined) {
     <div class="cms-message"><Alert intent="danger">@this.ViewState.error</Alert></div>
-} else if (!this.ViewState.loaded) {
-    <div class="cms-message"><Spinner label="Loading…" /></div>
 } else if (this.ViewState.type === "pageEdit" || this.ViewState.type === "pagePreview") {
     <div class="cms-message"><Alert intent="info">The site builder is not ported.</Alert></div>
 } else {
@@ -38,9 +36,7 @@
         const initialized = await this.Api.setupIsInitialized();
         if (initialized.ok && !initialized.body) {
             this.Navigation.navigateTo("/setup", true);
-            return;
         }
-        if (!this.ViewState.loaded) await this.ViewState.reload();
     }
 
     /** The layout of the current view: the page's, or the edit or detail layout for a plugin's view. */

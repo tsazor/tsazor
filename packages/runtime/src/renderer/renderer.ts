@@ -185,7 +185,7 @@ export class Renderer {
     component.componentServices = this.services;
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);
-    (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.track(promise, `${componentName(state)}: tracked work`);
+    (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.trackFor(state, promise, `${componentName(state)}: tracked work`);
     (state.renderHandle as { reportError?: unknown }).reportError = (error: unknown, phase: RenderErrorPhase) => this.handleComponentError(error, state, phase);
     (state.renderHandle as { sectionRegistry?: unknown }).sectionRegistry = this.sectionRegistry;
     Object.defineProperty(state.renderHandle, "isRenderingInProgress", { get: () => this.batchInProgress });
@@ -321,7 +321,8 @@ export class Renderer {
       return;
     }
     if (lifecycle === completedLifecycle) return;
-    this.track(
+    this.trackFor(
+      state,
       lifecycle.catch((error) => this.handleComponentError(error, state, "lifecycle")),
       `${componentName(state)}: onInitialized / onParametersSet`,
     );
@@ -332,13 +333,42 @@ export class Renderer {
    * for waitUntilIdle's timeout.
    */
   track<T>(promise: Promise<T>, label = "tracked work"): Promise<T> {
-    this.inFlight.set(promise, label);
+    return this.trackFor(undefined, promise, label);
+  }
+
+  /** @internal `track` for work of a component (`owner`): once it is disposed, a navigation no longer waits for the work. */
+  trackFor<T>(owner: ComponentState | undefined, promise: Promise<T>, label: string): Promise<T> {
+    this.inFlight.set(promise, { label, seq: this.trackedCount++, owner });
     void promise.finally(() => this.inFlight.delete(promise)).catch(() => undefined);
     return promise;
   }
 
-  /** The async work in flight, with what it is (`Autocomplete: input handler`). */
-  private readonly inFlight = new Map<Promise<unknown>, string>();
+  /** The async work in flight: what it is (`Autocomplete: input handler`), when it was tracked, whose it is. */
+  private readonly inFlight = new Map<Promise<unknown>, { label: string; seq: number; owner: ComponentState | undefined }>();
+  /** How much work was tracked so far: the next work's `seq`. */
+  private trackedCount = 0;
+
+  /** @internal The navigation hold (createTsazorApp): marks the work tracked so far; `settledSince` doesn't wait for it. */
+  markWork(): number {
+    return this.trackedCount;
+  }
+
+  /**
+   * @internal The navigation hold: resolves once `navigationWork` (the Router's OnNavigateAsync) is
+   * done, no batch is scheduled and the work tracked since `mark` is done — but for the work of
+   * components disposed meanwhile (a page navigated away from) — or at `deadline` (a `Date.now()`
+   * time) with work still running. Never rejects.
+   */
+  async settledSince(mark: number, deadline: number, navigationWork: readonly Promise<unknown>[] = []): Promise<void> {
+    if (navigationWork.length > 0 && !(await settlesBefore(Promise.allSettled(navigationWork), deadline))) return;
+    for (;;) {
+      const pending = [...this.inFlight].filter(([, work]) => work.seq >= mark && work.owner?.disposed !== true).map(([promise]) => promise);
+      const work = this.scheduledBatch ?? (pending.length > 0 ? Promise.allSettled(pending) : undefined);
+      if (work === undefined || Date.now() >= deadline) return;
+      // Looked at again every 50 ms at most: the work of a component disposed meanwhile no longer counts.
+      await settlesBefore(work, Math.min(deadline, Date.now() + 50));
+    }
+  }
 
   private buildParameterView(state: ComponentState, direct: ReadonlyMap<string, unknown>): ParameterView {
     const { cascading } = state.component.getParameterInfo();
@@ -538,7 +568,7 @@ export class Renderer {
       if (typeof component.disposeAsync === "function") {
         const pending = component.disposeAsync();
         if (isPromiseLike(pending)) {
-          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "dispose")), `${componentName(state)}: disposeAsync`);
+          this.trackFor(state, Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "dispose")), `${componentName(state)}: disposeAsync`);
         }
       } else if (typeof component.dispose === "function") {
         component.dispose();
@@ -630,7 +660,7 @@ export class Renderer {
       try {
         const pending = state.component.notifyAfterRender();
         if (isPromiseLike(pending)) {
-          this.track(Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "afterRender")), `${componentName(state)}: onAfterRender`);
+          this.trackFor(state, Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "afterRender")), `${componentName(state)}: onAfterRender`);
         }
       } catch (error) {
         this.handleComponentError(error, state, "afterRender");
@@ -824,7 +854,7 @@ export class Renderer {
     if (deadline === undefined) return work;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        const pending = [...new Set(this.inFlight.values())];
+        const pending = [...new Set([...this.inFlight.values()].map((work) => work.label))];
         reject(new Error(`waitUntilIdle: not idle after ${timeout} ms. Still pending: ${pending.length > 0 ? pending.join("; ") : "a render batch"}.`));
       }, Math.max(0, deadline - Date.now()));
       work.then(
@@ -895,6 +925,20 @@ export class Renderer {
   }
 
   // #endregion
+}
+
+/** Whether `work` settles (either way) before `deadline`, a `Date.now()` time. */
+function settlesBefore(work: Promise<unknown>, deadline: number): Promise<boolean> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), remaining);
+    const settled = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    work.then(settled, settled);
+  });
 }
 
 /** Whether `key` is a getter/setter somewhere on the prototype chain from `proto`. */

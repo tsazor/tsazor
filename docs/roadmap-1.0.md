@@ -166,6 +166,11 @@ architecture and security take priority.
   routing). For hosting without an `index.html` fallback, static hosting and iframe-embedded apps.
   Route and route query live in the fragment (`#/x?y=1`), and the real query string (e.g. an
   access token) is left untouched. Needed by the first business-SPA port; done (merged in `205b30a`).
+- **E13 — Holding the previous page on navigation** (Tsazor extension; Blazor's static SSR with enhanced
+  navigation behaves like this, its interactive modes don't). A navigation keeps the previous page on screen until
+  the new one has its data, then shows it in one step, without the empty frames of a page still loading. On by
+  default (owner, 2026-10-09), `routing.holdPreviousPage: false` turns it off. Found by the FluentCMS port (F39);
+  done 2026-10-09, [design-navigation-hold.md](design-navigation-hold.md).
 - **E10 — Support policy:** LTS window and deprecation rules, extending the stability promise.
 
 ## 6 — Release infrastructure

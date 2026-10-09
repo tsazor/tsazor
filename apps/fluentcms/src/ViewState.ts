@@ -26,10 +26,11 @@ export interface PageView extends PageFullDetailResponse {
 
 /**
  * The page the current URL resolves to, with its site, layouts, plugins and user (FluentCMS's
- * ViewState). It loads the page through `Page/GetByUrl` and again on every navigation, and tells its
- * subscribers when it has: components `this.observe(this.viewState)`.
+ * ViewState). It loads the page through `Page/GetByUrl` before each navigation renders (the
+ * Router's OnNavigateAsync, App.tsazor), and tells its subscribers when it has: components
+ * `this.observe(this.viewState)`.
  *
- * Blazor Server loads it synchronously per circuit; here the load is async, and the newest
+ * FluentCMS loads it per request before the page renders; here the load is async, and the newest
  * navigation wins.
  */
 export class ViewState {
@@ -44,9 +45,6 @@ export class ViewState {
     /** The plugin shown alone (`?pluginId=…&viewName=…`), and its view name. */
     plugin?: PluginDetailResponse;
     pluginViewName?: string;
-
-    /** False until the first page has loaded. */
-    loaded = false;
     /** Why the page could not load, if it couldn't. */
     error?: string;
 
@@ -56,9 +54,7 @@ export class ViewState {
     constructor(
         private readonly client: FluentCmsClient,
         private readonly navigation: NavigationManager,
-    ) {
-        navigation.addLocationChanged(() => void this.reload());
-    }
+    ) {}
 
     subscribe(listener: ObserveListener<void>): () => void {
         this.listeners.add(listener);
@@ -78,7 +74,6 @@ export class ViewState {
             this.error = undefined;
             this.apply(result.body.current ?? result.body.parent!, result.body.slug ?? null, new URL(uri).searchParams);
         }
-        this.loaded = true;
         for (const listener of this.listeners) listener();
     }
 

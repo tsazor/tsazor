@@ -20,7 +20,9 @@ add a `<Navigating>` block next to `<Found>` in `App.tsazor`:
 ```
 
 Click **Orders** again: the message shows until `prepare` is done. Without `<Navigating>`, the
-previous page simply stays — which can be right, too, for very short waits.
+previous page simply stays — which can be right, too, for very short waits. Tsazor then keeps it a
+little longer: until the new page has loaded its own data too (at most a second), so no half-filled
+page flashes on the way.
 
 `prepare` gets a `NavigationContext`: `context.path` is where the user is going, and
 `context.signal` is aborted when they click somewhere else before you're done — pass it to

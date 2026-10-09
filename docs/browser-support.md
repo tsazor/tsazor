@@ -21,7 +21,9 @@ Older browsers are not supported. Internet Explorer never was.
   - transitions and animations (`@transition`, `@animate`): the Web Animations API;
   - `@tsazor/worker`: module workers (`new Worker(url, { type: "module" })`);
   - `Virtualize`, `anchoredPosition`: `ResizeObserver`;
-  - reduced motion: `matchMedia("(prefers-reduced-motion: reduce)")`.
+  - reduced motion: `matchMedia("(prefers-reduced-motion: reduce)")`;
+  - holding the previous page while a navigation loads (`routing.holdPreviousPage`): view transitions
+    (`document.startViewTransition`; Firefox from 144). Without them, the page shows as it renders.
   All of them are available in the supported browsers.
 
 ## How it is checked

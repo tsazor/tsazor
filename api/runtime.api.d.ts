@@ -780,6 +780,8 @@ export declare class NavigationManager {
     readonly routingMode: RoutingMode;
     private handlingPopState;
     private scrollTarget;
+    private readonly holds;
+    private held;
     constructor(historyApiOrOptions?: History | NavigationManagerOptions);
     private get history();
     private get isHashMode();
@@ -798,12 +800,17 @@ export declare class NavigationManager {
     };
     setNavigationLock(lockId: string, callback: (uri: string, isIntercepted: boolean) => boolean | Promise<boolean>): void;
     releaseNavigationLock(lockId: string): void;
+    addNavigationHold(hold: NavigationHold, timeout: number): () => void;
+    holdFor(work: Promise<unknown>): void;
     private interceptionEnabled;
     enableNavigationInterception(): void;
     takeScrollTarget(): string | undefined;
     private isSamePageWithHash;
     private scrollOnSamePage;
     private onDocumentClick;
+    private interceptedTarget;
+    private followLink;
+    private followHeldLink;
     private isWithinBaseUriSpace;
     private isAbsolute;
     dispose(): void;
@@ -823,6 +830,9 @@ export declare class NavigationManager {
     private navigateHistoryWithoutPopStateCallback;
     private restoreLocation;
     private notifyLocationChanged;
+    private raiseLocationChanged;
+    private announce;
+    private announceHeld;
 }
 
 // NavigationManagerOptions
@@ -991,7 +1001,11 @@ export declare class Renderer {
     }>): void;
     private supplyParameters;
     track<T>(promise: Promise<T>, label?: string): Promise<T>;
+    trackFor<T>(owner: ComponentState | undefined, promise: Promise<T>, label: string): Promise<T>;
     private readonly inFlight;
+    private trackedCount;
+    markWork(): number;
+    settledSince(mark: number, deadline: number, navigationWork?: readonly Promise<unknown>[]): Promise<void>;
     private buildParameterView;
     private queryValues;
     private readonly querySubscribers;
@@ -1225,6 +1239,7 @@ export type RoutingMode = "history" | "hash";
 // RoutingOptions
 export interface RoutingOptions {
     readonly mode?: RoutingMode;
+    readonly holdPreviousPage?: number | false;
 }
 
 // SectionContent

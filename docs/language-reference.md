@@ -89,6 +89,27 @@ around it shows it).
 </Router>
 ```
 
+### Holding the previous page (Tsazor extension)
+
+An in-app navigation keeps the previous page on screen until the new one has rendered and its async
+work is done. That covers its `OnInitializedAsync`/`OnParametersSetAsync`, the Router's
+`OnNavigateAsync`, and a lazy page's chunk. The new page then shows in one step, as with Blazor's
+enhanced navigation. Without the hold, a page whose data is still loading would show its empty state
+for a few frames, as in Blazor's interactive render modes. Tsazor holds the page because in Blazor that
+empty state is something static SSR never showed.
+
+With `<Navigating>`, the router shows that instead while `OnNavigateAsync` runs: the app shows its own
+waiting state. The URL and `LocationChanged` change together, a frame after the click (the browser first captures
+the previous page). A navigation during the hold joins it,
+and a click on a link of the held page follows the link. The hold lasts at most 1000 ms; then the page
+shows as far as it got. Data a service loads by itself on `LocationChanged` isn't waited for: load it in
+`OnNavigateAsync`. The hold uses the browser's view transitions, without animation. Design:
+[design-navigation-hold.md](design-navigation-hold.md).
+
+```ts
+createTsazorApp({ root: App, routes, routing: { holdPreviousPage: 500 } });   // ms; false: off
+```
+
 ### Lazy routes (Tsazor extension)
 
 Pages can load on the first navigation to them — Blazor lazy-loads assemblies in `OnNavigateAsync`;

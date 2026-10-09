@@ -480,13 +480,16 @@ async function main() {
     await previewClick("nav a:nth-child(2)");
     await waitForPreview(page, "h2", "Orders");
     await previewClick(".filters a:nth-child(2)");
-    const hashList = await waitForPreview(page, ".orders", "#101 Marta");
+    // The URL and the list change together, a frame after the click (the navigation holds the
+    // previous page meanwhile); the full list has Marta too, so wait for the one without Jonas.
     let hashUrl = "";
+    let hashList = "";
     for (const deadline = Date.now() + 10_000; Date.now() < deadline; await page.waitForTimeout(250)) {
         hashUrl = (await page.textContent(".page-url").catch(() => "")) ?? "";
-        if (hashUrl.endsWith("#/orders?state=open")) break;
+        hashList = await previewText(page, ".orders").catch(() => "");
+        if (hashUrl.endsWith("#/orders?state=open") && hashList.includes("#101 Marta") && !hashList.includes("Jonas")) break;
     }
-    check(hashUrl.endsWith("/#/orders?state=open") && !hashList.includes("Jonas"), `ch14 Routing: hash mode routes in the preview; the bar shows the fragment (${hashUrl})`);
+    check(hashUrl.endsWith("/#/orders?state=open") && hashList.includes("#101 Marta") && !hashList.includes("Jonas"), `ch14 Routing: hash mode routes in the preview; the bar shows the fragment (${hashUrl})`);
     check(await noProblems(), "ch14 Routing: the hash solution type-checks");
 
     /* 7c''' — chapter 18: the preview runs *.test.ts with its Vitest-compatible runner */

@@ -5,6 +5,18 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime` (Tsazor extension, E13): an in-app navigation keeps the previous page on screen until the new
+  one has rendered and its async work is done, then shows it in one step, as Blazor's enhanced navigation does. The
+  async work counted here is lifecycle methods, the Router's `OnNavigateAsync` and a lazy page's chunk. Before, a
+  page whose data was still loading showed empty for a few frames. On the FluentCMS port the page then shrank and
+  its dark footer flashed mid-screen. The hold uses the browser's view transitions, without animation, and lasts at
+  most `routing.holdPreviousPage` ms (default 1000; `false` turns it off). The URL and `LocationChanged`
+  change together a frame after the navigation starts, so a handler's error is reported as uncaught instead of propagating out of
+  `navigateTo`. A navigation during the hold joins it, and a click on a link of the held page follows the link. A
+  Router with `<Navigating>` shows it instead of holding during `OnNavigateAsync`. Data
+  a service loads on `LocationChanged` isn't waited for; load it in `OnNavigateAsync`. See
+  `docs/design-navigation-hold.md`.
+
 - **Fix (Blazor parity)** `@tsazor/compiler`, `@tsazor/runtime`: a component with `<HeadContent>`, `<PageTitle>` or
   `<SectionContent>` no longer rebuilds that content on each of its renders. `SectionOutlet` keys its content on the
   fragment, as Blazor does. In C# a child content lambda that uses only `this` is an equal delegate on every render,

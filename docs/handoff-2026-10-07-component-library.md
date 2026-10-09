@@ -33,6 +33,28 @@ everything pushed.
 >   the fragment; C#'s delegate equality kept Blazor's head stable, a JS function didn't. Fixed with compiler hint
 >   H4 (child content without outer locals is cached on the component; see design-render-hints.md) and stable
 >   fragments in `PageTitle`/`HeadOutlet`. Lesson: checks compared content, none checked that elements stay.
+> - **F39 → E13 (2026-10-09, owner):** switching quickly between pages showed dark flashes. While its plugins
+>   loaded, the new page was empty for a few frames and the template's dark footer moved up. FluentCMS is static SSR
+>   with enhanced navigation and swaps the finished page in one step. The fix: a navigation holds the previous page
+>   (a view transition without animation) until the new one has its data. On by default (the owner's decision),
+>   `routing.holdPreviousPage: false` turns it off. A navigation during the hold joins it, and a click on a held
+>   link follows it. See design-navigation-hold.md. verify measures the painted frames. Lesson: measure what the
+>   browser paints (CDP screencast) and with latency. On localhost the flash came only sometimes.
+> - **E13 verified and committed (2026-10-09):** `pnpm gates` 31/31 after the two fixes below, the port's verify
+>   70/70 (painted frames: 0 of 11 with a dark band), the runtime, tutorial and port tests. Two fixes the gates found:
+>   - the port's `backend.mjs` asked `IsInitialized` without the API token. A set-up FluentCMS answers it only with
+>     the token, so a second start failed. Unnoticed while the first backend ran, until the restart (`0bb0464`);
+>   - the tutorial's ch14 hash check read the list right after the click. With the hold, URL and page change a frame
+>     later, and WebKit sometimes saw the old list. The check now waits for both.
+> - **Dogfood feedback (owner, 2026-10-09)**, for an app with charts, a live event feed and Sleipnir:
+>   - Virtualize knows a fixed `itemSize` only. Blazor measures the rendered items, so this is a parity gap, and
+>     there is no stick-to-bottom.
+>   - F17: an app can't bring its own icons.
+>   - The guide to integrating a chart library via `@attach`, promised in design-component-library.md, is
+>     missing.
+>   - Publishing is tested only through tarballs. The suggestion is a local registry (Verdaccio) with
+>     prereleases, which R2 needs anyway.
+>   - There are no soak tests for long-open tabs.
 > - **Next:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
