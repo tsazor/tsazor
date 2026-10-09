@@ -448,6 +448,43 @@ async function main() {
     await previewClick(".refresh");
     check((await waitForPreview(page, ".failed", "The weather service is down.")).includes("The weather service is down."), "ch12 Special components: the ErrorBoundary shows its error view");
 
+    // Virtualize: only the rows in view render; the measured rows size the spacers (layout the claims tests lack).
+    await page.goto(`${APP}/ts/long-lists`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(1500);
+    await waitForPreview(page, ".history", "#1 ");
+    const longRows = await (await frameOf()).$$eval(".history .order", (rows) => rows.length);
+    check(longRows > 3 && longRows < 100, `ch12 Special components: Virtualize renders only the rows in view (${longRows} of 10,000)`);
+    await (await frameOf()).$eval(".history", (el) => { el.scrollTop = el.scrollHeight; });
+    check((await waitForPreview(page, ".history", "#10000")).includes("#10000"), "ch12 Special components: scrolled to the end, the last order shows");
+
+    // AnchorMode End: the feed follows new events at the bottom, stops while the reader is further up, and
+    // follows again back at the bottom.
+    await page.goto(`${APP}/ts/a-live-feed`);
+    await page.click("button:has-text('Solve')");
+    await page.waitForTimeout(2500);
+    const feedState = () =>
+        frameOf().then((frame) =>
+            frame.$eval(".feed", (el) => ({
+                atBottom: Math.abs(el.scrollTop + el.clientHeight - el.scrollHeight) < 2,
+                scrollTop: el.scrollTop,
+                last: [...el.querySelectorAll(".event")].at(-1)?.textContent ?? "",
+            })),
+        );
+    const following = await feedState();
+    await page.waitForTimeout(1500);
+    const followed = await feedState();
+    check(following.atBottom && followed.atBottom && followed.last !== following.last, `ch12 Special components: AnchorMode End follows new events at the bottom (${followed.last.trim().slice(0, 30)})`);
+    await (await frameOf()).$eval(".feed", (el) => { el.scrollTop = 400; });
+    await page.waitForTimeout(400);
+    const reading = await feedState();
+    await page.waitForTimeout(1500);
+    const stillReading = await feedState();
+    check(!stillReading.atBottom && Math.abs(stillReading.scrollTop - reading.scrollTop) < 3, `ch12 Special components: scrolled up, the feed stays where the reader is (${reading.scrollTop} → ${stillReading.scrollTop})`);
+    await (await frameOf()).$eval(".feed", (el) => { el.scrollTop = el.scrollHeight; });
+    await page.waitForTimeout(2000);
+    check((await feedState()).atBottom, "ch12 Special components: back at the bottom, the feed follows again");
+
     await page.goto(`${APP}/ts/code-behind`);
     await page.click("button:has-text('Solve')");
     check((await waitForPreview(page, ".verdict", "Weak")).includes("Weak"), "ch13 Organizing code: a code-behind (X.tsazor.ts) runs in the preview");

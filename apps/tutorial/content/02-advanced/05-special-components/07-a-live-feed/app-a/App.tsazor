@@ -1,0 +1,24 @@
+@import { Virtualize } from "@tsazor/runtime"
+@import { history, nextEvent, type OvenEvent } from "./oven"
+
+<h1>Ovens</h1>
+
+<div class="feed">
+    <Virtualize Items="@events" Context="event">
+        <div class="event">
+            <strong>@event.oven</strong> #@event.id: @event.message
+        </div>
+    </Virtualize>
+</div>
+
+@code {
+    events: OvenEvent[] = history(500);
+
+    protected override onInitialized(): void {
+        const timer = setInterval(() => {
+            this.events = [...this.events, nextEvent()];
+            this.stateHasChanged();
+        }, 700);
+        this.disposeSignal.addEventListener("abort", () => clearInterval(timer));
+    }
+}

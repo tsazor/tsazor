@@ -1,0 +1,16 @@
+.history {
+    height: 320px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+}
+
+.order {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.note {
+    margin: 4px 0 0;
+    color: #8a6d3b;
+    font-style: italic;
+}

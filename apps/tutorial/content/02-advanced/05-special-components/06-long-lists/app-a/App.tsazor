@@ -1,0 +1,15 @@
+@import { orders } from "./orders"
+
+<h1>Order history</h1>
+<p>@orders.length orders</p>
+
+<div class="history">
+    @foreach (const order of orders) {
+        <div class="order">
+            <strong>#@order.id</strong> @order.customer: @order.items
+            @if (order.note) {
+                <p class="note">@order.note</p>
+            }
+        </div>
+    }
+</div>

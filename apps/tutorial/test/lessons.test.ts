@@ -28,7 +28,7 @@ const lessons = content.parts.flatMap((part) => part.chapters.flatMap((chapter) 
 
 afterAll(() => rmSync(gateDir, { recursive: true, force: true }));
 
-type FrontMatterKey = "startFails" | "typeErrors" | "gate" | "refactor";
+type FrontMatterKey = "startFails" | "typeErrors" | "gate" | "refactor" | "layoutOnly";
 
 /** A front-matter value set in either track's text (the first one found). */
 function frontMatter(lessonDir: string, name: FrontMatterKey): string | undefined {
@@ -210,7 +210,11 @@ describe("tutorial lessons", () => {
           }
           const a = buildProject(lesson.a);
           const before = a.entry ? (await renderBuild(a, path.join(gateDir, lesson.slug, "a2"), steps)).html + a.css : "";
-          if (flag(lesson.dir, "refactor")) {
+          if (flag(lesson.dir, "layoutOnly")) {
+            // The difference needs layout (a list that follows its new rows as they scroll in): the browser
+            // gate (scripts/verify.mjs) checks it. Here the solution only has to differ.
+            expect(lesson.b).not.toEqual(lesson.a);
+          } else if (flag(lesson.dir, "refactor")) {
             // A refactoring moves code around: the app must render exactly as before.
             const strip = (s: string): string => s.replace(/\s+b-[0-9a-f]{8}=""/g, "").replace(/\/\* [^*]+ \*\/\n/g, "");
             expect(strip(html + build.css)).toBe(strip(before));

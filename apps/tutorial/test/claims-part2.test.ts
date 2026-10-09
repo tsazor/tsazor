@@ -8,7 +8,7 @@
 import path from "node:path";
 import { rmSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { render, ServiceCollection, type RenderError } from "@tsazor/testing";
 import { buildProject, type Files } from "../src/engine/compile-project";
 import { TypeChecker } from "../src/engine/type-check";
@@ -742,6 +742,70 @@ describe("markup-with-components", () => {
     expect(strip(m.container.querySelector(".order")!.innerHTML)).toBe("");
     expect(m.container.querySelector(".order + button.order-button")).not.toBeNull();
     m.dispose();
+  });
+});
+
+describe("long-lists", () => {
+  const { a, b } = lesson("long-lists");
+  const spacers = (m: Mounted): HTMLElement[] => [...m.container.querySelectorAll<HTMLElement>(".history > [aria-hidden='true']")];
+
+  it("the start renders a row for each of the 10,000 orders", async () => {
+    const m = await mount(a);
+    expect(m.container.querySelectorAll(".history .order").length).toBe(10_000);
+    m.dispose();
+  });
+
+  it("Virtualize renders only some rows, with two empty spacers standing in for the rest", async () => {
+    const m = await mount(b);
+    const rows = m.container.querySelectorAll(".history .order").length;
+    // No layout in a test DOM: the rows render up to MaxItemCount (100) plus the overscan on both sides.
+    expect(rows).toBeGreaterThan(0);
+    expect(rows).toBeLessThanOrEqual(130);
+    const [before, after] = spacers(m);
+    expect(spacers(m)).toHaveLength(2);
+    expect(before!.children).toHaveLength(0);
+    // The after spacer takes the place of the rows not rendered, at ItemSize (50 px) until rows are measured.
+    expect(after!.style.height).toBe(`${(10_000 - rows) * 50}px`);
+    m.dispose();
+  });
+
+  it("orders with a note are taller rows: every seventh has one", async () => {
+    const m = await mount(b);
+    const rows = [...m.container.querySelectorAll(".history .order")];
+    expect(rows.filter((row) => row.querySelector(".note")).length).toBe(Math.floor(rows.length / 7));
+    m.dispose();
+  });
+});
+
+describe("a-live-feed", () => {
+  const { a, b } = lesson("a-live-feed");
+
+  it("an event arrives every 700 ms and joins the list: the after spacer grows by one row", async () => {
+    const m = await mount(a);
+    const after = (): string => [...m.container.querySelectorAll<HTMLElement>(".feed > [aria-hidden='true']")].at(-1)!.style.height;
+    const first = after();
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await m.settle();
+    expect(parseFloat(after())).toBe(parseFloat(first) + 50);
+    m.dispose();
+  });
+
+  it("the solution sets AnchorMode to End, imported with Virtualize from @tsazor/runtime", () => {
+    expect(b["App.tsazor"]).toContain('@import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"');
+    expect(b["App.tsazor"]).toContain('AnchorMode="@VirtualizeAnchorMode.End"');
+    expect(a["App.tsazor"]).not.toContain("AnchorMode");
+  });
+
+  it("the timer stops when the feed goes away (disposeSignal)", async () => {
+    const cleared = vi.spyOn(globalThis, "clearInterval");
+    try {
+      const m = await mount(b);
+      expect(cleared).not.toHaveBeenCalled();
+      m.dispose();
+      expect(cleared).toHaveBeenCalledTimes(1);
+    } finally {
+      cleared.mockRestore();
+    }
   });
 });
 
