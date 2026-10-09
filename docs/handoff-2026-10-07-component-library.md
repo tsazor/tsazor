@@ -91,6 +91,11 @@ everything pushed.
 >   - Next: step 4 (icon slots `IconStart`/`IconEnd` on Button, MenuItem, NavLink, Tab, TreeItem, Badge; the skins'
 >     own icons from the generated sets — D-I3), 5 (gallery icon browser, codemod rule
 >     `new Icons.X.Y.Z()` → `Icons.X.Y.Z`), 6 (FluentCMS uses the original's icons; F17 closes). Then Markdown.
+>   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
+>     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
+>     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)
+>     that types a library component sees no `scrollToItem`/`refreshDataAsync`. The manifest needs the public
+>     methods too.
 >   - Lockfile: a new external dependency is staged as HEAD's `pnpm-lock.yaml` plus its importer block and its
 >     `packages:` and `snapshots:` entries (written to a temp file, `git hash-object -w`, `git update-index
 >     --cacheinfo`), so the owner's `fluentcms-admin` WIP stays out.
