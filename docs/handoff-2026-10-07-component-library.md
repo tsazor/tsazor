@@ -61,8 +61,12 @@ everything pushed.
 >   Tsazor." Decided: waves A and B of [design-library-completeness.md](design-library-completeness.md) before 1.0
 >   (reference: Fluent UI Blazor + MudBlazor), both skins at once, `@tsazor/markdown` on marked + DOMPurify, charts as
 >   an `@attach` guide now and `@tsazor/charts` in wave B. Building them is also a core test vehicle (findings L1, L2, …).
->   **Order:** Virtualize at Blazor parity + sticking to the bottom (core) → icons (F17) and Markdown → rest of wave A
->   → wave B.
+>   **Order:** Virtualize at Blazor 11 parity (core; [design-virtualize.md](design-virtualize.md), spec in
+>   [blazor-virtualize-net11.md](blazor-virtualize-net11.md)) → icons (F17) and Markdown → rest of wave A → wave B.
+> - **Parity baseline: Blazor 11** (owner, 2026-10-09). Its Virtualize measures rows and has `AnchorMode.End`, so the
+>   dogfood's feed and chat are parity work. Decided for Virtualize: aliases for `Overscan`/`ItemTemplate`, fix all of
+>   Blazor's probable bugs (each a test), port all of Blazor's tests (new gate app `apps/blazor-parity`), DataGrid as
+>   QuickGrid 11.
 > - **Before that:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.

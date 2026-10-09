@@ -54,7 +54,8 @@ MudBlazor:
 - **Wave B:** the rest of the inventory, and `@tsazor/charts`.
 
 Each component goes into both skins at once. Building them is also a core test vehicle: core bugs found on the way
-become fixes with tests. The core goes first: Virtualize at Blazor parity, and sticking to the bottom.
+become fixes with tests. The core goes first: Virtualize at Blazor 11 parity, including `AnchorMode.End` for feeds
+and chats ([design-virtualize.md](design-virtualize.md); the parity baseline is Blazor 11, owner 2026-10-09).
 
 ## 3c — Heavy work off the main thread ([design-worker.md](design-worker.md))
 

@@ -83,13 +83,13 @@ The rich text editor stays in the app (the FluentCMS port embeds Quill), as in b
 
 ## 4. Outside the library
 
-- **Core:** Virtualize at Blazor parity:
+- **Core:** Virtualize at Blazor 11 parity ([design-virtualize.md](design-virtualize.md)):
   - measured item sizes;
   - generic `TItem`, so the context is typed;
   - `ItemContent`, `Placeholder` and `EmptyContent`;
   - `OverscanCount` and `MaxItemCount`.
 
-  Plus sticking to the bottom (a Tsazor extension) for feeds and chats.
+  Sticking to the bottom for feeds and chats is Blazor 11's `AnchorMode.End`, so it is parity too.
 - **Live data:** a guide to `EventSource` through `observe`, with reconnect and `Last-Event-ID`. The Sleipnir
   binding comes after 1.0.
 - **Docs:**
