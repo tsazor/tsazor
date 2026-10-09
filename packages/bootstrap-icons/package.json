@@ -1,0 +1,35 @@
+{
+  "name": "@tsazor/bootstrap-icons",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Bootstrap Icons as typed icon values for Tsazor, tree-shaken: Icons.Alarm. Generated from bootstrap-icons (MIT, The Bootstrap Authors).",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node scripts/generate.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tsazor/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "bootstrap-icons": "1.13.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.7"
+  },
+  "tsazor": {
+    "apiSnapshot": false
+  }
+}

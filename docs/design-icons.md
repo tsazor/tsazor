@@ -1,6 +1,6 @@
 # Design: icons (F17, wave A)
 
-Status: **in progress** (2026-10-09): steps 1 and 2 of §4 are done. The first step of wave A in
+Status: **in progress** (2026-10-09): steps 1–3 of §4 are done. The first step of wave A in
 [design-library-completeness.md](design-library-completeness.md) (D-L5: `Icon` takes any icon value; generated
 packages with the full sets, tree-shaken).
 
@@ -45,7 +45,7 @@ is trusted: it comes from a package or from the app's own code, never from user 
 | Package | Source (MIT) | Form |
 |---|---|---|
 | `@tsazor/fluent-icons` | `@fluentui/svg-icons` (about 2,000 icons × sizes 10–48 × regular/filled; 21,735 SVGs) | `Icons.Regular.Size20.Save`, `Icons.Filled.Size24.Delete` |
-| `@tsazor/bootstrap-icons` | `bootstrap-icons` (about 2,000 icons, one size) | `Icons.Save`, `Icons.SaveFill` |
+| `@tsazor/bootstrap-icons` | `bootstrap-icons` (2,078 icons, one size) | `Icons.Save`, `Icons.SaveFill`; a name that starts with a digit gets `Number` in front (`Icons.Number0Circle`) |
 
 - **Tree-shaken:** one ES module per variant and size (`regular/size20.js` exports `Save`, `Delete`, …), joined by
   `export * as` namespaces. Rollup drops what a static access (`Icons.Regular.Size20.Save`) doesn't reach. A build

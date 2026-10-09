@@ -43,6 +43,7 @@ const SHIPPED = [
   "ui",
   "worker",
   "bootstrap",
+  "bootstrap-icons",
   "fluent",
   "fluent-icons",
   "dotnet",

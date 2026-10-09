@@ -17,6 +17,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   `<Icon Value="@Icons.Regular.Size20.Save" />`. One module per variant and size, joined by namespaces: a page ships
   only the icons it uses (a build test checks it), and a misspelled icon is a type error with the near name.
   Generated at build time from `@fluentui/svg-icons` 1.1.344 (MIT, Microsoft); no API snapshot (the set is the API).
+- `@tsazor/bootstrap-icons` (new): Bootstrap Icons (2,078) the same way, `Icons.Alarm`; a name that starts with a
+  digit gets `Number` in front (`Icons.Number0Circle`). Generated from `bootstrap-icons` 1.13.2 (MIT).
 
 - **Blazor 11 parity** `@tsazor/runtime`: `Virtualize<TItem>` is Blazor 11's
   ([design-virtualize.md](docs/design-virtualize.md)).
