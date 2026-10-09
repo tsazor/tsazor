@@ -29,6 +29,10 @@ everything pushed.
 >   (`addComponentParameter`), upstream U3 and U4. The site builder stays out of scope.
 > - **Small findings closed:** F21 (`onClosed` carries no event), F23 (Razor parity confirmed; one TZS024 with a quick
 >   fix instead of a cascade), F35 (`waitUntilIdle({ timeout })` names the pending work).
+> - **F38 (2026-10-09, found by the owner using the site):** every navigation flickered. `SectionOutlet` keys on
+>   the fragment; C#'s delegate equality kept Blazor's head stable, a JS function didn't. Fixed with compiler hint
+>   H4 (child content without outer locals is cached on the component; see design-render-hints.md) and stable
+>   fragments in `PageTitle`/`HeadOutlet`. Lesson: checks compared content, none checked that elements stay.
 > - **Next:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
