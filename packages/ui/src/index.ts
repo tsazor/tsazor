@@ -3,6 +3,7 @@
 
 export type { Appearance, Intent, Orientation, Placement, Size } from "./vocabulary.js";
 export { uniqueId } from "./ids.js";
+export { builtInIcons, icon, type IconValue } from "./icons.js";
 export { focusableElements, focusElement } from "./focus.js";
 export { createLayer, isTopLayer, openLayer } from "./layers.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";

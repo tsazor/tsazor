@@ -5,6 +5,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { render, renderTree, type RenderResult } from "@tsazor/testing";
 import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { icon } from "@tsazor/ui";
 import {
   Icon,
   Indicator,
@@ -77,6 +78,48 @@ describe("Icon", () => {
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.getAttribute("aria-label")).toBe("Completed");
     expect(svg.getAttribute("aria-hidden")).toBe("false");
+    result.dispose();
+  });
+});
+
+describe("Icon with a value", () => {
+  it("draws an app's own icon: its viewBox and markup, in currentColor", async () => {
+    const bolt = icon("bolt", '<svg viewBox="0 0 16 16"><path d="M9 1L3 9h5l-1 6 6-8H8z"/></svg>');
+    const result = await renderOne(Icon, (b) => {
+      b.addAttribute(1, "value", bolt);
+      b.addAttribute(2, "size", 24);
+    });
+    const svg = result.container.querySelector("svg.fui-icon")!;
+    expect(svg.getAttribute("viewBox")).toBe("0 0 16 16");
+    expect(svg.getAttribute("fill")).toBe("currentColor");
+    expect(svg.getAttribute("width")).toBe("24");
+    // Parsed in the SVG namespace, so the browser draws it.
+    const path = svg.querySelector("path")!;
+    expect(path.namespaceURI).toBe("http://www.w3.org/2000/svg");
+    expect(path.getAttribute("d")).toBe("M9 1L3 9h5l-1 6 6-8H8z");
+    result.dispose();
+  });
+
+  it("a value wins over a name", async () => {
+    const result = await renderOne(Icon, (b) => {
+      b.addAttribute(1, "name", "close");
+      b.addAttribute(2, "value", icon("dot", '<circle cx="12" cy="12" r="4"/>'));
+    });
+    expect(result.container.querySelector("circle")).not.toBeNull();
+    expect(result.container.querySelector("path")).toBeNull();
+    result.dispose();
+  });
+
+  it("a title names it (role=img), and color sets the CSS color", async () => {
+    const result = await renderOne(Icon, (b) => {
+      b.addAttribute(1, "name", "check");
+      b.addAttribute(2, "title", "Saved");
+      b.addAttribute(3, "color", "green");
+    });
+    const svg = result.container.querySelector(".fui-icon")! as SVGElement;
+    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.getAttribute("aria-label")).toBe("Saved");
+    expect(svg.style.color).toBe("green");
     result.dispose();
   });
 });

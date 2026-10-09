@@ -6,6 +6,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { ErrorBoundary, EventCallback, ServiceCollection, type RenderFragment } from "@tsazor/runtime";
+import { icon } from "@tsazor/ui";
 import {
   addBootstrap,
   Accordion,
@@ -26,6 +27,7 @@ import {
   Toaster,
   Tooltip,
   Form,
+  Icon,
   RadioGroup,
   TextInput,
   Collapse,
@@ -89,6 +91,36 @@ describe("Button", () => {
       b.closeComponent();
     });
     expect(container.querySelector("button")!.hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("Icon", () => {
+  it("draws a built-in icon by name as a decorative .bi svg", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Icon);
+      b.addAttribute(1, "name", "close");
+      b.closeComponent();
+    });
+    const svg = container.querySelector("svg.bi")!;
+    expect(svg.getAttribute("width")).toBe("16");
+    expect(svg.getAttribute("aria-hidden")).toBe("true");
+    expect(svg.querySelector("path")!.getAttribute("d")).toBe("M3 3l14 14M17 3L3 17");
+  });
+
+  it("draws an app's own icon, named by its title", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Icon);
+      b.addAttribute(1, "value", icon("dot", '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3"/></svg>'));
+      b.addAttribute(2, "title", "Online");
+      b.addAttribute(3, "class", "text-success");
+      b.closeComponent();
+    });
+    const svg = container.querySelector("svg")!;
+    expect(svg.getAttribute("class")).toBe("bi text-success");
+    expect(svg.getAttribute("viewBox")).toBe("0 0 16 16");
+    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.getAttribute("aria-label")).toBe("Online");
+    expect(svg.querySelector("circle")!.namespaceURI).toBe("http://www.w3.org/2000/svg");
   });
 });
 

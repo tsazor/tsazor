@@ -1,0 +1,46 @@
+@** An inline SVG icon (`.bi`, as Bootstrap Icons draws them), in currentColor: a `value` (an `IconValue`: a generated
+    set's, or an app's own made with `icon()` from @tsazor/ui), or a `name` from the small built-in set — the same
+    parameters as the Fluent skin's Icon. Decorative (aria-hidden) by default; with a title (or ariaLabel) it gets
+    role="img". An unknown name falls back to check. *@
+@import { MarkupString } from "@tsazor/runtime"
+@import { builtInIcons, type IconValue } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+
+<svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>
+
+@code {
+    /** The icon: a generated set's value, or an app's own from `icon()`. Wins over name. */
+    @Parameter() value?: IconValue;
+    /** A name from the built-in set: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove, folder, folder-up, document, image, download. */
+    @Parameter() name?: string;
+    /** Pixel size (width/height); 16 by default, as Bootstrap Icons. */
+    @Parameter() size: number = 16;
+    /** The icon's color (any CSS color); by default the text color around it. */
+    @Parameter() color?: string;
+    /** The accessible name; without it (or ariaLabel) the icon is decorative. */
+    @Parameter() title?: string;
+    /** Accessible label — hides the icon from AT unless a label is given. */
+    @Parameter() ariaLabel?: string;
+    /** Further attributes for the svg element (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get icon(): IconValue {
+        return this.value ?? builtInIcons[this.name ?? ""] ?? (builtInIcons["check"] as IconValue);
+    }
+
+    private get iconAttributes(): Record<string, unknown> {
+        const label = this.ariaLabel ?? this.title;
+        return withClass("bi", {
+            width: this.size,
+            height: this.size,
+            viewBox: this.icon.viewBox,
+            fill: "currentColor",
+            style: this.color === undefined ? null : `color: ${this.color}`,
+            "aria-hidden": label === undefined ? "true" : "false",
+            "aria-label": label,
+            role: label === undefined ? null : "img",
+            focusable: "false",
+            ...this.additionalAttributes,
+        });
+    }
+}

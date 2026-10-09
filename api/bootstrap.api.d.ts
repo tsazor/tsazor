@@ -259,6 +259,17 @@ export default class Grid extends ComponentBase {
 
 // GridSort: re-exported from @tsazor/ui
 
+// Icon
+export default class Icon extends ComponentBase {
+    value?: IconValue;
+    name?: string;
+    size: number;
+    color?: string;
+    title?: string;
+    ariaLabel?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Intent: re-exported from @tsazor/ui
 
 // ListGroup

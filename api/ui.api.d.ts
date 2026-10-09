@@ -18,6 +18,9 @@ export interface AnchoredPositionOptions {
 // Appearance
 export type Appearance = "solid" | "outline" | "subtle" | "transparent";
 
+// builtInIcons
+export declare const builtInIcons: Readonly<Record<string, IconValue>>;
+
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
 
@@ -206,6 +209,16 @@ export declare function hasChildren(item: TreeViewItem): boolean;
 
 // hasSubmitAttempt
 export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
+
+// icon
+export declare function icon(name: string, svg: string, viewBox?: string): IconValue;
+
+// IconValue
+export interface IconValue {
+    readonly name: string;
+    readonly viewBox: string;
+    readonly content: string;
+}
 
 // initiallyExpanded
 export declare function initiallyExpanded(items: readonly TreeViewItem[]): Set<string>;

@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap` (F17, the first step of the icons in
+  [design-icons.md](docs/design-icons.md)): an app brings its own icons.
+  - `@tsazor/ui`: `IconValue` (an SVG's viewBox and inner markup) and `icon(name, svg)`, which takes the inner
+    markup or a whole `<svg>` (Fluent UI Blazor's `new Icon(name, variant, size, content)`). The small built-in
+    set moved here (`builtInIcons`).
+  - Both skins' `Icon` take `value` (wins over `name`), `color` and `title`, as Fluent UI Blazor's
+    `FluentIcon` does. `@tsazor/bootstrap` gets `Icon` (`.bi`, as Bootstrap Icons), with the same parameters.
+  - The generated full sets (Fluent System Icons, Bootstrap Icons) follow.
+
 - **Blazor 11 parity** `@tsazor/runtime`: `Virtualize<TItem>` is Blazor 11's
   ([design-virtualize.md](docs/design-virtualize.md)).
   - **Measurement:** the rows are measured, so rows of different heights work; `ItemSize` is only the first

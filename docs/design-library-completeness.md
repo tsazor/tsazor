@@ -104,7 +104,7 @@ Both waves come before 1.0 (D-L1). The waves set the order, not the release:
 - **B:** the rest of the table, and `@tsazor/charts` (D-L2).
 - **Order:**
   1. the core (Virtualize);
-  2. Icons and Markdown (every app hits them first);
+  2. Icons ([design-icons.md](design-icons.md)) and Markdown (every app hits them first);
   3. the rest of wave A;
   4. wave B.
 - **Every component** gets its behavior in `@tsazor/ui` (keyboard tests once), a gallery page per skin, axe, and
