@@ -88,7 +88,8 @@ function apiKey() {
 
 /** The first-time setup, then the BFF's settings. */
 async function setUp() {
-  if (!(await api("GET", "/api/Setup/IsInitialized"))) {
+  // Once set up, FluentCMS answers IsInitialized only with the API token (before, without one).
+  if (!(await api("GET", "/api/Setup/IsInitialized", { key: apiKey() || undefined }))) {
     console.log(`backend: first-time setup (user ${ADMIN.username}, template Default)`);
     await api("POST", "/api/Setup/Start", { body: { ...ADMIN, template: "Default", url: SITE_URLS[0] } });
   }
