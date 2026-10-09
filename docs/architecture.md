@@ -367,6 +367,10 @@ Blazor's sections and head management:
   `SetKey(RenderFragment)`; port: `componentKey`/`setKey` accept arbitrary objects and the
   diff compares object identity). A changing provider ⇒ a fresh renderer instance
   (cascades/error boundaries for the new content); the same content ⇒ instances are kept.
+  "The same content" needs C#'s delegate equality: compiled child content that uses only
+  the component is one function per instance (render hint H4, design-render-hints.md), and
+  `PageTitle`/`HeadOutlet` pass one function per instance like Blazor's method groups —
+  before that, every render of a `<HeadContent>`'s component rebuilt the head (F38).
 - `HeadOutlet` (head/head-outlet.ts) as a second app root: `createTsazorApp` renders it into
   `document.head` (parity with the Blazor WASM host; the head root is torn down first on
   `dispose()`). A port of Blazor's JS `PageTitle.getAndRemoveExistingTitle`: on the first

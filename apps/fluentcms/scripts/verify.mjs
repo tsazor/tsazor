@@ -164,8 +164,13 @@ async function main() {
     check(messages.some((m) => m.Subject === visitor && m.Email === `${visitor}@example.com` && m.Message === "Hello"), "a visitor's message is stored, under FluentCMS's property names");
 
     // Into another stored layout, without a page load: the blogs, a content list through its Scriban template.
+    await page.evaluate(() => {
+      window.headLinks = [...document.head.querySelectorAll("link[rel=stylesheet]")];
+    });
     await page.getByRole("link", { name: "Blogs" }).first().click();
     await page.locator(".f-content-list .blog-post").first().waitFor({ timeout: 10_000 });
+    const linksKept = await page.evaluate(() => window.headLinks.length > 0 && window.headLinks.every((link) => link.isConnected));
+    check(linksKept, "navigating keeps the head's stylesheet elements: the page doesn't lose its styles on the way (F38)");
     const list = await renderedLikeUpstream(page, "/blogs", ".f-content-list");
     check(list.same, "the content list fills its Scriban template as FluentCMS does, character for character (loops, conditions, dates, auto-indent)");
     await page.locator(".f-content-list .blog-post").first().click();

@@ -35,7 +35,9 @@ export interface TsazorPluginOptions {
   /** Every invisible compiler optimization (default true). `false` turns
    *  `staticMarkup` and `renderHints` (and later ones) off — the generated
    *  code is then what Razor would generate: a diagnostic and emergency
-   *  switch (A/B measurements, a suspected optimizer bug), not a recommended mode. */
+   *  switch (A/B measurements, a suspected optimizer bug), not a recommended mode.
+   *  It also caches no child content (H4), so section content is rebuilt on
+   *  every render of its component. */
   optimize?: boolean;
   /**
    * E5: pages loaded on the first navigation to them — `true` for every

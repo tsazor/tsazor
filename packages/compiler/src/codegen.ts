@@ -103,7 +103,8 @@ export interface CodegenOptions {
    * `staticMarkup` and `renderHints`). Default true; `false` turns them all
    * off — the generated code is then what Razor would generate. A diagnostic
    * and emergency switch (A/B measurements, isolating a suspected optimizer
-   * bug), not a recommended mode.
+   * bug), not a recommended mode. It also caches no child content (H4), so
+   * section content is rebuilt on every render of its component.
    */
   optimize?: boolean;
   /**
@@ -263,6 +264,10 @@ const alias = (name: string): string => `__tsazor_${name}`;
 const BIND_METHOD = alias("bindMethod");
 const FORMAT_VALUE = alias("formatValue");
 const FORMAT_PARSE = alias("parseValue");
+/** The type of a stable fragment's cache slot (H4). */
+const FRAGMENT_TYPE = `(${BUILDER}: ${alias("RenderTreeBuilder")}) => void`;
+/** The indent of a statement in the render method (stmt). */
+const STMT_INDENT = "    ";
 
 export function generateCode(document: DocumentNode, options: CodegenOptions, diagnostics: DiagnosticBag): CodegenResult {
   return new Codegen(options, diagnostics).run(document);
@@ -316,6 +321,10 @@ class Codegen {
   private readonly hoistedHandlers: Array<{ method: string; params: string[]; code: string; entries: PendingEntry[] }> = [];
   /** H1: every name some code of the file assigns (computed on first need). */
   private assignedNames: Set<string> | undefined;
+  /** H4: the fragments being emitted, innermost last — the locals declared outside each, and whether its body uses one. */
+  private readonly fragmentScopes: Array<{ outer: ReadonlySet<string>; captures: boolean }> = [];
+  /** H4: the cache slot type of each stable fragment (slot `__tsazor_f<index>`). */
+  private readonly stableFragments: string[] = [];
   /** H2: the keyed row being emitted with its dynamic values captured (emitReusableRow). */
   private rowCapture: RowCapture | null = null;
   /** H2: the value checks of each reusable row site, emitted as module constants after the class. */
@@ -547,6 +556,7 @@ class Codegen {
 
     const typeParams = this.metadata.typeParams;
     const typeDecl = typeParams.length > 0 ? `<${typeParams.join(", ")}>` : "";
+    const classStart = this.writer.lineCount;
     // `@attribute @decorator(…)`: a real class decorator (mapped for the LSP).
     for (const decorator of this.decorators) {
       const start = decorator.valueStart ?? decorator.pos;
@@ -580,6 +590,8 @@ class Codegen {
     this.emitNodes(renderBody, { line: 0, column: 0 });
     this.line("  }");
     this.emitHoistedHandlers();
+    // H4: the cache slots of the stable fragments (`declare` emits no field).
+    this.stableFragments.forEach((type, index) => this.line(`  declare private [${alias(`f${index}`)}]?: ${type};`));
     this.line("}");
     this.line("");
     // H2: one array per reusable row site — its identity names the site (a
@@ -592,6 +604,10 @@ class Codegen {
     // Member references inside non-arrow functions of the render code use
     // the captured component (`this` is rebound there).
     if (this.needsThisAlias) this.writer.insertLines(bodyStart, [`    const ${THIS_ALIAS} = this;`]);
+    // H4: one symbol per stable fragment, ahead of the class that declares its slot.
+    if (this.stableFragments.length > 0) {
+      this.writer.insertLines(classStart, [...this.stableFragments.map((_, index) => `const ${alias(`f${index}`)} = Symbol();`), ""]);
+    }
 
     // Splice the runtime import in at its header position, now that body
     // emission has revealed every runtime API the module uses (the writer
@@ -1123,6 +1139,7 @@ class Codegen {
     isOuterLocal: (name) => {
       if (!this.locals.has(name)) return false;
       this.capturedLocals?.add(name);
+      for (const scope of this.fragmentScopes) if (scope.outer.has(name)) scope.captures = true;
       return true;
     },
     prefixFor: (name, thisRebound) => {
@@ -1510,7 +1527,7 @@ class Codegen {
   }
 
   private stmt(text: string, pos: SourcePos, expressionStart?: number): void {
-    const indent = "    ";
+    const indent = STMT_INDENT;
     // Token-precise entries: outOffsets are relative to the expression inside
     // the statement text, so the baked expression's own start offset applies.
     const exprBase = indent.length + (expressionStart ?? 0);
@@ -2195,13 +2212,38 @@ class Codegen {
       this.emitFragment(parameter.name, context ?? "context", children, node, node.tagName, "ChildContent", parameter);
       return;
     }
-    this.stmt(`${BUILDER}.addContent(${this.seq()}, (${BUILDER}) => {`, node.pos);
-    this.enterScope();
-    this.withScope(() => {
-      for (const child of children) this.emitNode(child, node.pos);
+    this.emitFragmentValue(`${BUILDER}.addContent(${this.seq()}, `, `(${BUILDER}) => {`, node.pos, FRAGMENT_TYPE, () => {
+      this.enterScope();
+      this.withScope(() => {
+        for (const child of children) this.emitNode(child, node.pos);
+      });
+      this.leaveScope();
     });
-    this.leaveScope();
-    this.stmt(`});`, node.pos);
+  }
+
+  /**
+   * H4 (docs/design-render-hints.md): a fragment value `<prefix><lambda> … });`
+   * whose body uses no local declared outside it is cached on the component —
+   * `this[__tsazor_f0] ??= (__builder) => { … }` — so every render passes the
+   * same function, as every render of a C# lambda that captures only `this`
+   * is an equal delegate (`Delegate.Equals`: same method, same target). A
+   * body that uses an outer local stays a new closure per render, as in C#
+   * (a new closure object, a new target). The slot is a module symbol: a
+   * module re-evaluated by HMR gets new ones. Parity, not an optimization:
+   * `renderHints: false` keeps it; typed shadows and `optimize: false` don't.
+   */
+  private emitFragmentValue(prefix: string, lambda: string, pos: SourcePos, slotType: string, emitBody: () => void): void {
+    const line = this.writer.lineCount + 1;
+    this.stmt(prefix + lambda, pos);
+    const scope = { outer: new Set(this.locals.keys()), captures: false };
+    this.fragmentScopes.push(scope);
+    emitBody();
+    this.fragmentScopes.pop();
+    this.stmt(`});`, pos);
+    if (scope.captures || this.options.typedShadow !== undefined || this.options.optimize === false) return;
+    const slot = alias(`f${this.stableFragments.length}`);
+    this.stableFragments.push(slotType);
+    this.writer.insertText(line, STMT_INDENT.length + prefix.length, `this[${slot}] ??= `);
   }
 
   /**
@@ -2225,19 +2267,20 @@ class Codegen {
       }
     }
     const contextType = context !== null && parameter !== undefined ? this.shadowContextType(parameter) : undefined;
-    const head = context === null
-      ? `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${BUILDER}) => {`
-      : `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, (${context}: ${contextType ?? "any"}) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
-    this.stmt(head, at.pos);
-    this.enterScope();
-    if (context !== null) this.contextStack.push({ name: context, element, component });
-    this.withScope(() => {
-      if (context !== null) this.locals.set(context, "context");
-      for (const child of children) this.emitNode(child, at.pos);
+    const prefix = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, `;
+    const lambda = context === null
+      ? `(${BUILDER}) => {`
+      : `(${context}: ${contextType ?? "any"}) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
+    this.emitFragmentValue(prefix, lambda, at.pos, context === null ? FRAGMENT_TYPE : `(context: any) => ${FRAGMENT_TYPE}`, () => {
+      this.enterScope();
+      if (context !== null) this.contextStack.push({ name: context, element, component });
+      this.withScope(() => {
+        if (context !== null) this.locals.set(context, "context");
+        for (const child of children) this.emitNode(child, at.pos);
+      });
+      if (context !== null) this.contextStack.pop();
+      this.leaveScope();
     });
-    if (context !== null) this.contextStack.pop();
-    this.leaveScope();
-    this.stmt(`});`, at.pos);
   }
 
   /**

@@ -101,6 +101,38 @@ create, append and update every 10th unchanged within noise.
 comparisons are a minor share once H1/H2 remove the walk. Deferred; revisit with a bench where
 large non-list trees re-render.
 
+**H4 — Stable child content** (added 2026-10-09, port finding F38). Not an optimization first: it
+gives compiled child content C#'s delegate equality. A Razor child content lambda that uses only
+`this` is a new delegate on every render, but an *equal* one (`Delegate.Equals`: same method, same
+target), and Blazor relies on that where it keys on a fragment: `SectionOutlet` renders its
+content through an inner component keyed by the fragment, so the content's DOM and component
+instances stay while the providing component re-renders. A JS arrow function is a new, unequal
+object every render, so Tsazor rebuilt every `<HeadContent>` and `<SectionContent>` on every
+render of its component: stylesheets in the head were removed and re-added, the page lost its
+styles for a frame and flickered. The FluentCMS port's public site showed it on every navigation.
+
+The compiler caches a fragment whose body uses no local declared outside it on the component:
+
+```ts
+__builder.addContent(1, this[__tsazor_f0] ??= (__builder) => { … });
+const __tsazor_f0 = Symbol();                 // module level, ahead of the class
+declare private [__tsazor_f0]?: (__builder: RenderTreeBuilder) => void;   // in the class
+```
+
+A body that uses an outer local — a loop variable, a markup local, an enclosing template's
+context, a handler that captures one — stays a new closure per render, as in C# (a new closure
+object, a new target). Locals the body declares itself don't count. The slot is a module symbol,
+so a module re-evaluated by HMR gets new slots and never renders the old version's fragment; a
+private `#field` would break on HMR's prototype swap. The cache sits on the component (the
+lambda's `this`), not in the builder: nested child content runs in another component's builder,
+and a host that renders fragments from several owners must not reuse one owner's fragment for
+another. Hand-written fragments in TS follow the same rule by hand: the runtime's `PageTitle` and
+`HeadOutlet` pass one function per instance, as Blazor passes a method group.
+H4 is parity, so `renderHints: false` keeps it: that switch turns off the invisible hints, and the
+tutorial's gate compares the DOM with and without them. Only the emergency switch `optimize: false`
+("what Razor would generate") turns H4 off, at the cost of the parity: section content is then
+rebuilt on every render of its component.
+
 ## Decisions (approved 2026-10-06)
 
 - **D-R1 — H1 stable handlers**, `const`/parameter captures only. **Proposal: yes.**

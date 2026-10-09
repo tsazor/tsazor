@@ -286,7 +286,7 @@ describe("codegen integration (A4)", () => {
   it("keeps sequence numbers stable across the builder rename", () => {
     const code = gen("<Comp><p>@x</p></Comp><div>@y</div>", { resolveComponent: () => ({ specifier: "./Comp.tsazor" }) });
     expect(code).toContain("__builder.openComponent(0, __tsazor_comp_Comp);");
-    expect(code).toContain("__builder.addContent(1, (__builder) => {");
+    expect(code).toContain("__builder.addContent(1, this[__tsazor_f0] ??= (__builder) => {");
     expect(code).toContain('__builder.openElement(0, "p");');
     expect(code).toContain('__builder.openElement(2, "div");');
   });

@@ -69,9 +69,14 @@ async function withHeadMarkup(source: string) {
   renderHead(renderer);
   const container = document.createElement("div");
   document.body.appendChild(container);
-  renderer.renderInContainer(Page as never, container);
+  const state = renderer.renderInContainer(Page as never, container);
   await settleRenderer(renderer);
-  return { container };
+  const page = state.component as unknown as Record<string, unknown> & { stateHasChanged(): void };
+  const rerender = async (): Promise<void> => {
+    page.stateHasChanged();
+    await settleRenderer(renderer);
+  };
+  return { container, page, rerender };
 }
 
 describe("HeadOutlet/HeadContent (3.4)", () => {
@@ -87,6 +92,20 @@ describe("HeadOutlet/HeadContent (3.4)", () => {
 <HeadContent><meta name="x" content="1" /></HeadContent>`);
     expect(document.title).toBe("Doc");
     expect(document.head.querySelector('meta[name="x"]')).not.toBeNull();
+  });
+
+  it("re-rendering a page keeps its head elements and updates them in place (C#: an equal delegate keeps the outlet's content)", async () => {
+    const { page, rerender } = await withHeadMarkup(`<PageTitle>@title</PageTitle>
+<HeadContent><link rel="stylesheet" href="a.css" /><meta name="t" content="@title" /></HeadContent>
+@code { title = "One"; }`);
+    const title = document.head.querySelector("title");
+    const link = document.head.querySelector("link");
+    page.title = "Two";
+    await rerender();
+    expect(document.title).toBe("Two");
+    expect(document.head.querySelector("title")).toBe(title);
+    expect(document.head.querySelector("link")).toBe(link);
+    expect(document.head.querySelector('meta[name="t"]')?.getAttribute("content")).toBe("Two");
   });
 
   it("HeadOutlet captures and removes the static title as default content; PageTitle replaces it; removal restores it", async () => {

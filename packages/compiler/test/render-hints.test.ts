@@ -2,7 +2,8 @@
  * H1 render hints (docs/design-render-hints.md): an event-handler lambda
  * becomes a prototype method that creates it from the captured render-time
  * locals, bound with `EventCallback.bindWith` — equal across renders while
- * the captured values are the same. Guards keep today's closure.
+ * the captured values are the same. Guards keep today's closure. H2: keyed
+ * rows. H4: child content that uses no outer local is cached on the component.
  */
 import { describe, expect, it } from "vitest";
 import { compile } from "../src/compile";
@@ -245,5 +246,67 @@ describe("H2: skipping unchanged keyed rows", () => {
     // The rows after the inserted lines keep their mappings: `label` of `@row.label`.
     const contentLine = lines.findIndex((l) => l.startsWith("    const __tsazor_v3 = ")) + 1;
     expect(mappings!.filter((m) => m.genLine === contentLine).some((m) => m.srcLine === 1 && m.srcCol === source.indexOf("@row.label") + 1)).toBe(true);
+  });
+});
+
+describe("H4: stable child content", () => {
+  const panel = metadataOf("Panel", { childContent: "RenderFragment" });
+  const list = metadataOf("List", { rowTemplate: "RenderFragment<T>" });
+  const components = withComponents({ Panel: panel, List: list });
+  const slot = (index = 0) => `this[__tsazor_f${index}] ??= `;
+
+  it("a fragment that uses only the component is cached in a module symbol's slot", () => {
+    const { code } = gen(`<Panel><p>@count</p></Panel>\n${MEMBERS}`, components);
+    expect(code).toContain(`__builder.addContent(1, ${slot()}(__builder) => {`);
+    expect(code).toMatch(/const __tsazor_f0 = Symbol\(\);\n\nexport default class Rows/);
+    expect(code).toContain("  declare private [__tsazor_f0]?: (__builder: __tsazor_RenderTreeBuilder) => void;");
+  });
+
+  it("a template's outer function is cached; its context is its own", () => {
+    const { code } = gen(`<List><RowTemplate><p>@context</p></RowTemplate></List>\n${MEMBERS}`, components);
+    expect(code).toContain(`"rowTemplate", this[__tsazor_f0] ??= (context: any) => (__builder: __tsazor_RenderTreeBuilder) => {`);
+    expect(code).toContain("  declare private [__tsazor_f0]?: (context: any) => (__builder: __tsazor_RenderTreeBuilder) => void;");
+  });
+
+  it("locals declared inside the fragment don't count", () => {
+    const { code } = gen(`<Panel>@{ const n = 1; }@foreach (const row of rows) { <a @onclick="() => pick(row)">@n</a> }</Panel>\n${MEMBERS}`, components);
+    expect(code).toContain(slot());
+  });
+
+  it.each([
+    ["a loop variable", `@foreach (const row of rows) { <Panel><p>@row.id</p></Panel> }`],
+    ["a markup local", `@{ const n = 1; } <Panel><p>@n</p></Panel>`],
+    ["a handler capturing a loop variable", `@foreach (const row of rows) { <Panel><a @onclick="() => pick(row)">x</a></Panel> }`],
+    ["an enclosing template's context", `<List><RowTemplate><Panel><p>@context</p></Panel></RowTemplate></List>`],
+    ["a loop header", `@foreach (const row of rows) { <Panel>@foreach (const x of [row]) { <p>@x.id</p> }</Panel> }`],
+  ])("a fragment that uses %s stays a closure per render (C#: a new closure object)", (_, markup) => {
+    const { code } = gen(`${markup}\n${MEMBERS}`, components);
+    expect(code).toMatch(/addContent\(\d+, \(__builder\) => \{/);
+    expect(code).not.toMatch(/addContent\(\d+, this\[/);
+  });
+
+  it("only the inner fragment of a nested pair captures: the outer one is cached", () => {
+    const { code } = gen(`<List><RowTemplate><Panel><p>@context</p></Panel></RowTemplate></List>\n${MEMBERS}`, components);
+    expect(code).toContain('"rowTemplate", this[__tsazor_f0] ??= (context: any)');
+    expect(code).not.toContain("__tsazor_f1");
+  });
+
+  it("typed shadows and optimize: false keep a closure per render; renderHints: false keeps the cache (parity, not a hint)", () => {
+    const source = `<Panel><p>@count</p></Panel>\n${MEMBERS}`;
+    for (const options of [{ typedShadow: {} }, { optimize: false }]) {
+      const { code } = gen(source, { ...components, ...options });
+      expect(code).not.toContain("__tsazor_f0");
+    }
+    expect(gen(source, { ...components, renderHints: false }).code).toContain(slot());
+  });
+
+  it("the cached fragment's lines keep their .tsazor positions", () => {
+    const source = `<Panel>\n    <p>@count</p>\n</Panel>\n${MEMBERS}`;
+    const { code, mappings } = compile(source, { className: "Rows", ...components });
+    const lines = code.split("\n");
+    const head = lines.findIndex((l) => l.includes("this[__tsazor_f0] ??=")) + 1;
+    const content = lines.findIndex((l) => l.includes("addContent(1, this.count)")) + 1;
+    expect(mappings!.filter((m) => m.genLine === head)).toContainEqual({ genLine: head, genCol: 4, srcLine: 0, srcCol: 0 });
+    expect(mappings!.some((m) => m.genLine === content && m.srcLine === 1 && m.genCol === lines[content - 1]!.indexOf("count"))).toBe(true);
   });
 });

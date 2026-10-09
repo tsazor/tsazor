@@ -5,6 +5,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix (Blazor parity)** `@tsazor/compiler`, `@tsazor/runtime`: a component with `<HeadContent>`, `<PageTitle>` or
+  `<SectionContent>` no longer rebuilds that content on each of its renders. `SectionOutlet` keys its content on the
+  fragment, as Blazor does. In C# a child content lambda that uses only `this` is an equal delegate on every render,
+  but a JS function was a new key each time, so the head's stylesheets were removed and added again and the page
+  flickered. The compiler now caches child content that uses no local declared outside it on the component (render
+  hint H4), and `PageTitle` and `HeadOutlet` pass one function per instance, as Blazor's method groups are. Child
+  content that uses a loop variable or another outer local stays new per render, as in C#. H4 is parity, so
+  `renderHints: false` keeps it; only `optimize: false` turns it off. A fragment written by hand in TypeScript is
+  stable only when it is one function per instance.
+
 - `@tsazor/compiler`: a `"` inside an expression ends a `"`-quoted attribute value, as in Razor
   (`onClick="() => go(id, "x")"` ends after `go(id, `). That cut produced a cascade of TZS009 "Invalid attribute name"
   errors. Now it is one TZS024 at the quote, saying so, with a quick fix (single quotes around the attribute, or

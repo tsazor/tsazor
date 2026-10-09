@@ -37,11 +37,7 @@ export class HeadOutlet extends ComponentBase {
       b.openComponent(2, defineComponent(SectionContent));
       b.addAttribute(3, "sectionId", titleSectionId);
       b.addAttribute(4, "isDefaultContent", true);
-      b.addAttribute(5, "childContent", (builder: RenderTreeBuilder) => {
-        builder.openElement(0, "title");
-        builder.addContent(1, this.defaultTitle);
-        builder.closeElement();
-      });
+      b.addAttribute(5, "childContent", this.buildDefaultTitle);
       b.closeComponent();
     }
 
@@ -50,6 +46,13 @@ export class HeadOutlet extends ComponentBase {
     b.addAttribute(7, "sectionId", headSectionId);
     b.closeComponent();
   }
+
+  /** One function per instance, as Blazor's method group `BuildDefaultTitleRenderTree`: the same section content on every render. */
+  private readonly buildDefaultTitle = (builder: RenderTreeBuilder): void => {
+    builder.openElement(0, "title");
+    builder.addContent(1, this.defaultTitle);
+    builder.closeElement();
+  };
 }
 /** "Did the framework render this node?" — Tsazor's own range markers. */
 const isRenderedByTsazor = (node: Node | null): boolean =>

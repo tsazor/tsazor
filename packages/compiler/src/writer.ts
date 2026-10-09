@@ -79,6 +79,19 @@ export class CodeWriter {
     this.entries.splice(index, 0, ...inserted);
   }
 
+  /**
+   * Inserts `text` into the written 1-based `line` at `column` (H4: a
+   * fragment's cache slot, known only once its body was emitted). Entries
+   * on that line at or right of `column` move with the text.
+   */
+  insertText(line: number, column: number, text: string): void {
+    const current = this.lines[line - 1]!;
+    this.lines[line - 1] = current.slice(0, column) + text + current.slice(column);
+    this.entries = this.entries.map((entry) =>
+      entry.genLine === line && entry.genCol >= column ? { ...entry, genCol: entry.genCol + text.length } : entry,
+    );
+  }
+
   /** The mapping entries recorded so far, in registration order. */
   get mappings(): SourceMapEntry[] {
     return this.entries;

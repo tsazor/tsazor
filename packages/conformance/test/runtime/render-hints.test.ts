@@ -4,11 +4,12 @@
  * so re-rendering unchanged rows swaps no handler; a changed captured value
  * swaps it, and the new handler runs. H2: an unchanged keyed row is reused
  * (neither built nor diffed); the DOM and child component renders stay as
- * without hints.
+ * without hints. H4: child content that uses only the component is the same
+ * function on every render, as a C# lambda on `this` is an equal delegate.
  */
 import { describe, expect, it } from "vitest";
 import { EventCallback, RenderTreeBuilder, RenderTreeEditType, type Renderer, type RenderTreeEdit, type RenderTreeFrame } from "@tsazor/runtime";
-import { mount } from "../harness.js";
+import { compileFiles, mount } from "../harness.js";
 // Blazor's ChangeDetection.MayHaveChanged (internal to the runtime).
 import { mayHaveChanged } from "../../../runtime/src/components/change-detection.js";
 
@@ -278,5 +279,65 @@ describe("H2 — child components in rows keep Blazor's re-render rule", () => {
     const { counts, reused } = await setsAfterRerender(`<Child Label="@row.label" Loose="@row" />`);
     expect(counts).toEqual({ a: 2, b: 2 });
     expect(reused).toBe(0);
+  });
+});
+
+describe("H4 — child content is the same fragment across renders", () => {
+  const inits = (): string[] => (globalThis as Record<string, unknown>).__inits as string[];
+  const files = (content: string) => ({
+    "Child.tsazor": `<i>child</i>
+@code {
+    override onInitialized() { ((globalThis as Record<string, unknown>).__inits as string[]).push("child"); }
+}`,
+    "Test.tsazor": `@import Child from "./Child.tsazor"
+${content}
+<SectionOutlet SectionName="s" />
+@code { count = 0; labels = ["a"]; }`,
+  });
+  const MEMBERS_ONLY = `<SectionContent SectionName="s"><p class="kept">@count</p><Child /></SectionContent>`;
+
+  it("content that uses only the component keeps its DOM and instances while the component re-renders (C#: an equal delegate)", async () => {
+    (globalThis as Record<string, unknown>).__inits = [];
+    const m = await mount(files(MEMBERS_ONLY));
+    const p = m.container.querySelector(".kept");
+    m.instance.count = 1;
+    await m.rerender();
+    expect(m.container.querySelector(".kept")).toBe(p);
+    expect(p?.textContent).toBe("1");
+    expect(inits()).toEqual(["child"]);
+  });
+
+  it("content that uses a loop variable is a new fragment per render (C#: a new closure): the outlet rebuilds it", async () => {
+    (globalThis as Record<string, unknown>).__inits = [];
+    const m = await mount(files(`@foreach (const label of labels) { <SectionContent SectionName="s"><p class="kept">@label</p><Child /></SectionContent> }`));
+    const p = m.container.querySelector(".kept");
+    await m.rerender();
+    expect(m.container.querySelector(".kept")).not.toBe(p);
+    expect(m.text()).toBe("achild");
+    expect(inits()).toEqual(["child", "child"]);
+  });
+
+  it("optimize: false makes every fragment new per render (the emergency switch); renderHints: false doesn't", async () => {
+    (globalThis as Record<string, unknown>).__inits = [];
+    const m = await mount(files(MEMBERS_ONLY), "Test.tsazor", { optimize: false });
+    const p = m.container.querySelector(".kept");
+    await m.rerender();
+    expect(m.container.querySelector(".kept")).not.toBe(p);
+    expect(inits()).toEqual(["child", "child"]);
+
+    const hintsOff = await mount(files(MEMBERS_ONLY), "Test.tsazor", { renderHints: false });
+    const kept = hintsOff.container.querySelector(".kept");
+    await hintsOff.rerender();
+    expect(hintsOff.container.querySelector(".kept")).toBe(kept);
+  });
+
+  it("an HMR swap renders the new version's content, not the fragment cached by the old one", async () => {
+    (globalThis as Record<string, unknown>).__inits = [];
+    const m = await mount(files(MEMBERS_ONLY));
+    const next = await compileFiles(files(`<SectionContent SectionName="s"><p class="kept">v2 @count</p><Child /></SectionContent>`));
+    const { default: Next } = await import(/* @vite-ignore */ next.modules["Test.tsazor"]!);
+    m.renderer.hmrSwap(m.instance.constructor, Next);
+    await m.settle();
+    expect(m.text()).toBe("v2 0child");
   });
 });

@@ -47,7 +47,7 @@ describe("child content elements (named slots)", () => {
     const { code, diagnostics } = gen("<Panel><Header><h1>H</h1></Header></Panel>");
     expect(lines(code)).toEqual([
       "__builder.openComponent(0, __tsazor_comp_Panel);",
-      '__builder.addAttribute(1, "header", (__builder) => {',
+      '__builder.addAttribute(1, "header", this[__tsazor_f0] ??= (__builder) => {',
       '__builder.openElement(0, "h1");',
       '__builder.addContent(1, "H");',
       "__builder.closeElement();",
@@ -58,7 +58,7 @@ describe("child content elements (named slots)", () => {
 
   it("a RenderFragment<T> slot takes `context`, a local of its body", () => {
     const { code, diagnostics } = gen("<Grid Items=\"people\"><RowTemplate><td>@context.name</td></RowTemplate></Grid>");
-    expect(code).toContain('__builder.addAttribute(2, "rowTemplate", (context: any) => (__builder: __tsazor_RenderTreeBuilder) => {');
+    expect(code).toContain('__builder.addAttribute(2, "rowTemplate", this[__tsazor_f0] ??= (context: any) => (__builder: __tsazor_RenderTreeBuilder) => {');
     expect(code).toContain("__builder.addContent(1, context.name);");
     expect(diagnostics.all).toEqual([]);
   });
@@ -74,7 +74,7 @@ describe("child content elements (named slots)", () => {
 
   it("a slot wins over a component of the same name (Razor: child content tag helpers bind first)", () => {
     const { code } = gen("<Panel><Header>x</Header></Panel><Header>y</Header>", { Panel: panel, Header: header });
-    expect(code).toContain('__builder.addAttribute(1, "header", (__builder) => {');
+    expect(code).toContain('__builder.addAttribute(1, "header", this[__tsazor_f0] ??= (__builder) => {');
     // Outside Panel the same tag is the Header component.
     expect(code).toContain("__builder.openComponent(2, __tsazor_comp_Header);");
   });
@@ -82,13 +82,13 @@ describe("child content elements (named slots)", () => {
   it("whitespace between slots is not content", () => {
     const { errors, code } = gen("<Panel> <Header>a</Header> <ChildContent>b</ChildContent> </Panel>");
     expect(errors).toEqual([]);
-    expect(code).toContain('"childContent", (__builder) => {');
+    expect(code).toContain('"childContent", this[__tsazor_f1] ??= (__builder) => {');
     expect(code).not.toContain('addContent(1, " ")');
   });
 
   it("a RenderFragment<T> ChildContent takes the component's Context", () => {
     const { code, diagnostics } = gen('<List Items="people" Context="person"><b>@person</b></List>');
-    expect(code).toContain('__builder.addAttribute(2, "childContent", (person: any) => (__builder: __tsazor_RenderTreeBuilder) => {');
+    expect(code).toContain('__builder.addAttribute(2, "childContent", this[__tsazor_f0] ??= (person: any) => (__builder: __tsazor_RenderTreeBuilder) => {');
     expect(diagnostics.all).toEqual([]);
     expect(gen("<List><b>@context</b></List>").code).toContain("(context: any) =>");
   });
@@ -101,7 +101,7 @@ describe("child content elements (named slots)", () => {
   });
 
   it("a plain RenderFragment ChildContent keeps the 2.2 emission (addContent)", () => {
-    expect(gen("<Panel><p>x</p></Panel>").code).toContain("__builder.addContent(1, (__builder) => {");
+    expect(gen("<Panel><p>x</p></Panel>").code).toContain("__builder.addContent(1, this[__tsazor_f0] ??= (__builder) => {");
   });
 
   it("@context outside any template stays a member (this.context)", () => {
@@ -209,7 +209,7 @@ describe("@ref on a component with child content", () => {
   const lastFragment = (code: string): number =>
     // A plain ChildContent is written as `addContent` in the component frame
     // (the builder turns it into the ChildContent attribute, in place).
-    lines(code).reduce((last, l, i) => (/^__builder\.(addAttribute\(\d+, "(header|childContent)"|addContent\(\d+, \(__builder\))/.test(l) ? i : last), -1);
+    lines(code).reduce((last, l, i) => (/^__builder\.(addAttribute\(\d+, "(header|childContent)"|addContent\(\d+, (?:this\[__tsazor_f\d+\] \?\?= )?\(__builder\))/.test(l) ? i : last), -1);
 
   it("named slots come before the capture", () => {
     const { code, diagnostics } = gen('<Panel @ref="x"><Header><h1>H</h1></Header><ChildContent><p>b</p></ChildContent></Panel>');

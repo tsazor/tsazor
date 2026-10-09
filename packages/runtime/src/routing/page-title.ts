@@ -23,13 +23,18 @@ export class PageTitle extends ComponentBase {
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     b.openComponent(0, defineComponent(SectionContent));
     b.addAttribute(1, "sectionId", titleSectionId);
-    b.addAttribute(2, "childContent", (builder: RenderTreeBuilder) => this.buildTitleContent(builder));
+    b.addAttribute(2, "childContent", this.buildTitleContent);
     b.closeComponent();
   }
 
-  private buildTitleContent(builder: RenderTreeBuilder): void {
+  /**
+   * One function per instance: Blazor passes the method group
+   * `BuildTitleRenderTree`, an equal delegate on every render, so the
+   * outlet keeps its <title> element and updates the text.
+   */
+  private readonly buildTitleContent: RenderFragment = (builder) => {
     builder.openElement(0, "title");
     if (this.childContent !== undefined) builder.addContent(1, this.childContent);
     builder.closeElement();
-  }
+  };
 }

@@ -554,6 +554,7 @@ export declare class HeadOutlet extends ComponentBase {
     private defaultTitle;
     protected onAfterRender(firstRender: boolean): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
+    private readonly buildDefaultTitle;
 }
 
 // headSectionId
@@ -885,7 +886,7 @@ export type ObserveTeardown = (() => unknown) | {
 export declare class PageTitle extends ComponentBase {
     childContent?: RenderFragment;
     protected buildRenderTree(b: RenderTreeBuilder): void;
-    private buildTitleContent;
+    private readonly buildTitleContent;
 }
 
 // Parameter

@@ -117,7 +117,7 @@ describe("codegen", () => {
     expect(code).toContain('import __tsazor_comp_Greeter from "./Greeter.tsazor";');
     expect(code).toContain("__builder.openComponent(0, __tsazor_comp_Greeter);");
     expect(code).toContain('__builder.addAttribute(1, "Name", "World");');
-    expect(code).toContain('__builder.addContent(2, (__builder) => {');
+    expect(code).toContain('__builder.addContent(2, this[__tsazor_f0] ??= (__builder) => {');
     expect(code).toContain('__builder.closeComponent();');
   });
 

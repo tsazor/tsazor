@@ -231,10 +231,23 @@ A handler closure H1 cannot make stable (a `let` capture) is new every render, s
 every time. Typed shadows, `renderHints: false` and `optimize: false` emit today's code. Selecting
 one row among 11k: ~13.5 → ~8 ms.
 
+**Stable child content (H4).** In C#, a child content lambda that uses only `this` is
+an equal delegate on every render, and Blazor's `SectionOutlet` (behind `<HeadContent>` and
+`<SectionContent>`) keeps its content's DOM and components while the fragment stays equal. A JS
+arrow function is a new object every render. Tsazor chooses to cache child content whose body uses
+no local declared outside it on the component (`this[slot] ??= (__builder) => { … }`), so it is the
+same function on every render: a page that re-renders keeps its head's stylesheets instead of
+removing and re-adding them. Child content that uses an outer local (a loop variable, a markup local,
+an enclosing template's `context`) stays a new closure per render, as in C#. Fragments you write by
+hand in TypeScript follow the same rule only if you keep one function per instance (a field), as
+Blazor's method groups do. This is parity, not an optimization: `renderHints: false` keeps it, only
+`optimize: false` turns it off. Details: [design-render-hints.md](design-render-hints.md).
+
 **`optimize: false`.** One switch (compiler and Vite plugin) turns off every invisible compiler
 optimization — today `staticMarkup` and `renderHints`: the generated code is then what Razor would
 generate. It is a diagnostic and emergency switch (A/B measurements, isolating a suspected
-optimizer bug), not a recommended mode.
+optimizer bug), not a recommended mode. It turns stable child content (H4) off too, so section
+content is then rebuilt on every render of its component.
 
 ## @import
 
