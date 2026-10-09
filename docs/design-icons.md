@@ -1,6 +1,6 @@
 # Design: icons (F17, wave A)
 
-Status: **in progress** (2026-10-09): step 1 of §4 is done. The first step of wave A in
+Status: **in progress** (2026-10-09): steps 1 and 2 of §4 are done. The first step of wave A in
 [design-library-completeness.md](design-library-completeness.md) (D-L5: `Icon` takes any icon value; generated
 packages with the full sets, tree-shaken).
 
@@ -50,8 +50,10 @@ is trusted: it comes from a package or from the app's own code, never from user 
 - **Tree-shaken:** one ES module per variant and size (`regular/size20.js` exports `Save`, `Delete`, …), joined by
   `export * as` namespaces. Rollup drops what a static access (`Icons.Regular.Size20.Save`) doesn't reach. A build
   test checks that a page using one icon ships only that one.
-- **Generated at build time** from the MIT packages (devDependencies), not committed: about 12 MB of path data. The
-  generator writes the `.js` and `.d.ts` of each module; each icon is `export const Save: IconValue`.
+- **Generated at build time** from the MIT packages (devDependencies), not committed: about 14 MB of path data. The
+  generator writes the `.js` and `.d.ts` of each module; each icon is `export const Save: IconValue`. The
+  localized variants of the Fluent set (`icons/<language>/`) are left out for now. A generated package has no API
+  snapshot (`"tsazor": { "apiSnapshot": false }`): the source set is its API, pinned by version.
 - **Typed:** a typo is TS2339 on the namespace, with the usual hint.
 - **The Razor form** stays close to Fluent UI Blazor: `@import * as Icons from "@tsazor/fluent-icons"`, then
   `<Icon Value="@Icons.Regular.Size20.Save" />`. The codemod rewrites `new Icons.Regular.Size20.Save()` to

@@ -609,6 +609,25 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
 
+  packages/fluent-icons:
+    dependencies:
+      '@tsazor/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@fluentui/svg-icons':
+        specifier: 1.1.344
+        version: 1.1.344
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.7
+        version: 7.3.6(@types/node@20.19.43)
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)
+
   packages/lsp:
     dependencies:
       '@tsazor/compiler':
@@ -1067,6 +1086,9 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fluentui/svg-icons@1.1.344':
+    resolution: {integrity: sha512-rasjaq4hBXzRS25pSY9gaqwY7NdvZJCz7G/rtpwF6mCmg2R+9TnySLhHbR+sOpkMP/IDDG28XvxRcNEQ/lJYoQ==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2728,6 +2750,8 @@ snapshots:
     dependencies:
       '@eslint/core': 0.17.0
       levn: 0.4.1
+
+  '@fluentui/svg-icons@1.1.344': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

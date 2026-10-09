@@ -44,6 +44,7 @@ const SHIPPED = [
   "worker",
   "bootstrap",
   "fluent",
+  "fluent-icons",
   "dotnet",
   "create-tsazor",
 ];

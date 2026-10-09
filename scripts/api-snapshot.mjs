@@ -71,7 +71,8 @@ function packages() {
     .map((name) => path.join(dir, name))
     .filter((pkg) => existsSync(path.join(pkg, "package.json")))
     .map((pkg) => ({ dir: pkg, manifest: JSON.parse(readFileSync(path.join(pkg, "package.json"), "utf8")) }))
-    .filter(({ manifest }) => !manifest.private && manifest.name.startsWith("@tsazor/") && manifest.exports);
+    // A generated package (`"tsazor": { "apiSnapshot": false }`: @tsazor/fluent-icons, 20,000 icons) is its source set, pinned by version.
+    .filter(({ manifest }) => !manifest.private && manifest.name.startsWith("@tsazor/") && manifest.exports && manifest.tsazor?.apiSnapshot !== false);
 }
 
 let failed = false;

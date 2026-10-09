@@ -12,7 +12,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     set moved here (`builtInIcons`).
   - Both skins' `Icon` take `value` (wins over `name`), `color` and `title`, as Fluent UI Blazor's
     `FluentIcon` does. `@tsazor/bootstrap` gets `Icon` (`.bi`, as Bootstrap Icons), with the same parameters.
-  - The generated full sets (Fluent System Icons, Bootstrap Icons) follow.
+- `@tsazor/fluent-icons` (new): the Fluent System Icons (20,786: Regular, Filled, Light, Color; sizes 10–48) as
+  `IconValue`s, written as Fluent UI Blazor writes them: `@import * as Icons from "@tsazor/fluent-icons"`, then
+  `<Icon Value="@Icons.Regular.Size20.Save" />`. One module per variant and size, joined by namespaces: a page ships
+  only the icons it uses (a build test checks it), and a misspelled icon is a type error with the near name.
+  Generated at build time from `@fluentui/svg-icons` 1.1.344 (MIT, Microsoft); no API snapshot (the set is the API).
 
 - **Blazor 11 parity** `@tsazor/runtime`: `Virtualize<TItem>` is Blazor 11's
   ([design-virtualize.md](docs/design-virtualize.md)).
