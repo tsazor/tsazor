@@ -67,6 +67,17 @@ everything pushed.
 >   dogfood's feed and chat are parity work. Decided for Virtualize: aliases for `Overscan`/`ItemTemplate`, fix all of
 >   Blazor's probable bugs (each a test), port all of Blazor's tests (new gate app `apps/blazor-parity`), DataGrid as
 >   QuickGrid 11.
+> - **Virtualize at Blazor 11 parity (2026-10-09, in progress):**
+>   - Committed: `5c6062b` (the port, both DataGrids as QuickGrid 11, `@tsazor/testing` renders like bUnit, Blazor's
+>     47 unit tests) and `cd74706` (the new gate app `apps/blazor-parity` with Blazor's own E2E suite).
+>     Groups A–F, I and J are green in Edge, Firefox and WebKit, 128 cases each.
+>   - Tsazor fixes twelve Blazor bugs (A1–A12, design-virtualize.md §6). The gate found A11 (WebKit drift in the
+>     manual anchoring Safari always uses) and A12 (Home soon after End was pulled back to the bottom).
+>   - Open:
+>     - groups G, H, K, M and the 33 QuickGrid tests (L) against both skins (an agent was porting them);
+>     - the tutorial lessons "Long lists" and "A live feed" (ch12 Special components, flag `layoutOnly`) are
+>       written with claims tests and browser checks, but not yet run in the tutorial gate or committed;
+>     - then icons (F17) and Markdown.
 > - **Before that:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
