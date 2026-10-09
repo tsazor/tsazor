@@ -979,35 +979,118 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "name": "Virtualize",
       "file": "src/data/virtualize.ts",
       "isComponent": true,
-      "typeParameters": [],
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "default": "unknown"
+        }
+      ],
       "parameters": [
         {
-          "name": "items",
-          "category": "value",
+          "name": "childContent",
+          "category": "RenderFragment<T>",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "Virtualize",
-          "type": "unknown[]",
-          "doc": "In-memory items (alternative to itemsProvider)."
-        },
-        {
-          "name": "itemsProvider",
-          "category": "value",
-          "optional": true,
-          "hasInitializer": false,
-          "member": "field",
-          "declaredBy": "Virtualize",
-          "type": "VirtualizeItemsProvider<never>",
+          "type": "(item: TItem) => RenderFragment",
           "references": [
             {
-              "name": "VirtualizeItemsProvider",
-              "kind": "local",
-              "file": "src/data/virtualize.ts"
+              "name": "TItem",
+              "kind": "typeParameter"
+            },
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
             }
           ],
-          "doc": "Async slice provider (Blazor's ItemsProvider).",
-          "delegate": true
+          "doc": "The item template (Blazor's ChildContent). `ItemContent` wins when both are set.",
+          "typeArgument": "TItem"
+        },
+        {
+          "name": "itemContent",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "type": "(item: TItem) => RenderFragment",
+          "references": [
+            {
+              "name": "TItem",
+              "kind": "typeParameter"
+            },
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The item template (Blazor's ItemContent).",
+          "typeArgument": "TItem"
+        },
+        {
+          "name": "itemTemplate",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "type": "(item: TItem) => RenderFragment",
+          "references": [
+            {
+              "name": "TItem",
+              "kind": "typeParameter"
+            },
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Tsazor's earlier name of the item template; `ItemContent` and the child content win.",
+          "typeArgument": "TItem"
+        },
+        {
+          "name": "placeholder",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "type": "(context: PlaceholderContext) => RenderFragment",
+          "references": [
+            {
+              "name": "PlaceholderContext",
+              "kind": "local",
+              "file": "src/data/virtualize.ts"
+            },
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "What shows for an item that is not loaded yet; by default an empty block of the measured item height.",
+          "typeArgument": "PlaceholderContext"
+        },
+        {
+          "name": "emptyContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "What shows when the list is empty (after a load; not while loading)."
         },
         {
           "name": "itemSize",
@@ -1018,36 +1101,66 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "declaredBy": "Virtualize",
           "default": "50",
           "inferredType": "number",
-          "doc": "Height of one item row in pixels."
+          "doc": "The estimated item size in px until the rendered items are measured; must be positive."
         },
         {
-          "name": "overscan",
+          "name": "itemsProvider",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "type": "VirtualizeItemsProvider<TItem>",
+          "references": [
+            {
+              "name": "VirtualizeItemsProvider",
+              "kind": "local",
+              "file": "src/data/virtualize.ts"
+            },
+            {
+              "name": "TItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "Loads a slice of the list on demand (Blazor's ItemsProvider); give it or `Items`.",
+          "delegate": true
+        },
+        {
+          "name": "items",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "type": "readonly TItem[]",
+          "references": [
+            {
+              "name": "TItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "The whole list in memory (Blazor's Items); give it or `ItemsProvider`."
+        },
+        {
+          "name": "overscanCount",
           "category": "value",
           "optional": false,
           "hasInitializer": true,
           "member": "field",
           "declaredBy": "Virtualize",
-          "default": "3",
+          "default": "15",
           "inferredType": "number",
-          "doc": "Extra rows rendered above and below the viewport."
+          "doc": "How many items render above and below the visible ones."
         },
         {
-          "name": "itemTemplate",
-          "category": "RenderFragment<T>",
+          "name": "overscan",
+          "category": "value",
           "optional": true,
           "hasInitializer": false,
           "member": "field",
           "declaredBy": "Virtualize",
-          "type": "(item: unknown) => RenderFragment",
-          "references": [
-            {
-              "name": "RenderFragment",
-              "kind": "runtime",
-              "imported": "RenderFragment"
-            }
-          ],
-          "doc": "Fragment factory rendered once per visible item.",
-          "typeArgument": "unknown"
+          "type": "number",
+          "doc": "Tsazor's earlier name of `OverscanCount`; it wins when set."
         },
         {
           "name": "spacerElement",
@@ -1058,10 +1171,68 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "declaredBy": "Virtualize",
           "default": "\"div\"",
           "inferredType": "string",
-          "doc": "The spacer elements' tag (Blazor's SpacerElement): `tr` inside a `<tbody>`, `li` in a list."
+          "doc": "The spacers' tag: `tr` inside a `<tbody>`, `li` in a list."
+        },
+        {
+          "name": "maxItemCount",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "default": "100",
+          "inferredType": "number",
+          "doc": "At most this many items (plus the overscan) render, however large the viewport: a safeguard."
+        },
+        {
+          "name": "anchorMode",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "default": "VirtualizeAnchorMode.Start",
+          "type": "VirtualizeAnchorMode",
+          "references": [
+            {
+              "name": "VirtualizeAnchorMode",
+              "kind": "local",
+              "file": "src/data/virtualize.ts"
+            }
+          ],
+          "doc": "How the viewport behaves at the edges when items arrive; `Start` by default."
+        },
+        {
+          "name": "itemComparer",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "default": "Object.is",
+          "type": "(a: TItem, b: TItem) => boolean",
+          "references": [
+            {
+              "name": "TItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "Whether two items are the same item (Blazor's ItemComparer): an `ItemsProvider` list compares the item\nit showed with the one now at that index to tell a prepend from an append. The default compares\nreferences; a provider that returns fresh objects needs a comparer by key (`(a, b) => a.id === b.id`).",
+          "delegate": true
+        },
+        {
+          "name": "initialItemIndex",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Virtualize",
+          "default": "0",
+          "inferredType": "number",
+          "doc": "The item to scroll to on the first render (applied once; later, call `scrollToItem`)."
         }
       ],
-      "doc": "Blazor's Virtualize<TItem>: renders only the visible window of a large list\nusing the spacer strategy — two height-allocating spacer divs around the\nrendered slice, so the scrollbar geometry matches the full list.\n\nLike Blazor, it renders no element of its own — the spacers and items go\ninto the parent, and the visible window is measured against the nearest\nscrolling ancestor (or the window). The per-item template is `itemTemplate`.",
+      "doc": "Blazor's Virtualize<TItem> (Blazor 11): renders only the part of a long list that is in view. Two spacers\nstand for the items above and below, sized from the measured average item height, so the scrollbar matches\nthe whole list; rows of different heights work.\n\nLike Blazor, it renders no element of its own: the spacers and the items go into the parent (a `<tbody>`\nwith `SpacerElement=\"tr\"`), and the visible window is measured against the nearest scrolling ancestor (or\nthe window). The item template is the child content or `ItemContent`. `AnchorMode` keeps the viewport at\nan edge while items arrive there (`End` follows a feed or a chat), `InitialItemIndex` and `scrollToItem`\nscroll to an item.\n\nTsazor deviations from Blazor 11, where Blazor has a bug (docs/design-virtualize.md §6): only finite\nmeasurements count; rows never render beyond the window; placeholders take the measured average; changing\n`ItemSize` resets every measurement; a grown or shrunk list shifts the window where the previously first\nrow actually went (deletes above the viewport are compensated); a resized container re-checks the window.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

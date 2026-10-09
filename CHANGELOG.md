@@ -5,6 +5,30 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Blazor 11 parity** `@tsazor/runtime`: `Virtualize<TItem>` is Blazor 11's
+  ([design-virtualize.md](docs/design-virtualize.md)).
+  - **Measurement:** the rows are measured, so rows of different heights work; `ItemSize` is only the first
+    estimate.
+  - **New parameters:** `ChildContent`/`ItemContent`, `Placeholder`, `EmptyContent`, `MaxItemCount`,
+    `AnchorMode` (`End` follows new rows at the bottom, for a feed or a chat), `ItemComparer` and
+    `InitialItemIndex`. New method: `scrollToItem(index, signal?)`.
+  - **Provider requests** carry an `AbortSignal`. The view stays in place when rows are inserted above it.
+  - **Behavior changes:**
+    - `OverscanCount` defaults to 15 (`Overscan` and `ItemTemplate` stay as aliases).
+    - Before the first spacer report, nothing renders.
+    - Without an item template, nothing renders for the items.
+    - The spacers have no class.
+    - Giving both `Items` and `ItemsProvider` is an error.
+  - **Fixes of Blazor 11 bugs** (design-virtualize.md §6), among them: a delete above the viewport is compensated,
+    and End typed into a text field no longer moves the list.
+  - `@tsazor/testing` renders a Virtualize's rows up to `MaxItemCount` as bUnit does, since a test DOM has no
+    layout.
+- `@tsazor/bootstrap`, `@tsazor/fluent`: the virtualized DataGrid passes `AnchorMode`, `ItemComparer` and
+  `InitialItemIndex` as QuickGrid 11 does, and has `scrollToItem`.
+  - Rows keep their element when the window slides (`@key`).
+  - Loading windows show placeholder rows.
+  - Rows are no longer forced to `ItemSize`'s height.
+
 - `@tsazor/runtime` (Tsazor extension, E13): an in-app navigation keeps the previous page on screen until the new
   one has rendered and its async work is done, then shows it in one step, as Blazor's enhanced navigation does. The
   async work counted here is lifecycle methods, the Router's `OnNavigateAsync` and a lazy page's chunk. Before, a

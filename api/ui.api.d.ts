@@ -93,7 +93,7 @@ export declare class DataGridModel<T> {
     refreshDataAsync(): Promise<void>;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
-    provideRange(startIndex: number, count: number): Promise<GridItemsProviderResult<T>>;
+    provideRange(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
     private request;
     dispose(): void;
 }

@@ -198,19 +198,25 @@ try {
   // Virtualized DataGrid (/virtualize): a window of rows between tr spacers, scrolling and sorting over all 10,000.
   await page.goto(`${APP}/virtualize`, { waitUntil: "networkidle" });
   const vgrid = page.locator("table[aria-label=Orders]");
-  const dataRows = () => vgrid.locator("tbody > tr:not(.virtualize-spacer)");
+  const dataRows = () => vgrid.locator("tbody > tr:not([aria-hidden])");
   const firstId = async () => Number(await dataRows().first().locator("td").first().textContent());
   check((await dataRows().count()) < 40 && (await vgrid.getAttribute("aria-rowcount")) === "10001", `virtual grid: renders a window of rows (${await dataRows().count()}), aria-rowcount 10001`);
   const rowHeight = await dataRows().first().evaluate((row) => row.getBoundingClientRect().height);
   check(Math.abs(rowHeight - 33) < 1, `virtual grid: a row is ItemSize high (${rowHeight})`);
   await page.locator(".virtual-grid").evaluate((panel) => { panel.scrollTop = 33 * 3000; });
-  await page.waitForFunction(() => Number(document.querySelector("table[aria-label=Orders] tbody > tr:not(.virtualize-spacer) td")?.textContent) > 2900);
+  // The rows are measured: the first window after the jump is an estimate, the next spacer reports settle it.
+  await page
+    .waitForFunction(() => {
+      const first = Number(document.querySelector("table[aria-label=Orders] tbody > tr:not([aria-hidden]) td")?.textContent);
+      return first > 2900 && first <= 3001;
+    }, undefined, { timeout: 5000 })
+    .catch(() => undefined);
   const scrolledTo = await firstId();
   check(scrolledTo > 2900 && scrolledTo <= 3001, `virtual grid: scrolling shows the rows there (#${scrolledTo})`);
   await page.locator(".virtual-grid").evaluate((panel) => { panel.scrollTop = 0; });
   await vgrid.getByRole("button", { name: /#/ }).click();
   await vgrid.getByRole("button", { name: /#/ }).click();
-  await page.waitForFunction(() => document.querySelector("table[aria-label=Orders] tbody > tr:not(.virtualize-spacer) td")?.textContent === "10000");
+  await page.waitForFunction(() => document.querySelector("table[aria-label=Orders] tbody > tr:not([aria-hidden]) td")?.textContent === "10000");
   check(true, "virtual grid: sorting descending puts #10000 first");
   const vgridViolations = await axe(page);
   check(vgridViolations.length === 0, `axe /virtualize with the grid sorted${vgridViolations.length ? `: ${vgridViolations.join(" | ")}` : ""}`);

@@ -69,8 +69,7 @@ Markup follows Razor 1:1, code stays clean TypeScript:
 | `ScrollToItemAsync(index, token)` | `scrollToItem(index, signal?): Promise<void>`. It throws before the first render, and rejects only when `signal` aborts. A superseded call resolves, and so does one that a user scroll overrides |
 
 **Aliases (D-V2):** `ItemTemplate` and `Overscan` are Tsazor's earlier names. They keep working, and the docs show
-Blazor's names. Precedence: `ItemContent` › `ChildContent` › `ItemTemplate`. `Overscan` applies when set, and setting
-both `Overscan` and `OverscanCount` is an error.
+Blazor's names. Precedence: `ItemContent` › `ChildContent` › `ItemTemplate`. `Overscan` wins over `OverscanCount` when set.
 
 `Virtualize<TItem>` is a generic runtime class. The manifest lists `TItem`, and the compiler infers it from `Items` or
 `ItemsProvider` as it does for other generic components, so the item context is typed (it is `any` today).
@@ -101,6 +100,7 @@ that shows the better behavior. Where a Blazor test asserts the bug, the port as
 | A7 | built-in placeholder heights are applied only when a spacer changes | applied with every render (styles go through the CSSOM after each patch) |
 | A8 | a container that changes size adapts only at the next spacer crossing | a ResizeObserver on the scroll container re-checks the window |
 | A9 | the "initial index not yet started" guard covers only the before spacer | both spacers |
+| A10 | with window scrolling, Home/End and the scroll keys are taken from the whole document, so End typed in a text field makes the list follow the bottom | keys typed into an editable element (input, textarea, select, contenteditable) are text editing, not scrolling |
 
 Not bugs, so kept: `Items` mode compares by identity, not by `ItemComparer` (Blazor's design); the 50 ms throttle; the
 test-page quirks of spec appendix A.12 are fixed in the ported tests, not in the component.

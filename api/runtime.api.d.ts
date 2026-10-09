@@ -941,6 +941,12 @@ export declare function parseRouteTemplate(template: string): ParsedRoute;
 // parseValue
 export declare function parseValue(text: string, format: string | undefined, culture?: string | CultureInfo): string | number | Date | null;
 
+// PlaceholderContext
+export interface PlaceholderContext {
+    readonly index: number;
+    readonly size: number;
+}
+
 // PlaceholdersOf
 export type PlaceholdersOf<Message extends string> = Message extends `${string}{{${infer Rest}` ? PlaceholdersOf<Rest> : Message extends `${string}{${infer Name}}${infer Rest}` ? Name extends "" ? never : {
     [K in Name]: string | number;
@@ -1521,34 +1527,110 @@ export declare class ValidationSummary extends ComponentBase {
 }
 
 // Virtualize
-export declare class Virtualize extends ComponentBase {
-    items?: unknown[];
-    itemsProvider?: VirtualizeItemsProvider<never>;
+export declare class Virtualize<TItem = unknown> extends ComponentBase {
+    childContent?: (item: TItem) => RenderFragment;
+    itemContent?: (item: TItem) => RenderFragment;
+    itemTemplate?: (item: TItem) => RenderFragment;
+    placeholder?: (context: PlaceholderContext) => RenderFragment;
+    emptyContent?: RenderFragment;
     itemSize: number;
-    overscan: number;
-    itemTemplate?: (item: unknown) => RenderFragment;
+    itemsProvider?: VirtualizeItemsProvider<TItem>;
+    items?: readonly TItem[];
+    overscanCount: number;
+    overscan?: number;
     spacerElement: string;
-    private rootElement?;
-    private unsubscribeScroll?;
-    private resizeObserver?;
-    private startIndex;
-    private renderedCount;
-    private totalItemCount;
+    maxItemCount: number;
+    anchorMode: VirtualizeAnchorMode;
+    itemComparer: (a: TItem, b: TItem) => boolean;
+    initialItemIndex: number;
+    private viewport;
+    private spacerBefore;
+    private spacerAfter;
+    itemsBefore: number;
+    private visibleItemCapacity;
+    private unusedItemCapacity;
+    private itemCount;
+    private loadedItemsStartIndex;
+    lastRenderedItemCount: number;
+    lastRenderedPlaceholderCount: number;
+    private recalibratedItemSize;
+    private lastSetItemSize;
     private loadedItems;
-    private lastRequestedStart;
-    private lastRequestedCount;
-    private requestTicket;
-    protected onInitialized(): void;
-    protected onParametersSet(): void;
-    protected buildRenderTree(b: RenderTreeBuilder): void;
-    protected onAfterRender(firstRender: boolean): Promise<void>;
-    private handleScroll;
-    private visibleItems;
+    private previousFirstLoadedItem;
+    private previousFirstLoadedItemIndex;
+    private previousLastLoadedItem;
+    private previousLastLoadedItemIndex;
+    private refreshController;
+    private currentScrollController;
+    private nextRender;
+    private readonly initialIndex;
+    private skipNextDistributionRefresh;
+    private refreshError;
+    private itemTemplateInUse;
+    private placeholderInUse;
+    private loading;
+    totalMeasuredHeight: number;
+    measuredItemCount: number;
+    pendingScrollToBottom: boolean;
+    private lastRenderedAnchorMode;
+    private pendingAnchorRestore;
+    private deferAnchorRestoreClear;
+    private disposed;
+    private get usesItems();
+    private get effectiveOverscanCount();
+    private get canDetectPrepend();
     refreshData(): Promise<void>;
+    scrollToItem(itemIndex: number, signal?: AbortSignal): Promise<void>;
+    private scrollToItemCore;
+    private moveWindowToContain;
+    private ensureRenderCommitted;
+    private alignToTarget;
+    private clampToItemRange;
+    protected onParametersSet(): void;
+    protected onAfterRender(firstRender: boolean): Promise<void>;
+    protected buildRenderTree(b: RenderTreeBuilder): void;
+    private spacerStyle;
+    private toPx;
+    private placeholderContext;
+    private defaultPlaceholder;
+    private getItemHeight;
+    private getMeasuredItemHeight;
+    private updateItemSizeFromRenderedContent;
+    private cancelInFlightScrollForUserInteraction;
+    spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
+    spacerAfterVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
+    private updateWindowFromViewport;
+    private advanceInitialIndexPhase;
+    private getEffectiveItemSizeForStaleSpacer;
+    private accumulateMeasurement;
+    private recalibrateItemSize;
+    private calculateItemDistribution;
+    private getMaximumItemCapacity;
+    private getItemsProviderRequestCount;
+    private updateItemDistribution;
+    private refreshDataCore;
+    private refreshItems;
+    private sliceItems;
+    private adjustItemsForShift;
+    private refreshProvider;
+    private findShift;
+    private normalize;
+    private adjustProviderForShift;
+    private shouldAnchorForAppend;
+    private shouldScrollToBottomForAppend;
+    private shouldFollowPrependedHead;
+    private shouldFollowAppendedTail;
+    private advanceWindowToAppendedTail;
+    private failRefresh;
+    private track;
     dispose(): void;
-    private sequenceCounter;
-    private beginRender;
-    private nextSequence;
+}
+
+// VirtualizeAnchorMode
+export declare enum VirtualizeAnchorMode {
+    None = 0,
+    Start = 1,
+    End = 2
 }
 
 // VirtualizeItemsProvider
@@ -1556,13 +1638,14 @@ export type VirtualizeItemsProvider<TItem> = (request: VirtualizeItemsProviderRe
 
 // VirtualizeItemsProviderRequest
 export interface VirtualizeItemsProviderRequest {
-    startIndex: number;
-    count: number;
+    readonly startIndex: number;
+    readonly count: number;
+    readonly signal: AbortSignal;
 }
 
 // VirtualizeItemsProviderResult
 export interface VirtualizeItemsProviderResult<TItem> {
-    items?: TItem[];
+    items?: Iterable<TItem>;
     totalItemCount?: number;
 }
 

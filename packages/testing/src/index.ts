@@ -13,6 +13,36 @@ import {
 } from "@tsazor/runtime";
 
 /**
+ * A Virtualize in a test DOM has no layout, so no spacer ever comes into view. As bUnit does for Blazor's
+ * Virtualize, the viewport reports one huge container when it starts: every item renders, up to
+ * `MaxItemCount` (plus the overscan on both sides). A test that needs another viewport puts its own factory
+ * in this slot first.
+ */
+interface VirtualizeTestCallbacks {
+  spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: number): void;
+}
+const VIRTUALIZE_VIEWPORT_FACTORY = Symbol.for("tsazor.virtualize.viewportFactory");
+const slot = globalThis as { [VIRTUALIZE_VIEWPORT_FACTORY]?: unknown };
+slot[VIRTUALIZE_VIEWPORT_FACTORY] ??= (callbacks: VirtualizeTestCallbacks) => {
+  // bUnit's values: no spacer, no rows measured, a container of 1e9 px; reason 0 is a user scroll.
+  callbacks.spacerBeforeVisible(0, 0, 1_000_000_000, 0);
+  return {
+    spacerStyle: "",
+    afterRender: () => undefined,
+    scrollToBottom: () => undefined,
+    refreshObservers: () => undefined,
+    setAnchorMode: () => undefined,
+    restoreAnchor: () => undefined,
+    prepareShift: () => undefined,
+    alignToItem: () => null,
+    beginProgrammaticScroll: () => undefined,
+    isFollowingTop: () => false,
+    isFollowingBottom: () => false,
+    dispose: () => undefined,
+  };
+};
+
+/**
  * The parameters a test may pass to a component: its own fields (typed), or —
  * when only the generic component type is known (a `.tsazor` import outside
  * the type-checked shadow) — any name.

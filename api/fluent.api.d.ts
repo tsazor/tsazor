@@ -184,6 +184,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     virtualize: boolean;
     itemSize: number;
     overscanCount: number;
+    anchorMode: VirtualizeAnchorMode;
+    itemComparer?: (a: TGridItem, b: TGridItem) => boolean;
+    initialItemIndex: number;
     stickyHeader: boolean;
     additionalAttributes?: Record<string, unknown>;
 }

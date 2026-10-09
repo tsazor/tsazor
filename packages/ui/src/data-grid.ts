@@ -383,12 +383,15 @@ export class DataGridModel<T> {
   }
 
   /** One window of rows from the `ItemsProvider`, sorted like the grid (a running window request is aborted). */
-  async provideRange(startIndex: number, count: number): Promise<GridItemsProviderResult<T>> {
+  async provideRange(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>> {
     const provider = this.source.itemsProvider;
     if (provider === undefined) return { items: [], totalItemCount: 0 };
     this.abort?.abort();
     const abort = new AbortController();
     this.abort = abort;
+    // The caller (Virtualize) aborts a window it no longer needs: the provider's request aborts with it.
+    if (signal?.aborted) abort.abort(signal.reason);
+    else signal?.addEventListener("abort", () => abort.abort(signal.reason), { once: true, signal: abort.signal });
     try {
       const result = await provider(this.request(startIndex, count, abort.signal));
       abort.signal.throwIfAborted();

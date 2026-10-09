@@ -7,7 +7,7 @@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
-@import { Virtualize } from "@tsazor/runtime"
+@import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
 @import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode } from "@tsazor/ui"
 
 <CascadingValue Value="model">
@@ -45,9 +45,9 @@
                         @if (this.items !== undefined && this.items.length === 0) {
                             <tr class="fui-table__empty"><td colspan="@this.columnCount">@if (emptyContent) { @emptyContent } else { <span>No entries</span> }</td></tr>
                         }
-                        <Virtualize Items="@virtualItems" ItemsProvider="@virtualProvider" ItemSize="@itemSize" Overscan="@overscanCount" SpacerElement="tr" @ref="virtualizer">
-                            <ItemTemplate Context="row">
-                                <tr class="@this.rowClass(row)" aria-rowindex="@(this.virtualIndexOf(row) + 2)" style="@rowStyle">
+                        <Virtualize Items="@virtualItems" ItemsProvider="@(this.itemsProvider !== undefined ? this.virtualProvider : undefined)" ItemSize="@itemSize" OverscanCount="@overscanCount" SpacerElement="tr" AnchorMode="@anchorMode" ItemComparer="@(itemComparer ?? Object.is)" InitialItemIndex="@initialItemIndex" @ref="virtualizer">
+                            <ItemContent Context="row">
+                                <tr @key="this.keyOf(row)" class="@this.rowClass(row)" aria-rowindex="@(this.virtualIndexOf(row) + 2)">
                                     @if (selectionMode === "multiple") {
                                         <td class="fui-datagrid__select"><input type="checkbox" class="fui-datagrid__check" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
                                     } else if (selectionMode === "single") {
@@ -57,7 +57,10 @@
                                         <td class="@this.cellClass(column)">@column.cell(row)</td>
                                     }
                                 </tr>
-                            </ItemTemplate>
+                            </ItemContent>
+                            <Placeholder Context="placeholder">
+                                <tr class="fui-datagrid__placeholder" aria-rowindex="@(placeholder.index + 2)" style="@(`height: ${placeholder.size}px;`)"><td colspan="@this.columnCount"></td></tr>
+                            </Placeholder>
                         </Virtualize>
                     } else {
                     @if (this.rows.length === 0) {
@@ -129,10 +132,22 @@
      * scrolling container with a height; it doesn't combine with pagination.
      */
     @Parameter() virtualize: boolean = false;
-    /** A row's height in pixels when virtualized (rows get this height). */
+    /** The estimated row height in px when virtualized, until the rendered rows are measured (QuickGrid's ItemSize). */
     @Parameter() itemSize: number = 41;
     /** Rows rendered above and below the visible ones when virtualized. */
     @Parameter() overscanCount: number = 3;
+    /**
+     * Virtualized: how the grid behaves at its edges when rows arrive (QuickGrid's AnchorMode). `End` follows
+     * rows appended at the bottom, as a log or a feed.
+     */
+    @Parameter() anchorMode: VirtualizeAnchorMode = VirtualizeAnchorMode.Start;
+    /**
+     * Virtualized with an itemsProvider: whether two rows are the same row, to tell rows inserted above from
+     * rows appended (QuickGrid's ItemComparer). Compare by key when the provider returns fresh objects.
+     */
+    @Parameter() itemComparer?: (a: TGridItem, b: TGridItem) => boolean;
+    /** Virtualized: the row to scroll to on the first render (QuickGrid's InitialItemIndex). */
+    @Parameter() initialItemIndex: number = 0;
     /** Keeps the header row visible while the page (or a scrolling parent) scrolls. */
     @Parameter() stickyHeader: boolean = false;
     /** Further attributes for the table element (class adds to the table's classes). */
@@ -141,7 +156,7 @@
     private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
     private readonly groupName = uniqueId("fui-grid-select");
     private rendered = false;
-    private virtualizer?: Virtualize;
+    private virtualizer?: Virtualize<TGridItem>;
     /** Provider mode: the rows of the loaded window with their positions (for aria-rowindex and labels). */
     private readonly windowIndex = new Map<unknown, number>();
     private totalCount?: number;
@@ -157,13 +172,13 @@
     }
 
     /** Virtualized rows of Items: all of them, sorted. */
-    private get virtualItems(): unknown[] | undefined {
-        return this.items === undefined ? undefined : (this.model.sortedItems as unknown[]);
+    private get virtualItems(): readonly TGridItem[] | undefined {
+        return this.items === undefined ? undefined : this.model.sortedItems;
     }
 
     /** Virtualized rows of an ItemsProvider: the grid's request for the window in view. */
-    private readonly virtualProvider = async (request: { startIndex: number; count: number }) => {
-        const result = await this.model.provideRange(request.startIndex, request.count);
+    private readonly virtualProvider = async (request: { startIndex: number; count: number; signal: AbortSignal }) => {
+        const result = await this.model.provideRange(request.startIndex, request.count, request.signal);
         this.windowIndex.clear();
         result.items.forEach((item, offset) => this.windowIndex.set(item, request.startIndex + offset));
         if (this.totalCount !== result.totalItemCount) {
@@ -184,10 +199,6 @@
         return total === undefined ? null : total + 1;
     }
 
-    private get rowStyle(): string {
-        return `height: ${this.itemSize}px;`;
-    }
-
     protected override onAfterRender(firstRender: boolean): void {
         if (!firstRender) return;
         // The columns (and the default sort) are known now: the first request can go out.
@@ -197,6 +208,15 @@
     }
 
     /** Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed. */
+    /**
+     * Virtualized: scrolls so the row at `index` is at the top (QuickGrid's ScrollToItemAsync). A newer call
+     * supersedes this one, which then resolves; it rejects only when `signal` aborts.
+     */
+    scrollToItem(index: number, signal?: AbortSignal): Promise<void> {
+        if (this.virtualizer === undefined) throw new Error("DataGrid: scrollToItem needs Virtualize and a rendered grid.");
+        return this.virtualizer.scrollToItem(index, signal);
+    }
+
     refreshDataAsync(): Promise<void> {
         return this.model.refreshDataAsync();
     }

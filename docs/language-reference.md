@@ -711,13 +711,29 @@ entries) does not change language on a culture switch. Store the **key**, transl
     <button type="submit">Send</button>
 </EditForm>
 
-<Virtualize Items="@items" ItemSize="32" ItemTemplate="@renderItem" />
+<Virtualize Items="@messages" AnchorMode="@VirtualizeAnchorMode.End" Context="message">
+    <div class="message">@message.text</div>
+</Virtualize>
 ```
 
-- `Virtualize` renders no element of its own (Blazor): two spacers and the visible items go into the
-  parent, and the window is measured against the nearest scrolling ancestor (or the window) — put it
-  in a container with a height and `overflow-y: auto`. `SpacerElement` sets the spacers' tag (`tr`
-  inside a `<tbody>`, as the DataGrid does). A superseded `ItemsProvider` result is dropped.
+- `Virtualize<TItem>` is Blazor 11's ([design-virtualize.md](design-virtualize.md)). It renders no element of its
+  own: two spacers and the visible items go into the parent, and the window is measured against the nearest
+  scrolling ancestor (or the window), so put it in a container with a height and `overflow-y: auto`.
+  - **Rows of any height:** `ItemSize` (default 50) is only the first estimate. The rendered rows are measured,
+    and the spacers use their average.
+  - **Items:** `Items`, or an `ItemsProvider` whose request carries an `AbortSignal` that aborts when a newer
+    window supersedes it. `Placeholder` (`{ index, size }`) shows while a window loads, `EmptyContent` when the
+    list is empty. `OverscanCount` (default 15), `MaxItemCount` (default 100) and `SpacerElement` (`tr` inside a
+    `<tbody>`, as the DataGrid does) are as in Blazor.
+  - **Edges:** `AnchorMode` (`Start` by default; `End` follows new rows at the bottom, for a feed or a chat,
+    until the user scrolls away) and `ItemComparer` (`(a, b) => boolean`) to tell a prepend from an append
+    in an `ItemsProvider` list.
+  - **Scrolling:** `InitialItemIndex`, and `scrollToItem(index, signal?)` on an `@ref` (Blazor's
+    `ScrollToItemAsync`).
+  - `ItemTemplate` and `Overscan` are Tsazor's earlier names and still work. Tsazor fixes some of Blazor 11's
+    bugs (design-virtualize.md §6), for example a delete above the viewport keeps the visible rows in place.
+  - In tests (`@tsazor/testing`) there is no layout. As with bUnit, a Virtualize then renders its rows up to
+    `MaxItemCount`.
 
 - `ErrorBoundary` (3.1) catches errors in its own subtree — render, diff, DOM application,
   lifecycle, synchronous and async `@onclick` handling, `onAfterRender` (Blazor's

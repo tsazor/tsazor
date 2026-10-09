@@ -177,7 +177,7 @@ p {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  height: 32px; /* must match Virtualize ItemSize */
+  height: 32px; /* Virtualize's ItemSize is this estimate; it measures the rows */
   padding: 0 1rem;
   border-bottom: 1px solid #eaeef2;
   font-size: 0.95rem;

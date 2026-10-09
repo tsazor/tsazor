@@ -258,6 +258,8 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 
 // parseValue: re-exported from @tsazor/runtime
 
+// PlaceholderContext: re-exported from @tsazor/runtime
+
 // PlaceholdersOf: re-exported from @tsazor/runtime
 
 // QueryParameterMeta: re-exported from @tsazor/runtime
@@ -419,6 +421,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // ValidationSummary: re-exported from @tsazor/runtime
 
 // Virtualize: re-exported from @tsazor/runtime
+
+// VirtualizeAnchorMode: re-exported from @tsazor/runtime
 
 // VirtualizeItemsProvider: re-exported from @tsazor/runtime
 

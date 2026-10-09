@@ -96,6 +96,8 @@ export { NavigationLock } from "./routing/navigation-lock.js";
 // Data
 export {
   Virtualize,
+  VirtualizeAnchorMode,
+  type PlaceholderContext,
   type VirtualizeItemsProvider,
   type VirtualizeItemsProviderRequest,
   type VirtualizeItemsProviderResult,

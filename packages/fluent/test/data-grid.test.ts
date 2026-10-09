@@ -215,11 +215,13 @@ describe("DataGrid virtualize", () => {
     );
     await settle(renderer);
     const rows = [...container.querySelectorAll("tbody > tr")];
-    expect(rows[0]!.className).toBe("virtualize-spacer");
-    expect(rows.at(-1)!.className).toBe("virtualize-spacer");
+    // The spacers: the first and last rows, hidden from screen readers.
+    expect(rows[0]!.getAttribute("aria-hidden")).toBe("true");
+    expect(rows.at(-1)!.getAttribute("aria-hidden")).toBe("true");
     const data = rows.slice(1, -1);
-    // happy-dom's viewport: 768 px / 40 px = 20 rows, plus 3 overscan below.
-    expect(data.length).toBeLessThan(30);
+    // A test DOM has no layout: as with bUnit, the viewport reports a huge container, so the rows render up to
+    // MaxItemCount (100) plus the overscan on both sides (3 each).
+    expect(data.length).toBe(106);
     expect(data[0]!.querySelector("td")!.textContent).toBe("1");
     expect(data[0]!.getAttribute("aria-rowindex")).toBe("2");
     expect(container.querySelector("table")!.getAttribute("aria-rowcount")).toBe("1001");
