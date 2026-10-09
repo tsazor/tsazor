@@ -23,12 +23,24 @@ const LEGACY = "http://localhost:5411";
 
 const spawned = [];
 
-async function reachable(url) {
+/** Whether the sample's app answers `url` (its `/auth/user` JSON); another app on the port doesn't count. */
+async function answers(url) {
   try {
     const response = await fetch(url, { redirect: "manual" });
-    return response.status < 500;
+    if (response.status >= 500) return "down";
+    const body = response.headers.get("content-type")?.includes("application/json") ? await response.json() : undefined;
+    return body !== null && typeof body === "object" && "user" in body ? "ours" : "foreign";
   } catch {
-    return false;
+    return "down";
+  }
+}
+
+const reachable = async (url) => (await answers(url)) === "ours";
+
+/** A port another app holds: say so now, instead of timing out on its pages. */
+async function failIfTaken(url, app) {
+  if ((await answers(url)) === "foreign") {
+    throw new Error(`${new URL(url).host} is taken by another app, not the sample's ${app}: stop it, then run the gate again.`);
   }
 }
 
@@ -39,6 +51,8 @@ function run(command, args) {
 
 async function ensureServers() {
   run("npx", ["vite", "build", "--logLevel", "warn"]);
+  await failIfTaken(`${LEGACY}/auth/user`, "Blazor Server app");
+  await failIfTaken(`${GATEWAY}/auth/user`, "gateway");
   const legacyUp = await reachable(`${LEGACY}/auth/user`);
   const gatewayUp = await reachable(`${GATEWAY}/auth/user`);
   if (!legacyUp || !gatewayUp) {
