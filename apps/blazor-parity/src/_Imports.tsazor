@@ -1,0 +1,4 @@
+@import { ComponentBase, Parameter, inject, NavigationManager, Router, RouteView, Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
+@import type { RenderFragment, RouteData, VirtualizeItemsProviderRequest, VirtualizeItemsProviderResult } from "@tsazor/runtime"
+@import { deferred, delay, isAbortError, messageOf, onAbort, range, waitAsync, yieldToEventLoop } from "./shared/async"
+@import type { Deferred } from "./shared/async"

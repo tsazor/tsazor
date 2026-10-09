@@ -101,6 +101,8 @@ that shows the better behavior. Where a Blazor test asserts the bug, the port as
 | A8 | a container that changes size adapts only at the next spacer crossing | a ResizeObserver on the scroll container re-checks the window |
 | A9 | the "initial index not yet started" guard covers only the before spacer | both spacers |
 | A10 | with window scrolling, Home/End and the scroll keys are taken from the whole document, so End typed in a text field makes the list follow the bottom | keys typed into an editable element (input, textarea, select, contenteditable) are text editing, not scrolling |
+| A11 | the manual anchor restore adds a fractional delta to `scrollTop`; WebKit keeps whole pixels, so each restore loses up to 1px and the next snapshot starts from there (a table's anchored row drifted 9.5px over 10 prepends). Safari has no `overflow-anchor`, so there every list takes this path; Blazor tests in Chrome only | the dropped fraction is carried: until the user scrolls, snapshots record the offset the restore aimed for |
+| A12 | Home pressed while the convergence to the bottom after End is still running starts the convergence to the top too; both run, the bottom one wins, and the list is pulled back to the bottom (End during a top convergence likewise). Seen as a flaky WebKit test | a jump key ends a convergence toward the other edge first |
 
 Not bugs, so kept: `Items` mode compares by identity, not by `ItemComparer` (Blazor's design); the 50 ms throttle; the
 test-page quirks of spec appendix A.12 are fixed in the ported tests, not in the component.

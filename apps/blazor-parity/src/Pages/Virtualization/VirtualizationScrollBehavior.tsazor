@@ -1,0 +1,27 @@
+@page "/virtualization/scroll-behavior"
+@import type { HeightItem } from "./models"
+@* Tests: rapid scroll reversals, programmatic scrollToBottom, non-zero start index *@
+<p>
+    <b>Rapid Scroll & ScrollToBottom Test</b>:<br />
+    <span id="scroll-item-count">@items.length</span>
+    <div id="scroll-behavior-container" style="background-color: #eee; height: 200px; overflow-y: auto">
+        <Virtualize Items="@items" ItemSize="35">
+            <div @key="context.index" id="scroll-item-@context.index" class="scroll-behavior-item"
+                 style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 80%); padding: 4px; box-sizing: border-box;">
+                <span class="item-index">@context.index</span>
+            </div>
+        </Virtualize>
+    </div>
+</p>
+
+@code {
+    items: HeightItem[] = [];
+
+    protected override onInitialized(): void {
+        this.items = range(0, 500).map((i) => ({
+            index: i,
+            height: 25 + (i * 11 % 31),
+            hue: i * 7 % 360,
+        }));
+    }
+}

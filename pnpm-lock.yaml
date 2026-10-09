@@ -149,6 +149,28 @@ importers:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
 
+  apps/blazor-parity:
+    dependencies:
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+      '@tsazor/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin
+    devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
+      playwright-core:
+        specifier: ^1.63.0
+        version: 1.63.0
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.7
+        version: 7.3.6(@types/node@20.19.43)
+
   apps/demo:
     dependencies:
       '@tsazor/bootstrap':

@@ -1,0 +1,175 @@
+@page "/virtualization/variable-height-async"
+@import type { VariableHeightItem } from "./models"
+<p>
+    <strong>Test:</strong> Async ItemsProvider with variable-height items (25-55px).
+    Covers manual/auto loading, RTL layout, transform scale, CSS zoom/scale,
+    collection mutations (add/remove), and small item counts (0, 1, 5).
+</p>
+
+<p>
+    Variable Height Items with Async ItemsProvider:<br />
+    <label><input id="toggle-autoload" type="checkbox" checked="@autoLoad" @onchange="toggleAutoLoad" /> Auto-load items</label>
+    <button id="finish-loading" @onclick="finishLoading" disabled="@autoLoad">Finish loading</button>
+    <button id="refresh-data" @onclick="() => virtualizeRef?.refreshData()">Refresh data</button>
+    <button id="add-item-start" @onclick="addItemAtStart">Add at start</button>
+    <button id="remove-item-middle" @onclick="removeItemFromMiddle">Remove from middle</button>
+    <button id="set-count-0" @onclick="() => setItemCount(0)">Set 0 items</button>
+    <button id="set-count-1" @onclick="() => setItemCount(1)">Set 1 item</button>
+    <button id="set-count-5" @onclick="() => setItemCount(5)">Set 5 items</button>
+    <button id="set-count-200" @onclick="() => setItemCount(200)">Set 200 items</button>
+    <button id="toggle-rtl" @onclick="toggleRtl">Toggle RTL</button>
+    <button id="scale-200" @onclick="() => setTransformScale(2.0)">Transform Scale 200%</button>
+    <button id="scale-150" @onclick="() => setTransformScale(1.5)">Transform Scale 150%</button>
+    <button id="scale-100" @onclick="() => setTransformScale(1.0)">Transform Scale 100%</button>
+    <button id="scale-75" @onclick="() => setTransformScale(0.75)">Transform Scale 75%</button>
+    <button id="scale-50" @onclick="() => setTransformScale(0.5)">Transform Scale 50%</button>
+    <button id="zoom-200" @onclick="() => setCssZoom(2.0)">CSS Zoom 200%</button>
+    <button id="zoom-150" @onclick="() => setCssZoom(1.5)">CSS Zoom 150%</button>
+    <button id="zoom-100" @onclick="() => setCssZoom(1.0)">CSS Zoom 100%</button>
+    <button id="zoom-75" @onclick="() => setCssZoom(0.75)">CSS Zoom 75%</button>
+    <button id="zoom-50" @onclick="() => setCssZoom(0.5)">CSS Zoom 50%</button>
+    <button id="cssscale-200" @onclick="() => setCssScale(2.0)">CSS Scale 200%</button>
+    <button id="cssscale-150" @onclick="() => setCssScale(1.5)">CSS Scale 150%</button>
+    <button id="cssscale-100" @onclick="() => setCssScale(1.0)">CSS Scale 100%</button>
+    <button id="cssscale-75" @onclick="() => setCssScale(0.75)">CSS Scale 75%</button>
+    <button id="cssscale-50" @onclick="() => setCssScale(0.5)">CSS Scale 50%</button>
+    <span id="direction-status">Direction: @(isRtl ? "RTL" : "LTR")</span>
+    <span id="zoom-status">Transform Scale: @(transformScaleLevel * 100)%, CSS Zoom: @(cssZoomLevel * 100)%, CSS Scale: @(cssScaleLevel * 100)%</span>
+    <span id="load-count">Loads: @loadCount</span>
+    <span id="cancellation-count">Cancellations: @cancellationCount</span>
+    <span id="total-item-count">Total: @totalItemCount</span>
+    <div id="async-variable-container" style="background-color: #eee; height: 200px; overflow-y: auto; direction: @(isRtl ? "rtl" : "ltr"); transform: scale(@transformScaleLevel); transform-origin: top left; zoom: @cssZoomLevel; scale: @cssScaleLevel;">
+        <Virtualize @ref="virtualizeRef" ItemsProvider="getItems" ItemSize="35">
+            <ItemContent>
+                <div @key="context.id" id="async-variable-item-@context.index" class="async-variable-item"
+                     style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 80%); padding: 4px; box-sizing: border-box;">
+                    <span class="item-index">@context.index</span> - Height: @context.height px
+                </div>
+            </ItemContent>
+            <Placeholder>
+                <div id="async-variable-placeholder-@context.index" class="async-variable-placeholder"
+                     style="height: @(context.size)px; background-color: #ccc; padding: 4px; box-sizing: border-box;">
+                    Loading @(context.index)...
+                </div>
+            </Placeholder>
+            <EmptyContent>
+                <p id="no-data">No data to show</p>
+            </EmptyContent>
+        </Virtualize>
+    </div>
+</p>
+
+@code {
+    virtualizeRef?: Virtualize<VariableHeightItem>;
+    loadingTcs: Deferred = deferred();
+    totalItemCount = 1000;
+    loadCount = 0;
+    cancellationCount = 0;
+    autoLoad = false;
+    isRtl = false;
+    transformScaleLevel = 1.0;
+    cssZoomLevel = 1.0;
+    cssScaleLevel = 1.0;
+
+    // Pre-generate all items for consistency
+    allItems: VariableHeightItem[] = [];
+    nextId = 0;
+
+    toggleAutoLoad(e: Event): void {
+        this.autoLoad = (e.target as HTMLInputElement).checked;
+    }
+
+    toggleRtl(): void {
+        this.isRtl = !this.isRtl;
+    }
+
+    setTransformScale(scale: number): void {
+        this.transformScaleLevel = scale;
+    }
+
+    setCssZoom(zoom: number): void {
+        this.cssZoomLevel = zoom;
+    }
+
+    setCssScale(scale: number): void {
+        this.cssScaleLevel = scale;
+    }
+
+    protected override onInitialized(): void {
+        // Generate totalItemCount items (default 100) with deterministic variable heights (25-55px range)
+        this.allItems = range(0, this.totalItemCount).map((i) => ({
+            id: this.nextId++,
+            index: i,
+            height: 25 + (i * 11 % 31), // Heights vary from 25-55px
+            hue: i * 12 % 360,
+        }));
+    }
+
+    async getItems(request: VirtualizeItemsProviderRequest): Promise<VirtualizeItemsProviderResult<VariableHeightItem>> {
+        if (!this.autoLoad) {
+            const registration = onAbort(request.signal, () => {
+                this.loadingTcs.reject(request.signal.reason);
+                this.loadingTcs = deferred();
+                this.cancellationCount++;
+                this.stateHasChanged();
+            });
+
+            try {
+                await this.loadingTcs.promise;
+            } catch (error) {
+                registration();
+                throw error;
+            }
+
+            registration();
+        }
+
+        this.loadCount++;
+
+        const items = this.allItems.slice(request.startIndex, request.startIndex + request.count);
+
+        return { items, totalItemCount: this.totalItemCount };
+    }
+
+    finishLoading(): void {
+        this.loadingTcs.resolve();
+        this.loadingTcs = deferred();
+    }
+
+    recalculateIndices(): void {
+        for (let i = 0; i < this.allItems.length; i++) {
+            this.allItems[i]!.index = i;
+        }
+    }
+
+    addItemAtStart(): void {
+        const newItem = {
+            id: this.nextId++,
+            index: -1,
+            height: 100,
+            hue: 0,
+        };
+        this.allItems.splice(0, 0, newItem);
+        this.totalItemCount++;
+        this.recalculateIndices();
+    }
+
+    removeItemFromMiddle(): void {
+        if (this.totalItemCount > 2) {
+            this.allItems.splice(Math.trunc(this.totalItemCount / 2), 1);
+            this.totalItemCount--;
+            this.recalculateIndices();
+        }
+    }
+
+    setItemCount(count: number): void {
+        // Generate new items with variable heights for small count scenarios
+        this.allItems = range(0, count).map((i) => ({
+            id: this.nextId++,
+            index: i,
+            height: 30 + (i * 17 % 41), // Heights vary from 30-70px
+            hue: i * 72 % 360,
+        }));
+        this.totalItemCount = count;
+    }
+}

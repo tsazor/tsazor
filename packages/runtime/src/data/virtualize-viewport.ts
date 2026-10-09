@@ -153,6 +153,13 @@ export function createVirtualizeViewport(
 
   let anchorSnapshot: AnchorSnapshot | null = null;
   let restoreOnNextRender = false;
+  /**
+   * Tsazor (A11): the part of a restore's scroll the browser dropped. WebKit keeps an element's scrollTop in
+   * whole pixels, so `scrollTop += 41.95` lands 0.95px short, and the next snapshot would start from there:
+   * over many prepends the anchored row drifts. Until the user scrolls, snapshots record the offset the
+   * restore aimed for.
+   */
+  let anchorResidual = 0;
 
   const intersectionObserver = new IntersectionObserver(intersectionCallback, {
     root: scrollContainer,
@@ -417,7 +424,13 @@ export function createVirtualizeViewport(
     }
     // End mode: carry the at-bottom state forward only if the viewport is at the bottom right now.
     const preserveWasAtBottom = anchorModeIs.end && isViewportAtBottom();
-    if (Math.abs(delta) > 1) scrollElement.scrollTop += delta;
+    if (Math.abs(delta) > 1) {
+      const target = scrollElement.scrollTop + delta;
+      scrollElement.scrollTop = target;
+      // Only what rounding dropped; a clamp at the scroll range's end is not carried.
+      const residual = target - scrollElement.scrollTop;
+      anchorResidual = Math.abs(residual) < 1 ? residual : 0;
+    }
     // The offset after the adjustment, for the drift correction.
     if (pendingScrollCorrection) {
       const correctedOffset = measureLocalChildOffset(snapshot.anchorItemIndex);
@@ -453,6 +466,7 @@ export function createVirtualizeViewport(
   let pendingJumpToStart = false;
 
   function handleUserScrollInput(): void {
+    anchorResidual = 0;
     const selfScrollInProgress = scrollActivity.source === ScrollSource.AlignToItem || scrollActivity.source === ScrollSource.RestoreSnapshot;
     scrollActivity.consumeIgnoreScroll();
     scrollActivity.source = ScrollSource.UserScroll;
@@ -469,6 +483,9 @@ export function createVirtualizeViewport(
     const ke = e as KeyboardEvent;
     if (isEditable(ke.target)) return;
     if (ke.key === "End") {
+      // Tsazor (A12): a jump reverses a convergence still running toward the other edge. Blazor keeps both
+      // running, and the bottom one wins: Home pressed soon after End was pulled back to the bottom.
+      if (convergence.top) stopConvergenceObserving();
       scrollActivity.source = ScrollSource.UserScroll;
       reobserveSpacers();
       clearTopFollow();
@@ -480,6 +497,7 @@ export function createVirtualizeViewport(
       }
       if (!convergence.bottom && spacerAfter.offsetHeight > 0) startConvergenceObserving("bottom");
     } else if (ke.key === "Home") {
+      if (convergence.bottom) stopConvergenceObserving();
       scrollActivity.source = ScrollSource.UserScroll;
       reobserveSpacers();
       topTracking.following = true;
@@ -499,6 +517,7 @@ export function createVirtualizeViewport(
     const selfScrollInProgress = scrollActivity.source === ScrollSource.AlignToItem || scrollActivity.source === ScrollSource.RestoreSnapshot;
     if (selfScrollInProgress) return;
     scrollActivity.source = ScrollSource.UserScroll;
+    anchorResidual = 0;
     // A user scroll is the only thing that sets the follow state.
     if (anchorModeIs.beginning || topTracking.following) topTracking.following = isAtScrollTop();
     if (anchorModeIs.end || bottomTracking.following) {
@@ -541,6 +560,7 @@ export function createVirtualizeViewport(
   /** Measures the row's top and scrolls it to the container's top. */
   function alignToItemAt(localIndex: number): ViewportFillDirection | null {
     function beginAlign(): void {
+      anchorResidual = 0;
       scrollActivity.ignoreNextScroll();
       scrollActivity.source = ScrollSource.AlignToItem;
       anchorSnapshot = null;
@@ -657,7 +677,7 @@ export function createVirtualizeViewport(
         const modePinsTopItem = !anchorModeIs.beginning || !convergence.top;
         const itemAlreadyShifted = rect.top - top > rect.height;
         if (nativeAnchoringUnavailable && modePinsTopItem && anchorSnapshot && itemAlreadyShifted) return;
-        anchorSnapshot = { anchorItemIndex, anchorOffset: rect.top - top, scrollTop: scrollElement.scrollTop };
+        anchorSnapshot = { anchorItemIndex, anchorOffset: rect.top - top - anchorResidual, scrollTop: scrollElement.scrollTop };
         return;
       }
       anchorItemIndex++;

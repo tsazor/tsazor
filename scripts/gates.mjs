@@ -34,6 +34,7 @@ const GATES = [
   { name: "Accessibility — @tsazor/fluent", run: [["--filter", "gallery", "verify:a11y"]] },
   { name: "Accessibility — @tsazor/bootstrap", run: [["--filter", "demo", "verify:a11y"]] },
   { name: "One set of pages, two skins", run: [["--filter", "skins", "verify"]] },
+  { name: "Blazor parity — Blazor's own E2E tests", run: [["--filter", "blazor-parity", "verify"]] },
   { name: "The starter (npm create tsazor)", run: [["--filter", "starter", "verify"]] },
   { name: "Incremental migration", engines: false, run: [["--filter", "migration-sample", "verify"]] },
   { name: "The FluentCMS port", engines: false, run: [["--filter", "fluentcms", "verify"]] },

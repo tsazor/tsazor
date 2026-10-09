@@ -1,0 +1,52 @@
+@page "/virtualization/variable-height"
+@import type { HeightItem } from "./models"
+<p>
+    <strong>Test:</strong> Synchronous Items collection with extreme height variance (20-2000px).
+    Covers scrolling through all items, spacer adjustment, correct per-item heights,
+    and container resize while scrolled.
+</p>
+
+<p>
+    Variable Height Items (small container):<br />
+    <div id="variable-height-container" style="background-color: #eee; height: @(containerHeight)px; overflow-y: auto">
+        <Virtualize Items="@variableHeightItems" ItemSize="30">
+            <div @key="context.index" id="variable-item-@context.index" class="variable-height-item"
+                 style="height: @(context.height)px; background-color: hsl(@(context.hue), 70%, 80%); padding: 4px; box-sizing: border-box;">
+                <span class="item-index">@context.index</span>
+            </div>
+        </Virtualize>
+    </div>
+</p>
+
+<p>
+    <span id="total-item-count">Total items: @variableHeightItems.length</span>
+</p>
+
+<p>
+    Container height: <span id="container-height">@containerHeight</span>px
+    <button id="resize-small" @onclick="() => resizeContainer(100)">Small (100px)</button>
+    <button id="resize-medium" @onclick="() => resizeContainer(200)">Medium (200px)</button>
+    <button id="resize-large" @onclick="() => resizeContainer(400)">Large (400px)</button>
+</p>
+
+<p id="resize-status">@resizeStatus</p>
+
+@code {
+    variableHeightItems: HeightItem[] = [];
+    containerHeight = 100;
+    resizeStatus = "Ready";
+
+    resizeContainer(newHeight: number): void {
+        this.containerHeight = newHeight;
+        this.resizeStatus = `Container resized to ${newHeight}px`;
+    }
+
+    protected override onInitialized(): void {
+        // Generate 1000 items with extreme height variance (20-2000px range = 100x variance)
+        this.variableHeightItems = range(0, 1000).map((i) => ({
+            index: i,
+            height: 20 + (i * 37 % 1981), // Heights vary from 20-2000px (100x extreme variance!)
+            hue: i * 7 % 360, // Evenly distributed hues for visual distinction
+        }));
+    }
+}

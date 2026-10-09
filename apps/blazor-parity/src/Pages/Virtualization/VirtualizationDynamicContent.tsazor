@@ -1,0 +1,96 @@
+@page "/virtualization/dynamic-content"
+@import type { ExpandableItem } from "./models"
+
+<h1>Virtualization Dynamic Content</h1>
+<p>Tests for items that change height after initial render (images, expandables)</p>
+
+<div id="scroll-container" style="height: 300px; overflow-y: auto; border: 1px solid black;">
+    <Virtualize Items="@items" ItemSize="50" Context="item">
+        <div class="item"
+             data-index="@item.index"
+             style="border: 1px solid gray; padding: 5px; min-height: @(item.height)px;"
+             @onclick="() => toggleExpand(item)">
+            <div>Item @item.index</div>
+            @if (item.isExpanded)
+            {
+                <div class="expanded-content" style="height: 100px; background-color: lightblue;">
+                    Expanded content for item @item.index
+                </div>
+            }
+        </div>
+    </Virtualize>
+</div>
+
+<div style="margin-top: 10px;">
+    <button id="expand-item-2" @onclick="() => expandItem(2)">Expand Item 2</button>
+    <button id="expand-item-5" @onclick="() => expandItem(5)">Expand Item 5</button>
+    <button id="collapse-all" @onclick="collapseAll">Collapse All</button>
+    <button id="simulate-image-load" @onclick="simulateImageLoad">Simulate Image Load (Item 3)</button>
+    <button id="prepend-items" @onclick="prependItems">Prepend 10 Items</button>
+    <button id="append-items" @onclick="appendItems">Append 10 Items</button>
+</div>
+
+<p id="status">@statusMessage</p>
+
+@code {
+    private items: ExpandableItem[] = [];
+    private statusMessage = "Ready";
+
+    protected override onInitialized(): void {
+        // 500 items with initial height of 50px.
+        // With OverscanCount=15 (default), the initial render covers ~37 items (~2300px).
+        // 500 items provides enough content to force true virtualization when scrolling.
+        this.items = range(0, 500).map((i) => ({ index: i, height: 50, isExpanded: false }));
+    }
+
+    private toggleExpand(item: ExpandableItem): void {
+        item.isExpanded = !item.isExpanded;
+        item.height = item.isExpanded ? 160 : 50; // 50 base + 100 expanded + padding
+        this.statusMessage = `Item ${item.index} ${item.isExpanded ? "expanded" : "collapsed"}`;
+    }
+
+    private expandItem(index: number): void {
+        const item = this.items.find((i) => i.index === index);
+        if (item !== undefined && !item.isExpanded) {
+            item.isExpanded = true;
+            item.height = 160;
+            this.statusMessage = `Item ${index} expanded via button`;
+        }
+    }
+
+    private collapseAll(): void {
+        for (const item of this.items) {
+            item.isExpanded = false;
+            item.height = 50;
+        }
+        this.statusMessage = "All items collapsed";
+    }
+
+    private simulateImageLoad(): void {
+        // Simulate an image loading that increases item height
+        const item = this.items.find((i) => i.index === 3);
+        if (item !== undefined) {
+            item.height = 120; // Image loaded, item grew
+            this.statusMessage = "Item 3 height changed (simulated image load)";
+            this.stateHasChanged();
+        }
+    }
+
+    private nextPrependIndex = -1;
+    private nextAppendIndex = 500;
+
+    private prependItems(): void {
+        const newItems = range(0, 10).map((i) => ({ index: this.nextPrependIndex - i, height: 50, isExpanded: false }));
+        this.items.splice(0, 0, ...newItems);
+        this.nextPrependIndex -= 10;
+        this.statusMessage = `Prepended 10 items (indices ${newItems[newItems.length - 1]!.index}..${newItems[0]!.index})`;
+    }
+
+    private appendItems(): void {
+        const startIndex = this.nextAppendIndex;
+        const newItems = range(startIndex, 10).map((i) => ({ index: i, height: 50, isExpanded: false }));
+        this.items.push(...newItems);
+        this.nextAppendIndex += 10;
+        this.statusMessage = `Appended 10 items (indices ${startIndex}..${startIndex + 9})`;
+    }
+}

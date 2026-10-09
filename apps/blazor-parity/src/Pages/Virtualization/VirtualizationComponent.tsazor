@@ -1,0 +1,106 @@
+@page "/virtualization/component"
+
+<p>
+    Item size:<br />
+    <input id="item-size-input" type="number" @bind-value="itemSize" />
+</p>
+
+<p>
+    Synchronous:<br />
+    <div id="sync-container" style="background-color: #eee; height: 500px; overflow-y: auto">
+        <Virtualize Items="@fixedItems" ItemSize="itemSize" OverscanCount="3">
+            <div @key="context" id="sync-item" style="height: @(itemSize)px; background-color: rgb(@((context % 2) * 255), @((1-(context % 2)) * 255), 255);">Item @context</div>
+        </Virtualize>
+    </div>
+</p>
+
+<p>
+    Asynchronous:<br />
+    <button id="finish-loading-button-empty" @onclick="() => finishLoading(0)">Finish loading with total item count = 0</button><br />
+    <button id="finish-loading-button" @onclick="() => finishLoading(200)">Finish loading with total item count = 200</button><br />
+    <button id="refresh-data-async" @onclick="() => asyncComponent?.refreshData()">Call RefreshDataAsync</button><br />
+    Cancellation count: <span id="cancellation-count">@asyncCancellationCount</span><br />
+    <div id="async-container" style="background-color: #eee; height: 500px; overflow-y: auto">
+        <Virtualize @ref="asyncComponent" ItemsProvider="getItems" ItemSize="itemSize" OverscanCount="3">
+            <ItemContent>
+                <div @key="context" id="async-item" style="height: @(itemSize)px; background-color: rgb(@((context % 2) * 255), @((1-(context % 2)) * 255), 255);">Item @context</div>
+            </ItemContent>
+            <Placeholder>
+                <div id="async-placeholder" style="height: @(context.size)px; background-color: orange;">Loading item @(context.index)...</div>
+            </Placeholder>
+            <EmptyContent>
+                <p id="no-data-async">No data to show</p>
+            </EmptyContent>
+        </Virtualize>
+    </div>
+</p>
+
+<p>
+    Empty Content:<br />
+<div id="empty-container" style="background-color: #eee; height: 100px; overflow-y: auto">
+    <Virtualize Items="@emptyCollection" ItemSize="itemSize">
+        <ItemContent>
+            <div @key="context" style="height: @(itemSize)px; background-color: rgb(@((context % 2) * 255), @((1-(context % 2)) * 255), 255);">
+                Item @context</div>
+        </ItemContent>
+        <EmptyContent>
+            <p id="no-data-sync">No data to show</p>
+        </EmptyContent>
+    </Virtualize>
+</div>
+</p>
+
+<p>
+    Incorrect item size (declared 50, actual 30):<br />
+    <div id="incorrect-size-container" style="background-color: #eee; height: 500px; overflow-y: auto">
+        <Virtualize Items="@fixedItems" ItemSize="50" OverscanCount="3">
+            <div @key="context" class="incorrect-size-item" data-index="@context" style="height: 30px; background-color: rgb(@((context % 2) * 255), @((1-(context % 2)) * 255), 255);">Item @context</div>
+        </Virtualize>
+    </div>
+</p>
+
+<p id="viewport-as-root">
+    Viewport as root:<br />
+    <Virtualize Items="@fixedItems" ItemSize="itemSize" OverscanCount="3">
+        <div @key="context" id="@context" style="height: @(itemSize)px; background-color: rgb(@((context % 2) * 255), @((1-(context % 2)) * 255), 255);">Item @context</div>
+    </Virtualize>
+</p>
+
+@code {
+    itemSize = 100;
+    fixedItems: number[] = range(0, 1000);
+    emptyCollection: number[] = [];
+
+    asyncTotalItemCount = 200;
+    asyncCancellationCount = 0;
+    asyncTcs: Deferred = deferred();
+
+    asyncComponent?: Virtualize<number>;
+
+    async getItems(request: VirtualizeItemsProviderRequest): Promise<VirtualizeItemsProviderResult<number>> {
+        const loadingTask = this.asyncTcs.promise;
+
+        const registration = onAbort(request.signal, () => this.cancelLoading(request.signal));
+
+        await loadingTask;
+
+        registration();
+
+        return { items: range(request.startIndex, request.count), totalItemCount: this.asyncTotalItemCount };
+    }
+
+    finishLoading(totalItemCount: number): void {
+        this.asyncTotalItemCount = totalItemCount;
+        this.asyncTcs.resolve();
+        this.asyncTcs = deferred();
+    }
+
+    cancelLoading(signal: AbortSignal): void {
+        this.asyncTcs.reject(signal.reason);
+        this.asyncTcs = deferred();
+
+        this.asyncCancellationCount++;
+
+        this.stateHasChanged();
+    }
+}

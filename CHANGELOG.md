@@ -20,7 +20,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     - The spacers have no class.
     - Giving both `Items` and `ItemsProvider` is an error.
   - **Fixes of Blazor 11 bugs** (design-virtualize.md §6), among them: a delete above the viewport is compensated,
-    and End typed into a text field no longer moves the list.
+    End typed into a text field no longer moves the list, an anchored row no longer drifts in Safari (WebKit keeps
+    scrollTop in whole pixels), and Home pressed soon after End reaches the top.
   - `@tsazor/testing` renders a Virtualize's rows up to `MaxItemCount` as bUnit does, since a test DOM has no
     layout.
 - `@tsazor/bootstrap`, `@tsazor/fluent`: the virtualized DataGrid passes `AnchorMode`, `ItemComparer` and
