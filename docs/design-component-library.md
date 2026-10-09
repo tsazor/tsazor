@@ -96,7 +96,8 @@ density are open):
 - Layout: Card, Stack, Grid, Divider; theming (light/dark; Bootstrap `data-bs-theme`, Fluent
   tokens)
 
-**Tier 2 — after 1.0:** Autocomplete/Combobox, DatePicker popup, TimePicker, TreeView,
+**Tier 2 — after 1.0** (superseded 2026-10-09: both waves of
+[design-library-completeness.md](design-library-completeness.md) come before 1.0): Autocomplete/Combobox, DatePicker popup, TimePicker, TreeView,
 Stepper, Carousel, Rating, Slider, ColorPicker, Avatar, Chip, Timeline, drag-and-drop upload.
 Charts stay out (a chart library is its own product; document integrating one via `@attach`).
 
@@ -143,4 +144,4 @@ it on Blazor's QuickGrid**, which every Blazor team can use today:
 | D-C4 | Distribution | Bootstrap: npm; Fluent: npm + copy-in (as today); copy-in for Bootstrap later if asked for |
 | D-C5 | DataGrid API | QuickGrid-shaped (parity + codemod), extended per §5 |
 | D-C6 | Bootstrap CSS | not bundled: the app brings Bootstrap 5.3 (as every Blazor template does); the skin only emits classes |
-| D-C7 | 1.0 scope | Tier 1 as in §4 |
+| D-C7 | 1.0 scope | Tier 1 as in §4; widened 2026-10-09 to a complete library ([design-library-completeness.md](design-library-completeness.md)) |

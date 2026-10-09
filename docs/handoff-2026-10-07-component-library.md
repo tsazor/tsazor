@@ -55,7 +55,15 @@ everything pushed.
 >   - Publishing is tested only through tarballs. The suggestion is a local registry (Verdaccio) with
 >     prereleases, which R2 needs anyway.
 >   - There are no soak tests for long-open tabs.
-> - **Next:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
+> - **Library completeness (owner, 2026-10-09):** the dogfood assessment of AgentView (a new app: roadmap, branch map,
+>   approval inbox, coverage charts, decision log, live feed, chat) hit missing components at once. Owner: "A complete
+>   component library is important, otherwise you always hit a wall … Without a complete library, nobody will move to
+>   Tsazor." Decided: waves A and B of [design-library-completeness.md](design-library-completeness.md) before 1.0
+>   (reference: Fluent UI Blazor + MudBlazor), both skins at once, `@tsazor/markdown` on marked + DOMPurify, charts as
+>   an `@attach` guide now and `@tsazor/charts` in wave B. Building them is also a core test vehicle (findings L1, L2, …).
+>   **Order:** Virtualize at Blazor parity + sticking to the bottom (core) → icons (F17) and Markdown → rest of wave A
+>   → wave B.
+> - **Before that:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
 

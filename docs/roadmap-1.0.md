@@ -5,6 +5,8 @@ the component library (Tier 1, both skins) and `@tsazor/worker`. **Scope cut (ow
 and the Sleipnir integration move after 1.0, E12 first. Both are separate, additive packages; neither
 changes the API of the runtime or the compiler. **Left for 1.0:** R2, E3, E10, the E9 screen-reader
 audit, the known follow-ups, then going public (R4, provenance). The repository stays private until then.
+**Library completeness (owner, 2026-10-09):** 1.0 also waits for a complete component library, waves A and B of
+[design-library-completeness.md](design-library-completeness.md) (§3b).
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
 
 **Goal of 1.0:** a single-page-app framework with **Blazor parity** (markup and semantics),
@@ -42,6 +44,17 @@ Bootstrap 5 first (every `dotnet new blazor` template ships it), Fluent 2 second
 `@tsazor/ui` (behaviors as attachments, headless state models, field base), skins
 `@tsazor/bootstrap` and `@tsazor/fluent` on one shared vocabulary, a QuickGrid-shaped DataGrid, Tier 1
 scope for 1.0. Absorbs the open E9 keyboard patterns. Comes before R3 (`npm create tsazor --ui`).
+
+**Completeness (decided 2026-10-09, [design-library-completeness.md](design-library-completeness.md)):** Tier 1
+is done in both skins. The first new app (the AgentView dogfood) hit missing components at once. Owner: "Without a
+complete library, nobody will move to Tsazor." So both waves come before 1.0, measured against Fluent UI Blazor and
+MudBlazor:
+- **Wave A:** icons (F17), Markdown, Avatar, Chip, Timeline, Stepper, Splitter, Toolbar, Slider, a DatePicker popup,
+  an upload drop zone and a sortable list, plus the Bootstrap catch-up;
+- **Wave B:** the rest of the inventory, and `@tsazor/charts`.
+
+Each component goes into both skins at once. Building them is also a core test vehicle: core bugs found on the way
+become fixes with tests. The core goes first: Virtualize at Blazor parity, and sticking to the bottom.
 
 ## 3c — Heavy work off the main thread ([design-worker.md](design-worker.md))
 
@@ -236,7 +249,8 @@ architecture and security take priority.
    components and API pages, cross-linked with the lessons and the index (see the design doc).
 4. E4–E7 architecture and migration (incremental migration E6 is the main sales argument).
 5. ~~Sleipnir integration;~~ the remaining Svelte-style features with their chapters (done).
-6. ~~R3 (with the S2 templates)~~ (done 2026-10-08), R2, E3, E10, the E9 screen-reader audit, the follow-ups → 1.0 release
+6. ~~R3 (with the S2 templates)~~ (done 2026-10-08); the FluentCMS port (main track since 2026-10-08); the library's
+   waves A and B (§3b, 2026-10-09); R2, E3, E10, the E9 screen-reader audit, the follow-ups → 1.0 release
    candidate → public repository, docs site (R4), npm with provenance → 1.0.
 
 After 1.0: E12 (`@tsazor/primitives`, `@tsazor/extensions`, `Decimal` with `@bind:culture`), then the
