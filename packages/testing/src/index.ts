@@ -36,6 +36,7 @@ slot[VIRTUALIZE_VIEWPORT_FACTORY] ??= (callbacks: VirtualizeTestCallbacks) => {
     prepareShift: () => undefined,
     alignToItem: () => null,
     beginProgrammaticScroll: () => undefined,
+    holdFirstVisibleRow: () => undefined,
     isFollowingTop: () => false,
     isFollowingBottom: () => false,
     dispose: () => undefined,

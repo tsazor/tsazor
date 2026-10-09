@@ -1551,6 +1551,7 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private unusedItemCapacity;
     private itemCount;
     private loadedItemsStartIndex;
+    private renderedItemsBefore;
     lastRenderedItemCount: number;
     lastRenderedPlaceholderCount: number;
     private recalibratedItemSize;
@@ -1584,6 +1585,7 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private scrollToItemCore;
     private moveWindowToContain;
     private ensureRenderCommitted;
+    private fillViewportAroundTarget;
     private alignToTarget;
     private clampToItemRange;
     protected onParametersSet(): void;
@@ -1597,9 +1599,11 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private getMeasuredItemHeight;
     private updateItemSizeFromRenderedContent;
     private cancelInFlightScrollForUserInteraction;
+    isScrollToItemPending(): boolean;
     spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
     spacerAfterVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
     private updateWindowFromViewport;
+    private grownWindow;
     private advanceInitialIndexPhase;
     private getEffectiveItemSizeForStaleSpacer;
     private accumulateMeasurement;
@@ -1614,8 +1618,10 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private adjustItemsForShift;
     private refreshProvider;
     private findShift;
+    private indexInResult;
     private normalize;
     private adjustProviderForShift;
+    private replacesRenderedPlaceholders;
     private shouldAnchorForAppend;
     private shouldScrollToBottomForAppend;
     private shouldFollowPrependedHead;

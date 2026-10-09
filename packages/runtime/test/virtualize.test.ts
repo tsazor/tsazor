@@ -22,7 +22,7 @@ import {
   type VirtualizeItemsProviderRequest,
 } from "../src/index";
 import { setVirtualizeViewportFactory } from "../src/data/virtualize";
-import { SpacerVisibilityReason, type ViewportFillDirection, type VirtualizeViewport } from "../src/data/virtualize-viewport";
+import { SpacerVisibilityReason, ViewportFillDirection, type VirtualizeViewport } from "../src/data/virtualize-viewport";
 import { useCssomStyles } from "../src/renderer/dom-attributes";
 
 /* Fake viewport (Blazor's Mock.Of<IJSRuntime>()) ------------------------- */
@@ -43,6 +43,8 @@ class FakeViewport implements VirtualizeViewport {
   callsAfterDispose = 0;
   /** Runs on every call, so a test can act at the moment the component reaches a step (Blazor's gate). */
   onCall: ((method: ViewportMethod) => void) | undefined;
+  /** What the next alignToItem calls answer, in order; then null (the row isn't rendered). */
+  readonly alignResults: ViewportFillDirection[] = [];
 
   constructor(readonly anchorMode: VirtualizeAnchorMode) {}
 
@@ -64,9 +66,12 @@ class FakeViewport implements VirtualizeViewport {
   prepareShift(): void {
     this.record("prepareShift");
   }
+  holdFirstVisibleRow(): void {
+    this.record("holdFirstVisibleRow");
+  }
   alignToItem(localIndex: number): ViewportFillDirection | null {
     this.record("alignToItem", localIndex);
-    return null;
+    return this.alignResults.shift() ?? null;
   }
   beginProgrammaticScroll(): void {
     this.record("beginProgrammaticScroll");
@@ -539,6 +544,52 @@ describe("B. ItemsProvider, cancellation, refresh, data changes", () => {
 
     expect(virtualize.itemsBefore).toBe(150);
     await renderer.waitUntilIdle();
+  });
+
+  it("with an items provider, rows deleted above the window move it up by as many", async () => {
+    // Tsazor deviation A6 (Blazor skips its E2E test, #66509): the provider path finds the shift from the first
+    // row shown before that is still in the result, as the Items path does from the whole list.
+    const items = range(0, 200);
+    const { virtualize, renderer } = await createRenderedVirtualize(50, items.length, listProvider(items), simpleItemTemplate);
+    virtualize.spacerAfterVisible(0, 0, 500, SpacerVisibilityReason.ViewportFill);
+    await renderer.waitUntilIdle();
+    virtualize.spacerBeforeVisible((100 + 15) * 50, 40 * 50, 500, SpacerVisibilityReason.UserScroll);
+    await renderer.waitUntilIdle();
+    expect(virtualize.itemsBefore).toBe(100);
+
+    items.splice(0, 10);
+    await virtualize.refreshData();
+    await renderer.waitUntilIdle();
+
+    // Item 110, shown as the window's eleventh row, is at index 100 now.
+    expect(virtualize.itemsBefore).toBe(90);
+  });
+
+  it("rows replacing rendered placeholders keep the top row where it is", async () => {
+    // Tsazor deviation A14: the browser's scroll anchor was a placeholder the render removes, so the viewport
+    // holds the first visible row itself.
+    const gate = deferred();
+    let gated = false;
+    const provider: VirtualizeItemsProvider<number> = async (request) => {
+      if (gated) await gate.promise;
+      return { items: range(request.startIndex, Math.min(request.count, 1000 - request.startIndex)), totalItemCount: 1000 };
+    };
+    const { virtualize, renderer } = await createRenderedVirtualize(50, 1000, provider, simpleItemTemplate);
+    virtualize.spacerAfterVisible(0, 500, 500, SpacerVisibilityReason.ViewportFill);
+    await renderer.waitUntilIdle();
+    const viewport = viewports[0]!;
+
+    gated = true;
+    virtualize.spacerBeforeVisible((300 + 15) * 50, 40 * 50, 500, SpacerVisibilityReason.UserScroll);
+    await flushMicrotasks();
+    expect(virtualize.lastRenderedPlaceholderCount).toBeGreaterThan(0);
+    expect(viewport.called("holdFirstVisibleRow")).toBe(false);
+
+    gate.resolve();
+    await renderer.waitUntilIdle();
+
+    expect(virtualize.lastRenderedPlaceholderCount).toBe(0);
+    expect(viewport.called("holdFirstVisibleRow")).toBe(true);
   });
 
   it("with an items provider, a growing total count is not taken for a prepend", async () => {
@@ -1174,6 +1225,49 @@ describe("K. scrollToItem", () => {
     await m.renderer.waitUntilIdle();
     // The render throws it too, so an error boundary sees it (Blazor rethrows it from BuildRenderTree).
     expect(takeErrors(m).map((failure) => [failure.phase, failure.error])).toEqual([["render", sentinel]]);
+  });
+
+  it("it reports itself pending while it waits for its rows", async () => {
+    // Tsazor deviation A13: the viewport asks on user input, and makes the spacers report again, so a user's
+    // scroll cancels the pending fetch (Blazor quarantines its E2E test, #68777).
+    const gate = deferred();
+    let gated = false;
+    const provider: VirtualizeItemsProvider<number> = async (request) => {
+      if (gated) await gate.promise;
+      return { items: range(request.startIndex, Math.min(request.count, 1000 - request.startIndex)), totalItemCount: 1000 };
+    };
+    const { virtualize, renderer } = await createRenderedVirtualize(50, 1000, provider, simpleItemTemplate);
+    virtualize.spacerAfterVisible(0, 500, 500, SpacerVisibilityReason.ViewportFill);
+    await renderer.waitUntilIdle();
+    expect(virtualize.isScrollToItemPending()).toBe(false);
+
+    gated = true;
+    const task = virtualize.scrollToItem(800);
+    await flushMicrotasks();
+    expect(virtualize.isScrollToItemPending()).toBe(true);
+
+    gate.resolve();
+    await within(task, 2000);
+    expect(virtualize.isScrollToItemPending()).toBe(false);
+    await renderer.waitUntilIdle();
+  });
+
+  it("it grows the window until the rows cover the viewport before it completes", async () => {
+    // Tsazor deviation A15: Blazor grows the window once; a spacer still in view then slides it away from the
+    // target after the call completed.
+    const { virtualize, renderer } = await createRenderedVirtualize(50, 1000, undefined, simpleItemTemplate);
+    virtualize.spacerAfterVisible(0, 500, 500, SpacerVisibilityReason.ViewportFill);
+    await renderer.waitUntilIdle();
+    const viewport = viewports[0]!;
+    // Short rows: the after spacer stays in view twice, then the rows cover the viewport.
+    viewport.alignResults.push(ViewportFillDirection.After, ViewportFillDirection.After, ViewportFillDirection.Covered);
+
+    await within(virtualize.scrollToItem(500), 2000);
+
+    expect(viewport.calls.filter((call) => call.method === "alignToItem")).toHaveLength(3);
+    // 40 rows, doubled to 80, then to the maximum: MaxItemCount 100 plus twice the overscan of 15.
+    expect(virtualize.lastRenderedItemCount).toBe(130);
+    await renderer.waitUntilIdle();
   });
 
   it("a programmatic-scroll before-spacer report does not reset the window", async () => {

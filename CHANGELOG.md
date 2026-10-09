@@ -21,7 +21,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     - Giving both `Items` and `ItemsProvider` is an error.
   - **Fixes of Blazor 11 bugs** (design-virtualize.md §6), among them: a delete above the viewport is compensated,
     End typed into a text field no longer moves the list, an anchored row no longer drifts in Safari (WebKit keeps
-    scrollTop in whole pixels), and Home pressed soon after End reaches the top.
+    scrollTop in whole pixels), Home pressed soon after End reaches the top, a user scroll cancels a pending
+    `scrollToItem`, rows loading in place of placeholders don't move the visible row, and `scrollToItem` fills the
+    viewport before it completes.
   - `@tsazor/testing` renders a Virtualize's rows up to `MaxItemCount` as bUnit does, since a test DOM has no
     layout.
 - `@tsazor/compiler`: a generic component's type argument is inferred from whichever parameter the tag sets, and

@@ -172,6 +172,8 @@ type ViewportFactory = (
  * (the HMR bridge, `globalThis.__tsazor`, works the same way).
  */
 const VIEWPORT_FACTORY = Symbol.for("tsazor.virtualize.viewportFactory");
+/** How often scrollToItem grows the window to fill the viewport (the capacity doubles each time). */
+const MAX_FILL_STEPS = 8;
 type FactorySlot = { [VIEWPORT_FACTORY]?: ViewportFactory };
 
 function viewportFactory(): ViewportFactory {
@@ -254,6 +256,8 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
   private unusedItemCapacity = 0;
   private itemCount = 0;
   private loadedItemsStartIndex = 0;
+  /** The window start of the DOM as last rendered. */
+  private renderedItemsBefore = -1;
   /** @internal */
   lastRenderedItemCount = 0;
   /** @internal */
@@ -340,6 +344,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
       const refetchRequired = this.moveWindowToContain(itemIndex);
       await this.ensureRenderCommitted(refetchRequired, token);
       fillDirection = this.alignToTarget(itemIndex);
+      if (!this.initialIndex.isPositioning) fillDirection = await this.fillViewportAroundTarget(itemIndex, fillDirection, token);
     } catch (error) {
       // A superseded call (or one the user overrode) resolves; only the caller's own abort rejects.
       if (!(token.aborted && !signal?.aborted && isAbortOf(error, token))) throw error;
@@ -387,6 +392,30 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
     } finally {
       token.removeEventListener("abort", onAbort);
     }
+  }
+
+  /**
+   * Tsazor (A15): grows the window until the rows cover the viewport, aligning the target again after each
+   * render, before scrollToItem completes (InitialItemIndex fills the same way). Blazor grows it once: a spacer
+   * still in view then reports after the scroll completed and slides the window, converted with an average
+   * that changed since the spacers were sized, away from the target.
+   */
+  private async fillViewportAroundTarget(
+    itemIndex: number,
+    fillDirection: ViewportFillDirection | null,
+    token: AbortSignal,
+  ): Promise<ViewportFillDirection | null> {
+    for (let step = 0; step < MAX_FILL_STEPS; step++) {
+      if (fillDirection !== ViewportFillDirection.Before && fillDirection !== ViewportFillDirection.After) break;
+      const grown = this.grownWindow(fillDirection, this.visibleItemCapacity);
+      if (grown === undefined) break;
+      this.itemsBefore = grown.itemsBefore;
+      this.visibleItemCapacity = grown.visibleItemCapacity;
+      this.skipNextDistributionRefresh = false;
+      await this.ensureRenderCommitted(true, token);
+      fillDirection = this.alignToTarget(itemIndex);
+    }
+    return fillDirection;
   }
 
   private alignToTarget(itemIndex: number): ViewportFillDirection | null {
@@ -519,6 +548,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
       throw error;
     }
 
+    this.renderedItemsBefore = this.itemsBefore;
     b.openElement(0, this.spacerElement);
     b.addAttribute(1, "style", this.spacerStyle(this.itemsBefore, 0));
     b.addAttribute(2, "aria-hidden", "true");
@@ -643,6 +673,11 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
     }
   }
 
+  /** @internal The viewport: whether a scrollToItem is in flight (user input then cancels it, A13). */
+  isScrollToItemPending(): boolean {
+    return this.currentScrollController !== undefined;
+  }
+
   /** @internal The viewport: the before spacer is in view (Blazor's OnBeforeSpacerVisible). */
   spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void {
     if (this.disposed) return;
@@ -719,6 +754,24 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
       return;
     }
     if (fillDirection === null) return;
+    const grown = this.grownWindow(fillDirection, visibleItemCapacity);
+    if (grown !== undefined || unusedItemCapacity !== this.unusedItemCapacity) {
+      this.skipNextDistributionRefresh = false;
+      this.updateItemDistribution(
+        grown?.itemsBefore ?? this.itemsBefore,
+        grown?.visibleItemCapacity ?? this.visibleItemCapacity,
+        unusedItemCapacity,
+      );
+    } else if (this.initialIndex.isPositioning && !this.loading) {
+      this.advanceInitialIndexPhase();
+    }
+  }
+
+  /** The window grown toward the uncovered side: to the capacity given, or double; undefined when it can't grow. */
+  private grownWindow(
+    fillDirection: ViewportFillDirection.Before | ViewportFillDirection.After,
+    visibleItemCapacity: number,
+  ): { itemsBefore: number; visibleItemCapacity: number } | undefined {
     const maximumCapacity = Math.min(this.getMaximumItemCapacity(), this.itemCount);
     const doubledCapacity = Math.max(1, this.visibleItemCapacity) * 2;
     const desiredCapacity = Math.min(Math.max(visibleItemCapacity, doubledCapacity), maximumCapacity);
@@ -727,16 +780,11 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
         ? this.itemsBefore
         : Math.max(0, this.itemCount - this.itemsBefore - this.visibleItemCapacity);
     const addedItems = Math.min(Math.max(0, desiredCapacity - this.visibleItemCapacity), availableItems);
-    if (addedItems > 0 || unusedItemCapacity !== this.unusedItemCapacity) {
-      this.skipNextDistributionRefresh = false;
-      this.updateItemDistribution(
-        fillDirection === ViewportFillDirection.Before ? this.itemsBefore - addedItems : this.itemsBefore,
-        this.visibleItemCapacity + addedItems,
-        unusedItemCapacity,
-      );
-    } else if (this.initialIndex.isPositioning && !this.loading) {
-      this.advanceInitialIndexPhase();
-    }
+    if (addedItems <= 0) return undefined;
+    return {
+      itemsBefore: fillDirection === ViewportFillDirection.Before ? this.itemsBefore - addedItems : this.itemsBefore,
+      visibleItemCapacity: this.visibleItemCapacity + addedItems,
+    };
   }
 
   private advanceInitialIndexPhase(): void {
@@ -952,7 +1000,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
         }
         const hasComparableItem = comparison !== undefined && comparisonOffset >= 0 && comparisonOffset < result.items.length;
         if (hasComparableItem && !this.itemComparer(comparison!.item, result.items[comparisonOffset] as TItem)) {
-          const shift = this.findShift(comparison!.item, comparisonOffset, result, countDelta);
+          const shift = this.findShift(comparison!.item, request.startIndex + comparisonOffset, result, request.startIndex, countDelta);
           if (shift !== 0 && !(shift > 0 && this.shouldFollowPrependedHead())) {
             result = await this.adjustProviderForShift(shift, result, request, signal);
           }
@@ -972,7 +1020,10 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
       this.loadedItemsStartIndex = this.itemsBefore;
       this.loading = false;
       this.skipNextDistributionRefresh = request.count > 0;
-      if (renderOnSuccess) this.stateHasChanged();
+      if (renderOnSuccess) {
+        if (this.replacesRenderedPlaceholders()) this.viewport?.holdFirstVisibleRow();
+        this.stateHasChanged();
+      }
     } catch (error) {
       if (!isAbortOf(error, signal)) this.failRefresh(error);
     } finally {
@@ -984,14 +1035,31 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
   }
 
   /**
-   * How far the rows moved, from the item the window showed at `offset` (Tsazor, A5/A6): where the
-   * comparer finds it in the new result, else Blazor's rule (a growth is a prepend of the whole difference).
+   * How far the rows moved (Tsazor, A5/A6): where the comparer finds the item that was at `previousIndex` in
+   * the new result (which starts at `startIndex`), else Blazor's rule (a growth is a prepend of the whole
+   * difference).
    */
-  private findShift(previous: TItem, offset: number, result: LoadResult<TItem>, countDelta: number): number {
-    for (let i = 0; i < result.items.length; i++) {
-      if (this.itemComparer(previous, result.items[i] as TItem)) return i - offset;
+  private findShift(previous: TItem, previousIndex: number, result: LoadResult<TItem>, startIndex: number, countDelta: number): number {
+    const found = this.indexInResult(previous, result);
+    if (found >= 0) return startIndex + found - previousIndex;
+    if (countDelta < 0) {
+      // Rows deleted above: the item left the result upward. The first row shown before that is still in the
+      // result tells how far (the `Items` path searches the whole list instead).
+      const shown = this.loadedItems ?? [];
+      const last = Math.min(shown.length - 1, this.previousLastLoadedItemIndex - this.loadedItemsStartIndex);
+      for (let j = Math.max(0, this.previousFirstLoadedItemIndex - this.loadedItemsStartIndex); j <= last; j++) {
+        const at = this.indexInResult(shown[j] as TItem, result);
+        if (at >= 0) return startIndex + at - (this.loadedItemsStartIndex + j);
+      }
     }
     return countDelta > 0 ? countDelta : 0;
+  }
+
+  private indexInResult(item: TItem, result: LoadResult<TItem>): number {
+    for (let i = 0; i < result.items.length; i++) {
+      if (this.itemComparer(item, result.items[i] as TItem)) return i;
+    }
+    return -1;
   }
 
   /** The provider's result as a materialized list (Blazor enumerates it once). */
@@ -1028,6 +1096,26 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
     this.pendingAnchorRestore = true;
     this.deferAnchorRestoreClear = !wasAtTop;
     return adjusted;
+  }
+
+  /**
+   * Tsazor (A14): whether the coming render turns rendered placeholders into rows in place: the same window,
+   * no shift, no scroll of our own, no edge to follow. Blazor leaves this to the browser's scroll anchoring,
+   * which loses its anchor when that is a placeholder, so the top row jumped by the height difference above it.
+   */
+  private replacesRenderedPlaceholders(): boolean {
+    const viewport = this.viewport;
+    return (
+      viewport !== undefined &&
+      this.lastRenderedPlaceholderCount > 0 &&
+      this.renderedItemsBefore === this.itemsBefore &&
+      !this.pendingAnchorRestore &&
+      !this.pendingScrollToBottom &&
+      this.currentScrollController === undefined &&
+      !this.initialIndex.isPositioning &&
+      !viewport.isFollowingTop() &&
+      !viewport.isFollowingBottom()
+    );
   }
 
   /** Items appended near the end in a mode without End: restore the anchor, so the viewport doesn't chase them. */

@@ -32,6 +32,8 @@ export enum ViewportFillDirection {
 export interface VirtualizeViewportCallbacks {
   spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
   spacerAfterVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
+  /** Whether a scrollToItem is in flight (Tsazor, A13: user input then makes the spacers report again). */
+  isScrollToItemPending(): boolean;
 }
 
 /** What the component calls on the viewport (Blazor's VirtualizeJsInterop). */
@@ -49,6 +51,8 @@ export interface VirtualizeViewport {
   restoreAnchor(): void;
   /** Before a shift is committed: without native scroll anchoring, the snapshot to restore after the render. */
   prepareShift(): void;
+  /** Before a render that turns placeholders into rows: keeps the row at the top where it is (Tsazor, A14). */
+  holdFirstVisibleRow(): void;
   /** Scrolls the row at `localIndex` of the window to the top; null when it isn't rendered. */
   alignToItem(localIndex: number): ViewportFillDirection | null;
   beginProgrammaticScroll(): void;
@@ -470,7 +474,10 @@ export function createVirtualizeViewport(
     const selfScrollInProgress = scrollActivity.source === ScrollSource.AlignToItem || scrollActivity.source === ScrollSource.RestoreSnapshot;
     scrollActivity.consumeIgnoreScroll();
     scrollActivity.source = ScrollSource.UserScroll;
-    if (selfScrollInProgress) reobserveSpacers();
+    // Tsazor (A13): also while a scrollToItem waits for its rows. Its window renders as placeholders, and a
+    // scroll inside the tall before spacer crosses no threshold, so without a fresh report the user's scroll
+    // never cancels the fetch. Blazor re-observes only during the alignment scroll (its test is quarantined).
+    if (selfScrollInProgress || callbacks.isScrollToItemPending()) reobserveSpacers();
   }
 
   function handleUserPointerMove(e: Event): void {
@@ -778,6 +785,22 @@ export function createVirtualizeViewport(
     restoreAnchor(): void {
       restoreOnNextRender = false;
       restoreAnchorForShift();
+    },
+    holdFirstVisibleRow(): void {
+      // Rows replacing placeholders above the viewport have their own heights. The browser's anchor was a
+      // placeholder the render removes, so it compensates nothing: the drift correction after the render does.
+      if (convergence.isConverging()) return;
+      const top = containerTop();
+      let localIndex = 0;
+      for (let el = spacerBefore.nextElementSibling; el && el !== spacerAfter; el = el.nextElementSibling, localIndex++) {
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom > top) {
+          scrollCorrectionItemIndex = localIndex;
+          scrollCorrectionOffset = rect.top - top;
+          pendingScrollCorrection = true;
+          return;
+        }
+      }
     },
     prepareShift(): void {
       // With native anchoring the browser keeps the rows in place by itself.
