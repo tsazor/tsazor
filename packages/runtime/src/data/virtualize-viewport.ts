@@ -194,6 +194,12 @@ export function createVirtualizeViewport(
   };
 
   const anchoredItems = new Map<Element, number>();
+  /** Where the viewport's own last write left scrollTop (Tsazor, A16: a scroll elsewhere during a convergence is foreign). */
+  let ownScrollTop = scrollElement.scrollTop;
+  function setScrollTop(top: number): void {
+    scrollElement.scrollTop = top;
+    ownScrollTop = scrollElement.scrollTop;
+  }
   let scrollTriggeredRender = false;
 
   const scrollActivity = {
@@ -288,7 +294,7 @@ export function createVirtualizeViewport(
         scrollDelta += newHeight - oldHeight;
       }
     }
-    if (scrollDelta !== 0 && scrollElement.scrollTop > 0) scrollElement.scrollTop += scrollDelta;
+    if (scrollDelta !== 0 && scrollElement.scrollTop > 0) setScrollTop(scrollElement.scrollTop + scrollDelta);
   }
 
   // The ResizeObserver's roles:
@@ -299,8 +305,7 @@ export function createVirtualizeViewport(
   //  4. Tsazor (A8): the scroll container resized, so the window may need more or fewer rows.
   const resizeObserver = new ResizeObserver((entries) => {
     // Pin before re-observing the spacers, so the IntersectionObserver sees the pinned position.
-    if (convergence.isConverging()) {
-      scrollElement.scrollTop = convergence.bottom ? scrollElement.scrollHeight : 0;
+    if (convergence.isConverging() && pinToConvergingEdge()) {
       const spacer = convergence.bottom ? spacerAfter : spacerBefore;
       if (spacer.offsetHeight === 0) stopConvergenceObserving();
     }
@@ -336,9 +341,7 @@ export function createVirtualizeViewport(
     resizeObserver.observe(spacerAfter);
 
     // While converging: keep the observed rows in sync and pin the position, so it doesn't bounce back.
-    if (convergence.isConverging()) {
-      if (convergence.bottom) scrollElement.scrollTop = scrollElement.scrollHeight;
-      else if (convergence.top) scrollElement.scrollTop = 0;
+    if (convergence.isConverging() && pinToConvergingEdge()) {
       const currentItems = new Set<Element>();
       for (let el = spacerBefore.nextElementSibling; el && el !== spacerAfter; el = el.nextElementSibling) {
         resizeObserver.observe(el);
@@ -370,9 +373,12 @@ export function createVirtualizeViewport(
     scrollTriggeredRender = false;
     if (!wasScrollTriggered || isLoading) nativeAnchoring.resume("slide");
 
+    // A16: the reader scrolled up since our last write, and its scroll event hasn't come yet: take it now, so the
+    // pin below doesn't overwrite it.
+    if (scrolledUpSinceOwnWrite()) noteUserScroll();
     // End mode: pin new rows into view when at the bottom now, or when it was and still follows.
     if (bottomTracking.following || (anchorModeIs.end && (bottomTracking.wasAtBottomLastRender || bottomTracking.reached))) {
-      scrollElement.scrollTop = scrollElement.scrollHeight;
+      setScrollTop(scrollElement.scrollHeight);
       scrollActivity.ignoreNextScroll();
       // Converge only while there are more rows to load; when all fit, the assignment above is enough.
       if (!convergence.bottom && !convergence.top && spacerAfter.offsetHeight > 0) {
@@ -389,7 +395,7 @@ export function createVirtualizeViewport(
         pendingScrollCorrection = false;
         const delta = el.getBoundingClientRect().top - containerTop() - scrollCorrectionOffset;
         if (Math.abs(delta) > 1) {
-          scrollElement.scrollTop += delta;
+          setScrollTop(scrollElement.scrollTop + delta);
           scrollActivity.ignoreNextScroll();
         }
       }
@@ -412,7 +418,7 @@ export function createVirtualizeViewport(
     }
     // Start mode at the very top: show the new rows by converging to the top.
     if (anchorModeIs.beginning && snapshot.scrollTop < 1) {
-      scrollElement.scrollTop = 0;
+      setScrollTop(0);
       startConvergenceObserving("top");
       reobserveSpacers();
       return;
@@ -430,7 +436,7 @@ export function createVirtualizeViewport(
     const preserveWasAtBottom = anchorModeIs.end && isViewportAtBottom();
     if (Math.abs(delta) > 1) {
       const target = scrollElement.scrollTop + delta;
-      scrollElement.scrollTop = target;
+      setScrollTop(target);
       // Only what rounding dropped; a clamp at the scroll range's end is not carried.
       const residual = target - scrollElement.scrollTop;
       anchorResidual = Math.abs(residual) < 1 ? residual : 0;
@@ -520,12 +526,28 @@ export function createVirtualizeViewport(
   const scrollEventTarget: EventTarget = scrollContainer ?? window;
 
   function handleScroll(): void {
-    if (convergence.isConverging() || scrollActivity.consumeIgnoreScroll()) return;
+    // Tsazor (A16): a scroll the viewport didn't make is never swallowed. Blazor ignores every scroll while
+    // converging, and the next one after a write flagged "ignore next scroll"; a write that doesn't move scrollTop
+    // (at the bottom already) fires no event, so the flag stayed and ate the reader's scroll. A live feed (End
+    // mode, an append every few hundred ms) then pulled the reader back to the bottom in Firefox and Safari.
+    if (convergence.isConverging()) {
+      // A scroll away from the edge ends the convergence and counts as a user scroll.
+      if (!scrolledAwayFromConvergingEdge()) return;
+      stopConvergenceObserving();
+      scrollActivity.consumeIgnoreScroll();
+    } else if (scrollActivity.consumeIgnoreScroll() && Math.abs(scrollElement.scrollTop - ownScrollTop) <= 1) {
+      // The scroll of our own last write.
+      return;
+    }
     const selfScrollInProgress = scrollActivity.source === ScrollSource.AlignToItem || scrollActivity.source === ScrollSource.RestoreSnapshot;
     if (selfScrollInProgress) return;
+    noteUserScroll();
+  }
+
+  /** A user scroll: the only thing that sets the follow state. */
+  function noteUserScroll(): void {
     scrollActivity.source = ScrollSource.UserScroll;
     anchorResidual = 0;
-    // A user scroll is the only thing that sets the follow state.
     if (anchorModeIs.beginning || topTracking.following) topTracking.following = isAtScrollTop();
     if (anchorModeIs.end || bottomTracking.following) {
       const atBottom = isViewportAtBottom();
@@ -533,6 +555,34 @@ export function createVirtualizeViewport(
       bottomTracking.reached = atBottom;
     }
     updateAnchorSnapshot();
+  }
+
+  /**
+   * Whether scrollTop moved away from the converging edge since the viewport's own last write. Layout changes don't
+   * do that: rows growing below leave scrollTop alone, a shrink clamps it to the bottom, and native anchoring is
+   * suspended while converging.
+   */
+  function scrolledAwayFromConvergingEdge(): boolean {
+    return convergence.bottom ? scrolledUpSinceOwnWrite() : scrollElement.scrollTop > ownScrollTop + 1;
+  }
+
+  function scrolledUpSinceOwnWrite(): boolean {
+    return scrollElement.scrollTop < ownScrollTop - 1 && !isViewportAtBottom();
+  }
+
+  /**
+   * While converging: pins the edge again, unless the reader or the app scrolled away from it since our last write
+   * (A16). The scroll event may come only after this pin (in Chromium the ResizeObserver runs first), so the pin
+   * checks too: it ends the convergence and takes the scroll as the user's. False when it ended the convergence.
+   */
+  function pinToConvergingEdge(): boolean {
+    if (scrolledAwayFromConvergingEdge()) {
+      stopConvergenceObserving();
+      noteUserScroll();
+      return false;
+    }
+    setScrollTop(convergence.bottom ? scrollElement.scrollHeight : 0);
+    return true;
   }
 
   keydownTarget.addEventListener("keydown", handleJumpKeys);
@@ -587,6 +637,7 @@ export function createVirtualizeViewport(
       pendingJumpToStart = false;
       pendingJumpToEnd = false;
       scrollElement.scrollTo({ top: scrollElement.scrollTop + delta, behavior: "instant" });
+      ownScrollTop = scrollElement.scrollTop;
     }
     return getViewportFillDirection();
   }
@@ -642,7 +693,7 @@ export function createVirtualizeViewport(
     // The End key always converges; data-driven convergence only in End mode or after a user scroll.
     if (pendingJumpToEnd) {
       startConvergenceObserving("bottom");
-      scrollElement.scrollTop = scrollElement.scrollHeight;
+      setScrollTop(scrollElement.scrollHeight);
       pendingJumpToEnd = false;
       return;
     }
@@ -661,7 +712,7 @@ export function createVirtualizeViewport(
     // The Home key always converges; data-driven convergence only in Start mode.
     if (pendingJumpToStart) {
       startConvergenceObserving("top");
-      scrollElement.scrollTop = 0;
+      setScrollTop(0);
       pendingJumpToStart = false;
       return;
     }
@@ -718,9 +769,9 @@ export function createVirtualizeViewport(
         return true;
       }
       if (entry.target === spacerAfter && convergence.bottom && spacerAfter.offsetHeight > 0) {
-        scrollElement.scrollTop = scrollElement.scrollHeight;
+        pinToConvergingEdge();
       } else if (entry.target === spacerBefore && convergence.top && spacerBefore.offsetHeight > 0) {
-        scrollElement.scrollTop = 0;
+        pinToConvergingEdge();
       }
       return false;
     });
@@ -772,7 +823,7 @@ export function createVirtualizeViewport(
     },
     scrollToBottom(): void {
       if (!bottomTracking.following) return;
-      scrollElement.scrollTop = scrollElement.scrollHeight;
+      setScrollTop(scrollElement.scrollHeight);
       startConvergenceObserving("bottom");
     },
     refreshObservers: refreshObservedElements,

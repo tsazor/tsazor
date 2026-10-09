@@ -299,4 +299,38 @@ export const tests = [
       });
     },
   },
+  {
+    // Tsazor deviation A16: a scroll away from the edge during a convergence toward it is the reader's (or the
+    // app's), so it ends the convergence. Blazor ignores every scroll while converging, and the next pin pulled the
+    // list back to the bottom; a live feed that converges after each append did that to a reader in Firefox and
+    // Safari. Deterministic: the scroll comes in the microtask after the render that shows the last item, while
+    // the convergence still runs (as in the A12 test above).
+    name: "Tsazor_ScrollAwayWhileStillConvergingToTheEnd_StaysWhereScrolled",
+    async run(t) {
+      const { page } = t;
+      const container = await mountAnchorModeComponent(t, "0", { variableHeight: true });
+      await waitTrue(async () => (await count(container, ".item[data-index='0']")) > 0);
+      await page.evaluate(() => {
+        const c = document.getElementById("scroll-container");
+        const observer = new MutationObserver(() => {
+          if (!c.querySelector('.item[data-index="999"]')) return;
+          observer.disconnect();
+          c.scrollTop = 0;
+        });
+        observer.observe(c, { childList: true, subtree: true });
+      });
+      // A plain scroll to the end starts the convergence (no End key: Chromium animates the key's scroll, and that
+      // animation would carry on past the scroll below).
+      await container.evaluate((c) => {
+        c.scrollTop = c.scrollHeight;
+      });
+      await waitTrue(async () => (await count(container, ".item[data-index='0']")) > 0 && (await metric(container, "scrollTop")) < 1, {
+        message: async () => `A scroll to the top while still converging to the end should stay there (scrollTop=${await metric(container, "scrollTop")}).`,
+      });
+      // And it stays: nothing pulls it back down.
+      await page.waitForTimeout(500);
+      const scrollTop = await metric(container, "scrollTop");
+      assert(scrollTop < 1, `The list was pulled away from the top again (scrollTop=${scrollTop}).`);
+    },
+  },
 ];

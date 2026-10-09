@@ -858,4 +858,30 @@ export const tests = [
     name: `AnchorMode_Start_LargeAppendAtBottom_DoesNotFollowToBottom(variableHeight: ${variableHeight}, useItemsProvider: ${useItemsProvider})`,
     run: (t) => largeAppendAtBottomDoesNotFollow(t, "1", variableHeight, useItemsProvider, "Beginning mode: should not converge to bottom after large append."),
   })),
+  {
+    // Tsazor deviation A16: in End mode at the bottom, a render that changes nothing still pins to the bottom and
+    // flags "ignore the next scroll", but the pin doesn't move scrollTop, so no scroll event consumes the flag.
+    // In Blazor the reader's next scroll was swallowed: the list kept following and the next append pulled it
+    // back to the bottom (a live feed did that in Firefox and Safari). Tsazor ignores only a scroll to the
+    // position of its own last write.
+    name: "Tsazor_EndMode_ScrollAfterAPinThatDidNotMove_StaysWhereScrolled",
+    async run(t) {
+      const { page } = t;
+      const container = await mountAnchorModeComponent(t, "2");
+      await waitForRenderToSettle(container);
+      // A render without a change (the comparer is unused with Items): the pin at the bottom doesn't move.
+      await mutate(page, "toggle-comparer", "Using default ItemComparer");
+      await waitForRenderToSettle(container);
+
+      await container.evaluate((c) => {
+        c.scrollTop = 400;
+      });
+      await page.waitForTimeout(300);
+      await mutate(page, "append-one-item", "Appended 1 item");
+      await waitForRenderToSettle(container);
+
+      const scrollTop = await getScrollTop(container);
+      assert(Math.abs(scrollTop - 400) < 5, `End mode: the reader scrolled up to 400 and an append should not pull the list back (scrollTop=${scrollTop}).`);
+    },
+  },
 ];
