@@ -1,6 +1,6 @@
 import { compile, type ExpressionValue, type ImportSuggestion, type TypedTagInferenceRequest, type UninferredTypeArguments } from "@tsazor/compiler";
 import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { TsazorGenMap } from "./ts-mapping.js";
@@ -166,12 +166,8 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
   if (specifier.startsWith("@") && specifier !== "@tsazor/runtime") {
     const bindings = namedBindingsOf(clause ?? "");
     if (bindings.length > 0) {
-      let pkgDir: string | undefined;
-      try {
-        pkgDir = path.dirname(createRequire(path.join(projectRoot, "package.json")).resolve(path.join(specifier, "package.json")));
-      } catch {
-        return line;
-      }
+      const pkgDir = packageDirOf(specifier, projectRoot);
+      if (pkgDir === undefined) return line;
       const rebased: { binding: NamedBinding; shadow: string }[] = [];
       const plain: NamedBinding[] = [];
       for (const binding of bindings) {
@@ -194,6 +190,27 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
     }
   }
   return line;
+}
+
+/**
+ * The directory of the installed package `specifier`, as `require.resolve` would find it (symlinks resolved), without
+ * resolving `<package>/package.json`: a package whose `exports` don't list it refuses that. Windows let the
+ * backslashed `path.join(specifier, "package.json")` through, Linux and macOS didn't, so there the shadows of a
+ * package's components were never used and their methods (a DataGrid's `scrollToItem`) were missing.
+ */
+function packageDirOf(specifier: string, projectRoot: string): string | undefined {
+  const searchPaths = createRequire(path.join(projectRoot, "package.json")).resolve.paths(specifier) ?? [];
+  for (const dir of searchPaths) {
+    const candidate = path.join(dir, specifier);
+    if (existsSync(path.join(candidate, "package.json"))) {
+      try {
+        return realpathSync(candidate);
+      } catch {
+        return candidate;
+      }
+    }
+  }
+  return undefined;
 }
 
 /**

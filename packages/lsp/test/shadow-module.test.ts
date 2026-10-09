@@ -45,7 +45,9 @@ beforeAll(async () => {
   const pkg = path.join(root, "node_modules", "@fake", "ui");
   await mkdir(path.join(pkg, "src"), { recursive: true });
   // Its entry exports Badge — bare-package tags resolve only against the export list.
-  writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0", main: "./index.js" }));
+  // Like a real package, its `exports` list only ".": the rewrite must not resolve `@fake/ui/package.json`
+  // (Linux and macOS refuse it; only Windows let the old backslashed path through).
+  writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "@fake/ui", version: "1.0.0", main: "./index.js", exports: { ".": "./index.js" } }));
   writeFileSync(path.join(pkg, "index.js"), 'export { default as Badge } from "./dist/Badge.js";\nexport { default as Chip } from "./dist/Chip.js";\n');
   writeFileSync(path.join(pkg, "src", "Badge.tsazor"), '<span class="badge">@Text</span>\n\n@code {\n    @Parameter() Text?: string;\n}\n');
   writeFileSync(path.join(pkg, "src", "Chip.tsazor"), '<i class="chip">@Text</i>\n\n@code {\n    @Parameter() Text?: string;\n}\n');

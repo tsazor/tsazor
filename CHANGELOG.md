@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/lsp` (`tsazor check`, the editor), Linux and macOS: the components of a package (`@tsazor/fluent`,
+  `@tsazor/bootstrap`) were type-checked against its published declarations, which list the parameters only, so a
+  `@ref`'s methods (a DataGrid's `scrollToItem`) were TS2339. The package was looked up through
+  `<package>/package.json`, which a package whose `exports` list only `.` refuses; Windows let it through. Found by
+  CI's check job (Linux) on the new QuickGrid parity pages.
+
 - `@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap` (F17, the first step of the icons in
   [design-icons.md](docs/design-icons.md)): an app brings its own icons.
   - `@tsazor/ui`: `IconValue` (an SVG's viewBox and inner markup) and `icon(name, svg)`, which takes the inner
