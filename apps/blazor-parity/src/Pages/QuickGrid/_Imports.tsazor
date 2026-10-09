@@ -1,0 +1,4 @@
+@using @tsazor/fluent
+@* Blazor's QuickGrid is the DataGrid of Tsazor's skins. The bootstrap build points @tsazor/fluent at
+   @tsazor/bootstrap (vite.config.ts): the same pages, the other skin. *@
+@import "./skin-styles"

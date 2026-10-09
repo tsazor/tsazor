@@ -425,3 +425,252 @@ export async function enableTableStartAnchor(page) {
   await waitForRenderToSettle(container, ".table-scroll-item", true);
 }
 
+/**
+ * The async-provider flash loop of AnchorMode_None_AsyncProvider_ScrollDoesNotFlash (:3975) and its QuickGrid
+ * twin (:2484), the same script: up to 50 × `scrollTop += 200`, 100 ms apart. While the top visible row is a
+ * `.loading-placeholder` (or nothing is rendered) it waits up to 1.5 s for the provider. A flash is the top
+ * visible index dropping by more than 3. Returns the flash count, the highest top index seen, and (for the
+ * failure message) each step's scrollTop and top index.
+ */
+export function asyncProviderScrollFlashes(container) {
+  return container.evaluate(async (c) => {
+    const SCROLL_INCREMENT = 200;
+    const MAX_ITERATIONS = 50;
+    const SETTLE_MS = 100; // Short settle — we're testing for flashing, not waiting for full load
+
+    let prevTopIndex = -1;
+    let flashCount = 0;
+    let maxIndexSeen = -1;
+    const steps = [];
+
+    // Whether the topmost visible row is a placeholder (no data-index).
+    const topIsPlaceholderRow = () => {
+      const containerRect = c.getBoundingClientRect();
+      for (const candidate of c.querySelectorAll(".item[data-index], .loading-placeholder")) {
+        const rk = candidate.getBoundingClientRect();
+        if (rk.bottom > containerRect.top + 2 && rk.top < containerRect.bottom - 2) return !candidate.hasAttribute("data-index");
+      }
+      return false;
+    };
+
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      c.scrollTop += SCROLL_INCREMENT;
+      await new Promise((r) => setTimeout(r, SETTLE_MS));
+
+      let items = c.querySelectorAll(".item[data-index]");
+      let topIsPlaceholder = topIsPlaceholderRow();
+
+      // If the viewport is all placeholders, the async provider's in-flight fetch is being repeatedly
+      // cancelled by our fast scroll loop. Pause briefly so it can complete — this preserves the flash
+      // assertion (prevTopIndex carries across the gap) and keeps forward-progress on slow CI agents.
+      let waited = 0;
+      while ((items.length === 0 || topIsPlaceholder) && waited < 1500) {
+        await new Promise((r) => setTimeout(r, 100));
+        waited += 100;
+        items = c.querySelectorAll(".item[data-index]");
+        topIsPlaceholder = topIsPlaceholderRow();
+      }
+
+      const containerRect = c.getBoundingClientRect();
+      let topIndex = -1;
+      for (const item of items) {
+        const rect = item.getBoundingClientRect();
+        if (rect.bottom > containerRect.top + 2 && rect.top < containerRect.bottom - 2) {
+          topIndex = Number.parseInt(item.getAttribute("data-index"), 10);
+          break;
+        }
+      }
+
+      steps.push(`${Math.round(c.scrollTop)}:${topIndex}${waited > 0 ? `(waited ${waited})` : ""}`);
+      if (topIndex >= 0) {
+        if (topIndex > maxIndexSeen) maxIndexSeen = topIndex;
+        if (prevTopIndex >= 0 && topIndex < prevTopIndex - 3) {
+          flashCount++;
+          steps[steps.length - 1] += " FLASH";
+        }
+        prevTopIndex = topIndex;
+      }
+
+      // Stop if we've reached near the end.
+      if (c.scrollHeight - c.scrollTop - c.clientHeight < 2) break;
+    }
+
+    return { flashCount, maxIndexSeen, steps: steps.join(" ") };
+  });
+}
+
+/** ExecuteRapidScrollReversalScript (:5469): 20 × (+300px, 30 ms, −150px, 30 ms), then 200 ms; the rendered items. */
+export function rapidScrollReversal(page, containerId, itemSelector) {
+  return page.evaluate(
+    async ({ containerId, itemSelector }) => {
+      const container = document.getElementById(containerId);
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      for (let i = 0; i < 20; i++) {
+        container.scrollTop += 300;
+        await wait(30);
+        container.scrollTop -= 150;
+        await wait(30);
+      }
+      await wait(200);
+
+      return { itemCount: container.querySelectorAll(itemSelector).length, scrollTop: container.scrollTop };
+    },
+    { containerId, itemSelector },
+  );
+}
+
+/**
+ * ExecuteScrollStabilityScript (:5497): logs scroll events during 50 × `scrollTop += 40` (50 ms apart); a
+ * backward jump is scrollTop falling by more than 5px between two events.
+ */
+export function scrollStability(page, containerId, itemSelector) {
+  return page.evaluate(
+    async ({ containerId, itemSelector }) => {
+      const container = document.getElementById(containerId);
+      const scrollLog = [];
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      const scrollHandler = () => {
+        scrollLog.push({ t: performance.now(), st: container.scrollTop, items: container.querySelectorAll(itemSelector).length });
+      };
+      container.addEventListener("scroll", scrollHandler);
+
+      for (let i = 0; i < 50; i++) {
+        container.scrollTop += 40;
+        await wait(50);
+      }
+
+      container.removeEventListener("scroll", scrollHandler);
+      await wait(200);
+
+      let backwardJumps = 0;
+      let maxBackwardJump = 0;
+      for (let i = 1; i < scrollLog.length; i++) {
+        const delta = scrollLog[i].st - scrollLog[i - 1].st;
+        if (delta < -5) {
+          backwardJumps++;
+          maxBackwardJump = Math.max(maxBackwardJump, Math.abs(delta));
+        }
+      }
+
+      return {
+        totalEvents: scrollLog.length,
+        backwardJumps,
+        maxBackwardJump,
+        finalScrollTop: container.scrollTop,
+        finalItemCount: container.querySelectorAll(itemSelector).length,
+      };
+    },
+    { containerId, itemSelector },
+  );
+}
+
+/**
+ * ExecuteContainerScrollJumpDetectionScript (:5626): `scrollCount` steps of `scrollDelta` down, then as many
+ * up, each followed by the render-settle wait of :5552 (Blazor shares it with
+ * ExecuteViewportScrollJumpDetectionScript, as viewportScrollJumpDetection above has it); the per-step jumps.
+ */
+export function containerScrollJumpDetection(page, containerId, scrollCount = 40, scrollDelta = 100) {
+  return page.evaluate(
+    async ({ containerId, scrollCount, scrollDelta }) => {
+      const container = document.getElementById(containerId);
+      // Event-driven wait: watches for DOM mutations from re-renders, then waits 3 animation frames with
+      // no new mutations (layout settled). Falls back after 30 frames if no mutations occur.
+      const waitForRenderSettle = (observed) =>
+        new Promise((resolve) => {
+          let mutationSeen = false;
+          let framesSinceLastMutation = 0;
+          let totalFrames = 0;
+          const mo = new MutationObserver(() => {
+            mutationSeen = true;
+            framesSinceLastMutation = 0;
+          });
+          mo.observe(observed, { childList: true, subtree: true, attributes: true });
+          const checkSettle = () => {
+            totalFrames++;
+            framesSinceLastMutation++;
+            if ((mutationSeen && framesSinceLastMutation >= 3) || totalFrames >= 30) {
+              mo.disconnect();
+              resolve();
+            } else {
+              requestAnimationFrame(checkSettle);
+            }
+          };
+          requestAnimationFrame(checkSettle);
+        });
+
+      const runScrollPass = async (observed, readPos, doScroll, count) => {
+        const jumps = [];
+        let maxJump = 0;
+        for (let i = 0; i < count; i++) {
+          const before = readPos();
+          doScroll();
+          await waitForRenderSettle(observed);
+          const after = readPos();
+          const jump = after - before;
+          jumps.push(jump);
+          if (Math.abs(jump) > Math.abs(maxJump)) maxJump = jump;
+        }
+        return { jumps, maxJump };
+      };
+
+      const readPos = () => Math.round(container.scrollTop);
+      const down = await runScrollPass(container, readPos, () => { container.scrollTop = readPos() + scrollDelta; }, scrollCount);
+      const up = await runScrollPass(container, readPos, () => { container.scrollTop = readPos() - scrollDelta; }, scrollCount);
+
+      return {
+        scrollDelta,
+        maxJump: Math.max(Math.abs(down.maxJump), Math.abs(up.maxJump)),
+        downJumps: down.jumps.join(","),
+        upJumps: up.jumps.join(","),
+      };
+    },
+    { containerId, scrollCount, scrollDelta },
+  );
+}
+
+/** FastScroll (:1982): every 40 ms a synthetic WheelEvent, then `scrollTop` set to the next position. */
+export function fastScroll(page, containerId, positions, deltaY) {
+  return page.evaluate(
+    ({ containerId, positions, deltaY }) =>
+      new Promise((done) => {
+        const el = document.getElementById(containerId);
+        let i = 0;
+        const tick = () => {
+          el.dispatchEvent(new WheelEvent("wheel", { deltaY, bubbles: true }));
+          el.scrollTop = positions[i];
+          i++;
+          if (i < positions.length) {
+            setTimeout(tick, 40);
+          } else {
+            done();
+          }
+        };
+        tick();
+      }),
+    { containerId, positions, deltaY },
+  );
+}
+
+/**
+ * ViewportCenterShowsRealData (:2005): a data row spans the container's vertical centre. The spacers are the
+ * rows with `aria-hidden`. Blazor skips QuickGrid's placeholder rows by their `td.grid-cell-placeholder`; a
+ * skin's placeholder row is one empty cell, which the empty-text check skips as well.
+ */
+export function viewportCenterShowsRealData(page, containerId) {
+  return page.evaluate((id) => {
+    const el = document.getElementById(id);
+    const r = el.getBoundingClientRect();
+    const centerY = r.height / 2;
+    for (const row of el.querySelectorAll("tbody tr:not([aria-hidden])")) {
+      const cell = row.querySelector("td");
+      if (!cell || !cell.textContent || !cell.textContent.trim()) continue;
+      const rr = row.getBoundingClientRect();
+      const top = rr.top - r.top;
+      const bottom = rr.bottom - r.top;
+      if (top <= centerY && bottom >= centerY) return true;
+    }
+    return false;
+  }, containerId);
+}

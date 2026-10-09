@@ -151,12 +151,21 @@ importers:
 
   apps/blazor-parity:
     dependencies:
+      '@tsazor/bootstrap':
+        specifier: workspace:*
+        version: link:../../packages/bootstrap
+      '@tsazor/fluent':
+        specifier: workspace:*
+        version: link:../../packages/fluent
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
       '@tsazor/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin
+      bootstrap:
+        specifier: ^5.3.8
+        version: 5.3.8(@popperjs/core@2.11.8)
     devDependencies:
       '@tsazor/cli':
         specifier: workspace:*

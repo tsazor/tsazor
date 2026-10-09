@@ -1,13 +1,15 @@
 /**
  * The Blazor parity gate: Blazor's own E2E suites, ported, run against Tsazor's components. The app (src/)
- * holds Blazor's test pages as .tsazor; tests/<suite>/ holds the ported tests. Builds the app, serves dist/
- * on port 5360 and runs every test in a fresh browser context.
+ * holds Blazor's test pages as .tsazor; tests/<suite>/ holds the ported tests. Builds the app (once per
+ * DataGrid skin, see "Skins" below), serves the builds on port 5360 and runs every test in a fresh browser
+ * context.
  *
  *   node scripts/verify.mjs                      build, then all suites
  *   node scripts/verify.mjs --skip-build         dist/ is built already
  *   node scripts/verify.mjs --suite virtualize   one suite (a folder under tests/)
  *   node scripts/verify.mjs --group a,f          only these modules (by file name prefix: a-basic.mjs is "a")
  *   node scripts/verify.mjs --grep EndKey        only tests whose name contains the text
+ *   node scripts/verify.mjs --skin bootstrap     a skinned module's tests in this skin only
  *   TSAZOR_BROWSER=firefox node scripts/verify.mjs   (edge, firefox or webkit; scripts/browsers.mjs)
  *
  * Prints PASS / FAIL / SKIP per test and exits 1 when one fails.
@@ -38,8 +40,24 @@
  *   t.page      a fresh Playwright page in a fresh browser context, with the app's index loaded;
  *   t.mount(n)  Blazor's MountTestComponent: mounts the test page ported from the Razor component `n`
  *               (chosen in the index's test selector, as Blazor's BasicTestApp does);
- *   t.browser   "edge", "firefox" or "webkit".
+ *   t.browser   "edge", "firefox" or "webkit";
+ *   t.skin      the DataGrid skin of the build the test runs against ("fluent" or "bootstrap").
  * An uncaught error in the page fails the test too.
+ *
+ * Skins
+ * -----
+ * Blazor's QuickGrid tests run against the DataGrid of both of Tsazor's component libraries. A module that
+ * exports `skins` has each of its tests run once per skin, the skin in brackets after the name:
+ *
+ *   export const skins = ["fluent", "bootstrap"];   // tests/virtualize/l-quickgrid.mjs
+ *
+ * The app is built once per skin, as apps/skins does: the QuickGrid pages say `@using @tsazor/fluent`, and
+ * `vite build --mode bootstrap` points that package at @tsazor/bootstrap (vite.config.ts); the builds go to
+ * dist/fluent/ and dist/bootstrap/. The QuickGrid pages are lazy routes that bring their skin's stylesheet
+ * with them, so no other page loads a skin's CSS (Bootstrap's reboot is global) and those pages are the same
+ * in both builds. Both builds are served on the one port: a test's browser context sends its skin in the
+ * `x-blazor-parity-skin` request header, and the server answers from that skin's build. Tests of modules
+ * without `skins` run against the Fluent build.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import http from "node:http";
@@ -52,6 +70,10 @@ import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TESTS = path.join(ROOT, "tests");
 const DIST = path.join(ROOT, "dist");
+/** The DataGrid skins, one build each (dist/<skin>/); the first is the build of tests without a skin. */
+const SKINS = ["fluent", "bootstrap"];
+/** The request header that tells the server which skin's build a browser context runs. */
+const SKIN_HEADER = "x-blazor-parity-skin";
 const PORT = 5360;
 const BASE = `http://localhost:${PORT}`;
 /** A desktop window. Blazor's tests size the window only where they call SetWindowSize; those say so (`viewport`). */
@@ -67,19 +89,24 @@ const option = (name) => {
 const onlySuite = option("--suite");
 const onlyGroups = option("--group")?.split(",");
 const grep = option("--grep");
+const onlySkin = option("--skin");
 
 if (!args.includes("--skip-build")) {
-  const build = spawnSync("npx vite build --logLevel warn", { cwd: ROOT, stdio: "inherit", shell: true });
-  if (build.status !== 0) process.exit(build.status ?? 1);
+  for (const skin of SKINS) {
+    const build = spawnSync(`npx vite build --mode ${skin} --logLevel warn`, { cwd: ROOT, stdio: "inherit", shell: true });
+    if (build.status !== 0) process.exit(build.status ?? 1);
+  }
 }
 
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml" };
 const server = http
   .createServer((request, response) => {
     const requestUrl = new URL(request.url ?? "/", BASE);
-    let file = path.join(DIST, decodeURIComponent(requestUrl.pathname));
+    const skin = request.headers[SKIN_HEADER];
+    const dist = path.join(DIST, SKINS.includes(skin) ? skin : SKINS[0]);
+    let file = path.join(dist, decodeURIComponent(requestUrl.pathname));
     // Every route is the app (history routing): a path without a file is index.html.
-    if (!file.startsWith(DIST) || !existsSync(file) || !path.extname(file)) file = path.join(DIST, "index.html");
+    if (!file.startsWith(dist) || !existsSync(file) || !path.extname(file)) file = path.join(dist, "index.html");
     response.writeHead(200, { "content-type": TYPES[path.extname(file)] ?? "application/octet-stream" });
     response.end(readFileSync(file));
   })
@@ -101,7 +128,14 @@ async function discover() {
       const prefix = file.split("-")[0];
       if (onlyGroups && !onlyGroups.includes(prefix)) continue;
       const module = await import(pathToFileURL(path.join(TESTS, suite, file)).href);
-      modules.push({ suite, file, group: module.group ?? file, tests: module.tests ?? [] });
+      // A skinned module's test runs once per skin, the skin in its name.
+      const skins = module.skins ?? [undefined];
+      const tests = (module.tests ?? []).flatMap((test) =>
+        skins
+          .filter((skin) => skin === undefined || !onlySkin || skin === onlySkin)
+          .map((skin) => (skin === undefined ? test : { ...test, name: `${test.name} [${skin}]`, skin })),
+      );
+      modules.push({ suite, file, group: module.group ?? file, tests });
     }
   }
   return modules;
@@ -124,7 +158,8 @@ function withTimeout(promise, ms) {
 }
 
 async function runTest(browser, test) {
-  const context = await browser.newContext({ viewport: test.viewport ?? DEFAULT_VIEWPORT });
+  const skin = test.skin ?? SKINS[0];
+  const context = await browser.newContext({ viewport: test.viewport ?? DEFAULT_VIEWPORT, extraHTTPHeaders: { [SKIN_HEADER]: skin } });
   // Playwright's actions wait for their element; as long as a Selenium wait at most, not its default 30 s.
   context.setDefaultTimeout(10_000);
   const page = await context.newPage();
@@ -133,7 +168,7 @@ async function runTest(browser, test) {
   try {
     await page.goto(`${BASE}/`, { waitUntil: "load" });
     await page.waitForSelector("#test-selector", { timeout: 15_000 });
-    await withTimeout(test.run({ page, mount: (name) => mount(page, name), browser: BROWSER }), TEST_TIMEOUT);
+    await withTimeout(test.run({ page, mount: (name) => mount(page, name), browser: BROWSER, skin }), TEST_TIMEOUT);
     if (pageErrors.length > 0) throw new Error(`page error: ${pageErrors.join(" | ")}`);
   } finally {
     await context.close();

@@ -1,0 +1,86 @@
+@page "/quickgrid/virtualize-capacity"
+@import type { GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult } from "@tsazor/fluent"
+@import type { DescribedPerson } from "./models"
+
+<h3>QuickGrid Virtualize fast-scroll capacity test</h3>
+
+<p>
+    <strong>Test:</strong> With an async ItemsProvider and a declared ItemSize smaller than the
+    real row height, fast scrolling must not leave the viewport stuck on placeholders. Pick a
+    row-height mode: variable-height rows (a Description column with 1-8 lines) additionally
+    stress the size-estimate and window-advance logic.
+</p>
+
+<p>
+    <button id="qg-mode-fixed" @onclick="() => this.variableHeight = false">Fixed height</button>
+    <button id="qg-mode-variable" @onclick="() => this.variableHeight = true">Variable height</button>
+</p>
+
+<p id="items-provider-call-count">ItemsProvider calls: @itemsProviderCallCount</p>
+
+<style>
+    .qg-cap-cell { height: 50px; line-height: 50px; }
+    .qg-varcap-cell { padding: 4px 8px; vertical-align: top; }
+    .qg-varcap-desc { white-space: pre-line; }
+</style>
+
+@if (variableHeight === false)
+{
+    <div id="qg-capacity" style="height: 300px; overflow: auto; border: 1px solid #ccc;">
+        <DataGrid ItemsProvider="@itemsProvider" Virtualize="@true" ItemSize="25">
+            <PropertyColumn Property="(p) => p.id" Title="ID" Class="qg-cap-cell" />
+            <PropertyColumn Property="(p) => p.name" Title="Name" Class="qg-cap-cell" />
+        </DataGrid>
+    </div>
+}
+else if (variableHeight === true)
+{
+    <div id="qg-variable-capacity" style="height: 300px; overflow: auto; border: 1px solid #ccc;">
+        <DataGrid ItemsProvider="@itemsProvider" Virtualize="@true" ItemSize="25">
+            <PropertyColumn Property="(p) => p.id" Title="ID" Class="qg-varcap-cell" />
+            <PropertyColumn Property="(p) => p.name" Title="Name" Class="qg-varcap-cell" />
+            <TemplateColumn Title="Description" Class="qg-varcap-cell">
+                <div class="qg-varcap-desc">@context.description</div>
+            </TemplateColumn>
+        </DataGrid>
+    </div>
+}
+
+@code {
+    private static readonly totalItems = 1000;
+
+    /** Blazor's `bool? _variableHeight`: no grid until a mode is picked. */
+    private variableHeight: boolean | undefined;
+
+    private itemsProvider!: GridItemsProvider<DescribedPerson>;
+
+    private itemsProviderCallCount = 0;
+
+    protected override onInitialized(): void {
+        this.itemsProvider = (request) => this.getItems(request);
+    }
+
+    private async getItems(request: GridItemsProviderRequest<DescribedPerson>): Promise<GridItemsProviderResult<DescribedPerson>> {
+        await delay(50);
+        this.itemsProviderCallCount++;
+
+        const total = QuickGridVirtualizeCapacityComponent.totalItems;
+        const items = range(request.startIndex, request.count ?? total)
+            .filter((i) => i < total)
+            .map((i) => ({
+                id: i + 1,
+                name: `Person ${i + 1}`,
+                description: QuickGridVirtualizeCapacityComponent.generateDescription(i),
+            }));
+
+        this.stateHasChanged();
+        return { items, totalItemCount: total };
+    }
+
+    private static generateDescription(index: number): string {
+        const lineCount = 1 + (index % 8);
+        return range(0, lineCount)
+            .map((l) => `Line ${l + 1}: Item ${index + 1} description text.`)
+            .join("\n");
+    }
+}

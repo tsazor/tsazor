@@ -4,17 +4,23 @@ Blazor's own E2E tests, run against Tsazor's components. The app holds Blazor's 
 `.tsazor` with the same element ids, classes, structure, item counts and delays, so the Selenium tests port
 line by line to Playwright. A component that passes them behaves as Blazor's does where Blazor tests it.
 
-The first suite is Virtualize: Blazor 11's `VirtualizationTest.cs` and its 20 test pages
-(`src/Pages/Virtualization/`). The tests are grouped as in the behavior spec's catalog
-([docs/blazor-virtualize-net11.md](../../docs/blazor-virtualize-net11.md) §9), one module per group in
-`tests/virtualize/`. Groups A–F, I and J are ported. G, H, K and M (and L, QuickGrid, against the DataGrid
-skins) follow.
+The first suite is Virtualize: Blazor 11's `VirtualizationTest.cs`, its 20 test pages
+(`src/Pages/Virtualization/`) and the 5 QuickGrid pages it mounts (`src/Pages/QuickGrid/`). The tests are
+grouped as in the behavior spec's catalog ([docs/blazor-virtualize-net11.md](../../docs/blazor-virtualize-net11.md)
+§9), one module per group in `tests/virtualize/`; all groups, A–M, are ported.
+
+Tsazor's QuickGrid is the `DataGrid` of its two component libraries, so group L runs once per skin. The app is
+built once per skin (`vite build --mode fluent|bootstrap`, into `dist/<skin>/`): the QuickGrid pages say
+`@using @tsazor/fluent`, and the bootstrap build points that package at `@tsazor/bootstrap`. They are lazy
+routes that bring their skin's stylesheet, so no other page loads a skin's CSS. The runner's header
+(`scripts/verify.mjs`) has the details.
 
 ```sh
 pnpm --filter blazor-parity verify                         # build, serve on :5360, run every suite in Edge
 TSAZOR_BROWSER=firefox pnpm --filter blazor-parity verify  # or webkit
 pnpm --filter blazor-parity verify --skip-build --group a,f --grep EndKey   # a subset
-pnpm --filter blazor-parity dev                            # the test pages on :5361
+pnpm --filter blazor-parity verify --skip-build --group l --skin bootstrap   # one skin's QuickGrid tests
+pnpm --filter blazor-parity dev                            # the test pages on :5361 (dev:bootstrap: the other skin)
 ```
 
 The index page mounts a test page by its Razor name (`<select id="test-selector">`), as Blazor's

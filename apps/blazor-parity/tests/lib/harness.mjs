@@ -141,9 +141,14 @@ export async function sendKey(locator, key) {
   await locator.press(key);
 }
 
+/** The largest distance one wheel event of `wheel` carries (see there). */
+const WHEEL_STEP = 200;
+
 /**
  * Selenium's `Actions.ScrollFromOrigin(element, 0, deltaY)`: real wheel input at the element's in-view
- * centre, so the browser scrolls whatever is under the pointer (classified as a user scroll).
+ * centre, so the browser scrolls whatever is under the pointer (classified as a user scroll). Chromium and
+ * WebKit scroll one wheel event's whole delta; Firefox at most about a page (270px in a 300px container). So
+ * a larger delta goes as several events of at most WHEEL_STEP, and moves the same distance in every engine.
  */
 export async function wheel(page, locator, deltaY) {
   await locator.scrollIntoViewIfNeeded();
@@ -154,7 +159,12 @@ export async function wheel(page, locator, deltaY) {
   const top = Math.max(box.y, 0);
   const bottom = Math.min(box.y + box.height, viewport?.height ?? box.y + box.height);
   await page.mouse.move(x, (top + bottom) / 2);
-  await page.mouse.wheel(0, deltaY);
+  let remaining = deltaY;
+  do {
+    const step = Math.sign(remaining) * Math.min(Math.abs(remaining), WHEEL_STEP);
+    await page.mouse.wheel(0, step);
+    remaining -= step;
+  } while (remaining !== 0);
 }
 
 function format(value) {

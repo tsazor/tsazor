@@ -1,7 +1,8 @@
 /**
  * Group I of Blazor's Virtualize E2E tests (docs/blazor-virtualize-net11.md §9): Home/End keyboard jumps.
- * Ported from VirtualizationTest.cs; line numbers refer to it. The group's two QuickGrid tests mount
- * QuickGrid's test page and are ported with group L (QuickGrid), against the DataGrid skins.
+ * Ported from VirtualizationTest.cs; line numbers refer to it. The group's two QuickGrid tests
+ * (QuickGrid_AnchorMode_HomeKeyJumpsToTop, :2771, and …_EndKeyJumpsToBottom, :2799) run in l-quickgrid.mjs,
+ * against the DataGrid of both skins.
  */
 import { assert, byId, exists, SELENIUM_POLL, sendKey, waitTrue } from "../lib/harness.mjs";
 import {
@@ -16,6 +17,7 @@ import {
   scrollToBottomAndWait,
   scrollToTopAndWaitForRender,
   verifyInitialPosition,
+  windowBottomGap,
   windowScrollMidListAndWaitForRender,
 } from "./_helpers.mjs";
 
@@ -179,11 +181,6 @@ async function endModeHomeKeyFromBottom(t, variableHeight) {
   });
 }
 
-/** The window's distance to the bottom of the document. */
-function windowBottomGap(page) {
-  return page.evaluate(() => document.documentElement.scrollHeight - Math.round(window.scrollY) - window.innerHeight);
-}
-
 /** AnchorMode_WindowScroll_EndKeyJumpsToBottom (:5125). */
 async function windowScrollEndKey(t, anchorMode) {
   const { page } = t;
@@ -243,16 +240,6 @@ export const tests = [
       await jumpToStartWithStabilization(container, hasPlaceholders, loadData);
       await waitTrue(async () => (await count(container, byId("async-chat-msg-0"))) > 0, { message: "#async-chat-msg-0 should be rendered" });
     },
-  },
-  {
-    // Blazor: QuickGrid_AnchorMode_HomeKeyJumpsToTop (:2771), 6 cases
-    name: "QuickGrid_AnchorMode_HomeKeyJumpsToTop (6 cases)",
-    skip: "mounts QuickGrid's test page: ported with group L (QuickGrid → DataGrid skins)",
-  },
-  {
-    // Blazor: QuickGrid_AnchorMode_EndKeyJumpsToBottom (:2799), 5 cases
-    name: "QuickGrid_AnchorMode_EndKeyJumpsToBottom (5 cases)",
-    skip: "mounts QuickGrid's test page: ported with group L (QuickGrid → DataGrid skins)",
   },
   ...MODES_AND_SOURCES.map(([anchorMode, useItemsProvider]) => ({
     // Blazor: AnchorMode_EndKeyJumpsToBottom (:3725)

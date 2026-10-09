@@ -1,0 +1,78 @@
+@page "/quickgrid/variable-height"
+@import type { GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult } from "@tsazor/fluent"
+@import type { DescribedPerson } from "./models"
+
+<h3>QuickGrid with Variable Height Rows</h3>
+
+<p>
+    <strong>Test:</strong> Verify that QuickGrid works correctly with rows of varying heights
+    now that Virtualize supports variable-height items.
+</p>
+
+<p id="items-provider-call-count">ItemsProvider calls: @itemsProviderCallCount</p>
+<p id="total-items">Total items: 1000</p>
+<p id="data-loaded">Data loaded: @(dataLoaded ? "True" : "False")</p>
+<button id="qg-vh-toggle-delay" @onclick="toggleDelay">Provider Delay: @(useProviderDelay ? "150ms" : "None")</button>
+<p id="qg-vh-status">@statusMessage</p>
+
+<div id="grid-variable-height" style="height: 300px; overflow: auto; border: 1px solid #ccc;">
+    <DataGrid ItemsProvider="@variableHeightProvider" Virtualize="@true" ItemSize="50">
+        <PropertyColumn Property="(p) => p.id" Title="ID" />
+        <PropertyColumn Property="(p) => p.name" Title="Name" />
+        <TemplateColumn Title="Description">
+            <div style="padding: 4px;">
+                @context.description
+            </div>
+        </TemplateColumn>
+    </DataGrid>
+</div>
+
+@code {
+    private variableHeightProvider!: GridItemsProvider<DescribedPerson>;
+    private dataLoaded = false;
+    private useProviderDelay = false;
+    private statusMessage = "";
+
+    private itemsProviderCallCount = 0;
+
+    private toggleDelay(): void {
+        this.useProviderDelay = !this.useProviderDelay;
+        this.statusMessage = this.useProviderDelay ? "Provider delay for QuickGrid: 150ms" : "Provider delay for QuickGrid: None";
+    }
+
+    protected override onInitialized(): void {
+        this.variableHeightProvider = (request) => this.getItems(request);
+    }
+
+    private async getItems(request: GridItemsProviderRequest<DescribedPerson>): Promise<GridItemsProviderResult<DescribedPerson>> {
+        await yieldToEventLoop();
+        if (this.useProviderDelay) {
+            await delay(150);
+        }
+        this.itemsProviderCallCount++;
+
+        const items = range(request.startIndex, request.count ?? 1000)
+            .filter((i) => i < 1000)
+            .map((i) => ({
+                id: i + 1,
+                name: `Person ${i + 1}`,
+                description: this.generateDescription(i),
+            }));
+
+        // Mark data as loaded when we get items starting from index 0
+        if (request.startIndex === 0 && items.length > 0) {
+            this.dataLoaded = true;
+        }
+
+        this.stateHasChanged();
+        return { items, totalItemCount: 1000 };
+    }
+
+    private generateDescription(index: number): string {
+        // Create varying content lengths to produce different row heights (1-5 lines)
+        const lineCount = 1 + (index % 5);
+        return range(0, lineCount)
+            .map((l) => `Line ${l + 1}: Item ${index + 1} description text.`)
+            .join("\n");
+    }
+}

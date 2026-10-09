@@ -99,16 +99,22 @@ export async function assertAtBottom(container, expectation) {
   );
 }
 
+/**
+ * Tsazor pins End mode to the bottom in the same task as the render that switches the mode, before the window
+ * has moved to the tail: "at the bottom" already holds while Virtualize still converges there, and a scroll
+ * during convergence is ignored (Blazor's JS ignores it too, Virtualize.ts:615). In Blazor the pin comes later,
+ * through the after-render interop, and Selenium's round trips are slower than Playwright's: its tests scroll
+ * away only after the convergence ended. The mount helpers let it end too (a settled render), or the tail
+ * load pulls the list back to the bottom after the test scrolled to the top.
+ */
+async function letEndModeConvergenceFinish(anchorMode, container) {
+  if (anchorMode === "2") await waitForRenderToSettle(container);
+}
+
 /** VerifyInitialPosition (:3291): End mode starts at the bottom, the others at the top. */
 export async function verifyInitialPosition(anchorMode, container, listDescription) {
   if (anchorMode === "2") {
     await assertAtBottom(container, `${listDescription} should initially start at the bottom in End mode`);
-    // Tsazor pins End mode to the bottom in the same task as the render that switches the mode, before the
-    // window has moved to the tail: "at the bottom" already holds while Virtualize still converges there,
-    // and a scroll during convergence is ignored (Blazor's JS ignores it too, Virtualize.ts:615). In Blazor
-    // the pin comes later, through the after-render interop. Let the convergence finish before the test
-    // scrolls away, or the tail load pulls the list back.
-    await waitForRenderToSettle(container);
   } else {
     await assertScrollTop(container, (st) => st < 2, `${listDescription} should initially start at the top`);
   }
@@ -461,6 +467,7 @@ export async function mountAnchorModeComponent(t, anchorMode, { variableHeight =
 
   await waitTrue(async () => (await textOf(await exists(page, "#current-mode"))) === anchorMode);
   await waitTrue(async () => (await count(container, ".item")) > 0);
+  await letEndModeConvergenceFinish(anchorMode, container);
   return container;
 }
 
@@ -514,7 +521,44 @@ export async function mountWindowScrollAnchorModeComponent(t, anchorMode, { vari
 
   await waitTrue(async () => (await textOf(await exists(page, "#current-mode"))) === anchorMode);
   await waitTrue(async () => (await count(root, ".item")) > 0);
+  // As letEndModeConvergenceFinish, for the document as the scroller.
+  if (anchorMode === "2") await waitForWindowRenderToSettle(page);
   return root;
+}
+
+/**
+ * WaitForRenderToSettle (:5229) with the document as the scroller: three consecutive identical polls of the
+ * rounded scrollY, the item count and the first item in the window's viewport; a blank viewport resets.
+ */
+export async function waitForWindowRenderToSettle(page) {
+  let last = { scrollY: -1, itemCount: -1, firstIndex: "" };
+  let stableCount = 0;
+  await waitTrue(
+    async () => {
+      const result = await page.evaluate(() => {
+        const items = document.querySelectorAll(".item[data-index]");
+        let firstIndex = "";
+        for (const item of items) {
+          const r = item.getBoundingClientRect();
+          if (r.bottom > 2 && r.top < window.innerHeight - 2) {
+            firstIndex = item.getAttribute("data-index");
+            break;
+          }
+        }
+        return { scrollY: Math.round(window.scrollY), itemCount: items.length, firstIndex };
+      });
+      if (!result.firstIndex) {
+        stableCount = 0;
+      } else if (result.scrollY === last.scrollY && result.itemCount === last.itemCount && result.firstIndex === last.firstIndex) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+      last = result;
+      return stableCount >= 3;
+    },
+    { timeout: 15_000, interval: SELENIUM_POLL, message: "Render cycle did not settle in time" },
+  );
 }
 
 /** WindowScrollMidListAndWaitForRender (:4858). */
@@ -630,9 +674,14 @@ export function getBottomRenderedIndex(page) {
   });
 }
 
-/** ViewportEdgeCoveredByRealItem (:6150): a real `.item` reaches the edge ("top"/"bottom") of #scroll-container within 2px. */
-export function viewportEdgeCoveredByRealItem(page, edge) {
-  return page.evaluate((which) => {
+/**
+ * ViewportEdgeCoveredByRealItem (:6150): a real `.item` reaches the edge ("top"/"bottom") of #scroll-container
+ * within 2px. `inGridRow` measures the table row that holds the `.item` instead (the QuickGrid pages): a
+ * skin pads its cells by 8–12px where QuickGrid's default theme pads by about 2, so a row aligned with the edge
+ * leaves its `.item` more than 2px inside it.
+ */
+export function viewportEdgeCoveredByRealItem(page, edge, { inGridRow = false } = {}) {
+  return page.evaluate(([which, rows]) => {
     const c = document.getElementById("scroll-container");
     const rect = c.getBoundingClientRect();
     const scale = c.offsetHeight > 0 ? rect.height / c.offsetHeight : 1;
@@ -640,7 +689,7 @@ export function viewportEdgeCoveredByRealItem(page, edge) {
     const viewportBottom = viewportTop + c.clientHeight * scale;
     let best = which === "top" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
     for (const item of c.querySelectorAll(".item")) {
-      const r = item.getBoundingClientRect();
+      const r = (rows ? item.closest("tr") : item).getBoundingClientRect();
       if (r.bottom <= viewportTop + 1) continue;
       if (r.top >= viewportBottom - 1) continue;
       if (which === "top") {
@@ -650,7 +699,212 @@ export function viewportEdgeCoveredByRealItem(page, edge) {
       }
     }
     return which === "top" ? best <= viewportTop + 2 : best >= viewportBottom - 2;
-  }, edge);
+  }, [edge, inGridRow]);
+}
+
+/* Window scrolling (group H) ---------------------------------------------------------------------------- */
+
+/** WindowScrollToBottomAndWait (:4833): the window at the document's bottom, and an item in view. */
+export async function windowScrollToBottomAndWait(page) {
+  await waitTrue(
+    () =>
+      page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        return document.documentElement.scrollHeight - Math.round(window.scrollY) - window.innerHeight < 2;
+      }),
+    { timeout: 10_000, interval: SELENIUM_POLL },
+  );
+
+  await waitTrue(() =>
+    page.evaluate(() => {
+      for (const item of document.querySelectorAll(".item[data-index]")) {
+        const ir = item.getBoundingClientRect();
+        if (ir.bottom > 1 && ir.top < window.innerHeight - 1) return true;
+      }
+      return false;
+    }),
+  );
+}
+
+/**
+ * GetItemPositionInViewport (:5293): the item with `dataIndex`, or else the first one in the window's
+ * viewport (by more than 1px); its index and its top in viewport coordinates.
+ */
+export async function getItemPositionInViewport(root, itemSelector, dataIndex = null) {
+  const result = await root.evaluate(
+    (r, [selector, targetIndex]) => {
+      for (const item of r.querySelectorAll(selector)) {
+        const itemRect = item.getBoundingClientRect();
+        if (targetIndex !== null) {
+          if (item.getAttribute("data-index") === targetIndex) return { index: targetIndex, top: itemRect.top };
+        } else if (itemRect.bottom > 1 && itemRect.top < window.innerHeight - 1) {
+          return { index: item.getAttribute("data-index"), top: itemRect.top };
+        }
+      }
+      return null;
+    },
+    [itemSelector, dataIndex],
+  );
+  if (result === null) throw new AssertionError(`GetItemPositionInViewport: no ${dataIndex === null ? "visible item" : `item ${dataIndex}`} for ${itemSelector}`);
+  return { index: String(result.index), top: result.top };
+}
+
+/** AssertWindowScrollViewportStaysStable (:4883): item `indexBefore` comes back within `driftTolerance` px of its top. */
+export async function assertWindowScrollViewportStaysStable(root, indexBefore, topBefore, message, driftTolerance = 5) {
+  await waitTrue(
+    async () => {
+      const { top } = await getItemPositionInViewport(root, ".item[data-index]", indexBefore);
+      return Math.abs(top - topBefore) <= driftTolerance;
+    },
+    { timeout: 10_000, message },
+  );
+
+  const { top: topAfter } = await getItemPositionInViewport(root, ".item[data-index]", indexBefore);
+  assert(Math.abs(topAfter - topBefore) <= driftTolerance, `${message} (item ${indexBefore} moved from ${topBefore} to ${topAfter})`);
+}
+
+/** The window's scroll position, rounded as Blazor's tests read it. */
+export function windowScrollY(page) {
+  return page.evaluate(() => Math.round(window.scrollY));
+}
+
+/** The window's distance to the bottom of the document. */
+export function windowBottomGap(page) {
+  return page.evaluate(() => document.documentElement.scrollHeight - Math.round(window.scrollY) - window.innerHeight);
+}
+
+/* ScrollToItem (group K) -------------------------------------------------------------------------------- */
+
+/** SetScrollTargetIndex (:5976). */
+export const setScrollTargetIndex = (page, index) => setNumberInputAndWaitForBind(page, "scroll-target-index", index);
+
+/** WaitForScrollStatus (:6075): until #scroll-status starts with `expected`. */
+export async function waitForScrollStatus(page, expected, timeoutSeconds = 30) {
+  let actual = "<unable to read>";
+  await waitTrue(
+    async () => {
+      actual = await textOf(await exists(page, "#scroll-status"));
+      return actual.startsWith(expected);
+    },
+    {
+      timeout: timeoutSeconds * 1000,
+      message: async () => {
+        const targetInputValue = await page.evaluate(() => document.getElementById("scroll-target-index")?.value ?? "<missing>");
+        return `WaitForScrollStatus timeout: expected status to start with '${expected}', actual='${actual}', scroll-target-index value='${targetInputValue}'`;
+      },
+    },
+  );
+}
+
+/* QuickGrid (group L) ----------------------------------------------------------------------------------- */
+
+/** The #qg-status text. */
+export async function quickGridStatusText(page) {
+  return textOf(await exists(page, "#qg-status"));
+}
+
+/** MountQuickGridAnchorModeComponent (:2047). */
+export async function mountQuickGridAnchorModeComponent(t, anchorMode, useItemsProvider, { delay = false } = {}) {
+  if (delay && !useItemsProvider) throw new Error("delay only applies to the ItemsProvider path");
+  const { page } = t;
+  await t.mount("QuickGridAnchorModeComponent");
+  const container = await exists(page, "#qg-anchor-container");
+  await waitTrue(async () => (await count(container, ".item[data-index]")) > 0);
+
+  if (useItemsProvider) {
+    await (await exists(page, "#qg-toggle-provider")).click();
+    await waitTrue(async () => (await count(container, ".item[data-index]")) > 0);
+
+    if (delay) {
+      // Real life providers come with at least a small delay
+      await (await exists(page, "#qg-toggle-delay")).click();
+      await waitContains("Provider delay for QuickGrid on", () => quickGridStatusText(page));
+    }
+
+    await waitForRenderToSettle(container);
+  }
+
+  await (await exists(page, "#qg-anchor-mode-select")).selectOption(anchorMode);
+  await waitTrue(async () => (await textOf(await exists(page, "#qg-current-mode"))) === anchorMode);
+  await waitTrue(async () => (await count(container, ".item[data-index]")) > 0);
+  await letEndModeConvergenceFinish(anchorMode, container);
+  return container;
+}
+
+/** EnableQuickGridDefaultComparer (:2079). */
+export async function enableQuickGridDefaultComparer(page) {
+  await (await exists(page, "#qg-toggle-comparer")).click();
+  await waitContains("Comparer: Default", () => quickGridStatusText(page));
+}
+
+/** CountProviderEnters (:2112). */
+async function countProviderEnters(page) {
+  const events = await page.evaluate(() => document.getElementById("qg-provider-events")?.getAttribute("data-value") ?? "");
+  return events.split("-enter").length - 1;
+}
+
+/**
+ * GatedQuickGridProviderMutation (:2099): arms the gate, clicks the mutation, waits until its provider call
+ * parks at the gate, disarms the gate and releases it.
+ */
+async function gatedQuickGridProviderMutation(page, mutationButtonId) {
+  const entersBefore = await countProviderEnters(page);
+
+  await (await exists(page, "#qg-toggle-provider-gate")).click();
+  await (await exists(page, byId(mutationButtonId))).click();
+  await waitTrue(async () => (await countProviderEnters(page)) > entersBefore, {
+    timeout: 10_000,
+    message: "Gated provider call did not park at the gate",
+  });
+
+  await (await exists(page, "#qg-toggle-provider-gate")).click();
+  await (await exists(page, "#qg-release-provider-gate")).click();
+}
+
+/** QuickGridMutate (:2085): a gated mutation with the provider, a plain click with Items; then its status. */
+export async function quickGridMutate(page, mutationButtonId, statusText, useItemsProvider) {
+  if (useItemsProvider) {
+    await gatedQuickGridProviderMutation(page, mutationButtonId);
+  } else {
+    await (await exists(page, byId(mutationButtonId))).click();
+  }
+
+  await waitContains(statusText, () => quickGridStatusText(page));
+}
+
+/**
+ * CheckQuickGridFirstRow (:2029): `predicate` on the text of the first data row's first cell. The spacers are
+ * the rows with `aria-hidden`. Blazor skips QuickGrid's placeholder cells (`td.grid-cell-placeholder`); a
+ * skin's placeholder row is one empty cell, so its text is "" and fails the predicate the same way.
+ */
+export async function checkQuickGridFirstRow(container, predicate) {
+  const text = await container.evaluate((c) => c.querySelector("tbody tr:not([aria-hidden]) td")?.innerText.trim() ?? null);
+  return text !== null && predicate(text);
+}
+
+/** WaitForQuickGridDataRows (:2026): the first row is a data row (its first cell a number). */
+export async function waitForQuickGridDataRows(container) {
+  await waitTrue(() => checkQuickGridFirstRow(container, (text) => /^-?\d+$/.test(text)));
+}
+
+/** MountQuickGridForScrollToItem (:7067). */
+export async function mountQuickGridForScrollToItem(t, { useItemsProvider = true, variableHeight = false } = {}) {
+  const { page } = t;
+  await t.mount("QuickGridScrollComponent");
+  const container = await exists(page, "#scroll-container");
+  await waitTrue(async () => (await count(container, ".item")) > 0);
+
+  if (useItemsProvider) {
+    await (await exists(page, "#toggle-provider")).click();
+    await waitTrue(async () => (await count(container, ".item")) > 0);
+    await (await exists(page, "#toggle-delay")).click();
+  }
+
+  if (variableHeight) {
+    await (await exists(page, "#toggle-height")).click();
+    await waitTrue(async () => (await count(container, ".item")) > 0);
+  }
+  return container;
 }
 
 export { DEFAULT_TIMEOUT };
