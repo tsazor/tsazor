@@ -12,8 +12,10 @@
             <PropertyColumn property="(block) => block.category" title="Category" />
             <PropertyColumn property="(block) => block.description" title="Description" />
             <TemplateColumn title="Actions" Context="block">
-                <ActionButtonEdit href="@this.getUrl("Update Block", { id: block.id })" />
-                <ActionButtonDelete @onclick="() => this.selected = block" aria-label="@(`Delete ${block.name}`)" />
+                <ActionButtons>
+                    <ActionButtonEdit href="@this.getUrl("Update Block", { id: block.id })" />
+                    <ActionButtonDelete @onclick="() => this.selected = block" aria-label="@(`Delete ${block.name}`)" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

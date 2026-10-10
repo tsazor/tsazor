@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/ui`: `icon()` given a whole `<svg>` keeps its root's fill and stroke attributes (on a `<g>` around
+  the content). An outline icon (`fill="none" stroke="currentColor"` on the root) was drawn filled under the skins'
+  `fill="currentColor"`; and a root's `stroke-width` was read as its width (L4).
+- **Deprecated** both skins' `Icon` `name` and `@tsazor/ui`'s `builtInIcons` (the small stroke set): use `value` with
+  a generated set or `icon()`. Nothing in the repo uses them any more (icons step 6, F17 closed).
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (F17, icons step 4 in [design-icons.md](docs/design-icons.md)):
   icons on the components, with Fluent UI Blazor main's names.
   - `Button`, `MenuItem` (Bootstrap: `DropdownItem`), `Badge` and `NavbarLink` take `iconStart`/`iconEnd`; `Tab`

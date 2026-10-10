@@ -1,0 +1,7 @@
+/* FluentCMS's ActionButtons: the row's icon buttons side by side, at the cell's end. */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+}

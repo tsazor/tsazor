@@ -117,6 +117,11 @@ render in the browser.
   `new Icon(name, variant, size, content)`). The codemod does the `new Icons…()` part. Only the icons a page uses
   reach its bundle; in the dev server the namespace loads the whole set (about 1 s), and
   `@tsazor/fluent-icons/regular/size20` loads one module.
+- **An app's own icon set** (FluentCMS keeps its SVGs in a `.resx` and names them by an `IconName` enum): generate
+  one module of `icon()` values from the resource, `export const IconName = { Delete: icon("delete", "<svg…>"), … }`,
+  and import it once in `_Imports.tsazor`. The markup keeps `IconName.Delete`; a parameter of type `IconName` becomes
+  one of type `IconValue`. Generate it with a script (the FluentCMS port's `scripts/icons.mjs`), so an update of the
+  original's set is one run.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

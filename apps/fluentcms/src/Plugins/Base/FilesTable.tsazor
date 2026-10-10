@@ -10,7 +10,7 @@
 <DataGrid items="@this.items" itemKey="(item) => item.id" ariaLabel="@ariaLabel">
     <TemplateColumn title="Name" Context="item">
         <span class="asset-name">
-            <Icon name="@assetIcon(item)" size="20" />
+            <Icon value="@assetIcon(item)" size="20" />
             <Button appearance="transparent" size="small" disabled="@(item.id === disabledFolder)" onClick="() => this.rowClick(item)">@item.name</Button>
         </span>
     </TemplateColumn>
@@ -24,7 +24,7 @@
     <TemplateColumn title="Size" Context="item">@humanizeFileSize(item.size)</TemplateColumn>
     <TemplateColumn title="Actions" Context="item">
         @if (actionsFragment !== undefined) {
-            <span class="asset-actions">@actionsFragment(item)</span>
+            <ActionButtons>@actionsFragment(item)</ActionButtons>
         }
     </TemplateColumn>
 </DataGrid>

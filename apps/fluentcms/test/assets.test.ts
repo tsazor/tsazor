@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FolderDetailResponse } from "../src/api/models";
+import { IconName } from "../src/Components/IconName";
 import {
     DEFAULT_UPLOAD_CONFIG,
     assetIcon,
@@ -37,10 +38,15 @@ describe("a folder's rows (FluentCMS's FilesTable)", () => {
         expect(folderAssets(images, "root", true).map((row) => row.name)).toEqual(["(parent)", "icons"]);
     });
 
-    it("picks an icon per row", () => {
+    it("picks FluentCMS's icon per row (its FilesTable.GetFileIcon)", () => {
         const [parent, icons, logo] = folderAssets(images, "root");
-        expect([parent, icons, logo].map((row) => assetIcon(row!))).toEqual(["folder-up", "folder", "image"]);
-        expect(assetIcon({ id: "x", name: "a.pdf", isFolder: false, contentType: "application/pdf" })).toBe("document");
+        expect([parent, icons, logo].map((row) => assetIcon(row!))).toEqual([IconName.ParentFolder, IconName.Folder, IconName.Image]);
+        expect(assetIcon({ id: "x", name: "a.pdf", isFolder: false, contentType: "application/pdf" })).toBe(IconName.File);
+    });
+
+    it("keeps FluentCMS's outline icons outlines (their root fill=\"none\")", () => {
+        expect(IconName.AngleDown.content.startsWith("<g fill=\"none\">")).toBe(true);
+        expect(Object.keys(IconName)).toHaveLength(38);
     });
 });
 

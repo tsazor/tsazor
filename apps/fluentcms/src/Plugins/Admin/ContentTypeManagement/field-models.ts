@@ -1,5 +1,7 @@
 import { Required } from "@tsazor/runtime";
+import type { IconValue } from "@tsazor/fluent";
 import { ContentTypeField } from "../../../api/models";
+import { IconName } from "../../../Components/IconName";
 
 /** FluentCMS's field types, by the key a content type stores. */
 export const FIELD_TYPE = {
@@ -26,6 +28,8 @@ export interface FieldTypeInfo {
     readonly key: FieldTypeKey;
     readonly title: string;
     readonly description: string;
+    /** FluentCMS's icon for the type. */
+    readonly icon: IconValue;
     readonly order: number;
     /** The ways a content form can show the field; the first is the default. */
     readonly formViews: readonly FieldView[];
@@ -40,6 +44,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.STRING,
         title: "String",
         description: "Small or long text like title or description",
+        icon: IconName.Text,
         order: 1,
         formViews: [
             view("StringFieldFormText", "Input"),
@@ -53,6 +58,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.NUMBER,
         title: "Number",
         description: "Numbers (integer, float, decimal)",
+        icon: IconName.Number,
         order: 2,
         formViews: [view("NumberFieldFormInput", "Number Input"), view("NumberFieldFormRange", "Range Input")],
         dataTableViews: [view("NumberFieldDataTableView", "Raw Text")],
@@ -61,6 +67,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.BOOLEAN,
         title: "Boolean",
         description: "Yes or no, 1 or 0, true or false",
+        icon: IconName.Boolean,
         order: 3,
         formViews: [view("BooleanFieldFormSwitch", "Switch"), view("BooleanFieldFormCheckbox", "Checkbox")],
         dataTableViews: [
@@ -74,6 +81,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.DATE_TIME,
         title: "Date Time",
         description: "A date picker with hours, minutes and seconds",
+        icon: IconName.Clock,
         order: 4,
         formViews: [
             view("DateFieldFormDate", "Date Picker"),
@@ -86,6 +94,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.SINGLE_SELECT,
         title: "Single Select",
         description: "List of values, then pick one",
+        icon: IconName.List,
         order: 5,
         formViews: [
             view("SelectFieldFormSelect", "Dropdown"),
@@ -98,6 +107,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.MULTI_SELECT,
         title: "Multi Select",
         description: "List of values, then pick one or more",
+        icon: IconName.List,
         order: 6,
         formViews: [view("MultiSelectFieldFormCheckboxes", "Checkboxes"), view("MultiSelectFieldFormAutocomplete", "Autocomplete")],
         dataTableViews: [view("MultiSelectFieldDataTableBadges", "Badges")],
@@ -106,6 +116,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.SINGLE_FILE,
         title: "Single File",
         description: "Files like images, videos, etc",
+        icon: IconName.ClipboardList,
         order: 7,
         formViews: [view("SingleFileFieldFormFilePicker", "File Picker")],
         dataTableViews: [view("SingleFileFieldDataTableFile", "File")],
@@ -114,6 +125,7 @@ export const FIELD_TYPES: Readonly<Record<FieldTypeKey, FieldTypeInfo>> = {
         key: FIELD_TYPE.MULTI_FILE,
         title: "Multi File",
         description: "Multiple Files like images, videos, etc",
+        icon: IconName.ClipboardList,
         order: 8,
         formViews: [view("MultiFileFieldFormFilesPicker", "Files Picker")],
         dataTableViews: [view("MultiFileFieldDataTableFiles", "Files")],

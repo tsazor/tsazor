@@ -15,8 +15,10 @@
             <PropertyColumn property="(layout) => layout.modifiedBy ?? ''" title="Modified By" />
             <PropertyColumn property="(layout) => layout.modifiedAt" format="dateTime" title="Modified At" />
             <TemplateColumn title="Actions" Context="layout">
-                <ActionButtonDelete visible="@(!this.inUse(layout))" @onclick="() => this.selected = layout" aria-label="@(`Delete ${layout.name}`)" />
-                <ActionButtonEdit href="@this.getUrl("Update Layout", { id: layout.id })" />
+                <ActionButtons>
+                    <ActionButtonDelete visible="@(!this.inUse(layout))" @onclick="() => this.selected = layout" aria-label="@(`Delete ${layout.name}`)" />
+                    <ActionButtonEdit href="@this.getUrl("Update Layout", { id: layout.id })" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

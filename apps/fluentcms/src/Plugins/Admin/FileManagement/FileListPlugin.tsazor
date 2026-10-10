@@ -7,7 +7,7 @@
 
 <PluginBody title="@(`File Management (${this.folder?.name ?? "..."})`)">
     <ActionsFragment>
-        <ActionButton icon="add" label="Add Folder" @onclick="() => this.folderCreateOpen = true" />
+        <ActionButton iconName="@IconName.Plus" label="Add Folder" @onclick="() => this.folderCreateOpen = true" />
         <ActionButtonCreate label="Upload File" @onclick="() => this.uploadOpen = true" />
     </ActionsFragment>
     <SubtitleFragment>
@@ -16,11 +16,11 @@
     <ChildContent>
         <FilesTable @ref="this.filesTable" @bind-folderId="this.folderId" @bind-rootFolder="this.rootFolder" @bind-folder="this.folder" @bind-parentFolders="this.breadcrumbItems">
             <ActionsFragment>
-                <ActionButton visible="@(!context.isFolder)" icon="download" label="Download" intent="primary" href="@downloadUrl(this.breadcrumbItems, context)" download="@context.name" target="_blank" aria-label="@(`Download ${context.name}`)" />
+                <ActionButton visible="@(!context.isFolder)" iconName="@IconName.Download" label="Download" intent="primary" href="@downloadUrl(this.breadcrumbItems, context)" download="@context.name" target="_blank" aria-label="@(`Download ${context.name}`)" />
                 <ActionButton visible="@context.isFolder" label="Open" aria-label="@(`Open ${context.name}`)" @onclick="() => this.navigateFolder(context.id)" />
                 @if (!context.isParentFolder) {
-                    <ActionButton label="Rename" intent="primary" aria-label="@(`Rename ${context.name}`)" @onclick="() => this.openRename(context)" />
-                    <ActionButton label="Move" aria-label="@(`Move ${context.name}`)" @onclick="() => this.moving = context" />
+                    <ActionButton iconName="@IconName.Edit" label="Rename" intent="primary" aria-label="@(`Rename ${context.name}`)" @onclick="() => this.openRename(context)" />
+                    <ActionButton iconName="@IconName.FolderMove" label="Move" aria-label="@(`Move ${context.name}`)" @onclick="() => this.moving = context" />
                     <ActionButtonDelete aria-label="@(`Delete ${context.name}`)" @onclick="() => this.selected = context" />
                 }
             </ActionsFragment>

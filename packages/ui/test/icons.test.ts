@@ -40,3 +40,16 @@ describe("iconSize()", () => {
     expect(iconSize({ name: "x", viewBox: "", content: "" })).toBe(16);
   });
 });
+
+describe("icon() with an outline icon", () => {
+  it("keeps the root's fill and stroke on a <g>, so it isn't filled by the skins' currentColor", () => {
+    const value = icon("angle", '<svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="m19 9-7 7-7-7"/></svg>');
+    expect(value.content).toBe('<g fill="none"><path stroke="currentColor" stroke-width="2" d="m19 9-7 7-7-7"/></g>');
+    const stroked = icon("x", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12"/></svg>');
+    expect(stroked.content).toBe('<g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 6l12 12"/></g>');
+  });
+
+  it("reads width and height, not stroke-width, for a viewBox", () => {
+    expect(icon("w", '<svg stroke-width="2" width="20" height="10"><path/></svg>').viewBox).toBe("0 0 20 10");
+  });
+});

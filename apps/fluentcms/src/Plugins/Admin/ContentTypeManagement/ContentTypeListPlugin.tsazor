@@ -13,10 +13,12 @@
             <PropertyColumn property="(type) => type.description" title="Description" />
             <PropertyColumn property="(type) => type.fields?.length ?? 0" title="Fields" />
             <TemplateColumn title="Actions" Context="type">
-                <ActionButtonEdit href="@this.getUrl("Update ContentType", { id: type.id })" />
-                <ActionButton label="Fields" intent="success" href="@this.getUrl("View ContentType", { id: type.id })" aria-label="@(`Fields of ${type.title}`)" />
-                <ActionButton label="Contents" href="@this.getUrl("Contents List", { slug: type.slug ?? "" })" aria-label="@(`Contents of ${type.title}`)" />
-                <ActionButtonDelete aria-label="@(`Delete ${type.title}`)" @onclick="() => this.selected = type" />
+                <ActionButtons>
+                    <ActionButtonEdit href="@this.getUrl("Update ContentType", { id: type.id })" />
+                    <ActionButton iconName="@IconName.Eye" label="Fields" intent="success" href="@this.getUrl("View ContentType", { id: type.id })" aria-label="@(`Fields of ${type.title}`)" />
+                    <ActionButton iconName="@IconName.PenNib" label="Contents" href="@this.getUrl("Contents List", { slug: type.slug ?? "" })" aria-label="@(`Contents of ${type.title}`)" />
+                    <ActionButtonDelete aria-label="@(`Delete ${type.title}`)" @onclick="() => this.selected = type" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

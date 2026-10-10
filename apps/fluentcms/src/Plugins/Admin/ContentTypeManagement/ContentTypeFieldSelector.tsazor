@@ -6,8 +6,11 @@
         <div class="field-types">
             @foreach (const fieldType of ORDERED_FIELD_TYPES) {
                 <button type="button" class="field-type" @key="fieldType.key" @onclick="() => this.onSelect?.invokeAsync(fieldType.key)">
-                    <span class="field-type-title">@fieldType.title</span>
-                    <span class="field-type-description">@fieldType.description</span>
+                    <Icon value="@fieldType.icon" class="field-type-icon" />
+                    <span class="field-type-text">
+                        <span class="field-type-title">@fieldType.title</span>
+                        <span class="field-type-description">@fieldType.description</span>
+                    </span>
                 </button>
             }
         </div>

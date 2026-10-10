@@ -16,8 +16,10 @@
             </TemplateColumn>
             <PropertyColumn property="(role) => role.usersCount" title="Users Count" />
             <TemplateColumn title="Actions" Context="role">
-                <ActionButtonDelete visible="@(role.type === "UserDefined")" @onclick="() => this.selected = role" aria-label="@(`Delete ${role.name}`)" />
-                <ActionButtonEdit href="@this.getUrl("Update Role", { id: role.id })" />
+                <ActionButtons>
+                    <ActionButtonDelete visible="@(role.type === "UserDefined")" @onclick="() => this.selected = role" aria-label="@(`Delete ${role.name}`)" />
+                    <ActionButtonEdit href="@this.getUrl("Update Role", { id: role.id })" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

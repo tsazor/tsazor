@@ -9,7 +9,7 @@
         } else {
             <BreadcrumbItem onClick="() => this.onNavigate?.invokeAsync(folder.id)">
                 @if (folder.id === rootId) {
-                    <Icon name="folder" />
+                    <Icon value="@IconName.Folder" />
                 }
                 @folder.name
             </BreadcrumbItem>

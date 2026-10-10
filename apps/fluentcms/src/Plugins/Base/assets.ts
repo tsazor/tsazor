@@ -1,4 +1,6 @@
+import type { IconValue } from "@tsazor/fluent";
 import type { FileUploadConfig, FolderDetailResponse } from "../../api/models";
+import { IconName } from "../../Components/IconName";
 
 /** A file or a folder as one row of a list (FluentCMS's AssetDetail). */
 export interface AssetDetail {
@@ -45,10 +47,10 @@ export function folderAssets(folder: FolderDetailResponse, rootFolderId: string 
 }
 
 /** The icon of a row: one folder up, a folder, an image, or any other file. */
-export function assetIcon(item: AssetDetail): "folder-up" | "folder" | "image" | "document" {
-    if (item.isParentFolder) return "folder-up";
-    if (item.isFolder) return "folder";
-    return item.contentType?.startsWith("image/") ? "image" : "document";
+export function assetIcon(item: AssetDetail): IconValue {
+    if (item.isParentFolder) return IconName.ParentFolder;
+    if (item.isFolder) return IconName.Folder;
+    return item.contentType?.startsWith("image/") ? IconName.Image : IconName.File;
 }
 
 /** A size as FluentCMS shows it: whole MB, KB or bytes; "..." for none. */

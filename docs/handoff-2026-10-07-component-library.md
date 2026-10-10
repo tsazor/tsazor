@@ -82,7 +82,7 @@ everything pushed.
 >   - The tutorial lessons "Long lists" and "A live feed" (ch12, flag `layoutOnly`; `d4998a4`). The feed's browser
 >     check found A16 in Firefox and WebKit (`955c9bb`): a reader who scrolled up was pulled back to the bottom,
 >     because a scroll during a convergence, or after a pin that didn't move, was swallowed.
-> - **Icons (F17, wave A; [design-icons.md](design-icons.md)):** steps 1–5 of 6 done (1–3 on 2026-10-09, 4–5 on 2026-10-10).
+> - **Icons (F17, wave A; [design-icons.md](design-icons.md)):** done (steps 1–3 on 2026-10-09, 4–6 on 2026-10-10).
 >   - `c497ae8`: `IconValue` and `icon()` in `@tsazor/ui` (an app's own icons); both skins' `Icon` take `value`,
 >     `color`, `title`; `@tsazor/bootstrap` got `Icon`.
 >   - `15c1001`: `@tsazor/fluent-icons` (20,786 Fluent System Icons, `Icons.Regular.Size20.Save`, generated from
@@ -97,7 +97,11 @@ everything pushed.
 >     now `ImmediateInput` in `@tsazor/ui`). `@tsazor/fluent-icons/<variant>/<size>` entry points give a light dev
 >     start (the namespace costs ~1 s there). The gallery's gates take `GALLERY_PORT` (a fresh server beside a
 >     running one).
->   - Next: step 6 (FluentCMS uses the original's icons; F17 closes; then deprecate `name`). Then Markdown.
+>   - **Step 6 done (2026-10-10), F17 closed:** the FluentCMS port uses the original's 38 icons (`IconName.ts`
+>     from its `IconResource.resx` via `icon()`, `scripts/icons.mjs`); row actions are icon buttons with tooltips
+>     (`ActionButtons` cascades `TableAction`, as in FluentCMS). Found L4: `icon()` drew outline icons filled (the
+>     root's `fill="none"` was lost). `name`/`builtInIcons` deprecated.
+>   - Next: Markdown (`@tsazor/markdown`, D-L3), then the rest of wave A.
 >   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
 >     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
 >     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)
@@ -111,7 +115,7 @@ everything pushed.
 >   library; the old note that C# drops it too was wrong). The shadow calls those functions in place (codegen
 >   `deferred()`); real builds are unchanged. A lambda the author writes keeps TypeScript's rule. Tutorial lessons
 >   "Child content" and "Page title" rewritten.
-> - **Before that:** the port's admin and public parts are done. Open: F10, F13, F16, F17 (F15 fixed since); track B candidates (upload
+> - **Before that:** the port's admin and public parts are done. Open: F10, F13, F16 (F15 and F17 fixed since); track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
 

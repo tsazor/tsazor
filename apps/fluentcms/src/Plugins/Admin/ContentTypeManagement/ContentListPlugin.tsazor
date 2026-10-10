@@ -9,7 +9,7 @@
 @if (this.contentType !== undefined) {
     <PluginBody title="@(this.contentType.title ?? "")">
         <ActionsFragment>
-            <ActionButton icon="arrow-left" label="Back" @onclick="() => this.navigateBack()" />
+            <ActionButton iconName="@IconName.ArrowLeft" label="Back" @onclick="() => this.navigateBack()" />
             <ActionButtonCreate href="@this.getUrl("Create Content", { slug: this.contentTypeSlug ?? "" })" label="New Content" />
         </ActionsFragment>
         <ChildContent>
@@ -21,9 +21,11 @@
                     </TemplateColumn>
                 }
                 <TemplateColumn title="Actions" Context="content">
-                    <ActionButtonEdit href="@this.getUrl("Update Content", { slug: this.contentTypeSlug ?? "", id: content.id })" aria-label="@(`Edit ${this.labelOf(content)}`)" />
-                    <ActionButtonDelete aria-label="@(`Delete ${this.labelOf(content)}`)" @onclick="() => this.selected = content" />
-                </TemplateColumn>
+                <ActionButtons>
+                        <ActionButtonEdit href="@this.getUrl("Update Content", { slug: this.contentTypeSlug ?? "", id: content.id })" aria-label="@(`Edit ${this.labelOf(content)}`)" />
+                        <ActionButtonDelete aria-label="@(`Delete ${this.labelOf(content)}`)" @onclick="() => this.selected = content" />
+                        </ActionButtons>
+            </TemplateColumn>
             </DataGrid>
         </ChildContent>
     </PluginBody>

@@ -1,21 +1,26 @@
-@* A button or link in a list's row or above it (FluentCMS's ActionButton): an icon and a label. Its @onclick,
+@* A button or link in a list's row or above it (FluentCMS's ActionButton): its icon (`IconName`) and its label. In a
+   table's ActionButtons it is the icon alone, with the label as its tooltip and name, as in FluentCMS. Its @onclick,
    aria-label, download and target go onto it, as in Blazor. *@
-@import type { Intent } from "@tsazor/fluent"
+@import type { IconValue, Intent } from "@tsazor/fluent"
 
 @if (visible) {
-    <Button href="@href" appearance="subtle" size="small" intent="@intent" @attributes="@additionalAttributes">
-        @if (icon) {
-            <Icon name="@icon" />
-        }
-        @label
-    </Button>
+    @if (tableAction && iconName) {
+        <Tooltip Text="@label">
+            <Button href="@href" appearance="subtle" size="small" intent="@intent" iconStart="@iconName" ariaLabel="@label" @attributes="@additionalAttributes" />
+        </Tooltip>
+    } else {
+        <Button href="@href" appearance="subtle" size="small" intent="@intent" iconStart="@iconName" @attributes="@additionalAttributes">@label</Button>
+    }
 }
 
 @code {
     @Parameter() label = "";
-    @Parameter() icon?: string;
+    /** One of FluentCMS's icons (`IconName.Edit`, src/Components/IconName.ts). */
+    @Parameter() iconName?: IconValue;
     @Parameter() href?: string;
     @Parameter() intent: Intent = "secondary";
     @Parameter() visible = true;
+    /** Set by ActionButtons (a table's row): the icon alone. */
+    @CascadingParameter({ name: "TableAction" }) tableAction = false;
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 }

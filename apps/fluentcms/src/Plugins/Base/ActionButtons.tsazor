@@ -1,0 +1,10 @@
+@* A table row's actions (FluentCMS's ActionButtons): the ActionButtons inside show their icons alone, their labels as
+   tooltips and names. *@
+
+<CascadingValue Value="@true" Name="TableAction">
+    <div class="action-buttons">@childContent</div>
+</CascadingValue>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+}

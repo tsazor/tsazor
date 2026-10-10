@@ -13,8 +13,8 @@
             <FolderBreadcrumb folders="@this.parentFolders" current="@this.folderId" rootId="@this.rootFolder?.id" onNavigate="@this.navigateFolder" />
             <FilesTable @ref="this.filesTable" @bind-folderId="this.folderId" @bind-rootFolder="this.rootFolder" @bind-parentFolders="this.parentFolders" onRowClick="@this.rowClick">
                 <ActionsFragment>
-                    <ActionButton visible="@(!context.isFolder)" icon="check" label="Select" intent="primary" aria-label="@(`Select ${context.name}`)" @onclick="() => this.select(context)" />
-                    <ActionButton visible="@(!context.isFolder)" icon="download" label="Download" href="@downloadUrl(this.parentFolders, context)" target="_blank" aria-label="@(`Download ${context.name}`)" />
+                    <ActionButton visible="@(!context.isFolder)" iconName="@IconName.Check" label="Select" intent="primary" aria-label="@(`Select ${context.name}`)" @onclick="() => this.select(context)" />
+                    <ActionButton visible="@(!context.isFolder)" iconName="@IconName.Download" label="Download" href="@downloadUrl(this.parentFolders, context)" target="_blank" aria-label="@(`Download ${context.name}`)" />
                     <ActionButton visible="@context.isFolder" label="Open" aria-label="@(`Open ${context.name}`)" @onclick="() => this.navigateFolder(context.id)" />
                 </ActionsFragment>
             </FilesTable>

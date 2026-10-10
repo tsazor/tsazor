@@ -1,6 +1,6 @@
 # Design: icons (F17, wave A)
 
-Status: **in progress**: steps 1–3 of §4 done 2026-10-09, steps 4 and 5 on 2026-10-10; step 6 (FluentCMS) is open. The first step of wave A in
+Status: **done** (all six steps of §4: 1–3 on 2026-10-09, 4–6 on 2026-10-10; F17 is closed). The first step of wave A in
 [design-library-completeness.md](design-library-completeness.md) (D-L5: `Icon` takes any icon value; generated
 packages with the full sets, tree-shaken).
 
@@ -36,7 +36,9 @@ export interface IconValue {
 export function icon(name: string, svg: string): IconValue; // an app's own: inner markup, or a whole <svg> (its viewBox is kept)
 ```
 
-The skins render it as `<svg viewBox fill="currentColor">` with the content as markup. The renderer already parses
+The skins render it as `<svg viewBox fill="currentColor">` with the content as markup. A whole `<svg>` given to
+`icon()` keeps its root's fill and stroke attributes on a `<g>` around its content, so an outline icon
+(`fill="none" stroke="currentColor"` on the root, as most hand-made sets write it) stays an outline (L4). The renderer already parses
 markup inside `<svg>` in the SVG namespace, cached per string, under Trusted Types (`dom-renderer.ts`). Icon content
 is trusted: it comes from a package or from the app's own code, never from user input.
 
@@ -103,7 +105,11 @@ is trusted: it comes from a package or from the app's own code, never from user 
 5. The gallery: an icon browser per skin (search, copy the Razor form). The codemod rule. Done: the browser is
    the skins app's Icons page (one page, the set of the build's skin; Fluent by variant and size), and the codemod
    rewrites `new Icons.X.Y.Z()` to `Icons.X.Y.Z` in markup.
-6. FluentCMS: the port uses the original's icons (F17 closes).
+6. FluentCMS: the port uses the original's icons (F17 closes). Done: FluentCMS's own set (its UI library's
+   `IconResource.resx`, 38 icons) became `src/Components/IconName.ts`, made with `icon()` by `scripts/icons.mjs`,
+   so the port writes `IconName.Delete` as the original does. The row actions are icon buttons with the label as
+   tooltip and name, as FluentCMS's `ActionButtons` cascade `TableAction`; files, folders and field types show
+   their icons. `name` and `builtInIcons` are deprecated: nothing in the repo uses them any more.
 
 ## 5. Decisions (recommendations; D-L5 left the details to them)
 
@@ -111,6 +117,6 @@ is trusted: it comes from a package or from the app's own code, never from user 
 |---|---|---|
 | D-I1 | Namespace (`Icons.Regular.Size20.Save`) or flat names (`Save20Regular`)? | The namespace: it is Fluent UI Blazor's form, so ported markup changes least, and TypeScript completes it level by level |
 | D-I2 | Generate at build time or commit the generated files? | At build time; the sources are pinned MIT packages |
-| D-I3 | The built-in stroke set | Keep `name` until the skins' own components use the generated sets, then deprecate it |
+| D-I3 | The built-in stroke set | Keep `name` until the skins' own components use the generated sets, then deprecate it. Deprecated 2026-10-10 |
 | D-I4 | How a skin gets its own icons (2026-10-10) | A small copy, as Fluent UI Blazor's internal `CoreIcons`: `src/core-icons.ts`, written by `scripts/core-icons.mjs` from the generated set and kept equal to it by a test. The skin then doesn't depend on the whole set (14 MB in Fluent's case), in a dev server or in a package install |
 | D-I5 | Slot names (2026-10-10) | Fluent UI Blazor main's: `IconStart`/`IconEnd`, Tab's `IconStart`, the tree item's four, Badge's `IconLabel`. Its nav item's `IconRest`/`IconActive` become `icon`/`iconActive` on SidebarNav's link data |

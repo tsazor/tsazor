@@ -6,7 +6,7 @@
 
 <PluginBody title="Content Type Fields">
     <ActionsFragment>
-        <ActionButton icon="arrow-left" label="Back" @onclick="() => this.navigateBack()" />
+        <ActionButton iconName="@IconName.ArrowLeft" label="Back" @onclick="() => this.navigateBack()" />
         <ActionButtonCreate label="New Field" @onclick="@this.createField" />
     </ActionsFragment>
     <ChildContent>
@@ -14,14 +14,21 @@
             <PropertyColumn property="(field) => field.name" title="Name" />
             <PropertyColumn property="(field) => field.label" title="Label" />
             <TemplateColumn title="Type" Context="field">
-                <Badge>@ContentTypeDetailPlugin.typeTitle(field)</Badge>
+                <span class="field-type-cell">
+                    @if (isFieldType(field.type)) {
+                        <Icon value="@FIELD_TYPES[field.type].icon" />
+                    }
+                    <Badge>@ContentTypeDetailPlugin.typeTitle(field)</Badge>
+                </span>
             </TemplateColumn>
             <TemplateColumn title="Required" Context="field"><YesNo value="@(field.required ?? false)" /></TemplateColumn>
             <TemplateColumn title="Unique" Context="field"><YesNo value="@(field.unique ?? false)" /></TemplateColumn>
             <PropertyColumn property="(field) => field.description" title="Description" />
             <TemplateColumn title="Actions" Context="field">
-                <ActionButton label="Edit" intent="primary" aria-label="@(`Edit ${field.name}`)" @onclick="() => this.open('edit', field)" />
-                <ActionButtonDelete aria-label="@(`Delete ${field.name}`)" @onclick="() => this.open('delete', field)" />
+                <ActionButtons>
+                    <ActionButton iconName="@IconName.Edit" label="Edit" intent="primary" aria-label="@(`Edit ${field.name}`)" @onclick="() => this.open('edit', field)" />
+                    <ActionButtonDelete aria-label="@(`Delete ${field.name}`)" @onclick="() => this.open('delete', field)" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

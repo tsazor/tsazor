@@ -1,9 +1,10 @@
 @page "/primitives"
+@import * as Icons from "@tsazor/fluent-icons"
 
 <h1>Layout &amp; Primitives</h1>
 <p class="intro">
     The W1 components: layout primitives driven purely by <code>--fui-*</code> tokens,
-    the inline SVG icon set, status chips, alerts, breadcrumb and a controlled pagination.
+    the Fluent System Icons, status chips, alerts, breadcrumb and a controlled pagination.
 </p>
 
 <div class="demo">
@@ -36,16 +37,16 @@
 </div>
 
 <div class="demo">
-    <h2>Icons (inline SVG set)</h2>
+    <h2>Icons (Fluent System Icons, <code>@@tsazor/fluent-icons</code>)</h2>
     <div class="demo-row">
-        <Icon name="search" size="20" />
-        <Icon name="check" size="20" />
-        <Icon name="close" size="20" />
-        <Icon name="add" size="20" />
-        <Icon name="chevron-left" size="20" />
-        <Icon name="chevron-right" size="20" />
-        <Icon name="arrow-left" size="20" />
-        <Icon name="arrow-right" size="20" />
+        <Icon value="@Icons.Regular.Size20.Search" />
+        <Icon value="@Icons.Regular.Size20.Checkmark" />
+        <Icon value="@Icons.Regular.Size20.Dismiss" />
+        <Icon value="@Icons.Regular.Size20.Add" />
+        <Icon value="@Icons.Regular.Size20.ChevronLeft" />
+        <Icon value="@Icons.Regular.Size20.ChevronRight" />
+        <Icon value="@Icons.Filled.Size20.Heart" color="var(--fui-color-red-1)" title="Liked" />
+        <Icon value="@Icons.Regular.Size24.Settings" />
     </div>
 </div>
 

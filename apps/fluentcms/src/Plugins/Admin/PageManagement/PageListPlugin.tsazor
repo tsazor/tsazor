@@ -13,13 +13,13 @@
             <PropertyColumn property="(page) => this.layoutName(page.layoutId)" title="Layout" />
             <TemplateColumn title="Locked" Context="page"><YesNo value="@page.locked" /></TemplateColumn>
             <TemplateColumn title="Actions" Context="page">
-                <Stack direction="horizontal" gap="xs" wrap>
+                <ActionButtons>
                     @if (!page.locked) {
                         <ActionButtonEdit href="@this.getUrl("Update Page", { id: page.id })" />
                         <ActionButtonDelete visible="@(page.path !== "/")" @onclick="() => this.selected = page" aria-label="@(`Delete ${page.title}`)" />
                     }
-                    <Button href="@(page.fullPath ?? "/")" appearance="subtle" intent="success" size="small" target="_blank" ariaLabel="@(`Open ${page.title}`)">Open</Button>
-                </Stack>
+                    <ActionButton iconName="@IconName.Eye" intent="success" label="Open" href="@(page.fullPath ?? "/")" target="_blank" aria-label="@(`Open ${page.title}`)" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

@@ -18,12 +18,12 @@
                 <span class="token">@(this.shown === token.id ? `${token.key}:${token.secret}` : "***********************************")</span>
             </TemplateColumn>
             <TemplateColumn title="Actions" Context="token">
-                <Stack direction="horizontal" gap="xs" wrap>
-                    <Button appearance="subtle" size="small" ariaLabel="@(`${this.shown === token.id ? "Hide" : "Show"} the token of ${token.name}`)" onClick="() => this.shown = this.shown === token.id ? undefined : token.id">@(this.shown === token.id ? "Hide" : "Show")</Button>
-                    <Button appearance="subtle" intent="success" size="small" ariaLabel="@(`Re-Generate the token of ${token.name}`)" onClick="() => this.confirm(token, 'regenerate')">Re-Generate</Button>
+                <ActionButtons>
+                    <ActionButton iconName="@(this.shown === token.id ? IconName.EyeSlash : IconName.Eye)" label="@(this.shown === token.id ? "Hide" : "Show")" aria-label="@(`${this.shown === token.id ? "Hide" : "Show"} the token of ${token.name}`)" @onclick="() => this.shown = this.shown === token.id ? undefined : token.id" />
+                    <ActionButton iconName="@IconName.Refresh" intent="success" label="Re-Generate" aria-label="@(`Re-Generate the token of ${token.name}`)" @onclick="() => this.confirm(token, 'regenerate')" />
                     <ActionButtonEdit href="@this.getUrl("Update Api Token", { id: token.id })" />
                     <ActionButtonDelete visible="@(token.key !== this.ownKey)" @onclick="() => this.confirm(token, 'delete')" aria-label="@(`Delete ${token.name}`)" />
-                </Stack>
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

@@ -21,8 +21,10 @@
             <PropertyColumn property="(site) => this.layoutName(site.detailLayoutId)" title="Detail Layout" />
             <PropertyColumn property="(site) => this.layoutName(site.editLayoutId)" title="Edit Layout" />
             <TemplateColumn title="Actions" Context="site">
-                <ActionButtonEdit href="@this.getUrl("Update Site", { id: site.id })" />
-                <ActionButtonDelete visible="@(site.id !== this.viewState.site.id)" @onclick="() => this.selected = site" aria-label="@(`Delete ${site.name}`)" />
+                <ActionButtons>
+                    <ActionButtonEdit href="@this.getUrl("Update Site", { id: site.id })" />
+                    <ActionButtonDelete visible="@(site.id !== this.viewState.site.id)" @onclick="() => this.selected = site" aria-label="@(`Delete ${site.name}`)" />
+                </ActionButtons>
             </TemplateColumn>
         </DataGrid>
     </ChildContent>

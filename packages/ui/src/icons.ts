@@ -17,19 +17,38 @@ export interface IconValue {
 const DEFAULT_VIEW_BOX = "0 0 24 24";
 
 /**
+ * The root attributes an icon's drawing inherits: an outline icon says `fill="none" stroke="currentColor"` on its
+ * `<svg>`, not on each path.
+ */
+const PRESENTATION = [
+  "fill", "fill-rule", "fill-opacity", "clip-rule", "opacity",
+  "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-dasharray", "stroke-opacity",
+];
+
+/**
  * An app's own icon (Fluent UI Blazor's `new Icon(name, variant, size, content)`): the inner markup of an SVG, or a
- * whole `<svg>`, whose viewBox (else its width and height) is kept. Without either, the viewBox is `0 0 24 24`.
+ * whole `<svg>`, whose viewBox (else its width and height) is kept. Without either, the viewBox is `0 0 24 24`. A whole
+ * `<svg>`'s fill and stroke attributes move onto a `<g>` around its content, so an outline icon stays an outline under
+ * the skins' `fill="currentColor"`.
  */
 export function icon(name: string, svg: string, viewBox?: string): IconValue {
   const whole = /^\s*<svg\b([^>]*)>([\s\S]*)<\/svg>\s*$/i.exec(svg);
   if (whole === null) return { name, viewBox: viewBox ?? DEFAULT_VIEW_BOX, content: svg.trim() };
   const attributes = whole[1] ?? "";
   const attribute = (attributeName: string): string | undefined =>
-    new RegExp(`\\b${attributeName}\\s*=\\s*["']([^"']*)["']`, "i").exec(attributes)?.[1];
+    new RegExp(`(?:^|\\s)${attributeName}\\s*=\\s*["']([^"']*)["']`, "i").exec(attributes)?.[1];
   const width = Number.parseFloat(attribute("width") ?? "");
   const height = Number.parseFloat(attribute("height") ?? "");
   const sized = width > 0 && height > 0 ? `0 0 ${width} ${height}` : undefined;
-  return { name, viewBox: viewBox ?? attribute("viewBox") ?? sized ?? DEFAULT_VIEW_BOX, content: (whole[2] ?? "").trim() };
+  const inner = (whole[2] ?? "").trim();
+  const inherited = PRESENTATION.flatMap((attributeName) => {
+    const value = attribute(attributeName);
+    // The skins' Icon draws in currentColor already.
+    if (value === undefined || (attributeName === "fill" && value === "currentColor")) return [];
+    return [`${attributeName}="${value}"`];
+  });
+  const content = inherited.length === 0 ? inner : `<g ${inherited.join(" ")}>${inner}</g>`;
+  return { name, viewBox: viewBox ?? attribute("viewBox") ?? sized ?? DEFAULT_VIEW_BOX, content };
 }
 
 /**
@@ -53,6 +72,7 @@ function stroke(name: string, d: string): IconValue {
 /**
  * The small set both skins' `Icon` draws by `name` (chevrons, close, check, arrows, search, add, remove, files). The
  * full sets are the generated packages; this one stays so `name="close"` keeps working.
+ * @deprecated Use a generated set (`@tsazor/fluent-icons`, `@tsazor/bootstrap-icons`) or `icon()`.
  */
 export const builtInIcons: Readonly<Record<string, IconValue>> = Object.freeze(
   Object.fromEntries(

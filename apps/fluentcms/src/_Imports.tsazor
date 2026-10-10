@@ -10,3 +10,5 @@
 @* The app's own (Blazor: @using FluentCMS, @using FluentCMS.Web.ApiClients). *@
 @import { ViewState } from "./ViewState"
 @import { FluentCmsClient } from "./api/fluent-cms"
+@* FluentCMS's icons (Blazor: @using FluentCMS.Web.UI.Components, its IconName). *@
+@import { IconName } from "./Components/IconName"
