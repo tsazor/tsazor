@@ -253,3 +253,7 @@ a { color: var(--fui-color-brand-1); }
   border: 1px solid var(--fui-stroke-2);
   border-radius: var(--fui-radius-md);
 }
+
+.chip-gap {
+  margin-top: 8px;
+}

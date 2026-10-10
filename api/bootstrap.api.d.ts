@@ -131,6 +131,46 @@ export default class Checkbox extends InputBase<boolean> {
     id?: string;
 }
 
+// Chip
+export default class Chip<TValue> extends ComponentBase {
+    text?: string;
+    value?: TValue;
+    intent: Intent;
+    appearance: Appearance;
+    size: "small" | "medium";
+    shape: "circular" | "rounded";
+    icon?: IconValue;
+    avatarContent?: RenderFragment;
+    href?: string;
+    target?: string;
+    disabled: undefined;
+    selected: undefined;
+    selectedChanged?: EventCallback<boolean>;
+    onClick?: EventCallback<MouseEvent>;
+    onClose?: EventCallback<TValue | undefined>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+    set?: ChipSetModel<TValue>;
+}
+
+// ChipSet
+export default class ChipSet<TValue> extends ComponentBase {
+    selectionMode: ChipSelectionMode;
+    selectedValue?: TValue;
+    selectedValueChanged?: EventCallback<TValue | undefined>;
+    selectedValues?: readonly TValue[];
+    selectedValuesChanged?: EventCallback<TValue[]>;
+    checkMark: undefined;
+    allClosable: undefined;
+    readOnly: undefined;
+    disabled: undefined;
+    comparer?: (a: TValue, b: TValue) => boolean;
+    onClose?: EventCallback<TValue>;
+    ariaLabel?: string;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Collapse
 export default class Collapse extends ComponentBase {
     isOpen: boolean;

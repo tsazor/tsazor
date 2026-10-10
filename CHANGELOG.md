@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Chip` and `ChipSet` (MudBlazor's `MudChip`,
+  `MudChipSet`; Fluent 2's Tag). A set's `selectionMode` is single (one chip stays selected), toggle, multiple or none,
+  two-way with `@bind-selectedValue(s)`; `checkMark`, `allClosable`, `readOnly`, `comparer`, `onClose`. A chip is a
+  toggle button (`aria-pressed`) in a set, and alone a label, a button, a link or a toggle (`@bind-selected`); its close
+  button sits beside it (not inside: no nested buttons), and Delete or Backspace closes it, the focus moving to the next
+  chip. `intent`, `appearance`, `size`, `shape`, `icon`, `avatarContent`. `@tsazor/ui`: `ChipSetModel`,
+  `nextChipSelection`.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Avatar` (Fluent UI Blazor's `FluentAvatar`): `image`,
   else the initials of `name` (Fluent UI's rules: first and last word, no text in brackets, none for a phone number),
   else an icon; `color` neutral, brand, colorful (picked by a hash of the name, or `colorId`) or one of Fluent 2's 30

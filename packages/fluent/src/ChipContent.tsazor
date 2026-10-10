@@ -1,0 +1,21 @@
+@** What a Chip shows, in its button, link or label: a check mark (selected, in a set with checkMark), an avatar or an
+    icon, then the text. The avatar is decoration: the text names the chip. Internal to Chip. *@
+@import type { IconValue } from "@tsazor/ui"
+@import { Checkmark12Regular } from "./core-icons"
+
+@if (checked) {
+    <Icon value="@Checkmark12Regular" class="fui-chip__icon" />
+} else if (avatarContent) {
+    <span class="fui-chip__media" aria-hidden="true">@avatarContent</span>
+} else if (icon) {
+    <Icon value="@icon" size="16" class="fui-chip__icon" />
+}
+<span class="fui-chip__text">@if (childContent) {@childContent} else {@text}</span>
+
+@code {
+    @Parameter() checked = false;
+    @Parameter() icon?: IconValue;
+    @Parameter() avatarContent?: RenderFragment;
+    @Parameter() text = "";
+    @Parameter() childContent?: RenderFragment;
+}

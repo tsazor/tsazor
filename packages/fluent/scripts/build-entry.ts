@@ -31,7 +31,7 @@ try {
 }
 
 /** Compiled for the components that use them, not exported (DataGrid's Defer). */
-const INTERNAL: ReadonlySet<string> = new Set(["Defer", "TreeViewNode"]);
+const INTERNAL: ReadonlySet<string> = new Set(["Defer", "TreeViewNode", "ChipContent"]);
 
 /** Extra export names (the shared vocabulary): Bootstrap's names for the menu button and the form. */
 const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem", Form: "FluentForm" };

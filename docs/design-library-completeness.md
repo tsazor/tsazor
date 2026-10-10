@@ -58,7 +58,7 @@ these.
 | Icons: a full set plus an app's own (F17; done 2026-10-10) | Icons (Fluent System Icons, typed, tree-shaken) | Icon (Material) | A |
 | Markdown (sanitized; `@tsazor/markdown`, done 2026-10-10) | none | separate package | A |
 | Avatar (done 2026-10-10) | Avatar | Avatar | A |
-| Chip / ChipSet | none | Chip, ChipSet | A |
+| Chip / ChipSet (done 2026-10-10) | none | Chip, ChipSet | A |
 | Timeline | none | Timeline | A |
 | Stepper / Wizard | Wizard | Stepper | A |
 | Splitter | Splitter | SplitPanel | A |

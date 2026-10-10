@@ -19,6 +19,27 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Chips</Typography>
+    <ChipSet TValue="string" SelectionMode="multiple" CheckMark="@true" AriaLabel="Breads" @bind-SelectedValues="breads">
+        @foreach (const bread of allBreads) {
+            <Chip Text="@bread" />
+        }
+    </ChipSet>
+    <Typography Variant="caption"><span class="chip-choice">@(breads.length === 0 ? "No bread chosen." : `Chosen: ${breads.join(", ")}.`)</span></Typography>
+    <ChipSet TValue="string" SelectionMode="none" AllClosable="@true" AriaLabel="Tags" OnClose="@((tag: string) => this.tags = this.tags.filter((t) => t !== tag))" class="tag-set">
+        @foreach (const tag of tags) {
+            <Chip @key="tag" Text="@tag" Intent="info" />
+        }
+    </ChipSet>
+    <div class="demo-row chip-row">
+        <Chip TValue="string" Text="Solid" Appearance="solid" Intent="primary" />
+        <Chip TValue="string" Text="Outline" Appearance="outline" Intent="success" />
+        <Chip TValue="string" Text="Small" Size="small" Intent="warning" />
+        <Chip TValue="string" Text="Rounded" Shape="rounded" Intent="danger" />
+    </div>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Markdown</Typography>
     <div class="markdown-editor">
         <TextArea Label="Text" Rows="10" Immediate="@true" @bind-Value="text" />
@@ -39,6 +60,9 @@
 @code {
     private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra"];
     private picked = "";
+    private readonly allBreads = ["Rye", "Sourdough", "Spelt", "Pretzel"];
+    private breads: string[] = ["Rye"];
+    private tags = ["urgent", "gluten-free", "pickup"];
 
     /** Bootstrap draws tables with its `.table` class; Fluent's tokens style them in markdown.css. */
     private readonly tableClass = skin === "bootstrap" ? "table" : undefined;

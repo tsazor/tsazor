@@ -1,0 +1,84 @@
+@** A set of chips (MudBlazor's MudChipSet), a named group (role="group"): `selectionMode` single (the default: one
+    chip stays selected) | toggle (one or none) | multiple | none, the selection two-way with @bind-selectedValue or
+    @bind-selectedValues. `checkMark` marks a selected chip; `allClosable` gives every chip a close button, and
+    `onClose` gets a closed chip's value. Delete or Backspace closes the focused chip, and the focus moves to the chip
+    that takes its place. The chips inside take the value type from the set. *@
+@typeparam TValue
+@attribute @CascadingTypeParameter("TValue")
+@import { ChipSetModel, type ChipSelectionMode } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<CascadingValue Value="model">
+    <div role="group" @attributes="@this.setAttributes" @ref="root">@childContent</div>
+</CascadingValue>
+
+@code {
+    /** single (default), toggle, multiple or none. */
+    @Parameter() selectionMode: ChipSelectionMode = "single";
+    /** The selected chip's value (single, toggle; two-way with @bind-selectedValue). */
+    @Parameter() selectedValue?: TValue;
+    @Parameter() selectedValueChanged?: EventCallback<TValue | undefined>;
+    /** The selected chips' values (multiple; two-way with @bind-selectedValues). */
+    @Parameter() selectedValues?: readonly TValue[];
+    @Parameter() selectedValuesChanged?: EventCallback<TValue[]>;
+    /** A selected chip shows a check mark. */
+    @Parameter() checkMark = false;
+    /** Every chip gets a close button. */
+    @Parameter() allClosable = false;
+    /** The chips can't be selected or closed. */
+    @Parameter() readOnly = false;
+    @Parameter() disabled = false;
+    /** How two values compare (MudBlazor's `Comparer`); by identity by default. */
+    @Parameter() comparer?: (a: TValue, b: TValue) => boolean;
+    /** Receives a closed chip's value. */
+    @Parameter() onClose?: EventCallback<TValue>;
+    /** Names the group for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** The Chips. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private root?: HTMLDivElement;
+    private readonly model = new ChipSetModel<TValue>();
+    /** The selection the parameters gave last: a re-render with the same ones keeps a click's selection. */
+    private given?: readonly TValue[];
+
+    private get setAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-chip-set", "aria-label": this.ariaLabel }, this.additionalAttributes);
+    }
+
+    protected override onParametersSet(): void {
+        const model = this.model;
+        model.mode = this.selectionMode;
+        model.checkMark = this.checkMark;
+        model.allClosable = this.allClosable;
+        model.readOnly = this.readOnly;
+        model.disabled = this.disabled;
+        model.equals = this.comparer ?? Object.is;
+        model.onSelect = (selected) => this.report(selected);
+        model.onClose = (value) => this.onClose?.invokeAsync(value);
+        const given = this.selectedValues ?? (this.selectedValue === undefined ? [] : [this.selectedValue]);
+        const same = this.given !== undefined && given.length === this.given.length && given.every((value, i) => model.equals(value, this.given![i] as TValue));
+        if (!same) {
+            this.given = given;
+            model.setSelected(given);
+        }
+    }
+
+    private async report(selected: TValue[]): Promise<void> {
+        this.given = selected;
+        await this.selectedValuesChanged?.invokeAsync(selected);
+        await this.selectedValueChanged?.invokeAsync(selected[0]);
+    }
+
+    /** After a chip closed from the keyboard: the focus goes to the chip in its place, else the last one. */
+    protected override onAfterRender(): void {
+        const index = this.model.focusAfterClose;
+        if (index === undefined || this.root === undefined) return;
+        this.model.focusAfterClose = undefined;
+        const chips = [...this.root.querySelectorAll<HTMLElement>(":scope > [data-chip]")];
+        const chip = chips[Math.min(index, chips.length - 1)];
+        (chip?.querySelector<HTMLElement>("button:not(:disabled), a[href]") ?? this.root).focus();
+    }
+}

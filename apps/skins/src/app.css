@@ -105,3 +105,9 @@ body {
   border: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: 6px;
 }
+
+/* The Content page: the chip rows stand apart. */
+.tag-set,
+.chip-row {
+  margin-top: 0.5rem;
+}

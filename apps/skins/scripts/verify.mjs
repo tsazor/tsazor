@@ -205,6 +205,17 @@ try {
     await page.waitForFunction(() => document.querySelector(".picked")?.textContent === "Picked Marta Bauer.");
     say(true, "avatar: with onClick it is a button that Enter clicks");
 
+    /* Content: chips. */
+    const breads = page.getByRole("group", { name: "Breads" });
+    await breads.getByRole("button", { name: "Spelt" }).click();
+    await page.waitForFunction(() => document.querySelector(".chip-choice")?.textContent === "Chosen: Rye, Spelt.");
+    say((await breads.getByRole("button", { name: "Spelt" }).getAttribute("aria-pressed")) === "true", "chips: a click selects a chip (aria-pressed), two-way bound");
+    const tags = page.getByRole("group", { name: "Tags" });
+    await tags.getByRole("button", { name: "Remove gluten-free" }).focus();
+    await page.keyboard.press("Delete");
+    await page.waitForFunction(() => !document.querySelector(".tag-set")?.textContent?.includes("gluten-free"));
+    say((await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))) === "Remove pickup", "chips: Delete closes a chip and the focus moves to the next");
+
     /* Content: Markdown, rendered and sanitized in a real browser (unit tests can't: DOMPurify needs a real DOM). */
     const preview = page.locator(".markdown-preview .tz-markdown");
     say((await preview.locator("h2").textContent()) === "Order 1042", "markdown: the text renders as HTML");

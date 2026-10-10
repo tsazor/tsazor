@@ -70,6 +70,29 @@ export type AvatarNamedColor = (typeof AVATAR_COLORS)[number];
 // builtInIcons
 export declare const builtInIcons: Readonly<Record<string, IconValue>>;
 
+// ChipSelectionMode
+export type ChipSelectionMode = "none" | "single" | "toggle" | "multiple";
+
+// ChipSetModel
+export declare class ChipSetModel<T> {
+    #private;
+    mode: ChipSelectionMode;
+    checkMark: boolean;
+    allClosable: boolean;
+    readOnly: boolean;
+    disabled: boolean;
+    equals: (a: T, b: T) => boolean;
+    onSelect?: (selected: T[]) => Promise<void> | void;
+    onClose?: (value: T) => Promise<void> | void;
+    focusAfterClose: number | undefined;
+    get selected(): readonly T[];
+    setSelected(selected: readonly T[]): void;
+    isSelected(value: T): boolean;
+    click(value: T): Promise<void>;
+    close(value: T, index?: number): Promise<void>;
+    subscribe(listener: () => void): () => void;
+}
+
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
 
@@ -292,6 +315,9 @@ export declare function isTopLayer(key: object): boolean;
 
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;
+
+// nextChipSelection
+export declare function nextChipSelection<T>(mode: ChipSelectionMode, selected: readonly T[], value: T, equals?: (a: T, b: T) => boolean): T[];
 
 // openLayer
 export declare function openLayer(key: object): () => void;

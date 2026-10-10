@@ -1,0 +1,157 @@
+@** A chip in Bootstrap's look (Bootstrap has none; MudBlazor's MudChip, the Fluent skin's parameters): a pill for a
+    filter, a tag or a choice. In a ChipSet it is selected by a click (a toggle button, `aria-pressed`); alone it is a
+    label, a button (onClick), a link (`href`) or a toggle (`@bind-selected`). With `onClose` (or the set's
+    allClosable) it has a close button (`.btn-close`), and Delete or Backspace closes it. `intent` and `appearance`
+    (subtle by default) color it, `size` small | medium, `shape` circular (default) | rounded. *@
+@typeparam TValue
+@import { ChipSetModel, type Appearance, type IconValue, type Intent } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { backgroundColor, textColor } from "./vocabulary"
+
+<span data-chip @attributes="@withClass(this.chipClass, additionalAttributes)">
+    @if (href) {
+        <a class="@this.primaryClass" href="@(this.isDisabled ? null : href)" target="@target" rel="@this.linkRel" aria-disabled="@(this.isDisabled ? "true" : null)" @onkeydown="handleKeydown">
+            <ChipContent icon="@icon" avatarContent="@avatarContent" text="@this.label" childContent="@childContent" />
+        </a>
+    } else if (this.interactive) {
+        <button type="button" class="@this.primaryClass" aria-pressed="@this.pressed" disabled="@this.isDisabled" @onclick="handleClick" @onkeydown="handleKeydown">
+            <ChipContent checked="@(this.isSelected && (this.set?.checkMark ?? false))" icon="@icon" avatarContent="@avatarContent" text="@this.label" childContent="@childContent" />
+        </button>
+    } else {
+        <span class="@this.primaryClass">
+            <ChipContent icon="@icon" avatarContent="@avatarContent" text="@this.label" childContent="@childContent" />
+        </span>
+    }
+    @if (this.closable) {
+        <button type="button" class="btn-close align-self-center me-2" style="font-size: 0.625em" data-bs-theme="@(this.onFill ? "dark" : null)" aria-label="@(`Remove ${this.label}`)" disabled="@this.isDisabled" @onclick="close" @onkeydown="handleKeydown"></button>
+    }
+</span>
+
+@code {
+    /** The chip's text (MudBlazor's `Text`); without it the value's. */
+    @Parameter() text?: string;
+    /** What the chip stands for in its set; the text by default. */
+    @Parameter() value?: TValue;
+    /** The color: neutral (default), primary, success, danger, warning, info. */
+    @Parameter() intent: Intent = "neutral";
+    /** The weight: subtle (default), solid, outline or transparent. */
+    @Parameter() appearance: Appearance = "subtle";
+    /** small | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** circular (default) | rounded (MudBlazor's `Label`). */
+    @Parameter() shape: "circular" | "rounded" = "circular";
+    /** An icon before the text. */
+    @Parameter() icon?: IconValue;
+    /** An Avatar before the text, instead of the icon. */
+    @Parameter() avatarContent?: RenderFragment;
+    /** Makes the chip a link. */
+    @Parameter() href?: string;
+    /** The link's target; `_blank` gets rel="noopener". */
+    @Parameter() target?: string;
+    @Parameter() disabled = false;
+    /** Selected, alone (in a set, the set's selection decides). */
+    @Parameter() selected = false;
+    /** Makes a chip alone a toggle (two-way with @bind-selected). */
+    @Parameter() selectedChanged?: EventCallback<boolean>;
+    /** Makes the chip a button. */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** Gives the chip a close button; receives its value. */
+    @Parameter() onClose?: EventCallback<TValue | undefined>;
+    /** The text, instead of `text` (an element, a formatted value). */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the chip (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** Resolved from the nearest ChipSet. */
+    @CascadingParameter({ type: ChipSetModel }) set?: ChipSetModel<TValue>;
+
+    private unsubscribe?: () => void;
+
+    protected override onInitialized(): void {
+        this.unsubscribe = this.set?.subscribe(() => this.stateHasChanged());
+    }
+
+    dispose(): void {
+        this.unsubscribe?.();
+    }
+
+    /** What the set compares: `value`, else the text. */
+    private get key(): TValue {
+        return (this.value ?? this.text) as TValue;
+    }
+
+    private get label(): string {
+        return this.text ?? (this.value === undefined ? "" : String(this.value));
+    }
+
+    private get selectable(): boolean {
+        return this.set !== undefined ? this.set.mode !== "none" : this.selectedChanged !== undefined;
+    }
+
+    private get interactive(): boolean {
+        return this.selectable || this.onClick !== undefined;
+    }
+
+    private get isSelected(): boolean {
+        return this.set !== undefined ? this.set.isSelected(this.key) : this.selected;
+    }
+
+    private get isDisabled(): boolean {
+        return this.disabled || (this.set?.disabled ?? false);
+    }
+
+    private get closable(): boolean {
+        return (this.onClose !== undefined || (this.set?.allClosable ?? false)) && !(this.set?.readOnly ?? false);
+    }
+
+    private get pressed(): string | null {
+        return this.selectable ? (this.isSelected ? "true" : "false") : null;
+    }
+
+    private get linkRel(): string | null {
+        return this.target === "_blank" ? "noopener noreferrer" : null;
+    }
+
+    /** A solid or selected chip has a strong fill: the close button turns light on it. */
+    private get onFill(): boolean {
+        return this.isSelected || this.appearance === "solid";
+    }
+
+    private get chipClass(): string {
+        const parts = ["d-inline-flex", "align-items-stretch", "align-middle", "overflow-hidden", "border", this.shape === "rounded" ? "rounded" : "rounded-pill"];
+        if (this.isSelected) parts.push("text-bg-primary", "border-primary");
+        else if (this.appearance === "solid") parts.push(`text-bg-${backgroundColor(this.intent)}`, `border-${backgroundColor(this.intent)}`);
+        else if (this.appearance === "subtle") parts.push(`bg-${textColor(this.intent)}-subtle`, `text-${textColor(this.intent)}-emphasis`, `border-${textColor(this.intent)}-subtle`);
+        else if (this.appearance === "outline") parts.push(`text-${textColor(this.intent)}`, `border-${textColor(this.intent)}`);
+        else parts.push(`text-${textColor(this.intent)}`, "border-0");
+        if (this.size === "small") parts.push("small");
+        if (this.isDisabled) parts.push("opacity-50");
+        return parts.join(" ");
+    }
+
+    private get primaryClass(): string {
+        const spacing = this.size === "small" ? "px-2 py-0" : "px-3 py-1";
+        return `btn btn-sm border-0 rounded-0 text-reset d-inline-flex align-items-center gap-1 ${spacing}`;
+    }
+
+    private async handleClick(e: MouseEvent): Promise<void> {
+        if (this.set !== undefined) await this.set.click(this.key);
+        else if (this.selectedChanged !== undefined) await this.selectedChanged.invokeAsync(!this.selected);
+        await this.onClick?.invokeAsync(e);
+    }
+
+    private async close(): Promise<void> {
+        await this.onClose?.invokeAsync(this.value ?? (this.text as TValue | undefined));
+        await this.set?.close(this.key);
+    }
+
+    /** Delete or Backspace closes a closable chip; the set moves the focus to the chip that takes its place. */
+    private async handleKeydown(e: KeyboardEvent): Promise<void> {
+        if (!this.closable || this.isDisabled || (e.key !== "Delete" && e.key !== "Backspace")) return;
+        e.preventDefault();
+        const chip = (e.currentTarget as HTMLElement).closest("[data-chip]");
+        const chips = chip?.parentElement ? [...chip.parentElement.querySelectorAll(":scope > [data-chip]")] : [];
+        await this.onClose?.invokeAsync(this.value ?? (this.text as TValue | undefined));
+        await this.set?.close(this.key, chip ? chips.indexOf(chip) : undefined);
+    }
+}
