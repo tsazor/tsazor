@@ -40,6 +40,25 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Timeline</Typography>
+    <div class="timelines">
+        <Timeline Position="end" aria-label="Order history" class="order-history">
+            @foreach (const step of history) {
+                <TimelineItem Intent="@step.intent" Appearance="@step.appearance">
+                    <ItemOpposite>@step.when</ItemOpposite>
+                    <ItemContent>@step.what</ItemContent>
+                </TimelineItem>
+            }
+        </Timeline>
+        <Timeline aria-label="Week" class="week">
+            <TimelineItem Intent="success" Appearance="solid"><ItemContent>Monday: rye</ItemContent></TimelineItem>
+            <TimelineItem Intent="primary"><ItemContent>Tuesday: spelt</ItemContent></TimelineItem>
+            <TimelineItem><ItemContent>Wednesday: pretzels</ItemContent></TimelineItem>
+        </Timeline>
+    </div>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Markdown</Typography>
     <div class="markdown-editor">
         <TextArea Label="Text" Rows="10" Immediate="@true" @bind-Value="text" />
@@ -60,6 +79,11 @@
 @code {
     private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra"];
     private picked = "";
+    private readonly history = [
+        { when: "06:10", what: "Baked", intent: "success" as const, appearance: "solid" as const },
+        { when: "07:30", what: "Packed", intent: "primary" as const, appearance: "solid" as const },
+        { when: "12:00 – 12:30", what: "Picked up at the back door", intent: "neutral" as const, appearance: "outline" as const },
+    ];
     private readonly allBreads = ["Rye", "Sourdough", "Spelt", "Pretzel"];
     private breads: string[] = ["Rye"];
     private tags = ["urgent", "gluten-free", "pickup"];

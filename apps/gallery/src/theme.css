@@ -257,3 +257,10 @@ a { color: var(--fui-color-brand-1); }
 .chip-gap {
   margin-top: 8px;
 }
+
+.timeline-demos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}

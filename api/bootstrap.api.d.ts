@@ -623,6 +623,32 @@ export default class TextInput extends InputBase<string> {
     immediateDelay: number;
 }
 
+// Timeline
+export default class Timeline extends ComponentBase {
+    orientation: Orientation;
+    position: "alternate" | "start" | "end";
+    align: "start" | "center" | "end";
+    reverse: undefined;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// TimelineItem
+export default class TimelineItem extends ComponentBase {
+    icon?: IconValue;
+    intent: Intent;
+    appearance: Appearance;
+    size: "small" | "medium" | "large";
+    hideDot: undefined;
+    align?: "start" | "center" | "end";
+    itemContent?: RenderFragment;
+    itemOpposite?: RenderFragment;
+    itemDot?: RenderFragment;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+    timelineAlign?: "start" | "center" | "end";
+}
+
 // Toast: re-exported from @tsazor/ui
 
 // Toaster: re-exported from @tsazor/ui

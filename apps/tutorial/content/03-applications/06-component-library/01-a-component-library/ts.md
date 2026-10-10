@@ -47,6 +47,7 @@ weight: `solid` (the default), `outline`, `subtle` or `transparent`. `Size` take
 > focus handling.
 
 In your own app, install the package and its stylesheet (`npm install @tsazor/bootstrap
-bootstrap`) and import the CSS once in `Program.ts`: `import "bootstrap/dist/css/bootstrap.min.css";`.
+bootstrap`) and import the CSS once in `Program.ts`: `import "bootstrap/dist/css/bootstrap.min.css";`, then
+`import "@tsazor/bootstrap/tsazor-bootstrap.css";` for the components Bootstrap has no classes for (a timeline).
 The preview here does that for you. Put `@using @tsazor/bootstrap` in `_Imports.tsazor` to have the
 components in every file.

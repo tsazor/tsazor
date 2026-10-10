@@ -17,9 +17,11 @@
     @Parameter() selectionMode: ChipSelectionMode = "single";
     /** The selected chip's value (single, toggle; two-way with @bind-selectedValue). */
     @Parameter() selectedValue?: TValue;
+    /** Raised with the selected chip's value (undefined for none) when a click changes it. */
     @Parameter() selectedValueChanged?: EventCallback<TValue | undefined>;
     /** The selected chips' values (multiple; two-way with @bind-selectedValues). */
     @Parameter() selectedValues?: readonly TValue[];
+    /** Raised with the selected chips' values when a click changes them. */
     @Parameter() selectedValuesChanged?: EventCallback<TValue[]>;
     /** A selected chip shows a check mark. */
     @Parameter() checkMark = false;
@@ -27,6 +29,7 @@
     @Parameter() allClosable = false;
     /** The chips can't be selected or closed. */
     @Parameter() readOnly = false;
+    /** Greys every chip out. */
     @Parameter() disabled = false;
     /** How two values compare (MudBlazor's `Comparer`); by identity by default. */
     @Parameter() comparer?: (a: TValue, b: TValue) => boolean;

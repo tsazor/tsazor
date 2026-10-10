@@ -51,6 +51,7 @@
     @Parameter() href?: string;
     /** The link's target; `_blank` gets rel="noopener". */
     @Parameter() target?: string;
+    /** Greys the chip out; it can't be clicked or closed. */
     @Parameter() disabled = false;
     /** Selected, alone (in a set, the set's selection decides). */
     @Parameter() selected = false;

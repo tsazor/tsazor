@@ -68,7 +68,7 @@ it already has:
 "tsazor": {
   "components": "./dist/tsazor-components.json",
   "setup": {
-    "styles": ["bootstrap/dist/css/bootstrap.min.css"],
+    "styles": ["bootstrap/dist/css/bootstrap.min.css", "@tsazor/bootstrap/tsazor-bootstrap.css"],
     "services": "addBootstrap",
     "layout": ["ToastRegion"]
   }

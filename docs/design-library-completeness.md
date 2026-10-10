@@ -59,7 +59,7 @@ these.
 | Markdown (sanitized; `@tsazor/markdown`, done 2026-10-10) | none | separate package | A |
 | Avatar (done 2026-10-10) | Avatar | Avatar | A |
 | Chip / ChipSet (done 2026-10-10) | none | Chip, ChipSet | A |
-| Timeline | none | Timeline | A |
+| Timeline (done 2026-10-10) | none | Timeline | A |
 | Stepper / Wizard | Wizard | Stepper | A |
 | Splitter | Splitter | SplitPanel | A |
 | Toolbar | none on main (v4: Toolbar) | ToolBar | A |
@@ -132,3 +132,4 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L4 | `icon()` (`@tsazor/ui`) | Icons step 6, FluentCMS's own set: most of its SVGs say `fill="none" stroke="currentColor"` on the root. `icon()` kept only the viewBox and the inner markup, so under the skins' `fill="currentColor"` the outlines were drawn filled. And its `width` lookup matched `stroke-width` | The root's fill and stroke attributes move onto a `<g>` around the content; attributes are matched as whole names (2026-10-10; `packages/ui/test/icons.test.ts`) |
 | L5 | Tests of sanitized HTML | `@tsazor/markdown`'s first tests: under happy-dom (the environment of the skins' tests and of `@tsazor/testing`'s examples) DOMPurify keeps `onerror` and drops `<p>`, so a test sees unsanitized HTML; happy-dom also fetched an `<iframe>`'s URL and ran the `onerror` | The package tests under jsdom, and the skins app's gate checks the sanitizing in Edge, Firefox and WebKit (2026-10-10). An app that tests its own Markdown output needs jsdom too (README) |
 | L6 | `@tsazor/markdown`, accessibility | axe on the skins app's Content page: a task list's checkboxes had no name, and Bootstrap's pink inline code fell to 4.26:1 on the code background | The checkbox is named by its item's text; inline code takes the text color (2026-10-10) |
+| L7 | The skins' builds | Rebuilding a skin while a dev server ran (the owner's gallery and skins servers, mine): the build removed `dist/` first, the server read the missing files in the gap, cached the errors and lost track of the new files, so it served the old skin until a restart | The builds overwrite `dist/` in place and remove only what they didn't write (2026-10-10); a running dev server picks a rebuild up |

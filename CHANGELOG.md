@@ -5,6 +5,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap` (wave A): `Timeline` and `TimelineItem` (MudBlazor's `MudTimeline`): an ordered
+  list along a line, `orientation` vertical or horizontal, `position` alternate (default), start or end, `align`,
+  `reverse`; an item's `itemContent` (or child content), `itemOpposite` (a date) and dot (outline or solid, an
+  `intent`, small to large, an `icon`, `itemDot` or `hideDot`). The items share the timeline's tracks (CSS subgrid),
+  so the dots line up.
+- `@tsazor/bootstrap` has a stylesheet of its own for what Bootstrap has no classes for (Timeline so far), in
+  Bootstrap's variables: import `@tsazor/bootstrap/tsazor-bootstrap.css` after Bootstrap's (`npm create tsazor` does,
+  through `tsazor.setup`). The package now declares CSS as a side effect.
+- **Fix** the skins' and `@tsazor/markdown`'s builds overwrite `dist/` in place: a running dev server picks up a rebuild
+  (it kept the old one, L7).
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Chip` and `ChipSet` (MudBlazor's `MudChip`,
   `MudChipSet`; Fluent 2's Tag). A set's `selectionMode` is single (one chip stays selected), toggle, multiple or none,
   two-way with `@bind-selectedValue(s)`; `checkMark`, `allClosable`, `readOnly`, `comparer`, `onClose`. A chip is a

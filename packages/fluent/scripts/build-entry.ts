@@ -1,7 +1,7 @@
 import { compile } from "@tsazor/compiler";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const packageDir = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
@@ -17,7 +17,10 @@ const errors: CompileError[] = [];
 const exports: string[] = [];
 const cssChunks: string[] = [];
 
-await rm(distDir, { recursive: true, force: true });
+// A running dev server keeps reading dist while it is rebuilt: files are overwritten in place, and only the ones
+// this build didn't write are removed at the end. (Removing dist first left a dev server reading missing files and
+// caching the errors — L7.)
+const buildStart = Date.now();
 await mkdir(distDir, { recursive: true });
 
 // Design tokens ship first in fluent.css (component sidecars consume them).
@@ -176,3 +179,13 @@ await writeFile(
 await writeFile(path.join(distDir, "fluent.css"), `${cssChunks.join("\n")}\n`);
 
 console.log(`[tsazor/fluent] built ${files.length} components + fluent.css -> dist/`);
+
+/** Removes what an earlier build wrote and this one didn't (a component renamed or deleted). */
+async function removeStale(dir: string, since: number): Promise<void> {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) await removeStale(file, since);
+    else if ((await stat(file)).mtimeMs < since) await rm(file);
+  }
+}
+await removeStale(distDir, buildStart);

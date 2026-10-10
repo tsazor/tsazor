@@ -1,0 +1,206 @@
+/*
+ * Timeline — items along a line. The timeline is a grid of three tracks (the opposite content, the divider — a line,
+ * the dot, a line — and the content); each item is a row of it (a subgrid), so the dots of all items line up. The line runs through the gap between items (the content's padding), starts at the
+ * first dot and ends at the last.
+ */
+
+.fui-timeline {
+  --fui-timeline-line: var(--fui-stroke-2);
+  --fui-timeline-lead: 6px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  /* A taller box (a grid cell beside a longer timeline) doesn't spread the items apart. */
+  align-content: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+}
+
+.fui-timeline__item {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.fui-timeline--end {
+  grid-template-columns: auto auto 1fr;
+}
+
+.fui-timeline--start {
+  grid-template-columns: 1fr auto auto;
+}
+
+.fui-timeline__opposite,
+.fui-timeline__divider,
+.fui-timeline__content {
+  grid-row: 1;
+}
+
+.fui-timeline__opposite {
+  grid-column: 1;
+  text-align: end;
+  color: var(--fui-foreground-3);
+  font-size: var(--fui-font-size-caption-lg);
+}
+
+.fui-timeline__divider {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-inline: var(--fui-spacing-m);
+}
+
+.fui-timeline__content {
+  grid-column: 3;
+  min-width: 0;
+  padding-bottom: var(--fui-spacing-l);
+}
+
+.fui-timeline__item:last-child .fui-timeline__content {
+  padding-bottom: 0;
+}
+
+/* Content at the start: the opposite content moves to the end. */
+.fui-timeline--start .fui-timeline__content,
+.fui-timeline--alternate:not(.fui-timeline--reverse) .fui-timeline__item:nth-child(even) .fui-timeline__content,
+.fui-timeline--alternate.fui-timeline--reverse .fui-timeline__item:nth-child(odd) .fui-timeline__content {
+  grid-column: 1;
+  text-align: end;
+}
+
+.fui-timeline--start .fui-timeline__opposite,
+.fui-timeline--alternate:not(.fui-timeline--reverse) .fui-timeline__item:nth-child(even) .fui-timeline__opposite,
+.fui-timeline--alternate.fui-timeline--reverse .fui-timeline__item:nth-child(odd) .fui-timeline__opposite {
+  grid-column: 3;
+  text-align: start;
+}
+
+/* The line: before the dot and after it; the align decides which part is the short lead. */
+.fui-timeline__divider::before,
+.fui-timeline__divider::after {
+  content: "";
+  flex: 1 1 0;
+  width: 2px;
+  background: var(--fui-timeline-line);
+}
+
+.fui-timeline__item--align-start .fui-timeline__divider::before,
+.fui-timeline__item--align-end .fui-timeline__divider::after {
+  flex: none;
+  height: var(--fui-timeline-lead);
+}
+
+.fui-timeline__item:first-child .fui-timeline__divider::before,
+.fui-timeline__item:last-child .fui-timeline__divider::after {
+  background: transparent;
+}
+
+.fui-timeline__dot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--fui-timeline-dot, 16px);
+  height: var(--fui-timeline-dot, 16px);
+  border: 2px solid var(--fui-timeline-ink);
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-background-1);
+  color: var(--fui-timeline-ink);
+  box-sizing: border-box;
+}
+
+.fui-timeline__dot--medium {
+  --fui-timeline-dot: 24px;
+}
+
+.fui-timeline__dot--large {
+  --fui-timeline-dot: 32px;
+}
+
+.fui-timeline__dot--filled {
+  border-color: var(--fui-timeline-fill);
+  background: var(--fui-timeline-fill);
+  color: var(--fui-timeline-on-fill);
+}
+
+/* Color roles, as Badge has them. */
+.fui-timeline__dot--brand { --fui-timeline-fill: var(--fui-brand-background); --fui-timeline-on-fill: var(--fui-foreground-on-brand); --fui-timeline-ink: var(--fui-brand-background); }
+.fui-timeline__dot--neutral { --fui-timeline-fill: var(--fui-foreground-3); --fui-timeline-on-fill: var(--fui-background-1); --fui-timeline-ink: var(--fui-foreground-3); }
+.fui-timeline__dot--success { --fui-timeline-fill: var(--fui-color-green-filled); --fui-timeline-on-fill: #FFFFFF; --fui-timeline-ink: var(--fui-color-green-1); }
+.fui-timeline__dot--warning { --fui-timeline-fill: var(--fui-color-amber-filled); --fui-timeline-on-fill: #FFFFFF; --fui-timeline-ink: var(--fui-color-amber-1); }
+.fui-timeline__dot--danger { --fui-timeline-fill: var(--fui-color-red-filled); --fui-timeline-on-fill: #FFFFFF; --fui-timeline-ink: var(--fui-color-red-1); }
+.fui-timeline__dot--info { --fui-timeline-fill: var(--fui-color-blue-1); --fui-timeline-on-fill: #FFFFFF; --fui-timeline-ink: var(--fui-color-blue-1); }
+
+/* Horizontal: the items side by side, each a column of the opposite content, the divider and the content. */
+.fui-timeline--horizontal {
+  grid-template-columns: none;
+  grid-template-rows: 1fr auto 1fr;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.fui-timeline--horizontal.fui-timeline--end {
+  grid-template-rows: auto auto 1fr;
+}
+
+.fui-timeline--horizontal.fui-timeline--start {
+  grid-template-rows: 1fr auto auto;
+}
+
+.fui-timeline--horizontal .fui-timeline__item {
+  grid-column: auto;
+  grid-row: 1 / -1;
+  grid-template-columns: none;
+  grid-template-rows: subgrid;
+}
+
+.fui-timeline--horizontal :is(.fui-timeline__opposite, .fui-timeline__divider, .fui-timeline__content) {
+  grid-column: 1;
+  text-align: center;
+}
+
+.fui-timeline--horizontal .fui-timeline__opposite {
+  grid-row: 1;
+  align-self: end;
+}
+
+.fui-timeline--horizontal .fui-timeline__divider {
+  grid-row: 2;
+  flex-direction: row;
+  margin: var(--fui-spacing-s) 0;
+}
+
+.fui-timeline--horizontal .fui-timeline__content {
+  grid-row: 3;
+  padding: 0 var(--fui-spacing-s);
+}
+
+.fui-timeline--horizontal.fui-timeline--start .fui-timeline__content,
+.fui-timeline--horizontal.fui-timeline--alternate:not(.fui-timeline--reverse) .fui-timeline__item:nth-child(even) .fui-timeline__content,
+.fui-timeline--horizontal.fui-timeline--alternate.fui-timeline--reverse .fui-timeline__item:nth-child(odd) .fui-timeline__content {
+  grid-row: 1;
+  align-self: end;
+}
+
+.fui-timeline--horizontal.fui-timeline--start .fui-timeline__opposite,
+.fui-timeline--horizontal.fui-timeline--alternate:not(.fui-timeline--reverse) .fui-timeline__item:nth-child(even) .fui-timeline__opposite,
+.fui-timeline--horizontal.fui-timeline--alternate.fui-timeline--reverse .fui-timeline__item:nth-child(odd) .fui-timeline__opposite {
+  grid-row: 3;
+  align-self: start;
+}
+
+.fui-timeline--horizontal .fui-timeline__divider::before,
+.fui-timeline--horizontal .fui-timeline__divider::after {
+  width: auto;
+  height: 2px;
+}
+
+.fui-timeline--horizontal .fui-timeline__item--align-start .fui-timeline__divider::before,
+.fui-timeline--horizontal .fui-timeline__item--align-end .fui-timeline__divider::after {
+  width: var(--fui-timeline-lead);
+  height: 2px;
+}

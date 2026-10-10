@@ -6,7 +6,7 @@
 import { compile } from "@tsazor/compiler";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
-import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 
@@ -15,7 +15,10 @@ const srcDir = path.join(packageDir, "src");
 const distDir = path.join(packageDir, "dist");
 const NAME = "@tsazor/markdown";
 
-await rm(distDir, { recursive: true, force: true });
+// A running dev server keeps reading dist while it is rebuilt: files are overwritten in place, and only the ones
+// this build didn't write are removed at the end. (Removing dist first left a dev server reading missing files and
+// caching the errors — L7.)
+const buildStart = Date.now();
 await mkdir(distDir, { recursive: true });
 
 /** `./x.tsazor` and `./x` (a .ts helper) become the built `./x.js`. */
@@ -80,5 +83,16 @@ const index = [
 ].join("\n");
 await writeFile(path.join(distDir, "index.js"), `${index}\n`);
 await writeFile(path.join(distDir, "index.d.ts"), `${index}\nexport type { MarkdownOptions } from "./render-markdown.js";\n`);
-await copyFile(path.join(srcDir, "markdown.css"), path.join(distDir, "markdown.css"));
+// Written, not copied: a copy keeps the source's time, and removeStale would take it for stale.
+await writeFile(path.join(distDir, "markdown.css"), await readFile(path.join(srcDir, "markdown.css"), "utf8"));
 console.log(`[${NAME}] built ${files.length} component(s) -> dist/`);
+
+/** Removes what an earlier build wrote and this one didn't (a component renamed or deleted). */
+async function removeStale(dir: string, since: number): Promise<void> {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) await removeStale(file, since);
+    else if ((await stat(file)).mtimeMs < since) await rm(file);
+  }
+}
+await removeStale(distDir, buildStart);

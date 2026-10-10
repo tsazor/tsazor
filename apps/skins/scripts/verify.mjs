@@ -216,6 +216,17 @@ try {
     await page.waitForFunction(() => !document.querySelector(".tag-set")?.textContent?.includes("gluten-free"));
     say((await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))) === "Remove pickup", "chips: Delete closes a chip and the focus moves to the next");
 
+    /* Content: timelines, as laid out in the browser. */
+    const history = page.getByRole("list", { name: "Order history" });
+    const dotLefts = await history.locator("li [aria-hidden=true]").evaluateAll((dots) => dots.map((dot) => Math.round(dot.getBoundingClientRect().left)));
+    say(dotLefts.length === 3 && new Set(dotLefts).size === 1, `timeline: the dots line up, whatever the opposite content's width (${dotLefts.join(", ")})`);
+    const sides = await page.getByRole("list", { name: "Week" }).locator("li").evaluateAll((items) => items.map((li) => {
+      const dot = li.querySelector("[aria-hidden=true]").getBoundingClientRect();
+      const content = [...li.children].at(-1).getBoundingClientRect();
+      return content.left > dot.left ? "after" : "before";
+    }));
+    say(sides.join(" ") === "after before after", `timeline: alternate puts the content on both sides in turn (${sides.join(" ")})`);
+
     /* Content: Markdown, rendered and sanitized in a real browser (unit tests can't: DOMPurify needs a real DOM). */
     const preview = page.locator(".markdown-preview .tz-markdown");
     say((await preview.locator("h2").textContent()) === "Order 1042", "markdown: the text renders as HTML");

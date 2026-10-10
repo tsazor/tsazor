@@ -52,6 +52,31 @@
 </section>
 
 <section class="demo">
+    <h2>Timeline</h2>
+    <div class="timeline-demos">
+        <Timeline position="end" aria-label="Decisions">
+            @foreach (const step of this.decisions) {
+                <TimelineItem intent="@step.intent" appearance="@step.appearance" icon="@step.icon" size="medium">
+                    <ItemOpposite>@step.when</ItemOpposite>
+                    <ItemContent><strong>@step.title</strong><br />@step.text</ItemContent>
+                </TimelineItem>
+            }
+        </Timeline>
+        <Timeline aria-label="Order 1042">
+            <TimelineItem intent="success" appearance="solid"><ItemOpposite>06:10</ItemOpposite><ItemContent>Baked</ItemContent></TimelineItem>
+            <TimelineItem intent="primary"><ItemOpposite>07:30</ItemOpposite><ItemContent>Packed</ItemContent></TimelineItem>
+            <TimelineItem><ItemOpposite>12:00</ItemOpposite><ItemContent>Picked up</ItemContent></TimelineItem>
+        </Timeline>
+    </div>
+    <Timeline orientation="horizontal" position="end" align="center" aria-label="Release">
+        <TimelineItem intent="success" appearance="solid"><ItemOpposite>Mon</ItemOpposite><ItemContent>Plan</ItemContent></TimelineItem>
+        <TimelineItem intent="success" appearance="solid"><ItemOpposite>Tue</ItemOpposite><ItemContent>Build</ItemContent></TimelineItem>
+        <TimelineItem intent="primary"><ItemOpposite>Wed</ItemOpposite><ItemContent>Test</ItemContent></TimelineItem>
+        <TimelineItem><ItemOpposite>Thu</ItemOpposite><ItemContent>Ship</ItemContent></TimelineItem>
+    </Timeline>
+</section>
+
+<section class="demo">
     <h2>Markdown</h2>
     <div class="markdown-box">
         <Markdown Value="@this.answer" Breaks="true" />
@@ -72,6 +97,11 @@
     ].join("\n");
 
     private greeting = "";
+    private readonly decisions = [
+        { when: "Oct 9", title: "Waves A and B before 1.0", text: "The library is complete before the release.", intent: "primary" as const, appearance: "solid" as const, icon: Icons.Regular.Size16.Checkmark },
+        { when: "Oct 9", title: "Parity with Blazor 11", text: "Virtualize measures rows.", intent: "success" as const, appearance: "solid" as const, icon: Icons.Regular.Size16.Checkmark },
+        { when: "Oct 10", title: "Icons from the sets", text: "Fluent System Icons, Bootstrap Icons.", intent: "info" as const, appearance: "outline" as const, icon: Icons.Regular.Size16.Star },
+    ];
     private filters: string[] = ["Open"];
     private labels = ["bakery", "orders", "q4"];
     private removeLabel(label: string): void {

@@ -1,0 +1,71 @@
+@** One entry of a Timeline, in Bootstrap's look (MudBlazor's MudTimelineItem): its content (or `itemContent`), a dot on the line and,
+    on the other side, `itemOpposite` (a date, a time). The dot is outlined (default) or solid in an `intent`, small
+    (default) | medium | large, shows an `icon` or your own `itemDot`; `hideDot` leaves only the line. `align` overrides
+    the timeline's for this item. *@
+@import type { Appearance, IconValue, Intent } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { textColor } from "./vocabulary"
+
+<li @attributes="@this.itemAttributes">
+    <div class="tz-timeline__opposite">@itemOpposite</div>
+    <div class="tz-timeline__divider">
+        @if (!hideDot) {
+            <span class="@this.dotClass" aria-hidden="true">
+                @if (itemDot) {
+                    @itemDot
+                } else if (icon) {
+                    <Icon value="@icon" size="@this.iconPixels" />
+                }
+            </span>
+        }
+    </div>
+    <div class="tz-timeline__content">
+        @if (childContent) {
+            @childContent
+        } else {
+            @itemContent
+        }
+    </div>
+</li>
+
+@code {
+    /** An icon in the dot. */
+    @Parameter() icon?: IconValue;
+    /** The dot's color: neutral (default), primary, success, danger, warning, info. */
+    @Parameter() intent: Intent = "neutral";
+    /** outline (default) | solid (MudBlazor's Variant). */
+    @Parameter() appearance: Appearance = "outline";
+    /** small (default) | medium | large. */
+    @Parameter() size: "small" | "medium" | "large" = "small";
+    /** Only the line, no dot. */
+    @Parameter() hideDot = false;
+    /** start, center or end: this item's dot, instead of the timeline's. */
+    @Parameter() align?: "start" | "center" | "end";
+    /** The item's content (or ChildContent). */
+    @Parameter() itemContent?: RenderFragment;
+    /** On the other side of the line: a date, a time. */
+    @Parameter() itemOpposite?: RenderFragment;
+    /** A dot of your own (an Avatar). */
+    @Parameter() itemDot?: RenderFragment;
+    /** The item's content. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The timeline's align. */
+    @CascadingParameter({ name: "BootstrapTimelineAlign" }) timelineAlign?: "start" | "center" | "end";
+
+    private get iconPixels(): number {
+        return this.size === "large" ? 20 : this.size === "medium" ? 16 : 12;
+    }
+
+    private get dotClass(): string {
+        const filled = this.appearance === "solid" ? "filled" : "outline";
+        return `tz-timeline__dot tz-timeline__dot--${filled} tz-timeline__dot--${textColor(this.intent)} tz-timeline__dot--${this.size}`;
+    }
+
+    private get itemAttributes(): Record<string, unknown> {
+        const cls = `tz-timeline__item tz-timeline__item--align-${this.align ?? this.timelineAlign ?? "start"}`;
+        return withClass(cls, this.additionalAttributes);
+    }
+}
