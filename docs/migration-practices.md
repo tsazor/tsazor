@@ -140,6 +140,12 @@ render in the browser.
   gap). Fluent UI Blazor v4's `FluentToolbar Orientation` keeps its name. Give it a name: it is one tab stop, and the
   arrow keys move between its Buttons, Menus and fields, as the WAI-ARIA toolbar pattern says; MudToolBar leaves each
   control its own tab stop.
+- **Sliders.** `<FluentSlider @bind-Value="volume" Min="0" Max="100" Step="5" />` keeps its parameters as
+  `<Slider @bind-Value="volume" …>` (`Orientation`, `Size`, `ImmediateDelay`), and so does MudBlazor's `MudSlider`
+  (`TickMarks`, `TickMarkLabels`, `ValueLabel`, `Immediate`); its `Vertical` becomes `Orientation="vertical"`. A .NET
+  format string (`ValueLabelFormat="F1"`) becomes a function, `ValueFormat="@((v) => v.toFixed(1))"`, and it is the
+  text screen readers read as well. MudBlazor's `Variant.Filled` has no parameter: the Fluent slider always fills
+  its rail up to the thumb, Bootstrap's `.form-range` never does.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

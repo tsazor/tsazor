@@ -196,6 +196,69 @@ try {
     const wizardViolations = await axe(page);
     say(wizardViolations.length === 0, `axe /forms at the wizard's last step${wizardViolations.length ? `: ${wizardViolations.join(" | ")}` : ""}`);
 
+    /* Slider: the keys, the marks where the thumb goes, the value as text, an update on release only, vertical. */
+    const sliders = page.locator("section", { has: page.getByRole("heading", { name: "Slider", exact: true }) });
+    const caption = (name) => page.locator(`.slider-${name}`).textContent();
+    const captionIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.slider-${n}`)?.textContent === v, [name, value]);
+    const crust = sliders.getByRole("slider", { name: "Crust" });
+    // (instant: Bootstrap's reboot scrolls smoothly, and the boxes would move under the clicks.)
+    await sliders.evaluate((section) => section.scrollIntoView({ block: "center", behavior: "instant" }));
+    await crust.focus();
+    await page.keyboard.press("ArrowRight");
+    await captionIs("crust", "75");
+    say(true, "slider: ArrowRight moves a step (two-way bound)");
+    await page.keyboard.press("Home");
+    await captionIs("crust", "0");
+    await page.keyboard.press("End");
+    await captionIs("crust", "100");
+    say(true, "slider: Home and End go to min and max");
+    const crustBox = await crust.boundingBox();
+    for (const [label, value] of [["Light", "25"], ["Golden", "50"], ["Dark", "75"]]) {
+      const box = await sliders.getByText(label, { exact: true }).boundingBox();
+      await page.mouse.click(box.x + box.width / 2, crustBox.y + crustBox.height / 2);
+      await captionIs("crust", value);
+    }
+    say(true, "slider: a click above a mark's label gives the mark's value");
+    const sweetness = sliders.getByRole("slider", { name: "Sweetness" });
+    const marks = sweetness.locator("xpath=following-sibling::*[@aria-hidden='true']/*");
+    say((await marks.count()) === 11, `slider: a mark per step (${await marks.count()})`);
+    const sweetBox = await sweetness.boundingBox();
+    const missed = [];
+    for (const step of [0, 3, 7, 10]) {
+      const mark = await marks.nth(step).boundingBox();
+      await page.mouse.click(sweetBox.x + sweetBox.width / 2, mark.y + mark.height / 2);
+      await page.waitForTimeout(100);
+      if ((await caption("sweetness")) !== String(step)) missed.push(`${step} → ${await caption("sweetness")}`);
+    }
+    say(missed.length === 0, `slider: the marks sit where the thumb goes for their value, a step apart${missed.length ? ` (${missed.join(", ")})` : ""}`);
+    say(sweetBox.height > sweetBox.width * 3 && (await sweetness.getAttribute("aria-orientation")) === "vertical", `slider: vertical stands up (${Math.round(sweetBox.width)}×${Math.round(sweetBox.height)})`);
+    await sweetness.focus();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("ArrowUp");
+    await captionIs("sweetness", "1");
+    say(true, "slider: ArrowUp raises a vertical slider");
+    const oven = sliders.getByRole("slider", { name: "Oven" });
+    say((await oven.getAttribute("aria-valuetext")) === "220 °C", "slider: screen readers read the value's format (aria-valuetext)");
+    await oven.focus();
+    await page.keyboard.press("ArrowRight");
+    await captionIs("oven", "225");
+    say((await oven.getAttribute("aria-valuetext")) === "225 °C" && (await sliders.getByText("225 °C").isVisible()), "slider: the value label follows");
+    const rise = sliders.getByRole("slider", { name: "Rise" });
+    const riseBox = await rise.boundingBox();
+    // (A press on the track takes the thumb there and drags it.)
+    const riseAt = (fraction) => riseBox.x + riseBox.width * fraction;
+    await page.mouse.move(riseAt(0.3), riseBox.y + riseBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(riseAt(0.6), riseBox.y + riseBox.height / 2, { steps: 6 });
+    const moving = await rise.inputValue();
+    const shown = await rise.locator("xpath=../following-sibling::output").textContent();
+    const heldBack = (await caption("rise")) === "30" && moving !== "30" && shown === moving;
+    await page.mouse.up();
+    await captionIs("rise", moving);
+    say(heldBack, `slider: immediate false shows the drag (${shown}) and updates the value on release`);
+    const sliderViolations = await axe(page);
+    say(sliderViolations.length === 0, `axe /forms with the sliders${sliderViolations.length ? `: ${sliderViolations.join(" | ")}` : ""}`);
+
     /* Data: the grid sorts, pages and selects. */
     await open(page, base, "/data");
     const grid = page.getByRole("table", { name: "Orders" });

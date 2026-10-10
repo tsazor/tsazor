@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Slider` (Fluent UI Blazor's `FluentSlider`, MudBlazor's
+  `MudSlider`) on a native `input type="range"` (Bootstrap's `.form-range`), bound with `@bind-value`: `min`, `max`,
+  `step`, `orientation` (vertical stands it up), `size` small; the value follows the drag once it pauses
+  (`immediateDelay`, 60 ms) or, with `immediate` false, waits for the release. `tickMarks` with `tickMarkLabels`,
+  `valueLabel` with `valueFormat`, which is also the slider's `aria-valuetext`. Fluent fills the rail up to the thumb.
+  `@tsazor/ui`: `sliderFraction`, `sliderTicks`.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Toolbar` (MudBlazor's `MudToolBar`, Fluent UI Blazor
   v4's `FluentToolbar`; Bootstrap's `.btn-toolbar`): Buttons, Menus and fields in a row or a column that is one tab
   stop, the WAI-ARIA toolbar pattern. The arrow keys of its `orientation` move between the controls and wrap, Home

@@ -624,6 +624,26 @@ export default class Skeleton extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// Slider
+export default class Slider extends InputBase<number> {
+    label?: string;
+    help?: string;
+    min: number;
+    max: number;
+    step: number;
+    orientation: Orientation;
+    size: "small" | "medium";
+    disabled: boolean;
+    immediate: boolean;
+    immediateDelay: number;
+    tickMarks: boolean;
+    tickMarkLabels?: string[];
+    valueLabel: boolean;
+    valueFormat?: (value: number) => string;
+    id?: string;
+    ariaLabel?: string;
+}
+
 // SortDirection: re-exported from @tsazor/ui
 
 // SortedProperty: re-exported from @tsazor/ui

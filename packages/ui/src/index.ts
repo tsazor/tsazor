@@ -6,6 +6,7 @@ export { uniqueId } from "./ids.js";
 export { builtInIcons, icon, iconSize, type IconValue } from "./icons.js";
 export { ChipSetModel, nextChipSelection, type ChipSelectionMode } from "./chips.js";
 export { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, type SplitterResizeEventArgs } from "./splitter.js";
+export { sliderFraction, sliderTicks } from "./slider.js";
 export { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepChangeEventArgs, wizardStepStatus, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";

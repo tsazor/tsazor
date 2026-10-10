@@ -394,6 +394,12 @@ export type SelectionMode = "none" | "single" | "multiple";
 // Size
 export type Size = "small" | "medium" | "large";
 
+// sliderFraction
+export declare function sliderFraction(value: number, min: number, max: number): number;
+
+// sliderTicks
+export declare function sliderTicks(min: number, max: number, step: number, limit?: number): number[];
+
 // SortDirection
 export type SortDirection = "auto" | "ascending" | "descending";
 

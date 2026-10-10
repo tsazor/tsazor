@@ -63,7 +63,7 @@ these.
 | Stepper / Wizard (Wizard, done 2026-10-10) | Wizard | Stepper | A |
 | Splitter (done 2026-10-10) | Splitter | SplitPanel | A |
 | Toolbar (done 2026-10-10) | none on main (v4: Toolbar) | ToolBar | A |
-| Slider | Slider | Slider | A |
+| Slider (done 2026-10-10) | Slider | Slider | A |
 | DatePicker with a calendar popup | DateTime | DatePicker | A |
 | Upload drop zone with progress | InputFile | FileUpload, DropZone | A |
 | Sortable list (drag and drop, with a keyboard way) | SortableList, Drag | DropZone | A |

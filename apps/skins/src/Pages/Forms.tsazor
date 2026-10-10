@@ -45,7 +45,29 @@
     <Typography Variant="caption"><span class="wizard-status">@wizardStatus</span></Typography>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">Slider</Typography>
+    <div class="slider-demo">
+        <div class="slider-demo__stack">
+            <Slider Label="Crust" Step="25" TickMarks="@true" TickMarkLabels="@crustLabels" @bind-Value="crust" />
+            <Slider Label="Oven" Min="180" Max="260" Step="5" ValueLabel="@true" ValueFormat="@celsius" @bind-Value="oven" />
+            <Slider Label="Rise" Size="small" ValueLabel="@true" Immediate="@false" Help="Applies when you let go." @bind-Value="rise" />
+        </div>
+        <Slider Label="Sweetness" Orientation="vertical" Max="10" TickMarks="@true" ValueLabel="@true" @bind-Value="sweetness" />
+    </div>
+    <Typography Variant="caption">
+        Crust <span class="slider-crust">@crust</span>, oven <span class="slider-oven">@oven</span>, rise <span class="slider-rise">@rise</span>, sweetness <span class="slider-sweetness">@sweetness</span>.
+    </Typography>
+</section>
+
 @code {
+    private crust = 50;
+    private oven = 220;
+    private rise = 30;
+    private sweetness = 4;
+    private readonly crustLabels = ["Pale", "Light", "Golden", "Dark", "Bold"];
+    private readonly celsius = (value: number): string => `${value} °C`;
+
     private wizardStep = 0;
     private wizardStatus = "";
     private readonly wizardOrder = { name: "", pickup: "" };

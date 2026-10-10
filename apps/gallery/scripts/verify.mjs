@@ -134,6 +134,10 @@ async function main() {
     check((await page.textContent(".page")).includes("\"Grace\""), "@bind round-trip updates the echo text");
     await page.click("#demo-agree");
     check((await page.evaluate(() => document.getElementById("demo-agree").checked)) === true, "checkbox toggle checks natively");
+    await page.focus("#demo-volume");
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes("volume = 70"));
+    check((await page.getAttribute("#demo-volume", "aria-valuetext")) === "70 %", "a slider binds and its value reads in its format (aria-valuetext)");
 
     /* 4b — switch control via its label (the native input is under the track) */
     check((await page.locator("[role='switch']").first().count()) === 1, "switch carries role=switch");
