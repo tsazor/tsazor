@@ -788,3 +788,36 @@ export default class Typography extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
 }
+
+// Wizard
+export default class Wizard extends ComponentBase {
+    value: number;
+    valueChanged?: EventCallback<number>;
+    onFinish?: EventCallback;
+    stepperPosition: "start" | "top";
+    stepSequence: WizardStepSequence;
+    displayStepNumber: "none" | "all" | WizardStepStatus;
+    ariaLabel: string;
+    labelPrevious: string;
+    labelNext: string;
+    labelDone: string;
+    buttonTemplate?: (index: number) => RenderFragment;
+    steps?: RenderFragment;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// WizardStep
+export default class WizardStep extends ComponentBase {
+    label: string;
+    summary: string;
+    disabled: undefined;
+    deferredLoading: undefined;
+    displayStepNumber?: boolean;
+    iconPrevious?: IconValue;
+    iconCurrent?: IconValue;
+    iconNext?: IconValue;
+    onChange?: EventCallback<WizardStepChangeEventArgs>;
+    childContent?: RenderFragment;
+    wizard?: Wizard;
+}

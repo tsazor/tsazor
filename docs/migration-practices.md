@@ -126,6 +126,11 @@ render in the browser.
   always sanitizes, so text from an agent or a user needs no extra step. A Markdig pipeline's options become
   `Breaks`, `Highlight` (a highlighter) and `TableClass`. A test of what it renders needs jsdom: DOMPurify doesn't
   sanitize under happy-dom (L5).
+- **Wizards.** `<FluentWizard @bind-Value="step"><Steps><FluentWizardStep Label="…">` becomes
+  `<Wizard @bind-Value="step"><Steps><WizardStep Label="…">`; a step's `OnChange` sets `args.isCancelled`, and a
+  `FluentForm` in a step is validated before Next, as an `EditForm` is in Fluent UI Blazor. `StepperPosition.Left`
+  becomes `"start"`. MudBlazor's `MudStepper` maps onto it too: `ActiveIndex` is `Value`, a step's `Title` its
+  `Label`, `NonLinear` is `StepSequence="any"`.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

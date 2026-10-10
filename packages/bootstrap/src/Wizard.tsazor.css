@@ -1,0 +1,199 @@
+/*
+ * Wizard — in Bootstrap's variables: a step list (bullets joined by connectors, at the start or on top), the current step's content
+ * and the buttons. A wizard narrower than 36rem puts the list on top.
+ */
+
+.tz-wizard {
+  container-type: inline-size;
+}
+
+.tz-wizard__layout {
+  display: grid;
+  grid-template-columns: minmax(10rem, max-content) 1fr;
+  grid-template-areas:
+    "steps content"
+    "steps buttons";
+  column-gap: 1.5rem;
+  row-gap: 1rem;
+}
+
+.tz-wizard--top .tz-wizard__layout {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "steps"
+    "content"
+    "buttons";
+}
+
+.tz-wizard__steps {
+  grid-area: steps;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tz-wizard--top .tz-wizard__steps {
+  flex-direction: row;
+}
+
+.tz-wizard__content {
+  grid-area: content;
+  min-width: 0;
+}
+
+.tz-wizard__panel[hidden] {
+  display: none;
+}
+
+.tz-wizard__buttons {
+  grid-area: buttons;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.tz-wizard__step {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+}
+
+/* The connector to the next step: down from the bullet at the start, to the right on top. */
+.tz-wizard__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  inset-block: 36px 4px;
+  inset-inline-start: 19px;
+  width: 2px;
+  background: var(--bs-border-color);
+}
+
+.tz-wizard__step--previous:not(:last-child)::after {
+  background: var(--bs-primary);
+}
+
+.tz-wizard--top .tz-wizard__step:not(:last-child)::after {
+  inset-block: 19px auto;
+  inset-inline: 44px 4px;
+  width: auto;
+  height: 2px;
+}
+
+.tz-wizard__step-button {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: var(--bs-border-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.tz-wizard--top .tz-wizard__step-button {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+button.tz-wizard__step-button {
+  cursor: pointer;
+}
+
+button.tz-wizard__step-button:hover {
+  background: var(--bs-tertiary-bg);
+}
+
+button.tz-wizard__step-button:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: -2px;
+}
+
+.tz-wizard__bullet {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--bs-primary);
+}
+
+.tz-wizard__step--next .tz-wizard__bullet {
+  color: var(--bs-secondary-color);
+}
+
+.tz-wizard__number {
+  position: absolute;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--bs-white);
+}
+
+.tz-wizard__step--next .tz-wizard__number {
+  color: var(--bs-secondary-color);
+}
+
+.tz-wizard__labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.tz-wizard__label {
+  font-weight: 600;
+}
+
+.tz-wizard__step--next .tz-wizard__label {
+  font-weight: 400;
+}
+
+.tz-wizard__summary {
+  font-size: 0.875em;
+  color: var(--bs-secondary-color);
+}
+
+.tz-wizard__step--disabled {
+  opacity: 0.5;
+}
+
+/* A narrow wizard: the list on top, its labels hidden but for the current step's. */
+@container (max-width: 36rem) {
+  .tz-wizard__layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "steps"
+      "content"
+      "buttons";
+  }
+
+  .tz-wizard__steps {
+    flex-direction: row;
+  }
+
+  .tz-wizard__step-button {
+    flex-direction: column;
+  }
+
+  .tz-wizard__step:not(:last-child)::after {
+    inset-block: 19px auto;
+    inset-inline: 44px 4px;
+    width: auto;
+    height: 2px;
+  }
+
+  .tz-wizard__step:not(.tz-wizard__step--current) .tz-wizard__labels {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

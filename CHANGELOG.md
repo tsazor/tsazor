@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Wizard` and `WizardStep` (Fluent UI Blazor main's
+  `FluentWizard`): a step list (at the start, on top when narrow, or on top) with the current step's content and
+  Previous, Next and Done. `value` is the current index (`@bind-value`); Next skips disabled steps, validates the
+  step's forms (`FluentForm`/`Form` register with their step, as Fluent UI Blazor's EditForms do) and asks the step's
+  `onChange` (cancellable `WizardStepChangeEventArgs`); Done raises `onFinish`. `stepSequence` linear, any or
+  visited; `displayStepNumber`; `buttonTemplate`; `goToStep()`; the steps' `label`, `summary`, `disabled`,
+  `deferredLoading` and bullet icons. The button texts are parameters (`labelPrevious`, `labelNext`, `labelDone`).
+
 - `@tsazor/fluent`, `@tsazor/bootstrap` (wave A): `Timeline` and `TimelineItem` (MudBlazor's `MudTimeline`): an ordered
   list along a line, `orientation` vertical or horizontal, `position` alternate (default), start or end, `align`,
   `reverse`; an item's `itemContent` (or child content), `itemOpposite` (a date) and dot (outline or solid, an

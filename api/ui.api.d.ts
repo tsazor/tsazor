@@ -313,11 +313,17 @@ export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" 
 // isTopLayer
 export declare function isTopLayer(key: object): boolean;
 
+// isWizardStepClickable
+export declare function isWizardStepClickable(index: number, current: number, sequence: WizardStepSequence, maxVisited: number, disabled: boolean): boolean;
+
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;
 
 // nextChipSelection
 export declare function nextChipSelection<T>(mode: ChipSelectionMode, selected: readonly T[], value: T, equals?: (a: T, b: T) => boolean): T[];
+
+// nextWizardStep
+export declare function nextWizardStep(disabled: readonly boolean[], from: number): number;
 
 // openLayer
 export declare function openLayer(key: object): () => void;
@@ -345,6 +351,9 @@ export declare class PaginationState {
 
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
+
+// previousWizardStep
+export declare function previousWizardStep(disabled: readonly boolean[], from: number): number;
 
 // propertyPath
 export declare function propertyPath(property: (item: never) => unknown): string | undefined;
@@ -492,3 +501,20 @@ export interface VisibleTreeItem {
 
 // visibleTreeItems
 export declare function visibleTreeItems(items: readonly TreeViewItem[], expanded: ReadonlySet<string>): VisibleTreeItem[];
+
+// WizardStepChangeEventArgs
+export declare class WizardStepChangeEventArgs {
+    readonly targetIndex: number;
+    readonly targetLabel: string;
+    isCancelled: boolean;
+    constructor(targetIndex: number, targetLabel: string);
+}
+
+// WizardStepSequence
+export type WizardStepSequence = "linear" | "any" | "visited";
+
+// wizardStepStatus
+export declare function wizardStepStatus(index: number, current: number): WizardStepStatus;
+
+// WizardStepStatus
+export type WizardStepStatus = "previous" | "current" | "next";

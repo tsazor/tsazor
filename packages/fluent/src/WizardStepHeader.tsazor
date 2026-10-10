@@ -1,0 +1,22 @@
+@** A step's bullet, label and summary in a Wizard's step list. Internal to Wizard. *@
+@import type { IconValue } from "@tsazor/ui"
+
+<span class="fui-wizard__bullet" aria-hidden="true">
+    <Icon value="@icon" size="24" />
+    @if (number !== null) {
+        <span class="fui-wizard__number">@number</span>
+    }
+</span>
+<span class="fui-wizard__labels">
+    <span class="fui-wizard__label">@label</span>
+    @if (summary) {
+        <span class="fui-wizard__summary">@summary</span>
+    }
+</span>
+
+@code {
+    @Parameter() icon!: IconValue;
+    @Parameter() number: number | null = null;
+    @Parameter() label = "";
+    @Parameter() summary = "";
+}

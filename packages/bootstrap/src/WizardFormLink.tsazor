@@ -1,0 +1,31 @@
+@** Tells the WizardStep around a Form about the form, so the wizard validates it before it moves on (as Fluent UI
+    Blazor's wizard validates a step's EditForms). Renders nothing; internal to Form. *@
+@import type { EditContext } from "@tsazor/runtime"
+@import type WizardStep from "./WizardStep.tsazor"
+
+@code {
+    /** The form's EditContext. */
+    @Parameter() editContext!: EditContext;
+    /** The form's submit handlers, as a submit button would run them. */
+    @Parameter() onValid?: (context: EditContext) => Promise<void> | void;
+    @Parameter() onInvalid?: (context: EditContext) => Promise<void> | void;
+
+    @CascadingParameter({ name: "BootstrapWizardStep" }) step?: WizardStep;
+
+    private unregister?: () => void;
+
+    protected override onInitialized(): void {
+        this.unregister = this.step?.registerForm({ submit: () => this.submit() });
+    }
+
+    dispose(): void {
+        this.unregister?.();
+    }
+
+    private async submit(): Promise<boolean> {
+        const valid = this.editContext.validate();
+        if (valid) await this.onValid?.(this.editContext);
+        else await this.onInvalid?.(this.editContext);
+        return valid;
+    }
+}

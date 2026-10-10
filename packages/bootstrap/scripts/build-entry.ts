@@ -17,7 +17,7 @@ interface CompileError {
 const ALIASES: Readonly<Record<string, string>> = { Modal: "Dialog", Menu: "Dropdown", MenuItem: "DropdownItem" };
 
 /** Compiled for the components that use them, not exported (DataGrid's Defer). */
-const INTERNAL: ReadonlySet<string> = new Set(["Defer", "ChipContent"]);
+const INTERNAL: ReadonlySet<string> = new Set(["Defer", "ChipContent", "WizardStepHeader", "WizardFormLink"]);
 
 const errors: CompileError[] = [];
 const exports: string[] = [];

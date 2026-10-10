@@ -1,0 +1,185 @@
+@** A Fluent UI 2 wizard (Fluent UI Blazor's FluentWizard): WizardSteps with a step list and Previous, Next and Done
+    buttons. `value` is the current step's index (two-way with @bind-value). Next validates the step's forms and asks
+    its `onChange` first, and skips disabled steps; Done raises onFinish. `stepSequence` decides what a click on the
+    step list may open: nothing (linear, the default), any step, or the visited ones. `stepperPosition` puts the list at
+    the start (default; on top when the wizard is narrow) or on top; `displayStepNumber` shows the numbers in the
+    bullets. `buttonTemplate` replaces the buttons (it gets the current index; `goToStep` moves from your code). *@
+@import { isWizardStepClickable, nextWizardStep, previousWizardStep, uniqueId, WizardStepChangeEventArgs, wizardStepStatus, type IconValue, type WizardStepSequence, type WizardStepStatus } from "@tsazor/ui"
+@import type WizardStep from "./WizardStep.tsazor"
+@import { CheckmarkCircle20Filled, Circle20Filled, Circle20Regular } from "./core-icons"
+@import { withAttributes } from "./attributes"
+
+<CascadingValue Value="this" Name="FluentWizard">
+    <div @attributes="@this.wizardAttributes">
+        <div class="fui-wizard__layout">
+            <ol class="fui-wizard__steps" aria-label="@ariaLabel">
+                @foreach (const step of this.stepList) {
+                    <li class="@this.stepClass(step)" aria-current="@(step.current ? "step" : null)">
+                        @if (this.clickable(step)) {
+                            <button type="button" class="fui-wizard__step-button" @onclick="() => this.goToStep(step.index, step.index > this.value)">
+                                <WizardStepHeader icon="@this.iconOf(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
+                            </button>
+                        } else {
+                            <span class="fui-wizard__step-button" aria-disabled="@(step.disabled ? "true" : null)">
+                                <WizardStepHeader icon="@this.iconOf(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
+                            </span>
+                        }
+                    </li>
+                }
+            </ol>
+            <div class="fui-wizard__content">
+                @if (steps) {
+                    @steps
+                } else {
+                    @childContent
+                }
+            </div>
+            <div class="fui-wizard__buttons">
+                @if (buttonTemplate) {
+                    @buttonTemplate(value)
+                } else {
+                    @if (this.previousIndex >= 0) {
+                        <Button onClick="@this.previous">@labelPrevious</Button>
+                    }
+                    @if (this.nextIndex >= 0) {
+                        <Button intent="primary" onClick="@this.next">@labelNext</Button>
+                    } else {
+                        <Button intent="primary" onClick="@this.finish">@labelDone</Button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</CascadingValue>
+
+@code {
+    /** The current step's index (two-way with @bind-value). */
+    @Parameter() value: number = 0;
+    @Parameter() valueChanged?: EventCallback<number>;
+    /** Raised by Done, once the last step's forms are valid. */
+    @Parameter() onFinish?: EventCallback;
+    /** start (default; on top when the wizard is narrow) | top. */
+    @Parameter() stepperPosition: "start" | "top" = "start";
+    /** What a click on the step list opens: nothing (linear, default), any step, or the visited ones. */
+    @Parameter() stepSequence: WizardStepSequence = "linear";
+    /** Which bullets show their step's number: none (default), all, or the previous, current or next steps. */
+    @Parameter() displayStepNumber: "none" | "all" | WizardStepStatus = "none";
+    /** The step list's accessible name. */
+    @Parameter() ariaLabel: string = "Steps";
+    /** The Previous button's text. */
+    @Parameter() labelPrevious: string = "Previous";
+    /** The Next button's text. */
+    @Parameter() labelNext: string = "Next";
+    /** The Done button's text. */
+    @Parameter() labelDone: string = "Done";
+    /** Buttons of your own instead of Previous, Next and Done; it gets the current index. */
+    @Parameter() buttonTemplate?: (index: number) => RenderFragment;
+    /** The WizardSteps (Fluent UI Blazor's `Steps`). */
+    @Parameter() steps?: RenderFragment;
+    /** The WizardSteps, as child content. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly stepList: WizardStep[] = [];
+    private maxVisited = 0;
+    private readonly id = uniqueId("fui-wizard");
+
+    private get wizardAttributes(): Record<string, unknown> {
+        return withAttributes({ class: `fui-wizard fui-wizard--${this.stepperPosition}`, id: this.id }, this.additionalAttributes);
+    }
+
+    private get disabledSteps(): boolean[] {
+        return this.stepList.map((step) => step.disabled);
+    }
+
+    private get previousIndex(): number {
+        return previousWizardStep(this.disabledSteps, this.value);
+    }
+
+    private get nextIndex(): number {
+        return nextWizardStep(this.disabledSteps, this.value);
+    }
+
+    protected override onParametersSet(): void {
+        this.maxVisited = Math.max(this.maxVisited, this.value);
+    }
+
+    /** @internal Called by WizardStep as it starts: its index is its place. */
+    registerStep(step: WizardStep): void {
+        if (this.stepList.includes(step)) return;
+        step.index = this.stepList.length;
+        this.stepList.push(step);
+        this.stateHasChangedInternal();
+    }
+
+    /** @internal Called by WizardStep as it goes. */
+    unregisterStep(step: WizardStep): void {
+        const at = this.stepList.indexOf(step);
+        if (at < 0) return;
+        this.stepList.splice(at, 1);
+        this.stepList.forEach((other, index) => {
+            other.index = index;
+        });
+        this.stateHasChangedInternal();
+    }
+
+    /** @internal A step's label, summary or disabled state changed. */
+    refresh(): void {
+        this.stateHasChangedInternal();
+    }
+
+    private clickable(step: WizardStep): boolean {
+        return isWizardStepClickable(step.index, this.value, this.stepSequence, this.maxVisited, step.disabled);
+    }
+
+    private iconOf(step: WizardStep): IconValue {
+        const status = wizardStepStatus(step.index, this.value);
+        if (status === "previous") return step.iconPrevious ?? CheckmarkCircle20Filled;
+        if (status === "current") return step.iconCurrent ?? Circle20Filled;
+        return step.iconNext ?? Circle20Regular;
+    }
+
+    /** The bullet's number, or null when it shows none. */
+    private numberOf(step: WizardStep): number | null {
+        const status = wizardStepStatus(step.index, this.value);
+        const shown = step.displayStepNumber ?? (this.displayStepNumber === "all" || this.displayStepNumber === status);
+        return shown ? step.index + 1 : null;
+    }
+
+    private stepClass(step: WizardStep): string {
+        let cls = `fui-wizard__step fui-wizard__step--${wizardStepStatus(step.index, this.value)}`;
+        if (step.disabled) cls += " fui-wizard__step--disabled";
+        return cls;
+    }
+
+    /** Opens the step at `index`, after validating the current step's forms (`validate`) and asking its onChange. */
+    async goToStep(index: number, validate = false): Promise<void> {
+        const current = this.stepList[this.value];
+        const target = this.stepList[index];
+        if (target === undefined || index === this.value) return;
+        const args = new WizardStepChangeEventArgs(index, target.label);
+        if (validate && current !== undefined && !(await current.validateForms())) args.isCancelled = true;
+        if (!args.isCancelled) await current?.onChange?.invokeAsync(args);
+        if (args.isCancelled) return;
+        this.value = index;
+        this.maxVisited = Math.max(this.maxVisited, index);
+        for (const step of this.stepList) step.refreshPanel();
+        this.stateHasChangedInternal();
+        await this.valueChanged?.invokeAsync(index);
+    }
+
+    private async previous(): Promise<void> {
+        if (this.previousIndex >= 0) await this.goToStep(this.previousIndex);
+    }
+
+    private async next(): Promise<void> {
+        if (this.nextIndex >= 0) await this.goToStep(this.nextIndex, true);
+    }
+
+    private async finish(): Promise<void> {
+        const current = this.stepList[this.value];
+        if (current !== undefined && !(await current.validateForms())) return;
+        await this.onFinish?.invokeAsync();
+    }
+}

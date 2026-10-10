@@ -1,0 +1,85 @@
+@** One step of a Wizard (Fluent UI Blazor's FluentWizardStep): its `label` and `summary` in the step list, its content
+    in the wizard while it is the current step. A disabled step is skipped. `deferredLoading` renders the content only
+    while the step is current (otherwise it stays, hidden, and keeps its state). `onChange` runs before the wizard
+    leaves the step; set the args' `isCancelled` to stay. A form (Form) in the step is validated before the
+    wizard moves on, as Fluent UI Blazor validates the step's EditForms. *@
+@import { WizardStepChangeEventArgs, type IconValue } from "@tsazor/ui"
+@import type Wizard from "./Wizard.tsazor"
+@import type { WizardForm } from "./wizard-form"
+
+@if (this.current || !deferredLoading) {
+    <div class="tz-wizard__panel" role="group" aria-label="@label" hidden="@(!this.current)">
+        <CascadingValue Value="this" Name="BootstrapWizardStep">@childContent</CascadingValue>
+    </div>
+}
+
+@code {
+    /** The step's name in the step list. */
+    @Parameter() label: string = "";
+    /** A line below the label. */
+    @Parameter() summary: string = "";
+    /** Skipped by Next and Previous, and not clickable. */
+    @Parameter() disabled = false;
+    /** The content is rendered only while the step is current. */
+    @Parameter() deferredLoading = false;
+    /** Shows the step's number in its bullet (instead of the wizard's displayStepNumber). */
+    @Parameter() displayStepNumber?: boolean;
+    /** The bullet of a step before the current one; a filled check mark by default. */
+    @Parameter() iconPrevious?: IconValue;
+    /** The bullet of the current step; a filled circle by default. */
+    @Parameter() iconCurrent?: IconValue;
+    /** The bullet of a step after the current one; a circle by default. */
+    @Parameter() iconNext?: IconValue;
+    /** Runs before the wizard leaves this step; `isCancelled = true` keeps it here. */
+    @Parameter() onChange?: EventCallback<WizardStepChangeEventArgs>;
+    /** The step's content. */
+    @Parameter() childContent?: RenderFragment;
+
+    /** Resolved from the enclosing Wizard. */
+    @CascadingParameter({ name: "BootstrapWizard" }) wizard?: Wizard;
+
+    /** The step's place, set by the wizard. */
+    index = -1;
+    private readonly forms = new Set<WizardForm>();
+    private shown = "";
+
+    get current(): boolean {
+        return this.wizard?.value === this.index;
+    }
+
+    protected override onInitialized(): void {
+        this.wizard?.registerStep(this);
+    }
+
+    /** What the wizard's step list shows changed: it renders again (the content renders here). */
+    protected override onParametersSet(): void {
+        const shown = `${this.label}\u0000${this.summary}\u0000${this.disabled}\u0000${this.displayStepNumber}`;
+        if (this.shown !== "" && shown !== this.shown) this.wizard?.refresh();
+        this.shown = shown;
+    }
+
+    dispose(): void {
+        this.wizard?.unregisterStep(this);
+    }
+
+    /** @internal A form in the step: validated before the wizard moves on. */
+    registerForm(form: WizardForm): () => void {
+        this.forms.add(form);
+        return () => this.forms.delete(form);
+    }
+
+    /** @internal Validates the step's forms, as their submits do; true when all are valid. */
+    async validateForms(): Promise<boolean> {
+        let valid = true;
+        for (const form of [...this.forms]) {
+            if (!(await form.submit())) valid = false;
+        }
+        return valid;
+    }
+
+    /** @internal Renders the panel again (the current step changed). */
+    refreshPanel(): void {
+        this.stateHasChanged();
+    }
+}
+

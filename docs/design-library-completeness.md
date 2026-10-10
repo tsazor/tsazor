@@ -60,7 +60,7 @@ these.
 | Avatar (done 2026-10-10) | Avatar | Avatar | A |
 | Chip / ChipSet (done 2026-10-10) | none | Chip, ChipSet | A |
 | Timeline (done 2026-10-10) | none | Timeline | A |
-| Stepper / Wizard | Wizard | Stepper | A |
+| Stepper / Wizard (Wizard, done 2026-10-10) | Wizard | Stepper | A |
 | Splitter | Splitter | SplitPanel | A |
 | Toolbar | none on main (v4: Toolbar) | ToolBar | A |
 | Slider | Slider | Slider | A |

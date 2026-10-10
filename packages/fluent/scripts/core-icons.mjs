@@ -18,6 +18,8 @@ const CORE = [
   "ArrowSortUp20Regular",
   "Checkmark12Regular",
   "CheckmarkCircle20Filled",
+  "Circle20Filled",
+  "Circle20Regular",
   "ChevronDoubleLeft20Regular",
   "ChevronDoubleRight20Regular",
   "ChevronLeft20Regular",

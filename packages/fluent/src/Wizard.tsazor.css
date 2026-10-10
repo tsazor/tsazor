@@ -1,0 +1,202 @@
+/*
+ * Wizard — Fluent 2: a step list (bullets joined by connectors, at the start or on top), the current step's content
+ * and the buttons. A wizard narrower than 36rem puts the list on top.
+ */
+
+.fui-wizard {
+  container-type: inline-size;
+  font-family: var(--fui-font-family);
+  font-size: var(--fui-font-size-body);
+  color: var(--fui-foreground-1);
+}
+
+.fui-wizard__layout {
+  display: grid;
+  grid-template-columns: minmax(10rem, max-content) 1fr;
+  grid-template-areas:
+    "steps content"
+    "steps buttons";
+  column-gap: var(--fui-spacing-xl);
+  row-gap: var(--fui-spacing-l);
+}
+
+.fui-wizard--top .fui-wizard__layout {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "steps"
+    "content"
+    "buttons";
+}
+
+.fui-wizard__steps {
+  grid-area: steps;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fui-wizard--top .fui-wizard__steps {
+  flex-direction: row;
+}
+
+.fui-wizard__content {
+  grid-area: content;
+  min-width: 0;
+}
+
+.fui-wizard__panel[hidden] {
+  display: none;
+}
+
+.fui-wizard__buttons {
+  grid-area: buttons;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--fui-gap-sm);
+}
+
+.fui-wizard__step {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+}
+
+/* The connector to the next step: down from the bullet at the start, to the right on top. */
+.fui-wizard__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  inset-block: 36px 4px;
+  inset-inline-start: 19px;
+  width: 2px;
+  background: var(--fui-stroke-2);
+}
+
+.fui-wizard__step--previous:not(:last-child)::after {
+  background: var(--fui-brand-background);
+}
+
+.fui-wizard--top .fui-wizard__step:not(:last-child)::after {
+  inset-block: 19px auto;
+  inset-inline: 44px 4px;
+  width: auto;
+  height: 2px;
+}
+
+.fui-wizard__step-button {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fui-gap-sm);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--fui-spacing-s);
+  border: 0;
+  border-radius: var(--fui-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+
+.fui-wizard--top .fui-wizard__step-button {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+button.fui-wizard__step-button {
+  cursor: pointer;
+}
+
+button.fui-wizard__step-button:hover {
+  background: var(--fui-control-fill-hover);
+}
+
+button.fui-wizard__step-button:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: -2px;
+}
+
+.fui-wizard__bullet {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  color: var(--fui-brand-background);
+}
+
+.fui-wizard__step--next .fui-wizard__bullet {
+  color: var(--fui-foreground-3);
+}
+
+.fui-wizard__number {
+  position: absolute;
+  font-size: var(--fui-font-size-caption);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-on-brand);
+}
+
+.fui-wizard__step--next .fui-wizard__number {
+  color: var(--fui-foreground-2);
+}
+
+.fui-wizard__labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.fui-wizard__label {
+  font-weight: var(--fui-font-weight-semibold);
+}
+
+.fui-wizard__step--next .fui-wizard__label {
+  font-weight: var(--fui-font-weight-regular, 400);
+}
+
+.fui-wizard__summary {
+  font-size: var(--fui-font-size-caption-lg);
+  color: var(--fui-foreground-3);
+}
+
+.fui-wizard__step--disabled {
+  opacity: 0.5;
+}
+
+/* A narrow wizard: the list on top, its labels hidden but for the current step's. */
+@container (max-width: 36rem) {
+  .fui-wizard__layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "steps"
+      "content"
+      "buttons";
+  }
+
+  .fui-wizard__steps {
+    flex-direction: row;
+  }
+
+  .fui-wizard__step-button {
+    flex-direction: column;
+  }
+
+  .fui-wizard__step:not(:last-child)::after {
+    inset-block: 19px auto;
+    inset-inline: 44px 4px;
+    width: auto;
+    height: 2px;
+  }
+
+  .fui-wizard__step:not(.fui-wizard__step--current) .fui-wizard__labels {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

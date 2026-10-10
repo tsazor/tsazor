@@ -139,6 +139,25 @@ try {
     await page.waitForFunction(() => document.querySelector(".order-status")?.textContent?.startsWith("Reserved: 1 × rye for Marta"));
     say(true, "form: fixed and submitted, OnValidSubmit runs");
 
+    /* Forms: a wizard whose first step is a form. */
+    await open(page, base, "/forms");
+    const wizard = page.locator(".order-wizard");
+    const currentStep = () => wizard.locator("[aria-current=step]").innerText();
+    await wizard.getByRole("button", { name: "Next" }).click();
+    await page.getByText("Whom is the bread for?").waitFor({ timeout: 5000 });
+    say((await currentStep()).includes("Customer"), "wizard: Next keeps an invalid step's form and shows its message");
+    await wizard.getByLabel("Name on the order").fill("Marta");
+    await wizard.getByLabel("Name on the order").blur();
+    await wizard.getByRole("button", { name: "Next" }).click();
+    await page.waitForFunction(() => document.querySelector(".order-wizard [aria-current=step]")?.textContent?.includes("Pickup"));
+    await wizard.getByRole("button", { name: "Next" }).click();
+    await page.waitForFunction(() => document.querySelector(".order-wizard [aria-current=step]")?.textContent?.includes("Confirm"));
+    await wizard.getByRole("button", { name: "Done" }).click();
+    await page.waitForFunction(() => document.querySelector(".wizard-status")?.textContent === "Ordered for Marta.");
+    say(true, "wizard: a valid form moves on, the steps follow, Done finishes");
+    const wizardViolations = await axe(page);
+    say(wizardViolations.length === 0, `axe /forms at the wizard's last step${wizardViolations.length ? `: ${wizardViolations.join(" | ")}` : ""}`);
+
     /* Data: the grid sorts, pages and selects. */
     await open(page, base, "/data");
     const grid = page.getByRole("table", { name: "Orders" });

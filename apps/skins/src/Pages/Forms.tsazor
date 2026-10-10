@@ -25,7 +25,38 @@
 </Form>
 <p class="order-status">@status</p>
 
+<section class="demo">
+    <Typography Variant="h2">Wizard</Typography>
+    <Wizard @bind-Value="wizardStep" OnFinish="@finishOrder" DisplayStepNumber="all" AriaLabel="Order steps" class="order-wizard">
+        <Steps>
+            <WizardStep Label="Customer" Summary="Who orders">
+                <Form Model="@wizardOrder" Validators="@wizardRules">
+                    <TextInput Label="Name on the order" @bind-Value="wizardOrder.name" />
+                </Form>
+            </WizardStep>
+            <WizardStep Label="Pickup" Summary="When">
+                <DateInput Label="Pick-up date" @bind-Value="wizardOrder.pickup" />
+            </WizardStep>
+            <WizardStep Label="Confirm">
+                <Typography>@(`Bread for ${wizardOrder.name}, picked up ${wizardOrder.pickup || "any day"}.`)</Typography>
+            </WizardStep>
+        </Steps>
+    </Wizard>
+    <Typography Variant="caption"><span class="wizard-status">@wizardStatus</span></Typography>
+</section>
+
 @code {
+    private wizardStep = 0;
+    private wizardStatus = "";
+    private readonly wizardOrder = { name: "", pickup: "" };
+    private readonly wizardRules = {
+        name: (value: unknown) => (String(value ?? "").trim() === "" ? "Whom is the bread for?" : null),
+    };
+
+    private finishOrder(): void {
+        this.wizardStatus = `Ordered for ${this.wizardOrder.name}.`;
+    }
+
     private order = { name: "", bread: "", loaves: 1, pickup: "", slicing: "whole", note: "", terms: false, reminder: false };
     private status = "";
     private readonly slicing = [

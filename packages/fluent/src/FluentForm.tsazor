@@ -1,13 +1,13 @@
 @** A form (class "fui-form") around the runtime EditForm: it cascades the EditContext to the
     Fluent inputs inside, validates on submit and raises onValidSubmit or onInvalidSubmit. It also
     records the submit attempt, which makes the inputs show their validation messages. Put a
-    Button with type="submit" inside. *@
+    Button with type="submit" inside. In a WizardStep the wizard submits it before it moves on. *@
 @using @tsazor/runtime
 @import type { EditContext } from "@tsazor/runtime"
 @import { withAttributes } from "./attributes"
 @import { markSubmitAttempt } from "@tsazor/ui"
 
-<EditForm @attributes="@this.formAttributes" Model="@model" Validators="@validators" OnValidSubmit="@this.handleSubmit" OnInvalidSubmit="@this.handleInvalidSubmit" Context="formContext">@childContent(formContext)</EditForm>
+<EditForm @attributes="@this.formAttributes" Model="@model" Validators="@validators" OnValidSubmit="@this.handleSubmit" OnInvalidSubmit="@this.handleInvalidSubmit" Context="formContext"><WizardFormLink editContext="@formContext" onValid="@this.wizardValid" onInvalid="@this.wizardInvalid" />@childContent(formContext)</EditForm>
 
 @code {
     /** Model to edit and validate (passed to the inner EditForm). */
@@ -37,4 +37,8 @@
         markSubmitAttempt(context);
         return this.onInvalidSubmit?.invokeAsync(context);
     });
+
+    /** A wizard's Next or Done submits the form of its step, as a submit button does. */
+    private readonly wizardValid = (context: EditContext) => this.handleSubmit.invokeAsync(context);
+    private readonly wizardInvalid = (context: EditContext) => this.handleInvalidSubmit.invokeAsync(context);
 }
