@@ -392,6 +392,30 @@ export default class Dialog extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// MultiSplitter
+export default class Splitter extends ComponentBase {
+    orientation: Orientation;
+    barSize: number;
+    onResize?: EventCallback<SplitterResizeEventArgs>;
+    onCollapse?: EventCallback<SplitterEventArgs>;
+    onExpand?: EventCallback<SplitterEventArgs>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// MultiSplitterPane
+export default class SplitterPane extends ComponentBase {
+    size?: string;
+    min?: string;
+    max?: string;
+    resizable: undefined;
+    collapsible: undefined;
+    collapsed: undefined;
+    label?: string;
+    childContent?: RenderFragment;
+    splitter?: Splitter;
+}
+
 // Navbar
 export default class Navbar extends ComponentBase {
     brand?: string;
@@ -532,6 +556,30 @@ export default class Spinner extends ComponentBase {
     size: "small" | "medium" | "large";
     label?: string;
     ariaLabel: string | null;
+}
+
+// Splitter
+export default class Splitter extends ComponentBase {
+    orientation: Orientation;
+    barSize: number;
+    onResize?: EventCallback<SplitterResizeEventArgs>;
+    onCollapse?: EventCallback<SplitterEventArgs>;
+    onExpand?: EventCallback<SplitterEventArgs>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// SplitterPane
+export default class SplitterPane extends ComponentBase {
+    size?: string;
+    min?: string;
+    max?: string;
+    resizable: undefined;
+    collapsible: undefined;
+    collapsed: undefined;
+    label?: string;
+    childContent?: RenderFragment;
+    splitter?: Splitter;
 }
 
 // Stack

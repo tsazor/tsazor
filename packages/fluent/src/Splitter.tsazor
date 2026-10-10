@@ -1,0 +1,199 @@
+@** A Fluent UI 2 splitter (Fluent UI Blazor's FluentMultiSplitter; also MultiSplitter): SplitterPanes side by side
+    (orientation horizontal, the default) or stacked (vertical), with a bar between each two. Drag a bar, or focus it
+    and use the arrow keys (Shift for bigger steps), Home and End; Enter (or a double-click on a bar) collapses and
+    expands a collapsible pane. A pane's `size`, `min` and `max` take % or px. onResize reports a pane's new size (in
+    percent); onCollapse and onExpand can be cancelled. The bars follow the window splitter pattern
+    (role="separator", aria-valuenow). *@
+@import { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, type Orientation, type SplitterResizeEventArgs } from "@tsazor/ui"
+@import type SplitterPane from "./SplitterPane.tsazor"
+@import { withAttributes } from "./attributes"
+
+<CascadingValue Value="this" Name="FluentSplitter">
+    <div @attributes="@this.splitterAttributes" @ref="root">@childContent</div>
+</CascadingValue>
+
+@code {
+    /** horizontal (default: panes side by side) | vertical (stacked). */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** The bars' thickness in px; 8 by default. */
+    @Parameter() barSize: number = 8;
+    /** A pane's new size after a drag or a key (FluentMultiSplitterResizeEventArgs). */
+    @Parameter() onResize?: EventCallback<SplitterResizeEventArgs>;
+    /** Before a pane collapses; set `cancel` to keep it open. */
+    @Parameter() onCollapse?: EventCallback<SplitterEventArgs>;
+    /** Before a pane expands; set `cancel` to keep it collapsed. */
+    @Parameter() onExpand?: EventCallback<SplitterEventArgs>;
+    /** The SplitterPanes. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private root?: HTMLDivElement;
+    private readonly panes: SplitterPane[] = [];
+    /** The panes' sizes in percent once a bar moved; before, their `size`. */
+    private sizes?: number[];
+    private drag?: { bar: number; start: number; startSizes: number[]; pixels: number };
+
+    /** The bars' aria-valuenow comes from the panes' sizes, which exist once they are on the page. */
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender) for (const pane of this.panes) pane.refresh();
+    }
+
+    private get splitterAttributes(): Record<string, unknown> {
+        return withAttributes({
+            class: `fui-splitter fui-splitter--${this.orientation}`,
+            style: `--fui-splitter-bar: ${this.barSize}px`,
+        }, this.additionalAttributes);
+    }
+
+    /** @internal Called by SplitterPane as it starts. */
+    registerPane(pane: SplitterPane): void {
+        if (this.panes.includes(pane)) return;
+        pane.index = this.panes.length;
+        this.panes.push(pane);
+        for (const other of this.panes) other.refresh();
+    }
+
+    /** @internal Called by SplitterPane as it goes. */
+    unregisterPane(pane: SplitterPane): void {
+        const at = this.panes.indexOf(pane);
+        if (at < 0) return;
+        this.panes.splice(at, 1);
+        this.panes.forEach((other, index) => {
+            other.index = index;
+        });
+        this.sizes = undefined;
+        for (const other of this.panes) other.refresh();
+    }
+
+    /** @internal The pane's flex: collapsed, a moved size, its own size, or the room left. */
+    flexOf(pane: SplitterPane): string {
+        if (pane.isCollapsed) return "0 0 0px";
+        const moved = this.sizes?.[pane.index];
+        if (moved !== undefined) return `0 0 ${moved}%`;
+        return pane.size ? `0 0 ${pane.size}` : "1 1 0px";
+    }
+
+    /** @internal Whether a bar follows the pane. */
+    hasBarAfter(pane: SplitterPane): boolean {
+        return pane.index < this.panes.length - 1;
+    }
+
+    /** @internal The bar's aria-valuenow, -min and -max: the pane before it, in percent. */
+    barValues(pane: SplitterPane): { now: number; min: number; max: number } {
+        const pixels = this.pixels();
+        const now = this.sizes?.[pane.index] ?? (this.measure()[pane.index] ?? 0);
+        return {
+            now: Math.round(now),
+            min: Math.round(splitterPercent(pane.min, pixels) ?? 0),
+            max: Math.round(splitterPercent(pane.max, pixels) ?? 100),
+        };
+    }
+
+    private pixels(): number {
+        if (this.root === undefined) return 0;
+        const box = this.root.getBoundingClientRect();
+        return this.orientation === "horizontal" ? box.width : box.height;
+    }
+
+    /** The panes' sizes now, in percent of the splitter. */
+    private measure(): number[] {
+        const pixels = this.pixels();
+        if (pixels <= 0) return this.panes.map(() => 100 / Math.max(this.panes.length, 1));
+        return this.panes.map((pane) => {
+            const box = pane.element?.getBoundingClientRect();
+            const size = box === undefined ? 0 : this.orientation === "horizontal" ? box.width : box.height;
+            return (size / pixels) * 100;
+        });
+    }
+
+    private limits(): { mins: number[]; maxs: number[] } {
+        const pixels = this.pixels();
+        return {
+            mins: this.panes.map((pane) => (pane.isCollapsed ? 0 : splitterPercent(pane.min, pixels) ?? 0)),
+            maxs: this.panes.map((pane) => (pane.isCollapsed ? 0 : splitterPercent(pane.max, pixels) ?? 100)),
+        };
+    }
+
+    private apply(next: number[]): void {
+        this.sizes = next;
+        for (const pane of this.panes) pane.refresh();
+    }
+
+    /** @internal A bar's keys: the arrows move it, Home and End take the pane before to its min or max, Enter collapses. */
+    async keydown(pane: SplitterPane, e: KeyboardEvent): Promise<void> {
+        if (e.key === "Enter") {
+            const target = pane.collapsible ? pane : this.panes[pane.index + 1];
+            if (target?.collapsible) {
+                e.preventDefault();
+                await this.toggle(target);
+            }
+            return;
+        }
+        const rtl = this.root !== undefined && getComputedStyle(this.root).direction === "rtl";
+        const delta = splitterKeyDelta(e.key, this.orientation, e.shiftKey, rtl);
+        if (delta === undefined || !pane.resizable) return;
+        e.preventDefault();
+        const { mins, maxs } = this.limits();
+        const next = resizeSplitter(this.sizes ?? this.measure(), pane.index, delta, mins, maxs);
+        this.apply(next);
+        await this.onResize?.invokeAsync({ paneIndex: pane.index, newSize: next[pane.index] ?? 0 });
+    }
+
+    /** @internal A pointer down on the bar after `pane`: the bar follows it until it is up. */
+    pointerdown(pane: SplitterPane, e: PointerEvent): void {
+        if (!pane.resizable || e.button !== 0) return;
+        const bar = e.currentTarget as HTMLElement;
+        bar.setPointerCapture?.(e.pointerId);
+        e.preventDefault();
+        this.drag = {
+            bar: pane.index,
+            start: this.orientation === "horizontal" ? e.clientX : e.clientY,
+            startSizes: this.sizes ?? this.measure(),
+            pixels: this.pixels(),
+        };
+    }
+
+    /** @internal The pointer moves while a bar is dragged. */
+    pointermove(e: PointerEvent): void {
+        const drag = this.drag;
+        if (drag === undefined || drag.pixels <= 0) return;
+        let moved = (this.orientation === "horizontal" ? e.clientX : e.clientY) - drag.start;
+        if (this.orientation === "horizontal" && this.root !== undefined && getComputedStyle(this.root).direction === "rtl") moved = -moved;
+        const { mins, maxs } = this.limits();
+        this.apply(resizeSplitter(drag.startSizes, drag.bar, (moved / drag.pixels) * 100, mins, maxs));
+    }
+
+    /** @internal The pointer is up: the drag ends and the new size is reported. */
+    async pointerup(): Promise<void> {
+        const drag = this.drag;
+        if (drag === undefined) return;
+        this.drag = undefined;
+        await this.onResize?.invokeAsync({ paneIndex: drag.bar, newSize: this.sizes?.[drag.bar] ?? 0 });
+    }
+
+    /** @internal Collapses or expands a collapsible pane, unless onCollapse or onExpand cancels. */
+    async toggle(pane: SplitterPane): Promise<void> {
+        const args = new SplitterEventArgs(pane.index);
+        await (pane.isCollapsed ? this.onExpand : this.onCollapse)?.invokeAsync(args);
+        if (args.cancel) return;
+        // Once a bar moved, a collapsing pane's room goes to its neighbor and comes back when it expands.
+        if (this.sizes !== undefined) {
+            const next = [...this.sizes];
+            const i = pane.index;
+            const neighbor = this.panes[i + 1] !== undefined && !this.panes[i + 1]!.isCollapsed ? i + 1 : i - 1;
+            if (!pane.isCollapsed) {
+                pane.restoreSize = next[i];
+                next[neighbor] = (next[neighbor] ?? 0) + (next[i] ?? 0);
+                next[i] = 0;
+            } else {
+                const size = pane.restoreSize ?? 20;
+                next[neighbor] = Math.max(0, (next[neighbor] ?? 0) - size);
+                next[i] = size;
+            }
+            this.sizes = next;
+        }
+        pane.setCollapsed(!pane.isCollapsed);
+        for (const other of this.panes) other.refresh();
+    }
+}

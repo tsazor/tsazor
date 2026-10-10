@@ -48,7 +48,24 @@
     </Collapse>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">Splitter</Typography>
+    <Splitter class="demo-splitter" OnResize="@((args) => this.resized = `Pane ${args.paneIndex + 1}: ${Math.round(args.newSize)}%`)">
+        <SplitterPane Size="25%" Min="15%" Collapsible="@true" Label="Resize the orders">
+            <div class="pane-body">Orders</div>
+        </SplitterPane>
+        <SplitterPane Min="20%" Label="Resize the order">
+            <div class="pane-body">Order 1042</div>
+        </SplitterPane>
+        <SplitterPane Size="30%" Min="20%" Max="50%">
+            <div class="pane-body">Notes</div>
+        </SplitterPane>
+    </Splitter>
+    <Typography Variant="caption"><span class="splitter-echo">@resized</span></Typography>
+</section>
+
 @code {
+    private resized = "Drag a bar, or focus it and use the arrows.";
     private currentPage = 2;
     private detailsOpen = false;
 }

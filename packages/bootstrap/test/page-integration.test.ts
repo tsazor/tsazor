@@ -49,7 +49,8 @@ async function settle(renderer: Renderer): Promise<void> {
   await renderer.waitUntilIdle();
 }
 
-describe("compiled page integration (ComponentsDemo)", () => {
+// Each test compiles the page with the real compiler and imports the skin: seconds, more under a parallel root run.
+describe("compiled page integration (ComponentsDemo)", { timeout: 30_000 }, () => {
   it("swaps the alert branch to the restore button after self-dismissal", async () => {
     const file = await compilePage();
     const { default: ComponentsDemo } = await import(/* @vite-ignore */ path.resolve(file));

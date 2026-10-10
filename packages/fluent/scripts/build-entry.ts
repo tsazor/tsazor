@@ -37,7 +37,7 @@ try {
 const INTERNAL: ReadonlySet<string> = new Set(["Defer", "TreeViewNode", "ChipContent", "WizardStepHeader", "WizardFormLink"]);
 
 /** Extra export names (the shared vocabulary): Bootstrap's names for the menu button and the form. */
-const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem", Form: "FluentForm" };
+const ALIASES: Readonly<Record<string, string>> = { Dropdown: "Menu", DropdownItem: "MenuItem", Form: "FluentForm", MultiSplitter: "Splitter", MultiSplitterPane: "SplitterPane" };
 
 const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
 

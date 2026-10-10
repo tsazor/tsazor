@@ -1,0 +1,77 @@
+/* Splitter — panes side by side (or stacked) with a bar between each two: a hairline that turns brand on hover, while
+   dragged and on focus. */
+
+.tz-splitter {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tz-splitter--vertical {
+  flex-direction: column;
+}
+
+.tz-splitter__pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.tz-splitter__pane--collapsed {
+  overflow: hidden;
+}
+
+.tz-splitter__bar {
+  position: relative;
+  flex: none;
+  width: var(--tz-splitter-bar, 8px);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.tz-splitter--vertical > .tz-splitter__bar {
+  width: auto;
+  height: var(--tz-splitter-bar, 8px);
+  cursor: row-resize;
+}
+
+/* The hairline in the middle of the bar. */
+.tz-splitter__bar::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  width: 1px;
+  background: var(--bs-border-color);
+  transform: translateX(-50%);
+  transition: background 0.15s ease-in-out, width 0.15s ease-in-out;
+}
+
+.tz-splitter--vertical > .tz-splitter__bar::before {
+  inset-block-start: 50%;
+  inset-inline: 0;
+  width: auto;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.tz-splitter__bar:hover::before,
+.tz-splitter__bar:active::before,
+.tz-splitter__bar:focus-visible::before {
+  width: 3px;
+  background: var(--bs-primary);
+}
+
+.tz-splitter--vertical > .tz-splitter__bar:hover::before,
+.tz-splitter--vertical > .tz-splitter__bar:active::before,
+.tz-splitter--vertical > .tz-splitter__bar:focus-visible::before {
+  width: auto;
+  height: 3px;
+}
+
+.tz-splitter__bar:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: -2px;
+}

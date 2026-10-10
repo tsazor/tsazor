@@ -217,6 +217,18 @@ await gate("vitest", vitest);
 await gate("tsazor check", check);
 await gate("dotnet entry points", ["node", ["dotnet-entries.mjs"], app]);
 await gate("tsazor-dotnet generate", ["node", ["node_modules/@tsazor/dotnet/dist/bin.js", "generate", "dotnet-openapi.json", "--out", "src/dotnet-api", "--name", "SmokeApi"], app]);
+// The copy-in CLI ships with the package (L8: it didn't, so `npx @tsazor/fluent add` had nothing to run).
+// (Read with zlib: a tar on Windows may be GNU tar, which takes "C:" for a host.)
+writeFileSync(join(app, "fluent-cli.mjs"), `import { gunzipSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+const tar = gunzipSync(readFileSync(${JSON.stringify(tarballFile("@tsazor/fluent"))})).toString("latin1");
+const missing = ["package/bin/fluent.mjs", "package/bin/closure.mjs", '"tsazor-fluent": "./bin/fluent.mjs"'].filter((entry) => !tar.includes(entry));
+if (missing.length > 0) {
+  console.error("missing: " + missing.join(", "));
+  process.exit(1);
+}
+`);
+await gate("@tsazor/fluent ships its copy-in CLI", ["node", ["fluent-cli.mjs"], app]);
 await gate("dotnet output type check", ["node", ["node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--moduleResolution", "bundler", "--module", "ESNext", "src/dotnet-api/models.ts", "src/dotnet-api/smoke-api.ts"], app]);
 
 async function gate(name, [cmd, args, cwd]) {

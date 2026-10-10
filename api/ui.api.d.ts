@@ -361,6 +361,9 @@ export declare function propertyPath(property: (item: never) => unknown): string
 // propertyTitle
 export declare function propertyTitle(property: (item: never) => unknown): string | undefined;
 
+// resizeSplitter
+export declare function resizeSplitter(sizes: readonly number[], bar: number, delta: number, mins: readonly number[], maxs: readonly number[]): number[];
+
 // rovingFocus
 export declare function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement>;
 
@@ -398,6 +401,25 @@ export type SortDirection = "auto" | "ascending" | "descending";
 export interface SortedProperty {
     propertyName: string;
     direction: "ascending" | "descending";
+}
+
+// SplitterEventArgs
+export declare class SplitterEventArgs {
+    readonly paneIndex: number;
+    cancel: boolean;
+    constructor(paneIndex: number);
+}
+
+// splitterKeyDelta
+export declare function splitterKeyDelta(key: string, orientation: "horizontal" | "vertical", shift: boolean, rtl?: boolean): number | undefined;
+
+// splitterPercent
+export declare function splitterPercent(length: string | null | undefined, splitterPixels: number): number | undefined;
+
+// SplitterResizeEventArgs
+export interface SplitterResizeEventArgs {
+    readonly paneIndex: number;
+    readonly newSize: number;
 }
 
 // Toast

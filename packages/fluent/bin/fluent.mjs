@@ -15,9 +15,12 @@
 import { existsSync, mkdirSync, readFileSync, copyFileSync, readdirSync } from "node:fs";
 import { join, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { availableComponents as componentsIn, collectClosure as closureIn } from "./closure.mjs";
 
 const FLUENT_SRC = fileURLToPath(new URL("../src", import.meta.url));
 const FLUENT_STYLES = fileURLToPath(new URL("../src/styles", import.meta.url));
+const availableComponents = () => componentsIn(FLUENT_SRC);
+const collectClosure = (name) => closureIn(FLUENT_SRC, name);
 
 const argv = process.argv.slice(2);
 let root = process.cwd();
@@ -36,68 +39,6 @@ for (let i = 0; i < argv.length; i++) {
     } else if (!arg.startsWith("-")) {
         target = arg;
     }
-}
-
-function sourceFiles() {
-    return readdirSync(FLUENT_SRC).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor");
-}
-
-function availableComponents() {
-    const names = new Set();
-    for (const file of sourceFiles()) names.add(basename(file, ".tsazor"));
-    return [...names];
-}
-
-/** Sibling .tsazor components referenced as <Tag> in the markup. */
-function markupDependencies(source) {
-    const tags = new Set();
-    const available = new Set(availableComponents());
-    for (const match of source.matchAll(/<([A-Z][A-Za-z0-9]*)/g)) {
-        const tag = match[1];
-        if (available.has(tag)) tags.add(tag);
-    }
-    return tags;
-}
-
-/**
- * Sibling files a source imports by a relative path: `@import { withAttributes } from "./attributes"`,
- * `@import type Menu from "./Menu.tsazor"`, `import … from "./vocabulary.js"` in a .ts helper.
- */
-function moduleDependencies(source) {
-    const files = new Set();
-    for (const match of source.matchAll(/\bfrom\s+["']\.\/([^"']+)["']/g)) {
-        const spec = match[1];
-        const stem = spec.replace(/\.(js|ts)$/, "");
-        for (const file of spec.endsWith(".tsazor") ? [spec] : [`${stem}.ts`, `${stem}.tsazor`]) {
-            if (existsSync(join(FLUENT_SRC, file))) {
-                files.add(file);
-                break;
-            }
-        }
-    }
-    return files;
-}
-
-/** The component's file and every file it needs: sibling components in its markup, and the modules it imports. */
-function collectClosure(entryName) {
-    if (!existsSync(join(FLUENT_SRC, `${entryName}.tsazor`))) {
-        throw new Error(`unknown component "${entryName}" — run "npx @tsazor/fluent list" for available ones`);
-    }
-    const closure = new Map();
-    const queue = [`${entryName}.tsazor`];
-    while (queue.length > 0) {
-        const file = queue.shift();
-        if (closure.has(file)) continue;
-        const path = join(FLUENT_SRC, file);
-        const source = readFileSync(path, "utf8");
-        closure.set(file, { name: basename(file).replace(/\.(tsazor|ts)$/, ""), file, path, source });
-        const deps = [...moduleDependencies(source)];
-        if (file.endsWith(".tsazor")) deps.push(...[...markupDependencies(source)].map((tag) => `${tag}.tsazor`));
-        for (const dep of deps) {
-            if (!closure.has(dep)) queue.push(dep);
-        }
-    }
-    return [...closure.values()];
 }
 
 function planAdd(name) {

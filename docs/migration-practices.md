@@ -131,6 +131,9 @@ render in the browser.
   `FluentForm` in a step is validated before Next, as an `EditForm` is in Fluent UI Blazor. `StepperPosition.Left`
   becomes `"start"`. MudBlazor's `MudStepper` maps onto it too: `ActiveIndex` is `Value`, a step's `Title` its
   `Label`, `NonLinear` is `StepSequence="any"`.
+- **Splitters.** `FluentMultiSplitter`/`FluentMultiSplitterPane` keep their names (`MultiSplitter`, `MultiSplitterPane`)
+  and parameters (`Size`, `Min`, `Max`, `Collapsible`, `Resizable`, `OnResize`). MudBlazor's two-pane `MudSplitPanel`
+  (`FirstPanel`, `SecondPanel`) becomes a `Splitter` with two `SplitterPane`s; `MinPanelSize` is each pane's `Min`.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

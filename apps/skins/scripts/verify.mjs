@@ -276,6 +276,37 @@ try {
     await page.waitForFunction(() => document.querySelector(".page-echo")?.textContent === "Page 3 of 7");
     say(true, "pagination: Next raises onPageChanged");
 
+    /* Structure: the splitter, dragged and keyed. */
+    const splitterPanes = page.locator(".demo-splitter > div:not([role=separator])");
+    const paneWidth = (i) => splitterPanes.nth(i).evaluate((pane) => pane.getBoundingClientRect().width);
+    const orders = page.getByRole("separator", { name: "Resize the orders", exact: true });
+    await orders.scrollIntoViewIfNeeded();
+    const before = await paneWidth(0);
+    const bar = await orders.boundingBox();
+    await page.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(bar.x + bar.width / 2 + 80, bar.y + bar.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForFunction(() => document.querySelector(".splitter-echo")?.textContent?.startsWith("Pane 1:"));
+    const dragged = await paneWidth(0);
+    say(Math.abs(dragged - before - 80) < 4, `splitter: a drag moves the bar (${Math.round(before)} → ${Math.round(dragged)}px)`);
+    const order = page.getByRole("separator", { name: "Resize the order", exact: true });
+    const valueBefore = Number(await order.getAttribute("aria-valuenow"));
+    await order.focus();
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    await page.waitForFunction((v) => Number(document.querySelectorAll(".demo-splitter [role=separator]")[1]?.getAttribute("aria-valuenow")) < v, valueBefore);
+    say(true, "splitter: the arrow keys move a focused bar (aria-valuenow follows)");
+    await orders.focus();
+    await page.keyboard.press("Home");
+    await page.waitForFunction(() => document.querySelector(".demo-splitter [role=separator]")?.getAttribute("aria-valuenow") === "15");
+    say(true, "splitter: Home takes the pane to its min (15%)");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.querySelector(".demo-splitter > div")?.getBoundingClientRect().width === 0);
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => (document.querySelector(".demo-splitter > div")?.getBoundingClientRect().width ?? 0) > 0);
+    say(true, "splitter: Enter collapses a collapsible pane and expands it again");
+
     say(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
     await page.close();
   }

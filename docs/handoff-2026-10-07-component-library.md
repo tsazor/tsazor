@@ -108,9 +108,17 @@ everything pushed.
 >   (L5: DOMPurify doesn't sanitize under happy-dom); the skins app's Content page and its gate check the sanitizing
 >   in Edge, Firefox and WebKit; axe found L6 (task checkbox names, inline code contrast). The root `pnpm test` now
 >   also runs ui, the icon sets, markdown and worker (CI's `pnpm -r test` always did).
-> - **Next:** the rest of wave A: Avatar, Chip, Timeline, Stepper, Splitter, Toolbar, Slider, DatePicker, upload drop
->   zone, sortable list, the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav) and the chart
->   `@attach` guide.
+> - **Wave A components, 2026-10-10 (pushed through `3a485e3`):** Avatar (`a692b93`; Fluent 2's persona palette in
+>   `styles/avatar-colors.css`), Chip/ChipSet (`6349da6`; `ChipSetModel` in `@tsazor/ui`), Timeline (`f6ef67f`; subgrid,
+>   so the dots line up), Wizard (`3a485e3`; forms in a step register through `WizardFormLink`). `@tsazor/bootstrap` has
+>   a stylesheet of its own now, `tsazor-bootstrap.css` (the sidecar CSS, in `--bs-*` variables). L7: the builds keep
+>   `dist/` in place, so a running dev server sees a rebuild. Each component: behavior in `@tsazor/ui` where there is
+>   some, both skins, unit tests, the skins app (and the gallery) with gate checks and axe.
+> - **Environment, 2026-10-10 evening:** Vitest got slow on this machine (about a second idle per module; plain node
+>   loads everything in 0.2 s; Git Bash starts node in 1.2 s, PowerShell in 45 ms), so a full `pnpm test` runs into
+>   5 s timeouts. Logically green (2002 passed with long timeouts). Look at it again before trusting a red root run.
+> - **Next:** the rest of wave A: Splitter, Toolbar, Slider, DatePicker, upload drop zone, sortable list, the Bootstrap
+>   catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav) and the chart `@attach` guide.
 >   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
 >     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
 >     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)

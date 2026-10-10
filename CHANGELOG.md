@@ -5,6 +5,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/fluent`: the copy-in CLI is published (`bin`: `tsazor-fluent`), so `npx @tsazor/fluent add Dialog` runs
+  from npm; before, the package left `bin/` out (L8).
+
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Splitter` and `SplitterPane` (Fluent UI Blazor main's
+  `FluentMultiSplitter`; also as `MultiSplitter` and `MultiSplitterPane`): panes side by side or stacked, a bar between
+  each two that a drag or the keys move (the window splitter pattern: `role="separator"`, `aria-valuenow`, arrows,
+  Shift, Home, End; Enter or a double-click collapses a collapsible pane, whose room goes to its neighbor). A pane's
+  `size`, `min` and `max` take % or px; `onResize`, cancellable `onCollapse`/`onExpand`. `@tsazor/ui`:
+  `resizeSplitter`, `splitterKeyDelta`, `splitterPercent`, `SplitterEventArgs`.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Wizard` and `WizardStep` (Fluent UI Blazor main's
   `FluentWizard`): a step list (at the start, on top when narrow, or on top) with the current step's content and
   Previous, Next and Done. `value` is the current index (`@bind-value`); Next skips disabled steps, validates the

@@ -61,7 +61,7 @@ these.
 | Chip / ChipSet (done 2026-10-10) | none | Chip, ChipSet | A |
 | Timeline (done 2026-10-10) | none | Timeline | A |
 | Stepper / Wizard (Wizard, done 2026-10-10) | Wizard | Stepper | A |
-| Splitter | Splitter | SplitPanel | A |
+| Splitter (done 2026-10-10) | Splitter | SplitPanel | A |
 | Toolbar | none on main (v4: Toolbar) | ToolBar | A |
 | Slider | Slider | Slider | A |
 | DatePicker with a calendar popup | DateTime | DatePicker | A |
@@ -133,3 +133,4 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L5 | Tests of sanitized HTML | `@tsazor/markdown`'s first tests: under happy-dom (the environment of the skins' tests and of `@tsazor/testing`'s examples) DOMPurify keeps `onerror` and drops `<p>`, so a test sees unsanitized HTML; happy-dom also fetched an `<iframe>`'s URL and ran the `onerror` | The package tests under jsdom, and the skins app's gate checks the sanitizing in Edge, Firefox and WebKit (2026-10-10). An app that tests its own Markdown output needs jsdom too (README) |
 | L6 | `@tsazor/markdown`, accessibility | axe on the skins app's Content page: a task list's checkboxes had no name, and Bootstrap's pink inline code fell to 4.26:1 on the code background | The checkbox is named by its item's text; inline code takes the text color (2026-10-10) |
 | L7 | The skins' builds | Rebuilding a skin while a dev server ran (the owner's gallery and skins servers, mine): the build removed `dist/` first, the server read the missing files in the gap, cached the errors and lost track of the new files, so it served the old skin until a restart | The builds overwrite `dist/` in place and remove only what they didn't write (2026-10-10); a running dev server picks a rebuild up |
+| L8 | `@tsazor/fluent`'s copy-in CLI | Moving the CLI's closure into a module for a faster test: the package had no `bin` and its `files` left `bin/` out, so `npx @tsazor/fluent add`, as the README says, had nothing to run from npm | `"bin": { "tsazor-fluent": "./bin/fluent.mjs" }` and `bin` in `files` (2026-10-10); the tarball smoke checks the packed CLI |
