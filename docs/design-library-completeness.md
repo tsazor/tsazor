@@ -65,7 +65,7 @@ these.
 | Toolbar (done 2026-10-10) | none on main (v4: Toolbar) | ToolBar | A |
 | Slider (done 2026-10-10) | Slider | Slider | A |
 | DatePicker with a calendar popup (DatePicker and Calendar, done 2026-10-10) | DateTime | DatePicker | A |
-| Upload drop zone with progress | InputFile | FileUpload, DropZone | A |
+| Upload drop zone with progress (FileUpload, done 2026-10-10) | InputFile | FileUpload, DropZone | A |
 | Sortable list (drag and drop, with a keyboard way) | SortableList, Drag | DropZone | A |
 | Overlay (busy state) | Overlay | Overlay | B |
 | TimePicker | DateTime | TimePicker | B |
@@ -136,3 +136,4 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L8 | `@tsazor/fluent`'s copy-in CLI | Moving the CLI's closure into a module for a faster test: the package had no `bin` and its `files` left `bin/` out, so `npx @tsazor/fluent add`, as the README says, had nothing to run from npm | `"bin": { "tsazor-fluent": "./bin/fluent.mjs" }` and `bin` in `files` (2026-10-10); the tarball smoke checks the packed CLI |
 | L9 | `Slider` (both skins) | Writing the Slider: the renderer sets attributes in source order, and an `input type="range"` whose `value` comes before its `min` and `max` clamps it to the default 0–100 first (a probe in Edge, Firefox and WebKit: 220 with min 180 and max 260 became 180) | `value` comes after `min`, `max` and `step` in the markup (2026-10-10); the skins gate's Oven slider (180–260, at 220) checks it. A component with a range input of its own does the same |
 | L10 | Gates on the Bootstrap skin | The slider checks failed now and then: Bootstrap's reboot sets `scroll-behavior: smooth`, so `scrollIntoView` was still moving when the boxes were measured, and the clicks hit the wrong place | Scroll with `behavior: "instant"` before measuring (2026-10-10) |
+| L11 | `DatePicker` (both skins) | The calendar's dialog took a focus trap and dismissal; Escape did nothing: each opened an overlay layer of its own, and dismissal only acts for the top one (the trap's) | Both share one `createLayer()`, as Dialog does (2026-10-10; `test/date-picker.test.ts`). A component with a focus trap and dismissal of its own does the same |

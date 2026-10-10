@@ -1,0 +1,206 @@
+@** A Fluent UI 2 file upload zone (Fluent UI Blazor's FluentInputFile, MudBlazor's MudFileUpload): drop files on
+    it, or click it (or Tab to it and press Enter) to choose them. Each file goes through `upload` — `uploadTo(url)`
+    from @tsazor/ui posts it with its progress — or is read in chunks (mode buffer, the default: onProgressChange gets
+    each `chunk`, onFileUploaded the whole `buffer`) or handed over as it is (stream). A progress bar and its text
+    show the run (or a `progressTemplate`); onProgressChange can cancel it (`isCancelled`). More than
+    `maximumFileCount` files, or a file over `maximumFileSize`, raises onFileError. `anchorId` lets a button elsewhere
+    open the chooser. *@
+@import { InputFile, InputFileChangeEventArgs, type Attachment } from "@tsazor/runtime"
+@import {
+    fileUploadLabels, runFileUpload, uniqueId,
+    type FileUploader, type FileUploadErrorEventArgs, type FileUploadEventArgs, type FileUploadLabels, type FileUploadMode,
+    type ProgressFileDetails,
+} from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.uploadAttributes">
+    <label class="fui-file-upload__zone" aria-hidden="@(this.dragDropZoneVisible ? null : "true")" @attach="this.dropZone">
+        <span class="fui-file-upload__content">
+            @if (this.childContent) {
+                @this.childContent
+            } else {
+                @this.prompt
+            }
+        </span>
+        <InputFile OnChange="@this.chosen" id="@this.inputId" class="fui-file-upload__input" accept="@this.accept" multiple="@this.multiple" disabled="@this.disabled" tabindex="@(this.dragDropZoneVisible ? null : -1)" aria-describedby="@(this.title ? this.progressId : null)" />
+    </label>
+    @if (this.progressTemplate) {
+        @if (this.showsProgress) {
+            <div class="fui-file-upload__progress" id="@this.progressId">@this.progressTemplate(this.details)</div>
+        }
+    } else {
+        <div class="fui-file-upload__progress" id="@this.progressId" hidden="@(!this.showsProgress)">
+            <Progress value="@this.percent" ariaLabel="@this.progressLabel" />
+            <span class="fui-file-upload__title" role="status">@this.title</span>
+        </div>
+    }
+</div>
+
+@code {
+    /** Lets the user choose (or drop) several files. */
+    @Parameter() multiple: boolean = false;
+    /** The most files in one go; more raise onFileError (FileCountExceeded). 10 by default. */
+    @Parameter() maximumFileCount: number = 10;
+    /** The largest file in bytes; a larger one raises onFileError (MaximumSizeReached) and is skipped. 10 MiB by default. */
+    @Parameter() maximumFileSize: number = 10 * 1024 * 1024;
+    /** The chunk size in bytes in buffer mode. */
+    @Parameter() bufferSize: number = 10 * 1024;
+    /** The accepted file types (".csv", "image/*"). */
+    @Parameter() accept?: string;
+    /** Disables the zone. */
+    @Parameter() disabled: boolean = false;
+    /** buffer (default: read into memory) or stream (handed over as they are), without an `upload` function (`Mode`). */
+    @Parameter() mode: FileUploadMode = "buffer";
+    /** Sends each file somewhere with its progress: `uploadTo("/api/files")`. */
+    @Parameter() upload?: FileUploader;
+    /** Shows the zone (default); false keeps only the progress, for a chooser that `anchorId`'s element opens (the input then leaves the tab order). */
+    @Parameter() dragDropZoneVisible: boolean = true;
+    /** The id of an element (a button) that opens the chooser when clicked (`AnchorId`). */
+    @Parameter() anchorId?: string;
+    /** The zone's content; by default "Drop files here, or click to choose". */
+    @Parameter() childContent?: RenderFragment;
+    /** The progress instead of the bar and its text (`ProgressTemplate`). */
+    @Parameter() progressTemplate?: (details: ProgressFileDetails) => RenderFragment;
+    /** The run's progress, 0–100, two-way with @bind-progressPercent (`ProgressPercent`). */
+    @Parameter() progressPercent: number = 0;
+    /** Raised as the run's progress changes. */
+    @Parameter() progressPercentChanged?: EventCallback<number>;
+    /** The files as chosen, instead of the run (Blazor's InputFile `OnChange`; `OnInputFileChange`). */
+    @Parameter() onInputFileChange?: EventCallback<InputFileChangeEventArgs>;
+    /** Raised as a file's chunk is read or its bytes are sent; set `isCancelled` to stop. */
+    @Parameter() onProgressChange?: EventCallback<FileUploadEventArgs>;
+    /** Raised when a file is through (its `buffer`, `file` or `result`). */
+    @Parameter() onFileUploaded?: EventCallback<FileUploadEventArgs>;
+    /** Raised for too many files, a file too large, a failed upload. */
+    @Parameter() onFileError?: EventCallback<FileUploadErrorEventArgs>;
+    /** Raised with every file's args at the end of a run. */
+    @Parameter() onCompleted?: EventCallback<FileUploadEventArgs[]>;
+    /** The progress texts (English by default). */
+    @Parameter() labels?: Partial<FileUploadLabels>;
+    /** The progress bar's accessible name. */
+    @Parameter() progressLabel: string = "Upload progress";
+    /** `@attributes` pass-through onto the zone's wrapper (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly inputId = uniqueId("fui-file-upload");
+    private readonly progressId = `${this.inputId}-progress`;
+    private percent = 0;
+    private percentFor?: number;
+    private title = "";
+    private details: ProgressFileDetails = { index: 0, name: "", percentage: 0 };
+    private dragging = false;
+    private anchored?: { element: HTMLElement; open: () => void };
+
+    protected override onParametersSet(): void {
+        if (this.progressPercent !== this.percentFor) {
+            this.percentFor = this.progressPercent;
+            this.percent = this.progressPercent;
+        }
+    }
+
+    protected override onAfterRender(): void {
+        const anchor = this.anchorId ? document.getElementById(this.anchorId) : null;
+        if (anchor === this.anchored?.element) return;
+        if (this.anchored) this.anchored.element.removeEventListener("click", this.anchored.open);
+        this.anchored = undefined;
+        if (anchor === null) return;
+        const open = (): void => {
+            if (!this.disabled) this.input?.click();
+        };
+        anchor.addEventListener("click", open, { signal: this.disposeSignal });
+        this.anchored = { element: anchor, open };
+    }
+
+    private get input(): HTMLInputElement | null {
+        return document.getElementById(this.inputId) as HTMLInputElement | null;
+    }
+
+    private get prompt(): string {
+        return this.multiple ? "Drop files here, or click to choose" : "Drop a file here, or click to choose";
+    }
+
+    private get showsProgress(): boolean {
+        return this.percent > 0;
+    }
+
+    private get uploadAttributes(): Record<string, unknown> {
+        let cls = "fui-file-upload";
+        if (this.dragging) cls += " fui-file-upload--dragover";
+        if (this.disabled) cls += " fui-file-upload--disabled";
+        if (!this.dragDropZoneVisible) cls += " fui-file-upload--hidden-zone";
+        return withAttributes({ class: cls }, this.additionalAttributes);
+    }
+
+    /** Files dragged over the zone mark it; dropped ones start a run. */
+    private readonly dropZone: Attachment<HTMLElement> = (zone) => {
+        const over = (event: DragEvent): void => {
+            if (this.disabled) return;
+            event.preventDefault();
+            if (!this.dragging) {
+                this.dragging = true;
+                this.stateHasChanged();
+            }
+        };
+        const leave = (event: DragEvent): void => {
+            if (event.relatedTarget instanceof Node && zone.contains(event.relatedTarget)) return;
+            this.dragging = false;
+            this.stateHasChanged();
+        };
+        const drop = (event: DragEvent): void => {
+            if (this.disabled) return;
+            event.preventDefault();
+            this.dragging = false;
+            const files = [...(event.dataTransfer?.files ?? [])];
+            void this.chosen(new InputFileChangeEventArgs(this.multiple ? files : files.slice(0, 1)));
+        };
+        zone.addEventListener("dragenter", over);
+        zone.addEventListener("dragover", over);
+        zone.addEventListener("dragleave", leave);
+        zone.addEventListener("drop", drop);
+        return () => {
+            zone.removeEventListener("dragenter", over);
+            zone.removeEventListener("dragover", over);
+            zone.removeEventListener("dragleave", leave);
+            zone.removeEventListener("drop", drop);
+        };
+    };
+
+    private async chosen(e: InputFileChangeEventArgs): Promise<void> {
+        const files = [...e.getMultipleFiles(Number.MAX_SAFE_INTEGER)];
+        // The same file chosen again changes the input again.
+        const input = this.input;
+        if (input) input.value = "";
+        if (files.length === 0) return;
+        if (files.length > this.maximumFileCount) {
+            await this.onFileError?.invokeAsync({ errorCode: "FileCountExceeded", errorMessage: "The maximum number of files has been exceeded.", fileCount: files.length });
+            return;
+        }
+        if (this.onInputFileChange) {
+            await this.onInputFileChange.invokeAsync(e);
+            return;
+        }
+        await runFileUpload(files, {
+            maximumFileCount: this.maximumFileCount,
+            maximumFileSize: this.maximumFileSize,
+            bufferSize: this.bufferSize,
+            mode: this.mode,
+            upload: this.upload,
+            labels: { ...fileUploadLabels, ...this.labels },
+        }, {
+            progress: async (percent, title, details) => {
+                this.title = title;
+                this.details = details;
+                if (percent !== this.percent) {
+                    this.percent = percent;
+                    this.percentFor = percent;
+                    await this.progressPercentChanged?.invokeAsync(percent);
+                }
+                this.stateHasChanged();
+            },
+            progressChange: (args) => this.onProgressChange?.invokeAsync(args),
+            fileUploaded: (args) => this.onFileUploaded?.invokeAsync(args),
+            fileError: (error) => this.onFileError?.invokeAsync(error),
+            completed: (all) => this.onCompleted?.invokeAsync(all),
+        });
+    }
+}

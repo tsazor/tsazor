@@ -48,6 +48,24 @@ export {
   type DateRange,
   type IsoDate,
 } from "./calendar.js";
+export {
+  FileUploadEventArgs,
+  fileUploadLabels,
+  formatFileSize,
+  runFileUpload,
+  uploadFile,
+  uploadTo,
+  type FileUploadCallbacks,
+  type FileUploadErrorEventArgs,
+  type FileUploadLabels,
+  type FileUploadMode,
+  type FileUploadOptions,
+  type FileUploader,
+  type ProgressFileDetails,
+  type UploadedFileDetails,
+  type UploadFileOptions,
+  type UploadResponse,
+} from "./file-upload.js";
 export { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepChangeEventArgs, wizardStepStatus, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";

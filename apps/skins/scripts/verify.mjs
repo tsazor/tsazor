@@ -14,6 +14,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as playwright from "playwright-core";
 import { launchBrowser } from "../../../scripts/browsers.mjs";
+import { receiveUpload } from "./upload-endpoint.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
@@ -37,6 +38,7 @@ const servers = Object.entries(SKINS).map(([skin, port]) => {
   const dist = path.join(ROOT, "dist", skin);
   return http
     .createServer((request, response) => {
+      if (receiveUpload(request, response)) return;
       const requestUrl = new URL(request.url ?? "/", url(skin));
       let file = path.join(dist, decodeURIComponent(requestUrl.pathname));
       if (!file.startsWith(dist) || !existsSync(file) || !path.extname(file)) file = path.join(dist, "index.html");
@@ -318,6 +320,36 @@ try {
     say(true, "calendar: two clicks pick a range");
     await holidays.getByRole("button", { name: "December 2026" }).click();
     say(await holidays.getByRole("gridcell", { name: "December 2026" }).isVisible(), "calendar: the title zooms out to the months");
+
+    /* File upload: chosen and dropped files go to the server with the progress; the size limit; a button elsewhere. */
+    const uploads = page.locator("section", { has: page.getByRole("heading", { name: "File upload", exact: true }) });
+    await uploads.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const chooser = uploads.getByLabel(/Drop price lists here/);
+    const prices = "bread;3.20\nrolls;0.60\n";
+    await chooser.setInputFiles([
+      { name: "prices.csv", mimeType: "text/csv", buffer: Buffer.from(prices) },
+      { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.alloc(40 * 1024, 65) },
+    ]);
+    await uploads.getByText("notes.txt: 40 kB sent").waitFor();
+    say(await uploads.getByText(`prices.csv: ${prices.length} byte sent`).isVisible(), "file upload: chosen files go to the server, one by one");
+    const uploadBar = uploads.getByRole("progressbar").first();
+    say((await uploadBar.getAttribute("aria-valuenow")) === "100" && (await uploads.getByRole("status").first().textContent()) === "Completed", "file upload: the progress reaches 100, Completed");
+    await uploads.locator("label").first().evaluate((zone) => {
+      const data = new DataTransfer();
+      data.items.add(new File(["x".repeat(10)], "dropped.csv", { type: "text/csv" }));
+      zone.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: data }));
+    });
+    await uploads.getByText("dropped.csv: 10 byte sent").waitFor();
+    say(true, "file upload: dropped files go to the server");
+    await chooser.setInputFiles({ name: "huge.csv", mimeType: "text/csv", buffer: Buffer.alloc(2 * 1024 * 1024) });
+    await uploads.getByText("huge.csv: The maximum size allowed is reached").waitFor();
+    say(true, "file upload: a file over the limit is refused");
+    const [listChooser] = await Promise.all([page.waitForEvent("filechooser"), uploads.getByRole("button", { name: "Read a delivery list" }).click()]);
+    await listChooser.setFiles({ name: "route.csv", mimeType: "text/csv", buffer: Buffer.from("Mill Lane 4\nStation Road 12\nHigh Street 1\n") });
+    await page.waitForFunction(() => document.querySelector(".delivery-list")?.textContent === "Read 3 lines from route.csv.");
+    say(true, "file upload: a button elsewhere opens the chooser; buffer mode reads the file");
+    const uploadViolations = await axe(page);
+    say(uploadViolations.length === 0, `axe /forms after the uploads${uploadViolations.length ? `: ${uploadViolations.join(" | ")}` : ""}`);
 
     /* Data: the grid sorts, pages and selects. */
     await open(page, base, "/data");

@@ -157,6 +157,15 @@ render in the browser.
   `IsDateDisabledFunc` is `DisabledDateFunc`, `OpenTo="OpenTo.Month"` is `View="months"`, `FirstDayOfWeek` stays;
   a `MudDateRangePicker` becomes a `Calendar` with `SelectMode="range"`. Plain JavaScript would hand you a `Date`
   (or `Temporal.PlainDate` where it ships); `parseIsoDate` and `isoDate` in `@tsazor/ui` convert.
+- **File uploads.** `FluentInputFile` becomes `FileUpload` (`InputFile` stays Blazor's plain input), with its
+  parameters (`Multiple`, `MaximumFileCount`, `MaximumFileSize`, `Accept`, `Mode`, `AnchorId`, `DragDropZoneVisible`,
+  `ProgressTemplate`, `OnFileUploaded`, `OnProgressChange`, `OnFileError`, `OnCompleted`). Under Blazor Server
+  `Mode.SaveToTemporaryFolder` wrote to the server's disk; in the browser that becomes an `Upload` function:
+  `Upload="@sendToApi"` with `private readonly sendToApi = uploadTo("/api/files")` (one uploader, not a new one per
+  render) posts each file with its progress, and the API stores it (an ASP.NET minimal API takes it as an
+  `IFormFile`). `Mode.Buffer` hands `onFileUploaded` the whole `buffer` (a `Uint8Array`), each chunk
+  arriving in `onProgressChange`. MudBlazor's `MudFileUpload` with an activator button becomes a `FileUpload` with
+  `AnchorId` and `DragDropZoneVisible="false"`.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

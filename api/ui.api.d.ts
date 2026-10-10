@@ -283,6 +283,69 @@ export declare class FieldState {
 // FieldValidity
 export type FieldValidity = "invalid" | "valid" | "none";
 
+// FileUploadCallbacks
+export interface FileUploadCallbacks {
+    progress(percent: number, title: string, details: ProgressFileDetails): void | Promise<void>;
+    progressChange?(args: FileUploadEventArgs): void | Promise<void>;
+    fileUploaded?(args: FileUploadEventArgs): void | Promise<void>;
+    fileError?(error: FileUploadErrorEventArgs): void | Promise<void>;
+    completed?(files: FileUploadEventArgs[]): void | Promise<void>;
+}
+
+// FileUploader
+export type FileUploader = (file: File, progress: (loaded: number) => void, signal: AbortSignal) => Promise<unknown>;
+
+// FileUploadErrorEventArgs
+export interface FileUploadErrorEventArgs {
+    readonly errorCode: "FileCountExceeded" | "MaximumSizeReached" | "UploadFailed";
+    readonly errorMessage: string;
+    readonly fileName?: string;
+    readonly fileCount?: number;
+}
+
+// FileUploadEventArgs
+export declare class FileUploadEventArgs {
+    readonly file: File;
+    readonly index: number;
+    readonly allFiles: readonly UploadedFileDetails[];
+    isCancelled: boolean;
+    chunk?: Uint8Array;
+    buffer?: Uint8Array;
+    result?: unknown;
+    progressPercent: number;
+    progressTitle?: string;
+    errorMessage?: string;
+    constructor(file: File, index: number, allFiles: readonly UploadedFileDetails[]);
+    get name(): string;
+    get contentType(): string;
+    get size(): number;
+    get lastModified(): number;
+}
+
+// fileUploadLabels
+export declare const fileUploadLabels: FileUploadLabels;
+
+// FileUploadLabels
+export interface FileUploadLabels {
+    readonly loading: string;
+    readonly progress: (number: number, count: number, name: string) => string;
+    readonly completed: string;
+    readonly canceled: string;
+}
+
+// FileUploadMode
+export type FileUploadMode = "buffer" | "stream";
+
+// FileUploadOptions
+export interface FileUploadOptions {
+    readonly maximumFileCount: number;
+    readonly maximumFileSize: number;
+    readonly bufferSize: number;
+    readonly mode: FileUploadMode;
+    readonly upload?: FileUploader;
+    readonly labels: FileUploadLabels;
+}
+
 // filterOptions
 export declare function filterOptions<TOption>(options: readonly TOption[], text: string, optionText: (option: TOption) => string): TOption[];
 
@@ -307,6 +370,9 @@ export interface FocusTrapOptions {
 
 // formatDateField
 export declare function formatDateField(date: IsoDate, locale: string): string;
+
+// formatFileSize
+export declare function formatFileSize(bytes: number, locale?: string): string;
 
 // formatIsoDate
 export declare function formatIsoDate(date: IsoDate, locale: string, options: Intl.DateTimeFormatOptions): string;
@@ -486,6 +552,13 @@ export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-sta
 // previousWizardStep
 export declare function previousWizardStep(disabled: readonly boolean[], from: number): number;
 
+// ProgressFileDetails
+export interface ProgressFileDetails {
+    readonly index: number;
+    readonly name: string;
+    readonly percentage: number;
+}
+
 // propertyPath
 export declare function propertyPath(property: (item: never) => unknown): string | undefined;
 
@@ -509,6 +582,9 @@ export interface RovingFocusOptions {
     onMove?: (index: number, item: HTMLElement) => void;
     typeahead?: boolean;
 }
+
+// runFileUpload
+export declare function runFileUpload(files: readonly File[], options: FileUploadOptions, callbacks: FileUploadCallbacks): Promise<FileUploadEventArgs[]>;
 
 // scrollLock
 export declare const scrollLock: Attachment<HTMLElement>;
@@ -670,6 +746,37 @@ export interface TreeViewItem {
 
 // uniqueId
 export declare function uniqueId(prefix?: string): string;
+
+// UploadedFileDetails
+export interface UploadedFileDetails {
+    readonly name: string;
+    readonly size: number;
+    readonly contentType: string;
+}
+
+// uploadFile
+export declare function uploadFile(url: string, file: File, options?: UploadFileOptions): Promise<UploadResponse>;
+
+// UploadFileOptions
+export interface UploadFileOptions {
+    readonly method?: string;
+    readonly fieldName?: string;
+    readonly data?: Readonly<Record<string, string>>;
+    readonly headers?: Readonly<Record<string, string>>;
+    readonly withCredentials?: boolean;
+    readonly onProgress?: (loaded: number, total: number) => void;
+    readonly signal?: AbortSignal;
+}
+
+// UploadResponse
+export interface UploadResponse {
+    readonly status: number;
+    readonly ok: boolean;
+    readonly body: string;
+}
+
+// uploadTo
+export declare function uploadTo(url: string, options?: Omit<UploadFileOptions, "onProgress" | "signal">): FileUploader;
 
 // VisibleTreeItem
 export interface VisibleTreeItem {

@@ -147,6 +147,14 @@ export default class Calendar extends InputBase<string> {
     ariaLabel?: string;
 }
 
+// CalendarDay: re-exported from @tsazor/ui
+
+// CalendarLabels: re-exported from @tsazor/ui
+
+// CalendarSelectMode: re-exported from @tsazor/ui
+
+// CalendarView: re-exported from @tsazor/ui
+
 // Card
 export default class Card extends ComponentBase {
     appearance: "standard" | "filled";
@@ -383,6 +391,42 @@ export default class FileInput extends ComponentBase {
     onChange?: EventCallback<InputFileChangeEventArgs>;
 }
 
+// FileUpload
+export default class FileUpload extends ComponentBase {
+    multiple: boolean;
+    maximumFileCount: number;
+    maximumFileSize: number;
+    bufferSize: number;
+    accept?: string;
+    disabled: boolean;
+    mode: FileUploadMode;
+    upload?: FileUploader;
+    dragDropZoneVisible: boolean;
+    anchorId?: string;
+    childContent?: RenderFragment;
+    progressTemplate?: (details: ProgressFileDetails) => RenderFragment;
+    progressPercent: number;
+    progressPercentChanged?: EventCallback<number>;
+    onInputFileChange?: EventCallback<InputFileChangeEventArgs>;
+    onProgressChange?: EventCallback<FileUploadEventArgs>;
+    onFileUploaded?: EventCallback<FileUploadEventArgs>;
+    onFileError?: EventCallback<FileUploadErrorEventArgs>;
+    onCompleted?: EventCallback<FileUploadEventArgs[]>;
+    labels?: Partial<FileUploadLabels>;
+    progressLabel: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// FileUploader: re-exported from @tsazor/ui
+
+// FileUploadErrorEventArgs: re-exported from @tsazor/ui
+
+// FileUploadEventArgs: re-exported from @tsazor/ui
+
+// FileUploadLabels: re-exported from @tsazor/ui
+
+// FileUploadMode: re-exported from @tsazor/ui
+
 // FluentForm
 export default class FluentForm extends ComponentBase {
     model: object;
@@ -410,6 +454,8 @@ export default class FluentForm extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     childContent?: (context: EditContext) => RenderFragment;
 }
+
+// formatFileSize: re-exported from @tsazor/ui
 
 // FormField
 export default class FormField extends ComponentBase {
@@ -464,6 +510,8 @@ export default class Indicator extends ComponentBase {
 }
 
 // Intent: re-exported from @tsazor/ui
+
+// IsoDate: re-exported from @tsazor/ui
 
 // ListGroup
 export default class ListGroup extends ComponentBase {
@@ -606,6 +654,8 @@ export default class Progress extends ComponentBase {
     label?: string;
     ariaLabel?: string;
 }
+
+// ProgressFileDetails: re-exported from @tsazor/ui
 
 // PropertyColumn
 export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
@@ -917,6 +967,10 @@ export default class Typography extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
 }
+
+// uploadFile: re-exported from @tsazor/ui
+
+// uploadTo: re-exported from @tsazor/ui
 
 // Wizard
 export default class Wizard extends ComponentBase {

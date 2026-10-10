@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { tsazor } from "@tsazor/vite-plugin";
+import { receiveUpload } from "./scripts/upload-endpoint.mjs";
 
 /**
  * One set of pages, two skins. The sources say `@using @tsazor/bootstrap`; the
@@ -9,7 +10,18 @@ import { tsazor } from "@tsazor/vite-plugin";
 export default defineConfig(({ mode }) => {
   const skin = mode === "fluent" ? "fluent" : "bootstrap";
   return {
-    plugins: [tsazor()],
+    plugins: [
+      tsazor(),
+      {
+        // The FileUpload demo posts to /api/upload.
+        name: "skins-upload-endpoint",
+        configureServer(server) {
+          server.middlewares.use((request, response, next) => {
+            if (!receiveUpload(request, response)) next();
+          });
+        },
+      },
+    ],
     resolve: {
       alias: skin === "fluent" ? [{ find: /^@tsazor\/bootstrap$/, replacement: "@tsazor/fluent" }] : [],
     },

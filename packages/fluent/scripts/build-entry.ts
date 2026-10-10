@@ -138,6 +138,8 @@ exports.push('export { Toaster } from "@tsazor/ui"');
 exports.push('export { icon } from "@tsazor/ui"');
 // The DataGrid's sorting and paging state come with the skin too.
 exports.push('export { GridSort, PaginationState } from "@tsazor/ui"');
+// FileUpload's uploader (`uploadTo(url)`) and file sizes.
+exports.push('export { formatFileSize, uploadFile, uploadTo } from "@tsazor/ui"');
 // Plain helpers the package exports besides its components.
 exports.push('export { tooltip } from "./tooltip-attachment.js"');
 // What an Autocomplete's onOptionsSearch handler gets.
@@ -150,7 +152,7 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, IconValue, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, IconValue, Intent, IsoDate, Orientation, Placement, ProgressFileDetails, SelectionMode, Size, SortDirection, SortedProperty, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),

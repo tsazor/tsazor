@@ -1,5 +1,6 @@
 @page "/forms"
 @import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+@import { formatFileSize, uploadTo, type FileUploadErrorEventArgs, type FileUploadEventArgs } from "@tsazor/bootstrap"
 
 <Typography Variant="h1">Forms</Typography>
 <Typography>
@@ -75,12 +76,44 @@
     </Typography>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">File upload</Typography>
+    <FileUpload Multiple="@true" Accept=".csv,.txt" MaximumFileSize="@(1024 * 1024)" Upload="@sendToServer" OnFileUploaded="@sent" OnFileError="@failed">
+        <span>Drop price lists here, or click to choose (CSV or text, up to 1 MB each)</span>
+    </FileUpload>
+    <ul class="upload-log">
+        @foreach (const line of uploadLog) {
+            <li>@line</li>
+        }
+    </ul>
+    <Button id="read-list" Intent="secondary">Read a delivery list</Button>
+    <FileUpload AnchorId="read-list" DragDropZoneVisible="@false" Accept=".csv" OnFileUploaded="@readList" />
+    <Typography Variant="caption"><span class="delivery-list">@deliveryList</span></Typography>
+</section>
+
 @code {
     private pickupDay = "2026-10-10";
     private deliveryDay = "2026-10-10";
     private billingMonth = "2026-10-01";
     private holidays: string[] = [];
     private readonly closedOnSundays = (date: string): boolean => new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
+    private readonly sendToServer = uploadTo("/api/upload");
+    private uploadLog: string[] = [];
+    private deliveryList = "No list read yet.";
+
+    private sent(args: FileUploadEventArgs): void {
+        this.uploadLog = [...this.uploadLog, `${args.name}: ${formatFileSize(args.size, "en-US")} sent`];
+    }
+
+    private failed(error: FileUploadErrorEventArgs): void {
+        this.uploadLog = [...this.uploadLog, `${error.fileName ?? "The files"}: ${error.errorMessage}`];
+    }
+
+    private readList(args: FileUploadEventArgs): void {
+        const lines = new TextDecoder().decode(args.buffer).split(/\r?\n/).filter((line) => line.trim() !== "");
+        this.deliveryList = `Read ${lines.length} lines from ${args.name}.`;
+    }
+
     private readonly germanLabels = { previousMonth: "Vorheriger Monat", nextMonth: "Nächster Monat", previousYear: "Vorheriges Jahr", nextYear: "Nächstes Jahr", previousYears: "Vorherige Jahre", nextYears: "Nächste Jahre" };
 
     private crust = 50;

@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `FileUpload` (Fluent UI Blazor's `FluentInputFile`,
+  MudBlazor's `MudFileUpload`): a drop zone that is the label of a file input; dropped or chosen files go through an
+  `upload` function (`uploadTo(url)` posts each with its progress, over XMLHttpRequest) or are read in chunks (`mode`
+  buffer) or handed over (stream), with a progress bar and its text (or a `progressTemplate`), `onProgressChange`
+  (cancellable), `onFileUploaded`, `onFileError` (FileCountExceeded, MaximumSizeReached, UploadFailed), `onCompleted`,
+  `@bind-progressPercent`, `anchorId` and `dragDropZoneVisible`. `@tsazor/ui`: `runFileUpload`, `uploadFile`,
+  `uploadTo`, `formatFileSize`; both skins re-export the uploader, `formatFileSize` and the calendar's and the
+  upload's types.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Calendar` and `DatePicker` (Fluent UI Blazor's
   `FluentCalendar` and `FluentDatePicker`, MudBlazor's `MudDatePicker`). The value is an ISO date, `"2026-10-10"`, which no
   time zone shifts. The calendar shows days, months or years (`view`; the title zooms out), honors `minDate`,

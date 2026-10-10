@@ -143,6 +143,12 @@ async function main() {
     await page.getByRole("dialog", { name: "Choose date" }).getByRole("gridcell", { name: "Tuesday, November 10, 2026" }).click();
     await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes('due = "2026-11-10"'));
     check(true, "a date picker's calendar picks a day into the bound ISO value");
+    await page.locator("#demo-upload input[type=file]").setInputFiles([
+      { name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("abc") },
+      { name: "b.txt", mimeType: "text/plain", buffer: Buffer.from("hello") },
+    ]);
+    await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes('read = "a.txt (3 bytes), b.txt (5 bytes)"'));
+    check(true, "a file upload zone reads the chosen files into buffers");
 
     /* 4b — switch control via its label (the native input is under the track) */
     check((await page.locator("[role='switch']").first().count()) === 1, "switch carries role=switch");
