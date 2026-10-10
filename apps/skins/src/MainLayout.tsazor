@@ -10,6 +10,7 @@
         <NavbarLink Href="/data">Data</NavbarLink>
         <NavbarLink Href="/overlays">Overlays</NavbarLink>
         <NavbarLink Href="/structure">Structure</NavbarLink>
+        <NavbarLink Href="/content">Content</NavbarLink>
         <NavbarLink Href="/icons">Icons</NavbarLink>
     </Navbar>
     <div class="skin-switch">

@@ -101,7 +101,16 @@ everything pushed.
 >     from its `IconResource.resx` via `icon()`, `scripts/icons.mjs`); row actions are icon buttons with tooltips
 >     (`ActionButtons` cascades `TableAction`, as in FluentCMS). Found L4: `icon()` drew outline icons filled (the
 >     root's `fill="none"` was lost). `name`/`builtInIcons` deprecated.
->   - Next: Markdown (`@tsazor/markdown`, D-L3), then the rest of wave A.
+> - **Markdown (wave A, D-L3), 2026-10-10, done:** `@tsazor/markdown` — `Markdown` (MudMarkdown's `Value`) on marked
+>   18.0.14, always sanitized with DOMPurify 3.4.16 (own instance, its hooks don't touch an app's); external links get
+>   a new tab and `rel="noopener noreferrer"`; `breaks`, `inline`, `highlight`, `tableClass`, `allowTags`/
+>   `allowAttributes`; `renderMarkdown()`; `markdown.css` in Fluent's, else Bootstrap's tokens. Tests under jsdom
+>   (L5: DOMPurify doesn't sanitize under happy-dom); the skins app's Content page and its gate check the sanitizing
+>   in Edge, Firefox and WebKit; axe found L6 (task checkbox names, inline code contrast). The root `pnpm test` now
+>   also runs ui, the icon sets, markdown and worker (CI's `pnpm -r test` always did).
+> - **Next:** the rest of wave A: Avatar, Chip, Timeline, Stepper, Splitter, Toolbar, Slider, DatePicker, upload drop
+>   zone, sortable list, the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav) and the chart
+>   `@attach` guide.
 >   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
 >     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
 >     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)

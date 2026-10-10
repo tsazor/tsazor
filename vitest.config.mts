@@ -4,7 +4,7 @@
  * Replaces the deprecated `defineWorkspace` form of vitest.workspace.ts — the
  * old workspace list missed packages/fluent and packages/bootstrap, so the
  * root run silently skipped the component packages. Each project resolves its
- * own vitest.config.ts (happy-dom for runtime/testing/fluent/components, node
+ * own vitest.config.ts (happy-dom for runtime/testing/ui and the skins, jsdom for markdown, node
  * for compiler/lsp/vite-plugin); workspace, lsp and cli run on Vitest defaults.
  *
  * apps/* (gallery, demo, …) are excluded: they verify via their own
@@ -27,6 +27,11 @@ export default defineConfig({
       "packages/conformance",
       "packages/dotnet",
       "packages/create-tsazor",
+      "packages/ui",
+      "packages/fluent-icons",
+      "packages/bootstrap-icons",
+      "packages/markdown",
+      "packages/worker",
     ],
   },
 });

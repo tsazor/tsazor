@@ -1,0 +1,97 @@
+/*
+ * @tsazor/markdown: rendered Markdown in the skin's look. Each value takes the Fluent token, else Bootstrap's, else a
+ * neutral one, so the same stylesheet fits both skins and an app without either. Override a --tz-markdown-* property
+ * to change one.
+ */
+.tz-markdown {
+  /* Inline code in the text's color: a skin's accent (Bootstrap's pink) on the code background falls below 4.5:1. */
+  --tz-markdown-code-color: var(--fui-foreground-1, inherit);
+  --tz-markdown-code-background: var(--fui-background-3, var(--bs-tertiary-bg, rgba(127, 127, 127, 0.12)));
+  --tz-markdown-border: var(--fui-stroke-2, var(--bs-border-color, rgba(127, 127, 127, 0.35)));
+  --tz-markdown-quote: var(--fui-foreground-2, var(--bs-secondary-color, inherit));
+  --tz-markdown-radius: var(--fui-radius-md, var(--bs-border-radius, 6px));
+  --tz-markdown-mono: var(--fui-font-family-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace));
+  display: block;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.tz-markdown > :first-child {
+  margin-top: 0;
+}
+
+.tz-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.tz-markdown :is(p, ul, ol, pre, blockquote, table) {
+  margin: 0 0 0.75em;
+}
+
+.tz-markdown :is(h1, h2, h3, h4, h5, h6) {
+  margin: 1em 0 0.5em;
+  line-height: 1.25;
+}
+
+.tz-markdown :is(ul, ol) {
+  padding-inline-start: 1.5em;
+}
+
+.tz-markdown code {
+  font-family: var(--tz-markdown-mono);
+  font-size: 0.875em;
+}
+
+.tz-markdown :not(pre) > code {
+  padding: 0.1em 0.35em;
+  color: var(--tz-markdown-code-color);
+  border-radius: 4px;
+  background: var(--tz-markdown-code-background);
+}
+
+.tz-markdown pre {
+  overflow-x: auto;
+  padding: 0.75em 1em;
+  border-radius: var(--tz-markdown-radius);
+  background: var(--tz-markdown-code-background);
+}
+
+.tz-markdown blockquote {
+  padding: 0 1em;
+  border-inline-start: 3px solid var(--tz-markdown-border);
+  color: var(--tz-markdown-quote);
+}
+
+/* A wide table scrolls on its own instead of widening the page. */
+.tz-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.tz-markdown :is(th, td) {
+  padding: 0.375em 0.75em;
+  border: 1px solid var(--tz-markdown-border);
+  text-align: start;
+}
+
+.tz-markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.tz-markdown hr {
+  border: 0;
+  border-top: 1px solid var(--tz-markdown-border);
+}
+
+/* GitHub's task lists: the checkbox, not the bullet. */
+.tz-markdown li:has(> input[type="checkbox"]:first-child) {
+  list-style: none;
+  margin-inline-start: -1.25em;
+}
+
+.tz-markdown li > input[type="checkbox"]:first-child {
+  margin-inline-end: 0.4em;
+}

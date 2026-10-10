@@ -56,7 +56,7 @@ these.
 | Component | Fluent UI Blazor | MudBlazor | Wave |
 |---|---|---|---|
 | Icons: a full set plus an app's own (F17; done 2026-10-10) | Icons (Fluent System Icons, typed, tree-shaken) | Icon (Material) | A |
-| Markdown (sanitized) | none | separate package | A |
+| Markdown (sanitized; `@tsazor/markdown`, done 2026-10-10) | none | separate package | A |
 | Avatar | Avatar | Avatar | A |
 | Chip / ChipSet | none | Chip, ChipSet | A |
 | Timeline | none | Timeline | A |
@@ -130,3 +130,5 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L2 | `TextInput`, `TextArea` (both skins) | The icon browser's search: the value updated only on `change`. Fluent UI Blazor's inputs take `Immediate` and `ImmediateDelay` | `immediate` and `immediateDelay` (200 ms), the behavior `ImmediateInput` in `@tsazor/ui`: one update when the typing pauses, carrying the field's value then (2026-10-10). `NumberInput` doesn't have it yet |
 | L3 | `npx @tsazor/fluent add` (copy-in) | Icons step 4 added `core-icons.ts`; a dry run showed that a copied component never brought the modules it imports (`attributes.ts`, `vocabulary.ts`, `./Menu.tsazor` types), only the sibling tags of its markup | The CLI follows relative imports too, of components and helpers alike (2026-10-10; `test/copy-in.test.ts` copies every component and resolves its imports) |
 | L4 | `icon()` (`@tsazor/ui`) | Icons step 6, FluentCMS's own set: most of its SVGs say `fill="none" stroke="currentColor"` on the root. `icon()` kept only the viewBox and the inner markup, so under the skins' `fill="currentColor"` the outlines were drawn filled. And its `width` lookup matched `stroke-width` | The root's fill and stroke attributes move onto a `<g>` around the content; attributes are matched as whole names (2026-10-10; `packages/ui/test/icons.test.ts`) |
+| L5 | Tests of sanitized HTML | `@tsazor/markdown`'s first tests: under happy-dom (the environment of the skins' tests and of `@tsazor/testing`'s examples) DOMPurify keeps `onerror` and drops `<p>`, so a test sees unsanitized HTML; happy-dom also fetched an `<iframe>`'s URL and ran the `onerror` | The package tests under jsdom, and the skins app's gate checks the sanitizing in Edge, Firefox and WebKit (2026-10-10). An app that tests its own Markdown output needs jsdom too (README) |
+| L6 | `@tsazor/markdown`, accessibility | axe on the skins app's Content page: a task list's checkboxes had no name, and Bootstrap's pink inline code fell to 4.26:1 on the code background | The checkbox is named by its item's text; inline code takes the text color (2026-10-10) |

@@ -122,6 +122,10 @@ render in the browser.
   and import it once in `_Imports.tsazor`. The markup keeps `IconName.Delete`; a parameter of type `IconName` becomes
   one of type `IconValue`. Generate it with a script (the FluentCMS port's `scripts/icons.mjs`), so an update of the
   original's set is one run.
+- **Markdown.** `<MudMarkdown Value="@text" />` becomes `<Markdown Value="@text" />` from `@tsazor/markdown`. It
+  always sanitizes, so text from an agent or a user needs no extra step. A Markdig pipeline's options become
+  `Breaks`, `Highlight` (a highlighter) and `TableClass`. A test of what it renders needs jsdom: DOMPurify doesn't
+  sanitize under happy-dom (L5).
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

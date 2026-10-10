@@ -125,6 +125,9 @@ createTsazorApp({ root: App, routes });
 | `@tsazor/vite-plugin` | Vite plugin: transform + route manifest (`virtual:tsazor-routes`) + HMR with state retention + compiler errors in the dev overlay + scoped CSS rewriter (postcss) |
 | `@tsazor/bootstrap` | Bootstrap 5 UI library, itself written in `.tsazor` (dogfooding) |
 | `@tsazor/fluent` | Fluent 2 design system: token-driven, accessible components written in `.tsazor` ([docs/fluent.md](docs/fluent.md)) |
+| `@tsazor/ui` | The skins' behavior core: focus trap, dismiss, roving focus, positioning, the DataGrid and tree models, `icon()` |
+| `@tsazor/fluent-icons`, `@tsazor/bootstrap-icons` | The full icon sets as typed, tree-shaken values: `Icons.Regular.Size20.Save`, `Icons.Save` ([docs/design-icons.md](docs/design-icons.md)) |
+| `@tsazor/markdown` | A `Markdown` component on marked, always sanitized with DOMPurify ([README](packages/markdown/README.md)) |
 | `@tsazor/dotnet` | .NET backend bridge: OpenAPI ⇒ typed TS client (`tsazor-dotnet generate`), `HttpResult`/ProblemDetails, DataAnnotations decorators, cookie/JWT auth ([README](packages/dotnet/README.md)) |
 | `@tsazor/cli` | `tsazor check` (typed component-usage gate) and `tsazor codemod` (`.razor` → `.tsazor`) |
 | `@tsazor/lsp` | Language server: diagnostics, hover, go-to-definition, auto-complete |

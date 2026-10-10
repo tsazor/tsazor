@@ -46,6 +46,7 @@ const SHIPPED = [
   "bootstrap-icons",
   "fluent",
   "fluent-icons",
+  "markdown",
   "dotnet",
   "create-tsazor",
 ];

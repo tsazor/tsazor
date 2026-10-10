@@ -90,3 +90,18 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The Content page: an editor beside its preview (stacked on a phone). */
+.markdown-editor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.markdown-preview,
+.markdown-untrusted {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+}

@@ -1,0 +1,58 @@
+@page "/content"
+@import { Markdown } from "@tsazor/markdown"
+@import { skin } from "../skin"
+
+<Typography Variant="h1">Content</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">Markdown</Typography>
+    <div class="markdown-editor">
+        <TextArea Label="Text" Rows="10" Immediate="@true" @bind-Value="text" />
+        <div class="markdown-preview" aria-label="Preview" role="region">
+            <Markdown Value="@text" Breaks="@true" TableClass="@tableClass" />
+        </div>
+    </div>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Text nobody checked</Typography>
+    <Typography Variant="caption">An agent's answer or a user's comment is shown as it comes: what could run is removed.</Typography>
+    <div class="markdown-untrusted">
+        <Markdown Value="@untrusted" TableClass="@tableClass" />
+    </div>
+</section>
+
+@code {
+    /** Bootstrap draws tables with its `.table` class; Fluent's tokens style them in markdown.css. */
+    private readonly tableClass = skin === "bootstrap" ? "table" : undefined;
+
+    private text = [
+        "## Order 1042",
+        "",
+        "**Rye** bread, *sliced*, for ~~Monday~~ Tuesday.",
+        "",
+        "- [x] baked",
+        "- [ ] picked up",
+        "",
+        "| Item | Count |",
+        "|---|---|",
+        "| Rye | 2 |",
+        "| Pretzel | 4 |",
+        "",
+        "> Ring the bell at the back door.",
+        "",
+        "Call `bakery.pickup(1042)` or see [the hours](https://example.com/hours).",
+    ].join("\n");
+
+    /** What a hostile text would try: a script, an event handler, a javascript: link, a style that covers the page. */
+    private readonly untrusted = [
+        "Here is your summary.",
+        "",
+        "<script>window.__xss = 'script'</script>",
+        "<img src=\"missing.png\" alt=\"chart\" onerror=\"window.__xss = 'onerror'\">",
+        "",
+        "[Open the report](javascript:window.__xss='link') · [The docs](https://example.com/docs) · [Orders](/data)",
+        "",
+        "<div style=\"position:fixed;inset:0;background:red\">covered</div>",
+    ].join("\n");
+}

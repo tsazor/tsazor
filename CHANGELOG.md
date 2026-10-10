@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/markdown` (new; wave A, D-L3): a `Markdown` component (MudBlazor's `MudMarkdown`: `Value`) that renders
+  GitHub Flavored Markdown with marked and sanitizes it with DOMPurify, always: scripts, event handlers,
+  `javascript:` links, styles and forms are removed, so an agent's or a user's text can be shown as it comes. Links to
+  another origin open in a new tab with `rel="noopener noreferrer"`. `breaks`, `inline`, `highlight` (a
+  highlighter's HTML, sanitized too), `tableClass`, `allowTags`/`allowAttributes`; `renderMarkdown()` for the HTML
+  alone; `markdown.css` in the skin's tokens (Fluent's, else Bootstrap's).
+
 - **Fix** `@tsazor/ui`: `icon()` given a whole `<svg>` keeps its root's fill and stroke attributes (on a `<g>` around
   the content). An outline icon (`fill="none" stroke="currentColor"` on the root) was drawn filled under the skins'
   `fill="currentColor"`; and a root's `stroke-width` was read as its width (L4).

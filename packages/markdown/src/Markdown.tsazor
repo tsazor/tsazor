@@ -1,0 +1,66 @@
+@** Markdown shown as HTML (MudBlazor's MudMarkdown): `value` is the text, GitHub Flavored Markdown (tables, task
+    lists, strikethrough, autolinks). It is never trusted: DOMPurify removes scripts, event handlers, styles and
+    `javascript:` links, so an agent's answer or a user's comment can be shown as it comes. Links to another origin open
+    in a new tab without access to the page. `breaks` makes a single newline a line break (chat text); `highlight`
+    colors fenced code; `inline` renders a single line into a span. The look comes from `@tsazor/markdown/markdown.css`,
+    in the skin's tokens. *@
+@import { MarkupString } from "@tsazor/runtime"
+@import { renderMarkdown, sameMarkdownOptions, type MarkdownOptions } from "./render-markdown"
+
+@if (inline) {
+    <span @attributes="@this.rootAttributes">@(new MarkupString(this.html))</span>
+} else {
+    <div @attributes="@this.rootAttributes">@(new MarkupString(this.html))</div>
+}
+
+@code {
+    /** The Markdown text (MudMarkdown's `Value`). */
+    @Parameter() value: string = "";
+    /** A single newline is a line break, as in GitHub's comments and in chat text. */
+    @Parameter() breaks: boolean = false;
+    /** Only inline Markdown (emphasis, code, links), rendered into a span. */
+    @Parameter() inline: boolean = false;
+    /** Links to another origin open in a new tab (the default) or in place. */
+    @Parameter() externalLinks: "new-tab" | "same" = "new-tab";
+    /** Turns a fenced code block into HTML, e.g. with highlight.js; the result is sanitized too. */
+    @Parameter() highlight?: (code: string, language: string) => string;
+    /** Tags to allow beyond the default set, for content the app trusts more. */
+    @Parameter() allowTags?: string[];
+    /** Attributes to allow beyond the default set. */
+    @Parameter() allowAttributes?: string[];
+    /** A class for tables (Bootstrap: "table"). */
+    @Parameter() tableClass?: string;
+    /** `@attributes` pass-through onto the root element (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The last render's input and output: a re-render with the same text and options doesn't parse again. */
+    private rendered?: { value: string; options: MarkdownOptions; html: string };
+
+    private get options(): MarkdownOptions {
+        return {
+            breaks: this.breaks,
+            inline: this.inline,
+            externalLinks: this.externalLinks,
+            highlight: this.highlight,
+            allowTags: this.allowTags,
+            allowAttributes: this.allowAttributes,
+            tableClass: this.tableClass,
+        };
+    }
+
+    private get html(): string {
+        const options = this.options;
+        const last = this.rendered;
+        if (last !== undefined && last.value === this.value && sameMarkdownOptions(last.options, options)) return last.html;
+        const html = renderMarkdown(this.value, options);
+        this.rendered = { value: this.value, options, html };
+        return html;
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        const extra = this.additionalAttributes?.["class"];
+        const className = typeof extra === "string" && extra !== "" ? `tz-markdown ${extra}` : "tz-markdown";
+        return { ...this.additionalAttributes, class: className };
+    }
+}
+

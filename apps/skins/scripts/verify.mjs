@@ -19,7 +19,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const SKINS = { bootstrap: 5397, fluent: 5398 };
-const ROUTES = ["/", "/actions", "/forms", "/data", "/overlays", "/structure", "/icons"];
+const ROUTES = ["/", "/actions", "/forms", "/data", "/overlays", "/structure", "/content", "/icons"];
 const url = (skin) => `http://localhost:${SKINS[skin]}`;
 
 for (const [skin, other] of [["bootstrap", "fluent"], ["fluent", "bootstrap"]]) {
@@ -193,6 +193,26 @@ try {
     await page.locator(".icons-cell").first().click();
     await page.waitForFunction(() => document.body.textContent?.includes('<Icon Value="@Icons.') ?? false);
     say(true, "icons page: a click gives the icon's markup");
+
+    /* Content: Markdown, rendered and sanitized in a real browser (unit tests can't: DOMPurify needs a real DOM). */
+    await open(page, base, "/content");
+    const preview = page.locator(".markdown-preview .tz-markdown");
+    say((await preview.locator("h2").textContent()) === "Order 1042", "markdown: the text renders as HTML");
+    say((await preview.locator("input[type=checkbox]").count()) === 2 && (await preview.locator("td").count()) === 4, "markdown: task lists and tables (GitHub Flavored Markdown)");
+    const external = preview.getByRole("link", { name: "the hours" });
+    say((await external.getAttribute("target")) === "_blank" && (await external.getAttribute("rel")) === "noopener noreferrer", "markdown: a link to another origin opens in a new tab, without access to the page");
+    await page.getByLabel("Text").fill("# Live\n\nTyped *now*");
+    await page.waitForFunction(() => document.querySelector(".markdown-preview h1")?.textContent === "Live");
+    say(true, "markdown: the preview follows the typing (TextArea immediate)");
+    const untrusted = page.locator(".markdown-untrusted .tz-markdown");
+    // The image is missing: an onerror that survived would have run by now.
+    await page.waitForFunction(() => document.querySelector(".markdown-untrusted img")?.complete === true);
+    say((await page.evaluate(() => window.__xss)) === undefined, "markdown: nothing in an untrusted text ran (script, onerror)");
+    say((await untrusted.locator("script, [onerror], [style], a[href^='javascript:']").count()) === 0 && (await untrusted.locator("img[alt=chart]").count()) === 1,
+      "markdown: the sanitizer removed what could run and kept the rest");
+    await untrusted.getByText("Open the report").click();
+    say((await page.evaluate(() => window.__xss)) === undefined, "markdown: the javascript: link lost its href, so a click runs nothing");
+    say((await untrusted.getByRole("link", { name: "Orders" }).getAttribute("target")) === null, "markdown: a link in the app stays in the app");
 
     /* Structure: tabs, accordion, pagination. */
     await open(page, base, "/structure");
