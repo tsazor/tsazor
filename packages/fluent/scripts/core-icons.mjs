@@ -13,9 +13,12 @@ import * as Icons from "@tsazor/fluent-icons";
 
 /** `Name` + size + variant, as Fluent UI React names them (`Dismiss20Regular`). */
 const CORE = [
+  "ArrowDown20Regular",
   "ArrowSort20Regular",
   "ArrowSortDown20Regular",
   "ArrowSortUp20Regular",
+  "ArrowUp20Regular",
+  "Calendar20Regular",
   "Checkmark12Regular",
   "CheckmarkCircle20Filled",
   "Circle20Filled",

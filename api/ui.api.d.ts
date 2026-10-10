@@ -2,6 +2,15 @@
 
 /* @tsazor/ui */
 
+// addDays
+export declare function addDays(date: IsoDate, days: number): IsoDate;
+
+// addMonths
+export declare function addMonths(date: IsoDate, months: number): IsoDate;
+
+// addYears
+export declare function addYears(date: IsoDate, years: number): IsoDate;
+
 // anchoredPosition
 export declare function anchoredPosition(options: AnchoredPositionOptions): Attachment<HTMLElement>;
 
@@ -70,6 +79,48 @@ export type AvatarNamedColor = (typeof AVATAR_COLORS)[number];
 // builtInIcons
 export declare const builtInIcons: Readonly<Record<string, IconValue>>;
 
+// CalendarDay
+export interface CalendarDay {
+    readonly date: IsoDate;
+    readonly dayNumber: string;
+    readonly title: string;
+    readonly isToday: boolean;
+    readonly isSelected: boolean;
+    readonly isDisabled: boolean;
+    readonly isInactive: boolean;
+}
+
+// calendarKeyTarget
+export declare function calendarKeyTarget(date: IsoDate, key: {
+    key: string;
+    shiftKey?: boolean;
+}, firstDay: number, rtl?: boolean): IsoDate | undefined;
+
+// calendarLabels
+export declare const calendarLabels: CalendarLabels;
+
+// CalendarLabels
+export interface CalendarLabels {
+    readonly previousMonth: string;
+    readonly nextMonth: string;
+    readonly previousYear: string;
+    readonly nextYear: string;
+    readonly previousYears: string;
+    readonly nextYears: string;
+}
+
+// CalendarSelectMode
+export type CalendarSelectMode = "single" | "multiple" | "range";
+
+// CalendarView
+export type CalendarView = "days" | "months" | "years";
+
+// calendarWeeks
+export declare function calendarWeeks(month: IsoDate, firstDayOfWeek: number): IsoDate[][];
+
+// calendarYears
+export declare function calendarYears(date: IsoDate): number[];
+
 // ChipSelectionMode
 export type ChipSelectionMode = "none" | "single" | "toggle" | "multiple";
 
@@ -92,6 +143,9 @@ export declare class ChipSetModel<T> {
     close(value: T, index?: number): Promise<void>;
     subscribe(listener: () => void): () => void;
 }
+
+// clampDate
+export declare function clampDate(date: IsoDate, min?: IsoDate | null, max?: IsoDate | null): IsoDate;
 
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
@@ -173,6 +227,31 @@ export declare class DataGridModel<T> {
     dispose(): void;
 }
 
+// dateFieldPlaceholder
+export declare function dateFieldPlaceholder(locale: string): string;
+
+// DateLimits
+export interface DateLimits {
+    readonly minDate?: IsoDate | null;
+    readonly maxDate?: IsoDate | null;
+    readonly disabledDateFunc?: (date: IsoDate) => boolean;
+}
+
+// DateRange
+export interface DateRange {
+    readonly start?: IsoDate;
+    readonly end?: IsoDate;
+}
+
+// datesOfRange
+export declare function datesOfRange(range: DateRange): IsoDate[];
+
+// dayOfWeek
+export declare function dayOfWeek(date: IsoDate): number;
+
+// daysInMonth
+export declare function daysInMonth(year: number, month: number): number;
+
 // dismissable
 export declare function dismissable(options: DismissableOptions): Attachment<HTMLElement>;
 
@@ -207,6 +286,9 @@ export type FieldValidity = "invalid" | "valid" | "none";
 // filterOptions
 export declare function filterOptions<TOption>(options: readonly TOption[], text: string, optionText: (option: TOption) => string): TOption[];
 
+// firstDayOfWeek
+export declare function firstDayOfWeek(locale: string): number;
+
 // focusableElements
 export declare function focusableElements(container: ParentNode): HTMLElement[];
 
@@ -222,6 +304,15 @@ export interface FocusTrapOptions {
     initialFocus?: "first" | "container" | ((element: HTMLElement) => HTMLElement | null);
     restoreFocus?: boolean;
 }
+
+// formatDateField
+export declare function formatDateField(date: IsoDate, locale: string): string;
+
+// formatIsoDate
+export declare function formatIsoDate(date: IsoDate, locale: string, options: Intl.DateTimeFormatOptions): string;
+
+// formatPickerValue
+export declare function formatPickerValue(value: IsoDate, view: CalendarView, locale: string): string;
 
 // GridColumn
 export interface GridColumn<T> {
@@ -310,17 +401,41 @@ export declare function initiallyExpanded(items: readonly TreeViewItem[]): Set<s
 // Intent
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
 
+// isDateDisabled
+export declare function isDateDisabled(date: IsoDate, limits: DateLimits): boolean;
+
+// isMonthDisabled
+export declare function isMonthDisabled(year: number, month: number, limits: DateLimits, checkAllDays?: boolean): boolean;
+
+// isoDate
+export declare function isoDate(year: number, month: number, day: number): IsoDate;
+
+// IsoDate
+export type IsoDate = string;
+
 // isTopLayer
 export declare function isTopLayer(key: object): boolean;
 
 // isWizardStepClickable
 export declare function isWizardStepClickable(index: number, current: number, sequence: WizardStepSequence, maxVisited: number, disabled: boolean): boolean;
 
+// isYearDisabled
+export declare function isYearDisabled(year: number, limits: DateLimits, checkAllDays?: boolean): boolean;
+
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;
 
+// monthNames
+export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
+
 // nextChipSelection
 export declare function nextChipSelection<T>(mode: ChipSelectionMode, selected: readonly T[], value: T, equals?: (a: T, b: T) => boolean): T[];
+
+// nextDateRange
+export declare function nextDateRange(range: DateRange, clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): DateRange;
+
+// nextMultipleDates
+export declare function nextMultipleDates(selected: readonly IsoDate[], clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): IsoDate[];
 
 // nextWizardStep
 export declare function nextWizardStep(disabled: readonly boolean[], from: number): number;
@@ -330,6 +445,9 @@ export declare function openLayer(key: object): () => void;
 
 // Orientation
 export type Orientation = "horizontal" | "vertical";
+
+// pageLocale
+export declare function pageLocale(): string;
 
 // PaginationChange
 export type PaginationChange = "page" | "total";
@@ -349,6 +467,19 @@ export declare class PaginationState {
     private notify;
 }
 
+// parseDateField
+export declare function parseDateField(text: string, locale: string): IsoDate | undefined;
+
+// parseIsoDate
+export declare function parseIsoDate(text: string | null | undefined): {
+    year: number;
+    month: number;
+    day: number;
+} | undefined;
+
+// parsePickerValue
+export declare function parsePickerValue(text: string, view: CalendarView, locale: string): IsoDate | undefined;
+
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
 
@@ -360,6 +491,9 @@ export declare function propertyPath(property: (item: never) => unknown): string
 
 // propertyTitle
 export declare function propertyTitle(property: (item: never) => unknown): string | undefined;
+
+// rangeOfDates
+export declare function rangeOfDates(dates: readonly IsoDate[]): DateRange;
 
 // resizeSplitter
 export declare function resizeSplitter(sizes: readonly number[], bar: number, delta: number, mins: readonly number[], maxs: readonly number[]): number[];
@@ -428,6 +562,12 @@ export interface SplitterResizeEventArgs {
     readonly newSize: number;
 }
 
+// startOfMonth
+export declare function startOfMonth(date: IsoDate): IsoDate;
+
+// startOfWeek
+export declare function startOfWeek(date: IsoDate, firstDayOfWeek: number): IsoDate;
+
 // Toast
 export interface Toast {
     readonly id: number;
@@ -458,6 +598,9 @@ export interface ToastOptions {
     intent?: Intent;
     timeout?: number;
 }
+
+// today
+export declare function today(now?: Date): IsoDate;
 
 // toggleAll
 export declare function toggleAll<T>(selected: readonly T[], rows: readonly T[]): T[];
@@ -537,6 +680,9 @@ export interface VisibleTreeItem {
 
 // visibleTreeItems
 export declare function visibleTreeItems(items: readonly TreeViewItem[], expanded: ReadonlySet<string>): VisibleTreeItem[];
+
+// weekdayNames
+export declare function weekdayNames(locale: string, firstDay: number, width: "narrow" | "short" | "long"): string[];
 
 // WizardStepChangeEventArgs
 export declare class WizardStepChangeEventArgs {

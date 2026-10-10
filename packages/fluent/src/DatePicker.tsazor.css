@@ -1,0 +1,54 @@
+/* DatePicker — Fluent 2: a text field with a calendar button at its end; the calendar opens below it on a surface. */
+
+.fui-date-picker__field {
+  position: relative;
+  display: flex;
+}
+
+.fui-date-picker__field > .fui-input {
+  flex: 1;
+  inline-size: 100%;
+  padding-inline-end: calc(var(--fui-spacing-xs) + 28px);
+}
+
+.fui-date-picker__button {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: var(--fui-spacing-xs);
+  margin-block: auto;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  background: none;
+  color: var(--fui-foreground-3);
+  cursor: pointer;
+}
+
+.fui-date-picker__button:hover:not(:disabled) {
+  background: var(--fui-control-fill-hover);
+  color: var(--fui-foreground-1);
+}
+
+.fui-date-picker__button:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 0;
+}
+
+.fui-date-picker__button:disabled {
+  color: var(--fui-foreground-disabled);
+  cursor: not-allowed;
+}
+
+.fui-date-picker__popup {
+  padding: var(--fui-spacing-s);
+  background: var(--fui-background-1);
+  color: var(--fui-foreground-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+  z-index: var(--fui-z-dialog);
+}

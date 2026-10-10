@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Calendar` and `DatePicker` (Fluent UI Blazor's
+  `FluentCalendar` and `FluentDatePicker`, MudBlazor's `MudDatePicker`). The value is an ISO date, `"2026-10-10"`, which no
+  time zone shifts. The calendar shows days, months or years (`view`; the title zooms out), honors `minDate`,
+  `maxDate` and `disabledDateFunc`, selects single, multiple or a range (`selectedDates`, `selectDatesHover`), takes a
+  `daysTemplate`, `pickerMonth` and `locale` (names, the week's first day), and follows the WAI-ARIA date grid on the
+  keys. The date picker is a text field in the locale's format (typed dates are read in its order) with a button
+  that opens the calendar in a modal dialog; Alt+ArrowDown opens it too. `@tsazor/ui`: the ISO date arithmetic
+  (`addDays`, `addMonths`, `calendarWeeks`, `calendarKeyTarget`, `parseDateField`, `formatPickerValue`, …).
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Slider` (Fluent UI Blazor's `FluentSlider`, MudBlazor's
   `MudSlider`) on a native `input type="range"` (Bootstrap's `.form-range`), bound with `@bind-value`: `min`, `max`,
   `step`, `orientation` (vertical stands it up), `size` small; the value follows the drag once it pauses

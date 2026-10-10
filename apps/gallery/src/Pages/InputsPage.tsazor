@@ -39,10 +39,14 @@
         <Slider @bind="this.model.volume" label="Volume" step="10" tickMarks="true" valueLabel="true" valueFormat="@this.percent" id="demo-volume" />
         <p class="echo"><code>volume</code> = @this.model.volume</p>
     </div>
+    <div class="field">
+        <DatePicker @bind="this.model.due" label="Due date" locale="en-US" id="demo-due" />
+        <p class="echo"><code>due</code> = "@this.model.due"</p>
+    </div>
 </div>
 
 @code {
-    private model = { name: "Ada", notes: "", age: 18, agree: false, compact: false, topic: "general", volume: 60 };
+    private model = { name: "Ada", notes: "", age: 18, agree: false, compact: false, topic: "general", volume: 60, due: "2026-11-02" };
     private readonly percent = (value: number): string => `${value} %`;
 
     private get agreeText(): string {

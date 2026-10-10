@@ -60,7 +60,29 @@
     </Typography>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">Date picker and calendar</Typography>
+    <div class="date-demo">
+        <div class="date-demo__fields">
+            <DatePicker Label="Pickup day" Locale="en-US" MinDate="2026-10-05" MaxDate="2026-12-20" DisabledDateFunc="@closedOnSundays" Help="We bake Monday to Saturday." @bind-Value="pickupDay" />
+            <DatePicker Label="Liefertag" Locale="de-DE" ButtonLabel="Datum wählen" Labels="@germanLabels" @bind-Value="deliveryDay" />
+            <DatePicker Label="Billing month" Locale="en-US" View="months" @bind-Value="billingMonth" />
+        </div>
+        <Calendar AriaLabel="Holidays" Locale="en-US" SelectMode="range" PickerMonth="2026-12-01" @bind-SelectedDates="holidays" />
+    </div>
+    <Typography Variant="caption">
+        Pickup <span class="date-pickup">@pickupDay</span>, delivery <span class="date-delivery">@deliveryDay</span>, billing <span class="date-billing">@billingMonth</span>, holidays <span class="date-holidays">@holidays.join(", ")</span>.
+    </Typography>
+</section>
+
 @code {
+    private pickupDay = "2026-10-10";
+    private deliveryDay = "2026-10-10";
+    private billingMonth = "2026-10-01";
+    private holidays: string[] = [];
+    private readonly closedOnSundays = (date: string): boolean => new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
+    private readonly germanLabels = { previousMonth: "Vorheriger Monat", nextMonth: "Nächster Monat", previousYear: "Vorheriges Jahr", nextYear: "Nächstes Jahr", previousYears: "Vorherige Jahre", nextYears: "Nächste Jahre" };
+
     private crust = 50;
     private oven = 220;
     private rise = 30;

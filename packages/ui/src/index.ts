@@ -7,6 +7,47 @@ export { builtInIcons, icon, iconSize, type IconValue } from "./icons.js";
 export { ChipSetModel, nextChipSelection, type ChipSelectionMode } from "./chips.js";
 export { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, type SplitterResizeEventArgs } from "./splitter.js";
 export { sliderFraction, sliderTicks } from "./slider.js";
+export {
+  addDays,
+  addMonths,
+  addYears,
+  calendarKeyTarget,
+  calendarLabels,
+  calendarWeeks,
+  calendarYears,
+  clampDate,
+  dateFieldPlaceholder,
+  datesOfRange,
+  dayOfWeek,
+  daysInMonth,
+  firstDayOfWeek,
+  formatDateField,
+  formatIsoDate,
+  formatPickerValue,
+  isDateDisabled,
+  isMonthDisabled,
+  isoDate,
+  isYearDisabled,
+  monthNames,
+  nextDateRange,
+  nextMultipleDates,
+  parseDateField,
+  parseIsoDate,
+  pageLocale,
+  parsePickerValue,
+  rangeOfDates,
+  startOfMonth,
+  startOfWeek,
+  today,
+  weekdayNames,
+  type CalendarDay,
+  type CalendarLabels,
+  type CalendarSelectMode,
+  type CalendarView,
+  type DateLimits,
+  type DateRange,
+  type IsoDate,
+} from "./calendar.js";
 export { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepChangeEventArgs, wizardStepStatus, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";

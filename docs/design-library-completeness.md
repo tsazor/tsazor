@@ -64,7 +64,7 @@ these.
 | Splitter (done 2026-10-10) | Splitter | SplitPanel | A |
 | Toolbar (done 2026-10-10) | none on main (v4: Toolbar) | ToolBar | A |
 | Slider (done 2026-10-10) | Slider | Slider | A |
-| DatePicker with a calendar popup | DateTime | DatePicker | A |
+| DatePicker with a calendar popup (DatePicker and Calendar, done 2026-10-10) | DateTime | DatePicker | A |
 | Upload drop zone with progress | InputFile | FileUpload, DropZone | A |
 | Sortable list (drag and drop, with a keyboard way) | SortableList, Drag | DropZone | A |
 | Overlay (busy state) | Overlay | Overlay | B |

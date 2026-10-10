@@ -95,6 +95,31 @@ export default class ButtonGroup extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// Calendar
+export default class Calendar extends InputBase<string> {
+    view: CalendarView;
+    minDate?: IsoDate;
+    maxDate?: IsoDate;
+    disabledDateFunc?: (date: IsoDate) => boolean;
+    disabledCheckAllDaysOfMonthYear: boolean;
+    disabledSelectable: boolean;
+    dayFormat: "numeric" | "2-digit";
+    locale?: string;
+    firstDayOfWeek?: number;
+    pickerMonth?: IsoDate;
+    pickerMonthChanged?: EventCallback<IsoDate>;
+    displayToday: boolean;
+    selectMode: CalendarSelectMode;
+    selectedDates?: IsoDate[];
+    selectedDatesChanged?: EventCallback<IsoDate[]>;
+    selectDatesHover?: (date: IsoDate) => IsoDate[];
+    daysTemplate?: (day: CalendarDay) => RenderFragment;
+    labels?: Partial<CalendarLabels>;
+    readOnly: boolean;
+    disabled: boolean;
+    ariaLabel?: string;
+}
+
 // Card
 export default class Card extends ComponentBase {
     childContent?: RenderFragment;
@@ -217,6 +242,32 @@ export default class DateInput extends InputBase<string> {
     disabled: boolean;
     required: boolean;
     id?: string;
+}
+
+// DatePicker
+export default class DatePicker extends InputBase<string> {
+    label?: string;
+    help?: string;
+    placeholder?: string;
+    view: CalendarView;
+    minDate?: IsoDate;
+    maxDate?: IsoDate;
+    disabledDateFunc?: (date: IsoDate) => boolean;
+    disabledCheckAllDaysOfMonthYear: boolean;
+    disabledSelectable: boolean;
+    dayFormat: "numeric" | "2-digit";
+    locale?: string;
+    firstDayOfWeek?: number;
+    displayToday: boolean;
+    daysTemplate?: (day: CalendarDay) => RenderFragment;
+    labels?: Partial<CalendarLabels>;
+    buttonLabel: string;
+    onCalendarOpen?: EventCallback<boolean>;
+    disabled: boolean;
+    readOnly: boolean;
+    required: boolean;
+    id?: string;
+    ariaLabel?: string;
 }
 
 // Dialog

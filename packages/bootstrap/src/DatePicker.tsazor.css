@@ -1,0 +1,6 @@
+/* DatePicker — the calendar's surface: a .dropdown-menu, placed by the component, with room around the calendar. */
+
+.tz-date-picker__popup {
+  padding: 0.5rem;
+  min-width: 0;
+}

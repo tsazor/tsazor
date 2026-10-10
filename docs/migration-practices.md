@@ -146,6 +146,17 @@ render in the browser.
   format string (`ValueLabelFormat="F1"`) becomes a function, `ValueFormat="@((v) => v.toFixed(1))"`, and it is the
   text screen readers read as well. MudBlazor's `Variant.Filled` has no parameter: the Fluent slider always fills
   its rail up to the thumb, Bootstrap's `.form-range` never does.
+- **Date pickers and calendars.** `FluentDatePicker` and `FluentCalendar` keep their names without the prefix
+  (`<DatePicker>`, `<Calendar>`) and their parameters (`View`, `MinDate`, `MaxDate`, `DisabledDateFunc`, `DayFormat`,
+  `DaysTemplate`, `SelectMode`, `SelectedDates`, `PickerMonth`). The value changes type: a `DateTime?` or `DateOnly?`
+  becomes ISO text, `"2026-10-10"`, and an empty field `""`. Tsazor chooses the string because a JavaScript `Date`
+  carries a time and a time zone that can shift the day, while a .NET `DateOnly` arrives in JSON as that very text
+  (a `DateTime` model property becomes `string`; compare dates as text, `a < b`). `Culture` becomes `Locale`
+  (`"de-DE"`), which also sets the week's first day and how typed dates are read. `CalendarSelectMode.Range` is
+  `SelectMode="range"`. MudBlazor's `MudDatePicker` maps onto the same component: `Date` is `Value`,
+  `IsDateDisabledFunc` is `DisabledDateFunc`, `OpenTo="OpenTo.Month"` is `View="months"`, `FirstDayOfWeek` stays;
+  a `MudDateRangePicker` becomes a `Calendar` with `SelectMode="range"`. Plain JavaScript would hand you a `Date`
+  (or `Temporal.PlainDate` where it ships); `parseIsoDate` and `isoDate` in `@tsazor/ui` convert.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

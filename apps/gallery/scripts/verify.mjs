@@ -138,6 +138,11 @@ async function main() {
     await page.keyboard.press("ArrowRight");
     await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes("volume = 70"));
     check((await page.getAttribute("#demo-volume", "aria-valuetext")) === "70 %", "a slider binds and its value reads in its format (aria-valuetext)");
+    check((await page.inputValue("#demo-due")) === "11/02/2026", "a date picker writes its ISO value as the locale does");
+    await page.locator("#demo-due").locator("xpath=following-sibling::button").click();
+    await page.getByRole("dialog", { name: "Choose date" }).getByRole("gridcell", { name: "Tuesday, November 10, 2026" }).click();
+    await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes('due = "2026-11-10"'));
+    check(true, "a date picker's calendar picks a day into the bound ISO value");
 
     /* 4b — switch control via its label (the native input is under the track) */
     check((await page.locator("[role='switch']").first().count()) === 1, "switch carries role=switch");
