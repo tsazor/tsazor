@@ -1,0 +1,47 @@
+@** A toolbar (the WAI-ARIA toolbar pattern; MudBlazor's MudToolBar, Fluent UI's Toolbar): Buttons, Menus and toggles
+    in a row (or a column) that is one tab stop. The arrow keys move between them and wrap, Home and End jump to the
+    ends; in a text field they edit the text. Name it with `ariaLabel`. `size` small makes it dense (MudBlazor's
+    `Dense`), `wrap` lets it wrap; a vertical Divider separates groups. *@
+@import type { Attachment } from "@tsazor/runtime"
+@import { toolbarFocus, type Orientation } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<div role="toolbar" @attributes="@this.toolbarAttributes" @attach="@this.focus">@childContent</div>
+
+@code {
+    /** horizontal (default) | vertical. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** small (dense) | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** The controls wrap onto more rows. */
+    @Parameter() wrap = false;
+    /** The toolbar's accessible name ("Formatting"). */
+    @Parameter() ariaLabel?: string;
+    /** The controls. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private focusFor?: Orientation;
+    private focusAttachment?: Attachment<HTMLElement>;
+
+    /** The arrow keys of the toolbar's orientation (a new attachment only when it changes). */
+    private get focus(): Attachment<HTMLElement> {
+        if (this.focusAttachment === undefined || this.focusFor !== this.orientation) {
+            this.focusFor = this.orientation;
+            this.focusAttachment = toolbarFocus({ orientation: this.orientation });
+        }
+        return this.focusAttachment;
+    }
+
+    private get toolbarAttributes(): Record<string, unknown> {
+        let cls = `fui-toolbar fui-toolbar--${this.orientation}`;
+        if (this.size === "small") cls += " fui-toolbar--small";
+        if (this.wrap) cls += " fui-toolbar--wrap";
+        return withAttributes({
+            class: cls,
+            "aria-label": this.ariaLabel,
+            "aria-orientation": this.orientation === "vertical" ? "vertical" : null,
+        }, this.additionalAttributes);
+    }
+}

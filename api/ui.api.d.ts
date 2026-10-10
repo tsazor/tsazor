@@ -466,6 +466,14 @@ export declare function toggleOption<TOption>(selected: readonly TOption[], opti
 // toggleSelection
 export declare function toggleSelection<T>(selected: readonly T[], item: T, mode: SelectionMode): T[];
 
+// toolbarFocus
+export declare function toolbarFocus(options?: ToolbarFocusOptions): Attachment<HTMLElement>;
+
+// ToolbarFocusOptions
+export interface ToolbarFocusOptions {
+    orientation?: Orientation;
+}
+
 // tooltip
 export declare function tooltip(text: string, options?: TooltipOptions): Attachment<HTMLElement>;
 

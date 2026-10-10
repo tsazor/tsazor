@@ -47,6 +47,21 @@
     </div>
 </section>
 
+<section class="demo">
+    <h2>Toolbar</h2>
+    <Toolbar ariaLabel="Text formatting">
+        <Button appearance="subtle" ariaLabel="Bold" iconStart="@Icons.Regular.Size20.TextBold" />
+        <Button appearance="subtle" ariaLabel="Italic" iconStart="@Icons.Regular.Size20.TextItalic" />
+        <Button appearance="subtle" ariaLabel="Underline" iconStart="@Icons.Regular.Size20.TextUnderline" />
+        <Divider orientation="vertical" />
+        <Button appearance="subtle" ariaLabel="Bulleted list" iconStart="@Icons.Regular.Size20.TextBulletList" />
+        <Button appearance="subtle" ariaLabel="Numbered list" iconStart="@Icons.Regular.Size20.TextNumberListLtr" />
+        <Divider orientation="vertical" />
+        <Button appearance="subtle" disabled="true" ariaLabel="Undo" iconStart="@Icons.Regular.Size20.ArrowUndo" />
+    </Toolbar>
+    <p>One tab stop: the arrow keys move between the buttons and skip the disabled one.</p>
+</section>
+
 @code {
     private clicks = 0;
     private bump(): void {

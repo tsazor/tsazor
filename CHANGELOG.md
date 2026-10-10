@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Toolbar` (MudBlazor's `MudToolBar`, Fluent UI Blazor
+  v4's `FluentToolbar`; Bootstrap's `.btn-toolbar`): Buttons, Menus and fields in a row or a column that is one tab
+  stop, the WAI-ARIA toolbar pattern. The arrow keys of its `orientation` move between the controls and wrap, Home
+  and End jump, disabled controls are skipped; a text field keeps its arrow keys, an open menu its own. `ariaLabel`,
+  `size` small (dense), `wrap`; a vertical `Divider` separates groups. `@tsazor/ui`: `toolbarFocus`, an attachment
+  for any element.
+
 - **Fix** `@tsazor/fluent`: the copy-in CLI is published (`bin`: `tsazor-fluent`), so `npx @tsazor/fluent add Dialog` runs
   from npm; before, the package left `bin/` out (L8).
 

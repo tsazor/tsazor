@@ -118,6 +118,13 @@ async function main() {
     const shownIcons = (selector) => page.locator(selector).evaluateAll((svgs) => svgs.filter((svg) => getComputedStyle(svg).display !== "none").length);
     check((await shownIcons(".fui-nav__link--active svg")) === 1 && (await page.locator(".fui-nav__link--active .fui-nav__icon--active").isVisible()), "the active sidebar link shows its filled icon");
     check((await shownIcons(".fui-nav__link:not(.fui-nav__link--active) svg")) === (await page.locator(".fui-nav__link:not(.fui-nav__link--active)").count()), "the other links show one icon each");
+    // The toolbar: one tab stop; the arrow keys skip the disabled button and wrap.
+    const toolbar = page.getByRole("toolbar", { name: "Text formatting" });
+    check((await toolbar.locator("[tabindex='0']").count()) === 1, "the toolbar is one tab stop");
+    await toolbar.getByRole("button", { name: "Numbered list" }).focus();
+    await page.keyboard.press("ArrowRight");
+    const wrapped = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+    check(wrapped === "Bold", `the toolbar's arrow keys skip a disabled button and wrap (${wrapped})`);
 
     /* 4 — @bind round-trip: typed value reaches the echo line (change fires on blur) */
     await page.click("a[href='/inputs']");

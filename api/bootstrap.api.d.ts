@@ -708,6 +708,16 @@ export default class ToastRegion extends ComponentBase {
     position: "top-start" | "top-end" | "bottom-start" | "bottom-end";
 }
 
+// Toolbar
+export default class Toolbar extends ComponentBase {
+    orientation: Orientation;
+    size: "small" | "medium";
+    wrap: undefined;
+    ariaLabel?: string;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // tooltip
 export declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;
 

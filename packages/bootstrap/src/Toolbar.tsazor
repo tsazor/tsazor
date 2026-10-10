@@ -1,0 +1,45 @@
+@** A toolbar (Bootstrap's `.btn-toolbar`, the WAI-ARIA toolbar pattern; MudBlazor's MudToolBar): Buttons, ButtonGroups
+    and Dropdowns in a row (or a column) that is one tab stop. The arrow keys move between them and wrap, Home and End
+    jump to the ends; in a text field they edit the text. Name it with `ariaLabel`. `size` small packs the controls
+    closer (MudBlazor's `Dense`; size the Buttons themselves), `wrap` lets them wrap; a vertical Divider separates
+    groups — the same parameters as the Fluent skin's Toolbar. *@
+@import type { Attachment } from "@tsazor/runtime"
+@import { toolbarFocus, type Orientation } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+
+<div role="toolbar" aria-label="@ariaLabel" aria-orientation="@(orientation === 'vertical' ? 'vertical' : null)" @attributes="@withClass(toolbarClass, additionalAttributes)" @attach="@this.focus">@childContent</div>
+
+@code {
+    /** horizontal (default) | vertical. */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** small (dense) | medium (default). */
+    @Parameter() size: "small" | "medium" = "medium";
+    /** The controls wrap onto more rows. */
+    @Parameter() wrap = false;
+    /** The toolbar's accessible name ("Formatting"). */
+    @Parameter() ariaLabel?: string;
+    /** The controls. */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the toolbar element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private focusFor?: Orientation;
+    private focusAttachment?: Attachment<HTMLElement>;
+
+    /** The arrow keys of the toolbar's orientation (a new attachment only when it changes). */
+    private get focus(): Attachment<HTMLElement> {
+        if (this.focusAttachment === undefined || this.focusFor !== this.orientation) {
+            this.focusFor = this.orientation;
+            this.focusAttachment = toolbarFocus({ orientation: this.orientation });
+        }
+        return this.focusAttachment;
+    }
+
+    private get toolbarClass(): string {
+        const parts = ["btn-toolbar", "tz-toolbar", this.size === "small" ? "gap-1" : "gap-2"];
+        if (this.orientation === "vertical") parts.push("flex-column", "align-items-stretch");
+        else parts.push("align-items-center");
+        if (!this.wrap) parts.push("flex-nowrap");
+        return parts.join(" ");
+    }
+}

@@ -134,6 +134,12 @@ render in the browser.
 - **Splitters.** `FluentMultiSplitter`/`FluentMultiSplitterPane` keep their names (`MultiSplitter`, `MultiSplitterPane`)
   and parameters (`Size`, `Min`, `Max`, `Collapsible`, `Resizable`, `OnResize`). MudBlazor's two-pane `MudSplitPanel`
   (`FirstPanel`, `SecondPanel`) becomes a `Splitter` with two `SplitterPane`s; `MinPanelSize` is each pane's `Min`.
+- **Toolbars.** `<MudToolBar Dense="true" WrapContent="true">` becomes `<Toolbar Size="small" Wrap="true" AriaLabel="…">`;
+  a `MudDivider Vertical="true"` between groups becomes `<Divider Orientation="vertical" />`. A `MudSpacer` that
+  pushes the rest to the end becomes `style="margin-inline-start: auto"` on the control after it (`Spacer` is a fixed
+  gap). Fluent UI Blazor v4's `FluentToolbar Orientation` keeps its name. Give it a name: it is one tab stop, and the
+  arrow keys move between its Buttons, Menus and fields, as the WAI-ARIA toolbar pattern says; MudToolBar leaves each
+  control its own tab stop.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

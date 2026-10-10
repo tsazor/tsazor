@@ -62,7 +62,7 @@ these.
 | Timeline (done 2026-10-10) | none | Timeline | A |
 | Stepper / Wizard (Wizard, done 2026-10-10) | Wizard | Stepper | A |
 | Splitter (done 2026-10-10) | Splitter | SplitPanel | A |
-| Toolbar | none on main (v4: Toolbar) | ToolBar | A |
+| Toolbar (done 2026-10-10) | none on main (v4: Toolbar) | ToolBar | A |
 | Slider | Slider | Slider | A |
 | DatePicker with a calendar popup | DateTime | DatePicker | A |
 | Upload drop zone with progress | InputFile | FileUpload, DropZone | A |

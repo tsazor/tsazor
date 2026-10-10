@@ -39,6 +39,27 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Toolbar</Typography>
+    <Toolbar AriaLabel="Order list">
+        <Button Appearance="subtle" AriaLabel="New order" IconStart="@icons.add" OnClick="@(() => this.used("New order"))" />
+        <Button Appearance="subtle" AriaLabel="Save the list" IconStart="@icons.save" OnClick="@(() => this.used("Save the list"))" />
+        <Button Appearance="subtle" AriaLabel="Print the list" IconStart="@icons.print" OnClick="@(() => this.used("Print the list"))" />
+        <Divider Orientation="vertical" />
+        <ButtonGroup AriaLabel="Density">
+            <Button Intent="@(density === "compact" ? "primary" : "secondary")" aria-pressed="@(density === "compact" ? "true" : "false")" OnClick="@(() => this.density = "compact")">Compact</Button>
+            <Button Intent="@(density === "roomy" ? "primary" : "secondary")" aria-pressed="@(density === "roomy" ? "true" : "false")" OnClick="@(() => this.density = "roomy")">Roomy</Button>
+        </ButtonGroup>
+        <Divider Orientation="vertical" />
+        <Dropdown Label="Export" Intent="secondary">
+            <DropdownItem OnSelect="@(() => this.used("Export as CSV"))">As CSV</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.used("Export as PDF"))">As PDF</DropdownItem>
+        </Dropdown>
+        <TextInput AriaLabel="Find an order" Placeholder="Find an order" Type="search" @bind-Value="find" />
+    </Toolbar>
+    <Typography Variant="caption"><span class="toolbar-choice">@toolbarChoice</span> Density: <span class="toolbar-density">@density</span>.</Typography>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Button group, menu, tooltip, popover</Typography>
     <div class="demo-row">
         <ButtonGroup AriaLabel="View">
@@ -68,9 +89,16 @@
     private clicks = 0;
     private view = "week";
     private choice = "Nothing chosen yet.";
+    private toolbarChoice = "No tool used yet.";
+    private density = "compact";
+    private find = "";
 
     private chose(action: string): void {
         this.choice = `Chose ${action}.`;
         this.toaster.show({ message: `${action}: done.`, intent: "success" });
+    }
+
+    private used(tool: string): void {
+        this.toolbarChoice = `Used ${tool}.`;
     }
 }

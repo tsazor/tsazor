@@ -116,9 +116,47 @@ try {
     await page.keyboard.press("Escape");
     await page.waitForSelector("[role=dialog]", { state: "detached" });
     say(await opener.evaluate((el) => el === document.activeElement), "popover: Escape returns focus to its button");
-    await page.getByRole("button", { name: "Print" }).focus();
+    await page.getByRole("button", { name: "Print", exact: true }).focus();
     await page.waitForSelector("[role=tooltip]");
-    say((await page.getByRole("button", { name: "Print" }).getAttribute("aria-describedby")) !== null, "tooltip: describes its button");
+    say((await page.getByRole("button", { name: "Print", exact: true }).getAttribute("aria-describedby")) !== null, "tooltip: describes its button");
+
+    /* Toolbar: one tab stop, the arrow keys move and wrap, Home and End; a text field keeps its arrows; a menu its own. */
+    const toolbar = page.getByRole("toolbar", { name: "Order list" });
+    const focusedName = () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent?.trim());
+    await toolbar.scrollIntoViewIfNeeded();
+    const tabStops = await toolbar.evaluate((bar) => [...bar.querySelectorAll("[tabindex='0']")].length);
+    say(tabStops === 1, `toolbar: one tab stop (${tabStops})`);
+    await toolbar.getByRole("button", { name: "New order" }).focus();
+    await page.keyboard.press("ArrowRight");
+    say((await focusedName()) === "Save the list", "toolbar: ArrowRight moves to the next control");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    say((await focusedName()) === "Find an order", "toolbar: ArrowLeft wraps to the last control");
+    await page.keyboard.type("42");
+    await page.keyboard.press("ArrowLeft");
+    say((await focusedName()) === "Find an order", "toolbar: in the search field ArrowLeft edits the text");
+    await page.keyboard.press("Home");
+    say((await focusedName()) === "Find an order", "toolbar: in the search field Home stays in the text");
+    await page.keyboard.press("Shift+Tab");
+    say(!(await toolbar.evaluate((bar) => bar.contains(document.activeElement))), "toolbar: Shift+Tab leaves it at once");
+    await page.keyboard.press("Tab");
+    say((await focusedName()) === "Find an order", "toolbar: Tab comes back to the last focused control");
+    await toolbar.getByRole("button", { name: "Compact" }).focus();
+    await page.keyboard.press("End");
+    say((await focusedName()) === "Find an order", "toolbar: End jumps to the last control");
+    await toolbar.getByRole("button", { name: "Roomy" }).focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.querySelector(".toolbar-density")?.textContent === "roomy");
+    say((await toolbar.getByRole("button", { name: "Roomy" }).getAttribute("aria-pressed")) === "true", "toolbar: a toggle button says it is pressed");
+    await page.keyboard.press("ArrowRight");
+    say((await focusedName()) === "Export", "toolbar: the arrow keys reach a menu's toggle");
+    await page.keyboard.press("ArrowDown");
+    await page.waitForSelector("[role=menu]");
+    await page.keyboard.press("ArrowDown");
+    say((await focusedText()) === "As PDF", "toolbar: in its open menu the arrow keys move the menu's items");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("[role=menu]", { state: "detached" });
+    say((await page.textContent(".toolbar-choice")) === "Used Export as PDF.", "toolbar: a menu item in it chooses");
 
     /* Forms: messages only after a submit, linked to their inputs. */
     await open(page, base, "/forms");

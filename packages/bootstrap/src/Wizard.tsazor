@@ -55,6 +55,7 @@
 @code {
     /** The current step's index (two-way with @bind-value). */
     @Parameter() value: number = 0;
+    /** The new index after Next, Previous or a click on a step (@bind-value's other half). */
     @Parameter() valueChanged?: EventCallback<number>;
     /** Raised by Done, once the last step's forms are valid. */
     @Parameter() onFinish?: EventCallback;
