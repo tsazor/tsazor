@@ -18,6 +18,11 @@ describe("@tsazor/fluent-icons", () => {
     expect(Icons.Regular.Size16.ArrowLeft.name).toBe("arrow-left");
   });
 
+  it("a variant's size is its own entry point too (a light dev start), with the same values", async () => {
+    const Size20 = await import("@tsazor/fluent-icons/regular/size20");
+    expect(Size20.Save).toBe(Icons.Regular.Size20.Save);
+  });
+
   it("has the variants and the sizes of the source set", () => {
     expect(Object.keys(Icons).sort()).toEqual(["Color", "Filled", "Light", "Regular"]);
     expect(Object.keys(Icons.Regular)).toEqual(expect.arrayContaining(["Size10", "Size12", "Size16", "Size20", "Size24", "Size28", "Size32", "Size48"]));

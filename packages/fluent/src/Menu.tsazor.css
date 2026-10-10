@@ -27,7 +27,9 @@
 }
 
 .fui-menu__item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-sm);
   width: 100%;
   padding: var(--fui-spacing-xs, 4px) var(--fui-spacing-s);
   border: none;
@@ -37,6 +39,15 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
+}
+
+/* Icon slots: the icon keeps its size; iconEnd sits at the far end. */
+.fui-menu__icon {
+  flex: none;
+}
+
+.fui-menu__icon--end {
+  margin-inline-start: auto;
 }
 
 .fui-menu__item:hover,

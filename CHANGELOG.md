@@ -5,6 +5,33 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (F17, icons step 4 in [design-icons.md](docs/design-icons.md)):
+  icons on the components, with Fluent UI Blazor main's names.
+  - `Button`, `MenuItem` (Bootstrap: `DropdownItem`), `Badge` and `NavbarLink` take `iconStart`/`iconEnd`; `Tab`
+    takes `iconStart`. A Button without a label is icon-only (square in Fluent) and needs an `ariaLabel`; Badge
+    takes `iconLabel`.
+  - `TreeViewItem` takes `iconStart`, `iconEnd`, `iconCollapsed` and `iconExpanded`; `SidebarNav`'s links take
+    `icon` and `iconActive` (the filled icon on the current page). The compact rail shows only the icons, with the
+    labels as names and tooltips.
+  - `Icon` without `size` draws a value at its own size (`iconSize()`: its viewBox width; `Size20` is 20px), as
+    `FluentIcon` does; a `name` stays 16px. Bootstrap's `Icon` sits on the text's baseline, as `.bi` does.
+  - Both skins export `icon()` and `IconValue`, so an app's own icons need no other package.
+  - The skins draw their own icons from their set (a small copy, `src/core-icons.ts`, as Fluent UI Blazor's
+    `CoreIcons`): in Fluent, Alert's status icons, every close button, the pagers, the grid's sort arrows and the
+    accordion's and tree's chevrons; in Bootstrap, the grid's sort arrows.
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`: `TextInput` and `TextArea` take `immediate` and
+  `immediateDelay` (Fluent UI Blazor's `Immediate`/`ImmediateDelay`): the bound value follows the typing once it
+  pauses (200 ms), for a search field. The behavior is `ImmediateInput` in `@tsazor/ui`.
+- **Fix** `@tsazor/fluent` (`npx @tsazor/fluent add`): a copied component brings the modules it imports
+  (`attributes.ts`, `vocabulary.ts`, `core-icons.ts`, imported components), not only the components in its markup;
+  a copied Alert didn't compile (L3).
+- **Fix** `@tsazor/fluent`: a component's `class` of `null` (`class="@(open ? "x" : null)"`) replaced the
+  component's own classes; now it adds nothing (L1).
+- `@tsazor/fluent-icons`: each variant and size is also its own entry point (`@tsazor/fluent-icons/regular/size20`),
+  for a lighter dev server start; the namespace loads the whole set there (about 1 s).
+- `@tsazor/compiler` (codemod): Fluent UI Blazor's `new Icons.Regular.Size20.Save()` becomes
+  `Icons.Regular.Size20.Save` in markup.
+
 - **Fix** `@tsazor/compiler` (`tsazor check`, the editor; F15): the narrowing of an `@if` reaches the markup inside
   it, as Razor's nullable analysis carries it. `@if (node) { <Card>@node.name</Card> }` was TS2531 on `node`,
   because child content is a function that runs later. Now child content, slots and templates (`<PageTitle>`,

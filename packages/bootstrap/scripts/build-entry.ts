@@ -117,6 +117,8 @@ exports.push('export { tooltip } from "./tooltip-attachment.js"');
 exports.push('export { addBootstrap } from "./services.js"');
 // The toast service comes with the skin: register it, inject it, call show().
 exports.push('export { Toaster } from "@tsazor/ui"');
+// An app's own icons (`icon(name, svg)`), so it needs no other package for them.
+exports.push('export { icon } from "@tsazor/ui"');
 // The DataGrid's sorting and paging state come with the skin too.
 exports.push('export { GridSort, PaginationState } from "@tsazor/ui"');
 for (const [alias, target] of Object.entries(ALIASES)) exports.push(`export { default as ${alias} } from "./${target}.js"`);
@@ -125,7 +127,7 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, ColumnAlign, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, IconValue, Intent, Orientation, Placement, SelectionMode, Size, SortDirection, SortedProperty, Toast, ToastOptions } from "@tsazor/ui";\n`);
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),

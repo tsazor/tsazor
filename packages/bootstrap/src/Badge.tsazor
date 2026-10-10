@@ -1,10 +1,11 @@
 @** Renders Bootstrap's `.badge`, a small label for counts or status, colored by its intent
-    (`text-bg-*`) and optionally pill-shaped. *@
+    (`text-bg-*`) and optionally pill-shaped. `iconStart`/`iconEnd` add an icon at the badge's text size;
+    `iconLabel` names it. *@
 @import { withClass } from "./attributes"
 @* text-bg-*: Bootstrap picks a text color with enough contrast for the background (WCAG 1.4.3). *@
-@import type { Intent } from "@tsazor/ui"
+@import type { IconValue, Intent } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
-<span @attributes="@withClass(badgeClass, additionalAttributes)">@childContent</span>
+<span @attributes="@withClass(badgeClass, additionalAttributes)">@if (iconStart) {<Icon value="@iconStart" size="12" title="@iconLabel" class="@(childContent ? "me-1" : null)" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" size="12" title="@iconLabel" class="@(childContent ? "ms-1" : null)" />}</span>
 
 @code {
     /** The color role: primary, secondary (default), success, danger, warning, info or neutral. */
@@ -13,6 +14,12 @@
     @Parameter() pill: boolean = false;
     /** The badge text. */
     @Parameter() childContent?: RenderFragment;
+    /** An icon before the text (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the text (`IconEnd`). */
+    @Parameter() iconEnd?: IconValue;
+    /** The icons' accessible name (`IconLabel`); without it they are decorative. */
+    @Parameter() iconLabel?: string;
     /** Further attributes for the badge element. */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 

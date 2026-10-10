@@ -1,6 +1,6 @@
 @** A Bootstrap multi-line text field (`textarea.form-control`; InputBase — bind it with @bind) with an
     optional label and help text; validation state and message as with TextInput. *@
-@import { FieldState } from "@tsazor/ui"
+@import { FieldState, ImmediateInput } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 
 @inherits InputBase<string>
@@ -9,7 +9,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <textarea id="@field.id(id)" rows="@rows" placeholder="@placeholder" disabled="@disabled" required="@required" value="@(currentValue ?? "")" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange"></textarea>
+    <textarea id="@field.id(id)" rows="@rows" placeholder="@placeholder" disabled="@disabled" required="@required" value="@(currentValue ?? "")" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput"></textarea>
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -35,6 +35,10 @@
     @Parameter() required: boolean = false;
     /** The field's id; generated when omitted. */
     @Parameter() id?: string;
+    /** The value follows the typing once it pauses for immediateDelay ms (Fluent UI Blazor's `Immediate`); otherwise it updates on change. */
+    @Parameter() immediate: boolean = false;
+    /** The pause in ms before an immediate update (`ImmediateDelay`). */
+    @Parameter() immediateDelay: number = 200;
 
     private readonly field = new FieldState("tz-textarea");
 
@@ -51,7 +55,18 @@
         return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
     }
 
+    private immediateInput?: ImmediateInput;
+
+    private handleInput(e: Event): void {
+        if (!this.immediate) return;
+        this.immediateInput ??= new ImmediateInput(this.disposeSignal);
+        this.immediateInput.input(e, this.immediateDelay, (value) => {
+            this.currentValue = value;
+        });
+    }
+
     private handleChange(e: Event): void {
+        this.immediateInput?.cancel();
         this.currentValue = (e.target as HTMLTextAreaElement).value;
     }
 }

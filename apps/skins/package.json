@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@tsazor/bootstrap": "workspace:*",
+    "@tsazor/bootstrap-icons": "workspace:*",
     "@tsazor/fluent": "workspace:*",
+    "@tsazor/fluent-icons": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/ui": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",

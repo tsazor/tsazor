@@ -1,5 +1,6 @@
 @page "/actions"
 @import { Toaster, tooltip } from "@tsazor/bootstrap"
+@import { icons } from "../skin-icons"
 @inject Toaster toaster
 
 <Typography Variant="h1">Actions</Typography>
@@ -22,6 +23,22 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Icons on components</Typography>
+    <div class="demo-row icons-demo">
+        <Button Intent="primary" IconStart="@icons.save">Save</Button>
+        <Button IconEnd="@icons.more">More</Button>
+        <Button Appearance="subtle" AriaLabel="Delete" IconStart="@icons.delete" />
+        <Badge Intent="success" IconStart="@icons.star" IconLabel="Starred">Featured</Badge>
+        <Dropdown Label="File" Intent="secondary">
+            <DropdownItem IconStart="@icons.add">New</DropdownItem>
+            <DropdownItem IconStart="@icons.folder">Open</DropdownItem>
+            <DropdownItem IconStart="@icons.settings">Settings</DropdownItem>
+        </Dropdown>
+    </div>
+    <Typography Variant="caption">The skin's own set; every icon is on the <a href="/icons">Icons</a> page.</Typography>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Button group, menu, tooltip, popover</Typography>
     <div class="demo-row">
         <ButtonGroup AriaLabel="View">
@@ -37,7 +54,7 @@
             <DropdownItem OnSelect="@(() => this.chose("Archive"))">Archive</DropdownItem>
         </Dropdown>
         <Tooltip Text="Print the order list">
-            <Button Appearance="subtle" AriaLabel="Print">🖨</Button>
+            <Button Appearance="subtle" AriaLabel="Print" IconStart="@icons.print" />
         </Tooltip>
         <button type="button" class="tooltip-attached" @attach="tooltip('Saved a minute ago', 'bottom')">Attachment tooltip</button>
         <Popover Label="Opening hours" Title="Opening hours">

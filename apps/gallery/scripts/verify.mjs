@@ -10,13 +10,14 @@
  *   lock/restore → orders filter/sort/paging + row detail dialog →
  *   toast aria-live + auto-dismiss → sidebar aria-current → zero errors.
  *
- * Run: node scripts/verify.mjs
+ * Run: node scripts/verify.mjs (GALLERY_PORT=5331 for a fresh server beside a running one)
  */
 import { spawn, spawnSync } from "node:child_process";
 import * as playwright from "playwright-core";
 import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
-const APP = "http://localhost:5321";
+const PORT = process.env.GALLERY_PORT ?? "5321";
+const APP = `http://localhost:${PORT}`;
 
 let spawned = [];
 
@@ -31,12 +32,12 @@ async function reachable(url) {
 
 async function ensureServer() {
     if (!(await reachable(APP))) {
-        spawned.push(spawn("npx", ["vite", "--port", "5321", "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
-        console.log("started vite dev server on :5321");
+        spawned.push(spawn("npx", ["vite", "--port", PORT, "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
+        console.log(`started vite dev server on :${PORT}`);
     }
     const deadline = Date.now() + 30_000;
     while (!(await reachable(APP))) {
-        if (Date.now() > deadline) throw new Error("gallery did not come up within 30s (stale process on :5321?)");
+        if (Date.now() > deadline) throw new Error(`gallery did not come up within 30s (stale process on :${PORT}?)`);
         await new Promise((r) => setTimeout(r, 500));
     }
 }
@@ -107,6 +108,16 @@ async function main() {
     check(accentBg !== subtleBg, `primary and subtle buttons compute distinct colors (${accentBg} vs ${subtleBg})`);
     const disabledBtn = page.locator(".fui-button--disabled").first();
     check((await disabledBtn.getAttribute("disabled")) !== null, "disabled button carries the disabled attribute");
+    // Icons: iconStart/iconEnd at the icon's own size; an icon-only button is square and named by ariaLabel.
+    const saveIcon = page.locator(".icon-buttons .fui-button", { hasText: "Save" }).locator("svg");
+    check((await saveIcon.getAttribute("width")) === "20", "a Size20 icon in a button is drawn at 20px");
+    const deleteButton = page.getByRole("button", { name: "Delete" });
+    const deleteBox = await deleteButton.boundingBox();
+    check(deleteBox !== null && Math.abs(deleteBox.width - deleteBox.height) < 1, `an icon-only button is square (${deleteBox?.width}×${deleteBox?.height})`);
+    // The sidebar: the current page's link shows the filled icon, the others the regular one.
+    const shownIcons = (selector) => page.locator(selector).evaluateAll((svgs) => svgs.filter((svg) => getComputedStyle(svg).display !== "none").length);
+    check((await shownIcons(".fui-nav__link--active svg")) === 1 && (await page.locator(".fui-nav__link--active .fui-nav__icon--active").isVisible()), "the active sidebar link shows its filled icon");
+    check((await shownIcons(".fui-nav__link:not(.fui-nav__link--active) svg")) === (await page.locator(".fui-nav__link:not(.fui-nav__link--active)").count()), "the other links show one icon each");
 
     /* 4 — @bind round-trip: typed value reaches the echo line (change fires on blur) */
     await page.click("a[href='/inputs']");

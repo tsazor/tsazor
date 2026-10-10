@@ -7,6 +7,7 @@
 @typeparam TOption
 @import { SearchRunner, anchoredPosition, comboboxKeyAction, dismissable, filterOptions, toggleOption, uniqueId } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { Dismiss20Regular } from "./core-icons"
 @import { OptionsSearchEventArgs } from "./autocomplete-search"
 
 <div @attributes="@this.rootAttributes">
@@ -18,7 +19,7 @@
             @foreach (const option of selectedOptions) {
                 <span class="fui-autocomplete__chip" @key="this.keyOf(option)">
                     @optionText(option)
-                    <button type="button" class="fui-autocomplete__remove" aria-label="@(`Remove ${optionText(option)}`)" disabled="@disabled" @onclick="() => this.remove(option)">&times;</button>
+                    <button type="button" class="fui-autocomplete__remove" aria-label="@(`Remove ${optionText(option)}`)" disabled="@disabled" @onclick="() => this.remove(option)"><Icon value="@Dismiss20Regular" size="12" /></button>
                 </span>
             }
         }

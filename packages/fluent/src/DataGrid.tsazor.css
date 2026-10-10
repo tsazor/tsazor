@@ -31,7 +31,7 @@
 }
 
 .fui-datagrid__sort-indicator {
-  font-size: 0.75em;
+  display: inline-flex;
   color: var(--fui-foreground-3);
 }
 

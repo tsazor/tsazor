@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@import * as Icons from "@tsazor/fluent-icons"
+@import type { IconValue } from "@tsazor/fluent"
 @inject ThemeState Theme
 
 <FluentProvider theme="@this.Theme.theme">
@@ -28,23 +30,23 @@
 @code {
     private unsub: () => void = () => {};
 
-    /** Sidebar sections, rendered through SidebarNav + runtime NavLink. */
-    private navLinks: { href: string; label: string; match?: NavLinkMatch }[] = [
-        { href: "/", label: "Overview", match: NavLinkMatch.All },
-        { href: "/button", label: "Button" },
-        { href: "/inputs", label: "Inputs" },
-        { href: "/form", label: "Form" },
-        { href: "/tabs", label: "Tabs" },
-        { href: "/table", label: "Table" },
-        { href: "/datagrid", label: "DataGrid" },
-        { href: "/dialog", label: "Dialog" },
-        { href: "/overlays", label: "Menu, Drawer, Tooltip" },
-        { href: "/structure", label: "Accordion, List, Progress" },
-        { href: "/more", label: "More components" },
-        { href: "/feedback", label: "Feedback" },
-        { href: "/primitives", label: "Layout" },
-        { href: "/theme", label: "Theme" },
-        { href: "/dashboard", label: "Dashboard" },
+    /** Sidebar sections, rendered through SidebarNav + runtime NavLink: Fluent's regular icon at rest, the filled one on the current page. */
+    private navLinks: { href: string; label: string; match?: NavLinkMatch; icon: IconValue; iconActive: IconValue }[] = [
+        { href: "/", label: "Overview", match: NavLinkMatch.All, icon: Icons.Regular.Size20.Home, iconActive: Icons.Filled.Size20.Home },
+        { href: "/button", label: "Button", icon: Icons.Regular.Size20.CursorClick, iconActive: Icons.Filled.Size20.CursorClick },
+        { href: "/inputs", label: "Inputs", icon: Icons.Regular.Size20.Textbox, iconActive: Icons.Filled.Size20.Textbox },
+        { href: "/form", label: "Form", icon: Icons.Regular.Size20.Form, iconActive: Icons.Filled.Size20.Form },
+        { href: "/tabs", label: "Tabs", icon: Icons.Regular.Size20.TabDesktop, iconActive: Icons.Filled.Size20.TabDesktop },
+        { href: "/table", label: "Table", icon: Icons.Regular.Size20.Table, iconActive: Icons.Filled.Size20.Table },
+        { href: "/datagrid", label: "DataGrid", icon: Icons.Regular.Size20.Grid, iconActive: Icons.Filled.Size20.Grid },
+        { href: "/dialog", label: "Dialog", icon: Icons.Regular.Size20.Window, iconActive: Icons.Filled.Size20.Window },
+        { href: "/overlays", label: "Menu, Drawer, Tooltip", icon: Icons.Regular.Size20.Navigation, iconActive: Icons.Filled.Size20.Navigation },
+        { href: "/structure", label: "Accordion, List, Progress", icon: Icons.Regular.Size20.TextBulletListSquare, iconActive: Icons.Filled.Size20.TextBulletListSquare },
+        { href: "/more", label: "More components", icon: Icons.Regular.Size20.Apps, iconActive: Icons.Filled.Size20.Apps },
+        { href: "/feedback", label: "Feedback", icon: Icons.Regular.Size20.Alert, iconActive: Icons.Filled.Size20.Alert },
+        { href: "/primitives", label: "Layout", icon: Icons.Regular.Size20.LayoutRowTwo, iconActive: Icons.Filled.Size20.LayoutRowTwo },
+        { href: "/theme", label: "Theme", icon: Icons.Regular.Size20.Color, iconActive: Icons.Filled.Size20.Color },
+        { href: "/dashboard", label: "Dashboard", icon: Icons.Regular.Size20.Board, iconActive: Icons.Filled.Size20.Board },
     ];
 
     protected override onInitialized(): void {

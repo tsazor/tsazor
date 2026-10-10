@@ -20,6 +20,8 @@ export function withAttributes(
   const merged: Record<string, unknown> = { ...self };
   for (const [name, value] of Object.entries(additional)) {
     const both = name.toLowerCase() === "class";
+    // A class appends, so none (`class="@(open ? "x" : null)"`) keeps the component's own.
+    if (both && (value === null || value === undefined) && typeof merged[name] === "string") continue;
     merged[name] = both && typeof merged[name] === "string" && typeof value === "string"
       ? `${merged[name]} ${value}`
       : value;

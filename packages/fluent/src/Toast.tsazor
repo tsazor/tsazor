@@ -4,6 +4,7 @@
 @import type { Intent } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { statusColor } from "./vocabulary"
+@import { Dismiss20Regular } from "./core-icons"
 
 <div @attributes="@this.toastAttributes">
     <div class="fui-toast__content">
@@ -15,7 +16,7 @@
         }
     </div>
     @if (this.dismissible) {
-        <button type="button" class="fui-toast__close" aria-label="Close" @onclick="this.close">&times;</button>
+        <button type="button" class="fui-toast__close" aria-label="Close" @onclick="this.close"><Icon value="@Dismiss20Regular" size="16" /></button>
     }
 </div>
 

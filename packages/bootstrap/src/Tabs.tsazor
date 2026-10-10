@@ -9,7 +9,7 @@
 <ul class="nav nav-tabs" role="tablist" aria-label="@ariaLabel" @attach="keys">
     @for (let i = 0; i < this.tabs.length; i++) {
         <li class="nav-item" role="presentation">
-            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@this.tabs[i]!.title</button>
+            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@if (this.tabs[i]!.iconStart) {<Icon value="@this.tabs[i]!.iconStart" class="me-2" />}@this.tabs[i]!.title</button>
         </li>
     }
 </ul>

@@ -19,7 +19,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const SKINS = { bootstrap: 5397, fluent: 5398 };
-const ROUTES = ["/", "/actions", "/forms", "/data", "/overlays", "/structure"];
+const ROUTES = ["/", "/actions", "/forms", "/data", "/overlays", "/structure", "/icons"];
 const url = (skin) => `http://localhost:${SKINS[skin]}`;
 
 for (const [skin, other] of [["bootstrap", "fluent"], ["fluent", "bootstrap"]]) {
@@ -169,6 +169,30 @@ try {
     await page.getByRole("button", { name: "Error toast" }).click();
     await page.waitForSelector("[role=alert]");
     say((await page.locator("[role=alert]").textContent())?.includes("Upload failed.") === true, "toast: a danger toast is an alert");
+
+    /* Icons: on the components, and the Icons page browses the skin's set. */
+    await open(page, base, "/actions");
+    const iconPaths = await page.locator(".icons-demo").evaluate((row) => row.querySelectorAll("svg path").length);
+    say(iconPaths >= 4, `icons: Save, More, Delete and the badge draw the skin's icons (${iconPaths} paths)`);
+    say((await page.getByRole("button", { name: "Delete" }).locator("svg").count()) === 1, "icons: an icon-only button is named by its ariaLabel");
+    await open(page, base, "/icons");
+    await page.waitForSelector(".icons-cell", { timeout: 30_000 });
+    const total = Number((await page.locator(".icons-count").textContent())?.split(" ")[0]);
+    say(total > 2000, `icons page: the whole set (${total} icons)`);
+    say((await page.locator(".icons-cell").count()) < 300, "icons page: Virtualize renders only the rows in view");
+    await page.getByLabel("Search").fill("arrow left");
+    await page.waitForFunction((all) => Number(document.querySelector(".icons-count")?.textContent?.split(" ")[0]) < all, total);
+    const names = await page.locator(".icons-name").allTextContents();
+    say(names.length > 0 && names.every((name) => /arrow/i.test(name) && /left/i.test(name)), `icons page: the search filters as you type (${names.slice(0, 3).join(", ")})`);
+    if (skin === "fluent") {
+      await page.getByLabel("Search").fill("");
+      await page.getByLabel("Variant").selectOption("Light");
+      await page.waitForFunction(() => document.querySelector(".icons-cell")?.getAttribute("title")?.startsWith("Icons.Light.Size24.") ?? false);
+      say(true, "icons page: another variant loads its own module, at a size it has (Light starts at 24)");
+    }
+    await page.locator(".icons-cell").first().click();
+    await page.waitForFunction(() => document.body.textContent?.includes('<Icon Value="@Icons.') ?? false);
+    say(true, "icons page: a click gives the icon's markup");
 
     /* Structure: tabs, accordion, pagination. */
     await open(page, base, "/structure");

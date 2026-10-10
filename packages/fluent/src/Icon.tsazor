@@ -2,7 +2,7 @@
     `icon()` from @tsazor/ui), or a `name` from the small built-in set. Decorative (aria-hidden) by default; with a
     title (or ariaLabel) it gets role="img". An unknown name falls back to check. *@
 @import { MarkupString } from "@tsazor/runtime"
-@import { builtInIcons, type IconValue } from "@tsazor/ui"
+@import { builtInIcons, iconSize, type IconValue } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 
 <svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>
@@ -12,8 +12,8 @@
     @Parameter() value?: IconValue;
     /** A name from the built-in set: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove, folder, folder-up, document, image, download. */
     @Parameter() name?: string;
-    /** Pixel size (width/height); defaults to the 16px body icon size. */
-    @Parameter() size: number = 16;
+    /** Pixel size (width/height). By default the icon's own size, as in Fluent UI Blazor (`Size20` is 20px); 16 for a `name`. */
+    @Parameter() size?: number;
     /** The icon's color (any CSS color); by default the text color around it. */
     @Parameter() color?: string;
     /** The accessible name (Fluent UI Blazor's `Title`); without it (or ariaLabel) the icon is decorative. */
@@ -22,6 +22,10 @@
     @Parameter() ariaLabel?: string;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get pixels(): number {
+        return this.size ?? (this.value === undefined ? 16 : iconSize(this.value));
+    }
 
     private get icon(): IconValue {
         return this.value ?? builtInIcons[this.name ?? ""] ?? (builtInIcons["check"] as IconValue);
@@ -35,8 +39,8 @@
         const label = this.label;
         return withAttributes({
             class: "fui-icon",
-            width: this.size,
-            height: this.size,
+            width: this.pixels,
+            height: this.pixels,
             viewBox: this.icon.viewBox,
             fill: "currentColor",
             style: this.color === undefined ? null : `color: ${this.color}`,

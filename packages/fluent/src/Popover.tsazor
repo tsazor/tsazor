@@ -4,6 +4,7 @@
     button. It is positioned next to the button and flips when there is no room. *@
 @import { anchoredPosition, dismissable, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
+@import { Dismiss20Regular } from "./core-icons"
 
 <span class="fui-popover-anchor">
     <button class="@toggleClass" type="button" aria-expanded="@expandedText" aria-controls="@panelControls" @ref="toggleButton" @onclick="toggle">@label</button>
@@ -12,7 +13,7 @@
             @if (title) {
                 <div class="fui-popover__header">
                     <span class="fui-popover__title" id="@titleId">@title</span>
-                    <button type="button" class="fui-popover__close" aria-label="Close" @onclick="() => close(true)">&times;</button>
+                    <button type="button" class="fui-popover__close" aria-label="Close" @onclick="() => close(true)"><Icon value="@Dismiss20Regular" size="16" /></button>
                 </div>
             }
             <div class="fui-popover__body">@childContent</div>

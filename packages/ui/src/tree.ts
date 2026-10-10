@@ -2,6 +2,7 @@
  * The tree view's model (Fluent UI Blazor's ITreeViewItem) and its keyboard, after the ARIA tree
  * pattern: pure functions both skins share.
  */
+import type { IconValue } from "./icons.js";
 
 /** A node of a tree view. */
 export interface TreeViewItem {
@@ -15,6 +16,14 @@ export interface TreeViewItem {
   readonly expanded?: boolean;
   /** Shown, but can't be selected. */
   readonly disabled?: boolean;
+  /** An icon before the text (Fluent UI Blazor's `IconStart`; 16px recommended). */
+  readonly iconStart?: IconValue;
+  /** An icon after the text (`IconEnd`). */
+  readonly iconEnd?: IconValue;
+  /** Replaces the chevron while the node is closed (`IconCollapsed`), e.g. a folder. */
+  readonly iconCollapsed?: IconValue;
+  /** Replaces the chevron while the node is open (`IconExpanded`), e.g. an open folder. */
+  readonly iconExpanded?: IconValue;
 }
 
 /** A visible node: the item, its depth (1 at the top) and its parent's id. */

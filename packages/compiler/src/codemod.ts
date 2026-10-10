@@ -7,7 +7,8 @@ import { advancePos } from "./writer.js";
  * `@attribute [C#]`, typeparameter `where T : X`), TZS022 (`var`) and TZS024
  * (C# interpolated/verbatim strings) — and rewrites the PascalCase API forms
  * C# keeps (`.ToString()`, `.Length`, `.ToLower()`, `.ToUpper()`, outside
- * `@code`/`@functions`). That C# inside `@code` stays C# until Phase 3, and
+ * `@code`/`@functions`), and Fluent UI Blazor's icon instances
+ * (`new Icons.Regular.Size20.Save()` → `Icons.Regular.Size20.Save`). That C# inside `@code` stays C# until Phase 3, and
  * whatever no fix covers (TZS005, DataAnnotations, `(MarkupString)`) stays
  * and is reported.
  */
@@ -107,21 +108,25 @@ function finish(text: string, fileName: string, applied: TszDiagnostic[], apiRep
 /* C#-API forms ---------------------------------------------------------------- */
 
 /** PascalCase members C# keeps (`.Count` maps to neither — a dictionary's is
- *  `.size`, a list's `.length`; that call is not mechanical). One {name, edit}
- *  per occurrence, outside `@code`/`@functions` blocks. */
+ *  `.size`, a list's `.length`; that call is not mechanical), and Fluent UI
+ *  Blazor's icons: a class instance per use there, a shared `IconValue` in
+ *  @tsazor/fluent-icons (design-icons.md §3.2). One {name, edit} per
+ *  occurrence, outside `@code`/`@functions` blocks. */
 export function apiFormEdits(source: string): { name: string; edit: TextEdit }[] {
   const rules: [RegExp, string, string][] = [
     [/\.ToString\(\)/g, ".toString()", "ToString"],
     [/\.Length(?![\w(])/g, ".length", "Length"],
     [/\.ToLower\(\)/g, ".toLowerCase()", "ToLower"],
     [/\.ToUpper\(\)/g, ".toUpperCase()", "ToUpper"],
+    [/\bnew\s+(Icons(?:\.[A-Z]\w*)+)\(\)/g, "$1", "Icons"],
   ];
   const edits: { name: string; edit: TextEdit }[] = [];
   for (const region of markupRegions(source)) {
     for (const [pattern, replacement, name] of rules) {
       for (const match of region.text.matchAll(pattern)) {
         const offset = region.start + match.index;
-        edits.push({ name, edit: { ...rangeOf(source, offset, match[0].length), text: replacement } });
+        const text = replacement.replace("$1", match[1] ?? "");
+        edits.push({ name, edit: { ...rangeOf(source, offset, match[0].length), text } });
       }
     }
   }

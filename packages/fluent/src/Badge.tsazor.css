@@ -85,3 +85,12 @@
   background: transparent;
   color: var(--fui-badge-ink);
 }
+
+/* Icon slots: 12px (10px when small), 2px from the text. */
+.fui-badge {
+  gap: 2px;
+}
+
+.fui-badge__icon {
+  flex: none;
+}

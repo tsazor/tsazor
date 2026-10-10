@@ -41,7 +41,8 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "core-icons": "node scripts/core-icons.mjs"
   },
   "dependencies": {
     "@tsazor/ui": "workspace:*"
@@ -51,6 +52,7 @@
   },
   "devDependencies": {
     "@tsazor/compiler": "workspace:*",
+    "@tsazor/fluent-icons": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/testing": "workspace:*",
     "@tsazor/workspace": "workspace:*",

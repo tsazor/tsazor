@@ -52,20 +52,18 @@
   justify-content: center;
 }
 
-.fui-tree__chevron::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
+.fui-tree__chevron-icon {
   transition: transform var(--fui-duration-fast) var(--fui-ease-standard);
 }
 
-.fui-tree__node--open > .fui-tree__row > .fui-tree__chevron::before {
-  transform: rotate(45deg);
+.fui-tree__node--open > .fui-tree__row > .fui-tree__chevron > .fui-tree__chevron-icon {
+  transform: rotate(90deg);
 }
 
-.fui-tree__chevron--leaf::before {
-  content: none;
+.fui-tree__chevron-icon:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+.fui-tree__icon {
+  flex: none;
 }

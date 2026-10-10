@@ -161,3 +161,21 @@
 .fui-button--outline.fui-button--ink-info {
   border-color: currentColor;
 }
+
+/* Icon slots (iconStart/iconEnd): the icon keeps its own size; an icon-only button is square. */
+.fui-button__icon {
+  flex: none;
+}
+
+.fui-button--icon-only {
+  min-width: var(--fui-height);
+  padding: 0;
+}
+
+.fui-button--icon-only.fui-button--small {
+  min-width: var(--fui-height-s);
+}
+
+.fui-button--icon-only.fui-button--large {
+  min-width: var(--fui-height-l);
+}

@@ -68,3 +68,8 @@
     animation: none;
   }
 }
+/* iconStart on a Tab: before the title. */
+.fui-tab__icon {
+  flex: none;
+  margin-inline-end: var(--fui-gap-sm);
+}

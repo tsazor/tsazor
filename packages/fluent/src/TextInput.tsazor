@@ -3,7 +3,7 @@
     the field's first validation message (role="alert", aria-invalid, aria-describedby) once a
     submit was attempted. *@
 @import { withAttributes } from "./attributes"
-@import { uniqueId } from "@tsazor/ui"
+@import { uniqueId, ImmediateInput } from "@tsazor/ui"
 @import { hasSubmitAttempt } from "@tsazor/ui"
 
 @inherits InputBase<string>
@@ -12,7 +12,7 @@
     @if (this.label) {
         <label class="fui-input__label" for="@this.elementId">@this.label</label>
     }
-    <input id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    <input id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @oninput="this.handleInput" />
     @if (this.help) {
         <span class="fui-input__help" id="@this.helpId">@this.help</span>
     }
@@ -38,6 +38,10 @@
     @Parameter() id?: string;
     /** Overrides the input's accessible name. */
     @Parameter() ariaLabel?: string;
+    /** The value follows the typing once it pauses for immediateDelay ms (Fluent UI Blazor's `Immediate`); otherwise it updates on change. */
+    @Parameter() immediate: boolean = false;
+    /** The pause in ms before an immediate update (`ImmediateDelay`). */
+    @Parameter() immediateDelay: number = 200;
 
     private generatedId?: string;
 
@@ -105,7 +109,18 @@
         return messages[0] ?? "";
     }
 
+    private immediateInput?: ImmediateInput;
+
+    private handleInput(e: Event): void {
+        if (!this.immediate) return;
+        this.immediateInput ??= new ImmediateInput(this.disposeSignal);
+        this.immediateInput.input(e, this.immediateDelay, (value) => {
+            this.currentValue = value;
+        });
+    }
+
     private handleChange(e: Event): void {
+        this.immediateInput?.cancel();
         this.currentValue = (e.target as HTMLInputElement).value;
     }
 }

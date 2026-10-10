@@ -1298,6 +1298,7 @@ there is left untouched and is ported by hand):
 | `.Length` | `.length` |
 | `.ToLower()` | `.toLowerCase()` |
 | `.ToUpper()` | `.toUpperCase()` |
+| `new Icons.Regular.Size20.Save()` (Fluent UI Blazor) | `Icons.Regular.Size20.Save` (a shared value of `@tsazor/fluent-icons`) |
 
 `.Count` is deliberately **not** mapped — C# `.Count` is `.size` on a dictionary and
 `.length` on a list/array; the call is not mechanical and is left as is.

@@ -33,6 +33,9 @@ export default class Badge extends ComponentBase {
     intent: Intent;
     pill: boolean;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
+    iconLabel?: string;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -60,6 +63,8 @@ export default class Button extends ComponentBase {
     href?: string;
     onClick?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -206,6 +211,8 @@ export default class DropdownItem extends ComponentBase {
     onSelect?: EventCallback<MouseEvent>;
     disabled: boolean;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
     dropdown?: Dropdown;
 }
 
@@ -259,16 +266,20 @@ export default class Grid extends ComponentBase {
 
 // GridSort: re-exported from @tsazor/ui
 
+// icon: re-exported from @tsazor/ui
+
 // Icon
 export default class Icon extends ComponentBase {
     value?: IconValue;
     name?: string;
-    size: number;
+    size?: number;
     color?: string;
     title?: string;
     ariaLabel?: string;
     additionalAttributes?: Record<string, unknown>;
 }
+
+// IconValue: re-exported from @tsazor/ui
 
 // Intent: re-exported from @tsazor/ui
 
@@ -303,6 +314,8 @@ export default class DropdownItem extends ComponentBase {
     onSelect?: EventCallback<MouseEvent>;
     disabled: boolean;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
     dropdown?: Dropdown;
 }
 
@@ -334,6 +347,8 @@ export default class NavbarLink extends ComponentBase {
     href: string;
     match: NavLinkMatch;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
 }
 
 // NumberInput
@@ -484,6 +499,7 @@ export default class Switch extends InputBase<boolean> {
 // Tab
 export default class Tab extends ComponentBase {
     title: string;
+    iconStart?: IconValue;
     childContent?: RenderFragment;
     tabs?: Tabs;
 }
@@ -531,6 +547,8 @@ export default class TextArea extends InputBase<string> {
     disabled: boolean;
     required: boolean;
     id?: string;
+    immediate: boolean;
+    immediateDelay: number;
 }
 
 // TextInput
@@ -543,6 +561,8 @@ export default class TextInput extends InputBase<string> {
     disabled: boolean;
     required: boolean;
     id?: string;
+    immediate: boolean;
+    immediateDelay: number;
 }
 
 // Toast: re-exported from @tsazor/ui

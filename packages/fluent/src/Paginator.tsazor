@@ -2,6 +2,7 @@
     the row count, "Page 2 of 7", and buttons for the first, previous, next and last page. Pass the
     same state to the grid: `<DataGrid Pagination="pagination">` … `<Paginator State="pagination" />`. *@
 @import { PaginationState } from "@tsazor/ui"
+@import { ChevronDoubleLeft20Regular, ChevronDoubleRight20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "./core-icons"
 
 @if (state.totalItemCount !== undefined) {
     <nav class="fui-paginator" aria-label="@ariaLabel">
@@ -9,11 +10,11 @@
             @if (summaryContent) { @summaryContent } else { <text>@state.totalItemCount items</text> }
         </span>
         <div class="fui-pagination">
-            <button type="button" class="fui-pagination__button" aria-label="First page" title="First page" disabled="@(!canGoBack)" @onclick="() => go(0)">«</button>
-            <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)">‹</button>
+            <button type="button" class="fui-pagination__button" aria-label="First page" title="First page" disabled="@(!canGoBack)" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
             <span class="fui-paginator__page" aria-current="page">Page @(state.currentPageIndex + 1) of @(lastPage + 1)</span>
-            <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)">›</button>
-            <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page" disabled="@(!canGoForward)" @onclick="() => go(lastPage)">»</button>
+            <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page" disabled="@(!canGoForward)" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
         </div>
     </nav>
 }

@@ -58,6 +58,9 @@ export default class Badge extends ComponentBase {
     size: "small" | "medium";
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
+    iconLabel?: string;
 }
 
 // Breadcrumb
@@ -89,6 +92,8 @@ export default class Button extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     onClick?: EventCallback<MouseEvent>;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
 }
 
 // ButtonGroup
@@ -253,6 +258,8 @@ export default class MenuItem extends ComponentBase {
     onSelect?: EventCallback<MouseEvent>;
     disabled: boolean;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
     menu?: Menu;
 }
 
@@ -324,16 +331,20 @@ export default class Grid extends ComponentBase {
 
 // GridSort: re-exported from @tsazor/ui
 
+// icon: re-exported from @tsazor/ui
+
 // Icon
 export default class Icon extends ComponentBase {
     value?: IconValue;
     name?: string;
-    size: number;
+    size?: number;
     color?: string;
     title?: string;
     ariaLabel?: string;
     additionalAttributes?: Record<string, unknown>;
 }
+
+// IconValue: re-exported from @tsazor/ui
 
 // Indicator
 export default class Indicator extends ComponentBase {
@@ -376,6 +387,8 @@ export default class MenuItem extends ComponentBase {
     onSelect?: EventCallback<MouseEvent>;
     disabled: boolean;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
     menu?: Menu;
 }
 
@@ -393,6 +406,8 @@ export default class NavbarLink extends ComponentBase {
     href: string;
     match: NavLinkMatch;
     childContent?: RenderFragment;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
 }
 
 // NumberInput
@@ -507,6 +522,8 @@ export default class SidebarNav extends ComponentBase {
         href: string;
         label: string;
         match?: NavLinkMatch;
+        icon?: IconValue;
+        iconActive?: IconValue;
     }[];
     ariaLabel: string;
     compact: boolean;
@@ -568,6 +585,7 @@ export default class Switch extends InputBase<boolean> {
 // Tab
 export default class Tab extends ComponentBase {
     title: string;
+    iconStart?: IconValue;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
     owner?: unknown;
@@ -620,6 +638,8 @@ export default class TextArea extends InputBase<string> {
     required: boolean;
     id?: string;
     ariaLabel?: string;
+    immediate: boolean;
+    immediateDelay: number;
 }
 
 // TextInput
@@ -632,6 +652,8 @@ export default class TextInput extends InputBase<string> {
     required: boolean;
     id?: string;
     ariaLabel?: string;
+    immediate: boolean;
+    immediateDelay: number;
 }
 
 // Toast

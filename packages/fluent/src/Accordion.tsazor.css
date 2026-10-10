@@ -38,20 +38,21 @@
   outline-offset: -2px;
 }
 
+/* Fluent's ChevronRight, turned down while open. */
 .fui-accordion__chevron {
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg);
+  flex: none;
   transition: transform var(--fui-duration-fast, 100ms) var(--fui-ease-standard);
 }
 
+.fui-accordion__chevron:dir(rtl) {
+  transform: scaleX(-1);
+}
+
 .fui-accordion__button[aria-expanded="true"] .fui-accordion__chevron {
-  transform: rotate(45deg);
+  transform: rotate(90deg);
 }
 
 .fui-accordion__panel {
-  padding: var(--fui-spacing-xs) var(--fui-spacing-m) var(--fui-spacing-m) calc(var(--fui-spacing-m) + 6px + var(--fui-gap-sm));
+  padding: var(--fui-spacing-xs) var(--fui-spacing-m) var(--fui-spacing-m) calc(var(--fui-spacing-m) + 20px + var(--fui-gap-sm));
   color: var(--fui-foreground-2);
 }

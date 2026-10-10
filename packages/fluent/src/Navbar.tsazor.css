@@ -31,6 +31,9 @@
 }
 
 .fui-navbar__nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
   padding: var(--fui-spacing-xs) var(--fui-spacing-s);
   border-radius: var(--fui-radius-md);
   color: inherit;

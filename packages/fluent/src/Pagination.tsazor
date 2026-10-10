@@ -3,12 +3,13 @@
     numbers are skipped. It keeps no page state; clicks raise onPageChanged and the parent updates
     page. *@
 @import { withAttributes } from "./attributes"
+@import { ChevronDoubleLeft20Regular, ChevronDoubleRight20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "./core-icons"
 
 <nav aria-label="@this.ariaLabel" @attributes="@this.paginationAttributes">
     <button type="button" class="fui-pagination__button" aria-label="First page" title="First page"
-            disabled="@this.atFirst" @onclick="() => this.go(1)">«</button>
+            disabled="@this.atFirst" @onclick="() => this.go(1)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
     <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page"
-            disabled="@this.atFirst" @onclick="() => this.go(this.page - 1)">‹</button>
+            disabled="@this.atFirst" @onclick="() => this.go(this.page - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
     @for (const item of this.windowItems) {
         @if (typeof item === "number") {
             <button type="button" class="@this.pageClass(item)" aria-label="@`Go to page ${item}`"
@@ -20,9 +21,9 @@
         }
     }
     <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page"
-            disabled="@this.atLast" @onclick="() => this.go(this.page + 1)">›</button>
+            disabled="@this.atLast" @onclick="() => this.go(this.page + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
     <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page"
-            disabled="@this.atLast" @onclick="() => this.go(this.pageCount)">»</button>
+            disabled="@this.atLast" @onclick="() => this.go(this.pageCount)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
 </nav>
 
 @code {

@@ -1,19 +1,20 @@
 @** A Fluent UI 2 message bar (role="alert") with a status icon; `intent` info (default) | success |
     danger | warning | neutral (primary reads as info, secondary as neutral). With dismissible it shows a Close button that hides the alert and then
     raises onDismissed. *@
-@import type { Intent } from "@tsazor/ui"
+@import type { IconValue, Intent } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { statusColor } from "./vocabulary"
+@import { CheckmarkCircle20Filled, Dismiss20Regular, DismissCircle20Filled, Info20Filled, Warning20Filled } from "./core-icons"
 
 @if (this.visible) {
 <div role="alert" @attributes="@this.alertAttributes">
     <span class="fui-alert__icon" aria-hidden="true">
-        <Icon name="@this.iconName" size="16" />
+        <Icon value="@this.statusIcon" />
     </span>
     <div class="fui-alert__body">@childContent</div>
     @if (this.dismissible) {
     <button type="button" class="fui-alert__dismiss" aria-label="Close" @onclick="this.dismiss">
-        <Icon name="close" size="12" />
+        <Icon value="@Dismiss20Regular" size="16" />
     </button>
     }
 </div>
@@ -42,12 +43,13 @@
         return withAttributes({ class: this.alertClass }, this.additionalAttributes);
     }
 
-    private get iconName(): string {
-        const icons: Record<string, string> = {
-            "success": "check", "danger": "close",
-            "warning": "remove", "info": "remove", "neutral": "remove",
-        };
-        return icons[statusColor(this.intent)] ?? "remove";
+    /** Fluent UI Blazor's MessageBar icons: filled, in the intent's color. */
+    private get statusIcon(): IconValue {
+        const color = statusColor(this.intent);
+        return color === "success" ? CheckmarkCircle20Filled
+            : color === "danger" ? DismissCircle20Filled
+            : color === "warning" ? Warning20Filled
+            : Info20Filled;
     }
 
     private async dismiss(e: MouseEvent): Promise<void> {

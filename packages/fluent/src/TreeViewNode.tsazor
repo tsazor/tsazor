@@ -1,15 +1,23 @@
-@** One node of a TreeView, and — rendering itself — its open subtree. *@
-@import { hasChildren, type TreeViewItem } from "@tsazor/ui"
+@** One node of a TreeView, and — rendering itself — its open subtree. The item's iconStart and iconEnd frame its
+    text; iconCollapsed and iconExpanded replace the chevron in their state. *@
+@import { hasChildren, type IconValue, type TreeViewItem } from "@tsazor/ui"
+@import { ChevronRight12Regular } from "./core-icons"
 @import type { TreeHost } from "./tree-host"
 
 <li role="treeitem" class="@this.nodeClass" data-tree-id="@item.id" aria-level="@level" aria-expanded="@this.expandedText" aria-selected="@(tree.isSelected(item) ? "true" : "false")" aria-disabled="@(item.disabled ? "true" : null)" tabindex="@(tree.isFocusable(item) ? 0 : -1)" @onclick="select" @onclick:stopPropagation="true">
     <div class="fui-tree__row" style="@this.indent">
         @if (this.branch) {
-            <span class="fui-tree__chevron" aria-hidden="true" @onclick="toggle" @onclick:stopPropagation="true"></span>
+            <span class="fui-tree__chevron" aria-hidden="true" @onclick="toggle" @onclick:stopPropagation="true"><Icon value="@this.chevron" class="@(this.chevron === ChevronRight12Regular ? "fui-tree__chevron-icon" : null)" /></span>
         } else {
             <span class="fui-tree__chevron fui-tree__chevron--leaf" aria-hidden="true"></span>
         }
+        @if (item.iconStart) {
+            <Icon value="@item.iconStart" class="fui-tree__icon" />
+        }
         <span class="fui-tree__text">@item.text</span>
+        @if (item.iconEnd) {
+            <Icon value="@item.iconEnd" class="fui-tree__icon" />
+        }
     </div>
     @if (this.branch && tree.isExpanded(item)) {
         <ul role="group" class="fui-tree__group">
@@ -28,6 +36,12 @@
 
     private get branch(): boolean {
         return hasChildren(this.item);
+    }
+
+    /** The item's icon for its state, else Fluent's chevron (turned down by CSS while open). */
+    private get chevron(): IconValue {
+        const open = this.tree.isExpanded(this.item);
+        return (open ? this.item.iconExpanded : this.item.iconCollapsed) ?? ChevronRight12Regular;
     }
 
     private get expandedText(): string | null {

@@ -493,7 +493,8 @@ Slot-body candidates are left out of completion (TZS027 nestings).
 
 **Codemod core in the compiler** (`@tsazor/compiler`, `src/codemod.ts`). `codemodSource`
 runs the A7 `fix` payloads to a fixed point (max. 8 passes) and additionally rewrites the
-PascalCase API forms in markup (`.ToString()/.Length/.ToLower()/.ToUpper()` — outside
+PascalCase API forms in markup (`.ToString()/.Length/.ToLower()/.ToUpper()`, and Fluent UI
+Blazor's `new Icons.X.Y.Z()` → `Icons.X.Y.Z` — outside
 `@code`/`@functions`, whose blanked regions are remembered by
 `markupRegions`/`blankCodeBlocks`). In each pass, fix edits and API forms are computed on
 the same state and applied together via `applyTextEdits` (descending) — the fix wins any

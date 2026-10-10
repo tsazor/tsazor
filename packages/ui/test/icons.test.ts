@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { builtInIcons, icon } from "../src/index";
+import { builtInIcons, icon, iconSize } from "../src/index";
 
 describe("icon()", () => {
   it("takes an SVG's inner markup, with the default 24px viewBox", () => {
@@ -26,5 +26,17 @@ describe("builtInIcons", () => {
     expect(names).toContain("close");
     expect(names).toContain("download");
     expect(new Set(names.map((name) => builtInIcons[name]!.content)).size).toBe(names.length);
+  });
+});
+
+describe("iconSize()", () => {
+  it("is the viewBox width, as Fluent UI Blazor sizes an icon by its own size", () => {
+    expect(iconSize(icon("a", "<path/>", "0 0 20 20"))).toBe(20);
+    expect(iconSize(icon("b", '<svg viewBox="0,0,16,16"><path/></svg>'))).toBe(16);
+    expect(iconSize(icon("c", "<path/>"))).toBe(24);
+  });
+
+  it("is 16 when the viewBox has no width", () => {
+    expect(iconSize({ name: "x", viewBox: "", content: "" })).toBe(16);
   });
 });

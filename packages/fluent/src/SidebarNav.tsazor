@@ -1,12 +1,24 @@
 @** A sidebar navigation landmark (nav) that renders links as a list of runtime NavLinks, which
-    mark the link matching the current URL active. compact switches to the icon-rail variant. *@
+    mark the link matching the current URL active. A link may have an `icon`, and an `iconActive` shown while it is
+    the current page (Fluent UI Blazor's `IconRest`/`IconActive`, e.g. the regular and the filled variant). compact
+    switches to the icon rail: a link with an icon shows only the icon, its label stays its accessible name and its
+    tooltip. *@
+@import type { IconValue } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 
 <nav aria-label="@this.ariaLabel" @attributes="@this.navAttributes">
     <ul class="fui-nav__list">
-        @for (let i = 0; i < this.links.length; i++) {
+        @foreach (const link of this.links) {
             <li class="fui-nav__item">
-                <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@this.links[i]!.href" match="@(this.links[i]!.match ?? NavLinkMatch.Prefix)">@this.links[i]!.label</NavLink>
+                <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@link.href" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
+                    @if (link.icon) {
+                        <Icon value="@link.icon" class="@(link.iconActive ? "fui-nav__icon fui-nav__icon--rest" : "fui-nav__icon")" />
+                    }
+                    @if (link.iconActive) {
+                        <Icon value="@link.iconActive" class="fui-nav__icon fui-nav__icon--active" />
+                    }
+                    <span class="fui-nav__label">@link.label</span>
+                </NavLink>
             </li>
         }
     </ul>
@@ -15,7 +27,7 @@
 
 @code {
     /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link). */
-    @Parameter() links: { href: string; label: string; match?: NavLinkMatch }[] = [];
+    @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] = [];
     /** Accessible nav name. */
     @Parameter() ariaLabel: string = "Main navigation";
     /** Renders the compact (icon-rail) variant. */
@@ -27,6 +39,11 @@
 
     private get navClass(): string {
         return this.compact ? "fui-nav fui-nav--compact" : "fui-nav";
+    }
+
+    /** The rail shows only the icon: the label becomes its tooltip. */
+    private titleOf(link: { label: string; icon?: IconValue }): string | null {
+        return this.compact && link.icon !== undefined ? link.label : null;
     }
 
     private get navAttributes(): Record<string, unknown> {

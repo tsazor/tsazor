@@ -82,15 +82,22 @@ everything pushed.
 >   - The tutorial lessons "Long lists" and "A live feed" (ch12, flag `layoutOnly`; `d4998a4`). The feed's browser
 >     check found A16 in Firefox and WebKit (`955c9bb`): a reader who scrolled up was pulled back to the bottom,
 >     because a scroll during a convergence, or after a pin that didn't move, was swallowed.
-> - **Icons (F17, wave A; [design-icons.md](design-icons.md)), 2026-10-09 night:** steps 1–3 of 6 done.
+> - **Icons (F17, wave A; [design-icons.md](design-icons.md)):** steps 1–5 of 6 done (1–3 on 2026-10-09, 4–5 on 2026-10-10).
 >   - `c497ae8`: `IconValue` and `icon()` in `@tsazor/ui` (an app's own icons); both skins' `Icon` take `value`,
 >     `color`, `title`; `@tsazor/bootstrap` got `Icon`.
 >   - `15c1001`: `@tsazor/fluent-icons` (20,786 Fluent System Icons, `Icons.Regular.Size20.Save`, generated from
 >     `@fluentui/svg-icons`); `35a1c3f`: `@tsazor/bootstrap-icons` (2,078, `Icons.Alarm`). Tree-shaking proved by a
 >     Vite build test (nested `export * as` namespaces: Rollup keeps only the reached icon).
->   - Next: step 4 (icon slots `IconStart`/`IconEnd` on Button, MenuItem, NavLink, Tab, TreeItem, Badge; the skins'
->     own icons from the generated sets — D-I3), 5 (gallery icon browser, codemod rule
->     `new Icons.X.Y.Z()` → `Icons.X.Y.Z`), 6 (FluentCMS uses the original's icons; F17 closes). Then Markdown.
+>   - **Steps 4 and 5 done (2026-10-10):** icon slots with Fluent UI Blazor main's names (Button, MenuItem/
+>     DropdownItem, Badge, NavbarLink `iconStart`/`iconEnd`; Tab `iconStart`; TreeViewItem's four; SidebarNav links
+>     `icon`/`iconActive`); `Icon` sizes a value by its own viewBox; the skins draw their own icons from a small copy
+>     of their set (`src/core-icons.ts`, D-I4, kept equal by a test). The browser is the skins app's Icons page
+>     (Fluent by variant and size, Virtualize); the codemod rewrites `new Icons.X.Y.Z()`. Found on the way: L1
+>     (`withAttributes` dropped a component's class for `class=null`) and L2 (TextInput/TextArea lacked `Immediate`;
+>     now `ImmediateInput` in `@tsazor/ui`). `@tsazor/fluent-icons/<variant>/<size>` entry points give a light dev
+>     start (the namespace costs ~1 s there). The gallery's gates take `GALLERY_PORT` (a fresh server beside a
+>     running one).
+>   - Next: step 6 (FluentCMS uses the original's icons; F17 closes; then deprecate `name`). Then Markdown.
 >   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
 >     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
 >     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)

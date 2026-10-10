@@ -45,17 +45,17 @@ Radzen (charts, scheduler, HTML editor, pivot grid) is a suite. It is not the ta
 
 **In both skins (Tier 1, done):** Accordion, Alert, Badge, Breadcrumb, Button, ButtonGroup, Card, Checkbox, Collapse,
 DataGrid (PropertyColumn, TemplateColumn, Paginator, Virtualize), DateInput (native), Dialog, Divider, Drawer,
-FileInput, Form, FormField, Grid, ListGroup, Menu/Dropdown, Navbar, NumberInput, Pagination, Popover, Progress,
+FileInput, Form, FormField, Grid, Icon (since 2026-10-09; the full sets, see the Icons row), ListGroup, Menu/Dropdown, Navbar, NumberInput, Pagination, Popover, Progress,
 RadioGroup, Select, Skeleton, Spinner, Stack, Switch, Table, Tabs, TextArea, TextInput, Toast, Tooltip, Typography.
 
-**Only in `@tsazor/fluent`:** Autocomplete, CheckboxGroup, Icon (16 built-in icons), Indicator, SidebarNav, Spacer,
-TreeView. Bootstrap lacks these.
+**Only in `@tsazor/fluent`:** Autocomplete, CheckboxGroup, Indicator, SidebarNav, Spacer, TreeView. Bootstrap lacks
+these.
 
 **In neither skin:**
 
 | Component | Fluent UI Blazor | MudBlazor | Wave |
 |---|---|---|---|
-| Icons: a full set plus an app's own (F17) | Icons (Fluent System Icons, typed, tree-shaken) | Icon (Material) | A |
+| Icons: a full set plus an app's own (F17; steps 1–5 of 6 done 2026-10-10) | Icons (Fluent System Icons, typed, tree-shaken) | Icon (Material) | A |
 | Markdown (sanitized) | none | separate package | A |
 | Avatar | Avatar | Avatar | A |
 | Chip / ChipSet | none | Chip, ChipSet | A |
@@ -100,7 +100,7 @@ The rich text editor stays in the app (the FluentCMS port embeds Quill), as in b
 
 Both waves come before 1.0 (D-L1). The waves set the order, not the release:
 - **A:** what a business app reaches for in its first week (AgentView, FluentCMS, the owner's company admin). That is
-  the twelve wave-A rows above, plus the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, Icon, SidebarNav).
+  the twelve wave-A rows above, plus the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav; Icon is done).
 - **B:** the rest of the table, and `@tsazor/charts` (D-L2).
 - **Order:**
   1. the core (Virtualize);
@@ -119,3 +119,13 @@ Both waves come before 1.0 (D-L1). The waves set the order, not the release:
 | D-L3 | Markdown | `@tsazor/markdown`: a `Markdown` component on `marked` and DOMPurify, sanitized by default. An app that shows an agent's or a user's text must not need to know about XSS |
 | D-L4 | Both skins at once? | Yes, per component, as in Tier 1. The behavior lives in the core, so the second skin is markup and CSS |
 | D-L5 | Icons | `Icon` takes any icon value (an app's own SVG). Generated packages with the full sets, tree-shaken: Fluent System Icons for Fluent, Bootstrap Icons for Bootstrap (as recommended; the owner didn't object) |
+
+## 7. Findings
+
+Core and component gaps found while building the library (§1). Each is fixed with a test.
+
+| # | Where | Found | Fix |
+|---|---|---|---|
+| L1 | `@tsazor/fluent`, `withAttributes` | Icons step 4: `class="@(open ? "x" : null)"` on a component replaced its own classes (`fui-icon` was gone) instead of adding nothing | A missing class keeps the component's own (2026-10-10; `test/icon-slots.test.ts`) |
+| L2 | `TextInput`, `TextArea` (both skins) | The icon browser's search: the value updated only on `change`. Fluent UI Blazor's inputs take `Immediate` and `ImmediateDelay` | `immediate` and `immediateDelay` (200 ms), the behavior `ImmediateInput` in `@tsazor/ui`: one update when the typing pauses, carrying the field's value then (2026-10-10). `NumberInput` doesn't have it yet |
+| L3 | `npx @tsazor/fluent add` (copy-in) | Icons step 4 added `core-icons.ts`; a dry run showed that a copied component never brought the modules it imports (`attributes.ts`, `vocabulary.ts`, `./Menu.tsazor` types), only the sibling tags of its markup | The CLI follows relative imports too, of components and helpers alike (2026-10-10; `test/copy-in.test.ts` copies every component and resolves its imports) |

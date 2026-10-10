@@ -18,7 +18,8 @@ import { createRequire } from "node:module";
 import * as playwright from "playwright-core";
 import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
-const APP = "http://localhost:5321";
+const PORT = process.env.GALLERY_PORT ?? "5321";
+const APP = `http://localhost:${PORT}`;
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/structure", "/more", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
@@ -34,12 +35,12 @@ async function reachable(url) {
 }
 async function ensureServer() {
     if (!(await reachable(APP))) {
-        spawned.push(spawn("npx", ["vite", "--port", "5321", "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
-        console.log("started vite dev server on :5321");
+        spawned.push(spawn("npx", ["vite", "--port", PORT, "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
+        console.log(`started vite dev server on :${PORT}`);
     }
     const deadline = Date.now() + 30_000;
     while (!(await reachable(APP))) {
-        if (Date.now() > deadline) throw new Error("gallery did not come up within 30s (stale process on :5321?)");
+        if (Date.now() > deadline) throw new Error(`gallery did not come up within 30s (stale process on :${PORT}?)`);
         await new Promise((r) => setTimeout(r, 500));
     }
 }

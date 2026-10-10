@@ -1,5 +1,6 @@
 @** One tab of a Tabs container: it registers its title with the parent Tabs and renders its
     content as a tabpanel only while it is the active tab. Use inside Tabs. *@
+@import type { IconValue } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 
 @if (this.active) {
@@ -9,6 +10,8 @@
 @code {
     /** Label shown in the parent Tabs' list. */
     @Parameter() title: string = "";
+    /** An icon before the title in the tab list (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Panel content (rendered only while the tab is active). */
@@ -47,7 +50,7 @@
 
     protected override onInitialized(): void {
         const p = this.host as
-            { registerTab?: (tab: { title: string; setIndex(index: number): void }) => void } | undefined;
+            { registerTab?: (tab: { title: string; iconStart?: IconValue; setIndex(index: number): void }) => void } | undefined;
         p?.registerTab?.(this);
     }
 

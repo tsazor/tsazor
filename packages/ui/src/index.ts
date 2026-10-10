@@ -3,12 +3,13 @@
 
 export type { Appearance, Intent, Orientation, Placement, Size } from "./vocabulary.js";
 export { uniqueId } from "./ids.js";
-export { builtInIcons, icon, type IconValue } from "./icons.js";
+export { builtInIcons, icon, iconSize, type IconValue } from "./icons.js";
 export { focusableElements, focusElement } from "./focus.js";
 export { createLayer, isTopLayer, openLayer } from "./layers.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";
 export { dismissable, type DismissableOptions, type DismissReason } from "./behaviors/dismissable.js";
 export { scrollLock } from "./behaviors/scroll-lock.js";
+export { ImmediateInput } from "./behaviors/immediate.js";
 export { rovingFocus, type RovingFocusOptions } from "./behaviors/roving-focus.js";
 export { anchoredPosition, computePosition, type AnchoredPositionOptions } from "./behaviors/anchored-position.js";
 export { FieldState, hasSubmitAttempt, markSubmitAttempt, type FieldValidity } from "./forms.js";

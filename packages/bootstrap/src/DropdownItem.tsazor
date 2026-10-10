@@ -1,9 +1,10 @@
 @** One entry of a Dropdown menu (Bootstrap's `.dropdown-item`, `role="menuitem"`). Place it inside a
     Dropdown; choosing it (click, Enter or Space) raises onSelect, then closes the menu and returns
-    focus to the toggle. *@
+    focus to the toggle. `iconStart`/`iconEnd` put an icon before or after the label. *@
+@import type { IconValue } from "@tsazor/ui"
 @import type Dropdown from "./Dropdown.tsazor"
 <li role="none">
-    <button class="dropdown-item" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@childContent</button>
+    <button class="@(iconStart || iconEnd ? "dropdown-item d-flex align-items-center gap-2" : "dropdown-item")" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-auto" />}</button>
 </li>
 
 @code {
@@ -13,6 +14,10 @@
     @Parameter() disabled: boolean = false;
     /** The item's label. */
     @Parameter() childContent?: RenderFragment;
+    /** An icon before the label (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the label (`IconEnd`), at the item's far end. */
+    @Parameter() iconEnd?: IconValue;
 
     /** Resolved from the nearest Dropdown ancestor; selection closes the menu. */
     @CascadingParameter({ name: "Dropdown" }) dropdown?: Dropdown;

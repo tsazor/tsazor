@@ -6,6 +6,7 @@
 @import { Toaster, type Toast } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { statusColor } from "./vocabulary"
+@import { Dismiss20Regular } from "./core-icons"
 @inject Toaster toaster
 
 <div @attributes="@this.regionAttributes">
@@ -21,7 +22,7 @@
                     <div class="fui-toast__message">@toast.message</div>
                 }
             </div>
-            <button type="button" class="fui-toast__close" aria-label="Close" @onclick="() => toaster.dismiss(toast.id)">&times;</button>
+            <button type="button" class="fui-toast__close" aria-label="Close" @onclick="() => toaster.dismiss(toast.id)"><Icon value="@Dismiss20Regular" size="16" /></button>
         </div>
     }
 </div>

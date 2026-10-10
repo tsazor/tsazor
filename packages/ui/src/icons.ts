@@ -32,6 +32,15 @@ export function icon(name: string, svg: string, viewBox?: string): IconValue {
   return { name, viewBox: viewBox ?? attribute("viewBox") ?? sized ?? DEFAULT_VIEW_BOX, content: (whole[2] ?? "").trim() };
 }
 
+/**
+ * The size an icon is drawn at when nothing sets one (Fluent UI Blazor's `FluentIcon` takes the icon's size): its
+ * viewBox width, so `Icons.Regular.Size20.Save` is 20px and a Bootstrap icon 16px. 16 when the viewBox has none.
+ */
+export function iconSize(value: IconValue): number {
+  const width = Number.parseFloat(value.viewBox.trim().split(/[\s,]+/)[2] ?? "");
+  return width > 0 ? width : 16;
+}
+
 /** A built-in stroke icon on a 20px grid (the skins' small set, drawn with round 1.5px strokes). */
 function stroke(name: string, d: string): IconValue {
   return {

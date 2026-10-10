@@ -1,8 +1,10 @@
 @** A link in a Navbar (Bootstrap's `.nav-link`): the runtime's NavLink, marked active (`aria-current="page"`)
-    while its href is the current page. The same component exists in the Fluent skin. *@
+    while its href is the current page. `iconStart`/`iconEnd` put an icon before or after the text. The same
+    component exists in the Fluent skin. *@
 @import { NavLink, NavLinkMatch } from "@tsazor/runtime"
+@import type { IconValue } from "@tsazor/ui"
 
-<NavLink Href="@href" Match="@match" CssClass="nav-link">@childContent</NavLink>
+<NavLink Href="@href" Match="@match" CssClass="nav-link">@if (iconStart) {<Icon value="@iconStart" class="me-1" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="ms-1" />}</NavLink>
 
 @code {
     /** The target, as for NavLink. */
@@ -11,4 +13,8 @@
     @Parameter() match: NavLinkMatch = NavLinkMatch.Prefix;
     /** The link text. */
     @Parameter() childContent?: RenderFragment;
+    /** An icon before the text (as Fluent UI Blazor's links take `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the text (`IconEnd`). */
+    @Parameter() iconEnd?: IconValue;
 }

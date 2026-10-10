@@ -213,11 +213,23 @@ export declare function hasSubmitAttempt(context: EditContext | null | undefined
 // icon
 export declare function icon(name: string, svg: string, viewBox?: string): IconValue;
 
+// iconSize
+export declare function iconSize(value: IconValue): number;
+
 // IconValue
 export interface IconValue {
     readonly name: string;
     readonly viewBox: string;
     readonly content: string;
+}
+
+// ImmediateInput
+export declare class ImmediateInput {
+    #private;
+    constructor(signal?: AbortSignal);
+    input(event: Event, delay: number, apply: (value: string) => void): void;
+    cancel(): void;
+    get pending(): boolean;
 }
 
 // initiallyExpanded
@@ -387,6 +399,10 @@ export interface TreeViewItem {
     readonly items?: readonly TreeViewItem[] | null;
     readonly expanded?: boolean;
     readonly disabled?: boolean;
+    readonly iconStart?: IconValue;
+    readonly iconEnd?: IconValue;
+    readonly iconCollapsed?: IconValue;
+    readonly iconExpanded?: IconValue;
 }
 
 // uniqueId

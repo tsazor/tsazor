@@ -7,8 +7,9 @@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
+@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
-@import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode } from "@tsazor/ui"
+@import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode, type IconValue } from "@tsazor/ui"
 
 <CascadingValue Value="model">
     @{ this.model.startCollectingColumns(); }
@@ -29,7 +30,7 @@
                                 @if (column.sortable) {
                                     <button type="button" class="fui-datagrid__sort" @onclick="() => this.sort(column)">
                                         @if (column.headerContent) { @column.headerContent } else { @column.title }
-                                        <span class="fui-datagrid__sort-indicator" aria-hidden="true">@this.indicator(column)</span>
+                                        <span class="fui-datagrid__sort-indicator" aria-hidden="true"><Icon value="@this.indicator(column)" size="16" /></span>
                                     </button>
                                 } else if (column.headerContent) {
                                     @column.headerContent
@@ -281,9 +282,9 @@
         return this.model.sortDirectionOf(column) ?? null;
     }
 
-    private indicator(column: GridColumn<TGridItem>): string {
+    private indicator(column: GridColumn<TGridItem>): IconValue {
         const direction = this.model.sortDirectionOf(column);
-        return direction === "ascending" ? "▲" : direction === "descending" ? "▼" : "↕";
+        return direction === "ascending" ? ArrowSortUp20Regular : direction === "descending" ? ArrowSortDown20Regular : ArrowSort20Regular;
     }
 
     private sort(column: GridColumn<TGridItem>): Promise<void> {

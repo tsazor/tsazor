@@ -1,6 +1,7 @@
 @** One panel of a Tabs component (Bootstrap's `.tab-pane`, `role="tabpanel"`). Place it inside
     Tabs: its title appears in the parent's nav, and its content is rendered only while it is the
     active tab. *@
+@import type { IconValue } from "@tsazor/ui"
 @import type Tabs from "./Tabs.tsazor"
 @if (isActive) {
     <div class="tab-pane fade show active" role="tabpanel" id="@panelId" aria-labelledby="@tabId" tabindex="0">@childContent</div>
@@ -9,6 +10,8 @@
 @code {
     /** Label shown in the parent Tabs' nav. */
     @Parameter() title: string = "";
+    /** An icon before the title in the parent's nav (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
     /** The panel content, shown while the tab is active. */
     @Parameter() childContent?: RenderFragment;
 

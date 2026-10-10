@@ -5,6 +5,9 @@
 }
 .fui-pagination__button,
 .fui-pagination__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: var(--fui-height-s);
     height: var(--fui-height-s);
     padding: 0 var(--fui-spacing-s);

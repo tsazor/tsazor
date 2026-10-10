@@ -1,9 +1,10 @@
 @** One entry of a Fluent UI 2 Menu (`role="menuitem"`); also available as `DropdownItem`. Place it
     inside a Menu; choosing it (click, Enter or Space) raises onSelect, then closes the menu and returns
-    focus to the toggle. *@
+    focus to the toggle. `iconStart`/`iconEnd` put an icon before or after the label. *@
+@import type { IconValue } from "@tsazor/ui"
 @import type Menu from "./Menu.tsazor"
 <li role="none">
-    <button class="fui-menu__item" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@childContent</button>
+    <button class="fui-menu__item" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="fui-menu__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-menu__icon fui-menu__icon--end" />}</button>
 </li>
 
 @code {
@@ -13,6 +14,10 @@
     @Parameter() disabled: boolean = false;
     /** The item's label. */
     @Parameter() childContent?: RenderFragment;
+    /** An icon before the label (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the label (`IconEnd`), at the item's far end. */
+    @Parameter() iconEnd?: IconValue;
 
     /** Resolved from the nearest Menu ancestor; selection closes the menu. */
     @CascadingParameter({ name: "FluentMenu" }) menu?: Menu;

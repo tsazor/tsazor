@@ -8,7 +8,8 @@
  *   npx @tsazor/fluent add ToastRegion --root path/to/app --overwrite --print
  *
  * Copy-in mode: writes <target>/src/components/<Name>.tsazor (+ sidecar CSS +
- * every sibling component the markup needs). The design tokens go once into
+ * every sibling component the markup needs, and the helper modules they import:
+ * attributes.ts, vocabulary.ts, core-icons.ts, …). The design tokens go once into
  * <target>/src/styles/. No auto-editing — the CLI prints the next steps.
  */
 import { existsSync, mkdirSync, readFileSync, copyFileSync, readdirSync } from "node:fs";
@@ -58,20 +59,41 @@ function markupDependencies(source) {
     return tags;
 }
 
-function collectClosure(entryName) {
-    const closure = new Map();
-    const queue = [entryName];
-    while (queue.length > 0) {
-        const name = queue.shift();
-        if (closure.has(name)) continue;
-        const file = `${name}.tsazor`;
-        const path = join(FLUENT_SRC, file);
-        if (!existsSync(path)) {
-            throw new Error(`unknown component "${name}" — run "npx @tsazor/fluent list" for available ones`);
+/**
+ * Sibling files a source imports by a relative path: `@import { withAttributes } from "./attributes"`,
+ * `@import type Menu from "./Menu.tsazor"`, `import … from "./vocabulary.js"` in a .ts helper.
+ */
+function moduleDependencies(source) {
+    const files = new Set();
+    for (const match of source.matchAll(/\bfrom\s+["']\.\/([^"']+)["']/g)) {
+        const spec = match[1];
+        const stem = spec.replace(/\.(js|ts)$/, "");
+        for (const file of spec.endsWith(".tsazor") ? [spec] : [`${stem}.ts`, `${stem}.tsazor`]) {
+            if (existsSync(join(FLUENT_SRC, file))) {
+                files.add(file);
+                break;
+            }
         }
+    }
+    return files;
+}
+
+/** The component's file and every file it needs: sibling components in its markup, and the modules it imports. */
+function collectClosure(entryName) {
+    if (!existsSync(join(FLUENT_SRC, `${entryName}.tsazor`))) {
+        throw new Error(`unknown component "${entryName}" — run "npx @tsazor/fluent list" for available ones`);
+    }
+    const closure = new Map();
+    const queue = [`${entryName}.tsazor`];
+    while (queue.length > 0) {
+        const file = queue.shift();
+        if (closure.has(file)) continue;
+        const path = join(FLUENT_SRC, file);
         const source = readFileSync(path, "utf8");
-        closure.set(name, { name, file, path, source });
-        for (const dep of markupDependencies(source)) {
+        closure.set(file, { name: basename(file).replace(/\.(tsazor|ts)$/, ""), file, path, source });
+        const deps = [...moduleDependencies(source)];
+        if (file.endsWith(".tsazor")) deps.push(...[...markupDependencies(source)].map((tag) => `${tag}.tsazor`));
+        for (const dep of deps) {
             if (!closure.has(dep)) queue.push(dep);
         }
     }
@@ -85,7 +107,7 @@ function planAdd(name) {
         const dir = join(root, "src", "components");
         files.push({ from: component.path, to: join(dir, component.file) });
         const sidecar = `${component.file}.css`;
-        if (existsSync(join(FLUENT_SRC, sidecar))) {
+        if (component.file.endsWith(".tsazor") && existsSync(join(FLUENT_SRC, sidecar))) {
             files.push({ from: join(FLUENT_SRC, sidecar), to: join(dir, sidecar) });
         }
     }

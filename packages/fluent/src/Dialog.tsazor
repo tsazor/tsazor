@@ -3,6 +3,7 @@
     focus returns to the previous element on close. Escape, a backdrop click or the header's Close
     button raise onClosed; the parent then sets isOpen to false. *@
 @import { withAttributes } from "./attributes"
+@import { Dismiss20Regular } from "./core-icons"
 @import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 
 @if (this.isOpen) {
@@ -11,7 +12,7 @@
             @if (this.title) {
                 <div class="fui-dialog__header">
                     <h2 class="fui-dialog__title" id="@this.labelledBy">@this.title</h2>
-                    <button type="button" class="fui-dialog__close" aria-label="Close" @onclick="this.requestClose">&times;</button>
+                    <button type="button" class="fui-dialog__close" aria-label="Close" @onclick="this.requestClose"><Icon value="@Dismiss20Regular" /></button>
                 </div>
             }
             <div class="fui-dialog__body">@childContent</div>

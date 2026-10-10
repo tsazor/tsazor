@@ -3,7 +3,7 @@
     parameters as the Fluent skin's Icon. Decorative (aria-hidden) by default; with a title (or ariaLabel) it gets
     role="img". An unknown name falls back to check. *@
 @import { MarkupString } from "@tsazor/runtime"
-@import { builtInIcons, type IconValue } from "@tsazor/ui"
+@import { builtInIcons, iconSize, type IconValue } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 
 <svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>
@@ -13,8 +13,8 @@
     @Parameter() value?: IconValue;
     /** A name from the built-in set: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove, folder, folder-up, document, image, download. */
     @Parameter() name?: string;
-    /** Pixel size (width/height); 16 by default, as Bootstrap Icons. */
-    @Parameter() size: number = 16;
+    /** Pixel size (width/height). By default the icon's own size (16 for Bootstrap Icons); 16 for a `name`. */
+    @Parameter() size?: number;
     /** The icon's color (any CSS color); by default the text color around it. */
     @Parameter() color?: string;
     /** The accessible name; without it (or ariaLabel) the icon is decorative. */
@@ -24,6 +24,10 @@
     /** Further attributes for the svg element (class appends). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
+    private get pixels(): number {
+        return this.size ?? (this.value === undefined ? 16 : iconSize(this.value));
+    }
+
     private get icon(): IconValue {
         return this.value ?? builtInIcons[this.name ?? ""] ?? (builtInIcons["check"] as IconValue);
     }
@@ -31,11 +35,12 @@
     private get iconAttributes(): Record<string, unknown> {
         const label = this.ariaLabel ?? this.title;
         return withClass("bi", {
-            width: this.size,
-            height: this.size,
+            width: this.pixels,
+            height: this.pixels,
             viewBox: this.icon.viewBox,
             fill: "currentColor",
-            style: this.color === undefined ? null : `color: ${this.color}`,
+            // On the text's baseline, as bootstrap-icons.css sets `.bi`.
+            style: this.color === undefined ? "vertical-align: -0.125em" : `vertical-align: -0.125em; color: ${this.color}`,
             "aria-hidden": label === undefined ? "true" : "false",
             "aria-label": label,
             role: label === undefined ? null : "img",

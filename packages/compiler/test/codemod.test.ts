@@ -116,4 +116,19 @@ describe("apiFormEdits", () => {
     const edits = apiFormEdits(source);
     expect(edits.map((e) => e.name)).toEqual(["Length"]);
   });
+
+  it("turns Fluent UI Blazor's icon instances into the shared values", () => {
+    const source = [
+      '<FluentButton IconStart="@(new Icons.Regular.Size20.Save())" />',
+      '<FluentIcon Value="@(new  Icons.Filled.Size24.Delete())" />',
+      "<p>@(new IconsHelper.X())</p>",
+    ].join("\n");
+    const result = codemodSource(source);
+    expect(result.text).toBe([
+      '<FluentButton IconStart="@(Icons.Regular.Size20.Save)" />',
+      '<FluentIcon Value="@(Icons.Filled.Size24.Delete)" />',
+      "<p>@(new IconsHelper.X())</p>",
+    ].join("\n"));
+    expect(result.apiReplacements.map((a) => a.name)).toEqual(["Icons", "Icons"]);
+  });
 });

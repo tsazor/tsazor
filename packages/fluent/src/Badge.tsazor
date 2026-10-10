@@ -1,11 +1,12 @@
 @** A small Fluent UI 2 pill (span) for a count or short status label: `intent` picks the color
     (primary = brand, secondary/neutral = gray, success, warning, danger, info), `appearance` the
-    weight (solid, outline, subtle, transparent), size small | medium. *@
-@import type { Appearance, Intent } from "@tsazor/ui"
+    weight (solid, outline, subtle, transparent), size small | medium. `iconStart`/`iconEnd` add an icon (12px, 10px
+    when small, as Fluent 2 draws them); `iconLabel` names it. *@
+@import type { Appearance, IconValue, Intent } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { fluentAppearance, fluentColor } from "./vocabulary"
 
-<span @attributes="@this.badgeAttributes">@childContent</span>
+<span @attributes="@this.badgeAttributes">@if (iconStart) {<Icon value="@iconStart" size="@this.iconPixels" title="@iconLabel" class="fui-badge__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" size="@this.iconPixels" title="@iconLabel" class="fui-badge__icon" />}</span>
 
 @code {
     /** The color: primary (default, the brand color), secondary, success, danger, warning, info or neutral. */
@@ -18,10 +19,20 @@
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** The badge text. */
     @Parameter() childContent?: RenderFragment;
+    /** An icon before the text (Fluent UI Blazor's `IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the text (`IconEnd`). */
+    @Parameter() iconEnd?: IconValue;
+    /** The icons' accessible name (`IconLabel`); without it they are decorative. */
+    @Parameter() iconLabel?: string;
 
     private get badgeClass(): string {
         return `fui-badge fui-badge--${fluentAppearance(this.appearance)} fui-badge--${fluentColor(this.intent)}` +
             (this.size === "small" ? " fui-badge--small" : "");
+    }
+
+    private get iconPixels(): number {
+        return this.size === "small" ? 10 : 12;
     }
 
     private get badgeAttributes(): Record<string, unknown> {

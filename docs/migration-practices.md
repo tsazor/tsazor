@@ -110,9 +110,20 @@ render in the browser.
   closes the gaps before 1.0. Icons are the first wall (F17).
 - **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then
   `new Icons.Regular.Size20.Save()` becomes `Icons.Regular.Size20.Save`: a shared value, not an instance per use.
-  `<FluentIcon Value="…" Width="24px" />` becomes `<Icon Value="…" size="24" />`. An app's own icon is
-  `icon("name", svg)` from `@tsazor/ui` (Fluent UI Blazor's `new Icon(name, variant, size, content)`). Only the
-  icons a page uses reach its bundle.
+  `<FluentIcon Value="…" Width="24px" />` becomes `<Icon Value="…" size="24" />`, and without a size the icon is
+  drawn at its own, as in Fluent UI Blazor. `IconStart`/`IconEnd` on buttons, menu items, badges and links, Tab's
+  `IconStart` and the tree item's icons keep their names; a nav item's `IconRest`/`IconActive` become a SidebarNav
+  link's `icon`/`iconActive`. An app's own icon is `icon("name", svg)`, exported by both skins (Fluent UI Blazor's
+  `new Icon(name, variant, size, content)`). The codemod does the `new Icons…()` part. Only the icons a page uses
+  reach its bundle; in the dev server the namespace loads the whole set (about 1 s), and
+  `@tsazor/fluent-icons/regular/size20` loads one module.
+- **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
+  `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
+  updates on change, as Blazor's `InputText` does.
+- **Check the skins' parameter names against the reference, not against a guess.** The slot names came from
+  Fluent UI Blazor's main branch (a sparse clone of `src/Core/Components` takes a minute): `Tab` has only
+  `IconStart`, a nav item has `IconRest`/`IconActive`, Badge has `IconLabel`. A name that matches the reference is
+  one thing less to change in a port.
 - **Virtualize and QuickGrid** take Blazor 11's parameters.
   - `Items` is an array, and an `ItemsProvider` gets `request.signal`.
   - Rows may differ in height: they are measured.

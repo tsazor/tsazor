@@ -32,3 +32,61 @@ body {
   background: var(--fui-background-1);
   color: var(--fui-foreground-1);
 }
+
+/* The Icons page: the set as a virtualized grid of rows. */
+.icons-import {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.icons-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.icons-filters > * {
+  flex: 1 1 12rem;
+}
+
+.icons-grid {
+  height: 28rem;
+  overflow-y: auto;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: 6px;
+}
+
+.icons-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.icons-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  height: 88px;
+  padding: 0.75rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.icons-cell:hover,
+.icons-cell:focus-visible {
+  background: rgba(127, 127, 127, 0.15);
+}
+
+.icons-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
