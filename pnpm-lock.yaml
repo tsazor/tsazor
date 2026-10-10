@@ -259,6 +259,9 @@ importers:
       '@tsazor/fluent-icons':
         specifier: workspace:*
         version: link:../../packages/fluent-icons
+      '@tsazor/markdown':
+        specifier: workspace:*
+        version: link:../../packages/markdown
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime

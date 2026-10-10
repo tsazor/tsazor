@@ -1,0 +1,56 @@
+@page "/content"
+@import { Markdown } from "@tsazor/markdown"
+@import * as Icons from "@tsazor/fluent-icons"
+
+<h1>Content &amp; people</h1>
+<p class="intro">
+    Wave A of the library: avatars for the people in an app and Markdown for its text (an agent's answer, a comment),
+    always sanitized.
+</p>
+
+<section class="demo">
+    <h2>Avatar</h2>
+    <div class="demo-row avatar-row">
+        @foreach (const person of this.people) {
+            <Avatar name="@person" color="colorful" tooltip="@person" />
+        }
+    </div>
+    <div class="demo-row avatar-row">
+        <Avatar name="Ada Lovelace" size="24" />
+        <Avatar name="Ada Lovelace" size="32" color="brand" />
+        <Avatar name="Ada Lovelace" size="48" color="teal" active="true" />
+        <Avatar name="Ada Lovelace" size="64" color="lavender" shape="square" />
+        <Avatar name="Away" size="48" active="false" color="steel" />
+        <Avatar size="48" />
+        <Avatar name="Robot" size="48" icon="@Icons.Regular.Size24.Bot" color="dark-green" />
+        <Avatar name="Grace Hopper" size="48" color="colorful" onClick="@this.greet" />
+    </div>
+    <p class="greeting" aria-live="polite">@this.greeting</p>
+</section>
+
+<section class="demo">
+    <h2>Markdown</h2>
+    <div class="markdown-box">
+        <Markdown Value="@this.answer" Breaks="true" />
+    </div>
+</section>
+
+@code {
+    private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra", "Barbara Liskov", "Linus Torvalds", "Margaret Hamilton"];
+
+    private readonly answer = [
+        "### Order 1042",
+        "The **rye** is baked; the pretzels follow at *noon*.",
+        "",
+        "- [x] baked",
+        "- [ ] picked up",
+        "",
+        "Call `bakery.pickup(1042)` or see [the hours](https://example.com/hours).",
+    ].join("\n");
+
+    private greeting = "";
+
+    private greet(): void {
+        this.greeting = "Hello, Grace.";
+    }
+}

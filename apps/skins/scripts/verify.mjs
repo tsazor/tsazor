@@ -194,8 +194,18 @@ try {
     await page.waitForFunction(() => document.body.textContent?.includes('<Icon Value="@Icons.') ?? false);
     say(true, "icons page: a click gives the icon's markup");
 
-    /* Content: Markdown, rendered and sanitized in a real browser (unit tests can't: DOMPurify needs a real DOM). */
+    /* Content: avatars. */
     await open(page, base, "/content");
+    const avatars = page.locator(".avatars [role=img]");
+    say((await avatars.first().textContent()) === "AL" && (await avatars.first().getAttribute("aria-label")) === "Ada Lovelace", "avatar: the name's initials, named by it");
+    const backgrounds = await avatars.evaluateAll((items) => items.slice(0, 5).map((item) => getComputedStyle(item).backgroundColor));
+    say(new Set(backgrounds).size > 2, `avatar: colorful gives the names different colors (${new Set(backgrounds).size})`);
+    say((await page.locator(".avatars [aria-hidden=true] svg").count()) === 1, "avatar: without a name, a decorative person icon");
+    await page.getByRole("button", { name: "Marta Bauer" }).press("Enter");
+    await page.waitForFunction(() => document.querySelector(".picked")?.textContent === "Picked Marta Bauer.");
+    say(true, "avatar: with onClick it is a button that Enter clicks");
+
+    /* Content: Markdown, rendered and sanitized in a real browser (unit tests can't: DOMPurify needs a real DOM). */
     const preview = page.locator(".markdown-preview .tz-markdown");
     say((await preview.locator("h2").textContent()) === "Order 1042", "markdown: the text renders as HTML");
     say((await preview.locator("input[type=checkbox]").count()) === 2 && (await preview.locator("td").count()) === 4, "markdown: task lists and tables (GitHub Flavored Markdown)");

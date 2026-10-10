@@ -18,6 +18,55 @@ export interface AnchoredPositionOptions {
 // Appearance
 export type Appearance = "solid" | "outline" | "subtle" | "transparent";
 
+// AVATAR_COLORS
+export declare const AVATAR_COLORS: readonly [
+    "dark-red",
+    "cranberry",
+    "red",
+    "pumpkin",
+    "peach",
+    "marigold",
+    "gold",
+    "brass",
+    "brown",
+    "forest",
+    "seafoam",
+    "dark-green",
+    "light-teal",
+    "teal",
+    "steel",
+    "blue",
+    "royal-blue",
+    "cornflower",
+    "navy",
+    "lavender",
+    "purple",
+    "grape",
+    "lilac",
+    "pink",
+    "magenta",
+    "plum",
+    "beige",
+    "mink",
+    "platinum",
+    "anchor"
+];
+
+// AvatarColor
+export type AvatarColor = "neutral" | "brand" | "colorful" | AvatarNamedColor;
+
+// avatarColorFor
+export declare function avatarColorFor(color: AvatarColor, name: string | null | undefined, key?: string): AvatarColor;
+
+// avatarIconSize
+export declare function avatarIconSize(size: number): number;
+
+// avatarInitials
+export declare function avatarInitials(name: string | null | undefined, rtl?: boolean): string;
+
+// AvatarNamedColor
+export type AvatarNamedColor = (typeof AVATAR_COLORS)[number];
+
 // builtInIcons
 export declare const builtInIcons: Readonly<Record<string, IconValue>>;
 

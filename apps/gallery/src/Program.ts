@@ -4,6 +4,7 @@ import routes from "virtual:tsazor-routes";
 import { ThemeState } from "./ThemeState";
 import { Toaster } from "@tsazor/fluent";
 import "@tsazor/fluent/fluent.css";
+import "@tsazor/markdown/markdown.css";
 import "./theme.css";
 
 // Theme is pinned on <html> immediately (before the app mounts) so the first

@@ -1,0 +1,112 @@
+@** An avatar in Bootstrap's look (Bootstrap has none; the parameters are the Fluent skin's): a person's `image`, else
+    the initials of `name` (or `initials`), else a person icon. `color` neutral (default), brand, colorful (picked by
+    the name) or a named color, drawn as a tint of Bootstrap's nearest hue; `shape` circular | square; `size` in px.
+    `active` rings it, `active="false"` dims it. With onClick it is a button (Enter and Space click it). `name` is its
+    accessible name and, with `tooltip`, its tooltip. A badge goes in its content. *@
+@import { avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type IconValue } from "@tsazor/ui"
+@import { PersonFill } from "./core-icons"
+@import { withClass } from "./attributes"
+@import { avatarColors } from "./vocabulary"
+@import { tooltip as tooltipAttachment } from "./tooltip-attachment"
+
+<span @attributes="@this.rootAttributes" @onclick="handleClick" @onkeydown="handleKeydown" @attach="@this.tooltipAttach">
+    @if (image) {
+        <img class="w-100 h-100 object-fit-cover" style="border-radius: inherit" src="@image" alt="" />
+    } else if (this.text !== "") {
+        <span aria-hidden="true">@this.text</span>
+    } else {
+        <Icon value="@(icon ?? PersonFill)" size="@avatarIconSize(size)" />
+    }
+    @childContent
+</span>
+
+@code {
+    /** The person's name: the initials come from it, and it is the avatar's accessible name. */
+    @Parameter() name?: string;
+    /** Initials of your own ("JD"), instead of the name's. */
+    @Parameter() initials?: string;
+    /** An image of the person; it wins over the initials. */
+    @Parameter() image?: string;
+    /** The icon without an image and initials; a person by default. */
+    @Parameter() icon?: IconValue;
+    /** neutral (default), brand, colorful (picked by the name) or a named color (dark-red, teal, …). */
+    @Parameter() color: AvatarColor = "neutral";
+    /** What `colorful` hashes instead of the name (a user id: the color stays when the name changes). */
+    @Parameter() colorId?: string;
+    /** circular (default) | square. */
+    @Parameter() shape: "circular" | "square" = "circular";
+    /** The size in px; 32 by default. */
+    @Parameter() size: number = 32;
+    /** true rings the avatar (someone present), false dims it; unset, neither. */
+    @Parameter() active?: boolean;
+    /** How `active` shows: ring (default), shadow or ring-shadow. */
+    @Parameter() activeAppearance: "ring" | "shadow" | "ring-shadow" = "ring";
+    /** A tooltip on the avatar; its name is a good one. */
+    @Parameter() tooltip?: string;
+    /** Makes the avatar a button. */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** A badge over the avatar (presence, a count). */
+    @Parameter() childContent?: RenderFragment;
+    /** Further attributes for the avatar (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get text(): string {
+        return this.initials ?? avatarInitials(this.name);
+    }
+
+    private get clickable(): boolean {
+        return this.onClick !== undefined;
+    }
+
+    private get tooltipAttach() {
+        return this.tooltip ? tooltipAttachment(this.tooltip) : null;
+    }
+
+    private get avatarClass(): string {
+        const parts = ["d-inline-flex", "align-items-center", "justify-content-center", "flex-shrink-0", "position-relative", "fw-semibold", "lh-1", "user-select-none", "align-middle"];
+        parts.push(this.shape === "square" ? "rounded" : "rounded-circle");
+        if (this.active === true && this.activeAppearance !== "ring") parts.push("shadow");
+        if (this.active === false) parts.push("opacity-75");
+        return parts.join(" ");
+    }
+
+    /** Size, colors and the active ring as inline style: Bootstrap has no avatar classes. */
+    private get avatarStyle(): string {
+        const colors = avatarColors(avatarColorFor(this.color, this.name, this.colorId));
+        const style = [
+            `width: ${this.size}px`,
+            `height: ${this.size}px`,
+            `font-size: ${Math.round(this.size * 0.4)}px`,
+            `background: ${colors.background}`,
+            `color: ${colors.foreground}`,
+        ];
+        if (this.active === true && this.activeAppearance !== "shadow") style.push(`outline: 2px solid ${colors.ring}`, "outline-offset: 2px");
+        if (this.active === false) style.push("transform: scale(0.875)");
+        if (this.clickable) style.push("cursor: pointer");
+        return style.join("; ");
+    }
+
+    /** A named avatar is an image (or a button) with the name; one without a name is decoration. */
+    private get rootAttributes(): Record<string, unknown> {
+        const named = this.name !== undefined && this.name !== "";
+        return withClass(this.avatarClass, {
+            style: this.avatarStyle,
+            role: this.clickable ? "button" : named ? "img" : null,
+            "aria-label": named ? this.name : null,
+            "aria-hidden": !named && !this.clickable ? "true" : null,
+            tabindex: this.clickable ? 0 : null,
+            ...this.additionalAttributes,
+        });
+    }
+
+    private handleClick(e: MouseEvent): Promise<void> | undefined {
+        return this.onClick?.invokeAsync(e);
+    }
+
+    /** Enter and Space click a button avatar, as they click a button. */
+    private handleKeydown(e: KeyboardEvent): Promise<void> | undefined {
+        if (!this.clickable || (e.key !== "Enter" && e.key !== " ")) return undefined;
+        e.preventDefault();
+        return this.onClick?.invokeAsync(new MouseEvent("click"));
+    }
+}

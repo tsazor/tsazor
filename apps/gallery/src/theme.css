@@ -242,3 +242,14 @@ a { color: var(--fui-color-brand-1); }
 .page { padding: var(--fui-spacing-l); }
 
 .not-found { color: var(--fui-color-red-1); }
+/* The Content page. */
+.avatar-row {
+  gap: 12px;
+}
+
+.markdown-box {
+  max-width: 40rem;
+  padding: 12px 16px;
+  border: 1px solid var(--fui-stroke-2);
+  border-radius: var(--fui-radius-md);
+}

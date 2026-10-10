@@ -25,6 +25,7 @@ const CORE = [
   "Dismiss20Regular",
   "DismissCircle20Filled",
   "Info20Filled",
+  "Person20Regular",
   "Warning20Filled",
 ];
 

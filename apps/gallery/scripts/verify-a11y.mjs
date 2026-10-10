@@ -22,7 +22,7 @@ const PORT = process.env.GALLERY_PORT ?? "5321";
 const APP = `http://localhost:${PORT}`;
 const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/structure", "/more", "/table", "/datagrid", "/feedback", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
+const ROUTES = ["/", "/button", "/inputs", "/form", "/tabs", "/dialog", "/overlays", "/structure", "/more", "/table", "/datagrid", "/feedback", "/content", "/primitives", "/theme", "/dashboard", "/dashboard/orders", "/dashboard/settings"];
 
 const spawned = [];
 async function reachable(url) {

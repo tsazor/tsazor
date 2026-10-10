@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `Avatar` (Fluent UI Blazor's `FluentAvatar`): `image`,
+  else the initials of `name` (Fluent UI's rules: first and last word, no text in brackets, none for a phone number),
+  else an icon; `color` neutral, brand, colorful (picked by a hash of the name, or `colorId`) or one of Fluent 2's 30
+  named colors; `shape`, `size`, `active` (ring, shadow) and `active="false"` (dimmed), `tooltip`; with `onClick`
+  a button. The name is its accessible name. Fluent draws Fluent 2's persona palette (`styles/avatar-colors.css`, written from
+  `@fluentui/tokens`), Bootstrap a tint of its nearest hue behind its emphasis color. `@tsazor/ui`: `avatarInitials`,
+  `avatarColorFor`, `avatarIconSize`, `AVATAR_COLORS`.
+
 - `@tsazor/markdown` (new; wave A, D-L3): a `Markdown` component (MudBlazor's `MudMarkdown`: `Value`) that renders
   GitHub Flavored Markdown with marked and sanitizes it with DOMPurify, always: scripts, event handlers,
   `javascript:` links, styles and forms are removed, so an agent's or a user's text can be shown as it comes. Links to

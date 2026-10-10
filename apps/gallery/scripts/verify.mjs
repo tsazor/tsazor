@@ -295,6 +295,21 @@ async function main() {
     await page.waitForTimeout(100);
     check((await page.evaluate(() => document.body.style.overflow)) !== "hidden", "scroll lock released again");
 
+    /* 15 — avatars and Markdown (wave A) */
+    await page.click("a[href='/content']");
+    await page.waitForSelector(".fui-avatar");
+    const ada = page.getByRole("img", { name: "Ada Lovelace" }).first();
+    check((await ada.textContent()) === "AL", "an avatar shows its name's initials and is named by it");
+    const colorful = await page.locator(".avatar-row").first().locator(".fui-avatar").evaluateAll((avatars) => avatars.map((a) => a.className));
+    check(new Set(colorful).size > 3 && colorful.every((name) => !name.includes("--colorful")), `colorful avatars get named colors by their names (${new Set(colorful).size} colors)`);
+    const painted = await page.locator(".fui-avatar--teal").first().evaluate((a) => getComputedStyle(a).backgroundColor);
+    check(painted !== "rgba(0, 0, 0, 0)" && painted !== "", `a named color paints the avatar (${painted})`);
+    await page.getByRole("button", { name: "Grace Hopper" }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByText("Hello, Grace.").waitFor({ timeout: 5000 });
+    check(true, "an avatar with onClick is a button that Enter clicks");
+    check((await page.locator(".markdown-box .tz-markdown h3").textContent()) === "Order 1042", "Markdown renders in the Fluent gallery");
+
     /* global */
     check(errors.length === 0, "zero console/page errors across the whole run");
     if (errors.length > 0) {

@@ -51,6 +51,24 @@ export default class Autocomplete<TOption> extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// Avatar
+export default class Avatar extends ComponentBase {
+    name?: string;
+    initials?: string;
+    image?: string;
+    icon?: IconValue;
+    color: AvatarColor;
+    colorId?: string;
+    shape: "circular" | "square";
+    size: number;
+    active?: boolean;
+    activeAppearance: "ring" | "shadow" | "ring-shadow";
+    tooltip?: string;
+    onClick?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Badge
 export default class Badge extends ComponentBase {
     intent: Intent;

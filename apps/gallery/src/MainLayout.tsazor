@@ -44,6 +44,7 @@
         { href: "/structure", label: "Accordion, List, Progress", icon: Icons.Regular.Size20.TextBulletListSquare, iconActive: Icons.Filled.Size20.TextBulletListSquare },
         { href: "/more", label: "More components", icon: Icons.Regular.Size20.Apps, iconActive: Icons.Filled.Size20.Apps },
         { href: "/feedback", label: "Feedback", icon: Icons.Regular.Size20.Alert, iconActive: Icons.Filled.Size20.Alert },
+        { href: "/content", label: "Content & people", icon: Icons.Regular.Size20.People, iconActive: Icons.Filled.Size20.People },
         { href: "/primitives", label: "Layout", icon: Icons.Regular.Size20.LayoutRowTwo, iconActive: Icons.Filled.Size20.LayoutRowTwo },
         { href: "/theme", label: "Theme", icon: Icons.Regular.Size20.Color, iconActive: Icons.Filled.Size20.Color },
         { href: "/dashboard", label: "Dashboard", icon: Icons.Regular.Size20.Board, iconActive: Icons.Filled.Size20.Board },

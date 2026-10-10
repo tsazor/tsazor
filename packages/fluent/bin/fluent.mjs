@@ -175,12 +175,15 @@ if (!printOnly) {
 }
 
 const entry = collectClosure(target)[0];
+const styleImports = (existsSync(FLUENT_STYLES) ? readdirSync(FLUENT_STYLES).filter((css) => css.endsWith(".css")).sort() : [])
+    .map((css) => `       import "./src/styles/${css}";`)
+    .join("\n");
 console.log(`
 Next steps:
   1. Import the styles once in your entry file:
-       import "./src/styles/tokens.css";
-       import "./src/styles/controls.css";
-     (tokens.css defines the --fui-* design tokens, controls.css the component chrome.)
+${styleImports}
+     (tokens.css defines the --fui-* design tokens, controls.css the component chrome,
+     avatar-colors.css the avatars' named colors.)
   2. The components use the behavior core (focus trap, Escape, roving focus, ids):
        npm install @tsazor/ui
   3. Use <${entry.name} /> in your markup — app components resolve by name.

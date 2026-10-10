@@ -15,6 +15,7 @@
   "dependencies": {
     "@tsazor/fluent": "workspace:*",
     "@tsazor/fluent-icons": "workspace:*",
+    "@tsazor/markdown": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*"
   },

@@ -1,0 +1,104 @@
+/* Avatar — Fluent 2: a circle (or a rounded square) with an image, initials or an icon, in a named color. */
+
+.fui-avatar {
+  --fui-avatar-background: var(--fui-avatar-neutral-background);
+  --fui-avatar-foreground: var(--fui-avatar-neutral-foreground);
+  --fui-avatar-border: var(--fui-brand-background);
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--fui-avatar-size, 32px);
+  height: var(--fui-avatar-size, 32px);
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-avatar-background);
+  color: var(--fui-avatar-foreground);
+  font-family: var(--fui-font-family);
+  font-size: calc(var(--fui-avatar-size, 32px) * 0.4);
+  font-weight: var(--fui-font-weight-semibold);
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+  transition:
+    transform var(--fui-duration-fast) var(--fui-ease-standard),
+    opacity var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-avatar--square {
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-avatar__image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.fui-avatar__icon {
+  flex: none;
+}
+
+.fui-avatar[role="button"] {
+  cursor: pointer;
+}
+
+.fui-avatar[role="button"]:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+}
+
+/* Someone present: a ring in the avatar's color (outside it), a shadow, or both. */
+.fui-avatar--active-ring,
+.fui-avatar--active-ring-shadow {
+  outline: 2px solid var(--fui-avatar-border);
+  outline-offset: 2px;
+}
+
+.fui-avatar--active-shadow,
+.fui-avatar--active-ring-shadow {
+  box-shadow: var(--fui-shadow-8);
+}
+
+.fui-avatar--inactive {
+  opacity: 0.8;
+  transform: scale(0.875);
+}
+
+.fui-avatar--brand {
+  --fui-avatar-background: var(--fui-brand-background);
+  --fui-avatar-foreground: var(--fui-foreground-on-brand);
+}
+
+/* The named colors: tokens from styles/avatar-colors.css (Fluent 2's persona palette). */
+.fui-avatar--dark-red { --fui-avatar-background: var(--fui-avatar-dark-red-background); --fui-avatar-foreground: var(--fui-avatar-dark-red-foreground); --fui-avatar-border: var(--fui-avatar-dark-red-border); }
+.fui-avatar--cranberry { --fui-avatar-background: var(--fui-avatar-cranberry-background); --fui-avatar-foreground: var(--fui-avatar-cranberry-foreground); --fui-avatar-border: var(--fui-avatar-cranberry-border); }
+.fui-avatar--red { --fui-avatar-background: var(--fui-avatar-red-background); --fui-avatar-foreground: var(--fui-avatar-red-foreground); --fui-avatar-border: var(--fui-avatar-red-border); }
+.fui-avatar--pumpkin { --fui-avatar-background: var(--fui-avatar-pumpkin-background); --fui-avatar-foreground: var(--fui-avatar-pumpkin-foreground); --fui-avatar-border: var(--fui-avatar-pumpkin-border); }
+.fui-avatar--peach { --fui-avatar-background: var(--fui-avatar-peach-background); --fui-avatar-foreground: var(--fui-avatar-peach-foreground); --fui-avatar-border: var(--fui-avatar-peach-border); }
+.fui-avatar--marigold { --fui-avatar-background: var(--fui-avatar-marigold-background); --fui-avatar-foreground: var(--fui-avatar-marigold-foreground); --fui-avatar-border: var(--fui-avatar-marigold-border); }
+.fui-avatar--gold { --fui-avatar-background: var(--fui-avatar-gold-background); --fui-avatar-foreground: var(--fui-avatar-gold-foreground); --fui-avatar-border: var(--fui-avatar-gold-border); }
+.fui-avatar--brass { --fui-avatar-background: var(--fui-avatar-brass-background); --fui-avatar-foreground: var(--fui-avatar-brass-foreground); --fui-avatar-border: var(--fui-avatar-brass-border); }
+.fui-avatar--brown { --fui-avatar-background: var(--fui-avatar-brown-background); --fui-avatar-foreground: var(--fui-avatar-brown-foreground); --fui-avatar-border: var(--fui-avatar-brown-border); }
+.fui-avatar--forest { --fui-avatar-background: var(--fui-avatar-forest-background); --fui-avatar-foreground: var(--fui-avatar-forest-foreground); --fui-avatar-border: var(--fui-avatar-forest-border); }
+.fui-avatar--seafoam { --fui-avatar-background: var(--fui-avatar-seafoam-background); --fui-avatar-foreground: var(--fui-avatar-seafoam-foreground); --fui-avatar-border: var(--fui-avatar-seafoam-border); }
+.fui-avatar--dark-green { --fui-avatar-background: var(--fui-avatar-dark-green-background); --fui-avatar-foreground: var(--fui-avatar-dark-green-foreground); --fui-avatar-border: var(--fui-avatar-dark-green-border); }
+.fui-avatar--light-teal { --fui-avatar-background: var(--fui-avatar-light-teal-background); --fui-avatar-foreground: var(--fui-avatar-light-teal-foreground); --fui-avatar-border: var(--fui-avatar-light-teal-border); }
+.fui-avatar--teal { --fui-avatar-background: var(--fui-avatar-teal-background); --fui-avatar-foreground: var(--fui-avatar-teal-foreground); --fui-avatar-border: var(--fui-avatar-teal-border); }
+.fui-avatar--steel { --fui-avatar-background: var(--fui-avatar-steel-background); --fui-avatar-foreground: var(--fui-avatar-steel-foreground); --fui-avatar-border: var(--fui-avatar-steel-border); }
+.fui-avatar--blue { --fui-avatar-background: var(--fui-avatar-blue-background); --fui-avatar-foreground: var(--fui-avatar-blue-foreground); --fui-avatar-border: var(--fui-avatar-blue-border); }
+.fui-avatar--royal-blue { --fui-avatar-background: var(--fui-avatar-royal-blue-background); --fui-avatar-foreground: var(--fui-avatar-royal-blue-foreground); --fui-avatar-border: var(--fui-avatar-royal-blue-border); }
+.fui-avatar--cornflower { --fui-avatar-background: var(--fui-avatar-cornflower-background); --fui-avatar-foreground: var(--fui-avatar-cornflower-foreground); --fui-avatar-border: var(--fui-avatar-cornflower-border); }
+.fui-avatar--navy { --fui-avatar-background: var(--fui-avatar-navy-background); --fui-avatar-foreground: var(--fui-avatar-navy-foreground); --fui-avatar-border: var(--fui-avatar-navy-border); }
+.fui-avatar--lavender { --fui-avatar-background: var(--fui-avatar-lavender-background); --fui-avatar-foreground: var(--fui-avatar-lavender-foreground); --fui-avatar-border: var(--fui-avatar-lavender-border); }
+.fui-avatar--purple { --fui-avatar-background: var(--fui-avatar-purple-background); --fui-avatar-foreground: var(--fui-avatar-purple-foreground); --fui-avatar-border: var(--fui-avatar-purple-border); }
+.fui-avatar--grape { --fui-avatar-background: var(--fui-avatar-grape-background); --fui-avatar-foreground: var(--fui-avatar-grape-foreground); --fui-avatar-border: var(--fui-avatar-grape-border); }
+.fui-avatar--lilac { --fui-avatar-background: var(--fui-avatar-lilac-background); --fui-avatar-foreground: var(--fui-avatar-lilac-foreground); --fui-avatar-border: var(--fui-avatar-lilac-border); }
+.fui-avatar--pink { --fui-avatar-background: var(--fui-avatar-pink-background); --fui-avatar-foreground: var(--fui-avatar-pink-foreground); --fui-avatar-border: var(--fui-avatar-pink-border); }
+.fui-avatar--magenta { --fui-avatar-background: var(--fui-avatar-magenta-background); --fui-avatar-foreground: var(--fui-avatar-magenta-foreground); --fui-avatar-border: var(--fui-avatar-magenta-border); }
+.fui-avatar--plum { --fui-avatar-background: var(--fui-avatar-plum-background); --fui-avatar-foreground: var(--fui-avatar-plum-foreground); --fui-avatar-border: var(--fui-avatar-plum-border); }
+.fui-avatar--beige { --fui-avatar-background: var(--fui-avatar-beige-background); --fui-avatar-foreground: var(--fui-avatar-beige-foreground); --fui-avatar-border: var(--fui-avatar-beige-border); }
+.fui-avatar--mink { --fui-avatar-background: var(--fui-avatar-mink-background); --fui-avatar-foreground: var(--fui-avatar-mink-foreground); --fui-avatar-border: var(--fui-avatar-mink-border); }
+.fui-avatar--platinum { --fui-avatar-background: var(--fui-avatar-platinum-background); --fui-avatar-foreground: var(--fui-avatar-platinum-foreground); --fui-avatar-border: var(--fui-avatar-platinum-border); }
+.fui-avatar--anchor { --fui-avatar-background: var(--fui-avatar-anchor-background); --fui-avatar-foreground: var(--fui-avatar-anchor-foreground); --fui-avatar-border: var(--fui-avatar-anchor-border); }
