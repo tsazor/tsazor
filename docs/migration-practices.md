@@ -173,4 +173,5 @@ render in the browser.
 - **bUnit becomes `@tsazor/testing`.** `waitUntilIdle` names the work it still waits for (F35). A Virtualize
   renders its rows up to `MaxItemCount`, as with bUnit.
 - **A test DOM has no layout.** Put what depends on layout (virtualization, anchoring, scrolling, painted frames)
-  in browser tests (Playwright). Run them in all three engines.
+  in browser tests (Playwright). Run them in all three engines. Under Bootstrap, scroll with `behavior: "instant"`
+  before measuring: its reboot scrolls smoothly (L10).
