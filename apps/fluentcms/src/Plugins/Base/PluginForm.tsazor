@@ -3,8 +3,7 @@
 <PluginBody title="@title">
     @if (model !== undefined) {
         <CardBody>
-            @* `!`: the @if above checked it, but TypeScript's narrowing doesn't reach child content (port-findings H.3). *@
-            <FluentForm model="@model!" onValidSubmit="@this.handleSubmit">
+            <FluentForm model="@model" onValidSubmit="@this.handleSubmit">
                 <div class="plugin-form">
                     @if (description) {
                         <Typography>@description</Typography>

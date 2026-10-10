@@ -1122,11 +1122,15 @@ it is no longer rendered as `ChildContent` or as a component:
   `RenderFragment<TItem>` is written as the function it is, `(item: TItem) => RenderFragment`,
   and called as `@itemTemplate(item)`. (A generic `RenderFragment<T>` reference is recognized
   by the metadata, but the runtime type is not generic — port-findings P.5.)
-- **Narrowing does not reach deferred content.** A fragment body is a function that runs
-  later, so TypeScript drops the narrowing of a member from an enclosing `@if`:
-  `@if (user) { <Card>@user.name</Card> }` is TS2532 in `tsazor check` (the same for
-  `<PageTitle>`, slots and templates). Capture the value first — `@if (user) { const current =
-  user; <Card>@current.name</Card> }` — or read it through a getter.
+- **Narrowing reaches deferred content** (F15). A fragment body is a function that runs later,
+  and TypeScript drops the narrowing of a member inside a function. `tsazor check` reads the
+  markup where it is written instead, as Razor's nullable analysis does: `@if (user) {
+  <Card>@user.name</Card> }` checks clean, and so do `<PageTitle>`, slots, templates and the
+  setters of `@bind` and `@bind-Value`. What a fragment body assigns doesn't narrow the code
+  after it (the body may not run). A lambda the author writes keeps TypeScript's rule:
+  `@if (user) { <button @onclick="() => greet(user.name)"> }` is TS2532, because the handler
+  runs on the click. Capture the value first (`const current = user;`) or read it through a
+  getter.
 
 ### Await (Tsazor extension)
 

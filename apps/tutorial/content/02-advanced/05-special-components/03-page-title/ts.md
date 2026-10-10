@@ -29,6 +29,5 @@ when their component does. If several components set a title, the one rendered l
 so a page can override the app's default title, and a dialog the page's. When the last
 `PageTitle` disappears, the title the document started with comes back.
 
-Remember the tip from "Child content": `PageTitle`'s content is a fragment that renders later,
-so `@if (user) { <PageTitle>@user.name</PageTitle> }` needs a local or a getter for the
-narrowing — `unread` here is a getter, so it just works.
+`PageTitle`'s content is child content, like a card's: it renders later, and an `@if` around it
+still covers it, so `@if (user) { <PageTitle>@user.name</PageTitle> }` checks clean.

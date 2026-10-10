@@ -31,7 +31,10 @@ know first.
    it flaky (A12, A15).
    - Port the skipped and quarantined tests too, and run them. Two of Blazor's marked real bugs (#66509,
      #68777), fixed in Tsazor (A6, A13).
-7. **Debug a race with a log, not a debugger.** Stopping the code changes the timing, and the race goes away. Push
+7. **Check a "C# does the same" against the Razor compiler.** A scratch `dotnet new razorclasslib` with
+   `Nullable` on answers in a minute. A note from the tutorial port said C#'s nullable analysis drops a narrowing
+   in child content too; it doesn't, and three ports and a dogfood paid for the workaround before F15 was fixed.
+8. **Debug a race with a log, not a debugger.** Stopping the code changes the timing, and the race goes away. Push
    the events (observer reports, decisions, scroll positions) into an array on `globalThis` and print it in the
    test's failure message. One failing run then shows the cause: that found A13, A14 and A15.
 
@@ -74,8 +77,12 @@ render in the browser.
 
 - **Lifecycle names.** `OnInitializedAsync` is `onInitialized` returning a Promise. A C#-style
   `onInitializedAsync` gets TZS032 with a rename fix (F14).
-- **Narrowing in child content.** `@if (x !== undefined)` doesn't narrow inside child content. Take a local
-  `const` (F15).
+- **Narrowing works as in Razor, except in your own lambdas.** `@if (model != null) { <Card>@model.name</Card> }`
+  and `<InputText @bind-Value="model.name" />` inside it check clean: child content, slots, templates and bind
+  setters are read where they stand, as C# reads them (F15). A lambda you write is TypeScript's:
+  `@onclick="() => save(model.id)"` inside the same `@if` is TS2532, because the handler runs on the click. Take
+  a local first (`const current = model;`), or pass the value in (`@onclick="() => save(id)"` from a loop
+  variable). This is the place a Blazor team meets most often.
 - **Types in `@code` need an `@import`.** Tags resolve through `@using`, but code is TypeScript (F29).
 - **Cascading by type is `instanceof`.** TypeScript has no runtime types, and generated clients return plain JSON,
   never class instances. Cascade such values by name (F30).

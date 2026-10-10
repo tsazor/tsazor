@@ -366,6 +366,8 @@ class Codegen {
   /** 2.4: plain-text values of non-string parameters (typed-shadow builds only). */
   private readonly expressionValues: ExpressionValue[] = [];
   private readonly importSuggestions: ImportSuggestion[] = [];
+  /** F15: the shadow calls a deferred function in place (deferred()), so it declares the flag. */
+  private usesDeferred = false;
   /** The subset of importedNames bound to runtime values (usable as component tags). */
   private readonly importedValues = new Set<string>();
   /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
@@ -609,6 +611,7 @@ class Codegen {
     this.stableFragments.forEach((type, index) => this.line(`  declare private [${alias(`f${index}`)}]?: ${type};`));
     this.line("}");
     this.line("");
+    if (this.usesDeferred) this.line(`declare const ${alias("deferred")}: boolean;`);
     // H2: one array per reusable row site — its identity names the site (a
     // module re-evaluated by HMR gets new ones), its entries the value checks.
     this.reuseSites.forEach((checks, index) => this.line(`const ${alias(`r${index}`)}: readonly number[] = [${checks.join(", ")}];`));
@@ -2244,7 +2247,7 @@ class Codegen {
       this.emitFragment(parameter.name, context ?? "context", children, node, node.tagName, "ChildContent", parameter);
       return;
     }
-    this.emitFragmentValue(`${BUILDER}.addContent(${this.seq()}, `, `(${BUILDER}) => {`, node.pos, FRAGMENT_TYPE, () => {
+    this.emitFragmentValue(`${BUILDER}.addContent(${this.seq()}, `, undefined, node.pos, FRAGMENT_TYPE, () => {
       this.enterScope();
       this.withScope(() => {
         for (const child of children) this.emitNode(child, node.pos);
@@ -2263,19 +2266,47 @@ class Codegen {
    * (a new closure object, a new target). The slot is a module symbol: a
    * module re-evaluated by HMR gets new ones. Parity, not an optimization:
    * `renderHints: false` keeps it; typed shadows and `optimize: false` don't.
+   * `context` is a template's context parameter (`item: Person`); the lambda
+   * is `(item: Person) => (__builder) => { … }` then.
+   *
+   * A typed shadow writes the body as a deferred call (F15, see deferred()).
    */
-  private emitFragmentValue(prefix: string, lambda: string, pos: SourcePos, slotType: string, emitBody: () => void): void {
+  private emitFragmentValue(prefix: string, context: string | undefined, pos: SourcePos, slotType: string, emitBody: () => void): void {
     const line = this.writer.lineCount + 1;
-    this.stmt(prefix + lambda, pos);
+    const shadow = this.options.typedShadow !== undefined;
+    if (shadow) {
+      this.stmt(`${prefix}(${this.deferred()} && ((${context ?? ""}) => {`, pos);
+    } else {
+      this.stmt(prefix + (context === undefined ? `(${BUILDER}) => {` : `(${context}) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`), pos);
+    }
     const scope = { outer: new Set(this.locals.keys()), captures: false };
     this.fragmentScopes.push(scope);
     emitBody();
     this.fragmentScopes.pop();
-    this.stmt(`});`, pos);
-    if (scope.captures || this.options.typedShadow !== undefined || this.options.optimize === false) return;
+    this.stmt(shadow ? `})(${context === undefined ? "" : "null!"}), null!));` : `});`, pos);
+    if (scope.captures || shadow || this.options.optimize === false) return;
     const slot = alias(`f${this.stableFragments.length}`);
     this.stableFragments.push(slotType);
     this.writer.insertText(line, STMT_INDENT.length + prefix.length, `this[${slot}] ??= `);
+  }
+
+  /**
+   * F15: a function the compiler makes around markup (a fragment body, a bind's setter) runs later, so TypeScript
+   * reads it without the narrowing of an enclosing `@if`: `@if (node) { <Card>@node.name</Card> }` would be TS2531
+   * on `node`. Razor's nullable analysis reads a lambda in the state where it stands. A typed shadow therefore writes
+   * such a function as a call in place, `(__tsazor_deferred && (() => { … })(), null!)`: TypeScript reads a function
+   * called in place within the surrounding flow, and the `&&` keeps what the body assigns from narrowing the code
+   * after it (the call may not happen). The value passed on is `null!`, of any type. TypeScript reads an async
+   * function on its own, so a shadow writes an async setter's `await` as `void`. A real build keeps the function.
+   */
+  private deferred(): string {
+    this.usesDeferred = true;
+    return alias("deferred");
+  }
+
+  /** A setter as a deferred call in a typed shadow: `(__tsazor_deferred && (<lambda>)(null!), null!)`. */
+  private deferredCall(lambda: string): string {
+    return `(${this.deferred()} && (${lambda})(null!), null!)`;
   }
 
   /**
@@ -2300,10 +2331,8 @@ class Codegen {
     }
     const contextType = context !== null && parameter !== undefined ? this.shadowContextType(parameter) : undefined;
     const prefix = `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(name)}, `;
-    const lambda = context === null
-      ? `(${BUILDER}) => {`
-      : `(${context}: ${contextType ?? "any"}) => (${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
-    this.emitFragmentValue(prefix, lambda, at.pos, context === null ? FRAGMENT_TYPE : `(context: any) => ${FRAGMENT_TYPE}`, () => {
+    const contextParameter = context === null ? undefined : `${context}: ${contextType ?? "any"}`;
+    this.emitFragmentValue(prefix, contextParameter, at.pos, context === null ? FRAGMENT_TYPE : `(context: any) => ${FRAGMENT_TYPE}`, () => {
       this.enterScope();
       if (context !== null) this.contextStack.push({ name: context, element, component });
       this.withScope(() => {
@@ -2833,16 +2862,19 @@ class Codegen {
     else if (isNumber) extract = formatted ? "(__event.target as HTMLInputElement).value" : "Number((__event.target as HTMLInputElement).value)";
     else if (isDate) extract = format !== undefined ? "(__event.target as HTMLInputElement).value" : "new Date((__event.target as HTMLInputElement).value)";
 
+    // A typed shadow calls the handler in place (F15, deferred()).
+    const shadow = this.options.typedShadow !== undefined;
+    const wait = shadow ? "void " : "await ";
     const parts: string[] = [];
     if (attr.set !== undefined) {
       // Blazor awaits an async setter (and :after) before re-rendering.
       if (formatted && (isNumber || isDate)) {
         // A parse failure skips the setter (Blazor: TryParse false → no write).
         parts.push(
-          `await ((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${FORMAT_PARSE}(${extract}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""}))`,
+          `${wait}((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${FORMAT_PARSE}(${extract}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""}))`,
         );
       } else {
-        parts.push(`await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
+        parts.push(`${wait}(${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
       }
     } else {
       const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
@@ -2860,15 +2892,16 @@ class Codegen {
         parts.push(`${assignmentTarget} = ${extract}`);
       }
     }
-    if (attr.after !== undefined) parts.push(`await ${this.afterCall(attr.after, attr.codeStarts?.after)}`);
-    const async = attr.set !== undefined || attr.after !== undefined ? "async " : "";
+    if (attr.after !== undefined) parts.push(`${wait}${this.afterCall(attr.after, attr.codeStarts?.after)}`);
+    const async = !shadow && (attr.set !== undefined || attr.after !== undefined) ? "async " : "";
+    const handler = shadow ? this.deferredCall(`(__event: any) => { ${parts.join("; ")}; }`) : `${async}(__event) => { ${parts.join("; ")}; }`;
 
     this.stmt(
       `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${formatted ? `${FORMAT_VALUE}(${display}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""})` : display});`,
       pos,
     );
     this.stmt(
-      `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, ${async}(__event) => { ${parts.join("; ")}; }));`,
+      `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, ${handler}));`,
       pos,
     );
   }
@@ -2979,16 +3012,23 @@ class Codegen {
       return;
     }
 
+    // A typed shadow calls the setter in place (F15, deferred()); its value is `never`, as `any` would widen
+    // the bound member after it.
+    const shadow = this.options.typedShadow !== undefined;
+    const async = shadow ? "" : "async ";
+    const wait = shadow ? "void " : "await ";
+    const value = shadow ? "__value: never" : "__value";
     let handler: string;
     if (attr.set !== undefined) {
-      handler = `async (__value) => { await (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__value); }`;
+      handler = `${async}(${value}) => { ${wait}(${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__value); }`;
     } else {
       const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
       if (assignmentTarget === null) return;
       handler = attr.after !== undefined
-        ? `async (__value) => { ${assignmentTarget} = __value; await ${this.afterCall(attr.after, attr.codeStarts?.after)}; }`
-        : `(__value) => { ${assignmentTarget} = __value; }`;
+        ? `${async}(${value}) => { ${assignmentTarget} = __value; ${wait}${this.afterCall(attr.after, attr.codeStarts?.after)}; }`
+        : `(${value}) => { ${assignmentTarget} = __value; }`;
     }
+    if (shadow) handler = this.deferredCall(handler);
 
     // Both parameters must exist (TZS025 otherwise); emitted under their
     // canonical names. The bind's name starts after `@bind-`.

@@ -5,7 +5,7 @@
 <Dialog isOpen="@visible" title="@title" size="@size" onClosed="@this.cancel">
     <ChildContent>
         @if (model !== undefined) {
-            <FluentForm model="@model!" onValidSubmit="@this.submit">
+            <FluentForm model="@model" onValidSubmit="@this.submit">
                 <DataAnnotationsValidator />
                 <div class="form-modal">
                     @childContent

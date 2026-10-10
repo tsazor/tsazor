@@ -44,25 +44,33 @@ The content still belongs to `App`. It's written there, so `@name` inside it mea
 `name`, its event handlers re-render `App`, and `App`'s scoped styles apply to it — the card's
 `p { … }` wouldn't (that's what `::deep` is for).
 
-**One thing to know about TypeScript.** Because child content is a function that runs later,
-narrowing from an `@if` around it doesn't reach inside:
+**One thing to know about TypeScript.** Child content is a function the card calls later, and
+plain TypeScript drops a narrowing inside a function: by the time it runs, `this.user` could
+have changed. Tsazor's check reads the content where you wrote it instead, because that's where
+you read it. So an `@if` around a card covers its body:
 
 ```tsazor
 @if (user) {
     <Card title="Profile">
-        <p>@user.name</p>   @* tsazor check: Object is possibly 'undefined'. *@
+        <p>@user.name</p>
     </Card>
 }
 ```
 
-That's TypeScript being right: by the time the function runs, `this.user` could have changed.
-Capture the value in a local first — locals keep their narrowing inside functions:
+A function you write yourself stays TypeScript's. A click handler inside the same `@if` runs
+later, on the click, so `tsazor check` says *Object is possibly 'undefined'*:
+
+```tsazor
+@if (user) {
+    <button @onclick="() => greet(user.name)">Greet</button>   @* possibly 'undefined' *@
+}
+```
+
+Capture the value in a local first. A local keeps its narrowing inside functions:
 
 ```tsazor
 @if (user) {
     const current = user;
-    <Card title="Profile">
-        <p>@current.name</p>
-    </Card>
+    <button @onclick="() => greet(current.name)">Greet</button>
 }
 ```

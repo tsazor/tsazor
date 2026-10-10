@@ -112,8 +112,8 @@ sheet lives at `docs/csharp-to-typescript.md`.
    values, `@attributes` with no captured values, `@bind` on range and date inputs, empty
    number input. Claims pinned in `test/claims-part1.test.ts`; E2E smoke check per chapter.
 3. **M3** — Part 2 ✅: chapters 8–13, 17 lessons in both tracks (51 in total): Child
-   content · Named fragments · Templated components (incl. the `@if`-narrowing caveat for
-   deferred content, H.3) · Passing values down · Names and types · Injecting services ·
+   content · Named fragments · Templated components (an `@if`'s narrowing reaches child content;
+   a handler lambda needs a local, H.3/F15) · Passing values down · Names and types · Injecting services ·
    Lifetimes · Element references (`disposeSignal` for listeners) · Component references ·
    Error boundaries · Dynamic components · Page title and head · Sections · Code-behind ·
    Shared imports · Logic in modules · Containers and views (the last three: patterns against

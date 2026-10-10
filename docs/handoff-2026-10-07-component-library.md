@@ -99,7 +99,12 @@ everything pushed.
 >   - Lockfile: a new external dependency is staged as HEAD's `pnpm-lock.yaml` plus its importer block and its
 >     `packages:` and `snapshots:` entries (written to a temp file, `git hash-object -w`, `git update-index
 >     --cacheinfo`), so the owner's `fluentcms-admin` WIP stays out.
-> - **Before that:** the port's admin and public parts are done. Open: F10, F13, F15, F16, F17; track B candidates (upload
+> - **F15 fixed (2026-10-10, from a dogfood report):** an `@if`'s narrowing reaches child content, slots,
+>   templates and bind setters in `tsazor check`, as Razor's nullable analysis does (checked against a Razor class
+>   library; the old note that C# drops it too was wrong). The shadow calls those functions in place (codegen
+>   `deferred()`); real builds are unchanged. A lambda the author writes keeps TypeScript's rule. Tutorial lessons
+>   "Child content" and "Page title" rewritten.
+> - **Before that:** the port's admin and public parts are done. Open: F10, F13, F16, F17 (F15 fixed since); track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
 

@@ -166,10 +166,16 @@ resolution (playground, tutorial, later a REPL).
 ```
 
 The body of `<PageTitle>` is a `RenderFragment` (a lambda, rendered later) — TS discards
-the narrowing of `this.text` inside it, correctly by TS semantics (C#/Razor nullable analysis
-behaves similarly in lambdas). Surprising for learners; workaround: a getter
-(`pageTitle`) or a local via `@{ const t = text; }` before the tag. Candidate for a
-note in the language reference or later in the tutorial (chapter "Reusing content").
+the narrowing of `this.text` inside it. Surprising for learners; workaround: a getter
+(`pageTitle`) or a local via `@{ const t = text; }` before the tag.
+
+**Fixed 2026-10-10 (F15).** The note above said C#/Razor nullable analysis behaves similarly in
+lambdas. It doesn't: a Razor class library (.NET 10, `Nullable` on) builds `@if (Node != null) {
+<Card>@Node.Name</Card> }` without a warning, for a property, a field, `Node?.Child`, a template
+with `context` and a `@bind-Value`; C# reads a lambda in the state where it stands. `tsazor
+check` now does the same for the functions the compiler makes (fragments, bind setters): the
+shadow calls them in place (codegen `deferred()`). A lambda the author writes keeps
+TypeScript's rule.
 
 ### 4. `tsazor check` without a path also checks sample projects in the app folder
 
@@ -634,6 +640,7 @@ Both result in an invalid custom property — pixel-identical. For the guide: do
 
 Needed in almost every component with slots: `@if (x) { const current = x; <Slot>@current…</Slot> }`
 or a getter — also for `<HeadContent>` and the `ChildContent` of simple wrappers (Tile, Button).
+Fixed since 2026-10-10 (F15, see H.3): the narrowing reaches slots and child content.
 
 ### 9. Svelte idioms without a direct equivalent
 

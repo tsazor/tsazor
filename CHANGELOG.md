@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Fix** `@tsazor/compiler` (`tsazor check`, the editor; F15): the narrowing of an `@if` reaches the markup inside
+  it, as Razor's nullable analysis carries it. `@if (node) { <Card>@node.name</Card> }` was TS2531 on `node`,
+  because child content is a function that runs later. Now child content, slots and templates (`<PageTitle>`,
+  a grid's columns) and the setters of `@bind` and `@bind-Value` are checked where they are written. The check
+  still reports what a deferred body assigns (it doesn't narrow the code after it), and a lambda you write keeps
+  TypeScript's rule (`@onclick="() => greet(node.name)"` needs a local). Real builds are unchanged.
+
 - **Fix** `@tsazor/lsp` (`tsazor check`, the editor), Linux and macOS: the components of a package (`@tsazor/fluent`,
   `@tsazor/bootstrap`) were type-checked against its published declarations, which list the parameters only, so a
   `@ref`'s methods (a DataGrid's `scrollToItem`) were TS2339. The package was looked up through

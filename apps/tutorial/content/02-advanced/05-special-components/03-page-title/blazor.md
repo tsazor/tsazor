@@ -20,5 +20,5 @@ wins, and the static `<title>` of `index.html` is captured on the first render, 
 used as the fallback.
 
 > **Coming from Blazor:** no `<HeadOutlet @rendermode="…" />` in `App.razor` — the app adds the
-> outlet itself. Narrowing caveat from "Child content": `<PageTitle>@user.name</PageTitle>`
-> inside `@if (user)` is TS2532 in `tsazor check`; read the value through a getter or a local.
+> outlet itself. As in Razor, `<PageTitle>@user.name</PageTitle>` inside `@if (user)` checks
+> clean.

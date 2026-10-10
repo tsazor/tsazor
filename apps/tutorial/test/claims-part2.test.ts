@@ -75,11 +75,15 @@ describe("child-content", () => {
     m.dispose();
   });
 
-  it("narrowing from @if doesn't reach deferred child content; a local does", () => {
-    const narrowed = (body: string) => ({ "App.tsazor": `@if (user) {\n${body}\n}\n@code {\n    user?: { name: string } = { name: "Ada" };\n}\n`, "Card.tsazor": card });
-    const lost = types(narrowed(`    <Card title="Profile">\n        <p>@user.name</p>\n    </Card>`));
-    expect(lost.map((d) => `${d.line} ${d.code} ${d.message}`)).toEqual([expect.stringMatching(/^3 TS2532 Object is possibly 'undefined'. Hint: /)]);
-    expect(typeCodes(narrowed(`    const current = user;\n    <Card title="Profile">\n        <p>@current.name</p>\n    </Card>`))).toEqual([]);
+  it("narrowing from @if reaches the child content; a handler you write needs a local", () => {
+    const narrowed = (body: string) => ({
+      "App.tsazor": `@if (user) {\n${body}\n}\n@code {\n    user?: { name: string } = { name: "Ada" };\n    greet(_name: string): void {}\n}\n`,
+      "Card.tsazor": card,
+    });
+    expect(typeCodes(narrowed(`    <Card title="Profile">\n        <p>@user.name</p>\n    </Card>`))).toEqual([]);
+    const lost = types(narrowed(`    <button @onclick="() => greet(user.name)">Greet</button>`));
+    expect(lost.map((d) => `${d.line} ${d.code} ${d.message}`)).toEqual([expect.stringMatching(/^2 TS2532 Object is possibly 'undefined'. Hint: /)]);
+    expect(typeCodes(narrowed(`    const current = user;\n    <button @onclick="() => greet(current.name)">Greet</button>`))).toEqual([]);
   });
 });
 

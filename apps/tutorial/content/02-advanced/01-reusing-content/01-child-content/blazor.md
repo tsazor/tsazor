@@ -40,10 +40,10 @@ keeps the parent's context: its members, its re-render after events, its CSS iso
 > once for a whole folder in `_Imports.tsazor` (chapter "Organizing code"). There's no
 > `Microsoft.AspNetCore.Components` default namespace to lean on.
 
-> **Coming from Blazor — nullability in child content:** C#'s flow analysis and TypeScript's
-> narrowing differ in one visible place. Inside `@if (user) { <Card>@user.name</Card> }` the
-> body of `<Card>` is a lambda, and TypeScript drops the narrowing of `this.user` in it
-> (`tsazor check`: TS2532 *Object is possibly 'undefined'*) — the property could change
-> before the lambda runs. Capture it first: `@if (user) { const current = user; <Card>@current.name</Card> }`,
-> or read it through a getter. The same applies to every deferred fragment, `<PageTitle>`
-> included.
+> **Coming from Blazor — nullability in child content:** as with C#'s flow analysis, an `@if`
+> covers the child content inside it: `@if (user) { <Card>@user.name</Card> }` passes
+> `tsazor check`, and so do slots, templates, `<PageTitle>` and `@bind-Value="user.name"`. The
+> one difference is a lambda you write. C# carries the check into it, TypeScript doesn't:
+> `@onclick="() => greet(user.name)"` inside the `@if` is TS2532 *Object is possibly
+> 'undefined'*, because `this.user` could change before the click. Capture it first:
+> `@if (user) { const current = user; <button @onclick="() => greet(current.name)">… }`.

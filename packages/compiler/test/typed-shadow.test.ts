@@ -120,7 +120,8 @@ describe("plain-text values read as expressions (shadow-only)", () => {
 describe("typed slot contexts (shadow-only)", () => {
   it("types the context from the substituted type argument", () => {
     const { result } = gen('<Grid TItem="Person"><RowTemplate><td>@context.name</td></RowTemplate></Grid>', undefined, typedShadow);
-    expect(result.code).toContain('(context: Person) => (__builder: __tsazor_RenderTreeBuilder) => {');
+    // A deferred call in the shadow (F15).
+    expect(result.code).toContain("(__tsazor_deferred && ((context: Person) => {");
   });
 
   it("the context stays `any` without a resolved argument", () => {
@@ -134,6 +135,33 @@ describe("typed slot contexts (shadow-only)", () => {
     // shadow layer must not pretend otherwise (2.4).
     const { result } = gen('<Virtualized Items="people"><ItemTemplate>@context</ItemTemplate></Virtualized>', { Virtualized: virtualized }, typedShadow);
     expect(result.code).toContain("(context: any) =>");
+  });
+});
+
+describe("deferred content in the shadow (F15)", () => {
+  it("calls child content and a slot template in place, so an @if's narrowing reaches them; the real build keeps the functions", () => {
+    const source = '@if (x) { <Grid TItem="Person"><RowTemplate><td>@context.name</td></RowTemplate></Grid> <Box>@x</Box> }';
+    const components = { Grid: grid, Box: metadataOf("Box", { ChildContent: { category: "RenderFragment" } }) };
+    const shadow = gen(source, components, typedShadow).result.code;
+    expect(shadow).toContain('__builder.addAttribute(1, "rowTemplate", (__tsazor_deferred && ((context: Person) => {');
+    expect(shadow).toContain("})(null!), null!));");
+    expect(shadow).toMatch(/__builder\.addContent\(\d+, \(__tsazor_deferred && \(\(\) => \{/);
+    expect(shadow).toContain("})(), null!));");
+    expect(shadow).toContain("declare const __tsazor_deferred: boolean;");
+    const real = gen(source, components).result.code;
+    expect(real).toContain("(context: any) => (__builder: __tsazor_RenderTreeBuilder) => {");
+    expect(real).not.toContain("__tsazor_deferred");
+  });
+
+  it("calls a bind's setter in place, synchronously; the real build keeps the async setter", () => {
+    const source = '<input @bind="x" @bind:after="changed" /><Grid TItem="Person" @bind-Title="name" @bind-Title:after="changed" />';
+    const components = { Grid: metadataOf("Grid", { title: { category: "string", type: "string" }, titleChanged: { category: "EventCallback", type: "EventCallback<string>" } }, { typeParameters: [{ name: "TItem" }] }) };
+    const shadow = gen(source, components, typedShadow).result.code;
+    expect(shadow).toContain("(__tsazor_deferred && ((__event: any) => { this.x = (__event.target as HTMLInputElement).value; void this.changed(); })(null!), null!)");
+    expect(shadow).toContain("(__tsazor_deferred && ((__value: never) => { this.name = __value; void this.changed(); })(null!), null!)");
+    const real = gen(source, components).result.code;
+    expect(real).toContain("async (__event) => { this.x = (__event.target as HTMLInputElement).value; await this.changed(); }");
+    expect(real).toContain("async (__value) => { this.name = __value; await this.changed(); }");
   });
 });
 
