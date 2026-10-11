@@ -137,8 +137,10 @@ everything pushed.
 >     components take `@attributes` like their Fluent twins (`46108c9`); TimePicker, Rating, RatingDisplay, Highlighter
 >     (`76c9c15`); Hotkey, KeyCode, ColorPicker, ColorPickerInput and L15 (`InputBase.element`, `c7e802a`); Carousel,
 >     Link, Image, ScrollToTop (`06a05da`); TextInput's `mask` and Overflow (`fb5a6bc`). **Every wave-B component is
->     done** (both skins, unit tests, skins-gate checks in Edge, Firefox and WebKit). **Next: `@tsazor/charts`** (D-L2:
->     SVG line, bar, area, donut, sparkline in the skins' tokens; MudChart's breadth).
+>     done** (both skins, unit tests, skins-gate checks in Edge, Firefox and WebKit), and so is `@tsazor/charts`
+>     (`b1cbdc6`; D-L2, docs/design-charts.md; L16 fixed on the way). **Waves A and B are complete** — the library part
+>     of the 1.0 scope (D-L1). Not covered on purpose: MudBlazor's DateMask/RegexMask/BlockMask, overflowing child
+>     content without `Items`, chart types beyond line/area/bar/donut/pie (Chart.js through `@attach`).
 >   - **For the owner, before the API freeze:** the `Async` suffix. The runtime and DataGrid keep Blazor's names
 >     (`invokeAsync`, `refreshDataAsync`), the skins' newer methods drop it (Overlay `show()`/`close()` for Fluent UI
 >     Blazor's `ShowAsync`/`CloseAsync`, Wizard `goToStep()`). One rule for all would let the codemod map them.

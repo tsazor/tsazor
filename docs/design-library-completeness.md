@@ -104,7 +104,8 @@ Both waves come before 1.0 (D-L1). The waves set the order, not the release:
 - **A:** what a business app reaches for in its first week (AgentView, FluentCMS, the owner's company admin). That is
   the twelve wave-A rows above, plus the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav; done
   2026-10-11; Icon is done).
-- **B:** the rest of the table, and `@tsazor/charts` (D-L2).
+- **B:** the rest of the table, and `@tsazor/charts` (D-L2). Done 2026-10-11: every row of §3 is in both skins, and
+  `@tsazor/charts` is a package of its own; both waves are complete.
 - **Order:**
   1. the core (Virtualize);
   2. Icons ([design-icons.md](design-icons.md)) and Markdown (every app hits them first);
