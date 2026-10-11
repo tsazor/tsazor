@@ -1,0 +1,147 @@
+@** A color field (an `.input-group` of a `.form-control` and a button; Fluent UI Blazor's FluentColorPickerInput,
+    MudBlazor's MudColorPicker in a popover; InputBase — bind it with @bind-value): a text field for the color's hex
+    code ("#0f6cbd"; "#fc0" works too) and a button that shows the color and opens a ColorPicker in a dialog — `view`,
+    `palette` and `findClosestColor` as the picker's. A click on a swatch, Enter or Space, or the end of a drag in the
+    square picks the color and closes the dialog; Escape closes it too, the focus back on the button. Alt+ArrowDown in
+    the field opens it. `hideTextInput` leaves the button alone. Text that is no color goes to validation as it was
+    typed — the same parameters as the Fluent skin's ColorPickerInput. *@
+@import {
+    anchoredPosition, createLayer, dismissable, FieldState, focusTrap, normalizeHexColor, type ColorPickerLabels, type IconValue,
+} from "@tsazor/ui"
+@import { withClass } from "./attributes"
+@import { Palette } from "./core-icons"
+
+@inherits InputBase<string>
+
+<div class="mb-3 tz-color-picker-input">
+    @if (this.label) {
+        <label class="form-label" for="@this.inputId">@this.label</label>
+    }
+    <div class="input-group" @ref="fieldBox">
+        @if (!this.hideTextInput) {
+            <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" spellcheck="false" maxlength="7" placeholder="@this.placeholder" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@(this.currentValue ?? "")" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
+        }
+        <button type="button" id="@this.buttonId" class="btn btn-outline-secondary tz-color-picker-input__button" aria-label="@this.buttonText" title="@this.buttonText" aria-haspopup="dialog"
+                aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle">
+            <span class="tz-color-picker-input__swatch" style="@(`background: ${this.color ?? "transparent"}`)" aria-hidden="true"></span>
+            <Icon value="@this.iconPalette" />
+        </button>
+    </div>
+    @if (this.open) {
+        <div class="dropdown-menu show p-2 tz-color-picker-input__popup" role="dialog" aria-modal="true" aria-label="@this.buttonLabel" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
+            <ColorPicker selectedColor="@this.color" selectedColorChanged="@this.changed" onPick="@this.picked" view="@this.view" palette="@this.palette" findClosestColor="@this.findClosestColor" labels="@this.labels" />
+        </div>
+    }
+    @if (this.help) {
+        <div class="form-text" id="@this.field.helpId(this.id)">@this.help</div>
+    }
+    @if (this.message) {
+        <div class="invalid-feedback d-block" id="@this.field.messageId(this.id)">@this.message</div>
+    }
+</div>
+@code {
+    /** The field's label. */
+    @Parameter() label?: string;
+    /** A hint below the field, linked to it for screen readers. */
+    @Parameter() help?: string;
+    /** The text field's placeholder. */
+    @Parameter() placeholder: string = "#rrggbb";
+    /** The dialog's picker: swatch (default), wheel or hsv (`View`). */
+    @Parameter() view: "swatch" | "wheel" | "hsv" = "swatch";
+    /** The picker's colors (`Palette`). */
+    @Parameter() palette?: string[];
+    /** Marks the palette's nearest color when the color isn't in it (`FindClosestColor`). */
+    @Parameter() findClosestColor: boolean = true;
+    /** Only the button, no text field (`HideTextInput`). */
+    @Parameter() hideTextInput: boolean = false;
+    /** The button's icon next to the color (`IconPalette`). */
+    @Parameter() iconPalette: IconValue = Palette;
+    /** The button's and the dialog's name. */
+    @Parameter() buttonLabel: string = "Choose color";
+    /** The picker's texts (English by default). */
+    @Parameter() labels?: Partial<ColorPickerLabels>;
+    /** Disables the field and the button. */
+    @Parameter() disabled: boolean = false;
+    /** Shows the value without letting it change. */
+    @Parameter() readOnly: boolean = false;
+    /** Marks the field as required (the native attribute). */
+    @Parameter() required: boolean = false;
+    /** The text field's id; generated when omitted. */
+    @Parameter() id?: string;
+    /** The text field's accessible name when there is no label. */
+    @Parameter() ariaLabel?: string;
+
+    private readonly field = new FieldState("tz-color-picker-input");
+    private open = false;
+    private fieldBox?: HTMLDivElement;
+    private button?: HTMLButtonElement;
+
+    /** The trap and the dismiss handling are one overlay layer (inside a Modal, Escape closes the picker first). */
+    private readonly layer = createLayer();
+    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.setOpen(false), ignore: () => [this.button] });
+    private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
+    private readonly trap = focusTrap({ layer: this.layer, initialFocus: (popup) => popup.querySelector<HTMLElement>("[tabindex='0']") });
+
+    /** The value as a color, when it is one. */
+    private get color(): string | undefined {
+        return normalizeHexColor(this.currentValue ?? "");
+    }
+
+    /** The label points at the text field, or at the button without one. */
+    private get inputId(): string {
+        return this.hideTextInput ? this.buttonId : this.field.id(this.id);
+    }
+
+    private get buttonId(): string {
+        return `${this.field.id(this.id)}-button`;
+    }
+
+    /** The button says what it does and the color it shows. */
+    private get buttonText(): string {
+        return this.color === undefined ? this.buttonLabel : `${this.buttonLabel} (${this.color})`;
+    }
+
+    private get message(): string {
+        return this.field.message(this.editContext, this.ValueExpression);
+    }
+
+    private get inputClass(): string {
+        const validity = this.field.validity(this.fieldClass);
+        return validity === "invalid" ? "form-control is-invalid" : validity === "valid" ? "form-control is-valid" : "form-control";
+    }
+
+    private get inputAttributes(): Record<string, unknown> {
+        return { ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+    }
+
+    private handleChange(e: Event): void {
+        const text = (e.target as HTMLInputElement).value;
+        // Empty clears; a color becomes #rrggbb; anything else goes to validation as typed.
+        this.currentValue = text.trim() === "" ? "" : normalizeHexColor(text) ?? text;
+    }
+
+    private fieldKeydown(e: KeyboardEvent): void {
+        if (e.key !== "ArrowDown" || !e.altKey || this.open || this.disabled || this.readOnly) return;
+        e.preventDefault();
+        this.setOpen(true);
+    }
+
+    private toggle(): void {
+        this.setOpen(!this.open);
+    }
+
+    private setOpen(open: boolean): void {
+        if (this.open === open) return;
+        this.open = open;
+        this.stateHasChanged();
+    }
+
+    private readonly changed = (color: string): void => {
+        this.currentValue = color;
+    };
+
+    private readonly picked = (color: string): void => {
+        this.currentValue = color;
+        this.setOpen(false);
+    };
+}

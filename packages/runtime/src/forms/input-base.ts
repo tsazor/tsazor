@@ -28,6 +28,13 @@ export abstract class InputBase<TValue> extends ComponentBase {
   /** Pass-through attributes (class, style, placeholder, …). */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
+  /**
+   * Blazor's Element: the input's element once it has rendered, as InputFile's `element` — focus it with
+   * `input.element?.focus()` (Blazor's `Element.Value.FocusAsync()`). A component on InputBase sets it with
+   * `@ref="element"` on its input.
+   */
+  element?: HTMLElement;
+
   private editContextUnsubscribe?: () => void;
 
   /** Blazor's CurrentValue. */
@@ -67,6 +74,13 @@ export abstract class InputBase<TValue> extends ComponentBase {
     // Blazor's EditContext.FieldCssClass: the four documented states.
     if (isModified) return isValid ? "modified valid" : "modified invalid";
     return isValid ? "valid" : "invalid";
+  }
+
+  /** Captures the rendered input as `element` (after its attributes, before its content). */
+  protected captureElement(b: RenderTreeBuilder): void {
+    b.addElementReferenceCapture(this.nextSequence(), (element) => {
+      this.element = element as HTMLElement;
+    });
   }
 
   /** Merges validation class with pass-through attributes for one element. */

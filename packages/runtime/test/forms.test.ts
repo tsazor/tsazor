@@ -292,6 +292,32 @@ describe("InputDate (Blazor's InputDateType) and InputNumber with null", () => {
     time.remove();
   });
 
+  it("holds the rendered input as element (Blazor's Element), to focus it", async () => {
+    for (const component of [InputText, InputNumber, InputCheckbox, InputDate, InputSelect]) {
+      let instance: { element?: HTMLElement } | undefined;
+      class Host extends ComponentBase {
+        protected override buildRenderTree(b: RenderTreeBuilder): void {
+          b.openComponent(0, defineComponent(component as never));
+          b.addAttribute(1, "Value", "" as never);
+          b.addComponentReferenceCapture(2, (captured) => {
+            instance = captured as never;
+          });
+          b.closeComponent();
+        }
+      }
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const renderer = new Renderer();
+      renderer.renderInContainer(Host, container);
+      await renderer.waitUntilIdle();
+      const rendered = container.querySelector("input, select");
+      expect(instance?.element).toBe(rendered);
+      instance!.element!.focus();
+      expect(document.activeElement).toBe(rendered);
+      container.remove();
+    }
+  });
+
   it("shows a null number as an empty input, not \"null\"", async () => {
     const { input, remove } = await mountInput(InputNumber, null);
     expect(input.value).toBe("");

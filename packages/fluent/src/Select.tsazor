@@ -12,7 +12,7 @@
     @if (this.label) {
         <label class="fui-input__label" for="@this.elementId">@this.label</label>
     }
-    <select id="@this.elementId" value="@this.currentValue" @attributes="@this.inputAttributes" @onchange="this.handleChange">@childContent</select>
+    <select @ref="element" id="@this.elementId" value="@this.currentValue" @attributes="@this.inputAttributes" @onchange="this.handleChange">@childContent</select>
     @if (this.help) {
         <span class="fui-input__help" id="@this.helpId">@this.help</span>
     }

@@ -21,6 +21,7 @@ const CORE = [
   "Calendar20Regular",
   "Checkmark12Regular",
   "Clock20Regular",
+  "Color20Regular",
   "Star20Filled",
   "Star20Regular",
   "CheckmarkCircle20Filled",

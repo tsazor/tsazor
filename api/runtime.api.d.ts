@@ -576,12 +576,14 @@ export declare abstract class InputBase<TValue> extends ComponentBase {
     ValueExpression?: string;
     editContext?: EditContext;
     additionalAttributes?: Record<string, unknown>;
+    element?: HTMLElement;
     private editContextUnsubscribe?;
     get currentValue(): TValue | null | undefined;
     set currentValue(value: TValue);
     protected onInitialized(): void;
     dispose(): void;
     protected get fieldClass(): string;
+    protected captureElement(b: RenderTreeBuilder): void;
     protected applyCommonAttributes(b: RenderTreeBuilder): void;
     private sequenceCounter;
     protected nextSequence(): number;

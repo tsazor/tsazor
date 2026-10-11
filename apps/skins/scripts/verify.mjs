@@ -416,6 +416,43 @@ try {
     const ratingViolations = await axe(page);
     say(ratingViolations.length === 0, `axe /forms with the ratings${ratingViolations.length ? `: ${ratingViolations.join(" | ")}` : ""}`);
 
+    /* Color picker: the field and its dialog of swatches (radios; the arrows choose, a click picks and closes), the
+       saturation square and the hue bar (sliders), the wheel. */
+    const colors = page.locator("section", { has: page.getByRole("heading", { name: "Color picker", exact: true }) });
+    await colors.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const colorText = (name) => page.locator(`.color-${name}`).textContent();
+    const colorIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.color-${n}`)?.textContent === v, [name, value]);
+    say((await colors.getByLabel("Label color", { exact: true }).inputValue()) === "#0f6cbd", "color picker: the field shows the hex code");
+    await colors.getByRole("button", { name: "Choose color (#0f6cbd)" }).click();
+    const colorDialog = page.getByRole("dialog", { name: "Choose color" });
+    await colorDialog.waitFor();
+    say(await page.evaluate(() => document.activeElement?.getAttribute("role") === "radio" && document.activeElement.getAttribute("aria-checked") === "true"),
+      `color picker: the dialog opens on the nearest swatch (${await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))})`);
+    const colorViolations = await axe(page);
+    say(colorViolations.length === 0, `axe /forms with the color dialog open${colorViolations.length ? `: ${colorViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() => document.querySelector(".color-label")?.textContent !== "#0f6cbd");
+    say(await colorDialog.isVisible(), `color picker: an arrow chooses the next swatch and the dialog stays (${await colorText("label")})`);
+    await colorDialog.locator("[role=radio][aria-label$='#ffcdd2']").click();
+    await colorIs("label", "#ffcdd2");
+    await colorDialog.waitFor({ state: "detached" });
+    say((await focusedText()) === "" && (await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))) === "Choose color (#ffcdd2)", "color picker: a click picks the swatch and closes the dialog, the focus back on the button");
+    const square = colors.getByRole("slider", { name: "Saturation and brightness" });
+    const squareBox = await square.boundingBox();
+    await square.click({ position: { x: squareBox.width / 2, y: squareBox.height / 2 } });
+    await colorIs("accent", "#804040");
+    say((await square.getAttribute("aria-valuetext")) === "Saturation 50%, brightness 50%", "color picker: a click in the square sets saturation and brightness (#804040)");
+    const hueBar = colors.getByRole("slider", { name: "Hue" });
+    await hueBar.focus();
+    await page.keyboard.press("Shift+ArrowDown");
+    await page.waitForFunction(() => document.querySelector("[role=slider][aria-label=Hue]")?.getAttribute("aria-valuenow") === "10");
+    say((await colorText("accent")) !== "#804040", `color picker: the hue bar's keys turn the hue (${await colorText("accent")})`);
+    const hexagon = colors.getByRole("radiogroup", { name: "Wrapping paper" }).getByRole("radio").nth(40);
+    const hexagonColor = await hexagon.getAttribute("fill");
+    await hexagon.click();
+    await colorIs("paper", hexagonColor);
+    say(true, `color picker: a click on the wheel picks its hexagon (${hexagonColor})`);
+
     /* File upload: chosen and dropped files go to the server with the progress; the size limit; a button elsewhere. */
     const uploads = page.locator("section", { has: page.getByRole("heading", { name: "File upload", exact: true }) });
     await uploads.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
@@ -498,6 +535,23 @@ try {
     await page.getByRole("button", { name: "Error toast" }).click();
     await page.waitForSelector("[role=alert]");
     say((await page.locator("[role=alert]").textContent())?.includes("Upload failed.") === true, "toast: a danger toast is an alert");
+
+    /* Keyboard shortcuts: ? shows them and hides them again, not while typing; Ctrl+K goes to the search. */
+    const shortcuts = page.locator("section", { has: page.getByRole("heading", { name: "Keyboard shortcuts", exact: true }) });
+    await shortcuts.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    await page.keyboard.press("?");
+    await page.locator(".shortcut-help").waitFor();
+    say(true, "hotkey: ? shows the shortcuts");
+    await page.keyboard.press("?");
+    await page.locator(".shortcut-help").waitFor({ state: "detached" });
+    say(true, "hotkey: ? again hides them");
+    await page.keyboard.press("Control+k");
+    await page.waitForFunction(() => document.activeElement?.getAttribute("aria-keyshortcuts") === "Control+K");
+    say(true, "hotkey: Ctrl+K puts the focus in the search (its element, through @ref)");
+    await page.keyboard.press("?");
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    say((await page.locator(".shortcut-help").count()) === 0 && (await shortcuts.getByLabel("Search orders").inputValue()) === "?", "hotkey: a plain key doesn't fire while someone types");
 
     /* Overlay: a busy state over a card, and over the whole page. */
     const busyOverlay = page.locator(".busy-card > .fui-overlay, .busy-card > .tz-overlay");

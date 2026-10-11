@@ -110,6 +110,18 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Color picker</Typography>
+    <ColorPickerInput Label="Label color" Help="A hex code, or pick one." @bind-Value="labelColor" />
+    <div class="color-demo">
+        <ColorPicker View="hsv" AriaLabel="Accent" @bind-SelectedColor="accentColor" />
+        <ColorPicker View="wheel" AriaLabel="Wrapping paper" @bind-SelectedColor="paperColor" />
+    </div>
+    <Typography Variant="caption">
+        Label <span class="color-label">@labelColor</span>, accent <span class="color-accent">@accentColor</span>, paper <span class="color-paper">@paperColor</span>.
+    </Typography>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">File upload</Typography>
     <FileUpload Multiple="@true" Accept=".csv,.txt" MaximumFileSize="@(1024 * 1024)" Upload="@sendToServer" OnFileUploaded="@sent" OnFileError="@failed">
         <span>Drop price lists here, or click to choose (CSV or text, up to 1 MB each)</span>
@@ -133,6 +145,9 @@
     private pickupDay = "2026-10-10";
     private pickupTime = "16:30:00";
     private ryeRating = 3;
+    private labelColor = "#0f6cbd";
+    private accentColor = "#ff0000";
+    private paperColor = "";
     private deliveryTime = "09:00:00";
     private reminderTime = "";
     private readonly lunchBreak = (time: string): boolean => time >= "12:00:00" && time < "13:00:00";

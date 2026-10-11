@@ -180,6 +180,15 @@ body {
   gap: 1.5rem 2.5rem;
 }
 
+/* Color picker: the square and the wheel side by side. */
+.color-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-block: 0.75rem;
+}
+
 /* Busy state: the overlay covers the card. */
 .busy-card {
   position: relative;

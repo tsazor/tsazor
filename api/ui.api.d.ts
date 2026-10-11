@@ -27,6 +27,9 @@ export interface AnchoredPositionOptions {
 // Appearance
 export type Appearance = "solid" | "outline" | "subtle" | "transparent";
 
+// ariaKeyShortcuts
+export declare function ariaKeyShortcuts(hotkey: Hotkey): string;
+
 // AVATAR_COLORS
 export declare const AVATAR_COLORS: readonly [
     "dark-red",
@@ -147,6 +150,21 @@ export declare class ChipSetModel<T> {
 // clampDate
 export declare function clampDate(date: IsoDate, min?: IsoDate | null, max?: IsoDate | null): IsoDate;
 
+// closestColor
+export declare function closestColor(palette: readonly string[], color: string): HexColor | undefined;
+
+// colorPickerLabels
+export declare const colorPickerLabels: ColorPickerLabels;
+
+// ColorPickerLabels
+export interface ColorPickerLabels {
+    swatch: (color: HexColor) => string;
+    square: string;
+    squareValue: (saturation: number, brightness: number) => string;
+    hue: string;
+    hueValue: (hue: number, color: HexColor) => string;
+}
+
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
 
@@ -251,6 +269,9 @@ export declare function dayOfWeek(date: IsoDate): number;
 
 // daysInMonth
 export declare function daysInMonth(year: number, month: number): number;
+
+// describeColor
+export declare function describeColor(text: string): string;
 
 // dismissable
 export declare function dismissable(options: DismissableOptions): Attachment<HTMLElement>;
@@ -454,6 +475,15 @@ export declare function hasChildren(item: TreeViewItem): boolean;
 // hasSubmitAttempt
 export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
 
+// HexColor
+export type HexColor = string;
+
+// hexToHsv
+export declare function hexToHsv(text: string): Hsv | undefined;
+
+// hexToRgb
+export declare function hexToRgb(text: string): Rgb | undefined;
+
 // HighlightFragment
 export interface HighlightFragment {
     readonly text: string;
@@ -472,8 +502,33 @@ export interface HighlightOptions {
 // highlightTerms
 export declare function highlightTerms(highlightedText: string | undefined, delimiters?: string, more?: readonly string[]): string[];
 
+// Hotkey
+export interface Hotkey {
+    readonly key: string;
+    readonly ctrl: boolean;
+    readonly alt: boolean;
+    readonly shift: boolean;
+    readonly meta: boolean;
+}
+
+// hotkeyApplies
+export declare function hotkeyApplies(target: EventTarget | null, hotkey: Hotkey, inTextFields?: boolean): boolean;
+
 // HourCycle
 export type HourCycle = "h12" | "h23";
+
+// Hsv
+export interface Hsv {
+    readonly h: number;
+    readonly s: number;
+    readonly v: number;
+}
+
+// hsvToHex
+export declare function hsvToHex(hsv: Hsv): HexColor;
+
+// hsvToRgb
+export declare function hsvToRgb({ h, s, v }: Hsv): Rgb;
 
 // icon
 export declare function icon(name: string, svg: string, viewBox?: string): IconValue;
@@ -506,6 +561,9 @@ export declare function initialTimeOption(options: readonly IsoTime[], value: st
 // Intent
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
 
+// isApplePlatform
+export declare function isApplePlatform(): boolean;
+
 // isDateDisabled
 export declare function isDateDisabled(date: IsoDate, limits: DateLimits): boolean;
 
@@ -527,6 +585,9 @@ export type IsoTime = string;
 // isTopLayer
 export declare function isTopLayer(key: object): boolean;
 
+// isTypingTarget
+export declare function isTypingTarget(target: EventTarget | null): boolean;
+
 // isWizardStepClickable
 export declare function isWizardStepClickable(index: number, current: number, sequence: WizardStepSequence, maxVisited: number, disabled: boolean): boolean;
 
@@ -535,6 +596,9 @@ export declare function isYearDisabled(year: number, limits: DateLimits, checkAl
 
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;
+
+// matchesHotkey
+export declare function matchesHotkey(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">, hotkey: Hotkey): boolean;
 
 // monthNames
 export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
@@ -556,6 +620,9 @@ export declare function nextMultipleDates(selected: readonly IsoDate[], clicked:
 
 // nextWizardStep
 export declare function nextWizardStep(disabled: readonly boolean[], from: number): number;
+
+// normalizeHexColor
+export declare function normalizeHexColor(text: string): HexColor | undefined;
 
 // normalizeIsoTime
 export declare function normalizeIsoTime(text: string): IsoTime | undefined;
@@ -610,6 +677,9 @@ export declare class PaginationState {
 
 // parseDateField
 export declare function parseDateField(text: string, locale: string): IsoDate | undefined;
+
+// parseHotkey
+export declare function parseHotkey(text: string, apple?: boolean): Hotkey | undefined;
 
 // parseIsoDate
 export declare function parseIsoDate(text: string | null | undefined): {
@@ -676,6 +746,19 @@ export interface RatingLabels {
 
 // resizeSplitter
 export declare function resizeSplitter(sizes: readonly number[], bar: number, delta: number, mins: readonly number[], maxs: readonly number[]): number[];
+
+// Rgb
+export interface Rgb {
+    readonly r: number;
+    readonly g: number;
+    readonly b: number;
+}
+
+// rgbToHex
+export declare function rgbToHex({ r, g, b }: Rgb): HexColor;
+
+// rgbToHsv
+export declare function rgbToHsv({ r, g, b }: Rgb): Hsv;
 
 // rovingFocus
 export declare function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement>;
@@ -802,6 +885,15 @@ export declare function startOfMonth(date: IsoDate): IsoDate;
 
 // startOfWeek
 export declare function startOfWeek(date: IsoDate, firstDayOfWeek: number): IsoDate;
+
+// swatchKeyTarget
+export declare function swatchKeyTarget(key: {
+    key: string;
+    ctrlKey?: boolean;
+}, index: number, count: number, columns: number, rtl?: boolean): number | undefined;
+
+// swatchPalette
+export declare const swatchPalette: readonly string[];
 
 // timeFieldPlaceholder
 export declare function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle): string;
@@ -955,6 +1047,30 @@ export declare function visibleTreeItems(items: readonly TreeViewItem[], expande
 
 // weekdayNames
 export declare function weekdayNames(locale: string, firstDay: number, width: "narrow" | "short" | "long"): string[];
+
+// wheelKeyTarget
+export declare function wheelKeyTarget(key: {
+    key: string;
+}, index: number, rowSizes: readonly number[], rtl?: boolean): number | undefined;
+
+// wheelLayout
+export declare function wheelLayout(rowSizes: readonly number[], size?: number, padding?: number): WheelLayout;
+
+// WheelLayout
+export interface WheelLayout {
+    readonly viewBox: string;
+    readonly hexagons: readonly {
+        readonly cx: number;
+        readonly cy: number;
+        readonly points: string;
+    }[];
+}
+
+// wheelPalette
+export declare const wheelPalette: readonly string[];
+
+// wheelRowSizes
+export declare const wheelRowSizes: readonly number[];
 
 // WizardStepChangeEventArgs
 export declare class WizardStepChangeEventArgs {

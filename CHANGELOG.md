@@ -5,6 +5,25 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`, `@tsazor/fluent`, `@tsazor/bootstrap`: an input holds its field as `element` (Blazor's
+  `InputBase.Element`), so a page focuses it through its `@ref`: `search.element?.focus()` for Blazor's
+  `search.Element.Value.FocusAsync()` and Fluent UI Blazor's `FocusAsync()`. The runtime's InputText, InputTextArea,
+  InputNumber, InputCheckbox, InputDate and InputSelect set it, and so do both skins' TextInput, TextArea,
+  NumberInput, Select, Checkbox, Switch, DateInput, Slider, DatePicker, TimePicker and ColorPickerInput.
+
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `ColorPicker` (Fluent UI Blazor's `FluentColorPicker`,
+  MudBlazor's `MudColorPicker`): the color as hex text, `@bind-selectedColor`; `view` swatch (Fluent UI Blazor's
+  palette, ten shades a hue) or wheel (its 127 hexagons), both radio groups whose swatches say their color's name and
+  code, or hsv (a saturation and brightness square and a hue bar, sliders for the keys and the pointer); `palette`,
+  `columns`, `orientation`, `findClosestColor`, `onPick`, `labels`. `ColorPickerInput` (`FluentColorPickerInput`;
+  InputBase): a hex field with a button that shows the color and opens the picker in a dialog, closed by a pick
+  (`hideTextInput`, `iconPalette`). `Hotkey` (MudBlazor's `MudHotkey`): a combination for the whole page ("Ctrl+K",
+  "Mod+S", "?"; a plain key not while typing), `onHotkeyPressed`, content shown on the press. `KeyCode`
+  (`FluentKeyCode`): the keys of its content, the page or an anchor (`only`, `ignore`, `preventDefaultOnly`,
+  `stopRepeat`). `@tsazor/ui`: `parseHotkey`, `matchesHotkey`, `hotkeyApplies`, `ariaKeyShortcuts`; the colors'
+  `normalizeHexColor`, `hexToHsv`, `hsvToHex`, `closestColor`, `describeColor`, `swatchKeyTarget`, `wheelKeyTarget`,
+  `wheelLayout`, `swatchPalette`, `wheelPalette`. Both skins draw a palette (`Color20Regular`, `Palette`).
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `Rating` (MudBlazor's `MudRating`; InputBase): stars as
   radio buttons in a named group — the arrows move the value without wrapping (Shift, Home and End to the ends), a
   click on the value's star clears it, the pointer previews (`hoveredValueChanged`); `max`, `fullIcon`, `emptyIcon`,

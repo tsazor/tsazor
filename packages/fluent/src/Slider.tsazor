@@ -16,7 +16,7 @@
     }
     <div class="fui-slider__control">
         <div class="fui-slider__rail">
-            <input id="@this.elementId" type="range" @attributes="@this.inputAttributes" value="@this.shownValue" @oninput="this.handleInput" @onchange="this.handleChange" />
+            <input @ref="element" id="@this.elementId" type="range" @attributes="@this.inputAttributes" value="@this.shownValue" @oninput="this.handleInput" @onchange="this.handleChange" />
             @if (this.tickMarks) {
                 <div class="fui-slider__ticks" aria-hidden="true">
                     @foreach (const tick of this.ticks) {

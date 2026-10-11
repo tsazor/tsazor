@@ -255,6 +255,42 @@ export default class Collapse extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// ColorPicker
+export default class ColorPicker extends ComponentBase {
+    selectedColor?: string;
+    selectedColorChanged?: EventCallback<string>;
+    onPick?: EventCallback<string>;
+    view: "swatch" | "wheel" | "hsv";
+    palette?: string[];
+    columns: number;
+    orientation: Orientation;
+    findClosestColor: boolean;
+    width?: string;
+    height?: string;
+    ariaLabel: string;
+    labels?: Partial<ColorPickerLabels>;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// ColorPickerInput
+export default class ColorPickerInput extends InputBase<string> {
+    label?: string;
+    help?: string;
+    placeholder: string;
+    view: "swatch" | "wheel" | "hsv";
+    palette?: string[];
+    findClosestColor: boolean;
+    hideTextInput: boolean;
+    iconPalette: IconValue;
+    buttonLabel: string;
+    labels?: Partial<ColorPickerLabels>;
+    disabled: boolean;
+    readOnly: boolean;
+    required: boolean;
+    id?: string;
+    ariaLabel?: string;
+}
+
 // ColumnAlign: re-exported from @tsazor/ui
 
 // DataGrid
@@ -470,6 +506,8 @@ export default class Grid extends ComponentBase {
 
 // GridSort: re-exported from @tsazor/ui
 
+// HexColor: re-exported from @tsazor/ui
+
 // Highlighter
 export default class Highlighter extends ComponentBase {
     text: string;
@@ -479,6 +517,18 @@ export default class Highlighter extends ComponentBase {
     caseSensitive: boolean;
     untilNextBoundary: boolean;
     additionalAttributes?: Record<string, unknown>;
+}
+
+// Hotkey
+export default class Hotkey extends ComponentBase {
+    keys: string;
+    onHotkeyPressed?: EventCallback<KeyboardEvent>;
+    childContent?: RenderFragment;
+    hideChildContentOnRepress: boolean;
+    preventEventPropagation: boolean;
+    inTextFields: boolean;
+    disabled: boolean;
+    dispose(): void;
 }
 
 // HourCycle: re-exported from @tsazor/ui
@@ -503,6 +553,25 @@ export default class Icon extends ComponentBase {
 // IsoDate: re-exported from @tsazor/ui
 
 // IsoTime: re-exported from @tsazor/ui
+
+// KeyCode
+export default class KeyCode extends ComponentBase {
+    globalDocument: boolean;
+    anchor?: string;
+    tagName: "span" | "div";
+    onKeyDown?: EventCallback<KeyboardEvent>;
+    onKeyUp?: EventCallback<KeyboardEvent>;
+    only: string[];
+    ignore: string[];
+    ignoreModifier: boolean;
+    preventDefault: boolean;
+    preventDefaultOnly: string[];
+    stopPropagation: boolean;
+    stopRepeat: boolean;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+    dispose(): void;
+}
 
 // ListGroup
 export default class ListGroup extends ComponentBase {

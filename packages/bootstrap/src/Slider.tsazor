@@ -16,7 +16,7 @@
     }
     <div class="tz-slider__control">
         <div class="tz-slider__rail">
-            <input id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@(valueFormat ? valueText : null)" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @oninput="handleInput" @onchange="handleChange" />
+            <input @ref="element" id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@(valueFormat ? valueText : null)" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @oninput="handleInput" @onchange="handleChange" />
             @if (tickMarks) {
                 <div class="tz-slider__ticks" aria-hidden="true">
                     @foreach (const tick of ticks) {

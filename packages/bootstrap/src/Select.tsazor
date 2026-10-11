@@ -10,7 +10,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <select id="@field.id(id)" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange">@childContent</select>
+    <select @ref="element" id="@field.id(id)" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange">@childContent</select>
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }

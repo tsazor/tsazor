@@ -7,7 +7,7 @@
 @inherits InputBase<boolean>
 
 <div class="form-check form-switch mb-3">
-    <input id="@field.id(id)" type="checkbox" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    <input @ref="element" id="@field.id(id)" type="checkbox" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
     @if (label) {
         <label class="form-check-label" for="@field.id(id)">@label</label>
     }

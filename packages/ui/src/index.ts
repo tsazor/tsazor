@@ -9,6 +9,28 @@ export { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, t
 export { sliderFraction, sliderTicks } from "./slider.js";
 export { highlightFragments, highlightTerms, type HighlightFragment, type HighlightOptions } from "./highlight.js";
 export { formatRatingCount, formatRatingValue, ratingClickValue, ratingFill, ratingKeyTarget, ratingLabels, type RatingLabels } from "./rating.js";
+export { ariaKeyShortcuts, hotkeyApplies, isApplePlatform, isTypingTarget, matchesHotkey, parseHotkey, type Hotkey } from "./hotkeys.js";
+export {
+  closestColor,
+  colorPickerLabels,
+  describeColor,
+  hexToHsv,
+  hexToRgb,
+  hsvToHex,
+  hsvToRgb,
+  normalizeHexColor,
+  rgbToHex,
+  rgbToHsv,
+  swatchKeyTarget,
+  wheelKeyTarget,
+  wheelLayout,
+  type ColorPickerLabels,
+  type HexColor,
+  type Hsv,
+  type Rgb,
+  type WheelLayout,
+} from "./color.js";
+export { swatchPalette, wheelPalette, wheelRowSizes } from "./color-palettes.js";
 export {
   edgeEnabledOption,
   formatTimeField,

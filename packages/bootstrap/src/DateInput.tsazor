@@ -12,7 +12,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <input id="@field.id(id)" type="@type" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    <input @ref="element" id="@field.id(id)" type="@type" value="@(currentValue ?? "")" min="@min" max="@max" disabled="@disabled" required="@required" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }

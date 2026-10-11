@@ -33,6 +33,18 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Keyboard shortcuts</Typography>
+    <TextInput Label="Search orders" aria-keyshortcuts="Control+K" @ref="this.search" @bind-Value="query" />
+    <Typography Variant="caption">Ctrl+K (Cmd+K on a Mac) goes to the search; ? shows the shortcuts.</Typography>
+    <Hotkey Keys="Mod+K" OnHotkeyPressed="@goToSearch" />
+    <Hotkey Keys="?" HideChildContentOnRepress="@true">
+        <Card class="shortcut-help">
+            <CardBody>Ctrl+K: search. ?: these shortcuts.</CardBody>
+        </Card>
+    </Hotkey>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Busy state</Typography>
     <Card class="busy-card">
         <CardBody>
@@ -67,6 +79,13 @@
     private drawerOpen = false;
     private onlyOpen = false;
     private result = "";
+    private query = "";
+    private search?: { element?: HTMLElement };
+
+    /** Ctrl+K: the search field takes the focus (Blazor's `search.Element.Value.FocusAsync()`). */
+    private goToSearch(): void {
+        this.search?.element?.focus();
+    }
     private note = "Deliver before noon.";
     private saving = false;
     private saved = "";

@@ -7,7 +7,7 @@
 @inherits InputBase<boolean>
 
 <label class="@this.wrapperClass" for="@this.elementId">
-    <input id="@this.elementId" type="checkbox" checked="@this.isChecked" role="switch" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    <input @ref="element" id="@this.elementId" type="checkbox" checked="@this.isChecked" role="switch" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
     <span class="fui-switch__track" aria-hidden="true"></span>
     @if (this.label) {
         <span class="fui-switch__label">@this.label</span>

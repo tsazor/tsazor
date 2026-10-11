@@ -20,7 +20,7 @@
         <label class="form-label" for="@this.field.id(this.id)">@this.label</label>
     }
     <div class="input-group" @ref="fieldBox">
-        <input id="@this.field.id(this.id)" type="text" autocomplete="off" placeholder="@this.placeholderText" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
+        <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" placeholder="@this.placeholderText" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
         <button type="button" class="btn btn-outline-secondary" aria-label="@this.buttonLabel" title="@this.buttonLabel" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar3" /></button>
     </div>
     @if (this.open) {

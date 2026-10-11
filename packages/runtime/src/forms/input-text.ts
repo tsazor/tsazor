@@ -10,6 +10,7 @@ export class InputText extends InputBase<string> {
     b.addAttribute(this.nextSequence(), "value", this.currentValue ?? "");
     this.applyCommonAttributes(b);
     b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler((e) => (e.target as HTMLInputElement).value));
+    this.captureElement(b);
     b.closeElement();
   }
 }
@@ -22,6 +23,7 @@ export class InputTextArea extends InputBase<string> {
     b.addAttribute(this.nextSequence(), "value", this.currentValue ?? "");
     this.applyCommonAttributes(b);
     b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler((e) => (e.target as HTMLTextAreaElement).value));
+    this.captureElement(b);
     b.closeElement();
   }
 }
@@ -44,6 +46,7 @@ export class InputNumber extends InputBase<number | string> {
         return Number.isNaN(parsed) ? raw : parsed;
       }),
     );
+    this.captureElement(b);
     b.closeElement();
   }
 }
@@ -57,6 +60,7 @@ export class InputCheckbox extends InputBase<boolean> {
     b.addAttribute(this.nextSequence(), "checked", this.currentValue === true);
     this.applyCommonAttributes(b);
     b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler((e) => (e.target as HTMLInputElement).checked));
+    this.captureElement(b);
     b.closeElement();
   }
 }
@@ -90,6 +94,7 @@ export class InputDate extends InputBase<Date | string> {
         return parseDateInput(raw, this.type) ?? raw;
       }),
     );
+    this.captureElement(b);
     b.closeElement();
   }
 }
@@ -132,6 +137,7 @@ export class InputSelect extends InputBase<string> {
     b.addAttribute(this.nextSequence(), "value", this.currentValue ?? "");
     this.applyCommonAttributes(b);
     b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler((e) => (e.target as HTMLSelectElement).value));
+    this.captureElement(b);
     if (this.childContent) {
       this.childContent(b);
     }

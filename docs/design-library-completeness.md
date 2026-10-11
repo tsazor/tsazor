@@ -69,10 +69,10 @@ The Bootstrap skin caught up with Autocomplete, CheckboxGroup, SidebarNav and Tr
 | Sortable list (drag and drop, with a keyboard way; SortableList, done 2026-10-10) | SortableList, Drag | DropZone | A |
 | Overlay (busy state; done 2026-10-11) | Overlay | Overlay | B |
 | TimePicker (done 2026-10-11) | DateTime | TimePicker | B |
-| Hotkeys | KeyCode | Hotkey | B |
+| Hotkeys (Hotkey and KeyCode, done 2026-10-11) | KeyCode | Hotkey | B |
 | Highlighter (done 2026-10-11) | Highlighter | Highlighter | B |
 | Rating and RatingDisplay (done 2026-10-11) | RatingDisplay | Rating | B |
-| ColorPicker | ColorPicker | ColorPicker | B |
+| ColorPicker and ColorPickerInput (done 2026-10-11) | ColorPicker | ColorPicker | B |
 | Carousel | none | Carousel | B |
 | Overflow | Overflow | none | B |
 | Link, Image, ScrollToTop, input Mask | partly | yes | B |
@@ -143,3 +143,4 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L12 | `SortableList`, the keys | The gate pressed Space right after a move had rendered: the async key handler read the item from the key's target, a node the move had already given to another item, and acted on that one; with the pick-up still waiting, the next arrow key wasn't claimed at all (a held arrow key repeats as fast) | The keys act in turn (one queue for all lists of a page); whether a key is claimed (`preventDefault`) follows from the keys before it at once; a held item is found by its state, not by the key's target; the state attributes are set again right after each change; while an item is held, a key that lands outside the lists (its focused node was just removed) still goes to it (2026-10-10; `packages/ui/test/sortable.test.ts`) |
 | L13 | `@tsazor/bootstrap`, `@attributes` | The Overlay's demo put `class` on a Bootstrap `Card`: `tsazor check` refused it (TZS025). Many Bootstrap components capture no attributes, where their Fluent twins (and Blazor's) do | `Card` first, then the other thirteen whose Fluent twin takes them (2026-10-11; `packages/bootstrap/test/attributes.test.ts`). `Tabs` wraps its tab list and panels in a `div` for them |
 | L14 | Published declarations (`@tsazor/workspace`) | The Overlay's API snapshot showed `opacity: undefined`: a parameter without a type annotation (`@Parameter() wrap = false`) was written with the type it didn't have. 22 parameters per skin, all from wave A, where TypeScript's inference made the annotation look redundant | The literal initializer's type (`boolean`, `number`, `string`), else `unknown` (2026-10-11; both skins' `test/declarations.test.ts`) |
+| L15 | `InputBase` (`@tsazor/runtime`), the skins' inputs | The shortcuts demo: Ctrl+K should focus a TextInput through its `@ref`, as Blazor's `Element.Value.FocusAsync()` does; Tsazor's inputs held no element (only InputFile did) | `InputBase.element`, set by the runtime's inputs and by the skins' eleven input components on their field (2026-10-11; `packages/runtime/test/forms.test.ts`, both skins' `test/element.test.ts`) |

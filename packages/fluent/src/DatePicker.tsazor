@@ -19,7 +19,7 @@
         <label class="fui-input__label" for="@this.field.id(this.id)">@this.label</label>
     }
     <div class="fui-date-picker__field" @ref="fieldBox">
-        <input id="@this.field.id(this.id)" type="text" autocomplete="off" @attributes="@this.inputAttributes" value="@this.text" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
+        <input @ref="element" id="@this.field.id(this.id)" type="text" autocomplete="off" @attributes="@this.inputAttributes" value="@this.text" @onchange="this.handleChange" @onkeydown="this.fieldKeydown" />
         <button type="button" class="fui-date-picker__button" aria-label="@this.buttonLabel" title="@this.buttonLabel" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar20Regular" /></button>
     </div>
     @if (this.open) {

@@ -12,7 +12,7 @@
     @if (label) {
         <label class="fui-input__label" for="@field.id(id)">@label</label>
     }
-    <input id="@field.id(id)" type="@type" value="@(currentValue ?? "")" @attributes="@this.inputAttributes" @onchange="handleChange" />
+    <input @ref="element" id="@field.id(id)" type="@type" value="@(currentValue ?? "")" @attributes="@this.inputAttributes" @onchange="handleChange" />
     @if (help) {
         <span class="fui-input__help" id="@field.helpId(id)">@help</span>
     }

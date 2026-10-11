@@ -157,6 +157,20 @@ render in the browser.
 - **Highlighting.** `FluentHighlighter` and `MudHighlighter` keep their parameters as `<Highlighter>` (`Text`,
   `HighlightedText`, `Delimiters`, `HighlightedTexts`, `CaseSensitive`, `UntilNextBoundary`). MudBlazor's
   `Markup="true"` has no counterpart: the text stays text, so markup in a search result can't run.
+- **Focusing an input.** `await nameInput.Element.Value.FocusAsync()` (Blazor) and `await field.FocusAsync()` (Fluent
+  UI Blazor) become `this.nameInput?.element?.focus()`: every input holds its field as `element` once rendered.
+- **Keyboard shortcuts.** MudBlazor's `<MudHotkey Key="JsKey.KeyK" KeyModifiers="@(new[] { JsKeyModifier.ControlLeft })"
+  OnHotkeyPressed="…">` becomes `<Hotkey Keys="Ctrl+K" OnHotkeyPressed="…">`: the combination is text, and "Mod+K"
+  is Cmd on a Mac and Ctrl elsewhere. A plain key ("?") doesn't fire while someone types into a field. Fluent UI
+  Blazor's `FluentKeyCode` keeps its parameters as `<KeyCode>` with key names as the browser writes them
+  (`KeyCode.Enter` is `"Enter"`, `KeyCode.Down` is `"ArrowDown"`); its handlers get the KeyboardEvent. On one element
+  of your own, `@onkeydown` with `@onkeydown:preventDefault` needs neither. Put `aria-keyshortcuts` on the control a
+  shortcut triggers (`ariaKeyShortcuts` writes it).
+- **Color pickers.** `FluentColorPicker` keeps `SelectedColor`, `Palette`, `FindClosestColor`, `Width` and `Height`;
+  `View="ColorPickerView.SwatchPalette"` is `View="swatch"`, `ColorWheel` `"wheel"`, `HsvSquare` `"hsv"`.
+  `FluentColorPickerInput` becomes `<ColorPickerInput @bind-Value="…">` (`HideTextInput`, `IconPalette`). MudBlazor's
+  `MudColorPicker` (a `MudColor` value) takes hex text instead: `color.Value` is `"#rrggbb"`; its alpha channel has no
+  counterpart. The value is hex text, as an `<input type="color">` and CSS take it.
 - **Busy states.** `<FluentOverlay @bind-Visible="saving" FullScreen="true">` keeps its parameters as `<Overlay>`
   (`Interactive`, `BackgroundColor`, `Opacity`, `CloseMode`; `OverlayCloseMode.InsideOnly` is `"inside"`,
   `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `show()`/`close()`. MudBlazor's `MudOverlay`:

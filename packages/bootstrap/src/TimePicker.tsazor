@@ -21,13 +21,13 @@
         <label class="form-label" for="@this.field.id(this.id)">@this.label</label>
     }
     @if (this.renderStyle === "native") {
-        <input id="@this.field.id(this.id)" type="time" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.nativeValue" @onchange="this.nativeChange" />
+        <input @ref="element" id="@this.field.id(this.id)" type="time" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel" @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.nativeValue" @onchange="this.nativeChange" />
     } else {
         <div class="input-group" @ref="fieldBox">
-            <input id="@this.field.id(this.id)" type="text" role="combobox" autocomplete="off" aria-autocomplete="none"
+            <input @ref="element" id="@this.field.id(this.id)" type="text" role="combobox" autocomplete="off" aria-autocomplete="none"
                    aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId" aria-activedescendant="@this.activeId"
                    placeholder="@this.placeholderText" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel"
-                   @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @ref="input" @onchange="this.handleChange" @onkeydown="this.keydown" />
+                   @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @onchange="this.handleChange" @onkeydown="this.keydown" />
             <button type="button" class="btn btn-outline-secondary" tabindex="-1" aria-label="@this.buttonLabel" title="@this.buttonLabel"
                     aria-controls="@this.listId" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)"
                     @ref="button" @onmousedown:preventDefault @onclick="this.toggle"><Icon value="@Clock" /></button>
@@ -89,7 +89,6 @@
     private active = -1;
     private scrollPending = false;
     private fieldBox?: HTMLDivElement;
-    private input?: HTMLInputElement;
     private button?: HTMLButtonElement;
     private list?: HTMLUListElement;
 
@@ -228,7 +227,7 @@
             this.setOpen(false);
             return;
         }
-        this.input?.focus({ preventScroll: true });
+        this.element?.focus({ preventScroll: true });
         this.openAt(initialTimeOption(this.options, this.currentValue, this.optionDisabled));
     }
 
