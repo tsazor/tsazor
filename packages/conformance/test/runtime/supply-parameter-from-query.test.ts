@@ -219,7 +219,7 @@ describe("SupplyParameterFromQuery — RouteView interactions", () => {
         }
       }
       class Provider extends AuthenticationStateProvider {
-        getState(): Promise<AuthenticationState> {
+        getAuthenticationStateAsync(): Promise<AuthenticationState> {
           return Promise.resolve(new AuthenticationState(createUser({ name: "bea" })));
         }
       }

@@ -39,7 +39,7 @@ export declare class AuthenticationState {
 export declare abstract class AuthenticationStateProvider {
     private readonly subscribers;
     private cachedState?;
-    abstract getState(): Promise<AuthenticationState>;
+    abstract getAuthenticationStateAsync(): Promise<AuthenticationState>;
     peekState(): AuthenticationState | undefined;
     get notificationVersion(): number;
     private version;

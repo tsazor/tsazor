@@ -7,7 +7,7 @@ import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider, createUser
 export class DemoAuthProvider extends AuthenticationStateProvider {
   private current = ANONYMOUS;
 
-  getState(): Promise<AuthenticationState> {
+  getAuthenticationStateAsync(): Promise<AuthenticationState> {
     return Promise.resolve(this.current);
   }
 

@@ -109,7 +109,7 @@ describe("App.razor shapes over the built-in components", () => {
     constructor(private readonly state: AuthenticationState) {
       super();
     }
-    getState(): Promise<AuthenticationState> {
+    getAuthenticationStateAsync(): Promise<AuthenticationState> {
       return Promise.resolve(this.state);
     }
   }

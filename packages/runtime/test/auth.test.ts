@@ -27,11 +27,11 @@ import {
 
 class TestAuthProvider extends AuthenticationStateProvider {
   state: AuthenticationState = ANONYMOUS;
-  /** When true, getState() stays pending until release() — Authorizing test. */
+  /** When true, getAuthenticationStateAsync() stays pending until release() — Authorizing test. */
   pending = false;
   private resolvers: Array<(state: AuthenticationState) => void> = [];
 
-  getState(): Promise<AuthenticationState> {
+  getAuthenticationStateAsync(): Promise<AuthenticationState> {
     if (this.pending) {
       return new Promise((resolve) => this.resolvers.push(resolve));
     }
@@ -43,7 +43,7 @@ class TestAuthProvider extends AuthenticationStateProvider {
     this.notifyAuthenticationStateChanged(this.state);
   }
 
-  /** Resolves all pending getState() calls with the current state. */
+  /** Resolves all pending getAuthenticationStateAsync() calls with the current state. */
   release(): void {
     for (const resolve of this.resolvers.splice(0)) {
       resolve(this.state);
@@ -92,7 +92,7 @@ function container(): HTMLElement {
 }
 
 /**
- * waitUntilIdle does not track the untracked provider.getState() promise
+ * waitUntilIdle does not track the untracked provider.getAuthenticationStateAsync() promise
  * chains; one macrotask turn guarantees every microtask (and thus the queued
  * re-render) has flushed.
  */

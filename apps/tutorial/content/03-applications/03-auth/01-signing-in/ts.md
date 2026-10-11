@@ -12,7 +12,8 @@ Somebody has to know who's signed in. In Tsazor that's an **authentication state
 a service that answers "who is the user?" and tells the app when the answer changes. The
 app's provider is `BakeryAuth.ts`, and `Program.ts` already registers it.
 
-`getState()` answers the question; right now it always says "nobody". Fill in `signIn`:
+`getAuthenticationStateAsync()` answers the question; right now it always says "nobody". Fill
+in `signIn`:
 
 ```ts
 signIn(name: string) {

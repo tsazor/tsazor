@@ -145,8 +145,9 @@ everything pushed.
 >     `Async` included; a method Tsazor adds gets it when it returns a Promise (design-principles.md point 3,
 >     migration-practices.md). Renamed: Virtualize `refreshDataAsync`/`scrollToItemAsync`, DataGrid
 >     `scrollToItemAsync`, Overlay `showAsync`/`closeAsync`, Wizard `goToStepAsync`. Carousel's `moveTo`/`next`/
->     `previous` stay (MudBlazor's names have no suffix). Open: `AuthenticationStateProvider.getState()` (Blazor's
->     `GetAuthenticationStateAsync`) — the owner's `fluentcms-admin` WIP overrides it.
+>     `previous` stay (MudBlazor's names have no suffix). `AuthenticationStateProvider.getState()` is
+>     `getAuthenticationStateAsync()` (owner, same day). **The owner's `fluentcms-admin` WIP** overrides the old name
+>     in `src/auth/fluent-auth-provider.ts`: one line for the owner to rename.
 >   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
 >     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
 >     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git

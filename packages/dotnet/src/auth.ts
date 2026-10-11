@@ -39,7 +39,7 @@ export interface CookieAuthOptions {
   endpoint?: string;
 }
 
-/** Cookie-session form: getState() asks the server; failure ⇒ anonymous. */
+/** Cookie-session form: getAuthenticationStateAsync() asks the server; failure ⇒ anonymous. */
 export class CookieAuthenticationStateProvider extends AuthenticationStateProvider {
   private readonly endpoint: string;
 
@@ -55,7 +55,7 @@ export class CookieAuthenticationStateProvider extends AuthenticationStateProvid
     this.endpoint = options.endpoint ?? "/auth/user";
   }
 
-  override async getState(): Promise<AuthenticationState> {
+  override async getAuthenticationStateAsync(): Promise<AuthenticationState> {
     try {
       const body = await this.http.getJson<CookieUserEndpointResponse>(this.endpoint);
       const name = body?.user?.name;
@@ -70,8 +70,9 @@ export class CookieAuthenticationStateProvider extends AuthenticationStateProvid
         }),
       );
     } catch {
-      // Network/TLS/parse errors are anonymous — no throw in getState (the
-      // runtime would log and fall back to ANONYMOUS anyway).
+      // Network/TLS/parse errors are anonymous — no throw in
+      // getAuthenticationStateAsync (the runtime would log and fall back to
+      // ANONYMOUS anyway).
       return ANONYMOUS;
     }
   }
@@ -185,7 +186,7 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
     this.setToken(undefined);
   }
 
-  override async getState(): Promise<AuthenticationState> {
+  override async getAuthenticationStateAsync(): Promise<AuthenticationState> {
     return this.state;
   }
 
@@ -193,7 +194,7 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
     try {
       return new AuthenticationState(principalFromJwt(decodeJwt(token)));
     } catch {
-      // A broken token is anonymous, no throw — getState() stays total.
+      // A broken token is anonymous, no throw — getAuthenticationStateAsync() stays total.
       return ANONYMOUS;
     }
   }

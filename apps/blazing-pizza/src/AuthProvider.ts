@@ -20,7 +20,7 @@ export class AuthProvider extends AuthenticationStateProvider {
   private user: UserInfo | null = null;
   private readonly api = new PizzaApiClient(new TsazorHttp());
 
-  getState(): Promise<AuthenticationState> {
+  getAuthenticationStateAsync(): Promise<AuthenticationState> {
     // First call (app start / reload): re-hydrate from the session cookie.
     if (this.user === null && !this.probed) return this.probe();
     return Promise.resolve(this.current);

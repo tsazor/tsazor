@@ -48,18 +48,18 @@ describe("JwtAuthenticationStateProvider", () => {
     const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada", role: "admin" }));
     const states: string[] = [];
     const stop = provider.subscribe((state) => states.push(state.user.name));
-    expect((await provider.getState()).user.name).toBe("Ada");
+    expect((await provider.getAuthenticationStateAsync()).user.name).toBe("Ada");
 
     provider.setToken(makeJwt({ name: "Bob" }));
-    expect((await provider.getState()).user.name).toBe("Bob");
+    expect((await provider.getAuthenticationStateAsync()).user.name).toBe("Bob");
     provider.logout();
-    expect((await provider.getState()).user.isAuthenticated).toBe(false);
-    expect((await provider.getState()).user).toEqual(ANONYMOUS.user);
+    expect((await provider.getAuthenticationStateAsync()).user.isAuthenticated).toBe(false);
+    expect((await provider.getAuthenticationStateAsync()).user).toEqual(ANONYMOUS.user);
     stop();
     expect(states).toEqual(["Bob", ""]);
 
     const broken = new JwtAuthenticationStateProvider("garbage.parts.x");
-    expect((await broken.getState()).user.isAuthenticated).toBe(false);
+    expect((await broken.getAuthenticationStateAsync()).user.isAuthenticated).toBe(false);
   });
 
   it("attachJwtAuth adds the Bearer header (and does not overwrite existing ones)", async () => {
@@ -97,7 +97,7 @@ describe("CookieAuthenticationStateProvider", () => {
       vi.fn(async () => new Response(JSON.stringify({ user: { name: "Ada", roles: "admin", claims: { tenant: ["t1"] } } }), { status: 200 })),
     );
     const provider = new CookieAuthenticationStateProvider(new TsazorHttp());
-    const state = await provider.getState();
+    const state = await provider.getAuthenticationStateAsync();
     expect(state.user.name).toBe("Ada");
     expect([...state.user.roles]).toEqual(["admin"]);
     expect(state.user.claims).toEqual([{ type: "tenant", value: "t1" }]);
@@ -106,6 +106,6 @@ describe("CookieAuthenticationStateProvider", () => {
   it("is anonymous on an empty user shape (the server's logout signal)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ user: undefined }), { status: 200 })));
     const provider = new CookieAuthenticationStateProvider(new TsazorHttp());
-    expect((await provider.getState()).user.isAuthenticated).toBe(false);
+    expect((await provider.getAuthenticationStateAsync()).user.isAuthenticated).toBe(false);
   });
 });

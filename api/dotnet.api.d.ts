@@ -19,7 +19,7 @@ export declare class CookieAuthenticationStateProvider extends AuthenticationSta
     private readonly http;
     private readonly endpoint;
     constructor(http: TsazorHttp, options?: CookieAuthOptions);
-    getState(): Promise<AuthenticationState>;
+    getAuthenticationStateAsync(): Promise<AuthenticationState>;
 }
 
 // CookieAuthOptions
@@ -82,7 +82,7 @@ export declare class JwtAuthenticationStateProvider extends AuthenticationStateP
     getToken(): string | undefined;
     setToken(token: string | undefined): void;
     logout(): void;
-    getState(): Promise<AuthenticationState>;
+    getAuthenticationStateAsync(): Promise<AuthenticationState>;
     private decode;
 }
 

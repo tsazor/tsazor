@@ -79,7 +79,8 @@ render in the browser.
   `onInitializedAsync` gets TZS032 with a rename fix (F14).
 - **Method names are Blazor's, in camelCase — `Async` included.** `RefreshDataAsync()` is `refreshDataAsync()`,
   `ScrollToItemAsync` `scrollToItemAsync`, a `FluentOverlay`'s `ShowAsync()` `showAsync()`, a `FluentWizard`'s
-  `GoToStepAsync` `goToStepAsync`. A method without `Async` in Blazor has none here either, even when it returns a
+  `GoToStepAsync` `goToStepAsync`, and an `AuthenticationStateProvider` overrides
+  `getAuthenticationStateAsync()`. A method without `Async` in Blazor has none here either, even when it returns a
   Promise (MudBlazor's `MoveTo` is a Carousel's `moveTo`). A method Tsazor adds gets `Async` when it returns a
   Promise. Tsazor chooses this over JavaScript's habit (`fetch()`, `json()` carry no suffix) because a Blazor
   developer then finds every method under the name they know, and the codemod renames by rule, not by table. Two

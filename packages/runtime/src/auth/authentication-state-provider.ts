@@ -13,7 +13,7 @@ export abstract class AuthenticationStateProvider {
   private cachedState?: AuthenticationState;
 
   /** Resolves the current state; may be async (e.g. validating a token). */
-  abstract getState(): Promise<AuthenticationState>;
+  abstract getAuthenticationStateAsync(): Promise<AuthenticationState>;
 
   /** The most recently resolved state, if any (no request started). */
   peekState(): AuthenticationState | undefined {
@@ -22,8 +22,8 @@ export abstract class AuthenticationStateProvider {
 
   /**
    * Bumped by every notification. watchAuthenticationState compares it
-   * before and after its getState() request: a result that arrives after a
-   * newer notification is stale and dropped.
+   * before and after its getAuthenticationStateAsync() request: a result
+   * that arrives after a newer notification is stale and dropped.
    */
   get notificationVersion(): number {
     return this.version;
@@ -72,17 +72,18 @@ export function watchAuthenticationState(
   let active = true;
   const unsubscribe = provider.subscribe(apply);
   // The initial request is tokened with the notification version: if a
-  // login/logout notification arrives while getState() is pending, the late
-  // result (or failure) must not overwrite the newer state.
+  // login/logout notification arrives while getAuthenticationStateAsync()
+  // is pending, the late result (or failure) must not overwrite the newer
+  // state.
   const requestVersion = provider.notificationVersion;
   const isCurrent = () => active && provider.notificationVersion === requestVersion;
-  void provider.getState().then(
+  void provider.getAuthenticationStateAsync().then(
     (state) => {
       if (isCurrent()) apply(state);
     },
     (error) => {
       // eslint-disable-next-line no-console
-      console.error("[tsazor] AuthenticationStateProvider.getState() failed:", error);
+      console.error("[tsazor] AuthenticationStateProvider.getAuthenticationStateAsync() failed:", error);
       if (isCurrent()) apply(ANONYMOUS);
     },
   );

@@ -4,7 +4,7 @@ import { ANONYMOUS, AuthenticationState, AuthenticationStateProvider } from "@ts
 export class BakeryAuth extends AuthenticationStateProvider {
     private current = ANONYMOUS;
 
-    getState(): Promise<AuthenticationState> {
+    getAuthenticationStateAsync(): Promise<AuthenticationState> {
         return Promise.resolve(this.current);
     }
 

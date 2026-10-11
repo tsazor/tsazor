@@ -120,7 +120,7 @@ describe("C19 — @attribute", () => {
     const { default: Page } = await import(/* @vite-ignore */ compiled.modules["Admin.tsazor"]!);
     const render = async (user: ClaimsPrincipal): Promise<string> => {
       class Provider extends AuthenticationStateProvider {
-        getState(): Promise<AuthenticationState> {
+        getAuthenticationStateAsync(): Promise<AuthenticationState> {
           return Promise.resolve(new AuthenticationState(user));
         }
       }

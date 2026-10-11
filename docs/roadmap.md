@@ -597,8 +597,8 @@ Without handlers everything stays synchronous. `baseUri` from `<base href>`, `to
 `toBaseRelativePath` (throws outside the base) like Blazor, `navigateTo(uri, forceLoad, replace)` and
 `NavigationOptions` (`replaceHistoryEntry`, `historyEntryState`). `app.dispose()`: dispose the tree,
 remove the DOM range, dispose its own NavigationManager (click + popstate), remove the HMR bridge.
-Auth: `watchAuthenticationState` tags the initial `getState()` with the provider's
-notification version; a late result after a notification (or after
+Auth: `watchAuthenticationState` tags the initial `getAuthenticationStateAsync()` (then `getState()`)
+with the provider's notification version; a late result after a notification (or after
 unsubscribe) is discarded. Conformance: R14 ×5, R15 green, new: ambiguity, `long` > 2^53,
 `regex(a|b)`, lock against link click and popstate, `<base href>`, `app.dispose()`, auth race.
 Deviations: without a `<base>` element the base is the origin root (Blazor: directory of the

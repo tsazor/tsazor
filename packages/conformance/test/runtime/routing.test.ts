@@ -366,10 +366,10 @@ describe("R15 — app.dispose()", () => {
 });
 
 describe("auth race", () => {
-  it("a late getState() result does not overwrite a newer notification", async () => {
+  it("a late getAuthenticationStateAsync() result does not overwrite a newer notification", async () => {
     let resolveInitial!: (state: AuthenticationState) => void;
     class Provider extends AuthenticationStateProvider {
-      getState(): Promise<AuthenticationState> {
+      getAuthenticationStateAsync(): Promise<AuthenticationState> {
         return new Promise((resolve) => (resolveInitial = resolve));
       }
       signIn(name: string): void {
