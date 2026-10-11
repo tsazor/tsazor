@@ -179,7 +179,8 @@ render in the browser.
 - **Live updates.** What a Blazor Server page got through its circuit (a service's C# event,
   `InvokeAsync(StateHasChanged)`) becomes a stream the page observes: server-sent events, a WebSocket or SignalR's
   JavaScript client, through `this.observe` ([guide-live-data.md](guide-live-data.md)). Number the events and answer
-  `Last-Event-ID`, and a dropped connection loses nothing.
+  `Last-Event-ID`, and a dropped connection loses nothing. A live chart keeps a window of the last values in the
+  page and updates the chart without animation ([guide-live-data.md](guide-live-data.md#into-a-chart)).
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

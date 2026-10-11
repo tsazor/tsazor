@@ -23,21 +23,21 @@ leaves. That is exactly a chart's lifetime: create, then destroy.
 <canvas role="img" aria-label="@summary" @attach="sales.attach"></canvas>
 
 @code {
-    private readonly sales = new BarChart(this.thisWeek);
+    private readonly sales = new SeriesChart(this.thisWeek);
 
-    private show(week: BarSeries): void {
+    private show(week: Series): void {
         this.sales.update(week);
     }
 }
 ```
 
 The controller keeps the chart, so new data updates it in place (and it animates) instead of starting over
-(`apps/skins/src/charts.ts`, shortened):
+(`apps/skins/src/charts.ts`, shortened to bars; it draws lines too):
 
 ```ts
-export class BarChart {
+export class SeriesChart {
   #chart?: Chart<"bar">;
-  constructor(private series: BarSeries) {}
+  constructor(private series: Series) {}
 
   readonly attach: Attachment<HTMLCanvasElement> = (canvas) => {
     let attached = true;
@@ -54,7 +54,7 @@ export class BarChart {
     };
   };
 
-  update(series: BarSeries): void {
+  update(series: Series): void {
     this.series = series;
     if (this.#chart === undefined) return;
     this.#chart.data.datasets[0]!.data = [...series.values];
@@ -71,10 +71,12 @@ export class BarChart {
 - **A late load.** The attachment is synchronous and the import isn't; the `attached` flag keeps a chart from being
   created on a canvas that already left (a quick navigation).
 - **Colors from the skin.** Read CSS custom properties from the element (`getComputedStyle(canvas)`), and define
-  them in the app's CSS from the skin's tokens: `--chart-bar: var(--fui-brand-background, var(--bs-primary))` takes
+  them in the app's CSS from the skin's tokens: `--chart-color: var(--fui-brand-background, var(--bs-primary))` takes
   Fluent's brand color, else Bootstrap's primary. Listen to `matchMedia("(prefers-color-scheme: dark)")` and update
   the chart's colors when the scheme changes.
-- **Motion.** With `prefers-reduced-motion: reduce`, set `animation: false`.
+- **Motion.** With `prefers-reduced-motion: reduce`, set `animation: false`. A live chart doesn't animate either
+  (`chart.update("none")`): each new value would otherwise slide the whole line along
+  ([guide-live-data.md](guide-live-data.md#into-a-chart)).
 - **Accessibility.** A canvas is an image to a screen reader. Give it `role="img"` and an `aria-label` that says
   what the chart shows ("Loaves sold this week: from 98 to 182, the most on Sat."), and put the numbers in a table
   next to it (`<details><summary>The data</summary><table>…</table></details>`), from the same data.

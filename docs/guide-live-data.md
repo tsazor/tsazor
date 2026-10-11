@@ -4,8 +4,8 @@ A page that shows what happens on the server as it happens — orders coming in,
 dashboard — subscribes to a stream and renders each event. In Tsazor the subscription belongs to the component:
 `this.observe(source, onNext)` subscribes, renders on every notification, and unsubscribes when the component is
 disposed ([design-bindable-observe.md](design-bindable-observe.md), §2). This guide connects it to server-sent
-events (`EventSource`). `apps/skins` runs it (`/charts`, "Live data"), and its gate checks it in Edge, Firefox and
-WebKit across two dropped connections.
+events (`EventSource`) and draws them in a live chart. `apps/skins` runs it (`/charts`, "Live data"), and its gate
+checks it in Edge, Firefox and WebKit across dropped connections.
 
 If you come from Blazor Server: there the circuit itself is the live channel, and a service raises a C# event that
 the component handles with `InvokeAsync(StateHasChanged)`. In the browser the channel is explicit. Tsazor chooses
@@ -97,7 +97,40 @@ app.MapGet("/api/events", (HttpRequest request, OrderFeed feed, CancellationToke
 - **HTTP/1.1** allows six connections per origin, and each open stream takes one. Over HTTP/2 they share one.
 
 The skins app's endpoint (`apps/skins/scripts/events-endpoint.mjs`) ends every connection after five events on
-purpose; the gate waits for twelve and checks that they arrive as 1 to 12.
+purpose; the gate waits for twelve and checks that the readings it shows are numbered without a gap or a repeat.
+
+## Into a chart
+
+A dashboard shows the last minutes as a line that moves on. The page keeps the window, and each event updates the
+chart in place ([guide-charts.md](guide-charts.md), the chart through `@attach`):
+
+```razor
+<canvas role="img" aria-label="@ovenSummary" @attach="oven.attach"></canvas>
+
+@code {
+    private readings: Reading[] = [];
+    private readonly oven = new SeriesChart(this.ovenSeries, { type: "line", live: true });
+
+    protected override onInitialized(): void {
+        this.observe(serverEvents<Reading>("/api/events"), (reading) => {
+            this.readings = [...this.readings, reading].slice(-20); // the last 20
+            this.oven.update(this.ovenSeries);
+        });
+    }
+
+    private get ovenSeries(): Series {
+        return { label: "Oven temperature, °C", labels: this.readings.map((r) => String(r.id)), values: this.readings.map((r) => r.celsius) };
+    }
+}
+```
+
+- **Keep a window.** A stream doesn't end; `slice(-20)` keeps the page's memory and the chart's width fixed.
+- **Draw at once.** `chart.update("none")` for each event: an animation from the last values slides the line
+  sideways, several times a second.
+- **The same data for everyone.** The text alternative (`ovenSummary`: "from 222 to 238 °C, now 228 °C") and the
+  table next to the chart come from `readings` too, and `observe` renders them with each event.
+- **Fit the axis.** A line that follows a value takes its axis from the data (`beginAtZero: false`); bars that
+  compare start at zero.
 
 ## Other sources, the same pattern
 

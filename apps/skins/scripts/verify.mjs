@@ -598,10 +598,10 @@ try {
     const treeViolations = await axe(page);
     say(treeViolations.length === 0, `axe /structure with the tree open${treeViolations.length ? `: ${treeViolations.join(" | ")}` : ""}`);
 
-    /* Charts: a chart library through @attach, the app's own SVG, server events through observe. */
+    /* Charts: a chart library through @attach, the app's own SVG, a live chart of server events through observe. */
     await page.emulateMedia({ reducedMotion: "reduce" });
     await open(page, base, "/charts");
-    const canvas = page.locator(".chart-box canvas");
+    const canvas = page.locator(".sales-chart canvas");
     const pixels = () => canvas.evaluate((element) => {
       const context = element.getContext("2d");
       const data = context.getImageData(0, 0, element.width, element.height).data;
@@ -614,7 +614,7 @@ try {
       return { ink, hash };
     });
     await page.waitForFunction(() => {
-      const element = document.querySelector(".chart-box canvas");
+      const element = document.querySelector(".sales-chart canvas");
       const data = element?.getContext("2d")?.getImageData(0, 0, element.width, element.height).data;
       return data !== undefined && data.some((value, i) => i % 4 === 3 && value > 0);
     }, undefined, { timeout: 30_000 });
@@ -622,25 +622,36 @@ try {
     say(thisWeek.ink > 1000, `charts: Chart.js draws on the canvas the attachment gave it (${thisWeek.ink} pixels)`);
     await page.getByRole("button", { name: "Last week" }).click();
     await page.waitForFunction((before) => {
-      const element = document.querySelector(".chart-box canvas");
+      const element = document.querySelector(".sales-chart canvas");
       const data = element.getContext("2d").getImageData(0, 0, element.width, element.height).data;
       let hash = 0;
       for (let i = 3; i < data.length; i += 4) hash = (hash * 31 + data[i - 1] + data[i]) % 1000000007;
       return hash !== before;
     }, thisWeek.hash);
-    say((await canvas.getAttribute("aria-label")) === "Loaves sold last week: from 99 to 171, the most on Sat." && (await page.locator(".chart-table caption").textContent()) === "Loaves sold last week", "charts: new data updates the chart in place, its text alternative and its table");
+    say((await canvas.getAttribute("aria-label")) === "Loaves sold last week: from 99 to 171, the most on Sat." && (await page.locator(".sales-table caption").textContent()) === "Loaves sold last week", "charts: new data updates the chart in place, its text alternative and its table");
     const tiles = page.locator(".treemap .treemap__tile");
     say((await tiles.count()) === 9, `charts: the treemap draws a tile per product (${await tiles.count()})`);
     const area = (name) => page.locator(`.treemap [data-name="${name}"] rect`).evaluate((rect) => rect.getBBox().width * rect.getBBox().height);
     const ratio = (await area("Sourdough")) / (await area("Rye"));
     say(Math.abs(ratio - 340 / 210) < 0.25, `charts: a tile's area follows its value (Sourdough/Rye ${ratio.toFixed(2)}, the values ${(340 / 210).toFixed(2)})`);
-    await page.waitForFunction(() => (document.querySelector(".live-ids")?.textContent?.split(" ").length ?? 0) >= 12, undefined, { timeout: 30_000 });
-    const live = await page.evaluate(() => ({
-      ids: document.querySelector(".live-ids").textContent.split(" ").map(Number),
-      loaves: Number(document.querySelector(".live-loaves").textContent),
-    }));
-    say(live.ids.every((id, index) => id === index + 1), `charts: the events arrive across reconnects with nothing lost or twice (Last-Event-ID; ${live.ids.slice(0, 12).join(" ")})`);
-    say(live.loaves === live.ids[live.ids.length - 1] * 12, `charts: observe renders each event (${live.loaves} loaves)`);
+    // Twelve readings span two reconnects (five per connection); any window of them spans at least two.
+    await page.waitForFunction(() => Number(document.querySelector(".oven-table tbody tr:last-child th")?.textContent ?? 0) >= 12, undefined, { timeout: 30_000 });
+    const live = await page.evaluate(() => {
+      const element = document.querySelector(".oven-chart canvas");
+      const data = element.getContext("2d").getImageData(0, 0, element.width, element.height).data;
+      let ink = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) ink++;
+      return {
+        ids: [...document.querySelectorAll(".oven-table tbody th")].map((cell) => Number(cell.textContent)),
+        last: document.querySelector(".oven-table tbody tr:last-child td").textContent,
+        now: document.querySelector(".live-now").textContent,
+        label: element.getAttribute("aria-label"),
+        ink,
+      };
+    });
+    say(live.ids.length >= 12 && live.ids.length <= 20 && live.ids.every((id, index) => index === 0 || id === live.ids[index - 1] + 1), `charts: the events arrive across reconnects with nothing lost or twice (Last-Event-ID; ${live.ids.join(" ")})`);
+    say(live.now === live.last && live.label.endsWith(`now ${live.now} °C.`), `charts: observe renders each event, the text alternative too (${live.now} °C)`);
+    say(live.ink > 500, `charts: the live chart draws the readings (${live.ink} pixels)`);
     const chartViolations = await axe(page);
     say(chartViolations.length === 0, `axe /charts with the data${chartViolations.length ? `: ${chartViolations.join(" | ")}` : ""}`);
     await page.emulateMedia({ reducedMotion: "no-preference" });

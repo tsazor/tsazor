@@ -1,12 +1,12 @@
 @page "/charts"
 @import { hierarchy, treemap, treemapSquarify } from "d3-hierarchy"
-@import { BarChart, type BarSeries } from "../charts"
+@import { SeriesChart, type Series } from "../charts"
 @import { serverEvents, type StreamState } from "../server-events"
 
 <Typography Variant="h1">Charts and live data</Typography>
 <Typography>
-    A chart library through <code>@@attach</code>, a visualization of the app's own in SVG markup, and server events
-    through <code>observe</code> — the patterns of docs/guide-charts.md and docs/guide-live-data.md.
+    A chart library through <code>@@attach</code>, a visualization of the app's own in SVG markup, and a live chart of
+    server events through <code>observe</code> — the patterns of docs/guide-charts.md and docs/guide-live-data.md.
 </Typography>
 
 <section class="demo">
@@ -15,12 +15,12 @@
         <Button Intent="@(week === 0 ? "primary" : "secondary")" aria-pressed="@(week === 0 ? "true" : "false")" OnClick="@(() => this.show(0))">This week</Button>
         <Button Intent="@(week === 1 ? "primary" : "secondary")" aria-pressed="@(week === 1 ? "true" : "false")" OnClick="@(() => this.show(1))">Last week</Button>
     </ButtonGroup>
-    <div class="chart-box">
+    <div class="chart-box sales-chart">
         <canvas role="img" aria-label="@summary" @attach="sales.attach"></canvas>
     </div>
     <details class="chart-data">
         <summary>The data</summary>
-        <table class="chart-table">
+        <table class="chart-table sales-table">
             <caption>@weeks[week]!.label</caption>
             <thead><tr><th scope="col">Day</th><th scope="col">Loaves</th></tr></thead>
             <tbody>
@@ -49,17 +49,31 @@
 
 <section class="demo">
     <Typography Variant="h2">Live data</Typography>
-    <p class="live-state">Stream: <span class="live-stream">@stream</span>. Loaves baked: <span class="live-loaves">@loaves</span>.</p>
-    <p class="live-ids" aria-hidden="true">@ids.join(" ")</p>
+    <p class="live-state">Stream: <span class="live-stream">@stream</span>. Oven: <span class="live-now">@(readings.at(-1)?.celsius ?? "–")</span> °C.</p>
+    <div class="chart-box oven-chart">
+        <canvas role="img" aria-label="@ovenSummary" @attach="oven.attach"></canvas>
+    </div>
+    <details class="chart-data">
+        <summary>The readings</summary>
+        <table class="chart-table oven-table">
+            <caption>@ovenSeries.label</caption>
+            <thead><tr><th scope="col">Reading</th><th scope="col">°C</th></tr></thead>
+            <tbody>
+                @foreach (const reading of readings) {
+                    <tr @key="reading.id"><th scope="row">@reading.id</th><td>@reading.celsius</td></tr>
+                }
+            </tbody>
+        </table>
+    </details>
 </section>
 
 @code {
-    private readonly weeks: BarSeries[] = [
+    private readonly weeks: Series[] = [
         { label: "Loaves sold this week", labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], values: [120, 98, 134, 110, 156, 182] },
         { label: "Loaves sold last week", labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], values: [104, 121, 99, 140, 133, 171] },
     ];
     private week = 0;
-    private readonly sales = new BarChart(this.weeks[0]!);
+    private readonly sales = new SeriesChart(this.weeks[0]!);
 
     private readonly products = [
         { name: "Breads", children: [{ name: "Sourdough", value: 340 }, { name: "Rye", value: 210 }, { name: "Spelt", value: 150 }, { name: "Baguette", value: 95 }] },
@@ -67,18 +81,35 @@
         { name: "Drinks", children: [{ name: "Coffee", value: 230 }, { name: "Tea", value: 60 }] },
     ];
 
+    /** The live chart shows the last readings: a window that moves on with each event. */
+    private static readonly WINDOW = 20;
     private stream: StreamState = "connecting";
-    private loaves = 0;
-    private ids: number[] = [];
+    private readings: { id: number; celsius: number }[] = [];
+    private readonly oven = new SeriesChart(this.ovenSeries, { type: "line", live: true });
 
     protected override onInitialized(): void {
-        this.observe(serverEvents<{ id: number; loaves: number }>("/api/events", (state) => {
+        this.observe(serverEvents<{ id: number; celsius: number }>("/api/events", (state) => {
             this.stream = state;
             this.stateHasChanged();
-        }), (event) => {
-            this.loaves = event.loaves;
-            this.ids = [...this.ids, event.id];
+        }), (reading) => {
+            this.readings = [...this.readings, reading].slice(-Charts.WINDOW);
+            this.oven.update(this.ovenSeries);
         });
+    }
+
+    private get ovenSeries(): Series {
+        return {
+            label: "Oven temperature, °C",
+            labels: this.readings.map((reading) => String(reading.id)),
+            values: this.readings.map((reading) => reading.celsius),
+        };
+    }
+
+    /** The line in words, for the canvas's text alternative. */
+    private get ovenSummary(): string {
+        const values = this.readings.map((reading) => reading.celsius);
+        if (values.length === 0) return "Oven temperature: waiting for the first reading.";
+        return `Oven temperature, the last ${values.length} readings: from ${Math.min(...values)} to ${Math.max(...values)} °C, now ${values.at(-1)} °C.`;
     }
 
     private show(week: number): void {
