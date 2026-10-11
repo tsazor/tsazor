@@ -1,0 +1,109 @@
+# Live data: server events through `observe`
+
+A page that shows what happens on the server as it happens — orders coming in, a batch job's progress, a
+dashboard — subscribes to a stream and renders each event. In Tsazor the subscription belongs to the component:
+`this.observe(source, onNext)` subscribes, renders on every notification, and unsubscribes when the component is
+disposed ([design-bindable-observe.md](design-bindable-observe.md), §2). This guide connects it to server-sent
+events (`EventSource`). `apps/skins` runs it (`/charts`, "Live data"), and its gate checks it in Edge, Firefox and
+WebKit across two dropped connections.
+
+If you come from Blazor Server: there the circuit itself is the live channel, and a service raises a C# event that
+the component handles with `InvokeAsync(StateHasChanged)`. In the browser the channel is explicit. Tsazor chooses
+server-sent events for one-way streams because the browser reconnects by itself and resumes where it left off,
+with nothing but HTTP on the server; for both directions take a WebSocket or SignalR's JavaScript client, through
+the same `observe`.
+
+## The source
+
+`observe` takes anything with `subscribe(listener) → () => void`. An `EventSource` becomes one in a few lines
+(`apps/skins/src/server-events.ts`):
+
+```ts
+export function serverEvents<T>(url: string, onState?: (state: StreamState) => void) {
+  return {
+    subscribe(listener: (value: T) => void): () => void {
+      const source = new EventSource(url);
+      source.addEventListener("open", () => onState?.("open"));
+      // CONNECTING after an error: the browser is retrying; CLOSED: it gave up.
+      source.addEventListener("error", () => onState?.(source.readyState === EventSource.CONNECTING ? "reconnecting" : "closed"));
+      source.addEventListener("message", (event) => listener(JSON.parse(event.data) as T));
+      return () => source.close();
+    },
+  };
+}
+```
+
+## The page
+
+```razor
+<p>Stream: @stream. Orders today: @orders.</p>
+
+@code {
+    private stream: StreamState = "connecting";
+    private orders = 0;
+
+    protected override onInitialized(): void {
+        this.observe(serverEvents<OrderEvent>("/api/events", (state) => {
+            this.stream = state;
+            this.stateHasChanged(); // not an event of the page: render it yourself
+        }), (event) => {
+            this.orders = event.total; // observe renders after onNext
+        });
+    }
+}
+```
+
+- **One subscription per component.** Observe in `onInitialized`. Observing the same source again opens a second
+  stream; `observe` returns a function that ends one early.
+- **Bursts render once.** Events that arrive in one tick become one render.
+- **Leaving the page closes the stream.** The component is disposed, `observe` calls the source's cleanup, and
+  `source.close()` ends the connection. No `dispose()` of your own.
+- **The state callback** isn't a notification of the source, so it calls `stateHasChanged()` itself.
+
+## Reconnecting without losing events
+
+A connection drops: a proxy's timeout, a deploy, the laptop's lid. `EventSource` reconnects by itself after the
+server's `retry:` (or a few seconds), and it sends the id of the last event it saw in the `Last-Event-ID` header.
+A server that numbers its events resumes from the next one, so the page misses nothing and sees nothing twice:
+
+```text
+retry: 1000
+
+id: 41
+data: {"total":41}
+
+id: 42
+data: {"total":42}
+```
+
+In ASP.NET Core (.NET 10's `TypedResults.ServerSentEvents`, or by hand):
+
+```csharp
+app.MapGet("/api/events", (HttpRequest request, OrderFeed feed, CancellationToken cancel) =>
+{
+    long.TryParse(request.Headers["Last-Event-ID"], out var lastId);
+    return TypedResults.ServerSentEvents(feed.Since(lastId, cancel)); // SseItem<T> with EventId set
+});
+```
+
+- **Number the events** on the server (`id:`), from something that survives a restart if the stream must too (an
+  order number, a sequence, a timestamp).
+- **Answer `Last-Event-ID`** with the events after it. Without ids, a reconnect starts the stream over.
+- **Tell the user.** `reconnecting` is worth a quiet note ("Reconnecting…"); `closed` means the server refused the
+  stream (a 4xx, the wrong content type) and the browser won't retry: offer a way to try again.
+- **Authentication** goes with the cookie (same origin, or `new EventSource(url, { withCredentials: true })`).
+  `EventSource` can't send an `Authorization` header; behind a bearer token, put a short-lived token in the query
+  string or use `fetch` with a stream reader.
+- **HTTP/1.1** allows six connections per origin, and each open stream takes one. Over HTTP/2 they share one.
+
+The skins app's endpoint (`apps/skins/scripts/events-endpoint.mjs`) ends every connection after five events on
+purpose; the gate waits for twelve and checks that they arrive as 1 to 12.
+
+## Other sources, the same pattern
+
+- **A WebSocket:** `subscribe` opens it, `message` calls the listener, the cleanup closes it. Reconnecting and
+  resuming are yours to write.
+- **SignalR's JavaScript client** (`@microsoft/signalr`): `connection.on("OrderPlaced", listener)` in `subscribe`,
+  `connection.off(…)` in the cleanup; `withAutomaticReconnect()` reconnects, and the hub resends what was missed if
+  you build it to.
+- **A store or an RxJS observable** works as it is: `observe` takes `subscribe → { unsubscribe() }` too.

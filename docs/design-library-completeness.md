@@ -23,7 +23,7 @@ at once:
 | Roadmap (phases → gates, evidence) | Stepper, Progress, Accordion, Markdown | Stepper, Markdown |
 | Branch map | SVG lanes, Tooltip, Popover | none (own SVG component) |
 | Approval inbox | list or DataGrid, Dialog, Markdown, a diff view | Markdown, diff view |
-| Quality | a coverage line chart, a treemap | charts (out by design; the promised guide is missing) |
+| Quality | a coverage line chart, a treemap | charts (out by design; the guide is [guide-charts.md](guide-charts.md)) |
 | Decision log | Timeline | Timeline |
 | Live event feed | a list with rows of different heights that sticks to the bottom, icons | Virtualize (core), own icons (F17) |
 | Chat | the same list, Markdown with code blocks, Avatar | Avatar, Markdown |
@@ -90,11 +90,13 @@ The rich text editor stays in the app (the FluentCMS port embeds Quill), as in b
   - `OverscanCount` and `MaxItemCount`.
 
   Sticking to the bottom for feeds and chats is Blazor 11's `AnchorMode.End`, so it is parity too.
-- **Live data:** a guide to `EventSource` through `observe`, with reconnect and `Last-Event-ID`. The Sleipnir
-  binding comes after 1.0.
+- **Live data:** a guide to `EventSource` through `observe`, with reconnect and `Last-Event-ID` (done 2026-10-11:
+  [guide-live-data.md](guide-live-data.md)). The Sleipnir binding comes after 1.0.
 - **Docs:**
   - the guide to integrating a chart library through `@attach`, promised in design-component-library.md;
   - the pattern for an app's own SVG visualization, e.g. a treemap with `d3-hierarchy`.
+
+  Both done 2026-10-11 ([guide-charts.md](guide-charts.md)), and run in `apps/skins` (`/charts`) under its gate.
 
 ## 5. Waves
 

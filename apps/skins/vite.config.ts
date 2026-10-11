@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import { tsazor } from "@tsazor/vite-plugin";
+import { streamEvents } from "./scripts/events-endpoint.mjs";
 import { receiveUpload } from "./scripts/upload-endpoint.mjs";
 
 /**
@@ -13,11 +14,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tsazor(),
       {
-        // The FileUpload demo posts to /api/upload.
-        name: "skins-upload-endpoint",
+        // The FileUpload demo posts to /api/upload; the live data demo listens to /api/events.
+        name: "skins-endpoints",
         configureServer(server) {
           server.middlewares.use((request, response, next) => {
-            if (!receiveUpload(request, response)) next();
+            if (!receiveUpload(request, response) && !streamEvents(request, response)) next();
           });
         },
       },

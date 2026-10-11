@@ -179,3 +179,59 @@ body {
   align-items: flex-start;
   gap: 1.5rem 2.5rem;
 }
+
+/* Charts: the colors come from the skin's tokens (Fluent's first, else Bootstrap's). */
+.chart-box {
+  --chart-bar: var(--fui-brand-background, var(--bs-primary));
+  --chart-grid: var(--fui-stroke-2, var(--bs-border-color));
+  position: relative;
+  height: 16rem;
+  max-width: 40rem;
+  margin-top: 0.75rem;
+  color: var(--fui-foreground-2, var(--bs-secondary-color));
+}
+
+.chart-data {
+  margin-top: 0.5rem;
+}
+
+.chart-table th,
+.chart-table td {
+  padding: 0.125rem 0.75rem;
+  text-align: start;
+}
+
+.treemap {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  height: auto;
+}
+
+.treemap__tile--breads rect {
+  fill: var(--fui-brand-background, var(--bs-primary));
+}
+
+.treemap__tile--pastries rect {
+  fill: var(--fui-color-green-filled, var(--bs-success));
+}
+
+.treemap__tile--drinks rect {
+  fill: var(--fui-color-amber-filled, var(--bs-warning));
+}
+
+.treemap text {
+  fill: #fff;
+  font-size: 0.8rem;
+}
+
+/* Fluent's amber takes white text, Bootstrap's yellow black. */
+.treemap__tile--drinks text {
+  fill: var(--fui-foreground-on-brand, #000);
+}
+
+.live-ids {
+  font-family: var(--fui-font-family-mono, var(--bs-font-monospace));
+  font-size: 0.8rem;
+  word-break: break-all;
+}

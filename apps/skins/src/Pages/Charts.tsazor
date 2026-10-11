@@ -1,0 +1,119 @@
+@page "/charts"
+@import { hierarchy, treemap, treemapSquarify } from "d3-hierarchy"
+@import { BarChart, type BarSeries } from "../charts"
+@import { serverEvents, type StreamState } from "../server-events"
+
+<Typography Variant="h1">Charts and live data</Typography>
+<Typography>
+    A chart library through <code>@@attach</code>, a visualization of the app's own in SVG markup, and server events
+    through <code>observe</code> — the patterns of docs/guide-charts.md and docs/guide-live-data.md.
+</Typography>
+
+<section class="demo">
+    <Typography Variant="h2">A chart library</Typography>
+    <ButtonGroup AriaLabel="Week">
+        <Button Intent="@(week === 0 ? "primary" : "secondary")" aria-pressed="@(week === 0 ? "true" : "false")" OnClick="@(() => this.show(0))">This week</Button>
+        <Button Intent="@(week === 1 ? "primary" : "secondary")" aria-pressed="@(week === 1 ? "true" : "false")" OnClick="@(() => this.show(1))">Last week</Button>
+    </ButtonGroup>
+    <div class="chart-box">
+        <canvas role="img" aria-label="@summary" @attach="sales.attach"></canvas>
+    </div>
+    <details class="chart-data">
+        <summary>The data</summary>
+        <table class="chart-table">
+            <caption>@weeks[week]!.label</caption>
+            <thead><tr><th scope="col">Day</th><th scope="col">Loaves</th></tr></thead>
+            <tbody>
+                @for (let i = 0; i < weeks[week]!.labels.length; i++) {
+                    <tr><th scope="row">@weeks[week]!.labels[i]</th><td>@weeks[week]!.values[i]</td></tr>
+                }
+            </tbody>
+        </table>
+    </details>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">The app's own SVG</Typography>
+    <svg class="treemap" viewBox="0 0 600 260" role="img" aria-labelledby="treemap-title">
+        <title id="treemap-title">@treemapTitle</title>
+        @foreach (const tile of tiles) {
+            <g class="@(`treemap__tile treemap__tile--${tile.group}`)" data-name="@tile.name">
+                <rect x="@tile.x" y="@tile.y" width="@tile.width" height="@tile.height" rx="3"><title>@tile.name: @tile.value</title></rect>
+                @if (tile.width > 70 && tile.height > 28) {
+                    <text x="@(tile.x + 6)" y="@(tile.y + 18)" aria-hidden="true">@tile.name</text>
+                }
+            </g>
+        }
+    </svg>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Live data</Typography>
+    <p class="live-state">Stream: <span class="live-stream">@stream</span>. Loaves baked: <span class="live-loaves">@loaves</span>.</p>
+    <p class="live-ids" aria-hidden="true">@ids.join(" ")</p>
+</section>
+
+@code {
+    private readonly weeks: BarSeries[] = [
+        { label: "Loaves sold this week", labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], values: [120, 98, 134, 110, 156, 182] },
+        { label: "Loaves sold last week", labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], values: [104, 121, 99, 140, 133, 171] },
+    ];
+    private week = 0;
+    private readonly sales = new BarChart(this.weeks[0]!);
+
+    private readonly products = [
+        { name: "Breads", children: [{ name: "Sourdough", value: 340 }, { name: "Rye", value: 210 }, { name: "Spelt", value: 150 }, { name: "Baguette", value: 95 }] },
+        { name: "Pastries", children: [{ name: "Croissant", value: 260 }, { name: "Danish", value: 120 }, { name: "Pretzel", value: 70 }] },
+        { name: "Drinks", children: [{ name: "Coffee", value: 230 }, { name: "Tea", value: 60 }] },
+    ];
+
+    private stream: StreamState = "connecting";
+    private loaves = 0;
+    private ids: number[] = [];
+
+    protected override onInitialized(): void {
+        this.observe(serverEvents<{ id: number; loaves: number }>("/api/events", (state) => {
+            this.stream = state;
+            this.stateHasChanged();
+        }), (event) => {
+            this.loaves = event.loaves;
+            this.ids = [...this.ids, event.id];
+        });
+    }
+
+    private show(week: number): void {
+        this.week = week;
+        this.sales.update(this.weeks[week]!);
+    }
+
+    /** The bars in words, for the canvas's text alternative. */
+    private get summary(): string {
+        const series = this.weeks[this.week]!;
+        const top = series.values.indexOf(Math.max(...series.values));
+        return `${series.label}: from ${Math.min(...series.values)} to ${Math.max(...series.values)}, the most on ${series.labels[top]}.`;
+    }
+
+    /** d3-hierarchy lays the products out; the markup draws them. */
+    private get tiles(): { name: string; group: string; value: number; x: number; y: number; width: number; height: number }[] {
+        type Node = { name: string; value?: number; children?: Node[] };
+        const root = hierarchy<Node>({ name: "Sales", children: this.products })
+            .sum((node) => node.value ?? 0)
+            .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+        const laidOut = treemap<Node>().size([600, 260]).padding(2).tile(treemapSquarify)(root);
+        return laidOut.leaves().map((leaf) => ({
+            name: leaf.data.name,
+            group: (leaf.parent?.data.name ?? "").toLowerCase(),
+            value: leaf.value ?? 0,
+            x: leaf.x0,
+            y: leaf.y0,
+            width: leaf.x1 - leaf.x0,
+            height: leaf.y1 - leaf.y0,
+        }));
+    }
+
+    private get treemapTitle(): string {
+        const leaves = this.products.flatMap((group) => group.children);
+        const top = leaves.reduce((best, leaf) => (leaf.value > best.value ? leaf : best));
+        return `Sales by product: ${leaves.length} products in ${this.products.length} groups, ${top.name} the most with ${top.value}.`;
+    }
+}

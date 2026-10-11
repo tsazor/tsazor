@@ -174,6 +174,12 @@ render in the browser.
   (Space, the arrows, Escape) and announcements, which SortableJS lacks; give each list a visible name
   (`aria-labelledby`). MudBlazor's `MudDropContainer`/`MudDropZone` with zone selectors becomes one `SortableList` per
   zone in one `Group`.
+- **Charts.** `MudChart` and chart wrappers over JS interop become a chart library through `@attach` until
+  `@tsazor/charts` (wave B); an SVG component of the app's own keeps its markup ([guide-charts.md](guide-charts.md)).
+- **Live updates.** What a Blazor Server page got through its circuit (a service's C# event,
+  `InvokeAsync(StateHasChanged)`) becomes a stream the page observes: server-sent events, a WebSocket or SignalR's
+  JavaScript client, through `this.observe` ([guide-live-data.md](guide-live-data.md)). Number the events and answer
+  `Last-Event-ID`, and a dropped connection loses nothing.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

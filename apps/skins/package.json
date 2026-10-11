@@ -20,10 +20,13 @@
     "@tsazor/runtime": "workspace:*",
     "@tsazor/ui": "workspace:*",
     "@tsazor/vite-plugin": "workspace:*",
-    "bootstrap": "^5.3.8"
+    "bootstrap": "^5.3.8",
+    "chart.js": "^4.5.1",
+    "d3-hierarchy": "^3.1.2"
   },
   "devDependencies": {
     "@tsazor/cli": "workspace:*",
+    "@types/d3-hierarchy": "^3.1.7",
     "playwright-core": "^1.63.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.7"

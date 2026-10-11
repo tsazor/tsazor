@@ -148,6 +148,8 @@ createTsazorApp({ root: App, routes });
 - [Scoped CSS (`X.tsazor.css`)](docs/scoped-css.md)
 - [Code-behind (`X.tsazor.ts`)](docs/code-behind.md)
 - [Fluent components (`@tsazor/fluent`)](docs/fluent.md)
+- [Charts and visualizations (a chart library through `@attach`, an SVG of your own)](docs/guide-charts.md)
+- [Live data (server events through `observe`, with reconnects)](docs/guide-live-data.md)
 - [Language Server](docs/language-server.md)
 - [Debugging in DevTools](docs/debugging.md)
 - [Port findings (Blazing Pizza)](docs/port-findings.md)
