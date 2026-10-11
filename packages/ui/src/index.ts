@@ -74,6 +74,7 @@ export { createLayer, isTopLayer, openLayer } from "./layers.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";
 export { dismissable, type DismissableOptions, type DismissReason } from "./behaviors/dismissable.js";
 export { scrollLock } from "./behaviors/scroll-lock.js";
+export { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayBehaviorOptions, type OverlayCloseMode, type OverlayPress } from "./behaviors/overlay.js";
 export { ImmediateInput } from "./behaviors/immediate.js";
 export { rovingFocus, type RovingFocusOptions } from "./behaviors/roving-focus.js";
 export { toolbarFocus, type ToolbarFocusOptions } from "./behaviors/toolbar-focus.js";

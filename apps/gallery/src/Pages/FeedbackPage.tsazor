@@ -40,5 +40,22 @@
         </Card>
     </div>
 
+    <div class="demo">
+        <h2>Overlay</h2>
+        <Card class="overlay-card" style="position: relative">
+            <CardHeader>Order 101</CardHeader>
+            Three loaves of rye, for pickup at noon.
+            <CardFooter>
+                <Button OnClick="@(() => this.busy = true)">Refresh</Button>
+            </CardFooter>
+            <Overlay @bind-Visible="busy" CloseMode="outside" />
+        </Card>
+        <p class="echo overlay-state">@(busy ? "Refreshing (click the overlay's background to stop)." : "Up to date.")</p>
+    </div>
+
 <ToastPanel />
 <ToastRegion position="top-end" />
+
+@code {
+    private busy = false;
+}

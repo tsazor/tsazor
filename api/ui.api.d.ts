@@ -515,6 +515,27 @@ export declare function openLayer(key: object): () => void;
 // Orientation
 export type Orientation = "horizontal" | "vertical";
 
+// overlayBackground
+export declare function overlayBackground(color: string, opacity: number): string;
+
+// overlayBehavior
+export declare function overlayBehavior(options: OverlayBehaviorOptions): Attachment<HTMLElement>;
+
+// OverlayBehaviorOptions
+export interface OverlayBehaviorOptions {
+    blocks: "page" | "region" | "none";
+    onPress: (press: OverlayPress) => void;
+}
+
+// OverlayCloseMode
+export type OverlayCloseMode = "all" | "inside" | "outside" | "manual";
+
+// overlayClosesOn
+export declare function overlayClosesOn(mode: OverlayCloseMode, press: OverlayPress): boolean;
+
+// OverlayPress
+export type OverlayPress = "escape" | "inside" | "outside";
+
 // pageLocale
 export declare function pageLocale(): string;
 

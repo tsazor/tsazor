@@ -543,7 +543,8 @@ export function componentTypeDeclaration(
   for (const parameter of entry.parameters) {
     if (parameter.declaredBy !== ownName) continue;
     if (parameter.doc) lines.push(`  /** ${parameter.doc.replace(/\n/g, " ")} */`);
-    lines.push(`  ${parameter.name}${parameter.optional ? "?" : ""}: ${parameter.type};`);
+    // No annotation: the literal initializer's type (`wrap = false` is a boolean), else `unknown`.
+    lines.push(`  ${parameter.name}${parameter.optional ? "?" : ""}: ${parameter.type ?? parameter.inferredType ?? "unknown"};`);
   }
   lines.push("}");
   return `${lines.join("\n")}\n`;

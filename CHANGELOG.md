@@ -5,6 +5,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `Overlay` (Fluent UI Blazor's `FluentOverlay`, MudBlazor's
+  `MudOverlay`): a busy state over its container, or with `fullScreen` over the page as a modal dialog. What it covers
+  is inert while it shows, and focus that was there moves into it and back; full screen, the page doesn't scroll.
+  `closeMode` (`all`, `inside`, `outside`, `manual`) says which click closes it, and Escape does unless manual;
+  `interactive` blocks nothing. `@bind-visible`, `show()`, `close()`, `backgroundColor`, `opacity`, `ariaLabel`; a
+  Spinner unless `childContent` says otherwise. `@tsazor/ui`: `overlayBehavior`, `overlayClosesOn`,
+  `overlayBackground`. The Bootstrap skin's `Card` passes attributes through (`class` appends), as Fluent's does.
+
+- `@tsazor/workspace`: a component's published declaration types a parameter without an annotation by its literal
+  initializer (`wrap = false` is `wrap: boolean`), else `unknown`. It wrote `undefined`, so plain TypeScript (a
+  test's `render(Toolbar, { wrap: true })`) couldn't set it — in both skins' `Chip`, `ChipSet`, `Splitter`,
+  `SplitterPane`, `Timeline`, `Toolbar` and others.
+
 - `@tsazor/bootstrap` (wave A) catches up with the Fluent skin: `Autocomplete` (a `.form-control` with `.badge` chips
   and a `.dropdown-menu` listbox), `TreeView` (with `TreeViewItem` among its types), `CheckboxGroup` (`.form-check`)
   and `SidebarNav` (`.nav-pills`, the compact rail) — the same parameters as the Fluent skin's. Both skins'

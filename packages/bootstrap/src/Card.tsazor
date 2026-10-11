@@ -1,8 +1,11 @@
 @** Renders Bootstrap's `.card`, a bordered content container. Compose it from CardHeader, CardBody
     (with CardTitle) and CardFooter children. *@
-<div class="card">@childContent</div>
+@import { withClass } from "./attributes"
+<div @attributes="@withClass("card", additionalAttributes)">@childContent</div>
 
 @code {
     /** The card's parts: CardHeader, CardBody, CardFooter or other content. */
     @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 }

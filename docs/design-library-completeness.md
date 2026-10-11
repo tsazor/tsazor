@@ -67,7 +67,7 @@ The Bootstrap skin caught up with Autocomplete, CheckboxGroup, SidebarNav and Tr
 | DatePicker with a calendar popup (DatePicker and Calendar, done 2026-10-10) | DateTime | DatePicker | A |
 | Upload drop zone with progress (FileUpload, done 2026-10-10) | InputFile | FileUpload, DropZone | A |
 | Sortable list (drag and drop, with a keyboard way; SortableList, done 2026-10-10) | SortableList, Drag | DropZone | A |
-| Overlay (busy state) | Overlay | Overlay | B |
+| Overlay (busy state; done 2026-10-11) | Overlay | Overlay | B |
 | TimePicker | DateTime | TimePicker | B |
 | Hotkeys | KeyCode | Hotkey | B |
 | Highlighter | Highlighter | Highlighter | B |
@@ -141,3 +141,5 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L10 | Gates on the Bootstrap skin | The slider checks failed now and then: Bootstrap's reboot sets `scroll-behavior: smooth`, so `scrollIntoView` was still moving when the boxes were measured, and the clicks hit the wrong place | Scroll with `behavior: "instant"` before measuring (2026-10-10) |
 | L11 | `DatePicker` (both skins) | The calendar's dialog took a focus trap and dismissal; Escape did nothing: each opened an overlay layer of its own, and dismissal only acts for the top one (the trap's) | Both share one `createLayer()`, as Dialog does (2026-10-10; `test/date-picker.test.ts`). A component with a focus trap and dismissal of its own does the same |
 | L12 | `SortableList`, the keys | The gate pressed Space right after a move had rendered: the async key handler read the item from the key's target, a node the move had already given to another item, and acted on that one; with the pick-up still waiting, the next arrow key wasn't claimed at all (a held arrow key repeats as fast) | The keys act in turn (one queue for all lists of a page); whether a key is claimed (`preventDefault`) follows from the keys before it at once; a held item is found by its state, not by the key's target; the state attributes are set again right after each change; while an item is held, a key that lands outside the lists (its focused node was just removed) still goes to it (2026-10-10; `packages/ui/test/sortable.test.ts`) |
+| L13 | `@tsazor/bootstrap`, `@attributes` | The Overlay's demo put `class` on a Bootstrap `Card`: `tsazor check` refused it (TZS025). Many Bootstrap components capture no attributes, where their Fluent twins (and Blazor's) do | `Card` passes them through (2026-10-11); the other components follow before 1.0 (handoff) |
+| L14 | Published declarations (`@tsazor/workspace`) | The Overlay's API snapshot showed `opacity: undefined`: a parameter without a type annotation (`@Parameter() wrap = false`) was written with the type it didn't have. 22 parameters per skin, all from wave A, where TypeScript's inference made the annotation look redundant | The literal initializer's type (`boolean`, `number`, `string`), else `unknown` (2026-10-11; both skins' `test/declarations.test.ts`) |

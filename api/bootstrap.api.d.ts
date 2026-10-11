@@ -153,6 +153,7 @@ export default class Calendar extends InputBase<string> {
 // Card
 export default class Card extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // CardBody
@@ -212,8 +213,8 @@ export default class Chip<TValue> extends ComponentBase {
     avatarContent?: RenderFragment;
     href?: string;
     target?: string;
-    disabled: undefined;
-    selected: undefined;
+    disabled: boolean;
+    selected: boolean;
     selectedChanged?: EventCallback<boolean>;
     onClick?: EventCallback<MouseEvent>;
     onClose?: EventCallback<TValue | undefined>;
@@ -229,10 +230,10 @@ export default class ChipSet<TValue> extends ComponentBase {
     selectedValueChanged?: EventCallback<TValue | undefined>;
     selectedValues?: readonly TValue[];
     selectedValuesChanged?: EventCallback<TValue[]>;
-    checkMark: undefined;
-    allClosable: undefined;
-    readOnly: undefined;
-    disabled: undefined;
+    checkMark: boolean;
+    allClosable: boolean;
+    readOnly: boolean;
+    disabled: boolean;
     comparer?: (a: TValue, b: TValue) => boolean;
     onClose?: EventCallback<TValue>;
     ariaLabel?: string;
@@ -543,9 +544,9 @@ export default class SplitterPane extends ComponentBase {
     size?: string;
     min?: string;
     max?: string;
-    resizable: undefined;
-    collapsible: undefined;
-    collapsed: undefined;
+    resizable: boolean;
+    collapsible: boolean;
+    collapsed: boolean;
     label?: string;
     childContent?: RenderFragment;
     splitter?: Splitter;
@@ -583,6 +584,22 @@ export default class NumberInput extends InputBase<number> {
 }
 
 // Orientation: re-exported from @tsazor/ui
+
+// Overlay
+export default class Overlay extends ComponentBase {
+    visible: boolean;
+    visibleChanged?: EventCallback<boolean>;
+    fullScreen: boolean;
+    interactive: boolean;
+    backgroundColor: string;
+    opacity: number;
+    closeMode: OverlayCloseMode;
+    ariaLabel?: string;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// OverlayCloseMode: re-exported from @tsazor/ui
 
 // Pagination
 export default class Pagination extends ComponentBase {
@@ -771,9 +788,9 @@ export default class SplitterPane extends ComponentBase {
     size?: string;
     min?: string;
     max?: string;
-    resizable: undefined;
-    collapsible: undefined;
-    collapsed: undefined;
+    resizable: boolean;
+    collapsible: boolean;
+    collapsed: boolean;
     label?: string;
     childContent?: RenderFragment;
     splitter?: Splitter;
@@ -873,7 +890,7 @@ export default class Timeline extends ComponentBase {
     orientation: Orientation;
     position: "alternate" | "start" | "end";
     align: "start" | "center" | "end";
-    reverse: undefined;
+    reverse: boolean;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -884,7 +901,7 @@ export default class TimelineItem extends ComponentBase {
     intent: Intent;
     appearance: Appearance;
     size: "small" | "medium" | "large";
-    hideDot: undefined;
+    hideDot: boolean;
     align?: "start" | "center" | "end";
     itemContent?: RenderFragment;
     itemOpposite?: RenderFragment;
@@ -909,7 +926,7 @@ export default class ToastRegion extends ComponentBase {
 export default class Toolbar extends ComponentBase {
     orientation: Orientation;
     size: "small" | "medium";
-    wrap: undefined;
+    wrap: boolean;
     ariaLabel?: string;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
@@ -970,8 +987,8 @@ export default class Wizard extends ComponentBase {
 export default class WizardStep extends ComponentBase {
     label: string;
     summary: string;
-    disabled: undefined;
-    deferredLoading: undefined;
+    disabled: boolean;
+    deferredLoading: boolean;
     displayStepNumber?: boolean;
     iconPrevious?: IconValue;
     iconCurrent?: IconValue;

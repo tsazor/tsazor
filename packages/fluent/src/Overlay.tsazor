@@ -1,0 +1,105 @@
+@** An overlay (Fluent UI Blazor's FluentOverlay, MudBlazor's MudOverlay): a busy state over its container — give the
+    container `position: relative` — or, with fullScreen, over the whole page. What it covers is inert while it shows
+    (no clicks, no focus, hidden from screen readers), and focus that was there moves into it and back; full screen,
+    it is a modal dialog and the page doesn't scroll. closeMode says which click closes it: anywhere ("all", the
+    default), on its content ("inside"), on its background ("outside"), or none ("manual": only code); Escape closes it
+    too, unless manual. interactive blocks nothing. It shows a Spinner unless childContent says otherwise. *@
+@import type { Attachment } from "@tsazor/runtime"
+@import { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayCloseMode, type OverlayPress } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+@if (this.shown) {
+    <div @attributes="@this.overlayAttributes" @attach="@this.behavior">
+        <div class="fui-overlay__content">
+            @if (childContent) {
+                @childContent
+            } else {
+                <Spinner />
+            }
+        </div>
+    </div>
+}
+
+@code {
+    /** Whether the overlay shows; with `@bind-Visible` the parent learns when a click or Escape closes it. */
+    @Parameter() visible = false;
+    /** Raised when the overlay shows or closes on its own (a click, Escape, `show()` or `close()`). */
+    @Parameter() visibleChanged?: EventCallback<boolean>;
+    /** Covers the whole page instead of its container. */
+    @Parameter() fullScreen = false;
+    /** Blocks nothing: the page under it stays usable, and a press anywhere else counts as outside. */
+    @Parameter() interactive = false;
+    /** The background's color, mixed at `opacity` (default: the skin's overlay color). */
+    @Parameter() backgroundColor = "var(--fui-surface-overlay)";
+    /** The background's opacity in percent (default 40). */
+    @Parameter() opacity = 40;
+    /** Which click closes it: "all" (default), "inside" (its content), "outside" (its background) or "manual" (none). */
+    @Parameter() closeMode: OverlayCloseMode = "all";
+    /** The full-screen overlay's accessible name (it is a modal dialog); "Loading…" with the default spinner. */
+    @Parameter() ariaLabel?: string;
+    /** What it shows; a Spinner when empty. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends, style adds to the background's; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private shown = false;
+    private readonly behaviors = new Map<string, Attachment<HTMLElement>>();
+
+    protected override onParametersSet(): void {
+        this.shown = this.visible;
+    }
+
+    /** Shows the overlay (Fluent UI Blazor's ShowAsync). */
+    async show(): Promise<void> {
+        await this.change(true);
+    }
+
+    /** Hides the overlay (Fluent UI Blazor's CloseAsync). */
+    async close(): Promise<void> {
+        await this.change(false);
+    }
+
+    private async change(shown: boolean): Promise<void> {
+        if (this.shown === shown) return;
+        this.shown = shown;
+        this.stateHasChanged();
+        await this.visibleChanged?.invokeAsync(shown);
+    }
+
+    private get blocks(): "page" | "region" | "none" {
+        if (this.interactive) return "none";
+        return this.fullScreen ? "page" : "region";
+    }
+
+    /** What it blocks (a new attachment only when that changes). */
+    private get behavior(): Attachment<HTMLElement> {
+        const blocks = this.blocks;
+        let behavior = this.behaviors.get(blocks);
+        if (behavior === undefined) {
+            behavior = overlayBehavior({ blocks, onPress: (press) => this.pressed(press) });
+            this.behaviors.set(blocks, behavior);
+        }
+        return behavior;
+    }
+
+    private pressed(press: OverlayPress): void {
+        // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
+        if (overlayClosesOn(this.closeMode, press)) this.close().catch((error) => this.dispatchExceptionAsync(error));
+    }
+
+    private get overlayAttributes(): Record<string, unknown> {
+        let cls = "fui-overlay";
+        if (this.fullScreen) cls += " fui-overlay--full-screen";
+        if (this.interactive) cls += " fui-overlay--interactive";
+        const modal = this.blocks === "page";
+        const { style, ...additional } = this.additionalAttributes ?? {};
+        const background = `--fui-overlay-background: ${overlayBackground(this.backgroundColor, this.opacity)}`;
+        return withAttributes({
+            class: cls,
+            style: typeof style === "string" && style !== "" ? `${background}; ${style}` : background,
+            role: modal ? "dialog" : null,
+            "aria-modal": modal ? "true" : null,
+            "aria-label": modal ? (this.ariaLabel ?? (this.childContent ? null : "Loading…")) : null,
+        }, additional);
+    }
+}

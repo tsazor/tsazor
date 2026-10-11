@@ -91,9 +91,9 @@ export function focusTrap(options: FocusTrapOptions = {}): Attachment<HTMLElemen
  * The element focus returns to: the focused one, or — when nothing is
  * focused — the focusable element pressed within the last second. Safari
  * doesn't focus a button on click, so a dialog opened with the mouse would
- * otherwise have nowhere to return to.
+ * otherwise have nowhere to return to. (The overlay behavior uses it too.)
  */
-function invokerOf(document: Document): HTMLElement | null {
+export function invokerOf(document: Document): HTMLElement | null {
   trackPresses(document);
   const active = document.activeElement;
   if (active instanceof HTMLElement && active !== document.body) return active;
@@ -105,7 +105,7 @@ const lastPress = new WeakMap<Document, { element: HTMLElement; at: number }>();
 const tracked = new WeakSet<Document>();
 
 /** Starts remembering the last pressed focusable element of `document` (once). */
-function trackPresses(document: Document): void {
+export function trackPresses(document: Document): void {
   if (tracked.has(document)) return;
   tracked.add(document);
   document.addEventListener(

@@ -289,6 +289,17 @@ async function main() {
     await page.waitForTimeout(4500);
     check((await page.locator(".fui-toast").count()) === 0, "toasts auto-dismiss after their timeout");
 
+    /* 10b — overlay: a busy card is inert under it; a click on its background closes it (closeMode outside) */
+    await page.locator(".overlay-card .fui-button", { hasText: "Refresh" }).click();
+    const cardOverlay = page.locator(".overlay-card > .fui-overlay");
+    await cardOverlay.waitFor();
+    check(await page.locator(".overlay-card .fui-card-footer, .overlay-card footer").first().evaluate((footer) => footer.closest("[inert]") !== null), "the overlay makes the busy card inert");
+    await cardOverlay.locator(".fui-spinner").click();
+    check(await cardOverlay.isVisible(), "a click on the overlay's content keeps it (closeMode outside)");
+    await cardOverlay.click({ position: { x: 4, y: 4 } });
+    await cardOverlay.waitFor({ state: "detached" });
+    check((await page.locator(".overlay-state").textContent()) === "Up to date.", "a click on its background closes it and @bind-Visible follows");
+
     /* 11 — sidebar nav marks the current page */
     const navActive = page.locator(".fui-nav__link--active");
     check((await navActive.count()) === 1, "exactly one active sidebar link");

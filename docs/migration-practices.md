@@ -141,6 +141,14 @@ render in the browser.
   gap). Fluent UI Blazor v4's `FluentToolbar Orientation` keeps its name. Give it a name: it is one tab stop, and the
   arrow keys move between its Buttons, Menus and fields, as the WAI-ARIA toolbar pattern says; MudToolBar leaves each
   control its own tab stop.
+- **Busy states.** `<FluentOverlay @bind-Visible="saving" FullScreen="true">` keeps its parameters as `<Overlay>`
+  (`Interactive`, `BackgroundColor`, `Opacity`, `CloseMode`; `OverlayCloseMode.InsideOnly` is `"inside"`,
+  `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `show()`/`close()`. MudBlazor's `MudOverlay`:
+  `Absolute="true"` is the default (it covers its container: give that `position: relative`), without it
+  `FullScreen="true"`; `AutoClose="true"` is `CloseMode="all"`, without it `"manual"`; `Modal="false"` is
+  `Interactive="true"`; `DarkBackground` is `BackgroundColor`. For a save or a load, take `CloseMode="manual"`: the
+  default closes on a click, as Fluent UI Blazor's does. What the overlay covers is inert while it shows, so the
+  busy form can't be submitted twice and a screen reader doesn't read it.
 - **Sliders.** `<FluentSlider @bind-Value="volume" Min="0" Max="100" Step="5" />` keeps its parameters as
   `<Slider @bind-Value="volume" …>` (`Orientation`, `Size`, `ImmediateDelay`), and so does MudBlazor's `MudSlider`
   (`TickMarks`, `TickMarkLabels`, `ValueLabel`, `Immediate`); its `Vertical` becomes `Orientation="vertical"`. A .NET

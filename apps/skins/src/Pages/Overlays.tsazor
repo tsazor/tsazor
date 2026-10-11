@@ -32,11 +32,72 @@
     </div>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">Busy state</Typography>
+    <Card class="busy-card">
+        <CardBody>
+            <TextInput Label="Note on order 101" @bind-Value="note" />
+            <div class="demo-row">
+                <Button Intent="primary" OnClick="@save">Save note</Button>
+                <span class="busy-result">@saved</span>
+            </div>
+        </CardBody>
+        <Overlay Visible="@saving" CloseMode="manual">
+            <Spinner AriaLabel="Saving…" />
+        </Overlay>
+    </Card>
+    <div class="demo-row">
+        <Button OnClick="@publish">Publish the menu</Button>
+        <span class="publish-result">@published</span>
+    </div>
+    <Overlay Visible="@publishing" FullScreen="true" CloseMode="manual" AriaLabel="Publishing the menu">
+        <Card>
+            <CardBody>
+                <div class="publish-panel">
+                    <Spinner Label="Publishing the menu…" />
+                    <Button OnClick="@cancelPublish">Cancel</Button>
+                </div>
+            </CardBody>
+        </Card>
+    </Overlay>
+</section>
+
 @code {
     private dialogOpen = false;
     private drawerOpen = false;
     private onlyOpen = false;
     private result = "";
+    private note = "Deliver before noon.";
+    private saving = false;
+    private saved = "";
+    private publishing = false;
+    private published = "";
+    private publishRun = 0;
+
+    /** The card is busy while the note saves (a server would take a moment). */
+    private async save(): Promise<void> {
+        this.saving = true;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        this.saving = false;
+        this.saved = `Saved: ${this.note}`;
+    }
+
+    /** The whole page waits while the menu is published, unless the user cancels. */
+    private async publish(): Promise<void> {
+        const run = ++this.publishRun;
+        this.publishing = true;
+        this.published = "";
+        await new Promise((resolve) => setTimeout(resolve, 8000));
+        if (run !== this.publishRun) return;
+        this.publishing = false;
+        this.published = "The menu is published.";
+    }
+
+    private cancelPublish(): void {
+        this.publishRun++;
+        this.publishing = false;
+        this.published = "Publishing cancelled.";
+    }
 
     private confirmDelete(): void {
         this.dialogOpen = false;

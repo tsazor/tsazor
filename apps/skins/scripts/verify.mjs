@@ -405,6 +405,43 @@ try {
     await page.waitForSelector("[role=alert]");
     say((await page.locator("[role=alert]").textContent())?.includes("Upload failed.") === true, "toast: a danger toast is an alert");
 
+    /* Overlay: a busy state over a card, and over the whole page. */
+    const busyOverlay = page.locator(".busy-card > .fui-overlay, .busy-card > .tz-overlay");
+    await page.getByRole("button", { name: "Save note" }).click();
+    await busyOverlay.waitFor();
+    const busy = await page.evaluate(() => {
+      const card = document.querySelector(".busy-card");
+      const overlay = card.querySelector(":scope > .fui-overlay, :scope > .tz-overlay");
+      return {
+        fieldInert: card.querySelector("input").closest("[inert]") !== null,
+        focusIn: overlay.contains(document.activeElement),
+        pageInert: document.querySelector("h1").closest("[inert]") !== null,
+        covers: Math.abs(overlay.getBoundingClientRect().height - card.clientHeight) < 1,
+      };
+    });
+    say(busy.fieldInert && busy.focusIn && !busy.pageInert && busy.covers, `overlay: it covers the busy card, which is inert, and takes the focus; the page stays usable (${JSON.stringify(busy)})`);
+    await busyOverlay.waitFor({ state: "detached", timeout: 10_000 });
+    await page.waitForFunction(() => document.querySelector(".busy-result")?.textContent === "Saved: Deliver before noon.");
+    say((await focusedText()) === "Save note" && (await page.locator(".busy-card input").evaluate((input) => input.closest("[inert]") === null)), "overlay: when the work is done, the card is usable again and focus returns");
+    await page.getByRole("button", { name: "Publish the menu" }).click();
+    const publishing = page.getByRole("dialog", { name: "Publishing the menu" });
+    await publishing.waitFor();
+    const modal = await page.evaluate(() => ({
+      focus: document.activeElement?.textContent?.trim(),
+      headingInert: document.querySelector("h1").closest("[inert]") !== null,
+      scroll: getComputedStyle(document.body).overflow,
+    }));
+    say(modal.focus === "Cancel" && modal.headingInert && modal.scroll === "hidden", `overlay: full screen, it is a modal dialog: the page is inert and doesn't scroll, focus is on its button (${JSON.stringify(modal)})`);
+    const overlayViolations = await axe(page);
+    say(overlayViolations.length === 0, `axe /overlays with the full-screen overlay${overlayViolations.length ? `: ${overlayViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    say(await publishing.isVisible(), "overlay: closeMode manual: Escape leaves it open");
+    await publishing.getByRole("button", { name: "Cancel" }).click();
+    await publishing.waitFor({ state: "detached" });
+    await page.waitForFunction(() => document.querySelector(".publish-result")?.textContent === "Publishing cancelled.");
+    say((await focusedText()) === "Publish the menu" && (await page.evaluate(() => document.querySelector("[inert]") === null && getComputedStyle(document.body).overflow !== "hidden")), "overlay: its button closes it; the page is usable again and focus returns");
+
     /* Icons: on the components, and the Icons page browses the skin's set. */
     await open(page, base, "/actions");
     const iconPaths = await page.locator(".icons-demo").evaluate((row) => row.querySelectorAll("svg path").length);

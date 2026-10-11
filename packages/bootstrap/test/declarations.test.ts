@@ -2,6 +2,7 @@
  * The published declarations (dist/*.d.ts) type-check as a consumer sees them — with
  * skipLibCheck off, so a broken declaration can't hide behind it (types silently `any`).
  */
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
@@ -26,5 +27,15 @@ describe("the published declarations", () => {
         return `${where}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`;
       });
     expect(errors).toEqual([]);
+  });
+
+  it("type a parameter without an annotation by its initializer", () => {
+    const dist = path.resolve(import.meta.dirname, "..", "dist");
+    expect(readFileSync(path.join(dist, "Toolbar.d.ts"), "utf8")).toMatch(/^ {2}wrap: boolean;$/m);
+    expect(readFileSync(path.join(dist, "Overlay.d.ts"), "utf8")).toMatch(/^ {2}opacity: number;$/m);
+    const untyped = readdirSync(dist)
+      .filter((file) => file.endsWith(".d.ts"))
+      .filter((file) => /^ {2}\w+\??: undefined;$/m.test(readFileSync(path.join(dist, file), "utf8")));
+    expect(untyped).toEqual([]);
   });
 });
