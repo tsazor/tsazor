@@ -7,9 +7,9 @@
  *    network) is anonymous — the server decides per request.
  *  - JwtAuthenticationStateProvider: decodes the JWT payload locally (no
  *    dependency, no network) and maps the claims onto a ClaimsPrincipal.
- *    `name` comes from `name`, `unique_name`, the long Microsoft claim URI or
- *    `sub`; roles from `role` (also as a string or string array, Microsoft URI
- *    included). No signature check — client side it is display only; the
+ *    `name` comes from `name`, `unique_name`, the long Microsoft claim URI,
+ *    `sub` or the name identifier (`nameid` or its URI); roles from `role`
+ *    (also as a string or string array, Microsoft URI included). No signature check — client side it is display only; the
  *    server (JwtBearer) decides validity.
  *  - attachJwtAuth adds a request interceptor `Authorization: Bearer …`
  *    to the TsazorHttp — the client side of the middleware pipeline — and
@@ -115,7 +115,16 @@ function base64UrlDecode(text: string): string {
 
 /** Claims ⇒ ClaimsPrincipal: name, roles (Microsoft URI too), claims list. */
 export function principalFromJwt(claims: JwtClaims): ClaimsPrincipal {
-  const name = claimText(claims, "name") ?? claimText(claims, "unique_name") ?? claimText(claims, NAME_CLAIM) ?? claimText(claims, "sub") ?? String(claimText(claims, NAME_ID_CLAIM) ?? "");
+  // `nameid` is ClaimTypes.NameIdentifier as .NET's JwtSecurityTokenHandler writes it (FluentCMS's tokens name the
+  // user only there); without it such a token decoded as anonymous.
+  const name =
+    claimText(claims, "name") ??
+    claimText(claims, "unique_name") ??
+    claimText(claims, NAME_CLAIM) ??
+    claimText(claims, "sub") ??
+    claimText(claims, "nameid") ??
+    claimText(claims, NAME_ID_CLAIM) ??
+    "";
   const roleValue = claimValue(claims, "role") ?? claimValue(claims, ROLE_CLAIM);
   const roles = roleValue === undefined ? [] : toStringList(roleValue);
   const list: Claim[] = [];
@@ -206,6 +215,9 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
  * request that carried the current token (expired, revoked). `AuthorizeView` and `AuthorizeRouteView` then show
  * `NotAuthorized` — the redirect to the login. Blazor leaves this to a `DelegatingHandler` of the app's own
  * (Tsazor extension). A 401 to an older token, after a new login, changes nothing. Returns the unsubscribe.
+ *
+ * Attach it before a response interceptor that throws on an error status (an envelope mapping, say): response
+ * interceptors run in the order added, and one that throws ends the chain — the 401 would never get here.
  */
 export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider): () => void {
   const bearer = (): string | undefined => {

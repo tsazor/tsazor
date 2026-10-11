@@ -101,7 +101,8 @@ Holding an access token in the app is sometimes necessary, for example to call a
 directly from the browser. Then:
 
 - keep the token **in memory** only (a variable or a service), never in `localStorage` or
-  `sessionStorage`; prefer short-lived tokens;
+  `sessionStorage`; prefer short-lived tokens. A reload then signs the user out: that is the price.
+  The BFF pattern keeps the session across reloads without a script ever holding it;
 - `JwtAuthenticationStateProvider` decodes the token's claims for the UI and **does not verify
   its signature** — the server validates every token it receives (`AddJwtBearer`);
 - `attachJwtAuth(http, provider)` adds the `Authorization: Bearer …` header to every request, and
@@ -109,6 +110,7 @@ directly from the browser. Then:
   signed-in user, `AuthorizeView` and `AuthorizeRouteView` then show `NotAuthorized` (the app's
   redirect to the login). Blazor leaves this to a
   `DelegatingHandler` of the app's own (Tsazor extension). A 401 to an older token, after a new
-  login, changes nothing; a 403 never logs out.
+  login, changes nothing; a 403 never logs out. Attach it before any response interceptor that
+  throws on an error status: they run in the order added, and one that throws ends the chain.
 
 Write down why the BFF pattern doesn't fit before you choose this.

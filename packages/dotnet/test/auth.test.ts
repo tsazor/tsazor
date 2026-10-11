@@ -45,6 +45,21 @@ describe("decodeJwt / principalFromJwt", () => {
     expect(principalFromJwt(makeJwtClaims({ sub: "sub-9" })).name).toBe("sub-9");
     expect(principalFromJwt(makeJwtClaims({ sub: "sub-9" })).isAuthenticated).toBe(true);
   });
+
+  it("names the user by the short `nameid` (JwtSecurityTokenHandler's NameIdentifier, as FluentCMS issues it)", () => {
+    // The claims of a real FluentCMS login: no name, no sub, no role.
+    const principal = principalFromJwt(
+      makeJwtClaims({
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid": "3c8e7c4b-e856-4efb-be2d-dc1b2b86e303",
+        nameid: "admin",
+        email: "ADMIN@EXAMPLE.COM",
+        iss: "FluentCMS",
+      }),
+    );
+    expect(principal.name).toBe("admin");
+    expect(principal.isAuthenticated).toBe(true);
+    expect([...principal.roles]).toEqual([]);
+  });
 });
 
 // Helper: decodeJwt expects a token — feed the claims straight into the mapping.

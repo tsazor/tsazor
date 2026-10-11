@@ -712,6 +712,39 @@ login). To tell the token a response answers, a response interceptor gets the re
 argument. A 401 to an older token (a new login came in between) or to a request with its own `authorization`
 changes nothing; a 403 never logs out.
 
+Then the admin moved to `JwtAuthenticationStateProvider` + `attachJwtAuth` (its `FluentAuthProvider` a subclass that
+adds `signIn` and the profile's role; a test of its own against a stubbed FluentCMS API). That move found 4–6:
+
+### 4. A real .NET token decoded as signed out — **fixed**
+
+FluentCMS's `UserTokenProvider` names the user only by `ClaimTypes.NameIdentifier`, which `JwtSecurityTokenHandler`
+writes as `nameid` (besides `sid` and `email`; no `name`, no `sub`, no `role`). `principalFromJwt` knew the long
+URI of that claim, not the short form: a real login (probed against the port's backend) decoded as anonymous —
+after the move the user would have been signed out right after signing in. The tests had hand-made tokens with
+`name` or `sub`. `nameid` is now the fallback before the long URI; a test uses the claims of the real login.
+
+Open beside it: a principal counts as signed in only with a name. In .NET an identity with an authentication type
+is authenticated even when `Name` is null — a token without any name claim (only `oid`, say) still differs.
+
+### 5. Response interceptors aren't an onion — **open (owner's decision)**
+
+The admin's envelope interceptor throws on every non-2xx. Added before `attachJwtAuth`, the 401 never reaches it
+and the logout silently doesn't happen (the admin's test fails that way). `TsazorHttp` runs response interceptors
+in the order added, like the request ones; .NET's handler chain is an onion — the handler added last sees the
+response first — so "build the client, then attach auth" would work there. Documented at `attachJwtAuth` and in
+auth.md now; running response interceptors in reverse would be a breaking change.
+
+### 6. Roles that only a profile knows — **open (owner's decision)**
+
+FluentCMS's token carries no roles; `/api/Account/GetCurrent` says `isSuperAdmin`. The admin's subclass overrides
+`getAuthenticationStateAsync` to add the profile's role and notifies a second time once it arrives. In between,
+the user is signed in without the role: a page that needs it can show `NotAuthorized` for a moment, and the admin's
+`NotAuthorized` redirects to the login. Blazor's `NotifyAuthenticationStateChanged` takes a
+`Task<AuthenticationState>`, and `AuthorizeView` shows `Authorizing` until it completes — no in-between state.
+Tsazor's takes a resolved state. Taking a promise too would close it. (Overriding `setToken` worked well otherwise:
+login, logout and `attachJwtAuth`'s 401 logout all pass there, so the admin keeps its stored token in step in one
+place.)
+
 ## W. Friction (app code, no fix needed)
 
 - **`getJson<T>` is a cast, not a check.** Ten of the twelve errors were inline response types
@@ -719,3 +752,7 @@ changes nothing; a 403 never logs out.
   (`errors?: AppError[]`). Declare the envelope once, or generate the client.
 - **Workarounds outlive their gap.** The admin's interceptor said `TsazorHttp` throws a bare `Error` without the
   body; `TsazorHttpError` has carried `status` and `body` since 5.2.
+- **A token in memory doesn't survive a reload.** The admin keeps its token in `sessionStorage` (the owner's
+  choice, written down in its `token-store.ts`), as Blazor WebAssembly's MSAL does by default; auth.md says memory
+  only. A Blazor developer expects the session to survive F5 — auth.md now names the price, and the BFF as the way
+  to keep the session without a script holding the token.
