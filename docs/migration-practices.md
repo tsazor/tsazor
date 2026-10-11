@@ -171,6 +171,17 @@ render in the browser.
   `FluentColorPickerInput` becomes `<ColorPickerInput @bind-Value="…">` (`HideTextInput`, `IconPalette`). MudBlazor's
   `MudColorPicker` (a `MudColor` value) takes hex text instead: `color.Value` is `"#rrggbb"`; its alpha channel has no
   counterpart. The value is hex text, as an `<input type="color">` and CSS take it.
+- **Carousels.** MudBlazor's `MudCarousel` with `MudCarouselItem`s keeps its parameters as `<Carousel>`/`<CarouselItem>`
+  (`SelectedIndex`, `AutoCycle`, `ShowArrows`, `ShowBullets`, `EnableSwipeGesture`, `ItemsSource`, `ItemTemplate`);
+  `AutoCycleTime="TimeSpan.FromSeconds(5)"` is milliseconds, `AutoCycleTime="5000"`. A turning carousel gets a stop
+  button and stops while hovered or focused (WCAG 2.2.2); the slides are named "2 of 5". Arrow, bullet and button
+  templates have no counterpart: style the buttons, or turn `ShowArrows` off and call `next()`/`previous()` on a
+  `@ref`. With Bootstrap, add `class="carousel-dark"` for dark controls on light slides.
+- **Links and images.** `FluentLink` and `MudLink` become `<Link>` (`Href`, `Target`, `Appearance`, `IconStart`,
+  `IconEnd`; `ForceLoad` is rel="external", which the app's navigation leaves to the browser). A `MudLink` with only
+  an `OnClick` renders a button. `FluentImage` keeps `Source` and `AlternateText`; MudBlazor's `MudImage` `Src` and `Alt`
+  become those, `ObjectFit` is `Fit`, `Elevation` is `Shadow`. `MudScrollToTop` keeps `TopOffset` and `Selector`;
+  its own button replaces a child `MudFab`.
 - **Busy states.** `<FluentOverlay @bind-Visible="saving" FullScreen="true">` keeps its parameters as `<Overlay>`
   (`Interactive`, `BackgroundColor`, `Opacity`, `CloseMode`; `OverlayCloseMode.InsideOnly` is `"inside"`,
   `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `show()`/`close()`. MudBlazor's `MudOverlay`:

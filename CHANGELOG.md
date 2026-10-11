@@ -5,6 +5,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `Carousel` and `CarouselItem` (MudBlazor's `MudCarousel`;
+  the WAI-ARIA carousel pattern; Bootstrap's `.carousel` without its JavaScript): a slide at a time, each a group named
+  "2 of 5", previous and next, a button per slide, a swipe; `@bind-selectedIndex`, `itemsSource` with `itemTemplate`;
+  `autoCycle` turns the slides every `autoCycleTime` ms, silently, but not while hovered, focused, stopped by its
+  button or with reduced motion (WCAG 2.2.2). `Link` (Fluent UI Blazor's `FluentLink`, MudBlazor's `MudLink`): `href`,
+  `target` (a new tab gets `noopener`), `forceLoad` (rel="external"), `appearance` subtle, `inline`, `iconStart`,
+  `iconEnd`, `disabled`; without `href` but with `onClick` a button. `Image` (`FluentImage`, `MudImage`): `source`,
+  `alternateText`, `width`, `height`, `fit`, `position`, `shape`, `bordered`, `shadow`, `block`, `fluid`, lazy loading.
+  `ScrollToTop` (MudBlazor's `MudScrollToTop`): a button past `topOffset` that takes the page, or a `selector`'s
+  element, back up. `@tsazor/ui`: `carouselStep`, `carouselRotates`, `carouselSwipe`, `carouselLabels`.
+
 - `@tsazor/runtime`, `@tsazor/fluent`, `@tsazor/bootstrap`: an input holds its field as `element` (Blazor's
   `InputBase.Element`), so a page focuses it through its `@ref`: `search.element?.focus()` for Blazor's
   `search.Element.Value.FocusAsync()` and Fluent UI Blazor's `FocusAsync()`. The runtime's InputText, InputTextArea,

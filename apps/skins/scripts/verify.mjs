@@ -675,6 +675,49 @@ try {
     await page.waitForFunction(() => [...document.querySelectorAll(".menu-list mark")].map((mark) => mark.textContent).join() === "salt");
     say(true, "highlighter: the marks follow the typing");
 
+    /* Carousel: it turns by itself and silently; the stop button; previous, next and the bullets, announced. */
+    const bakery = page.locator("section[aria-roledescription=carousel]");
+    await bakery.evaluate((section) => section.scrollIntoView({ block: "center", behavior: "instant" }));
+    await page.mouse.move(0, 0);
+    const shownSlide = () => bakery.evaluate((carousel) => [...carousel.querySelectorAll("[aria-roledescription=slide]")].filter((slide) => !slide.hidden).map((slide) => slide.getAttribute("aria-label")).join());
+    say((await bakery.getAttribute("aria-label")) === "Today's bread" && /^[123] of 3$/.test(await shownSlide()), `carousel: a named carousel shows one slide, a group named by its place (${await shownSlide()})`);
+    const startSlide = await page.locator(".carousel-index").textContent();
+    await page.waitForFunction((start) => document.querySelector(".carousel-index")?.textContent !== start, startSlide, { timeout: 15_000 });
+    say((await bakery.locator("[aria-live]").getAttribute("aria-live")) === "off", "carousel: it turns by itself, without announcing it");
+    await bakery.getByRole("button", { name: "Stop the slides" }).click();
+    say((await bakery.locator("[aria-live]").getAttribute("aria-live")) === "polite" && (await bakery.getByRole("button", { name: "Start the slides" }).count()) === 1, "carousel: the stop button stops it, and slides are announced");
+    await bakery.getByRole("button", { name: "Next slide" }).click();
+    await page.waitForFunction(() => document.querySelector(".carousel-index")?.textContent === "2");
+    await bakery.getByRole("button", { name: "Slide 1" }).click();
+    await page.waitForFunction(() => document.querySelector(".carousel-index")?.textContent === "0");
+    say((await shownSlide()) === "1 of 3" && (await bakery.getByRole("button", { name: "Slide 1" }).getAttribute("aria-current")) === "true", "carousel: next and a bullet turn it, the bullet marked current");
+    const carouselViolations = await axe(page);
+    say(carouselViolations.length === 0, `axe /content with the carousel stopped${carouselViolations.length ? `: ${carouselViolations.join(" | ")}` : ""}`);
+
+    /* Links and images. */
+    const links = page.locator("section", { has: page.getByRole("heading", { name: "Links and images", exact: true }) });
+    say((await links.getByRole("link", { name: "Our bakery" }).getAttribute("rel")) === "noopener", "link: a new tab gets noopener");
+    await links.getByRole("button", { name: "Undo" }).click();
+    await page.waitForFunction(() => document.querySelector(".link-result")?.textContent === "Undone.");
+    say(true, "link: without href, a button that acts");
+    const archive = links.getByRole("link", { name: "Archive" });
+    say((await archive.getAttribute("aria-disabled")) === "true" && (await archive.getAttribute("href")) === null, "link: disabled, it goes nowhere");
+    say(await links.getByRole("img", { name: "A rye loaf" }).evaluate((image) => image.complete && image.naturalWidth > 0), "image: the loaf loads, named by its text");
+    await links.getByRole("link", { name: "Order form" }).click();
+    await page.waitForURL(/\/forms$/);
+    say(await page.getByRole("heading", { name: "Time picker", exact: true }).isVisible(), "link: an app link navigates in the app");
+    await page.goBack();
+    await page.waitForSelector("h1");
+
+    /* Scroll to top: the button appears down the page and takes the page back up. */
+    await page.evaluate(() => window.scrollTo({ top: 900, behavior: "instant" }));
+    const toTop = page.getByRole("button", { name: "Back to top" });
+    await toTop.waitFor();
+    await toTop.click();
+    await page.waitForFunction(() => window.scrollY === 0, undefined, { timeout: 10_000 });
+    await toTop.waitFor({ state: "detached" });
+    say(true, "scroll to top: it appears down the page, takes it back up and goes away");
+
     /* Structure: tabs, accordion, pagination. */
     await open(page, base, "/structure");
     await page.getByRole("tab", { name: "Items" }).focus();

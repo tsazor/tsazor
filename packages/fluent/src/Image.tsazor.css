@@ -1,0 +1,31 @@
+/* Image — square, rounded or circular; a border and a shadow from the tokens. */
+
+.fui-image {
+  max-inline-size: none;
+  vertical-align: middle;
+}
+
+.fui-image--rounded {
+  border-radius: var(--fui-radius-md);
+}
+
+.fui-image--circular {
+  border-radius: var(--fui-radius-circular);
+}
+
+.fui-image--bordered {
+  border: 1px solid var(--fui-stroke-2);
+}
+
+.fui-image--shadow {
+  box-shadow: var(--fui-shadow-4, var(--fui-shadow-16));
+}
+
+.fui-image--block {
+  display: block;
+}
+
+.fui-image--fluid {
+  max-inline-size: 100%;
+  block-size: auto;
+}

@@ -36,7 +36,9 @@ const CORE = [
   "Dismiss20Regular",
   "DismissCircle20Filled",
   "Info20Filled",
+  "Pause20Regular",
   "Person20Regular",
+  "Play20Regular",
   "Warning20Filled",
 ];
 

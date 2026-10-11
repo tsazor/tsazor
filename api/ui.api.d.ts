@@ -124,6 +124,35 @@ export declare function calendarWeeks(month: IsoDate, firstDayOfWeek: number): I
 // calendarYears
 export declare function calendarYears(date: IsoDate): number[];
 
+// carouselLabels
+export declare const carouselLabels: CarouselLabels;
+
+// CarouselLabels
+export interface CarouselLabels {
+    previous: string;
+    next: string;
+    slide: (index: number, count: number) => string;
+    bullet: (index: number) => string;
+    pause: string;
+    play: string;
+}
+
+// carouselRotates
+export declare function carouselRotates(state: {
+    autoCycle: boolean;
+    count: number;
+    paused: boolean;
+    hovered: boolean;
+    focused: boolean;
+    reducedMotion: boolean;
+}): boolean;
+
+// carouselStep
+export declare function carouselStep(index: number, step: number, count: number): number | undefined;
+
+// carouselSwipe
+export declare function carouselSwipe(dx: number, dy: number, rtl?: boolean, threshold?: number): "next" | "previous" | undefined;
+
 // ChipSelectionMode
 export type ChipSelectionMode = "none" | "single" | "toggle" | "multiple";
 

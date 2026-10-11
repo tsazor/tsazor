@@ -1,0 +1,28 @@
+/* ScrollToTop — a round button in the end corner of the view, above the content. */
+
+.fui-scroll-to-top {
+  position: fixed;
+  inset-block-end: var(--fui-spacing-l);
+  inset-inline-end: var(--fui-spacing-l);
+  z-index: calc(var(--fui-z-dialog) - 1);
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: none;
+  border-radius: var(--fui-radius-circular);
+  background: var(--fui-brand-background);
+  color: var(--fui-foreground-on-brand);
+  box-shadow: var(--fui-shadow-16);
+  cursor: pointer;
+}
+
+.fui-scroll-to-top:hover {
+  background: var(--fui-brand-background-hover, var(--fui-brand-background));
+}
+
+.fui-scroll-to-top:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+}

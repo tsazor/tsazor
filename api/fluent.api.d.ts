@@ -187,6 +187,35 @@ export default class CardTitle extends ComponentBase {
     childContent?: RenderFragment;
 }
 
+// Carousel
+export default class Carousel<TData> extends ComponentBase {
+    selectedIndex: number;
+    selectedIndexChanged?: EventCallback<number>;
+    itemsSource?: TData[];
+    itemTemplate?: (item: TData) => RenderFragment;
+    autoCycle: boolean;
+    autoCycleTime: number;
+    showArrows: boolean;
+    showBullets: boolean;
+    enableSwipeGesture: boolean;
+    ariaLabel: string;
+    labels?: Partial<CarouselLabels>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+    dispose(): void;
+    moveTo(index: number): Promise<void>;
+    next(): Promise<void>;
+    previous(): Promise<void>;
+}
+
+// CarouselItem
+export default class CarouselItem extends ComponentBase {
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+    owner?: unknown;
+    dispose(): void;
+}
+
 // Checkbox
 export default class Checkbox extends InputBase<boolean> {
     label?: string;
@@ -569,6 +598,23 @@ export default class Icon extends ComponentBase {
 
 // IconValue: re-exported from @tsazor/ui
 
+// Image
+export default class Image extends ComponentBase {
+    source?: string;
+    alternateText?: string;
+    width?: number | string;
+    height?: number | string;
+    fit?: "none" | "contain" | "cover" | "fill" | "scale-down" | "center";
+    position?: string;
+    shape: "square" | "rounded" | "circular";
+    bordered: boolean;
+    shadow: boolean;
+    block: boolean;
+    fluid: boolean;
+    loading: "lazy" | "eager";
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Indicator
 export default class Indicator extends ComponentBase {
     intent: Intent;
@@ -600,6 +646,25 @@ export default class KeyCode extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
     dispose(): void;
+}
+
+// Link
+export default class Link extends ComponentBase {
+    href?: string;
+    hrefLang?: string;
+    rel?: string;
+    referrerPolicy?: string;
+    linkType?: string;
+    target?: string;
+    appearance: "default" | "subtle";
+    inline: boolean;
+    iconStart?: IconValue;
+    iconEnd?: IconValue;
+    forceLoad: boolean;
+    disabled: boolean;
+    onClick?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // ListGroup
@@ -821,6 +886,21 @@ export default class RatingDisplay extends ComponentBase {
     locale?: string;
     labels?: Partial<RatingLabels>;
     additionalAttributes?: Record<string, unknown>;
+}
+
+// ScrollToTop
+export default class ScrollToTop extends ComponentBase {
+    selector?: string;
+    topOffset: number;
+    scrollBehavior: "smooth" | "instant";
+    ariaLabel: string;
+    onScroll?: EventCallback<{
+        scrollTop: number;
+    }>;
+    onClick?: EventCallback<MouseEvent>;
+    childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+    dispose(): void;
 }
 
 // Select

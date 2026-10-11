@@ -1,0 +1,43 @@
+@** One slide of a Carousel (Bootstrap's `.carousel-item`; MudBlazor's MudCarouselItem): a group named "2 of 5", shown while it is the carousel's
+    slide and kept hidden otherwise (its content stays as it was). Use inside a Carousel. *@
+@import { withClass } from "./attributes"
+
+<div role="group" aria-roledescription="slide" @attributes="@this.itemAttributes">@childContent</div>
+
+@code {
+    /** The slide's content. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** Resolved from the nearest Carousel (by cascade name). */
+    @CascadingParameter({ name: "BootstrapCarousel" }) owner?: unknown;
+
+    /** What a CarouselItem asks of its Carousel. */
+    private get carousel(): {
+        registerItem(item: object): number;
+        unregisterItem(item: object): void;
+        itemState(item: object): { index: number; count: number; shown: boolean };
+        slideLabel(index: number): string;
+    } | undefined {
+        return this.owner as never;
+    }
+
+    private get itemAttributes(): Record<string, unknown> {
+        const state = this.carousel?.itemState(this) ?? { index: 0, count: 1, shown: true };
+        return withClass(state.shown ? "carousel-item active" : "carousel-item", {
+            "aria-label": this.carousel?.slideLabel(state.index),
+            hidden: state.shown ? undefined : true,
+            ...this.additionalAttributes,
+        });
+    }
+
+    protected override onInitialized(): void {
+        this.carousel?.registerItem(this);
+    }
+
+    dispose(): void {
+        this.carousel?.unregisterItem(this);
+    }
+}
+

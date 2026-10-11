@@ -1,0 +1,96 @@
+@** A Fluent UI 2 link (Fluent UI Blazor's FluentLink, MudBlazor's MudLink): `href` with its text and an `iconStart` or
+    `iconEnd`; `appearance` subtle for links in dense lists, `inline` for links in running text (underlined). Without
+    `href` but with `onClick` it is a button that looks like a link — what it does is an action, not a place.
+    `forceLoad` loads the page from the server instead of navigating in the app (rel="external", which the app's
+    navigation leaves to the browser). `target` "_blank" opens a new tab, with rel="noopener". `disabled` keeps it
+    from going anywhere. *@
+@import type { IconValue } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+@if (this.isButton) {
+    <button type="button" @attributes="@this.linkAttributes" @onclick="this.click">
+        @if (this.iconStart) {
+            <Icon value="@this.iconStart" size="16" class="fui-link__icon" />
+        }
+        @childContent
+        @if (this.iconEnd) {
+            <Icon value="@this.iconEnd" size="16" class="fui-link__icon" />
+        }
+    </button>
+} else {
+    <a @attributes="@this.linkAttributes" @onclick="this.click">
+        @if (this.iconStart) {
+            <Icon value="@this.iconStart" size="16" class="fui-link__icon" />
+        }
+        @childContent
+        @if (this.iconEnd) {
+            <Icon value="@this.iconEnd" size="16" class="fui-link__icon" />
+        }
+    </a>
+}
+
+@code {
+    /** Where the link goes. */
+    @Parameter() href?: string;
+    /** The language of the page it goes to (`HrefLang`). */
+    @Parameter() hrefLang?: string;
+    /** What the link is to the page (`Rel`: "nofollow", "external", …). */
+    @Parameter() rel?: string;
+    /** How much of this page's address the other one learns (`ReferrerPolicy`). */
+    @Parameter() referrerPolicy?: string;
+    /** The media type of what it goes to (`LinkType`). */
+    @Parameter() linkType?: string;
+    /** Where it opens: "_blank" (a new tab), "_self", "_parent", "_top" (`Target`). */
+    @Parameter() target?: string;
+    /** default, or subtle (the text's own color until hovered). */
+    @Parameter() appearance: "default" | "subtle" = "default";
+    /** Inside running text: underlined, the text's size (`Inline`). */
+    @Parameter() inline: boolean = false;
+    /** An icon before the text (`IconStart`). */
+    @Parameter() iconStart?: IconValue;
+    /** An icon after the text (`IconEnd`). */
+    @Parameter() iconEnd?: IconValue;
+    /** Loads the page from the server (`ForceLoad`). */
+    @Parameter() forceLoad: boolean = false;
+    /** Keeps the link from going anywhere (MudBlazor's `Disabled`). */
+    @Parameter() disabled: boolean = false;
+    /** Raised on a click; without `href` the link is a button (`OnClick`). */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The link's text. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get isButton(): boolean {
+        return this.href === undefined && this.onClick !== undefined;
+    }
+
+    private get linkAttributes(): Record<string, unknown> {
+        let cls = "fui-link";
+        if (this.appearance === "subtle") cls += " fui-link--subtle";
+        if (this.inline) cls += " fui-link--inline";
+        if (this.isButton) {
+            return withAttributes({ class: cls, disabled: this.disabled ? true : undefined }, this.additionalAttributes);
+        }
+        const rel = [this.rel, this.forceLoad ? "external" : undefined, this.target === "_blank" ? "noopener" : undefined].filter(Boolean);
+        return withAttributes({
+            class: cls,
+            href: this.disabled ? undefined : this.href,
+            hreflang: this.hrefLang,
+            target: this.target,
+            rel: rel.length === 0 ? undefined : [...new Set(rel.join(" ").split(/\s+/))].join(" "),
+            referrerpolicy: this.referrerPolicy,
+            type: this.linkType,
+            role: this.disabled ? "link" : undefined,
+            "aria-disabled": this.disabled ? "true" : undefined,
+        }, this.additionalAttributes);
+    }
+
+    private click(e: MouseEvent): Promise<void> | undefined {
+        if (this.disabled) {
+            e.preventDefault();
+            return undefined;
+        }
+        return this.onClick?.invokeAsync(e);
+    }
+}

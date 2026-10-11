@@ -31,6 +31,7 @@ export {
   type WheelLayout,
 } from "./color.js";
 export { swatchPalette, wheelPalette, wheelRowSizes } from "./color-palettes.js";
+export { carouselLabels, carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "./carousel.js";
 export {
   edgeEnabledOption,
   formatTimeField,

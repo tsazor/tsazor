@@ -1,0 +1,81 @@
+@** A Fluent UI 2 scroll-to-top button (MudBlazor's MudScrollToTop): once the page — or the element `selector` names —
+    is scrolled down more than `topOffset` px, a button appears in the corner that scrolls it back to the top (at once
+    with reduced motion asked for). Its content replaces the default arrow; `onScroll` reports the scroll position.
+    While it is hidden it isn't in the page, so it takes no focus. *@
+@import { withAttributes } from "./attributes"
+@import { ArrowUp20Regular } from "./core-icons"
+
+@if (this.shown) {
+    <button type="button" @attributes="@this.buttonAttributes" @onclick="this.toTop">
+        @if (childContent) {
+            @childContent
+        } else {
+            <Icon value="@ArrowUp20Regular" />
+        }
+    </button>
+}
+
+@code {
+    /** The element that scrolls (a CSS selector; `Selector`); the page by default. */
+    @Parameter() selector?: string;
+    /** How far down the button appears, in px (`TopOffset`). */
+    @Parameter() topOffset: number = 300;
+    /** smooth (default) or instant (`ScrollBehavior`); reduced motion makes it instant. */
+    @Parameter() scrollBehavior: "smooth" | "instant" = "smooth";
+    /** The button's name. */
+    @Parameter() ariaLabel: string = "Back to top";
+    /** Raised with the scroll position as it changes (`OnScroll`). */
+    @Parameter() onScroll?: EventCallback<{ scrollTop: number }>;
+    /** Raised when the button is clicked, before it scrolls (`OnClick`). */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** The button's content instead of the arrow. */
+    @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private shown = false;
+    private watching?: string;
+    private detach?: () => void;
+
+    private get buttonAttributes(): Record<string, unknown> {
+        return withAttributes({ class: "fui-scroll-to-top", "aria-label": this.ariaLabel, title: this.ariaLabel }, this.additionalAttributes);
+    }
+
+    /** The element that scrolls, or the page's. */
+    private get scroller(): Element {
+        return (this.selector ? document.querySelector(this.selector) : null) ?? document.scrollingElement ?? document.documentElement;
+    }
+
+    protected override onAfterRender(): void {
+        // (Re)attaches when the scrolling element changes.
+        const key = this.selector ?? "";
+        if (key === this.watching) return;
+        this.detach?.();
+        this.watching = key;
+        const scroller = this.scroller;
+        // The page's scroll events go to the window, an element's to itself.
+        const target: EventTarget = scroller === document.scrollingElement || scroller === document.documentElement ? window : scroller;
+        const onScroll = (): void => {
+            const scrollTop = scroller.scrollTop;
+            const shown = scrollTop > this.topOffset;
+            if (shown !== this.shown) {
+                this.shown = shown;
+                this.stateHasChanged();
+            }
+            this.onScroll?.invokeAsync({ scrollTop }).catch((error) => this.dispatchExceptionAsync(error));
+        };
+        target.addEventListener("scroll", onScroll, { passive: true });
+        this.detach = () => target.removeEventListener("scroll", onScroll);
+        onScroll();
+    }
+
+    dispose(): void {
+        this.detach?.();
+    }
+
+    private async toTop(e: MouseEvent): Promise<void> {
+        await this.onClick?.invokeAsync(e);
+        const instant = this.scrollBehavior === "instant" || matchMedia("(prefers-reduced-motion: reduce)").matches;
+        this.scroller.scrollTo({ top: 0, behavior: instant ? "instant" : "smooth" });
+    }
+}

@@ -79,6 +79,35 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Carousel</Typography>
+    <Carousel AriaLabel="Today's bread" AutoCycleTime="3000" class="carousel-dark bread-carousel" @bind-SelectedIndex="slide">
+        <CarouselItem><div class="bread-slide">Rye with caraway, fresh at seven.</div></CarouselItem>
+        <CarouselItem><div class="bread-slide">Sourdough, a day's rest in the dough.</div></CarouselItem>
+        <CarouselItem><div class="bread-slide">Spelt rolls, still warm at noon.</div></CarouselItem>
+    </Carousel>
+    <Typography Variant="caption">Slide <span class="carousel-index">@slide</span>.</Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Links and images</Typography>
+    <div class="demo-row">
+        <Link Href="/forms">Order form</Link>
+        <Link Href="/data" Appearance="subtle">Order list</Link>
+        <Link Href="https://example.org/bakery" Target="_blank" IconEnd="@openIcon">Our bakery</Link>
+        <Link OnClick="@(() => this.linkResult = "Undone.")">Undo</Link>
+        <Link Href="/forms" Disabled="@true">Archive</Link>
+        <span class="link-result">@linkResult</span>
+    </div>
+    <p>Fresh bread every morning: see the <Link Href="/data" Inline="@true">order list</Link> for today.</p>
+    <div class="demo-row">
+        <Image Source="@loaf" AlternateText="A rye loaf" Width="96" Height="64" Shape="rounded" Bordered="@true" />
+        <Image Source="@loaf" AlternateText="" Width="64" Height="64" Shape="circular" Fit="cover" Shadow="@true" />
+    </div>
+</section>
+
+<ScrollToTop />
+
+<section class="demo">
     <Typography Variant="h2">Text nobody checked</Typography>
     <Typography Variant="caption">An agent's answer or a user's comment is shown as it comes: what could run is removed.</Typography>
     <div class="markdown-untrusted">
@@ -89,6 +118,11 @@
 @code {
     private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra"];
     private menuSearch = "rye, sour";
+    private slide = 0;
+    private linkResult = "";
+    private readonly openIcon = { name: "open", viewBox: "0 0 16 16", content: '<path d="M9 2h5v5h-1.5V4.6L7 10.1 5.9 9l5.5-5.5H9zM3 4h4v1.5H4.5v7h7V10H13v4H3z"/>' };
+    /** A loaf in SVG, so the demo needs no file. */
+    private readonly loaf = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 64"><rect width="96" height="64" fill="#f3e1c0"/><ellipse cx="48" cy="38" rx="36" ry="18" fill="#a0612b"/><path d="M26 32q6-6 12 0M44 30q6-6 12 0M62 32q6-6 12 0" stroke="#f3e1c0" stroke-width="3" fill="none"/></svg>')}`;
     private readonly menu = ["Rye bread with caraway", "Sourdough loaf, light rye", "Spelt rolls", "Pretzels <with> coarse salt"];
     private picked = "";
     private readonly history = [

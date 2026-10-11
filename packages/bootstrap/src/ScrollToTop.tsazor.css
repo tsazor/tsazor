@@ -1,0 +1,10 @@
+/* ScrollToTop — a round primary button in the end corner, above the page (under Bootstrap's fixed navbars, 1030). */
+
+.tz-scroll-to-top {
+  z-index: 1025;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  padding: 0;
+}

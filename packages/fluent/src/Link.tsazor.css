@@ -1,0 +1,48 @@
+/* Link — the brand's color, underlined on hover (always, inline); a button with onClick looks the same. */
+
+.fui-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-spacing-xxs, 2px);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fui-brand-foreground, var(--fui-accent));
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.fui-link:hover {
+  text-decoration: underline;
+}
+
+.fui-link--subtle {
+  color: var(--fui-foreground-2);
+}
+
+.fui-link--subtle:hover {
+  color: var(--fui-foreground-1);
+}
+
+.fui-link--inline {
+  display: inline;
+  text-decoration: underline;
+}
+
+.fui-link:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 1px;
+  border-radius: var(--fui-radius-sm);
+}
+
+.fui-link[aria-disabled="true"],
+.fui-link:disabled {
+  color: var(--fui-foreground-disabled);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.fui-link__icon {
+  flex: none;
+}

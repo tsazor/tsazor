@@ -189,6 +189,20 @@ body {
   margin-block: 0.75rem;
 }
 
+/* Carousel: a slide is a band of text. */
+.bread-carousel {
+  max-width: 32rem;
+}
+
+.bread-slide {
+  display: grid;
+  place-items: center;
+  min-height: 8rem;
+  padding: 1.5rem 3.5rem 2.5rem;
+  text-align: center;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
 /* Busy state: the overlay covers the card. */
 .busy-card {
   position: relative;
