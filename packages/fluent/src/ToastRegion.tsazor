@@ -33,7 +33,7 @@
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
-    override onInitialized() {
+    protected override onInitialized(): void {
         this.observe(this.toaster);
     }
 

@@ -28,6 +28,7 @@ export {
   RUNTIME_MODULE,
   type ParameterCategory,
   type ComponentParameter,
+  type ComponentMethod,
   type ComponentMetadata,
   type ComponentManifest,
   type TypeReference,

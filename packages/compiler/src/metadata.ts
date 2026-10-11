@@ -109,6 +109,26 @@ export interface ComponentParameter {
   synthesizedBy?: string;
 }
 
+/**
+ * A public method a component declares itself (`refreshDataAsync()`, `show()`), for its published declaration.
+ * Private, protected and static methods are left out, and so is one whose JSDoc says `@internal`.
+ */
+export interface ComponentMethod {
+  name: string;
+  /** `<T>`, as written. */
+  typeParameters?: string;
+  /** The parameter list (`index: number, signal?: AbortSignal`); one without a type takes its literal default's, else `unknown`. */
+  parameters: string;
+  /** The return type as written; without one `unknown` (`Promise<unknown>` when async). */
+  returnType: string;
+  /** JSDoc of the method. */
+  doc?: string;
+  /** Bindings of the root identifiers in the signature's types (empty/absent: none). */
+  references?: TypeReference[];
+  /** Class that declares the method. */
+  declaredBy: string;
+}
+
 export interface ComponentMetadata {
   name: string;
   /** The component's doc comment: the class JSDoc, or a leading `@** … *@` in a .tsazor file. */
@@ -126,6 +146,8 @@ export interface ComponentMetadata {
   base?: { name: string; typeArguments?: string[]; resolved: boolean; codeBehind?: boolean };
   /** All parameters, inherited first (runtime order: a re-declaration keeps the base's slot). */
   parameters: ComponentParameter[];
+  /** The public methods the class declares itself (inherited ones come with its base). */
+  methods?: ComponentMethod[];
   /** A base class could not be resolved: inherited parameters are missing. */
   incomplete?: boolean;
 }
@@ -179,6 +201,8 @@ export interface ClassRecord {
   /** `extends` clause; `codeBehind`: the default class of the sibling X.tsazor.ts. */
   base?: { name: string; typeArguments: string[]; codeBehind?: boolean };
   parameters: OwnParameter[];
+  /** Its public methods (see ComponentMethod). */
+  methods?: Omit<ComponentMethod, "references" | "declaredBy">[];
 }
 
 /** Syntactic facts of one module (.ts or .tsazor) — what resolution needs, nothing else. */
@@ -442,7 +466,45 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
     record.parameters.push(parameter);
     if (decorator.kind === "Bindable") record.parameters.push(...bindableParameters(parameter));
   }
+  for (const member of cls.members) {
+    if (!ts.isMethodDeclaration(member) || !ts.isIdentifier(member.name)) continue;
+    if (hasModifier(member, ts.SyntaxKind.PrivateKeyword) || hasModifier(member, ts.SyntaxKind.ProtectedKeyword) || hasModifier(member, ts.SyntaxKind.StaticKeyword)) continue;
+    if (ts.getJSDocTags(member).some((tag) => tag.tagName.text === "internal")) continue;
+    const name = member.name.text;
+    // Overloads: the first signature stands for them (the declaration lists one).
+    if (record.methods?.some((method) => method.name === name)) continue;
+    const method: Omit<ComponentMethod, "references" | "declaredBy"> = {
+      name,
+      parameters: member.parameters.map((parameter, index) => methodParameterText(parameter, index, file)).join(", "),
+      returnType: member.type?.getText(file) ?? (hasModifier(member, ts.SyntaxKind.AsyncKeyword) ? "Promise<unknown>" : "unknown"),
+    };
+    if (member.typeParameters && member.typeParameters.length > 0) method.typeParameters = `<${member.typeParameters.map((parameter) => parameter.getText(file)).join(", ")}>`;
+    const doc = jsDocOf(member);
+    if (doc) method.doc = doc;
+    (record.methods ??= []).push(method);
+  }
   return record;
+}
+
+/** One parameter of a public method as a declaration writes it: `signal?: AbortSignal`, `returnFocus?: boolean` for `returnFocus = true`. */
+function methodParameterText(parameter: ts.ParameterDeclaration, index: number, file: ts.SourceFile): string {
+  // A destructuring pattern can't keep its defaults in a declaration: it becomes a plain name.
+  const name = ts.isIdentifier(parameter.name) ? parameter.name.text : `arg${index}`;
+  const rest = parameter.dotDotDotToken !== undefined;
+  const optional = !rest && (parameter.questionToken !== undefined || parameter.initializer !== undefined);
+  const type = parameter.type?.getText(file) ?? (parameter.initializer ? literalTypeOf(parameter.initializer) : undefined) ?? (rest ? "unknown[]" : "unknown");
+  return `${rest ? "..." : ""}${name}${optional ? "?" : ""}: ${type}`;
+}
+
+/** The type of a literal (`""` is a string, `-1` a number), or undefined for anything else. */
+function literalTypeOf(initializer: ts.Expression): "string" | "number" | "boolean" | "bigint" | undefined {
+  let expression = initializer;
+  while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
+  if (ts.isStringLiteralLike(expression) || ts.isTemplateExpression(expression)) return "string";
+  if (ts.isNumericLiteral(expression) || (ts.isPrefixUnaryExpression(expression) && ts.isNumericLiteral(expression.operand))) return "number";
+  if (expression.kind === ts.SyntaxKind.TrueKeyword || expression.kind === ts.SyntaxKind.FalseKeyword) return "boolean";
+  if (ts.isBigIntLiteral(expression)) return "bigint";
+  return undefined;
 }
 
 /**
@@ -669,6 +731,14 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
     parameters.set(own.name, resolveOwnParameter(own, record.name, module, ownTypeParameters, host));
   }
   result.parameters = [...parameters.values()];
+  if (record.methods && record.methods.length > 0) {
+    result.methods = record.methods.map((own) => {
+      const method: ComponentMethod = { ...own, declaredBy: record.name };
+      const references = referencesOf(`${own.typeParameters ?? ""}(${own.parameters}) => ${own.returnType}`, module, ownTypeParameters);
+      if (references.length > 0) method.references = references;
+      return method;
+    });
+  }
   visiting.delete(key);
   return result;
 }

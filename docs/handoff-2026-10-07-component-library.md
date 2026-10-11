@@ -130,11 +130,11 @@ everything pushed.
 >   Hotkeys, Highlighter, Rating, ColorPicker, …), then `@tsazor/charts` (D-L2).
 >   - **Environment:** Vitest is sometimes slow here (a single file's collect up to 80 s). A root run during a skin
 >     rebuild fails at random (43 failures once): never rebuild a skin while tests or gates run.
->   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
->     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
->     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)
->     that types a library component sees no `scrollToItem`/`refreshDataAsync`. The manifest needs the public
->     methods too.
+>   - **Closed 2026-10-11:** a component's published `.d.ts` lists its public methods too (`ComponentMetadata.methods`
+>     in the compiler; `@internal` in a method's JSDoc keeps a child component's hook out), and types a parameter
+>     without an annotation by its literal initializer (L14).
+>   - **Wave B so far:** Overlay (`24d47bf`). L13: many Bootstrap components capture no `@attributes`; they
+>     follow before 1.0.
 >   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
 >     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
 >     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git

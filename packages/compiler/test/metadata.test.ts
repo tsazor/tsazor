@@ -352,3 +352,51 @@ describe(".tsazor extraction", () => {
     expect(param(resolved, "ValueChanged").typeArgument).toBe("string");
   });
 });
+
+describe("public methods", () => {
+  const host = (files: Record<string, string> = {}): MetadataHost => hostFor(files, RUNTIME_PACKAGES);
+
+  it("lists the public methods a component declares, typed as a declaration writes them", () => {
+    const module = extractTsazorMetadata(
+      [
+        "@typeparam TItem",
+        '@import type { Column } from "./types"',
+        "<p></p>",
+        "@code {",
+        "  @Parameter() items: TItem[] = [];",
+        "  /** Shows it. */",
+        "  async show(): Promise<void> {}",
+        "  close(returnFocus = true, delay = 0, reason = \"code\"): void {}",
+        "  sortBy(column: Column<TItem>, direction?: \"asc\" | \"desc\"): Promise<void> { return Promise.resolve(); }",
+        "  async reload() {}",
+        "  pick<T extends TItem>(...items: T[]) { return items[0]; }",
+        "  setOptions({ dense }: { dense: boolean }): void {}",
+        "  /** @internal For the child component. */",
+        "  register(item: TItem): void {}",
+        "  private helper(): void {}",
+        "  protected override onInitialized(): void {}",
+        "  static create(): void {}",
+        "}",
+      ].join("\n"),
+      "/virtual/List.tsazor",
+      { className: "List" },
+    );
+    const m = resolveComponentMetadata(module, undefined, host({ "/virtual/types.ts": "export type Column<T> = { key: keyof T };\n" }))!;
+    expect(m.methods?.map((method) => `${method.name}${method.typeParameters ?? ""}(${method.parameters}): ${method.returnType}`)).toEqual([
+      "show(): Promise<void>",
+      "close(returnFocus?: boolean, delay?: number, reason?: string): void",
+      'sortBy(column: Column<TItem>, direction?: "asc" | "desc"): Promise<void>',
+      "reload(): Promise<unknown>",
+      "pick<T extends TItem>(...items: T[]): unknown",
+      "setOptions(arg0: { dense: boolean }): void",
+    ]);
+    expect(m.methods?.[0]).toMatchObject({ doc: "Shows it.", declaredBy: "List" });
+    const sortBy = m.methods?.find((method) => method.name === "sortBy");
+    expect(sortBy?.references?.map((ref) => [ref.name, ref.kind])).toEqual([["Column", "import"], ["TItem", "typeParameter"], ["Promise", "global"]]);
+  });
+
+  it("leaves the methods out when there are none", () => {
+    const module = extractModuleMetadata(`${RT}export default class Plain extends ComponentBase {\n  @Parameter() label = "";\n}\n`, "/virtual/Plain.ts");
+    expect(resolveComponentMetadata(module, undefined, host())!.methods).toBeUndefined();
+  });
+});

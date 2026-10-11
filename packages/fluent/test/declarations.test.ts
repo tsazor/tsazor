@@ -38,4 +38,17 @@ describe("the published declarations", () => {
       .filter((file) => /^ {2}\w+\??: undefined;$/m.test(readFileSync(path.join(dist, file), "utf8")));
     expect(untyped).toEqual([]);
   });
+
+  it("list a component's public methods, not its internal ones or its lifecycle", () => {
+    const dist = path.resolve(import.meta.dirname, "..", "dist");
+    const read = (name: string): string => readFileSync(path.join(dist, `${name}.d.ts`), "utf8");
+    expect(read("Overlay")).toMatch(/^ {2}show\(\): Promise<void>;$/m);
+    expect(read("Overlay")).toMatch(/^ {2}close\(\): Promise<void>;$/m);
+    expect(read("DataGrid")).toMatch(/^ {2}refreshDataAsync\(\): Promise<void>;$/m);
+    expect(read("DataGrid")).toMatch(/^ {2}scrollToItem\(index: number, signal\?: AbortSignal\): Promise<void>;$/m);
+    expect(read("Wizard")).toMatch(/^ {2}goToStep\(index: number, validate\?: boolean\): Promise<void>;$/m);
+    expect(read("Menu")).not.toMatch(/close\(/);
+    expect(read("TreeView")).not.toMatch(/isExpanded\(/);
+    expect(read("ToastRegion")).not.toMatch(/onInitialized/);
+  });
 });

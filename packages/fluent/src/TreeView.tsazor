@@ -48,19 +48,23 @@
         this.root?.querySelector<HTMLElement>(`[data-tree-id="${CSS.escape(this.focusedId)}"]`)?.focus();
     }
 
+    /** @internal TreeViewNode asks whether its item is open. */
     isExpanded(item: TreeViewItem): boolean {
         return this.expanded?.has(item.id) ?? false;
     }
 
+    /** @internal TreeViewNode asks whether its item is the selected one. */
     isSelected(item: TreeViewItem): boolean {
         return this.selectedItem?.id === item.id;
     }
 
+    /** @internal TreeViewNode asks whether its item is the tree's tab stop. */
     isFocusable(item: TreeViewItem): boolean {
         const focused = this.focusedId ?? this.selectedItem?.id ?? this.items[0]?.id;
         return focused === item.id;
     }
 
+    /** @internal TreeViewNode opens or closes its item. */
     toggle(item: TreeViewItem): void {
         const expanded = (this.expanded ??= new Set());
         if (expanded.has(item.id)) expanded.delete(item.id);
@@ -69,6 +73,7 @@
         this.stateHasChanged();
     }
 
+    /** @internal TreeViewNode selects its item. */
     select(item: TreeViewItem): Promise<void> | undefined {
         if (item.disabled) return undefined;
         this.focusedId = item.id;

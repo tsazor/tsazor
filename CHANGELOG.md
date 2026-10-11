@@ -13,6 +13,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   Spinner unless `childContent` says otherwise. `@tsazor/ui`: `overlayBehavior`, `overlayClosesOn`,
   `overlayBackground`. The Bootstrap skin's `Card` passes attributes through (`class` appends), as Fluent's does.
 
+- `@tsazor/compiler`, `@tsazor/workspace`: a component's published declaration lists its public methods
+  (`DataGrid.refreshDataAsync()`, `Overlay.show()`, `Wizard.goToStep()`), so plain TypeScript — a code-behind, a test —
+  calls them on a reference. `ComponentMetadata.methods` carries them; a method whose JSDoc says `@internal` (a
+  child component's hook, such as `TreeView.isExpanded`) is left out. `ToastRegion.onInitialized` is protected.
+
 - `@tsazor/workspace`: a component's published declaration types a parameter without an annotation by its literal
   initializer (`wrap = false` is `wrap: boolean`), else `unknown`. It wrote `undefined`, so plain TypeScript (a
   test's `render(Toolbar, { wrap: true })`) couldn't set it — in both skins' `Chip`, `ChipSet`, `Splitter`,

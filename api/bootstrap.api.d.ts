@@ -221,6 +221,7 @@ export default class Chip<TValue> extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
     set?: ChipSetModel<TValue>;
+    dispose(): void;
 }
 
 // ChipSet
@@ -275,6 +276,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     initialItemIndex: number;
     stickyHeader: boolean;
     additionalAttributes?: Record<string, unknown>;
+    scrollToItem(index: number, signal?: AbortSignal): Promise<void>;
+    refreshDataAsync(): Promise<void>;
+    sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;
 }
 
 // DateInput
@@ -437,6 +441,7 @@ export default class FormField extends ComponentBase {
     for?: string;
     childContent?: RenderFragment;
     editContext?: EditContext;
+    dispose(): void;
 }
 
 // Grid
@@ -550,6 +555,7 @@ export default class SplitterPane extends ComponentBase {
     label?: string;
     childContent?: RenderFragment;
     splitter?: Splitter;
+    dispose(): void;
 }
 
 // Navbar
@@ -597,6 +603,8 @@ export default class Overlay extends ComponentBase {
     ariaLabel?: string;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
+    show(): Promise<void>;
+    close(): Promise<void>;
 }
 
 // OverlayCloseMode: re-exported from @tsazor/ui
@@ -632,6 +640,7 @@ export default class Popover extends ComponentBase {
     size: Size;
     placement: "bottom-start" | "bottom-end" | "top-start" | "top-end";
     childContent?: RenderFragment;
+    close(returnFocus?: boolean): void;
 }
 
 // Progress
@@ -794,6 +803,7 @@ export default class SplitterPane extends ComponentBase {
     label?: string;
     childContent?: RenderFragment;
     splitter?: Splitter;
+    dispose(): void;
 }
 
 // Stack
@@ -981,6 +991,7 @@ export default class Wizard extends ComponentBase {
     steps?: RenderFragment;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
+    goToStep(index: number, validate?: boolean): Promise<void>;
 }
 
 // WizardStep
@@ -996,4 +1007,5 @@ export default class WizardStep extends ComponentBase {
     onChange?: EventCallback<WizardStepChangeEventArgs>;
     childContent?: RenderFragment;
     wizard?: Wizard;
+    dispose(): void;
 }

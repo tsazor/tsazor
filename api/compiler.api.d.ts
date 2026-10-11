@@ -165,6 +165,7 @@ export interface ClassRecord {
         codeBehind?: boolean;
     };
     parameters: OwnParameter[];
+    methods?: Omit<ComponentMethod, "references" | "declaredBy">[];
 }
 
 // CodeBlockNode
@@ -295,7 +296,19 @@ export interface ComponentMetadata {
         codeBehind?: boolean;
     };
     parameters: ComponentParameter[];
+    methods?: ComponentMethod[];
     incomplete?: boolean;
+}
+
+// ComponentMethod
+export interface ComponentMethod {
+    name: string;
+    typeParameters?: string;
+    parameters: string;
+    returnType: string;
+    doc?: string;
+    references?: TypeReference[];
+    declaredBy: string;
 }
 
 // ComponentParameter

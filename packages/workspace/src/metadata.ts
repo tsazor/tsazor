@@ -400,14 +400,19 @@ export function manifestEntriesOfModule(entryFile: string): ManifestEntry[] {
   return entries;
 }
 
-/** The runtime's manifest, built from its sources (`<runtimeDir>/src/index.ts`). */
+/**
+ * The runtime's manifest, built from its sources (`<runtimeDir>/src/index.ts`). Without the methods: the runtime's
+ * declarations come from tsc, and the parameters are what the manifest is for.
+ */
 export function buildRuntimeManifest(runtimeDir: string): ComponentManifest {
-  return buildPackageManifest({
+  const manifest = buildPackageManifest({
     packageDir: runtimeDir,
     packageName: RUNTIME_MODULE,
     entries: manifestEntriesOfModule(path.join(runtimeDir, "src", "index.ts")),
     runtimeInternal: true,
   });
+  for (const metadata of Object.values(manifest.components)) delete metadata.methods;
+  return manifest;
 }
 
 const toPosix = (value: string): string => value.replace(/\\/g, "/");
@@ -419,6 +424,9 @@ function relativizeComponent(metadata: ComponentMetadata, packageDir: string): C
     if (!parameter.references) return parameter;
     return { ...parameter, references: parameter.references.map((ref) => mapFile(ref, relative)) };
   }) };
+  if (metadata.methods) {
+    result.methods = metadata.methods.map((method) => (method.references ? { ...method, references: method.references.map((ref) => mapFile(ref, relative)) } : method));
+  }
   if (metadata.file !== undefined) result.file = relative(metadata.file);
   return result;
 }
@@ -434,6 +442,9 @@ function absolutizeManifest(manifest: ComponentManifest, packageDir: string): Co
         parameter.references ? { ...parameter, references: parameter.references.map((ref) => mapFile(ref, absolute)) } : parameter,
       ),
     };
+    if (metadata.methods) {
+      components[name]!.methods = metadata.methods.map((method) => (method.references ? { ...method, references: method.references.map((ref) => mapFile(ref, absolute)) } : method));
+    }
   }
   return { ...manifest, components };
 }
@@ -515,6 +526,9 @@ export function componentTypeDeclaration(
     if (parameter.declaredBy !== ownName) continue;
     collectReferences(parameter.references, true);
   }
+  for (const method of entry.methods ?? []) {
+    if (method.declaredBy === ownName) collectReferences(method.references, true);
+  }
   if (base !== undefined && base.resolved) {
     // For these library builds the base is a runtime class (`@inherits InputBase<string>`);
     // a code-behind base is part of the consuming project and not importable here.
@@ -545,6 +559,12 @@ export function componentTypeDeclaration(
     if (parameter.doc) lines.push(`  /** ${parameter.doc.replace(/\n/g, " ")} */`);
     // No annotation: the literal initializer's type (`wrap = false` is a boolean), else `unknown`.
     lines.push(`  ${parameter.name}${parameter.optional ? "?" : ""}: ${parameter.type ?? parameter.inferredType ?? "unknown"};`);
+  }
+  // Its public methods: plain TypeScript (a code-behind, a test) calls them on a reference too.
+  for (const method of entry.methods ?? []) {
+    if (method.declaredBy !== ownName) continue;
+    if (method.doc) lines.push(`  /** ${method.doc.replace(/\n/g, " ")} */`);
+    lines.push(`  ${method.name}${method.typeParameters ?? ""}(${method.parameters}): ${method.returnType};`);
   }
   lines.push("}");
   return `${lines.join("\n")}\n`;
