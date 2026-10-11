@@ -383,6 +383,33 @@ try {
     await timeIs("reminder", "07:15:00");
     say((await reminder.getAttribute("type")) === "time", "time picker: renderStyle native, the browser's time input, read back as ISO");
 
+    /* Masked input: the text takes its shape as it is typed; the caret stays after what was typed; a clean value. */
+    const maskedFields = page.locator("section", { has: page.getByRole("heading", { name: "Masked input", exact: true }) });
+    await maskedFields.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const maskIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.mask-${n}`)?.textContent === v, [name, value]);
+    const phoneField = maskedFields.getByLabel("Phone");
+    await phoneField.pressSequentially("1234567890");
+    await phoneField.press("Tab");
+    await maskIs("phone", "(123) 456-7890");
+    say((await phoneField.inputValue()) === "(123) 456-7890" && (await phoneField.getAttribute("inputmode")) === "numeric", "mask: the phone number takes its shape as it is typed, with the number keyboard");
+    await phoneField.evaluate((input) => {
+      input.focus();
+      input.setSelectionRange(4, 4);
+    });
+    await page.keyboard.type("9");
+    const caret = await phoneField.evaluate((input) => ({ value: input.value, at: input.selectionStart }));
+    say(caret.value === "(123) 945-6789" && caret.at === 7, `mask: typing in the middle keeps the caret after the new digit (${JSON.stringify(caret)})`);
+    const cardField = maskedFields.getByLabel("Card number");
+    await cardField.pressSequentially("4111111111111111");
+    await cardField.press("Tab");
+    await maskIs("card", "4111111111111111");
+    say((await cardField.inputValue()) === "4111 1111 1111 1111", "mask: cleanDelimiters binds the digits, the field shows them grouped");
+    const batchField = maskedFields.getByLabel("Batch code");
+    await batchField.pressSequentially("hb12x34");
+    await batchField.press("Tab");
+    await maskIs("batch", "HB-1234");
+    say(true, "mask: letters, upper case, then digits (HB-1234)");
+
     /* Rating: stars as radio buttons in a named group, the keys without wrapping, a click on the value clears it; the
        display: one image with a text alternative, a half star drawn half. */
     const ratings = page.locator("section", { has: page.getByRole("heading", { name: "Rating", exact: true }) });
@@ -814,6 +841,33 @@ try {
     say((await sortOrder("sold")) === "Brioche", "sortable: a pointer drag moves an item to another list of the group");
     const sortableViolations = await axe(page);
     say(sortableViolations.length === 0, `axe /structure after sorting${sortableViolations.length ? `: ${sortableViolations.join(" | ")}` : ""}`);
+
+    /* Overflow: what doesn't fit goes behind +N, out of the tab order, and opens in a popup; wider, all fit. */
+    const stepsBox = page.getByRole("group", { name: "Order steps" });
+    await stepsBox.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+    const moreSteps = stepsBox.locator(":scope > button[aria-label*='more:']");
+    await page.waitForFunction(() => {
+      const more = document.querySelector("[aria-label='Order steps'] > button[aria-label*='more:']");
+      return more !== null && !more.hidden;
+    });
+    const steps = await stepsBox.evaluate((element) => ({
+      shown: [...element.querySelectorAll(":scope > div:not([inert]) button")].map((button) => button.textContent.trim()),
+      hidden: [...element.querySelectorAll(":scope > div[inert] button")].map((button) => button.textContent.trim()),
+      more: element.querySelector(":scope > button[aria-label*='more:']").textContent.trim(),
+    }));
+    say(steps.shown.length > 0 && steps.hidden.length > 0 && steps.more === `+${steps.hidden.length}`, `overflow: what doesn't fit goes behind +N (${steps.shown.join(", ")} | ${steps.more})`);
+    await moreSteps.click();
+    const stepsPopup = page.getByRole("group", { name: new RegExp(`^${steps.hidden.length} more:`) });
+    await stepsPopup.waitFor();
+    const overflowViolations = await axe(page);
+    say(overflowViolations.length === 0, `axe /structure with the overflow open${overflowViolations.length ? `: ${overflowViolations.join(" | ")}` : ""}`);
+    await stepsPopup.getByRole("button", { name: "Invoice" }).click();
+    await page.waitForFunction(() => document.querySelector(".overflow-echo")?.textContent === "Invoice");
+    say(true, "overflow: an overflowed button works in the popup");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Toggle the width" }).click();
+    await moreSteps.waitFor({ state: "hidden" });
+    say((await stepsBox.locator(":scope > div[inert]").count()) === 0, "overflow: wider, all of them fit and +N goes");
 
     /* Tree and side navigation: the current page's link, the rail's names, the tree's keys. */
     const treeSection = page.locator("section", { has: page.getByRole("heading", { name: "Tree and side navigation", exact: true }) });

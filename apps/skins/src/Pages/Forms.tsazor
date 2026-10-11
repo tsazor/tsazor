@@ -1,5 +1,6 @@
 @page "/forms"
 @import type { InputFileChangeEventArgs } from "@tsazor/runtime"
+@import { PatternMask } from "@tsazor/ui"
 @import { formatFileSize, uploadTo, type FileUploadErrorEventArgs, type FileUploadEventArgs } from "@tsazor/bootstrap"
 
 <Typography Variant="h1">Forms</Typography>
@@ -98,6 +99,18 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Masked input</Typography>
+    <div class="date-demo__fields">
+        <TextInput Label="Phone" Type="tel" Mask="(000) 000-0000" @bind-Value="phone" />
+        <TextInput Label="Card number" Mask="@cardMask" @bind-Value="card" />
+        <TextInput Label="Batch code" Mask="@batchMask" @bind-Value="batch" />
+    </div>
+    <Typography Variant="caption">
+        Phone <span class="mask-phone">@phone</span>, card <span class="mask-card">@card</span>, batch <span class="mask-batch">@batch</span>.
+    </Typography>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Rating</Typography>
     <div class="demo-row">
         <Rating AriaLabel="Rate our rye" Color="marigold" @bind-Value="ryeRating" />
@@ -145,6 +158,13 @@
     private pickupDay = "2026-10-10";
     private pickupTime = "16:30:00";
     private ryeRating = 3;
+    private phone = "";
+    private card = "";
+    private batch = "";
+    /** The card number binds its digits only. */
+    private readonly cardMask = new PatternMask("0000 0000 0000 0000", { cleanDelimiters: true });
+    /** Two letters, upper case, and four digits. */
+    private readonly batchMask = new PatternMask("aa-0000", { transform: (char) => char.toUpperCase() });
     private labelColor = "#0f6cbd";
     private accentColor = "#ff0000";
     private paperColor = "";

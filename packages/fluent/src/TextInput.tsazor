@@ -1,9 +1,9 @@
 @** A Fluent UI 2 single-line text field (input type text | password | email, InputBase; bind it
-    with @bind) with an optional label; the value updates on change. Inside a FluentForm it shows
-    the field's first validation message (role="alert", aria-invalid, aria-describedby) once a
-    submit was attempted. *@
+    with @bind) with an optional label; the value updates on change. `mask` shapes the text as it is typed
+    (MudBlazor's `Mask`: a PatternMask, "(000) 000-0000"). Inside a FluentForm it shows the field's first
+    validation message (role="alert", aria-invalid, aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
-@import { uniqueId, ImmediateInput } from "@tsazor/ui"
+@import { uniqueId, ImmediateInput, maskInput, toMask, type PatternMask } from "@tsazor/ui"
 @import { hasSubmitAttempt } from "@tsazor/ui"
 
 @inherits InputBase<string>
@@ -42,6 +42,8 @@
     @Parameter() immediate: boolean = false;
     /** The pause in ms before an immediate update (`ImmediateDelay`). */
     @Parameter() immediateDelay: number = 200;
+    /** Shapes the text as it is typed: a PatternMask, or its pattern as text ("(000) 000-0000"; MudBlazor's `Mask`). */
+    @Parameter() mask?: PatternMask | string;
 
     private generatedId?: string;
 
@@ -55,7 +57,8 @@
     }
 
     private get displayValue(): string {
-        return this.currentValue ?? "";
+        const value = this.currentValue ?? "";
+        return toMask(this.mask)?.format(value) ?? value;
     }
 
     private get wrapperClass(): string {
@@ -75,6 +78,7 @@
             "aria-label": this.ariaLabel,
             "aria-invalid": this.message ? "true" : undefined,
             "aria-describedby": this.describedBy,
+            inputmode: toMask(this.mask)?.numeric ? "numeric" : undefined,
         }, this.additionalAttributes);
     }
 
@@ -112,15 +116,18 @@
     private immediateInput?: ImmediateInput;
 
     private handleInput(e: Event): void {
+        const mask = toMask(this.mask);
+        if (mask !== undefined) maskInput(e.target as HTMLInputElement, mask);
         if (!this.immediate) return;
         this.immediateInput ??= new ImmediateInput(this.disposeSignal);
         this.immediateInput.input(e, this.immediateDelay, (value) => {
-            this.currentValue = value;
+            this.currentValue = mask?.value(value) ?? value;
         });
     }
 
     private handleChange(e: Event): void {
         this.immediateInput?.cancel();
-        this.currentValue = (e.target as HTMLInputElement).value;
+        const text = (e.target as HTMLInputElement).value;
+        this.currentValue = toMask(this.mask)?.value(text) ?? text;
     }
 }

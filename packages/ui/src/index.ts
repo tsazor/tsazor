@@ -32,6 +32,8 @@ export {
 } from "./color.js";
 export { swatchPalette, wheelPalette, wheelRowSizes } from "./color-palettes.js";
 export { carouselLabels, carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "./carousel.js";
+export { maskInput, PatternMask, toMask, type PatternMaskOptions } from "./mask.js";
+export { overflowFit } from "./overflow.js";
 export {
   edgeEnabledOption,
   formatTimeField,

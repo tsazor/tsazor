@@ -1,0 +1,153 @@
+@** A Fluent UI 2 overflow (Fluent UI Blazor's FluentOverflow): `items` in a row (or a column), each drawn by
+    `itemTemplate`; the ones that don't fit move behind a "+N" button, which opens them in a popup — buttons that
+    overflow stay usable there. It measures again when its size changes. `itemText` names the overflowed items for
+    the button; `moreTemplate` replaces the button's "+N", `overflowTemplate` the popup's content, and `onMoreClick`
+    takes over the button. The overflowed items stay in the page, out of sight and out of the tab order. *@
+@typeparam TItem
+@import type { Attachment } from "@tsazor/runtime"
+@import { anchoredPosition, createLayer, dismissable, overflowFit, uniqueId, type Orientation } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+
+<div @attributes="@this.rootAttributes" @attach="this.measure">
+    @for (let i = 0; i < this.rendered.length; i++) {
+        <div class="@(i < this.visibleCount ? "fui-overflow__item" : "fui-overflow__item fui-overflow__item--overflowed")" inert="@(i >= this.visibleCount)">
+            @if (this.itemTemplate !== undefined) {
+                @this.itemTemplate(this.rendered[i]!)
+            } else {
+                @String(this.rendered[i])
+            }
+        </div>
+    }
+    <button type="button" class="fui-overflow__more" hidden="@(this.overflowed.length === 0)" aria-label="@this.moreLabel" aria-haspopup="@(this.onMoreClick ? null : "true")"
+            aria-expanded="@(this.onMoreClick ? null : this.open ? "true" : "false")" aria-controls="@(this.open ? this.popupId : null)" @ref="button" @onclick="this.more">
+        @if (this.moreTemplate !== undefined) {
+            @this.moreTemplate({ overflowed: this.overflowed, count: this.overflowed.length })
+        } else {
+            @(`+${this.overflowed.length}`)
+        }
+    </button>
+    @if (this.open) {
+        <div class="fui-overflow__popup" id="@this.popupId" role="group" aria-label="@this.moreLabel" @attach="this.dismiss" @attach:position="this.position">
+            @if (this.overflowTemplate !== undefined) {
+                @this.overflowTemplate({ overflowed: this.overflowed, count: this.overflowed.length })
+            } else {
+                @foreach (const item of this.overflowed) {
+                    <div class="fui-overflow__popup-item">
+                        @if (this.itemTemplate !== undefined) {
+                            @this.itemTemplate(item)
+                        } else {
+                            @String(item)
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /** The items, in their order (`Items`). */
+    @Parameter() items: TItem[] = [];
+    /** An item (`ItemTemplate`); one element each. */
+    @Parameter() itemTemplate?: (item: TItem) => RenderFragment;
+    /** An item's text, for the button's name (`ItemText`). */
+    @Parameter() itemText?: (item: TItem) => string;
+    /** The most items rendered; the rest count as overflowed (`MaxRenderedItems`; 0: all). */
+    @Parameter() maxRenderedItems: number = 0;
+    /** horizontal (default) or vertical (`Orientation`). */
+    @Parameter() orientation: Orientation = "horizontal";
+    /** The button's content instead of "+N" (`MoreTemplate`). */
+    @Parameter() moreTemplate?: (context: { overflowed: TItem[]; count: number }) => RenderFragment;
+    /** The popup's content instead of the overflowed items (`OverflowTemplate`). */
+    @Parameter() overflowTemplate?: (context: { overflowed: TItem[]; count: number }) => RenderFragment;
+    /** Takes over the button: raised on its click instead of the popup (`OnMoreClick`). */
+    @Parameter() onMoreClick?: EventCallback<MouseEvent>;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private visibleCount = Number.POSITIVE_INFINITY;
+    private open = false;
+    private button?: HTMLButtonElement;
+    private readonly popupId = uniqueId("fui-overflow");
+    private readonly layer = createLayer();
+    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
+    private readonly position = anchoredPosition({ anchor: () => this.button, placement: "bottom-end" });
+
+    /** The items it renders (all, or up to maxRenderedItems). */
+    private get rendered(): TItem[] {
+        return this.maxRenderedItems > 0 ? this.items.slice(0, this.maxRenderedItems) : this.items;
+    }
+
+    /** The items behind the button: those that don't fit, and those past maxRenderedItems. */
+    private get overflowed(): TItem[] {
+        const shown = Math.min(this.visibleCount, this.rendered.length);
+        return this.items.slice(shown);
+    }
+
+    private get moreLabel(): string {
+        const names = this.overflowed.map((item) => this.itemText?.(item) ?? String(item));
+        return `${names.length} more: ${names.join(", ")}`;
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        return withAttributes({ class: `fui-overflow fui-overflow--${this.orientation}` }, this.additionalAttributes);
+    }
+
+    /** Measures again: set while the container is in the page. */
+    private refit?: () => void;
+
+    protected override onAfterRender(): void {
+        // New items, or a new template: they may take another size.
+        this.refit?.();
+    }
+
+    /** Measures the items and the button when the container's size changes. */
+    private readonly measure: Attachment<HTMLElement> = (element) => {
+        const fit = (): void => {
+            const vertical = this.orientation === "vertical";
+            const size = (node: Element): number => {
+                const box = node.getBoundingClientRect();
+                return vertical ? box.height : box.width;
+            };
+            const items = [...element.children].filter((child) => child.classList.contains("fui-overflow__item"));
+            const more = [...element.children].find((child): child is HTMLElement => child.classList.contains("fui-overflow__more"));
+            const style = getComputedStyle(element);
+            const gap = Number.parseFloat(vertical ? style.rowGap : style.columnGap) || 0;
+            const available = vertical ? element.clientHeight : element.clientWidth;
+            // The button counts even while it is hidden: measured as it would show.
+            let moreSize = 0;
+            if (more !== undefined) {
+                const hidden = more.hidden;
+                more.hidden = false;
+                moreSize = size(more);
+                more.hidden = hidden;
+            }
+            const count = overflowFit(items.map(size), available, moreSize, gap);
+            if (count !== this.visibleCount) {
+                this.visibleCount = count;
+                if (this.overflowed.length === 0) this.open = false;
+                this.stateHasChanged();
+            }
+        };
+        this.refit = fit;
+        const observer = new ResizeObserver(() => fit());
+        observer.observe(element);
+        queueMicrotask(fit);
+        return () => {
+            observer.disconnect();
+            this.refit = undefined;
+        };
+    };
+
+    private more(e: MouseEvent): Promise<void> | undefined {
+        if (this.onMoreClick !== undefined) return this.onMoreClick.invokeAsync(e);
+        this.open = !this.open;
+        return undefined;
+    }
+
+    private close(): void {
+        if (!this.open) return;
+        this.open = false;
+        this.stateHasChanged();
+    }
+}

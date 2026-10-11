@@ -74,8 +74,8 @@ The Bootstrap skin caught up with Autocomplete, CheckboxGroup, SidebarNav and Tr
 | Rating and RatingDisplay (done 2026-10-11) | RatingDisplay | Rating | B |
 | ColorPicker and ColorPickerInput (done 2026-10-11) | ColorPicker | ColorPicker | B |
 | Carousel (done 2026-10-11) | none | Carousel | B |
-| Overflow | Overflow | none | B |
-| Link, Image, ScrollToTop (done 2026-10-11), input Mask | partly | yes | B |
+| Overflow (done 2026-10-11) | Overflow | none | B |
+| Link, Image, ScrollToTop, input Mask (TextInput's `mask`; done 2026-10-11) | partly | yes | B |
 | Charts | none | Chart (line, bar, pie, donut) | decision D-L2 |
 | PullToRefresh, Emoji | yes | none | not planned |
 

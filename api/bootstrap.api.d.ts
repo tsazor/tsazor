@@ -748,6 +748,25 @@ export default class NumberInput extends InputBase<number> {
 
 // Orientation: re-exported from @tsazor/ui
 
+// Overflow
+export default class Overflow<TItem> extends ComponentBase {
+    items: TItem[];
+    itemTemplate?: (item: TItem) => RenderFragment;
+    itemText?: (item: TItem) => string;
+    maxRenderedItems: number;
+    orientation: Orientation;
+    moreTemplate?: (context: {
+        overflowed: TItem[];
+        count: number;
+    }) => RenderFragment;
+    overflowTemplate?: (context: {
+        overflowed: TItem[];
+        count: number;
+    }) => RenderFragment;
+    onMoreClick?: EventCallback<MouseEvent>;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Overlay
 export default class Overlay extends ComponentBase {
     visible: boolean;
@@ -1098,6 +1117,7 @@ export default class TextInput extends InputBase<string> {
     id?: string;
     immediate: boolean;
     immediateDelay: number;
+    mask?: PatternMask | string;
 }
 
 // Timeline

@@ -626,6 +626,9 @@ export declare function isYearDisabled(year: number, limits: DateLimits, checkAl
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;
 
+// maskInput
+export declare function maskInput(input: HTMLInputElement, mask: PatternMask): string;
+
 // matchesHotkey
 export declare function matchesHotkey(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">, hotkey: Hotkey): boolean;
 
@@ -661,6 +664,9 @@ export declare function openLayer(key: object): () => void;
 
 // Orientation
 export type Orientation = "horizontal" | "vertical";
+
+// overflowFit
+export declare function overflowFit(sizes: readonly number[], available: number, more: number, gap?: number): number;
 
 // overlayBackground
 export declare function overlayBackground(color: string, opacity: number): string;
@@ -729,6 +735,28 @@ export declare function parsePickerValue(text: string, view: CalendarView, local
 
 // parseTimeField
 export declare function parseTimeField(text: string, locale: string): IsoTime | undefined;
+
+// PatternMask
+export declare class PatternMask {
+    readonly pattern: string;
+    readonly options: PatternMaskOptions;
+    constructor(pattern: string, options?: PatternMaskOptions);
+    get numeric(): boolean;
+    apply(text: string): {
+        masked: string;
+        raw: string;
+    };
+    format(text: string): string;
+    value(text: string): string;
+    caret(count: number): number;
+}
+
+// PatternMaskOptions
+export interface PatternMaskOptions {
+    placeholder?: string;
+    cleanDelimiters?: boolean;
+    transform?: (char: string) => string;
+}
 
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
@@ -976,6 +1004,9 @@ export declare function toggleOption<TOption>(selected: readonly TOption[], opti
 
 // toggleSelection
 export declare function toggleSelection<T>(selected: readonly T[], item: T, mode: SelectionMode): T[];
+
+// toMask
+export declare function toMask(mask: PatternMask | string | undefined): PatternMask | undefined;
 
 // toolbarFocus
 export declare function toolbarFocus(options?: ToolbarFocusOptions): Attachment<HTMLElement>;

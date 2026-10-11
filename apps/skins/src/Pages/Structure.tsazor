@@ -88,6 +88,19 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Overflow</Typography>
+    <div class="overflow-demo" style="@(`width: ${overflowWidth}`)">
+        <Overflow Items="@steps" role="group" aria-label="Order steps">
+            <ItemTemplate Context="step"><Button OnClick="@(() => this.stepped = step)">@step</Button></ItemTemplate>
+        </Overflow>
+    </div>
+    <div class="demo-row">
+        <Button OnClick="@(() => this.overflowWidth = this.overflowWidth === "18rem" ? "48rem" : "18rem")">Toggle the width</Button>
+        <Typography Variant="caption">Last step: <span class="overflow-echo">@stepped</span>.</Typography>
+    </div>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Tree and side navigation</Typography>
     <div class="tree-demo">
         <SidebarNav AriaLabel="Sections" Links="@sections" />
@@ -98,6 +111,9 @@
 </section>
 
 @code {
+    private readonly steps = ["Bake", "Slice", "Wrap", "Label", "Pack", "Ship", "Invoice"];
+    private stepped = "";
+    private overflowWidth = "18rem";
     private readonly menu: TreeViewItem[] = [
         { id: "breads", text: "Breads", items: [{ id: "rye", text: "Rye" }, { id: "spelt", text: "Spelt" }, { id: "sourdough", text: "Sourdough" }] },
         { id: "pastries", text: "Pastries", items: [{ id: "croissant", text: "Croissant" }, { id: "danish", text: "Danish", disabled: true }] },

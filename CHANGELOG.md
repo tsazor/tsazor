@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `TextInput` takes a `mask` (MudBlazor's
+  `Mask="@(new PatternMask(...))"`): a PatternMask — `0` a digit, `a` a letter, `*` either, the rest written in
+  between — or its pattern as text ("(000) 000-0000"); the text takes its shape as it is typed, the caret staying
+  after what was typed; `cleanDelimiters` binds the characters only, `transform` changes them, `placeholder` shows the
+  open places; a digits-only mask asks for the number keyboard. `Overflow` (Fluent UI Blazor's `FluentOverflow`): the
+  items that don't fit move behind a "+N" button, named after them, which opens them in a popup where they still work
+  (`items`, `itemTemplate`, `itemText`, `maxRenderedItems`, `orientation`, `moreTemplate`, `overflowTemplate`,
+  `onMoreClick`). `@tsazor/ui`: `PatternMask`, `maskInput`, `toMask`, `overflowFit`.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `Carousel` and `CarouselItem` (MudBlazor's `MudCarousel`;
   the WAI-ARIA carousel pattern; Bootstrap's `.carousel` without its JavaScript): a slide at a time, each a group named
   "2 of 5", previous and next, a button per slide, a swipe; `@bind-selectedIndex`, `itemsSource` with `itemTemplate`;

@@ -182,6 +182,15 @@ render in the browser.
   an `OnClick` renders a button. `FluentImage` keeps `Source` and `AlternateText`; MudBlazor's `MudImage` `Src` and `Alt`
   become those, `ObjectFit` is `Fit`, `Elevation` is `Shadow`. `MudScrollToTop` keeps `TopOffset` and `Selector`;
   its own button replaces a child `MudFab`.
+- **Input masks.** `<MudTextField Mask="@(new PatternMask("(000) 000-0000"))">` keeps its shape as `<TextInput
+  Mask="@(new PatternMask("(000) 000-0000"))">` (PatternMask from `@tsazor/ui`), or shorter `Mask="(000) 000-0000"`;
+  `CleanDelimiters` and `Placeholder` are options (`{ cleanDelimiters: true }`), `Transformation` is `transform`.
+  MudBlazor's DateMask, RegexMask, BlockMask and MultiMask have no counterpart yet: a date takes a DatePicker, a
+  pattern a `pattern` attribute and the form's validation.
+- **Overflowing rows.** `FluentOverflow` with `Items` and `ItemTemplate` keeps its parameters as `<Overflow>`
+  (`ItemText`, `MaxRenderedItems`, `Orientation`, `MoreTemplate`, `OverflowTemplate`, `OnMoreClick`). The "+N" is a
+  button that opens the overflowed items, where they stay usable, instead of a tooltip that lists their names.
+  Overflowing child content (without `Items`) has no counterpart: give the items as a list.
 - **Busy states.** `<FluentOverlay @bind-Visible="saving" FullScreen="true">` keeps its parameters as `<Overlay>`
   (`Interactive`, `BackgroundColor`, `Opacity`, `CloseMode`; `OverlayCloseMode.InsideOnly` is `"inside"`,
   `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `show()`/`close()`. MudBlazor's `MudOverlay`:

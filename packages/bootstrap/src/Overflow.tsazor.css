@@ -1,0 +1,40 @@
+/* Overflow — the items in a line that doesn't wrap; the overflowed ones keep their size out of sight, so they can be
+   measured; the "+N" pill at the end, the overflowed items in a .dropdown-menu the component places. */
+
+.tz-overflow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-inline-size: 0;
+  overflow: hidden;
+}
+
+.tz-overflow--vertical {
+  flex-direction: column;
+  align-items: stretch;
+  min-block-size: 0;
+}
+
+.tz-overflow__item {
+  flex: none;
+}
+
+.tz-overflow__item--overflowed {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.tz-overflow__more {
+  flex: none;
+}
+
+.tz-overflow__popup {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
