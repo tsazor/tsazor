@@ -117,16 +117,28 @@ everything pushed.
 > - **Environment, 2026-10-10 evening:** Vitest got slow on this machine (about a second idle per module; plain node
 >   loads everything in 0.2 s; Git Bash starts node in 1.2 s, PowerShell in 45 ms), so a full `pnpm test` runs into
 >   5 s timeouts. Logically green (2002 passed with long timeouts). Look at it again before trusting a red root run.
-> - **Next:** the rest of wave A: Splitter, Toolbar, Slider, DatePicker, upload drop zone, sortable list, the Bootstrap
->   catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav) and the chart `@attach` guide.
+> - **Wave A done (2026-10-10/11):** Splitter (`a24e07a`), Toolbar (`df6cf56`), Slider (`3dcc604`), Calendar and
+>   DatePicker (`044f8ac`; ISO date strings, the WAI-ARIA date grid, typed dates read in the locale's order),
+>   FileUpload (`810da40`; `uploadTo(url)` over XHR for the progress), SortableList and the Bootstrap catch-up
+>   (`bfcc3df`; pointer drag across a group and a keyboard way with announcements; Autocomplete, TreeView,
+>   CheckboxGroup, SidebarNav in Bootstrap), the guides [guide-charts.md](guide-charts.md) and
+>   [guide-live-data.md](guide-live-data.md) (`9848560`; `apps/skins` `/charts`: Chart.js through `@attach`, a
+>   d3-hierarchy treemap in markup, server events through `observe` across reconnects). Each with unit tests and
+>   skins-gate checks in Edge, Firefox and WebKit with both skins; findings L9–L12 in
+>   design-library-completeness.md §7 (L12: async key handlers race the next key — queue them, claim keys at once).
+> - **Next:** wave B ([design-library-completeness.md](design-library-completeness.md) §3: Overlay, TimePicker,
+>   Hotkeys, Highlighter, Rating, ColorPicker, …), then `@tsazor/charts` (D-L2).
+>   - **Environment:** Vitest is sometimes slow here (a single file's collect up to 80 s). A root run during a skin
+>     rebuild fails at random (43 failures once): never rebuild a skin while tests or gates run.
 >   - **Open (found 2026-10-10):** a component's published `.d.ts` (`componentTypeDeclaration` in
 >     `@tsazor/workspace`) lists its parameters only. `.tsazor` files see the methods through the source shadows
 >     (`98f29b5` fixed that for Linux and macOS), but plain TypeScript (a code-behind `X.tsazor.ts`, a `.ts` helper)
 >     that types a library component sees no `scrollToItem`/`refreshDataAsync`. The manifest needs the public
 >     methods too.
->   - Lockfile: a new external dependency is staged as HEAD's `pnpm-lock.yaml` plus its importer block and its
->     `packages:` and `snapshots:` entries (written to a temp file, `git hash-object -w`, `git update-index
->     --cacheinfo`), so the owner's `fluentcms-admin` WIP stays out.
+>   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
+>     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
+>     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git
+>     hash-object -w`, `git update-index --cacheinfo 100644,<hash>,pnpm-lock.yaml`, restore both files.
 > - **F15 fixed (2026-10-10, from a dogfood report):** an `@if`'s narrowing reaches child content, slots,
 >   templates and bind setters in `tsazor check`, as Razor's nullable analysis does (checked against a Razor class
 >   library; the old note that C# drops it too was wrong). The shadow calls those functions in place (codegen
