@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/bootstrap`: `Accordion`, `Breadcrumb`, `BreadcrumbItem`, `CardBody`, `CardFooter`, `CardHeader`, `CardTitle`,
+  `Navbar`, `Pagination`, `Spinner`, `Tab`, `Table`, `Tabs` and `ToastRegion` pass attributes through (`class`
+  appends), as their Fluent twins do. `Tabs` puts its tab list and panels in one `div` for them; `Breadcrumb`'s
+  `nav` is named "breadcrumb", as Bootstrap's docs show.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `Overlay` (Fluent UI Blazor's `FluentOverlay`, MudBlazor's
   `MudOverlay`): a busy state over its container, or with `fullScreen` over the page as a modal dialog. What it covers
   is inert while it shows, and focus that was there moves into it and back; full screen, the page doesn't scroll.

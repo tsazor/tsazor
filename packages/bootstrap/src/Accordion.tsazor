@@ -2,11 +2,14 @@
     that shows or hides its body. It cascades itself to the items; at most one item is open at a
     time (the first one initially), and opening an item closes the others. *@
 @import type AccordionItem from "./AccordionItem.tsazor"
-<div class="accordion">@childContent</div>
+@import { withClass } from "./attributes"
+<div @attributes="@withClass("accordion", additionalAttributes)">@childContent</div>
 
 @code {
     /** The AccordionItem children. */
     @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     readonly isCascadingValueSupplier = true;
     readonly isFixed = false;

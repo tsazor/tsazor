@@ -1,10 +1,13 @@
-@** Renders Bootstrap's `.breadcrumb`: an ordered list inside a `<nav>` that shows the current
+@** Renders Bootstrap's `.breadcrumb`: an ordered list inside a `<nav>` named "breadcrumb" that shows the current
     page's location in a hierarchy. Fill it with BreadcrumbItem children, the last one `active`. *@
-<nav>
+@import { withClass } from "./attributes"
+<nav aria-label="breadcrumb" @attributes="@withClass(null, additionalAttributes)">
     <ol class="breadcrumb">@childContent</ol>
 </nav>
 
 @code {
     /** The BreadcrumbItem children. */
     @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 }

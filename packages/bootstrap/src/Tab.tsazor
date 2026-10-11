@@ -3,8 +3,9 @@
     active tab. *@
 @import type { IconValue } from "@tsazor/ui"
 @import type Tabs from "./Tabs.tsazor"
+@import { withClass } from "./attributes"
 @if (isActive) {
-    <div class="tab-pane fade show active" role="tabpanel" id="@panelId" aria-labelledby="@tabId" tabindex="0">@childContent</div>
+    <div role="tabpanel" id="@panelId" aria-labelledby="@tabId" tabindex="0" @attributes="@withClass("tab-pane fade show active", additionalAttributes)">@childContent</div>
 }
 
 @code {
@@ -14,6 +15,8 @@
     @Parameter() iconStart?: IconValue;
     /** The panel content, shown while the tab is active. */
     @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     /** Resolved from the nearest Tabs ancestor (by cascade name). */
     @CascadingParameter({ name: "Tabs" }) tabs?: Tabs;

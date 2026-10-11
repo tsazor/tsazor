@@ -1,7 +1,10 @@
 @** Renders Bootstrap's `.card-title` as an `<h5>` heading. Use it inside a CardBody. *@
-<h5 class="card-title">@childContent</h5>
+@import { withClass } from "./attributes"
+<h5 @attributes="@withClass("card-title", additionalAttributes)">@childContent</h5>
 
 @code {
     /** The title text. */
     @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 }

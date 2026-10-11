@@ -2,18 +2,21 @@
     `.tab-content` area that shows the active Tab. It cascades itself to the Tab children; the first
     tab is active initially. Clicking a tab or moving with the arrow keys (Home and End jump to the
     ends) activates it; only the active tab is in the Tab order (roving tabindex), and each tab is
-    linked to its panel through ids. *@
+    linked to its panel through ids; the tab list and the panels sit in one `div`, which takes `@attributes`. *@
 @import type Tab from "./Tab.tsazor"
 @import { rovingFocus, uniqueId } from "@tsazor/ui"
+@import { withClass } from "./attributes"
 
-<ul class="nav nav-tabs" role="tablist" aria-label="@ariaLabel" @attach="keys">
-    @for (let i = 0; i < this.tabs.length; i++) {
-        <li class="nav-item" role="presentation">
-            <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@if (this.tabs[i]!.iconStart) {<Icon value="@this.tabs[i]!.iconStart" class="me-2" />}@this.tabs[i]!.title</button>
-        </li>
-    }
-</ul>
-<div class="tab-content">@childContent</div>
+<div @attributes="@withClass(null, additionalAttributes)">
+    <ul class="nav nav-tabs" role="tablist" aria-label="@ariaLabel" @attach="keys">
+        @for (let i = 0; i < this.tabs.length; i++) {
+            <li class="nav-item" role="presentation">
+                <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@if (this.tabs[i]!.iconStart) {<Icon value="@this.tabs[i]!.iconStart" class="me-2" />}@this.tabs[i]!.title</button>
+            </li>
+        }
+    </ul>
+    <div class="tab-content">@childContent</div>
+</div>
 
 @code {
     /** The Tab children. */
@@ -22,6 +25,8 @@
     @Parameter() ariaLabel?: string;
     /** Fired with the index of the newly active tab. */
     @Parameter() onSelected?: EventCallback<number>;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     readonly isCascadingValueSupplier = true;
     /** The active index changes — the Tab children must re-render. */

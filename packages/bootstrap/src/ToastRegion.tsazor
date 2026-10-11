@@ -6,8 +6,9 @@
 @import { Toaster, type Toast } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
 @inject Toaster toaster
+@import { withClass } from "./attributes"
 
-<div class="@regionClass" aria-live="polite">
+<div aria-live="polite" @attributes="@withClass(regionClass, additionalAttributes)">
     @foreach (const toast of toaster.toasts) {
         <div @key="toast.id" class="@toastClass(toast)" role="@roleOf(toast)" aria-atomic="true" data-bs-theme="@themeOf(toast)"
              @onmouseenter="() => toaster.pause(toast.id)" @onmouseleave="() => toaster.resume(toast.id)"
@@ -28,6 +29,8 @@
 @code {
     /** The corner the toasts appear in. */
     @Parameter() position: "top-start" | "top-end" | "bottom-start" | "bottom-end" = "bottom-end";
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     protected override onInitialized(): void {
         this.observe(this.toaster);

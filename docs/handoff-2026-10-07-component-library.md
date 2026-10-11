@@ -133,8 +133,8 @@ everything pushed.
 >   - **Closed 2026-10-11:** a component's published `.d.ts` lists its public methods too (`ComponentMetadata.methods`
 >     in the compiler; `@internal` in a method's JSDoc keeps a child component's hook out), and types a parameter
 >     without an annotation by its literal initializer (L14).
->   - **Wave B so far:** Overlay (`24d47bf`). L13: many Bootstrap components capture no `@attributes`; they
->     follow before 1.0.
+>   - **Wave B so far:** Overlay (`24d47bf`); public methods in the declarations (`137bc13`); L13, the Bootstrap
+>     components take `@attributes` like their Fluent twins.
 >   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
 >     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
 >     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git

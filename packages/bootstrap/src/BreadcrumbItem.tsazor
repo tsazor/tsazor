@@ -1,7 +1,8 @@
 @** One entry of a Breadcrumb (Bootstrap's `.breadcrumb-item`): a link to `href`, a button when
     `onClick` is set, or plain text with the `active` class and `aria-current="page"` when it is the
     current page. Place it inside a Breadcrumb. *@
-<li class="@itemClass" aria-current="@ariaCurrent">
+@import { withClass } from "./attributes"
+<li aria-current="@ariaCurrent" @attributes="@withClass(itemClass, additionalAttributes)">
     @if (active) {
         @childContent
     } else if (onClick) {
@@ -21,6 +22,8 @@
     /** Makes the entry a button that raises this instead of a link: for a trail kept in state, not in the
         URL (the folders of a file picker). */
     @Parameter() onClick?: EventCallback<MouseEvent>;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get ariaCurrent(): string | null {
         return this.active ? "page" : null;

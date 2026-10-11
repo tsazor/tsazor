@@ -5,6 +5,7 @@
 // Accordion
 export default class Accordion extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // AccordionItem
@@ -82,6 +83,7 @@ export default class Badge extends ComponentBase {
 // Breadcrumb
 export default class Breadcrumb extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // BreadcrumbItem
@@ -90,6 +92,7 @@ export default class BreadcrumbItem extends ComponentBase {
     href: string;
     active: boolean;
     onClick?: EventCallback<MouseEvent>;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Button
@@ -159,21 +162,25 @@ export default class Card extends ComponentBase {
 // CardBody
 export default class CardBody extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // CardFooter
 export default class CardFooter extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // CardHeader
 export default class CardHeader extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // CardTitle
 export default class CardTitle extends ComponentBase {
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Checkbox
@@ -564,6 +571,7 @@ export default class Navbar extends ComponentBase {
     theme: "light" | "dark";
     ariaLabel?: string;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // NavbarLink
@@ -616,6 +624,7 @@ export default class Pagination extends ComponentBase {
     size: Size;
     ariaLabel: string;
     onPageChanged?: EventCallback<number>;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // PaginationState: re-exported from @tsazor/ui
@@ -779,6 +788,7 @@ export default class Spinner extends ComponentBase {
     size: "small" | "medium" | "large";
     label?: string;
     ariaLabel: string | null;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Splitter
@@ -831,6 +841,7 @@ export default class Tab extends ComponentBase {
     title: string;
     iconStart?: IconValue;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
     tabs?: Tabs;
 }
 
@@ -843,6 +854,7 @@ export default class Table extends ComponentBase {
     dark: boolean;
     responsive: boolean;
     childContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Tabs
@@ -850,6 +862,7 @@ export default class Tabs extends ComponentBase {
     childContent?: RenderFragment;
     ariaLabel?: string;
     onSelected?: EventCallback<number>;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // TemplateColumn
@@ -930,6 +943,7 @@ export default class TimelineItem extends ComponentBase {
 // ToastRegion
 export default class ToastRegion extends ComponentBase {
     position: "top-start" | "top-end" | "bottom-start" | "bottom-end";
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Toolbar

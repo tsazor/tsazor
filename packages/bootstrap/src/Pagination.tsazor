@@ -3,7 +3,8 @@
     updates `page`. *@
 @import type { Size } from "@tsazor/ui"
 @import { sizeSuffix } from "./vocabulary"
-<nav aria-label="@ariaLabel">
+@import { withClass } from "./attributes"
+<nav aria-label="@ariaLabel" @attributes="@withClass(null, additionalAttributes)">
     <ul class="@this.listClass">
         <li class="@this.prevClass"><button type="button" class="page-link" aria-label="Previous page" disabled="@(page <= 1)" @onclick="goPrev">Previous</button></li>
         @for (let i = 1; i <= pageCount; i++) {
@@ -24,6 +25,8 @@
     @Parameter() ariaLabel: string = "Pagination";
     /** Fired when the user picks a different page, with the new page number (1-based). */
     @Parameter() onPageChanged?: EventCallback<number>;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private select(page: number): Promise<void> | undefined {
         if (page === this.page) return undefined;

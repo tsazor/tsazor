@@ -1,9 +1,10 @@
 @** Renders a `<table>` with Bootstrap's `.table` classes (striped, bordered, hover, small, dark),
     optionally wrapped for horizontal scrolling. Supply the table rows as child content. *@
+@import { withClass } from "./attributes"
 @if (responsive) {
-    <div class="table-responsive"><table class="@tableClass">@childContent</table></div>
+    <div class="table-responsive"><table @attributes="@withClass(tableClass, additionalAttributes)">@childContent</table></div>
 } else {
-    <table class="@tableClass">@childContent</table>
+    <table @attributes="@withClass(tableClass, additionalAttributes)">@childContent</table>
 }
 
 @code {
@@ -21,6 +22,8 @@
     @Parameter() responsive: boolean = false;
     /** The table's content: thead, tbody and rows. */
     @Parameter() childContent?: RenderFragment;
+    /** `@attributes` pass-through (class appends). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get tableClass(): string {
         const parts = ["table"];
