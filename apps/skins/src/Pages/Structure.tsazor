@@ -1,4 +1,6 @@
 @page "/structure"
+@import type { TreeViewItem } from "@tsazor/bootstrap"
+@import { icons } from "../skin-icons"
 
 <Typography Variant="h1">Structure</Typography>
 
@@ -64,7 +66,52 @@
     <Typography Variant="caption"><span class="splitter-echo">@resized</span></Typography>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">Sortable lists</Typography>
+    <div class="sortable-demo">
+        <div>
+            <span class="sortable-title" id="bakes-title">Today's bakes</span>
+            <SortableList aria-labelledby="bakes-title" Group="bakery" ItemFilter="@isSignature" @bind-Items="bakes">
+                <ItemTemplate Context="bread">@bread</ItemTemplate>
+            </SortableList>
+        </div>
+        <div>
+            <span class="sortable-title" id="sold-title">Sold out</span>
+            <SortableList aria-labelledby="sold-title" Group="bakery" @bind-Items="soldOut">
+                <ItemTemplate Context="bread">@bread</ItemTemplate>
+            </SortableList>
+        </div>
+    </div>
+    <Typography Variant="caption">
+        Bakes: <span class="sortable-bakes">@bakes.join(", ")</span>. Sold out: <span class="sortable-sold">@soldOut.join(", ")</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Tree and side navigation</Typography>
+    <div class="tree-demo">
+        <SidebarNav AriaLabel="Sections" Links="@sections" />
+        <SidebarNav AriaLabel="Sections, compact" Links="@sections" Compact="@true" />
+        <TreeView AriaLabel="Menu" Items="@menu" @bind-SelectedItem="picked" />
+    </div>
+    <Typography Variant="caption">Picked: <span class="tree-picked">@(picked?.text ?? "nothing")</span>.</Typography>
+</section>
+
 @code {
+    private readonly menu: TreeViewItem[] = [
+        { id: "breads", text: "Breads", items: [{ id: "rye", text: "Rye" }, { id: "spelt", text: "Spelt" }, { id: "sourdough", text: "Sourdough" }] },
+        { id: "pastries", text: "Pastries", items: [{ id: "croissant", text: "Croissant" }, { id: "danish", text: "Danish", disabled: true }] },
+        { id: "drinks", text: "Drinks" },
+    ];
+    private picked: TreeViewItem | null = null;
+    private readonly sections = [
+        { href: "/", label: "Overview", match: NavLinkMatch.All, icon: icons.folder },
+        { href: "/forms", label: "Forms", icon: icons.save },
+        { href: "/structure", label: "Structure", icon: icons.settings },
+    ];
+    private bakes = ["Sourdough (fixed)", "Rye", "Spelt", "Brioche"];
+    private soldOut = ["Pretzel"];
+    private readonly isSignature = (bread: string): boolean => bread.startsWith("Sourdough");
     private resized = "Drag a bar, or focus it and use the arrows.";
     private currentPage = 2;
     private detailsOpen = false;

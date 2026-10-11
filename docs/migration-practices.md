@@ -107,7 +107,8 @@ render in the browser.
 
 - **Map the component library** (Fluent UI Blazor, MudBlazor) to `@tsazor/fluent` or `@tsazor/bootstrap`. A
   missing component is a finding: the completeness plan ([design-library-completeness.md](design-library-completeness.md))
-  closes the gaps before 1.0. Icons are the first wall (F17).
+  closes the gaps before 1.0. Icons are the first wall (F17). Both skins have the same components and parameters
+  (only Fluent's Indicator and Spacer are missing in Bootstrap), so the skin is a choice of looks, not of features.
 - **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then
   `new Icons.Regular.Size20.Save()` becomes `Icons.Regular.Size20.Save`: a shared value, not an instance per use.
   `<FluentIcon Value="…" Width="24px" />` becomes `<Icon Value="…" size="24" />`, and without a size the icon is
@@ -166,6 +167,13 @@ render in the browser.
   `IFormFile`). `Mode.Buffer` hands `onFileUploaded` the whole `buffer` (a `Uint8Array`), each chunk
   arriving in `onProgressChange`. MudBlazor's `MudFileUpload` with an activator button becomes a `FileUpload` with
   `AnchorId` and `DragDropZoneVisible="false"`.
+- **Sortable lists.** `<FluentSortableList Items="@items" OnUpdate="@SortList">` with an `ItemTemplate` keeps its
+  parameters as `<SortableList @bind-Items="items">` (`Group`, `Clone`, `Drop`, `Sort`, `Handle`, `ItemFilter`,
+  `OnUpdate`, `OnAdd`, `OnRemove`; `Fallback` is gone, as there is no SortableJS). The usual `OnUpdate` handler that
+  moved the item in the list itself is not needed: `@bind-Items` gets the new order. Tsazor adds a keyboard way
+  (Space, the arrows, Escape) and announcements, which SortableJS lacks; give each list a visible name
+  (`aria-labelledby`). MudBlazor's `MudDropContainer`/`MudDropZone` with zone selectors becomes one `SortableList` per
+  zone in one `Group`.
 - **Inputs that update while typing.** `FluentTextField Immediate="true" ImmediateDelay="300"` becomes
   `<TextInput Immediate="true" ImmediateDelay="300" @bind-Value="…" />` (TextArea too). Without it the value
   updates on change, as Blazor's `InputText` does.

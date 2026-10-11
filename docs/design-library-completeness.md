@@ -48,8 +48,8 @@ DataGrid (PropertyColumn, TemplateColumn, Paginator, Virtualize), DateInput (nat
 FileInput, Form, FormField, Grid, Icon (since 2026-10-09; the full sets, see the Icons row), ListGroup, Menu/Dropdown, Navbar, NumberInput, Pagination, Popover, Progress,
 RadioGroup, Select, Skeleton, Spinner, Stack, Switch, Table, Tabs, TextArea, TextInput, Toast, Tooltip, Typography.
 
-**Only in `@tsazor/fluent`:** Autocomplete, CheckboxGroup, Indicator, SidebarNav, Spacer, TreeView. Bootstrap lacks
-these.
+**Only in `@tsazor/fluent`:** Indicator and Spacer; a Bootstrap app takes a Badge and the margin utilities instead.
+The Bootstrap skin caught up with Autocomplete, CheckboxGroup, SidebarNav and TreeView on 2026-10-11.
 
 **In neither skin:**
 
@@ -66,7 +66,7 @@ these.
 | Slider (done 2026-10-10) | Slider | Slider | A |
 | DatePicker with a calendar popup (DatePicker and Calendar, done 2026-10-10) | DateTime | DatePicker | A |
 | Upload drop zone with progress (FileUpload, done 2026-10-10) | InputFile | FileUpload, DropZone | A |
-| Sortable list (drag and drop, with a keyboard way) | SortableList, Drag | DropZone | A |
+| Sortable list (drag and drop, with a keyboard way; SortableList, done 2026-10-10) | SortableList, Drag | DropZone | A |
 | Overlay (busy state) | Overlay | Overlay | B |
 | TimePicker | DateTime | TimePicker | B |
 | Hotkeys | KeyCode | Hotkey | B |
@@ -100,7 +100,8 @@ The rich text editor stays in the app (the FluentCMS port embeds Quill), as in b
 
 Both waves come before 1.0 (D-L1). The waves set the order, not the release:
 - **A:** what a business app reaches for in its first week (AgentView, FluentCMS, the owner's company admin). That is
-  the twelve wave-A rows above, plus the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav; Icon is done).
+  the twelve wave-A rows above, plus the Bootstrap catch-up (Autocomplete, TreeView, CheckboxGroup, SidebarNav; done
+  2026-10-11; Icon is done).
 - **B:** the rest of the table, and `@tsazor/charts` (D-L2).
 - **Order:**
   1. the core (Virtualize);
@@ -137,3 +138,4 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L9 | `Slider` (both skins) | Writing the Slider: the renderer sets attributes in source order, and an `input type="range"` whose `value` comes before its `min` and `max` clamps it to the default 0–100 first (a probe in Edge, Firefox and WebKit: 220 with min 180 and max 260 became 180) | `value` comes after `min`, `max` and `step` in the markup (2026-10-10); the skins gate's Oven slider (180–260, at 220) checks it. A component with a range input of its own does the same |
 | L10 | Gates on the Bootstrap skin | The slider checks failed now and then: Bootstrap's reboot sets `scroll-behavior: smooth`, so `scrollIntoView` was still moving when the boxes were measured, and the clicks hit the wrong place | Scroll with `behavior: "instant"` before measuring (2026-10-10) |
 | L11 | `DatePicker` (both skins) | The calendar's dialog took a focus trap and dismissal; Escape did nothing: each opened an overlay layer of its own, and dismissal only acts for the top one (the trap's) | Both share one `createLayer()`, as Dialog does (2026-10-10; `test/date-picker.test.ts`). A component with a focus trap and dismissal of its own does the same |
+| L12 | `SortableList`, the keys | The gate pressed Space right after a move had rendered: the async key handler read the item from the key's target, a node the move had already given to another item, and acted on that one; with the pick-up still waiting, the next arrow key wasn't claimed at all (a held arrow key repeats as fast) | The keys act in turn (one queue for all lists of a page); whether a key is claimed (`preventDefault`) follows from the keys before it at once; a held item is found by its state, not by the key's target; the state attributes are set again right after each change; while an item is held, a key that lands outside the lists (its focused node was just removed) still goes to it (2026-10-10; `packages/ui/test/sortable.test.ts`) |

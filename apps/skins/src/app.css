@@ -158,3 +158,24 @@ body {
   flex: 1 1 16rem;
   max-width: 22rem;
 }
+
+.sortable-demo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1.5rem;
+  max-width: 36rem;
+  margin-bottom: 0.5rem;
+}
+
+.sortable-title {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.tree-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem 2.5rem;
+}

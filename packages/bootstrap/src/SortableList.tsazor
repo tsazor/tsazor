@@ -1,0 +1,126 @@
+@** A Bootstrap sortable list (a `.list-group`; Fluent UI Blazor's FluentSortableList, MudBlazor's MudDropContainer):
+    items to drag into another order with a mouse, a pen or a finger — and, between lists of the same `group`, into
+    another list. The keys do the same: Space or Enter picks the focused item up, the arrow keys move it (across to the lists before
+    and after it in its group with the other arrows), Space or Enter puts it down, Escape puts it back; a screen
+    reader hears each step. The list is one tab stop. `items` is two-way (@bind-items); `itemTemplate` draws an item.
+    `handle` lets only an element with the class sortable-grab start a drag, `itemFilter` keeps items in place, `clone`
+    leaves a copy behind, `drop` and `sort` turn taking and reordering off — the same parameters as the Fluent skin's
+    SortableList. *@
+@typeparam TItem
+@import {
+    moveItem, sortableList, SortableListEventArgs, sortableListLabels, uniqueId,
+    type Orientation, type SortableListHandle, type SortableListLabels,
+} from "@tsazor/ui"
+@import { withClass } from "./attributes"
+
+<ul id="@this.listId" role="list" aria-label="@this.ariaLabel" @attributes="@withClass(this.listClass, this.additionalAttributes)" @attach="this.behavior">
+    @for (let i = 0; i < this.items.length; i++) {
+        <li class="@this.itemClass(i)" data-sortable-index="@i" aria-describedby="@this.hintId">@this.itemTemplate?.(this.items[i]!)</li>
+    }
+</ul>
+<span class="visually-hidden" id="@this.hintId">@this.texts.instructions</span>
+<span class="visually-hidden" role="status">@this.announcement</span>
+
+@code {
+    /** The items, two-way with @bind-items (`Items`). */
+    @Parameter() items: TItem[] = [];
+    /** Raised with the items in their new order. */
+    @Parameter() itemsChanged?: EventCallback<TItem[]>;
+    /** Draws an item (`ItemTemplate`). */
+    @Parameter() itemTemplate?: (item: TItem) => RenderFragment;
+    /** The list's accessible name, also said when an item moves into it. */
+    @Parameter() ariaLabel?: string;
+    /** Lists of one group trade items (`Group`). */
+    @Parameter() group?: string;
+    /** Items dragged to another list stay here too (`Clone`). */
+    @Parameter() clone: boolean = false;
+    /** Takes items from other lists of the group (default; `Drop`). */
+    @Parameter() drop: boolean = true;
+    /** Reorders within the list (default; `Sort`). */
+    @Parameter() sort: boolean = true;
+    /** Only an element with the class sortable-grab starts a drag (`Handle`). */
+    @Parameter() handle: boolean = false;
+    /** Items it returns true for stay where they are (`ItemFilter`). */
+    @Parameter() itemFilter?: (item: TItem) => boolean;
+    /** vertical (default) | horizontal: which arrow keys move along the list. */
+    @Parameter() orientation: Orientation = "vertical";
+    /** The texts a screen reader hears (English by default). */
+    @Parameter() labels?: Partial<SortableListLabels>;
+    /** Raised when an item moved within the list (`OnUpdate`). */
+    @Parameter() onUpdate?: EventCallback<SortableListEventArgs>;
+    /** Raised when an item left for another list (`OnRemove`). */
+    @Parameter() onRemove?: EventCallback<SortableListEventArgs>;
+    /** Raised when an item came from another list (`OnAdd`). */
+    @Parameter() onAdd?: EventCallback<SortableListEventArgs>;
+    /** The list's id, the fromListId and toListId of the events; generated when omitted. */
+    @Parameter() id?: string;
+    /** Further attributes for the list element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly generatedId = uniqueId("tz-sortable-list");
+    private readonly hintId = `${this.generatedId}-hint`;
+    private announcement = "";
+
+    private get listId(): string {
+        return this.id ?? this.generatedId;
+    }
+
+    private get texts(): SortableListLabels {
+        return { ...sortableListLabels, ...this.labels };
+    }
+
+    private get listClass(): string {
+        return this.orientation === "horizontal" ? "list-group list-group-horizontal tz-sortable-list" : "list-group tz-sortable-list";
+    }
+
+    private itemClass(index: number): string {
+        let cls = "list-group-item tz-sortable-list__item";
+        if (this.isFixed(index)) cls += " tz-sortable-list__item--fixed";
+        return cls;
+    }
+
+    private isFixed(index: number): boolean {
+        const item = this.items[index];
+        return item !== undefined && (this.itemFilter?.(item) ?? false);
+    }
+
+    /** The items changed: keep them, tell @bind-items. */
+    private async changed(items: TItem[]): Promise<void> {
+        this.items = items;
+        this.stateHasChanged();
+        await this.itemsChanged?.invokeAsync(items);
+    }
+
+    private readonly settings = (): SortableListHandle => ({
+        id: this.listId,
+        group: this.group,
+        clone: this.clone,
+        drop: this.drop,
+        sort: this.sort,
+        handle: this.handle ? ".sortable-grab" : undefined,
+        orientation: this.orientation,
+        name: this.ariaLabel ?? this.listId,
+        labels: this.texts,
+        count: this.items.length,
+        isFixed: (index) => this.isFixed(index),
+        itemAt: (index) => this.items[index],
+        move: async (from, to) => {
+            await this.changed(moveItem(this.items, from, to));
+            await this.onUpdate?.invokeAsync(new SortableListEventArgs(from, to, this.listId, this.listId));
+        },
+        remove: async (index, args) => {
+            await this.changed(this.items.filter((_, at) => at !== index));
+            await this.onRemove?.invokeAsync(args);
+        },
+        add: async (item, index, args) => {
+            await this.changed([...this.items.slice(0, index), item as TItem, ...this.items.slice(index)]);
+            await this.onAdd?.invokeAsync(args);
+        },
+        announce: (text) => {
+            this.announcement = text;
+            this.stateHasChanged();
+        },
+    });
+
+    private readonly behavior = sortableList(this.settings, { indicatorClass: "tz-sortable-list__indicator" });
+}

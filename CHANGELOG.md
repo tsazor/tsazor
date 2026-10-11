@@ -5,6 +5,20 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/bootstrap` (wave A) catches up with the Fluent skin: `Autocomplete` (a `.form-control` with `.badge` chips
+  and a `.dropdown-menu` listbox), `TreeView` (with `TreeViewItem` among its types), `CheckboxGroup` (`.form-check`)
+  and `SidebarNav` (`.nav-pills`, the compact rail) — the same parameters as the Fluent skin's. Both skins'
+  `Autocomplete.optionKey` returns a key `@key` takes (`string | number | object`).
+
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `SortableList` (Fluent UI Blazor's
+  `FluentSortableList`; MudBlazor's `MudDropContainer`): items dragged into another order with any pointer, and
+  between lists of one `group`, with a line where they land; and a keyboard way — Space or Enter picks the focused
+  item up, the arrows move it (across to the neighboring lists of the group with the other arrows), Space or Enter
+  puts it down, Escape puts it back — announced to screen readers. One tab stop per list. `@bind-items`,
+  `itemTemplate`, `clone`, `drop`, `sort`, `handle` (.sortable-grab), `itemFilter`, `orientation`, `labels`,
+  `onUpdate`, `onAdd`, `onRemove`. The Bootstrap skin draws a `.list-group`. `@tsazor/ui`: `sortableList`,
+  `moveItem`, `sortableInsertIndex`, `SortableListEventArgs`.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave A): `FileUpload` (Fluent UI Blazor's `FluentInputFile`,
   MudBlazor's `MudFileUpload`): a drop zone that is the label of a file input; dropped or chosen files go through an
   `upload` function (`uploadTo(url)` posts each with its progress, over XMLHttpRequest) or are read in chunks (`mode`

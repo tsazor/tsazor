@@ -494,6 +494,9 @@ export declare function markSubmitAttempt(context: EditContext): void;
 // monthNames
 export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
 
+// moveItem
+export declare function moveItem<T>(list: readonly T[], from: number, to: number): T[];
+
 // nextChipSelection
 export declare function nextChipSelection<T>(mode: ChipSelectionMode, selected: readonly T[], value: T, equals?: (a: T, b: T) => boolean): T[];
 
@@ -609,6 +612,59 @@ export declare function sliderFraction(value: number, min: number, max: number):
 
 // sliderTicks
 export declare function sliderTicks(min: number, max: number, step: number, limit?: number): number[];
+
+// sortableInsertIndex
+export declare function sortableInsertIndex(rects: readonly DOMRect[], point: {
+    x: number;
+    y: number;
+}, orientation: Orientation): number;
+
+// sortableList
+export declare function sortableList(handle: () => SortableListHandle, options: {
+    indicatorClass: string;
+}): Attachment<HTMLElement>;
+
+// SortableListEventArgs
+export declare class SortableListEventArgs {
+    readonly oldIndex: number;
+    readonly newIndex: number;
+    readonly fromListId: string | undefined;
+    readonly toListId: string | undefined;
+    constructor(oldIndex: number, newIndex: number, fromListId: string | undefined, toListId: string | undefined);
+}
+
+// SortableListHandle
+export interface SortableListHandle {
+    readonly id: string;
+    readonly group?: string;
+    readonly clone: boolean;
+    readonly drop: boolean;
+    readonly sort: boolean;
+    readonly handle?: string;
+    readonly orientation: Orientation;
+    readonly name: string;
+    readonly labels: SortableListLabels;
+    readonly count: number;
+    isFixed(index: number): boolean;
+    itemAt(index: number): unknown;
+    move(from: number, to: number): Promise<void>;
+    remove(index: number, args: SortableListEventArgs): Promise<void>;
+    add(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
+    announce(text: string): void;
+}
+
+// sortableListLabels
+export declare const sortableListLabels: SortableListLabels;
+
+// SortableListLabels
+export interface SortableListLabels {
+    readonly instructions: string;
+    readonly grabbed: (item: string, position: number, count: number) => string;
+    readonly moved: (item: string, position: number, count: number) => string;
+    readonly movedToList: (item: string, list: string, position: number, count: number) => string;
+    readonly dropped: (item: string, position: number, count: number) => string;
+    readonly canceled: (item: string) => string;
+}
 
 // SortDirection
 export type SortDirection = "auto" | "ascending" | "descending";

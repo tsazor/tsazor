@@ -37,7 +37,7 @@ export default class Autocomplete<TOption> extends ComponentBase {
     items?: TOption[];
     onOptionsSearch?: EventCallback<OptionsSearchEventArgs<TOption>>;
     optionText: (option: TOption) => string;
-    optionKey?: (option: TOption) => unknown;
+    optionKey?: (option: TOption) => string | number | object;
     optionTemplate?: (option: TOption) => RenderFragment;
     multiple: boolean;
     selectedOptions: TOption[];
@@ -744,6 +744,31 @@ export default class Slider extends InputBase<number> {
     id?: string;
     ariaLabel?: string;
 }
+
+// SortableList
+export default class SortableList<TItem> extends ComponentBase {
+    items: TItem[];
+    itemsChanged?: EventCallback<TItem[]>;
+    itemTemplate?: (item: TItem) => RenderFragment;
+    ariaLabel?: string;
+    group?: string;
+    clone: boolean;
+    drop: boolean;
+    sort: boolean;
+    handle: boolean;
+    itemFilter?: (item: TItem) => boolean;
+    orientation: Orientation;
+    labels?: Partial<SortableListLabels>;
+    onUpdate?: EventCallback<SortableListEventArgs>;
+    onRemove?: EventCallback<SortableListEventArgs>;
+    onAdd?: EventCallback<SortableListEventArgs>;
+    id?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// SortableListEventArgs: re-exported from @tsazor/ui
+
+// SortableListLabels: re-exported from @tsazor/ui
 
 // SortDirection: re-exported from @tsazor/ui
 

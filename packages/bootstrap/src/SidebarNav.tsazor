@@ -1,0 +1,48 @@
+@** A sidebar navigation landmark (nav; Bootstrap's `.nav-pills.flex-column`) that renders links as a list of runtime
+    NavLinks, which mark the link matching the current URL active. A link may have an `icon`, and an `iconActive`
+    shown while it is the current page (Fluent UI Blazor's `IconRest`/`IconActive`). compact switches to the icon
+    rail: a link with an icon shows only the icon, its label stays its accessible name and its tooltip — the same
+    parameters as the Fluent skin's SidebarNav. *@
+@import type { IconValue } from "@tsazor/ui"
+@import { withClass } from "./attributes"
+
+<nav aria-label="@ariaLabel" @attributes="@withClass(navClass, additionalAttributes)">
+    <ul class="nav nav-pills flex-column gap-1">
+        @foreach (const link of links) {
+            <li class="nav-item">
+                <NavLink cssClass="nav-link tz-nav__link" activeClass="active" href="@link.href" match="@(link.match ?? NavLinkMatch.Prefix)" title="@titleOf(link)">
+                    @if (link.icon) {
+                        <Icon value="@link.icon" class="@(link.iconActive ? "tz-nav__icon tz-nav__icon--rest" : "tz-nav__icon")" />
+                    }
+                    @if (link.iconActive) {
+                        <Icon value="@link.iconActive" class="tz-nav__icon tz-nav__icon--active" />
+                    }
+                    <span class="tz-nav__label">@link.label</span>
+                </NavLink>
+            </li>
+        }
+    </ul>
+    @childContent
+</nav>
+
+@code {
+    /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link). */
+    @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] = [];
+    /** Accessible nav name. */
+    @Parameter() ariaLabel: string = "Main navigation";
+    /** Renders the compact (icon-rail) variant. */
+    @Parameter() compact: boolean = false;
+    /** Further attributes for the nav element. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+    /** Extra content below the links (e.g. section headers). */
+    @Parameter() childContent?: RenderFragment;
+
+    private get navClass(): string {
+        return this.compact ? "tz-nav tz-nav--compact" : "tz-nav";
+    }
+
+    /** The rail shows only the icon: the label becomes its tooltip. */
+    private titleOf(link: { label: string; icon?: IconValue }): string | null {
+        return this.compact && link.icon !== undefined ? link.label : null;
+    }
+}

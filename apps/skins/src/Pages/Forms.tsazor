@@ -27,6 +27,15 @@
 <p class="order-status">@status</p>
 
 <section class="demo">
+    <Typography Variant="h2">Choices</Typography>
+    <CheckboxGroup Label="Allergens to leave out" Options="@allergenOptions" Inline="@true" @bind-Value="allergens" />
+    <Autocomplete Label="Toppings" Items="@toppingOptions" Placeholder="Type to search" @bind-SelectedOptions="toppings" />
+    <Typography Variant="caption">
+        Leave out <span class="choice-allergens">@allergens.join(", ")</span>; toppings <span class="choice-toppings">@toppings.join(", ")</span>.
+    </Typography>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Wizard</Typography>
     <Wizard @bind-Value="wizardStep" OnFinish="@finishOrder" DisplayStepNumber="all" AriaLabel="Order steps" class="order-wizard">
         <Steps>
@@ -92,6 +101,11 @@
 </section>
 
 @code {
+    private allergens: string[] = ["nuts"];
+    private readonly allergenOptions = [{ value: "gluten", label: "Gluten" }, { value: "nuts", label: "Nuts" }, { value: "sesame", label: "Sesame" }];
+    private toppings: string[] = [];
+    private readonly toppingOptions = ["Sesame", "Poppy seeds", "Sunflower seeds", "Pumpkin seeds", "Flax", "Oats", "Caraway"];
+
     private pickupDay = "2026-10-10";
     private deliveryDay = "2026-10-10";
     private billingMonth = "2026-10-01";

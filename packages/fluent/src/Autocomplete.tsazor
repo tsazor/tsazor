@@ -57,7 +57,7 @@
     /** An option's text, shown and searched. */
     @Parameter() optionText: (option: TOption) => string = (option) => String(option);
     /** What makes two options the same (by default their text). */
-    @Parameter() optionKey?: (option: TOption) => unknown;
+    @Parameter() optionKey?: (option: TOption) => string | number | object;
     /** How an option looks in the list. */
     @Parameter() optionTemplate?: (option: TOption) => RenderFragment;
     /** Several values (chips), the default; false for one. */
@@ -122,7 +122,7 @@
         return !this.multiple && this.selectedOption !== null ? this.optionText(this.selectedOption) : "";
     }
 
-    private keyOf(option: TOption): unknown {
+    private keyOf(option: TOption): string | number | object {
         return (this.optionKey ?? this.optionText)(option);
     }
 

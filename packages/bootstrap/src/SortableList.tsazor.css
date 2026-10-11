@@ -1,0 +1,55 @@
+/* SortableList — a .list-group to drag: a grab cursor, a primary ring on an item picked up with the keys, the dragged
+   one dimmed, a primary line where it will land. */
+
+/* An empty list stays a place to drop on. */
+.tz-sortable-list:not(:has(> li)) {
+  min-height: 2.75rem;
+  border: var(--bs-border-width) dashed var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.tz-sortable-list__item {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.tz-sortable-list__item:focus-visible {
+  z-index: 3;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.tz-sortable-list__item--fixed {
+  cursor: default;
+  color: var(--bs-secondary-color);
+}
+
+.tz-sortable-list__item[data-sortable-grabbed] {
+  z-index: 2;
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 1px var(--bs-primary), var(--bs-box-shadow-sm);
+}
+
+.tz-sortable-list__item[data-sortable-dragging] {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+/* A list with handles: only the handle grabs; the item takes touch scrolling. */
+.tz-sortable-list:has(.sortable-grab) .tz-sortable-list__item {
+  cursor: default;
+  touch-action: auto;
+}
+
+.tz-sortable-list .sortable-grab {
+  cursor: grab;
+  touch-action: none;
+}
+
+.tz-sortable-list__indicator {
+  z-index: 1070;
+  border-radius: 1px;
+  background: var(--bs-primary);
+  pointer-events: none;
+}

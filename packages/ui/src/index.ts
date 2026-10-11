@@ -66,6 +66,7 @@ export {
   type UploadFileOptions,
   type UploadResponse,
 } from "./file-upload.js";
+export { moveItem, sortableInsertIndex, sortableList, SortableListEventArgs, sortableListLabels, type SortableListHandle, type SortableListLabels } from "./sortable.js";
 export { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepChangeEventArgs, wizardStepStatus, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";

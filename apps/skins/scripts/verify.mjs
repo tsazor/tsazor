@@ -351,6 +351,28 @@ try {
     const uploadViolations = await axe(page);
     say(uploadViolations.length === 0, `axe /forms after the uploads${uploadViolations.length ? `: ${uploadViolations.join(" | ")}` : ""}`);
 
+    /* Choices: a checkbox group binds an array in the options' order; an autocomplete searches and picks chips. */
+    const choices = page.locator("section", { has: page.getByRole("heading", { name: "Choices", exact: true }) });
+    await choices.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const choiceIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.choice-${n}`)?.textContent === v, [name, value]);
+    await choices.getByLabel("Gluten").check();
+    await choiceIs("allergens", "gluten, nuts");
+    say(true, "checkbox group: a checked option joins the bound array, in the options' order");
+    const toppings = choices.getByRole("combobox", { name: "Toppings" });
+    await toppings.fill("pump");
+    const toppingList = page.getByRole("listbox", { name: "Toppings" });
+    await toppingList.waitFor();
+    say((await toppingList.getByRole("option").allTextContents()).map((text) => text.trim()).join(", ") === "Pumpkin seeds", "autocomplete: typing filters the options");
+    await toppings.press("ArrowDown");
+    await toppings.press("Enter");
+    await choiceIs("toppings", "Pumpkin seeds");
+    say(await choices.getByRole("button", { name: "Remove Pumpkin seeds" }).isVisible(), "autocomplete: Enter picks the option as a removable chip");
+    await choices.getByRole("button", { name: "Remove Pumpkin seeds" }).click();
+    await choiceIs("toppings", "");
+    say(true, "autocomplete: a chip's button removes it");
+    const choiceViolations = await axe(page);
+    say(choiceViolations.length === 0, `axe /forms with the choices${choiceViolations.length ? `: ${choiceViolations.join(" | ")}` : ""}`);
+
     /* Data: the grid sorts, pages and selects. */
     await open(page, base, "/data");
     const grid = page.getByRole("table", { name: "Orders" });
@@ -499,6 +521,81 @@ try {
     await page.keyboard.press("Enter");
     await page.waitForFunction(() => (document.querySelector(".demo-splitter > div")?.getBoundingClientRect().width ?? 0) > 0);
     say(true, "splitter: Enter collapses a collapsible pane and expands it again");
+
+    /* Sortable lists: the keyboard way (pick up, move, put down, put back, across), a fixed item, a pointer drag. */
+    const sortables = page.locator("section", { has: page.getByRole("heading", { name: "Sortable lists", exact: true }) });
+    await sortables.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const bakes = sortables.getByRole("list", { name: "Today's bakes" });
+    const soldOut = sortables.getByRole("list", { name: "Sold out" });
+    const bakeItem = (text) => bakes.locator("li", { hasText: text });
+    const sortOrder = (name) => page.locator(`.sortable-${name}`).textContent();
+    const orderIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.sortable-${n}`)?.textContent === v, [name, value]);
+    const spoken = () => sortables.getByRole("status").first().textContent();
+    say((await bakes.locator("li[tabindex='0']").count()) === 1, "sortable: a list is one tab stop");
+    await bakeItem("Rye").focus();
+    await page.keyboard.press("Space");
+    say((await spoken()) === "Rye, picked up. Position 2 of 4.", `sortable: Space picks an item up, and says so (${await spoken()})`);
+    await page.keyboard.press("ArrowDown");
+    await orderIs("bakes", "Sourdough (fixed), Spelt, Rye, Brioche");
+    await page.keyboard.press("Space");
+    await sortables.getByRole("status").getByText("Rye, put down at position 3 of 4.").waitFor({ state: "attached" });
+    say(true, "sortable: the arrows move it, Space puts it down");
+    await bakeItem("Spelt").focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("ArrowUp");
+    await orderIs("bakes", "Spelt, Sourdough (fixed), Rye, Brioche");
+    await page.keyboard.press("Escape");
+    await orderIs("bakes", "Sourdough (fixed), Spelt, Rye, Brioche");
+    // (The focus goes back to the item a frame later: wait for it before focusing another.)
+    await sortables.getByRole("status").getByText("Spelt, put back.").waitFor({ state: "attached" });
+    say(true, "sortable: Escape puts it back");
+    await bakeItem("Sourdough").focus();
+    await page.keyboard.press("Space");
+    say(!(await bakeItem("Sourdough").evaluate((item) => item.hasAttribute("data-sortable-grabbed"))), "sortable: a fixed item stays put");
+    await bakeItem("Brioche").focus();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowRight");
+    await orderIs("sold", "Pretzel, Brioche");
+    await page.keyboard.press("Space");
+    await sortables.getByRole("status").getByText("Brioche, put down at position 2 of 2.").waitFor({ state: "attached" });
+    say((await sortOrder("bakes")) === "Sourdough (fixed), Spelt, Rye", "sortable: the arrows across move an item to the next list of the group");
+    const dragTo = async (item, target, after) => {
+      const from = await item.boundingBox();
+      const to = await target.boundingBox();
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 + 8, { steps: 3 });
+      await page.mouse.move(to.x + to.width / 2, after ? to.y + to.height - 4 : to.y + 4, { steps: 8 });
+      await page.mouse.up();
+    };
+    await dragTo(bakeItem("Spelt"), bakeItem("Rye"), true);
+    await orderIs("bakes", "Sourdough (fixed), Rye, Spelt");
+    say(true, "sortable: a pointer drag reorders");
+    await dragTo(soldOut.locator("li", { hasText: "Pretzel" }), bakeItem("Rye"), false);
+    await orderIs("bakes", "Sourdough (fixed), Pretzel, Rye, Spelt");
+    say((await sortOrder("sold")) === "Brioche", "sortable: a pointer drag moves an item to another list of the group");
+    const sortableViolations = await axe(page);
+    say(sortableViolations.length === 0, `axe /structure after sorting${sortableViolations.length ? `: ${sortableViolations.join(" | ")}` : ""}`);
+
+    /* Tree and side navigation: the current page's link, the rail's names, the tree's keys. */
+    const treeSection = page.locator("section", { has: page.getByRole("heading", { name: "Tree and side navigation", exact: true }) });
+    await treeSection.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const sideNav = page.getByRole("navigation", { name: "Sections", exact: true });
+    say((await sideNav.getByRole("link", { name: "Structure" }).getAttribute("aria-current")) === "page", "side navigation: the current page's link says so");
+    const rail = page.getByRole("navigation", { name: "Sections, compact" });
+    say((await rail.getByRole("link", { name: "Forms" }).getAttribute("title")) === "Forms", "side navigation: the compact rail keeps each link's name and shows it as a tooltip");
+    const tree = treeSection.getByRole("tree", { name: "Menu" });
+    const breadNode = tree.getByRole("treeitem", { name: /^Breads/ });
+    await breadNode.focus();
+    await page.keyboard.press("ArrowRight");
+    await page.waitForFunction(() => document.querySelector("[role=treeitem][aria-expanded='true']") !== null);
+    say((await breadNode.getAttribute("aria-expanded")) === "true", "tree: ArrowRight opens a node");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.querySelector(".tree-picked")?.textContent === "Rye");
+    say((await tree.getByRole("treeitem", { name: "Rye" }).getAttribute("aria-selected")) === "true", "tree: ArrowDown and Enter select a child");
+    const treeViolations = await axe(page);
+    say(treeViolations.length === 0, `axe /structure with the tree open${treeViolations.length ? `: ${treeViolations.join(" | ")}` : ""}`);
 
     say(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(" | ")}` : ""}`);
     await page.close();

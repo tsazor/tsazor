@@ -28,6 +28,28 @@ export default class Alert extends ComponentBase {
 
 // Appearance: re-exported from @tsazor/ui
 
+// Autocomplete
+export default class Autocomplete<TOption> extends ComponentBase {
+    label?: string;
+    ariaLabel?: string;
+    placeholder?: string;
+    items?: TOption[];
+    onOptionsSearch?: EventCallback<OptionsSearchEventArgs<TOption>>;
+    optionText: (option: TOption) => string;
+    optionKey?: (option: TOption) => string | number | object;
+    optionTemplate?: (option: TOption) => RenderFragment;
+    multiple: boolean;
+    selectedOptions: TOption[];
+    selectedOptionsChanged?: EventCallback<TOption[]>;
+    selectedOption: TOption | null;
+    selectedOptionChanged?: EventCallback<TOption | null>;
+    maximumSelectedOptions?: number;
+    maximumOptionsSearch: number;
+    disabled: boolean;
+    id?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Avatar
 export default class Avatar extends ComponentBase {
     name?: string;
@@ -161,6 +183,20 @@ export default class Checkbox extends InputBase<boolean> {
     switch: boolean;
     disabled: boolean;
     required: boolean;
+    id?: string;
+}
+
+// CheckboxGroup
+export default class CheckboxGroup extends InputBase<string[]> {
+    label?: string;
+    options: {
+        value: string;
+        label: string;
+        disabled?: boolean;
+    }[];
+    inline: boolean;
+    help?: string;
+    disabled: boolean;
     id?: string;
 }
 
@@ -635,6 +671,21 @@ export default class Select extends InputBase<string> {
 
 // SelectionMode: re-exported from @tsazor/ui
 
+// SidebarNav
+export default class SidebarNav extends ComponentBase {
+    links: {
+        href: string;
+        label: string;
+        match?: NavLinkMatch;
+        icon?: IconValue;
+        iconActive?: IconValue;
+    }[];
+    ariaLabel: string;
+    compact: boolean;
+    additionalAttributes?: Record<string, unknown>;
+    childContent?: RenderFragment;
+}
+
 // Size: re-exported from @tsazor/ui
 
 // Skeleton
@@ -665,6 +716,31 @@ export default class Slider extends InputBase<number> {
     valueFormat?: (value: number) => string;
     id?: string;
 }
+
+// SortableList
+export default class SortableList<TItem> extends ComponentBase {
+    items: TItem[];
+    itemsChanged?: EventCallback<TItem[]>;
+    itemTemplate?: (item: TItem) => RenderFragment;
+    ariaLabel?: string;
+    group?: string;
+    clone: boolean;
+    drop: boolean;
+    sort: boolean;
+    handle: boolean;
+    itemFilter?: (item: TItem) => boolean;
+    orientation: Orientation;
+    labels?: Partial<SortableListLabels>;
+    onUpdate?: EventCallback<SortableListEventArgs>;
+    onRemove?: EventCallback<SortableListEventArgs>;
+    onAdd?: EventCallback<SortableListEventArgs>;
+    id?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// SortableListEventArgs: re-exported from @tsazor/ui
+
+// SortableListLabels: re-exported from @tsazor/ui
 
 // SortDirection: re-exported from @tsazor/ui
 
@@ -848,6 +924,17 @@ export default class Tooltip extends ComponentBase {
     placement: Placement;
     childContent?: RenderFragment;
 }
+
+// TreeView
+export default class TreeView extends ComponentBase {
+    items: TreeViewItem[];
+    selectedItem?: TreeViewItem | null;
+    selectedItemChanged?: EventCallback<TreeViewItem | null>;
+    ariaLabel?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// TreeViewItem: re-exported from @tsazor/ui
 
 // Typography
 export default class Typography extends ComponentBase {
