@@ -1,9 +1,10 @@
 # Charts and visualizations
 
-Tsazor has no chart component yet (`@tsazor/charts` comes in wave B,
-[design-library-completeness.md](design-library-completeness.md), D-L2). Until then, and for anything a chart
-component doesn't cover, an app uses one of two patterns. Both run in `apps/skins` (`/charts`), and its gate checks
-them in Edge, Firefox and WebKit, with both skins.
+For the common charts — line, area, bar, stacked bar, donut, pie, sparklines — take
+[`@tsazor/charts`](../packages/charts/README.md): SVG in the skin's colors, accessible, MudBlazor's `MudChart` as the
+model ([design-charts.md](design-charts.md)). For anything it doesn't cover — a time series with zoom, a heat map, a
+map — an app uses one of two patterns. All three run in `apps/skins` (`/charts`), and its gate checks them in Edge,
+Firefox and WebKit, with both skins.
 
 1. **A chart library on a canvas or an element of its own, through `@attach`.** Chart.js, ECharts, uPlot and
    ApexCharts all work this way: they take an element and draw into it.

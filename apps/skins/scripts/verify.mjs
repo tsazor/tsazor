@@ -925,6 +925,40 @@ try {
     const area = (name) => page.locator(`.treemap [data-name="${name}"] rect`).evaluate((rect) => rect.getBBox().width * rect.getBBox().height);
     const ratio = (await area("Sourdough")) / (await area("Rye"));
     say(Math.abs(ratio - 340 / 210) < 0.25, `charts: a tile's area follows its value (Sourdough/Rye ${ratio.toFixed(2)}, the values ${(340 / 210).toFixed(2)})`);
+    /* @tsazor/charts: SVG in the skin's colors, named and described in words, the numbers in a table; the keyboard
+       chooses a series, a click a slice; the legend hides a series. */
+    const sold = page.locator("figure.chart-sold");
+    await sold.evaluate((figure) => figure.scrollIntoView({ block: "start", behavior: "instant" }));
+    say((await sold.locator("svg").getAttribute("role")) === "group" && (await sold.locator("svg > title").textContent()) === "Loaves sold this week"
+      && (await sold.locator("svg > desc").textContent()).startsWith("Line chart: Rye from 98 to 182; Spelt from 38 to 75"), "charts: a chart named and described in words");
+    const chartColors = await sold.evaluate((figure) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--tz-chart-1)";
+      document.body.append(probe);
+      const first = getComputedStyle(probe).color;
+      probe.remove();
+      const lines = [...figure.querySelectorAll(".tz-chart__line")].map((line) => getComputedStyle(line).stroke);
+      return { first, lines };
+    });
+    say(chartColors.lines[0] === chartColors.first && new Set(chartColors.lines).size === 3, `charts: the series in the skin's palette (${chartColors.lines.join(", ")})`);
+    const ryeSeries = sold.getByRole("button", { name: "Rye: 98 to 182" });
+    await ryeSeries.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.querySelector(".chart-picked")?.textContent === "0");
+    say((await ryeSeries.getAttribute("aria-pressed")) === "true", "charts: Enter on a series chooses it (@bind-selectedIndex)");
+    await page.locator("figure.chart-share").getByRole("button", { name: /^Pastries: 450/ }).click();
+    await page.waitForFunction(() => document.querySelector(".chart-group")?.textContent === "1");
+    say(true, "charts: a click on a donut's slice chooses it");
+    const days = page.locator("figure.chart-days");
+    await days.getByLabel("Spelt").uncheck();
+    await page.waitForFunction(() => document.querySelectorAll("figure.chart-days .tz-chart__series").length === 2);
+    say((await days.locator("svg > desc").textContent()).includes("Spelt") === false, "charts: the legend's checkbox hides a series, the words follow");
+    await sold.locator("summary").click();
+    say((await sold.locator("tbody tr").count()) === 6, "charts: the numbers in a table");
+    say((await page.getByRole("img", { name: "Rye: from 98 to 182, now 182" }).count()) === 1, "charts: a sparkline named with where it goes");
+    const chartsViolations = await axe(page);
+    say(chartsViolations.length === 0, `axe /charts with @tsazor/charts in use${chartsViolations.length ? `: ${chartsViolations.join(" | ")}` : ""}`);
+
     // Twelve readings span two reconnects (five per connection); any window of them spans at least two.
     await page.waitForFunction(() => Number(document.querySelector(".oven-table tbody tr:last-child th")?.textContent ?? 0) >= 12, undefined, { timeout: 30_000 });
     const live = await page.evaluate(() => {

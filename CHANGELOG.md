@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/charts` (new, wave B; D-L2): `Chart` (MudBlazor's `MudChart`, its newer API) draws line, area, bar,
+  stacked-bar, donut and pie charts as SVG in the skin's colors (`--tz-chart-1` … `--tz-chart-8` default to Fluent's
+  or Bootstrap's tokens): `chartSeries`, `chartLabels`, `chartOptions` (`yAxisTicks`, `yAxisFormat` as a function,
+  smooth lines that don't overshoot, `chartPalette`, …), `legendPosition`, `@bind-selectedIndex` (each series or
+  slice a button then), `canHideSeries`. A figure named and described in words, the numbers in a table. `Sparkline`
+  for a cell or a card. The math (`valueAxis`, `linePath`, `arcPath`, `pieSlices`, …) for charts of an app's own.
+- `@tsazor/lsp` (`tsazor check`, the editor): an inline `type` beside a component in one `@import`
+  (`{ Chart, type ChartSeries }`) kept its name; the shadow program dropped it, so the type was unknown.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `TextInput` takes a `mask` (MudBlazor's
   `Mask="@(new PatternMask(...))"`): a PatternMask — `0` a digit, `a` a letter, `*` either, the rest written in
   between — or its pattern as text ("(000) 000-0000"); the text takes its shape as it is typed, the caret staying

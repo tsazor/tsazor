@@ -232,8 +232,13 @@ render in the browser.
   (Space, the arrows, Escape) and announcements, which SortableJS lacks; give each list a visible name
   (`aria-labelledby`). MudBlazor's `MudDropContainer`/`MudDropZone` with zone selectors becomes one `SortableList` per
   zone in one `Group`.
-- **Charts.** `MudChart` and chart wrappers over JS interop become a chart library through `@attach` until
-  `@tsazor/charts` (wave B); an SVG component of the app's own keeps its markup ([guide-charts.md](guide-charts.md)).
+- **Charts.** `MudChart` becomes `@tsazor/charts`' `<Chart>`: `ChartType="ChartType.Line"` is `ChartType="line"`
+  (`StackedBar` is `"stacked-bar"`), `ChartSeries` keeps `Name` and `Data`, `ChartLabels` stays — the older
+  `XAxisLabels` and `InputLabels` become it, and `InputData` a single series. `ChartOptions` keeps `YAxisTicks`,
+  `MaxNumYAxisTicks`, `YAxisLines`, `XAxisLines`, `ChartPalette` and `LineStrokeWidth`; `YAxisFormat="C0"` becomes a
+  function, `InterpolationOption.NaturalSpline` is `interpolation: "smooth"`. `SelectedIndex` and `CanHideSeries` stay.
+  Time series, heat maps, radar and Sankey charts, and chart wrappers over JS interop, become a chart library through
+  `@attach`; an SVG component of the app's own keeps its markup ([guide-charts.md](guide-charts.md)).
 - **Live updates.** What a Blazor Server page got through its circuit (a service's C# event,
   `InvokeAsync(StateHasChanged)`) becomes a stream the page observes: server-sent events, a WebSocket or SignalR's
   JavaScript client, through `this.observe` ([guide-live-data.md](guide-live-data.md)). Number the events and answer

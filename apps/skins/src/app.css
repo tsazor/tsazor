@@ -217,6 +217,20 @@ body {
   gap: 0.75rem;
 }
 
+/* @tsazor/charts: two charts a row on a wide page. */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.5rem;
+  max-width: 64rem;
+}
+
+.spark-table td,
+.spark-table th {
+  padding: 0.25rem 0.75rem;
+  text-align: start;
+}
+
 /* Charts: the colors come from the skin's tokens (Fluent's first, else Bootstrap's). */
 .chart-box {
   --chart-color: var(--fui-brand-background, var(--bs-primary));

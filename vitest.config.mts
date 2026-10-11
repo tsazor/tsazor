@@ -31,6 +31,7 @@ export default defineConfig({
       "packages/fluent-icons",
       "packages/bootstrap-icons",
       "packages/markdown",
+      "packages/charts",
       "packages/worker",
     ],
   },

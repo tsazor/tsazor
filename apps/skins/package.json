@@ -14,6 +14,7 @@
   "dependencies": {
     "@tsazor/bootstrap": "workspace:*",
     "@tsazor/bootstrap-icons": "workspace:*",
+    "@tsazor/charts": "workspace:*",
     "@tsazor/fluent": "workspace:*",
     "@tsazor/fluent-icons": "workspace:*",
     "@tsazor/markdown": "workspace:*",

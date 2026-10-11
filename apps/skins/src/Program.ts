@@ -3,6 +3,7 @@ import { Toaster } from "@tsazor/bootstrap";
 import App from "./App.tsazor";
 import routes from "virtual:tsazor-routes";
 import { skin } from "./skin";
+import "@tsazor/charts/charts.css";
 import "@tsazor/markdown/markdown.css";
 import "./app.css";
 

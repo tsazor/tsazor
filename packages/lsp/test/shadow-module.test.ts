@@ -125,6 +125,18 @@ describe("buildShadowModule", () => {
     expect(code).not.toContain('from "@fake/ui"');
   });
 
+  it("keeps an inline type beside a component in one import (`{ Badge, type BadgeSize }`)", async () => {
+    // The type's name used to be dropped: the import split into the component's shadow and nothing else.
+    const shadow = await buildShadowModule(
+      path.join(root, "Pages", "Typed.tsazor"),
+      '@import { Badge, type BadgeSize, tooltip as tip } from "@fake/ui"\n<p>x</p>\n',
+      root,
+    );
+    const lines = shadow!.code.split("\n");
+    expect(lines.some((line) => line.includes("Badge.tsazor.gen.ts"))).toBe(true);
+    expect(lines).toContain('import { type BadgeSize, tooltip as tip } from "@fake/ui";');
+  });
+
   it("binds a helper whose name differs from a component only in case to the package, not the component", async () => {
     // `tooltip` (a function) next to `Tooltip.tsazor`: on a case-insensitive file
     // system the existence check found the component and bound the helper to its shadow.

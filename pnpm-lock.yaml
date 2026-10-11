@@ -315,6 +315,9 @@ importers:
       '@tsazor/bootstrap-icons':
         specifier: workspace:*
         version: link:../../packages/bootstrap-icons
+      '@tsazor/charts':
+        specifier: workspace:*
+        version: link:../../packages/charts
       '@tsazor/fluent':
         specifier: workspace:*
         version: link:../../packages/fluent
@@ -545,6 +548,30 @@ importers:
       vite:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)(jsdom@29.1.1)
+
+  packages/charts:
+    devDependencies:
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@tsazor/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
       vitest:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)(jsdom@29.1.1)

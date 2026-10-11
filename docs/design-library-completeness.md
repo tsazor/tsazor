@@ -76,7 +76,7 @@ The Bootstrap skin caught up with Autocomplete, CheckboxGroup, SidebarNav and Tr
 | Carousel (done 2026-10-11) | none | Carousel | B |
 | Overflow (done 2026-10-11) | Overflow | none | B |
 | Link, Image, ScrollToTop, input Mask (TextInput's `mask`; done 2026-10-11) | partly | yes | B |
-| Charts | none | Chart (line, bar, pie, donut) | decision D-L2 |
+| Charts (`@tsazor/charts`, done 2026-10-11) | none | Chart (line, bar, pie, donut) | decision D-L2 |
 | PullToRefresh, Emoji | yes | none | not planned |
 
 The rich text editor stays in the app (the FluentCMS port embeds Quill), as in both references.
@@ -144,3 +144,4 @@ Core and component gaps found while building the library (§1). Each is fixed wi
 | L13 | `@tsazor/bootstrap`, `@attributes` | The Overlay's demo put `class` on a Bootstrap `Card`: `tsazor check` refused it (TZS025). Many Bootstrap components capture no attributes, where their Fluent twins (and Blazor's) do | `Card` first, then the other thirteen whose Fluent twin takes them (2026-10-11; `packages/bootstrap/test/attributes.test.ts`). `Tabs` wraps its tab list and panels in a `div` for them |
 | L14 | Published declarations (`@tsazor/workspace`) | The Overlay's API snapshot showed `opacity: undefined`: a parameter without a type annotation (`@Parameter() wrap = false`) was written with the type it didn't have. 22 parameters per skin, all from wave A, where TypeScript's inference made the annotation look redundant | The literal initializer's type (`boolean`, `number`, `string`), else `unknown` (2026-10-11; both skins' `test/declarations.test.ts`) |
 | L15 | `InputBase` (`@tsazor/runtime`), the skins' inputs | The shortcuts demo: Ctrl+K should focus a TextInput through its `@ref`, as Blazor's `Element.Value.FocusAsync()` does; Tsazor's inputs held no element (only InputFile did) | `InputBase.element`, set by the runtime's inputs and by the skins' eleven input components on their field (2026-10-11; `packages/runtime/test/forms.test.ts`, both skins' `test/element.test.ts`) |
+| L16 | `tsazor check` (`@tsazor/lsp`) | The charts demo: `@import { Chart, Sparkline, type ChartSeries } from "@tsazor/charts"` — `ChartSeries` was unknown. The shadow program rewrites a package import whose names are components and dropped every name with an inline `type` | An inline `type` keeps its name (2026-10-11; `packages/lsp/test/shadow-module.test.ts`) |
