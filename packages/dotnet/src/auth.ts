@@ -206,7 +206,11 @@ export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationState
     const token = provider.getToken();
     if (token === undefined || token.length === 0) return request;
     if (request.headers.has("authorization")) return request;
-    return new Request(request, { headers: { authorization: `Bearer ${token}` } });
+    // `headers` in a Request's init replaces all of them: without the copy, a POST lost its JSON content type and
+    // ASP.NET Core's [FromBody] answered 415.
+    const headers = new Headers(request.headers);
+    headers.set("authorization", `Bearer ${token}`);
+    return new Request(request, { headers });
   };
   return http.addRequestInterceptor(interceptor);
 }

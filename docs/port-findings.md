@@ -680,3 +680,40 @@ factory registrations, code-behind for the larger components, back/forward in ha
   first render); the template measures at `bind:this`, before the content is there, and
   never gets it (~1.4 % pixels). Deliberately not replicated.
 - Bundle: ~58 kB gzip (port) vs. ~43 kB gzip (Svelte original).
+
+# Dogfooding: FluentCMS admin (the owner's `apps/fluentcms-admin`, not committed) → Tsazor
+
+A second, hand-written port of FluentCMS's admin UI against the same backend, written by a Blazor developer
+without `@tsazor/dotnet`: login with a JWT, the admin shell, content types. Its type errors (2026-10-11) were app
+code; what they say about the framework:
+
+## V. Framework gaps
+
+### 1. `attachJwtAuth` dropped every other header — **fixed**
+
+`new Request(request, { headers: { authorization } })` replaces a request's headers instead of adding one: a POST
+lost `content-type: application/json` (ASP.NET Core's `[FromBody]` answers 415) and the client's `defaultHeaders`.
+The test checked the `authorization` header of a GET only. The admin had its own interceptor
+(`request.clone()` + `headers.set`) and never hit it. Fixed with a copy of the headers; a test sends a POST.
+
+### 2. Nothing led to `@tsazor/dotnet` — **open (docs)**
+
+The admin rebuilt by hand what `@tsazor/dotnet` has: the bearer token per request (`attachJwtAuth`), the
+envelope (`tsazor-dotnet generate --envelope data,errors`), errors as values (`HttpResult`). A Blazor developer
+starts from `TsazorHttp` (`HttpClient`) and the auth lesson; neither points there. Now in migration-practices.md
+(the backend boundary); the tutorial's backend chapter is the other place to name it.
+
+### 3. No reaction to a 401 — **open (decision)**
+
+`Program.ts` reached for `http.onUnauthorized`. Neither `TsazorHttp` nor `attachJwtAuth` reacts to a 401, as
+Blazor's handlers don't (a `DelegatingHandler` of the app's own). Candidate: `attachJwtAuth` logs out when a
+request that carried the token comes back 401, so `AuthorizeRouteView` shows its `NotAuthorized` (the redirect to
+the login).
+
+## W. Friction (app code, no fix needed)
+
+- **`getJson<T>` is a cast, not a check.** Ten of the twelve errors were inline response types
+  (`{ isSuccess; data?; errors?: unknown }`) that had drifted from the shared envelope type
+  (`errors?: AppError[]`). Declare the envelope once, or generate the client.
+- **Workarounds outlive their gap.** The admin's interceptor said `TsazorHttp` throws a bare `Error` without the
+  body; `TsazorHttpError` has carried `status` and `body` since 5.2.

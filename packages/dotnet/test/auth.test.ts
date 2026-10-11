@@ -81,6 +81,23 @@ describe("JwtAuthenticationStateProvider", () => {
     expect(seen[1]).toMatch(/^Bearer ey/);
     detach();
   });
+
+  it("attachJwtAuth keeps the request's other headers and its body (a POST stays JSON)", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
+    const http = new TsazorHttp({ defaultHeaders: { "x-site": "bakery" } });
+    attachJwtAuth(http, provider);
+    const seen: { type: string | null; site: string | null; auth: string | null; body: string }[] = [];
+    vi.stubGlobal("fetch", async (request: Request) => {
+      const { headers } = request;
+      seen.push({ type: headers.get("content-type"), site: headers.get("x-site"), auth: headers.get("authorization"), body: await request.text() });
+      return new Response("{}", { status: 200 });
+    });
+
+    await http.postJson("http://localhost/orders", { loaves: 2 });
+
+    expect(seen[0]).toMatchObject({ type: "application/json", site: "bakery", body: '{"loaves":2}' });
+    expect(seen[0]!.auth).toMatch(/^Bearer ey/);
+  });
 });
 
 describe("CookieAuthenticationStateProvider", () => {
