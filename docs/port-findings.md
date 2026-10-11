@@ -703,12 +703,14 @@ envelope (`tsazor-dotnet generate --envelope data,errors`), errors as values (`H
 starts from `TsazorHttp` (`HttpClient`) and the auth lesson; neither points there. Now in migration-practices.md
 (the backend boundary); the tutorial's backend chapter is the other place to name it.
 
-### 3. No reaction to a 401 — **open (decision)**
+### 3. No reaction to a 401 — **added (owner's decision, Tsazor extension)**
 
-`Program.ts` reached for `http.onUnauthorized`. Neither `TsazorHttp` nor `attachJwtAuth` reacts to a 401, as
-Blazor's handlers don't (a `DelegatingHandler` of the app's own). Candidate: `attachJwtAuth` logs out when a
-request that carried the token comes back 401, so `AuthorizeRouteView` shows its `NotAuthorized` (the redirect to
-the login).
+`Program.ts` reached for `http.onUnauthorized`. Neither `TsazorHttp` nor `attachJwtAuth` reacted to a 401, as
+Blazor's handlers don't (a `DelegatingHandler` of the app's own). Now `attachJwtAuth` logs out when a request that
+carried the current token comes back 401, so `AuthorizeRouteView` shows its `NotAuthorized` (the redirect to the
+login). To tell the token a response answers, a response interceptor gets the request that was sent as its second
+argument. A 401 to an older token (a new login came in between) or to a request with its own `authorization`
+changes nothing; a 403 never logs out.
 
 ## W. Friction (app code, no fix needed)
 

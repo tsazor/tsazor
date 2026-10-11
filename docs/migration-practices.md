@@ -70,8 +70,9 @@ render in the browser.
 - **Bearer tokens and envelopes are in `@tsazor/dotnet`.** `JwtAuthenticationStateProvider` with
   `attachJwtAuth(http, provider)` replaces the `DelegatingHandler` that adds the token, and `tsazor-dotnet generate
   --envelope data,errors` unwraps an `ApiResult<T>`-style envelope. A hand-written client types every call itself —
-  `getJson<T>` is a cast, not a check — so declare the envelope once. A 401 still needs a reaction of the app's own
-  (a response interceptor), as in Blazor (V2, V3 in port-findings.md).
+  `getJson<T>` is a cast, not a check — so declare the envelope once. Where Blazor needs a handler of its own for
+  an expired token, `attachJwtAuth` logs out on the 401, and `AuthorizeRouteView` redirects to the login (V2, V3 in
+  port-findings.md). A response interceptor gets the request too, as a `DelegatingHandler` does.
 - **Dates.** `DateTime.ToString()` writes the server's culture (`06.06.2024` on a German machine), and the browser
   can't know it. Run the backend with invariant globalization, or send ISO 8601 (U2). .NET format strings work in
   `@bind:format` (F34).

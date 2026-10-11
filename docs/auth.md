@@ -104,6 +104,11 @@ directly from the browser. Then:
   `sessionStorage`; prefer short-lived tokens;
 - `JwtAuthenticationStateProvider` decodes the token's claims for the UI and **does not verify
   its signature** — the server validates every token it receives (`AddJwtBearer`);
-- `attachJwtAuth(http, provider)` adds the `Authorization: Bearer …` header to every request.
+- `attachJwtAuth(http, provider)` adds the `Authorization: Bearer …` header to every request, and
+  logs out when the server answers that token with a 401 (expired, revoked): on a page that needs a
+  signed-in user, `AuthorizeView` and `AuthorizeRouteView` then show `NotAuthorized` (the app's
+  redirect to the login). Blazor leaves this to a
+  `DelegatingHandler` of the app's own (Tsazor extension). A 401 to an older token, after a new
+  login, changes nothing; a 403 never logs out.
 
 Write down why the BFF pattern doesn't fit before you choose this.

@@ -4,7 +4,17 @@
  * stateful cookie-route path via a stubbed fetch (401 ⇒ anonymous).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ANONYMOUS, TsazorHttp } from "@tsazor/runtime";
+import {
+  ANONYMOUS,
+  AuthenticationStateProvider,
+  AuthorizeRouteView,
+  ComponentBase,
+  defineComponent,
+  Renderer,
+  ServiceCollection,
+  TsazorHttp,
+  type RenderTreeBuilder,
+} from "@tsazor/runtime";
 import { CookieAuthenticationStateProvider, JwtAuthenticationStateProvider, attachJwtAuth, decodeJwt, principalFromJwt } from "../src/auth.js";
 
 /** Builds a hand-made JWT (header.payload.signature, Base64URL). */
@@ -97,6 +107,99 @@ describe("JwtAuthenticationStateProvider", () => {
 
     expect(seen[0]).toMatchObject({ type: "application/json", site: "bakery", body: '{"loaves":2}' });
     expect(seen[0]!.auth).toMatch(/^Bearer ey/);
+  });
+
+  it("attachJwtAuth logs out when the server rejects the token (401, not 403); the call still fails", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
+    const http = new TsazorHttp();
+    attachJwtAuth(http, provider);
+    const notified: boolean[] = [];
+    provider.subscribe((state) => notified.push(state.user.isAuthenticated));
+
+    vi.stubGlobal("fetch", async () => new Response("", { status: 403 }));
+    await expect(http.getJson("http://localhost/admin")).rejects.toMatchObject({ name: "TsazorHttpError", status: 403 });
+    expect(provider.getToken()).toBeDefined();
+
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+    await expect(http.getJson("http://localhost/orders")).rejects.toMatchObject({ name: "TsazorHttpError", status: 401 });
+    expect(provider.getToken()).toBeUndefined();
+    expect((await provider.getAuthenticationStateAsync()).user.isAuthenticated).toBe(false);
+    expect(notified).toEqual([false]);
+  });
+
+  it("attachJwtAuth keeps a newer login and a request's own authorization through a 401", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
+    const http = new TsazorHttp();
+    attachJwtAuth(http, provider);
+    const bob = makeJwt({ name: "Bob" });
+
+    // Bob signs in while Ada's request is on its way; its 401 is about Ada's token.
+    vi.stubGlobal("fetch", async () => {
+      provider.setToken(bob);
+      return new Response("", { status: 401 });
+    });
+    await expect(http.getJson("http://localhost/orders")).rejects.toMatchObject({ status: 401 });
+    expect(provider.getToken()).toBe(bob);
+
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+    await expect(http.getJson("http://localhost/partner", { headers: { authorization: "Bearer partner" } })).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(provider.getToken()).toBe(bob);
+  });
+
+  it("attachJwtAuth: after a 401 a guarded page shows NotAuthorized (AuthorizeRouteView)", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
+    const http = new TsazorHttp();
+    attachJwtAuth(http, provider);
+    const services = new ServiceCollection();
+    services.registerValue(AuthenticationStateProvider, provider);
+    const renderer = new Renderer(services.build());
+    class Orders extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, "Orders");
+      }
+    }
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/orders", type: Orders, authorize: {} }, values: {} } as never);
+        b.addAttribute(2, "NotAuthorized", () => (inner: RenderTreeBuilder) => inner.addContent(0, "Please sign in"));
+        b.closeComponent();
+      }
+    }
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    // The provider's state arrives after a macrotask (see the runtime's auth tests).
+    const settle = async () => {
+      await renderer.waitUntilIdle();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await renderer.waitUntilIdle();
+    };
+    renderer.renderInContainer(App, host);
+    await settle();
+    expect(host.textContent).toBe("Orders");
+
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+    await expect(http.getJson("http://localhost/api/orders")).rejects.toMatchObject({ status: 401 });
+    await settle();
+    expect(host.textContent).toBe("Please sign in");
+    host.remove();
+  });
+
+  it("attachJwtAuth's unsubscribe removes both interceptors", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
+    const http = new TsazorHttp();
+    attachJwtAuth(http, provider)();
+    const sent: (string | null)[] = [];
+    vi.stubGlobal("fetch", async (request: Request) => {
+      sent.push(request.headers.get("authorization"));
+      return new Response("", { status: 401 });
+    });
+
+    await expect(http.getJson("http://localhost/orders")).rejects.toMatchObject({ status: 401 });
+    expect(sent).toEqual([null]);
+    expect(provider.getToken()).toBeDefined();
   });
 });
 

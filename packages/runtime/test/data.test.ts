@@ -52,11 +52,17 @@ describe("TsazorHttp", () => {
       seenAuth.push(request.headers.get("authorization")!);
       return request;
     });
-    http.addResponseInterceptor((response) => new Response(response.body, { status: response.status, headers: { "x-touched": "yes" } }));
+    const answered: string[] = [];
+    http.addResponseInterceptor((response, request) => {
+      answered.push(request.headers.get("authorization")!);
+      return new Response(response.body, { status: response.status, headers: { "x-touched": "yes" } });
+    });
 
     const result = await http.getJson<number[]>("/numbers");
     expect(result).toEqual([1, 2]);
     expect(seenAuth).toEqual(["Bearer t1"]);
+    // A response interceptor sees the request that was sent, after the request interceptors.
+    expect(answered).toEqual(["Bearer t1"]);
     const [request] = fetchMock.mock.calls[0] as [Request];
     expect(request.headers.get("authorization")).toBe("Bearer t1");
   });

@@ -20,8 +20,11 @@ export interface TsazorHttpOptions {
 
 /** Transforms (or replaces) the outgoing request. */
 export type RequestInterceptor = (request: Request) => Request | Promise<Request>;
-/** Transforms (or replaces) the response before JSON parsing. */
-export type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
+/**
+ * Transforms (or replaces) the response before JSON parsing. `request` is the one that was sent (after the request
+ * interceptors), as a .NET `DelegatingHandler` sees both.
+ */
+export type ResponseInterceptor = (response: Response, request: Request) => Response | Promise<Response>;
 
 /**
  * Error thrown by the getJson/postJson/putJson/deleteJson helpers on non-2xx
@@ -77,7 +80,8 @@ export class TsazorHttp {
 
   /**
    * Adds an interceptor that runs on every response before the status check
-   * and JSON parsing, in the order added. Returns a function that removes it.
+   * and JSON parsing, in the order added; it gets the request that was sent
+   * too. Returns a function that removes it.
    */
   addResponseInterceptor(interceptor: ResponseInterceptor): () => void {
     this.responseInterceptors.push(interceptor);
@@ -95,7 +99,7 @@ export class TsazorHttp {
     }
     let response = await (this.options.fetch ?? fetch)(current);
     for (const interceptor of this.responseInterceptors) {
-      response = await interceptor(response);
+      response = await interceptor(response, current);
     }
     return response;
   }

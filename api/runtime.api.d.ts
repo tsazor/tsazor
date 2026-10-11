@@ -1167,7 +1167,7 @@ export declare function Required(options?: {
 export declare function resolveSectionIdentifier(componentName: string, sectionName: string | null | undefined, sectionId: unknown): unknown;
 
 // ResponseInterceptor
-export type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
+export type ResponseInterceptor = (response: Response, request: Request) => Response | Promise<Response>;
 
 // RouteData
 export interface RouteData {

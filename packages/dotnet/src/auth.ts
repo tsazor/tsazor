@@ -12,7 +12,8 @@
  *    included). No signature check — client side it is display only; the
  *    server (JwtBearer) decides validity.
  *  - attachJwtAuth adds a request interceptor `Authorization: Bearer …`
- *    to the TsazorHttp — the client side of the middleware pipeline.
+ *    to the TsazorHttp — the client side of the middleware pipeline — and
+ *    logs out when the server answers that token with a 401.
  *
  * The recommended default is the cookie provider (BFF pattern, docs/auth.md):
  * the token stays with the server in an HttpOnly cookie, no script in the
@@ -22,7 +23,7 @@
  * Either way: AuthorizeView/@authorize only control the UI;
  * enforcement happens on the server, on every request.
  */
-import { TsazorHttp, type Claim, type ClaimsPrincipal, type RequestInterceptor } from "@tsazor/runtime";
+import { TsazorHttp, type Claim, type ClaimsPrincipal, type RequestInterceptor, type ResponseInterceptor } from "@tsazor/runtime";
 import { ANONYMOUS, AuthenticationState, createUser } from "@tsazor/runtime";
 import { AuthenticationStateProvider } from "@tsazor/runtime";
 
@@ -200,17 +201,37 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
   }
 }
 
-/** Sets `Authorization: Bearer <token>` per request; returns the unsubscribe. */
+/**
+ * Sets `Authorization: Bearer <token>` per request, and logs out when the server rejects the token: a 401 to a
+ * request that carried the current token (expired, revoked). `AuthorizeView` and `AuthorizeRouteView` then show
+ * `NotAuthorized` — the redirect to the login. Blazor leaves this to a `DelegatingHandler` of the app's own
+ * (Tsazor extension). A 401 to an older token, after a new login, changes nothing. Returns the unsubscribe.
+ */
 export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider): () => void {
-  const interceptor: RequestInterceptor = (request) => {
+  const bearer = (): string | undefined => {
     const token = provider.getToken();
-    if (token === undefined || token.length === 0) return request;
-    if (request.headers.has("authorization")) return request;
+    return token === undefined || token.length === 0 ? undefined : `Bearer ${token}`;
+  };
+  const sign: RequestInterceptor = (request) => {
+    const authorization = bearer();
+    if (authorization === undefined || request.headers.has("authorization")) return request;
     // `headers` in a Request's init replaces all of them: without the copy, a POST lost its JSON content type and
     // ASP.NET Core's [FromBody] answered 415.
     const headers = new Headers(request.headers);
-    headers.set("authorization", `Bearer ${token}`);
+    headers.set("authorization", authorization);
     return new Request(request, { headers });
   };
-  return http.addRequestInterceptor(interceptor);
+  const rejected: ResponseInterceptor = (response, request) => {
+    const authorization = bearer();
+    if (response.status === 401 && authorization !== undefined && request.headers.get("authorization") === authorization) {
+      provider.logout();
+    }
+    return response;
+  };
+  const removeSign = http.addRequestInterceptor(sign);
+  const removeRejected = http.addResponseInterceptor(rejected);
+  return () => {
+    removeSign();
+    removeRejected();
+  };
 }

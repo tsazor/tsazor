@@ -13,7 +13,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   `getAuthenticationStateAsync()`, Blazor's name, in `@tsazor/runtime` and `@tsazor/dotnet`'s cookie and JWT
   providers: an app's own provider renames its override.
 - `@tsazor/dotnet`: `attachJwtAuth` kept only the `authorization` header — a POST lost its JSON content type (ASP.NET
-  Core answered 415) and the client's `defaultHeaders`. It adds the header to the others now.
+  Core answered 415) and the client's `defaultHeaders`. It adds the header to the others now. It also logs out when
+  the server answers the current token with a 401, so `AuthorizeRouteView` shows `NotAuthorized` (Tsazor extension;
+  a 403, or a 401 to an older token, changes nothing). `@tsazor/runtime`: a `ResponseInterceptor` gets the request
+  that was sent as its second argument.
 - `@tsazor/charts` (new, wave B; D-L2): `Chart` (MudBlazor's `MudChart`, its newer API) draws line, area, bar,
   stacked-bar, donut and pie charts as SVG in the skin's colors (`--tz-chart-1` … `--tz-chart-8` default to Fluent's
   or Bootstrap's tokens): `chartSeries`, `chartLabels`, `chartOptions` (`yAxisTicks`, `yAxisFormat` as a function,
