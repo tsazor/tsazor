@@ -141,6 +141,22 @@ render in the browser.
   gap). Fluent UI Blazor v4's `FluentToolbar Orientation` keeps its name. Give it a name: it is one tab stop, and the
   arrow keys move between its Buttons, Menus and fields, as the WAI-ARIA toolbar pattern says; MudToolBar leaves each
   control its own tab stop.
+- **Time pickers.** `FluentTimePicker` keeps its parameters as `<TimePicker>` (`StartHour`, `EndHour`, `Increment`,
+  `DisabledTimeFunc`); `Culture` becomes `Locale`, `RenderStyle="DatePickerRenderStyle.Native"` is
+  `RenderStyle="native"`. The value changes type as the date picker's does: a `TimeOnly?` or a `DateTime?` becomes
+  ISO text, `"14:30:00"` — what System.Text.Json writes for a `TimeOnly` and reads back — and an empty field `""`;
+  compare times as text. A `DateTime` that holds a date and a time takes a DatePicker and a TimePicker side by side,
+  joined as `${date}T${time}`. MudBlazor's `MudTimePicker` (a clock dial) becomes the same list: `AmPm="true"` is
+  `HourCycle="h12"`, `MinuteSelectionStep` is `Increment`.
+- **Ratings.** MudBlazor's `<MudRating @bind-SelectedValue="stars" MaxValue="10" />` becomes
+  `<Rating @bind-Value="stars" Max="10" />` (an input, so it validates in a form); `FullIcon`/`EmptyIcon`, `Size`,
+  `ReadOnly`, `Disabled` and `HoveredValueChanged` keep their names; a `Color` takes neutral, brand or marigold.
+  Fluent UI Blazor's `FluentRatingDisplay` keeps its parameters as `<RatingDisplay>` (`Value`, `Max`, `Count`,
+  `Compact`, `Shape`). Its stars are radio buttons, so a screen reader hears "3 stars, 3 of 5", and the arrows stop at
+  the ends instead of wrapping around.
+- **Highlighting.** `FluentHighlighter` and `MudHighlighter` keep their parameters as `<Highlighter>` (`Text`,
+  `HighlightedText`, `Delimiters`, `HighlightedTexts`, `CaseSensitive`, `UntilNextBoundary`). MudBlazor's
+  `Markup="true"` has no counterpart: the text stays text, so markup in a search result can't run.
 - **Busy states.** `<FluentOverlay @bind-Visible="saving" FullScreen="true">` keeps its parameters as `<Overlay>`
   (`Interactive`, `BackgroundColor`, `Opacity`, `CloseMode`; `OverlayCloseMode.InsideOnly` is `"inside"`,
   `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `show()`/`close()`. MudBlazor's `MudOverlay`:

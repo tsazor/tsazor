@@ -322,6 +322,100 @@ try {
     await holidays.getByRole("button", { name: "December 2026" }).click();
     say(await holidays.getByRole("gridcell", { name: "December 2026" }).isVisible(), "calendar: the title zooms out to the months");
 
+    /* Time picker: the locale's text, the list of times with its keys (the focus stays in the field), ruled-out times,
+       typing, German, the browser's own input. */
+    const times = page.locator("section", { has: page.getByRole("heading", { name: "Time picker", exact: true }) });
+    await times.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const plainTime = (text) => (text ?? "").replace(/[  ]/g, " ");
+    const timeIs = (name, value) => page.waitForFunction(([n, v]) => document.querySelector(`.time-${n}`)?.textContent === v, [name, value]);
+    const activeTime = () => page.evaluate(() => {
+      const id = document.activeElement?.getAttribute("aria-activedescendant");
+      return (id ? document.getElementById(id)?.textContent : "") ?? "";
+    });
+    const pickupTime = times.getByRole("combobox", { name: "Pickup time" });
+    const timeList = page.getByRole("listbox", { name: "Pickup time" });
+    say(plainTime(await pickupTime.inputValue()) === "4:30 PM", `time picker: the value as the locale writes it (${plainTime(await pickupTime.inputValue())})`);
+    await pickupTime.focus();
+    await page.keyboard.press("ArrowDown");
+    await timeList.waitFor();
+    say(plainTime(await activeTime()) === "4:30 PM" && (await pickupTime.evaluate((input) => input === document.activeElement)), "time picker: ArrowDown opens the list on the value, the focus stays in the field");
+    const [timeFieldBox, timeListBox] = [await pickupTime.boundingBox(), await timeList.boundingBox()];
+    say(timeListBox.y >= timeFieldBox.y + timeFieldBox.height - 1, "time picker: the list opens below the field");
+    const valueInView = await page.evaluate(() => {
+      const option = document.getElementById(document.activeElement.getAttribute("aria-activedescendant"));
+      const [inner, outer] = [option.getBoundingClientRect(), option.parentElement.getBoundingClientRect()];
+      return inner.top >= outer.top - 1 && inner.bottom <= outer.bottom + 1;
+    });
+    say(valueInView, "time picker: the list scrolls the value into view");
+    const timeViolations = await axe(page);
+    say(timeViolations.length === 0, `axe /forms with the list of times open${timeViolations.length ? `: ${timeViolations.join(" | ")}` : ""}`);
+    await page.keyboard.press("Home");
+    say(plainTime(await activeTime()) === "7:00 AM", "time picker: Home goes to the first time (startHour 7)");
+    for (let i = 0; i < 9; i++) await page.keyboard.press("ArrowDown");
+    say(plainTime(await activeTime()) === "11:30 AM", "time picker: the arrows move half an hour (increment 30)");
+    await page.keyboard.press("ArrowDown");
+    say(plainTime(await activeTime()) === "1:00 PM", "time picker: the arrows skip the ruled-out times (12 to 1)");
+    await page.keyboard.press("Enter");
+    await timeIs("pickup", "13:00:00");
+    await timeList.waitFor({ state: "detached" });
+    say(await pickupTime.evaluate((input) => input === document.activeElement), "time picker: Enter picks the time and closes the list, the focus still in the field");
+    await page.keyboard.press("ArrowUp");
+    await timeList.waitFor();
+    await page.keyboard.press("Escape");
+    await timeList.waitFor({ state: "detached" });
+    say(await pickupTime.evaluate((input) => input === document.activeElement), "time picker: Escape closes the list");
+    await times.getByRole("button", { name: "Choose time" }).first().click();
+    await timeList.getByRole("option", { name: /^9:00\sAM$/ }).click();
+    await timeIs("pickup", "09:00:00");
+    say(await timeList.count() === 0, "time picker: the button opens the list, a click picks a time");
+    await pickupTime.fill("5:45 pm");
+    await pickupTime.press("Tab");
+    await timeIs("pickup", "17:45:00");
+    say(plainTime(await pickupTime.inputValue()) === "5:45 PM", "time picker: typed text, read as the locale writes it");
+    const deliveryTime = times.getByRole("combobox", { name: "Lieferzeit" });
+    say((await deliveryTime.inputValue()) === "09:00", "time picker: in German 09:00");
+    await deliveryTime.fill("14.30");
+    await deliveryTime.press("Tab");
+    await timeIs("delivery", "14:30:00");
+    say((await deliveryTime.inputValue()) === "14:30", "time picker: German typing (14.30)");
+    const reminder = times.getByLabel("Reminder");
+    await reminder.fill("07:15");
+    await timeIs("reminder", "07:15:00");
+    say((await reminder.getAttribute("type")) === "time", "time picker: renderStyle native, the browser's time input, read back as ISO");
+
+    /* Rating: stars as radio buttons in a named group, the keys without wrapping, a click on the value clears it; the
+       display: one image with a text alternative, a half star drawn half. */
+    const ratings = page.locator("section", { has: page.getByRole("heading", { name: "Rating", exact: true }) });
+    await ratings.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
+    const ratingIs = (value) => page.waitForFunction((v) => document.querySelector(".rating-value")?.textContent === v, value);
+    const rye = ratings.getByRole("radiogroup", { name: "Rate our rye" });
+    say(await rye.getByRole("radio", { name: "3 stars" }).isChecked(), "rating: the value's star is checked (3 stars)");
+    await rye.getByRole("radio", { name: "3 stars" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await ratingIs("4");
+    say(await rye.getByRole("radio", { name: "4 stars" }).evaluate((radio) => radio === document.activeElement && radio.checked), "rating: ArrowRight gives one star more, the focus with it");
+    await page.keyboard.press("ArrowRight");
+    await ratingIs("5");
+    await page.keyboard.press("ArrowRight");
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    say((await page.locator(".rating-value").textContent()) === "5", "rating: the arrows stop at the last star instead of wrapping");
+    await rye.locator("label").nth(4).click();
+    await ratingIs("0");
+    say(!(await rye.getByRole("radio", { name: "5 stars" }).isChecked()), "rating: a click on the value's star clears it");
+    await rye.locator("label").nth(1).click();
+    await ratingIs("2");
+    say(true, "rating: a click on a star picks it");
+    const ratingShown = ratings.getByRole("img", { name: "Rated 4.5 out of 5, 1,234 ratings" });
+    say(await ratingShown.isVisible(), "rating display: one image, named with the value and the count");
+    const halfStar = await ratingShown.evaluate((root) => {
+      const star = root.querySelectorAll("[class*='rating-display__item']")[4].getBoundingClientRect();
+      const at = (fraction) => document.elementFromPoint(star.left + star.width * fraction, star.top + star.height * 0.55)?.closest("svg")?.getAttribute("class") ?? "";
+      return { left: at(0.35), right: at(0.65) };
+    });
+    say(halfStar.left.includes("rating-display__full") && halfStar.right.includes("rating-display__empty"), `rating display: 4.5 draws the fifth star half full (${JSON.stringify(halfStar)})`);
+    const ratingViolations = await axe(page);
+    say(ratingViolations.length === 0, `axe /forms with the ratings${ratingViolations.length ? `: ${ratingViolations.join(" | ")}` : ""}`);
+
     /* File upload: chosen and dropped files go to the server with the progress; the size limit; a button elsewhere. */
     const uploads = page.locator("section", { has: page.getByRole("heading", { name: "File upload", exact: true }) });
     await uploads.evaluate((section) => section.scrollIntoView({ block: "start", behavior: "instant" }));
@@ -517,6 +611,15 @@ try {
     await untrusted.getByText("Open the report").click();
     say((await page.evaluate(() => window.__xss)) === undefined, "markdown: the javascript: link lost its href, so a click runs nothing");
     say((await untrusted.getByRole("link", { name: "Orders" }).getAttribute("target")) === null, "markdown: a link in the app stays in the app");
+
+    /* Highlighter: the search's words marked to the end of their word, the text kept as text, following the typing. */
+    const menu = page.locator("section", { has: page.getByRole("heading", { name: "Highlighter", exact: true }) });
+    const menuMarks = () => menu.locator("mark").allTextContents();
+    say(JSON.stringify(await menuMarks()) === JSON.stringify(["Rye", "Sourdough", "rye"]), `highlighter: the search's words, to the end of the word (${(await menuMarks()).join(", ")})`);
+    say((await menu.locator("li").nth(3).textContent()) === "Pretzels <with> coarse salt" && (await menu.locator("li").nth(3).locator("*").count()) === 0, "highlighter: markup in the text stays text");
+    await menu.getByLabel("Find on the menu").fill("salt");
+    await page.waitForFunction(() => [...document.querySelectorAll(".menu-list mark")].map((mark) => mark.textContent).join() === "salt");
+    say(true, "highlighter: the marks follow the typing");
 
     /* Structure: tabs, accordion, pagination. */
     await open(page, base, "/structure");

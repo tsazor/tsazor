@@ -5,6 +5,27 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `Rating` (MudBlazor's `MudRating`; InputBase): stars as
+  radio buttons in a named group — the arrows move the value without wrapping (Shift, Home and End to the ends), a
+  click on the value's star clears it, the pointer previews (`hoveredValueChanged`); `max`, `fullIcon`, `emptyIcon`,
+  `size`, `color` (neutral, brand, marigold), `readOnly`, `disabled`, `labels`. `RatingDisplay` (Fluent UI Blazor's
+  `FluentRatingDisplay`): a value as stars, halves too, with the value and the number of ratings in the locale's way
+  (`count`, `compact`, `shape`), one image named "Rated 4.5 out of 5, 1,234 ratings". `Highlighter` (Fluent UI
+  Blazor's `FluentHighlighter`, MudBlazor's `MudHighlighter`): the search terms in a text marked (`highlightedText`,
+  `delimiters`, `highlightedTexts`, `caseSensitive`, `untilNextBoundary`); the text stays text. `@tsazor/ui`:
+  `ratingFill`, `ratingKeyTarget`, `ratingClickValue`, `ratingLabels`, `formatRatingValue`, `formatRatingCount`,
+  `highlightFragments`, `highlightTerms`. Both skins draw stars (`Star20Filled`/`Star20Regular`, `StarFill`/`Star`).
+
+- `@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui` (wave B): `TimePicker` (Fluent UI Blazor's `FluentTimePicker`,
+  MudBlazor's `MudTimePicker`): a text field for the time as the locale writes it ("2:30 PM", "14:30"; .NET's short
+  time pattern) and a list of times from `startHour` to `endHour` every `increment` minutes, in the ARIA combobox
+  pattern (the arrows open it on the value and move, Enter picks, Escape closes, the focus stays in the field).
+  The value is an ISO time, `"14:30:00"`, what .NET writes for a `TimeOnly`. `disabledTimeFunc`, `locale`,
+  `hourCycle` (h12, h23), `renderStyle` native (the browser's time input), `buttonLabel`; typed text is read in the
+  locale's way, with AM and PM anywhere, "14h30" or the digits only. Both skins draw a clock (`Clock20Regular`,
+  `Clock`). `@tsazor/ui`: `timeOptions`, `parseTimeField`, `formatTimeField`, `timeFieldPlaceholder`,
+  `parseIsoTime`, `isoTime`, `initialTimeOption`, `nextEnabledOption`; the skins re-export `IsoTime` and `HourCycle`.
+
 - `@tsazor/bootstrap`: `Accordion`, `Breadcrumb`, `BreadcrumbItem`, `CardBody`, `CardFooter`, `CardHeader`, `CardTitle`,
   `Navbar`, `Pagination`, `Spinner`, `Tab`, `Table`, `Tabs` and `ToastRegion` pass attributes through (`class`
   appends), as their Fluent twins do. `Tabs` puts its tab list and panels in one `div` for them; `Breadcrumb`'s

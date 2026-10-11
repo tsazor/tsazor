@@ -1,0 +1,123 @@
+@** A Fluent UI 2 rating (MudBlazor's MudRating; InputBase — bind it with @bind-value): a row of `max` stars someone
+    picks a value from, 0 for none. The stars are radio buttons in a named group, so a screen reader says "3 stars,
+    3 of 5"; the arrows (and Shift to the ends, Home, End) move the value without wrapping around, and a click on the
+    star of the value — or Space on it — clears it, as MudBlazor's does. The pointer previews a value
+    (`hoveredValueChanged`). `fullIcon` and `emptyIcon` draw the stars, `size` and `color` (brand, marigold, neutral;
+    Fluent UI's) style them. `readOnly` shows the value only (or take a RatingDisplay). *@
+@import type { IconValue } from "@tsazor/ui"
+@import { ratingClickValue, ratingKeyTarget, ratingLabels, uniqueId, type RatingLabels } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { Star20Filled, Star20Regular } from "./core-icons"
+
+@inherits InputBase<number>
+
+<div role="radiogroup" @attributes="@this.groupAttributes" @ref="group" @onpointerleave="this.leave">
+    @for (let i = 1; i <= this.max; i++) {
+        <label class="@this.itemClass(i)" @onpointerenter="() => this.hover(i)">
+            <input type="radio" class="fui-rating__input" name="@this.name" value="@i" checked="@(this.currentValue === i)" aria-label="@this.itemLabel(i)"
+                   disabled="@this.disabled" @onclick="(e) => this.clicked(e, i)" @onkeydown="this.keydown" />
+            <Icon value="@(this.shown(i) ? this.fullIcon : this.emptyIcon)" />
+        </label>
+    }
+</div>
+
+@code {
+    /** The number of stars (MudBlazor's `MaxValue`). */
+    @Parameter() max: number = 5;
+    /** The icon of a star up to the value (MudBlazor's `FullIcon`). */
+    @Parameter() fullIcon: IconValue = Star20Filled;
+    /** The icon of a star past it (MudBlazor's `EmptyIcon`). */
+    @Parameter() emptyIcon: IconValue = Star20Regular;
+    /** small | medium (default) | large. */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** The stars' color: neutral (default), brand or marigold (Fluent UI's). */
+    @Parameter() color: "neutral" | "brand" | "marigold" = "neutral";
+    /** Disables the stars. */
+    @Parameter() disabled: boolean = false;
+    /** Shows the value without letting it change. */
+    @Parameter() readOnly: boolean = false;
+    /** The group's name for screen readers. */
+    @Parameter() ariaLabel: string = "Rating";
+    /** The stars' names ("3 stars"; English by default). */
+    @Parameter() labels?: Partial<RatingLabels>;
+    /** Raised with the star the pointer is over, and undefined when it leaves (MudBlazor's `HoveredValueChanged`). */
+    @Parameter() hoveredValueChanged?: EventCallback<number | undefined>;
+
+    private readonly name = uniqueId("fui-rating");
+    private hovered?: number;
+    private focusPending = false;
+    private group?: HTMLDivElement;
+
+    private get value(): number {
+        return this.currentValue ?? 0;
+    }
+
+    private itemLabel(item: number): string {
+        return (this.labels?.item ?? ratingLabels.item)(item, this.max);
+    }
+
+    /** A star drawn full: up to the previewed value while the pointer is over the stars, else up to the value. */
+    private shown(item: number): boolean {
+        return item <= (this.hovered ?? this.value);
+    }
+
+    private itemClass(item: number): string {
+        let cls = "fui-rating__item";
+        if (this.shown(item)) cls += " fui-rating__item--full";
+        if (this.hovered !== undefined) cls += " fui-rating__item--preview";
+        return cls;
+    }
+
+    private get groupAttributes(): Record<string, unknown> {
+        let cls = `fui-rating fui-rating--${this.color}`;
+        if (this.size !== "medium") cls += ` fui-rating--${this.size}`;
+        if (this.disabled) cls += " fui-rating--disabled";
+        return withAttributes({
+            class: cls,
+            "aria-label": this.ariaLabel,
+            "aria-readonly": this.readOnly ? "true" : null,
+            "aria-disabled": this.disabled ? "true" : null,
+        }, this.additionalAttributes);
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.focusPending || this.group === undefined) return;
+        this.focusPending = false;
+        // The radio of the value; with none, the first (the group's tab stop then).
+        const radios = this.group.querySelectorAll<HTMLInputElement>("input");
+        radios[Math.max(0, this.value - 1)]?.focus();
+    }
+
+    private clicked(e: MouseEvent, item: number): void {
+        if (this.readOnly) {
+            // Puts the check back where the value is.
+            e.preventDefault();
+            return;
+        }
+        this.currentValue = ratingClickValue(item, this.value);
+    }
+
+    private keydown(e: KeyboardEvent): void {
+        if (!e.key.startsWith("Arrow") && e.key !== "Home" && e.key !== "End") return;
+        // The radios' own keys would wrap from the last star to the first.
+        e.preventDefault();
+        if (this.readOnly || this.disabled) return;
+        const rtl = getComputedStyle(e.target as Element).direction === "rtl";
+        const next = ratingKeyTarget(e, this.value, this.max, rtl);
+        if (next === undefined) return;
+        this.currentValue = next;
+        this.focusPending = true;
+    }
+
+    private hover(item: number): Promise<void> | undefined {
+        if (this.readOnly || this.disabled || this.hovered === item) return undefined;
+        this.hovered = item;
+        return this.hoveredValueChanged?.invokeAsync(item);
+    }
+
+    private leave(): Promise<void> | undefined {
+        if (this.hovered === undefined) return undefined;
+        this.hovered = undefined;
+        return this.hoveredValueChanged?.invokeAsync(undefined);
+    }
+}

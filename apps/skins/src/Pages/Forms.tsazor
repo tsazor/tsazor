@@ -86,6 +86,30 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Time picker</Typography>
+    <div class="date-demo__fields">
+        <TimePicker Label="Pickup time" Locale="en-US" StartHour="7" EndHour="19" Increment="30" DisabledTimeFunc="@lunchBreak" Help="Closed from 12 to 1." @bind-Value="pickupTime" />
+        <TimePicker Label="Lieferzeit" Locale="de-DE" ButtonLabel="Uhrzeit wählen" @bind-Value="deliveryTime" />
+        <TimePicker Label="Reminder" RenderStyle="native" @bind-Value="reminderTime" />
+    </div>
+    <Typography Variant="caption">
+        Pickup at <span class="time-pickup">@pickupTime</span>, delivery at <span class="time-delivery">@deliveryTime</span>, reminder at <span class="time-reminder">@reminderTime</span>.
+    </Typography>
+</section>
+
+<section class="demo">
+    <Typography Variant="h2">Rating</Typography>
+    <div class="demo-row">
+        <Rating AriaLabel="Rate our rye" Color="marigold" @bind-Value="ryeRating" />
+        <span class="rating-value">@ryeRating</span>
+    </div>
+    <div class="demo-row">
+        <RatingDisplay Value="4.5" Count="1234" Locale="en-US" Color="marigold" />
+        <RatingDisplay Value="3.7" Count="86" Locale="en-US" Compact="@true" />
+    </div>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">File upload</Typography>
     <FileUpload Multiple="@true" Accept=".csv,.txt" MaximumFileSize="@(1024 * 1024)" Upload="@sendToServer" OnFileUploaded="@sent" OnFileError="@failed">
         <span>Drop price lists here, or click to choose (CSV or text, up to 1 MB each)</span>
@@ -107,6 +131,11 @@
     private readonly toppingOptions = ["Sesame", "Poppy seeds", "Sunflower seeds", "Pumpkin seeds", "Flax", "Oats", "Caraway"];
 
     private pickupDay = "2026-10-10";
+    private pickupTime = "16:30:00";
+    private ryeRating = 3;
+    private deliveryTime = "09:00:00";
+    private reminderTime = "";
+    private readonly lunchBreak = (time: string): boolean => time >= "12:00:00" && time < "13:00:00";
     private deliveryDay = "2026-10-10";
     private billingMonth = "2026-10-01";
     private holidays: string[] = [];

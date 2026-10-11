@@ -45,13 +45,17 @@
         <p class="echo"><code>due</code> = "@this.model.due"</p>
     </div>
     <div class="field">
+        <TimePicker @bind="this.model.at" label="Pickup time" locale="en-GB" increment="30" id="demo-at" />
+        <p class="echo"><code>at</code> = "@this.model.at"</p>
+    </div>
+    <div class="field">
         <FileUpload multiple="true" onCompleted="@this.read" id="demo-upload" />
         <p class="echo"><code>read</code> = "@this.readFiles"</p>
     </div>
 </div>
 
 @code {
-    private model = { name: "Ada", notes: "", age: 18, agree: false, compact: false, topic: "general", volume: 60, due: "2026-11-02" };
+    private model = { name: "Ada", notes: "", age: 18, agree: false, compact: false, topic: "general", volume: 60, due: "2026-11-02", at: "09:30:00" };
     private readonly percent = (value: number): string => `${value} %`;
     private readFiles = "";
 

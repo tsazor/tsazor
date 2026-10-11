@@ -1,0 +1,111 @@
+/* Rating and RatingDisplay — stars in the text's line, in Bootstrap's colors: the body's (neutral), primary (brand)
+   or warning's text emphasis (marigold, 3:1 against the page). */
+
+.tz-rating,
+.tz-rating-display {
+  --tz-rating-size: 1.25rem;
+  --tz-rating-full: var(--bs-body-color);
+  --tz-rating-empty: var(--bs-border-color);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.tz-rating--brand {
+  --tz-rating-full: var(--bs-primary);
+}
+
+.tz-rating--marigold {
+  --tz-rating-full: var(--bs-warning-text-emphasis);
+}
+
+.tz-rating--small {
+  --tz-rating-size: 1rem;
+}
+
+.tz-rating--large {
+  --tz-rating-size: 1.75rem;
+}
+
+.tz-rating__item {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: calc(var(--tz-rating-size) + 0.25rem);
+  block-size: calc(var(--tz-rating-size) + 0.25rem);
+  color: var(--tz-rating-full);
+  cursor: pointer;
+}
+
+.tz-rating__item > svg {
+  inline-size: var(--tz-rating-size);
+  block-size: var(--tz-rating-size);
+}
+
+.tz-rating__item--preview {
+  opacity: 0.8;
+}
+
+.tz-rating__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.tz-rating__input:focus-visible + svg {
+  border-radius: var(--bs-border-radius-sm);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.tz-rating--disabled .tz-rating__item {
+  color: var(--bs-secondary-color);
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.tz-rating[aria-readonly="true"] .tz-rating__item {
+  cursor: default;
+}
+
+.tz-rating-display {
+  gap: 0.125rem;
+}
+
+.tz-rating-display__item {
+  display: inline-grid;
+  inline-size: var(--tz-rating-size);
+  block-size: var(--tz-rating-size);
+}
+
+.tz-rating-display__item > svg {
+  grid-area: 1 / 1;
+  inline-size: var(--tz-rating-size);
+  block-size: var(--tz-rating-size);
+}
+
+.tz-rating-display__empty {
+  color: var(--tz-rating-empty);
+}
+
+.tz-rating-display__full {
+  color: var(--tz-rating-full);
+  clip-path: inset(0 calc(100% - var(--tz-rating-fill)) 0 0);
+}
+
+.tz-rating-display__full:dir(rtl) {
+  clip-path: inset(0 0 0 calc(100% - var(--tz-rating-fill)));
+}
+
+.tz-rating-display__value {
+  margin-inline-start: 0.25rem;
+}
+
+.tz-rating-display__count {
+  margin-inline-start: 0.25rem;
+}
+
+.tz-rating-display__count::before {
+  content: "· ";
+}

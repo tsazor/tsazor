@@ -143,6 +143,13 @@ async function main() {
     await page.getByRole("dialog", { name: "Choose date" }).getByRole("gridcell", { name: "Tuesday, November 10, 2026" }).click();
     await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes('due = "2026-11-10"'));
     check(true, "a date picker's calendar picks a day into the bound ISO value");
+    check((await page.inputValue("#demo-at")) === "09:30", "a time picker writes its ISO value as the locale does (en-GB)");
+    await page.focus("#demo-at");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.querySelector(".page")?.textContent?.includes('at = "10:00:00"'));
+    check((await page.inputValue("#demo-at")) === "10:00", "a time picker's list picks the next half hour into the bound ISO value");
     await page.locator("#demo-upload input[type=file]").setInputFiles([
       { name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("abc") },
       { name: "b.txt", mimeType: "text/plain", buffer: Buffer.from("hello") },

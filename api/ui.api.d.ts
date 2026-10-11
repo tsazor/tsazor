@@ -267,6 +267,9 @@ export interface DismissableOptions {
 // DismissReason
 export type DismissReason = "escape" | "outside";
 
+// edgeEnabledOption
+export declare function edgeEnabledOption(step: 1 | -1, disabled: readonly boolean[]): number;
+
 // FieldState
 export declare class FieldState {
     private readonly prefix;
@@ -380,6 +383,18 @@ export declare function formatIsoDate(date: IsoDate, locale: string, options: In
 // formatPickerValue
 export declare function formatPickerValue(value: IsoDate, view: CalendarView, locale: string): string;
 
+// formatRatingCount
+export declare function formatRatingCount(count: number, locale?: string): string;
+
+// formatRatingValue
+export declare function formatRatingValue(value: number, locale?: string): string;
+
+// formatTimeField
+export declare function formatTimeField(time: IsoTime, locale: string, hourCycle?: HourCycle): string;
+
+// formatTimePickerValue
+export declare function formatTimePickerValue(value: string, locale: string, hourCycle?: HourCycle): string;
+
 // GridColumn
 export interface GridColumn<T> {
     readonly owner: object;
@@ -439,6 +454,27 @@ export declare function hasChildren(item: TreeViewItem): boolean;
 // hasSubmitAttempt
 export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
 
+// HighlightFragment
+export interface HighlightFragment {
+    readonly text: string;
+    readonly highlighted: boolean;
+}
+
+// highlightFragments
+export declare function highlightFragments(text: string, terms: readonly string[], options?: HighlightOptions): HighlightFragment[];
+
+// HighlightOptions
+export interface HighlightOptions {
+    caseSensitive?: boolean;
+    untilNextBoundary?: boolean;
+}
+
+// highlightTerms
+export declare function highlightTerms(highlightedText: string | undefined, delimiters?: string, more?: readonly string[]): string[];
+
+// HourCycle
+export type HourCycle = "h12" | "h23";
+
 // icon
 export declare function icon(name: string, svg: string, viewBox?: string): IconValue;
 
@@ -464,6 +500,9 @@ export declare class ImmediateInput {
 // initiallyExpanded
 export declare function initiallyExpanded(items: readonly TreeViewItem[]): Set<string>;
 
+// initialTimeOption
+export declare function initialTimeOption(options: readonly IsoTime[], value: string | undefined, disabled: readonly boolean[]): number;
+
 // Intent
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
 
@@ -478,6 +517,12 @@ export declare function isoDate(year: number, month: number, day: number): IsoDa
 
 // IsoDate
 export type IsoDate = string;
+
+// isoTime
+export declare function isoTime(hours: number, minutes: number, seconds?: number): IsoTime;
+
+// IsoTime
+export type IsoTime = string;
 
 // isTopLayer
 export declare function isTopLayer(key: object): boolean;
@@ -503,11 +548,17 @@ export declare function nextChipSelection<T>(mode: ChipSelectionMode, selected: 
 // nextDateRange
 export declare function nextDateRange(range: DateRange, clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): DateRange;
 
+// nextEnabledOption
+export declare function nextEnabledOption(from: number, step: 1 | -1, disabled: readonly boolean[]): number;
+
 // nextMultipleDates
 export declare function nextMultipleDates(selected: readonly IsoDate[], clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): IsoDate[];
 
 // nextWizardStep
 export declare function nextWizardStep(disabled: readonly boolean[], from: number): number;
+
+// normalizeIsoTime
+export declare function normalizeIsoTime(text: string): IsoTime | undefined;
 
 // openLayer
 export declare function openLayer(key: object): () => void;
@@ -567,8 +618,18 @@ export declare function parseIsoDate(text: string | null | undefined): {
     day: number;
 } | undefined;
 
+// parseIsoTime
+export declare function parseIsoTime(text: string): {
+    hours: number;
+    minutes: number;
+    seconds: number;
+} | undefined;
+
 // parsePickerValue
 export declare function parsePickerValue(text: string, view: CalendarView, locale: string): IsoDate | undefined;
+
+// parseTimeField
+export declare function parseTimeField(text: string, locale: string): IsoTime | undefined;
 
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
@@ -591,6 +652,27 @@ export declare function propertyTitle(property: (item: never) => unknown): strin
 
 // rangeOfDates
 export declare function rangeOfDates(dates: readonly IsoDate[]): DateRange;
+
+// ratingClickValue
+export declare function ratingClickValue(item: number, value: number): number;
+
+// ratingFill
+export declare function ratingFill(item: number, value: number): number;
+
+// ratingKeyTarget
+export declare function ratingKeyTarget(key: {
+    key: string;
+    shiftKey?: boolean;
+}, value: number, max: number, rtl?: boolean): number | undefined;
+
+// ratingLabels
+export declare const ratingLabels: RatingLabels;
+
+// RatingLabels
+export interface RatingLabels {
+    item: (value: number, max: number) => string;
+    display: (value: string, max: number, count: string | undefined) => string;
+}
 
 // resizeSplitter
 export declare function resizeSplitter(sizes: readonly number[], bar: number, delta: number, mins: readonly number[], maxs: readonly number[]): number[];
@@ -720,6 +802,12 @@ export declare function startOfMonth(date: IsoDate): IsoDate;
 
 // startOfWeek
 export declare function startOfWeek(date: IsoDate, firstDayOfWeek: number): IsoDate;
+
+// timeFieldPlaceholder
+export declare function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle): string;
+
+// timeOptions
+export declare function timeOptions(startHour?: number, endHour?: number, increment?: number): IsoTime[];
 
 // Toast
 export interface Toast {

@@ -470,6 +470,19 @@ export default class Grid extends ComponentBase {
 
 // GridSort: re-exported from @tsazor/ui
 
+// Highlighter
+export default class Highlighter extends ComponentBase {
+    text: string;
+    highlightedText: string;
+    highlightedTexts: string[];
+    delimiters: string;
+    caseSensitive: boolean;
+    untilNextBoundary: boolean;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// HourCycle: re-exported from @tsazor/ui
+
 // icon: re-exported from @tsazor/ui
 
 // Icon
@@ -488,6 +501,8 @@ export default class Icon extends ComponentBase {
 // Intent: re-exported from @tsazor/ui
 
 // IsoDate: re-exported from @tsazor/ui
+
+// IsoTime: re-exported from @tsazor/ui
 
 // ListGroup
 export default class ListGroup extends ComponentBase {
@@ -691,6 +706,34 @@ export default class RadioGroup extends InputBase<string> {
     help?: string;
     disabled: boolean;
     id?: string;
+}
+
+// Rating
+export default class Rating extends InputBase<number> {
+    max: number;
+    fullIcon: IconValue;
+    emptyIcon: IconValue;
+    size: "small" | "medium" | "large";
+    color: "neutral" | "brand" | "marigold";
+    disabled: boolean;
+    readOnly: boolean;
+    ariaLabel: string;
+    labels?: Partial<RatingLabels>;
+    hoveredValueChanged?: EventCallback<number | undefined>;
+}
+
+// RatingDisplay
+export default class RatingDisplay extends ComponentBase {
+    value: number;
+    max: number;
+    count?: number;
+    compact: boolean;
+    shape: IconValue;
+    size: "small" | "medium" | "large";
+    color: "neutral" | "brand" | "marigold";
+    locale?: string;
+    labels?: Partial<RatingLabels>;
+    additionalAttributes?: Record<string, unknown>;
 }
 
 // Select
@@ -932,6 +975,26 @@ export default class TimelineItem extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
     timelineAlign?: "start" | "center" | "end";
+}
+
+// TimePicker
+export default class TimePicker extends InputBase<string> {
+    label?: string;
+    help?: string;
+    placeholder?: string;
+    startHour: number;
+    endHour: number;
+    increment: number;
+    disabledTimeFunc?: (time: IsoTime) => boolean;
+    renderStyle: "list" | "native";
+    locale?: string;
+    hourCycle?: HourCycle;
+    buttonLabel: string;
+    disabled: boolean;
+    readOnly: boolean;
+    required: boolean;
+    id?: string;
+    ariaLabel?: string;
 }
 
 // Toast: re-exported from @tsazor/ui

@@ -7,6 +7,23 @@ export { builtInIcons, icon, iconSize, type IconValue } from "./icons.js";
 export { ChipSetModel, nextChipSelection, type ChipSelectionMode } from "./chips.js";
 export { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, type SplitterResizeEventArgs } from "./splitter.js";
 export { sliderFraction, sliderTicks } from "./slider.js";
+export { highlightFragments, highlightTerms, type HighlightFragment, type HighlightOptions } from "./highlight.js";
+export { formatRatingCount, formatRatingValue, ratingClickValue, ratingFill, ratingKeyTarget, ratingLabels, type RatingLabels } from "./rating.js";
+export {
+  edgeEnabledOption,
+  formatTimeField,
+  formatTimePickerValue,
+  initialTimeOption,
+  isoTime,
+  nextEnabledOption,
+  normalizeIsoTime,
+  parseIsoTime,
+  parseTimeField,
+  timeFieldPlaceholder,
+  timeOptions,
+  type HourCycle,
+  type IsoTime,
+} from "./time.js";
 export {
   addDays,
   addMonths,

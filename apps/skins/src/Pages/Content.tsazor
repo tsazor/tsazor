@@ -69,6 +69,16 @@
 </section>
 
 <section class="demo">
+    <Typography Variant="h2">Highlighter</Typography>
+    <TextInput Label="Find on the menu" Immediate="@true" @bind-Value="menuSearch" Help="Separate words with spaces or commas." />
+    <ul class="menu-list">
+        @foreach (const item of menu) {
+            <li><Highlighter Text="@item" HighlightedText="@menuSearch" Delimiters=" ," UntilNextBoundary="@true" /></li>
+        }
+    </ul>
+</section>
+
+<section class="demo">
     <Typography Variant="h2">Text nobody checked</Typography>
     <Typography Variant="caption">An agent's answer or a user's comment is shown as it comes: what could run is removed.</Typography>
     <div class="markdown-untrusted">
@@ -78,6 +88,8 @@
 
 @code {
     private readonly people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Edsger Dijkstra"];
+    private menuSearch = "rye, sour";
+    private readonly menu = ["Rye bread with caraway", "Sourdough loaf, light rye", "Spelt rolls", "Pretzels <with> coarse salt"];
     private picked = "";
     private readonly history = [
         { when: "06:10", what: "Baked", intent: "success" as const, appearance: "solid" as const },

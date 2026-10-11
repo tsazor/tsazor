@@ -1,0 +1,74 @@
+@** A Fluent UI 2 rating display (Fluent UI Blazor's FluentRatingDisplay): a value shown as stars, halves too — `value`
+    of `max` — with the value written next to them and the number of ratings (`count`, with the locale's thousands
+    separator). `compact` shows one star and the numbers. A screen reader reads it as one image, "Rated 3.5 out of 5,
+    1,234 ratings" (`labels`). `shape` is the star's icon; `size` and `color` (neutral, brand, marigold) as the
+    Rating's. *@
+@import type { IconValue } from "@tsazor/ui"
+@import { formatRatingCount, formatRatingValue, pageLocale, ratingFill, ratingLabels, type RatingLabels } from "@tsazor/ui"
+@import { withAttributes } from "./attributes"
+@import { Star20Filled } from "./core-icons"
+
+<div role="img" @attributes="@this.rootAttributes">
+    @if (this.compact) {
+        <span class="fui-rating-display__item" style="--fui-rating-fill: 100%" aria-hidden="true">
+            <Icon value="@this.shape" class="fui-rating-display__empty" />
+            <Icon value="@this.shape" class="fui-rating-display__full" />
+        </span>
+    } else {
+        @for (let i = 1; i <= this.max; i++) {
+            <span class="fui-rating-display__item" style="@(`--fui-rating-fill: ${ratingFill(i, this.value) * 100}%`)" aria-hidden="true">
+                <Icon value="@this.shape" class="fui-rating-display__empty" />
+                <Icon value="@this.shape" class="fui-rating-display__full" />
+            </span>
+        }
+    }
+    <span class="fui-rating-display__value" aria-hidden="true">@this.valueText</span>
+    @if (this.count !== undefined) {
+        <span class="fui-rating-display__count" aria-hidden="true">@this.countText</span>
+    }
+</div>
+
+@code {
+    /** The value, 0 to `max`; halves and other fractions fill part of a star. */
+    @Parameter() value: number = 0;
+    /** The number of stars. */
+    @Parameter() max: number = 5;
+    /** The number of ratings behind the value, written after it. */
+    @Parameter() count?: number;
+    /** One star and the numbers instead of the row. */
+    @Parameter() compact: boolean = false;
+    /** The star's icon (`Shape`). */
+    @Parameter() shape: IconValue = Star20Filled;
+    /** small | medium (default) | large. */
+    @Parameter() size: "small" | "medium" | "large" = "medium";
+    /** The stars' color: neutral (default), brand or marigold. */
+    @Parameter() color: "neutral" | "brand" | "marigold" = "neutral";
+    /** The locale of the numbers ("de-DE"). Default: the page's lang, else the browser's. */
+    @Parameter() locale?: string;
+    /** The text alternative ("Rated 3.5 out of 5, 1,234 ratings"; English by default). */
+    @Parameter() labels?: Partial<RatingLabels>;
+    /** `@attributes` pass-through (class appends; see src/attributes.ts). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get locales(): string {
+        return this.locale ?? pageLocale();
+    }
+
+    private get valueText(): string {
+        return formatRatingValue(this.value, this.locales);
+    }
+
+    private get countText(): string | undefined {
+        return this.count === undefined ? undefined : formatRatingCount(this.count, this.locales);
+    }
+
+    private get rootAttributes(): Record<string, unknown> {
+        let cls = `fui-rating-display fui-rating--${this.color}`;
+        if (this.size !== "medium") cls += ` fui-rating--${this.size}`;
+        if (this.compact) cls += " fui-rating-display--compact";
+        return withAttributes({
+            class: cls,
+            "aria-label": (this.labels?.display ?? ratingLabels.display)(this.valueText, this.max, this.countText),
+        }, this.additionalAttributes);
+    }
+}

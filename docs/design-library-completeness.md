@@ -68,10 +68,10 @@ The Bootstrap skin caught up with Autocomplete, CheckboxGroup, SidebarNav and Tr
 | Upload drop zone with progress (FileUpload, done 2026-10-10) | InputFile | FileUpload, DropZone | A |
 | Sortable list (drag and drop, with a keyboard way; SortableList, done 2026-10-10) | SortableList, Drag | DropZone | A |
 | Overlay (busy state; done 2026-10-11) | Overlay | Overlay | B |
-| TimePicker | DateTime | TimePicker | B |
+| TimePicker (done 2026-10-11) | DateTime | TimePicker | B |
 | Hotkeys | KeyCode | Hotkey | B |
-| Highlighter | Highlighter | Highlighter | B |
-| Rating | RatingDisplay | Rating | B |
+| Highlighter (done 2026-10-11) | Highlighter | Highlighter | B |
+| Rating and RatingDisplay (done 2026-10-11) | RatingDisplay | Rating | B |
 | ColorPicker | ColorPicker | ColorPicker | B |
 | Carousel | none | Carousel | B |
 | Overflow | Overflow | none | B |
