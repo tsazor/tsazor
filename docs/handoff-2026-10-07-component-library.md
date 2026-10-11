@@ -135,8 +135,10 @@ everything pushed.
 >     without an annotation by its literal initializer (L14).
 >   - **Wave B so far:** Overlay (`24d47bf`); public methods in the declarations (`137bc13`); L13, the Bootstrap
 >     components take `@attributes` like their Fluent twins (`46108c9`); TimePicker, Rating, RatingDisplay, Highlighter
->     (`76c9c15`); Hotkey, KeyCode, ColorPicker, ColorPickerInput and L15 (`InputBase.element`). Left: Carousel,
->     Overflow, Link, Image, ScrollToTop, input Mask, then `@tsazor/charts`.
+>     (`76c9c15`); Hotkey, KeyCode, ColorPicker, ColorPickerInput and L15 (`InputBase.element`, `c7e802a`); Carousel,
+>     Link, Image, ScrollToTop (`06a05da`); TextInput's `mask` and Overflow (`fb5a6bc`). **Every wave-B component is
+>     done** (both skins, unit tests, skins-gate checks in Edge, Firefox and WebKit). **Next: `@tsazor/charts`** (D-L2:
+>     SVG line, bar, area, donut, sparkline in the skins' tokens; MudChart's breadth).
 >   - **For the owner, before the API freeze:** the `Async` suffix. The runtime and DataGrid keep Blazor's names
 >     (`invokeAsync`, `refreshDataAsync`), the skins' newer methods drop it (Overlay `show()`/`close()` for Fluent UI
 >     Blazor's `ShowAsync`/`CloseAsync`, Wizard `goToStep()`). One rule for all would let the codemod map them.
