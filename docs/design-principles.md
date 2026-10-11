@@ -39,6 +39,10 @@ handled elsewhere, mostly automated (codemod).
 3. **Runtime API: Blazor semantics, TypeScript names.** `onInitialized` instead of
    `OnInitialized`, `bigint` instead of `long`, a boolean renders as `"true"`. Modern standard TS
    features take precedence (e.g. standard decorators instead of `experimentalDecorators`).
+   A method keeps Blazor's name in camelCase, `Async` included (`refreshDataAsync`, `invokeAsync`,
+   a Wizard's `goToStepAsync`), and a method Tsazor adds gets `Async` when it returns a Promise:
+   the suffix is part of the name a Blazor developer looks for, not C# syntax (decided 2026-10-11).
+   A lifecycle pair (`OnInitialized`/`OnInitializedAsync`) is one method, `onInitialized`.
 4. **Migration through tooling, not through compiler leniency.** Leftover C# in ported code is
    handled by a codemod (`.razor` → `.tsazor`) and LSP diagnostics with quick fixes. The
    compiler does not silently accept C# constructs — it reports them together with the
@@ -60,7 +64,8 @@ Conventions of the Razor *template language* — not of C# — stay:
 
 In contested cases, the **TypeScript convention wins, not Blazor's**. Fidelity to Blazor covers
 markup, directives and the semantics of the component model; where it collides with idiomatic
-TypeScript (naming, types, syntax, language features), TypeScript wins.
+TypeScript (naming, types, syntax, language features), TypeScript wins. One decided exception: the
+`Async` suffix of method names stays (above).
 
 ## Parity first, then scale
 

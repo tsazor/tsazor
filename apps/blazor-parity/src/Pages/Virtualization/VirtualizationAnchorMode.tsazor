@@ -201,7 +201,7 @@
         this.nextPrependIndex -= 10;
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingPrepend = newItems;
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             this.items.splice(0, 0, ...newItems);
         }
@@ -213,7 +213,7 @@
         this.nextPrependIndex -= 100;
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingPrepend = newItems;
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             this.items.splice(0, 0, ...newItems);
         }
@@ -226,7 +226,7 @@
         this.nextAppendIndex += 10;
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingAppend = newItems;
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             this.items.push(...newItems);
         }
@@ -239,7 +239,7 @@
         this.nextAppendIndex += 1;
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingAppend = [newItem];
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             this.items.push(newItem);
         }
@@ -252,7 +252,7 @@
         this.nextAppendIndex += 100;
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingAppend = newItems;
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             this.items.push(...newItems);
         }
@@ -264,7 +264,7 @@
         this.nextPrependIndex = -1;
         this.nextAppendIndex = 5;
         this.statusMessage = "Set to 5 items";
-        if (this.useItemsProvider && this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshData(); }
+        if (this.useItemsProvider && this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshDataAsync(); }
     }
 
     // Reproduces the Aspire dashboard "Console logs": a large OverscanCount and a dataset that is
@@ -275,7 +275,7 @@
         this.nextPrependIndex = -1;
         this.nextAppendIndex = 40;
         this.statusMessage = "Console scenario: 40 items, overscan 100";
-        if (this.useItemsProvider && this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshData(); }
+        if (this.useItemsProvider && this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshDataAsync(); }
     }
 
     private setLowMaxItemCount(): void {
@@ -321,7 +321,7 @@
         const count = Math.min(10, this.items.length);
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingDeleteFromTop = count;
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             this.items.splice(0, count);
         }
@@ -332,7 +332,7 @@
         const count = Math.min(10, this.items.length);
         if (this.useItemsProvider && this.virtualizeRef !== undefined) {
             this.pendingDeleteFromBottom = count;
-            await this.virtualizeRef.refreshData();
+            await this.virtualizeRef.refreshDataAsync();
         } else {
             const startIdx = this.items.length - count;
             this.items.splice(startIdx, count);
@@ -437,7 +437,7 @@
         this.providerEvents.push("scroll-start");
         this.scrollStatus = `Scrolling to ${this.scrollTargetIndex}...`;
         try {
-            await this.virtualizeRef.scrollToItem(this.scrollTargetIndex);
+            await this.virtualizeRef.scrollToItemAsync(this.scrollTargetIndex);
             this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
             this.providerEvents.push("scroll-complete");
         } catch (error) {
@@ -456,7 +456,7 @@
         this.scrollStatus = "Rapid scrolling...";
         // Fire 5 calls back-to-back; each subsequent call supersedes the previous.
         // Superseded calls resolve normally — only the final target lands in the viewport.
-        const tasks = [50, 400, 100, 350, 250].map((index) => virtualize.scrollToItem(index));
+        const tasks = [50, 400, 100, 350, 250].map((index) => virtualize.scrollToItemAsync(index));
         const outcomes = await Promise.allSettled(tasks);
         const canceled = outcomes.filter((o) => o.status === "rejected" && isAbortError(o.reason)).length;
         const completed = outcomes.filter((o) => o.status === "fulfilled").length;
@@ -469,7 +469,7 @@
         this.userScrollController = new AbortController();
         this.scrollStatus = `Scrolling to ${this.scrollTargetIndex} (cancellable)...`;
         try {
-            await this.virtualizeRef.scrollToItem(this.scrollTargetIndex, this.userScrollController.signal);
+            await this.virtualizeRef.scrollToItemAsync(this.scrollTargetIndex, this.userScrollController.signal);
             this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
         } catch (error) {
             this.scrollStatus = isAbortError(error) ? "Canceled" : `Faulted: ${messageOf(error)}`;

@@ -1,6 +1,6 @@
 /**
  * Group K of Blazor's Virtualize E2E tests (docs/blazor-virtualize-net11.md §9): ScrollToItemAsync, which is
- * Tsazor's `scrollToItem(index, signal?)`. Ported from VirtualizationTest.cs; line numbers refer to it. The
+ * Tsazor's `scrollToItemAsync(index, signal?)`. Ported from VirtualizationTest.cs; line numbers refer to it. The
  * page's "Completed"/"Canceled"/"Faulted" status mirrors the Task's outcome: a rejection with an AbortError is
  * Blazor's OperationCanceledException.
  */

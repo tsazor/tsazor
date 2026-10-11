@@ -122,7 +122,7 @@
         if (this.useItemsProvider) {
             this.pendingPrepend = newItems;
             this.statusMessage = `Prepended 10 items (indices ${newItems[0]!.index}..${newItems[newItems.length - 1]!.index})`;
-            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshData(); }
+            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshDataAsync(); }
         } else {
             this.items.splice(0, 0, ...newItems);
             this.statusMessage = `Prepended 10 items (indices ${newItems[0]!.index}..${newItems[newItems.length - 1]!.index})`;
@@ -136,7 +136,7 @@
         if (this.useItemsProvider) {
             this.pendingPrepend = newItems;
             this.statusMessage = `Prepended 100 items (indices ${newItems[0]!.index}..${newItems[newItems.length - 1]!.index})`;
-            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshData(); }
+            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshDataAsync(); }
         } else {
             this.items.splice(0, 0, ...newItems);
             this.statusMessage = `Prepended 100 items (indices ${newItems[0]!.index}..${newItems[newItems.length - 1]!.index})`;
@@ -151,7 +151,7 @@
         if (this.useItemsProvider) {
             this.pendingAppend = newItems;
             this.statusMessage = `Appended 10 items (indices ${startIndex}..${startIndex + 9})`;
-            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshData(); }
+            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshDataAsync(); }
         } else {
             this.items.push(...newItems);
             this.statusMessage = `Appended 10 items (indices ${startIndex}..${startIndex + 9})`;
@@ -166,7 +166,7 @@
         if (this.useItemsProvider) {
             this.pendingAppend = newItems;
             this.statusMessage = `Appended 100 items (indices ${startIndex}..${startIndex + 99})`;
-            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshData(); }
+            if (this.virtualizeRef !== undefined) { await this.virtualizeRef.refreshDataAsync(); }
         } else {
             this.items.push(...newItems);
             this.statusMessage = `Appended 100 items (indices ${startIndex}..${startIndex + 99})`;
@@ -219,7 +219,7 @@
         if (this.virtualizeRef === undefined) { this.scrollStatus = "Faulted: no virtualizeRef"; return; }
         this.scrollStatus = `Scrolling to ${this.scrollTargetIndex}...`;
         try {
-            await this.virtualizeRef.scrollToItem(this.scrollTargetIndex);
+            await this.virtualizeRef.scrollToItemAsync(this.scrollTargetIndex);
             this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
         } catch (error) {
             this.scrollStatus = `Faulted: ${messageOf(error)}`;

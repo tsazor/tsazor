@@ -141,9 +141,12 @@ everything pushed.
 >     (`b1cbdc6`; D-L2, docs/design-charts.md; L16 fixed on the way). **Waves A and B are complete** — the library part
 >     of the 1.0 scope (D-L1). Not covered on purpose: MudBlazor's DateMask/RegexMask/BlockMask, overflowing child
 >     content without `Items`, chart types beyond line/area/bar/donut/pie (Chart.js through `@attach`).
->   - **For the owner, before the API freeze:** the `Async` suffix. The runtime and DataGrid keep Blazor's names
->     (`invokeAsync`, `refreshDataAsync`), the skins' newer methods drop it (Overlay `show()`/`close()` for Fluent UI
->     Blazor's `ShowAsync`/`CloseAsync`, Wizard `goToStep()`). One rule for all would let the codemod map them.
+>   - **The `Async` suffix — decided 2026-10-11 (owner): it stays.** A method keeps Blazor's name in camelCase,
+>     `Async` included; a method Tsazor adds gets it when it returns a Promise (design-principles.md point 3,
+>     migration-practices.md). Renamed: Virtualize `refreshDataAsync`/`scrollToItemAsync`, DataGrid
+>     `scrollToItemAsync`, Overlay `showAsync`/`closeAsync`, Wizard `goToStepAsync`. Carousel's `moveTo`/`next`/
+>     `previous` stay (MudBlazor's names have no suffix). Open: `AuthenticationStateProvider.getState()` (Blazor's
+>     `GetAuthenticationStateAsync`) — the owner's `fluentcms-admin` WIP overrides it.
 >   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
 >     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
 >     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git

@@ -168,7 +168,7 @@
 
     protected override onParametersSet(): void {
         const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
-        this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshData() ?? Promise.resolve() : undefined);
+        this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshDataAsync() ?? Promise.resolve() : undefined);
         if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
     }
 
@@ -208,16 +208,16 @@
         if (this.itemsProvider !== undefined && !this.virtualize) void this.model.refreshDataAsync();
     }
 
-    /** Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed. */
     /**
      * Virtualized: scrolls so the row at `index` is at the top (QuickGrid's ScrollToItemAsync). A newer call
      * supersedes this one, which then resolves; it rejects only when `signal` aborts.
      */
-    scrollToItem(index: number, signal?: AbortSignal): Promise<void> {
-        if (this.virtualizer === undefined) throw new Error("DataGrid: scrollToItem needs Virtualize and a rendered grid.");
-        return this.virtualizer.scrollToItem(index, signal);
+    scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void> {
+        if (this.virtualizer === undefined) throw new Error("DataGrid: scrollToItemAsync needs Virtualize and a rendered grid.");
+        return this.virtualizer.scrollToItemAsync(index, signal);
     }
 
+    /** Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed. */
     refreshDataAsync(): Promise<void> {
         return this.model.refreshDataAsync();
     }

@@ -530,11 +530,11 @@ describe("B. ItemsProvider, cancellation, refresh, data changes", () => {
 
     items.unshift(...range(-20, 20));
     blockAdjustedRequest = true;
-    const canceledRefresh = virtualize.refreshData();
+    const canceledRefresh = virtualize.refreshDataAsync();
     const blockedRequest = await blockedRequestStarted.promise;
 
     virtualize.itemsBefore = 130;
-    await virtualize.refreshData();
+    await virtualize.refreshDataAsync();
 
     expect(blockedRequest.signal.aborted).toBe(true);
     expect(virtualize.itemsBefore).toBe(150);
@@ -558,7 +558,7 @@ describe("B. ItemsProvider, cancellation, refresh, data changes", () => {
     expect(virtualize.itemsBefore).toBe(100);
 
     items.splice(0, 10);
-    await virtualize.refreshData();
+    await virtualize.refreshDataAsync();
     await renderer.waitUntilIdle();
 
     // Item 110, shown as the window's eleventh row, is at index 100 now.
@@ -605,7 +605,7 @@ describe("B. ItemsProvider, cancellation, refresh, data changes", () => {
     await renderer.waitUntilIdle();
     const itemsBeforeAfterInit = virtualize.itemsBefore;
 
-    // New data arrives at the end; the refresh is driven by the spacer, not by refreshData.
+    // New data arrives at the end; the refresh is driven by the spacer, not by refreshDataAsync.
     totalCount = 120;
     virtualize.spacerAfterVisible(0, 800, 800, SpacerVisibilityReason.ViewportFill);
     await renderer.waitUntilIdle();
@@ -641,7 +641,7 @@ describe("B. ItemsProvider, cancellation, refresh, data changes", () => {
 
     items.unshift(...range(-20, 20));
     returnSinglePass = true;
-    await virtualize.refreshData();
+    await virtualize.refreshDataAsync();
     await renderer.waitUntilIdle();
 
     expect(virtualize.itemsBefore).toBe(itemsBeforePrepend + 20);
@@ -890,7 +890,7 @@ describe("E. Measurement", () => {
     expect(Number.isFinite(Number.parseFloat(after.style.height))).toBe(true);
   });
 
-  it("refreshData resets the running average", async () => {
+  it("refreshDataAsync resets the running average", async () => {
     // Blazor: Virtualize_RefreshDataAsync_ResetsRunningAverage
     const { virtualize, renderer } = await renderVirtualize<number>({ ItemSize: 50, Items: range(1, 100), ChildContent: spanItemTemplate });
     for (let i = 0; i < 10; i++) {
@@ -899,7 +899,7 @@ describe("E. Measurement", () => {
     }
     expect(virtualize.measuredItemCount).toBeGreaterThan(0);
 
-    await virtualize.refreshData();
+    await virtualize.refreshDataAsync();
     await renderer.waitUntilIdle();
 
     expect(virtualize.totalMeasuredHeight).toBe(0);
@@ -1093,14 +1093,14 @@ describe("J. InitialItemIndex", () => {
   });
 });
 
-/* K. scrollToItem --------------------------------------------------------- */
+/* K. scrollToItemAsync --------------------------------------------------------- */
 
-describe("K. scrollToItem", () => {
+describe("K. scrollToItemAsync", () => {
   it("throws before the first render", () => {
     // Blazor: ScrollToIndexAsync_ThrowsBeforeJsInteropInitialized
     const virtualize = new Virtualize<number>();
 
-    expect(() => virtualize.scrollToItem(0)).toThrow(/scrollToItem[\s\S]*InitialItemIndex/);
+    expect(() => virtualize.scrollToItemAsync(0)).toThrow(/scrollToItemAsync[\s\S]*InitialItemIndex/);
   });
 
   it("a negative index does not throw", async () => {
@@ -1109,7 +1109,7 @@ describe("K. scrollToItem", () => {
     virtualize.spacerAfterVisible(0, 500, 500, SpacerVisibilityReason.ViewportFill);
     await renderer.waitUntilIdle();
 
-    const task = virtualize.scrollToItem(-5);
+    const task = virtualize.scrollToItemAsync(-5);
     await renderer.waitUntilIdle();
 
     await expect(task).resolves.toBeUndefined();
@@ -1123,7 +1123,7 @@ describe("K. scrollToItem", () => {
     virtualize.spacerAfterVisible(0, 500, 500, SpacerVisibilityReason.ViewportFill);
     await renderer.waitUntilIdle();
 
-    const task = virtualize.scrollToItem(99_999);
+    const task = virtualize.scrollToItemAsync(99_999);
     await renderer.waitUntilIdle();
 
     await expect(task).resolves.toBeUndefined();
@@ -1137,7 +1137,7 @@ describe("K. scrollToItem", () => {
     // Regression (Blazor): the render rendezvous waited for a rendered row, which never comes for an empty list.
     const { virtualize } = await createRenderedVirtualize(50, 0);
 
-    await expect(within(virtualize.scrollToItem(0), 2000)).resolves.toBeUndefined();
+    await expect(within(virtualize.scrollToItemAsync(0), 2000)).resolves.toBeUndefined();
   });
 
   it("an already aborted signal rejects", async () => {
@@ -1146,7 +1146,7 @@ describe("K. scrollToItem", () => {
     const controller = new AbortController();
     controller.abort();
 
-    await expect(virtualize.scrollToItem(10, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+    await expect(virtualize.scrollToItemAsync(10, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("aborting the signal aborts the provider request", async () => {
@@ -1173,7 +1173,7 @@ describe("K. scrollToItem", () => {
 
     blockProvider = true;
     const controller = new AbortController();
-    const task = virtualize.scrollToItem(90, controller.signal);
+    const task = virtualize.scrollToItemAsync(90, controller.signal);
     await within(requestStarted.promise, 2000);
 
     controller.abort();
@@ -1191,8 +1191,8 @@ describe("K. scrollToItem", () => {
     await renderer.waitUntilIdle();
 
     let secondSettled: "resolved" | "rejected" | undefined;
-    const first = virtualize.scrollToItem(500);
-    const second = virtualize.scrollToItem(750);
+    const first = virtualize.scrollToItemAsync(500);
+    const second = virtualize.scrollToItemAsync(750);
     second.then(
       () => (secondSettled = "resolved"),
       () => (secondSettled = "rejected"),
@@ -1219,7 +1219,7 @@ describe("K. scrollToItem", () => {
     };
     const m = await createRenderedVirtualize(50, 100, throwingProvider);
 
-    const task = m.virtualize.scrollToItem(50);
+    const task = m.virtualize.scrollToItemAsync(50);
 
     await expect(within(task, 2000)).rejects.toBe(sentinel);
     await m.renderer.waitUntilIdle();
@@ -1242,7 +1242,7 @@ describe("K. scrollToItem", () => {
     expect(virtualize.isScrollToItemPending()).toBe(false);
 
     gated = true;
-    const task = virtualize.scrollToItem(800);
+    const task = virtualize.scrollToItemAsync(800);
     await flushMicrotasks();
     expect(virtualize.isScrollToItemPending()).toBe(true);
 
@@ -1262,7 +1262,7 @@ describe("K. scrollToItem", () => {
     // Short rows: the after spacer stays in view twice, then the rows cover the viewport.
     viewport.alignResults.push(ViewportFillDirection.After, ViewportFillDirection.After, ViewportFillDirection.Covered);
 
-    await within(virtualize.scrollToItem(500), 2000);
+    await within(virtualize.scrollToItemAsync(500), 2000);
 
     expect(viewport.calls.filter((call) => call.method === "alignToItem")).toHaveLength(3);
     // 40 rows, doubled to 80, then to the maximum: MaxItemCount 100 plus twice the overscan of 15.

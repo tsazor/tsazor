@@ -77,6 +77,14 @@ render in the browser.
 
 - **Lifecycle names.** `OnInitializedAsync` is `onInitialized` returning a Promise. A C#-style
   `onInitializedAsync` gets TZS032 with a rename fix (F14).
+- **Method names are Blazor's, in camelCase — `Async` included.** `RefreshDataAsync()` is `refreshDataAsync()`,
+  `ScrollToItemAsync` `scrollToItemAsync`, a `FluentOverlay`'s `ShowAsync()` `showAsync()`, a `FluentWizard`'s
+  `GoToStepAsync` `goToStepAsync`. A method without `Async` in Blazor has none here either, even when it returns a
+  Promise (MudBlazor's `MoveTo` is a Carousel's `moveTo`). A method Tsazor adds gets `Async` when it returns a
+  Promise. Tsazor chooses this over JavaScript's habit (`fetch()`, `json()` carry no suffix) because a Blazor
+  developer then finds every method under the name they know, and the codemod renames by rule, not by table. Two
+  exceptions: a lifecycle pair is one method (above), and the HTTP client follows `fetch` — `GetFromJsonAsync<T>` is
+  `getJson<T>`.
 - **Narrowing works as in Razor, except in your own lambdas.** `@if (model != null) { <Card>@model.name</Card> }`
   and `<InputText @bind-Value="model.name" />` inside it check clean: child content, slots, templates and bind
   setters are read where they stand, as C# reads them (F15). A lambda you write is TypeScript's:
@@ -91,7 +99,7 @@ render in the browser.
   virtualized provider list. With fresh objects from the provider and no comparer, every load that changes the
   count looks like a prepend, and rows deleted above the viewport go unnoticed (A6).
 - **Cancellation and tasks.** `CancellationToken` is `AbortSignal` (`request.signal`), and `Task` is `Promise`.
-  Tsazor keeps Blazor's semantics: a superseded `scrollToItem` resolves, and only the caller's own abort rejects.
+  Tsazor keeps Blazor's semantics: a superseded `scrollToItemAsync` resolves, and only the caller's own abort rejects.
 - **Enums** stay enums, and `[Flags]` combinations with `|` work (`VirtualizeAnchorMode.Start | End`).
 - **Generic components infer like Razor.** `TGridItem` comes from `Items` or from `ItemsProvider` (a
   `GridItemsProvider<Person>` field), and cascades to the columns. Where nothing can be inferred, the errors in the
@@ -193,8 +201,8 @@ render in the browser.
   Overflowing child content (without `Items`) has no counterpart: give the items as a list.
 - **Busy states.** `<FluentOverlay @bind-Visible="saving" FullScreen="true">` keeps its parameters as `<Overlay>`
   (`Interactive`, `BackgroundColor`, `Opacity`, `CloseMode`; `OverlayCloseMode.InsideOnly` is `"inside"`,
-  `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `show()`/`close()`. MudBlazor's `MudOverlay`:
-  `Absolute="true"` is the default (it covers its container: give that `position: relative`), without it
+  `OutsideOnly` `"outside"`), and `ShowAsync()`/`CloseAsync()` are `showAsync()`/`closeAsync()`. MudBlazor's
+  `MudOverlay`: `Absolute="true"` is the default (it covers its container: give that `position: relative`), without it
   `FullScreen="true"`; `AutoClose="true"` is `CloseMode="all"`, without it `"manual"`; `Modal="false"` is
   `Interactive="true"`; `DarkBackground` is `BackgroundColor`. For a save or a load, take `CloseMode="manual"`: the
   default closes on a click, as Fluent UI Blazor's does. What the overlay covers is inert while it shows, so the
@@ -255,7 +263,7 @@ render in the browser.
   - `Items` is an array, and an `ItemsProvider` gets `request.signal`.
   - Rows may differ in height: they are measured.
   - `AnchorMode.End` follows a feed or a chat.
-  - `await scrollToItem(i)` resolves once the rows around the target fill the viewport (A15), so code after the
+  - `await scrollToItemAsync(i)` resolves once the rows around the target fill the viewport (A15), so code after the
     `await` sees the final rows.
   - The DataGrid passes the same parameters as QuickGrid 11.
 - **Await the callbacks you invoke.** Return or await an `EventCallback`'s promise, so an async handler's error

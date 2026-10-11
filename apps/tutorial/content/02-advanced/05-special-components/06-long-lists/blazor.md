@@ -18,4 +18,4 @@ the first estimate. `OverscanCount`, `MaxItemCount`, `Placeholder`, `EmptyConten
 
 > **Coming from Blazor:** `Items` is an array. An `ItemsProvider` gets `request.signal`, an
 > `AbortSignal`, where Blazor passes a `CancellationToken`, and returns a `Promise`. `ItemComparer`
-> is a function, `(a, b) => boolean`. `ScrollToItemAsync` is `scrollToItem(index, signal?)`.
+> is a function, `(a, b) => boolean`. `ScrollToItemAsync` is `scrollToItemAsync(index, signal?)`.

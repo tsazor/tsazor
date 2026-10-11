@@ -197,7 +197,7 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
  * The directory of the installed package `specifier`, as `require.resolve` would find it (symlinks resolved), without
  * resolving `<package>/package.json`: a package whose `exports` don't list it refuses that. Windows let the
  * backslashed `path.join(specifier, "package.json")` through, Linux and macOS didn't, so there the shadows of a
- * package's components were never used and their methods (a DataGrid's `scrollToItem`) were missing.
+ * package's components were never used and their methods (a DataGrid's `scrollToItemAsync`) were missing.
  */
 function packageDirOf(specifier: string, projectRoot: string): string | undefined {
   const searchPaths = createRequire(path.join(projectRoot, "package.json")).resolve.paths(specifier) ?? [];

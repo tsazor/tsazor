@@ -1582,8 +1582,8 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private get usesItems();
     private get effectiveOverscanCount();
     private get canDetectPrepend();
-    refreshData(): Promise<void>;
-    scrollToItem(itemIndex: number, signal?: AbortSignal): Promise<void>;
+    refreshDataAsync(): Promise<void>;
+    scrollToItemAsync(itemIndex: number, signal?: AbortSignal): Promise<void>;
     private scrollToItemCore;
     private moveWindowToContain;
     private ensureRenderCommitted;

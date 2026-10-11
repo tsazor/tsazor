@@ -10,7 +10,7 @@
     Variable Height Items with Async ItemsProvider:<br />
     <label><input id="toggle-autoload" type="checkbox" checked="@autoLoad" @onchange="toggleAutoLoad" /> Auto-load items</label>
     <button id="finish-loading" @onclick="finishLoading" disabled="@autoLoad">Finish loading</button>
-    <button id="refresh-data" @onclick="() => virtualizeRef?.refreshData()">Refresh data</button>
+    <button id="refresh-data" @onclick="() => virtualizeRef?.refreshDataAsync()">Refresh data</button>
     <button id="add-item-start" @onclick="addItemAtStart">Add at start</button>
     <button id="remove-item-middle" @onclick="removeItemFromMiddle">Remove from middle</button>
     <button id="set-count-0" @onclick="() => setItemCount(0)">Set 0 items</button>

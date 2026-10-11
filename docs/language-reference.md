@@ -728,8 +728,8 @@ entries) does not change language on a culture switch. Store the **key**, transl
   - **Edges:** `AnchorMode` (`Start` by default; `End` follows new rows at the bottom, for a feed or a chat,
     until the user scrolls away) and `ItemComparer` (`(a, b) => boolean`) to tell a prepend from an append
     in an `ItemsProvider` list.
-  - **Scrolling:** `InitialItemIndex`, and `scrollToItem(index, signal?)` on an `@ref` (Blazor's
-    `ScrollToItemAsync`).
+  - **Scrolling:** `InitialItemIndex`, and `scrollToItemAsync(index, signal?)` on an `@ref`; `refreshDataAsync()`
+    asks the provider again.
   - `ItemTemplate` and `Overscan` are Tsazor's earlier names and still work. Tsazor fixes some of Blazor 11's
     bugs (design-virtualize.md §6), for example a delete above the viewport keeps the visible rows in place.
   - In tests (`@tsazor/testing`) there is no layout. As with bUnit, a Virtualize then renders its rows up to

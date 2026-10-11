@@ -351,7 +351,7 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     initialItemIndex: number;
     stickyHeader: boolean;
     additionalAttributes?: Record<string, unknown>;
-    scrollToItem(index: number, signal?: AbortSignal): Promise<void>;
+    scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void>;
     refreshDataAsync(): Promise<void>;
     sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;
 }
@@ -801,8 +801,8 @@ export default class Overlay extends ComponentBase {
     ariaLabel?: string;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
-    show(): Promise<void>;
-    close(): Promise<void>;
+    showAsync(): Promise<void>;
+    closeAsync(): Promise<void>;
 }
 
 // OverlayCloseMode: re-exported from @tsazor/ui
@@ -1271,7 +1271,7 @@ export default class Wizard extends ComponentBase {
     steps?: RenderFragment;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
-    goToStep(index: number, validate?: boolean): Promise<void>;
+    goToStepAsync(index: number, validate?: boolean): Promise<void>;
 }
 
 // WizardStep

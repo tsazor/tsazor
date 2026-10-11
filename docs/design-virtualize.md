@@ -65,8 +65,8 @@ Markup follows Razor 1:1, code stays clean TypeScript:
 | `ItemSize`, `OverscanCount`, `MaxItemCount`, `SpacerElement`, `InitialItemIndex` | same names; defaults 50, 15, 100, `"div"`, 0. `Overscan` stays as an alias of `OverscanCount` (D-V2) |
 | `AnchorMode` | `VirtualizeAnchorMode = { None: 0, Start: 1, End: 2 } as const` (flags, `Start \| End` works); default `Start` |
 | `ItemComparer` | `(a: TItem, b: TItem) => boolean`, default `Object.is` |
-| `RefreshDataAsync()` | `refreshData(): Promise<void>` |
-| `ScrollToItemAsync(index, token)` | `scrollToItem(index, signal?): Promise<void>`. It throws before the first render, and rejects only when `signal` aborts. A superseded call resolves, and so does one that a user scroll overrides |
+| `RefreshDataAsync()` | `refreshDataAsync(): Promise<void>` |
+| `ScrollToItemAsync(index, token)` | `scrollToItemAsync(index, signal?): Promise<void>`. It throws before the first render, and rejects only when `signal` aborts. A superseded call resolves, and so does one that a user scroll overrides |
 
 **Aliases (D-V2):** `ItemTemplate` and `Overscan` are Tsazor's earlier names. They keep working, and the docs show
 Blazor's names. Precedence: `ItemContent` › `ChildContent` › `ItemTemplate`. `Overscan` wins over `OverscanCount` when set.
@@ -81,7 +81,7 @@ Blazor's names. Precedence: `ItemContent` › `ChildContent` › `ItemTemplate`.
 - **Callers:** both DataGrid skins, the demo, the tutorial's DataGrid lesson, the language reference and the
   CHANGELOG move to the new names.
 - **Tutorial:** a lesson for long lists, with a live feed that follows the bottom (`AnchorMode.End`), rows of different
-  heights, and `scrollToItem`.
+  heights, and `scrollToItemAsync`.
 - **The rest of the library:** the chat and feed patterns of AgentView then need no library component of their own.
 
 ## 6. Where Tsazor deviates from Blazor 11 (D-V4)
@@ -103,9 +103,9 @@ that shows the better behavior. Where a Blazor test asserts the bug, the port as
 | A10 | with window scrolling, Home/End and the scroll keys are taken from the whole document, so End typed in a text field makes the list follow the bottom | keys typed into an editable element (input, textarea, select, contenteditable) are text editing, not scrolling |
 | A11 | the manual anchor restore adds a fractional delta to `scrollTop`; WebKit keeps whole pixels, so each restore loses up to 1px and the next snapshot starts from there (a table's anchored row drifted 9.5px over 10 prepends). Safari has no `overflow-anchor`, so there every list takes this path; Blazor tests in Chrome only | the dropped fraction is carried: until the user scrolls, snapshots record the offset the restore aimed for |
 | A12 | Home pressed while the convergence to the bottom after End is still running starts the convergence to the top too; both run, the bottom one wins, and the list is pulled back to the bottom (End during a top convergence likewise). Seen as a flaky WebKit test | a jump key ends a convergence toward the other edge first |
-| A13 | a user scroll while `ScrollToItemAsync` waits for its provider doesn't cancel the fetch (#68777; the test is quarantined). The window already renders as placeholders, the scroll stays inside the tall before spacer and crosses no threshold, and user input re-observes the spacers only during the alignment scroll | user input re-observes the spacers while a scrollToItem is pending, so the fresh report is a user scroll and cancels it |
+| A13 | a user scroll while `ScrollToItemAsync` waits for its provider doesn't cancel the fetch (#68777; the test is quarantined). The window already renders as placeholders, the scroll stays inside the tall before spacer and crosses no threshold, and user input re-observes the spacers only during the alignment scroll | user input re-observes the spacers while a scrollToItemAsync is pending, so the fresh report is a user scroll and cancels it |
 | A14 | rows replacing placeholders above the viewport have their own heights; the browser's scroll anchor was a placeholder that the render removes, so nothing compensates and the top row jumps (Tsazor's port of `AnchorMode_None_AsyncProvider_ScrollDoesNotFlash` failed in all three engines; not checked against Blazor) | before that render the viewport records the first visible row, and the drift correction after the patch puts it back, before paint |
-| A15 | `ScrollToItemAsync` grows the window once. When the rows near the target are much shorter than the average, a spacer stays in view; its report after the call completed slides the window with an average that changed since the spacers were sized, and the list runs away from the target (an Edge race in `ScrollToItem_TallItemsBeforeTarget_…`) | scrollToItem grows the window and aligns again until the rows cover the viewport (at most 8 doublings), as InitialItemIndex does, before it completes |
+| A15 | `ScrollToItemAsync` grows the window once. When the rows near the target are much shorter than the average, a spacer stays in view; its report after the call completed slides the window with an average that changed since the spacers were sized, and the list runs away from the target (an Edge race in `ScrollToItem_TallItemsBeforeTarget_…`) | scrollToItemAsync grows the window and aligns again until the rows cover the viewport (at most 8 doublings), as InitialItemIndex does, before it completes |
 | A16 | a scroll the viewport didn't make can be swallowed. While converging to an edge every scroll is ignored, and the next pin pulls the list back; after a write that flags "ignore the next scroll" but doesn't move scrollTop (at the bottom already), no event consumes the flag, and it eats the reader's next scroll. A live feed (End mode, an append every 700 ms) pulled a reader who scrolled up back to the bottom, in Firefox and Safari (the tutorial's gate found it) | the viewport records where its own last write left scrollTop. A scroll elsewhere is the reader's or the app's: it ends a convergence away from its edge, a stale flag doesn't swallow it, and a pin that comes before its event (Chromium runs the ResizeObserver first) takes it as a user scroll instead of overwriting it |
 
 Not bugs, so kept: `Items` mode compares by identity, not by `ItemComparer` (Blazor's design); the 50 ms throttle; the
@@ -117,7 +117,7 @@ test-page quirks of spec appendix A.12 are fixed in the ported tests, not in the
 2. The viewport driver and the render: spacers, the inline template, placeholders, `EmptyContent`, the loop breaker.
    Then the new API with its callers.
 3. Anchoring: native and manual, snapshot/restore, the follow state, convergence, Home/End.
-4. `InitialItemIndex` and `scrollToItem`.
+4. `InitialItemIndex` and `scrollToItemAsync`.
 5. The parity gate (D-V5) and the DataGrid parameters.
 6. Tutorial, docs, CHANGELOG.
 

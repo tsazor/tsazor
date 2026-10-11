@@ -155,7 +155,7 @@
         if (grid === undefined) { this.scrollStatus = "Faulted: no grid"; return; }
         this.scrollStatus = `Scrolling to ${this.scrollTargetIndex}...`;
         try {
-            await grid.scrollToItem(this.scrollTargetIndex);
+            await grid.scrollToItemAsync(this.scrollTargetIndex);
             this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
         } catch (error) {
             this.scrollStatus = isAbortError(error) ? `Canceled: ${this.scrollTargetIndex}` : `Faulted: ${messageOf(error)}`;
@@ -166,7 +166,7 @@
         const grid = this.activeGrid;
         if (grid === undefined) { this.scrollStatus = "Faulted: no grid"; return; }
         this.scrollStatus = "Rapid scrolling...";
-        const tasks = [50, 400, 100, 350, 250].map((index) => grid.scrollToItem(index));
+        const tasks = [50, 400, 100, 350, 250].map((index) => grid.scrollToItemAsync(index));
         const outcomes = await Promise.allSettled(tasks);
         const canceled = outcomes.filter((o) => o.status === "rejected" && isAbortError(o.reason)).length;
         const completed = outcomes.filter((o) => o.status === "fulfilled").length;
@@ -180,7 +180,7 @@
         this.userScrollController = new AbortController();
         this.scrollStatus = `Scrolling to ${this.scrollTargetIndex} (cancellable)...`;
         try {
-            await grid.scrollToItem(this.scrollTargetIndex, this.userScrollController.signal);
+            await grid.scrollToItemAsync(this.scrollTargetIndex, this.userScrollController.signal);
             this.scrollStatus = `Completed: ${this.scrollTargetIndex}`;
         } catch (error) {
             this.scrollStatus = isAbortError(error) ? "Canceled" : `Faulted: ${messageOf(error)}`;

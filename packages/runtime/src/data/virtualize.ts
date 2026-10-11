@@ -172,7 +172,7 @@ type ViewportFactory = (
  * (the HMR bridge, `globalThis.__tsazor`, works the same way).
  */
 const VIEWPORT_FACTORY = Symbol.for("tsazor.virtualize.viewportFactory");
-/** How often scrollToItem grows the window to fill the viewport (the capacity doubles each time). */
+/** How often scrollToItemAsync grows the window to fill the viewport (the capacity doubles each time). */
 const MAX_FILL_STEPS = 8;
 type FactorySlot = { [VIEWPORT_FACTORY]?: ViewportFactory };
 
@@ -198,7 +198,7 @@ export function setVirtualizeViewportFactory(factory: ViewportFactory): () => vo
  * Like Blazor, it renders no element of its own: the spacers and the items go into the parent (a `<tbody>`
  * with `SpacerElement="tr"`), and the visible window is measured against the nearest scrolling ancestor (or
  * the window). The item template is the child content or `ItemContent`. `AnchorMode` keeps the viewport at
- * an edge while items arrive there (`End` follows a feed or a chat), `InitialItemIndex` and `scrollToItem`
+ * an edge while items arrive there (`End` follows a feed or a chat), `InitialItemIndex` and `scrollToItemAsync`
  * scroll to an item.
  *
  * Tsazor deviations from Blazor 11, where Blazor has a bug (docs/design-virtualize.md §6): only finite
@@ -239,7 +239,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
    * references; a provider that returns fresh objects needs a comparer by key (`(a, b) => a.id === b.id`).
    */
   @Parameter() itemComparer: (a: TItem, b: TItem) => boolean = Object.is;
-  /** The item to scroll to on the first render (applied once; later, call `scrollToItem`). */
+  /** The item to scroll to on the first render (applied once; later, call `scrollToItemAsync`). */
   @Parameter() initialItemIndex = 0;
 
   private viewport: VirtualizeViewport | undefined;
@@ -306,7 +306,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
    * Blazor's RefreshDataAsync: asks the `ItemsProvider` again for the current window (an `Items` list needs
    * no call: it is read on every render). It doesn't render on success; the caller's own render follows.
    */
-  async refreshData(): Promise<void> {
+  async refreshDataAsync(): Promise<void> {
     this.totalMeasuredHeight = 0;
     this.measuredItemCount = 0;
     await this.refreshDataCore(false, undefined, true);
@@ -318,10 +318,10 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
    * overrides by scrolling. It rejects only when `signal` aborts. Throws before the first render: use
    * `InitialItemIndex` for the first position.
    */
-  scrollToItem(itemIndex: number, signal?: AbortSignal): Promise<void> {
+  scrollToItemAsync(itemIndex: number, signal?: AbortSignal): Promise<void> {
     if (this.viewport === undefined) {
       throw new Error(
-        "Virtualize: scrollToItem cannot be called before the Virtualize has rendered in the browser. " +
+        "Virtualize: scrollToItemAsync cannot be called before the Virtualize has rendered in the browser. " +
           "Use the InitialItemIndex parameter to set the initial scroll position.",
       );
     }
@@ -396,7 +396,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
 
   /**
    * Tsazor (A15): grows the window until the rows cover the viewport, aligning the target again after each
-   * render, before scrollToItem completes (InitialItemIndex fills the same way). Blazor grows it once: a spacer
+   * render, before scrollToItemAsync completes (InitialItemIndex fills the same way). Blazor grows it once: a spacer
    * still in view then reports after the scroll completed and slides the window, converted with an average
    * that changed since the spacers were sized, away from the target.
    */
@@ -456,7 +456,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
       }
     } else if (this.items !== undefined) {
       // An in-memory list costs nothing to read again, so every parameter set does: items added to or removed
-      // from it show without refreshData. This load is synchronous.
+      // from it show without refreshDataAsync. This load is synchronous.
       void this.refreshDataCore(false);
     } else {
       throw new Error("Virtualize requires either the 'Items' or 'ItemsProvider' parameters to be specified and non-null.");
@@ -467,7 +467,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
 
   protected override async onAfterRender(firstRender: boolean): Promise<void> {
     if (this.disposed) return;
-    // A scrollToItem waits for the render that shows its window.
+    // A scrollToItemAsync waits for the render that shows its window.
     const pendingRender = this.nextRender;
     if (
       pendingRender !== undefined &&
@@ -498,7 +498,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
         viewport.setAnchorMode(this.anchorMode);
       }
       // Restore the anchor a data shift captured, so the same row stays at the same offset; not while a
-      // scrollToItem moves the viewport on purpose.
+      // scrollToItemAsync moves the viewport on purpose.
       const shouldRestore = this.pendingAnchorRestore && !this.pendingScrollToBottom && this.currentScrollController === undefined;
       const deferClear =
         shouldRestore &&
@@ -512,7 +512,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
       viewport.refreshObservers(this.loading);
     }
 
-    // InitialItemIndex applies once, through scrollToItem's path: the spacer callback at scrollTop 0 must not
+    // InitialItemIndex applies once, through scrollToItemAsync's path: the spacer callback at scrollTop 0 must not
     // reset the window to index 0 first.
     if (this.initialIndex.phase === InitialIndexPhase.None) {
       if (this.initialItemIndex > 0) {
@@ -673,7 +673,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
     }
   }
 
-  /** @internal The viewport: whether a scrollToItem is in flight (user input then cancels it, A13). */
+  /** @internal The viewport: whether a scrollToItemAsync is in flight (user input then cancels it, A13). */
   isScrollToItemPending(): boolean {
     return this.currentScrollController !== undefined;
   }
@@ -1178,7 +1178,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
     return { result, request };
   }
 
-  /** A failed load: the next render throws it (to an error boundary), and a waiting scrollToItem rejects with it. */
+  /** A failed load: the next render throws it (to an error boundary); a waiting scrollToItemAsync rejects with it. */
   private failRefresh(error: unknown): void {
     this.refreshError = { error };
     this.nextRender?.reject(error);

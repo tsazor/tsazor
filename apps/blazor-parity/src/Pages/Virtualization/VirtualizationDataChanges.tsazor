@@ -24,7 +24,7 @@
 <h4>Using ItemsProvider parameter</h4>
 <p>
     <button id="add-person-to-itemsprovider" @onclick="addPersonToItemsProvider">Add person</button>
-    <button id="refresh-itemsprovider" @onclick="() => asyncVirtualize?.refreshData()">Refresh</button>
+    <button id="refresh-itemsprovider" @onclick="() => asyncVirtualize?.refreshDataAsync()">Refresh</button>
 </p>
 
 @* Person.Equals (same Id) is what C#'s default comparer uses; TypeScript has no such protocol, so the
@@ -255,14 +255,14 @@
     async setLargeDataSetLength(length: number): Promise<void> {
         this.largeDataSetLength = length;
         await Promise.all([
-            this.removeManyVirtualize?.refreshData(),
-            this.tableSimpleLayoutVirtualize?.refreshData(),
-            this.tableComplexLayoutVirtualize?.refreshData(),
-            this.tableComplexLayoutWithTBodyAsContainerVirtualize?.refreshData(),
-            this.tableSimpleLayoutWithParentVirtualize?.refreshData(),
-            this.tableComplexLayoutWithParentVirtualize?.refreshData(),
-            this.displayTableSimpleLayoutVirtualize?.refreshData(),
-            this.displayTableComplexLayoutVirtualize?.refreshData(),
+            this.removeManyVirtualize?.refreshDataAsync(),
+            this.tableSimpleLayoutVirtualize?.refreshDataAsync(),
+            this.tableComplexLayoutVirtualize?.refreshDataAsync(),
+            this.tableComplexLayoutWithTBodyAsContainerVirtualize?.refreshDataAsync(),
+            this.tableSimpleLayoutWithParentVirtualize?.refreshDataAsync(),
+            this.tableComplexLayoutWithParentVirtualize?.refreshDataAsync(),
+            this.displayTableSimpleLayoutVirtualize?.refreshDataAsync(),
+            this.displayTableComplexLayoutVirtualize?.refreshDataAsync(),
         ]);
     }
 

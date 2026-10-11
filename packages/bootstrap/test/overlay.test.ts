@@ -135,10 +135,10 @@ describe("Overlay", () => {
     escape();
     await settle();
     expect(overlay()).not.toBeNull();
-    await host.overlay!.close();
+    await host.overlay!.closeAsync();
     await settle();
     expect(overlay()).toBeNull();
-    await host.overlay!.show();
+    await host.overlay!.showAsync();
     await settle();
     expect(overlay()).not.toBeNull();
     expect(host.changes).toEqual([false, true]);

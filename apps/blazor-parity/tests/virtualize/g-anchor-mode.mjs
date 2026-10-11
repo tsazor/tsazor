@@ -700,7 +700,7 @@ export const tests = [
 
       const { index: indexBefore, relTop: relTopBefore } = await getItemPositionInContainer(container, ".item");
 
-      // Wait for all provider calls to complete (refreshData finishes), then for the final render and restore.
+      // Wait for all provider calls to complete (refreshDataAsync finishes), then for the final render and restore.
       await mutateAndAssertStable(
         page,
         container,

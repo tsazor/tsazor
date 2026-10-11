@@ -3,7 +3,7 @@
     its `onChange` first, and skips disabled steps; Done raises onFinish. `stepSequence` decides what a click on the
     step list may open: nothing (linear, the default), any step, or the visited ones. `stepperPosition` puts the list at
     the start (default; on top when the wizard is narrow) or on top; `displayStepNumber` shows the numbers in the
-    bullets. `buttonTemplate` replaces the buttons (it gets the current index; `goToStep` moves from your code). *@
+    bullets. `buttonTemplate` replaces the buttons (it gets the current index; `goToStepAsync` moves from your code). *@
 @import { isWizardStepClickable, nextWizardStep, previousWizardStep, uniqueId, WizardStepChangeEventArgs, wizardStepStatus, type IconValue, type WizardStepSequence, type WizardStepStatus } from "@tsazor/ui"
 @import type WizardStep from "./WizardStep.tsazor"
 @import { CheckmarkCircle20Filled, Circle20Filled, Circle20Regular } from "./core-icons"
@@ -16,7 +16,7 @@
                 @foreach (const step of this.stepList) {
                     <li class="@this.stepClass(step)" aria-current="@(step.current ? "step" : null)">
                         @if (this.clickable(step)) {
-                            <button type="button" class="fui-wizard__step-button" @onclick="() => this.goToStep(step.index, step.index > this.value)">
+                            <button type="button" class="fui-wizard__step-button" @onclick="() => this.goToStepAsync(step.index, step.index > this.value)">
                                 <WizardStepHeader icon="@this.iconOf(step)" number="@this.numberOf(step)" label="@step.label" summary="@step.summary" />
                             </button>
                         } else {
@@ -155,7 +155,7 @@
     }
 
     /** Opens the step at `index`, after validating the current step's forms (`validate`) and asking its onChange. */
-    async goToStep(index: number, validate = false): Promise<void> {
+    async goToStepAsync(index: number, validate = false): Promise<void> {
         const current = this.stepList[this.value];
         const target = this.stepList[index];
         if (target === undefined || index === this.value) return;
@@ -171,11 +171,11 @@
     }
 
     private async previous(): Promise<void> {
-        if (this.previousIndex >= 0) await this.goToStep(this.previousIndex);
+        if (this.previousIndex >= 0) await this.goToStepAsync(this.previousIndex);
     }
 
     private async next(): Promise<void> {
-        if (this.nextIndex >= 0) await this.goToStep(this.nextIndex, true);
+        if (this.nextIndex >= 0) await this.goToStepAsync(this.nextIndex, true);
     }
 
     private async finish(): Promise<void> {

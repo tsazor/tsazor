@@ -1386,6 +1386,7 @@ all four apps followed up (only the Gallery uses `@tsazor/fluent`):
 | before B4 | Unknown parameters: error like Blazor or only a warning? | **Decided (2026-09-30):** error like Blazor (at runtime from B4; statically in addition from 2.2) |
 | before 3.6 | Validation: decorators (close to DataAnnotations) or a function map? | **Decided (2026-10-01): decorators** — TC39 field decorators as the DataAnnotations counterpart with .NET error texts, `DataAnnotationsValidator` as a built-in; the `validators` map stays as an adapter (enables 5.2: schema ⇒ validators) |
 | before 4.2 | Switch Fluent to PascalCase? | **Decided (2026-10-01): no** — members stay camelCase, PascalCase markup maps case-insensitively (design principles) |
+| before the 1.0 API freeze | Keep the `Async` suffix? | **Decided (2026-10-11): yes** — a method keeps Blazor's name in camelCase, `Async` included (`refreshDataAsync`, `showAsync`, `goToStepAsync`); a method Tsazor adds gets it when it returns a Promise. Exceptions: lifecycle pairs are one method (`onInitialized`), the HTTP client follows `fetch` (design principles, migration-practices.md) |
 
 ## Ongoing in every phase
 

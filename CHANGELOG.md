@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Breaking — method names keep Blazor's `Async` suffix** (decided before the API freeze; design-principles.md):
+  `@tsazor/runtime`'s `Virtualize` has `refreshDataAsync()` and `scrollToItemAsync(index, signal?)` (were
+  `refreshData`, `scrollToItem`); `@tsazor/fluent` and `@tsazor/bootstrap`: `DataGrid.scrollToItemAsync`, `Overlay`'s
+  `showAsync()`/`closeAsync()`, `Wizard.goToStepAsync(index, validate?)`. Methods whose Blazor name has no suffix
+  (a Carousel's `moveTo`, `next`, `previous`) keep theirs.
 - `@tsazor/charts` (new, wave B; D-L2): `Chart` (MudBlazor's `MudChart`, its newer API) draws line, area, bar,
   stacked-bar, donut and pie charts as SVG in the skin's colors (`--tz-chart-1` … `--tz-chart-8` default to Fluent's
   or Bootstrap's tokens): `chartSeries`, `chartLabels`, `chartOptions` (`yAxisTicks`, `yAxisFormat` as a function,

@@ -51,12 +51,12 @@
     }
 
     /** Shows the overlay (Fluent UI Blazor's ShowAsync). */
-    async show(): Promise<void> {
+    async showAsync(): Promise<void> {
         await this.change(true);
     }
 
     /** Hides the overlay (Fluent UI Blazor's CloseAsync). */
-    async close(): Promise<void> {
+    async closeAsync(): Promise<void> {
         await this.change(false);
     }
 
@@ -85,7 +85,7 @@
 
     private pressed(press: OverlayPress): void {
         // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
-        if (overlayClosesOn(this.closeMode, press)) this.close().catch((error) => this.dispatchExceptionAsync(error));
+        if (overlayClosesOn(this.closeMode, press)) this.closeAsync().catch((error) => this.dispatchExceptionAsync(error));
     }
 
     private get overlayAttributes(): Record<string, unknown> {

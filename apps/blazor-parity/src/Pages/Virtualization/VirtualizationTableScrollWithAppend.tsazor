@@ -61,7 +61,7 @@
     private async appendItem(): Promise<void> {
         const index = this.items.length;
         this.items.push({ index });
-        await this.virtualize?.refreshData();
+        await this.virtualize?.refreshDataAsync();
         this.completedUpdates++;
         this.status = `Appended item ${index}`;
     }
@@ -69,7 +69,7 @@
     private async prependItem(): Promise<void> {
         const index = this.nextPrependIndex--;
         this.items.splice(0, 0, { index });
-        await this.virtualize?.refreshData();
+        await this.virtualize?.refreshDataAsync();
         this.completedUpdates++;
         this.status = `Prepended item ${index}`;
     }

@@ -32,7 +32,7 @@ export enum ViewportFillDirection {
 export interface VirtualizeViewportCallbacks {
   spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
   spacerAfterVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
-  /** Whether a scrollToItem is in flight (Tsazor, A13: user input then makes the spacers report again). */
+  /** Whether a scrollToItemAsync is in flight (Tsazor, A13: user input then makes the spacers report again). */
   isScrollToItemPending(): boolean;
 }
 
@@ -266,7 +266,7 @@ export function createVirtualizeViewport(
     return scrollContainer ? scrollContainer.getBoundingClientRect().top : 0;
   }
 
-  /** At the start of a scrollToItem, before the alignment scroll. */
+  /** At the start of a scrollToItemAsync, before the alignment scroll. */
   function beginProgrammaticScroll(): void {
     stopConvergenceObserving();
     clearTopFollow();
@@ -480,7 +480,7 @@ export function createVirtualizeViewport(
     const selfScrollInProgress = scrollActivity.source === ScrollSource.AlignToItem || scrollActivity.source === ScrollSource.RestoreSnapshot;
     scrollActivity.consumeIgnoreScroll();
     scrollActivity.source = ScrollSource.UserScroll;
-    // Tsazor (A13): also while a scrollToItem waits for its rows. Its window renders as placeholders, and a
+    // Tsazor (A13): also while a scrollToItemAsync waits for its rows. Its window renders as placeholders, and a
     // scroll inside the tall before spacer crosses no threshold, so without a fresh report the user's scroll
     // never cancels the fetch. Blazor re-observes only during the alignment scroll (its test is quarantined).
     if (selfScrollInProgress || callbacks.isScrollToItemPending()) reobserveSpacers();

@@ -51,7 +51,7 @@ it.
 | C# | TypeScript |
 | --- | --- |
 | `Task`, `Task<T>`, `ValueTask<T>` | `Promise<void>`, `Promise<T>` |
-| `async Task<User> LoadAsync()` | `async load(): Promise<User>` (no `Async` suffix by convention) |
+| `async Task<User> LoadAsync()` | `async loadAsync(): Promise<User>` (the suffix stays, as in Tsazor's API) |
 | `await Task.WhenAll(a, b)` | `await Promise.all([a, b])` (typed tuple; rejects on the first failure) |
 | inspecting every task after `WhenAll` | `await Promise.allSettled([a, b])` |
 | `await Task.WhenAny(a, b)` | `await Promise.race([a, b])` (first to settle), `Promise.any` (first to succeed) |
@@ -421,7 +421,7 @@ re-renders on every value and unsubscribes on dispose.
 | `PascalCase` types | `PascalCase` types |
 | `_camelCase` private fields | `#camelCase` |
 | `IOrderService` | `OrderService` (no `I` prefix) |
-| `LoadAsync` | `load` (no `Async` suffix) |
+| `LoadAsync` | `loadAsync` (the suffix stays, as in Tsazor's API: `refreshDataAsync`, `invokeAsync`) |
 | `const` `PascalCase` | `camelCase`, or `UPPER_CASE` for true constants |
 | `OrderService.cs` | `order-service.ts` or `OrderService.ts` (pick one); components: `Counter.tsazor` |
 
