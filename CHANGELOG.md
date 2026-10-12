@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`: `AppLayout`, the app's frame (MudBlazor's `MudLayout` with `MudAppBar`, a
+  persistent `MudDrawer` and `MudMainContent`; Fluent UI Blazor's `FluentLayout`): a `header` bar, a `nav` column
+  and the page as `<main>`. `@bind-navOpen` shows or hides the column; in a window narrower than 960px it starts
+  closed and lies over the page, and Escape or a click on the page closes it.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`: `TextInput` takes `contentBefore` and `contentAfter` — an icon or a button
   inside the field (MudBlazor's adornments, Fluent 2's Input slots), such as the password field's show/hide button.
   Fluent draws one field box around them; Bootstrap makes an input group. A field without them is unchanged.

@@ -29,6 +29,16 @@ export default class Alert extends ComponentBase {
 
 // Appearance: re-exported from @tsazor/ui
 
+// AppLayout
+export default class AppLayout extends ComponentBase {
+    header?: RenderFragment;
+    nav?: RenderFragment;
+    childContent?: RenderFragment;
+    navOpen: boolean;
+    navOpenChanged?: EventCallback<boolean>;
+    additionalAttributes?: Record<string, unknown>;
+}
+
 // Autocomplete
 export default class Autocomplete<TOption> extends ComponentBase {
     label?: string;
