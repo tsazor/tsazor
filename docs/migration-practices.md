@@ -37,6 +37,11 @@ know first.
 8. **Debug a race with a log, not a debugger.** Stopping the code changes the timing, and the race goes away. Push
    the events (observer reports, decisions, scroll positions) into an array on `globalThis` and print it in the
    test's failure message. One failing run then shows the cause: that found A13, A14 and A15.
+9. **Run the original with its own SDK.** A Blazor 6 app may not build with a current SDK at all: the newer Razor
+   compiler names component parameters with `nameof(...)`, so a component library's
+   `[Obsolete(error: true)]` parameters become compile errors (BlazorHero on MudBlazor 6.0.2, B1 in
+   [port-blazorhero.md](port-blazorhero.md)). Microsoft's `dotnet-install` script puts the old SDK into a folder of
+   the project, without admin rights; the original then runs as it did.
 
 ## From static SSR to an SPA
 

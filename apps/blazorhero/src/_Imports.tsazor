@@ -1,0 +1,6 @@
+@using @tsazor/fluent
+@* The standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). Unused imports are dropped by the build. *@
+@import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, inject } from "@tsazor/runtime"
+@import { NavigationManager, Router, RouteView, LayoutView, NavLink, NavLinkMatch, PageTitle, FocusOnNavigate } from "@tsazor/runtime"
+@import { EditContext, TsazorHttp } from "@tsazor/runtime"
+@import type { RenderFragment, RouteData } from "@tsazor/runtime"

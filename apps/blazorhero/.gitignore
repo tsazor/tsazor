@@ -1,0 +1,6 @@
+node_modules
+dist
+*.local
+# The BlazorHero clone and its build (scripts/backend.mjs).
+.backend
+.tmp

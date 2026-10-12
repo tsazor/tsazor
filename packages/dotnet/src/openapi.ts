@@ -79,7 +79,9 @@ export async function loadOpenApiDocument(source: string): Promise<OpenApiDocume
 
 async function readSource(source: string): Promise<string> {
   if (/^https?:\/\//i.test(source)) {
-    const response = await fetch(source);
+    // Node's fetch sends `accept-language: *`, which BlazorHero's request-culture middleware answers with a 500
+    // (port-blazorhero.md, U1). A fixed language also keeps a localizing server's output the same on every machine.
+    const response = await fetch(source, { headers: { accept: "application/json", "accept-language": "en" } });
     if (!response.ok) {
       throw new Error(`[tsazor-dotnet] OpenAPI URL ${source} responded ${response.status} ${response.statusText}.`);
     }

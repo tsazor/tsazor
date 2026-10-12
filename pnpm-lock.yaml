@@ -180,6 +180,43 @@ importers:
         specifier: ^7.1.7
         version: 7.3.6(@types/node@20.19.43)
 
+  apps/blazorhero:
+    dependencies:
+      '@tsazor/dotnet':
+        specifier: workspace:*
+        version: link:../../packages/dotnet
+      '@tsazor/fluent':
+        specifier: workspace:*
+        version: link:../../packages/fluent
+      '@tsazor/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+    devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
+      '@tsazor/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      '@tsazor/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin
+      happy-dom:
+        specifier: ^18.0.1
+        version: 18.0.1
+      playwright-core:
+        specifier: ^1.63.0
+        version: 1.63.0
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^7.1.7
+        version: 7.3.6(@types/node@20.19.43)
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)(jsdom@29.1.1)
+
   apps/demo:
     dependencies:
       '@tsazor/bootstrap':

@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/dotnet`: `tsazor-dotnet generate <url>` asks for `application/json` in English. Node's fetch sent
+  `accept-language: *`, which BlazorHero's server answers with a 500; a fixed language also keeps a localizing
+  server's output the same on every machine.
+
 ## 1.0.0-next.1 (2026-10-12)
 
 - **Every package has one version** (lockstep, docs/design-release.md): `1.0.0-next.1` is the first prerelease, in a

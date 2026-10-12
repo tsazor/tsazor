@@ -1,0 +1,32 @@
+<div class="top-row">
+    <a class="brand" href="">blazorhero</a>
+    <button title="Navigation menu" class="navbar-toggler" aria-expanded="@(collapsed ? "false" : "true")" @onclick="toggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@navMenuCssClass nav-scrollable" @onclick="toggleNavMenu">
+    <nav>
+        <div class="nav-item">
+            <NavLink class="nav-link" Href="" Match="@NavLinkMatch.All">Home</NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" Href="counter">Counter</NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" Href="weather">Weather</NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private collapsed = true;
+
+    private get navMenuCssClass(): string | undefined {
+        return this.collapsed ? "collapse" : undefined;
+    }
+
+    private toggleNavMenu() {
+        this.collapsed = !this.collapsed;
+    }
+}

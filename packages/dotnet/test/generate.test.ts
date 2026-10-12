@@ -7,7 +7,7 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import ts from "typescript";
 import { generateClient } from "../src/generate.js";
 import { loadOpenApiDocument, type OpenApiDocument } from "../src/openapi.js";
@@ -208,6 +208,23 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
     const plain = generateClient(await defaults, { clientName: "Cms" }).files.find((f) => f.path === "cms.ts")!.content;
     expect(signatures(plain)[0]).toBe("userGetAll(): UserDtoIApiPagingResult");
     expect(await typeErrors((await generate()).files, "swashbuckle")).toBe("");
+  });
+});
+
+describe("loadOpenApiDocument from a URL", () => {
+  it("asks for JSON in a fixed language, not with Node's `accept-language: *` (BlazorHero answers that with a 500)", async () => {
+    const asked: Headers[] = [];
+    vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+      asked.push(new Headers(init?.headers));
+      return new Response(JSON.stringify({ openapi: "3.0.1", info: { title: "Bakery", version: "v1" }, paths: {} }));
+    });
+    try {
+      expect((await loadOpenApiDocument("http://localhost:5350/swagger/v1/swagger.json")).info?.title).toBe("Bakery");
+      expect(asked[0]!.get("accept-language")).toBe("en");
+      expect(asked[0]!.get("accept")).toBe("application/json");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
