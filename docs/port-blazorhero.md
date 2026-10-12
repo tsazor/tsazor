@@ -8,8 +8,9 @@ localization (resx, eleven languages, Arabic right-to-left), a dashboard with ch
 export and import.
 
 The rule is FluentCMS's: the backend stays unchanged, every gap becomes a framework fix with a test, every lesson
-goes into [migration-practices.md](migration-practices.md). A week of porting without a public-API change is the
-freeze signal.
+goes into [migration-practices.md](migration-practices.md). The freeze signal is FluentCMS's too: the public API
+stops moving while the port goes on, judged with a sense of proportion
+([port-fluentcms.md](port-fluentcms.md)).
 
 ## Setup
 

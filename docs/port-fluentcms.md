@@ -6,8 +6,13 @@
 experience with it.
 - Every gap the port finds becomes a framework fix with a test, logged below. The port is the vehicle;
   the framework is the subject ([port-findings.md](port-findings.md) holds the earlier ports).
-- **The 1.0 signal:** a week of porting with no change to the public API (`api/*.api.d.ts`) means the
-  API can freeze. A release candidate follows.
+- **The 1.0 signal:** the public API (`api/*.api.d.ts`) stops moving while the ports go on, and then it can
+  freeze; a release candidate follows. Judged with a sense of proportion, not by a clock (owner, 2026-10-12). The
+  question is whether code written against today's API would have to change: a renamed or removed member, a
+  changed meaning or default of an existing one, a language rule — above all in the core (runtime, compiler,
+  `@tsazor/dotnet`) — weigh heavily. A component or an optional parameter the library still lacks, and a fix
+  toward Blazor parity, weigh little: they complete the API rather than unsettle it. Pending proposals that would
+  change existing behavior are decided before the release candidate.
 
 **The original.** [FluentCMS](https://github.com/fluentcms/FluentCMS) (MIT), commit `c63d49c`
 (2025-09-20, the latest on `dev`).

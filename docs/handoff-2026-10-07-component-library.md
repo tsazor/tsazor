@@ -8,7 +8,8 @@ everything pushed.
 > - **The decision:** quality isn't 1.0-ready yet; the API still moved a lot.
 >   - Before R2/1.0, a real Blazor app is ported: FluentCMS's admin, with `@tsazor/fluent`.
 >   - Every gap becomes a framework fix with a test.
->   - A week of porting without a public-API change is the signal for the freeze.
+>   - The freeze signal: the public API stops moving while the ports go on — judged with a sense of proportion,
+>     not by a clock (owner, 2026-10-12; the yardstick is in port-fluentcms.md).
 > - **Track B (owner):** complex components are a port of their own (reference: Fluent UI Blazor).
 > - **Done so far:**
 >   - phases 0–2: backend script, BFF, shell, sign-in, every management screen but files and content types;
@@ -157,7 +158,8 @@ everything pushed.
 >     - **R2 done** ([design-release.md](design-release.md)): lockstep `1.0.0-next.N` (owner), prereleases only to a
 >       local Verdaccio (owner). `pnpm registry` (port 4873, `~/.tsazor/registry`), `pnpm release:local`,
 >       `pnpm release:version`, `pnpm rehearsal` (in CI's check job). **1.0.0-next.1** is in the local registry.
->       Next: let the owner's apps run on it; the freeze week counts from the last public-API change (2026-10-12).
+>       Next: let the owner's apps run on it. Last breaking change 2026-10-12 (9943032, the interceptor order);
+>       BlazorHero's additions after it complete the library (see the freeze yardstick in port-fluentcms.md).
 >   - **2026-10-12 — the second app port, BlazorHero** ([port-blazorhero.md](port-blazorhero.md)): MudBlazor →
 >     `@tsazor/fluent`, against upstream's unchanged API (`apps/blazorhero`; the .NET 6 SDK and the clone in
 >     `.backend/`, LocalDB). Phases 0 and 1 (the shell: sign-in, JWT with refresh, hub, navigation by permission,
