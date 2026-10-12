@@ -147,6 +147,17 @@ everything pushed.
 >     `scrollToItemAsync`, Overlay `showAsync`/`closeAsync`, Wizard `goToStepAsync`. Carousel's `moveTo`/`next`/
 >     `previous` stay (MudBlazor's names have no suffix). `AuthenticationStateProvider.getState()` is
 >     `getAuthenticationStateAsync()` (owner, same day); the owner's `fluentcms-admin` WIP is renamed too.
+>   - **2026-10-11/12 — dogfooding the owner's `fluentcms-admin` WIP (port-findings.md V/W), then R2:**
+>     - `@tsazor/dotnet`: `attachJwtAuth` keeps a request's headers and logs out on the current token's 401;
+>       `principalFromJwt` knows `nameid`, and a token without a name signs in (as .NET); `createUserAsync` for roles
+>       from a profile; the cookie provider's `refresh()` (F10: the FluentCMS port signs in without a reload).
+>     - `@tsazor/runtime` (owner): response interceptors unwind like .NET's handler chain (the one added last
+>       first); `notifyAuthenticationStateChanged` takes a promise (Blazor's Task; Authorizing until it resolves).
+>     - F16 (the starter's font), V2 (the tutorial names `@tsazor/dotnet`).
+>     - **R2 done** ([design-release.md](design-release.md)): lockstep `1.0.0-next.N` (owner), prereleases only to a
+>       local Verdaccio (owner). `pnpm registry` (port 4873, `~/.tsazor/registry`), `pnpm release:local`,
+>       `pnpm release:version`, `pnpm rehearsal` (in CI's check job). **1.0.0-next.1** is in the local registry.
+>       Next: let the owner's apps run on it; the freeze week counts from the last public-API change (2026-10-12).
 >   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
 >     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
 >     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git

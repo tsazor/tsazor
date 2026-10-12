@@ -1,7 +1,16 @@
 {
   "name": "@tsazor/markdown",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/markdown"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/markdown#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Markdown for Tsazor: a Markdown component on marked, sanitized with DOMPurify, so an app can show an agent's or a user's text without knowing about XSS.",
   "keywords": [
@@ -34,6 +43,9 @@
     "dist",
     "src"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run"

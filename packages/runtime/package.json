@@ -1,7 +1,17 @@
 {
   "name": "@tsazor/runtime",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/runtime#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "description": "The Tsazor runtime: Blazor's component model in the browser, in TypeScript — rendering, lifecycle, parameters, DI, routing, forms, Virtualize, auth and HTTP.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,8 +41,12 @@
     "components": "./dist/tsazor-components.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b && node scripts/build-manifest.mjs",
     "test": "vitest run"

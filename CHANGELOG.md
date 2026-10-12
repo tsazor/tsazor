@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.1 (2026-10-12)
+
+- **Every package has one version** (lockstep, docs/design-release.md): `1.0.0-next.1` is the first prerelease, in a
+  local registry until the repository is public. The packages carry a README, a LICENSE and their repository; the
+  tools need Node 20.19 or later. `tsazor --version` and `tsazor-dotnet --version` report the package's version
+  (they said 0.2.0 and 0.1.0). No package ships its `.tsbuildinfo` any more.
+
 - `@tsazor/fluent`: `fluent.css` sets the document's typeface at zero weight (`:where(body)`), so text outside the
   components reads in Fluent's type and any rule of the app's own still wins. `create-tsazor`: with a library that
   brings styles, the new app's `app.css` leaves the template's Helvetica out (F16; it beat the library's typeface).

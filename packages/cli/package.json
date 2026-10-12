@@ -1,9 +1,18 @@
 {
   "name": "@tsazor/cli",
-  "version": "0.2.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
-  "description": "Tsazor CLI: `tsazor check` (2.4, typed component-usage gate) and `tsazor codemod` (2.5, .razor → .tsazor).",
+  "description": "The Tsazor command line: tsazor check (type-checks every .tsazor component) and tsazor codemod (.razor to .tsazor).",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -16,8 +25,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"

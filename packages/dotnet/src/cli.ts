@@ -8,6 +8,7 @@
  * generator warnings (documented subset). Exit: 0 green, 1 errors, 2
  * usage/fatal — like `tsazor`.
  */
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { generateClient } from "./generate.js";
@@ -17,7 +18,8 @@ import type { EnvelopeOptions } from "./http-result.js";
 export { generateClient, type GenerateOptions, type Generation, type GeneratedFile } from "./generate.js";
 export { loadOpenApiDocument } from "./openapi.js";
 
-const VERSION = "0.1.0";
+/** The package's own version (one for every package, design-release.md D-P1). */
+const VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 const USAGE = `Usage: tsazor-dotnet generate <openapi.json|url> --out <dir> [options]
   --name <Name>        class name of the client (default from info.title)

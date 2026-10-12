@@ -1,7 +1,16 @@
 {
   "name": "create-tsazor",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/create-tsazor"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/create-tsazor#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Creates a Tsazor app in the shape of `dotnet new blazorwasm`, with strict TypeScript and any component library: npm create tsazor@latest my-app",
   "keywords": [
@@ -16,10 +25,11 @@
   },
   "files": [
     "dist",
-    "template"
+    "template",
+    "!dist/.tsbuildinfo"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19"
   },
   "scripts": {
     "build": "tsc -b && node scripts/write-versions.mjs",

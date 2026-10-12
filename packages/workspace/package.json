@@ -1,7 +1,16 @@
 {
   "name": "@tsazor/workspace",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/workspace"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Shared .tsazor workspace resolution: _Imports chains, component/type resolution, runtime built-ins. Used by the Vite plugin and the language server.",
   "main": "./dist/index.js",
@@ -17,8 +26,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo"
   ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"

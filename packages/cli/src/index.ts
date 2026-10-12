@@ -4,13 +4,15 @@
  * nonzero on errors — and `tsazor codemod` (2.5), the `.razor` → `.tsazor`
  * migration command (dry-run by default, `--write` beside the source).
  */
+import { readFileSync } from "node:fs";
 import { checkProject } from "@tsazor/lsp";
 import { codemodProject } from "./codemod.js";
 
 export { checkProject, type CheckResult, type CheckDiagnostic } from "@tsazor/lsp";
 export { codemodProject, findRazorFiles, type CodemodOptions, type CodemodReport, type CodemodFileReport } from "./codemod.js";
 
-const VERSION = "0.2.0";
+/** The package's own version (one for every package, design-release.md D-P1). */
+const VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 /** CLI entry: prints diagnostics `file(line,column) code message` (paths
  *  relative to the root, posix) and returns the exit code — 0 clean, 1 with

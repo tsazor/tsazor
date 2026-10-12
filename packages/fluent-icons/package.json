@@ -1,7 +1,16 @@
 {
   "name": "@tsazor/fluent-icons",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/fluent-icons"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/fluent-icons#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "The Fluent System Icons as typed icon values for Tsazor, tree-shaken: Icons.Regular.Size20.Save, as Fluent UI Blazor writes them. Generated from @fluentui/svg-icons (MIT, Microsoft).",
   "main": "./dist/index.js",
@@ -20,6 +29,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node scripts/generate.mjs",
     "test": "vitest run"

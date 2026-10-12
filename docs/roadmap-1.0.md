@@ -110,7 +110,8 @@ architecture and security take priority.
   enforcement happens on the server. **Done (2026-10-04):** [auth.md](auth.md) with the ASP.NET
   Core BFF template; the `localStorage` hint in `auth.ts` replaced.
 - **E3 — Supply chain:** npm provenance, SBOM, signed releases, and a `SECURITY.md` with a
-  vulnerability disclosure process. Zero runtime dependencies stays a policy.
+  vulnerability disclosure process. Zero runtime dependencies stays a policy. **Provenance prepared (2026-10-12):**
+  `release.yml` publishes with `--provenance` through Trusted Publishing (R2). Open: SBOM, `SECURITY.md`.
 
 **Architecture**
 - **E4 — Architecture guide** (`docs/patterns.md`): layers, services via DI, feature folders, when
@@ -195,7 +196,13 @@ architecture and security take priority.
   snapshot, tarball smoke) and job `e2e` (windows: the four verify scripts in Edge, ticker via
   `dotnet`). It found two Linux-only bugs on its first runs (the `tsazor` bin link on a fresh
   checkout, the scope hash of backslash paths), both fixed.
-- **R2 — npm publishing:** versioning, changelog, provenance, and the publish workflow.
+- **R2 — npm publishing:** versioning, changelog, provenance, and the publish workflow. **Done (2026-10-12,**
+  [design-release.md](design-release.md)): one version for every package (owner: lockstep, `1.0.0-next.N` until
+  1.0), prereleases only to a local Verdaccio while the repository is private (owner); `scripts/release.mjs` sets the
+  version, packs and checks every tarball (README, LICENSE, the files `exports` names, no tests, no `workspace:`) and
+  publishes; `pnpm registry` runs the local registry, `pnpm release:local` publishes to it; the rehearsal (CI's check
+  job) publishes to a fresh Verdaccio and builds an app from `npm create tsazor`. `release.yml` (Trusted Publishing,
+  provenance) is prepared for `tsazor/tsazor`. **1.0.0-next.1** is in the local registry.
 - **R3 — `npm create tsazor`:** project starter (strict, Vite, `_Imports.tsazor`, a sample
   component and test, optional `@tsazor/dotnet`). **Done (2026-10-08,**
   [design-create-tsazor.md](design-create-tsazor.md)): the package `create-tsazor` writes the shape of

@@ -1,0 +1,42 @@
+name: Release
+
+# Publishes every package to npm (docs/design-release.md). Started by hand, like all of CI, and only in the public
+# release repository with the repository variable RELEASE_ENABLED = true: until then the prereleases go to a local
+# registry (D-P2).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.repository == 'tsazor/tsazor' && vars.RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    # Npm's Trusted Publisher names this environment too; its protection rules can ask for an approval.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # Trusted Publishing and provenance (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # its npm is 11.5.1 or later, which Trusted Publishing needs
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --filter "./packages/*" build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - run: pnpm -r test
+      - run: pnpm api:check
+      - run: pnpm smoke
+      - run: pnpm rehearsal
+      - name: Publish (dist-tag next for a prerelease, else latest)
+        run: node scripts/release.mjs publish --registry https://registry.npmjs.org/ --provenance
+        env:
+          # The first release only: a short-lived granular token (design-release.md, release day). Later releases go
+          # through Trusted Publishing and need none.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

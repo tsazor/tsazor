@@ -1,9 +1,18 @@
 {
   "name": "@tsazor/bootstrap",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/bootstrap"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/bootstrap#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
-  "description": "Bootstrap 5 UI component library for Tsazor — written in .tsazor (dogfooding the compiler and runtime).",
+  "description": "Bootstrap 5 components for Tsazor, written in .tsazor.",
   "keywords": [
     "tsazor",
     "tsazor-components",
@@ -40,6 +49,9 @@
     "dist",
     "src"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run",

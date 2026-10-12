@@ -1,7 +1,16 @@
 {
   "name": "@tsazor/fluent",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/fluent"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/fluent#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Fluent 2 design system for Tsazor — token-driven, accessible components written in .tsazor. Install via npm or copy the sources: the components belong to you.",
   "keywords": [
@@ -43,6 +52,9 @@
     "src",
     "bin"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run",

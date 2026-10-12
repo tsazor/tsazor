@@ -4,7 +4,7 @@
  * anything, so `tsazor check && vite build` gates passed vacuously.
  */
 import { mkdtemp, rm } from "node:fs/promises";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -45,5 +45,14 @@ describe("tsazor check — default root", () => {
     const codemod: string[] = [];
     expect(await main(["node", "tsazor", "codemod"], (l) => codemod.push(l))).toBe(2);
     expect(codemod).toEqual(["Usage: tsazor codemod <path> [--write]"]);
+  });
+});
+
+describe("tsazor --version", () => {
+  it("prints the package's version, the one every package has (it was a constant, two releases behind)", async () => {
+    const out: string[] = [];
+    const { version } = JSON.parse(readFileSync(path.join(__dirname, "..", "package.json"), "utf8")) as { version: string };
+    expect(await main(["node", "tsazor", "--version"], (l) => out.push(l))).toBe(0);
+    expect(out).toEqual([`tsazor ${version}`]);
   });
 });

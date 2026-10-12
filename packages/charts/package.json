@@ -1,7 +1,16 @@
 {
   "name": "@tsazor/charts",
-  "version": "0.1.0",
+  "version": "1.0.0-next.1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/charts"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/charts#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
   "type": "module",
   "description": "Charts for Tsazor: line, area, bar, stacked bar, donut and pie charts and sparklines as SVG in the skin's tokens, accessible as figures with their numbers in a table.",
   "keywords": [
@@ -35,6 +44,9 @@
     "dist",
     "src"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "vitest run"
