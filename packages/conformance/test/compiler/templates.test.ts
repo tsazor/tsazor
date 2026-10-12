@@ -176,7 +176,8 @@ describe("App.razor shapes over the built-in components", () => {
 </Router>`,
     };
     const routes = [{ template: "/secret", page: "Secret.tsazor", authorize: {} }];
-    expect(await start(files, "/secret", routes)).toBe('<p class="denied">Please sign in.</p>');
+    // In the default layout, as Blazor's AuthorizeRouteView renders NotAuthorized (RenderContentInDefaultLayout).
+    expect(await start(files, "/secret", routes)).toBe('<main><p class="denied">Please sign in.</p></main>');
     app!.dispose();
     document.body.innerHTML = "";
     expect(await start(files, "/secret", routes, new AuthenticationState(createUser({ name: "alice" })))).toBe("<main><p>secret</p></main>");

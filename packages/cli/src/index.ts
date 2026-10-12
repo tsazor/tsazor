@@ -11,8 +11,11 @@ import { codemodProject } from "./codemod.js";
 export { checkProject, type CheckResult, type CheckDiagnostic } from "@tsazor/lsp";
 export { codemodProject, findRazorFiles, type CodemodOptions, type CodemodReport, type CodemodFileReport } from "./codemod.js";
 
-/** The package's own version (one for every package, design-release.md D-P1). */
-const VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+/** The package's own version (one for every package, design-release.md D-P1) — read when asked: a bundler that loads
+ * this module (the tutorial's tests) has no file URL to read it from. */
+function version(): string {
+  return (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+}
 
 /** CLI entry: prints diagnostics `file(line,column) code message` (paths
  *  relative to the root, posix) and returns the exit code — 0 clean, 1 with
@@ -20,7 +23,7 @@ const VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.
 export async function main(argv: readonly string[], stdout: (line: string) => void): Promise<number> {
   const [command, rootArgument, ...extra] = argv.slice(2);
   if (command === "--version" || command === "-v") {
-    stdout(`tsazor ${VERSION}`);
+    stdout(`tsazor ${version()}`);
     return 0;
   }
   const help = rootArgument === "--help" || rootArgument === "-h";

@@ -13,6 +13,7 @@ import {
   AuthorizeView,
   CascadingAuthenticationState,
   ComponentBase,
+  LayoutComponentBase,
   type ClaimsPrincipal,
   defineComponent,
   CascadingParameter,
@@ -338,6 +339,47 @@ describe("AuthorizeRouteView", () => {
     renderer.renderInContainer(App, container());
     await settle(renderer);
     expect(document.querySelector("h1")?.textContent).toBe("Public area");
+  });
+
+  it("renders Authorizing and NotAuthorized in the default layout, Blazor's texts when none is given, and keeps the layout on sign-in", async () => {
+    // BlazorHero's login sits in MainLayout this way (port-blazorhero.md, B14).
+    class Frame extends LayoutComponentBase {
+      static made = 0;
+      constructor() {
+        super();
+        Frame.made++;
+      }
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "div");
+        b.addAttribute(1, "class", "frame");
+        b.addContent(2, this.Body);
+        b.closeElement();
+      }
+    }
+    const provider = new TestAuthProvider();
+    provider.pending = true;
+    const renderer = buildApp(provider);
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.addAttribute(2, "DefaultLayout", Frame);
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    await settle(renderer);
+    expect(document.querySelector(".frame")?.textContent).toBe("Authorizing...");
+
+    provider.release();
+    await settle(renderer);
+    expect(document.querySelector(".frame")?.textContent).toBe("Not authorized");
+
+    provider.pending = false;
+    provider.signIn(createUser({ name: "erin", roles: ["admin"] }));
+    await settle(renderer);
+    expect(document.querySelector(".frame h1")?.textContent).toBe("Admin area");
+    expect(Frame.made).toBe(1);
   });
 });
 

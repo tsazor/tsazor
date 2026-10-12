@@ -18,8 +18,11 @@ import type { EnvelopeOptions } from "./http-result.js";
 export { generateClient, type GenerateOptions, type Generation, type GeneratedFile } from "./generate.js";
 export { loadOpenApiDocument } from "./openapi.js";
 
-/** The package's own version (one for every package, design-release.md D-P1). */
-const VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+/** The package's own version (one for every package, design-release.md D-P1) — read when asked: a bundler that loads
+ * this module (the tutorial's tests) has no file URL to read it from. */
+function version(): string {
+  return (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+}
 
 const USAGE = `Usage: tsazor-dotnet generate <openapi.json|url> --out <dir> [options]
   --name <Name>        class name of the client (default from info.title)
@@ -30,7 +33,7 @@ Exit: 0 green, 1 errors, 2 usage/fatal.`;
 export async function main(argv: readonly string[], stdout: (line: string) => void): Promise<number> {
   const [command, source, ...extra] = argv.slice(2);
   if (command === "--version" || command === "-v") {
-    stdout(`tsazor-dotnet ${VERSION}`);
+    stdout(`tsazor-dotnet ${version()}`);
     return 0;
   }
   if (source === "--help" || source === "-h" || command === "--help") {

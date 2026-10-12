@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`AuthorizeRouteView` renders `NotAuthorized` and `Authorizing` in the default layout**, as Blazor's does
+  (`RenderContentInDefaultLayout`), and shows Blazor's "Not authorized" / "Authorizing..." when the app gives none.
+  Before, they rendered without a layout and empty by default. The layout stays mounted when access turns granted.
+- `@tsazor/cli`, `@tsazor/dotnet`: the version is read when `--version` asks for it. 1.0.0-next.1 read it while
+  loading the module, so a bundler that loaded `@tsazor/dotnet`'s generator failed ("The URL must be of scheme file").
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`: `SidebarNav` takes `sections` — links under headings (MudBlazor's
   `MudListSubheader`, Fluent UI Blazor's `FluentNavGroup`), each a group named by its heading, after `links`. The
   icon rail hides the headings. Both skins re-export `DialogService` and `DialogReference`, and the types

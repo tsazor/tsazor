@@ -79,6 +79,7 @@ export declare class AuthorizeRouteView extends RouteView {
     protected onInitialized(): void;
     dispose(): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
+    private renderInDefaultLayout;
     private authorizationService;
 }
 
