@@ -63,6 +63,9 @@ render in the browser.
 
 - **Secrets move behind a BFF.** A Blazor Server UI holds the API token and the user's JWT on the server. An SPA
   needs a BFF for them. Behind the BFF's proxy the backend must still see the browser's host (F4).
+- **Signing in needs no reload.** Blazor Server code calls `NavigateTo(url, forceLoad: true)` after a sign-in or
+  sign-out, because a circuit keeps the user it started with. With the cookie provider, call `refresh()` and
+  navigate normally: it asks the BFF again (F10). An OIDC redirect stays a full navigation.
 - **Generate the clients** with `tsazor-dotnet generate`. Swashbuckle's output needs care: a missing
   `operationId`, missing `required`, multipart bodies and envelopes (F1–F3, F5, F7, F8; all handled now).
 - **Calls that throw.** Code ported from NSwag clients expects a throwing call (`catch (ApiClientException)`). Use

@@ -372,6 +372,64 @@ describe("CookieAuthenticationStateProvider", () => {
     expect(state.user.claims).toEqual([{ type: "tenant", value: "t1" }]);
   });
 
+  it("refresh() asks again after a sign-in: Authorizing meanwhile, then the user, without a reload", async () => {
+    let session: { name: string; roles: string } | undefined;
+    let pending: (() => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      () =>
+        new Promise<Response>((resolve) => {
+          pending = () => resolve(new Response(JSON.stringify({ user: session }), { status: 200 }));
+        }),
+    );
+    /** Answers the endpoint's request once it is on its way. */
+    const answer = async () => {
+      await vi.waitFor(() => expect(pending).toBeDefined());
+      const respond = pending!;
+      pending = undefined;
+      respond();
+    };
+    const provider = new CookieAuthenticationStateProvider(new TsazorHttp());
+    const services = new ServiceCollection();
+    services.registerValue(AuthenticationStateProvider, provider);
+    const renderer = new Renderer(services.build());
+    class AdminPage extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, "Admin area");
+      }
+    }
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.addAttribute(2, "NotAuthorized", () => (inner: RenderTreeBuilder) => inner.addContent(0, "Please sign in"));
+        b.addAttribute(3, "Authorizing", (inner: RenderTreeBuilder) => inner.addContent(0, "Checking…"));
+        b.closeComponent();
+      }
+    }
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const settle = async () => {
+      await renderer.waitUntilIdle();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await renderer.waitUntilIdle();
+    };
+    renderer.renderInContainer(App, host);
+    await answer();
+    await settle();
+    expect(host.textContent).toBe("Please sign in");
+
+    // The login form posted to the BFF, which set the cookie: the endpoint knows the user now.
+    session = { name: "Ada", roles: "admin" };
+    provider.refresh();
+    await settle();
+    expect(host.textContent).toBe("Checking…");
+    await answer();
+    await settle();
+    expect(host.textContent).toBe("Admin area");
+    host.remove();
+  });
+
   it("is anonymous on an empty user shape (the server's logout signal)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ user: undefined }), { status: 200 })));
     const provider = new CookieAuthenticationStateProvider(new TsazorHttp());

@@ -156,7 +156,7 @@ everything pushed.
 >   library; the old note that C# drops it too was wrong). The shadow calls those functions in place (codegen
 >   `deferred()`); real builds are unchanged. A lambda the author writes keeps TypeScript's rule. Tutorial lessons
 >   "Child content" and "Page title" rewritten.
-> - **Before that:** the port's admin and public parts are done. Open: F10, F13, F16 (F15 and F17 fixed since); track B candidates (upload
+> - **Before that:** the port's admin and public parts are done. Open: F13, F16 (F15, F17 and F10 fixed since); track B candidates (upload
 >   drop zone with progress, a sortable list). The freeze signal: phase 5 added one Blazor parity method and fixed
 >   three small API types, so the API still moves, but by now in small corrections.
 

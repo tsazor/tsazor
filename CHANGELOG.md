@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/dotnet`: `CookieAuthenticationStateProvider.refresh()` asks the session endpoint again after a sign-in or
+  sign-out through the app's own form (F10): the auth components show `Authorizing` until the answer, no reload.
+
 - **Breaking — `TsazorHttp` unwinds response interceptors like .NET's handler chain:** the one added last sees the
   response first (request interceptors still run in the order added). An interceptor added after one that throws on
   an error status sees the response now; `attachJwtAuth` goes after the app's own error handling.

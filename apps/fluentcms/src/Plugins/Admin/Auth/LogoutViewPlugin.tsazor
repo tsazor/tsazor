@@ -1,10 +1,14 @@
 @inherits BasePlugin
+@import { CookieAuthenticationStateProvider } from "@tsazor/dotnet"
 @import { signOut } from "../../../api/api-result"
 @inject TsazorHttp Http
+@inject CookieAuthenticationStateProvider Auth
 
 @code {
     protected override async onInitialized(): Promise<void> {
         await signOut(this.Http);
-        this.navigation.navigateTo("/", true);
+        // No reload, as after signing in (LoginViewPlugin).
+        this.Auth.refresh();
+        this.navigation.navigateTo("/");
     }
 }

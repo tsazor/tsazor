@@ -6,12 +6,13 @@
  *   plugins rendering what FluentCMS renders, the contact form, navigating with latency (no half-loaded
  *   frame, a quick second click followed) →
  *   signed out, an admin page says so → the login form shows the API's error for a wrong password →
- *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response) → an admin
+ *   signing in keeps the JWT on the server (an HttpOnly cookie, no token in the response), without a
+ *   reload → an admin
  *   page in the admin layout, its sidebar link current → the roles: add, edit (?id=), delete after
  *   a confirmation → the users: add, assign a role (checkbox group), delete → plugins, global
  *   settings, layouts, blocks, a site's settings → API tokens, pages (a TreeView) → files: a folder,
  *   an upload (multipart), the file served, rename, move in the folder picker, delete → axe on both
- *   layouts, the dialogs and the forms → signing out
+ *   layouts, the dialogs and the forms → signing out, without a reload either
  *
  * Starts what isn't running (the backend clones and builds FluentCMS the first time), builds the
  * app and the BFF, and fails on every console error but the one a wrong password causes.
@@ -268,8 +269,15 @@ async function main() {
       await route.fulfill({ response });
     });
     await page.getByLabel("Password").fill(ADMIN.password);
+    await page.evaluate(() => (window.sameDocument = true));
     await page.getByRole("button", { name: "Sign in to your account" }).click();
     await page.waitForURL(`${APP}/`, { timeout: 10_000 });
+    // FluentCMS (Blazor Server) reloads after signing in; the app asks the BFF again instead (F10).
+    await page.locator(".f-html-content").first().waitFor({ timeout: 15_000 });
+    check(
+      (await page.evaluate(() => window.sameDocument === true)) && (await page.locator("header a[href='/auth/login']").count()) === 0,
+      "signing in needs no reload: the home page's layout no longer offers Log In",
+    );
     check(login?.ok === true && login.body.data?.userName === ADMIN.username && login.body.data?.token === null, "signing in answers with the user, without the token");
     const session = (await context.cookies()).find((cookie) => cookie.name === "fluentcms.session");
     check(session?.httpOnly === true && session.sameSite === "Strict", "the session is an HttpOnly, SameSite=Strict cookie");
@@ -685,8 +693,11 @@ async function main() {
 
     // Signing out through the user's menu.
     await page.getByRole("button", { name: ADMIN.username }).click();
+    await page.evaluate(() => (window.sameDocument = true));
     await page.getByRole("menuitem", { name: "Logout" }).click();
     await page.waitForURL(`${APP}/`, { timeout: 10_000 });
+    await page.locator("header a[href='/auth/login']").waitFor({ timeout: 15_000 });
+    check(await page.evaluate(() => window.sameDocument === true), "signing out needs no reload either: the layout offers Log In again");
     const user = await page.evaluate(() => fetch("/bff/user").then((response) => response.json()));
     check(user.user === null, "signing out ends the session");
 

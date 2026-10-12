@@ -89,9 +89,13 @@ createTsazorApp({
 });
 ```
 
-Any failure (401, a network error) counts as signed out; the provider never throws. Login and
-logout are full page navigations — `navigation.navigateTo("/auth/login", true)`, and after the
-logout request `navigateTo("/", true)` — so the app starts again with the new state.
+Any failure (401, a network error) counts as signed out; the provider never throws. With an
+identity provider, login and logout are full page navigations — `navigation.navigateTo("/auth/login", true)`,
+and after the logout request `navigateTo("/", true)` — so the app starts again with the new state.
+With a login form of the app's own that posts to the BFF, call `auth.refresh()` after the call
+instead: the provider asks the endpoint again, and `AuthorizeView` shows `Authorizing` until the
+answer is there. (Blazor Server needs a full page load at that point: its circuit keeps the user
+it started with.) Register the instance under its class too, to `@inject` it for that.
 `AuthorizeView`, `AuthorizeRouteView`, `@authorize` and `CascadingAuthenticationState` then
 work as in the tutorial's auth chapter.
 

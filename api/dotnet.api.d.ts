@@ -19,6 +19,7 @@ export declare class CookieAuthenticationStateProvider extends AuthenticationSta
     private readonly http;
     private readonly endpoint;
     constructor(http: TsazorHttp, options?: CookieAuthOptions);
+    refresh(): void;
     getAuthenticationStateAsync(): Promise<AuthenticationState>;
 }
 

@@ -4,7 +4,8 @@
  *
  *  - CookieAuthenticationStateProvider: asks a session endpoint (default
  *    `/auth/user`) for the signed-in user; every failure (401/403,
- *    network) is anonymous — the server decides per request.
+ *    network) is anonymous — the server decides per request. `refresh()`
+ *    asks again after a sign-in or sign-out within the app.
  *  - JwtAuthenticationStateProvider: decodes the JWT payload locally (no
  *    dependency, no network) and maps the claims onto a ClaimsPrincipal.
  *    `name` comes from `name`, `unique_name`, the long Microsoft claim URI,
@@ -54,6 +55,16 @@ export class CookieAuthenticationStateProvider extends AuthenticationStateProvid
   ) {
     super();
     this.endpoint = options.endpoint ?? "/auth/user";
+  }
+
+  /**
+   * Asks the session endpoint again and tells the auth components — after a sign-in or sign-out that changed the
+   * cookie without leaving the app (a login form posting to the BFF). Until the answer is there, AuthorizeView
+   * shows Authorizing. Blazor Server needs a full page load at that point (a circuit keeps the user it started
+   * with); a full navigation (an OIDC redirect) doesn't need this either: the app starts with the new cookie.
+   */
+  refresh(): void {
+    this.notifyAuthenticationStateChanged(this.getAuthenticationStateAsync());
   }
 
   override async getAuthenticationStateAsync(): Promise<AuthenticationState> {

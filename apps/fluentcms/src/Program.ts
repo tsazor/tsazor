@@ -18,7 +18,10 @@ createTsazorApp({
         // Blazor: the NSwag clients on a named HttpClient that adds the API token and the user's JWT.
         // Here the BFF adds both; the generated client only knows the API.
         services.registerValue(FluentCmsClient, new FluentCmsClient(http));
-        services.registerValue(AuthenticationStateProvider, new CookieAuthenticationStateProvider(http, { endpoint: "/bff/user" }));
+        // One instance under two keys: the class for the sign-in's refresh(), the base class for the auth components.
+        const auth = new CookieAuthenticationStateProvider(http, { endpoint: "/bff/user" });
+        services.registerValue(CookieAuthenticationStateProvider, auth);
+        services.registerValue(AuthenticationStateProvider, auth);
         services.register(ViewState, (s) => new ViewState(s.get(FluentCmsClient), s.get(NavigationManager)), { lifetime: "scoped" });
         addFluent(services);
     },

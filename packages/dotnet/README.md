@@ -43,7 +43,8 @@ ran their own HTTP helpers).
   generated model *classes* (`@Required()`, `@MinLength`, `@MaxLength`, `@StringLength`,
   `@Range`, `@EmailAddress`, `@RegularExpression`) — EditContext +
   `DataAnnotationsValidator` validate with them out of the box.
-- **Auth integration.** `CookieAuthenticationStateProvider` (session endpoint)
+- **Auth integration.** `CookieAuthenticationStateProvider` (session endpoint; `refresh()` asks
+  again after a sign-in through the app's own form)
   and `JwtAuthenticationStateProvider` (local payload decoding, Microsoft claim URIs; override
   `createUserAsync` for roles the token doesn't carry) on top of the runtime's
   `AuthenticationStateProvider`; `attachJwtAuth` installs the `Authorization: Bearer` interceptor
