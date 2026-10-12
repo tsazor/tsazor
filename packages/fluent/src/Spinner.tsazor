@@ -1,16 +1,19 @@
 @** A Fluent UI 2 loading spinner (role="status" with an aria-label, "Loading…" by default);
     size small | medium | large. Optional child content renders next to it. *@
 @import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 <span role="status" @attributes="@this.spinnerAttributes">@if (label) {<span class="fui-spinner__label">@label</span>}@childContent</span>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** small | medium (default) | large (24/32/40 px on the control grid). */
     @Parameter() size: "small" | "medium" | "large" = "medium";
     /** Visible text next to the spinner ("Loading orders…"). */
     @Parameter() label?: string;
     /** Accessible label announcing the busy state (defaults to "Loading…"). */
-    @Parameter() ariaLabel: string | null = "Loading…";
+    @Parameter() ariaLabel?: string | null;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Optional slot next to the spinner (e.g. a text line). */
@@ -26,7 +29,7 @@
     private get spinnerAttributes(): Record<string, unknown> {
         return withAttributes({
             class: this.spinnerClass,
-            "aria-label": this.ariaLabel ?? undefined,
+            "aria-label": this.ariaLabel === undefined ? this.t("loading") : this.ariaLabel ?? undefined,
         }, this.additionalAttributes);
     }
 }

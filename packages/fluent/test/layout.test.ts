@@ -108,6 +108,17 @@ describe("Typography", () => {
     result.dispose();
   });
 
+  it("renders another element with the variant's style through `as` (a page's h1 in an h5's size)", async () => {
+    const result = await renderOne(Typography, (b) => {
+      b.addAttribute(1, "variant", "h5");
+      b.addAttribute(2, "as", "h1");
+    });
+    const h1 = result.container.querySelector("h1")!;
+    expect(h1.className).toContain("fui-typography--h5");
+    expect(result.container.querySelector("h5")).toBeNull();
+    result.dispose();
+  });
+
   it("renders body and caption variants with weight overrides", async () => {
     const body = await renderOne(Typography, (b) => {
       b.addAttribute(1, "variant", "body");

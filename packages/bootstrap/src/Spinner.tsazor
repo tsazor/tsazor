@@ -4,7 +4,8 @@
 @import type { Intent } from "@tsazor/ui"
 @import { textColor } from "./vocabulary"
 @import { withClass } from "./attributes"
-<span role="status" aria-label="@ariaLabel" @attributes="@withClass("d-inline-flex align-items-center gap-2", additionalAttributes)">
+@import { libraryTexts } from "@tsazor/ui"
+<span role="status" aria-label="@(ariaLabel === undefined ? t("loading") : ariaLabel)" @attributes="@withClass("d-inline-flex align-items-center gap-2", additionalAttributes)">
     <span class="@spinnerClass" style="@spinnerStyle" aria-hidden="true"></span>
     @if (label) {
         <span>@label</span>
@@ -12,6 +13,8 @@
 </span>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The color role: primary (default), secondary, success, danger, warning, info or neutral. */
     @Parameter() intent: Intent = "primary";
     /** A rotating border (default) or a growing dot. */
@@ -21,7 +24,7 @@
     /** Visible text next to the spinner ("Loading orders…"). */
     @Parameter() label?: string;
     /** The status region's accessible name. */
-    @Parameter() ariaLabel: string | null = "Loading…";
+    @Parameter() ariaLabel?: string | null;
     /** `@attributes` pass-through (class appends). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 

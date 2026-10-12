@@ -4,9 +4,10 @@
     1,234 ratings" (`labels`). `shape` is the star's icon; `size` and `color` (neutral, brand, marigold) as the
     Rating's. *@
 @import type { IconValue } from "@tsazor/ui"
-@import { formatRatingCount, formatRatingValue, pageLocale, ratingFill, ratingLabels, type RatingLabels } from "@tsazor/ui"
+@import { formatRatingCount, formatRatingValue, pageLocale, ratingFill, type RatingLabels } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Star20Filled } from "./core-icons"
+@import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
 
 <div role="img" @attributes="@this.rootAttributes">
     @if (this.compact) {
@@ -29,6 +30,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The value, 0 to `max`; halves and other fractions fill part of a star. */
     @Parameter() value: number = 0;
     /** The number of stars. */
@@ -68,7 +71,7 @@
         if (this.compact) cls += " fui-rating-display--compact";
         return withAttributes({
             class: cls,
-            "aria-label": (this.labels?.display ?? ratingLabels.display)(this.valueText, this.max, this.countText),
+            "aria-label": (this.labels?.display ?? ratingLabelsFrom(this.t).display)(this.valueText, this.max, this.countText),
         }, this.additionalAttributes);
     }
 }

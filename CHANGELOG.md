@@ -5,6 +5,25 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`: `Typography`'s `as` picks the element apart from the style (MudText's
+  `HtmlTag`, Fluent UI React's `as`): `<Typography variant="h5" as="h1">` is a page's h1 in an h5's size. The
+  Bootstrap skin gives the element Bootstrap's heading class (`<h1 class="h5">`).
+- **The component library's own texts are localizable** (B29): a dialog's "Close", the paginator's "Page 2 of 7",
+  the grid's "Loading…", a chip's "Remove …", the calendar's "Next month", a sortable list's announcements, … Each
+  has a reserved key `tsazor.ui.<name>` in the app's string tables, English when it is missing, as the validation
+  messages' `tsazor.validation.*` (MudBlazor's MudLocalizer, Fluent UI Blazor's IFluentLocalizer). Counted texts go
+  by the culture's plural rules (`….one`, `….few`, `….other`). The components re-render on a culture change. The
+  catalog is `@tsazor/ui`'s `libraryTextDefaults`; `libraryTexts()`, `libraryText`, `libraryPlural`,
+  `englishLibraryTexts` and the label builders (`calendarLabelsFrom`, `carouselLabelsFrom`, …) are exported. The
+  skins' text parameters with an English default — `ariaLabel` of Paginator, Pagination, Wizard, Carousel, Rating,
+  ColorPicker, ScrollToTop, SidebarNav, `emptyText`, `pageSizeLabel`, `buttonLabel`, `progressLabel`, the Wizard's
+  `labelPrevious`/`labelNext`/`labelDone`, the Spinner's `ariaLabel` — are optional now: unset is the library text;
+  set, they still win. `describeColor`, `dateFieldPlaceholder` and `timeFieldPlaceholder` take the texts as an
+  optional last argument (German writes TT.MM.JJJJ); `FileUploadLabels` gains the optional `fileCountExceeded` and
+  `fileSizeExceeded` messages. Screen-reader role descriptions ("carousel", "slide", "2D slider") are library texts
+  too. `@tsazor/runtime`:
+  `StringLocalizer.raw` is documented as public — the lookup without formatting and without the missing-key warning.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`: the `Autocomplete` takes part in a form as the inputs do (MudAutocomplete's
   `For`): `@bind-selectedOption`/`@bind-selectedOptions` pass the field (`selectedOptionExpression`,
   `selectedOptionsExpression`), a pick notifies the EditContext, and after a submit the field shows its message,

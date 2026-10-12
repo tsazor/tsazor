@@ -9,6 +9,7 @@
 } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Color20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @inherits InputBase<string>
 
@@ -27,7 +28,7 @@
         </button>
     </div>
     @if (this.open) {
-        <div class="fui-color-picker-input__popup" role="dialog" aria-modal="true" aria-label="@this.buttonLabel" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
+        <div class="fui-color-picker-input__popup" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("colorPicker.button"))" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
             <ColorPicker selectedColor="@this.color" selectedColorChanged="@this.changed" onPick="@this.picked" view="@this.view" palette="@this.palette" findClosestColor="@this.findClosestColor" labels="@this.labels" />
         </div>
     }
@@ -40,6 +41,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The field's label. */
     @Parameter() label?: string;
     /** A hint below the field, linked to it for screen readers. */
@@ -57,7 +60,7 @@
     /** The button's icon next to the color (`IconPalette`). */
     @Parameter() iconPalette: IconValue = Color20Regular;
     /** The button's and the dialog's name. */
-    @Parameter() buttonLabel: string = "Choose color";
+    @Parameter() buttonLabel?: string;
     /** The picker's texts (English by default). */
     @Parameter() labels?: Partial<ColorPickerLabels>;
     /** Disables the field and the button. */
@@ -98,7 +101,8 @@
 
     /** The button says what it does and the color it shows. */
     private get buttonText(): string {
-        return this.color === undefined ? this.buttonLabel : `${this.buttonLabel} (${this.color})`;
+        const label = this.buttonLabel ?? this.t("colorPicker.button");
+        return this.color === undefined ? label : `${label} (${this.color})`;
     }
 
     private get message(): string {

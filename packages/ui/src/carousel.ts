@@ -3,6 +3,8 @@
  * itself. Pure, so both skins draw the same behavior.
  */
 
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+
 /** The slide `step` slides from `index` (wrapping around), or undefined when there are none. */
 export function carouselStep(index: number, step: number, count: number): number | undefined {
   if (count <= 0) return undefined;
@@ -40,11 +42,16 @@ export interface CarouselLabels {
   play: string;
 }
 
-export const carouselLabels: CarouselLabels = {
-  previous: "Previous slide",
-  next: "Next slide",
-  slide: (index, count) => `${index + 1} of ${count}`,
-  bullet: (index) => `Slide ${index + 1}`,
-  pause: "Stop the slides",
-  play: "Start the slides",
-};
+/** The carousel's texts from the library texts (`tsazor.ui.carousel.*`): `{ ...carouselLabelsFrom(t), ...labels }`. */
+export function carouselLabelsFrom(t: LibraryTexts): CarouselLabels {
+  return {
+    previous: t("carousel.previous"),
+    next: t("carousel.next"),
+    slide: (index, count) => t("carousel.slide", { position: index + 1, count }),
+    bullet: (index) => t("carousel.bullet", { position: index + 1 }),
+    pause: t("carousel.pause"),
+    play: t("carousel.play"),
+  };
+}
+
+export const carouselLabels: CarouselLabels = carouselLabelsFrom(englishLibraryTexts);

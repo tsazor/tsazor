@@ -3,6 +3,8 @@
  * as the value — what an `<input type="color">` and CSS take — and HSV for the saturation square and the hue bar.
  */
 
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+
 /** A color as "#rrggbb" (lower case). */
 export type HexColor = string;
 
@@ -194,27 +196,33 @@ export interface ColorPickerLabels {
   hueValue: (hue: number, color: HexColor) => string;
 }
 
-export const colorPickerLabels: ColorPickerLabels = {
-  swatch: (color) => `${describeColor(color)}, ${color}`,
-  square: "Saturation and brightness",
-  squareValue: (saturation, brightness) => `Saturation ${saturation}%, brightness ${brightness}%`,
-  hue: "Hue",
-  hueValue: (hue, color) => `${hue} degrees, ${describeColor(color)}`,
-};
+/** The color picker's texts from the library texts (`tsazor.ui.colorPicker.*`, the color names `tsazor.ui.color.*`). */
+export function colorPickerLabelsFrom(t: LibraryTexts): ColorPickerLabels {
+  return {
+    swatch: (color) => t("colorPicker.swatch", { color: describeColor(color, t), hex: color }),
+    square: t("colorPicker.square"),
+    squareValue: (saturation, brightness) => t("colorPicker.squareValue", { saturation, brightness }),
+    hue: t("colorPicker.hue"),
+    hueValue: (hue, color) => t("colorPicker.hueValue", { hue, color: describeColor(color, t) }),
+  };
+}
+
+export const colorPickerLabels: ColorPickerLabels = colorPickerLabelsFrom(englishLibraryTexts);
 
 /**
  * A color's name for a screen reader, from its hue and lightness ("dark blue", "light red", "gray") — what a swatch
- * says besides its hex code, so a choice doesn't rest on seeing the color (WCAG 1.4.1).
+ * says besides its hex code, so a choice doesn't rest on seeing the color (WCAG 1.4.1). The names are library
+ * texts (`tsazor.ui.color.*`), English by default.
  */
-export function describeColor(text: string): string {
+export function describeColor(text: string, t: LibraryTexts = englishLibraryTexts): string {
   const hsv = hexToHsv(text);
   if (hsv === undefined) return text;
   const { h, s, v } = hsv;
   const lightness = v * (1 - s / 2);
-  if (v < 0.12) return "black";
-  if (s < 0.12) return lightness > 0.92 ? "white" : lightness > 0.65 ? "light gray" : lightness < 0.35 ? "dark gray" : "gray";
+  if (v < 0.12) return t("color.black");
+  if (s < 0.12) return t(lightness > 0.92 ? "color.white" : lightness > 0.65 ? "color.lightGray" : lightness < 0.35 ? "color.darkGray" : "color.gray");
   // Every 30 degrees; pure blue (240) is "blue", as most people say.
-  const names = ["red", "orange", "yellow", "lime", "green", "teal", "cyan", "blue", "blue", "purple", "magenta", "pink"];
-  const name = names[Math.round(h / 30) % 12]!;
-  return lightness > 0.75 ? `light ${name}` : lightness < 0.35 ? `dark ${name}` : name;
+  const names = ["red", "orange", "yellow", "lime", "green", "teal", "cyan", "blue", "blue", "purple", "magenta", "pink"] as const;
+  const name = t(`color.${names[Math.round(h / 30) % 12]!}`);
+  return lightness > 0.75 ? t("color.light", { color: name }) : lightness < 0.35 ? t("color.dark", { color: name }) : name;
 }

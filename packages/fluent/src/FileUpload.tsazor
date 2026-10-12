@@ -7,11 +7,12 @@
     open the chooser. *@
 @import { InputFile, InputFileChangeEventArgs, type Attachment } from "@tsazor/runtime"
 @import {
-    fileUploadLabels, runFileUpload, uniqueId,
+    runFileUpload, uniqueId,
     type FileUploader, type FileUploadErrorEventArgs, type FileUploadEventArgs, type FileUploadLabels, type FileUploadMode,
     type ProgressFileDetails,
 } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { libraryTexts, fileUploadLabelsFrom } from "@tsazor/ui"
 
 <div @attributes="@this.uploadAttributes">
     <label class="fui-file-upload__zone" aria-hidden="@(this.dragDropZoneVisible ? null : "true")" @attach="this.dropZone">
@@ -30,13 +31,15 @@
         }
     } else {
         <div class="fui-file-upload__progress" id="@this.progressId" hidden="@(!this.showsProgress)">
-            <Progress value="@this.percent" ariaLabel="@this.progressLabel" />
+            <Progress value="@this.percent" ariaLabel="@(this.progressLabel ?? t("fileUpload.progressLabel"))" />
             <span class="fui-file-upload__title" role="status">@this.title</span>
         </div>
     }
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Lets the user choose (or drop) several files. */
     @Parameter() multiple: boolean = false;
     /** The most files in one go; more raise onFileError (FileCountExceeded). 10 by default. */
@@ -57,7 +60,7 @@
     @Parameter() dragDropZoneVisible: boolean = true;
     /** The id of an element (a button) that opens the chooser when clicked (`AnchorId`). */
     @Parameter() anchorId?: string;
-    /** The zone's content; by default "Drop files here, or click to choose". */
+    /** The zone's content; by default the library text "fileUpload.dropFiles" ("Drop files here, or click to choose"). */
     @Parameter() childContent?: RenderFragment;
     /** The progress instead of the bar and its text (`ProgressTemplate`). */
     @Parameter() progressTemplate?: (details: ProgressFileDetails) => RenderFragment;
@@ -78,7 +81,7 @@
     /** The progress texts (English by default). */
     @Parameter() labels?: Partial<FileUploadLabels>;
     /** The progress bar's accessible name. */
-    @Parameter() progressLabel: string = "Upload progress";
+    @Parameter() progressLabel?: string;
     /** `@attributes` pass-through onto the zone's wrapper (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
@@ -116,7 +119,7 @@
     }
 
     private get prompt(): string {
-        return this.multiple ? "Drop files here, or click to choose" : "Drop a file here, or click to choose";
+        return this.t(this.multiple ? "fileUpload.dropFiles" : "fileUpload.dropFile");
     }
 
     private get showsProgress(): boolean {
@@ -185,7 +188,7 @@
             bufferSize: this.bufferSize,
             mode: this.mode,
             upload: this.upload,
-            labels: { ...fileUploadLabels, ...this.labels },
+            labels: { ...fileUploadLabelsFrom(this.t), ...this.labels },
         }, {
             progress: async (percent, title, details) => {
                 this.title = title;

@@ -7,14 +7,15 @@
     of a drag) — a ColorPickerInput closes on it. The same parameters as the Fluent skin's ColorPicker. *@
 @import type { Attachment } from "@tsazor/runtime"
 @import {
-    closestColor, colorPickerLabels, hexToHsv, hsvToHex, normalizeHexColor, swatchKeyTarget, swatchPalette, wheelKeyTarget,
+    closestColor, hexToHsv, hsvToHex, normalizeHexColor, swatchKeyTarget, swatchPalette, wheelKeyTarget,
     wheelLayout, wheelPalette, wheelRowSizes, type ColorPickerLabels, type Hsv, type Orientation,
 } from "@tsazor/ui"
 @import { withClass } from "./attributes"
+@import { libraryTexts, colorPickerLabelsFrom } from "@tsazor/ui"
 
 <div @attributes="@this.rootAttributes" @ref="root">
     @if (this.view === "hsv") {
-        <div class="tz-color-picker__square" role="slider" tabindex="0" aria-roledescription="2D slider" aria-label="@this.text.square"
+        <div class="tz-color-picker__square" role="slider" tabindex="0" aria-roledescription="@t("colorPicker.squareRoleDescription")" aria-label="@this.text.square"
              aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Math.round(this.hsv.s * 100)"
              aria-valuetext="@this.text.squareValue(Math.round(this.hsv.s * 100), Math.round(this.hsv.v * 100))"
              style="@(`--tz-color-picker-hue: ${hsvToHex({ h: this.hsv.h, s: 1, v: 1 })}`)" @attach="this.squareDrag" @onkeydown="this.squareKey">
@@ -26,7 +27,7 @@
             <span class="tz-color-picker__hue-indicator" style="@(`top: ${(this.hsv.h / 360) * 100}%`)"></span>
         </div>
     } else if (this.view === "wheel") {
-        <svg class="tz-color-picker__wheel" viewBox="@this.wheel.viewBox" role="radiogroup" aria-label="@this.ariaLabel">
+        <svg class="tz-color-picker__wheel" viewBox="@this.wheel.viewBox" role="radiogroup" aria-label="@(this.ariaLabel ?? t("colorPicker.label"))">
             @for (let i = 0; i < this.wheelColors.length; i++) {
                 <polygon class="tz-color-picker__hexagon" role="radio" points="@this.wheel.hexagons[i]!.points" fill="@this.wheelColors[i]"
                          stroke="@this.wheelColors[i]" data-index="@i" tabindex="@(i === this.tabStop ? 0 : -1)" aria-checked="@(i === this.selectedIndex ? "true" : "false")"
@@ -37,7 +38,7 @@
             }
         </svg>
     } else {
-        <div class="tz-color-picker__swatches" role="radiogroup" aria-label="@this.ariaLabel" style="@(`--tz-color-picker-columns: ${this.columns}`)">
+        <div class="tz-color-picker__swatches" role="radiogroup" aria-label="@(this.ariaLabel ?? t("colorPicker.label"))" style="@(`--tz-color-picker-columns: ${this.columns}`)">
             @for (let i = 0; i < this.swatches.length; i++) {
                 <span class="@(i === this.selectedIndex ? "tz-color-picker__swatch tz-color-picker__swatch--selected" : "tz-color-picker__swatch")" role="radio"
                       style="@(`background: ${this.swatches[i]}`)" data-index="@i" tabindex="@(i === this.tabStop ? 0 : -1)"
@@ -49,6 +50,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The color, "#rrggbb" (`SelectedColor`). */
     @Parameter() selectedColor?: string;
     /** Raised with each change of the color, "#rrggbb" (`SelectedColorChanged`). */
@@ -70,7 +73,7 @@
     /** The picker's height (CSS; `Height`). */
     @Parameter() height?: string;
     /** The palette's name for screen readers. */
-    @Parameter() ariaLabel: string = "Color";
+    @Parameter() ariaLabel?: string;
     /** The swatches' and the sliders' texts (English by default). */
     @Parameter() labels?: Partial<ColorPickerLabels>;
     /** `@attributes` pass-through (class appends). */
@@ -83,7 +86,7 @@
     private readonly wheel = wheelLayout(wheelRowSizes);
 
     private get text(): ColorPickerLabels {
-        return { ...colorPickerLabels, ...this.labels };
+        return { ...colorPickerLabelsFrom(this.t), ...this.labels };
     }
 
     /** The color in its full form, when it is one. */

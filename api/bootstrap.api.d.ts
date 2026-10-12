@@ -207,7 +207,7 @@ export default class Carousel<TData> extends ComponentBase {
     showArrows: boolean;
     showBullets: boolean;
     enableSwipeGesture: boolean;
-    ariaLabel: string;
+    ariaLabel?: string;
     labels?: Partial<CarouselLabels>;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
@@ -309,7 +309,7 @@ export default class ColorPicker extends ComponentBase {
     findClosestColor: boolean;
     width?: string;
     height?: string;
-    ariaLabel: string;
+    ariaLabel?: string;
     labels?: Partial<ColorPickerLabels>;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -324,7 +324,7 @@ export default class ColorPickerInput extends InputBase<string> {
     findClosestColor: boolean;
     hideTextInput: boolean;
     iconPalette: IconValue;
-    buttonLabel: string;
+    buttonLabel?: string;
     labels?: Partial<ColorPickerLabels>;
     disabled: boolean;
     readOnly: boolean;
@@ -395,7 +395,7 @@ export default class DatePicker extends InputBase<string> {
     displayToday: boolean;
     daysTemplate?: (day: CalendarDay) => RenderFragment;
     labels?: Partial<CalendarLabels>;
-    buttonLabel: string;
+    buttonLabel?: string;
     onCalendarOpen?: EventCallback<boolean>;
     disabled: boolean;
     readOnly: boolean;
@@ -509,7 +509,7 @@ export default class FileUpload extends ComponentBase {
     onFileError?: EventCallback<FileUploadErrorEventArgs>;
     onCompleted?: EventCallback<FileUploadEventArgs[]>;
     labels?: Partial<FileUploadLabels>;
-    progressLabel: string;
+    progressLabel?: string;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -823,7 +823,7 @@ export default class Pagination extends ComponentBase {
     page: number;
     pageCount: number;
     size: Size;
-    ariaLabel: string;
+    ariaLabel?: string;
     onPageChanged?: EventCallback<number>;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -833,11 +833,11 @@ export default class Pagination extends ComponentBase {
 // Paginator
 export default class Paginator extends ComponentBase {
     state: PaginationState;
-    ariaLabel: string;
+    ariaLabel?: string;
     summaryContent?: RenderFragment;
     size: Size;
     pageSizeOptions?: number[];
-    pageSizeLabel: string;
+    pageSizeLabel?: string;
 }
 
 // Placement: re-exported from @tsazor/ui
@@ -905,7 +905,7 @@ export default class Rating extends InputBase<number> {
     color: "neutral" | "brand" | "marigold";
     disabled: boolean;
     readOnly: boolean;
-    ariaLabel: string;
+    ariaLabel?: string;
     labels?: Partial<RatingLabels>;
     hoveredValueChanged?: EventCallback<number | undefined>;
 }
@@ -929,7 +929,7 @@ export default class ScrollToTop extends ComponentBase {
     selector?: string;
     topOffset: number;
     scrollBehavior: "smooth" | "instant";
-    ariaLabel: string;
+    ariaLabel?: string;
     onScroll?: EventCallback<{
         scrollTop: number;
     }>;
@@ -973,7 +973,7 @@ export default class SidebarNav extends ComponentBase {
             target?: string;
         }[];
     }[];
-    ariaLabel: string;
+    ariaLabel?: string;
     compact: boolean;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
@@ -1045,7 +1045,7 @@ export default class Spinner extends ComponentBase {
     kind: "border" | "grow";
     size: "small" | "medium" | "large";
     label?: string;
-    ariaLabel: string | null;
+    ariaLabel?: string | null;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -1207,7 +1207,7 @@ export default class TimePicker extends InputBase<string> {
     renderStyle: "list" | "native";
     locale?: string;
     hourCycle?: HourCycle;
-    buttonLabel: string;
+    buttonLabel?: string;
     disabled: boolean;
     readOnly: boolean;
     required: boolean;
@@ -1263,6 +1263,7 @@ export default class TreeView extends ComponentBase {
 // Typography
 export default class Typography extends ComponentBase {
     variant: "h1" | "h2" | "h3" | "h4" | "h5" | "body" | "caption";
+    as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "span" | "div" | "label";
     weight?: "semibold" | "bold";
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
@@ -1280,10 +1281,10 @@ export default class Wizard extends ComponentBase {
     stepperPosition: "start" | "top";
     stepSequence: WizardStepSequence;
     displayStepNumber: "none" | "all" | WizardStepStatus;
-    ariaLabel: string;
-    labelPrevious: string;
-    labelNext: string;
-    labelDone: string;
+    ariaLabel?: string;
+    labelPrevious?: string;
+    labelNext?: string;
+    labelDone?: string;
     buttonTemplate?: (index: number) => RenderFragment;
     steps?: RenderFragment;
     childContent?: RenderFragment;

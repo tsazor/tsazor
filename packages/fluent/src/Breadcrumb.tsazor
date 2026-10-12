@@ -1,18 +1,21 @@
 @** A breadcrumb trail: a nav landmark (aria-label="breadcrumb") around an ordered list. Put
     BreadcrumbItem children inside and mark the current page's item active. *@
 @import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
-<nav aria-label="breadcrumb" @attributes="@this.breadcrumbAttributes">
+<nav aria-label="@t("breadcrumb.label")" @attributes="@this.breadcrumbAttributes">
     <ol class="fui-breadcrumb__list">@childContent</ol>
 </nav>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** The BreadcrumbItem children, rendered inside the ol. */
     @Parameter() childContent?: RenderFragment;
 
     private get breadcrumbAttributes(): Record<string, unknown> {
-        return withAttributes({ class: "fui-breadcrumb", "aria-label": "breadcrumb" }, this.additionalAttributes);
+        return withAttributes({ class: "fui-breadcrumb", "aria-label": this.t("breadcrumb.label") }, this.additionalAttributes);
     }
 }

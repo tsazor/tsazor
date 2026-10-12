@@ -11,6 +11,7 @@
 @import { SearchRunner, anchoredPosition, comboboxKeyAction, dismissable, filterOptions, hasSubmitAttempt, toggleOption, uniqueId } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { OptionsSearchEventArgs } from "./autocomplete-search"
+@import { libraryTexts } from "@tsazor/ui"
 
 <div @attributes="@withClass("mb-3 tz-autocomplete", this.additionalAttributes)">
     @if (label) {
@@ -21,7 +22,7 @@
             @foreach (const option of selectedOptions) {
                 <span class="badge text-bg-light border tz-autocomplete__chip" @key="this.keyOf(option)">
                     @optionText(option)
-                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@(`Remove ${optionText(option)}`)" disabled="@disabled" @onclick="() => this.remove(option)"></button>
+                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@disabled" @onclick="() => this.remove(option)"></button>
                 </span>
             }
         }
@@ -50,6 +51,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The field's label. */
     @Parameter() label?: string;
     /** The input's accessible name when there is no label. */

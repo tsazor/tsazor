@@ -8,6 +8,7 @@
 @import type { Attachment } from "@tsazor/runtime"
 @import { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayCloseMode, type OverlayPress } from "@tsazor/ui"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
     <div @attributes="@this.overlayAttributes" @attach="@this.behavior">
@@ -22,6 +23,8 @@
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Whether the overlay shows; with `@bind-Visible` the parent learns when a click or Escape closes it. */
     @Parameter() visible = false;
     /** Raised when the overlay shows or closes on its own (a click, Escape, `show()` or `close()`). */
@@ -99,7 +102,7 @@
             style: typeof style === "string" && style !== "" ? `${background}; ${style}` : background,
             role: modal ? "dialog" : null,
             "aria-modal": modal ? "true" : null,
-            "aria-label": modal ? (this.ariaLabel ?? (this.childContent ? null : "Loading…")) : null,
+            "aria-label": modal ? (this.ariaLabel ?? (this.childContent ? null : this.t("loading"))) : null,
             ...additional,
         });
     }

@@ -4,6 +4,8 @@
  * `upload` function, with the progress of all of them, a way to cancel, and errors for too many or too large files.
  */
 
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+
 /** How the files are handed over when there is no `upload` function (Fluent UI Blazor's `InputFileMode`). */
 export type FileUploadMode = "buffer" | "stream";
 
@@ -89,15 +91,26 @@ export interface FileUploadLabels {
   readonly progress: (number: number, count: number, name: string) => string;
   readonly completed: string;
   readonly canceled: string;
+  /** onFileError's message when more files come than maximumFileCount allows. */
+  readonly fileCountExceeded?: string;
+  /** onFileError's message for a file larger than maximumFileSize. */
+  readonly fileSizeExceeded?: string;
+}
+
+/** The progress texts from the library texts (`tsazor.ui.fileUpload.*`): `{ ...fileUploadLabelsFrom(t), ...labels }`. */
+export function fileUploadLabelsFrom(t: LibraryTexts): FileUploadLabels {
+  return {
+    loading: t("fileUpload.loading"),
+    progress: (number, count, name) => t("fileUpload.progress", { number, count, name }),
+    completed: t("fileUpload.completed"),
+    canceled: t("fileUpload.canceled"),
+    fileCountExceeded: t("fileUpload.fileCountExceeded"),
+    fileSizeExceeded: t("fileUpload.fileSizeExceeded"),
+  };
 }
 
 /** The default progress texts, Fluent UI Blazor's. */
-export const fileUploadLabels: FileUploadLabels = {
-  loading: "Loading...",
-  progress: (number, count, name) => `Loading ${number}/${count} - ${name}`,
-  completed: "Completed",
-  canceled: "Canceled",
-};
+export const fileUploadLabels: FileUploadLabels = fileUploadLabelsFrom(englishLibraryTexts);
 
 /** How a run goes. */
 export interface FileUploadOptions {
@@ -129,7 +142,7 @@ export async function runFileUpload(files: readonly File[], options: FileUploadO
   if (files.length > options.maximumFileCount) {
     await callbacks.fileError?.({
       errorCode: "FileCountExceeded",
-      errorMessage: "The maximum number of files has been exceeded.",
+      errorMessage: options.labels.fileCountExceeded ?? fileUploadLabels.fileCountExceeded!,
       fileCount: files.length,
     });
     return [];
@@ -146,7 +159,7 @@ export async function runFileUpload(files: readonly File[], options: FileUploadO
     const args = new FileUploadEventArgs(file, index, all);
     done.push(args);
     if (file.size > options.maximumFileSize) {
-      args.errorMessage = "The maximum size allowed is reached";
+      args.errorMessage = labels.fileSizeExceeded ?? fileUploadLabels.fileSizeExceeded!;
       await callbacks.fileError?.({ errorCode: "MaximumSizeReached", errorMessage: args.errorMessage, fileName: file.name });
       continue;
     }

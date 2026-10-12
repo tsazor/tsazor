@@ -7,6 +7,7 @@
     title, size and closing rules from `show`, and Escape, the backdrop and Close cancel it. *@
 @import { createLayer, DialogReference, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (shown) {
     <div class="modal-backdrop show"></div>
@@ -16,7 +17,7 @@
                 @if (shownTitle) {
                     <div class="modal-header">
                         <h5 class="modal-title" id="@titleId">@shownTitle</h5>
-                        <button type="button" class="btn-close" aria-label="Close" @onclick="requestClose"></button>
+                        <button type="button" class="btn-close" aria-label="@t("close")" @onclick="requestClose"></button>
                     </div>
                 }
                 <div class="modal-body">@childContent</div>
@@ -29,6 +30,8 @@
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Whether the dialog is visible; the parent flips this in response to onClosed. Unset in a component the DialogService shows. */
     @Parameter() isOpen?: boolean;
     /** The DialogService's dialog this one is the frame of (when isOpen is unset). */

@@ -4,6 +4,8 @@
  * The field writes and reads the time as the locale does ("2:30 PM" in en-US, "14:30" in de-DE).
  */
 
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+
 /** A time of day as ISO text, "HH:mm:ss" ("14:30:00"); "HH:mm" is read too. */
 export type IsoTime = string;
 
@@ -70,12 +72,15 @@ export function formatTimeField(time: IsoTime, locale: string, hourCycle?: HourC
   return timeFormat(locale, hourCycle, parts.seconds !== 0).format(atTime(parts.hours, parts.minutes, parts.seconds));
 }
 
-/** A time field's placeholder for `locale`: "hh:mm AM/PM" (en-US), "hh:mm" (de-DE). */
-export function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle): string {
+/**
+ * A time field's placeholder for `locale`: "hh:mm AM/PM" (en-US), "hh:mm" (de-DE). The letters are library texts
+ * (`tsazor.ui.timeField.*`).
+ */
+export function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle, t: LibraryTexts = englishLibraryTexts): string {
   const { am, pm } = dayPeriods(locale);
   return timeFormat(locale, hourCycle, false)
     .formatToParts(atTime(13, 30))
-    .map((part) => (part.type === "hour" ? "hh" : part.type === "minute" ? "mm" : part.type === "dayPeriod" ? `${am}/${pm}` : part.value))
+    .map((part) => (part.type === "hour" ? t("timeField.hour") : part.type === "minute" ? t("timeField.minute") : part.type === "dayPeriod" ? `${am}/${pm}` : part.value))
     .join("");
 }
 

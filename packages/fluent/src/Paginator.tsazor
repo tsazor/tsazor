@@ -4,12 +4,13 @@
     `pageSizeOptions` it offers the rows per page (MudBlazor's TablePager); a choice goes back to the first page. *@
 @import { PaginationState } from "@tsazor/ui"
 @import { ChevronDoubleLeft20Regular, ChevronDoubleRight20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (state.totalItemCount !== undefined) {
-    <nav class="fui-paginator" aria-label="@ariaLabel">
+    <nav class="fui-paginator" aria-label="@(ariaLabel ?? t("paginator.label"))">
         @if (pageSizeOptions !== undefined && pageSizeOptions.length > 0) {
             <label class="fui-paginator__size">
-                <span>@pageSizeLabel</span>
+                <span>@(pageSizeLabel ?? t("paginator.pageSize"))</span>
                 <select class="fui-input fui-select fui-paginator__size-select" value="@String(state.itemsPerPage)" @onchange="changePageSize">
                     @foreach (const option of pageSizeOptions) {
                         <option value="@String(option)">@option</option>
@@ -18,29 +19,31 @@
             </label>
         }
         <span class="fui-paginator__count">
-            @if (summaryContent) { @summaryContent } else { <text>@state.totalItemCount items</text> }
+            @if (summaryContent) { @summaryContent } else { <text>@t.plural("paginator.items", state.totalItemCount)</text> }
         </span>
         <div class="fui-pagination">
-            <button type="button" class="fui-pagination__button" aria-label="First page" title="First page" disabled="@(!canGoBack)" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
-            <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
-            <span class="fui-paginator__page" aria-current="page">Page @(state.currentPageIndex + 1) of @(lastPage + 1)</span>
-            <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
-            <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page" disabled="@(!canGoForward)" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")" disabled="@(!canGoBack)" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
+            <span class="fui-paginator__page" aria-current="page">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
+            <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")" disabled="@(!canGoForward)" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
         </div>
     </nav>
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The paging state, shared with the grid. */
     @Parameter() state!: PaginationState;
     /** Names the navigation for screen readers. */
-    @Parameter() ariaLabel: string = "Pages";
+    @Parameter() ariaLabel?: string;
     /** Replaces the row count ("120 items"). */
     @Parameter() summaryContent?: RenderFragment;
     /** The rows per page to choose from (10, 25, 50, 100); without them the page size stays the state's. */
     @Parameter() pageSizeOptions?: number[];
     /** The page size choice's label (MudBlazor's RowsPerPageString). */
-    @Parameter() pageSizeLabel: string = "Rows per page";
+    @Parameter() pageSizeLabel?: string;
 
     private observed?: PaginationState;
     private stopObserving?: () => void;

@@ -1,10 +1,13 @@
 @** One slide of a Carousel (MudBlazor's MudCarouselItem): a group named "2 of 5", shown while it is the carousel's
     slide and kept hidden otherwise (its content stays as it was). Use inside a Carousel. *@
 @import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
-<div role="group" aria-roledescription="slide" @attributes="@this.itemAttributes">@childContent</div>
+<div role="group" aria-roledescription="@t("carousel.slideRoleDescription")" @attributes="@this.itemAttributes">@childContent</div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The slide's content. */
     @Parameter() childContent?: RenderFragment;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */

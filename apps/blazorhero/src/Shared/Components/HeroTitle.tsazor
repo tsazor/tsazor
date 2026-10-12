@@ -1,9 +1,8 @@
 @* Client/Shared/Components/HeroTitle.razor: a page's title in the brand colour and its description. The original's
-   MudText Typo.h5 rendered an h5 as the page's only heading; the title is the page's h1 here, in the h5's size
-   (Typography ties the element to the size, B24). *@
+   MudText Typo.h5 rendered an h5 as the page's only heading; here it is the page's h1 in the h5's size (B24). *@
 
 <div class="bh-hero-title">
-    <h1 class="bh-hero-title__title">@title</h1>
+    <Typography variant="h5" as="h1" class="bh-hero-title__title">@title</Typography>
     <p class="bh-hero-title__description">@description</p>
 </div>
 

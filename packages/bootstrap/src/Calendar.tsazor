@@ -8,13 +8,14 @@
     Space picks. The names and the week's first day come from `locale` — the same parameters as the Fluent skin's
     Calendar. *@
 @import {
-    addDays, addMonths, addYears, calendarKeyTarget, calendarLabels, calendarWeeks, calendarYears, clampDate,
+    addDays, addMonths, addYears, calendarKeyTarget, calendarWeeks, calendarYears, clampDate,
     datesOfRange, daysInMonth, firstDayOfWeek, formatIsoDate, isDateDisabled, isMonthDisabled, isoDate, isYearDisabled, monthNames,
     nextDateRange, nextMultipleDates, pageLocale, parseIsoDate, rangeOfDates, startOfMonth, today, uniqueId, weekdayNames,
     type CalendarDay, type CalendarLabels, type CalendarSelectMode, type CalendarView, type DateLimits, type IsoDate,
 } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { ChevronLeft, ChevronRight } from "./core-icons"
+@import { libraryTexts, calendarLabelsFrom } from "@tsazor/ui"
 
 @inherits InputBase<string>
 
@@ -86,6 +87,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** What it shows and picks: days (default), months or years (`CalendarViews`). */
     @Parameter() view: CalendarView = "days";
     /** The first day that can be picked (ISO). */
@@ -251,7 +254,7 @@
     }
 
     private get texts(): CalendarLabels {
-        return { ...calendarLabels, ...this.labels };
+        return { ...calendarLabelsFrom(this.t), ...this.labels };
     }
 
     private get stepLabels(): [string, string] {

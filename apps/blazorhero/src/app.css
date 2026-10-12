@@ -152,8 +152,6 @@ h1:focus {
 .bh-hero-title__title {
     margin: 0 0 var(--fui-spacing-s);
     color: var(--fui-accent);
-    font-size: var(--fui-font-size-title);
-    font-weight: var(--fui-font-weight-semibold);
 }
 
 .bh-hero-title__description {

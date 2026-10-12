@@ -147,9 +147,9 @@ export class StringLocalizer<Table extends StringTable = StringTable> {
   }
 
   /**
-   * @internal The raw message of a key without placeholder formatting —
-   * `undefined` when missing (the validation message resolver's fallback
-   * check; reserved `tsazor.validation.*` keys).
+   * The message of a key as the tables hold it, unformatted — `undefined` when no table has it, without `get`'s
+   * DEV warning. For code with a fallback of its own: the validation messages (`tsazor.validation.*`), the
+   * component library's texts (`tsazor.ui.*`).
    */
   raw(key: string): string | undefined {
     return this.resolve(key);

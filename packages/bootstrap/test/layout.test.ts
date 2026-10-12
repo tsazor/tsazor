@@ -88,6 +88,19 @@ describe("Grid, Typography", () => {
     expect((fluid.container.firstElementChild as HTMLElement).style.gridTemplateColumns).toBe("repeat(auto-fill, minmax(240px, 1fr))");
   });
 
+  it("renders another element with the variant's look through `as`: an h1 with Bootstrap's h5 class", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Typography);
+      b.addAttribute(1, "variant", "h5");
+      b.addAttribute(2, "as", "h1");
+      b.addAttribute(3, "childContent", text("Brands"));
+      b.closeComponent();
+    });
+    const h1 = container.querySelector("h1")!;
+    expect(h1.className).toBe("h5");
+    expect(container.querySelector("h5")).toBeNull();
+  });
+
   it("picks the element by variant and the weight by class", async () => {
     const heading = await renderTree((b) => {
       b.openComponent(0, Typography);

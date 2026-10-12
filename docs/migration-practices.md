@@ -155,6 +155,12 @@ render in the browser.
   `ActivatorContent` is `Menu`'s `labelContent` (B10); a snackbar's `Action` is a toast's `action` (B11).
 - **Localizers in components.** Several `IStringLocalizer<T>`s in one component (a page's and its validator's) are
   fine: the component re-renders once on a language change, however many it injects (B18).
+- **The library's own texts** (MudBlazor's `MudLocalizer`, Fluent UI Blazor's `IFluentLocalizer`, B29): add the
+  `tsazor.ui.*` keys to your string tables — `"tsazor.ui.close": "Schließen"`, `"tsazor.ui.paginator.page": "Seite
+  {page} von {pages}"` — and every component shows them in that language; the catalog with the English texts is
+  `libraryTextDefaults` in `@tsazor/ui`. A per-instance text such as MudTablePager's `RowsPerPageString` stays a
+  parameter (`pageSizeLabel`). Counted texts take an entry per plural category (`….one`, `….other`, and `….few`,
+  `….many` where your language has them).
 - **MudForm becomes `FluentForm`, and that is a `<form>`.** MudForm is a `div`, so the browser never checked its
   fields. `FluentForm` (as Blazor's `EditForm`) is a real form: a `type="email"` field gets the browser's own check
   first, which stops the submit with the browser's bubble before your validators speak. Write `novalidate` on the

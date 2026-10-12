@@ -4,9 +4,10 @@
     out of 5, 1,234 ratings" (`labels`). `shape` is the star's icon; `size` and `color` as the Rating's — the same
     parameters as the Fluent skin's RatingDisplay. *@
 @import type { IconValue } from "@tsazor/ui"
-@import { formatRatingCount, formatRatingValue, pageLocale, ratingFill, ratingLabels, type RatingLabels } from "@tsazor/ui"
+@import { formatRatingCount, formatRatingValue, pageLocale, ratingFill, type RatingLabels } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { StarFill } from "./core-icons"
+@import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
 
 <div role="img" aria-label="@this.label" @attributes="@withClass(this.rootClass, this.additionalAttributes)">
     @if (this.compact) {
@@ -29,6 +30,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The value, 0 to `max`; halves and other fractions fill part of a star. */
     @Parameter() value: number = 0;
     /** The number of stars. */
@@ -63,7 +66,7 @@
     }
 
     private get label(): string {
-        return (this.labels?.display ?? ratingLabels.display)(this.valueText, this.max, this.countText);
+        return (this.labels?.display ?? ratingLabelsFrom(this.t).display)(this.valueText, this.max, this.countText);
     }
 
     private get rootClass(): string {

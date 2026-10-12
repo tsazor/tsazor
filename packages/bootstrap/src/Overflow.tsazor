@@ -8,6 +8,7 @@
 @import type { Attachment } from "@tsazor/runtime"
 @import { anchoredPosition, createLayer, dismissable, overflowFit, uniqueId, type Orientation } from "@tsazor/ui"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 <div @attributes="@this.rootAttributes" @attach="this.measure">
     @for (let i = 0; i < this.rendered.length; i++) {
@@ -47,6 +48,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The items, in their order (`Items`). */
     @Parameter() items: TItem[] = [];
     /** An item (`ItemTemplate`); one element each. */
@@ -87,7 +90,7 @@
 
     private get moreLabel(): string {
         const names = this.overflowed.map((item) => this.itemText?.(item) ?? String(item));
-        return `${names.length} more: ${names.join(", ")}`;
+        return this.t.plural("overflow.more", names.length, { names: names.join(", ") });
     }
 
     private get rootAttributes(): Record<string, unknown> {

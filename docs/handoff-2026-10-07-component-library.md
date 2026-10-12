@@ -172,8 +172,9 @@ everything pushed.
 >     searched on the server, dialogs, Excel export and import, a picture shrunk before the upload. From it:
 >     `requestImageFileAsync` and InputFile's click/cancel with Blazor's InputFile E2E suite in the parity gate (B22),
 >     Paginator `pageSizeOptions` (B23), the Autocomplete in forms (B26), `CascadingTypeToken` (B27), a sortKey-only
->     TemplateColumn (B28), the Fluent grid's header alignment (B25). Open for the owner as well: B24 (Typography
->     `as`), **B29 — the library's own texts are English only; a localization decision before 1.0**. Next (owner,
+>     TemplateColumn (B28), the Fluent grid's header alignment (B25). **Done after the owner's go (same day):** B24
+>     (Typography `as`) and **B29 — the library's own texts are localizable** (`tsazor.ui.*` keys in the app's
+>     tables, English fallback, plurals by `Intl.PluralRules`, design-localization.md §4a). Next (owner,
 >     2026-10-12): the fullstackhero React admin port (the target group's archetype; UI question open), BlazorHero's
 >     phases 3–6 later where fullstackhero doesn't cover them.
 >     Seen once, under load: the parity gate's `DynamicContent_AppendItemsWhileAtBottom_ViewportStaysStable`

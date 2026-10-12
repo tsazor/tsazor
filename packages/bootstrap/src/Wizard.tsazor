@@ -8,11 +8,12 @@
 @import type WizardStep from "./WizardStep.tsazor"
 @import { CheckCircleFill, Circle, CircleFill } from "./core-icons"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 <CascadingValue Value="this" Name="BootstrapWizard">
     <div @attributes="@this.wizardAttributes">
         <div class="tz-wizard__layout">
-            <ol class="tz-wizard__steps" aria-label="@ariaLabel">
+            <ol class="tz-wizard__steps" aria-label="@(ariaLabel ?? t("wizard.label"))">
                 @foreach (const step of this.stepList) {
                     <li class="@this.stepClass(step)" aria-current="@(step.current ? "step" : null)">
                         @if (this.clickable(step)) {
@@ -39,12 +40,12 @@
                     @buttonTemplate(value)
                 } else {
                     @if (this.previousIndex >= 0) {
-                        <Button intent="secondary" onClick="@this.previous">@labelPrevious</Button>
+                        <Button intent="secondary" onClick="@this.previous">@(labelPrevious ?? t("wizard.previous"))</Button>
                     }
                     @if (this.nextIndex >= 0) {
-                        <Button intent="primary" onClick="@this.next">@labelNext</Button>
+                        <Button intent="primary" onClick="@this.next">@(labelNext ?? t("wizard.next"))</Button>
                     } else {
-                        <Button intent="primary" onClick="@this.finish">@labelDone</Button>
+                        <Button intent="primary" onClick="@this.finish">@(labelDone ?? t("wizard.done"))</Button>
                     }
                 }
             </div>
@@ -53,6 +54,8 @@
 </CascadingValue>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The current step's index (two-way with @bind-value). */
     @Parameter() value: number = 0;
     /** The new index after Next, Previous or a click on a step (@bind-value's other half). */
@@ -66,13 +69,13 @@
     /** Which bullets show their step's number: none (default), all, or the previous, current or next steps. */
     @Parameter() displayStepNumber: "none" | "all" | WizardStepStatus = "none";
     /** The step list's accessible name. */
-    @Parameter() ariaLabel: string = "Steps";
+    @Parameter() ariaLabel?: string;
     /** The Previous button's text. */
-    @Parameter() labelPrevious: string = "Previous";
+    @Parameter() labelPrevious?: string;
     /** The Next button's text. */
-    @Parameter() labelNext: string = "Next";
+    @Parameter() labelNext?: string;
     /** The Done button's text. */
-    @Parameter() labelDone: string = "Done";
+    @Parameter() labelDone?: string;
     /** Buttons of your own instead of Previous, Next and Done; it gets the current index. */
     @Parameter() buttonTemplate?: (index: number) => RenderFragment;
     /** The WizardSteps (Fluent UI Blazor's `Steps`). */

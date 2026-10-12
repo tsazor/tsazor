@@ -5,6 +5,7 @@
     ScrollToTop. *@
 @import { withClass } from "./attributes"
 @import { ArrowUp } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
     <button type="button" @attributes="@this.buttonAttributes" @onclick="this.toTop">
@@ -17,6 +18,8 @@
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The element that scrolls (a CSS selector; `Selector`); the page by default. */
     @Parameter() selector?: string;
     /** How far down the button appears, in px (`TopOffset`). */
@@ -24,7 +27,7 @@
     /** smooth (default) or instant (`ScrollBehavior`); reduced motion makes it instant. */
     @Parameter() scrollBehavior: "smooth" | "instant" = "smooth";
     /** The button's name. */
-    @Parameter() ariaLabel: string = "Back to top";
+    @Parameter() ariaLabel?: string;
     /** Raised with the scroll position as it changes (`OnScroll`). */
     @Parameter() onScroll?: EventCallback<{ scrollTop: number }>;
     /** Raised when the button is clicked, before it scrolls (`OnClick`). */
@@ -39,7 +42,7 @@
     private detach?: () => void;
 
     private get buttonAttributes(): Record<string, unknown> {
-        return withClass("tz-scroll-to-top btn btn-primary rounded-circle shadow position-fixed bottom-0 end-0 m-3", { "aria-label": this.ariaLabel, title: this.ariaLabel, ...this.additionalAttributes });
+        return withClass("tz-scroll-to-top btn btn-primary rounded-circle shadow position-fixed bottom-0 end-0 m-3", { "aria-label": this.ariaLabel ?? this.t("scrollToTop.label"), title: this.ariaLabel ?? this.t("scrollToTop.label"), ...this.additionalAttributes });
     }
 
     /** The element that scrolls, or the page's. */

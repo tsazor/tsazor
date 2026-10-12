@@ -2,6 +2,7 @@
     builds one row per item; an empty-state row shows when there are no items. For column-driven
     tables use DataGrid. *@
 @import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 @typeparam TRow
 
@@ -9,7 +10,7 @@
     <thead class="fui-table__head">@this.headerContent</thead>
     <tbody class="fui-table__body">
         @if (this.items.length === 0) {
-            <tr class="fui-table__empty"><td colspan="@this.colSpan">@this.emptyText</td></tr>
+            <tr class="fui-table__empty"><td colspan="@this.colSpan">@(this.emptyText ?? this.t("noEntries"))</td></tr>
         }
         @for (let i = 0; i < this.items.length; i++) {
             @this.rowFor(i)
@@ -18,6 +19,8 @@
 </table>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Rows to render (filter/sort/paging live in the host app). */
     @Parameter() items: TRow[] = [];
     /** Thead content (column headers). */
@@ -31,7 +34,7 @@
     /** Dense row heights. */
     @Parameter() compact: boolean = false;
     /** Text for the empty-state row. */
-    @Parameter() emptyText: string = "No entries";
+    @Parameter() emptyText?: string;
     /** Column count for the empty-state colspan. */
     @Parameter() colSpan: number = 1;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */

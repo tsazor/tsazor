@@ -4,35 +4,38 @@
     page. *@
 @import { withAttributes } from "./attributes"
 @import { ChevronDoubleLeft20Regular, ChevronDoubleRight20Regular, ChevronLeft20Regular, ChevronRight20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
-<nav aria-label="@this.ariaLabel" @attributes="@this.paginationAttributes">
-    <button type="button" class="fui-pagination__button" aria-label="First page" title="First page"
+<nav aria-label="@(this.ariaLabel ?? t("pagination.label"))" @attributes="@this.paginationAttributes">
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")"
             disabled="@this.atFirst" @onclick="() => this.go(1)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
-    <button type="button" class="fui-pagination__button" aria-label="Previous page" title="Previous page"
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")"
             disabled="@this.atFirst" @onclick="() => this.go(this.page - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
     @for (const item of this.windowItems) {
         @if (typeof item === "number") {
-            <button type="button" class="@this.pageClass(item)" aria-label="@`Go to page ${item}`"
-                    aria-current="@this.currentPageAttr(item)" title="@`Go to page ${item}`"
+            <button type="button" class="@this.pageClass(item)" aria-label="@t("pagination.goTo", { page: item })"
+                    aria-current="@this.currentPageAttr(item)" title="@t("pagination.goTo", { page: item })"
                     @onclick="@(() => this.go(item))">@item</button>
         }
         else {
             <span class="fui-pagination__ellipsis" aria-hidden="true">…</span>
         }
     }
-    <button type="button" class="fui-pagination__button" aria-label="Next page" title="Next page"
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")"
             disabled="@this.atLast" @onclick="() => this.go(this.page + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
-    <button type="button" class="fui-pagination__button" aria-label="Last page" title="Last page"
+    <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")"
             disabled="@this.atLast" @onclick="() => this.go(this.pageCount)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
 </nav>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Current page (1-based) — controlled: the component keeps no page state. */
     @Parameter() page: number = 1;
     /** Total number of pages. */
     @Parameter() pageCount: number = 1;
     /** Accessible nav name. */
-    @Parameter() ariaLabel: string = "Pagination";
+    @Parameter() ariaLabel?: string;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** Fired when a button targets another valid page; receives the new 1-based page number. */

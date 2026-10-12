@@ -12,6 +12,7 @@
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"
 @import { OptionsSearchEventArgs } from "./autocomplete-search"
+@import { libraryTexts } from "@tsazor/ui"
 
 <div @attributes="@this.rootAttributes">
     @if (label) {
@@ -22,7 +23,7 @@
             @foreach (const option of selectedOptions) {
                 <span class="fui-autocomplete__chip" @key="this.keyOf(option)">
                     @optionText(option)
-                    <button type="button" class="fui-autocomplete__remove" aria-label="@(`Remove ${optionText(option)}`)" disabled="@disabled" @onclick="() => this.remove(option)"><Icon value="@Dismiss20Regular" size="12" /></button>
+                    <button type="button" class="fui-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@disabled" @onclick="() => this.remove(option)"><Icon value="@Dismiss20Regular" size="12" /></button>
                 </span>
             }
         }
@@ -51,6 +52,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The field's label. */
     @Parameter() label?: string;
     /** The input's accessible name when there is no label. */

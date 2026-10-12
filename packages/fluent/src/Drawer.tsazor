@@ -5,6 +5,7 @@
     to false. *@
 @import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 @import { Dismiss20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (isOpen) {
     <div class="fui-drawer-backdrop"></div>
@@ -13,13 +14,15 @@
             @if (title) {
                 <h2 class="fui-drawer__title" id="@titleId">@title</h2>
             }
-            <button type="button" class="fui-drawer__close" aria-label="Close" @onclick="requestClose"><Icon value="@Dismiss20Regular" /></button>
+            <button type="button" class="fui-drawer__close" aria-label="@t("close")" @onclick="requestClose"><Icon value="@Dismiss20Regular" /></button>
         </div>
         <div class="fui-drawer__body">@childContent</div>
     </div>
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Whether the panel is open; the parent flips this in response to onClosed. */
     @Parameter() isOpen: boolean = false;
     /** The edge it slides in from. */

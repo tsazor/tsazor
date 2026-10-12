@@ -3,16 +3,19 @@
 @import type { Intent } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 @if (visible) {
     <div role="alert" @attributes="@withClass(alertClass, additionalAttributes)">
         @childContent
         @if (dismissible) {
-            <button type="button" class="btn-close" aria-label="Close" @onclick="dismiss"></button>
+            <button type="button" class="btn-close" aria-label="@t("close")" @onclick="dismiss"></button>
         }
     </div>
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The color role: primary, secondary, success, danger, warning, info (default) or neutral. */
     @Parameter() intent: Intent = "info";
     /** Renders the dismiss button; the alert closes itself and fires onDismissed. */

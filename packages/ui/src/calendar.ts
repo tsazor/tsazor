@@ -5,6 +5,8 @@
  * Names and formats come from Intl for a locale.
  */
 
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+
 /** A date as ISO text, `"2026-10-10"`. */
 export type IsoDate = string;
 
@@ -207,10 +209,13 @@ export function parseDateField(text: string, locale: string): IsoDate | undefine
   return isoDate(year, month, day);
 }
 
-/** A date field's placeholder for `locale`: "MM/DD/YYYY" (en-US), "DD.MM.YYYY" (de-DE). */
-export function dateFieldPlaceholder(locale: string): string {
+/**
+ * A date field's placeholder for `locale`: "MM/DD/YYYY" (en-US), "DD.MM.YYYY" (de-DE). The letters are library texts
+ * (`tsazor.ui.dateField.*`): a German table makes it "TT.MM.JJJJ".
+ */
+export function dateFieldPlaceholder(locale: string, t: LibraryTexts = englishLibraryTexts): string {
   const { order, separator } = dateFieldPattern(locale);
-  return order.map((name) => (name === "year" ? "YYYY" : name === "month" ? "MM" : "DD")).join(separator);
+  return order.map((name) => t(name === "year" ? "dateField.year" : name === "month" ? "dateField.month" : "dateField.day")).join(separator);
 }
 
 /**
@@ -296,15 +301,20 @@ export interface CalendarLabels {
   readonly nextYears: string;
 }
 
-/** The calendar's default texts. */
-export const calendarLabels: CalendarLabels = {
-  previousMonth: "Previous month",
-  nextMonth: "Next month",
-  previousYear: "Previous year",
-  nextYear: "Next year",
-  previousYears: "Previous years",
-  nextYears: "Next years",
-};
+/** The calendar's texts from the library texts (`tsazor.ui.calendar.*`): `{ ...calendarLabelsFrom(t), ...labels }`. */
+export function calendarLabelsFrom(t: LibraryTexts): CalendarLabels {
+  return {
+    previousMonth: t("calendar.previousMonth"),
+    nextMonth: t("calendar.nextMonth"),
+    previousYear: t("calendar.previousYear"),
+    nextYear: t("calendar.nextYear"),
+    previousYears: t("calendar.previousYears"),
+    nextYears: t("calendar.nextYears"),
+  };
+}
+
+/** The calendar's default texts, in English. */
+export const calendarLabels: CalendarLabels = calendarLabelsFrom(englishLibraryTexts);
 
 /** What keeps a date from being picked: before minDate, after maxDate, or disabledDateFunc. */
 export interface DateLimits {

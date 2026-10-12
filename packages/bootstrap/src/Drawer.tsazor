@@ -5,6 +5,7 @@
     to false. *@
 @import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (isOpen) {
     <div class="offcanvas-backdrop fade show"></div>
@@ -13,13 +14,15 @@
             @if (title) {
                 <h5 class="offcanvas-title" id="@titleId">@title</h5>
             }
-            <button type="button" class="btn-close" aria-label="Close" @onclick="requestClose"></button>
+            <button type="button" class="btn-close" aria-label="@t("close")" @onclick="requestClose"></button>
         </div>
         <div class="offcanvas-body">@childContent</div>
     </div>
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Whether the panel is open; the parent flips this in response to onClosed. */
     @Parameter() isOpen: boolean = false;
     /** The edge it slides in from. */

@@ -1,0 +1,192 @@
+import { formatMessage, inject, StringLocalizer } from "@tsazor/runtime";
+
+/**
+ * The component library's own texts — a dialog's "Close", the paginator's "Page 2 of 7" — by name, with their
+ * English wording. Each has the reserved key `tsazor.ui.<name>` (`libraryTextKey`): an entry under that key in the
+ * app's string tables localizes the text in every component that shows it, as the `tsazor.validation.*` keys do for
+ * the validation messages (MudBlazor's MudLocalizer, Fluent UI Blazor's IFluentLocalizer). A component's own text
+ * parameter (`emptyText`, `labels`, …) still wins over both. `{name}` placeholders take the values the component
+ * passes. A text that depends on a count has one entry per plural category of `Intl.PluralRules` — `….one`,
+ * `….other`, and in a table also `….few`, `….many`, … as the language needs them.
+ */
+export const libraryTextDefaults = {
+  // Shared by several components.
+  "close": "Close",
+  "remove": "Remove {name}",
+  "loading": "Loading…",
+  "noEntries": "No entries",
+
+  "pagination.label": "Pagination",
+  "pagination.first": "First page",
+  "pagination.previous": "Previous page",
+  "pagination.next": "Next page",
+  "pagination.last": "Last page",
+  "pagination.goTo": "Go to page {page}",
+  // The Bootstrap skin's Pagination writes these on its buttons.
+  "pagination.previousText": "Previous",
+  "pagination.nextText": "Next",
+
+  "paginator.label": "Pages",
+  "paginator.page": "Page {page} of {pages}",
+  "paginator.items.one": "{count} item",
+  "paginator.items.other": "{count} items",
+  "paginator.pageSize": "Rows per page",
+
+  "dataGrid.selectAll": "Select all rows",
+  "dataGrid.selected": "Selected",
+  "dataGrid.selectRow": "Select row {row}",
+
+  "sidebarNav.label": "Main navigation",
+  "scrollToTop.label": "Back to top",
+  "breadcrumb.label": "breadcrumb",
+  "splitter.resize": "Resize",
+  "overflow.more.one": "{count} more: {names}",
+  "overflow.more.other": "{count} more: {names}",
+
+  "wizard.label": "Steps",
+  "wizard.previous": "Previous",
+  "wizard.next": "Next",
+  "wizard.done": "Done",
+
+  "carousel.label": "Slides",
+  // aria-roledescription: what a screen reader calls the carousel and each slide.
+  "carousel.roleDescription": "carousel",
+  "carousel.slideRoleDescription": "slide",
+  "carousel.previous": "Previous slide",
+  "carousel.next": "Next slide",
+  "carousel.slide": "{position} of {count}",
+  "carousel.bullet": "Slide {position}",
+  "carousel.pause": "Stop the slides",
+  "carousel.play": "Start the slides",
+
+  "calendar.previousMonth": "Previous month",
+  "calendar.nextMonth": "Next month",
+  "calendar.previousYear": "Previous year",
+  "calendar.nextYear": "Next year",
+  "calendar.previousYears": "Previous years",
+  "calendar.nextYears": "Next years",
+  "datePicker.button": "Choose date",
+  "timePicker.button": "Choose time",
+  // A date or time field's placeholder, in the locale's order: "DD.MM.YYYY" (German writes "TT.MM.JJJJ").
+  "dateField.year": "YYYY",
+  "dateField.month": "MM",
+  "dateField.day": "DD",
+  "timeField.hour": "hh",
+  "timeField.minute": "mm",
+
+  "colorPicker.label": "Color",
+  "colorPicker.button": "Choose color",
+  "colorPicker.swatch": "{color}, {hex}",
+  "colorPicker.square": "Saturation and brightness",
+  "colorPicker.squareRoleDescription": "2D slider",
+  "colorPicker.squareValue": "Saturation {saturation}%, brightness {brightness}%",
+  "colorPicker.hue": "Hue",
+  "colorPicker.hueValue": "{hue} degrees, {color}",
+  // A color's name for a screen reader (describeColor): a hue, lighter or darker.
+  "color.light": "light {color}",
+  "color.dark": "dark {color}",
+  "color.black": "black",
+  "color.white": "white",
+  "color.gray": "gray",
+  "color.lightGray": "light gray",
+  "color.darkGray": "dark gray",
+  "color.red": "red",
+  "color.orange": "orange",
+  "color.yellow": "yellow",
+  "color.lime": "lime",
+  "color.green": "green",
+  "color.teal": "teal",
+  "color.cyan": "cyan",
+  "color.blue": "blue",
+  "color.purple": "purple",
+  "color.magenta": "magenta",
+  "color.pink": "pink",
+
+  "fileUpload.dropFile": "Drop a file here, or click to choose",
+  "fileUpload.dropFiles": "Drop files here, or click to choose",
+  "fileUpload.progressLabel": "Upload progress",
+  "fileUpload.loading": "Loading...",
+  "fileUpload.progress": "Loading {number}/{count} - {name}",
+  "fileUpload.completed": "Completed",
+  "fileUpload.canceled": "Canceled",
+  // The errorMessage of onFileError (FileCountExceeded, MaximumSizeReached), Fluent UI Blazor's wording.
+  "fileUpload.fileCountExceeded": "The maximum number of files has been exceeded.",
+  "fileUpload.fileSizeExceeded": "The maximum size allowed is reached",
+
+  "rating.label": "Rating",
+  "rating.stars.one": "{count} star",
+  "rating.stars.other": "{count} stars",
+  "rating.display": "Rated {value} out of {max}",
+  "rating.displayWithCount": "Rated {value} out of {max}, {ratings}",
+  "rating.ratings.one": "{count} rating",
+  "rating.ratings.other": "{count} ratings",
+
+  "sortableList.instructions": "Press Space to pick the item up, the arrow keys to move it, Space to put it down, Escape to put it back.",
+  "sortableList.grabbed": "{item}, picked up. Position {position} of {count}.",
+  "sortableList.moved": "{item}, position {position} of {count}.",
+  "sortableList.movedToList": "{item}, moved to {list}, position {position} of {count}.",
+  "sortableList.dropped": "{item}, put down at position {position} of {count}.",
+  "sortableList.canceled": "{item}, put back.",
+} as const satisfies Record<string, string>;
+
+/** The name of a library text: "close", "paginator.page", … */
+export type LibraryText = keyof typeof libraryTextDefaults;
+
+/** The name of a library text that depends on a count ("rating.stars"): its entries end in a plural category. */
+export type LibraryPluralText = LibraryText extends infer Name ? (Name extends `${infer Base}.other` ? Base : never) : never;
+
+/** A library text's key in the app's string tables: "tsazor.ui.paginator.page". */
+export function libraryTextKey(text: string): string {
+  return `tsazor.ui.${text}`;
+}
+
+/** A library text in the localizer's current culture — the table's entry, else the English text — formatted. */
+export function libraryText(localizer: StringLocalizer, text: LibraryText, params?: Record<string, unknown>): string {
+  return formatMessage(localizer.raw(libraryTextKey(text)) ?? libraryTextDefaults[text], params);
+}
+
+/**
+ * A library text for `count` things: the entry of the count's plural category in the current culture
+ * (`Intl.PluralRules`: "one", "few", "many", "other", …), else its "other" entry, else the English text.
+ * `{count}` is the count as the culture writes it.
+ */
+export function libraryPlural(localizer: StringLocalizer, text: LibraryPluralText, count: number, params?: Record<string, unknown>): string {
+  const culture = localizer.culture || "en";
+  const category = new Intl.PluralRules(culture).select(count);
+  const values = { count: new Intl.NumberFormat(culture).format(count), ...params };
+  const own = localizer.raw(libraryTextKey(`${text}.${category}`)) ?? localizer.raw(libraryTextKey(`${text}.other`));
+  return own !== undefined ? formatMessage(own, values) : englishPlural(text, count, values);
+}
+
+/** The English entry for `count` ("one" or "other"), formatted with `values` (`{count}` as given). */
+function englishPlural(text: LibraryPluralText, count: number, values: Record<string, unknown>): string {
+  const category = new Intl.PluralRules("en").select(count) === "one" ? "one" : "other";
+  return formatMessage(libraryTextDefaults[`${text}.${category}` as LibraryText], values);
+}
+
+/** What `libraryTexts()` returns: a library text by name (`t("close")`), and one for a count (`t.plural(…)`). */
+export interface LibraryTexts {
+  (text: LibraryText, params?: Record<string, unknown>): string;
+  plural(text: LibraryPluralText, count: number, params?: Record<string, unknown>): string;
+}
+
+/** The library texts in English, without a localizer: the defaults of the `*Labels` constants (`carouselLabels`, …). */
+export const englishLibraryTexts: LibraryTexts = Object.assign(
+  (text: LibraryText, params?: Record<string, unknown>) => formatMessage(libraryTextDefaults[text], params),
+  {
+    plural: (text: LibraryPluralText, count: number, params?: Record<string, unknown>) =>
+      englishPlural(text, count, { count: new Intl.NumberFormat("en").format(count), ...params }),
+  },
+);
+
+/**
+ * A component's library texts: `private readonly t = libraryTexts();` in a field initializer, then `@t("close")`.
+ * Resolving the StringLocalizer while the component is constructed makes it render again when the culture changes
+ * or a table arrives (the E8 auto-render).
+ */
+export function libraryTexts(): LibraryTexts {
+  const localizer = inject(StringLocalizer);
+  const texts = ((text: LibraryText, params?: Record<string, unknown>) => libraryText(localizer, text, params)) as LibraryTexts;
+  texts.plural = (text, count, params) => libraryPlural(localizer, text, count, params);
+  return texts;
+}

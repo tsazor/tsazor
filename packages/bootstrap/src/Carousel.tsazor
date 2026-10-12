@@ -6,12 +6,13 @@
     Each slide is a group named "2 of 5"; a slide a person turns to is announced, one that turns by itself isn't — the
     same parameters as the Fluent skin's Carousel. *@
 @typeparam TData
-@import { carouselLabels, carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "@tsazor/ui"
+@import { carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "@tsazor/ui"
 @import type { Attachment } from "@tsazor/runtime"
 @import { withClass } from "./attributes"
 @import { PauseFill, PlayFill } from "./core-icons"
+@import { libraryTexts, carouselLabelsFrom } from "@tsazor/ui"
 
-<section aria-roledescription="carousel" @attributes="@this.rootAttributes" @onpointerenter="this.enter" @onpointerleave="this.leave" @onfocusin="this.focusIn" @onfocusout="this.focusOut" @attach="this.swipe">
+<section aria-roledescription="@t("carousel.roleDescription")" @attributes="@this.rootAttributes" @onpointerenter="this.enter" @onpointerleave="this.leave" @onfocusin="this.focusIn" @onfocusout="this.focusOut" @attach="this.swipe">
     @if (this.autoCycle) {
         <button type="button" class="btn btn-sm btn-light tz-carousel__rotation" aria-label="@(this.paused ? this.text.play : this.text.pause)" @onclick="this.togglePause">
             <Icon value="@(this.paused ? PlayFill : PauseFill)" />
@@ -20,7 +21,7 @@
     <div class="carousel-inner" aria-live="@(this.rotating ? "off" : "polite")">
         @if (this.itemsSource !== undefined) {
             @for (let i = 0; i < this.itemsSource.length; i++) {
-                <div class="@(i === this.index ? "carousel-item active" : "carousel-item")" role="group" aria-roledescription="slide" aria-label="@this.text.slide(i, this.count)" hidden="@(i !== this.index)">
+                <div class="@(i === this.index ? "carousel-item active" : "carousel-item")" role="group" aria-roledescription="@t("carousel.slideRoleDescription")" aria-label="@this.text.slide(i, this.count)" hidden="@(i !== this.index)">
                     @if (this.itemTemplate !== undefined) {
                         @this.itemTemplate(this.itemsSource[i]!)
                     }
@@ -44,6 +45,8 @@
 </section>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The slide shown, from 0 (`SelectedIndex`). */
     @Parameter() selectedIndex: number = 0;
     /** Raised when the slide changes (`SelectedIndexChanged`). */
@@ -63,7 +66,7 @@
     /** A swipe turns the slide (`EnableSwipeGesture`). */
     @Parameter() enableSwipeGesture: boolean = true;
     /** The carousel's name for screen readers ("Today's bread"). */
-    @Parameter() ariaLabel: string = "Slides";
+    @Parameter() ariaLabel?: string;
     /** The buttons' and slides' texts (English by default). */
     @Parameter() labels?: Partial<CarouselLabels>;
     /** CarouselItem children. */
@@ -88,7 +91,7 @@
     private timer?: ReturnType<typeof setTimeout>;
 
     private get text(): CarouselLabels {
-        return { ...carouselLabels, ...this.labels };
+        return { ...carouselLabelsFrom(this.t), ...this.labels };
     }
 
     private get count(): number {
@@ -102,7 +105,7 @@
     }
 
     private get rootAttributes(): Record<string, unknown> {
-        return withClass("carousel slide tz-carousel", { "aria-label": this.ariaLabel, ...this.additionalAttributes });
+        return withClass("carousel slide tz-carousel", { "aria-label": this.ariaLabel ?? this.t("carousel.label"), ...this.additionalAttributes });
     }
 
     protected override onParametersSet(): void {

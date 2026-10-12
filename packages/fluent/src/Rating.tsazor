@@ -5,9 +5,10 @@
     (`hoveredValueChanged`). `fullIcon` and `emptyIcon` draw the stars, `size` and `color` (brand, marigold, neutral;
     Fluent UI's) style them. `readOnly` shows the value only (or take a RatingDisplay). *@
 @import type { IconValue } from "@tsazor/ui"
-@import { ratingClickValue, ratingKeyTarget, ratingLabels, uniqueId, type RatingLabels } from "@tsazor/ui"
+@import { ratingClickValue, ratingKeyTarget, uniqueId, type RatingLabels } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Star20Filled, Star20Regular } from "./core-icons"
+@import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
 
 @inherits InputBase<number>
 
@@ -22,6 +23,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The number of stars (MudBlazor's `MaxValue`). */
     @Parameter() max: number = 5;
     /** The icon of a star up to the value (MudBlazor's `FullIcon`). */
@@ -37,7 +40,7 @@
     /** Shows the value without letting it change. */
     @Parameter() readOnly: boolean = false;
     /** The group's name for screen readers. */
-    @Parameter() ariaLabel: string = "Rating";
+    @Parameter() ariaLabel?: string;
     /** The stars' names ("3 stars"; English by default). */
     @Parameter() labels?: Partial<RatingLabels>;
     /** Raised with the star the pointer is over, and undefined when it leaves (MudBlazor's `HoveredValueChanged`). */
@@ -53,7 +56,7 @@
     }
 
     private itemLabel(item: number): string {
-        return (this.labels?.item ?? ratingLabels.item)(item, this.max);
+        return (this.labels?.item ?? ratingLabelsFrom(this.t).item)(item, this.max);
     }
 
     /** A star drawn full: up to the previewed value while the pointer is over the stars, else up to the value. */
@@ -74,7 +77,7 @@
         if (this.disabled) cls += " fui-rating--disabled";
         return withAttributes({
             class: cls,
-            "aria-label": this.ariaLabel,
+            "aria-label": this.ariaLabel ?? this.t("rating.label"),
             "aria-readonly": this.readOnly ? "true" : null,
             "aria-disabled": this.disabled ? "true" : null,
         }, this.additionalAttributes);

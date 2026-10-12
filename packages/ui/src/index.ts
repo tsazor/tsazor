@@ -3,16 +3,18 @@
 
 export type { Appearance, Intent, Orientation, Placement, Size } from "./vocabulary.js";
 export { uniqueId } from "./ids.js";
+export { englishLibraryTexts, libraryPlural, libraryText, libraryTextDefaults, libraryTextKey, libraryTexts, type LibraryPluralText, type LibraryText, type LibraryTexts } from "./library-texts.js";
 export { builtInIcons, icon, iconSize, type IconValue } from "./icons.js";
 export { ChipSetModel, nextChipSelection, type ChipSelectionMode } from "./chips.js";
 export { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, type SplitterResizeEventArgs } from "./splitter.js";
 export { sliderFraction, sliderTicks } from "./slider.js";
 export { highlightFragments, highlightTerms, type HighlightFragment, type HighlightOptions } from "./highlight.js";
-export { formatRatingCount, formatRatingValue, ratingClickValue, ratingFill, ratingKeyTarget, ratingLabels, type RatingLabels } from "./rating.js";
+export { formatRatingCount, formatRatingValue, ratingClickValue, ratingFill, ratingKeyTarget, ratingLabels, ratingLabelsFrom, type RatingLabels } from "./rating.js";
 export { ariaKeyShortcuts, hotkeyApplies, isApplePlatform, isTypingTarget, matchesHotkey, parseHotkey, type Hotkey } from "./hotkeys.js";
 export {
   closestColor,
   colorPickerLabels,
+  colorPickerLabelsFrom,
   describeColor,
   hexToHsv,
   hexToRgb,
@@ -31,7 +33,7 @@ export {
   type WheelLayout,
 } from "./color.js";
 export { swatchPalette, wheelPalette, wheelRowSizes } from "./color-palettes.js";
-export { carouselLabels, carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "./carousel.js";
+export { carouselLabels, carouselLabelsFrom, carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "./carousel.js";
 export { maskInput, PatternMask, toMask, type PatternMaskOptions } from "./mask.js";
 export { overflowFit } from "./overflow.js";
 export {
@@ -55,6 +57,7 @@ export {
   addYears,
   calendarKeyTarget,
   calendarLabels,
+  calendarLabelsFrom,
   calendarWeeks,
   calendarYears,
   clampDate,
@@ -93,6 +96,7 @@ export {
 export {
   FileUploadEventArgs,
   fileUploadLabels,
+  fileUploadLabelsFrom,
   formatFileSize,
   runFileUpload,
   uploadFile,
@@ -108,7 +112,7 @@ export {
   type UploadFileOptions,
   type UploadResponse,
 } from "./file-upload.js";
-export { moveItem, sortableInsertIndex, sortableList, SortableListEventArgs, sortableListLabels, type SortableListHandle, type SortableListLabels } from "./sortable.js";
+export { moveItem, sortableInsertIndex, sortableList, SortableListEventArgs, sortableListLabels, sortableListLabelsFrom, type SortableListHandle, type SortableListLabels } from "./sortable.js";
 export { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepChangeEventArgs, wizardStepStatus, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";

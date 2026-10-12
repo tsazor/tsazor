@@ -4,12 +4,13 @@
     offers the rows per page (MudBlazor's TablePager); a choice goes back to the first page. *@
 @import { PaginationState, type Size } from "@tsazor/ui"
 @import { sizeSuffix } from "./vocabulary"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (state.totalItemCount !== undefined) {
-    <nav class="d-flex flex-wrap align-items-center gap-3 tz-paginator" aria-label="@ariaLabel">
+    <nav class="d-flex flex-wrap align-items-center gap-3 tz-paginator" aria-label="@(ariaLabel ?? t("paginator.label"))">
         @if (pageSizeOptions !== undefined && pageSizeOptions.length > 0) {
             <label class="d-inline-flex align-items-center gap-2 text-body-secondary tz-paginator-size">
-                <span>@pageSizeLabel</span>
+                <span>@(pageSizeLabel ?? t("paginator.pageSize"))</span>
                 <select class="@selectClass" value="@String(state.itemsPerPage)" @onchange="changePageSize">
                     @foreach (const option of pageSizeOptions) {
                         <option value="@String(option)">@option</option>
@@ -18,23 +19,25 @@
             </label>
         }
         <span class="text-body-secondary tz-paginator-count">
-            @if (summaryContent) { @summaryContent } else { <text>@state.totalItemCount items</text> }
+            @if (summaryContent) { @summaryContent } else { <text>@t.plural("paginator.items", state.totalItemCount)</text> }
         </span>
         <ul class="@listClass">
-            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="First page" disabled="@(!canGoBack)" @onclick="() => go(0)">«</button></li>
-            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="Previous page" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)">‹</button></li>
-            <li class="page-item active" aria-current="page"><span class="page-link tz-paginator-page">Page @(state.currentPageIndex + 1) of @(lastPage + 1)</span></li>
-            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="Next page" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)">›</button></li>
-            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="Last page" disabled="@(!canGoForward)" @onclick="() => go(lastPage)">»</button></li>
+            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="@t("pagination.first")" disabled="@(!canGoBack)" @onclick="() => go(0)">«</button></li>
+            <li class="@itemClass(!canGoBack)"><button type="button" class="page-link" aria-label="@t("pagination.previous")" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)">‹</button></li>
+            <li class="page-item active" aria-current="page"><span class="page-link tz-paginator-page">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span></li>
+            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="@t("pagination.next")" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)">›</button></li>
+            <li class="@itemClass(!canGoForward)"><button type="button" class="page-link" aria-label="@t("pagination.last")" disabled="@(!canGoForward)" @onclick="() => go(lastPage)">»</button></li>
         </ul>
     </nav>
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The paging state, shared with the grid. */
     @Parameter() state!: PaginationState;
     /** Names the navigation for screen readers. */
-    @Parameter() ariaLabel: string = "Pages";
+    @Parameter() ariaLabel?: string;
     /** Replaces the row count ("120 items"). */
     @Parameter() summaryContent?: RenderFragment;
     /** small, medium (default) or large. */
@@ -42,7 +45,7 @@
     /** The rows per page to choose from (10, 25, 50, 100); without them the page size stays the state's. */
     @Parameter() pageSizeOptions?: number[];
     /** The page size choice's label (MudBlazor's RowsPerPageString). */
-    @Parameter() pageSizeLabel: string = "Rows per page";
+    @Parameter() pageSizeLabel?: string;
 
     private observed?: PaginationState;
     private stopObserving?: () => void;

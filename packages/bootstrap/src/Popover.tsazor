@@ -4,6 +4,7 @@
     button. It is positioned next to the button and flips when there is no room. *@
 @import { anchoredPosition, dismissable, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
+@import { libraryTexts } from "@tsazor/ui"
 
 <span class="d-inline-block">
     <button class="@toggleClass" type="button" aria-expanded="@expandedText" aria-controls="@panelControls" @ref="toggleButton" @onclick="toggle">@label</button>
@@ -12,7 +13,7 @@
             @if (title) {
                 <div class="popover-header d-flex align-items-center">
                     <span class="flex-grow-1" id="@titleId">@title</span>
-                    <button type="button" class="btn-close ms-2" aria-label="Close" @onclick="() => close(true)"></button>
+                    <button type="button" class="btn-close ms-2" aria-label="@t("close")" @onclick="() => close(true)"></button>
                 </div>
             }
             <div class="popover-body">@childContent</div>
@@ -21,6 +22,8 @@
 </span>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The button's label. */
     @Parameter() label: string = "";
     /** The popover's heading; it also names the dialog. */

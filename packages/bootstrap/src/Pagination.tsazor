@@ -4,17 +4,20 @@
 @import type { Size } from "@tsazor/ui"
 @import { sizeSuffix } from "./vocabulary"
 @import { withClass } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 <nav aria-label="@ariaLabel" @attributes="@withClass(null, additionalAttributes)">
     <ul class="@this.listClass">
-        <li class="@this.prevClass"><button type="button" class="page-link" aria-label="Previous page" disabled="@(page <= 1)" @onclick="goPrev">Previous</button></li>
+        <li class="@this.prevClass"><button type="button" class="page-link" aria-label="@t("pagination.previous")" disabled="@(page <= 1)" @onclick="goPrev">@t("pagination.previousText")</button></li>
         @for (let i = 1; i <= pageCount; i++) {
-            <li class="@this.itemClass(i)"><button type="button" class="page-link" aria-label="@(`Go to page ${i}`)" aria-current="@this.currentText(i)" @onclick="() => this.select(i)">@i</button></li>
+            <li class="@this.itemClass(i)"><button type="button" class="page-link" aria-label="@t("pagination.goTo", { page: i })" aria-current="@this.currentText(i)" @onclick="() => this.select(i)">@i</button></li>
         }
-        <li class="@this.nextClass"><button type="button" class="page-link" aria-label="Next page" disabled="@(page >= pageCount)" @onclick="goNext">Next</button></li>
+        <li class="@this.nextClass"><button type="button" class="page-link" aria-label="@t("pagination.next")" disabled="@(page >= pageCount)" @onclick="goNext">@t("pagination.nextText")</button></li>
     </ul>
 </nav>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The current page (1-based); parent-owned, changed via OnPageChanged. */
     @Parameter() page: number = 1;
     /** Total number of pages. */
@@ -22,7 +25,7 @@
     /** small, medium (default) or large. */
     @Parameter() size: Size = "medium";
     /** Names the navigation for screen readers. */
-    @Parameter() ariaLabel: string = "Pagination";
+    @Parameter() ariaLabel?: string;
     /** Fired when the user picks a different page, with the new page number (1-based). */
     @Parameter() onPageChanged?: EventCallback<number>;
     /** `@attributes` pass-through (class appends). */

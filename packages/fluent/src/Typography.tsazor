@@ -1,24 +1,34 @@
-@** Text on the Fluent UI 2 type ramp; variant picks both the element (h1 to h5, p for body, span
-    for caption) and the token type style, weight optionally sets semibold | bold. *@
+@** Text on the Fluent UI 2 type ramp; variant picks the token type style and, by default, the element (h1 to h5, p
+    for body, span for caption); `as` picks another element for the same style (MudText's HtmlTag, Fluent UI React's
+    `as`): a page's h1 in an h5's size. weight optionally sets semibold | bold. *@
 @import { withAttributes } from "./attributes"
 
-@if (this.variant === "h1") { <h1 @attributes="@this.textAttributes">@childContent</h1> }
-else if (this.variant === "h2") { <h2 @attributes="@this.textAttributes">@childContent</h2> }
-else if (this.variant === "h3") { <h3 @attributes="@this.textAttributes">@childContent</h3> }
-else if (this.variant === "h4") { <h4 @attributes="@this.textAttributes">@childContent</h4> }
-else if (this.variant === "h5") { <h5 @attributes="@this.textAttributes">@childContent</h5> }
-else if (this.variant === "caption") { <span @attributes="@this.textAttributes">@childContent</span> }
+@if (this.element === "h1") { <h1 @attributes="@this.textAttributes">@childContent</h1> }
+else if (this.element === "h2") { <h2 @attributes="@this.textAttributes">@childContent</h2> }
+else if (this.element === "h3") { <h3 @attributes="@this.textAttributes">@childContent</h3> }
+else if (this.element === "h4") { <h4 @attributes="@this.textAttributes">@childContent</h4> }
+else if (this.element === "h5") { <h5 @attributes="@this.textAttributes">@childContent</h5> }
+else if (this.element === "h6") { <h6 @attributes="@this.textAttributes">@childContent</h6> }
+else if (this.element === "span") { <span @attributes="@this.textAttributes">@childContent</span> }
+else if (this.element === "div") { <div @attributes="@this.textAttributes">@childContent</div> }
+else if (this.element === "label") { <label @attributes="@this.textAttributes">@childContent</label> }
 else { <p @attributes="@this.textAttributes">@childContent</p> }
 
 @code {
-    /** Semantic variant: h1 | h2 | h3 | h4 | h5 | body (default) | caption — also picks the element tag. */
+    /** Semantic variant: h1 | h2 | h3 | h4 | h5 | body (default) | caption — the style, and the element unless `as` says. */
     @Parameter() variant: "h1" | "h2" | "h3" | "h4" | "h5" | "body" | "caption" = "body";
+    /** The element when it isn't the variant's: h1 to h6, p, span, div or label. */
+    @Parameter() as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "span" | "div" | "label";
     /** Optional weight alias: semibold | bold. */
     @Parameter() weight?: "semibold" | "bold";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** The text content. */
     @Parameter() childContent?: RenderFragment;
+
+    private get element(): string {
+        return this.as ?? (this.variant === "body" ? "p" : this.variant === "caption" ? "span" : this.variant);
+    }
 
     private get textClass(): string {
         return `fui-typography fui-typography--${this.variant}`;

@@ -7,6 +7,7 @@
  */
 import type { Attachment } from "@tsazor/runtime";
 import type { Orientation } from "./vocabulary.js";
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
 
 /** Where an item went (Fluent UI Blazor's `FluentSortableListEventArgs`). */
 export class SortableListEventArgs {
@@ -34,14 +35,19 @@ export interface SortableListLabels {
 }
 
 /** The default texts. */
-export const sortableListLabels: SortableListLabels = {
-  instructions: "Press Space to pick the item up, the arrow keys to move it, Space to put it down, Escape to put it back.",
-  grabbed: (item, position, count) => `${item}, picked up. Position ${position} of ${count}.`,
-  moved: (item, position, count) => `${item}, position ${position} of ${count}.`,
-  movedToList: (item, list, position, count) => `${item}, moved to ${list}, position ${position} of ${count}.`,
-  dropped: (item, position, count) => `${item}, put down at position ${position} of ${count}.`,
-  canceled: (item) => `${item}, put back.`,
-};
+/** The list's texts from the library texts (`tsazor.ui.sortableList.*`): `{ ...sortableListLabelsFrom(t), ...labels }`. */
+export function sortableListLabelsFrom(t: LibraryTexts): SortableListLabels {
+  return {
+    instructions: t("sortableList.instructions"),
+    grabbed: (item, position, count) => t("sortableList.grabbed", { item, position, count }),
+    moved: (item, position, count) => t("sortableList.moved", { item, position, count }),
+    movedToList: (item, list, position, count) => t("sortableList.movedToList", { item, list, position, count }),
+    dropped: (item, position, count) => t("sortableList.dropped", { item, position, count }),
+    canceled: (item) => t("sortableList.canceled", { item }),
+  };
+}
+
+export const sortableListLabels: SortableListLabels = sortableListLabelsFrom(englishLibraryTexts);
 
 /** What a list tells its behavior, and what the behavior asks of it. */
 export interface SortableListHandle {

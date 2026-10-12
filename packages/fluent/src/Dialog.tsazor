@@ -7,6 +7,7 @@
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"
 @import { createLayer, DialogReference, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
     <div class="fui-dialog-overlay" @attach="trap" @attach:lock="lock">
@@ -14,7 +15,7 @@
             @if (this.shownTitle) {
                 <div class="fui-dialog__header">
                     <h2 class="fui-dialog__title" id="@this.labelledBy">@this.shownTitle</h2>
-                    <button type="button" class="fui-dialog__close" aria-label="Close" @onclick="this.requestClose"><Icon value="@Dismiss20Regular" /></button>
+                    <button type="button" class="fui-dialog__close" aria-label="@t("close")" @onclick="this.requestClose"><Icon value="@Dismiss20Regular" /></button>
                 </div>
             }
             <div class="fui-dialog__body">@childContent</div>
@@ -26,6 +27,8 @@
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Whether the dialog is visible; the parent flips this in response to onClosed. Unset in a component the DialogService shows. */
     @Parameter() isOpen?: boolean;
     /** The DialogService's dialog this one is the frame of (when isOpen is unset). */

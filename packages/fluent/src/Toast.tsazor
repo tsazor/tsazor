@@ -5,6 +5,7 @@
 @import { withAttributes } from "./attributes"
 @import { statusColor } from "./vocabulary"
 @import { Dismiss20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 <div @attributes="@this.toastAttributes">
     <div class="fui-toast__content">
@@ -16,11 +17,13 @@
         }
     </div>
     @if (this.dismissible) {
-        <button type="button" class="fui-toast__close" aria-label="Close" @onclick="this.close"><Icon value="@Dismiss20Regular" size="16" /></button>
+        <button type="button" class="fui-toast__close" aria-label="@t("close")" @onclick="this.close"><Icon value="@Dismiss20Regular" size="16" /></button>
     }
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The status: info (default), success, warning, danger or neutral. */
     @Parameter() intent: Intent = "info";
     /** Optional headline. */

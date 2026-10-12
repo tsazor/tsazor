@@ -5,6 +5,7 @@
 @import { withAttributes } from "./attributes"
 @import { statusColor } from "./vocabulary"
 @import { CheckmarkCircle20Filled, Dismiss20Regular, DismissCircle20Filled, Info20Filled, Warning20Filled } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @if (this.visible) {
 <div role="alert" @attributes="@this.alertAttributes">
@@ -13,7 +14,7 @@
     </span>
     <div class="fui-alert__body">@childContent</div>
     @if (this.dismissible) {
-    <button type="button" class="fui-alert__dismiss" aria-label="Close" @onclick="this.dismiss">
+    <button type="button" class="fui-alert__dismiss" aria-label="@t("close")" @onclick="this.dismiss">
         <Icon value="@Dismiss20Regular" size="16" />
     </button>
     }
@@ -21,6 +22,8 @@
 }
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The status: info (default), success, danger, warning or neutral. */
     @Parameter() intent: Intent = "info";
     /** Shows a dismiss button. */

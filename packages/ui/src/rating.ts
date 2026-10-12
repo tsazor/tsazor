@@ -3,6 +3,8 @@
  * value, halves too). Pure, so both skins draw the same behavior.
  */
 
+import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+
 /** How much of star `item` (1 to max) a value fills: 0, 1, or the fraction in between (3.5 fills half of the 4th). */
 export function ratingFill(item: number, value: number): number {
   return Math.min(1, Math.max(0, value - (item - 1)));
@@ -52,10 +54,21 @@ export interface RatingLabels {
   display: (value: string, max: number, count: string | undefined) => string;
 }
 
-export const ratingLabels: RatingLabels = {
-  item: (value) => (value === 1 ? "1 star" : `${value} stars`),
-  display: (value, max, count) => `Rated ${value} out of ${max}${count === undefined ? "" : `, ${count} ratings`}`,
-};
+/**
+ * The rating's texts from the library texts (`tsazor.ui.rating.*`, plural by the culture's rules):
+ * `{ ...ratingLabelsFrom(t), ...labels }`. The display's count is a whole number as the locale writes it.
+ */
+export function ratingLabelsFrom(t: LibraryTexts): RatingLabels {
+  return {
+    item: (value) => t.plural("rating.stars", value),
+    display: (value, max, count) =>
+      count === undefined
+        ? t("rating.display", { value, max })
+        : t("rating.displayWithCount", { value, max, ratings: t.plural("rating.ratings", Number(count.replace(/\D/g, "")), { count }) }),
+  };
+}
+
+export const ratingLabels: RatingLabels = ratingLabelsFrom(englishLibraryTexts);
 
 /** A rating value as the locale writes it, one decimal at most: "3.5", "3,5" (de-DE), "4". */
 export function formatRatingValue(value: number, locale?: string): string {

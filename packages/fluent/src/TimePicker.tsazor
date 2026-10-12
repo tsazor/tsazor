@@ -13,6 +13,7 @@
 } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Clock20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @inherits InputBase<string>
 
@@ -27,12 +28,12 @@
             <input @ref="element" id="@this.field.id(this.id)" type="text" role="combobox" autocomplete="off" aria-autocomplete="none"
                    aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId" aria-activedescendant="@this.activeId"
                    @attributes="@this.inputAttributes" value="@this.text" @onchange="this.handleChange" @onkeydown="this.keydown" />
-            <button type="button" class="fui-time-picker__button" tabindex="-1" aria-label="@this.buttonLabel" title="@this.buttonLabel"
+            <button type="button" class="fui-time-picker__button" tabindex="-1" aria-label="@(this.buttonLabel ?? t("timePicker.button"))" title="@(this.buttonLabel ?? t("timePicker.button"))"
                     aria-controls="@this.listId" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)"
                     @ref="button" @onmousedown:preventDefault @onclick="this.toggle"><Icon value="@Clock20Regular" /></button>
         </div>
         @if (this.open) {
-            <ul class="fui-time-picker__list" role="listbox" id="@this.listId" aria-label="@(this.label ?? this.ariaLabel ?? this.buttonLabel)" @ref="list" @attach="this.dismiss" @attach:position="this.position">
+            <ul class="fui-time-picker__list" role="listbox" id="@this.listId" aria-label="@(this.label ?? this.ariaLabel ?? this.buttonLabel ?? t("timePicker.button"))" @ref="list" @attach="this.dismiss" @attach:position="this.position">
                 @for (let i = 0; i < this.options.length; i++) {
                     <li class="@this.optionClass(i)" role="option" id="@this.optionId(i)" aria-selected="@(this.options[i] === this.selected ? "true" : "false")"
                         aria-disabled="@(this.optionDisabled[i] ? "true" : null)" @onmousedown:preventDefault @onclick="() => this.pickAt(i)">@this.optionText(this.options[i]!)</li>
@@ -49,6 +50,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The field's label (clicking it focuses the text field). */
     @Parameter() label?: string;
     /** A hint below the field, linked to it for screen readers. */
@@ -70,7 +73,7 @@
     /** 12 hours with AM and PM, or 24, instead of the locale's (MudBlazor's `AmPm`). */
     @Parameter() hourCycle?: HourCycle;
     /** The button's and the list's name. */
-    @Parameter() buttonLabel: string = "Choose time";
+    @Parameter() buttonLabel?: string;
     /** Disables the field and the button. */
     @Parameter() disabled: boolean = false;
     /** Shows the value without letting it change. */
@@ -164,7 +167,7 @@
         const cls = this.validity === "invalid" ? "fui-input fui-input--invalid" : this.validity === "valid" ? "fui-input fui-input--valid" : "fui-input";
         return withAttributes({
             class: cls,
-            placeholder: this.renderStyle === "native" ? undefined : (this.placeholder ?? timeFieldPlaceholder(this.locales, this.hourCycle)),
+            placeholder: this.renderStyle === "native" ? undefined : (this.placeholder ?? timeFieldPlaceholder(this.locales, this.hourCycle, this.t)),
             disabled: this.disabled ? true : undefined,
             readonly: this.readOnly ? true : undefined,
             required: this.required ? true : undefined,

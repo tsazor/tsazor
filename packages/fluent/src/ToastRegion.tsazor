@@ -7,6 +7,7 @@
 @import { withAttributes } from "./attributes"
 @import { buttonClasses, statusColor } from "./vocabulary"
 @import { Dismiss20Regular } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 @inject Toaster toaster
 
 <div @attributes="@this.regionAttributes">
@@ -25,12 +26,14 @@
             @if (toast.action) {
                 <button type="button" class="@actionClass" @onclick="() => toaster.act(toast.id)">@toast.action.label</button>
             }
-            <button type="button" class="fui-toast__close" aria-label="Close" @onclick="() => toaster.dismiss(toast.id)"><Icon value="@Dismiss20Regular" size="16" /></button>
+            <button type="button" class="fui-toast__close" aria-label="@t("close")" @onclick="() => toaster.dismiss(toast.id)"><Icon value="@Dismiss20Regular" size="16" /></button>
         </div>
     }
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The corner the toasts appear in. */
     @Parameter() position: "top-start" | "top-end" | "bottom-start" | "bottom-end" = "bottom-end";
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */

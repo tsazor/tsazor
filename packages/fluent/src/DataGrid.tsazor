@@ -10,6 +10,7 @@
 @import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
 @import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode, type IconValue } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
 
 <CascadingValue Value="model">
     @{ this.model.startCollectingColumns(); }
@@ -21,9 +22,9 @@
                 <thead class="@headClass">
                     <tr>
                         @if (selectionMode === "multiple") {
-                            <th scope="col" class="fui-datagrid__select"><input type="checkbox" class="fui-datagrid__check" aria-label="Select all rows" checked="@allSelected" @onchange="selectAll" /></th>
+                            <th scope="col" class="fui-datagrid__select"><input type="checkbox" class="fui-datagrid__check" aria-label="@t("dataGrid.selectAll")" checked="@allSelected" @onchange="selectAll" /></th>
                         } else if (selectionMode === "single") {
-                            <th scope="col" class="fui-datagrid__select"><span class="fui-visually-hidden">Selected</span></th>
+                            <th scope="col" class="fui-datagrid__select"><span class="fui-visually-hidden">@t("dataGrid.selected")</span></th>
                         }
                         @foreach (const column of this.model.columns) {
                             <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
@@ -44,7 +45,7 @@
                 <tbody>
                     @if (virtualize) {
                         @if (this.items !== undefined && this.items.length === 0) {
-                            <tr class="fui-table__empty"><td colspan="@this.columnCount">@if (emptyContent) { @emptyContent } else { <span>No entries</span> }</td></tr>
+                            <tr class="fui-table__empty"><td colspan="@this.columnCount">@if (emptyContent) { @emptyContent } else { <span>@t("noEntries")</span> }</td></tr>
                         }
                         <Virtualize Items="@virtualItems" ItemsProvider="@(this.itemsProvider !== undefined ? this.virtualProvider : undefined)" ItemSize="@itemSize" OverscanCount="@overscanCount" SpacerElement="tr" AnchorMode="@anchorMode" ItemComparer="@(itemComparer ?? Object.is)" InitialItemIndex="@initialItemIndex" @ref="virtualizer">
                             <ItemContent Context="row">
@@ -68,11 +69,11 @@
                         <tr class="fui-table__empty">
                             <td colspan="@this.columnCount">
                                 @if (this.model.loading) {
-                                    @if (loadingContent) { @loadingContent } else { <span>Loading…</span> }
+                                    @if (loadingContent) { @loadingContent } else { <span>@t("loading")</span> }
                                 } else if (emptyContent) {
                                     @emptyContent
                                 } else {
-                                    <span>No entries</span>
+                                    <span>@t("noEntries")</span>
                                 }
                             </td>
                         </tr>
@@ -98,6 +99,8 @@
 </CascadingValue>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The rows, sorted and paged by the grid. Set this or itemsProvider. */
     @Parameter() items?: TGridItem[];
     /** Loads the rows of a page on demand (server-side paging and sorting). Set this or items. */
@@ -108,9 +111,9 @@
     @Parameter() itemKey?: (item: TGridItem) => unknown;
     /** The columns: PropertyColumn and TemplateColumn. */
     @Parameter() childContent?: RenderFragment;
-    /** Shown when there are no rows (default "No entries"). */
+    /** Shown when there are no rows (default: the library text "noEntries", "No entries"). */
     @Parameter() emptyContent?: RenderFragment;
-    /** Shown while an itemsProvider loads and no rows are shown yet (default "Loading…"). */
+    /** Shown while an itemsProvider loads and no rows are shown yet (default: the library text "loading", "Loading…"). */
     @Parameter() loadingContent?: RenderFragment;
     /** none (default), single (radio buttons) or multiple (checkboxes, with "select all"). */
     @Parameter() selectionMode: SelectionMode = "none";
@@ -306,7 +309,7 @@
     private selectLabel(index: number): string {
         const pagination = this.pagination;
         const row = (pagination ? pagination.currentPageIndex * pagination.itemsPerPage : 0) + index + 1;
-        return `Select row ${row}`;
+        return this.t("dataGrid.selectRow", { row });
     }
 
     private get allSelected(): boolean {

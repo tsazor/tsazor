@@ -8,6 +8,7 @@
 @import { Dismiss12Regular } from "./core-icons"
 @import { withAttributes } from "./attributes"
 @import { fluentAppearance, fluentColor } from "./vocabulary"
+@import { libraryTexts } from "@tsazor/ui"
 
 <span data-chip @attributes="@this.chipAttributes">
     @if (href) {
@@ -24,13 +25,15 @@
         </span>
     }
     @if (this.closable) {
-        <button type="button" class="fui-chip__dismiss" aria-label="@(`Remove ${this.label}`)" disabled="@this.isDisabled" @onclick="close" @onkeydown="handleKeydown">
+        <button type="button" class="fui-chip__dismiss" aria-label="@t("remove", { name: this.label })" disabled="@this.isDisabled" @onclick="close" @onkeydown="handleKeydown">
             <Icon value="@Dismiss12Regular" />
         </button>
     }
 </span>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The chip's text (MudBlazor's `Text`); without it the value's. */
     @Parameter() text?: string;
     /** What the chip stands for in its set; the text by default. */

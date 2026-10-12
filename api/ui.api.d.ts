@@ -112,6 +112,9 @@ export interface CalendarLabels {
     readonly nextYears: string;
 }
 
+// calendarLabelsFrom
+export declare function calendarLabelsFrom(t: LibraryTexts): CalendarLabels;
+
 // CalendarSelectMode
 export type CalendarSelectMode = "single" | "multiple" | "range";
 
@@ -136,6 +139,9 @@ export interface CarouselLabels {
     pause: string;
     play: string;
 }
+
+// carouselLabelsFrom
+export declare function carouselLabelsFrom(t: LibraryTexts): CarouselLabels;
 
 // carouselRotates
 export declare function carouselRotates(state: {
@@ -193,6 +199,9 @@ export interface ColorPickerLabels {
     hue: string;
     hueValue: (hue: number, color: HexColor) => string;
 }
+
+// colorPickerLabelsFrom
+export declare function colorPickerLabelsFrom(t: LibraryTexts): ColorPickerLabels;
 
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
@@ -275,7 +284,7 @@ export declare class DataGridModel<T> {
 }
 
 // dateFieldPlaceholder
-export declare function dateFieldPlaceholder(locale: string): string;
+export declare function dateFieldPlaceholder(locale: string, t?: LibraryTexts): string;
 
 // DateLimits
 export interface DateLimits {
@@ -300,7 +309,7 @@ export declare function dayOfWeek(date: IsoDate): number;
 export declare function daysInMonth(year: number, month: number): number;
 
 // describeColor
-export declare function describeColor(text: string): string;
+export declare function describeColor(text: string, t?: LibraryTexts): string;
 
 // DialogOptions
 export interface DialogOptions<TComponent extends ComponentBase = ComponentBase> {
@@ -362,6 +371,9 @@ export type DismissReason = "escape" | "outside";
 
 // edgeEnabledOption
 export declare function edgeEnabledOption(step: 1 | -1, disabled: readonly boolean[]): number;
+
+// englishLibraryTexts
+export declare const englishLibraryTexts: LibraryTexts;
 
 // FieldState
 export declare class FieldState {
@@ -427,7 +439,12 @@ export interface FileUploadLabels {
     readonly progress: (number: number, count: number, name: string) => string;
     readonly completed: string;
     readonly canceled: string;
+    readonly fileCountExceeded?: string;
+    readonly fileSizeExceeded?: string;
 }
+
+// fileUploadLabelsFrom
+export declare function fileUploadLabelsFrom(t: LibraryTexts): FileUploadLabels;
 
 // FileUploadMode
 export type FileUploadMode = "buffer" | "stream";
@@ -666,6 +683,134 @@ export declare function isWizardStepClickable(index: number, current: number, se
 // isYearDisabled
 export declare function isYearDisabled(year: number, limits: DateLimits, checkAllDays?: boolean): boolean;
 
+// libraryPlural
+export declare function libraryPlural(localizer: StringLocalizer, text: LibraryPluralText, count: number, params?: Record<string, unknown>): string;
+
+// LibraryPluralText
+export type LibraryPluralText = LibraryText extends infer Name ? (Name extends `${infer Base}.other` ? Base : never) : never;
+
+// libraryText
+export declare function libraryText(localizer: StringLocalizer, text: LibraryText, params?: Record<string, unknown>): string;
+
+// LibraryText
+export type LibraryText = keyof typeof libraryTextDefaults;
+
+// libraryTextDefaults
+export declare const libraryTextDefaults: {
+    readonly close: "Close";
+    readonly remove: "Remove {name}";
+    readonly loading: "Loading…";
+    readonly noEntries: "No entries";
+    readonly "pagination.label": "Pagination";
+    readonly "pagination.first": "First page";
+    readonly "pagination.previous": "Previous page";
+    readonly "pagination.next": "Next page";
+    readonly "pagination.last": "Last page";
+    readonly "pagination.goTo": "Go to page {page}";
+    readonly "pagination.previousText": "Previous";
+    readonly "pagination.nextText": "Next";
+    readonly "paginator.label": "Pages";
+    readonly "paginator.page": "Page {page} of {pages}";
+    readonly "paginator.items.one": "{count} item";
+    readonly "paginator.items.other": "{count} items";
+    readonly "paginator.pageSize": "Rows per page";
+    readonly "dataGrid.selectAll": "Select all rows";
+    readonly "dataGrid.selected": "Selected";
+    readonly "dataGrid.selectRow": "Select row {row}";
+    readonly "sidebarNav.label": "Main navigation";
+    readonly "scrollToTop.label": "Back to top";
+    readonly "breadcrumb.label": "breadcrumb";
+    readonly "splitter.resize": "Resize";
+    readonly "overflow.more.one": "{count} more: {names}";
+    readonly "overflow.more.other": "{count} more: {names}";
+    readonly "wizard.label": "Steps";
+    readonly "wizard.previous": "Previous";
+    readonly "wizard.next": "Next";
+    readonly "wizard.done": "Done";
+    readonly "carousel.label": "Slides";
+    readonly "carousel.roleDescription": "carousel";
+    readonly "carousel.slideRoleDescription": "slide";
+    readonly "carousel.previous": "Previous slide";
+    readonly "carousel.next": "Next slide";
+    readonly "carousel.slide": "{position} of {count}";
+    readonly "carousel.bullet": "Slide {position}";
+    readonly "carousel.pause": "Stop the slides";
+    readonly "carousel.play": "Start the slides";
+    readonly "calendar.previousMonth": "Previous month";
+    readonly "calendar.nextMonth": "Next month";
+    readonly "calendar.previousYear": "Previous year";
+    readonly "calendar.nextYear": "Next year";
+    readonly "calendar.previousYears": "Previous years";
+    readonly "calendar.nextYears": "Next years";
+    readonly "datePicker.button": "Choose date";
+    readonly "timePicker.button": "Choose time";
+    readonly "dateField.year": "YYYY";
+    readonly "dateField.month": "MM";
+    readonly "dateField.day": "DD";
+    readonly "timeField.hour": "hh";
+    readonly "timeField.minute": "mm";
+    readonly "colorPicker.label": "Color";
+    readonly "colorPicker.button": "Choose color";
+    readonly "colorPicker.swatch": "{color}, {hex}";
+    readonly "colorPicker.square": "Saturation and brightness";
+    readonly "colorPicker.squareRoleDescription": "2D slider";
+    readonly "colorPicker.squareValue": "Saturation {saturation}%, brightness {brightness}%";
+    readonly "colorPicker.hue": "Hue";
+    readonly "colorPicker.hueValue": "{hue} degrees, {color}";
+    readonly "color.light": "light {color}";
+    readonly "color.dark": "dark {color}";
+    readonly "color.black": "black";
+    readonly "color.white": "white";
+    readonly "color.gray": "gray";
+    readonly "color.lightGray": "light gray";
+    readonly "color.darkGray": "dark gray";
+    readonly "color.red": "red";
+    readonly "color.orange": "orange";
+    readonly "color.yellow": "yellow";
+    readonly "color.lime": "lime";
+    readonly "color.green": "green";
+    readonly "color.teal": "teal";
+    readonly "color.cyan": "cyan";
+    readonly "color.blue": "blue";
+    readonly "color.purple": "purple";
+    readonly "color.magenta": "magenta";
+    readonly "color.pink": "pink";
+    readonly "fileUpload.dropFile": "Drop a file here, or click to choose";
+    readonly "fileUpload.dropFiles": "Drop files here, or click to choose";
+    readonly "fileUpload.progressLabel": "Upload progress";
+    readonly "fileUpload.loading": "Loading...";
+    readonly "fileUpload.progress": "Loading {number}/{count} - {name}";
+    readonly "fileUpload.completed": "Completed";
+    readonly "fileUpload.canceled": "Canceled";
+    readonly "fileUpload.fileCountExceeded": "The maximum number of files has been exceeded.";
+    readonly "fileUpload.fileSizeExceeded": "The maximum size allowed is reached";
+    readonly "rating.label": "Rating";
+    readonly "rating.stars.one": "{count} star";
+    readonly "rating.stars.other": "{count} stars";
+    readonly "rating.display": "Rated {value} out of {max}";
+    readonly "rating.displayWithCount": "Rated {value} out of {max}, {ratings}";
+    readonly "rating.ratings.one": "{count} rating";
+    readonly "rating.ratings.other": "{count} ratings";
+    readonly "sortableList.instructions": "Press Space to pick the item up, the arrow keys to move it, Space to put it down, Escape to put it back.";
+    readonly "sortableList.grabbed": "{item}, picked up. Position {position} of {count}.";
+    readonly "sortableList.moved": "{item}, position {position} of {count}.";
+    readonly "sortableList.movedToList": "{item}, moved to {list}, position {position} of {count}.";
+    readonly "sortableList.dropped": "{item}, put down at position {position} of {count}.";
+    readonly "sortableList.canceled": "{item}, put back.";
+};
+
+// libraryTextKey
+export declare function libraryTextKey(text: string): string;
+
+// libraryTexts
+export declare function libraryTexts(): LibraryTexts;
+
+// LibraryTexts
+export interface LibraryTexts {
+    (text: LibraryText, params?: Record<string, unknown>): string;
+    plural(text: LibraryPluralText, count: number, params?: Record<string, unknown>): string;
+}
+
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;
 
@@ -845,6 +990,9 @@ export interface RatingLabels {
     display: (value: string, max: number, count: string | undefined) => string;
 }
 
+// ratingLabelsFrom
+export declare function ratingLabelsFrom(t: LibraryTexts): RatingLabels;
+
 // resizeSplitter
 export declare function resizeSplitter(sizes: readonly number[], bar: number, delta: number, mins: readonly number[], maxs: readonly number[]): number[];
 
@@ -953,6 +1101,9 @@ export interface SortableListLabels {
     readonly canceled: (item: string) => string;
 }
 
+// sortableListLabelsFrom
+export declare function sortableListLabelsFrom(t: LibraryTexts): SortableListLabels;
+
 // SortDirection
 export type SortDirection = "auto" | "ascending" | "descending";
 
@@ -997,7 +1148,7 @@ export declare function swatchKeyTarget(key: {
 export declare const swatchPalette: readonly string[];
 
 // timeFieldPlaceholder
-export declare function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle): string;
+export declare function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle, t?: LibraryTexts): string;
 
 // timeOptions
 export declare function timeOptions(startHour?: number, endHour?: number, increment?: number): IsoTime[];

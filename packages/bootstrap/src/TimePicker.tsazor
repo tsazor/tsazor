@@ -13,6 +13,7 @@
 } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { Clock } from "./core-icons"
+@import { libraryTexts } from "@tsazor/ui"
 
 @inherits InputBase<string>
 
@@ -28,7 +29,7 @@
                    aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId" aria-activedescendant="@this.activeId"
                    placeholder="@this.placeholderText" disabled="@this.disabled" readonly="@this.readOnly" required="@this.required" aria-label="@this.ariaLabel"
                    @attributes="@withClass(this.inputClass, this.inputAttributes)" value="@this.text" @onchange="this.handleChange" @onkeydown="this.keydown" />
-            <button type="button" class="btn btn-outline-secondary" tabindex="-1" aria-label="@this.buttonLabel" title="@this.buttonLabel"
+            <button type="button" class="btn btn-outline-secondary" tabindex="-1" aria-label="@(this.buttonLabel ?? t("timePicker.button"))" title="@(this.buttonLabel ?? t("timePicker.button"))"
                     aria-controls="@this.listId" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)"
                     @ref="button" @onmousedown:preventDefault @onclick="this.toggle"><Icon value="@Clock" /></button>
         </div>
@@ -50,6 +51,8 @@
 </div>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The field's label (clicking it focuses the text field). */
     @Parameter() label?: string;
     /** A hint below the field, linked to it for screen readers. */
@@ -71,7 +74,7 @@
     /** 12 hours with AM and PM, or 24, instead of the locale's (MudBlazor's `AmPm`). */
     @Parameter() hourCycle?: HourCycle;
     /** The button's and the list's name. */
-    @Parameter() buttonLabel: string = "Choose time";
+    @Parameter() buttonLabel?: string;
     /** Disables the field and the button. */
     @Parameter() disabled: boolean = false;
     /** Shows the value without letting it change. */
@@ -129,7 +132,7 @@
     }
 
     private get placeholderText(): string {
-        return this.placeholder ?? timeFieldPlaceholder(this.locales, this.hourCycle);
+        return this.placeholder ?? timeFieldPlaceholder(this.locales, this.hourCycle, this.t);
     }
 
     /** The value as the field writes it; text that is no time stays as typed. */

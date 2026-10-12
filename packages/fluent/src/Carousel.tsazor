@@ -5,12 +5,13 @@
     in it, nor with reduced motion asked for; a button stops and starts them (WCAG 2.2.2). Each slide is a group named
     "2 of 5"; a slide a person turns to is announced, one that turns by itself isn't. *@
 @typeparam TData
-@import { carouselLabels, carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "@tsazor/ui"
+@import { carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "@tsazor/ui"
 @import type { Attachment } from "@tsazor/runtime"
 @import { withAttributes } from "./attributes"
 @import { ChevronLeft20Regular, ChevronRight20Regular, Pause20Regular, Play20Regular } from "./core-icons"
+@import { libraryTexts, carouselLabelsFrom } from "@tsazor/ui"
 
-<section aria-roledescription="carousel" @attributes="@this.rootAttributes" @onpointerenter="this.enter" @onpointerleave="this.leave" @onfocusin="this.focusIn" @onfocusout="this.focusOut" @attach="this.swipe">
+<section aria-roledescription="@t("carousel.roleDescription")" @attributes="@this.rootAttributes" @onpointerenter="this.enter" @onpointerleave="this.leave" @onfocusin="this.focusIn" @onfocusout="this.focusOut" @attach="this.swipe">
     @if (this.autoCycle) {
         <button type="button" class="fui-carousel__rotation" aria-label="@(this.paused ? this.text.play : this.text.pause)" @onclick="this.togglePause">
             <Icon value="@(this.paused ? Play20Regular : Pause20Regular)" />
@@ -19,7 +20,7 @@
     <div class="fui-carousel__slides" aria-live="@(this.rotating ? "off" : "polite")">
         @if (this.itemsSource !== undefined) {
             @for (let i = 0; i < this.itemsSource.length; i++) {
-                <div class="fui-carousel__item" role="group" aria-roledescription="slide" aria-label="@this.text.slide(i, this.count)" hidden="@(i !== this.index)">
+                <div class="fui-carousel__item" role="group" aria-roledescription="@t("carousel.slideRoleDescription")" aria-label="@this.text.slide(i, this.count)" hidden="@(i !== this.index)">
                     @if (this.itemTemplate !== undefined) {
                         @this.itemTemplate(this.itemsSource[i]!)
                     }
@@ -44,6 +45,8 @@
 </section>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The slide shown, from 0 (`SelectedIndex`). */
     @Parameter() selectedIndex: number = 0;
     /** Raised when the slide changes (`SelectedIndexChanged`). */
@@ -63,7 +66,7 @@
     /** A swipe turns the slide (`EnableSwipeGesture`). */
     @Parameter() enableSwipeGesture: boolean = true;
     /** The carousel's name for screen readers ("Today's bread"). */
-    @Parameter() ariaLabel: string = "Slides";
+    @Parameter() ariaLabel?: string;
     /** The buttons' and slides' texts (English by default). */
     @Parameter() labels?: Partial<CarouselLabels>;
     /** CarouselItem children. */
@@ -88,7 +91,7 @@
     private timer?: ReturnType<typeof setTimeout>;
 
     private get text(): CarouselLabels {
-        return { ...carouselLabels, ...this.labels };
+        return { ...carouselLabelsFrom(this.t), ...this.labels };
     }
 
     private get count(): number {
@@ -102,7 +105,7 @@
     }
 
     private get rootAttributes(): Record<string, unknown> {
-        return withAttributes({ class: "fui-carousel", "aria-label": this.ariaLabel }, this.additionalAttributes);
+        return withAttributes({ class: "fui-carousel", "aria-label": this.ariaLabel ?? this.t("carousel.label") }, this.additionalAttributes);
     }
 
     protected override onParametersSet(): void {

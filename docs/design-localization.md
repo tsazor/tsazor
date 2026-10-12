@@ -241,6 +241,33 @@ on validation runs, a culture switch must re-validate: `EditContext` observes th
 same way components do (§3) and re-runs validation on notification. That keeps a form's messages
 in the new language without a full re-render.
 
+### 4a. The component library's own texts (B29, owner 2026-10-12)
+
+The skins' texts — a dialog's "Close", the paginator's "Page 2 of 7" and "Rows per page", the grid's
+"Loading…" and "No entries", a chip's "Remove Rye", the calendar's "Next month", the screen-reader
+announcements of a sortable list — follow the same pattern as the validation messages: each has a
+reserved key `tsazor.ui.<name>`, looked up in the app's `StringLocalizer`, with the English text as
+the fallback. MudBlazor (`MudLocalizer`) and Fluent UI Blazor (`IFluentLocalizer`) localize theirs
+the same way: one service, every instance follows it.
+
+- **The catalog** is `libraryTextDefaults` in `@tsazor/ui` (typed: `LibraryText` is its key union),
+  English, with named placeholders (`"paginator.page": "Page {page} of {pages}"`). An app localizes a
+  text with one table entry: `"tsazor.ui.paginator.page": "Seite {page} von {pages}"`.
+- **Counts** go by the culture's plural rules (`Intl.PluralRules`): a counted text has one entry per
+  category — `tsazor.ui.paginator.items.one`, `….other`, and `….few`, `….many` where the language
+  has them (Russian, Arabic, …); a missing category falls back to `.other`. `{count}` is written as
+  the culture writes numbers ("1.234" in German).
+- **Precedence:** a component's own parameter (`emptyText`, `pageSizeLabel`, `buttonLabel`, a
+  `labels` object, `ariaLabel`) wins over the table, the table over English. Those parameters are
+  optional now: unset means "the library text".
+- **Re-render:** a component takes its texts with `libraryTexts()` in a field initializer; that
+  resolves the `StringLocalizer` during construction, so a culture change or an arriving table
+  re-renders it (§3) — no new mechanism.
+- **Silence:** the lookup uses `StringLocalizer.raw`, which doesn't warn about a missing key — the
+  library texts are missing from most tables on purpose.
+- **Not covered:** the texts an app passes in (labels, titles), and names and formats that come from
+  `Intl` for a locale already (month and day names, numbers, dates).
+
 ---
 
 ## 5. Culture-aware formatting and `@bind:culture`

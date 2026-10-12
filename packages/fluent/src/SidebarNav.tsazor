@@ -6,8 +6,9 @@
     accessible name and its tooltip, and the headings hide. *@
 @import { uniqueId, type IconValue } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
+@import { libraryTexts } from "@tsazor/ui"
 
-<nav aria-label="@this.ariaLabel" @attributes="@this.navAttributes">
+<nav aria-label="@(this.ariaLabel ?? t("sidebarNav.label"))" @attributes="@this.navAttributes">
     @foreach (const section of this.allSections) {
         <div role="@(section.heading ? "group" : null)" aria-labelledby="@(section.heading ? section.id : null)">
             @if (section.heading) {
@@ -34,13 +35,15 @@
 </nav>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link).
      * `target` is the link's, as MudNavLink's Target: "_blank" opens it in a new tab, outside the app's routing. */
     @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] = [];
     /** Links under headings, after `links`: each section a group named by its heading. */
     @Parameter() sections: { heading?: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] }[] = [];
     /** Accessible nav name. */
-    @Parameter() ariaLabel: string = "Main navigation";
+    @Parameter() ariaLabel?: string;
     /** Renders the compact (icon-rail) variant. */
     @Parameter() compact: boolean = false;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */

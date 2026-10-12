@@ -8,10 +8,11 @@
     SortableList. *@
 @typeparam TItem
 @import {
-    moveItem, sortableList, SortableListEventArgs, sortableListLabels, uniqueId,
+    moveItem, sortableList, SortableListEventArgs, uniqueId,
     type Orientation, type SortableListHandle, type SortableListLabels,
 } from "@tsazor/ui"
 @import { withClass } from "./attributes"
+@import { libraryTexts, sortableListLabelsFrom } from "@tsazor/ui"
 
 <ul id="@this.listId" role="list" aria-label="@this.ariaLabel" @attributes="@withClass(this.listClass, this.additionalAttributes)" @attach="this.behavior">
     @for (let i = 0; i < this.items.length; i++) {
@@ -22,6 +23,8 @@
 <span class="visually-hidden" role="status">@this.announcement</span>
 
 @code {
+    private readonly t = libraryTexts();
+
     /** The items, two-way with @bind-items (`Items`). */
     @Parameter() items: TItem[] = [];
     /** Raised with the items in their new order. */
@@ -66,7 +69,7 @@
     }
 
     private get texts(): SortableListLabels {
-        return { ...sortableListLabels, ...this.labels };
+        return { ...sortableListLabelsFrom(this.t), ...this.labels };
     }
 
     private get listClass(): string {
