@@ -18,7 +18,7 @@ export interface ParameterMeta {
   /** Cascading parameters: match by name instead of type. */
   readonly cascadingName?: string;
   /** Cascading parameters: type token for by-type matching. */
-  readonly cascadingType?: abstract new (...args: never[]) => unknown;
+  readonly cascadingType?: CascadingTypeToken;
   /** Captures attributes the parent passed that have no matching parameter. */
   readonly captureUnmatchedValues?: boolean;
   /**
@@ -207,11 +207,17 @@ export function Parameter(options?: {
   };
 }
 
+/**
+ * The class a cascading parameter matches by (`instanceof`, Blazor's parameter type): any class — abstract, or one
+ * whose constructor is private, as SignalR's HubConnection, which a builder creates.
+ */
+export type CascadingTypeToken = { readonly prototype: object; readonly name: string };
+
 /** [CascadingParameter]-equivalent field decorator. */
 export function CascadingParameter(options?: {
   name?: string;
   /** Type token for by-type matching (TS has no property type metadata). */
-  type?: abstract new (...args: never[]) => unknown;
+  type?: CascadingTypeToken;
 }): (value: unknown, context: ParameterDecoratorContext) => void {
   return (_value, context) => {
     register(context, "@CascadingParameter()", {

@@ -109,6 +109,31 @@ describe("R12 — cascading updates reach subscribers directly", () => {
     await h.update();
     expect(h.text()).toBe("2");
   });
+
+  it("by the type of a class whose constructor is private (a builder creates it, as SignalR's HubConnection)", async () => {
+    class Hub {
+      private constructor(readonly url: string) {}
+      static create(url: string): Hub {
+        return new Hub(url);
+      }
+    }
+    class HubConsumer extends ComponentBase {
+      @CascadingParameter({ type: Hub }) hub?: Hub;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, this.hub?.url ?? "none");
+      }
+    }
+    const h = await host((b) => {
+      b.openComponent(0, defineComponent(CascadingValue));
+      b.addAttribute(2, "value", Hub.create("/signalRHub") as never);
+      b.addAttribute(3, "childContent", ((inner: RenderTreeBuilder) => {
+        inner.openComponent(0, defineComponent(HubConsumer));
+        inner.closeComponent();
+      }) as never);
+      b.closeComponent();
+    });
+    expect(h.text()).toBe("/signalRHub");
+  });
 });
 
 describe("parameters", () => {

@@ -1,6 +1,7 @@
 @** A DataGrid column with your own cell content; the row is the template's context:
     `<TemplateColumn Title="Actions" Context="order"><button @onclick="() => open(order)">Open</button></TemplateColumn>`.
-    It sorts when it has a `sortBy` (`GridSort.byAscending((o) => o.total)`). Place it inside a
+    It sorts when it has a `sortBy` (`GridSort.byAscending((o) => o.total)`), or, with an ItemsProvider, a
+    `sortKey` the server orders by (`sortKey="Brand"`). Place it inside a
     DataGrid: it takes the grid's row type. *@
 @typeparam TGridItem
 @import { DataGridModel, type ColumnAlign, type GridSort } from "@tsazor/ui"
@@ -13,11 +14,14 @@
     @Parameter() childContent?: (item: TGridItem) => RenderFragment;
     /** The header text. */
     @Parameter() title: string = "";
-    /** How the column sorts; it is sortable when set. */
+    /** How the column sorts in the browser; it is sortable when set. */
     @Parameter() sortBy?: GridSort<TGridItem>;
-    /** Turns sorting off although sortBy is set. */
+    /** Turns sorting off although sortBy or sortKey is set. */
     @Parameter() sortable?: boolean;
-    /** The property name an itemsProvider gets in getSortByProperties(). */
+    /**
+     * The property name an itemsProvider gets in getSortByProperties(); it makes the column sortable on its own, the
+     * server ordering by it (QuickGrid reads that name from SortBy's expression).
+     */
     @Parameter() sortKey?: string;
     /** The direction of the first click (and of the default sort). */
     @Parameter() initialSortDirection?: "ascending" | "descending";
@@ -34,13 +38,14 @@
         const grid = this.grid;
         if (grid === undefined) throw new Error("TemplateColumn must be placed inside a DataGrid.");
         const content = this.childContent;
-        const sortable = this.sortable ?? this.sortBy !== undefined;
+        const canSort = this.sortBy !== undefined || this.sortKey !== undefined;
+        const sortable = (this.sortable ?? canSort) && canSort;
         grid.addColumn({
             owner: this,
             title: this.title,
             headerContent: this.headerContent,
             cell: (item) => (content ? content(item) : () => undefined),
-            sortable: sortable && this.sortBy !== undefined,
+            sortable,
             sortBy: this.sortBy,
             sortKey: this.sortKey,
             initialSortDirection: this.initialSortDirection,

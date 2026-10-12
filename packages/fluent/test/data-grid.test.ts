@@ -134,6 +134,60 @@ describe("DataGrid", () => {
     expect(requests.at(-1)!.startIndex).toBe(2);
   });
 
+  it("offers the rows per page; a choice goes back to the first page and the provider loads the new size", async () => {
+    const requests: GridItemsProviderRequest<Order>[] = [];
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 2;
+    const provider = (request: GridItemsProviderRequest<Order>) => {
+      requests.push(request);
+      return { items: orders.slice(request.startIndex, request.startIndex + request.count!), totalItemCount: orders.length };
+    };
+    const { container, renderer } = await renderTree((b) => {
+      component(b, 0, DataGrid, { itemsProvider: provider, pagination, childContent: ((inner: RenderTreeBuilder) => component(inner, 0, PropertyColumn, { property: customer })) as RenderFragment });
+      component(b, 10, Paginator, { state: pagination, pageSizeOptions: [2, 4], pageSizeLabel: "Rows per page:" });
+    });
+    await settle(renderer);
+    await pagination.setCurrentPageIndexAsync(1);
+    await settle(renderer);
+    expect(texts(container, "tbody td")).toEqual(["Lena", "Ali"]);
+
+    const select = container.querySelector("select")!;
+    expect(select.closest("label")!.textContent).toContain("Rows per page:");
+    expect([...select.options].map((option) => option.value)).toEqual(["2", "4"]);
+    expect(select.value).toBe("2");
+    select.value = "4";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(renderer);
+    expect(texts(container, "tbody td")).toEqual(["Marta", "Jonas", "Lena", "Ali"]);
+    expect(pagination.currentPageIndex).toBe(0);
+    expect([requests.at(-1)!.startIndex, requests.at(-1)!.count]).toEqual([0, 4]);
+    await expect(pagination.setItemsPerPageAsync(0)).rejects.toThrow(RangeError);
+  });
+
+  it("sorts a TemplateColumn by its sortKey alone through the ItemsProvider (the server orders by the name)", async () => {
+    const requests: GridItemsProviderRequest<Order>[] = [];
+    const provider = (request: GridItemsProviderRequest<Order>) => {
+      requests.push(request);
+      return { items: orders, totalItemCount: orders.length };
+    };
+    const { container, renderer } = await renderTree(
+      grid({ itemsProvider: provider }, (b) => {
+        component(b, 0, TemplateColumn, {
+          title: "Customer",
+          sortKey: "Customer",
+          childContent: ((order: Order) => (inner: RenderTreeBuilder) => inner.addContent(0, order.customer)) as never,
+        });
+      }),
+    );
+    await settle(renderer);
+    const sortButton = container.querySelector<HTMLButtonElement>("thead th button");
+    expect(sortButton?.textContent).toContain("Customer");
+    sortButton!.click();
+    await settle(renderer);
+    expect(requests.at(-1)!.getSortByProperties()).toEqual([{ propertyName: "Customer", direction: "ascending" }]);
+    expect(container.querySelector("thead th")!.getAttribute("aria-sort")).toBe("ascending");
+  });
+
   it("selects rows with checkboxes and reports them through selectedItemsChanged", async () => {
     let selected: Order[] = [];
     const { container, renderer } = await renderTree(

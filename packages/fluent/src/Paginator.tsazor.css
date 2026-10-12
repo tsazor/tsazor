@@ -19,3 +19,14 @@
   color: var(--fui-foreground-1);
   font-weight: var(--fui-font-weight-semibold);
 }
+
+.fui-paginator__size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-spacing-s);
+  color: var(--fui-foreground-2);
+}
+
+.fui-paginator__size .fui-paginator__size-select {
+  width: auto;
+}

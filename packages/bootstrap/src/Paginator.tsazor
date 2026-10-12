@@ -1,11 +1,22 @@
 @** Pages a DataGrid through a shared PaginationState (QuickGrid's Paginator): the row count,
     "Page 2 of 7", and buttons for the first, previous, next and last page. Pass the same state to
-    the grid: `<DataGrid Pagination="pagination">` … `<Paginator State="pagination" />`. *@
+    the grid: `<DataGrid Pagination="pagination">` … `<Paginator State="pagination" />`. With `pageSizeOptions` it
+    offers the rows per page (MudBlazor's TablePager); a choice goes back to the first page. *@
 @import { PaginationState, type Size } from "@tsazor/ui"
 @import { sizeSuffix } from "./vocabulary"
 
 @if (state.totalItemCount !== undefined) {
     <nav class="d-flex flex-wrap align-items-center gap-3 tz-paginator" aria-label="@ariaLabel">
+        @if (pageSizeOptions !== undefined && pageSizeOptions.length > 0) {
+            <label class="d-inline-flex align-items-center gap-2 text-body-secondary tz-paginator-size">
+                <span>@pageSizeLabel</span>
+                <select class="@selectClass" value="@String(state.itemsPerPage)" @onchange="changePageSize">
+                    @foreach (const option of pageSizeOptions) {
+                        <option value="@String(option)">@option</option>
+                    }
+                </select>
+            </label>
+        }
         <span class="text-body-secondary tz-paginator-count">
             @if (summaryContent) { @summaryContent } else { <text>@state.totalItemCount items</text> }
         </span>
@@ -28,6 +39,10 @@
     @Parameter() summaryContent?: RenderFragment;
     /** small, medium (default) or large. */
     @Parameter() size: Size = "medium";
+    /** The rows per page to choose from (10, 25, 50, 100); without them the page size stays the state's. */
+    @Parameter() pageSizeOptions?: number[];
+    /** The page size choice's label (MudBlazor's RowsPerPageString). */
+    @Parameter() pageSizeLabel: string = "Rows per page";
 
     private observed?: PaginationState;
     private stopObserving?: () => void;
@@ -53,6 +68,15 @@
 
     private go(pageIndex: number): Promise<void> {
         return this.state.setCurrentPageIndexAsync(pageIndex);
+    }
+
+    private changePageSize(e: Event): Promise<void> {
+        return this.state.setItemsPerPageAsync(Number((e.target as HTMLSelectElement).value));
+    }
+
+    private get selectClass(): string {
+        const suffix = sizeSuffix(this.size);
+        return suffix ? `form-select w-auto form-select-${suffix}` : "form-select w-auto";
     }
 
     private get listClass(): string {

@@ -50,6 +50,8 @@
 
 // CascadingTypeParameter: re-exported from @tsazor/runtime
 
+// CascadingTypeToken: re-exported from @tsazor/runtime
+
 // CascadingValue: re-exported from @tsazor/runtime
 
 // CascadingValueSupplier: re-exported from @tsazor/runtime

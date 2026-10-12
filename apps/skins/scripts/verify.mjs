@@ -579,6 +579,13 @@ try {
     await open(page, base, "/data");
     const grid = page.getByRole("table", { name: "Orders" });
     say((await grid.locator("th[aria-sort=ascending]").textContent())?.includes("Customer") === true, "grid: sorted by its default column (aria-sort)");
+    // Align="end" lines up the header with its cells (the table's header rule aligns to the start).
+    const totalAlignment = await grid.evaluate((table) => {
+      const headers = [...table.querySelectorAll("thead th")];
+      const index = headers.findIndex((th) => th.textContent.includes("Total"));
+      return [headers[index], table.querySelector(`tbody tr td:nth-child(${index + 1})`)].map((cell) => getComputedStyle(cell).textAlign);
+    });
+    say(totalAlignment.every((align) => align === "end" || align === "right"), `grid: an end-aligned column's header and cells align to the end (${totalAlignment.join(", ")})`);
     await grid.getByRole("button", { name: /Total/ }).click();
     await page.waitForFunction(() => document.querySelector("table[aria-label=Orders] th[aria-sort]")?.textContent?.includes("Total"));
     await page.getByRole("button", { name: "Next page" }).click();

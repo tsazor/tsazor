@@ -114,3 +114,8 @@
 .fui-autocomplete__option[aria-selected="true"] {
   font-weight: 600;
 }
+
+/* In a form whose field fails a rule: the inputs' red border (controls.css). */
+.fui-autocomplete__field--invalid {
+  border-color: var(--fui-color-red-1);
+}

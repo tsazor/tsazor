@@ -54,6 +54,9 @@ export default class Autocomplete<TOption> extends ComponentBase {
     selectedOptionsChanged?: EventCallback<TOption[]>;
     selectedOption: TOption | null;
     selectedOptionChanged?: EventCallback<TOption | null>;
+    selectedOptionExpression?: string;
+    selectedOptionsExpression?: string;
+    editContext?: EditContext;
     maximumSelectedOptions?: number;
     maximumOptionsSearch: number;
     disabled: boolean;
@@ -852,6 +855,8 @@ export default class Paginator extends ComponentBase {
     state: PaginationState;
     ariaLabel: string;
     summaryContent?: RenderFragment;
+    pageSizeOptions?: number[];
+    pageSizeLabel: string;
 }
 
 // Placement: re-exported from @tsazor/ui

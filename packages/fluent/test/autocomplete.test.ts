@@ -4,8 +4,8 @@
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
-import { EventCallback } from "@tsazor/runtime";
-import { Autocomplete, OptionsSearchEventArgs } from "../dist/index.js";
+import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { Autocomplete, FluentForm, OptionsSearchEventArgs } from "../dist/index.js";
 
 type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
 async function settle(renderer: Renderer): Promise<void> {
@@ -117,5 +117,56 @@ describe("Autocomplete", () => {
     pending[0]!.resolve();
     await settle(renderer);
     expect(options()).toEqual(["Red"]);
+  });
+});
+
+describe("Autocomplete in a form", () => {
+  it("takes part as an input (MudAutocomplete's For): the message after a submit, a pick validates the field again", async () => {
+    const model = { brand: null as string | null };
+    let validSubmits = 0;
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, FluentForm);
+      b.addAttribute(1, "model", model);
+      b.addAttribute(2, "validators", { brand: (value: unknown) => (value ? null : "Brand is required!") });
+      b.addAttribute(3, "onValidSubmit", EventCallback.unbound(() => void validSubmits++));
+      b.addAttribute(4, "childContent", ((_context: unknown) => (inner: RenderTreeBuilder) => {
+        inner.openComponent(0, Autocomplete);
+        inner.addAttribute(1, "label", "Brand");
+        inner.addAttribute(2, "items", COLORS);
+        inner.addAttribute(3, "multiple", false);
+        inner.addAttribute(4, "selectedOption", model.brand);
+        inner.addAttribute(5, "selectedOptionChanged", EventCallback.unbound((value: string | null) => void (model.brand = value)));
+        inner.addAttribute(6, "selectedOptionExpression", "brand");
+        inner.closeComponent();
+      }) as never);
+      b.closeComponent();
+    });
+    await settle(renderer);
+    const input = container.querySelector<HTMLInputElement>("input[role=combobox]")!;
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
+    expect(container.textContent).not.toContain("Brand is required!");
+
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    const message = container.querySelector("[id$='-message']")!;
+    expect(message.textContent).toBe("Brand is required!");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBe(message.id);
+    expect(validSubmits).toBe(0);
+
+    input.value = "gre";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await settle(renderer);
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    await settle(renderer);
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    await settle(renderer);
+    expect(model.brand).toBe("Green");
+    expect(container.textContent).not.toContain("Brand is required!");
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
+
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle(renderer);
+    expect(validSubmits).toBe(1);
   });
 });

@@ -154,11 +154,17 @@ export declare class CascadingAuthenticationState extends ComponentBase implemen
 // CascadingParameter
 export declare function CascadingParameter(options?: {
     name?: string;
-    type?: abstract new (...args: never[]) => unknown;
+    type?: CascadingTypeToken;
 }): (value: unknown, context: ParameterDecoratorContext) => void;
 
 // CascadingTypeParameter
 export declare function CascadingTypeParameter(...names: string[]): (value: abstract new (...args: never[]) => unknown, context: ClassDecoratorContext) => void;
+
+// CascadingTypeToken
+export type CascadingTypeToken = {
+    readonly prototype: object;
+    readonly name: string;
+};
 
 // CascadingValue
 export declare class CascadingValue extends ComponentBase implements CascadingValueSupplier {
@@ -919,7 +925,7 @@ export interface ParameterMeta {
     readonly propertyName: string;
     readonly cascading?: boolean;
     readonly cascadingName?: string;
-    readonly cascadingType?: abstract new (...args: never[]) => unknown;
+    readonly cascadingType?: CascadingTypeToken;
     readonly captureUnmatchedValues?: boolean;
     readonly query?: QueryParameterMeta;
     readonly store?: symbol;

@@ -5,6 +5,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`: the `Autocomplete` takes part in a form as the inputs do (MudAutocomplete's
+  `For`): `@bind-selectedOption`/`@bind-selectedOptions` pass the field (`selectedOptionExpression`,
+  `selectedOptionsExpression`), a pick notifies the EditContext, and after a submit the field shows its message,
+  with `aria-invalid`. The `Paginator` offers the rows per page with `pageSizeOptions` and `pageSizeLabel`
+  (MudBlazor's TablePager); `@tsazor/ui`'s `PaginationState.setItemsPerPageAsync` goes back to the first page and
+  reloads the grid. A `TemplateColumn` with a `sortKey` and no `sortBy` sorts through an ItemsProvider (the server
+  orders by the key; QuickGrid reads that name from SortBy's expression, which TypeScript has none of).
+- `@tsazor/fluent`: a DataGrid column's `align="end"`/`"center"` reaches its header too (the table's header rule
+  kept it at the start).
+- `@tsazor/runtime`: `@CascadingParameter({ type })` takes any class (`CascadingTypeToken`), also one whose
+  constructor is private — SignalR's HubConnection comes from a builder and didn't compile as a type token.
+  `ParameterMeta.cascadingType` has that type too.
+
 - `@tsazor/runtime`: `requestImageFileAsync(file, format, maxWidth, maxHeight)`, Blazor's
   `IBrowserFile.RequestImageFileAsync`: the image scaled to fit (never enlarged) and written as `format` by the
   browser's canvas; name and last-modified time stay. Unlike Blazor's, an unreadable image rejects instead of never

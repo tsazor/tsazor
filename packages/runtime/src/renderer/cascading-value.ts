@@ -1,3 +1,5 @@
+import type { CascadingTypeToken } from "../components/parameter-metadata.js";
+
 /**
  * Duck-typed contract for components that supply cascading values to their
  * subtree (Blazor's ICascadingValueSupplier). Implemented by the
@@ -41,7 +43,7 @@ export function isCascadingValueSupplier(value: unknown): value is CascadingValu
 /** What a cascading parameter requests (from its @CascadingParameter metadata). */
 export interface CascadingParameterRequest {
   readonly cascadingName?: string;
-  readonly cascadingType?: abstract new (...args: never[]) => unknown;
+  readonly cascadingType?: CascadingTypeToken;
 }
 
 /**

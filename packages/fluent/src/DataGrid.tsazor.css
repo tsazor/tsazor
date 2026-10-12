@@ -1,10 +1,13 @@
 /* DataGrid — the Table surface (Table.tsazor.css) plus sorting, selection and alignment. */
 
-.fui-datagrid__cell--center {
+/* A column's alignment, its header included (the Table's header rule aligns to the start). */
+.fui-datagrid__cell--center,
+.fui-table__head th.fui-datagrid__cell--center {
   text-align: center;
 }
 
-.fui-datagrid__cell--end {
+.fui-datagrid__cell--end,
+.fui-table__head th.fui-datagrid__cell--end {
   text-align: end;
 }
 

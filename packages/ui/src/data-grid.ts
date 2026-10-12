@@ -79,7 +79,7 @@ export type PaginationChange = "page" | "total";
  * pass it to both.
  */
 export class PaginationState {
-  /** Rows per page. Set it before the first render. */
+  /** Rows per page. Set it before the first render; later, `setItemsPerPageAsync` reloads the grid. */
   itemsPerPage = 10;
   private pageIndex = 0;
   private total: number | undefined;
@@ -106,6 +106,21 @@ export class PaginationState {
     const next = Math.max(0, last === undefined ? pageIndex : Math.min(pageIndex, last));
     if (next === this.pageIndex) return;
     this.pageIndex = next;
+    this.notify("page");
+  }
+
+  /**
+   * Changes the rows per page and goes back to the first page; the grid loads it (MudBlazor's `SetRowsPerPage`,
+   * the Paginator's `pageSizeOptions`). Setting `itemsPerPage` alone, as QuickGrid's property, takes effect on the
+   * grid's next load.
+   */
+  async setItemsPerPageAsync(itemsPerPage: number): Promise<void> {
+    if (!Number.isInteger(itemsPerPage) || itemsPerPage < 1) {
+      throw new RangeError(`itemsPerPage must be a positive whole number, not ${itemsPerPage}.`);
+    }
+    if (itemsPerPage === this.itemsPerPage) return;
+    this.itemsPerPage = itemsPerPage;
+    this.pageIndex = 0;
     this.notify("page");
   }
 

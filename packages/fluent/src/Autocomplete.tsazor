@@ -3,9 +3,12 @@
     `args.items`; a newer search aborts the older one (`args.signal`) and its late answer is dropped. The
     arrow keys move through the options, Enter picks one, Escape closes the list. With `multiple` (the
     default) the picked options are removable chips, bound with `@bind-selectedOptions`; Backspace in the
-    empty input removes the last. Without it, one option, bound with `@bind-selectedOption`. *@
+    empty input removes the last. Without it, one option, bound with `@bind-selectedOption`. In a form, the
+    bound field takes part as an input's does (MudAutocomplete's For): a pick notifies the EditContext, and once
+    the form was submitted the field shows its validation message. *@
 @typeparam TOption
-@import { SearchRunner, anchoredPosition, comboboxKeyAction, dismissable, filterOptions, toggleOption, uniqueId } from "@tsazor/ui"
+@import { EditContext } from "@tsazor/runtime"
+@import { SearchRunner, anchoredPosition, comboboxKeyAction, dismissable, filterOptions, hasSubmitAttempt, toggleOption, uniqueId } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"
 @import { OptionsSearchEventArgs } from "./autocomplete-search"
@@ -14,7 +17,7 @@
     @if (label) {
         <label class="fui-input__label" for="@this.inputId">@label</label>
     }
-    <div class="fui-autocomplete__field" @ref="field">
+    <div class="@(this.message ? "fui-autocomplete__field fui-autocomplete__field--invalid" : "fui-autocomplete__field")" @ref="field">
         @if (multiple) {
             @foreach (const option of selectedOptions) {
                 <span class="fui-autocomplete__chip" @key="this.keyOf(option)">
@@ -26,8 +29,12 @@
         <input id="@this.inputId" class="fui-autocomplete__input" type="text" role="combobox" autocomplete="off"
                aria-autocomplete="list" aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId"
                aria-activedescendant="@this.activeId" aria-label="@ariaLabel" placeholder="@placeholder" disabled="@disabled"
+               aria-invalid="@(this.message ? "true" : null)" aria-describedby="@(this.message ? this.messageId : null)"
                value="@this.inputText" @oninput="this.input" @onkeydown="this.keydown" />
     </div>
+    @if (this.message) {
+        <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
+    }
     @if (this.open) {
         <ul class="fui-autocomplete__list" role="listbox" id="@this.listId" aria-label="@(label ?? ariaLabel)" aria-multiselectable="@(multiple ? "true" : null)" @attach="position" @attach:dismiss="dismiss">
             @for (let i = 0; i < this.options.length; i++) {
@@ -70,6 +77,12 @@
     @Parameter() selectedOption: TOption | null = null;
     /** Raised with the value when the user picks one. */
     @Parameter() selectedOptionChanged?: EventCallback<TOption | null>;
+    /** The bound field in a form (`@bind-selectedOption` passes it), as an input's ValueExpression. */
+    @Parameter() selectedOptionExpression?: string;
+    /** The bound field in a form (`@bind-selectedOptions` passes it). */
+    @Parameter() selectedOptionsExpression?: string;
+    /** The form's EditContext, from the nearest EditForm. */
+    @CascadingParameter({ type: EditContext }) editContext?: EditContext;
     /** At most this many values. */
     @Parameter() maximumSelectedOptions?: number;
     /** At most this many options in the list (Fluent UI Blazor's MaximumOptionsSearch). */
@@ -95,6 +108,30 @@
 
     protected override onInitialized(): void {
         this.disposeSignal.addEventListener("abort", () => this.runner.cancel());
+        // A validation or a submit elsewhere in the form changes what this field shows.
+        if (this.editContext) this.observe(this.editContext);
+    }
+
+    /** The bound field, for the form. */
+    private get fieldName(): string | undefined {
+        return this.multiple ? this.selectedOptionsExpression : this.selectedOptionExpression;
+    }
+
+    /** The field's first validation message, once the form was submitted (as the inputs). */
+    private get message(): string {
+        const field = this.fieldName;
+        if (!field || !this.editContext || !hasSubmitAttempt(this.editContext)) return "";
+        return this.editContext.getValidationMessages(field)[0] ?? "";
+    }
+
+    private get messageId(): string {
+        return `${this.inputId}-message`;
+    }
+
+    /** The form learns of a change after the parent has the value (InputBase's order). */
+    private notifyFieldChanged(value: unknown): void {
+        const field = this.fieldName;
+        if (field && this.editContext) this.editContext.notifyFieldChanged(field, value);
     }
 
     private get inputId(): string {
@@ -199,11 +236,13 @@
             this.typed = "";
             this.close();
             await this.selectedOptionsChanged?.invokeAsync(next);
+            this.notifyFieldChanged(next);
         } else {
             this.selectedOption = option;
             this.typed = null;
             this.close();
             await this.selectedOptionChanged?.invokeAsync(option);
+            this.notifyFieldChanged(option);
         }
     }
 
@@ -212,6 +251,7 @@
         const next = this.selectedOptions.filter((candidate) => this.keyOf(candidate) !== key);
         this.selectedOptions = next;
         await this.selectedOptionsChanged?.invokeAsync(next);
+        this.notifyFieldChanged(next);
     }
 
     private close(): void {
