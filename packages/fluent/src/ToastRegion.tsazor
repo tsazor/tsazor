@@ -1,11 +1,11 @@
 @** Shows the app's toasts (the `Toaster` service from @tsazor/ui) as Fluent UI 2 toasts in a corner of
     the page. Place it once, in the layout; any component then injects `Toaster` and calls
-    `show({ title, message, intent })`. Toasts close themselves after their timeout, pause while the
+    `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them (WCAG 2.2.1), and can be closed with their button. The
     region is a polite live region; `danger` toasts are announced as alerts. *@
 @import { Toaster, type Toast } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
-@import { statusColor } from "./vocabulary"
+@import { buttonClasses, statusColor } from "./vocabulary"
 @import { Dismiss20Regular } from "./core-icons"
 @inject Toaster toaster
 
@@ -22,6 +22,9 @@
                     <div class="fui-toast__message">@toast.message</div>
                 }
             </div>
+            @if (toast.action) {
+                <button type="button" class="@actionClass" @onclick="() => toaster.act(toast.id)">@toast.action.label</button>
+            }
             <button type="button" class="fui-toast__close" aria-label="Close" @onclick="() => toaster.dismiss(toast.id)"><Icon value="@Dismiss20Regular" size="16" /></button>
         </div>
     }
@@ -44,6 +47,9 @@
         if (horizontal === "start") classes.push("fui-toasts--start");
         return withAttributes({ class: classes.join(" "), "aria-live": "polite" }, this.additionalAttributes);
     }
+
+    /** A toast's action: a transparent brand button, as Fluent's toast actions are links in the brand color. */
+    private readonly actionClass = `${buttonClasses("primary", "transparent", "small")} fui-toast__action`;
 
     private toastClass(toast: Toast): string {
         return `fui-toast fui-toast--${statusColor(toast.intent)}`;

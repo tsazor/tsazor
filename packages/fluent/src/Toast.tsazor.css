@@ -54,6 +54,11 @@
   flex: 1;
 }
 
+.fui-toast__action {
+  flex: none;
+  align-self: center;
+}
+
 .fui-toast__close {
   flex: none;
   width: 24px;

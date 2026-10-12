@@ -10,6 +10,15 @@ export interface ToastOptions {
   intent?: Intent;
   /** Milliseconds until the toast closes itself; 0 keeps it until closed. Default 5000. */
   timeout?: number;
+  /** A button besides Close ("Chat?" opens the chat): the toast closes after its click. */
+  action?: ToastAction;
+}
+
+/** A toast's button besides Close (MudBlazor's snackbar `Action`): its label, and what a click does. */
+export interface ToastAction {
+  readonly label: string;
+  /** Runs on the click; the toast closes then. */
+  readonly onClick: () => void | Promise<void>;
 }
 
 /** One toast on screen. */
@@ -18,6 +27,7 @@ export interface Toast {
   readonly title?: string;
   readonly message?: string;
   readonly intent: Intent;
+  readonly action?: ToastAction;
 }
 
 interface Entry extends Toast {
@@ -51,7 +61,7 @@ export class Toaster {
   show(options: ToastOptions): number {
     const id = this.next++;
     const timeout = Math.max(0, options.timeout ?? 5000);
-    const entry: Entry = { id, title: options.title, message: options.message, intent: options.intent ?? "info", timeout, remaining: timeout, started: Date.now(), timer: undefined };
+    const entry: Entry = { id, title: options.title, message: options.message, intent: options.intent ?? "info", action: options.action, timeout, remaining: timeout, started: Date.now(), timer: undefined };
     this.entries = [...this.entries, entry];
     this.start(entry);
     this.changed();
@@ -65,6 +75,14 @@ export class Toaster {
     if (entry.timer) clearTimeout(entry.timer);
     this.entries = this.entries.filter((candidate) => candidate !== entry);
     this.changed();
+  }
+
+  /** Runs a toast's action and closes the toast (a skin's action button calls it). */
+  async act(id: number): Promise<void> {
+    const entry = this.entries.find((candidate) => candidate.id === id);
+    if (!entry?.action) return;
+    this.dismiss(id);
+    await entry.action.onClick();
   }
 
   /** Stops a toast's countdown (pointer over it, focus in it). */

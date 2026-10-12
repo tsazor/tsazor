@@ -964,6 +964,13 @@ export interface Toast {
     readonly title?: string;
     readonly message?: string;
     readonly intent: Intent;
+    readonly action?: ToastAction;
+}
+
+// ToastAction
+export interface ToastAction {
+    readonly label: string;
+    readonly onClick: () => void | Promise<void>;
 }
 
 // Toaster
@@ -974,6 +981,7 @@ export declare class Toaster {
     get toasts(): readonly Toast[];
     show(options: ToastOptions): number;
     dismiss(id: number): void;
+    act(id: number): Promise<void>;
     pause(id: number): void;
     resume(id: number): void;
     subscribe(listener: () => void): () => void;
@@ -987,6 +995,7 @@ export interface ToastOptions {
     message?: string;
     intent?: Intent;
     timeout?: number;
+    action?: ToastAction;
 }
 
 // today

@@ -390,6 +390,26 @@ describe("Drawer, ToastRegion, Tooltip", () => {
     expect(toaster.toasts.map((toast) => toast.message)).toEqual(["Offline"]);
   });
 
+  it("ToastRegion shows a toast's action: a click runs it and closes the toast", async () => {
+    const toaster = new Toaster();
+    const { container, renderer } = await renderTree(
+      (b) => {
+        b.openComponent(0, ToastRegion);
+        b.closeComponent();
+      },
+      { services: (services) => services.registerValue(Toaster, toaster) },
+    );
+    const opened: string[] = [];
+    toaster.show({ message: "Hi from John", intent: "primary", timeout: 0, action: { label: "Chat?", onClick: () => void opened.push("chat") } });
+    await settle(renderer);
+    const action = container.querySelector<HTMLButtonElement>(".toast .btn-link")!;
+    expect(action.textContent).toBe("Chat?");
+    action.click();
+    await settle(renderer);
+    expect(opened).toEqual(["chat"]);
+    expect(toaster.toasts).toHaveLength(0);
+  });
+
   it("addBootstrap registers one Toaster for the app (package.json tsazor.setup names it)", () => {
     const services = new ServiceCollection();
     addBootstrap(services);
@@ -548,6 +568,31 @@ describe("Dropdown + DropdownItem", () => {
     await settle(renderer);
     expect(selected).toBe(1);
     expect(container.querySelector(".dropdown-menu")).toBeNull();
+  });
+
+  it("opens from labelContent — the user's avatar, as MudBlazor's ActivatorContent — named by ariaLabel", async () => {
+    const { container, renderer } = await renderTree((b) => {
+      b.openComponent(0, Dropdown);
+      b.addAttribute(1, "labelContent", (inner: typeof b) => {
+        inner.openElement(0, "span");
+        inner.addAttribute(1, "class", "avatar");
+        inner.addContent(2, "M");
+        inner.closeElement();
+      });
+      b.addAttribute(2, "ariaLabel", "Account of Mukesh");
+      b.addAttribute(3, "childContent", (inner: typeof b) => {
+        inner.openComponent(0, DropdownItem);
+        inner.addAttribute(1, "childContent", text("Logout"));
+        inner.closeComponent();
+      });
+      b.closeComponent();
+    });
+    const toggle = container.querySelector<HTMLElement>(".dropdown-toggle")!;
+    expect(toggle.innerHTML).toContain('<span class="avatar">M</span>');
+    expect(toggle.getAttribute("aria-label")).toBe("Account of Mukesh");
+    toggle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector(".dropdown-menu")!.textContent).toContain("Logout");
   });
 
   it("follows the menu button pattern: arrow keys open and move, Escape closes and returns focus", async () => {

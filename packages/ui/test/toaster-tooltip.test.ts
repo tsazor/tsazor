@@ -32,6 +32,23 @@ describe("Toaster", () => {
     toaster.dismiss(id);
     expect(toaster.toasts).toHaveLength(0);
   });
+
+  it("runs a toast's action and closes it (MudBlazor's snackbar Action: \"Chat?\" opens the chat)", async () => {
+    const toaster = new Toaster();
+    const opened: string[] = [];
+    const id = toaster.show({ message: "Hi from John", action: { label: "Chat?", onClick: () => void opened.push("chat/john") } });
+    expect(toaster.toasts[0]!.action?.label).toBe("Chat?");
+
+    await toaster.act(id);
+
+    expect(opened).toEqual(["chat/john"]);
+    expect(toaster.toasts).toHaveLength(0);
+    // A toast without an action, or one that is gone, does nothing.
+    await toaster.act(toaster.show({ message: "Saved" }));
+    await toaster.act(id);
+    expect(opened).toHaveLength(1);
+    expect(toaster.toasts).toHaveLength(1);
+  });
 });
 
 describe("tooltip", () => {

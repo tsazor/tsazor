@@ -1,6 +1,6 @@
 @** Shows the app's toasts (the `Toaster` service from @tsazor/ui) as Bootstrap toasts in a corner of
     the page. Place it once, in the layout; any component then injects `Toaster` and calls
-    `show({ title, message, intent })`. Toasts close themselves after their timeout, pause while the
+    `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them, and can be closed with their button. The region is a
     polite live region; `danger` toasts are announced as alerts. *@
 @import { Toaster, type Toast } from "@tsazor/ui"
@@ -20,6 +20,10 @@
                     }
                     @toast.message
                 </div>
+                @if (toast.action) {
+                    @* In the toast's own text color, so it keeps its contrast on every background. *@
+                    <button type="button" class="btn btn-sm btn-link text-reset fw-semibold m-auto" @onclick="() => toaster.act(toast.id)">@toast.action.label</button>
+                }
                 <button type="button" class="btn-close me-2 m-auto" aria-label="Close" @onclick="() => toaster.dismiss(toast.id)"></button>
             </div>
         </div>

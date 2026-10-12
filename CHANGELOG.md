@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`: `Menu`/`Dropdown` takes `labelContent` — any content for its toggle, such
+  as the user's avatar (MudBlazor's `ActivatorContent`) — and `ariaLabel` to name it. `@tsazor/ui`: a toast can
+  carry an action (`show({ action: { label, onClick } })`, MudBlazor's snackbar `Action`); `Toaster.act(id)` runs it
+  and closes the toast, and both skins' `ToastRegion` render its button.
+
 - `@tsazor/dotnet`: `attachJwtAuth(http, provider, { refresh, refreshBefore })` renews the access token before a
   request when it expires within a minute (the refresh-token pattern Blazor apps build into a `DelegatingHandler`):
   once per token while the other requests wait; a refresh that fails logs out; a sign-in meanwhile wins.

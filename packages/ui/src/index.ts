@@ -123,7 +123,7 @@ export { toolbarFocus, type ToolbarFocusOptions } from "./behaviors/toolbar-focu
 export { anchoredPosition, computePosition, type AnchoredPositionOptions } from "./behaviors/anchored-position.js";
 export { FieldState, hasSubmitAttempt, markSubmitAttempt, type FieldValidity } from "./forms.js";
 export { tooltip, type TooltipOptions } from "./behaviors/tooltip.js";
-export { Toaster, type Toast, type ToastOptions } from "./toaster.js";
+export { Toaster, type Toast, type ToastAction, type ToastOptions } from "./toaster.js";
 export {
   hasChildren,
   initiallyExpanded,

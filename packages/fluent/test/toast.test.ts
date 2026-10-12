@@ -68,6 +68,23 @@ describe("ToastRegion", () => {
     expect(container.querySelectorAll(".fui-toast")).toHaveLength(1);
   });
 
+  it("shows a toast's action as a button: a click runs it and closes the toast", async () => {
+    const toaster = new Toaster();
+    const { container, renderer } = await renderRegion(toaster);
+    const opened: string[] = [];
+    toaster.show({ message: "Hi from John", timeout: 0, action: { label: "Chat?", onClick: () => void opened.push("chat") } });
+    toaster.show({ message: "Saved", timeout: 0 });
+    await settle(renderer);
+    const actions = container.querySelectorAll<HTMLButtonElement>(".fui-toast__action");
+    expect(actions).toHaveLength(1);
+    expect(actions[0]!.textContent).toBe("Chat?");
+    expect(actions[0]!.className).toContain("fui-button");
+    actions[0]!.click();
+    await settle(renderer);
+    expect(opened).toEqual(["chat"]);
+    expect(toaster.toasts.map((toast) => toast.message)).toEqual(["Saved"]);
+  });
+
   it("closes a toast after its timeout, but not while the pointer is over it", async () => {
     vi.useFakeTimers();
     const toaster = new Toaster();

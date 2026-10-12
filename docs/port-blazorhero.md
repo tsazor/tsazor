@@ -56,7 +56,7 @@ Each phase ends with its part of `scripts/verify.mjs` (the app in a browser agai
 | B7 | Runtime (parity) | `StringLocalizer` looked a key up in the current culture's table and then the default's. .NET walks the parent cultures first (`fr-FR` → `fr`), and BlazorHero's resources are neutral (`Login.fr.resx`) while its cultures are specific (`fr-FR`) | Fixed: the parent cultures come before the default, with a test |
 | B8 | Library | MudBlazor's app frame — `MudLayout` with `MudAppBar`, a persistent `MudDrawer` and `MudMainContent` — has no counterpart: `Drawer` is an overlay | To build (owner, 2026-10-12: both skins) |
 | B9 | Library | `MudTextField`'s adornments (the password field's eye button) have no counterpart: `TextInput` has no start or end slot | To build (owner, 2026-10-12: both skins) |
-| B10 | Library | The account menu opens from the user's avatar (`MudMenu` `ActivatorContent`); `Menu` takes a text label only | To build (owner, 2026-10-12: both skins) |
-| B11 | Library | A chat notification is a snackbar with an action ("Chat?" opens the chat); `Toaster`'s toasts have no action | To build (owner, 2026-10-12: both skins) |
+| B10 | Library | The account menu opens from the user's avatar (`MudMenu` `ActivatorContent`); `Menu` takes a text label only | Added: `Menu` (Bootstrap: `Dropdown`) takes `labelContent` and `ariaLabel` |
+| B11 | Library | A chat notification is a snackbar with an action ("Chat?" opens the chat); `Toaster`'s toasts have no action | Added: `show({ action: { label, onClick } })`, `Toaster.act(id)`; both regions render the button |
 | U2 | Upstream | Five Arabic resx files start their names with right-to-left marks (U+200F, `‏‏MainLayout.ar.resx`), so .NET never finds them and those components stay English in Arabic | `scripts/resx.mjs` reads them under their real names |
 | U3 | Upstream | Khmer's culture code is `km_KH`, with an underscore — not a BCP 47 tag | Open |

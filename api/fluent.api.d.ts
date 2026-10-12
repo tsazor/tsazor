@@ -432,6 +432,8 @@ export default class Drawer extends ComponentBase {
 // Dropdown
 export default class Menu extends ComponentBase {
     label: string;
+    labelContent?: RenderFragment;
+    ariaLabel?: string;
     intent: Intent;
     appearance: Appearance;
     size: Size;
@@ -686,6 +688,8 @@ export default class ListGroupItem extends ComponentBase {
 // Menu
 export default class Menu extends ComponentBase {
     label: string;
+    labelContent?: RenderFragment;
+    ariaLabel?: string;
     intent: Intent;
     appearance: Appearance;
     size: Size;

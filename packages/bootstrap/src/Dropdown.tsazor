@@ -8,8 +8,12 @@
 @import { buttonClasses } from "./vocabulary"
 
 <div class="dropdown">
-    <button class="@toggleClass" type="button" id="@toggleId" aria-haspopup="menu" aria-expanded="@expandedText" aria-controls="@menuControls" @ref="toggleButton" @onclick="toggle" @onkeydown="toggleKeydown">
-        @label
+    <button class="@toggleClass" type="button" id="@toggleId" aria-haspopup="menu" aria-expanded="@expandedText" aria-controls="@menuControls" aria-label="@ariaLabel" @ref="toggleButton" @onclick="toggle" @onkeydown="toggleKeydown">
+        @if (labelContent) {
+            @labelContent
+        } else {
+            @label
+        }
     </button>
     @if (open) {
         <ul class="dropdown-menu show" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
@@ -19,6 +23,10 @@
 @code {
     /** Toggle button label. */
     @Parameter() label: string = "";
+    /** The toggle's content instead of the text label — the user's avatar, say (MudBlazor's `ActivatorContent`). */
+    @Parameter() labelContent?: RenderFragment;
+    /** The toggle's accessible name, for a `labelContent` without text. */
+    @Parameter() ariaLabel?: string;
     /** The toggle's color role. */
     @Parameter() intent: Intent = "primary";
     /** The toggle's visual weight. */
