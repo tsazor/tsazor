@@ -2,18 +2,20 @@
     header (title and close button) and footer — the modal dialog pattern: focus moves into the
     dialog and stays there (Tab wraps), the page behind it doesn't scroll, and focus returns when it
     closes. It does not close itself: Escape, a backdrop click or the close button raise onClosed,
-    and the parent sets `isOpen` to false. Also available as `Modal`, Bootstrap's name for it. *@
-@import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+    and the parent sets `isOpen` to false. Also available as `Modal`, Bootstrap's name for it. In a component
+    the DialogService shows (MudBlazor's MudDialog), leave isOpen unset: the dialog is open until it closes, takes its
+    title, size and closing rules from `show`, and Escape, the backdrop and Close cancel it. *@
+@import { createLayer, DialogReference, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 
-@if (isOpen) {
+@if (shown) {
     <div class="modal-backdrop show"></div>
     <div role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass("modal d-block", additionalAttributes)" @attach="trap" @attach:lock="lock">
         <div class="@dialogClass">
             <div class="modal-content" @attach="dismiss">
-                @if (title) {
+                @if (shownTitle) {
                     <div class="modal-header">
-                        <h5 class="modal-title" id="@titleId">@title</h5>
+                        <h5 class="modal-title" id="@titleId">@shownTitle</h5>
                         <button type="button" class="btn-close" aria-label="Close" @onclick="requestClose"></button>
                     </div>
                 }
@@ -27,8 +29,10 @@
 }
 
 @code {
-    /** Whether the dialog is visible; the parent flips this in response to onClosed. */
-    @Parameter() isOpen: boolean = false;
+    /** Whether the dialog is visible; the parent flips this in response to onClosed. Unset in a component the DialogService shows. */
+    @Parameter() isOpen?: boolean;
+    /** The DialogService's dialog this one is the frame of (when isOpen is unset). */
+    @CascadingParameter({ type: DialogReference }) hosted?: DialogReference;
     /** Optional heading; it also names the dialog for screen readers. Omitting it hides the header row. */
     @Parameter() title?: string;
     /** The dialog's accessible name when it has no title. */
@@ -57,25 +61,42 @@
     private readonly lock = scrollLock;
     private readonly dismiss = dismissable({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
+    /** The service's dialog, when this is its frame: isOpen unset (a dialog inside one sets it). */
+    private get hostedBy(): DialogReference | undefined {
+        return this.isOpen === undefined ? this.hosted : undefined;
+    }
+
+    private get shown(): boolean {
+        return this.isOpen ?? this.hostedBy !== undefined;
+    }
+
+    private get shownTitle(): string | undefined {
+        return this.title ?? this.hostedBy?.options.title;
+    }
+
     private get labelledBy(): string | null {
-        return this.title ? this.titleId : null;
+        return this.shownTitle ? this.titleId : null;
     }
 
     private get dialogClass(): string {
         const parts = ["modal-dialog"];
-        if (this.size === "small") parts.push("modal-sm");
-        else if (this.size === "large") parts.push("modal-lg");
-        else if (this.size === "xlarge") parts.push("modal-xl");
+        const size = this.hostedBy?.options.size ?? this.size;
+        if (size === "small") parts.push("modal-sm");
+        else if (size === "large") parts.push("modal-lg");
+        else if (size === "xlarge") parts.push("modal-xl");
         if (this.centered) parts.push("modal-dialog-centered");
         return parts.join(" ");
     }
 
     private dismissed(reason: DismissReason): void {
         // The behavior's callback is outside the renderer: its errors go to the ErrorBoundary by hand.
-        if (reason === "escape" ? this.closeOnEscape : this.closeOnBackdrop) this.requestClose()?.catch((error) => this.dispatchExceptionAsync(error));
+        const options = this.hostedBy?.options;
+        const closes = reason === "escape" ? (options?.closeOnEscape ?? this.closeOnEscape) : (options?.closeOnBackdrop ?? this.closeOnBackdrop);
+        if (closes) this.requestClose()?.catch((error) => this.dispatchExceptionAsync(error));
     }
 
     private requestClose(): Promise<void> | undefined {
+        this.hostedBy?.cancel();
         return this.onClosed?.invokeAsync();
     }
 }

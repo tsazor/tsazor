@@ -41,7 +41,8 @@
       ],
       "services": "addBootstrap",
       "layout": [
-        "ToastRegion"
+        "ToastRegion",
+        "DialogProvider"
       ]
     }
   },

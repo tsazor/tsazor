@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Dialogs from code** (MudBlazor's `IDialogService`, Fluent UI Blazor's and Radzen's `DialogService`):
+  `@tsazor/ui`'s `DialogService.show(Component, { title, parameters, size, closeOnEscape, closeOnBackdrop })` returns
+  a `DialogReference` whose `result` the page awaits (`{ canceled, data }`); the dialog gets the reference as a
+  cascading value and calls `close(data)` or `cancel()`. Both skins add `DialogProvider` (place it once in the
+  layout; their `tsazor.setup` lists it, so the starter does) and a hosted mode of `Dialog`: without `isOpen` it is
+  the frame of the shown dialog — show's title, size and closing rules, and Escape, the backdrop and Close cancel.
+  `Dialog`'s `isOpen` is optional now (unset is closed, as before, outside a shown dialog). `addFluent` and
+  `addBootstrap` register the service.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`: `AppLayout`, the app's frame (MudBlazor's `MudLayout` with `MudAppBar`, a
   persistent `MudDrawer` and `MudMainContent`; Fluent UI Blazor's `FluentLayout`): a `header` bar, a `nav` column
   and the page as `<main>`. `@bind-navOpen` shows or hides the column; in a window narrower than 960px it starts

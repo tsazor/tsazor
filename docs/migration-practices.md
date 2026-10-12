@@ -138,6 +138,17 @@ render in the browser.
   missing component is a finding: the completeness plan ([design-library-completeness.md](design-library-completeness.md))
   closes the gaps before 1.0. Icons are the first wall (F17). Both skins have the same components and parameters
   (only Fluent's Indicator and Spacer are missing in Bootstrap), so the skin is a choice of looks, not of features.
+- **Dialogs opened from code stay dialogs opened from code.** MudBlazor's `DialogService.Show<T>(title, parameters,
+  options)` becomes `dialogs.show(T, { title, parameters, size })` (`@inject DialogService dialogs`, from
+  `@tsazor/ui`), and `await dialog.Result` becomes `await dialog.result` (`{ canceled, data }`). In the dialog,
+  `[CascadingParameter] MudDialogInstance` becomes `@CascadingParameter({ type: DialogReference }) dialog`, with
+  `close(data)` and `cancel()`; `<MudDialog>` becomes the skin's `<Dialog>` without `isOpen` (its `TitleContent`
+  is `show`'s title, `DialogActions` its `footer`). Put `<DialogProvider />` into the layout, as `MudDialogProvider`
+  (`npm create tsazor --ui` does). A dialog inside it that the code opens and closes keeps its `isOpen` (B6).
+- **The app frame** — `MudLayout`, `MudAppBar`, a persistent `MudDrawer`, `MudMainContent` — is one `AppLayout`
+  with `header`, `nav` and `@bind-navOpen` (B8). `MudTextField`'s adornments are `TextInput`'s `contentBefore` and
+  `contentAfter` (B9); `MudMenu`'s `ActivatorContent` is `Menu`'s `labelContent` (B10); a snackbar's `Action` is a
+  toast's `action` (B11).
 - **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then
   `new Icons.Regular.Size20.Save()` becomes `Icons.Regular.Size20.Save`: a shared value, not an instance per use.
   `<FluentIcon Value="…" Width="24px" />` becomes `<Icon Value="…" size="24" />`, and without a size the icon is

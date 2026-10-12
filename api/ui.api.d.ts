@@ -302,6 +302,49 @@ export declare function daysInMonth(year: number, month: number): number;
 // describeColor
 export declare function describeColor(text: string): string;
 
+// DialogOptions
+export interface DialogOptions<TComponent extends ComponentBase = ComponentBase> {
+    readonly title?: string;
+    readonly parameters?: DialogParameters<TComponent>;
+    readonly size?: "small" | "medium" | "large" | "xlarge";
+    readonly closeOnEscape?: boolean;
+    readonly closeOnBackdrop?: boolean;
+}
+
+// DialogParameters
+export type DialogParameters<TComponent extends ComponentBase> = ComponentBase extends TComponent ? Record<string, unknown> : Partial<Omit<TComponent, keyof ComponentBase>>;
+
+// DialogReference
+export declare class DialogReference<TData = unknown> {
+    readonly id: number;
+    readonly component: abstract new (...args: never[]) => ComponentBase;
+    readonly options: DialogOptions;
+    private readonly remove;
+    readonly result: Promise<DialogResult<TData>>;
+    private settle;
+    constructor(id: number, component: abstract new (...args: never[]) => ComponentBase, options: DialogOptions, remove: (dialog: DialogReference<TData>) => boolean);
+    close(data?: TData): void;
+    cancel(): void;
+}
+
+// DialogResult
+export interface DialogResult<TData = unknown> {
+    readonly canceled: boolean;
+    readonly data?: TData;
+}
+
+// DialogService
+export declare class DialogService {
+    private open;
+    private next;
+    private readonly listeners;
+    get dialogs(): readonly DialogReference<unknown>[];
+    show<TComponent extends ComponentBase>(component: abstract new (...args: never[]) => TComponent, options?: DialogOptions<TComponent>): DialogReference<unknown>;
+    subscribe(listener: () => void): () => void;
+    private removed;
+    private changed;
+}
+
 // dismissable
 export declare function dismissable(options: DismissableOptions): Attachment<HTMLElement>;
 

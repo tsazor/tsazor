@@ -116,7 +116,7 @@ describe("the library contract", () => {
       const library = libraryFromManifest(manifest, "^0.1.0");
       expect(library.warnings).toEqual([]);
       expect(library.setup?.services).toBe(skin === "bootstrap" ? "addBootstrap" : "addFluent");
-      expect(library.setup?.layout).toEqual(["ToastRegion"]);
+      expect(library.setup?.layout).toEqual(["ToastRegion", "DialogProvider"]);
     }
   });
 });

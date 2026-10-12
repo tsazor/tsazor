@@ -4,10 +4,11 @@
  * `addFluent` and named in its package.json `tsazor.setup`, so
  * `npm create tsazor` wires it: `createTsazorApp({ root, routes, services: addFluent })`.
  */
-import { Toaster } from "@tsazor/ui";
+import { DialogService, Toaster } from "@tsazor/ui";
 import type { ServiceCollection } from "@tsazor/runtime";
 
-/** Registers the `Toaster` (one per app, shown by a `<ToastRegion />`). */
+/** Registers the `Toaster` (shown by a `<ToastRegion />`) and the `DialogService` (shown by a `<DialogProvider />`), one each per app. */
 export function addFluent(services: ServiceCollection): void {
   services.registerType(Toaster, { singleton: true });
+  services.registerType(DialogService, { singleton: true });
 }

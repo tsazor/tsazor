@@ -406,7 +406,8 @@ export default class DatePicker extends InputBase<string> {
 
 // Dialog
 export default class Dialog extends ComponentBase {
-    isOpen: boolean;
+    isOpen?: boolean;
+    hosted?: DialogReference;
     title?: string;
     size: "small" | "medium" | "large" | "xlarge";
     ariaLabel?: string;
@@ -417,6 +418,10 @@ export default class Dialog extends ComponentBase {
     onClosed?: EventCallback;
     childContent?: RenderFragment;
     footer?: RenderFragment;
+}
+
+// DialogProvider
+export default class DialogProvider extends ComponentBase {
 }
 
 // Divider

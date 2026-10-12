@@ -43,7 +43,8 @@
       ],
       "services": "addFluent",
       "layout": [
-        "ToastRegion"
+        "ToastRegion",
+        "DialogProvider"
       ]
     }
   },
