@@ -68,6 +68,15 @@ describe("decodeJwt / principalFromJwt", () => {
     expect(principal.isAuthenticated).toBe(true);
     expect([...principal.roles]).toEqual([]);
   });
+
+  it("signs in a token without any name claim, as .NET does (Name null there, empty here)", async () => {
+    const principal = principalFromJwt(makeJwtClaims({ oid: "7f3c", scp: "orders.read" }));
+    expect(principal.isAuthenticated).toBe(true);
+    expect(principal.name).toBe("");
+    expect(principal.claims).toContainEqual({ type: "oid", value: "7f3c" });
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ oid: "7f3c" }));
+    expect((await provider.getAuthenticationStateAsync()).user.isAuthenticated).toBe(true);
+  });
 });
 
 // Helper: decodeJwt expects a token — feed the claims straight into the mapping.

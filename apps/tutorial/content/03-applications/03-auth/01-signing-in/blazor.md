@@ -26,3 +26,8 @@ header greets Marta.
 > `ClaimsPrincipal`. `Program.ts` registers one instance under two keys — the class for
 > `@inject` and the base class for the auth components — where you'd write
 > `AddScoped<AuthenticationStateProvider, BakeryAuth>()`.
+>
+> Against your own ASP.NET Core backend you don't write the provider: `@tsazor/dotnet` has
+> `CookieAuthenticationStateProvider` for a BFF's session cookie, and for a bearer token
+> `JwtAuthenticationStateProvider` with `attachJwtAuth`, your `DelegatingHandler`. The
+> [auth guide](https://github.com/HolgerTheHuck/Tsazor/blob/main/docs/auth.md) says which to pick.

@@ -29,4 +29,5 @@ as before.
 > `npx tsazor-dotnet generate https://localhost:5001/openapi/v1.json --out src/api`. The
 > client returns an `HttpResult` instead of throwing. Nullable reference types in the
 > schema become `| null`. Your `[Required]` and `[Range]` rules come along as
-> decorators in `models.ts`.
+> decorators in `models.ts`. Does your API wrap every answer in an envelope, such as
+> `{ data, errors }`? `--envelope data,errors` unwraps it, so you don't type each call by hand.

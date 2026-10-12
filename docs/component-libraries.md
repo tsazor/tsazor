@@ -36,7 +36,10 @@ packages above serve as the reference implementation.
 - **`tsazor.setup`:** what an app needs besides `@using`. `npm create tsazor --ui <package>` reads
   it and writes the setup into the new app:
   - **`styles`:** module specifiers that the app's `Program.ts` imports, either your own CSS
-    (through an export) or a peer's (`bootstrap/dist/css/bootstrap.min.css`).
+    (through an export) or a peer's (`bootstrap/dist/css/bootstrap.min.css`). With styles, the
+    starter leaves its template's body font out of `app.css`, so your styles set the document's
+    typeface: a zero-weight `:where(body) { font-family: … }`, which any rule of the app's own
+    still beats (`@tsazor/fluent` ships one; Bootstrap's reboot sets `body` itself).
   - **`services`:** the name of an exported function `(services: ServiceCollection) => void`. It
     registers what your components inject; the app calls it in `createTsazorApp({ services })`. It
     is the counterpart of Blazor's `builder.Services.AddMudServices()`.

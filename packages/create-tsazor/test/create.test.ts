@@ -159,6 +159,7 @@ describe("the files", () => {
     expect(read(dir, "src/Program.ts")).not.toContain("@acme");
     expect(read(dir, "src/_Imports.tsazor")).not.toMatch(/^@using /m);
     expect(read(dir, "src/Layout/MainLayout.tsazor").trimEnd().endsWith("</div>")).toBe(true);
+    expect(read(dir, "src/app.css")).toContain('font-family: "Helvetica Neue"');
   });
 
   it("writes a library's setup: @using, its styles before app.css and the components, its services, its layout components, its peers", () => {
@@ -175,6 +176,11 @@ describe("the files", () => {
     expect(read(dir, "src/Layout/MainLayout.tsazor")).toContain("</div>\n<ToastHost />\n<PopoverHost />\n");
     expect(JSON.parse(read(dir, "package.json")).dependencies).toEqual({ "@acme/ui": "^2.3.4", "@tsazor/runtime": "^0.1.0", "acme-css": "^4.0.0" });
     expect(read(dir, "README.md")).toContain("`@acme/ui`");
+    // The library's styles bring its typeface; the template's body font would beat it (F16). The rest stays.
+    const css = read(dir, "src/app.css");
+    expect(css).not.toContain("font-family");
+    expect(css).toMatch(/html,\s*body \{\s*margin: 0;\s*\}/);
+    expect(css).toContain(".validation-message");
   });
 
   it("adds @tsazor/dotnet and the api script with --dotnet", () => {

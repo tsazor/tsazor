@@ -696,12 +696,13 @@ lost `content-type: application/json` (ASP.NET Core's `[FromBody]` answers 415) 
 The test checked the `authorization` header of a GET only. The admin had its own interceptor
 (`request.clone()` + `headers.set`) and never hit it. Fixed with a copy of the headers; a test sends a POST.
 
-### 2. Nothing led to `@tsazor/dotnet` — **open (docs)**
+### 2. Nothing led to `@tsazor/dotnet` — **fixed (docs)**
 
 The admin rebuilt by hand what `@tsazor/dotnet` has: the bearer token per request (`attachJwtAuth`), the
 envelope (`tsazor-dotnet generate --envelope data,errors`), errors as values (`HttpResult`). A Blazor developer
-starts from `TsazorHttp` (`HttpClient`) and the auth lesson; neither points there. Now in migration-practices.md
-(the backend boundary); the tutorial's backend chapter is the other place to name it.
+starts from `TsazorHttp` (`HttpClient`) and the auth lesson; neither pointed there. Now in migration-practices.md
+(the backend boundary), and the tutorial's Blazor track names it: "Signing in" the providers and `attachJwtAuth`,
+"A typed client" the `--envelope` option.
 
 ### 3. No reaction to a 401 — **added (owner's decision, Tsazor extension)**
 
@@ -724,8 +725,9 @@ URI of that claim, not the short form: a real login (probed against the port's b
 after the move the user would have been signed out right after signing in. The tests had hand-made tokens with
 `name` or `sub`. `nameid` is now the fallback before the long URI; a test uses the claims of the real login.
 
-Open beside it: a principal counts as signed in only with a name. In .NET an identity with an authentication type
-is authenticated even when `Name` is null — a token without any name claim (only `oid`, say) still differs.
+Beside it, fixed the next day: a principal counted as signed in only with a name. In .NET an identity with an
+authentication type is authenticated even when `Name` is null, so a token without any name claim (only `oid`, say)
+now signs in too, with an empty name.
 
 ### 5. Response interceptors weren't an onion — **changed (owner: .NET's order)**
 

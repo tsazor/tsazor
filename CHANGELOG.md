@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`: `fluent.css` sets the document's typeface at zero weight (`:where(body)`), so text outside the
+  components reads in Fluent's type and any rule of the app's own still wins. `create-tsazor`: with a library that
+  brings styles, the new app's `app.css` leaves the template's Helvetica out (F16; it beat the library's typeface).
+
+- `@tsazor/dotnet`: a JWT without any name claim (only `oid`, say) signs in, with an empty name, as .NET's identity
+  is authenticated while its `Name` is null. It counted as signed out before.
+
 - `@tsazor/dotnet`: `CookieAuthenticationStateProvider.refresh()` asks the session endpoint again after a sign-in or
   sign-out through the app's own form (F10): the auth components show `Authorizing` until the answer, no reload.
 

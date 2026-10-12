@@ -340,5 +340,10 @@
 /* ------------------------------ base element set -------------------------- */
 
 /* The provider ships the base ramp on the document level; apps that do not
- * want a reset can rely on these being plain custom properties (no element
- * styling beyond the ramp above). */
+ * want a reset can rely on these being plain custom properties. The one
+ * element rule is the document's typeface, at zero weight: text outside the
+ * components reads in Fluent's type, and any rule of the app's own still wins
+ * (create-tsazor leaves its template font out with a library — F16). */
+:where(body) {
+  font-family: var(--fui-font-family);
+}

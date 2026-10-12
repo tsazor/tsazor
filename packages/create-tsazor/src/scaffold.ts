@@ -46,7 +46,9 @@ export function scaffold(options: ScaffoldOptions): string[] {
     written.push(relative);
   };
 
-  copyTemplate(options.templateDir ?? DEFAULT_TEMPLATE, "", options.name, write);
+  const templateDir = options.templateDir ?? DEFAULT_TEMPLATE;
+  copyTemplate(templateDir, "", options.name, write);
+  write("src/app.css", appCss(readFileSync(path.join(templateDir, "src", "app.css"), "utf8"), options.library));
   write("package.json", packageJson(options));
   write("src/Program.ts", programTs(options.library));
   write("src/_Imports.tsazor", importsTsazor(options.library));
@@ -66,6 +68,16 @@ function copyTemplate(dir: string, relative: string, name: string, write: (relat
     const content = readFileSync(path.join(dir, source), "utf8");
     write(target, TEXT.test(entry.name) ? content.replaceAll("%APP_NAME%", name) : content);
   }
+}
+
+/**
+ * The template's app.css. A library that brings stylesheets brings its typeface too (a zero-weight `:where(body)`
+ * rule, component-libraries.md), so the template's own font goes: in app.css, loaded after the library's styles, it
+ * beat the library's for every text outside the components (F16).
+ */
+function appCss(template: string, library: Library | undefined): string {
+  if ((library?.setup?.styles ?? []).length === 0) return template;
+  return template.replace(/^[ \t]*font-family:[^\n]*\n/m, "");
 }
 
 function packageJson(options: ScaffoldOptions): string {

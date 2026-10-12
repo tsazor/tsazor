@@ -147,7 +147,9 @@ export function principalFromJwt(claims: JwtClaims): ClaimsPrincipal {
   }
   return {
     name,
-    isAuthenticated: name.length > 0,
+    // A token is a signed-in identity even without a name claim: .NET's ClaimsIdentity with an authentication type
+    // is authenticated while its Name is null (here "").
+    isAuthenticated: true,
     roles,
     claims: list,
   };

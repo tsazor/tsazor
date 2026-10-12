@@ -29,11 +29,14 @@ const AXE = createRequire(import.meta.url).resolve("axe-core/axe.min.js");
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const SCRATCH = path.join(tmpdir(), "tsazor-starter-gate");
 
-/** The three apps: the library (a tarball name prefix), the port, the proof that its stylesheet loaded. */
+/**
+ * The three apps: the library (a tarball name prefix), the port, the proof that its stylesheet loaded, and the body's
+ * typeface — the library's, or the template's without one (F16).
+ */
 const VARIANTS = [
-  { name: "bootstrap", dir: "app", port: 5391, rootProperty: "--bs-blue" },
-  { name: "fluent", dir: "app-fluent", port: 5392, tarball: "tsazor-fluent-", rootProperty: "--fui-foreground-on-brand" },
-  { name: "none", dir: "app-none", port: 5393 },
+  { name: "bootstrap", dir: "app", port: 5391, rootProperty: "--bs-blue", bodyFont: "system-ui" },
+  { name: "fluent", dir: "app-fluent", port: 5392, tarball: "tsazor-fluent-", rootProperty: "--fui-foreground-on-brand", bodyFont: '"Segoe UI Variable Text"' },
+  { name: "none", dir: "app-none", port: 5393, bodyFont: '"Helvetica Neue"' },
 ];
 
 let failed = 0;
@@ -129,6 +132,8 @@ try {
       say(value !== "", `the library's stylesheet is loaded (${variant.rootProperty})`);
       say((await page.locator("[aria-live=polite]").count()) > 0, "the library's toast region is in the layout");
     }
+    const bodyFont = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    say(bodyFont.startsWith(variant.bodyFont), `the body's typeface is ${variant.rootProperty ? "the library's" : "the template's"} (${bodyFont.split(",")[0]})`);
     await axeClean("/");
 
     await page.getByRole("link", { name: "Counter" }).click();
