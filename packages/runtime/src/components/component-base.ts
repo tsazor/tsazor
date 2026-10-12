@@ -38,6 +38,8 @@ export abstract class ComponentBase {
   #disposeController: AbortController | null = null;
   /** Active `observe` subscriptions: source → stop (null until the first observe). */
   #observed: Set<{ source: unknown; stop: () => void }> | null = null;
+  /** The culture-aware services this component already re-renders on (E8 auto-render): one subscription each. */
+  #autoObserved: Set<unknown> | null = null;
 
   /**
    * Blazor's SetParametersAsync: parameter values are applied first (an
@@ -269,7 +271,7 @@ export abstract class ComponentBase {
     // E8 auto-render: a culture-aware service injected from a lifecycle method
     // is observed here (a construction-time call is collected and drained by
     // the renderer — autoObserveInternal); anything else is just resolved.
-    if (isAutoRender(service) && !collectAutoObserve(service)) this.observe(service as ObserveSource);
+    if (isAutoRender(service) && !collectAutoObserve(service)) this.autoObserveInternal(service);
     return service;
   }
 
@@ -395,6 +397,10 @@ export abstract class ComponentBase {
    * notifications, the same subscription a hand-written `observe` would build.
    */
   autoObserveInternal(source: unknown): void {
+    // Injected again (a second localizer, a lifecycle method that runs on every parameter set): already observed.
+    const observed = (this.#autoObserved ??= new Set());
+    if (observed.has(source)) return;
+    observed.add(source);
     this.observe(source as ObserveSource);
   }
 

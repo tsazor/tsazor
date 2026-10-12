@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: a component re-renders on a culture change through one subscription, however often it injects
+  the `StringLocalizer` or the `CultureService` (two localizers in field initializers, `this.inject` in a lifecycle
+  method that runs on every parameter set). Before, each call subscribed again and warned "observed twice" in DEV.
 - **`AuthorizeRouteView` renders `NotAuthorized` and `Authorizing` in the default layout**, as Blazor's does
   (`RenderContentInDefaultLayout`), and shows Blazor's "Not authorized" / "Authorizing..." when the app gives none.
   Before, they rendered without a layout and empty by default. The layout stays mounted when access turns granted.

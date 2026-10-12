@@ -272,6 +272,36 @@ describe("auto-render (E8 §3, D-L6) — culture-aware services re-render their 
     expect(normalizeHtml(container.innerHTML)).toBe("<p>Hallo</p>");
   });
 
+  it("a service injected more than once is observed once (field initializers, a lifecycle method that runs again)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { culture, container, settle, text } = await mountLocalized({
+      "Test.tsazor": `@import Child from "./Child.tsazor"
+<Child round="@round" />
+<button @onclick="@(() => round++)">next</button>
+@code {
+    private round = 1;
+}`,
+      "Child.tsazor": `@import { inject, StringLocalizer } from "@tsazor/runtime"
+@inject StringLocalizer L
+<p>@L.get("Greeting") @M.get("Greeting") @round</p>
+@code {
+    @Parameter() round = 0;
+    private readonly M = inject(StringLocalizer);
+    protected override onParametersSet(): void {
+        this.inject(StringLocalizer);
+    }
+}`,
+    });
+    expect(text()).toBe("Hello Hello 1next");
+    container.querySelector("button")!.click(); // new parameters: onParametersSet injects again
+    await settle();
+    culture.setExplicit("de-DE");
+    await settle();
+    expect(text()).toBe("Hallo Hallo 2next");
+    expect(warn.mock.calls.filter(([message]) => String(message).includes("observed twice"))).toEqual([]);
+    warn.mockRestore();
+  });
+
   it("injecting the CultureService re-renders as well", async () => {
     const { culture, settle, text } = await mountLocalized({
       "Test.tsazor": `@import { CultureService } from "@tsazor/runtime"

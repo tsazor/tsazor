@@ -2519,7 +2519,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Rendered when access is denied; receives the AuthenticationState\n (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>).",
+          "doc": "Rendered in the default layout when access is denied; receives the AuthenticationState\n (Razor's <NotAuthorized>, Blazor's RenderFragment<AuthenticationState>).",
           "typeArgument": "AuthenticationState"
         },
         {
@@ -2537,10 +2537,10 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "imported": "RenderFragment"
             }
           ],
-          "doc": "Rendered while the state is still resolving (Razor's <Authorizing>)."
+          "doc": "Rendered in the default layout while the state is still resolving (Razor's <Authorizing>)."
         }
       ],
-      "doc": "Blazor's AuthorizeRouteView: like RouteView, but the matched page only\nrenders when the user meets the route's `authorize` requirements\n(Blazor's [Authorize] attribute on the page). Swap it into the Router's\nfound fragment to protect pages. As in Blazor it derives from RouteView,\nwhich renders the granted page (layout, route and query parameters).",
+      "doc": "Blazor's AuthorizeRouteView: like RouteView, but the matched page only\nrenders when the user meets the route's `authorize` requirements\n(Blazor's [Authorize] attribute on the page). Swap it into the Router's\nfound fragment to protect pages. As in Blazor it derives from RouteView,\nwhich renders the granted page (layout, route and query parameters), and\nrenders NotAuthorized and Authorizing in the default layout too — \"Not\nauthorized\" and \"Authorizing...\" when the app gives none.",
       "base": {
         "name": "RouteView",
         "resolved": true
