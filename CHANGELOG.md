@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`: `TextInput` takes `contentBefore` and `contentAfter` — an icon or a button
+  inside the field (MudBlazor's adornments, Fluent 2's Input slots), such as the password field's show/hide button.
+  Fluent draws one field box around them; Bootstrap makes an input group. A field without them is unchanged.
+
 - `@tsazor/fluent`, `@tsazor/bootstrap`: `Menu`/`Dropdown` takes `labelContent` — any content for its toggle, such
   as the user's avatar (MudBlazor's `ActivatorContent`) — and `ariaLabel` to name it. `@tsazor/ui`: a toast can
   carry an action (`show({ action: { label, onClick } })`, MudBlazor's snackbar `Action`); `Toaster.act(id)` runs it

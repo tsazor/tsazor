@@ -2,7 +2,7 @@
     and help text. Inside a Form it turns red or green with the field's validation state, and after
     a submit attempt it shows the first message below (`.invalid-feedback`, linked with
     aria-describedby, aria-invalid). `mask` shapes the text as it is typed (MudBlazor's `Mask`: a PatternMask,
-    "(000) 000-0000"). *@
+    "(000) 000-0000"). `contentBefore` and `contentAfter` make it an input group (MudBlazor's adornments). *@
 @import { FieldState, ImmediateInput, maskInput, toMask, type PatternMask } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 
@@ -12,7 +12,16 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+    @if (contentBefore || contentAfter) {
+        @* Bootstrap's input group: the slots' own classes (.input-group-text, .btn) style them. *@
+        <div class="input-group">
+            @contentBefore
+            <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+            @contentAfter
+        </div>
+    } else {
+        <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+    }
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -44,6 +53,10 @@
     @Parameter() immediateDelay: number = 200;
     /** Shapes the text as it is typed: a PatternMask, or its pattern as text ("(000) 000-0000"; MudBlazor's `Mask`). */
     @Parameter() mask?: PatternMask | string;
+    /** Content before the input in a Bootstrap input group — an `.input-group-text` with an icon (MudBlazor's start adornment). */
+    @Parameter() contentBefore?: RenderFragment;
+    /** Content after the input in the group — a `.btn` that shows the password, say (MudBlazor's end adornment). */
+    @Parameter() contentAfter?: RenderFragment;
 
     private readonly field = new FieldState("tz-input");
 

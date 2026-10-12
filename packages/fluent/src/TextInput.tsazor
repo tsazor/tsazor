@@ -1,6 +1,7 @@
 @** A Fluent UI 2 single-line text field (input type text | password | email, InputBase; bind it
     with @bind) with an optional label; the value updates on change. `mask` shapes the text as it is typed
-    (MudBlazor's `Mask`: a PatternMask, "(000) 000-0000"). Inside a FluentForm it shows the field's first
+    (MudBlazor's `Mask`: a PatternMask, "(000) 000-0000"). `contentBefore` and `contentAfter` put an icon or a
+    button inside the field (MudBlazor's adornments). Inside a FluentForm it shows the field's first
     validation message (role="alert", aria-invalid, aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
 @import { uniqueId, ImmediateInput, maskInput, toMask, type PatternMask } from "@tsazor/ui"
@@ -12,7 +13,19 @@
     @if (this.label) {
         <label class="fui-input__label" for="@this.elementId">@this.label</label>
     }
-    <input @ref="element" id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @oninput="this.handleInput" />
+    @if (this.contentBefore || this.contentAfter) {
+        <div class="fui-input-group">
+            @if (this.contentBefore) {
+                <span class="fui-input-group__before">@this.contentBefore</span>
+            }
+            <input @ref="element" id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @oninput="this.handleInput" />
+            @if (this.contentAfter) {
+                <span class="fui-input-group__after">@this.contentAfter</span>
+            }
+        </div>
+    } else {
+        <input @ref="element" id="@this.elementId" type="@this.type" value="@this.displayValue" @attributes="@this.inputAttributes" @onchange="this.handleChange" @oninput="this.handleInput" />
+    }
     @if (this.help) {
         <span class="fui-input__help" id="@this.helpId">@this.help</span>
     }
@@ -44,6 +57,10 @@
     @Parameter() immediateDelay: number = 200;
     /** Shapes the text as it is typed: a PatternMask, or its pattern as text ("(000) 000-0000"; MudBlazor's `Mask`). */
     @Parameter() mask?: PatternMask | string;
+    /** Content inside the field before the text — an icon (Fluent's `contentBefore`, MudBlazor's start adornment). */
+    @Parameter() contentBefore?: RenderFragment;
+    /** Content inside the field after the text — a button that shows the password, say (MudBlazor's end adornment). */
+    @Parameter() contentAfter?: RenderFragment;
 
     private generatedId?: string;
 

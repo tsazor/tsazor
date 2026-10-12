@@ -66,6 +66,58 @@
   color: var(--fui-color-red-1);
 }
 
+/* contentBefore/contentAfter: one field box around the slots and the input (Fluent 2's Input). The box takes
+   the input's chrome; the input inside goes borderless. */
+.fui-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-spacing-xs);
+  height: var(--fui-height);
+  padding: 0 var(--fui-spacing-xs);
+  background: var(--fui-control-fill-input);
+  border: 1px solid var(--fui-control-stroke);
+  border-radius: var(--fui-radius-md);
+  box-sizing: border-box;
+  transition: border-color var(--fui-duration-fast) var(--fui-ease-standard);
+}
+
+.fui-input-group:hover {
+  background: var(--fui-control-fill-input-hover);
+  border-color: var(--fui-control-stroke-hover);
+}
+
+.fui-input-group:focus-within {
+  border-color: var(--fui-control-focus-stroke);
+  box-shadow: 0 1px 4px var(--fui-control-focus-outer-stroke);
+}
+
+.fui-input-group:has(.fui-input--invalid) {
+  border-color: var(--fui-color-red-1);
+}
+
+.fui-input-group:has(.fui-input--valid) {
+  border-color: var(--fui-color-green-1);
+}
+
+.fui-input-group > .fui-input,
+.fui-input-group > .fui-input:hover,
+.fui-input-group > .fui-input:focus-visible {
+  flex: 1;
+  height: 100%;
+  padding: 0 var(--fui-spacing-xs);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fui-input-group__before,
+.fui-input-group__after {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--fui-foreground-3);
+}
+
 .fui-input__message {
   font-size: var(--fui-font-size-caption);
   line-height: var(--fui-line-height-caption);

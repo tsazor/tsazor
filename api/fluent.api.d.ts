@@ -1148,6 +1148,8 @@ export default class TextInput extends InputBase<string> {
     immediate: boolean;
     immediateDelay: number;
     mask?: PatternMask | string;
+    contentBefore?: RenderFragment;
+    contentAfter?: RenderFragment;
 }
 
 // Timeline
