@@ -146,7 +146,7 @@ render in the browser.
   is `show`'s title, `DialogActions` its `footer`). Put `<DialogProvider />` into the layout, as `MudDialogProvider`
   (`npm create tsazor --ui` does). A dialog inside it that the code opens and closes keeps its `isOpen` (B6).
 - **The app frame** — `MudLayout`, `MudAppBar`, a persistent `MudDrawer`, `MudMainContent` — is one `AppLayout`
-  with `header`, `nav` and `@bind-navOpen` (B8). `MudTextField`'s adornments are `TextInput`'s `contentBefore` and
+  with `header`, `nav` and `@bind-navOpen` (B8). `MudNavMenu` with `MudListSubheader`s is a `SidebarNav` with `sections` (B13). `MudTextField`'s adornments are `TextInput`'s `contentBefore` and
   `contentAfter` (B9); `MudMenu`'s `ActivatorContent` is `Menu`'s `labelContent` (B10); a snackbar's `Action` is a
   toast's `action` (B11).
 - **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then

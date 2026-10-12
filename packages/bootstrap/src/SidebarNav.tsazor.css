@@ -36,3 +36,15 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* A section's heading (sections), a quiet caption above its links. */
+.tz-nav__heading {
+  margin: 1rem 0.75rem 0.25rem;
+  font-size: 0.875em;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+}
+
+.tz-nav--compact .tz-nav__heading {
+  display: none;
+}

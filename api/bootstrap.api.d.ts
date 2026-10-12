@@ -417,9 +417,19 @@ export default class Dialog extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// DialogOptions: re-exported from @tsazor/ui
+
+// DialogParameters: re-exported from @tsazor/ui
+
 // DialogProvider
 export default class DialogProvider extends ComponentBase {
 }
+
+// DialogReference: re-exported from @tsazor/ui
+
+// DialogResult: re-exported from @tsazor/ui
+
+// DialogService: re-exported from @tsazor/ui
 
 // Divider
 export default class Divider extends ComponentBase {
@@ -946,6 +956,16 @@ export default class SidebarNav extends ComponentBase {
         icon?: IconValue;
         iconActive?: IconValue;
     }[];
+    sections: {
+        heading?: string;
+        links: {
+            href: string;
+            label: string;
+            match?: NavLinkMatch;
+            icon?: IconValue;
+            iconActive?: IconValue;
+        }[];
+    }[];
     ariaLabel: string;
     compact: boolean;
     additionalAttributes?: Record<string, unknown>;
@@ -1189,6 +1209,8 @@ export default class TimePicker extends InputBase<string> {
 }
 
 // Toast: re-exported from @tsazor/ui
+
+// ToastAction: re-exported from @tsazor/ui
 
 // Toaster: re-exported from @tsazor/ui
 

@@ -124,6 +124,8 @@ exports.push('export { tooltip } from "./tooltip-attachment.js"');
 exports.push('export { addBootstrap } from "./services.js"');
 // The toast service comes with the skin: register it, inject it, call show().
 exports.push('export { Toaster } from "@tsazor/ui"');
+// Dialogs opened from code: the service and the reference a dialog closes (MudBlazor's IDialogService).
+exports.push('export { DialogReference, DialogService } from "@tsazor/ui"');
 // An app's own icons (`icon(name, svg)`), so it needs no other package for them.
 exports.push('export { icon } from "@tsazor/ui"');
 // The DataGrid's sorting and paging state come with the skin too.
@@ -136,7 +138,7 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 // sibling `.d.ts` written above.
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
-await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, Toast, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, Toast, ToastAction, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),
@@ -144,7 +146,7 @@ await writeFile(
 );
 await writeFile(
   path.join(distDir, "services.d.ts"),
-  'import type { ServiceCollection } from "@tsazor/runtime";\n/** Registers the services the Bootstrap components use (the `Toaster`): `createTsazorApp({ services: addBootstrap })`. */\nexport declare function addBootstrap(services: ServiceCollection): void;\n',
+  'import type { ServiceCollection } from "@tsazor/runtime";\n/** Registers the services the Bootstrap components use (the `Toaster` and the `DialogService`): `createTsazorApp({ services: addBootstrap })`. */\nexport declare function addBootstrap(services: ServiceCollection): void;\n',
 );
 // What Bootstrap has no classes for, in its variables (--bs-*): imported after bootstrap.css.
 await writeFile(path.join(distDir, "tsazor-bootstrap.css"), `/* @tsazor/bootstrap: the components Bootstrap has no classes for, in its variables. */\n\n${cssChunks.join("\n")}`);

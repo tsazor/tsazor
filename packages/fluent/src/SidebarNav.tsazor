@@ -1,41 +1,59 @@
 @** A sidebar navigation landmark (nav) that renders links as a list of runtime NavLinks, which
     mark the link matching the current URL active. A link may have an `icon`, and an `iconActive` shown while it is
-    the current page (Fluent UI Blazor's `IconRest`/`IconActive`, e.g. the regular and the filled variant). compact
-    switches to the icon rail: a link with an icon shows only the icon, its label stays its accessible name and its
-    tooltip. *@
-@import type { IconValue } from "@tsazor/ui"
+    the current page (Fluent UI Blazor's `IconRest`/`IconActive`, e.g. the regular and the filled variant). `sections`
+    add links under headings (MudBlazor's MudListSubheader, Fluent UI Blazor's FluentNavGroup), each a group named by
+    its heading. compact switches to the icon rail: a link with an icon shows only the icon, its label stays its
+    accessible name and its tooltip, and the headings hide. *@
+@import { uniqueId, type IconValue } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 
 <nav aria-label="@this.ariaLabel" @attributes="@this.navAttributes">
-    <ul class="fui-nav__list">
-        @foreach (const link of this.links) {
-            <li class="fui-nav__item">
-                <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@link.href" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
-                    @if (link.icon) {
-                        <Icon value="@link.icon" class="@(link.iconActive ? "fui-nav__icon fui-nav__icon--rest" : "fui-nav__icon")" />
-                    }
-                    @if (link.iconActive) {
-                        <Icon value="@link.iconActive" class="fui-nav__icon fui-nav__icon--active" />
-                    }
-                    <span class="fui-nav__label">@link.label</span>
-                </NavLink>
-            </li>
-        }
-    </ul>
+    @foreach (const section of this.allSections) {
+        <div role="@(section.heading ? "group" : null)" aria-labelledby="@(section.heading ? section.id : null)">
+            @if (section.heading) {
+                <p class="fui-nav__heading" id="@section.id">@section.heading</p>
+            }
+            <ul class="fui-nav__list">
+                @foreach (const link of section.links) {
+                    <li class="fui-nav__item">
+                        <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@link.href" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
+                            @if (link.icon) {
+                                <Icon value="@link.icon" class="@(link.iconActive ? "fui-nav__icon fui-nav__icon--rest" : "fui-nav__icon")" />
+                            }
+                            @if (link.iconActive) {
+                                <Icon value="@link.iconActive" class="fui-nav__icon fui-nav__icon--active" />
+                            }
+                            <span class="fui-nav__label">@link.label</span>
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
     @this.childContent
 </nav>
 
 @code {
     /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link). */
     @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] = [];
+    /** Links under headings, after `links`: each section a group named by its heading. */
+    @Parameter() sections: { heading?: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] }[] = [];
     /** Accessible nav name. */
     @Parameter() ariaLabel: string = "Main navigation";
     /** Renders the compact (icon-rail) variant. */
     @Parameter() compact: boolean = false;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
-    /** Extra content below the links (e.g. section headers). */
+    /** Extra content below the links. */
     @Parameter() childContent?: RenderFragment;
+
+    private readonly sectionIds = uniqueId("fui-nav-section");
+
+    /** `links` as a first section without a heading, then the sections — each with the id its heading has. */
+    private get allSections(): { heading?: string; id: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] }[] {
+        const sections = this.links.length > 0 ? [{ links: this.links }, ...this.sections] : this.sections;
+        return sections.map((section, index) => ({ ...section, id: `${this.sectionIds}-${index}` }));
+    }
 
     private get navClass(): string {
         return this.compact ? "fui-nav fui-nav--compact" : "fui-nav";

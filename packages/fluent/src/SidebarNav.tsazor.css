@@ -73,3 +73,15 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* A section's heading (sections), a quiet caption above its links. */
+.fui-nav__heading {
+  margin: var(--fui-spacing-l) var(--fui-spacing-m) var(--fui-spacing-xs);
+  font-size: var(--fui-font-size-caption);
+  font-weight: var(--fui-font-weight-semibold);
+  color: var(--fui-foreground-3);
+}
+
+.fui-nav--compact .fui-nav__heading {
+  display: none;
+}

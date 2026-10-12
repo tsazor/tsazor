@@ -5,6 +5,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/fluent`, `@tsazor/bootstrap`: `SidebarNav` takes `sections` — links under headings (MudBlazor's
+  `MudListSubheader`, Fluent UI Blazor's `FluentNavGroup`), each a group named by its heading, after `links`. The
+  icon rail hides the headings. Both skins re-export `DialogService` and `DialogReference`, and the types
+  `DialogOptions`, `DialogParameters`, `DialogResult` and `ToastAction`.
+
 - **Dialogs from code** (MudBlazor's `IDialogService`, Fluent UI Blazor's and Radzen's `DialogService`):
   `@tsazor/ui`'s `DialogService.show(Component, { title, parameters, size, closeOnEscape, closeOnBackdrop })` returns
   a `DialogReference` whose `result` the page awaits (`{ canceled, data }`); the dialog gets the reference as a
