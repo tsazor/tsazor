@@ -825,10 +825,14 @@ entries) does not change language on a culture switch. Store the **key**, transl
 
   - `<InputFile OnChange="@handle" />` opens the file dialog; `multiple` and `accept` are passed
     through as element attributes. The event receives an `InputFileChangeEventArgs`:
-    `FileCount`, `GetMultipleFiles(max)` (default `10`, Blazor's limit), `File` (the first
-    file, `null` without a selection). The files are native `File` objects instead of Blazor's
+    `FileCount`, `GetMultipleFiles(max)` (default `10`, Blazor's limit), `File` (the one
+    file; it throws without a selection or with several, as Blazor's). The files are native `File` objects instead of Blazor's
     `IBrowserFile` — `name`/`size`/`type` match, `OpenReadStream`/`ReadBuffer` do not
-    exist (read the content via `file.text()`/`arrayBuffer()`). The frame order is the same as in
+    exist (read the content via `file.text()`/`arrayBuffer()`; compare `file.size` for a limit).
+    `RequestImageFileAsync` is the function `requestImageFileAsync(file, format, maxWidth,
+    maxHeight)`. As Blazor's, a click empties the input (the same file again raises `OnChange`) and
+    a cancelled dialog raises `OnChange` with no files; Blazor's InputFile E2E suite runs in the
+    parity gate (apps/blazor-parity). The frame order is the same as in
     Blazor's InputFile: attributes, `type="file"` and reference capture before the handler — an
     `@ref` between them does not shadow the following handlers (diff and renderer
     treat attributes, handlers and captures as the element's preamble range; captures

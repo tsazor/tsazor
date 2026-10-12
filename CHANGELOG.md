@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: `requestImageFileAsync(file, format, maxWidth, maxHeight)`, Blazor's
+  `IBrowserFile.RequestImageFileAsync`: the image scaled to fit (never enlarged) and written as `format` by the
+  browser's canvas; name and last-modified time stay. Unlike Blazor's, an unreadable image rejects instead of never
+  settling. `InputFile` does what Blazor's InputFile.ts does: a click empties the input, so the same file chosen
+  again raises `onChange`, and a cancelled file dialog raises `onChange` with no files. Blazor's InputFile E2E suite
+  runs in the parity gate (six of seven tests; `OpenReadStream`'s size cap has no counterpart).
+
 - `@tsazor/runtime`: a component re-renders on a culture change through one subscription, however often it injects
   the `StringLocalizer` or the `CultureService` (two localizers in field initializers, `this.inject` in a lifecycle
   method that runs on every parameter set). Before, each call subscribed again and warned "observed twice" in DEV.

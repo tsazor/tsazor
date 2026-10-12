@@ -1,0 +1,107 @@
+@* Blazor's BasicTestApp/FormsTest/InputFileComponent.razor (release/11.0), same ids and structure. Tsazor hands
+   the app the browser's File: `file.OpenReadStream(maxFileSize)` + StreamReader become `file.text()`, so the
+   max file size input has nothing to cap (the suite skips its test), and `RequestImageFileAsync` is
+   `requestImageFileAsync(file, …)`. The page keeps Blazor's two spans with the id "exception-message". *@
+@page "/forms/input-file"
+@import { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "@tsazor/runtime"
+
+<h1>File preview</h1>
+
+Max file size:
+<br />
+<input type="number" id="max-file-size" @bind-value="maxFileSize" />
+<br />
+
+Max allowed files:
+<br />
+<input type="number" id="max-allowed-files" @bind-value="maxAllowedFiles" />
+<br />
+
+<InputFile OnChange="loadFiles" id="input-file" multiple />
+<br />
+
+<span id="file-count">@loadedFiles.size</span>
+<span id="exception-message">@exceptionMessage</span>
+
+@if (isLoading) {
+    <p>Loading...</p>
+    <br />
+}
+
+@foreach (const [file, content] of loadedFiles) {
+    <p id="file-@(file.name)">
+        <strong>Name:</strong> <span id="file-name">@(file.name)</span><br />
+        <strong>Last modified:</strong> <span id="file-last-modified">@(new Date(file.lastModified).toISOString())</span><br />
+        <strong>Size (bytes):</strong> <span id="file-size">@(file.size)</span><br />
+        <strong>Content type:</strong> <span id="file-content-type">@(file.type)</span><br />
+        <strong>Content:</strong> <span id="file-content">@content</span><br />
+    </p>
+}
+
+<h1>Image upload</h1>
+
+<InputFile OnChange="loadImage" id="input-image" />
+<br />
+
+<span id="exception-message">@exceptionMessage</span>
+
+@if (imageDataUri !== null) {
+    <p>
+        Uploaded image:<br />
+        <img id="image-uploaded" src="@imageDataUri" />
+    </p>
+}
+
+<p>
+    Source image:<br />
+    <img id="image-source" src="images/blazor_logo_1000x.png" onload="document.getElementById('image-status').textContent = 'ready'" />
+    <span id="image-status"></span>
+</p>
+
+@code {
+    private readonly loadedFiles = new Map<File, string>();
+
+    private maxFileSize = 1024 * 1024 * 15;
+    private maxAllowedFiles = 3;
+
+    private isLoading = false;
+
+    private imageDataUri: string | null = null;
+
+    private exceptionMessage = "";
+
+    private async loadFiles(e: InputFileChangeEventArgs): Promise<void> {
+        this.isLoading = true;
+        this.loadedFiles.clear();
+        this.exceptionMessage = "";
+
+        try {
+            for (const file of e.getMultipleFiles(this.maxAllowedFiles)) {
+                this.stateHasChanged();
+
+                this.loadedFiles.set(file, await file.text());
+            }
+        } catch (error) {
+            this.exceptionMessage = error instanceof Error ? error.message : String(error);
+        }
+
+        this.isLoading = false;
+    }
+
+    private async loadImage(e: InputFileChangeEventArgs): Promise<void> {
+        this.exceptionMessage = "";
+
+        try {
+            const format = "image/jpeg";
+            const imageFile = await requestImageFileAsync(e.file, format, 640, 480);
+
+            const bytes = new Uint8Array(await imageFile.arrayBuffer());
+            let binary = "";
+            for (const byte of bytes) binary += String.fromCharCode(byte);
+
+            this.imageDataUri = `data:${format};base64,${btoa(binary)}`;
+        } catch (error) {
+            this.exceptionMessage = error instanceof Error ? error.message : String(error);
+        }
+    }
+}

@@ -2281,7 +2281,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Pass-through attributes (accept, multiple, class, …)."
         }
       ],
-      "doc": "Blazor's InputFile (src/Components/Web/src/Forms/InputFile.cs): an\n`<input type=\"file\">` that raises `onChange` with an\n`InputFileChangeEventArgs`.\n\nDeviations (documented, roadmap 3.7): the JS-interop plumbing is the\nbrowser's native File API — the event's files are the DOM `File` objects\n(`IBrowserFile` had no port; name/size/lastModified/type come from File),\n`OpenReadStream`/`ConvertToImageFileAsync` have no interop to port (a File\nstreams natively), and the `Element` capture is the plain DOM element.",
+      "doc": "Blazor's InputFile (src/Components/Web/src/Forms/InputFile.cs): an\n`<input type=\"file\">` that raises `onChange` with an\n`InputFileChangeEventArgs`.\n\nAs Blazor's InputFile.ts, a click empties the input first (the same file\ncan be chosen again), and cancelling the file dialog raises `onChange`\nwith no files.\n\nDeviations (documented, roadmap 3.7): the JS-interop plumbing is the\nbrowser's native File API — the event's files are the DOM `File` objects\n(`IBrowserFile` had no port; name/size/lastModified/type come from File),\n`OpenReadStream` has no counterpart (a File reads natively: `text()`,\n`arrayBuffer()`, `stream()`), `RequestImageFileAsync` is the function\n`requestImageFileAsync(file, …)`, and the `Element` capture is the plain\nDOM element.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

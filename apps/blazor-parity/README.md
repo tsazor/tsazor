@@ -9,6 +9,12 @@ The first suite is Virtualize: Blazor 11's `VirtualizationTest.cs`, its 20 test 
 grouped as in the behavior spec's catalog ([docs/blazor-virtualize-net11.md](../../docs/blazor-virtualize-net11.md)
 §9), one module per group in `tests/virtualize/`; all groups, A–M, are ported.
 
+The second suite is InputFile: Blazor 11's `InputFileTest.cs` with its page `InputFileComponent`
+(`src/Pages/FormsTest/`), in `tests/input-file/`. Six of its seven tests run; `ThrowsWhenOversizedFileIsSelected`
+is skipped because Tsazor hands the app the browser's `File`, which has no `OpenReadStream(maxAllowedSize)`.
+The app's `index.html` has Blazor's `<base href="/">`, so a page's relative URLs (`images/…`) resolve as in
+BasicTestApp.
+
 Tsazor's QuickGrid is the `DataGrid` of its two component libraries, so group L runs once per skin. The app is
 built once per skin (`vite build --mode fluent|bootstrap`, into `dist/<skin>/`): the QuickGrid pages say
 `@using @tsazor/fluent`, and the bootstrap build points that package at `@tsazor/bootstrap`. They are lazy

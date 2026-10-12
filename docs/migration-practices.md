@@ -280,6 +280,15 @@ render in the browser.
   `IFormFile`). `Mode.Buffer` hands `onFileUploaded` the whole `buffer` (a `Uint8Array`), each chunk
   arriving in `onProgressChange`. MudBlazor's `MudFileUpload` with an activator button becomes a `FileUpload` with
   `AnchorId` and `DragDropZoneVisible="false"`.
+- **`IBrowserFile` is the browser's `File`.** `e.File.Name`/`Size`/`ContentType`/`LastModified` are
+  `e.file.name`/`size`/`type`/`lastModified` (milliseconds). `OpenReadStream(maxSize)` + a `StreamReader` or a
+  `byte[]` buffer becomes `await file.text()` or `new Uint8Array(await file.arrayBuffer())`; the cap guarded
+  Blazor's transfer into .NET, so compare `file.size` yourself where the app wants a limit. A `byte[]` that goes to
+  the API as JSON is base64, as System.Text.Json writes it. `await e.File.RequestImageFileAsync("image/png", 400,
+  400)` becomes `await requestImageFileAsync(e.file, "image/png", 400, 400)` from `@tsazor/runtime`.
+- **Downloads through JS interop** (`IJSRuntime.InvokeVoidAsync("Download", new { ByteArray, FileName, MimeType })`
+  and a `file.js`): a few lines of TypeScript — a `Blob` from the bytes, an object URL, a link with `download`
+  clicked and removed. No interop, no script in `index.html`.
 - **Sortable lists.** `<FluentSortableList Items="@items" OnUpdate="@SortList">` with an `ItemTemplate` keeps its
   parameters as `<SortableList @bind-Items="items">` (`Group`, `Clone`, `Drop`, `Sort`, `Handle`, `ItemFilter`,
   `OnUpdate`, `OnAdd`, `OnRemove`; `Fallback` is gone, as there is no SortableJS). The usual `OnUpdate` handler that

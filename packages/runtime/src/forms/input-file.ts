@@ -8,11 +8,17 @@ import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
  * `<input type="file">` that raises `onChange` with an
  * `InputFileChangeEventArgs`.
  *
+ * As Blazor's InputFile.ts, a click empties the input first (the same file
+ * can be chosen again), and cancelling the file dialog raises `onChange`
+ * with no files.
+ *
  * Deviations (documented, roadmap 3.7): the JS-interop plumbing is the
  * browser's native File API — the event's files are the DOM `File` objects
  * (`IBrowserFile` had no port; name/size/lastModified/type come from File),
- * `OpenReadStream`/`ConvertToImageFileAsync` have no interop to port (a File
- * streams natively), and the `Element` capture is the plain DOM element.
+ * `OpenReadStream` has no counterpart (a File reads natively: `text()`,
+ * `arrayBuffer()`, `stream()`), `RequestImageFileAsync` is the function
+ * `requestImageFileAsync(file, …)`, and the `Element` capture is the plain
+ * DOM element.
  */
 export class InputFile extends ComponentBase {
   /** The change event of the input element. */
@@ -47,6 +53,52 @@ export class InputFile extends ComponentBase {
     );
     b.closeElement();
   }
+
+  protected override onAfterRender(firstRender: boolean): void {
+    if (!firstRender || !(this.element instanceof HTMLInputElement)) return;
+    // Blazor's InputFile.ts listens on the element itself, apart from the app's own attributes.
+    const input = this.element;
+    const signal = this.disposeSignal;
+    // An emptied input raises change for the same file again (Blazor: "Permits replacing an existing file with a
+    // new one of the same file name").
+    input.addEventListener("click", () => (input.value = ""), { signal });
+    // A cancelled file dialog notifies with an empty list.
+    input.addEventListener(
+      "cancel",
+      () => void this.onChange?.invokeAsync(new InputFileChangeEventArgs([])).catch((error: unknown) => this.dispatchExceptionAsync(error)),
+      { signal },
+    );
+  }
+}
+
+/**
+ * Blazor's `IBrowserFile.RequestImageFileAsync` (BrowserFileExtensions): the image scaled to fit within `maxWidth` ×
+ * `maxHeight` (never enlarged) and written as `format` ("image/jpeg", "image/png", …) by the browser's canvas, as
+ * Blazor's InputFile.ts does. The result keeps the file's name and last-modified time; its type is `format`.
+ *
+ * Deviations: a file the browser can't decode as an image rejects (Blazor's promise never settles), and when the
+ * canvas writes nothing the original file comes back unchanged (Blazor returned it with a size of 0).
+ */
+export async function requestImageFileAsync(file: File, format: string, maxWidth: number, maxHeight: number): Promise<File> {
+  const url = URL.createObjectURL(file);
+  let image: HTMLImageElement;
+  try {
+    image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const loading = new Image();
+      loading.onload = () => resolve(loading);
+      loading.onerror = () => reject(new Error(`The file '${file.name}' is not an image the browser can read.`));
+      loading.src = url;
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+  const ratio = Math.min(1, maxWidth / image.width, maxHeight / image.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.width * ratio);
+  canvas.height = Math.round(image.height * ratio);
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, format));
+  return blob === null ? file : new File([blob], file.name, { type: format, lastModified: file.lastModified });
 }
 
 /**

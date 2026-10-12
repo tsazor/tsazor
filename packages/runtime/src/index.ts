@@ -113,7 +113,7 @@ export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";
 export { enableDataAnnotationsValidation } from "./forms/edit-context.js";
-export { InputFile, InputFileChangeEventArgs } from "./forms/input-file.js";
+export { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "./forms/input-file.js";
 export { formatValue, parseValue } from "./forms/bind-format.js";
 export {
   Required,

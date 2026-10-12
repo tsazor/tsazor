@@ -65,6 +65,21 @@ describe("InputFile (3.7)", () => {
     expect(captured[0]!.file.size).toBe(4);
   });
 
+  it("a click empties the input first, so choosing the same file again raises OnChange (Blazor's InputFile.ts)", async () => {
+    const { captured, input } = await dispatchChange([file("same.txt")]);
+    Object.defineProperty(input, "value", { value: "C:\\fakepath\\same.txt", writable: true, configurable: true });
+    input.dispatchEvent(new MouseEvent("click"));
+    expect(input.value).toBe("");
+    expect(captured).toHaveLength(1);
+  });
+
+  it("a cancelled file dialog raises OnChange with no files (Blazor's 'cancel' listener)", async () => {
+    const { captured, input } = await dispatchChange([file("chosen.txt")]);
+    input.dispatchEvent(new Event("cancel"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(captured.map((args) => args.fileCount)).toEqual([1, 0]);
+  });
+
   it("File and GetMultipleFiles guard with Blazor's messages", () => {
     const three = new InputFileChangeEventArgs([file("a"), file("b"), file("c")]);
     expect(three.getMultipleFiles()).toHaveLength(3);

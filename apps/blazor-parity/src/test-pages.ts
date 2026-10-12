@@ -29,6 +29,8 @@ export const testPages: readonly TestPage[] = [
   { name: "VirtualizationVariableHeight", route: "/virtualization/variable-height" },
   { name: "VirtualizationVariableHeightAsync", route: "/virtualization/variable-height-async" },
   { name: "VirtualizationVariableHeightTable", route: "/virtualization/variable-height-table" },
+  // Blazor's BasicTestApp.FormsTest pages.
+  { name: "InputFileComponent", route: "/forms/input-file" },
   // Blazor's BasicTestApp.QuickGridTest pages, against the DataGrid of the build's skin (vite.config.ts).
   { name: "QuickGridAnchorModeComponent", route: "/quickgrid/anchor-mode" },
   { name: "QuickGridScrollComponent", route: "/quickgrid/scroll" },

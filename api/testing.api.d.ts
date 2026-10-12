@@ -326,6 +326,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // RenderTreeFrame: re-exported from @tsazor/runtime
 
+// requestImageFileAsync: re-exported from @tsazor/runtime
+
 // RequestInterceptor: re-exported from @tsazor/runtime
 
 // Required: re-exported from @tsazor/runtime

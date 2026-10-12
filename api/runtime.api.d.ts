@@ -618,6 +618,7 @@ export declare class InputFile extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     element?: Element;
     protected buildRenderTree(b: RenderTreeBuilder): void;
+    protected onAfterRender(firstRender: boolean): void;
 }
 
 // InputFileChangeEventArgs
@@ -1161,6 +1162,9 @@ export interface RenderTreeFrame {
     readonly componentReferenceCaptureAction?: (component: ComponentBase) => void;
     readonly markupContent?: string;
 }
+
+// requestImageFileAsync
+export declare function requestImageFileAsync(file: File, format: string, maxWidth: number, maxHeight: number): Promise<File>;
 
 // RequestInterceptor
 export type RequestInterceptor = (request: Request) => Request | Promise<Request>;
