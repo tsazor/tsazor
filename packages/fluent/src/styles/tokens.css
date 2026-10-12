@@ -113,15 +113,7 @@
   --fui-control-focus-stroke: #0F6CBD;
   --fui-control-focus-outer-stroke: rgba(0, 0, 0, 0.55);
 
-  /* Alias: the primary interaction color most components resolve against. */
-  --fui-accent: var(--fui-brand-80);
-  --fui-accent-hover: var(--fui-brand-70);
-  --fui-accent-active: var(--fui-brand-40);
-  /* Fills behind on-brand text (Fluent's brandBackground): the accent is for text,
-     lines and icons; a fill needs 4.5:1 against white in every theme (E9). */
-  --fui-brand-background: var(--fui-brand-80);
-  --fui-brand-background-hover: var(--fui-brand-70);
-  --fui-brand-background-pressed: var(--fui-brand-40);
+  /* The accent and the brand fills are aliases of the ramp: see "aliases" below. */
   /* Status fills behind white text (filled badges). */
   --fui-color-green-filled: #0E700E;
   --fui-color-amber-filled: #B75C06;
@@ -142,15 +134,11 @@
   --fui-spacing-xl: 24px;
   --fui-spacing-xxl: 32px;
   --fui-spacing-xxxl: 40px;
-  --fui-gap-sm: var(--fui-spacing-m);
-  --fui-gap-md: var(--fui-spacing-l);
 
   /* Control heights (s24 / m32 / l40 on the standard grid). */
   --fui-height-s: 24px;
   --fui-height-m: 32px;
   --fui-height-l: 40px;
-  --fui-height: var(--fui-height-m);
-  --fui-height-input: var(--fui-height-m);
 
   /* Typography — Segoe UI stack + Fluent 2 type ramp. */
   --fui-font-family:
@@ -177,7 +165,6 @@
   --fui-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
   --fui-shadow-28: 0 14px 28px rgba(0, 0, 0, 0.24), 0 0 8px rgba(0, 0, 0, 0.2);
   --fui-flyout-shadow: 0 4px 8px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
-  --fui-dialog-shadow: var(--fui-shadow-28);
 
   /* Motion. */
   --fui-duration-fast: 100ms;
@@ -249,12 +236,6 @@
   --fui-control-focus-stroke: #75B9F7;
   --fui-control-focus-outer-stroke: rgba(255, 255, 255, 0.6);
 
-  --fui-accent: var(--fui-brand-100);
-  --fui-accent-hover: var(--fui-brand-90);
-  --fui-accent-active: var(--fui-brand-70);
-  --fui-brand-background: var(--fui-brand-70);
-  --fui-brand-background-hover: var(--fui-brand-80);
-  --fui-brand-background-pressed: var(--fui-brand-40);
   --fui-color-green-filled: #107C10;
   --fui-color-amber-filled: #B75C06;
   --fui-color-red-filled: #B10E1C;
@@ -264,7 +245,6 @@
   --fui-shadow-8: 0 4px 8px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
   --fui-shadow-16: 0 8px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.4);
   --fui-shadow-28: 0 14px 28px rgba(0, 0, 0, 0.6), 0 0 8px rgba(0, 0, 0, 0.4);
-  --fui-flyout-shadow: var(--fui-shadow-8);
 }
 
 /* OS dark applied until the app opts into a theme explicitly on <html>
@@ -313,15 +293,59 @@
     --fui-control-stroke-disabled: #454545;
     --fui-control-focus-stroke: #75B9F7;
 
+    --fui-color-green-filled: #107C10;
+    --fui-color-amber-filled: #B75C06;
+    --fui-color-red-filled: #B10E1C;
+  }
+}
+
+/* --------------------------------- aliases -------------------------------- */
+
+/* Tokens made of other tokens resolve where they are declared. Declared on :root
+ * alone they would keep the shipped ramp under a FluentProvider whose
+ * tokenOverrides change it (a brand ramp, the spacing), so they are declared on
+ * every provider as well and resolve against its overrides there. Their themes
+ * follow the value blocks above: light by default, dark under an explicit dark
+ * theme, and under the OS's dark mode until the app chooses. */
+
+:root,
+.fui-provider {
+  /* The primary interaction color most components resolve against. */
+  --fui-accent: var(--fui-brand-80);
+  --fui-accent-hover: var(--fui-brand-70);
+  --fui-accent-active: var(--fui-brand-40);
+  /* Fills behind on-brand text (Fluent's brandBackground): the accent is for text,
+     lines and icons; a fill needs 4.5:1 against white in every theme (E9). */
+  --fui-brand-background: var(--fui-brand-80);
+  --fui-brand-background-hover: var(--fui-brand-70);
+  --fui-brand-background-pressed: var(--fui-brand-40);
+  --fui-gap-sm: var(--fui-spacing-m);
+  --fui-gap-md: var(--fui-spacing-l);
+  --fui-height: var(--fui-height-m);
+  --fui-height-input: var(--fui-height-m);
+  --fui-dialog-shadow: var(--fui-shadow-28);
+}
+
+[data-fluent-theme="dark"],
+[data-fluent-theme="dark"] .fui-provider {
+  --fui-accent: var(--fui-brand-100);
+  --fui-accent-hover: var(--fui-brand-90);
+  --fui-accent-active: var(--fui-brand-70);
+  --fui-brand-background: var(--fui-brand-70);
+  --fui-brand-background-hover: var(--fui-brand-80);
+  --fui-brand-background-pressed: var(--fui-brand-40);
+  --fui-flyout-shadow: var(--fui-shadow-8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-fluent-theme]),
+  :root:not([data-fluent-theme]) .fui-provider {
     --fui-accent: var(--fui-brand-100);
     --fui-accent-hover: var(--fui-brand-70);
     --fui-accent-active: var(--fui-brand-40);
     --fui-brand-background: var(--fui-brand-70);
     --fui-brand-background-hover: var(--fui-brand-80);
     --fui-brand-background-pressed: var(--fui-brand-40);
-    --fui-color-green-filled: #107C10;
-    --fui-color-amber-filled: #B75C06;
-    --fui-color-red-filled: #B10E1C;
   }
 }
 

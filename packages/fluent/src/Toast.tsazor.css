@@ -28,7 +28,6 @@
   padding: var(--fui-spacing-m);
   background: var(--fui-background-3);
   border: 1px solid var(--fui-stroke-1);
-  border-start-start-radius: var(--fui-radius-md);
   border-radius: var(--fui-radius-md);
   box-shadow: var(--fui-shadow-8);
   font-family: var(--fui-font-family);
@@ -86,28 +85,28 @@
 
 /* Severity accents: the icon-side bar. */
 .fui-toast--info {
-  border-start-start-color: var(--fui-color-blue-1);
-  border-start-start-width: 4px;
+  border-inline-start-color: var(--fui-color-blue-1);
+  border-inline-start-width: 4px;
 }
 
 .fui-toast--success {
-  border-start-start-color: var(--fui-color-green-1);
-  border-start-start-width: 4px;
+  border-inline-start-color: var(--fui-color-green-1);
+  border-inline-start-width: 4px;
 }
 
 .fui-toast--warning {
-  border-start-start-color: var(--fui-color-amber-1);
-  border-start-start-width: 4px;
+  border-inline-start-color: var(--fui-color-amber-1);
+  border-inline-start-width: 4px;
 }
 
 .fui-toast--neutral {
-  border-start-start-color: var(--fui-foreground-2);
-  border-start-start-width: 4px;
+  border-inline-start-color: var(--fui-foreground-2);
+  border-inline-start-width: 4px;
 }
 
 .fui-toast--danger {
-  border-start-start-color: var(--fui-color-red-1);
-  border-start-start-width: 4px;
+  border-inline-start-color: var(--fui-color-red-1);
+  border-inline-start-width: 4px;
 }
 
 @keyframes fui-toast-enter {

@@ -955,6 +955,7 @@ export default class SidebarNav extends ComponentBase {
         match?: NavLinkMatch;
         icon?: IconValue;
         iconActive?: IconValue;
+        target?: string;
     }[];
     sections: {
         heading?: string;
@@ -964,6 +965,7 @@ export default class SidebarNav extends ComponentBase {
             match?: NavLinkMatch;
             icon?: IconValue;
             iconActive?: IconValue;
+            target?: string;
         }[];
     }[];
     ariaLabel: string;

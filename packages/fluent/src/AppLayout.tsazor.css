@@ -29,6 +29,25 @@
   box-sizing: border-box;
 }
 
+/* The header is the brand colour: the light buttons take its ink (MudAppBar's Color.Inherit, the Bootstrap skin's
+   dark-themed bar) and darken the brand under the pointer. The popups it holds keep the theme's colours. */
+.fui-app-layout__header :is(.fui-button--transparent, .fui-button--subtle) {
+  color: inherit;
+}
+
+.fui-app-layout__header :is(.fui-button--transparent, .fui-button--subtle):hover {
+  background: var(--fui-brand-background-hover);
+}
+
+.fui-app-layout__header :is(.fui-button--transparent, .fui-button--subtle):active {
+  background: var(--fui-brand-background-pressed);
+  color: inherit;
+}
+
+.fui-app-layout__header .fui-menu {
+  color: var(--fui-foreground-1);
+}
+
 .fui-app-layout__nav {
   grid-area: nav;
   position: sticky;

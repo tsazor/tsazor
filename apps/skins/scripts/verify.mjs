@@ -69,6 +69,23 @@ async function axe(page) {
   }, WCAG_TAGS);
 }
 
+/**
+ * The properties a stylesheet declares (custom properties and vendor prefixes aside). A browser drops a property it
+ * does not know without a word, so a misspelt one — a logical name that does not exist — passes every other check.
+ */
+function declaredProperties(file) {
+  const css = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const properties = new Set();
+  for (const [, block] of css.matchAll(/\{([^{}]*)\}/g)) {
+    for (const declaration of block.split(";")) {
+      const colon = declaration.indexOf(":");
+      const property = colon < 0 ? "" : declaration.slice(0, colon).trim();
+      if (/^[a-z][a-z-]*$/.test(property)) properties.add(property);
+    }
+  }
+  return [...properties];
+}
+
 async function open(page, base, route) {
   await page.goto(`${base}${route}`, { waitUntil: "networkidle" });
   // A page that failed to load is empty, and axe finds nothing wrong with nothing.
@@ -77,6 +94,32 @@ async function open(page, base, route) {
 
 const browser = await launchBrowser(playwright);
 try {
+  /* The packages' own stylesheets: every property they declare is one the browser knows. */
+  const blank = await browser.newPage();
+  for (const sheet of ["fluent/dist/fluent.css", "bootstrap/dist/tsazor-bootstrap.css", "charts/dist/charts.css"]) {
+    const properties = declaredProperties(path.join(ROOT, "..", "..", "packages", sheet));
+    const unknown = await blank.evaluate((list) => list.filter((property) => !CSS.supports(property, "initial")), properties);
+    check(unknown.length === 0, `${sheet}: the browser knows each of its ${properties.length} properties${unknown.length ? `: ${unknown.join(", ")}` : ""}`);
+  }
+
+  /* FluentProvider's tokenOverrides reach the tokens made of others: a brand ramp of the app's own colours the
+     primary button, in the light theme, the dark one, and under a dark document (BlazorHero's theme, B19). */
+  await blank.addStyleTag({ path: path.join(ROOT, "..", "..", "packages", "fluent", "dist", "fluent.css") });
+  const fills = await blank.evaluate(() => {
+    const fill = (theme, outer) => {
+      document.documentElement.toggleAttribute("data-fluent-theme", outer !== undefined);
+      if (outer !== undefined) document.documentElement.setAttribute("data-fluent-theme", outer);
+      document.body.innerHTML = `<div class="fui-provider" data-fluent-theme="${theme}" style="--fui-brand-70: rgb(1, 2, 3); --fui-brand-80: rgb(4, 5, 6)"><button class="fui-button fui-button--primary">Save</button></div>`;
+      return getComputedStyle(document.querySelector("button")).backgroundColor;
+    };
+    return { light: fill("light"), dark: fill("dark"), underDark: fill("light", "dark") };
+  });
+  check(
+    fills.light === "rgb(4, 5, 6)" && fills.dark === "rgb(1, 2, 3)" && fills.underDark === "rgb(1, 2, 3)",
+    `fluent: tokenOverrides of the brand ramp colour the brand fills (${Object.values(fills).join(" / ")})`,
+  );
+  await blank.close();
+
   for (const skin of Object.keys(SKINS)) {
     const base = url(skin);
     const other = skin === "fluent" ? "bootstrap" : "fluent";

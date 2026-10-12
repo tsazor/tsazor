@@ -8,6 +8,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - `@tsazor/runtime`: a component re-renders on a culture change through one subscription, however often it injects
   the `StringLocalizer` or the `CultureService` (two localizers in field initializers, `this.inject` in a lifecycle
   method that runs on every parameter set). Before, each call subscribed again and warned "observed twice" in DEV.
+- `@tsazor/fluent`, `@tsazor/bootstrap`: a `SidebarNav` link takes a `target` (MudBlazor's `MudNavLink Target`):
+  `"_blank"` opens it in a new tab, outside the app's routing. `AppLayout` without `nav` renders no column — the
+  header over the page, as a signed-out page has it.
+- `@tsazor/fluent`: `FluentProvider`'s `tokenOverrides` reach the tokens made of others. `--fui-accent`,
+  `--fui-brand-background` (and their hover and pressed steps), the gaps, the control heights and the dialog shadow
+  were resolved on `:root` only, so overriding the brand ramp left buttons, headers and links in Fluent's blue in the
+  light theme. They are declared on every provider now and resolve against its overrides.
+- `@tsazor/fluent`: `AppLayout`'s transparent and subtle header buttons take the header's ink and darken the brand
+  on hover (they kept a light surface's gray). The toasts show their intent's accent bar: the rule used CSS
+  properties that don't exist, so no toast had one.
+
 - **`AuthorizeRouteView` renders `NotAuthorized` and `Authorizing` in the default layout**, as Blazor's does
   (`RenderContentInDefaultLayout`), and shows Blazor's "Not authorized" / "Authorizing..." when the app gives none.
   Before, they rendered without a layout and empty by default. The layout stays mounted when access turns granted.

@@ -1,6 +1,6 @@
 /**
  * SidebarNav's sections (MudBlazor's MudListSubheader, Fluent UI Blazor's FluentNavGroup), as BlazorHero's nav menu
- * has them: the links first, then each section a group named by its heading.
+ * has them: the links first, then each section a group named by its heading; a link may open in a new tab.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
@@ -21,7 +21,7 @@ async function nav(compact = false) {
     b.openComponent(0, SidebarNav);
     b.addAttribute(1, "ariaLabel", "Main");
     b.addAttribute(2, "compact", compact);
-    b.addAttribute(3, "links", [{ href: "/", label: "Home", match: NavLinkMatch.All }]);
+    b.addAttribute(3, "links", [{ href: "/", label: "Home", match: NavLinkMatch.All }, { href: "/jobs", label: "Hangfire", target: "_blank" }]);
     b.addAttribute(4, "sections", [
       { heading: "Personal", links: [{ href: "/dashboard", label: "Dashboard" }, { href: "/account", label: "Account" }] },
       { heading: "Administrator", links: [{ href: "/identity/users", label: "Users" }] },
@@ -51,5 +51,13 @@ describe("SidebarNav sections", () => {
     const groups = [...container.querySelectorAll<HTMLElement>("[role=group]")];
     expect(groups).toHaveLength(2);
     expect(document.getElementById(groups[1]!.getAttribute("aria-labelledby")!)!.textContent).toBe("Administrator");
+  });
+
+  it("a link's target is its anchor's (MudNavLink Target): _blank leaves it to the browser; the others have none", async () => {
+    const { container } = await nav();
+    const anchor = (label: string) => [...container.querySelectorAll("a")].find((link) => link.textContent === label)!;
+    expect(anchor("Hangfire").getAttribute("target")).toBe("_blank");
+    expect(anchor("Home").hasAttribute("target")).toBe(false);
+    expect(anchor("Users").hasAttribute("target")).toBe(false);
   });
 });

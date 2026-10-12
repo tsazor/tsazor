@@ -2,15 +2,18 @@
     Blazor's FluentLayout): a header bar across the top, a navigation column beside the content, and the content as
     the page's main landmark. `navOpen` (two-way: @bind-navOpen) shows or hides the column. In a window narrower than
     960px the column starts closed and, opened, lies over the content: Escape or a click on the content closes it,
-    as MudBlazor's responsive drawer does. Put a SidebarNav — the nav landmark — into `nav`; the header is
-    Bootstrap's primary color, dark-themed so its buttons and links stay light. *@
+    as MudBlazor's responsive drawer does. Put a SidebarNav — the nav landmark — into `nav`; without one the layout is the
+    header over the content (a signed-out page). The header is Bootstrap's primary color, dark-themed so its buttons and
+    links stay light. *@
 @import { withClass } from "./attributes"
 
 <div @attributes="@this.rootAttributes" @onkeydown="this.keydown">
     @if (this.header) {
         <header class="tz-app-layout__header bg-primary" data-bs-theme="dark">@this.header</header>
     }
-    <div class="tz-app-layout__nav bg-body border-end" hidden="@(!this.open)">@this.nav</div>
+    @if (this.nav) {
+        <div class="tz-app-layout__nav bg-body border-end" hidden="@(!this.open)">@this.nav</div>
+    }
     <main class="tz-app-layout__main" @onclick="this.contentClicked">@this.childContent</main>
 </div>
 
@@ -36,7 +39,7 @@
 
     protected override async onAfterRender(firstRender: boolean): Promise<void> {
         // A narrow window starts with the column closed: open, it would cover the page.
-        if (firstRender && this.open && this.narrow()) await this.change(false);
+        if (firstRender && this.nav && this.open && this.narrow()) await this.change(false);
     }
 
     private get rootAttributes(): Record<string, unknown> {

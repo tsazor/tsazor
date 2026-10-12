@@ -16,7 +16,7 @@
             <ul class="fui-nav__list">
                 @foreach (const link of section.links) {
                     <li class="fui-nav__item">
-                        <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@link.href" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
+                        <NavLink cssClass="fui-nav__link" activeClass="fui-nav__link--active" href="@link.href" target="@link.target" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
                             @if (link.icon) {
                                 <Icon value="@link.icon" class="@(link.iconActive ? "fui-nav__icon fui-nav__icon--rest" : "fui-nav__icon")" />
                             }
@@ -34,10 +34,11 @@
 </nav>
 
 @code {
-    /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link). */
-    @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] = [];
+    /** Sidebar entries (rendered through runtime NavLink; `match` defaults to Prefix — use All for the home link).
+     * `target` is the link's, as MudNavLink's Target: "_blank" opens it in a new tab, outside the app's routing. */
+    @Parameter() links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] = [];
     /** Links under headings, after `links`: each section a group named by its heading. */
-    @Parameter() sections: { heading?: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] }[] = [];
+    @Parameter() sections: { heading?: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] }[] = [];
     /** Accessible nav name. */
     @Parameter() ariaLabel: string = "Main navigation";
     /** Renders the compact (icon-rail) variant. */
@@ -50,7 +51,7 @@
     private readonly sectionIds = uniqueId("fui-nav-section");
 
     /** `links` as a first section without a heading, then the sections — each with the id its heading has. */
-    private get allSections(): { heading?: string; id: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue }[] }[] {
+    private get allSections(): { heading?: string; id: string; links: { href: string; label: string; match?: NavLinkMatch; icon?: IconValue; iconActive?: IconValue; target?: string }[] }[] {
         const sections = this.links.length > 0 ? [{ links: this.links }, ...this.sections] : this.sections;
         return sections.map((section, index) => ({ ...section, id: `${this.sectionIds}-${index}` }));
     }

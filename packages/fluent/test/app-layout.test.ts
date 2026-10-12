@@ -12,6 +12,7 @@ const mounted: RenderResult[] = [];
 afterEach(() => {
   for (const result of mounted.splice(0)) result.dispose();
   vi.unstubAllGlobals();
+  Shell.withNav = true;
   document.body.innerHTML = "";
 });
 
@@ -22,6 +23,7 @@ function windowWidth(width: number): void {
 
 class Shell extends ComponentBase {
   static last: Shell | undefined;
+  static withNav = true;
   open = true;
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     Shell.last = this;
@@ -31,7 +33,7 @@ class Shell extends ComponentBase {
       this.open = next;
     }));
     b.addAttribute(3, "header", (inner: RenderTreeBuilder) => inner.addContent(0, "Blazor Hero"));
-    b.addAttribute(4, "nav", (inner: RenderTreeBuilder) => {
+    if (Shell.withNav) b.addAttribute(4, "nav", (inner: RenderTreeBuilder) => {
       inner.openElement(0, "nav");
       inner.addAttribute(1, "aria-label", "Main");
       inner.addContent(2, "Home");
@@ -103,5 +105,13 @@ describe("AppLayout", () => {
       expect(column(container).hidden).toBe(true);
       expect(Shell.last!.open).toBe(false);
     }
+  });
+
+  it("without a nav it is the header over the page: no column, and a narrow window changes nothing", async () => {
+    windowWidth(600);
+    Shell.withNav = false;
+    const { container } = await mount();
+    expect([...container.firstElementChild!.children].map((child) => child.tagName.toLowerCase())).toEqual(["header", "main"]);
+    expect(Shell.last!.open).toBe(true);
   });
 });
