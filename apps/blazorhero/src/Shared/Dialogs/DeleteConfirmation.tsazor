@@ -1,0 +1,27 @@
+@* Client/Shared/Dialogs/DeleteConfirmation.razor: shown by the DialogService; Confirm closes it with true. *@
+@import { DialogReference } from "@tsazor/fluent"
+
+<Dialog title="@L("Delete Confirmation")">
+    <ChildContent>
+        <p>@contentText</p>
+    </ChildContent>
+    <Footer>
+        <Button onClick="@cancel">@L("Cancel")</Button>
+        <Button intent="danger" onClick="@submit">@L("Confirm")</Button>
+    </Footer>
+</Dialog>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() contentText = "";
+
+    private readonly L = localizerFor("DeleteConfirmation");
+
+    private submit(): void {
+        this.dialog?.close(true);
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

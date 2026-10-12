@@ -1,0 +1,188 @@
+@* Client/Pages/Catalog/Products.razor(.cs): the products paged, searched and sorted on the server — MudTable's
+   ServerData becomes the DataGrid's ItemsProvider, a column's SortLabel its sortKey ("Name Ascending" goes to the
+   API) — with the actions the user's permissions allow. The original went back to the first page on every reload
+   while a search was set, so its search results couldn't be paged (U9); here a new search starts on the first page. *@
+@page "/catalog/products"
+@authorize({ policy: "Permissions.Products.View" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { DialogService, PaginationState, Toaster, type DataGrid, type GridItemsProvider, type GridItemsProviderResult } from "@tsazor/fluent"
+@import { AddEditProductCommand, type GetAllPagedProductsResponse } from "../../Application/Catalog"
+@import { downloadBase64, fileStamp } from "../../Extensions/Files"
+@import AddEditProductModal from "./AddEditProductModal.tsazor"
+@import DeleteConfirmation from "../../Shared/Dialogs/DeleteConfirmation.tsazor"
+@inject ProductManager productManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<HeroTitle title="@L("Products")" description="@L("Manage Products.")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Products")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canCreateProducts) {
+                <Button intent="primary" iconStart="@Icons.Add" onClick="@(() => invokeModal())">@L("Create")</Button>
+            }
+            <Button intent="secondary" iconStart="@Icons.ArrowClockwise" onClick="@(() => onSearch(""))">@L("Reload")</Button>
+            @if (canExportProducts) {
+                <Button iconStart="@Icons.DocumentTable" onClick="@exportToExcel">@L("Export")</Button>
+            }
+        </div>
+        @if (canSearchProducts) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search")" placeholder="@L("Search")" @bind-Value:get="searchString" @bind-Value:set="onSearch">
+                <ContentBefore><Icon value="@Icons.Search" /></ContentBefore>
+            </TextInput>
+        }
+    </div>
+    <DataGrid @ref="table" TGridItem="GetAllPagedProductsResponse" itemsProvider="@serverReload" pagination="@pagination" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Products")">
+        <PropertyColumn property="(product) => product.id" title="@L("Id")" sortable sortKey="Id" />
+        <TemplateColumn title="@L("Name")" sortable sortKey="Name" Context="product">
+            <Highlighter text="@product.name" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Brand")" sortable sortKey="Brand" Context="product">
+            <Highlighter text="@product.brand" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Description")" sortable sortKey="Description" Context="product">
+            <Highlighter text="@product.description" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Barcode")" sortable sortKey="Barcode" Context="product">
+            <Highlighter text="@product.barcode" highlightedText="@searchString" />
+        </TemplateColumn>
+        <PropertyColumn property="(product) => product.rate" title="@L("Rate")" sortable sortKey="Rate" />
+        <TemplateColumn title="@L("Actions")" align="end" Context="product">
+            @if (canEditProducts || canDeleteProducts) {
+                <Menu label="@L("Actions")" ariaLabel='@(`${L("Actions")}: ${product.name}`)' placement="bottom-end">
+                    @if (canEditProducts) {
+                        <MenuItem onSelect="@(() => invokeModal(product.id))">@L("Edit")</MenuItem>
+                    }
+                    @if (canDeleteProducts) {
+                        <MenuItem onSelect="@(() => deleteAsync(product.id))">@L("Delete")</MenuItem>
+                    }
+                </Menu>
+            } else {
+                <Button size="small" iconStart="@Icons.HandRight" disabled>@L("No Allowed Actions")</Button>
+            }
+        </TemplateColumn>
+    </DataGrid>
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+
+    private readonly L = localizerFor("Products");
+    private readonly pagination = new PaginationState();
+    private table?: DataGrid<GetAllPagedProductsResponse>;
+    /** The rows on the page shown, for the edit dialog (the original's _pagedData). */
+    private pagedData: readonly GetAllPagedProductsResponse[] = [];
+    private searchString = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canCreateProducts = false;
+    private canEditProducts = false;
+    private canDeleteProducts = false;
+    private canExportProducts = false;
+    private canSearchProducts = false;
+    private loaded = false;
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        const can = (policy: string) => this.authorization.isAuthorized(user, { policy });
+        this.canCreateProducts = can(Permissions.Products.Create);
+        this.canEditProducts = can(Permissions.Products.Edit);
+        this.canDeleteProducts = can(Permissions.Products.Delete);
+        this.canExportProducts = can(Permissions.Products.Export);
+        this.canSearchProducts = can(Permissions.Products.Search);
+        this.loaded = true;
+    }
+
+    /** ServerReload/LoadData: one page from the API, sorted by the column's SortLabel ("Name Ascending"). */
+    private readonly serverReload: GridItemsProvider<GetAllPagedProductsResponse> = async (request) => {
+        const orderBy = request.getSortByProperties().map((sort) => `${sort.propertyName} ${sort.direction === "ascending" ? "Ascending" : "Descending"}`);
+        const pageSize = request.count ?? this.pagination.itemsPerPage;
+        const response = await this.productManager.getProductsAsync({
+            pageNumber: Math.floor(request.startIndex / pageSize) + 1,
+            pageSize,
+            searchString: this.searchString,
+            orderBy,
+        });
+        if (!response.succeeded) {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+            return { items: [], totalItemCount: 0 } satisfies GridItemsProviderResult<GetAllPagedProductsResponse>;
+        }
+        this.pagedData = response.data;
+        return { items: response.data, totalItemCount: response.totalCount };
+    };
+
+    /** OnSearch: a new search (or Reload) loads the first page again. */
+    private async onSearch(text: string): Promise<void> {
+        this.searchString = text;
+        if (this.pagination.currentPageIndex !== 0) await this.pagination.setCurrentPageIndexAsync(0);
+        else await this.table?.refreshDataAsync();
+    }
+
+    private async exportToExcel(): Promise<void> {
+        const response = await this.productManager.exportToExcelAsync(this.searchString);
+        if (response.succeeded) {
+            downloadBase64(response.data, `products_${fileStamp()}.xlsx`, ApplicationConstants.MimeTypes.OpenXml);
+            this.toaster.show({ message: this.searchString.trim() === "" ? this.L("Products exported") : this.L("Filtered Products exported"), intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async invokeModal(id = 0): Promise<void> {
+        const product = id === 0 ? undefined : this.pagedData.find((candidate) => candidate.id === id);
+        const model = Object.assign(new AddEditProductCommand(), product && {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            rate: product.rate,
+            brandId: product.brandId,
+            barcode: product.barcode,
+        });
+        const dialog = this.dialogs.show(AddEditProductModal, {
+            title: id === 0 ? this.L("Create") : this.L("Edit"),
+            size: "medium",
+            closeOnBackdrop: false,
+            parameters: { addEditProductModel: model },
+        });
+        if ((await dialog.result).canceled) return;
+        await this.updateDashboard();
+        await this.onSearch("");
+    }
+
+    private async deleteAsync(id: number): Promise<void> {
+        const dialog = this.dialogs.show(DeleteConfirmation, {
+            title: this.L("Delete"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { contentText: this.L("Delete Content", { 0: id }) },
+        });
+        if ((await dialog.result).canceled) return;
+        const response = await this.productManager.deleteAsync(id);
+        await this.onSearch("");
+        if (response.succeeded) {
+            await this.updateDashboard();
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    /** The original's dialog and Delete send UpdateDashboard, so open dashboards reload their counts. */
+    private async updateDashboard(): Promise<void> {
+        await this.hubConnection?.send(ApplicationConstants.SignalR.SendUpdateDashboard);
+    }
+}

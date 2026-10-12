@@ -1,0 +1,184 @@
+@* Client/Pages/Catalog/Brands.razor(.cs): every brand, searched and sorted in the browser — MudTable with Items and
+   Filter becomes a DataGrid of the filtered list — with the actions the user's permissions allow: add and edit in
+   a dialog, delete after a confirmation, import a workbook, export the (filtered) brands. *@
+@page "/catalog/brands"
+@authorize({ policy: "Permissions.Brands.View" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { DialogService, GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import { AddEditBrandCommand, type GetAllBrandsResponse, type UploadRequest } from "../../Application/Catalog"
+@import { downloadBase64, fileStamp } from "../../Extensions/Files"
+@import AddEditBrandModal from "./AddEditBrandModal.tsazor"
+@import DeleteConfirmation from "../../Shared/Dialogs/DeleteConfirmation.tsazor"
+@import ImportExcelModal from "../../Shared/Components/ImportExcelModal.tsazor"
+@inject BrandManager brandManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<HeroTitle title="@L("Brands")" description="@L("Manage Brands.")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Brands")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canCreateBrands) {
+                <Button intent="primary" iconStart="@Icons.Add" onClick="@(() => invokeModal())">@L("Create")</Button>
+                @if (canImportBrands) {
+                    <Button intent="primary" iconStart="@Icons.ArrowUpload" onClick="@invokeImportModal">@L("Import")</Button>
+                }
+            }
+            <Button intent="secondary" iconStart="@Icons.ArrowClockwise" onClick="@getBrandsAsync">@L("Reload")</Button>
+            @if (canExportBrands) {
+                <Button iconStart="@Icons.DocumentTable" onClick="@exportToExcel">@L("Export")</Button>
+            }
+        </div>
+        @if (canSearchBrands) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search for Brands")" placeholder="@L("Search for Brands")" @bind-Value="searchString" immediate>
+                <ContentBefore><Icon value="@Icons.Search" /></ContentBefore>
+            </TextInput>
+        }
+    </div>
+    <DataGrid items="@filteredBrands" pagination="@pagination" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Brands")">
+        <PropertyColumn property="(brand) => brand.id" title="@L("Id")" sortable />
+        <TemplateColumn title="@L("Name")" sortBy="@byName" Context="brand">
+            <Highlighter text="@brand.name" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Description")" sortBy="@byDescription" Context="brand">
+            <Highlighter text="@brand.description" highlightedText="@searchString" />
+        </TemplateColumn>
+        <PropertyColumn property="(brand) => brand.tax" title="@L("Tax")" sortable />
+        <TemplateColumn title="@L("Actions")" align="end" Context="brand">
+            @if (canEditBrands || canDeleteBrands) {
+                <Menu label="@L("Actions")" ariaLabel='@(`${L("Actions")}: ${brand.name}`)' placement="bottom-end">
+                    @if (canEditBrands) {
+                        <MenuItem onSelect="@(() => invokeModal(brand.id))">@L("Edit")</MenuItem>
+                    }
+                    @if (canDeleteBrands) {
+                        <MenuItem onSelect="@(() => deleteAsync(brand.id))">@L("Delete")</MenuItem>
+                    }
+                </Menu>
+            } else {
+                <Button size="small" iconStart="@Icons.HandRight" disabled>@L("No Allowed Actions")</Button>
+            }
+        </TemplateColumn>
+    </DataGrid>
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+
+    private readonly L = localizerFor("Brands");
+    private readonly pagination = new PaginationState();
+    private brandList: GetAllBrandsResponse[] = [];
+    private searchString = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canCreateBrands = false;
+    private canEditBrands = false;
+    private canDeleteBrands = false;
+    private canExportBrands = false;
+    private canSearchBrands = false;
+    private canImportBrands = false;
+    private loaded = false;
+
+    private readonly byName = GridSort.byAscending((brand: GetAllBrandsResponse) => brand.name);
+    private readonly byDescription = GridSort.byAscending((brand: GetAllBrandsResponse) => brand.description);
+
+    /** MudTable's Filter: the name or the description contains the search, in any case. */
+    private get filteredBrands(): GetAllBrandsResponse[] {
+        const search = this.searchString.trim().toLowerCase();
+        if (search === "") return this.brandList;
+        return this.brandList.filter((brand) => brand.name.toLowerCase().includes(search) || brand.description.toLowerCase().includes(search));
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        const can = (policy: string) => this.authorization.isAuthorized(user, { policy });
+        this.canCreateBrands = can(Permissions.Brands.Create);
+        this.canEditBrands = can(Permissions.Brands.Edit);
+        this.canDeleteBrands = can(Permissions.Brands.Delete);
+        this.canExportBrands = can(Permissions.Brands.Export);
+        this.canSearchBrands = can(Permissions.Brands.Search);
+        this.canImportBrands = can(Permissions.Brands.Import);
+
+        await this.getBrandsAsync();
+        this.loaded = true;
+    }
+
+    private async getBrandsAsync(): Promise<void> {
+        const response = await this.brandManager.getAllAsync();
+        if (response.succeeded) {
+            this.brandList = response.data;
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async deleteAsync(id: number): Promise<void> {
+        const dialog = this.dialogs.show(DeleteConfirmation, {
+            title: this.L("Delete"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { contentText: this.L("Delete Content", { 0: id }) },
+        });
+        if ((await dialog.result).canceled) return;
+        const response = await this.brandManager.deleteAsync(id);
+        await this.getBrandsAsync();
+        if (response.succeeded) {
+            await this.updateDashboard();
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async exportToExcel(): Promise<void> {
+        const response = await this.brandManager.exportToExcelAsync(this.searchString);
+        if (response.succeeded) {
+            downloadBase64(response.data, `brands_${fileStamp()}.xlsx`, ApplicationConstants.MimeTypes.OpenXml);
+            this.toaster.show({ message: this.searchString.trim() === "" ? this.L("Brands exported") : this.L("Filtered Brands exported"), intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async invokeModal(id = 0): Promise<void> {
+        const brand = id === 0 ? undefined : this.brandList.find((candidate) => candidate.id === id);
+        const model = Object.assign(new AddEditBrandCommand(), brand && { id: brand.id, name: brand.name, description: brand.description, tax: brand.tax });
+        const dialog = this.dialogs.show(AddEditBrandModal, {
+            title: id === 0 ? this.L("Create") : this.L("Edit"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { addEditBrandModel: model },
+        });
+        if ((await dialog.result).canceled) return;
+        await this.updateDashboard();
+        await this.getBrandsAsync();
+    }
+
+    private async invokeImportModal(): Promise<void> {
+        const dialog = this.dialogs.show(ImportExcelModal, {
+            title: this.L("Import"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { modelName: this.L("Brands"), onSaved: (upload: UploadRequest) => this.brandManager.importAsync({ uploadRequest: upload }) },
+        });
+        if (!(await dialog.result).canceled) await this.getBrandsAsync();
+    }
+
+    /** The original's dialogs and Delete send UpdateDashboard, so open dashboards reload their counts. */
+    private async updateDashboard(): Promise<void> {
+        await this.hubConnection?.send(ApplicationConstants.SignalR.SendUpdateDashboard);
+    }
+}

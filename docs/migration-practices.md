@@ -322,6 +322,27 @@ render in the browser.
   - `await scrollToItemAsync(i)` resolves once the rows around the target fill the viewport (A15), so code after the
     `await` sees the final rows.
   - The DataGrid passes the same parameters as QuickGrid 11.
+- **MudTable becomes the DataGrid** (BlazorHero's catalog, B23, B28).
+  - `Items` with a `Filter` function: a getter that returns the filtered list, as the grid's `items`.
+  - `ServerData`: the grid's `itemsProvider`, a field holding one function (not a new lambda per render). The page is
+    `request.startIndex / request.count`; the sort comes from `request.getSortByProperties()`.
+  - A column's `SortLabel` is its `sortKey` — a `TemplateColumn` with a `sortKey` sorts through the provider without
+    a `sortBy`.
+  - `HeaderContent`/`RowTemplate` pairs become columns: a `PropertyColumn` for plain values, a `TemplateColumn` with
+    `Context="row"` for markup such as a `Highlighter` or an actions `Menu`.
+  - `Dense`, `Striped`, `Bordered`, `Hover` are `small`, `striped`, `bordered`, `hover`.
+  - `MudTablePager` is a `Paginator` on the grid's `PaginationState`: `PageSizeOptions` and `RowsPerPageString` keep
+    their meaning as `pageSizeOptions` and `pageSizeLabel`, and an `InfoFormat` becomes its `summaryContent`.
+  - `table.ReloadServerData()` is `grid.refreshDataAsync()` (or a page change on the PaginationState).
+- **MudAutocomplete becomes Autocomplete** (B26). `T="int"` with `SearchFunc` and `ToStringFunc` over the ids:
+  `TOption="number"`, `items` the ids, `optionText` the name of an id. `For`'s part in the form comes with
+  `@bind-selectedOption`: the field's message after a submit, the invalid state. "No value" is `null` where
+  MudBlazor's int was `0` — convert where the API wants the int.
+- **Dialogs live outside the page's cascades.** As `MudDialogProvider`, the `DialogProvider` sits in the layout, so a
+  shown dialog gets no `CascadingValue` a page receives (BlazorHero's hub connection). Pass what it needs as a
+  parameter, or act in the page once `dialog.result` resolves.
+- **Keep Blazor's `<base href="/">`** in a hand-written `index.html` (`npm create tsazor` writes one): relative URLs
+  the API returns — BlazorHero's `Files\Images\…` pictures — resolve against the app's root, not the page's address.
 - **Await the callbacks you invoke.** Return or await an `EventCallback`'s promise, so an async handler's error
   reaches the `ErrorBoundary` and a test can wait for it (F11, F28).
 - **Builder code from data.** `addComponentParameter` (F37). Sequence numbers come from a node's place among its

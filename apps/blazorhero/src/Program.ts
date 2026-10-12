@@ -11,6 +11,7 @@ import { BlazorHeroStateProvider } from "./Infrastructure/Authentication/BlazorH
 import { LocalStorage } from "./Infrastructure/LocalStorage";
 import { AuthenticationManager } from "./Infrastructure/Managers/AuthenticationManager";
 import { ClientPreferenceManager } from "./Infrastructure/Managers/ClientPreferenceManager";
+import { BrandManager, ProductManager } from "./Infrastructure/Managers/CatalogManagers";
 import { AccountManager, RoleManager, UserManager } from "./Infrastructure/Managers/IdentityManagers";
 
 // Client/Program.cs and WebAssemblyHostBuilderExtensions.AddClientServices.
@@ -54,6 +55,8 @@ const app = createTsazorApp({
         services.registerValue(AccountManager, new AccountManager(http));
         services.registerValue(UserManager, new UserManager(http));
         services.registerValue(RoleManager, new RoleManager(http));
+        services.registerValue(BrandManager, new BrandManager(http));
+        services.registerValue(ProductManager, new ProductManager(http));
         addFluent(services);
     },
 });

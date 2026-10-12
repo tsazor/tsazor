@@ -168,7 +168,14 @@ everything pushed.
 >     slots (B9), `Menu` `labelContent` and toast actions (B10, B11), `SidebarNav` sections and `target` (B13, B15);
 >     fixes B7, B14, B16–B19 (B19: `tokenOverrides` never reached `--fui-accent`/`--fui-brand-background`). The
 >     skins gate now checks every CSS property of the packages' stylesheets (B17). Open for the owner: B2, B3, B12,
->     B20. Next: phase 2, the catalog (server-paged tables, add/edit dialogs, Excel export/import).
+>     B20. **Phase 2 (the catalog) done the same day** (66 checks): brands in the browser, products paged, sorted and
+>     searched on the server, dialogs, Excel export and import, a picture shrunk before the upload. From it:
+>     `requestImageFileAsync` and InputFile's click/cancel with Blazor's InputFile E2E suite in the parity gate (B22),
+>     Paginator `pageSizeOptions` (B23), the Autocomplete in forms (B26), `CascadingTypeToken` (B27), a sortKey-only
+>     TemplateColumn (B28), the Fluent grid's header alignment (B25). Open for the owner as well: B24 (Typography
+>     `as`), **B29 — the library's own texts are English only; a localization decision before 1.0**. Next (owner,
+>     2026-10-12): the fullstackhero React admin port (the target group's archetype; UI question open), BlazorHero's
+>     phases 3–6 later where fullstackhero doesn't cover them.
 >     Seen once, under load: the parity gate's `DynamicContent_AppendItemsWhileAtBottom_ViewportStaysStable`
 >     (virtualize) failed in a full `pnpm gates edge` run ("should not converge to bottom after small append") and
 >     passed 3/3 alone — a timing window in Virtualize to look at if it recurs.

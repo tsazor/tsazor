@@ -15,7 +15,9 @@
  * Run: node scripts/verify.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as playwright from "playwright-core";
@@ -108,6 +110,237 @@ function navigationOf(page) {
     }
     return sections;
   });
+}
+
+/** The API as the signed-in user: the page's token, the original's JSON. */
+function api(page, method, url, body) {
+  return page.evaluate(
+    async ({ method, url, body }) => {
+      const token = JSON.parse(localStorage.getItem("authToken"));
+      const headers = { "content-type": "application/json", authorization: `Bearer ${token}`, "accept-language": "en" };
+      const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      return response.json();
+    },
+    { method, url, body },
+  );
+}
+
+/** A PNG's width and height (its IHDR chunk), from base64. */
+function pngSize(base64) {
+  const bytes = Buffer.from(base64, "base64");
+  return `${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`;
+}
+
+/** The table pager's "first-last of total", as numbers. */
+async function pagerSummary(page) {
+  const text = await page.getByRole("navigation", { name: "Pages" }).innerText();
+  return text.match(/(\d+)-(\d+) of (\d+)/)?.slice(1).map(Number) ?? [];
+}
+
+/**
+ * Phase 2, the catalog, as the administrator. Brands: added and edited in a dialog with the validators' messages,
+ * searched and sorted in the browser, exported, imported from that workbook, deleted after a confirmation.
+ * Products: paged, sorted and searched on the server (a search's results page too — U9), one added with its brand
+ * picked in an Autocomplete and a picture shrunk to fit 400 × 400 before the upload, edited, deleted, exported.
+ * Everything the run creates carries `stamp` and is removed at the end.
+ */
+async function catalog(page, stamp) {
+  const requests = [];
+  const recordRequest = (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/api/v1/")) requests.push({ method: request.method(), path: url.pathname, query: url.searchParams, body: request.postData() });
+  };
+  page.on("request", recordRequest);
+  const dialog = page.getByRole("dialog");
+  const downloads = mkdtempSync(path.join(os.tmpdir(), "blazorhero-verify-"));
+  const brandName = `Verify Brand ${stamp}`;
+
+  try {
+    // Brands.
+    await page.getByRole("link", { name: "Brands", exact: true }).click();
+    const brands = page.getByRole("table", { name: "Brands" });
+    await brands.waitFor();
+    check(await page.getByRole("heading", { level: 1, name: "Brands" }).isVisible(), "Brands: the page's heading (HeroTitle) is its h1");
+    await axe(page, "the brands");
+
+    await page.getByRole("button", { name: "Create" }).click();
+    await dialog.getByRole("heading", { name: "Add Brand" }).waitFor();
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await dialog.getByText("Tax must be greater than 0").waitFor();
+    const brandMessages = await dialog.getByRole("alert").allInnerTexts();
+    check(
+      JSON.stringify(brandMessages) === JSON.stringify(["Name is required!", "Description is required!", "Tax must be greater than 0"]),
+      `Save shows AddEditBrandCommandValidator's messages (${brandMessages.join(", ")})`,
+    );
+    await axe(page, "the brand dialog with its messages");
+    await dialog.getByLabel("Name").fill(brandName);
+    await dialog.getByLabel("Description").fill("Made by the verify run");
+    await dialog.getByLabel("Tax").fill("7.5");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await dialog.waitFor({ state: "detached" });
+    await page.getByText("Brand Saved").first().waitFor();
+    const brandRow = () => brands.locator("tbody tr").filter({ hasText: brandName });
+    await brandRow().first().waitFor();
+    check(true, "a valid brand is saved: the API's message as a toast, the row in the table");
+
+    await brandRow().getByRole("button", { name: `Actions: ${brandName}` }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await dialog.getByRole("heading", { name: "Update Brand" }).waitFor();
+    check(await dialog.getByLabel("Id").isDisabled(), "Edit shows the brand's id, disabled");
+    await dialog.getByLabel("Description").fill("Edited by the verify run");
+    await dialog.getByRole("button", { name: "Update" }).click();
+    await page.getByText("Brand Updated").first().waitFor();
+    await brands.locator("tbody tr").filter({ hasText: "Edited by the verify run" }).waitFor();
+    check(true, "Edit updates the brand");
+
+    const brandSearch = page.getByRole("textbox", { name: "Search for Brands" });
+    await brandSearch.fill(stamp);
+    await page.waitForFunction((table) => table.querySelectorAll("tbody tr").length === 1, await brands.elementHandle());
+    check((await brands.locator("tbody mark").first().innerText()) === stamp, "the search filters the brands in the browser and marks the match (Highlighter)");
+
+    const [brandExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export" }).click()]);
+    const workbook = path.join(downloads, brandExport.suggestedFilename());
+    await brandExport.saveAs(workbook);
+    await page.getByText("Filtered Brands exported").first().waitFor();
+    check(
+      /^brands_\d{14}\.xlsx$/.test(brandExport.suggestedFilename()) && readFileSync(workbook).subarray(0, 2).toString() === "PK",
+      `Export saves the filtered brands as a workbook (${brandExport.suggestedFilename()}), no JS interop`,
+    );
+
+    await page.getByRole("button", { name: "Import" }).click();
+    await dialog.getByRole("heading", { name: "Import - Brands" }).waitFor();
+    check(await dialog.getByRole("button", { name: "Import" }).isDisabled(), "Import waits for a workbook");
+    await dialog.locator("input[type=file]").setInputFiles(workbook);
+    await dialog.getByText(path.basename(workbook)).waitFor();
+    await dialog.getByRole("button", { name: "Import" }).click();
+    await dialog.waitFor({ state: "detached" });
+    await page.waitForFunction((table) => table.querySelectorAll("tbody tr").length === 2, await brands.elementHandle());
+    check(true, "Import adds the workbook's brand (the export, read back by the API)");
+
+    await brandRow().nth(1).getByRole("button", { name: `Actions: ${brandName}` }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+    await dialog.getByRole("heading", { name: "Delete Confirmation" }).waitFor();
+    await dialog.getByRole("button", { name: "Confirm" }).click();
+    await page.getByText("Brand Deleted").first().waitFor();
+    await page.waitForFunction((table) => table.querySelectorAll("tbody tr").length === 1, await brands.elementHandle());
+    check(true, "Delete asks first, then removes the brand");
+    await brandSearch.fill("");
+
+    const nameHeader = brands.locator("thead th").filter({ hasText: "Name" });
+    await nameHeader.getByRole("button").click();
+    const sortedOnce = await nameHeader.getAttribute("aria-sort");
+    await nameHeader.getByRole("button").click();
+    check(sortedOnce === "ascending" && (await nameHeader.getAttribute("aria-sort")) === "descending", "a column sorts in the browser, then the other way (aria-sort)");
+
+    // Products.
+    const seeded = await api(page, "GET", "/api/v1/brands");
+    const brandId = seeded.data.find((brand) => brand.name === brandName).id;
+    for (let i = 1; i <= 24; i++) {
+      await api(page, "POST", "/api/v1/products", {
+        id: 0,
+        name: `Verify Roll ${stamp} ${String(i).padStart(2, "0")}`,
+        barcode: `V-${stamp}-${i}`,
+        description: i % 2 === 0 ? "Rye" : "Wheat",
+        rate: i,
+        brandId,
+      });
+    }
+    await page.getByRole("link", { name: "Products", exact: true }).click();
+    const products = page.getByRole("table", { name: "Products" });
+    await products.locator("tbody tr").first().waitFor();
+    await axe(page, "the products");
+    const productRequest = () => requests.filter((request) => request.method === "GET" && request.path === "/api/v1/products").at(-1);
+
+    await page.getByRole("button", { name: "Create" }).click();
+    await dialog.getByRole("heading", { name: "Add Product" }).waitFor();
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await dialog.getByText("Brand is required!").waitFor();
+    const productMessages = await dialog.getByRole("alert").allInnerTexts();
+    check(
+      ["Name is required!", "Description is required!", "Brand is required!", "Rate must be greater than 0", "Barcode is required!"].every((message) => productMessages.includes(message)),
+      `Save shows AddEditProductCommandValidator's messages, the brand's at its Autocomplete (${productMessages.join(", ")})`,
+    );
+    check((await dialog.getByRole("combobox", { name: "Brand" }).getAttribute("aria-invalid")) === "true", "the brand's Autocomplete is invalid until a brand is picked");
+    await axe(page, "the product dialog with its messages");
+    const productName = `Verify Loaf ${stamp}`;
+    await dialog.getByLabel("Name").fill(productName);
+    await dialog.getByLabel("Description").fill("Baked by the verify run");
+    await dialog.getByRole("combobox", { name: "Brand" }).fill(stamp);
+    await page.getByRole("listbox").getByRole("option", { name: brandName }).click();
+    await dialog.getByLabel("Rate").fill("4.5");
+    await dialog.getByLabel("Barcode").fill(`V-${stamp}-loaf`);
+    const picture = await page.evaluate(() => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1000;
+      canvas.height = 700;
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#1565c0";
+      context.fillRect(0, 0, 1000, 700);
+      return canvas.toDataURL("image/png").split(",")[1];
+    });
+    await dialog.locator("input[type=file]").setInputFiles({ name: "loaf.png", mimeType: "image/png", buffer: Buffer.from(picture, "base64") });
+    await dialog.locator("img").waitFor();
+    check(!(await dialog.getByRole("combobox", { name: "Brand" }).getAttribute("aria-invalid")), "picking a brand validates the field again (the Autocomplete notifies the form)");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await page.getByText("Product Saved").first().waitFor();
+    const saved = JSON.parse(requests.filter((request) => request.method === "POST" && request.path === "/api/v1/products").at(-1).body);
+    check(saved.brandId === brandId && pngSize(saved.uploadRequest.data) === "400x280", `the product goes with its brand and the picture shrunk to fit 400 × 400 (${pngSize(saved.uploadRequest.data)}, RequestImageFileAsync)`);
+
+    await page.waitForFunction(() => /\d+-\d+ of \d+/.test(document.querySelector("nav[aria-label=Pages]")?.textContent ?? ""));
+    const [, , total] = await pagerSummary(page);
+    await page.getByRole("button", { name: "Next page" }).click();
+    await page.waitForFunction(() => /11-20 of/.test(document.querySelector("nav[aria-label=Pages]")?.textContent ?? ""));
+    check(productRequest().query.get("pageNumber") === "2" && productRequest().query.get("pageSize") === "10", `the next page comes from the server (pageNumber=2 of ${total} products)`);
+    await page.getByLabel("Rows per page:").selectOption("25");
+    await page.waitForFunction(() => /1-25 of/.test(document.querySelector("nav[aria-label=Pages]")?.textContent ?? ""));
+    check(productRequest().query.get("pageNumber") === "1" && productRequest().query.get("pageSize") === "25", "rows per page: 25 load from the first page (TablePager)");
+    await page.getByLabel("Rows per page:").selectOption("10");
+
+    const productNameHeader = products.locator("thead th").filter({ hasText: "Name" });
+    await productNameHeader.getByRole("button").click();
+    await page.waitForFunction(() => document.querySelector("table[aria-label=Products] th[aria-sort=ascending]") !== null);
+    check(productRequest().query.get("orderBy") === "Name Ascending", `a template column sorts on the server by its sortKey (orderBy=${productRequest().query.get("orderBy")})`);
+
+    const productSearch = page.getByRole("textbox", { name: "Search" });
+    await productSearch.fill(stamp);
+    await productSearch.press("Enter");
+    await page.waitForFunction(() => /1-10 of 25/.test(document.querySelector("nav[aria-label=Pages]")?.textContent ?? ""));
+    await page.getByRole("button", { name: "Next page" }).click();
+    await page.waitForFunction(() => /11-20 of 25/.test(document.querySelector("nav[aria-label=Pages]")?.textContent ?? ""));
+    check(productRequest().query.get("searchString") === stamp && productRequest().query.get("pageNumber") === "2", "a search's results page on the server (U9: the original went back to page 1)");
+
+    await productSearch.fill(productName);
+    await productSearch.press("Enter");
+    const productRow = products.locator("tbody tr").filter({ hasText: productName });
+    await productRow.waitFor();
+    await productRow.getByRole("button", { name: `Actions: ${productName}` }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await dialog.getByRole("heading", { name: "Update Product" }).waitFor();
+    await page.waitForFunction(() => (document.querySelector("[role=dialog] img")?.naturalWidth ?? 0) > 0);
+    const stored = await dialog.locator("img").evaluate((image) => ({ src: image.getAttribute("src"), width: image.naturalWidth }));
+    check(/^Files[\\/]Images[\\/]Products[\\/]/.test(stored.src) && stored.width === 400, `Edit shows the stored picture, served by the API (${stored.src}, base href)`);
+    check((await dialog.getByRole("combobox", { name: "Brand" }).inputValue()) === brandName && (await dialog.getByLabel("Barcode").isDisabled()), "Edit shows the product's brand by name and its barcode disabled");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await dialog.waitFor({ state: "detached" });
+
+    const [productExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export" }).click()]);
+    await page.getByText("Filtered Products exported").first().waitFor();
+    check(/^products_\d{14}\.xlsx$/.test(productExport.suggestedFilename()), `Export saves the filtered products (${productExport.suggestedFilename()})`);
+
+    await productRow.getByRole("button", { name: `Actions: ${productName}` }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+    await dialog.getByRole("button", { name: "Confirm" }).click();
+    await page.getByText("Product Deleted").first().waitFor();
+    check(true, "Delete removes the product after the confirmation");
+  } finally {
+    page.off("request", recordRequest);
+    // What the run created.
+    const left = await api(page, "GET", `/api/v1/products?pageNumber=1&pageSize=100&searchString=${stamp}&orderBy=`).catch(() => ({ data: [] }));
+    for (const product of left.data ?? []) await api(page, "DELETE", `/api/v1/products/${product.id}`);
+    const brandsLeft = await api(page, "GET", "/api/v1/brands").catch(() => ({ data: [] }));
+    for (const brand of (brandsLeft.data ?? []).filter((candidate) => candidate.name === brandName)) await api(page, "DELETE", `/api/v1/brands/${brand.id}`);
+    rmSync(downloads, { recursive: true, force: true });
+  }
 }
 
 let browser;
@@ -234,6 +467,9 @@ try {
   await page.getByRole("menuitem", { name: "Englisch" }).click();
   await page.getByRole("group", { name: "Personal" }).waitFor();
 
+  // Phase 2: the catalog.
+  await catalog(page, Date.now().toString(36));
+
   // The logout dialog: Cancel stays, Logout leaves.
   await page.getByRole("button", { name: /^Account:/ }).click();
   await page.getByRole("menuitem", { name: "Logout" }).click();
@@ -258,6 +494,10 @@ try {
   await signIn(page, BASIC);
   const basicNav = await navigationOf(page);
   check(!basicNav[""].includes("Hangfire") && !("Administrator" in basicNav) && !("Catalog Management" in basicNav), `the basic user sees no permission's pages (${Object.entries(basicNav).map(([heading, links]) => `${heading || "top"}: ${links.join(", ")}`).join("; ")})`);
+  // A page the policy closes (@authorize({ policy })): NotAuthorized is the login, which sends a signed-in user home.
+  await page.goto(`${APP}/catalog/products`);
+  await page.waitForURL(`${APP}/`, { timeout: 10_000 }).catch(() => undefined);
+  check(new URL(page.url()).pathname === "/" && (await page.getByRole("table", { name: "Products" }).count()) === 0, "the basic user can't open the products: the policy sends them home");
 
   // An address no page has: the not-found layout.
   await page.goto(`${APP}/no/such/page`);

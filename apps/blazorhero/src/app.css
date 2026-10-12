@@ -143,3 +143,87 @@ h1:focus {
     box-sizing: border-box;
     text-align: center;
 }
+
+/* HeroTitle.razor: the page's title in the brand colour (MudText Typo.h5 Color.Primary) and its description. */
+.bh-hero-title {
+    margin-bottom: var(--fui-spacing-l);
+}
+
+.bh-hero-title__title {
+    margin: 0 0 var(--fui-spacing-s);
+    color: var(--fui-accent);
+    font-size: var(--fui-font-size-title);
+    font-weight: var(--fui-font-weight-semibold);
+}
+
+.bh-hero-title__description {
+    margin: 0;
+    color: var(--fui-foreground-2);
+}
+
+/* MudTable's ToolBarContent: the actions on the start, the search on the end. */
+.bh-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+    margin-bottom: var(--fui-spacing-m);
+}
+
+.bh-table-toolbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-table-toolbar__search {
+    min-width: 260px;
+}
+
+/* MudTable's FooterContent (the switches) and PagerContent in one row. */
+.bh-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+    margin-top: var(--fui-spacing-s);
+}
+
+.bh-table-footer__switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fui-spacing-l);
+}
+
+/* MudGrid with MudItem xs="12" md="6": two columns from a medium window on. */
+.bh-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--fui-spacing-m);
+}
+
+.bh-import__status {
+    margin-top: var(--fui-spacing-l);
+}
+
+/* AddEditProductModal.razor: the picture (MudAvatar Square, its natural size up to the column) and its buttons. */
+.bh-product-image {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--fui-spacing-s);
+}
+
+.bh-product-image__preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: var(--fui-radius-md);
+}
+
+.bh-product-image__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--fui-spacing-xs);
+}

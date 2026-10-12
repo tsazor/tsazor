@@ -17,5 +17,6 @@
 @import { BlazorHeroStateProvider } from "./Infrastructure/Authentication/BlazorHeroStateProvider"
 @import { AuthenticationManager } from "./Infrastructure/Managers/AuthenticationManager"
 @import { AccountManager, RoleManager, UserManager } from "./Infrastructure/Managers/IdentityManagers"
+@import { BrandManager, ProductManager } from "./Infrastructure/Managers/CatalogManagers"
 @import { ClientPreferenceManager } from "./Infrastructure/Managers/ClientPreferenceManager"
 @import { BlazorHeroLogo } from "./Infrastructure/Settings/BlazorHeroTheme"
