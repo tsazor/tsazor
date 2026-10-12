@@ -11,11 +11,14 @@
     "preview": "vite preview",
     "test": "vitest run",
     "check": "tsazor check",
+    "verify": "node scripts/verify.mjs",
     "api": "tsazor-dotnet generate http://localhost:5350/swagger/v1/swagger.json --out src/api"
   },
   "dependencies": {
+    "@microsoft/signalr": "^10.0.11",
     "@tsazor/dotnet": "workspace:*",
     "@tsazor/fluent": "workspace:*",
+    "@tsazor/fluent-icons": "workspace:*",
     "@tsazor/runtime": "workspace:*"
   },
   "devDependencies": {

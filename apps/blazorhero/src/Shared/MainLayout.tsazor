@@ -1,0 +1,64 @@
+@* Client/Shared/MainLayout.razor: the theme (MudThemeProvider → FluentProvider with BlazorHero's colors), the
+   direction (MudRTLProvider → dir), the dialog and toast hosts. Signed in, MainBody is the app frame; signed out,
+   the same bar (an AppLayout without a navigation column) with the language and the dark mode over the page in a
+   card — the login. *@
+@inherits LayoutComponentBase
+@import { tokenOverrides } from "../Infrastructure/Settings/BlazorHeroTheme"
+@inject ClientPreferenceManager preferences
+
+<FluentProvider theme="@theme" tokenOverrides="@tokenOverrides" dir="@direction" class="bh-root">
+    <audio id="notification" src="/media/notification.mp3"></audio>
+    <AuthorizeView>
+        <Authorized>
+            <MainBody onDarkModeToggle="@toggleDarkMode" onRightToLeftToggle="@rightToLeftToggle">
+                @Body
+            </MainBody>
+        </Authorized>
+        <NotAuthorized>
+            <AppLayout>
+                <Header>
+                    <div class="bh-header-end">
+                        <LanguageSelector />
+                        <Tooltip text="@L("Toggle Dark Mode")">
+                            <Button appearance="transparent" iconStart="@Icons.WeatherMoon" ariaLabel="@L("Toggle Dark Mode")" onClick="@toggleDarkMode" />
+                        </Tooltip>
+                    </div>
+                </Header>
+                <ChildContent>
+                    <div class="bh-signed-out">
+                        <Card class="bh-signed-out__card">@Body</Card>
+                    </div>
+                </ChildContent>
+            </AppLayout>
+        </NotAuthorized>
+    </AuthorizeView>
+    <ToastRegion />
+    <DialogProvider />
+</FluentProvider>
+
+@code {
+    private readonly L = localizerFor("MainLayout");
+    private dark = false;
+    private rightToLeft = false;
+
+    protected override onInitialized(): void {
+        this.dark = this.preferences.isDarkMode();
+        this.rightToLeft = this.preferences.isRTL();
+    }
+
+    private get theme(): "light" | "dark" {
+        return this.dark ? "dark" : "light";
+    }
+
+    private get direction(): "rtl" | "ltr" {
+        return this.rightToLeft ? "rtl" : "ltr";
+    }
+
+    private toggleDarkMode(): void {
+        this.dark = this.preferences.toggleDarkMode();
+    }
+
+    private rightToLeftToggle(value: boolean): void {
+        this.rightToLeft = value;
+    }
+}

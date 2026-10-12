@@ -158,10 +158,22 @@ everything pushed.
 >       local Verdaccio (owner). `pnpm registry` (port 4873, `~/.tsazor/registry`), `pnpm release:local`,
 >       `pnpm release:version`, `pnpm rehearsal` (in CI's check job). **1.0.0-next.1** is in the local registry.
 >       Next: let the owner's apps run on it; the freeze week counts from the last public-API change (2026-10-12).
+>   - **2026-10-12 — the second app port, BlazorHero** ([port-blazorhero.md](port-blazorhero.md)): MudBlazor →
+>     `@tsazor/fluent`, against upstream's unchanged API (`apps/blazorhero`; the .NET 6 SDK and the clone in
+>     `.backend/`, LocalDB). Phases 0 and 1 (the shell: sign-in, JWT with refresh, hub, navigation by permission,
+>     dark mode, languages, logout dialog) done; `pnpm --filter blazorhero verify` (38 checks; not in `pnpm gates` or
+>     CI yet — it needs LocalDB and the .NET 6 SDK). From it: `DialogService` (B6), `AppLayout` (B8), `TextInput`
+>     slots (B9), `Menu` `labelContent` and toast actions (B10, B11), `SidebarNav` sections and `target` (B13, B15);
+>     fixes B7, B14, B16–B19 (B19: `tokenOverrides` never reached `--fui-accent`/`--fui-brand-background`). The
+>     skins gate now checks every CSS property of the packages' stylesheets (B17). Open for the owner: B2, B3, B12,
+>     B20. Next: phase 2, the catalog (server-paged tables, add/edit dialogs, Excel export/import).
+>     Seen once, under load: the parity gate's `DynamicContent_AppendItemsWhileAtBottom_ViewportStaysStable`
+>     (virtualize) failed in a full `pnpm gates edge` run ("should not converge to bottom after small append") and
+>     passed 3/3 alone — a timing window in Virtualize to look at if it recurs.
 >   - Lockfile: a new external dependency is staged without the owner's `fluentcms-admin` WIP: back up
 >     `pnpm-lock.yaml` and `pnpm-workspace.yaml`, add `"!apps/fluentcms-admin"` to the workspace, `pnpm install
->     --lockfile-only --offline`, diff the result against HEAD (only the new packages), convert it to CRLF, `git
->     hash-object -w`, `git update-index --cacheinfo 100644,<hash>,pnpm-lock.yaml`, restore both files.
+>     --lockfile-only --offline`, diff the result against HEAD (only the new packages), keep its LF line endings
+>     (HEAD's blob has them), `git hash-object -w`, `git update-index --cacheinfo 100644,<hash>,pnpm-lock.yaml`, restore both files.
 > - **F15 fixed (2026-10-10, from a dogfood report):** an `@if`'s narrowing reaches child content, slots,
 >   templates and bind setters in `tsazor check`, as Razor's nullable analysis does (checked against a Razor class
 >   library; the old note that C# drops it too was wrong). The shadow calls those functions in place (codegen

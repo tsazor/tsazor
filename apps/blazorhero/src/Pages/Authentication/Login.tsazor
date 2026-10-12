@@ -1,0 +1,84 @@
+@* Client/Pages/Authentication/Login.razor(.cs). FluentValidationValidator + TokenRequestValidator become the form's
+   validators; the password field's eye is TextInput's contentAfter (MudTextField's adornment). The original kept
+   Sign In disabled until the form was valid and validated while rendering, so every message showed before the
+   first key (U6). Here Sign In stays enabled: a submit shows the messages (a field marks itself invalid after an
+   edit), which a disabled button would never let happen. MudForm is no <form>; FluentForm is, so novalidate keeps
+   the browser's own check of the email field from stopping the submit before the validators speak. *@
+@page "/login"
+@import { TokenRequest } from "../../Application/Identity"
+@import { tokenRequestValidators } from "../../Application/Validators/Identity"
+@import { Toaster } from "@tsazor/fluent"
+@inject AuthenticationManager authenticationManager
+@inject AuthenticationStateProvider stateProvider
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<FluentForm model="@model" validators="@validators" onValidSubmit="@submitAsync" novalidate class="bh-login">
+    <Icon value="@BlazorHeroLogo" size="100" class="bh-login__logo" />
+    <Typography variant="h1" class="bh-login__title">@L("Title")</Typography>
+    <p class="bh-login__text">@L("Description")</p>
+    <p class="bh-login__text">@L("Don't have an account?") <Link href="/register">@L("Register here")</Link></p>
+    <TextInput label="@L("E-mail")" type="email" @bind-Value="model.email" />
+    <TextInput label="@L("Password")" type="@passwordType" @bind-Value="model.password">
+        <ContentAfter>
+            <Button appearance="transparent" size="small" iconStart="@passwordIcon" ariaLabel="@passwordToggleLabel" onClick="@togglePasswordVisibility" />
+        </ContentAfter>
+    </TextInput>
+    <div class="bh-login__row">
+        <Checkbox label="@L("Remember me?")" @bind-Value="rememberMe" />
+        <Link href="/account/forgot-password">@L("Forgot password?")</Link>
+    </div>
+    <Button type="submit" intent="primary" size="large" class="bh-login__submit">@L("Sign In")</Button>
+    <Button appearance="subtle" onClick="@fillAdministratorCredentials">@L("Fill Administrator Credentials")</Button>
+    <Button appearance="subtle" onClick="@fillBasicUserCredentials">@L("Fill Basic User Credentials")</Button>
+</FluentForm>
+
+@code {
+    private readonly L = localizerFor("Login");
+    private readonly validators = tokenRequestValidators(localizerFor("TokenRequestValidator"));
+    private model = new TokenRequest();
+    private rememberMe = false;
+    private passwordVisible = false;
+
+    private get passwordType(): "password" | "text" {
+        return this.passwordVisible ? "text" : "password";
+    }
+
+    private get passwordIcon() {
+        return this.passwordVisible ? Icons.Eye : Icons.EyeOff;
+    }
+
+    private get passwordToggleLabel(): string {
+        return this.passwordVisible ? "Hide password" : "Show password";
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        // The original compared the state with a new anonymous one by reference — always unequal, so it always went
+        // to "/" (U5). Meant: a signed-in user has no business here.
+        if ((await this.stateProvider.getAuthenticationStateAsync()).user.isAuthenticated) this.navigation.navigateTo("/");
+    }
+
+    private async submitAsync(): Promise<void> {
+        const result = await this.authenticationManager.login(this.model);
+        if (!result.succeeded) {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+            return;
+        }
+        // Signed in on /login: the page the original would have shown (its redirect above made every login start at /).
+        if (new URL(this.navigation.uri).pathname === "/login") this.navigation.navigateTo("/");
+    }
+
+    private togglePasswordVisibility(): void {
+        this.passwordVisible = !this.passwordVisible;
+    }
+
+    private fillAdministratorCredentials(): void {
+        this.model.email = "mukesh@blazorhero.com";
+        this.model.password = "123Pa$$word!";
+    }
+
+    private fillBasicUserCredentials(): void {
+        this.model.email = "john@blazorhero.com";
+        this.model.password = "123Pa$$word!";
+    }
+}

@@ -1,0 +1,20 @@
+@* Client/Shared/Components/UserCard.razor: the signed-in user's avatar, name and e-mail. *@
+
+<div class="bh-user-card">
+    <Avatar name="@fullName" image="@imageDataUrl" />
+    <div class="bh-user-card__text">
+        <Typography variant="body">@fullName</Typography>
+        <Typography variant="caption">@email</Typography>
+    </div>
+</div>
+
+@code {
+    @Parameter() firstName = "";
+    @Parameter() lastName = "";
+    @Parameter() email = "";
+    @Parameter() imageDataUrl?: string;
+
+    private get fullName(): string {
+        return `${this.firstName} ${this.lastName}`.trim();
+    }
+}

@@ -146,9 +146,24 @@ render in the browser.
   is `show`'s title, `DialogActions` its `footer`). Put `<DialogProvider />` into the layout, as `MudDialogProvider`
   (`npm create tsazor --ui` does). A dialog inside it that the code opens and closes keeps its `isOpen` (B6).
 - **The app frame** — `MudLayout`, `MudAppBar`, a persistent `MudDrawer`, `MudMainContent` — is one `AppLayout`
-  with `header`, `nav` and `@bind-navOpen` (B8). `MudNavMenu` with `MudListSubheader`s is a `SidebarNav` with `sections` (B13). `MudTextField`'s adornments are `TextInput`'s `contentBefore` and
-  `contentAfter` (B9); `MudMenu`'s `ActivatorContent` is `Menu`'s `labelContent` (B10); a snackbar's `Action` is a
-  toast's `action` (B11).
+  with `header`, `nav` and `@bind-navOpen` (B8); a signed-out page's bar alone is an `AppLayout` without `nav`. The
+  bar's buttons take its colour as MudBlazor's `Color.Inherit` did: write them `appearance="transparent"` (B16). A
+  `MudSpacer` in the bar becomes a wrapper with `margin-inline-start: auto` around what follows it (see Toolbars).
+  `MudNavMenu` with `MudListSubheader`s is a `SidebarNav` with `sections` (B13); a `MudNavLink Target="_blank"` is a
+  link with `target: "_blank"` — without it the router takes a backend page such as `/swagger` for an app page
+  (B15). `MudTextField`'s adornments are `TextInput`'s `contentBefore` and `contentAfter` (B9); `MudMenu`'s
+  `ActivatorContent` is `Menu`'s `labelContent` (B10); a snackbar's `Action` is a toast's `action` (B11).
+- **Localizers in components.** Several `IStringLocalizer<T>`s in one component (a page's and its validator's) are
+  fine: the component re-renders once on a language change, however many it injects (B18).
+- **MudForm becomes `FluentForm`, and that is a `<form>`.** MudForm is a `div`, so the browser never checked its
+  fields. `FluentForm` (as Blazor's `EditForm`) is a real form: a `type="email"` field gets the browser's own check
+  first, which stops the submit with the browser's bubble before your validators speak. Write `novalidate` on the
+  form to keep their messages (B21). A submit `Disabled="@(!Validated)"` goes away: the fields show their messages
+  after a submit, so a disabled button would leave the user with red borders and no reason (U6).
+- **Your own dark-mode switch** (MudBlazor's `IsDarkMode` from a stored preference): set `data-fluent-theme="light"` on
+  `<html>` in `index.html`, so the OS's dark mode doesn't overrule the preference, and switch the `FluentProvider`'s
+  `theme` (B20). A brand ramp in `tokenOverrides` colours the accents too: check its brand-80 as link text on the
+  page's near-white, not only as a fill behind white text (B19).
 - **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then
   `new Icons.Regular.Size20.Save()` becomes `Icons.Regular.Size20.Save`: a shared value, not an instance per use.
   `<FluentIcon Value="…" Width="24px" />` becomes `<Icon Value="…" size="24" />`, and without a size the icon is

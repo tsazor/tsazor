@@ -1,6 +1,21 @@
+@* Client/_Imports.razor. Its `@attribute [Authorize]` protects every page; Tsazor's @authorize doesn't inherit
+   (TZS014), so each page that needs a user says so itself (port-blazorhero.md, B12). *@
 @using @tsazor/fluent
+@using ./Shared
+@using ./Shared/Components
+@using ./Shared/Dialogs
 @* The standard runtime set (Blazor: @using Microsoft.AspNetCore.Components.*). Unused imports are dropped by the build. *@
 @import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, inject } from "@tsazor/runtime"
 @import { NavigationManager, Router, RouteView, LayoutView, NavLink, NavLinkMatch, PageTitle, FocusOnNavigate } from "@tsazor/runtime"
-@import { EditContext, TsazorHttp } from "@tsazor/runtime"
+@import { AuthorizeView, AuthorizeRouteView, AuthenticationStateProvider, AuthorizationService, TsazorHttp } from "@tsazor/runtime"
 @import type { RenderFragment, RouteData } from "@tsazor/runtime"
+@import type { Intent } from "@tsazor/fluent"
+@* The app's own (Blazor: @using BlazorHero.CleanArchitecture.Client.Infrastructure.*, Shared.Constants.*). *@
+@import * as Icons from "@tsazor/fluent-icons/regular/size20"
+@import { localizerFor } from "./i18n"
+@import { ApplicationConstants, LocalizationConstants, Permissions } from "./Application/Constants"
+@import { BlazorHeroStateProvider } from "./Infrastructure/Authentication/BlazorHeroStateProvider"
+@import { AuthenticationManager } from "./Infrastructure/Managers/AuthenticationManager"
+@import { AccountManager, RoleManager, UserManager } from "./Infrastructure/Managers/IdentityManagers"
+@import { ClientPreferenceManager } from "./Infrastructure/Managers/ClientPreferenceManager"
+@import { BlazorHeroLogo } from "./Infrastructure/Settings/BlazorHeroTheme"

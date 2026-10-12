@@ -1,0 +1,16 @@
+@* Client/Shared/NotFoundLayout.razor: the logo drawing, the message and the way home. *@
+@inherits LayoutComponentBase
+@import { tokenOverrides } from "../Infrastructure/Settings/BlazorHeroTheme"
+
+<FluentProvider tokenOverrides="@tokenOverrides" class="bh-root">
+    <main class="bh-not-found">
+        <Icon value="@BlazorHeroLogo" size="160" class="bh-not-found__logo" />
+        <Typography variant="h1">@L("Message")</Typography>
+        <Button intent="primary" size="large" href="/">@L("GoHome")</Button>
+    </main>
+    <ToastRegion />
+</FluentProvider>
+
+@code {
+    private readonly L = localizerFor("NotFoundLayout");
+}

@@ -1,13 +1,18 @@
 <!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
+<!-- The app has its own dark mode (the stored preference): the document opts out of the OS's, and MainLayout's
+     FluentProvider switches the theme. -->
+<html lang="en" data-fluent-theme="light">
+  <head>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>blazorhero</title>
-    <base href="%BASE_URL%" />
-</head>
-<body>
+    <title>BlazorHero - Clean Architecture</title>
+    <link rel="icon" href="/favicon.ico" />
+    <!-- BlazorHero's typeface (Client/wwwroot/index.html). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
     <div id="app"></div>
     <script type="module" src="/src/Program.ts"></script>
-</body>
+  </body>
 </html>

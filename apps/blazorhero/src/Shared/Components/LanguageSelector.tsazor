@@ -1,0 +1,32 @@
+@* Client/Shared/Components/LanguageSelector.razor: the languages; a choice is stored and the page loads again in it,
+   as the original's does (forceLoad). *@
+@import { StringLocalizer } from "@tsazor/runtime"
+@inject ClientPreferenceManager preferences
+@inject NavigationManager navigation
+
+<Menu appearance="transparent" placement="bottom-end" ariaLabel="Language">
+    <LabelContent>
+        <Icon value="@Icons.LocalLanguage" />
+    </LabelContent>
+    <ChildContent>
+        @foreach (const language of LocalizationConstants.SupportedLanguages) {
+            <MenuItem onSelect="@(() => change(language.code))">@nameOf(language.displayName)</MenuItem>
+        }
+    </ChildContent>
+</Menu>
+
+@code {
+    private readonly localizer = inject(StringLocalizer);
+
+    /** `_localizer[language.DisplayName]`: a name the resource has (English, French, …) or the name itself (عربي). */
+    private nameOf(displayName: string): string {
+        const key = `LanguageSelector.${displayName}`;
+        const text = this.localizer.get(key);
+        return text === key ? displayName : text;
+    }
+
+    private change(languageCode: string): void {
+        this.preferences.changeLanguage(languageCode);
+        this.navigation.navigateTo(this.navigation.uri, true);
+    }
+}

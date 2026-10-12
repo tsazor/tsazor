@@ -3,10 +3,10 @@
  *
  *   node scripts/resx.mjs        (after `pnpm backend` cloned upstream)
  *
- * writes src/i18n/<culture>.ts, one flat table per culture with the key `<Resource>.<name>` ("Login.Title"). A
- * resource belongs to the component or class of its path, as .NET finds it by the type's name
- * (Resources/Pages/Authentication/Login.de.resx → Pages/Authentication/Login.razor); a resource without one is
- * stale and left out. Arabic file names that start with right-to-left marks (U+200F) are read under their
+ * writes src/i18n/<culture>.ts — the client's resources and the Application project's validators' messages —, one
+ * flat table per culture with the key `<Resource>.<name>` ("Login.Title"). A resource belongs to the component or
+ * class of its path, as .NET finds it by the type's name (Resources/Pages/Authentication/Login.de.resx →
+ * Pages/Authentication/Login.razor); a resource without one is stale and left out. Arabic file names that start with right-to-left marks (U+200F) are read under their
  * real name (U2: .NET never finds them).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -16,7 +16,15 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const upstream = path.join(root, ".backend", "blazor-starter-kit", "src");
 const out = path.join(root, "src", "i18n");
-const PROJECTS = ["Client", "Client.Infrastructure"];
+/**
+ * The projects whose resources the client reads, and the folder in each: of the Application project only the
+ * validators (its handlers' messages come translated from the server).
+ */
+const PROJECTS = [
+  ["Client", ""],
+  ["Client.Infrastructure", ""],
+  ["Application", "Validators"],
+];
 const MARKS = /^[​‎‏]+/;
 
 function* resxFiles(dir) {
@@ -62,9 +70,9 @@ const tables = {};
 const owners = new Map();
 const stale = new Set();
 let marked = 0;
-for (const project of PROJECTS) {
+for (const [project, only] of PROJECTS) {
   const resources = path.join(upstream, project, "Resources");
-  for (const file of resxFiles(resources)) {
+  for (const file of resxFiles(path.join(resources, only))) {
     const raw = path.basename(file);
     const name = raw.replace(MARKS, "");
     if (name !== raw) marked++;
