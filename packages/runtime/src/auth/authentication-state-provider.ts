@@ -3,13 +3,19 @@ import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
 
 type AuthenticationStateChangedHandler = (state: AuthenticationState) => void;
 
+/** Options for `AuthenticationStateProvider.subscribe`. */
+export interface AuthenticationStateSubscribeOptions {
+  /** Called when a notification's promise starts; the handler follows once it resolves. */
+  onPending?: () => void;
+}
+
 /**
  * Blazor's AuthenticationStateProvider: supplies the current user and
  * notifies subscribers on changes (login/logout). Apps subclass this — the
  * runtime only consumes it via the ServiceProvider.
  */
 export abstract class AuthenticationStateProvider {
-  private readonly subscribers = new Set<AuthenticationStateChangedHandler>();
+  private readonly subscribers = new Set<{ handler: AuthenticationStateChangedHandler; onPending?: () => void }>();
   private cachedState?: AuthenticationState;
 
   /** Resolves the current state; may be async (e.g. validating a token). */
@@ -31,25 +37,59 @@ export abstract class AuthenticationStateProvider {
 
   private version = 0;
 
-  /** Blazor's NotifyAuthenticationStateChanged (login/logout happened). */
-  protected notifyAuthenticationStateChanged(state: AuthenticationState): void {
-    this.version++;
+  /**
+   * Blazor's NotifyAuthenticationStateChanged (login/logout happened). Takes
+   * the new state, or a promise of it as Blazor takes a `Task` — such as
+   * `this.getAuthenticationStateAsync()` when the user needs a request (roles
+   * from a profile endpoint). Until a promise resolves, AuthorizeView and
+   * AuthorizeRouteView show their Authorizing content, and no in-between user
+   * reaches anyone. A newer notification wins over a pending promise; a
+   * rejected one counts as signed out.
+   */
+  protected notifyAuthenticationStateChanged(state: AuthenticationState | Promise<AuthenticationState>): void {
+    const version = ++this.version;
+    if (!isPromiseLike(state)) {
+      this.publish(state);
+      return;
+    }
+    for (const subscriber of [...this.subscribers]) {
+      subscriber.onPending?.();
+    }
+    state.then(
+      (resolved) => {
+        if (this.version === version) this.publish(resolved);
+      },
+      (error: unknown) => {
+        // eslint-disable-next-line no-console
+        console.error("[tsazor] The state passed to notifyAuthenticationStateChanged() failed:", error);
+        if (this.version === version) this.publish(ANONYMOUS);
+      },
+    );
+  }
+
+  private publish(state: AuthenticationState): void {
     this.cachedState = state;
     for (const subscriber of [...this.subscribers]) {
-      subscriber(state);
+      subscriber.handler(state);
     }
   }
 
   /**
    * Calls `handler` with the new state on every notification (Blazor's
-   * `AuthenticationStateChanged` event). Returns the unsubscribe function.
+   * `AuthenticationStateChanged` event; a promise is awaited first, and
+   * `onPending` tells when one starts). Returns the unsubscribe function.
    */
-  subscribe(handler: AuthenticationStateChangedHandler): () => void {
-    this.subscribers.add(handler);
+  subscribe(handler: AuthenticationStateChangedHandler, options: AuthenticationStateSubscribeOptions = {}): () => void {
+    const subscriber = { handler, onPending: options.onPending };
+    this.subscribers.add(subscriber);
     return () => {
-      this.subscribers.delete(handler);
+      this.subscribers.delete(subscriber);
     };
   }
+}
+
+function isPromiseLike(value: AuthenticationState | Promise<AuthenticationState>): value is Promise<AuthenticationState> {
+  return typeof (value as Partial<Promise<AuthenticationState>>).then === "function";
 }
 
 /**
@@ -58,11 +98,14 @@ export abstract class AuthenticationStateProvider {
  * app renders as anonymous (Blazor throws — here the auth package is
  * optional, so a missing registration degrades gracefully).
  *
- * Returns the unsubscribe function (for the component's dispose()).
+ * `onPending` hears when a notification's promise starts (AuthorizeView
+ * shows its Authorizing content then). Returns the unsubscribe function (for
+ * the component's dispose()).
  */
 export function watchAuthenticationState(
   services: ServiceProviderLike | undefined,
   apply: (state: AuthenticationState) => void,
+  onPending?: () => void,
 ): () => void {
   const provider = services?.tryGet(AuthenticationStateProvider);
   if (!provider) {
@@ -70,7 +113,7 @@ export function watchAuthenticationState(
     return () => undefined;
   }
   let active = true;
-  const unsubscribe = provider.subscribe(apply);
+  const unsubscribe = provider.subscribe(apply, { onPending });
   // The initial request is tokened with the notification version: if a
   // login/logout notification arrives while getAuthenticationStateAsync()
   // is pending, the late result (or failure) must not overwrite the newer

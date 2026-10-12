@@ -67,6 +67,33 @@ describe("TsazorHttp", () => {
     expect(request.headers.get("authorization")).toBe("Bearer t1");
   });
 
+  it("unwinds response interceptors like .NET's handler chain: the one added last sees the response first", async () => {
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+    const http = new TsazorHttp();
+    const order: string[] = [];
+    http.addRequestInterceptor((request) => {
+      order.push("request: outer");
+      return request;
+    });
+    http.addRequestInterceptor((request) => {
+      order.push("request: inner");
+      return request;
+    });
+    // The outer one maps error statuses to exceptions, as an app's envelope handling does.
+    http.addResponseInterceptor((response) => {
+      order.push("response: outer");
+      if (!response.ok) throw new Error(`mapped ${response.status}`);
+      return response;
+    });
+    http.addResponseInterceptor((response) => {
+      order.push(`response: inner saw ${response.status}`);
+      return response;
+    });
+
+    await expect(http.getJson("/orders")).rejects.toThrow("mapped 401");
+    expect(order).toEqual(["request: outer", "request: inner", "response: inner saw 401", "response: outer"]);
+  });
+
   it("sends through the fetch option instead of the global fetch (HttpClient's handler)", async () => {
     const globalFetch = vi.fn(async () => new Response("global"));
     vi.stubGlobal("fetch", globalFetch);

@@ -83,8 +83,12 @@ export declare class JwtAuthenticationStateProvider extends AuthenticationStateP
     setToken(token: string | undefined): void;
     logout(): void;
     getAuthenticationStateAsync(): Promise<AuthenticationState>;
-    private decode;
+    protected createUserAsync(claims: JwtClaims, token: string): ClaimsPrincipal | Promise<ClaimsPrincipal>;
+    private stateFor;
 }
+
+// JwtClaims
+export type JwtClaims = Record<string, string | number | string[] | undefined>;
 
 // OpenApiClient
 export declare abstract class OpenApiClient {

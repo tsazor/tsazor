@@ -10,7 +10,9 @@ import { watchAuthenticationState } from "./authentication-state-provider.js";
  * Blazor's CascadingAuthenticationState: cascades the AuthenticationState to
  * the whole subtree and re-renders it on login/logout. The
  * AuthenticationStateProvider is looked up in DI (registerValue); this
- * wrapper also re-renders children that cascade-consume the state.
+ * wrapper also re-renders children that cascade-consume the state. Blazor
+ * cascades a Task; this cascades the state itself, so while a notified
+ * promise is pending the subtree keeps the last state.
  */
 export class CascadingAuthenticationState extends ComponentBase implements CascadingValueSupplier {
   /** Content whose subtree receives the AuthenticationState. */

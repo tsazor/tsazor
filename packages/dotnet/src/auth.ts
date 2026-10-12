@@ -169,14 +169,14 @@ function toClaims(record: Record<string, string | string[]>): Claim[] {
 /** The JWT-based provider: state is a local decode, notification on setToken/logout. */
 export class JwtAuthenticationStateProvider extends AuthenticationStateProvider {
   private token: string | undefined;
-  private state: AuthenticationState = ANONYMOUS;
+  /** The state for `token`; undefined until first asked (a subclass's fields aren't set during the constructor). */
+  private state: AuthenticationState | Promise<AuthenticationState> | undefined;
 
-  /** Initial state right away from `initialToken` (e.g. from a login flow that just finished).
+  /** Starts with `initialToken` (e.g. from a login flow that just finished).
    *  Keep the token in memory only — not in localStorage/sessionStorage (XSS reads it there). */
   constructor(initialToken?: string) {
     super();
     this.token = initialToken;
-    this.state = initialToken ? this.decode(initialToken) : ANONYMOUS;
   }
 
   /** The token currently set (attachJwtAuth reads it per request). */
@@ -187,7 +187,7 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
   /** Login/expiry: set a new token (undefined = logout) and notify subscribers. */
   setToken(token: string | undefined): void {
     this.token = token;
-    this.state = token ? this.decode(token) : ANONYMOUS;
+    this.state = this.stateFor(token);
     this.notifyAuthenticationStateChanged(this.state);
   }
 
@@ -197,16 +197,45 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
   }
 
   override async getAuthenticationStateAsync(): Promise<AuthenticationState> {
-    return this.state;
+    this.state ??= this.stateFor(this.token);
+    const token = this.token;
+    const state = await this.state;
+    // The token changed meanwhile (attachJwtAuth's logout on the profile request's 401, a new login): answer for
+    // the current one, not for the token this request started with.
+    return this.token === token ? state : this.getAuthenticationStateAsync();
   }
 
-  private decode(token: string): AuthenticationState {
+  /**
+   * The user a token stands for: by default its claims (`principalFromJwt`). Override it to add what the token
+   * doesn't carry, such as roles from a profile endpoint (Blazor WebAssembly's
+   * `AccountClaimsPrincipalFactory.CreateUserAsync`; like its `ValueTask`, the result may be ready at once). A
+   * promise makes a login notify a promise: AuthorizeView shows Authorizing until it resolves, with no in-between
+   * user. A rejected one counts as signed out.
+   */
+  protected createUserAsync(claims: JwtClaims, token: string): ClaimsPrincipal | Promise<ClaimsPrincipal> {
+    return principalFromJwt(claims);
+  }
+
+  private stateFor(token: string | undefined): AuthenticationState | Promise<AuthenticationState> {
+    if (token === undefined || token.length === 0) return ANONYMOUS;
+    let claims: JwtClaims;
     try {
-      return new AuthenticationState(principalFromJwt(decodeJwt(token)));
+      claims = decodeJwt(token);
     } catch {
       // A broken token is anonymous, no throw — getAuthenticationStateAsync() stays total.
       return ANONYMOUS;
     }
+    const user = this.createUserAsync(claims, token);
+    if (typeof (user as Partial<Promise<ClaimsPrincipal>>).then !== "function") return new AuthenticationState(user as ClaimsPrincipal);
+    return Promise.resolve(user).then(
+      (resolved) => new AuthenticationState(resolved),
+      (error: unknown) => {
+        // After a logout (attachJwtAuth's, on the profile request's 401) the failure answers an old token: no news.
+        // eslint-disable-next-line no-console
+        if (this.token === token) console.error("[tsazor-dotnet] createUserAsync() failed:", error);
+        return ANONYMOUS;
+      },
+    );
   }
 }
 
@@ -216,8 +245,8 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
  * `NotAuthorized` — the redirect to the login. Blazor leaves this to a `DelegatingHandler` of the app's own
  * (Tsazor extension). A 401 to an older token, after a new login, changes nothing. Returns the unsubscribe.
  *
- * Attach it before a response interceptor that throws on an error status (an envelope mapping, say): response
- * interceptors run in the order added, and one that throws ends the chain — the 401 would never get here.
+ * Attach it after a response interceptor that throws on an error status (an envelope mapping, say): as in .NET's
+ * handler chain, the interceptor added last sees the response first, so the 401 gets here before the other one throws.
  */
 export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider): () => void {
   const bearer = (): string | undefined => {

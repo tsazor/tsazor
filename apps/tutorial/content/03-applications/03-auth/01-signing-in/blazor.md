@@ -20,8 +20,8 @@ Write `signOut` the same way with `ANONYMOUS`, and import `createUser`. Click Si
 header greets Marta.
 
 > **Coming from Blazor:** you override `getAuthenticationStateAsync()` as you would
-> `GetAuthenticationStateAsync()`, but `notifyAuthenticationStateChanged` takes the state itself
-> instead of a `Task`. The user is
+> `GetAuthenticationStateAsync()`. `notifyAuthenticationStateChanged` takes the state itself when
+> it's ready, as here, or a promise of it where Blazor takes a `Task`. The user is
 > a plain object (`name`, `isAuthenticated`, `roles`, `claims`) instead of a
 > `ClaimsPrincipal`. `Program.ts` registers one instance under two keys — the class for
 > `@inject` and the base class for the auth components — where you'd write

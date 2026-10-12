@@ -2430,7 +2430,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Content whose subtree receives the AuthenticationState."
         }
       ],
-      "doc": "Blazor's CascadingAuthenticationState: cascades the AuthenticationState to\nthe whole subtree and re-renders it on login/logout. The\nAuthenticationStateProvider is looked up in DI (registerValue); this\nwrapper also re-renders children that cascade-consume the state.",
+      "doc": "Blazor's CascadingAuthenticationState: cascades the AuthenticationState to\nthe whole subtree and re-renders it on login/logout. The\nAuthenticationStateProvider is looked up in DI (registerValue); this\nwrapper also re-renders children that cascade-consume the state. Blazor\ncascades a Task; this cascades the state itself, so while a notified\npromise is pending the subtree keeps the last state.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

@@ -80,8 +80,10 @@ export class TsazorHttp {
 
   /**
    * Adds an interceptor that runs on every response before the status check
-   * and JSON parsing, in the order added; it gets the request that was sent
-   * too. Returns a function that removes it.
+   * and JSON parsing; it gets the request that was sent too. The one added
+   * last runs first, as .NET's handler chain unwinds (the handler added last
+   * is the innermost): an interceptor added after one that throws on an error
+   * status still sees that response. Returns a function that removes it.
    */
   addResponseInterceptor(interceptor: ResponseInterceptor): () => void {
     this.responseInterceptors.push(interceptor);
@@ -98,7 +100,7 @@ export class TsazorHttp {
       current = await interceptor(current);
     }
     let response = await (this.options.fetch ?? fetch)(current);
-    for (const interceptor of this.responseInterceptors) {
+    for (const interceptor of [...this.responseInterceptors].reverse()) {
       response = await interceptor(response, current);
     }
     return response;

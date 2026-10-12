@@ -104,13 +104,17 @@ directly from the browser. Then:
   `sessionStorage`; prefer short-lived tokens. A reload then signs the user out: that is the price.
   The BFF pattern keeps the session across reloads without a script ever holding it;
 - `JwtAuthenticationStateProvider` decodes the token's claims for the UI and **does not verify
-  its signature** — the server validates every token it receives (`AddJwtBearer`);
+  its signature** — the server validates every token it receives (`AddJwtBearer`). What the
+  token doesn't carry, such as roles from a profile endpoint, comes from an override of its
+  `createUserAsync` (Blazor WebAssembly's `AccountClaimsPrincipalFactory`): until that resolves,
+  `AuthorizeView` shows `Authorizing`;
 - `attachJwtAuth(http, provider)` adds the `Authorization: Bearer …` header to every request, and
   logs out when the server answers that token with a 401 (expired, revoked): on a page that needs a
   signed-in user, `AuthorizeView` and `AuthorizeRouteView` then show `NotAuthorized` (the app's
   redirect to the login). Blazor leaves this to a
   `DelegatingHandler` of the app's own (Tsazor extension). A 401 to an older token, after a new
-  login, changes nothing; a 403 never logs out. Attach it before any response interceptor that
-  throws on an error status: they run in the order added, and one that throws ends the chain.
+  login, changes nothing; a 403 never logs out. Attach it after a response interceptor that
+  throws on an error status: as in .NET's handler chain, the one added last sees the response
+  first.
 
 Write down why the BFF pattern doesn't fit before you choose this.

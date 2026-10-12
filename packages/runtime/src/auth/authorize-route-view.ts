@@ -28,11 +28,19 @@ export class AuthorizeRouteView extends RouteView {
 
   protected override onInitialized(): void {
     const services = this.componentServices as ServiceProvider | undefined;
-    this.unsubscribe = watchAuthenticationState(services, (state) => {
-      this.authenticationState = state;
-      this.resolved = true;
-      this.stateHasChangedInternal();
-    });
+    this.unsubscribe = watchAuthenticationState(
+      services,
+      (state) => {
+        this.authenticationState = state;
+        this.resolved = true;
+        this.stateHasChangedInternal();
+      },
+      () => {
+        // A promise was notified: Authorizing until it resolves, as Blazor awaits the Task.
+        this.resolved = false;
+        this.stateHasChangedInternal();
+      },
+    );
   }
 
   /** Stops listening to authentication state changes. */

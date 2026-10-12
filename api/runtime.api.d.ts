@@ -43,8 +43,14 @@ export declare abstract class AuthenticationStateProvider {
     peekState(): AuthenticationState | undefined;
     get notificationVersion(): number;
     private version;
-    protected notifyAuthenticationStateChanged(state: AuthenticationState): void;
-    subscribe(handler: AuthenticationStateChangedHandler): () => void;
+    protected notifyAuthenticationStateChanged(state: AuthenticationState | Promise<AuthenticationState>): void;
+    private publish;
+    subscribe(handler: AuthenticationStateChangedHandler, options?: AuthenticationStateSubscribeOptions): () => void;
+}
+
+// AuthenticationStateSubscribeOptions
+export interface AuthenticationStateSubscribeOptions {
+    onPending?: () => void;
 }
 
 // AuthorizationPolicy
@@ -1658,7 +1664,7 @@ export interface VirtualizeItemsProviderResult<TItem> {
 }
 
 // watchAuthenticationState
-export declare function watchAuthenticationState(services: ServiceProviderLike | undefined, apply: (state: AuthenticationState) => void): () => void;
+export declare function watchAuthenticationState(services: ServiceProviderLike | undefined, apply: (state: AuthenticationState) => void, onPending?: () => void): () => void;
 
 /* @tsazor/runtime/transition */
 

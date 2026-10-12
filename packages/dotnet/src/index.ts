@@ -37,4 +37,5 @@ export {
   JwtAuthenticationStateProvider,
   attachJwtAuth,
   type CookieAuthOptions,
+  type JwtClaims,
 } from "./auth.js";

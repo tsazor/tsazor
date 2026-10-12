@@ -5,6 +5,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Breaking — `TsazorHttp` unwinds response interceptors like .NET's handler chain:** the one added last sees the
+  response first (request interceptors still run in the order added). An interceptor added after one that throws on
+  an error status sees the response now; `attachJwtAuth` goes after the app's own error handling.
+- `@tsazor/runtime`: `notifyAuthenticationStateChanged` takes a promise of the state too, as Blazor's takes a
+  `Task`. Until it resolves, `AuthorizeView` and `AuthorizeRouteView` show `Authorizing`; subscribers hear the
+  resolved state (`subscribe` takes `{ onPending }` to hear the start); a newer notification wins; a rejected promise
+  counts as signed out. `@tsazor/dotnet`: `JwtAuthenticationStateProvider.createUserAsync(claims, token)` (Blazor
+  WebAssembly's `AccountClaimsPrincipalFactory.CreateUserAsync`) adds what the token doesn't carry, such as roles from
+  a profile endpoint; the provider works its state out on first request instead of in the constructor.
+
 - **Breaking — method names keep Blazor's `Async` suffix** (decided before the API freeze; design-principles.md):
   `@tsazor/runtime`'s `Virtualize` has `refreshDataAsync()` and `scrollToItemAsync(index, signal?)` (were
   `refreshData`, `scrollToItem`); `@tsazor/fluent` and `@tsazor/bootstrap`: `DataGrid.scrollToItemAsync`, `Overlay`'s

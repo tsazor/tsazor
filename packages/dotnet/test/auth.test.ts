@@ -13,9 +13,17 @@ import {
   Renderer,
   ServiceCollection,
   TsazorHttp,
+  type ClaimsPrincipal,
   type RenderTreeBuilder,
 } from "@tsazor/runtime";
-import { CookieAuthenticationStateProvider, JwtAuthenticationStateProvider, attachJwtAuth, decodeJwt, principalFromJwt } from "../src/auth.js";
+import {
+  CookieAuthenticationStateProvider,
+  JwtAuthenticationStateProvider,
+  attachJwtAuth,
+  decodeJwt,
+  principalFromJwt,
+  type JwtClaims,
+} from "../src/auth.js";
 
 /** Builds a hand-made JWT (header.payload.signature, Base64URL). */
 function makeJwt(payload: object): string {
@@ -215,6 +223,132 @@ describe("JwtAuthenticationStateProvider", () => {
     await expect(http.getJson("http://localhost/orders")).rejects.toMatchObject({ status: 401 });
     expect(sent).toEqual([null]);
     expect(provider.getToken()).toBeDefined();
+  });
+
+  it("attachJwtAuth after an interceptor that throws on error statuses still sees the 401 (.NET's order)", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada" }));
+    const http = new TsazorHttp();
+    // The app's client first (its envelope handling throws), then the auth — as a .NET handler chain is built.
+    http.addResponseInterceptor((response) => {
+      if (!response.ok) throw new Error(`envelope: ${response.status}`);
+      return response;
+    });
+    attachJwtAuth(http, provider);
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+
+    await expect(http.getJson("http://localhost/orders")).rejects.toThrow("envelope: 401");
+    expect(provider.getToken()).toBeUndefined();
+  });
+});
+
+describe("JwtAuthenticationStateProvider.createUserAsync (roles the token doesn't carry)", () => {
+  /** FluentCMS's case: the token names the user, a profile request says whether they're an admin. */
+  class ProfileAuth extends JwtAuthenticationStateProvider {
+    constructor(
+      private readonly http: TsazorHttp,
+      initialToken?: string,
+    ) {
+      super(initialToken);
+    }
+
+    protected override async createUserAsync(claims: JwtClaims, token: string): Promise<ClaimsPrincipal> {
+      // Reads its field at once: during the base constructor it wouldn't be set yet.
+      const profile = this.http.getJson<{ admin: boolean }>("http://localhost/profile");
+      const user = await super.createUserAsync(claims, token);
+      return (await profile).admin ? { ...user, roles: [...user.roles, "admin"] } : user;
+    }
+  }
+
+  function signedInApp(provider: ProfileAuth): { host: HTMLElement; settle: () => Promise<void> } {
+    const services = new ServiceCollection();
+    services.registerValue(AuthenticationStateProvider, provider);
+    const renderer = new Renderer(services.build());
+    class AdminPage extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, "Admin area");
+      }
+    }
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeRouteView));
+        b.addAttribute(1, "RouteData", { route: { template: "/admin", type: AdminPage, authorize: { roles: ["admin"] } }, values: {} } as never);
+        b.addAttribute(2, "NotAuthorized", () => (inner: RenderTreeBuilder) => inner.addContent(0, "Please sign in"));
+        b.addAttribute(3, "Authorizing", (inner: RenderTreeBuilder) => inner.addContent(0, "Checking…"));
+        b.closeComponent();
+      }
+    }
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    renderer.renderInContainer(App, host);
+    const settle = async () => {
+      await renderer.waitUntilIdle();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await renderer.waitUntilIdle();
+    };
+    return { host, settle };
+  }
+
+  it("a login notifies once, with the role: Authorizing meanwhile, never a user without it", async () => {
+    const http = new TsazorHttp();
+    const provider = new ProfileAuth(http);
+    attachJwtAuth(http, provider);
+    let answerProfile!: () => void;
+    vi.stubGlobal(
+      "fetch",
+      (request: Request) =>
+        new Promise<Response>((resolve) => {
+          answerProfile = () => resolve(new Response(JSON.stringify({ admin: request.headers.has("authorization") }), { status: 200 }));
+        }),
+    );
+    const { host, settle } = signedInApp(provider);
+    await settle();
+    expect(host.textContent).toBe("Please sign in");
+    const heard: string[] = [];
+    provider.subscribe((state) => heard.push(`${state.user.name}:${state.user.roles.join()}`));
+
+    provider.setToken(makeJwt({ nameid: "admin" }));
+    await settle();
+    expect(host.textContent).toBe("Checking…");
+
+    answerProfile();
+    await settle();
+    expect(host.textContent).toBe("Admin area");
+    expect(heard).toEqual(["admin:admin"]);
+    host.remove();
+  });
+
+  it("runs after construction (a subclass's fields are set for the initial token); a 401 on the profile signs out", async () => {
+    const http = new TsazorHttp();
+    const provider = new ProfileAuth(http, makeJwt({ nameid: "admin" }));
+    attachJwtAuth(http, provider);
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+    const errors = vi.spyOn(console, "error");
+
+    const state = await provider.getAuthenticationStateAsync();
+
+    expect(state.user.isAuthenticated).toBe(false);
+    expect(provider.getToken()).toBeUndefined();
+    // The 401 is handled (signed out), not an error to report.
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it("answers for the current token when an override swallows the profile's 401", async () => {
+    class LenientAuth extends ProfileAuth {
+      protected override async createUserAsync(claims: JwtClaims, token: string): Promise<ClaimsPrincipal> {
+        try {
+          return await super.createUserAsync(claims, token);
+        } catch {
+          return principalFromJwt(claims); // signed in without the role — but attachJwtAuth logged out meanwhile
+        }
+      }
+    }
+    const http = new TsazorHttp();
+    const provider = new LenientAuth(http, makeJwt({ nameid: "admin" }));
+    attachJwtAuth(http, provider);
+    vi.stubGlobal("fetch", async () => new Response("", { status: 401 }));
+
+    expect((await provider.getAuthenticationStateAsync()).user.isAuthenticated).toBe(false);
   });
 });
 

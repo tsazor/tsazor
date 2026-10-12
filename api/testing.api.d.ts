@@ -22,6 +22,8 @@
 
 // AuthenticationStateProvider: re-exported from @tsazor/runtime
 
+// AuthenticationStateSubscribeOptions: re-exported from @tsazor/runtime
+
 // AuthorizationPolicy: re-exported from @tsazor/runtime
 
 // AuthorizationRequirements: re-exported from @tsazor/runtime
