@@ -119,6 +119,20 @@ directly from the browser. Then:
   `DelegatingHandler` of the app's own (Tsazor extension). A 401 to an older token, after a new
   login, changes nothing; a 403 never logs out. Attach it after a response interceptor that
   throws on an error status: as in .NET's handler chain, the one added last sees the response
-  first.
+  first;
+- with a refresh token, `attachJwtAuth(http, provider, { refresh })` renews the access token
+  before a request when it expires within a minute (`refreshBefore` seconds): once, while the
+  other requests wait. A refresh that fails logs out. `refresh` sends its request with a client of
+  its own; through the one it renews for, it would wait for itself.
+
+  ```ts
+  const tokens = new TsazorHttp(); // no interceptors: the refresh endpoint takes the tokens in its body
+  attachJwtAuth(http, auth, {
+    refresh: async (token) => {
+      const result = await tokens.postJson<TokenResult>("/api/identity/token/refresh", { token, refreshToken: store.refreshToken });
+      return result.succeeded ? result.data.token : undefined;
+    },
+  });
+  ```
 
 Write down why the BFF pattern doesn't fit before you choose this.

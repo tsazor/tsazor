@@ -250,6 +250,80 @@ describe("JwtAuthenticationStateProvider", () => {
   });
 });
 
+describe("attachJwtAuth's refresh (BlazorHero renews a token in its last minute)", () => {
+  const inSeconds = (seconds: number) => Math.floor(Date.now() / 1000) + seconds;
+
+  function recordSent(): (string | null)[] {
+    const sent: (string | null)[] = [];
+    vi.stubGlobal("fetch", async (request: Request) => {
+      sent.push(request.headers.get("authorization"));
+      return new Response("{}", { status: 200 });
+    });
+    return sent;
+  }
+
+  it("renews a token that expires within the minute before the request — once for requests in parallel", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada", exp: inSeconds(30) }));
+    const http = new TsazorHttp();
+    const renewed = makeJwt({ name: "Ada", exp: inSeconds(3600) });
+    const refresh = vi.fn(async () => renewed);
+    attachJwtAuth(http, provider, { refresh });
+    const sent = recordSent();
+
+    await Promise.all([http.getJson("http://localhost/brands"), http.getJson("http://localhost/products")]);
+
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(sent).toEqual([`Bearer ${renewed}`, `Bearer ${renewed}`]);
+    expect(provider.getToken()).toBe(renewed);
+  });
+
+  it("leaves a token alone that is further from its exp than refreshBefore", async () => {
+    const token = makeJwt({ name: "Ada", exp: inSeconds(600) });
+    const provider = new JwtAuthenticationStateProvider(token);
+    const http = new TsazorHttp();
+    const refresh = vi.fn(async () => "never");
+    attachJwtAuth(http, provider, { refresh, refreshBefore: 300 });
+    const sent = recordSent();
+
+    await http.getJson("http://localhost/brands");
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(sent).toEqual([`Bearer ${token}`]);
+  });
+
+  it("logs out when the refresh fails or has no new token; the request then goes out unsigned", async () => {
+    for (const refresh of [async () => undefined, async () => Promise.reject(new Error("refresh token expired"))]) {
+      const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada", exp: inSeconds(10) }));
+      const http = new TsazorHttp();
+      attachJwtAuth(http, provider, { refresh });
+      const sent = recordSent();
+
+      await http.getJson("http://localhost/brands");
+
+      expect(provider.getToken()).toBeUndefined();
+      expect(sent).toEqual([null]);
+    }
+  });
+
+  it("a sign-in while the refresh runs wins over its result", async () => {
+    const provider = new JwtAuthenticationStateProvider(makeJwt({ name: "Ada", exp: inSeconds(10) }));
+    const http = new TsazorHttp();
+    const bob = makeJwt({ name: "Bob", exp: inSeconds(3600) });
+    attachJwtAuth(http, provider, {
+      refresh: async () => {
+        provider.setToken(bob);
+        return makeJwt({ name: "Ada", exp: inSeconds(3600) });
+      },
+    });
+    const sent = recordSent();
+
+    await http.getJson("http://localhost/brands");
+
+    expect(provider.getToken()).toBe(bob);
+    expect(sent).toEqual([`Bearer ${bob}`]);
+  });
+});
+
 describe("JwtAuthenticationStateProvider.createUserAsync (roles the token doesn't carry)", () => {
   /** FluentCMS's case: the token names the user, a profile request says whether they're an admin. */
   class ProfileAuth extends JwtAuthenticationStateProvider {

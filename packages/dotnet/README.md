@@ -48,7 +48,7 @@ ran their own HTTP helpers).
   and `JwtAuthenticationStateProvider` (local payload decoding, Microsoft claim URIs; override
   `createUserAsync` for roles the token doesn't carry) on top of the runtime's
   `AuthenticationStateProvider`; `attachJwtAuth` installs the `Authorization: Bearer` interceptor
-  and logs out when the server answers the token with a 401 (attach it after an interceptor that
+  and logs out when the server answers the token with a 401, and with `{ refresh }` renews it before it expires (attach it after an interceptor that
   throws on error statuses, as .NET's handler chain is built). The cookie provider (the BFF pattern, token in an HttpOnly cookie) is the recommended
   default; JWT in the browser only with a stated reason, kept in memory — see [docs/auth.md](../../docs/auth.md).
 

@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/dotnet`: `attachJwtAuth(http, provider, { refresh, refreshBefore })` renews the access token before a
+  request when it expires within a minute (the refresh-token pattern Blazor apps build into a `DelegatingHandler`):
+  once per token while the other requests wait; a refresh that fails logs out; a sign-in meanwhile wins.
+
 - `@tsazor/runtime`: `StringLocalizer` walks the parent cultures before the default (`fr-FR` → `fr`), as .NET's
   resource lookup does: a table for the neutral culture serves its specific ones.
 

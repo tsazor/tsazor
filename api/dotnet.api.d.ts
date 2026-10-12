@@ -9,7 +9,7 @@ export declare function asProblemDetails(body: unknown): ProblemDetails | null;
 export declare function asValidationProblem(body: unknown): ValidationProblemDetails | null;
 
 // attachJwtAuth
-export declare function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider): () => void;
+export declare function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider, options?: JwtAuthOptions): () => void;
 
 // buildResult
 export declare function buildResult<T>(response: Response, text: string, envelope: EnvelopeOptions | undefined): HttpResult<T>;
@@ -86,6 +86,12 @@ export declare class JwtAuthenticationStateProvider extends AuthenticationStateP
     getAuthenticationStateAsync(): Promise<AuthenticationState>;
     protected createUserAsync(claims: JwtClaims, token: string): ClaimsPrincipal | Promise<ClaimsPrincipal>;
     private stateFor;
+}
+
+// JwtAuthOptions
+export interface JwtAuthOptions {
+    readonly refresh?: (token: string) => Promise<string | undefined>;
+    readonly refreshBefore?: number;
 }
 
 // JwtClaims

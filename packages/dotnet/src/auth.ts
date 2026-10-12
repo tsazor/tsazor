@@ -260,15 +260,20 @@ export class JwtAuthenticationStateProvider extends AuthenticationStateProvider 
  *
  * Attach it after a response interceptor that throws on an error status (an envelope mapping, say): as in .NET's
  * handler chain, the interceptor added last sees the response first, so the 401 gets here before the other one throws.
+ *
+ * With `refresh`, it renews the token before a request when the token expires soon (see `JwtAuthOptions`).
  */
-export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider): () => void {
+export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider, options: JwtAuthOptions = {}): () => void {
   const bearer = (): string | undefined => {
     const token = provider.getToken();
     return token === undefined || token.length === 0 ? undefined : `Bearer ${token}`;
   };
-  const sign: RequestInterceptor = (request) => {
+  const renew = renewal(provider, options);
+  const sign: RequestInterceptor = async (request) => {
+    if (request.headers.has("authorization")) return request;
+    await renew();
     const authorization = bearer();
-    if (authorization === undefined || request.headers.has("authorization")) return request;
+    if (authorization === undefined) return request;
     // `headers` in a Request's init replaces all of them: without the copy, a POST lost its JSON content type and
     // ASP.NET Core's [FromBody] answered 415.
     const headers = new Headers(request.headers);
@@ -288,4 +293,56 @@ export function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationState
     removeSign();
     removeRejected();
   };
+}
+
+/** Options for `attachJwtAuth`. */
+export interface JwtAuthOptions {
+  /**
+   * Renews the token: gets the current one, returns the new one (from a refresh-token endpoint), or undefined when
+   * the session is over. Called before a request whose token expires within `refreshBefore` seconds, once per
+   * token — requests in the meantime wait for it. A refresh that throws or returns undefined logs out. Send its own
+   * request with a client of its own: through the one it renews for, it would wait for itself.
+   */
+  readonly refresh?: (token: string) => Promise<string | undefined>;
+  /** How many seconds before its `exp` a token is renewed (default 60, BlazorHero's minute). */
+  readonly refreshBefore?: number;
+}
+
+/** The `refresh` side of `attachJwtAuth`: resolves once a token that expires soon is renewed (or has gone). */
+function renewal(provider: JwtAuthenticationStateProvider, options: JwtAuthOptions): () => Promise<void> {
+  const { refresh, refreshBefore = 60 } = options;
+  let pending: { token: string; done: Promise<void> } | undefined;
+  return () => {
+    const token = provider.getToken();
+    if (refresh === undefined || token === undefined || token.length === 0 || !expiresWithin(token, refreshBefore)) {
+      return Promise.resolve();
+    }
+    if (pending?.token !== token) {
+      const done = (async () => {
+        let next: string | undefined;
+        try {
+          next = await refresh(token);
+        } catch {
+          next = undefined;
+        }
+        // A login or logout while it ran wins over this result.
+        if (provider.getToken() !== token) return;
+        if (next === undefined || next.length === 0) provider.logout();
+        else provider.setToken(next);
+      })();
+      pending = { token, done };
+    }
+    return pending.done;
+  };
+}
+
+/** Whether the token's `exp` is less than `seconds` away (a token without `exp`, or one that isn't a JWT, never is). */
+function expiresWithin(token: string, seconds: number): boolean {
+  let exp: unknown;
+  try {
+    exp = decodeJwt(token).exp;
+  } catch {
+    return false;
+  }
+  return typeof exp === "number" && exp * 1000 - Date.now() < seconds * 1000;
 }
