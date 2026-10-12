@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: `StringLocalizer` walks the parent cultures before the default (`fr-FR` → `fr`), as .NET's
+  resource lookup does: a table for the neutral culture serves its specific ones.
+
 - `@tsazor/dotnet`: `tsazor-dotnet generate <url>` asks for `application/json` in English. Node's fetch sent
   `accept-language: *`, which BlazorHero's server answers with a 500; a fixed language also keeps a localizing
   server's output the same on every machine.

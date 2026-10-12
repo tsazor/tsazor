@@ -155,10 +155,12 @@ export class StringLocalizer<Table extends StringTable = StringTable> {
     return this.resolve(key);
   }
 
-  /** The fallback chain: current culture's table → default culture's table. */
+  /**
+   * The fallback chain: the current culture's table, its parents' (`fr-FR` → `fr`, as .NET's resource lookup
+   * walks the parent cultures), then the default culture's.
+   */
   private resolve(key: string): string | undefined {
-    const culture = this.culture;
-    if (culture !== "") {
+    for (const culture of withParents(this.culture)) {
       const value = this.tableOf(culture)?.[key];
       if (value !== undefined) return value;
     }
@@ -205,6 +207,15 @@ export class StringLocalizer<Table extends StringTable = StringTable> {
       handler();
     }
   }
+}
+
+/** A culture and its parents, most specific first: "de-CH" → ["de-CH", "de"]; the invariant culture → []. */
+function withParents(culture: string): string[] {
+  const chain: string[] = [];
+  for (let name = culture; name !== ""; name = name.includes("-") ? name.slice(0, name.lastIndexOf("-")) : "") {
+    chain.push(name);
+  }
+  return chain;
 }
 
 /**

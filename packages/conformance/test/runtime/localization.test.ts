@@ -144,6 +144,21 @@ describe("StringLocalizer (E8 §2)", () => {
     localizer.dispose();
   });
 
+  it("walks the parent cultures before the default, as .NET's resource lookup does (fr-FR finds a neutral fr table)", () => {
+    // BlazorHero's resources are neutral (Login.fr.resx) and its cultures specific (fr-FR).
+    const culture = new CultureService("fr-CA");
+    const localizer = new StringLocalizer({
+      culture,
+      tables: { "en-US": { "Login.Title": "Sign In", "Login.Help": "Help" }, fr: { "Login.Title": "Connexion" }, "fr-CA": { "Login.Help": "Aide" } },
+      defaultCulture: "en-US",
+    });
+    expect(localizer.get("Login.Help")).toBe("Aide");
+    expect(localizer.get("Login.Title")).toBe("Connexion");
+    culture.setExplicit("de-DE");
+    expect(localizer.get("Login.Title")).toBe("Sign In");
+    localizer.dispose();
+  });
+
   it("an empty localizer returns the key", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const localizer = new StringLocalizer();

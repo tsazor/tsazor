@@ -27,14 +27,18 @@ freeze signal.
 
 0. **Backend and reference** — done 2026-10-12: the script, the original client signs in and shows its shell.
 1. **Shell and sign-in:** layout (app bar, nav menu, user card, dark mode, language selector), login with the
-   JWT and its refresh token, Home; the typed client from BlazorHero's Swagger document.
+   JWT and its refresh token, Home; the original's managers and DTOs as TypeScript (B3). The shell already holds
+   the SignalR connection (sign-in at the hub, chat notifications, forced token refresh, logout when a role's
+   permissions change) and reads every text through its localizer, so both start here:
+   - **Translations** (done 2026-10-12): `scripts/resx.mjs` turns the 39 resources into one table per culture
+     (`src/i18n`, keys `<Resource>.<name>`) — 505 keys in English, 266 in German.
 2. **Catalog:** brands and products — server-paged tables with search, add/edit dialogs, delete confirmation, Excel
    export and import.
 3. **Identity:** users, roles, role permissions, user roles, profile and account (password, picture), register,
    forgot and reset password.
 4. **Documents and audit:** document store and types, extended attributes, audit trails.
-5. **Real time:** chat and notifications over SignalR (with the JWT), the dashboard with its charts.
-6. **Localization:** the resx resources, the language switch, right-to-left.
+5. **Real time:** the chat page, the dashboard with its charts.
+6. **Languages:** the switch between the eleven, right-to-left for Arabic.
 
 Each phase ends with its part of `scripts/verify.mjs` (the app in a browser against the real backend).
 
@@ -47,3 +51,12 @@ Each phase ends with its part of `scripts/verify.mjs` (the app in a browser agai
 | U1 | Upstream | `Accept-Language: *` (Node's fetch sends it) answers every request with a 500: `RequestCultureMiddleware` makes a culture of it. Browsers send real languages | The backend script sends `en-US`; `tsazor-dotnet generate` now asks in English (it hit the 500 too) |
 | B3 | `@tsazor/dotnet` (generator) | The Swagger document has no response types: the controllers return `IActionResult`, and client and server share their C# DTOs through `Shared`/`Application`, as hosted WebAssembly apps do. The generated client types the 58 requests and returns `HttpResult<void>` for every response | Port: the original's managers (`Client.Infrastructure`) become TypeScript services with the DTOs ported by hand. A generator option is a proposal for the owner |
 | B4 | `@tsazor/dotnet` (generator) | URL-segment API versioning (`api/v{version}/…`, no `SubstituteApiVersionInUrl`) makes `{version}` a parameter of every versioned method and of its name (`getBrandsByVersion("1")`) | Open |
+| B5 | `@tsazor/dotnet` | BlazorHero refreshes its token before a request when it expires within a minute (`TryRefreshToken`, a request interceptor), and again when the hub asks (`RegenerateTokens`). `attachJwtAuth` signs requests and logs out on a 401, but can't refresh | Open (the port refreshes in an interceptor of its own) |
+| B6 | Library | Every modal of the original opens through MudBlazor's `IDialogService.Show<T>(title, parameters, options)` and awaits its result (add/edit forms, delete confirmation, logout). Tsazor's dialogs are declarative only; MudBlazor, Radzen and Fluent UI Blazor all have the service | Open (owner) |
+| B7 | Runtime (parity) | `StringLocalizer` looked a key up in the current culture's table and then the default's. .NET walks the parent cultures first (`fr-FR` → `fr`), and BlazorHero's resources are neutral (`Login.fr.resx`) while its cultures are specific (`fr-FR`) | Fixed: the parent cultures come before the default, with a test |
+| B8 | Library | MudBlazor's app frame — `MudLayout` with `MudAppBar`, a persistent `MudDrawer` and `MudMainContent` — has no counterpart: `Drawer` is an overlay | Open (owner) |
+| B9 | Library | `MudTextField`'s adornments (the password field's eye button) have no counterpart: `TextInput` has no start or end slot | Open (owner) |
+| B10 | Library | The account menu opens from the user's avatar (`MudMenu` `ActivatorContent`); `Menu` takes a text label only | Open (owner) |
+| B11 | Library | A chat notification is a snackbar with an action ("Chat?" opens the chat); `Toaster`'s toasts have no action | Open (owner) |
+| U2 | Upstream | Five Arabic resx files start their names with right-to-left marks (U+200F, `‏‏MainLayout.ar.resx`), so .NET never finds them and those components stay English in Arabic | `scripts/resx.mjs` reads them under their real names |
+| U3 | Upstream | Khmer's culture code is `km_KH`, with an underscore — not a BCP 47 tag | Open |
