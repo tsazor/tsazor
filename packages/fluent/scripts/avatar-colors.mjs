@@ -27,7 +27,8 @@ const block = (tokens, indent) => COLORS.flatMap((name) => {
 const css = `/* Avatar colors — Fluent 2's persona palette (Background2, Foreground2, BorderActive) and its neutral avatar, light and dark, written from
  * @fluentui/tokens 1.0.0-alpha.22 (MIT, Microsoft). Avatar's color="dark-red" … color="colorful" read them. */
 
-:root {
+:root,
+[data-fluent-theme="light"] {
 ${neutral("light", "  ")}${block(light, "  ")}
 }
 
@@ -36,7 +37,8 @@ ${neutral("dark", "  ")}${block(dark, "  ")}
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-fluent-theme]) {
+  :root:not([data-fluent-theme]),
+  :root[data-fluent-theme="system"] {
 ${neutral("dark", "    ")}${block(dark, "    ")}
   }
 }

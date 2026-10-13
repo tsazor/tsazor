@@ -32,6 +32,14 @@ describe("FluentProvider", () => {
     expect(provider.getAttribute("data-fluent-theme")).toBe("dark");
   });
 
+  it("follows the system by default (Fluent UI Blazor's DesignThemeModes.System)", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, FluentProvider);
+      b.closeComponent();
+    });
+    expect(container.querySelector(".fui-provider")!.getAttribute("data-fluent-theme")).toBe("system");
+  });
+
   it("renders token overrides as inline custom properties", async () => {
     const { container } = await renderTree((b) => {
       b.openComponent(0, FluentProvider);

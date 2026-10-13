@@ -2,7 +2,7 @@
 @inherits LayoutComponentBase
 @import { tokenOverrides } from "../Infrastructure/Settings/BlazorHeroTheme"
 
-<FluentProvider tokenOverrides="@tokenOverrides" class="bh-root">
+<FluentProvider theme="light" tokenOverrides="@tokenOverrides" class="bh-root">
     <main class="bh-not-found">
         <Icon value="@BlazorHeroLogo" size="160" class="bh-not-found__logo" />
         <Typography variant="h1">@L("Message")</Typography>

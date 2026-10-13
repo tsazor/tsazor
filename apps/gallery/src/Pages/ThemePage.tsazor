@@ -3,8 +3,9 @@
 
 <h1>Theme</h1>
 <p class="intro">
-    One token set, four blocks: <code>:root</code> light, <code>[data-fluent-theme="dark"]</code>,
-    OS-preference dark behind <code>:root:not([data-fluent-theme])</code>, and a compact density.
+    One token set: <code>:root</code> light (or <code>[data-fluent-theme="light"]</code>),
+    <code>[data-fluent-theme="dark"]</code>, OS-preference dark on a root that pins no theme (or
+    <code>"system"</code>), the aliases per theme, and a compact density.
     The toggle in the topbar writes <code>data-fluent-theme</code> on <code>html</code> — below, the
     <code>html</code>-attribute swatch proves it takes.
 </p>

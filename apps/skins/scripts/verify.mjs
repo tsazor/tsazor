@@ -103,20 +103,38 @@ try {
   }
 
   /* FluentProvider's tokenOverrides reach the tokens made of others: a brand ramp of the app's own colours the
-     primary button, in the light theme, the dark one, and under a dark document (BlazorHero's theme, B19). */
+     primary button, in the light theme, the dark one, and under a dark document (BlazorHero's theme, B19). The
+     theme (B20): "system" follows the document, "light" pins light under a dark document, and a nested provider
+     takes the nearest pinned theme — light (brand-80) or dark (brand-70) fill. */
   await blank.addStyleTag({ path: path.join(ROOT, "..", "..", "packages", "fluent", "dist", "fluent.css") });
-  const fills = await blank.evaluate(() => {
-    const fill = (theme, outer) => {
-      document.documentElement.toggleAttribute("data-fluent-theme", outer !== undefined);
-      if (outer !== undefined) document.documentElement.setAttribute("data-fluent-theme", outer);
-      document.body.innerHTML = `<div class="fui-provider" data-fluent-theme="${theme}" style="--fui-brand-70: rgb(1, 2, 3); --fui-brand-80: rgb(4, 5, 6)"><button class="fui-button fui-button--primary">Save</button></div>`;
-      return getComputedStyle(document.querySelector("button")).backgroundColor;
-    };
-    return { light: fill("light"), dark: fill("dark"), underDark: fill("light", "dark") };
+  const fill = (theme, outer, middle) => blank.evaluate(([theme, outer, middle]) => {
+    document.documentElement.toggleAttribute("data-fluent-theme", outer !== null);
+    if (outer !== null) document.documentElement.setAttribute("data-fluent-theme", outer);
+    const provider = `<div class="fui-provider" data-fluent-theme="${theme}" style="--fui-brand-70: rgb(1, 2, 3); --fui-brand-80: rgb(4, 5, 6)"><button class="fui-button fui-button--primary">Save</button></div>`;
+    document.body.innerHTML = middle === null ? provider : `<div class="fui-provider" data-fluent-theme="${middle}">${provider}</div>`;
+    return getComputedStyle(document.querySelector("button")).backgroundColor;
+  }, [theme, outer ?? null, middle ?? null]);
+  const LIGHT_FILL = "rgb(4, 5, 6)";
+  const DARK_FILL = "rgb(1, 2, 3)";
+  const fills = {
+    light: [await fill("light"), LIGHT_FILL],
+    dark: [await fill("dark"), DARK_FILL],
+    systemUnderDark: [await fill("system", "dark"), DARK_FILL],
+    lightUnderDark: [await fill("light", "dark"), LIGHT_FILL],
+    systemInLightInDark: [await fill("system", "dark", "light"), LIGHT_FILL],
+    systemInDarkInLight: [await fill("system", "light", "dark"), DARK_FILL],
+  };
+  await blank.emulateMedia({ colorScheme: "dark" });
+  Object.assign(fills, {
+    systemUnderDarkOs: [await fill("system"), DARK_FILL],
+    lightUnderDarkOs: [await fill("light"), LIGHT_FILL],
+    systemUnderPinnedLightRoot: [await fill("system", "light"), LIGHT_FILL],
+    systemUnderSystemRoot: [await fill("system", "system"), DARK_FILL],
   });
+  const wrong = Object.entries(fills).filter(([, [actual, expected]]) => actual !== expected);
   check(
-    fills.light === "rgb(4, 5, 6)" && fills.dark === "rgb(1, 2, 3)" && fills.underDark === "rgb(1, 2, 3)",
-    `fluent: tokenOverrides of the brand ramp colour the brand fills (${Object.values(fills).join(" / ")})`,
+    wrong.length === 0,
+    `fluent: the brand fills follow the nearest theme and the tokenOverrides${wrong.length ? `: ${wrong.map(([name, [actual]]) => `${name} ${actual}`).join(", ")}` : ""}`,
   );
   await blank.close();
 

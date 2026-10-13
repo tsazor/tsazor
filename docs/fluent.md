@@ -39,15 +39,22 @@ copied files is harmless for class matching.
 
 ## Tokens
 
-All styling hangs off CSS custom properties (`--fui-*`), defined in four
+All styling hangs off CSS custom properties (`--fui-*`), defined in these
 blocks:
 
 | Block | Selector | Purpose |
 |---|---|---|
-| Light (default) | `:root` | the Fluent 2 light palette |
-| Dark explicit | `[data-fluent-theme="dark"]` | toggled via `ThemeState`/provider |
-| Dark OS | `@media (prefers-color-scheme: dark)` behind `:root:not([data-fluent-theme])` | follow the OS until pinned |
+| Theme-independent | `:root` | brand ramp, radii, spacing, type, motion |
+| Light | `:root`, `[data-fluent-theme="light"]` | the Fluent 2 light palette; the attribute pins it on any element |
+| Dark | `[data-fluent-theme="dark"]` | toggled via `ThemeState`/provider |
+| Dark OS | `@media (prefers-color-scheme: dark)` on `:root:not([data-fluent-theme])` and `:root[data-fluent-theme="system"]` | follow the OS until pinned (the dark block's values) |
+| Aliases | `:root`, `.fui-provider`, `[data-fluent-theme]` | tokens made of others (`--fui-accent`, …), resolved per provider and theme |
 | Compact density | `[data-fluent-density="compact"]` | tighter spacing/heights |
+
+`FluentProvider`'s `theme` writes the attribute: `"system"` (the default, Fluent UI Blazor's
+`DesignThemeModes.System`) pins nothing — the OS's preference, or the theme an ancestor pins — and `"light"` /
+`"dark"` pin the subtree. The aliases read the theme through two toggles (`--fui-if-light`, `--fui-if-dark`), so a
+nested provider follows the nearest pinned theme.
 
 Sets include: brand ramp, neutral ramp + semantic surfaces
 (`--fui-background-1..5`, `--fui-foreground-1..3`, strokes), status colors,

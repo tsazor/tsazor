@@ -166,9 +166,10 @@ render in the browser.
   first, which stops the submit with the browser's bubble before your validators speak. Write `novalidate` on the
   form to keep their messages (B21). A submit `Disabled="@(!Validated)"` goes away: the fields show their messages
   after a submit, so a disabled button would leave the user with red borders and no reason (U6).
-- **Your own dark-mode switch** (MudBlazor's `IsDarkMode` from a stored preference): set `data-fluent-theme="light"` on
-  `<html>` in `index.html`, so the OS's dark mode doesn't overrule the preference, and switch the `FluentProvider`'s
-  `theme` (B20). A brand ramp in `tokenOverrides` colours the accents too: check its brand-80 as link text on the
+- **Your own dark-mode switch** (MudBlazor's `IsDarkMode` from a stored preference): bind the `FluentProvider`'s
+  `theme` to `"light"` or `"dark"`. Both pin the theme, even under the OS's dark mode; the default, `"system"`,
+  follows the OS (Fluent UI Blazor's `DesignThemeModes.System`). MudBlazor's `MudThemeProvider` without `IsDarkMode`
+  is light: write `theme="light"` there (B20). A brand ramp in `tokenOverrides` colours the accents too: check its brand-80 as link text on the
   page's near-white, not only as a fill behind white text (B19).
 - **Icons.** `@import * as Icons from "@tsazor/fluent-icons"` (or `@tsazor/bootstrap-icons`), then
   `new Icons.Regular.Size20.Save()` becomes `Icons.Regular.Size20.Save`: a shared value, not an instance per use.

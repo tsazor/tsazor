@@ -20,8 +20,9 @@ import "@tsazor/fluent/fluent.css";
 </FluentProvider>
 ```
 
-Theming: light by default, `data-fluent-theme="dark"` on `<html>` for dark,
-plus a compact density attribute. `FluentProvider` takes `tokenOverrides` for
+Theming: `FluentProvider`'s `theme` is `"system"` by default (the OS's preference) or pins
+`"light"` / `"dark"`; `data-fluent-theme` on `<html>` (or any element) does the same, plus a compact
+density attribute. `FluentProvider` takes `tokenOverrides` for
 single-token customizations.
 
 ## The Add-CLI (copy-in)

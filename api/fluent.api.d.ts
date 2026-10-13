@@ -538,7 +538,7 @@ export default class FluentForm extends ComponentBase {
 
 // FluentProvider
 export default class FluentProvider extends ComponentBase {
-    theme: "light" | "dark";
+    theme: "system" | "light" | "dark";
     tokenOverrides?: Record<string, string>;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;

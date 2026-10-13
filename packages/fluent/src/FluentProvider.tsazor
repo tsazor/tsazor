@@ -1,16 +1,17 @@
 @** The theme root (a div with data-fluent-theme): place it at the app root, or around a subtree,
-    to scope the --fui-* token palette (light | dark) and apply tokenOverrides as inline custom
-    properties. It also cascades the theme as "FluentTheme" to descendants. *@
+    to scope the --fui-* token palette (system | light | dark) and apply tokenOverrides as inline
+    custom properties. It also cascades the theme as "FluentTheme" to descendants. *@
 @import { withAttributes } from "./attributes"
 
 <div @attributes="@this.providerAttributes">@childContent</div>
 
 @code {
-    /** Controls the subtree's token palette: "light" (default) or "dark". Mirrored
-     * to the data-fluent-theme attribute so the provider can scope a theme
-     * without touching <html>; apps that re-theme the whole document set the
-     * attribute on <html> instead and leave this light. */
-    @Parameter() theme: "light" | "dark" = "light";
+    /** The subtree's token palette (Fluent UI Blazor's DesignThemeModes):
+     * "system" (default) follows the OS's preference, or the theme an ancestor
+     * pins (`data-fluent-theme` on <html>, an outer provider); "light" and
+     * "dark" pin it, even under a dark OS. Mirrored to the data-fluent-theme
+     * attribute, so the provider scopes a theme without touching <html>. */
+    @Parameter() theme: "system" | "light" | "dark" = "system";
     /** MudBlazor-style TokenOverrides: inline `--fui-*` custom-property values
      * layered on top of the shipped token sheet. */
     @Parameter() tokenOverrides?: Record<string, string>;

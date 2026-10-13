@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Breaking — `@tsazor/fluent`: `FluentProvider`'s theme defaults to `"system"`** (Fluent UI Blazor's
+  `DesignThemeModes.System`): `theme: "system" | "light" | "dark"`. `"system"` follows the OS's preference, or the
+  theme an ancestor pins; `"light"` now pins light, even under the OS's dark mode or inside a dark subtree (before, it
+  was the default and meant "inherit"). `data-fluent-theme="light"` pins light on any element, `"system"` on `<html>`
+  follows the OS. An app with its own dark-mode switch no longer needs `data-fluent-theme="light"` on `<html>`. The
+  OS's dark mode now has all of the explicit dark theme's values (the neutral ramp, the shadows and the accent's
+  hover/active steps were the light ones), and the theme-dependent aliases (`--fui-accent*`,
+  `--fui-brand-background*`, `--fui-flyout-shadow`) follow the nearest theme in nested providers.
 - `@tsazor/runtime`: **`StandardSchemaValidator`** — an EditForm validates its model with a Standard Schema: a zod
   (3.24+), Valibot or ArkType schema, react-hook-form's `zodResolver` in Blazor's shape (Blazored.FluentValidation's
   `<FluentValidationValidator />`). Issues become the fields' messages by their path (`["address", "city"]` →
