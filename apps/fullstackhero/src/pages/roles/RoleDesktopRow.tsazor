@@ -1,0 +1,54 @@
+@* pages/roles/list.tsx's RoleDesktopRow: a role in the desktop grid — tile, name (with a System badge for Admin and
+   Basic), description, permission count. The whole row is the button that opens the role. *@
+@import { ChevronRight, Shield } from "lucide"
+@import type { RoleDto } from "@/api/roles"
+
+<li class="list-none">
+    <button type="button" @onclick="() => onClick?.invokeAsync()"
+            class="@cn("group grid w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--color-accent)] focus-visible:outline-none focus-visible:bg-[var(--color-accent)]", RoleDesktopRow.columns)">
+        @* Name *@
+        <div class="flex min-w-0 items-center gap-3">
+            <span aria-hidden="true" class="grid size-9 shrink-0 place-items-center rounded-lg" style="background-color: oklch(from var(--color-primary) l c h / 0.10); box-shadow: inset 0 0 0 1px oklch(from var(--color-primary) l c h / 0.22); color: var(--color-primary)">
+                <Icon icon="@Shield" class="size-4" />
+            </span>
+            <span class="truncate text-[14px] font-medium text-[var(--color-foreground)] transition-colors group-hover:text-[var(--color-primary)]">@role.name</span>
+            @if (isSystem) {
+                <Badge variant="outline" class="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em]">System</Badge>
+            }
+        </div>
+
+        @* Description (lg+) *@
+        <div class="hidden lg:block">
+            <p class="truncate text-[12.5px] text-[var(--color-muted-foreground)]">
+                @if (role.description) { @role.description } else { <span class="italic opacity-60">No description on file.</span> }
+            </p>
+        </div>
+
+        @* Permission count *@
+        <span class="font-mono text-[12px] tabular-nums text-[var(--color-muted-foreground)]">@permissionLabel</span>
+
+        <div class="flex items-center justify-end">
+            <Icon icon="@ChevronRight" class="size-4 text-[var(--color-border)] transition-colors group-hover:text-[var(--color-muted-foreground)]" />
+        </div>
+    </button>
+</li>
+
+@code {
+    @Parameter() role!: RoleDto;
+    @Parameter() onClick?: EventCallback;
+
+    /** The system roles (Admin, Basic): sorted first, badged. */
+    static readonly systemRoles = new Set(["Admin", "Basic"]);
+    /** Desktop grid template — shared by header + rows. */
+    static readonly columns = "grid-cols-[1fr_120px_24px] lg:grid-cols-[1.4fr_2fr_120px_24px]";
+
+    private get isSystem(): boolean {
+        return RoleDesktopRow.systemRoles.has(this.role.name);
+    }
+
+    private get permissionLabel(): string {
+        const permissions = this.role.permissions;
+        if (permissions === undefined || permissions === null) return "—";
+        return `${permissions.length} ${permissions.length === 1 ? "permission" : "permissions"}`;
+    }
+}

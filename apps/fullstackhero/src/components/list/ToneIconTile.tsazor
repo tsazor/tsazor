@@ -1,0 +1,25 @@
+@* components/list/tone-icon-tile.tsx: a tone-tinted icon square — a 10%-alpha fill, a 22%-alpha inset ring, and
+   the icon in the tone's full colour. The default (primary, lg) is EntityPageHeader's tile. *@
+@import type { IconNode } from "lucide"
+@import { cn } from "@/lib/cn"
+@import { SIZE_MAP, TONE_VAR, type ToneIconTileSize, type ToneIconTileTone } from "./tone"
+
+<span aria-hidden="true" class="@cn("grid shrink-0 place-items-center", dims.tile, dims.radius, additionalAttributes?.class as string)" style="@style">
+    <Icon icon="@icon" class="@dims.icon" />
+</span>
+
+@code {
+    @Parameter() icon!: IconNode;
+    @Parameter() tone: ToneIconTileTone = "primary";
+    @Parameter() size: ToneIconTileSize = "lg";
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private get dims() {
+        return SIZE_MAP[this.size];
+    }
+
+    private get style(): string {
+        const v = TONE_VAR[this.tone];
+        return `background-color: oklch(from var(${v}) l c h / 0.10); box-shadow: inset 0 0 0 1px oklch(from var(${v}) l c h / 0.22); color: var(${v})`;
+    }
+}

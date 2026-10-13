@@ -1,0 +1,9 @@
+@* components/ui/dialog.tsx's DialogBody. *@
+@import { withClass } from "@/lib/attributes"
+
+<div @attributes="@withClass("px-6 pb-5 pt-1", additionalAttributes)">@childContent</div>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

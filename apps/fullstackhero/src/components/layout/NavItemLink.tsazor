@@ -1,0 +1,35 @@
+@* components/layout/sidebar.tsx's NavItemLink: a nav destination — the top singletons, an accordion's items, the
+   collapsed rail's icons. Active (React Router's NavLink: aria-current="page", `end` for "/"): the soft brand fill
+   and a 2px brand bar. Collapsed: the label is a hover/focus tooltip. *@
+@import { isNavItemActive, type NavSpec } from "./nav-items"
+
+<a href="@item.to" aria-current="@(active ? "page" : null)" title="@(collapsed ? item.label : null)" aria-label="@(collapsed ? item.label : null)"
+   @onclick="() => onNavigate?.invokeAsync()"
+   class="@cn("group/nav relative flex h-9 items-center gap-3 rounded-md text-sm font-medium", "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]", active ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]", collapsed ? "justify-center px-0" : "px-3")">
+    @* 2px brand bar for active item *@
+    <span aria-hidden="true" class="@cn("absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]", "transition-opacity duration-[var(--duration-default)]", active ? "opacity-100" : "opacity-0")"></span>
+
+    <Icon icon="@item.icon" class="h-4 w-4 shrink-0" />
+
+    @if (!collapsed) {
+        <span class="whitespace-nowrap">@item.label</span>
+    }
+
+    @* Tooltip in collapsed mode *@
+    @if (collapsed) {
+        <span role="tooltip" class="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--color-popover)] px-2 py-1 text-xs text-[var(--color-popover-foreground)] shadow-[var(--shadow-md)] opacity-0 transition-opacity duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)] group-hover/nav:opacity-100 group-focus-visible/nav:opacity-100">
+            @item.label
+        </span>
+    }
+</a>
+
+@code {
+    @Parameter() item!: NavSpec;
+    @Parameter() collapsed: boolean = false;
+    @Parameter() pathname: string = "/";
+    @Parameter() onNavigate?: EventCallback;
+
+    private get active(): boolean {
+        return isNavItemActive(this.item, this.pathname);
+    }
+}

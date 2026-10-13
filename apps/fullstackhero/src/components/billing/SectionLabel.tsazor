@@ -1,0 +1,19 @@
+@* components/billing/plan-form-dialog.tsx's SectionLabel: a section heading in the plan dialog — a small icon tile,
+   the title and a one-line description. *@
+@import type { IconNode } from "lucide"
+
+<div class="flex items-start gap-2.5 pb-1">
+    <span aria-hidden="true" class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[var(--color-accent)] text-[var(--color-muted-foreground)]">
+        <Icon icon="@icon" class="h-3.5 w-3.5" />
+    </span>
+    <div class="min-w-0">
+        <p class="text-[12.5px] font-semibold text-[var(--color-foreground)]">@title</p>
+        <p class="text-[11.5px] leading-relaxed text-[var(--color-muted-foreground)]">@description</p>
+    </div>
+</div>
+
+@code {
+    @Parameter() icon!: IconNode;
+    @Parameter() title: string = "";
+    @Parameter() description: string = "";
+}

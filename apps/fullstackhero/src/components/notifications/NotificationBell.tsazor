@@ -1,0 +1,142 @@
+@* components/notifications/notification-bell.tsx: the topbar trigger with the unread badge and a popover preview of
+   the most recent items. Live-updates via the SignalR NotificationCreated event (bumps the unread query and flashes
+   the bell); a burst of events coalesces into one refetch. The full inbox lives at /notifications. *@
+@import { Bell, BellRing, CheckCheck } from "lucide"
+@import { getUnreadCount, listNotifications, markAllNotificationsRead, markNotificationRead, type NotificationDto } from "@/api/notifications"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { RealtimeService } from "@/realtime/realtime-service"
+@inject RealtimeService realtime
+@inject AuthService auth
+
+@if (auth.isAuthenticated) {
+    <div class="relative">
+        <button type="button" @onclick="() => open = !open" aria-label="@(count > 0 ? `${count} unread notifications` : "Notifications")"
+                aria-haspopup="true" aria-expanded="@(open ? "true" : "false")"
+                class="relative grid h-8 w-8 place-items-center rounded-md text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+            @if (pulse) {
+                <Icon icon="@BellRing" class="h-4 w-4 text-[var(--color-accent-signal)]" />
+            } else {
+                <Icon icon="@Bell" class="h-4 w-4" />
+            }
+            @if (count > 0) {
+                <span aria-hidden="true" class="absolute right-1 top-1 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-[var(--color-accent-signal)] px-[3px] font-mono text-[9px] font-bold tabular-nums text-[var(--color-accent-signal-foreground)] ring-2 ring-[var(--color-background)]">@(count > 99 ? "99+" : count)</span>
+            }
+        </button>
+
+        @if (open) {
+            @* Click-away catcher — not in the tab order or AT tree. *@
+            <button type="button" aria-hidden="true" tabindex="-1" @onclick="() => open = false" class="fixed inset-0 z-40 cursor-default bg-transparent"></button>
+            <div aria-label="Notifications" class="absolute right-0 z-50 mt-2 w-[22rem] overflow-hidden rounded-xl card-shell shadow-[0_24px_64px_-24px_oklch(0_0_0/0.30)]">
+                <div class="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2.5">
+                    <div class="meta text-[var(--color-muted-foreground)]">// Notifications</div>
+                    @if (count > 0) {
+                        <button type="button" @onclick="markAll" disabled="@markingAll"
+                                class="inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]">
+                            <Icon icon="@CheckCheck" class="h-3 w-3" />
+                            Mark all read
+                        </button>
+                    }
+                </div>
+
+                <div class="max-h-[24rem] overflow-y-auto">
+                    @if (recent.result.isLoading) {
+                        <p role="status" class="px-3 py-6 text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                            Loading<span class="caret text-[var(--color-accent-signal)]"></span>
+                        </p>
+                    }
+                    @if (!recent.result.isLoading && items.length === 0) {
+                        <p class="px-3 py-8 text-center text-sm text-[var(--color-muted-foreground)]">You're all caught up.</p>
+                    }
+                    <ul class="divide-y divide-[var(--color-border)]">
+                        @foreach (const n of items) {
+                            <NotificationRow @key="n.id" notif="@n" onMarkRead="@(() => markOne(n.id))" onClick="@(() => open = false)" />
+                        }
+                    </ul>
+                </div>
+
+                <div class="border-t border-[var(--color-border)] px-3 py-2">
+                    <a href="/notifications" @onclick="() => open = false" class="inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-foreground)] hover:underline">View all</a>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private open = false;
+    private pulse = false;
+    private markingAll = false;
+    private refreshTimer: number | null = null;
+
+    private readonly unread = new Query(() => ({
+        queryKey: ["notifications", "unread-count"],
+        queryFn: getUnreadCount,
+        enabled: this.auth.isAuthenticated,
+        staleTime: 30_000,
+        refetchInterval: 60_000,
+    }));
+
+    private readonly recent = new Query(() => ({
+        queryKey: ["notifications", "recent"],
+        queryFn: () => listNotifications({ pageSize: 8 }),
+        enabled: this.auth.isAuthenticated && this.open,
+        staleTime: 15_000,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.unread);
+        this.observe(this.recent);
+        // Coalesce a burst of NotificationCreated events into a single refetch.
+        this.observe(this.realtime.event("NotificationCreated"), () => {
+            this.pulse = true;
+            window.setTimeout(() => {
+                this.pulse = false;
+                this.stateHasChanged();
+            }, 1500);
+            if (this.refreshTimer !== null) return;
+            this.refreshTimer = window.setTimeout(() => {
+                this.refreshTimer = null;
+                void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            }, 800);
+        });
+        // Close the popover on Escape (it isn't a focus-trapping modal).
+        document.addEventListener("keydown", this.onKey, { signal: this.disposeSignal });
+    }
+
+    private readonly onKey = (event: KeyboardEvent): void => {
+        if (this.open && event.key === "Escape") {
+            this.open = false;
+            this.stateHasChanged();
+        }
+    };
+
+    private get count(): number {
+        return this.unread.result.data ?? 0;
+    }
+
+    private get items(): NotificationDto[] {
+        return this.recent.result.data ?? [];
+    }
+
+    private async markOne(id: string): Promise<void> {
+        await markNotificationRead(id).catch(() => undefined);
+        await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }
+
+    private async markAll(): Promise<void> {
+        this.markingAll = true;
+        try {
+            const data = await markAllNotificationsRead();
+            toast.success(`${data.updated} ${data.updated === 1 ? "notification" : "notifications"} marked read`);
+            await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        } catch {
+            /* the original's mutation has no onError */
+        } finally {
+            this.markingAll = false;
+        }
+    }
+
+}

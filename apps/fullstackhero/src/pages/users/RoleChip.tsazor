@@ -1,0 +1,16 @@
+@* pages/users/detail.tsx's RoleChip: the On/Off pill that toggles a role in the draft ("Toggle Admin"); a changed one
+   is ringed in the warning tone. *@
+@import { ShieldCheck } from "lucide"
+
+<button type="button" @onclick="() => onToggle?.invokeAsync()" aria-label="@(`Toggle ${label}`)"
+        class="@cn("inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors", enabled ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]" : "border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-muted)]", changed && "ring-1 ring-offset-2 ring-offset-[var(--color-background)] ring-[var(--color-warning)]/60")">
+    <Icon icon="@ShieldCheck" class="@cn("h-3 w-3", enabled ? "" : "opacity-40")" />
+    <span>@(enabled ? "On" : "Off")</span>
+</button>
+
+@code {
+    @Parameter() enabled: boolean = false;
+    @Parameter() changed: boolean = false;
+    @Parameter() onToggle?: EventCallback;
+    @Parameter() label: string = "";
+}

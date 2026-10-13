@@ -1,0 +1,33 @@
+@* components/empty-state.tsx: what a list or query shows with no results — a hairline icon container, a mono kicker,
+   a display headline, an optional description and a single call to action (the Action slot). *@
+@import type { IconNode } from "lucide"
+
+<div class="@cn("flex flex-col items-center justify-center gap-4 px-6 py-14 text-center", additionalAttributes?.class as string)">
+    @if (icon) {
+        <span aria-hidden="true" class="relative grid h-14 w-14 place-items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)] shadow-[inset_0_1px_0_oklch(1_0_0_/_0.55)]">
+            <Icon icon="@icon" class="h-5 w-5" />
+            <span aria-hidden="true" class="pointer-events-none absolute -bottom-1.5 left-1/2 h-px w-8 -translate-x-1/2 bg-[var(--color-accent-signal)] opacity-40"></span>
+        </span>
+    }
+    @if (kicker) {
+        <span class="meta text-[var(--color-muted-foreground)]">@kicker</span>
+    }
+    <h3 class="font-display text-2xl font-semibold tracking-tight">@title</h3>
+    @if (descriptionContent || description) {
+        <p class="max-w-md text-sm text-[var(--color-muted-foreground)] leading-relaxed">@if (descriptionContent) { @descriptionContent } else { @description }</p>
+    }
+    @if (action) {
+        <div class="pt-1">@action</div>
+    }
+</div>
+
+@code {
+    @Parameter() icon?: IconNode;
+    /** Mono crumb shown above the headline. */
+    @Parameter() kicker?: string;
+    @Parameter() title: string = "";
+    @Parameter() description?: string;
+    @Parameter() descriptionContent?: RenderFragment;
+    @Parameter() action?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

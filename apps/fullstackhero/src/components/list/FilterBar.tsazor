@@ -1,0 +1,16 @@
+@* components/list/filter-bar.tsx: the horizontal rail of filters above lists — a mono-caps "// Filters" eyebrow, the
+   filters, an optional trailing slot; it wraps on small screens. *@
+
+<div class="@cn("flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-[var(--color-border)] px-1 py-3", additionalAttributes?.class as string)">
+    <span class="meta text-[var(--color-muted-foreground)]">// Filters</span>
+    <div class="flex flex-1 flex-wrap items-center gap-2">@childContent</div>
+    @if (trailing) {
+        <div class="flex items-center gap-2">@trailing</div>
+    }
+</div>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    @Parameter() trailing?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

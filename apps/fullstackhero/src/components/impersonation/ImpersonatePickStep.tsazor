@@ -1,0 +1,116 @@
+@* impersonate-dialog.tsx's PickStep: step 1 — search the target tenant's active users (a 250ms debounce, the previous
+   results kept while the next load) and pick one. Disabled accounts are skipped: impersonating a deactivated user is
+   a footgun (the token would be valid, but the user's own sign-in is disabled — confusing to debug). *@
+@import { ArrowRight, Search } from "lucide"
+@import { keepPreviousData } from "@tanstack/query-core"
+@import type { Attachment } from "@tsazor/runtime"
+@import { searchUsers, type UserDto } from "@/api/users"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import { inputClass } from "@/components/ui/variants"
+
+<DialogBody class="space-y-3">
+    <div class="relative">
+        <Icon icon="@Search" class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-muted-foreground)]" />
+        @* React's autoFocus: focused when the step mounts (also when coming back from step 2). *@
+        <input data-slot="input" autofocus value="@search" @oninput="onSearch" placeholder="Search by name, email, or username…" aria-label="Search users to impersonate"
+               class="@cn(inputClass, "pl-9")" @attach="focusOnMount" />
+    </div>
+
+    <div class="-mx-2 max-h-[22rem] overflow-y-auto">
+        @if (query.result.isError) {
+            <div class="px-3 py-6 text-sm text-[var(--color-destructive)]">
+                @(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load users.")
+            </div>
+        }
+
+        @if (query.result.isLoading) {
+            <div class="px-3 py-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+                Loading<span class="caret text-[var(--color-accent-signal)]" aria-hidden="true"></span>
+            </div>
+        }
+
+        @if (!query.result.isLoading && users.length === 0) {
+            <div class="px-3 py-10 text-center text-sm text-[var(--color-muted-foreground)]">
+                @(`No users match${debounced ? ` “${debounced}”` : ""}.`)
+            </div>
+        }
+
+        <ul class="divide-y divide-[var(--color-border)]">
+            @foreach (const user of users) {
+                <li @key="user.id">
+                    <button type="button" @onclick="() => onPick?.invokeAsync(user)"
+                            class="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-muted)]/60 focus:outline-none focus-visible:bg-[var(--color-muted)]/60">
+                        <Monogram seed="@(user.id ?? user.userName ?? "x")" firstName="@(user.firstName ?? undefined)" lastName="@(user.lastName ?? undefined)" fallback="@(user.userName ?? user.email ?? "?")" size="sm" />
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                <span class="truncate text-sm font-medium">@nameOf(user)</span>
+                                @if (user.userName) {
+                                    <span class="truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">@(`@${user.userName}`)</span>
+                                }
+                            </div>
+                            <div class="truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">@(user.email ?? "—")</div>
+                        </div>
+                        <Icon icon="@ArrowRight" class="h-3.5 w-3.5 text-[var(--color-muted-foreground)] transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                </li>
+            }
+        </ul>
+    </div>
+</DialogBody>
+
+<DialogFooter>
+    <Button variant="outline" onClick="@(() => onCancel?.invokeAsync())">Cancel</Button>
+</DialogFooter>
+
+@code {
+    @Parameter() tenantId: string = "";
+    @Parameter() onPick?: EventCallback<UserDto>;
+    @Parameter() onCancel?: EventCallback;
+
+    private search = "";
+    private debounced = "";
+    private timer?: ReturnType<typeof setTimeout>;
+
+    private readonly query = new Query(() => ({
+        queryKey: ["impersonation", "users", this.tenantId, this.debounced],
+        queryFn: () =>
+            searchUsers({
+                tenantId: this.tenantId,
+                search: this.debounced || undefined,
+                pageSize: 25,
+                isActive: true,
+            }),
+        placeholderData: keepPreviousData,
+    }));
+
+    private readonly focusOnMount: Attachment<HTMLInputElement> = (input) => input.focus();
+
+    protected override onInitialized(): void {
+        // Built before `tenantId` was set: apply the current options before Query.subscribe starts it.
+        void this.query.result;
+        this.observe(this.query);
+    }
+
+    private get users(): UserDto[] {
+        return this.query.result.data?.items ?? [];
+    }
+
+    private nameOf(user: UserDto): string {
+        return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.userName || user.email || "Unnamed";
+    }
+
+    /** The original's 250ms debounce (useEffect + setTimeout). */
+    private onSearch(event: Event): void {
+        this.search = (event.target as HTMLInputElement).value;
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+            this.debounced = this.search.trim();
+            this.stateHasChanged();
+        }, 250);
+    }
+
+    dispose(): void {
+        clearTimeout(this.timer);
+    }
+}

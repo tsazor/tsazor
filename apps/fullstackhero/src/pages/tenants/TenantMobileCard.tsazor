@@ -1,0 +1,29 @@
+@* pages/tenants/list.tsx's TenantMobileCard: a tenant as a card on small screens ("Open tenant …"). *@
+@import { ChevronRight } from "lucide"
+@import type { TenantDto } from "@/api/tenants"
+@import TenantStatusPill from "./TenantStatusPill.tsazor"
+
+<li class="list-none">
+    <button type="button" @onclick="() => onClick?.invokeAsync()" aria-label="@(`Open tenant ${tenant.name}`)"
+            class="@cn("group w-full overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-left shadow-xs", "transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-accent)]", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]", !tenant.isActive && "opacity-75")">
+        <div class="flex items-center justify-between">
+            <div class="flex min-w-0 items-center gap-3">
+                <Monogram seed="@tenant.id" fallback="@tenant.name" size="md" />
+                <div class="min-w-0">
+                    <p class="truncate text-[14px] font-medium text-[var(--color-foreground)]">@tenant.name</p>
+                    <p class="mt-0.5 truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">@tenant.id</p>
+                </div>
+            </div>
+            <Icon icon="@ChevronRight" class="size-4 shrink-0 text-[var(--color-border)] transition-colors group-hover:text-[var(--color-muted-foreground)]" />
+        </div>
+        <div class="mt-2 ml-[52px] flex flex-wrap items-center gap-2">
+            <TenantStatusPill active="@tenant.isActive" />
+            <span class="truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">@tenant.adminEmail</span>
+        </div>
+    </button>
+</li>
+
+@code {
+    @Parameter() tenant!: TenantDto;
+    @Parameter() onClick?: EventCallback;
+}

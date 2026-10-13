@@ -1,0 +1,30 @@
+@* pages/health/page.tsx's CheckRow `rowInner`: the four grid cells of a check — status dot, name and description,
+   duration, and the disclosure chevron (a spacer without details). It renders no element of its own, so the cells
+   land in the row's grid, as React's fragment does. *@
+@import { ChevronRight } from "lucide"
+@import type { HealthEntry } from "@/api/health"
+@import StatusDot from "./StatusDot.tsazor"
+
+<StatusDot status="@entry.status" />
+<div class="min-w-0">
+    <div class="truncate font-mono text-[13px] font-medium">@entry.name</div>
+    @if (entry.description) {
+        <div class="mt-0.5 truncate text-xs text-[var(--color-muted-foreground)]">
+            @entry.description
+        </div>
+    }
+</div>
+<span class="font-mono text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
+    @(entry.durationMs.toFixed(1))ms
+</span>
+@if (hasDetails) {
+    <Icon icon="@ChevronRight" class="@cn("h-4 w-4 text-[var(--color-muted-foreground)] transition-transform", open && "rotate-90")" />
+} else {
+    <span class="h-4 w-4" aria-hidden="true"></span>
+}
+
+@code {
+    @Parameter() entry!: HealthEntry;
+    @Parameter() hasDetails: boolean = false;
+    @Parameter() open: boolean = false;
+}

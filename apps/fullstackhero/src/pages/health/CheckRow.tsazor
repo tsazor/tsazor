@@ -1,0 +1,43 @@
+@* pages/health/page.tsx's CheckRow: one dependency check. With details it is a button that unfolds them below; without,
+   a plain row. React's `rowInner` (one JSX value placed in either) is a component here: CheckRowContent. *@
+@import type { HealthEntry } from "@/api/health"
+@import CheckRowContent from "./CheckRowContent.tsazor"
+
+<li>
+    @if (hasDetails) {
+        <button type="button" @onclick="() => open = !open" aria-expanded="@(open ? "true" : "false")"
+                class="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-3.5 text-left transition-colors hover:bg-[var(--color-muted)]/50 focus-visible:bg-[var(--color-muted)]/50 focus-visible:outline-none">
+            <CheckRowContent entry="@entry" hasDetails="@hasDetails" open="@open" />
+        </button>
+    } else {
+        <div class="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-3.5">
+            <CheckRowContent entry="@entry" hasDetails="@hasDetails" open="@open" />
+        </div>
+    }
+    @if (hasDetails && open) {
+        <div class="border-t border-[var(--color-border)] bg-[var(--color-surface-2)] px-5 py-3">
+            <dl class="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+                @foreach (const [key, value] of Object.entries(entry.details ?? {})) {
+                    <div @key="key" class="flex items-baseline justify-between gap-3 border-b border-dashed border-[var(--color-border)] py-1.5">
+                        <dt class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--color-muted-foreground)]">
+                            @key
+                        </dt>
+                        <dd class="truncate font-mono text-[12px] text-[var(--color-foreground)]">
+                            @(String(value))
+                        </dd>
+                    </div>
+                }
+            </dl>
+        </div>
+    }
+</li>
+
+@code {
+    @Parameter() entry!: HealthEntry;
+
+    private open = false;
+
+    private get hasDetails(): boolean {
+        return !!this.entry.details && Object.keys(this.entry.details).length > 0;
+    }
+}

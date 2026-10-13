@@ -1,0 +1,16 @@
+@* pages/webhooks/detail.tsx's FieldRow: a term and its value in the endpoint's definition list. React's
+   `value: ReactNode` is `value` (text) or the ValueContent slot. *@
+
+<div class="grid grid-cols-[10rem_1fr] items-baseline gap-4">
+    <dt class="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">@label</dt>
+    <dd class="@cn("min-w-0 break-words text-sm", mono && "font-mono text-[0.8125rem]")">
+        @if (valueContent) { @valueContent } else { @value }
+    </dd>
+</div>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() value?: string;
+    @Parameter() valueContent?: RenderFragment;
+    @Parameter() mono: boolean = false;
+}

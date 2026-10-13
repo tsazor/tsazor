@@ -1,0 +1,41 @@
+@* pages/roles/list.tsx's RoleMobileCard: a role as a card on small screens ("Open role …"). *@
+@import { ChevronRight, Shield } from "lucide"
+@import type { RoleDto } from "@/api/roles"
+@import RoleDesktopRow from "./RoleDesktopRow.tsazor"
+
+<li class="list-none">
+    <button type="button" @onclick="() => onClick?.invokeAsync()" aria-label="@(`Open role ${role.name}`)"
+            class="group w-full overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-left shadow-xs transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+        <div class="flex items-center justify-between">
+            <div class="flex min-w-0 items-center gap-3">
+                <span aria-hidden="true" class="grid size-10 shrink-0 place-items-center rounded-lg" style="background-color: oklch(from var(--color-primary) l c h / 0.10); box-shadow: inset 0 0 0 1px oklch(from var(--color-primary) l c h / 0.22); color: var(--color-primary)">
+                    <Icon icon="@Shield" class="size-4" />
+                </span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <p class="truncate text-[14px] font-medium text-[var(--color-foreground)]">@role.name</p>
+                        @if (RoleDesktopRow.systemRoles.has(role.name)) {
+                            <Badge variant="outline" class="font-mono text-[10px] uppercase tracking-[0.14em]">System</Badge>
+                        }
+                    </div>
+                    <p class="mt-0.5 truncate text-[11px] text-[var(--color-muted-foreground)]">
+                        @if (role.description) { @role.description } else { <span class="italic opacity-60">No description on file.</span> }
+                    </p>
+                </div>
+            </div>
+            <Icon icon="@ChevronRight" class="size-4 shrink-0 text-[var(--color-border)] transition-colors group-hover:text-[var(--color-muted-foreground)]" />
+        </div>
+        @if (role.permissions != null) {
+            <div class="mt-2 ml-[52px]">
+                <span class="inline-flex items-center rounded-full bg-[oklch(from_var(--color-info)_l_c_h_/_0.12)] px-2 py-0.5 text-[10.5px] font-medium text-[var(--color-info)]">
+                    @role.permissions.length @(role.permissions.length === 1 ? "permission" : "permissions")
+                </span>
+            </div>
+        }
+    </button>
+</li>
+
+@code {
+    @Parameter() role!: RoleDto;
+    @Parameter() onClick?: EventCallback;
+}

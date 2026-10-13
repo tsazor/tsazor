@@ -1,0 +1,33 @@
+@* components/list/settings-section.tsx: a compact section card — a header stripe (icon, title, description), the
+   body, an optional footer stripe (the Footer slot) with its actions. *@
+@import type { IconNode } from "lucide"
+
+<section class="@cn("overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]", "shadow-xs", additionalAttributes?.class as string)">
+    @if (title) {
+        <div class="border-b border-[oklch(from_var(--color-border)_l_c_h_/_0.5)] px-5 py-3">
+            <h2 class="flex items-center gap-2 text-[13px] font-semibold text-[var(--color-foreground)]">
+                @if (icon) {
+                    <Icon icon="@icon" class="size-3.5 text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.5)]" />
+                }
+                @title
+            </h2>
+            @if (descriptionContent || description) {
+                <p class="mt-1 text-[12px] text-[var(--color-muted-foreground)]">@if (descriptionContent) { @descriptionContent } else { @description }</p>
+            }
+        </div>
+    }
+    <div class="px-5 py-5">@childContent</div>
+    @if (footer) {
+        <div class="border-t border-[oklch(from_var(--color-border)_l_c_h_/_0.5)] px-5 py-3">@footer</div>
+    }
+</section>
+
+@code {
+    @Parameter() title?: string;
+    @Parameter() icon?: IconNode;
+    @Parameter() description?: string;
+    @Parameter() descriptionContent?: RenderFragment;
+    @Parameter() footer?: RenderFragment;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

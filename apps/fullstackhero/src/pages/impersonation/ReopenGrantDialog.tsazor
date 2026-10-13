@@ -1,0 +1,14 @@
+@* pages/impersonation/list.tsx's ReopenDialog: the impersonate dialog pre-filled with an Active grant's tenant and user.
+   It still asks for a fresh reason and duration — the operator starts a NEW audit-trail entry; the old grant stays
+   active until it expires or is revoked. *@
+@import type { ImpersonationGrantDto } from "@/api/impersonation-grants"
+@import { prefillUserOf } from "@/components/impersonation/impersonation"
+@import ImpersonateDialog from "@/components/impersonation/ImpersonateDialog.tsazor"
+
+<ImpersonateDialog open="@(grant !== null)" openChanged="@onOpenChange" tenantId="@(grant?.impersonatedTenantId ?? "")"
+                   tenantName="@(grant?.impersonatedTenantId)" prefillUser="@prefillUserOf(grant)" />
+
+@code {
+    @Parameter() grant: ImpersonationGrantDto | null = null;
+    @Parameter() onOpenChange?: EventCallback<boolean>;
+}

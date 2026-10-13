@@ -1,0 +1,40 @@
+@* pages/tenants/list.tsx's TenantDesktopRow: a tenant in the desktop grid — monogram, name, id and validity, the
+   admin email (lg+), the status pill. The whole row is the button that opens the tenant. *@
+@import { ChevronRight } from "lucide"
+@import type { TenantDto } from "@/api/tenants"
+@import { formatDate } from "@/components/tenants/format"
+@import TenantStatusPill from "./TenantStatusPill.tsazor"
+
+<li class="list-none">
+    <button type="button" @onclick="() => onClick?.invokeAsync()"
+            class="@cn(`group grid w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--color-accent)] focus-visible:bg-[var(--color-accent)] focus-visible:outline-none ${TenantDesktopRow.columns}`, !tenant.isActive && "opacity-75")">
+        @* Name + id *@
+        <div class="flex min-w-0 items-center gap-3">
+            <Monogram seed="@tenant.id" fallback="@tenant.name" size="md" />
+            <div class="min-w-0">
+                <span class="block truncate text-[14px] font-medium text-[var(--color-foreground)] transition-colors group-hover:text-[var(--color-primary)]">@tenant.name</span>
+                <span class="block truncate font-mono text-[12px] text-[var(--color-muted-foreground)]">@tenant.id · valid @formatDate(tenant.validUpto)</span>
+            </div>
+        </div>
+
+        @* Admin email (lg+) *@
+        <code class="hidden truncate font-mono text-[12px] text-[var(--color-muted-foreground)] lg:block">@tenant.adminEmail</code>
+
+        @* Status *@
+        <div class="flex items-center">
+            <TenantStatusPill active="@tenant.isActive" />
+        </div>
+
+        <div class="flex items-center justify-end">
+            <Icon icon="@ChevronRight" class="size-4 text-[var(--color-border)] transition-colors group-hover:text-[var(--color-muted-foreground)]" />
+        </div>
+    </button>
+</li>
+
+@code {
+    @Parameter() tenant!: TenantDto;
+    @Parameter() onClick?: EventCallback;
+
+    /** Desktop grid template — shared by header + rows. */
+    static readonly columns = "grid-cols-[1fr_140px_24px] lg:grid-cols-[1.6fr_1.4fr_140px_24px]";
+}

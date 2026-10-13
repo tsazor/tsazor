@@ -1,0 +1,21 @@
+@* components/list/form-shell.tsx's FormSection: one row of a FormShell — the aside (a mono-caps title, the
+   description) on the left, the fields on the right; stacked on mobile. `danger` is the destructive tone. *@
+
+<section class="@cn("grid gap-8 md:grid-cols-[18rem_1fr] md:gap-10", additionalAttributes?.class as string)">
+    <aside class="@cn("space-y-2 border-t pt-3", tone === "danger" ? "border-[var(--color-destructive)]" : "border-[var(--color-foreground)]")">
+        <p class="@cn("font-mono text-[0.6875rem] uppercase tracking-[0.22em]", tone === "danger" ? "text-[var(--color-destructive)]" : "text-[var(--color-foreground)]")">@(`\\ ${title}`)</p>
+        @if (descriptionContent || description) {
+            <p class="text-sm text-[var(--color-muted-foreground)]">@if (descriptionContent) { @descriptionContent } else { @description }</p>
+        }
+    </aside>
+    <div class="space-y-5">@childContent</div>
+</section>
+
+@code {
+    @Parameter() title: string = "";
+    @Parameter() description?: string;
+    @Parameter() descriptionContent?: RenderFragment;
+    @Parameter() tone: "default" | "danger" = "default";
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

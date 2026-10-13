@@ -1,0 +1,58 @@
+@* pages/audits/detail.tsx's PayloadPanel: 4. the payload as indented JSON with its line count and a Copy button
+   ("Copied" for 1.5s). The <pre> holds the <code> on the same line: Razor keeps whitespace between tags that JSX
+   drops, and in a <pre> it would show. *@
+@import { ClipboardCheck, Copy, FileText } from "lucide"
+
+<div class="px-6 py-4">
+    <div class="mb-2 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5">
+            <Icon icon="@FileText" class="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
+            <span class="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+                Payload
+            </span>
+            <span class="text-[10.5px] text-[var(--color-muted-foreground)]">
+                · @lineCount lines
+            </span>
+        </div>
+        <Button variant="ghost" size="sm" onClick="@copy" class="h-6 px-2 text-[11px]">
+            @if (copied) {
+                <Icon icon="@ClipboardCheck" class="mr-1 h-3 w-3" /><text> Copied</text>
+            } else {
+                <Icon icon="@Copy" class="mr-1 h-3 w-3" /><text> Copy</text>
+            }
+        </Button>
+    </div>
+    <pre class="max-h-[50vh] overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 font-mono text-[11.5px] leading-relaxed text-[var(--color-foreground)]"><code>@json</code></pre>
+</div>
+
+@code {
+    @Parameter() payload: unknown;
+
+    private copied = false;
+    private timer?: number;
+
+    private get json(): string {
+        return JSON.stringify(this.payload ?? null, null, 2);
+    }
+
+    private get lineCount(): number {
+        return this.json.split("\n").length;
+    }
+
+    private async copy(): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(this.json);
+            this.copied = true;
+            this.timer = window.setTimeout(() => {
+                this.copied = false;
+                this.stateHasChanged();
+            }, 1500);
+        } catch {
+            /* noop */
+        }
+    }
+
+    dispose(): void {
+        window.clearTimeout(this.timer);
+    }
+}

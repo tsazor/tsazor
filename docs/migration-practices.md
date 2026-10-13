@@ -357,6 +357,85 @@ render in the browser.
   - `Dialog.onClosed` carries no event (F21);
   - breadcrumb items that are state, not URLs, are buttons (F25).
 
+## From React (a team that left Blazor for React)
+
+From the fullstackhero port ([port-fullstackhero.md](port-fullstackhero.md)): a React 19 admin on Radix, Tailwind
+and TanStack Query, the client a .NET team wrote after leaving Blazor.
+
+- **Port its Playwright suite first, and run it unchanged.** A React app's E2E tests usually mock the API
+  (`page.route`) and find elements by role and name — exactly what survives a port. fullstackhero's 111 tests run
+  against the Tsazor app as they are; run them against the original once in your environment first (Edge on a German
+  Windows formats "129,50 $" unless started with `--lang=en-US`).
+- **Framework-free code moves unchanged**: the fetch wrapper, the API modules, token storage, JWT decoding, runtime
+  config, permission constants — in fullstackhero 2,200 lines, one import changed. So do cva, clsx and
+  tailwind-merge: a shadcn `buttonVariants` is the same file.
+- **Keep TanStack Query.** Its core (`@tanstack/query-core`) is framework-free; `useQuery` wraps a `QueryObserver`,
+  and a Tsazor component subscribes to it with `observe` — a 60-line `Query` class gives `useQuery`'s semantics
+  (options read on every render, a changed key switches queries, `keepPreviousData`). Mutations become async
+  handlers that call `invalidateQueries`.
+- **Keep the zod schemas.** `useForm({ resolver: zodResolver(schema) })` becomes an `EditForm` with
+  `<StandardSchemaValidator Schema="@schema" />`; `register("name")` an `InputText` bound to the model; the error
+  line reads the field's message from the EditContext. Submit the schema's parsed values (`schema.parse(model)`), as
+  `handleSubmit` does — zod's `.trim()` is a transform.
+- **shadcn components become your own `.tsazor` files**, as shadcn means them to be: the same classes, the behavior
+  from @tsazor/ui (focus trap, dismissal, roving focus, anchored positioning). Radix's compound parts
+  (`Dialog`/`DialogContent`/`DialogTitle`) become components that share the root through a cascading value.
+  `asChild` has no counterpart — put the variants on the element: `<a class="@buttonVariants({ variant: "outline" })">`.
+- **Radix's Portal is the browser's top layer.** An overlay inside a `backdrop-blur` header or a translated dialog
+  is placed and clipped by that ancestor unless it leaves it; `popover="manual"` + `showPopover()` lifts it above the
+  page without moving it in the DOM (F2).
+- **Props:** a `ReactNode` prop becomes a text parameter plus a `…Content` slot (Blazor's `Title`/`TitleContent`);
+  `value`/`onChange` becomes `value`/`valueChanged` (`@bind-value`); a context provider (`useTheme`, `useAuth`)
+  becomes a service the component injects and observes.
+- **JSX → Razor:** `className` → `class`, `{cond && <x/>}` → `@if (cond) { <x/> }`, `.map(...)` →
+  `@foreach (const x of xs)` with `@key`. Two traps: Razor reads `Overview@if (…)` as an email address (an `@` after
+  a letter is text; write `<text>Overview</text>@if (…)`), and `const body = <div/>` inside a function has no
+  counterpart yet (F3) — make it a small component. A computed variant type (`VariantProps<…>["variant"]`) on a
+  parameter makes the compiler read `variant="outline"` as an expression (F1): write the union out.
+- **Routes:** each page's `@page` replaces the route table; nested routes with an `<Outlet/>` become nested layouts;
+  `ProtectedRoute` is `AuthorizeRouteView` + a redirect to the login that keeps "where from" in the history entry's
+  state (`historyEntryState`, React Router's `location.state`); `React.lazy` pages are lazy routes
+  (`tsazor({ lazyRoutes })`).
+- **The `@/` alias keeps working**: Tsazor follows tsconfig `paths` (F4, F13); Vite's `resolve.alias` resolves it in
+  the bundle.
+- **Hooks map onto a component's lifecycle:**
+  - `useState` → fields; `useMemo` → getters (keep fallbacks stable: `data ?? Page.empty`, not `?? []`, or a draft
+    that resyncs on identity resets on every parent render);
+  - `useEffect(…, [open])` that resets a form → `onParametersSet` comparing with the previous value;
+  - a mount fetch → an async `onInitialized` (the loading state renders first);
+  - a stale async effect → an identity check plus `disposeSignal.aborted`;
+  - `useMutation` → an async handler with a `pending` field in try/finally (`mutate()` swallows errors: catch and
+    toast them yourself);
+  - `useSearchParams` → `@SupplyParameterFromQuery()` fields, and `navigateTo(nav.getUriWithQueryParameter(…))` to
+    change one (the page instance stays, inputs keep their focus);
+  - a hook that holds state → a class with `subscribe` that the component `observe`s.
+- **Forms:** react-hook-form's `register()` binds per keystroke, InputText on `change` — a live preview or an
+  `isDirty`-gated Save needs an input that binds on `input` (F15). react-hook-form focuses the first invalid field
+  after a failed submit; EditForm doesn't (F16). Playwright's `fill` fires no `change`: the bound value arrives with
+  the next action's blur. react-hook-form shows messages only after the first submit; Blazor's timing shows a field's
+  message when it is left.
+- **A controlled input that rejects a keystroke** (`onChange={e => setYear(e.target.value.replace(/\D/g, ""))}`):
+  React writes the state back into the DOM after each change; Tsazor and Blazor write `value` only when the rendered
+  value changes, so "20x" stays on screen while the model holds "20". Put the cleaned value back into
+  `event.target.value` in the handler.
+- **Markup details:**
+  - JSX drops whitespace-only text that contains a line break; Razor keeps it as a space — write `Advanced<span>`
+    and `<pre><code>@json</code></pre>` on one line;
+  - React renders `aria-expanded={false}` as `"false"`; Razor omits a false attribute — write
+    `aria-expanded="@(open ? "true" : "false")"`, and a bare JSX `aria-hidden` as `aria-hidden="true"`;
+  - React's `autoFocus` calls `focus()` on mount; HTML's `autofocus` works only on a document's first load — focus
+    from an `@attach` or `onAfterRender` (a dialog's focus trap honors `[autofocus]`);
+  - React Router's `NavLink` takes a `className` function of `isActive`; Tsazor's (Blazor's) NavLink sets `aria-current`
+    — write the active classes as Tailwind's `aria-[current=page]:` variants, with `activeClass=""`;
+  - `dangerouslySetInnerHTML` → `@(new MarkupString(html))`;
+  - a module's top-level helpers and types → a sibling `.ts` file or static members (a `.tsazor` has no module scope);
+  - a component named `Row` may collide with one in an `@using` namespace — name it after what it is.
+- **Compare computed styles, not the source.** A library that injects its stylesheet unlayered (sonner) wins over the
+  app's overrides in a Tailwind layer, whatever their specificity: the original's toasts didn't look like its CSS
+  said (F20).
+- **Lazy pages compile on first request in the dev server**: a test run that opens them all at once times out —
+  `server.warmup` compiles them at startup.
+
 ## Tests
 
 - **bUnit becomes `@tsazor/testing`.** `waitUntilIdle` names the work it still waits for (F35). A Virtualize

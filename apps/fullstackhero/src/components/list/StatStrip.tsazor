@@ -1,0 +1,12 @@
+@* components/list/stat.tsx's StatStrip: the responsive grid for Stat tiles, with the fsh-enter-2 stagger. *@
+@import { cn } from "@/lib/cn"
+
+<div class="@cn("fsh-enter fsh-enter-2 grid grid-cols-1 gap-3", cols === 2 && "sm:grid-cols-2", cols === 3 && "sm:grid-cols-3", cols === 4 && "sm:grid-cols-2 xl:grid-cols-4", additionalAttributes?.class as string)">
+    @childContent
+</div>
+
+@code {
+    @Parameter() cols: 2 | 3 | 4 = 3;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

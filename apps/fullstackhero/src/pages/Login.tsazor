@@ -1,0 +1,192 @@
+@* pages/login.tsx: the root-operator sign-in — atmospheric orbs, the fullstackhero lockup, the frosted card with
+   tenant, email and password (a show/hide toggle), the error band, and in DEV the demo-account picker. A signed-in
+   user goes on to the page they came from (RedirectToLogin keeps it in the history entry's state). The form is the
+   original's plain one (no form library: `noValidate`, React state per field) — here fields bound with @bind-Value. *@
+@page "/login"
+@layout BlankLayout
+@import { AlertCircle, ArrowRight, Eye, EyeOff, Loader2, ShieldCheck, Sparkles, TimerOff } from "lucide"
+@import { consumeSignedOutReason } from "@/auth/inactivity"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { env } from "@/env"
+@import type { DemoAccount } from "./login.demo-accounts"
+@import BlankLayout from "@/layouts/BlankLayout.tsazor"
+@import DemoAccountsDialog from "@/components/auth/DemoAccountsDialog.tsazor"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+@* ── Outer shell — matches dashboard AuthShell exactly ─────────── *@
+<div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--color-background)] px-5 py-8 sm:py-12">
+    @* Atmospheric background orbs *@
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div class="absolute -top-[25%] -left-[15%] h-[70vw] w-[70vw] rounded-full blur-[140px]" style="background-color: oklch(from var(--color-primary) l c h / 0.05)"></div>
+        <div class="absolute -bottom-[20%] -right-[10%] h-[55vw] w-[55vw] rounded-full blur-[120px]" style="background-color: oklch(from var(--color-primary) l c h / 0.07)"></div>
+        <div class="absolute top-[10%] right-[5%] h-[30vw] w-[30vw] rounded-full blur-[80px]" style="background-color: oklch(from var(--color-primary) l c h / 0.025)"></div>
+    </div>
+
+    @* Card column *@
+    <div class="relative z-10 w-full max-w-[420px] fsh-enter fsh-enter-1">
+        @* ── Brand lockup — same as dashboard AuthShell ─────────────── *@
+        <div class="mb-8 flex flex-col items-center">
+            <div class="flex items-center gap-2.5">
+                <img src="/logo-fullstackhero.png" alt="fullstackhero" class="size-9 object-contain" />
+                <span class="font-display text-[26px] font-semibold tracking-tight text-[var(--color-foreground)]">fullstack<span class="text-[var(--color-primary)]">hero</span></span>
+            </div>
+            <div class="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">
+                <span aria-hidden="true" class="h-px w-6 bg-[var(--color-border)]"></span>
+                <span>Platform Admin</span>
+                <span aria-hidden="true" class="h-px w-6 bg-[var(--color-border)]"></span>
+            </div>
+        </div>
+
+        @* Form card *@
+        <div class="rounded-xl border border-[var(--color-border)] bg-[oklch(from_var(--color-card)_l_c_h_/_0.85)] shadow-[0_1px_3px_oklch(0_0_0_/_0.04),0_8px_24px_oklch(0_0_0_/_0.06)] backdrop-blur-xl">
+            <div class="px-6 py-7 sm:px-8 sm:py-9">
+                <div class="mb-6 sm:mb-8">
+                    <h1 class="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">Welcome back</h1>
+                    <p class="text-[13px] text-[var(--color-muted-foreground)]">Sign in to your operator account</p>
+                </div>
+
+                @if (notice) {
+                    <div role="status" class="mb-5 flex items-start gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2.5 text-[12.5px] leading-snug text-[var(--color-muted-foreground)] fsh-enter">
+                        <Icon icon="@TimerOff" class="mt-0.5 size-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                        <span>@notice</span>
+                    </div>
+                }
+
+                <form @onsubmit="onSubmit" @onsubmit:preventDefault class="space-y-5" novalidate aria-describedby="@(error ? "login-error" : null)">
+                    @* Tenant *@
+                    <div class="space-y-1.5">
+                        <Label for="tenant" class="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Tenant</Label>
+                        <Input id="tenant" @bind-Value="tenant" autocomplete="organization" placeholder="root" required aria-invalid="@(error ? "true" : null)" class="h-11 text-[14px]" />
+                    </div>
+
+                    @* Email *@
+                    <div class="space-y-1.5">
+                        <Label for="email" class="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Email</Label>
+                        <Input id="email" type="email" @bind-Value="email" autocomplete="email" placeholder="operator@root.example" required aria-invalid="@(error ? "true" : null)" class="h-11 text-[14px]" />
+                    </div>
+
+                    @* Password *@
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <Label for="password" class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Password</Label>
+                            <a href="/forgot-password" class="text-[11px] font-medium text-[var(--color-muted-foreground)] underline-offset-4 transition-colors hover:text-[var(--color-primary)] hover:underline">Forgot?</a>
+                        </div>
+                        <div class="relative">
+                            <Input id="password" type="@(showPassword ? "text" : "password")" @bind-Value="password" autocomplete="current-password" placeholder="Enter your password" required
+                                   aria-invalid="@(error ? "true" : null)" class="h-11 pr-11 text-[14px]" />
+                            <button type="button" @onclick="() => showPassword = !showPassword" aria-label="@(showPassword ? "Hide password" : "Show password")"
+                                    class="absolute right-3.5 top-1/2 grid h-6 w-6 -translate-y-1/2 cursor-pointer place-items-center rounded text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+                                <Icon icon="@(showPassword ? EyeOff : Eye)" class="size-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (error) {
+                        <div id="login-error" role="alert" class="fsh-enter flex items-start gap-2 rounded-lg border border-[oklch(from_var(--color-destructive)_l_c_h_/_0.30)] bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.06)] px-3 py-2 text-sm text-[var(--color-destructive)]">
+                            <Icon icon="@AlertCircle" class="mt-0.5 size-4 shrink-0" />
+                            <span class="leading-snug">@error</span>
+                        </div>
+                    }
+
+                    <div class="pt-1.5">
+                        <Button type="submit" disabled="@(submitting || !email || !password || !tenant)" class="group h-11 w-full text-[14px] font-semibold">
+                            @if (submitting) {
+                                <Icon icon="@Loader2" class="size-4 animate-spin" />
+                                <span>Signing in…</span>
+                            } else {
+                                <span>Sign in</span>
+                                <Icon icon="@ArrowRight" class="size-[14px] opacity-60 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                            }
+                        </Button>
+                    </div>
+                </form>
+
+                @* Demo accounts — dev-only, same dashed-button pattern as dashboard. *@
+                @if (import.meta.env.DEV) {
+                    <div class="mt-7">
+                        <button type="button" @onclick="() => demoOpen = true"
+                                class="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--color-primary)]/25 bg-transparent text-[12.5px] font-medium text-[var(--color-primary)]/70 transition-all duration-150 hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/[0.04] hover:text-[var(--color-primary)]">
+                            <Icon icon="@Sparkles" class="size-[13px]" />
+                            <span>Sign in with a demo account</span>
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
+            <Icon icon="@ShieldCheck" class="size-3" />
+            <span>Encrypted in transit · JWT-secured session</span>
+        </div>
+        <p class="mt-4 text-center text-[10px] font-medium uppercase tracking-wider text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.5)]">fullstackhero Administration</p>
+    </div>
+</div>
+
+@* Demo dialog — rendered outside the shell to escape any overflow clipping. *@
+@if (import.meta.env.DEV) {
+    <DemoAccountsDialog @bind-open="demoOpen" onPick="@onPickDemo" />
+}
+
+@code {
+    private email = "";
+    private password = "";
+    private tenant = env.defaultTenant;
+    private submitting = false;
+    private error: string | null = null;
+    private demoOpen = false;
+    private showPassword = false;
+    private notice: string | null = null;
+
+    protected override onInitialized(): void {
+        // Surface why the previous session ended (read-and-clear, one-shot).
+        if (consumeSignedOutReason() === "inactivity") this.notice = "You were signed out due to inactivity.";
+        this.observe(this.auth.changes, () => this.leaveIfSignedIn());
+        this.leaveIfSignedIn();
+    }
+
+    /** Where the redirect to the login came from (RedirectToLogin's history entry state), else "/". */
+    private get from(): string {
+        try {
+            const state = JSON.parse(this.navigation.historyEntryState ?? "null") as { from?: string } | null;
+            return state?.from ?? "/";
+        } catch {
+            return "/";
+        }
+    }
+
+    /** The original's `if (isAuthenticated) return <Navigate to={from} replace />`. */
+    private leaveIfSignedIn(): void {
+        if (this.auth.isAuthenticated) this.navigation.navigateTo(this.from, { replaceHistoryEntry: true });
+    }
+
+    private async performLogin(credentials: { email: string; password: string; tenant: string }): Promise<void> {
+        this.error = null;
+        this.submitting = true;
+        try {
+            await this.auth.login(credentials);
+            this.navigation.navigateTo(this.from, { replaceHistoryEntry: true });
+        } catch (err) {
+            this.error =
+                err instanceof ApiRequestError
+                    ? err.problem?.detail ?? err.problem?.title ?? err.message
+                    : err instanceof Error
+                        ? err.message
+                        : "Login failed";
+        } finally {
+            this.submitting = false;
+        }
+    }
+
+    private onSubmit(): Promise<void> {
+        return this.performLogin({ email: this.email, password: this.password, tenant: this.tenant });
+    }
+
+    // Demo picker → reflect the chosen creds in the form, then sign in instantly.
+    private onPickDemo(account: DemoAccount): Promise<void> {
+        this.email = account.email;
+        this.password = account.password;
+        this.tenant = account.tenant;
+        return this.performLogin({ email: account.email, password: account.password, tenant: account.tenant });
+    }
+}

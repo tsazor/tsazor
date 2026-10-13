@@ -1,0 +1,55 @@
+@* pages/audits/detail.tsx's CorrelationChip: an id with its label; a click copies it (a check for 1.2s). Without a
+   value it is a disabled "—". *@
+@import { Check, Copy } from "lucide"
+
+<button type="button" @onclick="onCopy" disabled="@(!hasValue)" aria-label="@(hasValue ? `Copy ${label}` : `${label} not available`)"
+        class="@cn("group/chip flex min-w-0 items-start gap-3 rounded-lg border border-[var(--color-border)] px-3 py-2.5 text-left transition-colors", hasValue ? "hover:bg-[var(--color-muted)]/50" : "opacity-60")">
+    <div class="min-w-0 flex-1 space-y-0.5">
+        <div class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+            @label
+        </div>
+        <div class="truncate font-mono text-[11.5px] text-[var(--color-foreground)]">
+            @(hasValue ? value : "—")
+        </div>
+    </div>
+    @if (hasValue) {
+        <span aria-hidden="true"
+              class="@cn("grid h-5 w-5 shrink-0 place-items-center rounded text-[var(--color-muted-foreground)] transition-all", "opacity-0 group-hover/chip:opacity-100 group-focus-visible/chip:opacity-100", copied && "opacity-100 text-[var(--color-success)]")">
+            @if (copied) {
+                <Icon icon="@Check" class="h-3 w-3" />
+            } else {
+                <Icon icon="@Copy" class="h-3 w-3" />
+            }
+        </span>
+    }
+</button>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() value: string | null = null;
+
+    private copied = false;
+    private timer?: number;
+
+    private get hasValue(): boolean {
+        return Boolean(this.value && this.value !== "—");
+    }
+
+    private async onCopy(): Promise<void> {
+        if (!this.hasValue) return;
+        try {
+            await navigator.clipboard.writeText(this.value!);
+            this.copied = true;
+            this.timer = window.setTimeout(() => {
+                this.copied = false;
+                this.stateHasChanged();
+            }, 1200);
+        } catch {
+            /* noop */
+        }
+    }
+
+    dispose(): void {
+        window.clearTimeout(this.timer);
+    }
+}

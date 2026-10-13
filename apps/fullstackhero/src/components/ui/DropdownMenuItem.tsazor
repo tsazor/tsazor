@@ -1,0 +1,62 @@
+@* components/ui/dropdown-menu.tsx's DropdownMenuItem: a menuitem — a click, Enter or Space selects it (`onSelect`)
+   and closes the menu, as Radix's. It is highlighted (`data-highlighted`, the original's classes) while it has the
+   focus; the pointer moving over it gives it the focus. `destructive` is the original's danger tone. *@
+@import { cn } from "@/lib/cn"
+@import DropdownMenu from "./DropdownMenu.tsazor"
+
+<div role="menuitem" tabindex="-1" data-highlighted="@(highlighted ? "" : null)" data-disabled="@(disabled ? "" : null)" aria-disabled="@(disabled ? "true" : null)"
+     @attributes="@this.attributes" @onclick="this.select" @onkeydown="this.keydown" @onpointermove="this.hover" @onpointerleave="this.leave"
+     @onfocus="() => highlighted = true" @onblur="() => highlighted = false">@childContent</div>
+
+@code {
+    @Parameter() destructive: boolean = false;
+    @Parameter() disabled: boolean = false;
+    /** Radix's onSelect. */
+    @Parameter() onSelect?: EventCallback;
+    @CascadingParameter({ type: DropdownMenu }) menu?: DropdownMenu;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private highlighted = false;
+
+    private get attributes(): Record<string, unknown> {
+        return {
+            ...this.additionalAttributes,
+            class: cn(
+                "group relative mx-1 my-0.5 flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-2 text-sm",
+                "data-[disabled]:cursor-not-allowed",
+                "outline-none focus:outline-none focus-visible:outline-none focus-visible:shadow-none",
+                "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
+                "data-[highlighted]:bg-[var(--color-accent)]",
+                this.destructive
+                    ? "text-[var(--color-destructive)] data-[highlighted]:bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.10)] data-[highlighted]:text-[var(--color-destructive)]"
+                    : "text-[var(--color-foreground)] data-[highlighted]:text-[var(--color-foreground)]",
+                "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+                this.additionalAttributes?.class as string | undefined,
+            ),
+        };
+    }
+
+    private async select(): Promise<void> {
+        if (this.disabled) return;
+        await this.menu?.close();
+        await this.onSelect?.invokeAsync();
+    }
+
+    private keydown(event: KeyboardEvent): Promise<void> | undefined {
+        if (event.key !== "Enter" && event.key !== " ") return undefined;
+        event.preventDefault();
+        return this.select();
+    }
+
+    private hover(event: PointerEvent): void {
+        const item = event.currentTarget as HTMLElement;
+        if (!this.disabled && item.ownerDocument.activeElement !== item) item.focus({ preventScroll: true });
+    }
+
+    private leave(event: PointerEvent): void {
+        // Radix: the highlight leaves with the pointer; the menu keeps the focus.
+        const item = event.currentTarget as HTMLElement;
+        if (item.ownerDocument.activeElement === item) item.closest<HTMLElement>("[role=menu]")?.focus({ preventScroll: true });
+    }
+}

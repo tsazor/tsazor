@@ -1,0 +1,48 @@
+@* App.tsx and routes.tsx. React Router's route table becomes the pages' own @page directives (the router collects
+   them), its nesting becomes layouts: AppShell is the default layout (routes.tsx: the children of
+   <ProtectedRoute><AppShell/>), Billing and Settings nest theirs in it, the public pages use BlankLayout. The
+   original's guards are AuthorizeRouteView's, with the AuthService as the authentication state:
+   - ProtectedRoute: a page with `@authorize` renders for a signed-in user; a signed-out one is sent to /login, the
+     page they came from kept for after the sign-in (RedirectToLogin); restoring a session shows a spinner.
+   - RouteGuard: `@authorize({ policy: Permissions.X })` — one policy per permission (main.ts); a signed-in user
+     without it sees ForbiddenView with the missing permission, as the original prints it.
+   The toasts' region sits beside the router, as App.tsx's FshToaster. *@
+@import SessionPending from "./components/SessionPending.tsazor"
+@import ForbiddenView from "./components/ForbiddenView.tsazor"
+@import RedirectToLogin from "./components/RedirectToLogin.tsazor"
+@import AppShell from "./components/layout/AppShell.tsazor"
+@import BlankLayout from "./layouts/BlankLayout.tsazor"
+@import NotFoundPage from "./pages/NotFoundPage.tsazor"
+
+<Router>
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@AppShell">
+            <Authorizing>
+                <SessionPending />
+            </Authorizing>
+            <NotAuthorized Context="state">
+                @if (!state.user.isAuthenticated) {
+                    <RedirectToLogin />
+                } else {
+                    <ForbiddenView missing="@missing(routeData)" />
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@BlankLayout">
+            <NotFoundPage />
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@* App.tsx's FshToaster: sonner's region, outside the routes. *@
+<FshToaster />
+
+@code {
+    /** The route's required permission (RouteGuard's `perms`), for ForbiddenView. */
+    private missing(routeData: RouteData): string[] {
+        const policy = routeData.route.authorize?.policy;
+        return policy ? [policy] : [];
+    }
+}

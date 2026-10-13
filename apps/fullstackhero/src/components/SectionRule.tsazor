@@ -1,0 +1,26 @@
+@* components/section-rule.tsx: the editorial top rule of a module's pages — a hairline over mono-caps crumbs
+   separated by "\\", an optional trailing note. *@
+@import type { SectionCrumb } from "./section-crumb"
+
+<div class="@cn("section-rule justify-between", additionalAttributes?.class as string)">
+    <div class="flex items-baseline gap-2">
+        @for (let i = 0; i < crumbs.length; i++) {
+            const crumb = crumbs[i]!;
+            <span @key="@(`${crumb.label}-${i}`)" class="flex items-baseline gap-2">
+                @if (i > 0) {
+                    <span class="section-rule__crumb section-rule__crumb--muted">\\</span>
+                }
+                <span class="@cn("section-rule__crumb", crumb.muted && "section-rule__crumb--muted")">@crumb.label</span>
+            </span>
+        }
+    </div>
+    @if (trailing) {
+        <div class="text-[0.6875rem] font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">@trailing</div>
+    }
+</div>
+
+@code {
+    @Parameter() crumbs: readonly SectionCrumb[] = [];
+    @Parameter() trailing?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

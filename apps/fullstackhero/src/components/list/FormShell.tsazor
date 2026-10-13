@@ -1,0 +1,15 @@
+@* components/list/form-shell.tsx: an editor form's single card-shell surface; pair with FormSection rows and a
+   FormActions footer. *@
+
+<div class="@cn("card-shell p-6 sm:p-8", widths[maxWidth], additionalAttributes?.class as string)">
+    <div class="space-y-10">@childContent</div>
+</div>
+
+@code {
+    /** Max width of the card. Defaults to a generous reading measure. */
+    @Parameter() maxWidth: "md" | "lg" | "xl" | "full" = "lg";
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly widths = { md: "max-w-3xl", lg: "max-w-5xl", xl: "max-w-6xl", full: "max-w-none" };
+}

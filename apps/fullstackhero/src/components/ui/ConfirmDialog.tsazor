@@ -1,0 +1,48 @@
+@* components/ui/confirm-dialog.tsx: the confirmation for important or irreversible actions. The confirm button shows a
+   pending state while the action runs, and the dialog stays open until the caller closes it (no closing while
+   pending). React's `description: ReactNode` is `description` (text) or the DescriptionContent slot. *@
+@import { AlertTriangle } from "lucide"
+
+<Dialog open="@open" openChanged="@this.requestOpen">
+    <DialogContent size="sm">
+        <DialogHeader>
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="@cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl ring-1 ring-inset", destructive ? "bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.12)] text-[var(--color-destructive)] ring-[oklch(from_var(--color-destructive)_l_c_h_/_0.18)]" : "bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)] text-[var(--color-primary)] ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]")">
+                    <Icon icon="@AlertTriangle" class="h-[18px] w-[18px]" />
+                </span>
+                <DialogTitle class="text-[16px]">@title</DialogTitle>
+            </div>
+        </DialogHeader>
+
+        <DialogBody>
+            <DialogDescription>
+                @if (descriptionContent) { @descriptionContent } else { @description }
+            </DialogDescription>
+        </DialogBody>
+
+        <DialogFooter>
+            <Button type="button" variant="outline" onClick="@(() => requestOpen(false))" disabled="@pending">@cancelLabel</Button>
+            <Button type="button" variant="@(destructive ? "destructive" : "default")" onClick="@(() => onConfirm?.invokeAsync())" disabled="@pending">
+                @(pending ? "Working…" : confirmLabel)
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    @Parameter() title: string = "";
+    @Parameter() description?: string;
+    @Parameter() descriptionContent?: RenderFragment;
+    @Parameter() confirmLabel: string = "Confirm";
+    @Parameter() cancelLabel: string = "Cancel";
+    @Parameter() onConfirm?: EventCallback;
+    @Parameter() destructive: boolean = false;
+    @Parameter() pending: boolean = false;
+
+    private requestOpen(open: boolean): Promise<void> | undefined {
+        if (this.pending) return undefined;
+        return this.openChanged?.invokeAsync(open);
+    }
+}

@@ -1,0 +1,131 @@
+@* pages/tenants/list.tsx: the tenant registry — paged (12 per page, the previous page kept while the next loads), as
+   cards on mobile and as a grid table on desktop; "New tenant" (Tenants.Create) opens the create dialog. *@
+@page "/tenants"
+@authorize({ policy: "Permissions.Tenants.View" })
+@import { Building2, ChevronLeft, ChevronRight, Plus } from "lucide"
+@import { keepPreviousData } from "@tanstack/query-core"
+@import { listTenants, type TenantDto } from "@/api/tenants"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { MultitenancyPermissions } from "@/lib/permissions"
+@import { Query } from "@/lib/query"
+@import CreateTenantDialog from "@/components/tenants/CreateTenantDialog.tsazor"
+@import TenantDesktopRow from "./TenantDesktopRow.tsazor"
+@import TenantMobileCard from "./TenantMobileCard.tsazor"
+@inject AuthService auth
+@inject NavigationManager navigation
+
+<div class="space-y-4 sm:space-y-6">
+    <EntityPageHeader icon="@Building2" title="Registry" tone="info" total="@(data?.totalCount ?? null)" unit="tenant"
+                      description="@(data ? `${data.totalCount} ${data.totalCount === 1 ? "tenant" : "tenants"} registered on this instance.` : "Loading the registry…")">
+        @if (canCreateTenant) {
+            <Button onClick="@(() => createOpen = true)" class="h-9 flex-1 gap-1.5 rounded-lg px-4 text-[13px] font-semibold sm:flex-none">
+                <Icon icon="@Plus" class="size-4" /> New tenant
+            </Button>
+        }
+    </EntityPageHeader>
+
+    @if (query.result.isError) {
+        <ErrorBand message="@(query.result.error instanceof ApiRequestError ? query.result.error.problem?.detail ?? query.result.error.message : "Failed to load tenants.")" />
+    }
+
+    @if (query.result.isLoading && items.length === 0) {
+        <div role="status" class="py-12 text-center font-mono text-sm uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">Loading…</div>
+    }
+
+    @if (!query.result.isLoading && items.length === 0 && !query.result.isError) {
+        <div class="py-16 text-center">
+            <p class="font-display text-2xl text-[var(--color-foreground)]">No tenants yet.</p>
+            <p class="mt-1 text-sm text-[var(--color-muted-foreground)]">Provision the first tenant to get started.</p>
+        </div>
+    }
+
+    @if (items.length > 0) {
+        <div>
+            <p class="mb-3 text-[12px] font-medium text-[var(--color-muted-foreground)]">@(data?.totalCount ?? 0) tenant@((data?.totalCount ?? 0) !== 1 ? "s" : "") registered</p>
+
+            @* Mobile card list *@
+            <div class="space-y-2 md:hidden">
+                @for (let i = 0; i < items.length; i++) {
+                    const tenant = items[i]!;
+                    <TenantMobileCard @key="tenant.id ?? i" tenant="@tenant" onClick="@(() => open(tenant))" />
+                }
+            </div>
+
+            @* Desktop table *@
+            <div class="hidden overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xs md:block">
+                <div class="@(`grid items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-muted)]/40 px-4 py-2.5 ${TenantDesktopRow.columns}`)">
+                    <span class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Tenant</span>
+                    <span class="hidden text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] lg:block">Admin email</span>
+                    <span class="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Status</span>
+                    <span></span>
+                </div>
+
+                <ol class="divide-y divide-[var(--color-border)]">
+                    @for (let i = 0; i < items.length; i++) {
+                        const tenant = items[i]!;
+                        <TenantDesktopRow @key="tenant.id ?? i" tenant="@tenant" onClick="@(() => open(tenant))" />
+                    }
+                </ol>
+            </div>
+        </div>
+    }
+
+    @* Pagination *@
+    @if (data && data.totalPages > 1) {
+        <div class="flex items-center justify-between text-xs">
+            <span class="font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">@pageBadge</span>
+            <div class="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled="@(!data.hasPrevious || query.result.isFetching)" onClick="@(() => pageNumber = Math.max(1, pageNumber - 1))" class="h-9 rounded-lg px-3 text-[13px]">
+                    <Icon icon="@ChevronLeft" class="mr-1 h-3.5 w-3.5" /> Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled="@(!data.hasNext || query.result.isFetching)" onClick="@(() => pageNumber = pageNumber + 1)" class="h-9 rounded-lg px-3 text-[13px]">
+                    Next <Icon icon="@ChevronRight" class="ml-1 h-3.5 w-3.5" />
+                </Button>
+            </div>
+        </div>
+    }
+
+    <CreateTenantDialog @bind-open="createOpen" />
+</div>
+
+@code {
+    private static readonly pageSize = 12;
+
+    private pageNumber = 1;
+    private createOpen = false;
+
+    private readonly query = new Query(() => ({
+        queryKey: ["tenants", { pageNumber: this.pageNumber, pageSize: TenantsList.pageSize }],
+        queryFn: () => listTenants({ pageNumber: this.pageNumber, pageSize: TenantsList.pageSize }),
+        placeholderData: keepPreviousData,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.query);
+    }
+
+    private get canCreateTenant(): boolean {
+        return (this.auth.user?.permissions ?? []).includes(MultitenancyPermissions.Tenants.Create);
+    }
+
+    private get data() {
+        return this.query.result.data;
+    }
+
+    private get items(): TenantDto[] {
+        return this.data?.items ?? [];
+    }
+
+    private get pageBadge(): string {
+        const data = this.data;
+        if (!data) return "—";
+        const p = String(data.pageNumber).padStart(2, "0");
+        const t = String(Math.max(data.totalPages, 1)).padStart(2, "0");
+        return `Page ${p} of ${t}`;
+    }
+
+    private open(tenant: TenantDto): void {
+        this.navigation.navigateTo(`/tenants/${tenant.id}`);
+    }
+}

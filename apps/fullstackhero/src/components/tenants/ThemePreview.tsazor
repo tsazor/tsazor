@@ -1,0 +1,38 @@
+@* tenant-branding-card.tsx's ThemePreview: how primary-action buttons and the surface tokens render with a palette. *@
+@import type { PaletteDto } from "@/api/tenants"
+
+<div class="overflow-hidden rounded-xl border border-[var(--color-border)]" style="background-color: @palette.background">
+    @* Preview header bar *@
+    <div class="flex items-center justify-between border-b px-4 py-2" style="@(`border-color: ${palette.surface}55; background-color: ${palette.surface}`)">
+        <span class="text-[11px] font-semibold uppercase tracking-[0.12em] opacity-60" style="color: @palette.secondary">@label</span>
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]" style="@(`background-color: ${palette.success}; color: ${palette.surface}`)">live</span>
+    </div>
+
+    @* Preview body *@
+    <div class="p-4">
+        <div class="rounded-xl p-4" style="background-color: @palette.surface">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <span class="text-[13px] font-semibold" style="color: @palette.secondary">Sample tenant page</span>
+                <span class="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]" style="@(`background-color: ${palette.success}; color: ${palette.surface}`)">active</span>
+            </div>
+            <p class="mb-4 text-[12.5px] leading-relaxed" style="@(`color: ${palette.secondary}; opacity: 0.72`)">
+                A short paragraph rendered with the chosen body color over the chosen surface, on the chosen page background. Action buttons use the primary token.
+            </p>
+            <div class="flex flex-wrap gap-2">
+                @* Primary action *@
+                <span class="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-medium shadow-sm" style="@(`background-color: ${palette.primary}; color: ${palette.surface}`)">Primary action</span>
+                @* Outline secondary *@
+                <span class="inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium" style="@(`border-color: ${palette.primary}; color: ${palette.primary}; background-color: transparent`)">Secondary</span>
+                @* Warning pill *@
+                <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-[10.5px] font-mono font-medium uppercase tracking-[0.1em]" style="@(`background-color: ${palette.warning}; color: ${palette.background}`)">warn</span>
+                @* Error pill *@
+                <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-[10.5px] font-mono font-medium uppercase tracking-[0.1em]" style="@(`background-color: ${palette.error}; color: ${palette.surface}`)">error</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    @Parameter() palette!: PaletteDto;
+    @Parameter() label: string = "";
+}

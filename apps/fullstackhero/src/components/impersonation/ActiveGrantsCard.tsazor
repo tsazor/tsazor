@@ -1,0 +1,78 @@
+@* components/impersonation/active-grants-card.tsx: the tenant detail's inline view of the active impersonation
+   sessions targeting users in this tenant, polled every 5s. Renders nothing when the caller can't see grants
+   (Impersonation.View), while loading, or when there are none — busy operators don't need an empty box on every
+   tenant page. *@
+@import { UserCog } from "lucide"
+@import { listImpersonationGrants, type ImpersonationGrantDto } from "@/api/impersonation-grants"
+@import { IdentityPermissions } from "@/lib/permissions"
+@import { Query } from "@/lib/query"
+@import { prefillUserOf } from "./impersonation"
+@import ActiveGrantRow from "./ActiveGrantRow.tsazor"
+@import ImpersonateDialog from "./ImpersonateDialog.tsazor"
+@import RevokeGrantDialog from "./RevokeGrantDialog.tsazor"
+@inject AuthService auth
+
+@if (canView && !query.result.isLoading && items.length > 0) {
+    <SettingsSection title="Active impersonations" icon="@UserCog"
+                     description="Operators currently signed in as users in this tenant. Revoking immediately invalidates the issued token; the dashboard tab will 401 on its next request.">
+        <ul class="divide-y divide-[var(--color-border)]">
+            @foreach (const g of items) {
+                <ActiveGrantRow @key="g.id" grant="@g" canRevoke="@canRevoke"
+                                canReopen="@(canImpersonate && currentUserId !== null && g.actorUserId === currentUserId)"
+                                onRevoke="@(() => targetGrant = g)" onReopen="@(() => reopenGrant = g)" />
+            }
+        </ul>
+    </SettingsSection>
+
+    <RevokeGrantDialog grant="@targetGrant" onOpenChange="@(open => { if (!open) targetGrant = null; })" />
+
+    <ImpersonateDialog open="@(reopenGrant !== null)" openChanged="@(open => { if (!open) reopenGrant = null; })"
+                       tenantId="@(reopenGrant?.impersonatedTenantId ?? "")" tenantName="@(reopenGrant?.impersonatedTenantId)" prefillUser="@prefillUserOf(reopenGrant)" />
+}
+
+@code {
+    @Parameter() tenantId: string = "";
+
+    private static readonly refreshIntervalMs = 5_000;
+
+    private targetGrant: ImpersonationGrantDto | null = null;
+    private reopenGrant: ImpersonationGrantDto | null = null;
+
+    private readonly query = new Query(() => ({
+        queryKey: ["impersonation-grants", "tenant-active", this.tenantId],
+        queryFn: () => listImpersonationGrants({ status: "Active", impersonatedTenantId: this.tenantId, take: 50 }),
+        enabled: this.canView,
+        refetchInterval: ActiveGrantsCard.refreshIntervalMs,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        // Built before `tenantId` was set: apply the current options before Query.subscribe starts it.
+        void this.query.result;
+        this.observe(this.query);
+    }
+
+    private get permissions(): string[] {
+        return this.auth.user?.permissions ?? [];
+    }
+
+    private get canView(): boolean {
+        return this.permissions.includes(IdentityPermissions.Impersonation.View);
+    }
+
+    private get canRevoke(): boolean {
+        return this.permissions.includes(IdentityPermissions.Impersonation.Revoke);
+    }
+
+    private get canImpersonate(): boolean {
+        return this.permissions.includes(IdentityPermissions.Users.Impersonate);
+    }
+
+    private get currentUserId(): string | null {
+        return this.auth.user?.id ?? null;
+    }
+
+    private get items(): ImpersonationGrantDto[] {
+        return this.query.result.data ?? [];
+    }
+}

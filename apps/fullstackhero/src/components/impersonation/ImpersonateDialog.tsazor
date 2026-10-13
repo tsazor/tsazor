@@ -1,0 +1,66 @@
+@* components/impersonation/impersonate-dialog.tsx: a two-step modal — 1. pick a user inside the target tenant (skipped
+   when `prefillUser` is set), 2. enter the reason, pick the session's duration and start. On success the dashboard
+   opens in a NEW TAB with the impersonation token in the URL hash: the dashboard's bootstrap reads the hash, installs
+   the token and strips it before any render. Hash params are never sent to the server and don't leak via referrer
+   or HTTP logs. Reopening is idempotent: the step and the selection reset each time it opens. *@
+@import { UserCog } from "lucide"
+@import type { UserDto } from "@/api/users"
+@import ImpersonateConfigureStep from "./ImpersonateConfigureStep.tsazor"
+@import ImpersonatePickStep from "./ImpersonatePickStep.tsazor"
+
+<Dialog open="@open" openChanged="@openChanged">
+    <DialogContent size="lg">
+        <DialogHeader>
+            <div class="flex items-center gap-2">
+                <span aria-hidden="true" class="grid h-7 w-7 place-items-center rounded-md bg-[var(--color-accent-signal)]/15 text-[var(--color-accent-signal)]">
+                    <Icon icon="@UserCog" class="h-4 w-4" />
+                </span>
+                <DialogTitle>Impersonate user</DialogTitle>
+            </div>
+            <DialogDescription>
+                Tenant <code class="code-chip">@(tenantName ?? tenantId)</code> · @(step === "pick" ? "pick a user to impersonate." : "session details. Token will be issued and opened in the dashboard.")
+            </DialogDescription>
+        </DialogHeader>
+
+        @if (step === "pick") {
+            <ImpersonatePickStep tenantId="@tenantId" onPick="@pick" onCancel="@(() => openChanged?.invokeAsync(false))" />
+        } else if (selected) {
+            <ImpersonateConfigureStep tenantId="@tenantId" tenantName="@tenantName" user="@selected"
+                                      onBack="@(prefillUser ? undefined : () => backToPick())" onDone="@(() => openChanged?.invokeAsync(false))" />
+        }
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    @Parameter() tenantId: string = "";
+    @Parameter() tenantName?: string;
+    /** Pre-select a user — skips the picker and jumps straight to the form. */
+    @Parameter() prefillUser?: UserDto;
+
+    private step: "pick" | "configure" = "pick";
+    private selected: UserDto | null = null;
+    private wasOpen = false;
+    private prefilledId?: string;
+
+    /** Reset on open, and when the prefill changes, so reopening is idempotent. */
+    protected override onParametersSet(): void {
+        if (this.open && (!this.wasOpen || this.prefillUser?.id !== this.prefilledId)) {
+            this.step = this.prefillUser ? "configure" : "pick";
+            this.selected = this.prefillUser ?? null;
+            this.prefilledId = this.prefillUser?.id;
+        }
+        this.wasOpen = this.open;
+    }
+
+    private pick(user: UserDto): void {
+        this.selected = user;
+        this.step = "configure";
+    }
+
+    private backToPick(): void {
+        this.selected = null;
+        this.step = "pick";
+    }
+}

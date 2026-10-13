@@ -1,0 +1,26 @@
+@* pages/settings/security.tsx's RevealInput: a password input with a first-class show/hide eye toggle (mirrors the
+   login screen). React forwards the ref so react-hook-form can register the field; here the field is the form's
+   InputText, and the component passes its binding through — value, valueChanged and valueExpression (the field
+   name the EditContext keys its messages on), as a Blazor component wrapping an input does. *@
+@import { Eye, EyeOff } from "lucide"
+@import { InputText } from "@tsazor/runtime"
+@import { inputClass } from "@/components/ui/variants"
+
+<div class="relative">
+    <InputText @attributes="@additionalAttributes" type="@(show ? "text" : "password")" class="@cn(inputClass, "pr-10", additionalAttributes?.class as string)"
+               Value="@value" ValueChanged="@valueChanged" ValueExpression="@valueExpression" />
+    <button type="button" tabindex="-1" @onclick="() => show = !show" aria-label="@(show ? "Hide password" : "Show password")"
+            class="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-[var(--color-muted-foreground)] outline-none transition-colors hover:text-[var(--color-foreground)] focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]">
+        <Icon icon="@(show ? EyeOff : Eye)" class="size-4" />
+    </button>
+</div>
+
+@code {
+    @Parameter() value?: string;
+    @Parameter() valueChanged?: EventCallback<string>;
+    @Parameter() valueExpression?: string;
+    /** `id`, `autocomplete`, `autofocus`, `class` (merged), … on the input. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private show = false;
+}

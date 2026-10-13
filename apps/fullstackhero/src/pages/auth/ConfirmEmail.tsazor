@@ -1,0 +1,148 @@
+@* pages/auth/confirm-email.tsx: Confirm-email landing — admin variant. Same shape as the dashboard's: auto-fire GET on
+   mount, surface stable success or failure state with recovery affordances. Uses the unified centered-card auth
+   shell so the page reads as part of the same surface as the login and other auth pages. The parameters come from
+   the query string (SupplyParameterFromQuery); the effect on mount is an async onInitialized (Blazor's
+   OnInitializedAsync), which renders the loading state first and the outcome when the request settles. *@
+@page "/confirm-email"
+@layout BlankLayout
+@import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from "lucide"
+@import { SupplyParameterFromQuery } from "@tsazor/runtime"
+@import { confirmEmail } from "@/api/users"
+@import { ApiRequestError } from "@/lib/api-client"
+@import BlankLayout from "@/layouts/BlankLayout.tsazor"
+
+<div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--color-background)] px-5 py-8 sm:py-12">
+    @* Atmospheric background orbs *@
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div class="absolute -top-[25%] -left-[15%] h-[70vw] w-[70vw] rounded-full blur-[140px]" style="background-color: oklch(from var(--color-primary) l c h / 0.05)"></div>
+        <div class="absolute -bottom-[20%] -right-[10%] h-[55vw] w-[55vw] rounded-full blur-[120px]" style="background-color: oklch(from var(--color-saffron, var(--color-primary)) l c h / 0.07)"></div>
+        <div class="absolute top-[10%] right-[5%] h-[30vw] w-[30vw] rounded-full blur-[80px]" style="background-color: oklch(from var(--color-primary) l c h / 0.025)"></div>
+    </div>
+
+    @* Card column *@
+    <div class="relative z-10 w-full max-w-[420px] fsh-enter fsh-enter-1">
+        @* Brand lockup *@
+        <div class="mb-8 flex flex-col items-center">
+            <div class="flex items-center gap-2.5">
+                <img src="/logo-fullstackhero.png" alt="fullstackhero" class="size-9 object-contain" />
+                <span class="font-display text-[26px] font-semibold tracking-tight text-[var(--color-foreground)]">fullstack<span class="text-[var(--color-primary)]">hero</span></span>
+            </div>
+            <div class="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">
+                <span aria-hidden="true" class="h-px w-6 bg-[var(--color-border)]"></span>
+                <span>.NET 10 Starter Kit</span>
+                <span aria-hidden="true" class="h-px w-6 bg-[var(--color-border)]"></span>
+            </div>
+        </div>
+
+        @* Status card *@
+        <div class="rounded-xl border border-[var(--color-border)] bg-[oklch(from_var(--color-card)_l_c_h_/_0.85)] shadow-[0_1px_3px_oklch(0_0_0_/_0.04),0_8px_24px_oklch(0_0_0_/_0.06)] backdrop-blur-xl">
+            <div class="px-6 py-7 sm:px-8 sm:py-9">
+                @if (status.kind === "loading") {
+                    <div class="space-y-5 text-center">
+                        <div class="grid place-items-center">
+                            <span aria-hidden="true" class="grid size-14 place-items-center rounded-2xl bg-[var(--color-muted)] text-[var(--color-muted-foreground)]">
+                                <Icon icon="@Loader2" class="size-6 animate-spin" />
+                            </span>
+                        </div>
+                        <div>
+                            <h1 class="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
+                                Verifying your <span class="text-[var(--color-primary)]">email…</span>
+                            </h1>
+                            <p class="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
+                                One moment — checking the confirmation token with the server.
+                            </p>
+                        </div>
+                    </div>
+                }
+
+                @if (status.kind === "success") {
+                    <div class="fsh-enter space-y-5 text-center">
+                        <div class="grid place-items-center">
+                            <span aria-hidden="true" class="grid size-14 place-items-center rounded-2xl bg-[oklch(from_var(--color-success)_l_c_h_/_0.10)] text-[var(--color-success)]">
+                                <Icon icon="@CheckCircle2" class="size-6" />
+                            </span>
+                        </div>
+                        <div>
+                            <h1 class="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
+                                Email <span class="text-[var(--color-primary)]">confirmed</span>
+                            </h1>
+                            <p class="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">@status.message</p>
+                        </div>
+                        <a href="/login" class="block">
+                            <Button type="button" class="group h-11 w-full text-[14px] font-semibold">
+                                <span>Continue to sign in</span>
+                                <Icon icon="@ArrowRight" class="size-[14px] opacity-60 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                            </Button>
+                        </a>
+                    </div>
+                }
+
+                @if (status.kind === "error") {
+                    <div class="fsh-enter space-y-5 text-center">
+                        <div class="grid place-items-center">
+                            <span aria-hidden="true" class="grid size-14 place-items-center rounded-2xl bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.10)] text-[var(--color-destructive)]">
+                                <Icon icon="@AlertCircle" class="size-6" />
+                            </span>
+                        </div>
+                        <div>
+                            <h1 class="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
+                                Couldn't <span class="text-[var(--color-primary)]">confirm</span> your email
+                            </h1>
+                            <p class="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">@status.message</p>
+                            <p class="mt-2 text-[12px] leading-relaxed text-[var(--color-muted-foreground)]">
+                                The link may have expired or been used already. If you've signed in since
+                                this email was sent, you can ignore it.
+                            </p>
+                        </div>
+                        <div class="flex items-center justify-center gap-2 pt-1">
+                            <a href="/login">
+                                <Button type="button" variant="outline">Back to sign in</Button>
+                            </a>
+                            <a href="/forgot-password">
+                                <Button type="button" variant="ghost">Reset password instead</Button>
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="mt-6 text-center">
+            <a href="/login" class="text-[12.5px] text-[var(--color-muted-foreground)] underline-offset-4 hover:text-[var(--color-foreground)] hover:underline">← Back to sign in</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    @SupplyParameterFromQuery() userId: string | null = null;
+    @SupplyParameterFromQuery() code: string | null = null;
+    @SupplyParameterFromQuery() tenant: string | null = null;
+
+    private status: { kind: "loading" } | { kind: "success"; message: string } | { kind: "error"; message: string } = { kind: "loading" };
+
+    protected override async onInitialized(): Promise<void> {
+        const userId = this.userId ?? "";
+        const code = this.code ?? "";
+        const tenant = this.tenant ?? "";
+        if (!userId || !code || !tenant) {
+            this.status = {
+                kind: "error",
+                message: "This confirmation link is missing required parameters. It may have been clipped by your email client.",
+            };
+            return;
+        }
+        try {
+            const message = await confirmEmail({ userId, code, tenant });
+            this.status = {
+                kind: "success",
+                message: typeof message === "string" && message.length > 0 ? message : "Your email is confirmed. You can now sign in.",
+            };
+        } catch (err) {
+            const detail =
+                err instanceof ApiRequestError
+                    ? err.problem?.detail ?? err.problem?.title ?? err.message
+                    : (err as Error).message;
+            this.status = { kind: "error", message: detail };
+        }
+    }
+}

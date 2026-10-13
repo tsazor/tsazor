@@ -1,0 +1,29 @@
+@* react-hook-form's `register()`: an InputText whose bound value follows every keystroke — a live preview, a derived
+   identifier, a Save button enabled by `isDirty` — where Blazor's (and Tsazor's) InputText binds on `change`, which
+   comes only when the field is left. Blazor's documented idiom is a component that inherits InputText and binds
+   `oninput`; that would also validate on every keystroke. Here the form hears of the change on `change`, as
+   InputText's — only a field that already has a message re-validates per keystroke (react-hook-form's
+   reValidateMode "onChange": the message goes as soon as the value is fixed). The validation class and aria-invalid
+   are InputBase's (`cssClass`, `attributesWithValidation`). *@
+@import { InputText } from "@tsazor/runtime"
+@inherits InputText
+
+<input @attributes="@attributesWithValidation" class="@(cssClass || null)" value="@(Value ?? "")" @oninput="onInput" @onchange="onChange" @ref="element" />
+
+@code {
+    /** Every keystroke: the bound value (ValueChanged); the field change only while the field has a message. */
+    private onInput(event: Event): void {
+        const value = (event.target as HTMLInputElement).value;
+        if (Object.is(value, this.Value)) return;
+        this.Value = value;
+        void this.ValueChanged?.invokeAsync(value);
+        if (this.ValueExpression && this.editContext && !this.editContext.isValid(this.ValueExpression)) {
+            this.editContext.notifyFieldChanged(this.ValueExpression, value);
+        }
+    }
+
+    /** On change, as InputText: the EditContext's field change (validation, modified). */
+    private onChange(event: Event): void {
+        if (this.ValueExpression && this.editContext) this.editContext.notifyFieldChanged(this.ValueExpression, (event.target as HTMLInputElement).value);
+    }
+}

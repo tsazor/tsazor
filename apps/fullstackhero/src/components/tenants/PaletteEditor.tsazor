@@ -1,0 +1,40 @@
+@* tenant-branding-card.tsx's PaletteEditor: one palette's color swatches paired with hex inputs, with a reset to the
+   framework defaults. *@
+@import { RotateCcw } from "lucide"
+@import type { PaletteDto } from "@/api/tenants"
+@import ColorRow from "./ColorRow.tsazor"
+
+<div class="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+    <div class="flex items-center justify-between border-b border-[oklch(from_var(--color-border)_l_c_h_/_0.5)] px-4 py-2.5">
+        <h4 class="text-[12.5px] font-semibold tracking-tight text-[var(--color-foreground)]">@title</h4>
+        <button type="button" class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                @onclick="() => onChange?.invokeAsync(defaults)">
+            <Icon icon="@RotateCcw" class="h-2.5 w-2.5" />
+            Reset palette
+        </button>
+    </div>
+    <div class="grid gap-2 p-4 sm:grid-cols-2">
+        @foreach (const { key, label } of PaletteEditor.fields) {
+            <ColorRow @key="key" label="@label" value="@palette[key]" onChange="@(v => onChange?.invokeAsync({ [key]: v } as Partial<PaletteDto>))" />
+        }
+    </div>
+</div>
+
+@code {
+    @Parameter() title: string = "";
+    @Parameter() palette!: PaletteDto;
+    @Parameter() onChange?: EventCallback<Partial<PaletteDto>>;
+    @Parameter() defaults!: PaletteDto;
+
+    static readonly fields: ReadonlyArray<{ key: keyof PaletteDto; label: string }> = [
+        { key: "primary", label: "Primary" },
+        { key: "secondary", label: "Secondary" },
+        { key: "tertiary", label: "Tertiary" },
+        { key: "background", label: "Background" },
+        { key: "surface", label: "Surface" },
+        { key: "error", label: "Error" },
+        { key: "warning", label: "Warning" },
+        { key: "success", label: "Success" },
+        { key: "info", label: "Info" },
+    ];
+}

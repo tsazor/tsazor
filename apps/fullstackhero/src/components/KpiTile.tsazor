@@ -1,0 +1,21 @@
+@* components/kpi-tile.tsx: the small stat card at the top of list pages — a mono uppercase label, the value in
+   display weight with tabular figures, an optional subtitle; in a Card. *@
+
+<Card class="@cn("card-shell-interactive", additionalAttributes?.class as string)">
+    <CardContent class="px-5 pb-5 pt-5">
+        <div class="font-mono text-[10.5px] font-medium uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">@label</div>
+        <div class="text-display mt-3 text-3xl font-semibold leading-none tabular-nums">@if (valueContent) { @valueContent } else { @value }</div>
+        @if (subtitleContent || subtitle !== undefined) {
+            <div class="mt-2 text-xs leading-relaxed text-[var(--color-muted-foreground)]">@if (subtitleContent) { @subtitleContent } else { @subtitle }</div>
+        }
+    </CardContent>
+</Card>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() value?: string;
+    @Parameter() valueContent?: RenderFragment;
+    @Parameter() subtitle?: string;
+    @Parameter() subtitleContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

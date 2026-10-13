@@ -1,0 +1,158 @@
+@* pages/roles/detail.tsx's PermissionEditor: the permission catalog (lib/permissions.ts) group by group — a checkbox
+   per permission (a custom box over an sr-only input, the root and basic tags), "Select all / remaining / Clear all"
+   per group — with the unsaved state, Discard, and a save of the whole set. A new permission list (after a save)
+   resets the selection, as the original's effect on `role.permissions`. *@
+@import { ShieldCheck } from "lucide"
+@import { updateRolePermissions, type RoleDto } from "@/api/roles"
+@import { PERMISSION_CATALOG, type PermissionGroup } from "@/lib/permissions"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import OptionalFooterSection from "../../components/users/OptionalFooterSection.tsazor"
+
+<OptionalFooterSection title="Permissions" icon="@ShieldCheck" description="Pick what holders of this role can do. Root-only permissions take effect only on roles assigned in the root tenant." showFooter="@(!disabled)">
+    <Footer>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="text-[11.5px] font-medium text-[var(--color-muted-foreground)]">
+                @if (dirty) {
+                    <span class="inline-flex items-center gap-1.5 text-[var(--color-warning)]">
+                        <span class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-warning)]"></span>
+                        Unsaved changes · @(String(selected.size).padStart(2, "0")) of @(String(PermissionEditor.total).padStart(2, "0")) granted
+                    </span>
+                } else {
+                    <span>All changes saved · @(String(selected.size).padStart(2, "0")) of @(String(PermissionEditor.total).padStart(2, "0")) granted</span>
+                }
+            </div>
+            <div class="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" disabled="@(!dirty || saving)" onClick="@discard" class="h-9 rounded-lg px-3 text-[13px]">
+                    Discard
+                </Button>
+                <Button type="button" size="sm" disabled="@(!dirty || saving || disabled)" onClick="@save" class="h-9 rounded-lg px-3 text-[13px]">
+                    <Icon icon="@ShieldCheck" class="mr-1 h-3.5 w-3.5" />
+                    @(saving ? "Saving…" : "Save permissions")
+                </Button>
+            </div>
+        </div>
+    </Footer>
+    <ChildContent>
+        <div class="space-y-4">
+            @foreach (const group of PERMISSION_CATALOG) {
+                const groupCount = group.entries.filter((e) => selected.has(e.name)).length;
+                const allOn = groupCount === group.entries.length;
+                const someOn = groupCount > 0 && groupCount < group.entries.length;
+                <div @key="group.category" class="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">
+                    <div class="flex flex-wrap items-baseline justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-muted)]/40 px-4 py-3">
+                        <div class="min-w-0">
+                            <div class="flex items-baseline gap-3">
+                                <h3 class="text-[13px] font-semibold tracking-tight text-[var(--color-foreground)]">@group.category</h3>
+                                <span class="font-mono text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
+                                    @(String(groupCount).padStart(2, "0")) / @(String(group.entries.length).padStart(2, "0"))
+                                </span>
+                            </div>
+                            <p class="mt-0.5 text-[11.5px] text-[var(--color-muted-foreground)]">@group.blurb</p>
+                        </div>
+                        <button type="button" disabled="@disabled" @onclick="() => toggleGroup(group, !allOn)"
+                                class="@cn("cursor-pointer rounded-full px-2.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wider", "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]", "transition-colors", disabled && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-[var(--color-muted-foreground)]")">
+                            @(allOn ? "Clear all" : someOn ? "Select remaining" : "Select all")
+                        </button>
+                    </div>
+
+                    <ul class="grid grid-cols-1 divide-y divide-[var(--color-border)] sm:grid-cols-2 sm:divide-y-0">
+                        @foreach (const entry of group.entries) {
+                            const checked = selected.has(entry.name);
+                            <li @key="entry.name" class="border-b border-[oklch(from_var(--color-border)_l_c_h_/_0.5)] last:border-b-0">
+                                <label class="@cn("flex cursor-pointer items-start gap-3 px-4 py-3 text-[12.5px] transition-colors", disabled && "cursor-not-allowed opacity-60", !disabled && checked && "bg-[oklch(from_var(--color-primary)_l_c_h_/_0.04)] hover:bg-[oklch(from_var(--color-primary)_l_c_h_/_0.07)]", !disabled && !checked && "hover:bg-[var(--color-accent)]")">
+                                    @* Custom checkbox *@
+                                    <span aria-hidden="true" class="@cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded border transition-all", checked ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-foreground)]" : "border-[var(--color-input)] bg-transparent")">
+                                        @if (checked) {
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                                        }
+                                    </span>
+                                    <input type="checkbox" checked="@checked" disabled="@disabled" @onchange="() => toggle(entry.name)" class="sr-only" />
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-baseline gap-1.5">
+                                            <span class="@cn("text-[13px] font-medium", checked ? "text-[var(--color-foreground)]" : "text-[var(--color-muted-foreground)]")">@entry.description</span>
+                                            @if (entry.root) {
+                                                <span class="rounded-full bg-[oklch(from_var(--color-warning)_l_c_h_/_0.16)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-warning)]">root</span>
+                                            }
+                                            @if (entry.basic) {
+                                                <span class="rounded-full bg-[oklch(from_var(--color-info)_l_c_h_/_0.16)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-info)]">basic</span>
+                                            }
+                                        </div>
+                                        <div class="mt-0.5 truncate font-mono text-[10.5px] text-[var(--color-muted-foreground)]">@entry.name</div>
+                                    </div>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </ChildContent>
+</OptionalFooterSection>
+
+@code {
+    @Parameter() role!: RoleDto;
+    @Parameter() disabled: boolean = false;
+
+    /** Every permission of the catalog. */
+    private static readonly total = PERMISSION_CATALOG.reduce((sum, g) => sum + g.entries.length, 0);
+
+    private initial: Set<string> = new Set();
+    private selected: Set<string> = new Set();
+    private syncedRole?: RoleDto;
+    private saving = false;
+
+    /** The original's `useMemo`/`useEffect` on `role.permissions`: a new list is the new baseline and selection. */
+    protected override onParametersSet(): void {
+        if (this.syncedRole === undefined || this.syncedRole.permissions !== this.role.permissions) {
+            this.initial = new Set(this.role.permissions ?? []);
+            this.selected = new Set(this.initial);
+        }
+        this.syncedRole = this.role;
+    }
+
+    private get dirty(): boolean {
+        return !PermissionEditor.sameSet(this.selected, this.initial);
+    }
+
+    private toggle(name: string): void {
+        const next = new Set(this.selected);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        this.selected = next;
+    }
+
+    private toggleGroup(group: PermissionGroup, value: boolean): void {
+        const next = new Set(this.selected);
+        for (const e of group.entries) {
+            if (value) next.add(e.name);
+            else next.delete(e.name);
+        }
+        this.selected = next;
+    }
+
+    private discard(): void {
+        this.selected = new Set(this.initial);
+    }
+
+    private async save(): Promise<void> {
+        this.saving = true;
+        try {
+            await updateRolePermissions({ roleId: this.role.id, permissions: Array.from(this.selected) });
+            toast.success("Permissions updated");
+            void queryClient.invalidateQueries({ queryKey: ["roles", this.role.id] });
+        } catch (err) {
+            const detail = err instanceof ApiRequestError ? err.problem?.detail ?? err.problem?.title ?? err.message : (err as Error).message;
+            toast.error("Update failed", { description: detail });
+        } finally {
+            this.saving = false;
+        }
+    }
+
+    private static sameSet<T>(a: Set<T>, b: Set<T>): boolean {
+        if (a.size !== b.size) return false;
+        for (const item of a) if (!b.has(item)) return false;
+        return true;
+    }
+}

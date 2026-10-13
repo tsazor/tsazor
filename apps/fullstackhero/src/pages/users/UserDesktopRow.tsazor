@@ -1,0 +1,48 @@
+@* pages/users/list.tsx's UserDesktopRow: a user in the desktop grid — monogram, name and email, the @username chip, the
+   status and email pills (lg+). The whole row is the button that opens the user; a disabled account is dimmed. *@
+@import { ChevronRight } from "lucide"
+@import type { UserDto } from "@/api/users"
+
+<li class="list-none">
+    <button type="button" @onclick="() => onClick?.invokeAsync()"
+            class="@cn(`group grid w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--color-accent)] focus-visible:bg-[var(--color-accent)] focus-visible:outline-none ${UserDesktopRow.columns}`, !user.isActive && "opacity-75")">
+        @* Name + email *@
+        <div class="flex min-w-0 items-center gap-3">
+            <Monogram seed="@(user.id ?? user.userName ?? "user")" firstName="@user.firstName" lastName="@user.lastName" fallback="@(user.userName ?? user.email)" size="md" />
+            <div class="min-w-0">
+                <span class="block truncate text-[14px] font-medium text-[var(--color-foreground)] transition-colors group-hover:text-[var(--color-primary)]">@display</span>
+                <span class="@cn("block truncate text-[12px] text-[var(--color-muted-foreground)]", !user.email && "italic opacity-60")">@(user.email ?? "no email on file")</span>
+            </div>
+        </div>
+
+        @* Username *@
+        <code title="@(user.userName ?? undefined)" class="truncate font-mono text-[12px] text-[var(--color-muted-foreground)]">@(user.userName ? `@${user.userName}` : "—")</code>
+
+        @* Status (lg+) *@
+        <div class="hidden items-center gap-1.5 lg:flex">
+            <span class="@cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[10.5px] font-medium", user.isActive ? "bg-[oklch(from_var(--color-success)_l_c_h_/_0.12)] text-[var(--color-success)]" : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]")">
+                @(user.isActive ? "Active" : "Inactive")
+            </span>
+            <span class="@cn("inline-flex items-center rounded-full px-1.5 py-0.5 text-[10.5px] font-medium", user.emailConfirmed ? "bg-[oklch(from_var(--color-info)_l_c_h_/_0.12)] text-[var(--color-info)]" : "bg-[oklch(from_var(--color-warning)_l_c_h_/_0.12)] text-[var(--color-warning)]")">
+                @(user.emailConfirmed ? "Confirmed" : "Pending")
+            </span>
+        </div>
+
+        <div class="flex items-center justify-end">
+            <Icon icon="@ChevronRight" class="size-4 text-[var(--color-border)] transition-colors group-hover:text-[var(--color-muted-foreground)]" />
+        </div>
+    </button>
+</li>
+
+@code {
+    @Parameter() user!: UserDto;
+    @Parameter() onClick?: EventCallback;
+
+    /** Desktop grid template — shared by header + rows. */
+    static readonly columns = "grid-cols-[1fr_140px_24px] lg:grid-cols-[1.6fr_140px_180px_24px]";
+
+    private get display(): string {
+        const fullName = [this.user.firstName, this.user.lastName].filter(Boolean).join(" ").trim();
+        return fullName || this.user.userName || this.user.email || "Unnamed";
+    }
+}

@@ -1,0 +1,101 @@
+@* pages/impersonation/list.tsx's GrantRow (with its StatusGlyph, StatusBadge and Details): one grant — the status dot,
+   actor → impersonated user and tenant, the start and expiry, a disclosure with the grant's details, the status, and
+   Re-open / Revoke as the caller may. *@
+@import { ChevronDown, Clock, ShieldOff, UserCog } from "lucide"
+@import type { ImpersonationGrantDto, ImpersonationGrantStatus } from "@/api/impersonation-grants"
+@import type { BadgeVariant } from "@/components/ui/variants"
+@import GrantDetailRow from "./GrantDetailRow.tsazor"
+
+<li>
+    <div class="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-1 py-3.5">
+        <span aria-hidden="true" class="@cn("h-2 w-2 rounded-full", glyphTone)"></span>
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-baseline gap-2">
+                <span class="truncate text-sm">
+                    <span class="font-medium">@(grant.actorUserName ?? grant.actorUserId)</span>
+                    <span class="mx-1.5 text-[var(--color-muted-foreground)]">→</span>
+                    <span class="font-medium">@(grant.impersonatedUserName ?? grant.impersonatedUserId)</span>
+                </span>
+                <Badge variant="muted" class="font-mono uppercase tracking-[0.14em]">@grant.impersonatedTenantId</Badge>
+            </div>
+            <div class="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
+                <span><Icon icon="@Clock" class="-mt-0.5 mr-1 inline h-3 w-3" />@formatTimestamp(grant.startedAtUtc)</span>
+                <span>· expires @formatTimestamp(grant.expiresAtUtc)</span>
+                <button type="button" @onclick="() => open = !open" aria-expanded="@(open ? "true" : "false")" aria-label="@(open ? "Hide grant details" : "Show grant details")"
+                        class="ml-1 inline-flex items-center gap-0.5 underline-offset-2 hover:text-[var(--color-foreground)] hover:underline">
+                    @(open ? "hide" : "details")
+                    <Icon icon="@ChevronDown" class="@cn("h-3 w-3 transition-transform", open && "rotate-180")" />
+                </button>
+            </div>
+        </div>
+        <Badge variant="@statusVariant" class="font-mono uppercase tracking-[0.14em]">@grant.status</Badge>
+        <div class="flex shrink-0 items-center gap-2">
+            @if (canReopen) {
+                <Button variant="outline" size="sm" onClick="@(() => onReopen?.invokeAsync())" title="Issue a fresh impersonation token for this user — use when you've lost the original browser tab.">
+                    <Icon icon="@UserCog" class="mr-1 h-3.5 w-3.5" /> Re-open
+                </Button>
+            }
+            @if (canRevoke) {
+                <Button variant="outline" size="sm" onClick="@(() => onRevoke?.invokeAsync())">
+                    <Icon icon="@ShieldOff" class="mr-1 h-3.5 w-3.5" /> Revoke
+                </Button>
+            } else if (!canReopen) {
+                <span aria-hidden="true"></span>
+            }
+        </div>
+    </div>
+    @if (open) {
+        <dl class="ml-7 grid grid-cols-1 gap-y-1 border-l-2 border-[var(--color-accent-signal)] py-2 pl-4 text-[12px] sm:grid-cols-2 sm:gap-x-6">
+            <GrantDetailRow label="Reason">
+                <span class="text-[var(--color-muted-foreground)]">@(grant.reason || "—")</span>
+            </GrantDetailRow>
+            <GrantDetailRow label="Grant id"><code class="code-chip">@grant.id</code></GrantDetailRow>
+            <GrantDetailRow label="JWT id"><code class="code-chip">@grant.jti</code></GrantDetailRow>
+            <GrantDetailRow label="Actor"><code class="code-chip">@grant.actorUserId</code> @@ @grant.actorTenantId</GrantDetailRow>
+            <GrantDetailRow label="Impersonated"><code class="code-chip">@grant.impersonatedUserId</code></GrantDetailRow>
+            @if (grant.endedAtUtc) {
+                <GrantDetailRow label="Ended at">@(new Date(grant.endedAtUtc).toLocaleString())</GrantDetailRow>
+            }
+            @if (grant.revokedAtUtc) {
+                <GrantDetailRow label="Revoked at">@(new Date(grant.revokedAtUtc).toLocaleString())</GrantDetailRow>
+                <GrantDetailRow label="Revoked by">@(grant.revokedByUserName ?? grant.revokedByUserId ?? "—")</GrantDetailRow>
+                <GrantDetailRow label="Revoke reason" wide>
+                    <span class="text-[var(--color-muted-foreground)]">@(grant.revokeReason || "—")</span>
+                </GrantDetailRow>
+            }
+        </dl>
+    }
+</li>
+
+@code {
+    @Parameter() grant!: ImpersonationGrantDto;
+    @Parameter() canRevoke: boolean = false;
+    @Parameter() canReopen: boolean = false;
+    @Parameter() onRevoke?: EventCallback;
+    @Parameter() onReopen?: EventCallback;
+
+    private open = false;
+
+    private get glyphTone(): string {
+        const status: ImpersonationGrantStatus = this.grant.status;
+        return status === "Active"
+            ? "bg-[var(--color-accent-signal)]"
+            : status === "Revoked"
+              ? "bg-[var(--color-destructive)]"
+              : status === "Ended"
+                ? "bg-[var(--color-info)]"
+                : "bg-[var(--color-muted-foreground)]/50";
+    }
+
+    private get statusVariant(): BadgeVariant {
+        const status = this.grant.status;
+        return status === "Active" ? "brand" : status === "Revoked" ? "danger" : status === "Ended" ? "info" : "muted";
+    }
+
+    private formatTimestamp(value: string): string {
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return value;
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+}

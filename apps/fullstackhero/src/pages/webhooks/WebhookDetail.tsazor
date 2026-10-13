@@ -1,0 +1,201 @@
+@* pages/webhooks/detail.tsx: one subscription — its endpoint (send a test event, delete), its events, and its
+   deliveries, refreshed every 10s. The server has no GET /subscriptions/{id}, so the page lists a big enough page and
+   finds the subscription by id (counts are typically small); the deliveries load once it is found. *@
+@page "/webhooks/{id}"
+@authorize({ policy: "Permissions.Webhooks.View" })
+@import { ArrowLeft, Link2, List, RefreshCw, Send, Trash2 } from "lucide"
+@import { keepPreviousData } from "@tanstack/query-core"
+@import { deleteWebhookSubscription, listWebhookDeliveries, listWebhookSubscriptions, testWebhookSubscription, type WebhookSubscriptionDto } from "@/api/webhooks"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import type { SectionCrumb } from "@/components/section-crumb"
+@import DeliveryRow from "./DeliveryRow.tsazor"
+@import FieldRow from "./FieldRow.tsazor"
+@import { describe } from "./webhook-format"
+@inject NavigationManager navigation
+
+<div class="space-y-8">
+    <PageHeader crumbs="@crumbs" title="@(sub?.url ?? "Subscription")"
+                description="@(sub ? `Subscribed to ${sub.events.length} ${sub.events.length === 1 ? "event" : "events"}.` : "Loading subscription…")">
+        <Trailing>@(sub ? (sub.isActive ? "ACTIVE" : "INACTIVE") : "—")</Trailing>
+        <Actions>
+            <Button variant="ghost" size="sm" onClick="@(() => navigation.navigateTo("/webhooks"))">
+                <Icon icon="@ArrowLeft" class="mr-1 h-3.5 w-3.5" /> Subscriptions
+            </Button>
+        </Actions>
+    </PageHeader>
+
+    @if (subsQuery.result.isError) {
+        <ErrorBand message="@(subsQuery.result.error instanceof ApiRequestError ? subsQuery.result.error.problem?.detail ?? subsQuery.result.error.message : "Failed to load subscription.")" />
+    }
+
+    @if (subsQuery.result.isLoading) {
+        <LoadingRow label="Loading subscription" />
+    }
+
+    @if (!subsQuery.result.isLoading && !sub && !subsQuery.result.isError) {
+        <ErrorBand message="Subscription not found. It may have been deleted." />
+    }
+
+    @if (sub) {
+        <div class="space-y-4">
+            <SettingsSection icon="@Link2" title="Endpoint" description="Where we POST event payloads.">
+                <ChildContent>
+                    <dl class="grid grid-cols-1 gap-y-3 sm:grid-cols-2">
+                        <FieldRow label="URL" mono value="@sub.url" />
+                        <FieldRow label="Status">
+                            <ValueContent>
+                                <Badge variant="@(sub.isActive ? "success" : "muted")" class="font-mono uppercase tracking-[0.14em]">
+                                    @(sub.isActive ? "Active" : "Inactive")
+                                </Badge>
+                            </ValueContent>
+                        </FieldRow>
+                        <FieldRow label="Subscription id" mono value="@sub.id" />
+                        <FieldRow label="Created" mono value="@(new Date(sub.createdAtUtc).toLocaleString())" />
+                    </dl>
+                </ChildContent>
+                <Footer>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <Button variant="outline" size="sm" onClick="@sendTest" disabled="@testing">
+                            <Icon icon="@Send" class="mr-1.5 h-3.5 w-3.5" />
+                            @(testing ? "Sending…" : "Send test event")
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick="@deleteSubscription" disabled="@removing"
+                                class="text-[var(--color-destructive)] hover:bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.08)]">
+                            <Icon icon="@Trash2" class="mr-1.5 h-3.5 w-3.5" />
+                            @(removing ? "Deleting…" : "Delete subscription")
+                        </Button>
+                    </div>
+                </Footer>
+            </SettingsSection>
+
+            <SettingsSection icon="@List" title="Events" description="Event types this endpoint subscribes to.">
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach (const e of sub.events) {
+                        <code @key="e" class="code-chip">@e</code>
+                    }
+                    @if (sub.events.length === 0) {
+                        <span class="text-sm text-[var(--color-muted-foreground)]">— no events; subscription would never fire</span>
+                    }
+                </div>
+            </SettingsSection>
+
+            <SettingsSection title="Deliveries" description="Recent attempts to POST events to this endpoint. Auto-refreshes every 10s.">
+                <ChildContent>
+                    @if (deliveries.result.isError) {
+                        <ErrorBand message="@describe(deliveries.result.error)" />
+                    } else if (deliveries.result.isLoading) {
+                        <LoadingRow label="Loading deliveries" />
+                    } else if (!deliveryData || deliveryData.items.length === 0) {
+                        <p class="text-sm text-[var(--color-muted-foreground)]">
+                            No deliveries yet. Try the test button above, or wait for matching events to fire.
+                        </p>
+                    } else {
+                        <ol class="-mx-5 divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+                            @foreach (const delivery of deliveryData.items) {
+                                <DeliveryRow @key="delivery.id" delivery="@delivery" />
+                            }
+                        </ol>
+                        @if (deliveryData.totalPages > 1) {
+                            <div class="mt-4">
+                                <Pagination page="@deliveryData.pageNumber" totalPages="@deliveryData.totalPages" totalCount="@deliveryData.totalCount"
+                                            shown="@deliveryData.items.length" fetching="@deliveries.result.isFetching"
+                                            hasPrev="@deliveryData.hasPrevious" hasNext="@deliveryData.hasNext"
+                                            onPrev="@(() => deliveryPage = Math.max(1, deliveryPage - 1))" onNext="@(() => deliveryPage = deliveryPage + 1)" noun="deliveries" />
+                            </div>
+                        }
+                    }
+                </ChildContent>
+                <Footer>
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+                            @(deliveryData ? `${deliveryData.totalCount} attempts` : "—")
+                        </span>
+                        <Button variant="outline" size="sm" onClick="@(() => deliveries.refetch())" disabled="@deliveries.result.isFetching">
+                            <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", deliveries.result.isFetching && "animate-spin")" />
+                            Refresh
+                        </Button>
+                    </div>
+                </Footer>
+            </SettingsSection>
+        </div>
+    }
+</div>
+
+@code {
+    @Parameter() id: string = "";
+
+    private readonly pageSize = 25;
+
+    private deliveryPage = 1;
+    private testing = false;
+    private removing = false;
+
+    // No GET /subscriptions/{id} on the server, so list with a big enough page and find by id.
+    private readonly subsQuery = new Query(() => ({
+        queryKey: ["webhooks", "subscriptions", "all"],
+        queryFn: () => listWebhookSubscriptions(1, 200),
+    }));
+
+    private readonly deliveries = new Query(() => {
+        const id = this.id;
+        const page = this.deliveryPage;
+        return {
+            queryKey: ["webhooks", "deliveries", id, page],
+            queryFn: () => listWebhookDeliveries(id, page, this.pageSize),
+            enabled: Boolean(this.sub),
+            placeholderData: keepPreviousData,
+            refetchInterval: 10_000,
+        };
+    });
+
+    protected override onInitialized(): void {
+        this.observe(this.subsQuery);
+        this.observe(this.deliveries);
+    }
+
+    private get sub(): WebhookSubscriptionDto | undefined {
+        return this.subsQuery.result.data?.items.find((s) => s.id === this.id);
+    }
+
+    private get deliveryData() {
+        return this.deliveries.result.data;
+    }
+
+    private get crumbs(): SectionCrumb[] {
+        return [{ label: "\\ Webhooks" }, { label: this.sub?.url ?? "…", muted: true }];
+    }
+
+    /** The `test` mutation. */
+    private async sendTest(): Promise<void> {
+        this.testing = true;
+        try {
+            const data = await testWebhookSubscription(this.id);
+            toast[data.success ? "success" : "warning"](data.success ? "Test event delivered" : "Endpoint rejected the test event");
+            void this.deliveries.refetch();
+        } catch (err) {
+            toast.error("Test failed", { description: describe(err) });
+        } finally {
+            this.testing = false;
+        }
+    }
+
+    /** The `remove` mutation, after the browser's confirm. */
+    private async deleteSubscription(): Promise<void> {
+        const sub = this.sub;
+        if (!sub || !window.confirm(`Delete subscription to ${sub.url}?`)) return;
+        this.removing = true;
+        try {
+            await deleteWebhookSubscription(this.id);
+            toast.success("Subscription deleted");
+            void queryClient.invalidateQueries({ queryKey: ["webhooks", "subscriptions"] });
+            this.navigation.navigateTo("/webhooks");
+        } catch (err) {
+            toast.error("Delete failed", { description: describe(err) });
+        } finally {
+            this.removing = false;
+        }
+    }
+}

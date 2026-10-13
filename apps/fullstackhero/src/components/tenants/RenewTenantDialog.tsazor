@@ -1,0 +1,98 @@
+@* components/tenants/renew-tenant-dialog.tsx: renew or change a tenant's plan. Renewing the same plan extends validity
+   by one term; choosing a different plan switches the tenant from the renewal forward. The server issues the term
+   invoice. *@
+@import { CalendarClock } from "lucide"
+@import { renewTenant } from "@/api/tenants"
+@import { getPlans, planTermPrice } from "@/api/billing"
+@import { queryClient } from "@/lib/query-client"
+@import { Query } from "@/lib/query"
+@import { toast } from "@/lib/toast"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import { describe, formatDate, formatMoney } from "./format"
+
+<Dialog open="@open" openChanged="@openChanged">
+    <DialogContent size="md">
+        <DialogHeader>
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)] text-[var(--color-primary)] ring-1 ring-inset ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]">
+                    <Icon icon="@CalendarClock" class="h-[18px] w-[18px]" />
+                </span>
+                <DialogTitle class="text-[16px]">Renew subscription</DialogTitle>
+            </div>
+            <DialogDescription class="mt-1">
+                Extend the tenant by one plan term (stacking on remaining time) or switch plans. Currently valid until @(formatDate(validUpto)).
+            </DialogDescription>
+        </DialogHeader>
+
+        <DialogBody class="space-y-4">
+            <Field id="renew-plan" label="Plan" required
+                   hint="@(planChanged ? "Switching plans — the new plan applies from this renewal forward." : "Renewing the current plan extends validity by one term.")">
+                <FormSelect id="renew-plan" @bind-value="planKey" options="@options"
+                            emptyLabel="@(plans.result.isLoading ? "Loading plans…" : options.length === 0 ? "No active plans" : undefined)"
+                            disabled="@(plans.result.isLoading || options.length === 0)" />
+            </Field>
+        </DialogBody>
+
+        <DialogFooter>
+            <Button type="button" variant="outline" onClick="@(() => openChanged?.invokeAsync(false))" disabled="@pending">Cancel</Button>
+            <Button type="button" onClick="@(() => renew(planKey))" disabled="@(pending || !planKey)">
+                @(pending ? "Renewing…" : planChanged ? "Change plan & renew" : "Renew")
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    @Parameter() tenantId: string = "";
+    @Parameter() currentPlanKey?: string | null;
+    @Parameter() validUpto?: string;
+
+    private planKey = "";
+    private pending = false;
+
+    private readonly plans = new Query(() => ({
+        queryKey: ["billing", "plans", "active"],
+        queryFn: () => getPlans(false),
+        enabled: this.open,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.plans);
+    }
+
+    /** Default the selection to the tenant's current plan once it is known. */
+    protected override onParametersSet(): void {
+        if (this.open && this.currentPlanKey && !this.planKey) this.planKey = this.currentPlanKey;
+    }
+
+    private get options(): SelectOption[] {
+        return (this.plans.result.data ?? []).map((p) => ({
+            value: p.key,
+            label: p.key === this.currentPlanKey ? `${p.name} (current)` : p.name,
+            hint: `${p.interval} · ${formatMoney(planTermPrice(p), p.currency)}`,
+        }));
+    }
+
+    private get planChanged(): boolean {
+        return !!this.planKey && this.planKey !== this.currentPlanKey;
+    }
+
+    private async renew(key: string): Promise<void> {
+        this.pending = true;
+        try {
+            const result = await renewTenant(this.tenantId, key || null);
+            toast.success(result.planChanged ? `Plan changed to ${result.planKey}` : "Tenant renewed", {
+                description: `Valid until ${formatDate(result.validUpto)}. A term invoice was issued.`,
+            });
+            void queryClient.invalidateQueries({ queryKey: ["tenant", this.tenantId] });
+            void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            await this.openChanged?.invokeAsync(false);
+        } catch (err) {
+            toast.error("Renew failed", { description: describe(err) });
+        } finally {
+            this.pending = false;
+        }
+    }
+}

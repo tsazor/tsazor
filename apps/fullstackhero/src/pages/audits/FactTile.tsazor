@@ -1,0 +1,18 @@
+@* pages/audits/detail.tsx's FactTile: a mono-caps label over a value. React's `value: ReactNode` is `value` (text) or
+   the ValueContent slot. *@
+
+<div class="min-w-0 space-y-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-1)] px-3 py-2.5">
+    <div class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+        @label
+    </div>
+    <div class="@cn("min-w-0 break-words text-sm text-[var(--color-foreground)]", mono && "font-mono text-[12px]")">
+        @if (valueContent) { @valueContent } else { @value }
+    </div>
+</div>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() value?: string;
+    @Parameter() valueContent?: RenderFragment;
+    @Parameter() mono: boolean = false;
+}

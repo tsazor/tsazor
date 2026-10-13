@@ -1,0 +1,42 @@
+{
+  "name": "fullstackhero",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "fullstackhero's React admin (React 19, Radix and Tailwind in shadcn style) ported to Tsazor with Tailwind, against fullstackhero's unchanged API — the third app port (docs/port-fullstackhero.md).",
+  "scripts": {
+    "backend": "node scripts/backend.mjs",
+    "dev": "vite",
+    "build": "tsazor check && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check": "tsazor check",
+    "acceptance": "node scripts/acceptance.mjs",
+    "visual": "node scripts/visual.mjs"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^10.0.11",
+    "@tanstack/query-core": "^5.99.2",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/ui": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide": "^0.475.0",
+    "qrcode": "^1.5.4",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@tsazor/cli": "workspace:*",
+    "@tsazor/testing": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "@types/qrcode": "^1.5.6",
+    "happy-dom": "^18.0.1",
+    "playwright-core": "^1.63.0",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.7"
+  }
+}

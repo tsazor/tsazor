@@ -1,0 +1,100 @@
+@* pages/tenants/detail.tsx's ProvisioningPanel: the live pipeline status — the overall status dot and badge with the
+   retry action, then a "not tracked" neutral state, the step timeline, or the loading / empty / error states; the
+   failed step's error body below. The 404 / not-tracked logic is preserved verbatim. *@
+@import { RefreshCw, ServerCrash } from "lucide"
+@import type { TenantProvisioningStep } from "@/api/tenants"
+@import type { BadgeVariant } from "@/components/ui/variants"
+@import { describe } from "@/components/tenants/format"
+@import ProvisioningStepRow from "./ProvisioningStepRow.tsazor"
+
+<div class="space-y-5">
+    @* Status bar *@
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+            @* OverallStatusDot — a pulsing dot that conveys overall pipeline status at a glance alongside the badge text. *@
+            <span class="relative inline-flex h-2.5 w-2.5 shrink-0">
+                @if (dotStatus === "Running") {
+                    <span class="@cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-60", dotColor)"></span>
+                }
+                <span class="@cn("relative inline-flex h-2.5 w-2.5 rounded-full", dotColor)"></span>
+            </span>
+            <Badge variant="@overallVariant">@badgeText</Badge>
+        </div>
+        @if (status === "Failed" && canRetry) {
+            <Button size="sm" variant="outline" onClick="@(() => onRetry?.invokeAsync())" disabled="@retryPending">
+                <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", retryPending && "animate-spin")" />
+                @(retryPending ? "Re-queuing…" : "Retry provisioning")
+            </Button>
+        }
+    </div>
+
+    @* Body *@
+    @if (error) {
+        <ErrorBand message="@describe(error)" />
+    } else if (loading && steps.length === 0) {
+        <p class="text-[13px] text-[var(--color-muted-foreground)]">Loading…</p>
+    } else if (notTracked) {
+        <div class="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] px-4 py-3.5">
+            <Icon icon="@ServerCrash" class="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]" />
+            <p class="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
+                This tenant wasn't created through the provisioning pipeline, so there's no run history to show. Tenants created via the console report their seed/migrate steps here.
+            </p>
+        </div>
+    } else if (steps.length === 0) {
+        <p class="text-[13px] text-[var(--color-muted-foreground)]">No provisioning runs recorded.</p>
+    } else {
+        @* StepTimeline — the steps as a connected vertical timeline. *@
+        <ol class="space-y-0">
+            @for (let i = 0; i < steps.length; i++) {
+                const step = steps[i]!;
+                <ProvisioningStepRow @key="step.step" step="@step" index="@(i + 1)" isLast="@(i === steps.length - 1)" />
+            }
+        </ol>
+    }
+
+    @* Error body (failed step detail) *@
+    @if (errorBody) {
+        <pre class="max-h-44 overflow-auto rounded-lg border border-[var(--color-destructive)]/40 bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.06)] p-3.5 font-mono text-[11px] whitespace-pre-wrap text-[var(--color-destructive)]">@errorBody</pre>
+    }
+</div>
+
+@code {
+    @Parameter() steps: TenantProvisioningStep[] = [];
+    @Parameter() status?: string;
+    @Parameter() currentStep?: string;
+    @Parameter() errorBody?: string;
+    @Parameter() loading: boolean = false;
+    @Parameter() error?: unknown;
+    @Parameter() notTracked: boolean = false;
+    @Parameter() onRetry?: EventCallback;
+    @Parameter() retryPending: boolean = false;
+    @Parameter() canRetry: boolean = false;
+
+    private get overall(): string {
+        return this.notTracked ? "Not tracked" : (this.status ?? (this.loading ? "Loading" : "Unknown"));
+    }
+
+    private get overallVariant(): BadgeVariant {
+        return this.status === "Completed" ? "success" : this.status === "Failed" ? "danger" : this.status === "Running" ? "info" : "outline";
+    }
+
+    private get badgeText(): string {
+        if (this.status === "Failed") return `Failed at ${this.currentStep ?? "unknown step"}`;
+        return this.currentStep ? `${this.overall} · ${this.currentStep}` : this.overall;
+    }
+
+    private get dotStatus(): string {
+        return this.notTracked ? "NotTracked" : (this.status ?? "Unknown");
+    }
+
+    private get dotColor(): string {
+        const status = this.dotStatus;
+        return status === "Completed"
+            ? "bg-[var(--color-success)]"
+            : status === "Failed"
+              ? "bg-[var(--color-destructive)]"
+              : status === "Running"
+                ? "bg-[var(--color-info)]"
+                : "bg-[var(--color-muted-foreground)]";
+    }
+}

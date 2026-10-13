@@ -1,0 +1,110 @@
+@* impersonate-dialog.tsx's ConfigureStep: step 2 — the session's duration and the reason (at least 4 characters,
+   recorded in the audit trail), then start: the token opens the dashboard in a new tab. *@
+@import { ArrowLeft, Check, ShieldAlert } from "lucide"
+@import { startImpersonation } from "@/api/impersonation"
+@import type { UserDto } from "@/api/users"
+@import { toast } from "@/lib/toast"
+@import { describe } from "@/components/tenants/format"
+@import { DURATION_OPTIONS, handoffToDashboard, labelFor } from "./impersonation"
+@import SelectedUserCard from "./SelectedUserCard.tsazor"
+
+<DialogBody class="space-y-5">
+    <SelectedUserCard user="@user" tenantId="@tenantId" tenantName="@tenantName" />
+
+    <fieldset class="space-y-2">
+        <legend class="meta text-[var(--color-muted-foreground)]">// Duration</legend>
+        <div class="grid grid-cols-3 gap-2">
+            @foreach (const opt of DURATION_OPTIONS) {
+                const active = minutes === opt.minutes;
+                <button @key="opt.minutes" type="button" @onclick="() => minutes = opt.minutes" aria-pressed="@(active ? "true" : "false")"
+                        class="@cn("flex flex-col items-center gap-0.5 rounded-md border px-3 py-2 transition-colors", active ? "border-[var(--color-accent-signal)] bg-[var(--color-accent-signal)]/10 text-[var(--color-foreground)]" : "border-[var(--color-border)] hover:bg-[var(--color-muted)]/60")">
+                    <span class="font-display text-lg font-semibold tabular-nums">@opt.minutes</span>
+                    <span class="meta text-[var(--color-muted-foreground)]">minutes</span>
+                </button>
+            }
+        </div>
+    </fieldset>
+
+    <div class="space-y-1.5">
+        <label for="impersonation-reason" class="meta flex items-center gap-1.5 text-[var(--color-muted-foreground)]">
+            Reason
+            <span class="text-[var(--color-destructive)]" aria-hidden="true">·</span>
+        </label>
+        <textarea id="impersonation-reason" value="@reason" @oninput="(e) => reason = (e.target as HTMLTextAreaElement).value"
+                  placeholder="e.g. Customer ticket #4821 — verifying ledger discrepancy" rows="3" maxlength="500"
+                  class="@cn("w-full resize-y rounded-md border border-[var(--color-input)] bg-transparent px-3 py-2 text-sm", "transition-[border-color,background-color,box-shadow] duration-[var(--duration-fast)]", "hover:border-[var(--color-border-strong)]", "focus-visible:outline-none focus-visible:border-[var(--color-accent-signal)] focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-accent-signal)_l_c_h_/_0.25)] focus-visible:bg-[var(--color-surface-2)]")"></textarea>
+        <p class="flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
+            <span>Recorded in the security audit trail — be specific enough that a reviewer can reconstruct the case later.</span>
+            <span class="@cn("font-mono tabular-nums", trimmedReason.length > 0 && !reasonValid && "text-[var(--color-warning)]")">@(trimmedReason.length)/500</span>
+        </p>
+    </div>
+
+    <div class="flex items-start gap-2 rounded-md border border-[var(--color-warning)]/40 bg-[oklch(from_var(--color-warning)_l_c_h_/_0.08)] px-3 py-2.5 text-xs text-[var(--color-foreground)]">
+        <Icon icon="@ShieldAlert" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-warning)]" />
+        <div>
+            <strong class="font-medium">Everything you do is attributed to your account.</strong>
+            The session token carries actor claims; the audit trail will show both the user being impersonated and you as the actor. End from the dashboard tab when done.
+        </div>
+    </div>
+</DialogBody>
+
+<DialogFooter>
+    @if (onBack) {
+        <Button variant="outline" onClick="@(() => onBack?.invokeAsync())" disabled="@pending" class="sm:mr-auto">
+            <Icon icon="@ArrowLeft" class="mr-1 h-3.5 w-3.5" /> Choose another user
+        </Button>
+    }
+    <Button variant="signal" disabled="@(!reasonValid || pending)" onClick="@start">
+        @if (pending) {
+            <text>Issuing token…</text>
+        } else {
+            <Icon icon="@Check" class="mr-1 h-3.5 w-3.5" /> <text>Start @(minutes)-min impersonation</text>
+        }
+    </Button>
+</DialogFooter>
+
+@code {
+    @Parameter() tenantId: string = "";
+    @Parameter() tenantName?: string;
+    @Parameter() user!: UserDto;
+    /** Back to the picker; unset when the user was pre-filled (a "Re-open"). */
+    @Parameter() onBack?: EventCallback;
+    @Parameter() onDone?: EventCallback;
+
+    private reason = "";
+    private minutes = 15;
+    private pending = false;
+
+    private get trimmedReason(): string {
+        return this.reason.trim();
+    }
+
+    private get reasonValid(): boolean {
+        return this.trimmedReason.length >= 4;
+    }
+
+    private async start(): Promise<void> {
+        // The values of this click, not state read after the await.
+        const minutes = this.minutes;
+        const user = this.user;
+        const tenantId = this.tenantId;
+        this.pending = true;
+        try {
+            const response = await startImpersonation({
+                targetUserId: user.id,
+                targetTenantId: tenantId,
+                reason: this.trimmedReason,
+                durationMinutes: minutes,
+            });
+            handoffToDashboard(response, tenantId);
+            toast.success(`Impersonation started · ${minutes} min`, {
+                description: `Opened the dashboard as ${labelFor(user)}. End impersonation from inside the dashboard tab.`,
+            });
+            await this.onDone?.invokeAsync();
+        } catch (err) {
+            toast.error("Impersonation failed", { description: describe(err) });
+        } finally {
+            this.pending = false;
+        }
+    }
+}

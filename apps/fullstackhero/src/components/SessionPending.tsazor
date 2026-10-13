@@ -1,0 +1,22 @@
+@* While the user isn't settled yet (AuthorizeRouteView's Authorizing): restoring a stored session — the silent token
+   refresh at boot, a full-page spinner (auth/protected-route.tsx) — or resolving a new user's permissions inside the
+   shell (auth/route-guard.tsx), instead of a flash of the login or of "access denied". *@
+@inject AuthService auth
+
+@if (auth.isInitializing) {
+    <div class="flex min-h-screen items-center justify-center text-sm text-[var(--color-muted-foreground)]" role="status" aria-busy="true">
+        <span class="sr-only">Restoring your session…</span>
+        <span class="size-5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true"></span>
+    </div>
+} else {
+    <div class="flex min-h-[60vh] items-center justify-center text-sm font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]" aria-busy="true">
+        Resolving permissions
+        <span class="caret text-[var(--color-accent-signal)]" aria-hidden="true"></span>
+    </div>
+}
+
+@code {
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+    }
+}

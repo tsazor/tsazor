@@ -1,0 +1,26 @@
+@* pages/users/detail.tsx's RoleRow: a role of the user's assignment — its name (a warning dot while changed), its
+   description, and the On/Off chip. *@
+@import type { UserRoleDto } from "@/api/users"
+@import RoleChip from "./RoleChip.tsazor"
+
+<li class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+    <div class="min-w-0">
+        <div class="flex items-center gap-2">
+            <span class="text-[13px] font-medium tracking-tight text-[var(--color-foreground)]">@(role.roleName ?? "Untitled role")</span>
+            @if (changed) {
+                <span class="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-warning)]" aria-label="modified"></span>
+            }
+        </div>
+        @if (role.description) {
+            <div class="mt-0.5 line-clamp-1 text-[11.5px] text-[var(--color-muted-foreground)]">@role.description</div>
+        }
+    </div>
+    <RoleChip enabled="@enabled" changed="@changed" onToggle="@onToggle" label="@(role.roleName ?? "role")" />
+</li>
+
+@code {
+    @Parameter() role!: UserRoleDto;
+    @Parameter() enabled: boolean = false;
+    @Parameter() changed: boolean = false;
+    @Parameter() onToggle?: EventCallback;
+}

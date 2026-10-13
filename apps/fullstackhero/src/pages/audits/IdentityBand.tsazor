@@ -1,0 +1,27 @@
+@* pages/audits/detail.tsx's IdentityBand: 1. the event-type and severity chips, the source line, the time. *@
+@import type { AuditDetailDto } from "@/api/audits"
+@import { eventTypeVariant, formatEventType, formatTimestamp, severityTone } from "./audit-detail-format"
+
+<div class="px-6 py-4" aria-label="Event identity">
+    <div class="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+        Identity
+    </div>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <Badge variant="@eventTypeVariant(eventLabel)" class="font-mono uppercase tracking-[0.16em]">@eventLabel</Badge>
+        <Badge variant="@severityTone(event.severity).variant" class="font-mono uppercase tracking-[0.16em]">@event.severity</Badge>
+        @if (event.source) {
+            <span class="min-w-0 truncate font-mono text-[12px] text-[var(--color-muted-foreground)]"><span class="opacity-60">source · </span><span class="text-[var(--color-foreground)]">@event.source</span></span>
+        }
+        <span class="ml-auto shrink-0 font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
+            @formatTimestamp(event.occurredAtUtc)
+        </span>
+    </div>
+</div>
+
+@code {
+    @Parameter() event!: AuditDetailDto;
+
+    private get eventLabel(): string {
+        return formatEventType(this.event.eventType);
+    }
+}

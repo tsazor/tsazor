@@ -1,0 +1,9 @@
+@* components/ui/card.tsx: CardContent. *@
+@import { withClass } from "@/lib/attributes"
+
+<div data-slot="card-content" @attributes="@withClass("px-6 pb-6", additionalAttributes)">@childContent</div>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

@@ -1,0 +1,10 @@
+@* components/ui/label.tsx: Radix's Label is a <label> (it only stops a double click from selecting text). *@
+@import { withClass } from "@/lib/attributes"
+
+<label @attributes="@withClass("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70", additionalAttributes)">@childContent</label>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    /** `for`, `class` (merged), … on the <label>. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

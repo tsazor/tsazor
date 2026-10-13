@@ -1,0 +1,24 @@
+@* pages/audits/detail.tsx's AuditDetailSheet: the side sheet shown when an audit row is clicked on the list page. It is
+   open while there is an id; closing it (Escape, a press outside, the header's Close) asks the list to clear the id.
+   The body fetches the full record by id and renders the four sections the old full-page route showed. *@
+@import AuditDetailSheetBody from "./AuditDetailSheetBody.tsazor"
+
+<Dialog open="@open" openChanged="@this.onOpenChange">
+    <SheetContent side="right" showClose="false" class="w-[min(640px,95vw)] max-w-none overflow-hidden p-0">
+        <AuditDetailSheetBody auditId="@(auditId ?? null)" onClose="@(() => onClose?.invokeAsync())" />
+    </SheetContent>
+</Dialog>
+
+@code {
+    /** The audit id to load, or null / undefined when the sheet is closed. */
+    @Parameter() auditId?: string | null;
+    @Parameter() onClose?: EventCallback;
+
+    private get open(): boolean {
+        return Boolean(this.auditId);
+    }
+
+    private onOpenChange(open: boolean): Promise<void> | undefined {
+        return open ? undefined : this.onClose?.invokeAsync();
+    }
+}

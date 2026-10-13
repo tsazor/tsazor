@@ -1,0 +1,11 @@
+@* components/ui/dialog.tsx's DialogDescription: the dialog's description (Radix: a p with the content's aria-describedby). *@
+@import { withClass } from "@/lib/attributes"
+@import Dialog from "./Dialog.tsazor"
+
+<p id="@dialog?.descriptionId" @attributes="@withClass("text-sm leading-relaxed text-[var(--color-muted-foreground)]", additionalAttributes)">@childContent</p>
+
+@code {
+    @CascadingParameter({ type: Dialog }) dialog?: Dialog;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

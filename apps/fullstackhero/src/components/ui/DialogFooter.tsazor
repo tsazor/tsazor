@@ -1,0 +1,9 @@
+@* components/ui/dialog.tsx's DialogFooter. *@
+@import { withClass } from "@/lib/attributes"
+
+<div @attributes="@withClass("flex flex-col-reverse gap-2 border-t border-[var(--color-border)] px-6 py-4 sm:flex-row sm:justify-end", additionalAttributes)">@childContent</div>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

@@ -1,0 +1,46 @@
+@* pages/health/page.tsx's ProbeSection: one probe — its dependency checks (or that it reported none), and in the footer
+   its status and its path. *@
+@import { Activity } from "lucide"
+@import type { HealthResult } from "@/api/health"
+@import CheckRow from "./CheckRow.tsazor"
+@import StatusBadge from "./StatusBadge.tsazor"
+
+<SettingsSection title="@title" description="@description">
+    <ChildContent>
+        @if (loading) {
+            <div class="py-6 text-sm text-[var(--color-muted-foreground)]">Probing…</div>
+        } else if (!result || result.results.length === 0) {
+            <div class="flex items-center gap-3 py-5">
+                <Icon icon="@Activity" class="h-4 w-4 text-[var(--color-muted-foreground)]" />
+                <div>
+                    <div class="text-sm font-medium">No dependency checks reported.</div>
+                    <div class="text-xs text-[var(--color-muted-foreground)]">
+                        The probe responded with status <code class="code-chip">@(result?.status ?? "—")</code>.
+                    </div>
+                </div>
+            </div>
+        } else {
+            <ul class="-mx-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+                @foreach (const entry of result.results) {
+                    <CheckRow @key="entry.name" entry="@entry" />
+                }
+            </ul>
+        }
+    </ChildContent>
+    <Footer>
+        <div class="flex items-center justify-between">
+            @if (result) {
+                <StatusBadge status="@result.status" />
+            }
+            <code class="code-chip ml-auto">@path</code>
+        </div>
+    </Footer>
+</SettingsSection>
+
+@code {
+    @Parameter() title: string = "";
+    @Parameter() path: string = "";
+    @Parameter() result?: HealthResult;
+    @Parameter() loading: boolean = false;
+    @Parameter() description: string = "";
+}

@@ -1,0 +1,9 @@
+@* pages/health/page.tsx's StatusDot: a check's status as a coloured dot (its name in the tooltip). *@
+@import type { HealthStatus } from "@/api/health"
+@import { statusToColor } from "./health-status"
+
+<span aria-hidden="true" title="@status" class="@cn("h-2 w-2 rounded-full", statusToColor(status))"></span>
+
+@code {
+    @Parameter() status: HealthStatus = "";
+}

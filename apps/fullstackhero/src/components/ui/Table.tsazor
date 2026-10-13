@@ -1,0 +1,13 @@
+@* components/ui/table.tsx: the table in a horizontally scrolling wrapper — mono uppercase headers with wide tracking,
+   hairline row borders, the hovered row tinted. TableHeader, TableBody, TableRow, TableHead and TableCell are its
+   parts. *@
+@import { withClass } from "@/lib/attributes"
+
+<div class="relative w-full overflow-auto">
+    <table @attributes="@withClass("w-full caption-bottom text-sm tabular-nums", additionalAttributes)">@childContent</table>
+</div>
+
+@code {
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

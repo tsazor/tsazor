@@ -1,0 +1,105 @@
+@* pages/tenants/detail.tsx's StepRow: one provisioning step on the timeline — the status icon on the track (a connector
+   down to the next step), the step's index and name, its duration and status. *@
+@import { CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide"
+@import type { TenantProvisioningStep } from "@/api/tenants"
+@import type { BadgeVariant } from "@/components/ui/variants"
+
+<li class="flex items-stretch gap-3">
+    @* Timeline track column *@
+    <div class="flex w-8 shrink-0 flex-col items-center">
+        @* Icon *@
+        <span class="@cn("relative z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full", "border border-[var(--color-border)] bg-[var(--color-card)]", iconColor)">
+            <Icon icon="@icon" class="@cn("h-3.5 w-3.5", isRunning && "animate-spin")" />
+        </span>
+        @* Vertical connector line — hidden on last item *@
+        @if (!isLast) {
+            <div class="@cn("mt-1 w-[2px] flex-1 rounded-full opacity-30", trackColor)" style="min-height: 1.25rem"></div>
+        }
+    </div>
+
+    @* Content *@
+    <div class="@cn("flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-4 gap-y-0.5 pb-4", isLast && "pb-0")">
+        @* Step index + name *@
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="font-mono text-[10.5px] tabular-nums text-[var(--color-muted-foreground)] opacity-60">@(String(index).padStart(2, "0"))</span>
+            <span class="@cn("truncate font-mono text-[13px]", isPending ? "text-[var(--color-muted-foreground)]" : "text-[var(--color-foreground)]")">@step.step</span>
+        </div>
+
+        @* Duration + status *@
+        <div class="flex shrink-0 items-center gap-2.5">
+            @if (duration) {
+                <span class="font-mono text-[11px] tabular-nums text-[var(--color-muted-foreground)]">@duration</span>
+            }
+            <Badge variant="@statusVariant" class="font-mono uppercase tracking-[0.12em]">@step.status</Badge>
+        </div>
+    </div>
+</li>
+
+@code {
+    @Parameter() step!: TenantProvisioningStep;
+    @Parameter() index: number = 1;
+    @Parameter() isLast: boolean = false;
+
+    private get isCompleted(): boolean {
+        return this.step.status === "Completed";
+    }
+
+    private get isFailed(): boolean {
+        return this.step.status === "Failed";
+    }
+
+    private get isRunning(): boolean {
+        return this.step.status === "Running";
+    }
+
+    private get isPending(): boolean {
+        return !this.isCompleted && !this.isFailed && !this.isRunning;
+    }
+
+    private get iconColor(): string {
+        return this.isCompleted
+            ? "text-[var(--color-success)]"
+            : this.isFailed
+              ? "text-[var(--color-destructive)]"
+              : this.isRunning
+                ? "text-[var(--color-info)]"
+                : "text-[var(--color-muted-foreground)]";
+    }
+
+    private get icon() {
+        return this.isCompleted ? CheckCircle2 : this.isFailed ? XCircle : this.isRunning ? Loader2 : CircleDashed;
+    }
+
+    private get trackColor(): string {
+        return this.isCompleted
+            ? "bg-[var(--color-success)]"
+            : this.isFailed
+              ? "bg-[var(--color-destructive)]"
+              : this.isRunning
+                ? "bg-[var(--color-info)]"
+                : "bg-[var(--color-border-strong)]";
+    }
+
+    private get statusVariant(): BadgeVariant {
+        return this.isCompleted ? "success" : this.isFailed ? "danger" : this.isRunning ? "info" : "outline";
+    }
+
+    private get duration(): string | null {
+        const { startedUtc, completedUtc } = this.step;
+        if (startedUtc && completedUtc) return ProvisioningStepRow.formatDuration(startedUtc, completedUtc);
+        return startedUtc ? "in flight" : null;
+    }
+
+    private static formatDuration(start: string, end: string): string {
+        const a = new Date(start).getTime();
+        const b = new Date(end).getTime();
+        if (Number.isNaN(a) || Number.isNaN(b)) return "—";
+        const ms = Math.max(0, b - a);
+        if (ms < 1000) return `${ms}ms`;
+        const s = ms / 1000;
+        if (s < 60) return `${s.toFixed(1)}s`;
+        const m = Math.floor(s / 60);
+        const rem = Math.round(s - m * 60);
+        return `${m}m ${rem}s`;
+    }
+}

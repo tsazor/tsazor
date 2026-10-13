@@ -1,0 +1,28 @@
+@* tenant-branding-card.tsx's ColorRow: a color chip (clicking it opens the native color picker) beside its hex input. *@
+
+<div class="flex items-center gap-2.5">
+    @* Color chip — clicking opens the native color picker *@
+    <label class="relative grid h-8 w-8 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-[var(--color-border)]"
+           style="@(valid ? `background-color: ${value}` : null)" title="@(`Pick ${label} color`)">
+        <input type="color" value="@(valid ? value : "#000000")" @oninput="pick" class="sr-only" aria-label="@(`${label} color`)" />
+    </label>
+    <div class="min-w-0 flex-1">
+        <div class="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">@label</div>
+        <Input value="@value" valueChanged="@(next => onChange?.invokeAsync(next.toUpperCase()))" spellcheck="false" autocomplete="off" maxlength="9"
+               class="@cn("h-7 px-2 font-mono text-[11.5px]", !valid && "border-[var(--color-destructive)]/60 focus-visible:ring-[var(--color-destructive)]/40")" />
+    </div>
+</div>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() value: string = "";
+    @Parameter() onChange?: EventCallback<string>;
+
+    private get valid(): boolean {
+        return /^#[0-9a-f]{6}$/i.test(this.value);
+    }
+
+    private pick(event: Event): Promise<void> | undefined {
+        return this.onChange?.invokeAsync((event.target as HTMLInputElement).value.toUpperCase());
+    }
+}

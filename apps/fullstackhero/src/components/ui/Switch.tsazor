@@ -1,0 +1,19 @@
+@* components/ui/switch.tsx: an accessible toggle (role="switch") whose thumb slides between off and on. React's
+   controlled `checked`/`onCheckedChange` is `@bind-checked`. Space and Enter activate it (a button's default). *@
+
+<button type="button" role="switch" aria-checked="@(checked ? "true" : "false")" disabled="@disabled" @attributes="@additionalAttributes" @onclick="this.toggle"
+        class="@cn("relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full", "transition-colors duration-[var(--duration-default)] ease-[var(--ease-out-cubic)]", "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]", "disabled:cursor-not-allowed disabled:opacity-50", checked ? "bg-[var(--color-primary)]" : "bg-[var(--color-input)]")">
+    <span aria-hidden="true" class="@cn("pointer-events-none inline-block h-4 w-4 rounded-full bg-[var(--color-overlay-foreground)] shadow-[0_1px_2px_oklch(0_0_0_/_0.20)]", "transition-transform duration-[var(--duration-default)] ease-[var(--ease-out-cubic)]", checked ? "translate-x-[18px]" : "translate-x-0.5")"></span>
+</button>
+
+@code {
+    @Parameter() checked: boolean = false;
+    @Parameter() checkedChanged?: EventCallback<boolean>;
+    @Parameter() disabled: boolean = false;
+    /** `id`, `aria-label`, `aria-labelledby`, … on the button. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private toggle(): Promise<void> | undefined {
+        return this.checkedChanged?.invokeAsync(!this.checked);
+    }
+}

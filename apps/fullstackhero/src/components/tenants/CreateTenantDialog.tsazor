@@ -1,0 +1,315 @@
+@* components/tenants/create-tenant-dialog.tsx: provision a tenant and its seed admin — a live preview rail beside the
+   form. The identifier is derived from the display name until the operator unlocks it, the JWT issuer mirrors the
+   identifier until edited by hand, a strong password can be generated, the plan picker preselects the trial plan,
+   and the issuer and a dedicated database sit behind "Advanced".
+   react-hook-form + zodResolver become an EditForm with a StandardSchemaValidator over the original's zod schema
+   (unchanged). `watch()` — the preview and the derived fields follow every keystroke — needs the value per `input`
+   event: those fields are LiveInputTexts (InputText binds on `change`). The useEffects that derive the identifier
+   and the issuer are the inputs' `@bind-Value:after`. The dialog owns its EditContext: `setValue(…, {
+   shouldValidate })` is `notifyFieldChanged`, `reset()` a new model and context. *@
+@import { ChevronDown, CircleCheck, Eye, EyeOff, Loader2, Lock, Pencil, Sparkles, Wand2 } from "lucide"
+@import { z } from "zod"
+@import { EditContext, EditForm, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { createTenant } from "@/api/tenants"
+@import { getPlans, planTermPrice } from "@/api/billing"
+@import { queryClient } from "@/lib/query-client"
+@import { Query } from "@/lib/query"
+@import { toast } from "@/lib/toast"
+@import { inputClass } from "@/components/ui/variants"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import { describe, formatMoney } from "./format"
+@import { TENANT_ID_RE, generatePassword, slugify } from "./create-tenant"
+@import AdornButton from "./AdornButton.tsazor"
+@import LiveInputText from "@/components/ui/LiveInputText.tsazor"
+@import TenantPreviewRail from "./TenantPreviewRail.tsazor"
+@inject NavigationManager navigation
+
+<Dialog open="@open" openChanged="@this.requestOpen">
+    <DialogContent size="lg" class="overflow-hidden p-0 sm:max-w-3xl">
+        <EditForm id="ct-form" EditContext="@editContext" OnValidSubmit="@submit" class="grid sm:grid-cols-[13.5rem_1fr]">
+            <StandardSchemaValidator Schema="@schema" />
+            <FocusFirstError />
+
+            @* ── Live preview rail ── *@
+            <TenantPreviewRail name="@model.name" slug="@model.id" planLabel="@planLabel" email="@model.adminEmail" />
+
+            @* ── Form pane ── *@
+            <div class="min-w-0">
+                @* Header (leave room for the close affordance, top-right) *@
+                <div class="flex flex-col gap-1 px-6 pb-2 pt-6 pr-12">
+                    <div class="flex items-center gap-2">
+                        <DialogTitle class="text-[16px]">New tenant</DialogTitle>
+                        <Icon icon="@Sparkles" class="size-3.5 text-[var(--color-primary)] opacity-70" />
+                    </div>
+                    <DialogDescription>
+                        Provision a tenant and its seed admin. The identifier is the URL-safe slug used in routing and JWT claims.
+                    </DialogDescription>
+                </div>
+
+                @* Fields *@
+                <div class="space-y-4 px-6 py-4">
+                    <Field id="ct-name" label="Display name" required for="name">
+                        <LiveInputText id="ct-name" autocomplete="off" placeholder="Acme Corp" class="@inputClass" @bind-Value="model.name" @bind-Value:after="nameChanged" />
+                    </Field>
+
+                    @* Identifier — auto-derived, unlock to edit *@
+                    <Field id="ct-id" label="Identifier" required for="id">
+                        <HintContent>
+                            @if (idTouched && idValid) {
+                                <span class="inline-flex items-center gap-1 text-[var(--color-success)]">
+                                    <Icon icon="@CircleCheck" class="size-3.5" />
+                                    Valid format — availability is confirmed when you create.
+                                </span>
+                            } else {
+                                <text>Lowercase letters, digits, and hyphens. 3–64 characters.</text>
+                            }
+                        </HintContent>
+                        <ChildContent>
+                            <div class="relative">
+                                <LiveInputText id="ct-id" autocomplete="off" placeholder="acme-corp" readonly="@(idMode === "auto")"
+                                               class="@cn(inputClass, "pr-[4.75rem] font-mono", idMode === "auto" && "text-[var(--color-muted-foreground)]")"
+                                               @bind-Value="model.id" @bind-Value:after="mirrorIssuer" />
+                                <div class="absolute inset-y-0 right-1.5 flex items-center gap-1">
+                                    @if (idMode === "auto") {
+                                        <button type="button" @onclick="unlockIdentifier" class="@lockButtonClass">
+                                            <Icon icon="@Pencil" class="size-3" /> Edit
+                                        </button>
+                                    } else {
+                                        <button type="button" @onclick="relockIdentifier" class="@lockButtonClass">
+                                            <Icon icon="@Lock" class="size-3" /> Auto
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </ChildContent>
+                    </Field>
+
+                    <Field id="ct-adminEmail" label="Admin email" required for="adminEmail">
+                        <LiveInputText id="ct-adminEmail" type="email" autocomplete="off" placeholder="admin@acme.example" class="@cn(inputClass, "font-mono")" @bind-Value="model.adminEmail" />
+                    </Field>
+
+                    @* Password — generate + show/hide *@
+                    <Field id="ct-adminPassword" label="Initial admin password" required hint="The first admin signs in with this and can rotate it after first login." for="adminPassword">
+                        <div class="relative">
+                            <InputText id="ct-adminPassword" type="@(showPassword ? "text" : "password")" autocomplete="new-password" placeholder="Min 8 characters" class="@cn(inputClass, "pr-16 font-mono")" @bind-Value="model.adminPassword" />
+                            <div class="absolute inset-y-0 right-1.5 flex items-center gap-0.5">
+                                <AdornButton label="Generate strong password" onClick="@fillGeneratedPassword">
+                                    <Icon icon="@Wand2" />
+                                </AdornButton>
+                                <AdornButton label="@(showPassword ? "Hide password" : "Show password")" onClick="@(() => showPassword = !showPassword)">
+                                    <Icon icon="@(showPassword ? EyeOff : Eye)" />
+                                </AdornButton>
+                            </div>
+                        </div>
+                    </Field>
+
+                    @* Plan *@
+                    <Field id="ct-plan" label="Billing plan" for="planKey"
+                           hint="@(plans.result.isError ? "Could not load plans — the tenant will fall back to the default plan." : "Sets the first invoice and how long the tenant stays valid. Defaults to the trial plan.")">
+                        <FormSelect id="ct-plan" value="@model.planKey" valueChanged="@pickPlan" options="@planOptions"
+                                    emptyLabel="@(plans.result.isLoading ? "Loading plans…" : planOptions.length === 0 ? "No active plans" : undefined)"
+                                    disabled="@(plans.result.isLoading || planOptions.length === 0)" />
+                    </Field>
+
+                    @* Advanced disclosure — issuer + dedicated database *@
+                    <div class="rounded-lg border border-[var(--color-border)]">
+                        <button type="button" @onclick="() => advancedOpen = !advancedOpen" aria-expanded="@(advancedOpen ? "true" : "false")"
+                                class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left outline-none transition-colors hover:bg-[var(--color-accent)] cursor-pointer focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]">
+                            @* JSX drops the line break between "Advanced" and the span; Razor would keep it as a space. *@
+                            <span class="text-[12.5px] font-medium text-[var(--color-foreground)]">
+                                Advanced<span class="ml-1.5 font-normal text-[var(--color-muted-foreground)]">issuer, dedicated database</span>
+                            </span>
+                            <Icon icon="@ChevronDown" class="@cn("size-4 shrink-0 text-[var(--color-muted-foreground)] transition-transform duration-[var(--duration-fast)]", advancedOpen && "rotate-180")" />
+                        </button>
+
+                        @if (advancedOpen) {
+                            <div class="space-y-4 border-t border-[var(--color-border)] px-3 py-3.5">
+                                <Field id="ct-issuer" label="JWT issuer" required hint="Mirrors the identifier by default. Issued in tokens to scope sessions." for="issuer">
+                                    <LiveInputText id="ct-issuer" placeholder="acme-corp" class="@cn(inputClass, "font-mono")" @bind-Value="model.issuer" @bind-Value:after="() => issuerDirty = true" />
+                                </Field>
+
+                                <Field id="ct-connectionString" label="Connection string" hint="Optional. Leave blank to use the shared catalog database." for="connectionString">
+                                    <InputText id="ct-connectionString" placeholder="Host=…;Database=…" class="@cn(inputClass, "font-mono")" @bind-Value="model.connectionString" />
+                                </Field>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* Footer *@
+                <DialogFooter class="px-6">
+                    <Button type="button" variant="outline" onClick="@close" disabled="@submitting">Cancel</Button>
+                    <Button type="submit" disabled="@submitting" class="min-w-[8.5rem]">
+                        @if (submitting) {
+                            <Icon icon="@Loader2" class="size-4 animate-spin" />
+                            <span>Provisioning…</span>
+                        } else {
+                            <text>Create tenant</text>
+                        }
+                    </Button>
+                </DialogFooter>
+            </div>
+        </EditForm>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+
+    // ─── Schema (unchanged contract) ───
+    private readonly schema = z.object({
+        id: z.string().trim().regex(TENANT_ID_RE, "Lowercase letters, digits, hyphens. 3–64 chars. No leading/trailing hyphen."),
+        name: z.string().trim().min(2, "At least 2 characters.").max(128),
+        adminEmail: z.string().trim().email("Enter a valid email."),
+        adminPassword: z.string().min(8, "At least 8 characters.").max(128, "Maximum 128 characters."),
+        issuer: z.string().trim().min(2, "Required.").max(256),
+        connectionString: z.string().trim().max(2048).optional(),
+        // Optional: preselected to the default plan when plans load; if left empty the
+        // server falls back to the configured trial plan.
+        planKey: z.string().trim().optional(),
+    });
+
+    private model = CreateTenantDialog.defaults();
+    private editContext = new EditContext(this.model);
+
+    // UI-only state, reset on close.
+    private idMode: "auto" | "manual" = "auto";
+    private issuerDirty = false;
+    private showPassword = false;
+    private advancedOpen = false;
+    private submitting = false;
+
+    private readonly lockButtonClass = "inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]";
+
+    private readonly plans = new Query(() => ({
+        queryKey: ["billing", "plans", "active"],
+        queryFn: () => getPlans(false),
+        enabled: this.open,
+    }));
+
+    private static defaults() {
+        return { id: "", name: "", adminEmail: "", adminPassword: "", issuer: "", connectionString: "", planKey: "" };
+    }
+
+    protected override onInitialized(): void {
+        this.observe(this.plans, () => this.preselectPlan());
+    }
+
+    protected override onParametersSet(): void {
+        if (this.open) this.preselectPlan();
+    }
+
+    private get planOptions(): SelectOption[] {
+        return (this.plans.result.data ?? []).map((p) => ({
+            value: p.key,
+            label: p.name,
+            hint: `${p.interval} · ${formatMoney(planTermPrice(p), p.currency)}`,
+        }));
+    }
+
+    /** Prefer the conventional trial plan, else the first active plan. */
+    private get defaultPlanKey(): string {
+        const plans = this.plans.result.data;
+        return plans?.find((p) => p.key === "free")?.key ?? plans?.[0]?.key ?? "";
+    }
+
+    private get idValid(): boolean {
+        return TENANT_ID_RE.test(this.model.id.trim());
+    }
+
+    private get idTouched(): boolean {
+        return this.model.id.trim().length > 0;
+    }
+
+    private get planLabel(): string | null {
+        const selected = this.plans.result.data?.find((p) => p.key === this.model.planKey);
+        return selected ? `${selected.name} · ${formatMoney(planTermPrice(selected), selected.currency)}` : null;
+    }
+
+    /** Preselect the default/trial plan once plans load (without clobbering a choice). */
+    private preselectPlan(): void {
+        const key = this.defaultPlanKey;
+        if (key && !this.model.planKey) this.model.planKey = key;
+    }
+
+    /** Auto-derive the identifier slug from the display name until the operator unlocks the field for manual editing. */
+    private nameChanged(): void {
+        if (this.idMode === "auto") this.setId(slugify(this.model.name));
+    }
+
+    private setId(id: string): void {
+        this.model.id = id;
+        this.mirrorIssuer();
+    }
+
+    /** JWT issuer mirrors the identifier until the operator edits it by hand. */
+    private mirrorIssuer(): void {
+        if (!this.issuerDirty) this.model.issuer = this.model.id.trim();
+    }
+
+    private pickPlan(key: string): void {
+        this.model.planKey = key;
+        this.editContext.notifyFieldChanged("planKey", key);
+    }
+
+    private requestOpen(open: boolean): Promise<void> | undefined {
+        if (!open) return this.close();
+        return this.openChanged?.invokeAsync(true);
+    }
+
+    /** react-hook-form's reset() and the UI state, then close. */
+    private close(): Promise<void> | undefined {
+        this.model = CreateTenantDialog.defaults();
+        this.editContext = new EditContext(this.model);
+        this.idMode = "auto";
+        this.issuerDirty = false;
+        this.showPassword = false;
+        this.advancedOpen = false;
+        return this.openChanged?.invokeAsync(false);
+    }
+
+    private unlockIdentifier(): void {
+        this.idMode = "manual";
+        requestAnimationFrame(() => document.getElementById("ct-id")?.focus());
+    }
+
+    private relockIdentifier(): void {
+        this.idMode = "auto";
+        this.setId(slugify(this.model.name));
+    }
+
+    private fillGeneratedPassword(): void {
+        this.model.adminPassword = generatePassword();
+        this.editContext.notifyFieldChanged("adminPassword", this.model.adminPassword);
+        this.showPassword = true;
+    }
+
+    private async submit(): Promise<void> {
+        // Pass the parsed values on — no state read later, after the await.
+        const values = this.schema.parse(this.model);
+        this.submitting = true;
+        try {
+            const result = await createTenant({
+                id: values.id,
+                name: values.name,
+                adminEmail: values.adminEmail,
+                adminPassword: values.adminPassword,
+                issuer: values.issuer,
+                connectionString: values.connectionString?.trim() ? values.connectionString : null,
+                planKey: values.planKey?.trim() ? values.planKey : null,
+            });
+            toast.success(`Tenant ${result.id} created`, {
+                description: "Provisioning runs in the background. Track progress on the detail page.",
+            });
+            // Fire-and-forget refresh — don't block navigation on the list refetch.
+            void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            await this.close();
+            this.navigation.navigateTo(`/tenants/${result.id}`);
+        } catch (err) {
+            toast.error("Create failed", { description: describe(err) });
+        } finally {
+            this.submitting = false;
+        }
+    }
+}

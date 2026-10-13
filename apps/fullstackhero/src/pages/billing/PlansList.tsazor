@@ -1,0 +1,148 @@
+@* pages/billing/plans-list.tsx: the plan catalog — a KPI strip (plans, active, average base price), then every plan
+   (inactive ones too) with its key, name, interval, state, overage rates and term price. Billing.Manage adds
+   "New plan" and a per-row Edit, both opening the PlanFormDialog. *@
+@page "/billing/plans"
+@authorize({ policy: "Permissions.Billing.View" })
+@layout BillingLayout
+@import { Pencil } from "lucide"
+@import { getPlans, planTermPrice, type BillingPlanDto } from "@/api/billing"
+@import { BillingPermissions } from "@/lib/permissions"
+@import { Query } from "@/lib/query"
+@import { describe, formatMoney } from "@/components/billing/billing-format"
+@import PlanFormDialog from "@/components/billing/PlanFormDialog.tsazor"
+@import BillingLayout from "./BillingLayout.tsazor"
+@import AllPlansSection from "./AllPlansSection.tsazor"
+@inject AuthService auth
+
+<div class="space-y-6">
+    @* KPI strip *@
+    <StatStrip cols="3">
+        <Stat label="Plans" hint="@(`${totals.active} active`)">
+            <ValueContent>@if (query.result.isLoading) { <Skeleton class="h-7 w-16" /> } else { @totals.count }</ValueContent>
+        </Stat>
+        <Stat label="Active" hint="@(totals.count - totals.active > 0 ? `${totals.count - totals.active} inactive` : "all active")">
+            <ValueContent>@if (query.result.isLoading) { <Skeleton class="h-7 w-16" /> } else { @totals.active }</ValueContent>
+        </Stat>
+        <Stat label="Average base" hint="monthly subscription fee">
+            <ValueContent>@if (query.result.isLoading) { <Skeleton class="h-7 w-24" /> } else { @formatMoney(totals.averagePrice, totals.currency) }</ValueContent>
+        </Stat>
+    </StatStrip>
+
+    @* Plans list *@
+    <AllPlansSection canManage="@canManageBilling" onCreate="@openCreate">
+        @if (query.result.isError) {
+            <div class="mb-4 rounded-md border border-[oklch(from_var(--color-destructive)_l_c_h_/_0.30)] bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.05)] px-4 py-3 text-sm text-[var(--color-destructive)]">
+                @describe(query.result.error, "Failed to load plans.")
+            </div>
+        }
+
+        @if (query.result.isLoading) {
+            <ul class="-mx-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+                @for (let i = 0; i < 3; i++) {
+                    <li class="px-5 py-5">
+                        <Skeleton class="h-5 w-1/3" />
+                        <Skeleton class="mt-2 h-3 w-1/2" />
+                    </li>
+                }
+            </ul>
+        } else if (plans.length === 0) {
+            <div class="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
+                No plans yet. Create your first plan to start charging tenants.
+            </div>
+        } else {
+            <ul class="-mx-5 border-t border-[var(--color-border)]">
+                @foreach (const [i, plan] of plans.entries()) {
+                    <li @key="plan.id"
+                        class="fsh-enter grid grid-cols-[1fr_auto] items-center gap-x-6 gap-y-1 border-b border-[var(--color-border)] last:border-b-0 px-5 py-4 transition-colors hover:bg-[var(--color-muted)]"
+                        style="@(`animation-delay: ${Math.min(i, 6) * 30}ms`)">
+                        @* Identity column *@
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <code class="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-tight">@plan.key</code>
+                                <span class="font-display text-base font-semibold">@plan.name</span>
+                                <Badge variant="outline">@(plan.interval === "Yearly" ? "Yearly" : "Monthly")</Badge>
+                                @if (plan.isActive) {
+                                    <Badge variant="success">Active</Badge>
+                                } else {
+                                    <Badge variant="muted">Inactive</Badge>
+                                }
+                            </div>
+                            <div class="mt-1 font-mono text-[11px] tracking-tight text-[var(--color-muted-foreground)]">
+                                currency @plan.currency · overage @formatOverageRates(plan.overageRates, plan.currency)
+                            </div>
+                        </div>
+
+                        @* Right column — price + edit *@
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <div class="text-display text-lg font-semibold leading-none tabular-nums">@formatMoney(planTermPrice(plan), plan.currency)</div>
+                                <div class="mt-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">@(plan.interval === "Yearly" ? "per year" : "per month")</div>
+                            </div>
+                            @if (canManageBilling) {
+                                <Button variant="ghost" size="icon" aria-label="@(`Edit ${plan.name}`)" onClick="@(() => openEdit(plan))">
+                                    <Icon icon="@Pencil" class="h-4 w-4" />
+                                </Button>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </AllPlansSection>
+
+    <PlanFormDialog @bind-open="dialogOpen" plan="@editingPlan" />
+</div>
+
+@code {
+    private dialogOpen = false;
+    private editingPlan?: BillingPlanDto;
+
+    private readonly query = new Query(() => ({
+        queryKey: ["billing", "plans", { includeInactive: true }],
+        queryFn: () => getPlans(true),
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.query);
+    }
+
+    private get canManageBilling(): boolean {
+        return (this.auth.user?.permissions ?? []).includes(BillingPermissions.Manage);
+    }
+
+    private get plans(): BillingPlanDto[] {
+        return this.query.result.data ?? [];
+    }
+
+    private get totals(): { count: number; active: number; averagePrice: number; currency: string } {
+        const plans = this.plans;
+        if (plans.length === 0) {
+            return { count: 0, active: 0, averagePrice: 0, currency: "USD" };
+        }
+        const active = plans.filter((p) => p.isActive).length;
+        const sum = plans.reduce((acc, p) => acc + p.monthlyBasePrice, 0);
+        return {
+            count: plans.length,
+            active,
+            averagePrice: sum / plans.length,
+            currency: plans[0]!.currency,
+        };
+    }
+
+    private formatOverageRates(rates: BillingPlanDto["overageRates"], currency: string): string {
+        const entries = Object.entries(rates).filter(([, v]) => v && v > 0);
+        if (entries.length === 0) return "—";
+        return entries.map(([resource, rate]) => `${resource} ${formatMoney(rate ?? 0, currency)}`).join(" · ");
+    }
+
+    private openCreate(): void {
+        this.editingPlan = undefined;
+        this.dialogOpen = true;
+    }
+
+    private openEdit(plan: BillingPlanDto): void {
+        this.editingPlan = plan;
+        this.dialogOpen = true;
+    }
+}

@@ -1,0 +1,22 @@
+@* components/ui/button.tsx: the original's Button — a <button> with its cva variants (variants.ts). React's
+   `className` is `class` here, merged with tailwind-merge as the original's cn() does. The original's `asChild`
+   (Radix Slot: the child element takes the button's classes) is the variants function on that element:
+   `<NavLink class="@buttonVariants({ variant: "outline", size: "sm" })">`. *@
+@import { withClass } from "@/lib/attributes"
+@import { buttonVariants, type ButtonSize, type ButtonVariant } from "./variants"
+
+<button data-slot="button" data-variant="@variant" data-size="@size" @attributes="@withClass(buttonVariants({ variant, size }), additionalAttributes)" @onclick="this.click">@childContent</button>
+
+@code {
+    @Parameter() variant: ButtonVariant = "default";
+    @Parameter() size: ButtonSize = "default";
+    /** React's onClick. A button without one in a form submits it, as the original's (no default `type`). */
+    @Parameter() onClick?: EventCallback<MouseEvent>;
+    @Parameter() childContent?: RenderFragment;
+    /** `class` (merged), `type`, `disabled`, `aria-*`, `title`, … on the <button>. */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private click(event: MouseEvent): Promise<void> | undefined {
+        return this.onClick?.invokeAsync(event);
+    }
+}

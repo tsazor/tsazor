@@ -1,0 +1,11 @@
+@* auth/protected-route.tsx's `<Navigate to="/login" replace state={{ from: location }} />`: a signed-out user on a
+   protected page goes to the login, which returns there after the sign-in. The page they came from rides in the
+   history entry's state (Blazor's HistoryEntryState), not in the URL — the address stays /login, as the original's. *@
+@inject NavigationManager navigation
+
+@code {
+    protected override onInitialized(): void {
+        const from = this.navigation.toBaseRelativePath(this.navigation.uri);
+        this.navigation.navigateTo("/login", { replaceHistoryEntry: true, historyEntryState: JSON.stringify({ from: `/${from}` }) });
+    }
+}

@@ -1,0 +1,235 @@
+/*
+ * sonner's own stylesheet (sonner 2.0.7, MIT, © Emil Kowalski — https://github.com/emilkowalski/sonner), the
+ * cosmetic rules: the toast's box, its icon, title, description, buttons and the light and dark theme variables.
+ * sonner injects them unlayered, so in the original they win over globals.css's layered `.fsh-toast` overrides
+ * (an unlayered rule beats a layered one whatever its specificity): the original's toasts are 356px wide with
+ * 16px padding and a 16px icon, not what globals.css describes. Kept here, unlayered too, so the port looks the
+ * same. sonner's positioning, stacking, swipe and loader rules are left out: FshToaster lays out its own column.
+ * (Extracted by selector from node_modules/sonner/dist/styles.css; docs/port-fullstackhero.md.)
+ */
+
+html[dir='ltr'], [data-sonner-toaster][dir='ltr'] {
+  --toast-icon-margin-start: -3px;
+  --toast-icon-margin-end: 4px;
+  --toast-svg-margin-start: -1px;
+  --toast-svg-margin-end: 0px;
+  --toast-button-margin-start: auto;
+  --toast-button-margin-end: 0;
+  --toast-close-button-start: 0;
+  --toast-close-button-end: unset;
+  --toast-close-button-transform: translate(-35%, -35%);
+}
+
+html[dir='rtl'], [data-sonner-toaster][dir='rtl'] {
+  --toast-icon-margin-start: 4px;
+  --toast-icon-margin-end: -3px;
+  --toast-svg-margin-start: 0px;
+  --toast-svg-margin-end: -1px;
+  --toast-button-margin-start: 0;
+  --toast-button-margin-end: auto;
+  --toast-close-button-start: unset;
+  --toast-close-button-end: 0;
+  --toast-close-button-transform: translate(35%, -35%);
+}
+
+[data-sonner-toaster] {
+  --gray1: hsl(0, 0%, 99%);
+  --gray2: hsl(0, 0%, 97.3%);
+  --gray3: hsl(0, 0%, 95.1%);
+  --gray4: hsl(0, 0%, 93%);
+  --gray5: hsl(0, 0%, 90.9%);
+  --gray6: hsl(0, 0%, 88.7%);
+  --gray7: hsl(0, 0%, 85.8%);
+  --gray8: hsl(0, 0%, 78%);
+  --gray9: hsl(0, 0%, 56.1%);
+  --gray10: hsl(0, 0%, 52.3%);
+  --gray11: hsl(0, 0%, 43.5%);
+  --gray12: hsl(0, 0%, 9%);
+  --border-radius: 8px;
+}
+
+[data-sonner-toast][data-styled='true'] {
+  padding: 16px;
+  background: var(--normal-bg);
+  border: 1px solid var(--normal-border);
+  color: var(--normal-text);
+  border-radius: var(--border-radius);
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  width: var(--width);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-sonner-toast]:focus-visible {
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-sonner-toast][data-styled='true'] [data-description] {
+  font-weight: 400;
+  line-height: 1.4;
+  color: #3f3f3f;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-description] {
+  color: hsl(0, 0%, 91%);
+}
+
+[data-sonner-toast][data-styled='true'] [data-title] {
+  font-weight: 500;
+  line-height: 1.5;
+  color: inherit;
+}
+
+[data-sonner-toast][data-styled='true'] [data-icon] {
+  display: flex;
+  height: 16px;
+  width: 16px;
+  position: relative;
+  justify-content: flex-start;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: var(--toast-icon-margin-start);
+  margin-right: var(--toast-icon-margin-end);
+}
+
+[data-sonner-toast][data-styled='true'] [data-icon] > * {
+  flex-shrink: 0;
+}
+
+[data-sonner-toast][data-styled='true'] [data-icon] svg {
+  margin-left: var(--toast-svg-margin-start);
+  margin-right: var(--toast-svg-margin-end);
+}
+
+[data-sonner-toast][data-styled='true'] [data-content] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-sonner-toast][data-styled='true'] [data-button] {
+  border-radius: 4px;
+  padding-left: 8px;
+  padding-right: 8px;
+  height: 24px;
+  font-size: 12px;
+  color: var(--normal-bg);
+  background: var(--normal-text);
+  margin-left: var(--toast-button-margin-start);
+  margin-right: var(--toast-button-margin-end);
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: opacity 400ms, box-shadow 200ms;
+}
+
+[data-sonner-toast][data-styled='true'] [data-button]:focus-visible {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
+[data-sonner-toast][data-styled='true'] [data-button]:first-of-type {
+  margin-left: var(--toast-button-margin-start);
+  margin-right: var(--toast-button-margin-end);
+}
+
+[data-sonner-toast][data-styled='true'] [data-cancel] {
+  color: var(--normal-text);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast][data-styled='true'] [data-cancel] {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  position: absolute;
+  left: var(--toast-close-button-start);
+  right: var(--toast-close-button-end);
+  top: 0;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  color: var(--gray12);
+  background: var(--normal-bg);
+  border: 1px solid var(--gray4);
+  transform: var(--toast-close-button-transform);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1;
+  transition: opacity 100ms, background 200ms, border-color 200ms;
+}
+
+[data-sonner-toast][data-styled='true'] [data-close-button]:focus-visible {
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-sonner-toast][data-styled='true'] [data-disabled='true'] {
+  cursor: not-allowed;
+}
+
+[data-sonner-toast][data-styled='true']:hover [data-close-button]:hover {
+  background: var(--gray2);
+  border-color: var(--gray5);
+}
+
+[data-sonner-toast] > * {
+  transition: opacity 400ms;
+}
+
+[data-sonner-toaster][data-sonner-theme='light'] {
+  --normal-bg: #fff;
+  --normal-border: var(--gray4);
+  --normal-text: var(--gray12);
+  --success-bg: hsl(143, 85%, 96%);
+  --success-border: hsl(145, 92%, 87%);
+  --success-text: hsl(140, 100%, 27%);
+  --info-bg: hsl(208, 100%, 97%);
+  --info-border: hsl(221, 91%, 93%);
+  --info-text: hsl(210, 92%, 45%);
+  --warning-bg: hsl(49, 100%, 97%);
+  --warning-border: hsl(49, 91%, 84%);
+  --warning-text: hsl(31, 92%, 45%);
+  --error-bg: hsl(359, 100%, 97%);
+  --error-border: hsl(359, 100%, 94%);
+  --error-text: hsl(360, 100%, 45%);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] {
+  --normal-bg: #000;
+  --normal-bg-hover: hsl(0, 0%, 12%);
+  --normal-border: hsl(0, 0%, 20%);
+  --normal-border-hover: hsl(0, 0%, 25%);
+  --normal-text: var(--gray1);
+  --success-bg: hsl(150, 100%, 6%);
+  --success-border: hsl(147, 100%, 12%);
+  --success-text: hsl(150, 86%, 65%);
+  --info-bg: hsl(215, 100%, 6%);
+  --info-border: hsl(223, 43%, 17%);
+  --info-text: hsl(216, 87%, 65%);
+  --warning-bg: hsl(64, 100%, 6%);
+  --warning-border: hsl(60, 100%, 9%);
+  --warning-text: hsl(46, 87%, 65%);
+  --error-bg: hsl(358, 76%, 10%);
+  --error-border: hsl(357, 89%, 16%);
+  --error-text: hsl(358, 100%, 81%);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast] [data-close-button] {
+  background: var(--normal-bg);
+  border-color: var(--normal-border);
+  color: var(--normal-text);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast] [data-close-button]:hover {
+  background: var(--normal-bg-hover);
+  border-color: var(--normal-border-hover);
+}

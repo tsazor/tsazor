@@ -1,0 +1,16 @@
+@* The app's imports for every component (Blazor's _Imports.razor): the shadcn-style primitives (components/ui), the
+   design-system pieces (components/list), the shell, and the runtime's standard set. *@
+@using ./components
+@using ./components/ui
+@using ./components/list
+@using ./components/layout
+@using ./components/auth
+@using ./components/notifications
+@using ./components/roles
+@import { ComponentBase, LayoutComponentBase, Parameter, CascadingParameter, EventCallback, inject } from "@tsazor/runtime"
+@import { NavigationManager, Router, RouteView, LayoutView, NavLink, NavLinkMatch, PageTitle, FocusOnNavigate } from "@tsazor/runtime"
+@import { AuthorizeView, AuthorizeRouteView, AuthenticationStateProvider, AuthorizationService } from "@tsazor/runtime"
+@import type { RenderFragment, RouteData } from "@tsazor/runtime"
+@import { cn } from "@/lib/cn"
+@import { AuthService } from "@/auth/auth-service"
+@import { ThemeService } from "@/components/theme/theme-service"

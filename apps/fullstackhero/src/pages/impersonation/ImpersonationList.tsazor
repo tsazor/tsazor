@@ -1,0 +1,130 @@
+@* pages/impersonation/list.tsx: every impersonation token the server issued — the KPI strip, a status filter (Active by
+   default), the grants. One poll (every 5s, and on window focus) fetches all grants; the filtered list and the counts
+   are both derived in the browser, so two overlapping polls aren't needed. Active grants can be revoked; an operator's
+   own active grant can be re-opened (the lost-tab recovery path). *@
+@page "/impersonation"
+@authorize({ policy: "Permissions.Impersonation.View" })
+@import { RefreshCw, UserCog } from "lucide"
+@import { listImpersonationGrants, type ImpersonationGrantDto, type ImpersonationGrantStatus } from "@/api/impersonation-grants"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { IdentityPermissions } from "@/lib/permissions"
+@import { Query } from "@/lib/query"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import RevokeGrantDialog from "@/components/impersonation/RevokeGrantDialog.tsazor"
+@import GrantRow from "./GrantRow.tsazor"
+@import ReopenGrantDialog from "./ReopenGrantDialog.tsazor"
+@inject AuthService auth
+
+<div class="space-y-8">
+    <EntityPageHeader icon="@UserCog" tone="warning" title="Impersonation"
+                      description="Every impersonation token issued by the server is tracked here. Active grants can be revoked — the token is rejected by the JWT validation hook within seconds.">
+        <Button variant="outline" size="sm" disabled="@grants.result.isFetching" onClick="@(() => grants.refetch())" class="flex-1 sm:flex-none">
+            <Icon icon="@RefreshCw" class="@cn("mr-1.5 h-3.5 w-3.5", grants.result.isFetching && "animate-spin")" />
+            Refresh
+        </Button>
+    </EntityPageHeader>
+
+    <StatStrip cols="4">
+        <Stat label="Active" value="@(grants.result.isLoading ? "—" : counts.active.toString())" hint="in-flight tokens" tone="@(counts.active > 0 ? "signal" : "default")" />
+        <Stat label="Ended" value="@(grants.result.isLoading ? "—" : counts.ended.toString())" hint="operator clicked End" />
+        <Stat label="Revoked" value="@(grants.result.isLoading ? "—" : counts.revoked.toString())" hint="forcibly invalidated" tone="@(counts.revoked > 0 ? "danger" : "default")" />
+        <Stat label="Expired" value="@(grants.result.isLoading ? "—" : counts.expired.toString())" hint="reached natural TTL" />
+    </StatStrip>
+
+    <FilterBar>
+        <Select value="@status" valueChanged="@(v => status = v as ImpersonationGrantStatus | "")" options="@ImpersonationList.statusOptions" placeholder="All statuses" minWidth="12rem" />
+    </FilterBar>
+
+    @if (grants.result.isError) {
+        <ErrorBand message="@(grants.result.error instanceof ApiRequestError ? grants.result.error.problem?.detail ?? grants.result.error.message : "Failed to load impersonation grants.")" />
+    }
+
+    @if (grants.result.isLoading) {
+        <LoadingRow label="Loading grants" />
+    }
+
+    @if (!grants.result.isLoading && items.length === 0 && !grants.result.isError) {
+        <EmptyState icon="@UserCog" kicker="// nothing here"
+                    title="@(status === "Active" ? "No active impersonations." : "No grants match this filter.")"
+                    description="@(status === "Active" ? "When an operator starts impersonating a tenant user, the session appears here in real time." : "Try a different status filter to see the rest of the grant history.")" />
+    }
+
+    @if (items.length > 0) {
+        <ul class="divide-y divide-[var(--color-border)] border-y border-[var(--color-border)]">
+            @foreach (const g of items) {
+                @* Re-open is only meaningful when the grant is still Active server-side (token not revoked / expired),
+                   the caller is the original actor (the "I closed my browser tab" recovery path — not a way to hijack
+                   someone else's session), and the caller still has Users.Impersonate (revocation guard). *@
+                <GrantRow @key="g.id" grant="@g" canRevoke="@(canRevoke && g.status === "Active")"
+                          canReopen="@(canImpersonate && g.status === "Active" && currentUserId !== null && g.actorUserId === currentUserId)"
+                          onRevoke="@(() => targetGrant = g)" onReopen="@(() => reopenGrant = g)" />
+            }
+        </ul>
+    }
+
+    <RevokeGrantDialog grant="@targetGrant" onOpenChange="@(open => { if (!open) targetGrant = null; })" />
+
+    <ReopenGrantDialog grant="@reopenGrant" onOpenChange="@(open => { if (!open) reopenGrant = null; })" />
+</div>
+
+@code {
+    private static readonly refreshIntervalMs = 5_000;
+
+    private static readonly statusOptions: SelectOption<ImpersonationGrantStatus>[] = [
+        { value: "Active", label: "Active" },
+        { value: "Ended", label: "Ended" },
+        { value: "Revoked", label: "Revoked" },
+        { value: "Expired", label: "Expired" },
+    ];
+
+    private status: ImpersonationGrantStatus | "" = "Active";
+    private targetGrant: ImpersonationGrantDto | null = null;
+    private reopenGrant: ImpersonationGrantDto | null = null;
+
+    private readonly grants = new Query(() => ({
+        queryKey: ["impersonation-grants", "all"],
+        queryFn: () => listImpersonationGrants({ take: 200 }),
+        // Poll while viewing — admins watching an active session expect near-real-time updates.
+        refetchInterval: ImpersonationList.refreshIntervalMs,
+        refetchOnWindowFocus: true,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.grants);
+    }
+
+    private get permissions(): string[] {
+        return this.auth.user?.permissions ?? [];
+    }
+
+    private get canRevoke(): boolean {
+        return this.permissions.includes(IdentityPermissions.Impersonation.Revoke);
+    }
+
+    private get canImpersonate(): boolean {
+        return this.permissions.includes(IdentityPermissions.Users.Impersonate);
+    }
+
+    private get currentUserId(): string | null {
+        return this.auth.user?.id ?? null;
+    }
+
+    private get allGrants(): ImpersonationGrantDto[] {
+        return this.grants.result.data ?? [];
+    }
+
+    private get counts() {
+        const all = this.allGrants;
+        return {
+            active: all.filter((g) => g.status === "Active").length,
+            ended: all.filter((g) => g.status === "Ended").length,
+            revoked: all.filter((g) => g.status === "Revoked").length,
+            expired: all.filter((g) => g.status === "Expired").length,
+        };
+    }
+
+    private get items(): ImpersonationGrantDto[] {
+        return this.status ? this.allGrants.filter((g) => g.status === this.status) : this.allGrants;
+    }
+}

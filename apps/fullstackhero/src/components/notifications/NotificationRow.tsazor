@@ -1,0 +1,31 @@
+@* components/notifications/notification-bell.tsx's Row: one notification in the bell's preview — the unread dot,
+   the title with its age, the body; a link when it has one; "Mark as read" on hover while unread. *@
+@import { CheckCheck } from "lucide"
+@import type { NotificationDto } from "@/api/notifications"
+
+<li class="@cn("group/notif flex items-start gap-2.5 px-3 py-2.5 text-sm transition-colors", unread && "bg-[oklch(from_var(--color-accent-signal)_l_c_h_/_0.04)]", "hover:bg-[var(--color-muted)]/40")">
+    <span aria-hidden="true" class="@cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", unread ? "bg-[var(--color-accent-signal)]" : "bg-transparent")"></span>
+    @if (notif.link) {
+        <a href="@notif.link" @onclick="() => onClick?.invokeAsync()" class="block min-w-0 flex-1">
+            <NotificationRowBody notif="@notif" />
+        </a>
+    } else {
+        <NotificationRowBody notif="@notif" />
+    }
+    @if (unread) {
+        <button type="button" @onclick="() => onMarkRead?.invokeAsync()" @onclick:preventDefault @onclick:stopPropagation aria-label="Mark as read"
+                class="invisible mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] group-hover/notif:visible">
+            <Icon icon="@CheckCheck" class="h-3 w-3" />
+        </button>
+    }
+</li>
+
+@code {
+    @Parameter() notif!: NotificationDto;
+    @Parameter() onMarkRead?: EventCallback;
+    @Parameter() onClick?: EventCallback;
+
+    private get unread(): boolean {
+        return !this.notif.readAtUtc;
+    }
+}

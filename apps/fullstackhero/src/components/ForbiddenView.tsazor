@@ -1,0 +1,40 @@
+@* components/forbidden-view.tsx: the 403 surface — a hairline-bordered mono crumb, the missing permissions printed as
+   code chips so the operator can paste them into a permission grant. *@
+@import { ShieldOff } from "lucide"
+@import { buttonVariants } from "@/components/ui/variants"
+
+<div class="flex min-h-[60vh] items-center justify-center p-6">
+    <div class="card-shell w-full max-w-md px-8 py-9">
+        <div class="flex items-center gap-3">
+            <span class="grid h-10 w-10 place-items-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted-foreground)]">
+                <Icon icon="@ShieldOff" class="h-5 w-5" />
+            </span>
+            <div class="meta text-[var(--color-muted-foreground)]">// 403 · access denied</div>
+        </div>
+
+        <h2 class="mt-5 font-display text-2xl font-semibold tracking-tight">You don't hold the permissions to view this surface.</h2>
+        <p class="mt-2 text-sm text-[var(--color-muted-foreground)] leading-relaxed">
+            Ask a root-tenant operator to grant the permissions below to a role you hold.
+        </p>
+
+        @if (missing && missing.length > 0) {
+            <div class="mt-5 space-y-1.5 border-l-2 border-[var(--color-accent-signal)] pl-3">
+                <div class="meta text-[var(--color-muted-foreground)]">missing</div>
+                <ul class="flex flex-wrap gap-1.5">
+                    @foreach (const permission of missing) {
+                        <li @key="permission"><code class="code-chip">@permission</code></li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="mt-7 flex items-center gap-2">
+            <a href="/" class="@buttonVariants({ variant: "outline", size: "sm" })">← Overview</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    /** Permission strings the caller required that the user doesn't hold. Shown for operator clarity. */
+    @Parameter() missing?: readonly string[];
+}

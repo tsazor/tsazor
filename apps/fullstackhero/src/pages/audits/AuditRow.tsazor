@@ -1,0 +1,58 @@
+@* pages/audits/list.tsx's AuditRow: one event — the severity dot, the time, the event-type badge, the source with the
+   user, the tenant and the correlation id. The whole row is the button that opens the detail sheet. *@
+@import { ChevronRight } from "lucide"
+@import type { AuditEventType, AuditSummaryDto } from "@/api/audits"
+@import type { BadgeVariant } from "@/components/ui/variants"
+@import SeverityDot from "./SeverityDot.tsazor"
+
+<li>
+    <button type="button" @onclick="() => onClick?.invokeAsync()"
+            class="group grid w-full grid-cols-[auto_8rem_auto_1fr_auto] items-center gap-4 px-1 py-3 text-left transition-colors hover:bg-[var(--color-muted)]/50 focus:outline-none focus-visible:bg-[var(--color-muted)]/50">
+        <SeverityDot severity="@event.severity" />
+        <span class="font-mono text-[11px] tabular-nums text-[var(--color-muted-foreground)]">@formatTimestamp(event.occurredAtUtc)</span>
+        <Badge variant="@eventTypeVariant(event.eventType)" class="justify-self-start font-mono uppercase tracking-[0.14em]">@event.eventType</Badge>
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-baseline gap-2">
+                <span class="truncate text-sm font-medium">@(event.source ?? "—")</span>
+                @if (event.userName) {
+                    <span class="truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">· @event.userName</span>
+                }
+                @if (event.tenantId) {
+                    <code class="code-chip">@event.tenantId</code>
+                }
+            </div>
+            @if (event.correlationId) {
+                <div class="mt-0.5 truncate font-mono text-[10.5px] text-[var(--color-muted-foreground)]">corr · @event.correlationId</div>
+            }
+        </div>
+        <Icon icon="@ChevronRight" class="h-4 w-4 text-[var(--color-muted-foreground)] transition-transform group-hover:translate-x-0.5" />
+    </button>
+</li>
+
+@code {
+    @Parameter() event!: AuditSummaryDto;
+    @Parameter() onClick?: EventCallback;
+
+    private eventTypeVariant(type: AuditEventType): BadgeVariant {
+        switch (type) {
+            case "Security":
+                return "info";
+            case "Exception":
+                return "danger";
+            case "EntityChange":
+                return "brand";
+            case "Activity":
+                return "muted";
+            default:
+                return "outline";
+        }
+    }
+
+    /** Tight ISO-like local format: 04-30 14:22:01. */
+    private formatTimestamp(value: string): string {
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return value;
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+}

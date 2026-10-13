@@ -1,0 +1,26 @@
+@* react-hook-form's `shouldFocusError` (on by default): after a submit that finds errors, the first invalid field takes
+   the focus. EditForm (Blazor's too) leaves it on the submit button. Placed inside an EditForm: when the form
+   validates, the first element of the form marked aria-invalid (the inputs mark themselves, in form order) is
+   focused once that render is on the screen. *@
+@import { EditContext } from "@tsazor/runtime"
+
+<span hidden @ref="marker"></span>
+
+@code {
+    @CascadingParameter({ type: EditContext }) editContext?: EditContext;
+
+    private marker?: HTMLElement;
+    private validated = false;
+
+    protected override onInitialized(): void {
+        const editContext = this.editContext;
+        if (!editContext) throw new Error("FocusFirstError requires a cascading parameter of type EditContext: place it inside an EditForm.");
+        this.observe({ subscribe: (listener: () => void) => editContext.onValidationRequested.subscribe(() => { this.validated = true; listener(); }) });
+    }
+
+    protected override onAfterRender(): void {
+        if (!this.validated) return;
+        this.validated = false;
+        this.marker?.closest("form")?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    }
+}

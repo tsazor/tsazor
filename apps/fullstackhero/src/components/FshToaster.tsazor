@@ -1,0 +1,74 @@
+@* App.tsx's FshToaster: sonner's <Toaster position="top-right" closeButton expand visibleToasts={4}>, rendered from
+   the app's Toaster (lib/toast.ts) in sonner's markup — the data-sonner-* attributes and the fsh-toast classes that
+   globals.css styles (the tone stripe, the display-face title) — over sonner's own rules, which win in the original
+   (styles/sonner-toast.css): 356px wide, 16px padding, a 16px icon. The newest is on top; a toast
+   pauses while the pointer is over it or the focus is in it. The region lives in the top layer, above an open dialog
+   as sonner's (lib/top-layer.ts). *@
+@import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide"
+@import type { Toast } from "@tsazor/ui"
+@import { raiseInTopLayer } from "@/lib/top-layer"
+@import { toaster } from "@/lib/toast"
+@inject ThemeService theme
+
+<section aria-label="Notifications" tabindex="-1" aria-live="polite" aria-relevant="additions text" aria-atomic="false">
+    <ol popover="manual" data-sonner-toaster data-sonner-theme="@theme.theme" data-theme="@theme.theme" data-y-position="top" data-x-position="right" dir="ltr"
+        style="--width: 356px"
+        class="fixed top-6 right-6 left-auto bottom-auto z-[999999] m-0 flex w-[356px] max-w-[calc(100vw-3rem)] list-none flex-col gap-[10px] overflow-visible border-0 bg-transparent p-0"
+        @ref="region">
+        @foreach (const item of visible) {
+            <li @key="item.id" data-sonner-toast data-styled="true" data-mounted="true" data-visible="true" data-type="@type(item)" tabindex="0" class="fsh-toast"
+                role="@(item.intent === "danger" ? "alert" : "status")"
+                @onpointerenter="() => toaster.pause(item.id)" @onpointerleave="() => toaster.resume(item.id)"
+                @onfocusin="() => toaster.pause(item.id)" @onfocusout="() => toaster.resume(item.id)">
+                <div data-icon>
+                    <Icon icon="@glyph(item)" strokeWidth="2.25" class="fsh-toast-glyph" />
+                </div>
+                <div data-content>
+                    @if (item.title) {
+                        <div data-title class="fsh-toast-title">@item.title</div>
+                    }
+                    @if (item.message) {
+                        <div data-description class="fsh-toast-description">@item.message</div>
+                    }
+                </div>
+                @if (item.action) {
+                    <button type="button" data-button data-action class="fsh-toast-action" @onclick="() => toaster.act(item.id)">@item.action.label</button>
+                }
+                <button type="button" aria-label="Close toast" data-close-button class="fsh-toast-close" @onclick="() => toaster.dismiss(item.id)">
+                    <Icon icon="@X" />
+                </button>
+            </li>
+        }
+    </ol>
+</section>
+
+@code {
+    private region?: HTMLOListElement;
+    private raisedAt = -1;
+
+    protected override onInitialized(): void {
+        this.observe(toaster);
+        this.observe(this.theme.changes);
+    }
+
+    protected override onAfterRender(): void {
+        // Shown while there are toasts, and above an overlay that opened since.
+        const region = this.region;
+        if (!region) return;
+        if (this.visible.length > 0) this.raisedAt = raiseInTopLayer(region, this.raisedAt);
+        else if (region.matches(":popover-open")) region.hidePopover();
+    }
+
+    /** visibleToasts={4}, newest first. */
+    private get visible(): readonly Toast[] {
+        return toaster.toasts.slice(-4).reverse();
+    }
+
+    private type(item: Toast): string {
+        return { success: "success", danger: "error", warning: "warning", info: "info" }[item.intent as string] ?? "default";
+    }
+
+    private glyph(item: Toast) {
+        return { success: CheckCircle2, danger: AlertCircle, warning: AlertTriangle }[item.intent as string] ?? Info;
+    }
+}

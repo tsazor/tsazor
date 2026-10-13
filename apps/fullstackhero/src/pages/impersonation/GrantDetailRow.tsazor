@@ -1,0 +1,12 @@
+@* pages/impersonation/list.tsx's DRow: one labelled line of a grant's details. *@
+
+<div class="@cn("flex items-baseline gap-2", wide && "sm:col-span-2")">
+    <dt class="font-mono text-[10.5px] uppercase tracking-[0.14em] w-32 shrink-0 text-[var(--color-muted-foreground)]">@label</dt>
+    <dd class="min-w-0 truncate">@childContent</dd>
+</div>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() wide: boolean = false;
+    @Parameter() childContent?: RenderFragment;
+}

@@ -1,0 +1,23 @@
+@* pages/users/list.tsx's Segmented: a labelled group of toggle buttons (aria-pressed), one per option — the directory's
+   status and email filters. React's value/onChange is `@bind-value`. *@
+@typeparam T extends string
+
+<div class="flex items-center gap-2 text-[0.6875rem] font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+    <span id="@(`seg-${label}`)">@label</span>
+    <div role="group" aria-labelledby="@(`seg-${label}`)" class="flex overflow-hidden rounded-md border border-[var(--color-border)]">
+        @foreach (const option of options) {
+            const selected = option.value === value;
+            <button @key="option.value" type="button" @onclick="() => valueChanged?.invokeAsync(option.value)" aria-pressed="@(selected ? "true" : "false")"
+                    class="@cn("px-2.5 py-1 text-[0.6875rem] tracking-[0.18em] transition-colors", selected ? "bg-[var(--color-foreground)] text-[var(--color-background)]" : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]")">
+                @option.label
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    @Parameter() label!: string;
+    @Parameter() value!: T;
+    @Parameter() valueChanged?: EventCallback<T>;
+    @Parameter() options: ReadonlyArray<{ value: T; label: string }> = [];
+}

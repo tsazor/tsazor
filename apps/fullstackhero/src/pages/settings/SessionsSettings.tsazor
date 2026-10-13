@@ -1,0 +1,104 @@
+@* pages/settings/sessions.tsx: SessionsSettings — every browser or device signed into the account, this device
+   first; revoke one, or sign out everywhere else. The mutations are plain handlers: `busyIds` is a Set (not a single
+   id) so concurrent revokes track independently and the first to resolve doesn't clear a still-pending row's busy
+   state. *@
+@page "/settings/sessions"
+@layout SettingsLayout
+@authorize
+@import { AlertTriangle, LogOut, MonitorSmartphone } from "lucide"
+@import { getMySessions, revokeAllMySessions, revokeMySession, type UserSessionDto } from "@/api/sessions"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { Query } from "@/lib/query"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { describe, sortSessions } from "./session-format"
+@import SettingsLayout from "./SettingsLayout.tsazor"
+@import SessionList from "./SessionList.tsazor"
+
+@if (query.result.isLoading) {
+    <LoadingRow label="Loading sessions" />
+} else if (query.result.isError) {
+    <ErrorBand message="@(query.result.error instanceof ApiRequestError ? (query.result.error.problem?.detail ?? query.result.error.message) : "Failed to load sessions.")" />
+} else {
+    <div class="space-y-5 fsh-enter">
+        @if (activeOtherCount > 0) {
+            <SettingsSection title="Active sessions" icon="@MonitorSmartphone" description="@description">
+                <Footer>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-start gap-2 text-xs">
+                            <Icon icon="@AlertTriangle" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-warning)]" />
+                            <span class="text-[var(--color-muted-foreground)]">
+                                @activeOtherCount other @(activeOtherCount === 1 ? "session is" : "sessions are") active.
+                                Sign them all out at once if you suspect an account compromise.
+                            </span>
+                        </div>
+                        <Button variant="outline" size="sm" onClick="@revokeAll" disabled="@revokingAll">
+                            <Icon icon="@LogOut" class="mr-1.5 h-3.5 w-3.5" />
+                            @(revokingAll ? "Signing out…" : "Sign out everywhere else")
+                        </Button>
+                    </div>
+                </Footer>
+                <ChildContent>
+                    <SessionList sessions="@sorted" busyIds="@busyIds" onRevoke="@revokeOne" />
+                </ChildContent>
+            </SettingsSection>
+        } else {
+            <SettingsSection title="Active sessions" icon="@MonitorSmartphone" description="@description">
+                <SessionList sessions="@sorted" busyIds="@busyIds" onRevoke="@revokeOne" />
+            </SettingsSection>
+        }
+    </div>
+}
+
+@code {
+    private readonly description = "Every browser or device currently signed into your account. Revoking a session signs that device out within ~10 seconds.";
+
+    private readonly query = new Query(() => ({
+        queryKey: ["identity", "sessions", "me"],
+        queryFn: getMySessions,
+        staleTime: 15_000,
+    }));
+
+    private busyIds: ReadonlySet<string> = new Set();
+    private revokingAll = false;
+
+    protected override onInitialized(): void {
+        this.observe(this.query);
+    }
+
+    private get sorted(): UserSessionDto[] {
+        return sortSessions(this.query.result.data ?? []);
+    }
+
+    private get activeOtherCount(): number {
+        return this.sorted.filter((s) => s.isActive && !s.isCurrentSession).length;
+    }
+
+    private async revokeOne(sessionId: string): Promise<void> {
+        this.busyIds = new Set(this.busyIds).add(sessionId);
+        try {
+            await revokeMySession(sessionId);
+            toast.success("Session revoked");
+            void queryClient.invalidateQueries({ queryKey: ["identity", "sessions", "me"] });
+        } catch (err) {
+            toast.error("Revoke failed", { description: describe(err) });
+        } finally {
+            const next = new Set(this.busyIds);
+            next.delete(sessionId);
+            this.busyIds = next;
+        }
+    }
+
+    private async revokeAll(): Promise<void> {
+        this.revokingAll = true;
+        try {
+            const data = await revokeAllMySessions();
+            toast.success(`Revoked ${data.revokedCount} other ${data.revokedCount === 1 ? "session" : "sessions"}`);
+            void queryClient.invalidateQueries({ queryKey: ["identity", "sessions", "me"] });
+        } catch (err) {
+            toast.error("Revoke all failed", { description: describe(err) });
+        } finally {
+            this.revokingAll = false;
+        }
+    }
+}

@@ -177,6 +177,19 @@ everything pushed.
 >     tables, English fallback, plurals by `Intl.PluralRules`, design-localization.md §4a). Next (owner,
 >     2026-10-12): the fullstackhero React admin port (the target group's archetype; UI question open), BlazorHero's
 >     phases 3–6 later where fullstackhero doesn't cover them.
+>   - **2026-10-13 — the third app port, fullstackhero's React admin** ([port-fullstackhero.md](port-fullstackhero.md)):
+>     the client a .NET team wrote after leaving Blazor (React 19, Radix/Tailwind in shadcn style, TanStack Query),
+>     ported with its own look (owner: "Bleibe bei Tailwind/shadcn") — app-owned shadcn-style `.tsazor` components on
+>     `@tsazor/ui`, the original's `globals.css`, TanStack's framework-free core via `observe`, zod via the new
+>     `StandardSchemaValidator`, Radix's Portal as the browser's top layer. All 32 pages (five areas ported in
+>     parallel by agents on the conventions in the doc). **The original's Playwright suite runs unchanged: 111/111**
+>     (`pnpm --filter fullstackhero acceptance`); `visual` compares screenshots of both apps per test (94/111
+>     within 0.5%). Framework fixes from it: nested layouts (F10), `historyEntryState` (F7), `aria-invalid` and
+>     `cssClass`/`attributesWithValidation` on inputs (F6, F14), `getUriWithQueryParameter(s)` (F11), tsconfig
+>     `paths` in the metadata and the type checker (F4, F13), `addAttribute` takes `unknown` (F12). Open for the
+>     owner: F1 (cva's computed variant types), F2 (top layer for the skins), F3/F17 (Razor templates), F5
+>     (ValidationSummary's classes), F15/F16 (InputText `immediate`, focus on invalid submit). The backend (Aspire,
+>     Docker) hasn't run yet: Docker Desktop hung in "starting".
 >     Seen once, under load: the parity gate's `DynamicContent_AppendItemsWhileAtBottom_ViewportStaysStable`
 >     (virtualize) failed in a full `pnpm gates edge` run ("should not converge to bottom after small append") and
 >     passed 3/3 alone — a timing window in Virtualize to look at if it recurs.

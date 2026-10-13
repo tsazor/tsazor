@@ -1,0 +1,35 @@
+@* components/monogram.tsx: a person's initials on one of four mono tones, the tone hashed from a seed (FNV-1a), so a
+   person keeps their colour across pages. *@
+
+<div aria-hidden="true" class="@cn("mono-grid grid place-items-center rounded-sm font-mono font-medium tracking-wider select-none", sizes[size], tone, additionalAttributes?.class as string)">@initials</div>
+
+@code {
+    @Parameter() seed: string = "";
+    @Parameter() firstName?: string | null;
+    @Parameter() lastName?: string | null;
+    @Parameter() fallback?: string | null;
+    @Parameter() size: "sm" | "md" | "lg" = "md";
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly sizes = { sm: "h-8 w-8 text-[0.6875rem]", md: "h-10 w-10 text-xs", lg: "h-20 w-20 text-2xl" };
+
+    private get tone(): string {
+        const seed = this.seed || this.fallback || "x";
+        let h = 2166136261;
+        for (let i = 0; i < seed.length; i++) {
+            h ^= seed.charCodeAt(i);
+            h = (h * 16777619) >>> 0;
+        }
+        return ["mono-tone-0", "mono-tone-1", "mono-tone-2", "mono-tone-3"][h % 4]!;
+    }
+
+    private get initials(): string {
+        const f = (this.firstName ?? "").trim();
+        const l = (this.lastName ?? "").trim();
+        if (f && l) return (f[0]! + l[0]!).toUpperCase();
+        if (f) return f.slice(0, 2).toUpperCase();
+        if (l) return l.slice(0, 2).toUpperCase();
+        const fb = (this.fallback ?? "??").trim();
+        return (fb.slice(0, 2) || "??").toUpperCase();
+    }
+}

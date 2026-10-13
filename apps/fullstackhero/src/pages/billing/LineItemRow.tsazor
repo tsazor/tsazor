@@ -1,0 +1,27 @@
+@* pages/billing/invoice-detail.tsx's LineItemRow: one line of an invoice — description, kind badge, resource, the
+   quantity × unit price, and the amount. *@
+@import type { InvoiceLineItemDto } from "@/api/billing"
+@import { formatMoney, lineItemKindVariant } from "@/components/billing/billing-format"
+
+<li class="fsh-enter grid grid-cols-[1fr_auto] items-baseline gap-x-6 border-b border-[var(--color-border)] last:border-b-0 px-5 py-3"
+    style="@(`animation-delay: ${Math.min(delayIndex, 6) * 30}ms`)">
+    <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium">@item.description</span>
+            <Badge variant="@lineItemKindVariant(item.kind)">@item.kind</Badge>
+            @if (item.resource) {
+                <span class="font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">@item.resource</span>
+            }
+        </div>
+        <div class="mt-1 font-mono text-[11px] text-[var(--color-muted-foreground)] tabular-nums">
+            @item.quantity.toLocaleString() × @formatMoney(item.unitPrice, currency)
+        </div>
+    </div>
+    <div class="text-right text-sm font-semibold tabular-nums">@formatMoney(item.amount, currency)</div>
+</li>
+
+@code {
+    @Parameter() item!: InvoiceLineItemDto;
+    @Parameter() currency: string = "";
+    @Parameter() delayIndex: number = 0;
+}

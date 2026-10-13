@@ -1,0 +1,11 @@
+@* components/ui/dialog.tsx's DialogTitle: the dialog's accessible name (Radix: an h2 with the content's aria-labelledby). *@
+@import { withClass } from "@/lib/attributes"
+@import Dialog from "./Dialog.tsazor"
+
+<h2 id="@dialog?.titleId" @attributes="@withClass("font-display text-lg font-semibold leading-tight tracking-tight", additionalAttributes)">@childContent</h2>
+
+@code {
+    @CascadingParameter({ type: Dialog }) dialog?: Dialog;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+}

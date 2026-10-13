@@ -1,0 +1,25 @@
+@* impersonate-dialog.tsx's SelectedUserCard: the user about to be impersonated, with their tenant. *@
+@import type { UserDto } from "@/api/users"
+@import { labelFor } from "./impersonation"
+
+<div class="flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-3">
+    <Monogram seed="@(user.id ?? user.userName ?? "x")" firstName="@(user.firstName ?? undefined)" lastName="@(user.lastName ?? undefined)" fallback="@(user.userName ?? user.email ?? "?")" size="md" />
+    <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-baseline gap-2">
+            <span class="truncate text-sm font-medium">@labelFor(user)</span>
+            @if (user.userName) {
+                <span class="truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">@(`@${user.userName}`)</span>
+            }
+        </div>
+        <div class="mt-0.5 flex flex-wrap items-baseline gap-2 font-mono text-[11px] text-[var(--color-muted-foreground)]">
+            <span class="truncate">@(user.email ?? "—")</span>
+            <Badge variant="muted" class="font-mono uppercase tracking-[0.14em]">@(tenantName ?? tenantId)</Badge>
+        </div>
+    </div>
+</div>
+
+@code {
+    @Parameter() user!: UserDto;
+    @Parameter() tenantId: string = "";
+    @Parameter() tenantName?: string;
+}

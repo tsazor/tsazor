@@ -1,0 +1,169 @@
+@* components/layout/topbar.tsx: the sticky header — the mobile nav trigger, the notification bell and the user
+   dropdown (name, tenant, theme, profile, settings, sign out), with the sign-out confirmation. The avatar is the
+   profile's image, read from the shared ["identity","profile"] query so it updates the instant a new image is
+   uploaded (the profile page invalidates that key). *@
+@import { Check, ChevronsUpDown, LogOut, Moon, Settings as SettingsIcon, Sun, UserRound } from "lucide"
+@import { getMyProfile } from "@/api/users"
+@import { Query } from "@/lib/query"
+@inject AuthService auth
+@inject ThemeService theme
+@inject NavigationManager navigation
+
+<header class="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[oklch(from_var(--color-background)_l_c_h_/_0.8)] px-3 backdrop-blur-sm md:px-5">
+    @* Mobile nav trigger — leading edge on small screens *@
+    <MobileNavTrigger />
+
+    @* Spacer pushes right-side actions to the trailing edge *@
+    <div class="flex-1"></div>
+
+    <NotificationBell />
+
+    @* User dropdown (`modal={false}`: the sign-out confirmation opens from it). *@
+    <DropdownMenu modal="false">
+        <DropdownMenuTrigger aria-label="Open profile menu"
+                             class="group flex cursor-pointer items-center gap-2.5 rounded-lg py-1 pl-1 pr-2 outline-none transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)] hover:bg-[var(--color-accent)] focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] data-[state=open]:bg-[var(--color-accent)]">
+            @* Square avatar tile — uploaded image with initials fallback *@
+            <ProfileTile src="@avatarUrl" initials="@initialsOf(auth.user?.name ?? auth.user?.email)" />
+            @* Name + tenant — desktop only *@
+            <div class="hidden min-w-0 text-left md:block">
+                <p class="truncate text-[12px] font-medium leading-none text-[var(--color-foreground)]">@displayName</p>
+                <p class="mt-1 truncate text-[10px] leading-none text-[var(--color-muted-foreground)]">@(auth.user?.tenant ?? "—")</p>
+            </div>
+            <Icon icon="@ChevronsUpDown" class="size-3.5 shrink-0 text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.5)] transition-colors duration-[var(--duration-fast)] group-hover:text-[var(--color-muted-foreground)]" />
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" sideOffset="6" class="w-[240px] p-0">
+            @* User info header *@
+            <div class="px-3 py-2.5">
+                <p class="truncate text-[12px] font-semibold text-[var(--color-foreground)]">@displayName</p>
+                @if (auth.user?.email && auth.user.name) {
+                    <p class="mt-0.5 truncate text-[10.5px] text-[var(--color-muted-foreground)]">@auth.user.email</p>
+                }
+                @if (auth.user?.tenant) {
+                    <div class="mt-1.5 flex items-center gap-1.5">
+                        <span aria-hidden="true" class="inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-success)]"></span>
+                        <span class="text-[10px] text-[var(--color-muted-foreground)]">@auth.user.tenant</span>
+                    </div>
+                }
+            </div>
+
+            <DropdownMenuSeparator class="!my-0" />
+
+            @* Theme *@
+            <DropdownMenuLabel class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Theme</DropdownMenuLabel>
+            <div class="px-1 pb-1">
+                <DropdownMenuItem onSelect="@(() => theme.setTheme("light"))" class="@menuItemClass">
+                    <Icon icon="@Sun" class="size-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                    <span class="flex-1 text-[12.5px] font-medium text-[var(--color-foreground)]">Light</span>
+                    @if (theme.theme === "light") {
+                        <Icon icon="@Check" class="size-3.5 shrink-0 text-[var(--color-primary)]" />
+                    }
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect="@(() => theme.setTheme("dark"))" class="@menuItemClass">
+                    <Icon icon="@Moon" class="size-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                    <span class="flex-1 text-[12.5px] font-medium text-[var(--color-foreground)]">Dark</span>
+                    @if (theme.theme === "dark") {
+                        <Icon icon="@Check" class="size-3.5 shrink-0 text-[var(--color-primary)]" />
+                    }
+                </DropdownMenuItem>
+            </div>
+
+            <DropdownMenuSeparator class="!my-0" />
+
+            @* Account quick actions *@
+            <DropdownMenuLabel class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">Account</DropdownMenuLabel>
+            <div class="px-1 pb-1">
+                <DropdownMenuItem onSelect="@(() => navigation.navigateTo("/settings/profile"))" class="@menuItemClass">
+                    <Icon icon="@UserRound" class="size-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                    <span class="text-[12.5px] font-medium text-[var(--color-foreground)]">Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect="@(() => navigation.navigateTo("/settings"))" class="@menuItemClass">
+                    <Icon icon="@SettingsIcon" class="size-3.5 shrink-0 text-[var(--color-muted-foreground)]" />
+                    <span class="text-[12.5px] font-medium text-[var(--color-foreground)]">Settings</span>
+                </DropdownMenuItem>
+            </div>
+
+            <DropdownMenuSeparator class="!my-0" />
+
+            @* Sign out *@
+            <div class="px-1 py-1">
+                <DropdownMenuItem destructive onSelect="@(() => confirmOpen = true)" class="!my-0 cursor-pointer rounded-md !px-2.5 !py-1.5">
+                    <Icon icon="@LogOut" class="size-3.5" />
+                    <span class="text-[12.5px] font-medium">Sign out</span>
+                </DropdownMenuItem>
+            </div>
+        </DropdownMenuContent>
+    </DropdownMenu>
+
+    @* Sign-out confirmation dialog *@
+    <Dialog @bind-open="confirmOpen">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Sign out of fullstackhero?</DialogTitle>
+                <DialogDescription>
+                    You'll need to sign in again to access this admin. Any unsaved work in this session will be lost.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+                <div class="flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2.5">
+                    <Avatar name="@displayName" src="@avatarUrl" size="md" />
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-medium tracking-tight">@displayName</div>
+                        @if (auth.user?.email && auth.user.name) {
+                            <div class="truncate text-xs text-[var(--color-muted-foreground)]">@auth.user.email</div>
+                        }
+                    </div>
+                    @if (auth.user?.tenant) {
+                        <code class="rounded bg-[var(--color-muted)] px-1.5 py-0.5 font-mono text-[11px]">@auth.user.tenant</code>
+                    }
+                </div>
+            </DialogBody>
+            <DialogFooter>
+                <Button variant="outline" size="sm" onClick="@(() => confirmOpen = false)">Cancel</Button>
+                <Button variant="destructive" size="sm" onClick="@signOut" autofocus>
+                    <Icon icon="@LogOut" class="mr-1.5 h-3.5 w-3.5" />
+                    Sign out
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+</header>
+
+@code {
+    private confirmOpen = false;
+    private readonly menuItemClass = "!my-0 flex cursor-pointer items-center gap-2.5 rounded-md !px-2.5 !py-1.5";
+
+    // Avatar lives on the profile, not the JWT.
+    private readonly profile = new Query(() => ({
+        queryKey: ["identity", "profile"],
+        queryFn: getMyProfile,
+        staleTime: 60_000,
+    }));
+
+    protected override onInitialized(): void {
+        this.observe(this.auth.changes);
+        this.observe(this.theme.changes);
+        this.observe(this.profile);
+    }
+
+    private get avatarUrl(): string | null {
+        return this.profile.result.data?.imageUrl ?? null;
+    }
+
+    private get displayName(): string {
+        return this.auth.user?.name ?? this.auth.user?.email ?? "Unknown";
+    }
+
+    /** Up-to-2-char initials from a display name. */
+    private initialsOf(name?: string | null): string {
+        if (!name) return "U";
+        const parts = name.split(/\s+/).filter((word) => word.length > 0 && !word.endsWith("."));
+        if (parts.length === 0) return name[0]?.toUpperCase() ?? "U";
+        return parts.map((word) => word[0]).join("").slice(0, 2).toUpperCase();
+    }
+
+    private signOut(): void {
+        this.confirmOpen = false;
+        this.auth.logout();
+    }
+}

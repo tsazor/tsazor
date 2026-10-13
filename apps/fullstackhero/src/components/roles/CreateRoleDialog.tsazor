@@ -1,0 +1,95 @@
+@* components/roles/create-role-dialog.tsx: create a role, then grant it permissions on its detail page.
+   react-hook-form + zodResolver become Tsazor's EditForm with a StandardSchemaValidator over the original's zod schema
+   (unchanged); `register("name")` is an InputText bound to the model, `errors.name?.message` Field's `for="name"`. The
+   submit sends the schema's parsed (trimmed) values, as handleSubmit does; a failed one focuses the first invalid
+   field (react-hook-form's shouldFocusError). *@
+@import { Shield } from "lucide"
+@import { z } from "zod"
+@import { EditForm, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { upsertRole } from "@/api/roles"
+@import { ApiRequestError } from "@/lib/api-client"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { inputClass } from "@/components/ui/variants"
+@inject NavigationManager navigation
+
+<Dialog open="@open" openChanged="@this.requestOpen">
+    <DialogContent size="md">
+        @* ── Header ── *@
+        <DialogHeader>
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)] text-[var(--color-primary)] ring-1 ring-inset ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]">
+                    <Icon icon="@Shield" class="h-[18px] w-[18px]" />
+                </span>
+                <div class="min-w-0">
+                    <DialogTitle class="text-[16px]">New role</DialogTitle>
+                </div>
+            </div>
+            <DialogDescription class="mt-1">
+                Create a role, then grant it permissions on its detail page. The role name is what shows up in user role assignments — choose something descriptive.
+            </DialogDescription>
+        </DialogHeader>
+
+        @* ── Form ── *@
+        <EditForm id="cr-form" Model="@model" OnValidSubmit="@submit" novalidate>
+            <StandardSchemaValidator Schema="@schema" />
+            <FocusFirstError />
+            <DialogBody class="space-y-4">
+                <Field id="cr-name" label="Name" required for="name">
+                    <InputText id="cr-name" placeholder="Support agent" autocomplete="off" class="@inputClass" @bind-Value="model.name" />
+                </Field>
+                <Field id="cr-description" label="Description" hint="Optional. Plain English explaining what this role is for." for="description">
+                    <InputText id="cr-description" placeholder="Inbound support · read-only on billing" class="@inputClass" @bind-Value="model.description" />
+                </Field>
+            </DialogBody>
+
+            @* ── Footer ── *@
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick="@close" disabled="@submitting">Cancel</Button>
+                <Button type="submit" disabled="@submitting">@(submitting ? "Saving…" : "Create role")</Button>
+            </DialogFooter>
+        </EditForm>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+
+    // ─── Schema (identical to the old create page) ───
+    private readonly schema = z.object({
+        name: z.string().trim().min(2, "At least 2 characters.").max(64, "Keep under 64 characters."),
+        description: z.string().trim().max(256, "Keep under 256 characters.").optional(),
+    });
+
+    private model = { name: "", description: "" };
+    private submitting = false;
+
+    private requestOpen(open: boolean): Promise<void> | undefined {
+        if (!open) return this.close();
+        return this.openChanged?.invokeAsync(true);
+    }
+
+    /** react-hook-form's reset(), then close. */
+    private close(): Promise<void> | undefined {
+        this.model = { name: "", description: "" };
+        return this.openChanged?.invokeAsync(false);
+    }
+
+    private async submit(): Promise<void> {
+        const values = this.schema.parse(this.model);
+        this.submitting = true;
+        try {
+            const result = await upsertRole({ id: "", name: values.name, description: values.description?.trim() ? values.description : null });
+            toast.success(`Role ${result.name} created`);
+            void queryClient.invalidateQueries({ queryKey: ["roles"] });
+            await this.close();
+            this.navigation.navigateTo(`/roles/${result.id}`);
+        } catch (err) {
+            const detail = err instanceof ApiRequestError ? err.problem?.detail ?? err.problem?.title ?? err.message : (err as Error).message;
+            toast.error("Create failed", { description: detail });
+        } finally {
+            this.submitting = false;
+        }
+    }
+}

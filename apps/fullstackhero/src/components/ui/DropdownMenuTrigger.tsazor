@@ -1,0 +1,39 @@
+@* components/ui/dropdown-menu.tsx's DropdownMenuTrigger: the button that opens the menu — a click by pointer;
+   Enter, Space and ArrowDown open it on its first item, ArrowUp on its last (Radix). The original passes its own
+   <button> with `asChild`; here the trigger is that button and takes its classes (`class`, `aria-label`, …). *@
+@import { withClass } from "@/lib/attributes"
+@import DropdownMenu from "./DropdownMenu.tsazor"
+
+<button type="button" id="@menu?.triggerId" aria-haspopup="menu" aria-expanded="@(menu?.isOpen ? "true" : "false")"
+        aria-controls="@(menu?.isOpen ? menu.contentId : null)" data-state="@(menu?.isOpen ? "open" : "closed")"
+        @attributes="@withClass("", additionalAttributes)" @ref="element" @onclick="this.toggle" @onkeydown="this.keydown">@childContent</button>
+
+@code {
+    @CascadingParameter({ type: DropdownMenu }) menu?: DropdownMenu;
+    @Parameter() childContent?: RenderFragment;
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private element?: HTMLButtonElement;
+
+    protected override onAfterRender(): void {
+        if (this.menu && this.element) this.menu.trigger = this.element;
+    }
+
+    private toggle(event: MouseEvent): Promise<void> | undefined {
+        // A key's click (Enter, Space) is handled in keydown.
+        if (event.detail === 0) return;
+        return this.menu?.setOpen(!this.menu.isOpen);
+    }
+
+    private keydown(event: KeyboardEvent): Promise<void> | undefined {
+        if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") {
+            event.preventDefault();
+            return this.menu?.setOpen(true, "first");
+        }
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+            return this.menu?.setOpen(true, "last");
+        }
+        return undefined;
+    }
+}

@@ -1,0 +1,11 @@
+@* revoke-grant-dialog.tsx's Row: a labelled line of the grant summary. *@
+
+<div class="grid grid-cols-[7rem_1fr] items-baseline gap-3">
+    <span class="meta text-[var(--color-muted-foreground)]">@label</span>
+    <span class="min-w-0 text-sm">@childContent</span>
+</div>
+
+@code {
+    @Parameter() label: string = "";
+    @Parameter() childContent?: RenderFragment;
+}

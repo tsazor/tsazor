@@ -1,0 +1,286 @@
+@* components/billing/plan-form-dialog.tsx: create or edit a billing plan in a dialog. Pass `plan` to edit (key and
+   currency are immutable then), omit it to create; on success it invalidates the plans cache and closes. The
+   original keeps plain state per field (no react-hook-form) and validates the money fields with zod refinements as
+   they are typed: a negative or non-numeric price shows its error and disables the submit, so no request goes out.
+   Its useEffect on [open, plan] (reset or populate the fields whenever the dialog opens or the plan changes) is
+   onParametersSet. React's Field clones its control to add aria-describedby and aria-invalid; here the controls take
+   them from `aria()`. *@
+@import { CreditCard, Gauge } from "lucide"
+@import { z } from "zod"
+@import { createPlan, updatePlan, type BillingPlanDto, type PlanInterval, type QuotaResource } from "@/api/billing"
+@import type { SelectOption } from "@/components/ui/select-option"
+@import { queryClient } from "@/lib/query-client"
+@import { toast } from "@/lib/toast"
+@import { describe } from "./billing-format"
+@import SectionLabel from "./SectionLabel.tsazor"
+
+<Dialog open="@open" openChanged="@openChanged">
+    <DialogContent size="lg">
+        <DialogHeader>
+            <div class="flex items-center gap-3">
+                <span aria-hidden="true" class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[oklch(from_var(--color-primary)_l_c_h_/_0.12)] text-[var(--color-primary)] ring-1 ring-inset ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]">
+                    <Icon icon="@CreditCard" class="h-[18px] w-[18px]" />
+                </span>
+                <DialogTitle class="text-[16px]">@(isEdit ? "Edit plan" : "New plan")</DialogTitle>
+            </div>
+            <DialogDescription class="mt-1">
+                @(isEdit
+                    ? "Update name, pricing, interval, or overage rates. Key and currency are immutable."
+                    : "Plan keys are canonical slugs used by tenant subscriptions and quota configuration.")
+            </DialogDescription>
+        </DialogHeader>
+
+        <form @onsubmit="submit" @onsubmit:preventDefault>
+            <DialogBody class="space-y-6">
+                @* ── Details ── *@
+                <div class="space-y-3">
+                    <SectionLabel icon="@CreditCard" title="Plan details"
+                                  description="Identity + pricing. The interval sets the term length and how often the tenant is billed." />
+                    <div class="h-px bg-[var(--color-border)] opacity-60"></div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <Field id="pf-key" label="Key" hint="Lowercase slug (e.g. 'pro', 'team-2025'). Immutable." required="@(!isEdit)"
+                               error="@(keyInvalid ? "Invalid slug." : undefined)">
+                            <Input id="pf-key" @bind-Value="key" placeholder="pro" class="font-mono" disabled="@isEdit" autocomplete="off"
+                                   @attributes="@aria("pf-key", keyInvalid ? "Invalid slug." : undefined, true)" />
+                        </Field>
+                        <Field id="pf-name" label="Display name" required>
+                            <Input id="pf-name" @bind-Value="name" placeholder="Pro" />
+                        </Field>
+                        <Field id="pf-currency" label="Currency" hint="ISO 4217. Immutable." required="@(!isEdit)">
+                            <Input id="pf-currency" value="@currency" valueChanged="@((value: string) => currency = value.toUpperCase())" placeholder="USD"
+                                   class="font-mono" disabled="@isEdit" autocomplete="off" @attributes="@aria("pf-currency", undefined, true)" />
+                        </Field>
+                        <Field id="pf-monthlyBasePrice" label="Monthly base price" hint="Canonical monthly rate; the term price for monthly plans." required
+                               error="@priceError">
+                            <Input id="pf-monthlyBasePrice" @bind-Value="monthlyBasePrice" inputmode="decimal" placeholder="29.00"
+                                   @attributes="@aria("pf-monthlyBasePrice", priceError, true)" />
+                        </Field>
+                        <Field id="pf-interval" label="Billing interval" required>
+                            <FormSelect id="pf-interval" value="@interval" valueChanged="@((value: string) => interval = value === "Yearly" ? "Yearly" : "Monthly")"
+                                        options="@PlanFormDialog.intervalOptions" />
+                        </Field>
+                        @if (interval === "Yearly") {
+                            <Field id="pf-annualPrice" label="Annual price" hint="Per yearly term. Blank → 12× monthly." error="@annualError">
+                                <Input id="pf-annualPrice" @bind-Value="annualPrice" inputmode="decimal"
+                                       placeholder="@(monthlyBasePrice ? String(Number(monthlyBasePrice) * 12) : "290.00")"
+                                       @attributes="@aria("pf-annualPrice", annualError, true)" />
+                            </Field>
+                        }
+                    </div>
+                </div>
+
+                @* ── Overage rates ── *@
+                <div class="space-y-3">
+                    <SectionLabel icon="@Gauge" title="Overage rates"
+                                  description="Per-unit price when a tenant exceeds the plan limit. Leave blank to skip a resource." />
+                    <div class="h-px bg-[var(--color-border)] opacity-60"></div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        @foreach (const res of PlanFormDialog.overageResources) {
+                            <Field @key="res.key" id="@(`pf-overage-${res.key}`)" label="@res.label" error="@overageErrors[res.key]">
+                                <Input id="@(`pf-overage-${res.key}`)" value="@(overage[res.key] ?? "")"
+                                       valueChanged="@((value: string) => overage = { ...overage, [res.key]: value })"
+                                       inputmode="decimal" placeholder="@res.placeholder"
+                                       @attributes="@aria(`pf-overage-${res.key}`, overageErrors[res.key], false)" />
+                            </Field>
+                        }
+                    </div>
+                </div>
+            </DialogBody>
+
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick="@close" disabled="@pending">Cancel</Button>
+                <Button type="submit" disabled="@(pending || keyInvalid || pricingInvalid)">
+                    @(pending ? "Saving…" : isEdit ? "Save changes" : "Create plan")
+                </Button>
+            </DialogFooter>
+        </form>
+    </DialogContent>
+</Dialog>
+
+@code {
+    @Parameter() open: boolean = false;
+    @Parameter() openChanged?: EventCallback<boolean>;
+    @Parameter() plan?: BillingPlanDto;
+
+    static readonly planKeyPattern = /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/;
+
+    // A money/rate field is a free-text decimal string. These refinements run
+    // client-side so a negative price is rejected before any network call (the
+    // server also rejects it, but we don't rely on that).
+    static readonly nonNegativeMessage = "Must be a non-negative number.";
+
+    /** Required non-negative decimal (e.g. monthly base price). */
+    static readonly requiredNonNegative = z
+        .string()
+        .trim()
+        .min(1, "Required.")
+        .refine((v) => Number.isFinite(Number(v)) && Number(v) >= 0, PlanFormDialog.nonNegativeMessage);
+
+    /** Optional non-negative decimal (blank allowed → omitted). */
+    static readonly optionalNonNegative = z
+        .string()
+        .trim()
+        .refine((v) => v === "" || (Number.isFinite(Number(v)) && Number(v) >= 0), PlanFormDialog.nonNegativeMessage);
+
+    static readonly intervalOptions: SelectOption<PlanInterval>[] = [
+        { value: "Monthly", label: "Monthly", hint: "billed every month" },
+        { value: "Yearly", label: "Yearly", hint: "billed every 12 months" },
+    ];
+
+    static readonly overageResources: { key: QuotaResource; label: string; placeholder: string }[] = [
+        { key: "ApiCalls", label: "API calls", placeholder: "0.0010" },
+        { key: "StorageBytes", label: "Storage bytes", placeholder: "0.00000001" },
+        { key: "Users", label: "Users", placeholder: "5.00" },
+        { key: "ActiveFeatureFlags", label: "Feature flags", placeholder: "1.00" },
+    ];
+
+    private key = "";
+    private name = "";
+    private currency = "USD";
+    private monthlyBasePrice = "";
+    private interval: PlanInterval = "Monthly";
+    private annualPrice = "";
+    private overage: Record<string, string> = {};
+    private pending = false;
+
+    private wasOpen = false;
+    private populatedFor?: BillingPlanDto;
+
+    /** Reset/populate whenever the dialog opens (or the target plan changes). */
+    protected override onParametersSet(): void {
+        if (this.open && (!this.wasOpen || this.plan !== this.populatedFor)) this.populate();
+        this.wasOpen = this.open;
+        this.populatedFor = this.plan;
+    }
+
+    private populate(): void {
+        const plan = this.plan;
+        this.key = plan?.key ?? "";
+        this.name = plan?.name ?? "";
+        this.currency = plan?.currency ?? "USD";
+        this.monthlyBasePrice = plan ? String(plan.monthlyBasePrice) : "";
+        this.interval = plan?.interval === "Yearly" ? "Yearly" : "Monthly";
+        this.annualPrice = plan?.annualPrice != null ? String(plan.annualPrice) : "";
+        const next: Record<string, string> = {};
+        for (const [resource, rate] of Object.entries(plan?.overageRates ?? {})) {
+            if (rate !== undefined && rate !== null) next[resource] = String(rate);
+        }
+        this.overage = next;
+    }
+
+    private get isEdit(): boolean {
+        return !!this.plan;
+    }
+
+    private get keyInvalid(): boolean {
+        return !this.isEdit && this.key.length > 0 && !PlanFormDialog.planKeyPattern.test(this.key);
+    }
+
+    /** Only surface the price error once something's been typed; the submit check still blocks an empty required field. */
+    private get priceError(): string | undefined {
+        return this.monthlyBasePrice.length > 0 ? this.fieldError(PlanFormDialog.requiredNonNegative, this.monthlyBasePrice) : undefined;
+    }
+
+    private get annualError(): string | undefined {
+        return this.fieldError(PlanFormDialog.optionalNonNegative, this.annualPrice);
+    }
+
+    /** Per-resource overage validation — a negative or non-numeric rate blocks submit. */
+    private get overageErrors(): Partial<Record<string, string>> {
+        const out: Partial<Record<string, string>> = {};
+        for (const { key } of PlanFormDialog.overageResources) {
+            const err = this.fieldError(PlanFormDialog.optionalNonNegative, this.overage[key] ?? "");
+            if (err) out[key] = err;
+        }
+        return out;
+    }
+
+    /** Aggregate validity for disabling submit. Monthly price is required + non-negative. */
+    private get pricingInvalid(): boolean {
+        return !!this.fieldError(PlanFormDialog.requiredNonNegative, this.monthlyBasePrice) || !!this.annualError || Object.keys(this.overageErrors).length > 0;
+    }
+
+    private get annualPricePayload(): number | null {
+        return this.interval === "Yearly" && this.annualPrice.trim().length > 0 ? Number(this.annualPrice) : null;
+    }
+
+    /** First validation message for a value against a schema, or undefined when valid. */
+    private fieldError(schema: z.ZodTypeAny, value: string): string | undefined {
+        const result = schema.safeParse(value);
+        return result.success ? undefined : result.error.issues[0]?.message;
+    }
+
+    /** What React's Field adds to its control: the error or hint as its description, the error as aria-invalid. */
+    private aria(id: string, error: string | undefined, hasHint: boolean): Record<string, unknown> {
+        return {
+            "aria-describedby": error ? `${id}-error` : hasHint ? `${id}-hint` : undefined,
+            "aria-invalid": error ? "true" : undefined,
+        };
+    }
+
+    private toOverageNumbers(): Partial<Record<QuotaResource, number>> | null {
+        const out: Record<string, number> = {};
+        let any = false;
+        for (const { key } of PlanFormDialog.overageResources) {
+            const raw = this.overage[key];
+            if (raw === undefined || raw.trim() === "") continue;
+            const n = Number(raw);
+            // Submission is blocked upstream when a value is invalid, so anything that
+            // reaches here is a non-negative finite number.
+            if (!Number.isFinite(n) || n < 0) continue;
+            out[key] = n;
+            any = true;
+        }
+        return any ? out : null;
+    }
+
+    private close(): Promise<void> | undefined {
+        return this.openChanged?.invokeAsync(false);
+    }
+
+    private async submit(): Promise<void> {
+        if (this.pricingInvalid) return;
+        const overageRates = this.toOverageNumbers();
+        const plan = this.plan;
+        if (plan) {
+            await this.save("Update", "updated", "Could not update plan.", () =>
+                updatePlan({
+                    planId: plan.id,
+                    name: this.name.trim(),
+                    monthlyBasePrice: Number(this.monthlyBasePrice),
+                    overageRates,
+                    interval: this.interval,
+                    annualPrice: this.annualPricePayload,
+                }),
+            );
+            return;
+        }
+        if (this.keyInvalid) return;
+        await this.save("Create", "created", "Could not create plan.", () =>
+            createPlan({
+                key: this.key.trim(),
+                name: this.name.trim(),
+                currency: this.currency.trim().toUpperCase(),
+                monthlyBasePrice: Number(this.monthlyBasePrice),
+                overageRates,
+                interval: this.interval,
+                annualPrice: this.annualPricePayload,
+            }),
+        );
+    }
+
+    /** The create and update mutations: on success a toast, the plans refetched and the dialog closed. */
+    private async save(verb: "Create" | "Update", done: string, fallback: string, mutate: () => Promise<string>): Promise<void> {
+        this.pending = true;
+        try {
+            await mutate();
+            toast.success(`Plan "${this.name}" ${done}`);
+            void queryClient.invalidateQueries({ queryKey: ["billing", "plans"] });
+            await this.close();
+        } catch (err) {
+            toast.error(`${verb} failed`, { description: describe(err, fallback) });
+        } finally {
+            this.pending = false;
+        }
+    }
+}

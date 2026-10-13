@@ -1,0 +1,16 @@
+@* A SettingsSection whose footer may be absent — React's `footer={cond ? <div>…</div> : undefined}`. A slot is always
+   set, and a fragment can't be written in code yet (Razor's `@<div>…</div>`, F3): the condition comes in as
+   `showFooter`, and the Footer slot reaches the SettingsSection only then (no empty footer stripe otherwise). *@
+@import type { IconNode } from "lucide"
+
+<SettingsSection title="@title" icon="@icon" description="@description" footer="@(showFooter ? footer : undefined)">@childContent</SettingsSection>
+
+@code {
+    @Parameter() title?: string;
+    @Parameter() icon?: IconNode;
+    @Parameter() description?: string;
+    /** Whether the Footer shows (React: whether `footer` is a node or undefined). */
+    @Parameter() showFooter: boolean = true;
+    @Parameter() footer?: RenderFragment;
+    @Parameter() childContent?: RenderFragment;
+}
