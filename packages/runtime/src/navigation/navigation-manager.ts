@@ -872,7 +872,6 @@ function isMemoryHistory(history: History | undefined): history is History & { r
   return history !== undefined && typeof (history as { href?: unknown }).href === "string";
 }
 
-/** Blazor's NavigationOptions (plus `replace`, the former Tsazor spelling of ReplaceHistoryEntry). */
 /** A query parameter's value for getUriWithQueryParameter(s): null or undefined removes the parameter. */
 export type QueryParameterValue = string | number | bigint | boolean | Date | null | undefined;
 
@@ -938,6 +937,7 @@ export function withQueryParameters(uri: string, parameters: Readonly<Record<str
   return `${base}${pairs.length > 0 ? `?${pairs.join("&")}` : ""}${hash}`;
 }
 
+/** Blazor's NavigationOptions (plus `replace`, the former Tsazor spelling of ReplaceHistoryEntry). */
 export interface NavigationOptions {
   /** Bypass client-side routing: full page load. */
   readonly forceLoad?: boolean;

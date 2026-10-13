@@ -9,6 +9,7 @@ import { EditContext, type ValidationMessageStore } from "./edit-context.js";
  * form can validate with any of them. Copied here as the spec intends — no dependency on it or on a library.
  */
 export interface StandardSchemaV1<Input = unknown, Output = Input> {
+  /** The spec's properties: its version, the library's name, the validation, the input and output types. */
   readonly "~standard": {
     readonly version: 1;
     readonly vendor: string;
@@ -24,7 +25,9 @@ export type StandardSchemaResult<Output> =
 
 /** One problem a schema found; `path` names the field (a nested one by its segments). */
 export interface StandardSchemaIssue {
+  /** The message, as the schema words it. */
   readonly message: string;
+  /** The field's path (`["address", "city"]`); absent for an issue of the whole value. */
   readonly path?: ReadonlyArray<PropertyKey | { readonly key: PropertyKey }> | undefined;
 }
 
