@@ -6,12 +6,13 @@
     the DialogService shows (MudBlazor's MudDialog), leave isOpen unset: the dialog is open until it closes, takes its
     title, size and closing rules from `show`, and Escape, the backdrop and Close cancel it. *@
 @import { createLayer, DialogReference, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
 
 @if (shown) {
-    <div class="modal-backdrop show"></div>
-    <div role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass("modal d-block", additionalAttributes)" @attach="trap" @attach:lock="lock">
+    <div class="modal-backdrop show" @attach="topLayer"></div>
+    <div role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="@withClass("modal d-block", additionalAttributes)" @attach:top="topLayer" @attach="trap" @attach:lock="lock">
         <div class="@dialogClass">
             <div class="modal-content" @attach="dismiss">
                 @if (shownTitle) {

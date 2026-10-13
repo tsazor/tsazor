@@ -2,6 +2,7 @@ import type { Attachment } from "@tsazor/runtime";
 import { uniqueId } from "../ids.js";
 import type { Placement } from "../vocabulary.js";
 import { anchoredPosition } from "./anchored-position.js";
+import { showInTopLayer } from "./top-layer.js";
 
 /** Options of `tooltip`. */
 export interface TooltipOptions {
@@ -68,6 +69,8 @@ function attachTooltip(element: HTMLElement, text: string, options: TooltipOptio
     tip.addEventListener("pointerenter", () => clearTimeout(hideTimer));
     tip.addEventListener("pointerleave", scheduleHide);
     document.body.append(tip);
+    // Above an open dialog or menu too: the top layer (removing the tip takes it out again).
+    showInTopLayer(tip);
     detachPosition = anchoredPosition({ anchor: () => element, placement: options.placement ?? "top", offset: 6 })(tip);
   };
   const hide = (): void => {

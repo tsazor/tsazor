@@ -7,6 +7,7 @@
 @typeparam TItem
 @import type { Attachment } from "@tsazor/runtime"
 @import { anchoredPosition, createLayer, dismissable, overflowFit, uniqueId, type Orientation } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
 
@@ -29,7 +30,7 @@
         }
     </button>
     @if (this.open) {
-        <div class="tz-overflow__popup dropdown-menu show p-2" id="@this.popupId" role="group" aria-label="@this.moreLabel" @attach="this.dismiss" @attach:position="this.position">
+        <div class="tz-overflow__popup dropdown-menu show p-2" id="@this.popupId" role="group" aria-label="@this.moreLabel" @attach:top="topLayer" @attach="this.dismiss" @attach:position="this.position">
             @if (this.overflowTemplate !== undefined) {
                 @this.overflowTemplate({ overflowed: this.overflowed, count: this.overflowed.length })
             } else {

@@ -8,6 +8,7 @@
 import type { Attachment } from "@tsazor/runtime";
 import type { Orientation } from "./vocabulary.js";
 import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
+import { showInTopLayer } from "./behaviors/top-layer.js";
 
 /** Where an item went (Fluent UI Blazor's `FluentSortableListEventArgs`). */
 export class SortableListEventArgs {
@@ -368,7 +369,11 @@ export function sortableList(handle: () => SortableListHandle, options: { indica
       const box = list.element.getBoundingClientRect();
       const before = all[index];
       const after = all[index - 1];
-      indicator ??= document.body.appendChild(document.createElement("div"));
+      if (indicator === undefined) {
+        indicator = document.body.appendChild(document.createElement("div"));
+        // Above a list in a dialog or drawer: the top layer.
+        showInTopLayer(indicator);
+      }
       indicator.className = options.indicatorClass;
       indicator.setAttribute("aria-hidden", "true");
       const edge = before !== undefined

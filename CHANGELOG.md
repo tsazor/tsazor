@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Behavior — `@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap`: the overlays are in the browser's top layer**
+  (Radix's Portal without a portal; the DOM and the component tree stay): `topLayer`, an attachment that shows the
+  element as a manual popover and undoes the popover's own box at zero specificity (a constructed sheet, no
+  `<style>`), and `raiseInTopLayer` / `showInTopLayer` / `hideFromTopLayer`. Both skins put Dialog, Drawer (and
+  their backdrops), Popover, Menu/Dropdown, the full-screen Overlay, the ToastRegion and the popups of Autocomplete,
+  DatePicker, TimePicker, ColorPickerInput and Overflow there, and @tsazor/ui its tooltips and the sortable list's
+  drop indicator: an ancestor's `transform`, `filter`, `backdrop-filter` or `overflow` no longer moves or clips them,
+  and no z-index can cover them. They stack in the order they open; the toasts show themselves on top again when a
+  toast arrives after an overlay opened. Without the Popover API (a DOM test environment) nothing changes.
 - `@tsazor/dotnet`: **an envelope's success flag** — `--envelope data,messages,succeeded` (`EnvelopeOptions.succeeded`)
   for APIs whose `Result<T>` says `succeeded: false` with HTTP 200 and carries messages on a success too ("Product
   Saved"): the flag decides, a success's messages are no failure. Without the flag the failure side decides, as

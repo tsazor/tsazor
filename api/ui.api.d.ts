@@ -573,6 +573,9 @@ export declare function hexToHsv(text: string): Hsv | undefined;
 // hexToRgb
 export declare function hexToRgb(text: string): Rgb | undefined;
 
+// hideFromTopLayer
+export declare function hideFromTopLayer(element: HTMLElement): void;
+
 // HighlightFragment
 export interface HighlightFragment {
     readonly text: string;
@@ -966,6 +969,9 @@ export declare function propertyPath(property: (item: never) => unknown): string
 // propertyTitle
 export declare function propertyTitle(property: (item: never) => unknown): string | undefined;
 
+// raiseInTopLayer
+export declare function raiseInTopLayer(element: HTMLElement, since: number): number;
+
 // rangeOfDates
 export declare function rangeOfDates(dates: readonly IsoDate[]): DateRange;
 
@@ -1038,6 +1044,9 @@ export declare class SearchRunner<TOption> {
 
 // SelectionMode
 export type SelectionMode = "none" | "single" | "multiple";
+
+// showInTopLayer
+export declare function showInTopLayer(element: HTMLElement): boolean;
 
 // Size
 export type Size = "small" | "medium" | "large";
@@ -1230,6 +1239,9 @@ export interface TooltipOptions {
     innerClassName?: string;
     delay?: number;
 }
+
+// topLayer
+export declare const topLayer: Attachment<HTMLElement>;
 
 // treeKeyAction
 export declare function treeKeyAction(items: readonly TreeViewItem[], expanded: ReadonlySet<string>, focusedId: string, key: string): TreeKeyAction | null;

@@ -173,6 +173,30 @@ try {
     await page.waitForSelector("[role=menu]", { state: "detached" });
     say((await page.textContent(".menu-choice")) === "Chose Archive.", "menu: End and Enter choose the last item");
     say(await page.getByRole("button", { name: "Order actions" }).evaluate((el) => el === document.activeElement), "menu: focus returns to the toggle");
+    /* F2: a menu in a blurred, transformed, clipping bar lies in the top layer — below its toggle, not clipped. */
+    await page.getByRole("button", { name: "Bar actions" }).click();
+    await page.waitForSelector("[role=menu]");
+    const barMenu = await page.evaluate(() => {
+      const menu = document.querySelector("[role=menu]");
+      const toggle = [...document.querySelectorAll("button")].find((button) => button.textContent.includes("Bar actions"));
+      const items = menu.querySelectorAll("[role=menuitem]");
+      const last = items[items.length - 1].getBoundingClientRect();
+      const hit = document.elementFromPoint(last.x + last.width / 2, last.y + last.height / 2);
+      // Next to its toggle (below, or above where the page ends), as anchoredPosition places it in the viewport.
+      const box = menu.getBoundingClientRect();
+      const anchor = toggle.getBoundingClientRect();
+      const gap = box.top >= anchor.bottom - 1 ? box.top - anchor.bottom : anchor.top - box.bottom;
+      return {
+        open: menu.matches(":popover-open"),
+        beside: gap >= -1 && gap <= 12 && Math.abs(box.left - anchor.left) <= 1,
+        reachable: menu.contains(hit),
+        margin: getComputedStyle(menu).marginLeft,
+      };
+    });
+    say(barMenu.open && barMenu.beside && barMenu.reachable && barMenu.margin === "0px", `menu in a clipping bar: in the top layer, at its toggle, not clipped (${JSON.stringify(barMenu)})`);
+    await page.getByRole("menuitem", { name: "Hide the bar" }).click();
+    await page.waitForSelector("[role=menu]", { state: "detached" });
+    say((await page.textContent(".menu-choice")) === "Chose Hide the bar.", "menu in a clipping bar: its last item takes the click");
     const opener = page.getByRole("button", { name: "Opening hours" });
     await opener.click();
     await page.waitForSelector("[role=dialog]");

@@ -13,6 +13,7 @@
 @import { withClass } from "./attributes"
 @import { Calendar3 } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 
 @inherits InputBase<string>
 
@@ -25,7 +26,7 @@
         <button type="button" class="btn btn-outline-secondary" aria-label="@(this.buttonLabel ?? t("datePicker.button"))" title="@(this.buttonLabel ?? t("datePicker.button"))" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")" disabled="@(this.disabled || this.readOnly)" @ref="button" @onclick="this.toggle"><Icon value="@Calendar3" /></button>
     </div>
     @if (this.open) {
-        <div class="tz-date-picker__popup dropdown-menu show" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("datePicker.button"))" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
+        <div class="tz-date-picker__popup dropdown-menu show" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("datePicker.button"))" @attach:top="topLayer" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
             <Calendar value="@this.calendarValue" valueChanged="@this.picked" view="@this.view" minDate="@this.minDate" maxDate="@this.maxDate" disabledDateFunc="@this.disabledDateFunc" disabledCheckAllDaysOfMonthYear="@this.disabledCheckAllDaysOfMonthYear" disabledSelectable="@this.disabledSelectable" dayFormat="@this.dayFormat" locale="@this.locales" firstDayOfWeek="@this.firstDayOfWeek" displayToday="@this.displayToday" daysTemplate="@this.daysTemplate" labels="@this.labels" />
         </div>
     }

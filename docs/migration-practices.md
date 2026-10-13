@@ -393,8 +393,9 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
   (`Dialog`/`DialogContent`/`DialogTitle`) become components that share the root through a cascading value.
   `asChild` has no counterpart — put the variants on the element: `<a class="@buttonVariants({ variant: "outline" })">`.
 - **Radix's Portal is the browser's top layer.** An overlay inside a `backdrop-blur` header or a translated dialog
-  is placed and clipped by that ancestor unless it leaves it; `popover="manual"` + `showPopover()` lifts it above the
-  page without moving it in the DOM (F2).
+  is placed and clipped by that ancestor unless it leaves it. The skins' overlays are in the top layer already; an
+  overlay of your own takes `@attach="topLayer"` from @tsazor/ui as its first attachment, which lifts it above the
+  page without moving it in the DOM, and `raiseInTopLayer` keeps the toasts above a dialog opened after them (F2).
 - **Props:** a `ReactNode` prop becomes a text parameter plus a `…Content` slot (Blazor's `Title`/`TitleContent`);
   `value`/`onChange` becomes `value`/`valueChanged` (`@bind-value`); a context provider (`useTheme`, `useAuth`)
   becomes a service the component injects and observes.

@@ -3,14 +3,14 @@
     `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them (WCAG 2.2.1), and can be closed with their button. The
     region is a polite live region; `danger` toasts are announced as alerts. *@
-@import { Toaster, type Toast } from "@tsazor/ui"
+@import { Toaster, hideFromTopLayer, raiseInTopLayer, type Toast } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { buttonClasses, statusColor } from "./vocabulary"
 @import { Dismiss20Regular } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"
 @inject Toaster toaster
 
-<div @attributes="@this.regionAttributes">
+<div @attributes="@this.regionAttributes" @attach="this.topLayer">
     @foreach (const toast of toaster.toasts) {
         <div @key="toast.id" class="@toastClass(toast)" role="@roleOf(toast)" aria-atomic="true"
              @onmouseenter="() => toaster.pause(toast.id)" @onmouseleave="() => toaster.resume(toast.id)"
@@ -41,6 +41,27 @@
 
     protected override onInitialized(): void {
         this.observe(this.toaster);
+    }
+
+    private region?: HTMLElement;
+    private raisedSince = 0;
+    private newestToast?: number;
+
+    /** The region lies in the browser's top layer, so a toast shows above an open dialog, as Fluent UI's. */
+    private readonly topLayer = (element: HTMLElement): (() => void) => {
+        this.region = element;
+        this.raisedSince = raiseInTopLayer(element, 0);
+        return () => {
+            hideFromTopLayer(element);
+            this.region = undefined;
+        };
+    };
+
+    /** A new toast after an overlay opened: the region shows itself on top of the top layer again. */
+    protected override onAfterRender(): void {
+        const newest = this.toaster.toasts.at(-1)?.id;
+        if (this.region && newest !== undefined && newest !== this.newestToast) this.raisedSince = raiseInTopLayer(this.region, this.raisedSince);
+        this.newestToast = newest;
     }
 
     private get regionAttributes(): Record<string, unknown> {

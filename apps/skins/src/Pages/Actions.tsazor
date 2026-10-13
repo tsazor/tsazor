@@ -85,6 +85,19 @@
     <Typography Variant="caption"><span class="menu-choice">@choice</span></Typography>
 </section>
 
+<section class="demo">
+    <Typography Variant="h2">A menu in a blurred, clipping bar</Typography>
+    @* A sticky header's backdrop blur and a slide-in transform make `position: fixed` relative to the bar, and its
+       overflow clips: the overlays leave it through the browser's top layer (Radix's Portal without a portal). *@
+    <div class="clipping-bar">
+        <Dropdown Label="Bar actions" Intent="secondary">
+            <DropdownItem OnSelect="@(() => this.chose("Pin"))">Pin</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Share"))">Share</DropdownItem>
+            <DropdownItem OnSelect="@(() => this.chose("Hide the bar"))">Hide the bar</DropdownItem>
+        </Dropdown>
+    </div>
+</section>
+
 @code {
     private clicks = 0;
     private view = "week";

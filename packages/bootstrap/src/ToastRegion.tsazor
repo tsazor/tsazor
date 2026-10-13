@@ -3,13 +3,13 @@
     `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them, and can be closed with their button. The region is a
     polite live region; `danger` toasts are announced as alerts. *@
-@import { Toaster, type Toast } from "@tsazor/ui"
+@import { Toaster, hideFromTopLayer, raiseInTopLayer, type Toast } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
 @inject Toaster toaster
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
 
-<div aria-live="polite" @attributes="@withClass(regionClass, additionalAttributes)">
+<div aria-live="polite" @attributes="@withClass(regionClass, additionalAttributes)" @attach="this.topLayer">
     @foreach (const toast of toaster.toasts) {
         <div @key="toast.id" class="@toastClass(toast)" role="@roleOf(toast)" aria-atomic="true" data-bs-theme="@themeOf(toast)"
              @onmouseenter="() => toaster.pause(toast.id)" @onmouseleave="() => toaster.resume(toast.id)"
@@ -41,6 +41,27 @@
 
     protected override onInitialized(): void {
         this.observe(this.toaster);
+    }
+
+    private region?: HTMLElement;
+    private raisedSince = 0;
+    private newestToast?: number;
+
+    /** The container lies in the browser's top layer, so a toast shows above an open modal, as Bootstrap's z-index does. */
+    private readonly topLayer = (element: HTMLElement): (() => void) => {
+        this.region = element;
+        this.raisedSince = raiseInTopLayer(element, 0);
+        return () => {
+            hideFromTopLayer(element);
+            this.region = undefined;
+        };
+    };
+
+    /** A new toast after an overlay opened: the container shows itself on top of the top layer again. */
+    protected override onAfterRender(): void {
+        const newest = this.toaster.toasts.at(-1)?.id;
+        if (this.region && newest !== undefined && newest !== this.newestToast) this.raisedSince = raiseInTopLayer(this.region, this.raisedSince);
+        this.newestToast = newest;
     }
 
     private get regionClass(): string {

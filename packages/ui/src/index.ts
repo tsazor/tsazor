@@ -117,6 +117,7 @@ export { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepCh
 export { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";
 export { createLayer, isTopLayer, openLayer } from "./layers.js";
+export { hideFromTopLayer, raiseInTopLayer, showInTopLayer, topLayer } from "./behaviors/top-layer.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";
 export { dismissable, type DismissableOptions, type DismissReason } from "./behaviors/dismissable.js";
 export { scrollLock } from "./behaviors/scroll-lock.js";

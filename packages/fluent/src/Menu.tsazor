@@ -6,6 +6,7 @@
     returns focus to the toggle; Tab or a click outside closes it too. The menu is positioned next to
     the toggle and flips up when there is no room below. *@
 @import { anchoredPosition, dismissable, rovingFocus, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
 
 <div class="fui-menu-button">
@@ -17,7 +18,7 @@
         }
     </button>
     @if (open) {
-        <ul class="fui-menu" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
+        <ul class="fui-menu" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach:top="topLayer" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
     }
 </div>
 

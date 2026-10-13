@@ -6,11 +6,12 @@
     too, unless manual. interactive blocks nothing. It shows a Spinner unless childContent says otherwise. *@
 @import type { Attachment } from "@tsazor/runtime"
 @import { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayCloseMode, type OverlayPress } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
-    <div @attributes="@this.overlayAttributes" @attach="@this.behavior">
+    <div @attributes="@this.overlayAttributes" @attach:top="@(this.fullScreen ? topLayer : null)" @attach="@this.behavior">
         <div class="fui-overlay__content">
             @if (childContent) {
                 @childContent

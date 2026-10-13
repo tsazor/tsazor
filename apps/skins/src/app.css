@@ -27,6 +27,19 @@ body {
   gap: 0.75rem;
 }
 
+/* A bar as a sticky header draws it: blurred behind, slid in, clipping (Actions page). */
+.clipping-bar {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+  padding: 0 0.75rem;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  transform: translateY(0);
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 0.5rem;
+}
+
 [data-skin="fluent"] body {
   font-family: var(--fui-font-family);
   background: var(--fui-background-1);

@@ -7,10 +7,11 @@
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"
 @import { createLayer, DialogReference, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 @import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
-    <div class="fui-dialog-overlay" @attach="trap" @attach:lock="lock">
+    <div class="fui-dialog-overlay" @attach:top="topLayer" @attach="trap" @attach:lock="lock">
         <div role="dialog" aria-modal="true" @attributes="@this.dialogAttributes" @attach="dismiss">
             @if (this.shownTitle) {
                 <div class="fui-dialog__header">

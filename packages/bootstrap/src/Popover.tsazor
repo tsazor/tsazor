@@ -3,13 +3,14 @@
     opens; Escape, the close button or a click outside closes it, and Escape returns focus to the
     button. It is positioned next to the button and flips when there is no room. *@
 @import { anchoredPosition, dismissable, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { topLayer } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
 @import { libraryTexts } from "@tsazor/ui"
 
 <span class="d-inline-block">
     <button class="@toggleClass" type="button" aria-expanded="@expandedText" aria-controls="@panelControls" @ref="toggleButton" @onclick="toggle">@label</button>
     @if (open) {
-        <div class="popover bs-popover-auto show" role="dialog" id="@panelId" aria-labelledby="@titleId" aria-label="@panelLabel" tabindex="-1" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
+        <div class="popover bs-popover-auto show" role="dialog" id="@panelId" aria-labelledby="@titleId" aria-label="@panelLabel" tabindex="-1" @attach:top="topLayer" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
             @if (title) {
                 <div class="popover-header d-flex align-items-center">
                     <span class="flex-grow-1" id="@titleId">@title</span>
