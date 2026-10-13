@@ -391,8 +391,9 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
 - **JSX → Razor:** `className` → `class`, `{cond && <x/>}` → `@if (cond) { <x/> }`, `.map(...)` →
   `@foreach (const x of xs)` with `@key`. Two traps: Razor reads `Overview@if (…)` as an email address (an `@` after
   a letter is text; write `<text>Overview</text>@if (…)`), and `const body = <div/>` inside a function has no
-  counterpart yet (F3) — make it a small component. A computed variant type (`VariantProps<…>["variant"]`) on a
-  parameter makes the compiler read `variant="outline"` as an expression (F1): write the union out.
+  counterpart yet (F3) — make it a small component. A cva variant type stays as it is: a parameter typed
+  `VariantProps<typeof buttonVariants>["variant"]` takes `variant="outline"` as text, and `tsazor check` checks it
+  against cva's variants (F1).
 - **Routes:** each page's `@page` replaces the route table; nested routes with an `<Outlet/>` become nested layouts;
   `ProtectedRoute` is `AuthorizeRouteView` + a redirect to the login that keeps "where from" in the history entry's
   state (`historyEntryState`, React Router's `location.state`); `React.lazy` pages are lazy routes

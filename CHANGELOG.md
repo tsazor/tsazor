@@ -13,6 +13,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   OS's dark mode now has all of the explicit dark theme's values (the neutral ramp, the shadows and the accent's
   hover/active steps were the light ones), and the theme-dependent aliases (`--fui-accent*`,
   `--fui-brand-background*`, `--fui-flyout-shadow`) follow the nearest theme in nested providers.
+- **Breaking — `@tsazor/compiler`: computed parameter types take text as text** (Razor decides from the real type):
+  a parameter typed with an indexed access (`VariantProps<typeof buttonVariants>["variant"]`), a conditional or
+  mapped type, `typeof`, `keyof` or a lib utility over one lowers `variant="outline"` as the text `"outline"`, as a
+  `string` parameter, and `tsazor check` checks it against the real type — no TZS026. Before, such a type counted
+  as a value and the text as an expression (`TS2339 Property 'outline' does not exist`). A computed type that is
+  not text takes `@` (`Count="@5"`). `NonNullable<T>`, `Readonly<T>`, `Exclude<T, …>` and `Extract<T, …>` take T's
+  category, `Uppercase<…>` and its kin are strings.
 - **Breaking (CSS) — `@tsazor/runtime`: `ValidationSummary` renders Blazor's markup:** `<ul class="validation-errors">`
   with a `<li class="validation-message">` per message (before: `ul.validation-summary` and bare `li`s). As in Blazor,
   the class replaces a passed `class`; the other attributes pass through. Rename `.validation-summary` in your CSS; a

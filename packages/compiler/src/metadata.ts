@@ -968,6 +968,21 @@ interface Categorized {
   includesUndefined?: boolean;
   /** A function type (not a RenderFragment<T>): see ComponentParameter.delegate. */
   delegate?: boolean;
+  /**
+   * A type only the type checker can evaluate — an indexed access (`VariantProps<…>["variant"]`), a conditional or
+   * mapped type, `typeof`, `keyof`, a global utility over one. Its category is `string`: text written without `@`
+   * is text, `@expr` is code, and `tsazor check` checks the value against the real type (F1).
+   */
+  computed?: boolean;
+}
+
+/** Lib utilities that narrow their first argument: they take its category (`NonNullable<Size>` is Size's). */
+const NARROWING_UTILITIES = new Set(["NonNullable", "Readonly", "Exclude", "Extract"]);
+/** Lib's intrinsic string types. */
+const STRING_UTILITIES = new Set(["Uppercase", "Lowercase", "Capitalize", "Uncapitalize"]);
+
+function computed(): Categorized {
+  return { category: "string", computed: true };
 }
 
 /** Categorizes a type text given the bindings of its root identifiers (see ParameterCategory). */
@@ -1014,6 +1029,11 @@ function categorizeNode(node: ts.TypeNode, scope: ReadonlyMap<string, TypeRefere
       return { category: "value", includesUndefined: true };
   }
   if (ts.isLiteralTypeNode(node)) return { category: ts.isStringLiteral(node.literal) ? "string" : "value" };
+  if (ts.isIndexedAccessTypeNode(node) || ts.isConditionalTypeNode(node) || ts.isMappedTypeNode(node) || ts.isTypeQueryNode(node)) return computed();
+  if (ts.isTypeOperatorNode(node)) {
+    // `keyof T` is computed; `readonly T[]` is its array, `unique symbol` a symbol.
+    return node.operator === ts.SyntaxKind.KeyOfKeyword ? computed() : categorizeNode(node.type, scope, host, depth + 1);
+  }
   if (ts.isFunctionTypeNode(node)) {
     const returns = categorizeNode(node.type, scope, host, depth + 1);
     const first = node.parameters[0];
@@ -1035,7 +1055,8 @@ function categorizeNode(node: ts.TypeNode, scope: ReadonlyMap<string, TypeRefere
       const exported = ref.imported === "*" ? member : member === undefined ? ref.imported : undefined;
       return runtimeCategory(exported, typeArguments);
     }
-    if (ref.kind === "typeParameter" || ref.kind === "global") return { category: "value" };
+    if (ref.kind === "typeParameter") return { category: "value" };
+    if (ref.kind === "global") return member === undefined ? categorizeGlobal(root.text, typeArguments, scope, host, depth) : { category: "value" };
     if (ref.kind === "local" && member === undefined && ref.file) {
       const module = host.moduleAt(ref.file);
       return module ? categorizeDeclared(module, root.text, typeArguments, scope, host, depth) : { category: "value", uncertain: true };
@@ -1051,6 +1072,23 @@ function categorizeNode(node: ts.TypeNode, scope: ReadonlyMap<string, TypeRefere
     }
     return { category: "value", uncertain: true };
   }
+  return { category: "value" };
+}
+
+/**
+ * A global (lib) type: the narrowing utilities take their argument's category, the string utilities are strings,
+ * any other utility over a computed type is computed (`ReturnType<typeof f>`), and the rest are values
+ * (`Record<…>`, `Array<…>`, `Partial<Model>`).
+ */
+function categorizeGlobal(name: string, typeArguments: readonly ts.TypeNode[], scope: ReadonlyMap<string, TypeReference>, host: MetadataHost, depth: number): Categorized {
+  const [first] = typeArguments;
+  if (first !== undefined && NARROWING_UTILITIES.has(name)) {
+    const result = categorizeNode(first, scope, host, depth + 1);
+    if (name !== "Readonly") delete result.includesUndefined;
+    return result;
+  }
+  if (first !== undefined && STRING_UTILITIES.has(name)) return { category: "string" };
+  if (typeArguments.some((argument) => categorizeNode(argument, scope, host, depth + 1).computed)) return computed();
   return { category: "value" };
 }
 

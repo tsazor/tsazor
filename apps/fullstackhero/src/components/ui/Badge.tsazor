@@ -1,11 +1,12 @@
 @* components/ui/badge.tsx: a compact status pill with the original's cva variants (variants.ts). *@
 @import { withClass } from "@/lib/attributes"
-@import { badgeVariants, type BadgeVariant } from "./variants"
+@import type { VariantProps } from "class-variance-authority"
+@import { badgeVariants } from "./variants"
 
 <span @attributes="@withClass(badgeVariants({ variant }), additionalAttributes)">@childContent</span>
 
 @code {
-    @Parameter() variant: BadgeVariant = "default";
+    @Parameter() variant: VariantProps<typeof badgeVariants>["variant"] = "default";
     @Parameter() childContent?: RenderFragment;
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 }

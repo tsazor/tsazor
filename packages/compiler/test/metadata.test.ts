@@ -199,6 +199,43 @@ export default class C extends ComponentBase {
     expect(param(m, "theme")).toMatchObject({ category: "value", uncertain: true });
   });
 
+  it("lowers computed types as text without @ — not uncertain: `tsazor check` checks them (F1)", () => {
+    const m = component(
+      RT +
+        `import type { VariantProps } from "class-variance-authority";
+import { buttonVariants, pick } from "./variants";
+type Maybe = "a" | "b" | undefined;
+interface Model { id: number; name: string }
+type Flags = "x" | "y";
+export default class C extends ComponentBase {
+  @Parameter() variant?: VariantProps<typeof buttonVariants>["variant"];
+  @Parameter() size?: NonNullable<VariantProps<typeof buttonVariants>["size"]>;
+  @Parameter() key?: keyof Model;
+  @Parameter() conditional?: Flags extends string ? "s" : number;
+  @Parameter() mapped?: { [K in Flags]?: boolean };
+  @Parameter() query?: typeof buttonVariants;
+  @Parameter() returned?: ReturnType<typeof pick>;
+  @Parameter() narrowed!: NonNullable<Maybe>;
+  @Parameter() excluded!: Exclude<Maybe, undefined>;
+  @Parameter() callback?: NonNullable<EventCallback<number>>;
+  @Parameter() frozen?: Readonly<Model>;
+  @Parameter() upper?: Uppercase<Flags>;
+  @Parameter() record?: Record<string, number>;
+  @Parameter() list?: readonly string[];
+}`,
+      { "/virtual/variants.ts": "export const buttonVariants = {};\nexport function pick(): string { return \"\"; }\n" },
+    );
+    for (const name of ["variant", "size", "key", "conditional", "mapped", "query", "returned"]) {
+      expect(param(m, name), name).toMatchObject({ category: "string" });
+      expect(param(m, name).uncertain, name).toBeUndefined();
+    }
+    expect(param(m, "narrowed")).toMatchObject({ category: "string", optional: false });
+    expect(param(m, "excluded")).toMatchObject({ category: "string", optional: false });
+    expect(param(m, "callback")).toMatchObject({ category: "EventCallback<T>", typeArgument: "number" });
+    expect(param(m, "upper").category).toBe("string");
+    for (const name of ["frozen", "record", "list"]) expect(param(m, name).category, name).toBe("value");
+  });
+
   it("covers accessor fields, setters, cascading options and JSDoc; skips static/private/foreign decorators", () => {
     const m = component(
       RT +

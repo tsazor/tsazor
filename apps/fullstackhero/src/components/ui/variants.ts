@@ -69,12 +69,6 @@ export const buttonVariants = cva(
   },
 );
 
-// The original's ButtonProps take VariantProps<typeof buttonVariants>. Tsazor's compiler decides from a parameter's
-// declared type whether an attribute's text is a string (`variant="outline"`) and reads that type without the
-// type checker, so a computed type (VariantProps<…>["variant"]) counts as a value and the text as an expression
-// (port-fullstackhero.md, F1). The unions are written out, and checked against cva's below.
-export type ButtonVariant = "default" | "signal" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "soft" | "saffron";
-export type ButtonSize = "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
 
 /**
  * Badge — compact status pill. Variants map to semantic tokens so a
@@ -112,15 +106,8 @@ export const badgeVariants = cva(
   },
 );
 
-export type BadgeVariant = "default" | "brand" | "muted" | "success" | "warning" | "info" | "danger" | "outline";
-
-/** The written-out unions are exactly cva's variants (a compile error otherwise). */
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
-export const variantsMatch: [
-  Same<ButtonVariant, NonNullable<VariantProps<typeof buttonVariants>["variant"]>>,
-  Same<ButtonSize, NonNullable<VariantProps<typeof buttonVariants>["size"]>>,
-  Same<BadgeVariant, NonNullable<VariantProps<typeof badgeVariants>["variant"]>>,
-] = [true, true, true];
+/** A Badge variant, for the pages' status helpers (the original's `React.ComponentProps<typeof Badge>["variant"]`). */
+export type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
 /**
  * Input — h-9 hairline-bordered field with a 3px brand-tinted focus

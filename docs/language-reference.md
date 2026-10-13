@@ -1002,6 +1002,7 @@ member name: `Appearance="…"` sets `appearance`). Markup stays Razor; the valu
 | Parameter type (category) | Attribute | Value |
 |---|---|---|
 | `string` (also unions with `string`, literal types) | `Title="5"`, `Title="@x"`, `Title="n: @x"` | `"5"`, `this.x`, template string — as on elements |
+| a computed type: an indexed access (`VariantProps<typeof buttonVariants>["variant"]`), a conditional or mapped type, `typeof x`, `keyof T`, a lib utility over one (`NonNullable<…>`, `ReturnType<typeof f>`) | `Variant="outline"`, `Variant="@choice"` | as a `string` parameter: text without `@` is text, `@expr` is code; `tsazor check` checks the value against the real type |
 | any other value (`number`, `boolean`, objects, arrays, function types, `RenderFragment`) | `Count="5"`, `Enabled="true"`, `Items="people"`, `Interval="@4000"`, `Max="@a + 1"`, `<X Enabled />` | TS expression with or without `@`: `5`, `true`, `this.people`, `4000`, `this.a + 1`, `true`; on a function type a method group is bound (see below) |
 | `EventCallback` / `EventCallback<T>` | `OnClick="handle"`, `OnClick="item.toggle"`, `OnClick="() => n++"`, `OnClick="@OnClick"` | `EventCallback` bound to the component (re-render afterwards); a method group with a receiver keeps it (like `@onclick`); an already bound `EventCallback` (passed through) stays unchanged |
 | `captureUnmatchedValues` / not declared, but a capture property exists | anything | as written (text as string) |
@@ -1026,6 +1027,12 @@ member name: `Appearance="…"` sets `appearance`). Markup stays Razor; the valu
   over a method group with a receiver (`OnClick="item.toggle"`), which now compares equal (Blazor:
   same target + method) and no longer makes the child re-render. Without metadata, or with `uncertain`
   metadata (TZS026), it stays `this.isVisible`.
+- Razor decides from the parameter's real type; the compiler reads the declared type without the type
+  checker, following aliases and imports. A type only the type checker can evaluate (the computed
+  row above) takes Razor's lowering for text — so shadcn's `variant="outline"` over cva's
+  `VariantProps` is text — and its value is still type-checked, so no TZS026. Write `@` for a value
+  that is not text (`Count="@5"` on a computed `number`). `NonNullable<T>`, `Readonly<T>`,
+  `Exclude<T, …>` and `Extract<T, …>` of a type the compiler can follow take that type's category.
 - An empty value on a non-string parameter (`Count=""`) or a valueless attribute on
   an `EventCallback` ⇒ TZS009; a syntax error in the value ⇒ TZS024.
 - `@bind-Value` passes `ValueExpression` (in general `<Target>Expression`) only if the component
