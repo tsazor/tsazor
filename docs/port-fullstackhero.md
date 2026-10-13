@@ -48,9 +48,15 @@ judged with a sense of proportion ([port-fluentcms.md](port-fluentcms.md)).
   `locale` alone leaves Edge's `Intl` default at the system language ("129,50 $" on a German Windows). It is a gate
   (owner 2026-10-13): `pnpm --filter fullstackhero verify` in `pnpm gates` and CI's e2e job (Edge), which clones the
   upstream and installs its admin's packages on the first run.
-- **Backend:** .NET 10 + Aspire (Postgres, Valkey, RustFS in Docker). Not yet run: Docker Desktop on the dev machine
-  hangs in "starting" (2026-10-13). The acceptance suite needs no backend.
-- **Ports:** the port's dev server 5372 (`PORT=` for parallel runs), preview 5373; the original admin 5173.
+- **Backend:** .NET 10 + Aspire (Postgres, Valkey, RustFS in Docker): `pnpm --filter fullstackhero backend`. It also
+  starts the original admin (:5173) and dashboard (:5174); the dev server proxies to the API's HTTPS endpoint
+  (:7030, F21). **Live check (2026-10-13):** `pnpm --filter fullstackhero live [--write] [--original]` signs in with
+  the seeded `superadmin@root.com`, opens every page — the detail pages through their list's first entry — and
+  collects page errors, console errors and API answers of 400 and up; `--write` creates a role, grants a permission
+  and deletes it again. The port and the original: 20 pages, 3 detail pages and the role's life, all clean — after
+  F22. The acceptance suite needs no backend and keeps to itself even when one runs (F23).
+- **Ports:** the port's dev server 5372 (against the real backend), preview 5373, the acceptance's own dev server
+  5374 (`--port=` for parallel runs); the original admin 5173, its dashboard 5174.
 
 ## How the port is written
 
@@ -125,3 +131,6 @@ Conventions for every area (the reference is the roles list and its create dialo
 | F19 | Tooling | Without metadata (before F4), a method group passed to a parameter not named `On*` was emitted bare (`valueChanged="@onImageChange"` lost `this`), and TZS027 named an unrelated `<Button>` for a slot of an unresolved component. Both were dev-server only (the plugin bundle predated F4) | Gone with F4. Proposals: treat `*Changed` like `On*` when the metadata is unknown; TZS027 should say the parent is unknown |
 | U1 | Upstream | The original's dev proxy sends a page load of its own `/health` route to the API; its health spec works around it for :5173 only | Port: the proxy hands a document request to the app |
 | F20 | Migration (CSS) | The original's toasts don't look like its `globals.css` says: the `.fsh-toast` overrides live in a Tailwind layer, and sonner injects its stylesheet unlayered — an unlayered rule beats a layered one whatever its specificity. So they are 356px wide with 16px padding and a 16px icon | Port: sonner's cosmetic rules, unlayered too (`styles/sonner-toast.css`). Lesson: compare computed styles, not the source |
+| F21 | Backend (port) | The dev server proxied `/api` to the API's HTTP endpoint (:5030), which redirects to HTTPS with a 307 — and a redirect drops the `Authorization` header, so every call signed in failed. The AppHost gives the original `VITE_API_BASE_URL` = the HTTPS endpoint | **Fixed:** the HTTPS endpoint (:7030) as the default, as the original runs under Aspire |
+| F22 | Realtime (port) | Against the real backend, the sign-in logged "The connection was stopped during negotiation": the realtime connection was rebuilt on every token store notification, and a sign-in sends the permissions right after the tokens. The original's provider does the same (`tokenEpoch`) and wins the race only by timing | **Fixed:** the service rebuilds the connection when the access token changes, the only thing it depends on |
+| F23 | Acceptance | With the backend running, `tenants/branding.spec.ts` failed 0/5: the acceptance reused the dev server on :5372, which now reached the real API — it answered the calls the spec doesn't mock with a 401 for the spec's made-up token, and the app signed out. The original's specs assume no backend behind the dev server | **Fixed:** the acceptance starts a dev server of its own (:5374) that proxies to nowhere (`VITE_API_BASE_URL=http://127.0.0.1:9`); 111/111 with the backend up |

@@ -25,10 +25,24 @@ export class RealtimeService {
   private connection: HubConnection | null = null;
   private readonly listeners = new Map<string, Set<Listener>>();
   private stopped = false;
+  private token = tokenStore.getAccessToken();
 
   constructor() {
-    tokenStore.subscribe(() => this.restart());
+    tokenStore.subscribe(() => this.tokenChanged());
     void this.connect();
+  }
+
+  /**
+   * The connection depends on the access token only. The original's provider rebuilds it on every token store
+   * notification, the permissions' too, which a sign-in sends right after the tokens: when they arrive before the hub's
+   * negotiation ends, the first connection is stopped mid-negotiation ("The connection was stopped during
+   * negotiation", against the real backend — a race the original wins only by timing). So: a rebuild per new token.
+   */
+  private tokenChanged(): void {
+    const token = tokenStore.getAccessToken();
+    if (token === this.token) return;
+    this.token = token;
+    this.restart();
   }
 
   /** Wire a handler for a server event. Returns an unsubscribe function. */

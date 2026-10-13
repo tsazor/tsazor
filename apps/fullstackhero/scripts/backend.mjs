@@ -2,7 +2,8 @@
  * fullstackhero's backend for the port (docs/port-fullstackhero.md): upstream unchanged at the pinned commit, run the
  * way its README says — the .NET Aspire AppHost, which starts Postgres (+ pgAdmin), Valkey, RustFS, the migrator, the
  * demo seeder, the API (http://localhost:5030, https://localhost:7030, /scalar) and both original React apps (the
- * admin on :5173 is the reference). The port's dev server (:5372) proxies /api to :5030.
+ * admin on :5173 is the reference). The port's dev server (:5372) proxies /api to :7030 (HTTPS: the HTTP endpoint
+ * redirects there with a 307, which drops the Authorization header).
  *
  *   node scripts/backend.mjs
  *

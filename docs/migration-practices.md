@@ -82,6 +82,12 @@ render in the browser.
   services with the DTOs ported once — the original's `Client.Infrastructure` is that layer already, and its
   callers keep their shape (BlazorHero's `ProductManager`, B3). Annotating the controllers
   (`[ProducesResponseType(typeof(Result<ProductResponse>), 200)]`) makes the generator usable later.
+- **Proxy to the API's HTTPS endpoint.** With `UseHttpsRedirection`, the HTTP endpoint answers a 307 to HTTPS — another
+  origin, so the browser drops the `Authorization` header and every signed-in call fails. Aspire hands the HTTPS
+  endpoint to a JavaScript app (`VITE_API_BASE_URL`); point the dev server's proxy there (fullstackhero F21).
+- **Keep a mocked E2E suite away from a running backend.** Specs that mock with `page.route` assume nothing answers the
+  rest; with the backend up, an unmocked call meets the real API (a 401 for the test's made-up token signs the app
+  out). Give the suite a dev server of its own whose proxy goes nowhere (F23).
 - **Calls that throw.** Code ported from NSwag clients expects a throwing call (`catch (ApiClientException)`). Use
   a small `ensureOk(result)` helper (F13).
 - **Bearer tokens and envelopes are in `@tsazor/dotnet`.** `JwtAuthenticationStateProvider` with

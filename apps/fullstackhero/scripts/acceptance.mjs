@@ -9,8 +9,11 @@
  *   node scripts/acceptance.mjs --workers=2 …         Playwright's workers (default 4)
  *   node scripts/acceptance.mjs --retries=2           the original's CI retries (the gate, `pnpm … verify`)
  *
- * The port's dev server (:5372) starts when it isn't running, as the original's config starts its own; the specs
- * expect a dev build (the demo accounts are DEV-only). The browser is Edge (no Playwright browser download), in
+ * A dev server of the port's own starts (:5374) when it isn't running, as the original's config starts its own; the
+ * specs expect a dev build (the demo accounts are DEV-only). It proxies /api to nowhere: the specs mock every call
+ * they need with `page.route` and assume no backend behind the dev server — a running one (scripts/backend.mjs)
+ * would answer the rest, with a 401 for the specs' made-up token, and sign them out. (So it isn't the dev server on
+ * :5372, which proxies to the real backend: scripts/live.mjs.) The browser is Edge (no Playwright browser download), in
  * en-US as on the original's CI: the specs read amounts as "$129.50". (Playwright's `locale` alone leaves Edge's Intl
  * default at the system's language — "129,50 $" on a German Windows; `--lang` sets it.)
  * The configuration is written next to the specs, in the clone; the results go to .tmp/acceptance.json.
@@ -28,7 +31,7 @@ const filters = args.filter((arg) => !arg.startsWith("--"));
 ensureClone();
 ensureAdminPackages();
 
-const port = original ? 5173 : option("port", 5372);
+const port = original ? 5173 : option("port", 5374);
 const workers = option("workers", 4);
 // The original's CI retries twice (`retries: process.env.CI ? 2 : 0`); the gate does the same (`verify`), and the
 // summary names every test that passed only on a retry. (A fresh headless Edge sometimes closes right after its
@@ -40,7 +43,13 @@ mkdirSync(path.dirname(results), { recursive: true });
 const config = path.join(admin, `playwright.tsazor-${port}.config.ts`);
 const server = original
   ? { command: "npm run dev", cwd: admin }
-  : { command: process.platform === "win32" ? `set PORT=${port}&& pnpm dev` : `PORT=${port} pnpm dev`, cwd: root };
+  : {
+      // Port 9 (discard) refuses the connection: an unmocked call fails as it does with no backend running.
+      command: process.platform === "win32"
+        ? `set PORT=${port}&& set VITE_API_BASE_URL=http://127.0.0.1:9&& pnpm dev`
+        : `PORT=${port} VITE_API_BASE_URL=http://127.0.0.1:9 pnpm dev`,
+      cwd: root,
+    };
 writeFileSync(
   config,
   `// Written by apps/fullstackhero/scripts/acceptance.mjs: the original's suite against ${original ? "the original admin" : "the Tsazor port"}.

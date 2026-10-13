@@ -3,10 +3,12 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import { tsazor } from "@tsazor/vite-plugin";
 
-// The original's vite.config.ts with Tsazor's plugin in place of React's. fullstackhero's API (scripts/backend.mjs:
-// http://localhost:5030) answers through this proxy, so the browser stays same-origin, as in the original. The public
-// files — /config.json (the runtime configuration), the logo, the favicons — are the original's, from the clone.
-const api = process.env.VITE_API_BASE_URL ?? "http://localhost:5030";
+// The original's vite.config.ts with Tsazor's plugin in place of React's. fullstackhero's API (scripts/backend.mjs)
+// answers through this proxy, so the browser stays same-origin, as in the original. Its HTTPS endpoint, as the AppHost
+// gives the original (`VITE_API_BASE_URL`): the HTTP one redirects to it with a 307, which drops the Authorization
+// header. The public files — /config.json (the runtime configuration), the logo, the favicons — are the original's,
+// from the clone.
+const api = process.env.VITE_API_BASE_URL ?? "https://localhost:7030";
 const upstream = path.resolve(import.meta.dirname, ".backend/dotnet-starter-kit/clients/admin");
 
 export default defineConfig({

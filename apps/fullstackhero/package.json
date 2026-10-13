@@ -12,6 +12,7 @@
     "test": "vitest run",
     "check": "tsazor check",
     "acceptance": "node scripts/acceptance.mjs",
+    "live": "node scripts/live.mjs",
     "verify": "node scripts/acceptance.mjs --retries=2",
     "visual": "node scripts/visual.mjs"
   },
