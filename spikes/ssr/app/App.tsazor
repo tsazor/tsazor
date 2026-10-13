@@ -1,0 +1,39 @@
+@* The spike's page: a child component with a parameter and child content, a list, a Razor template, an event
+   handler and a lifecycle hook — what a server render has to get through. *@
+
+<main class="shop">
+    <h1>@title</h1>
+    <Greeting name="@user">
+        <p>You have @basket.length items in the basket.</p>
+    </Greeting>
+    <ul>
+        @foreach (const item of basket) {
+            <li @key="item.id" class="@(item.price > 3 ? "dear" : null)">@item.name — @item.price.toFixed(2) €</li>
+        }
+    </ul>
+    @footer
+    <button @onclick="add">Add a roll</button>
+</main>
+
+@code {
+    private title = "Bakery";
+    private user = "Ada";
+    private basket: { id: number; name: string; price: number }[] = [];
+
+    private readonly footer: RenderFragment = @<footer>Total: @total().toFixed(2) €</footer>;
+
+    protected override onInitialized(): void {
+        this.basket = [
+            { id: 1, name: "Sourdough", price: 4.5 },
+            { id: 2, name: "Pretzel", price: 1.2 },
+        ];
+    }
+
+    private total(): number {
+        return this.basket.reduce((sum, item) => sum + item.price, 0);
+    }
+
+    private add(): void {
+        this.basket = [...this.basket, { id: this.basket.length + 1, name: "Roll", price: 0.6 }];
+    }
+}
