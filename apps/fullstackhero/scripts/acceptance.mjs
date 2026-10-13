@@ -7,6 +7,7 @@
  *   node scripts/acceptance.mjs --original            the same specs against the original admin (the reference)
  *   node scripts/acceptance.mjs --port=5381 users     against a dev server of its own on that port (parallel runs)
  *   node scripts/acceptance.mjs --workers=2 …         Playwright's workers (default 4)
+ *   node scripts/acceptance.mjs --retries=2           the original's CI retries (the gate, `pnpm … verify`)
  *
  * The port's dev server (:5372) starts when it isn't running, as the original's config starts its own; the specs
  * expect a dev build (the demo accounts are DEV-only). The browser is Edge (no Playwright browser download), in
@@ -29,6 +30,10 @@ ensureAdminPackages();
 
 const port = original ? 5173 : option("port", 5372);
 const workers = option("workers", 4);
+// The original's CI retries twice (`retries: process.env.CI ? 2 : 0`); the gate does the same (`verify`), and the
+// summary names every test that passed only on a retry. (A fresh headless Edge sometimes closes right after its
+// launch on Windows — `browser.newContext: … has been closed` before the test's first step.)
+const retries = option("retries", 0);
 // One run per port at a time: its report, its configuration and its test-results directory are its own.
 const results = path.join(root, ".tmp", `acceptance-${port}.json`);
 mkdirSync(path.dirname(results), { recursive: true });
@@ -45,6 +50,7 @@ export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
   workers: ${workers},
+  retries: ${retries},
   outputDir: ${JSON.stringify(path.join(root, ".tmp", `test-results-${port}`))},
   reporter: [["list"], ["json", { outputFile: ${JSON.stringify(results)} }]],
   use: { baseURL: "http://localhost:${port}", channel: "msedge", locale: "en-US", launchOptions: { args: ["--lang=en-US"] }, trace: "off", actionTimeout: 10_000, navigationTimeout: 15_000 },
@@ -75,10 +81,11 @@ try {
   const visit = (suite, file) => {
     const current = suite.file ?? file;
     for (const spec of suite.specs ?? []) {
-      const entry = files.get(current) ?? { passed: 0, failed: [] };
+      const entry = files.get(current) ?? { passed: 0, failed: [], flaky: [] };
       const ok = spec.tests.every((test) => test.results.some((run) => run.status === "passed"));
       if (ok) entry.passed++;
       else entry.failed.push(spec.title);
+      if (ok && spec.tests.some((test) => test.results.length > 1)) entry.flaky.push(spec.title);
       files.set(current, entry);
     }
     for (const child of suite.suites ?? []) visit(child, current);
@@ -92,8 +99,10 @@ try {
     total += entry.passed + entry.failed.length;
     console.log(`  ${entry.failed.length === 0 ? "ok  " : "FAIL"} ${file}  ${entry.passed}/${entry.passed + entry.failed.length}`);
     for (const title of entry.failed) console.log(`         - ${title}`);
+    for (const title of entry.flaky) console.log(`         ~ ${title} (passed on a retry)`);
   }
-  console.log(`  ${passed}/${total} passed`);
+  const flaky = [...files.values()].reduce((count, entry) => count + entry.flaky.length, 0);
+  console.log(`  ${passed}/${total} passed${flaky > 0 ? `, ${flaky} only on a retry` : ""}`);
 } catch (error) {
   console.error(`acceptance: no report (${error.message})`);
 }
