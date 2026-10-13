@@ -4,12 +4,12 @@
    and the issuer and a dedicated database sit behind "Advanced".
    react-hook-form + zodResolver become an EditForm with a StandardSchemaValidator over the original's zod schema
    (unchanged). `watch()` — the preview and the derived fields follow every keystroke — needs the value per `input`
-   event: those fields are LiveInputTexts (InputText binds on `change`). The useEffects that derive the identifier
+   event: those fields are InputTexts with `immediate` (without it, InputText binds on `change`). The useEffects that derive the identifier
    and the issuer are the inputs' `@bind-Value:after`. The dialog owns its EditContext: `setValue(…, {
    shouldValidate })` is `notifyFieldChanged`, `reset()` a new model and context. *@
 @import { ChevronDown, CircleCheck, Eye, EyeOff, Loader2, Lock, Pencil, Sparkles, Wand2 } from "lucide"
 @import { z } from "zod"
-@import { EditContext, EditForm, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { EditContext, EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
 @import { createTenant } from "@/api/tenants"
 @import { getPlans, planTermPrice } from "@/api/billing"
 @import { queryClient } from "@/lib/query-client"
@@ -20,7 +20,6 @@
 @import { describe, formatMoney } from "./format"
 @import { TENANT_ID_RE, generatePassword, slugify } from "./create-tenant"
 @import AdornButton from "./AdornButton.tsazor"
-@import LiveInputText from "@/components/ui/LiveInputText.tsazor"
 @import TenantPreviewRail from "./TenantPreviewRail.tsazor"
 @inject NavigationManager navigation
 
@@ -28,7 +27,7 @@
     <DialogContent size="lg" class="overflow-hidden p-0 sm:max-w-3xl">
         <EditForm id="ct-form" EditContext="@editContext" OnValidSubmit="@submit" class="grid sm:grid-cols-[13.5rem_1fr]">
             <StandardSchemaValidator Schema="@schema" />
-            <FocusFirstError />
+            <FocusOnInvalidSubmit />
 
             @* ── Live preview rail ── *@
             <TenantPreviewRail name="@model.name" slug="@model.id" planLabel="@planLabel" email="@model.adminEmail" />
@@ -49,7 +48,7 @@
                 @* Fields *@
                 <div class="space-y-4 px-6 py-4">
                     <Field id="ct-name" label="Display name" required for="name">
-                        <LiveInputText id="ct-name" autocomplete="off" placeholder="Acme Corp" class="@inputClass" @bind-Value="model.name" @bind-Value:after="nameChanged" />
+                        <InputText immediate id="ct-name" autocomplete="off" placeholder="Acme Corp" class="@inputClass" @bind-Value="model.name" @bind-Value:after="nameChanged" />
                     </Field>
 
                     @* Identifier — auto-derived, unlock to edit *@
@@ -66,7 +65,7 @@
                         </HintContent>
                         <ChildContent>
                             <div class="relative">
-                                <LiveInputText id="ct-id" autocomplete="off" placeholder="acme-corp" readonly="@(idMode === "auto")"
+                                <InputText immediate id="ct-id" autocomplete="off" placeholder="acme-corp" readonly="@(idMode === "auto")"
                                                class="@cn(inputClass, "pr-[4.75rem] font-mono", idMode === "auto" && "text-[var(--color-muted-foreground)]")"
                                                @bind-Value="model.id" @bind-Value:after="mirrorIssuer" />
                                 <div class="absolute inset-y-0 right-1.5 flex items-center gap-1">
@@ -85,7 +84,7 @@
                     </Field>
 
                     <Field id="ct-adminEmail" label="Admin email" required for="adminEmail">
-                        <LiveInputText id="ct-adminEmail" type="email" autocomplete="off" placeholder="admin@acme.example" class="@cn(inputClass, "font-mono")" @bind-Value="model.adminEmail" />
+                        <InputText immediate id="ct-adminEmail" type="email" autocomplete="off" placeholder="admin@acme.example" class="@cn(inputClass, "font-mono")" @bind-Value="model.adminEmail" />
                     </Field>
 
                     @* Password — generate + show/hide *@
@@ -125,7 +124,7 @@
                         @if (advancedOpen) {
                             <div class="space-y-4 border-t border-[var(--color-border)] px-3 py-3.5">
                                 <Field id="ct-issuer" label="JWT issuer" required hint="Mirrors the identifier by default. Issued in tokens to scope sessions." for="issuer">
-                                    <LiveInputText id="ct-issuer" placeholder="acme-corp" class="@cn(inputClass, "font-mono")" @bind-Value="model.issuer" @bind-Value:after="() => issuerDirty = true" />
+                                    <InputText immediate id="ct-issuer" placeholder="acme-corp" class="@cn(inputClass, "font-mono")" @bind-Value="model.issuer" @bind-Value:after="() => issuerDirty = true" />
                                 </Field>
 
                                 <Field id="ct-connectionString" label="Connection string" hint="Optional. Leave blank to use the shared catalog database." for="connectionString">

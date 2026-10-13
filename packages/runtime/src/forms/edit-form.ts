@@ -4,7 +4,7 @@ import { EventCallback } from "../components/event-callback.js";
 import { EventHandlerFlags } from "../render-tree/frame-type.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
-import { EditContext } from "./edit-context.js";
+import { EditContext, formElements } from "./edit-context.js";
 
 /** Function-based validator (the adapter; rules come from the field decorators). */
 export type ModelValidator = (value: unknown, model: unknown) => string | null;
@@ -157,6 +157,9 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
     for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
       b.addAttribute(2, name, value as never);
     }
+    // The form of this context, for components inside it that work on its fields (FocusOnInvalidSubmit).
+    const editContext = this.currentEditContext!;
+    b.addElementReferenceCapture(3, (element) => formElements.set(editContext, element as HTMLFormElement));
     if (this.childContent) {
       this.childContent(this.currentEditContext!)(b);
     }

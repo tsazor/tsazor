@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: **`immediate` on `InputText` and `InputTextArea`** (MudBlazor's `Immediate`; react-hook-form's
+  `register()`): the value binds on every keystroke, the form hears of the field change on `change` as before — and,
+  while the field has a message, on every keystroke, so the message goes as soon as the value is fixed
+  (react-hook-form's reValidateMode). `InputBase.addImmediateHandlers` gives an own input the same handlers.
+- `@tsazor/runtime`: **`<FocusOnInvalidSubmit />`** inside an `EditForm` focuses the first invalid field after a
+  submit that found errors (react-hook-form's `shouldFocusError`; Blazor's EditForm leaves the focus on the button).
+  Named after `FocusOnNavigate`; `selector` (default `[aria-invalid="true"]`) picks the fields, in form order.
 - **Breaking — `@tsazor/fluent`: `FluentProvider`'s theme defaults to `"system"`** (Fluent UI Blazor's
   `DesignThemeModes.System`): `theme: "system" | "light" | "dark"`. `"system"` follows the OS's preference, or the
   theme an ancestor pins; `"light"` now pins light, even under the OS's dark mode or inside a dark subtree (before, it

@@ -522,6 +522,18 @@ export interface FieldIdentifier {
 // focusBySelector
 export declare function focusBySelector(selector: string): void;
 
+// FocusOnInvalidSubmit
+export declare class FocusOnInvalidSubmit extends ComponentBase {
+    editContext?: EditContext;
+    selector: string;
+    private focusAfterRender;
+    private unsubscribe?;
+    protected onInitialized(): void;
+    protected buildRenderTree(_b: RenderTreeBuilder): void;
+    protected onAfterRender(): void;
+    dispose(): void;
+}
+
 // FocusOnNavigate
 export declare class FocusOnNavigate extends ComponentBase {
     routeData?: RouteData;
@@ -604,6 +616,7 @@ export declare abstract class InputBase<TValue> extends ComponentBase {
     protected nextSequence(): number;
     protected beginRender(): void;
     protected changeHandler(extract: (e: Event) => TValue): EventCallback<Event>;
+    protected addImmediateHandlers(b: RenderTreeBuilder, extract: (e: Event) => TValue): void;
 }
 
 // InputCheckbox
@@ -651,11 +664,13 @@ export declare class InputSelect extends InputBase<string> {
 
 // InputText
 export declare class InputText extends InputBase<string> {
+    immediate: boolean;
     protected buildRenderTree(b: RenderTreeBuilder): void;
 }
 
 // InputTextArea
 export declare class InputTextArea extends InputBase<string> {
+    immediate: boolean;
     protected buildRenderTree(b: RenderTreeBuilder): void;
 }
 

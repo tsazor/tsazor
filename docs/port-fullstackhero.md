@@ -26,8 +26,8 @@ judged with a sense of proportion ([port-fluentcms.md](port-fluentcms.md)).
   takes anything with `subscribe`, so `lib/query.ts` (60 lines) is `useQuery`: options read on every render, a changed
   key switches the query, `keepPreviousData` works. Mutations are plain async handlers with `invalidateQueries`.
 - **react-hook-form + zod → EditForm + `StandardSchemaValidator`** (new in the runtime, F8): the original's zod schemas
-  unchanged, `register("x")` a `LiveInputText` bound to the model (per keystroke, F15), `errors.x?.message` the
-  `Field`'s `for="x"`, `shouldFocusError` a `<FocusFirstError />` in the form (F16).
+  unchanged, `register("x")` an `<InputText immediate>` bound to the model (per keystroke, F15), `errors.x?.message`
+  the `Field`'s `for="x"`, `shouldFocusError` a `<FocusOnInvalidSubmit />` in the form (F16).
 - **sonner → @tsazor/ui's Toaster**, behind a sonner-shaped `toast` (`lib/toast.ts`): the 84 call sites keep
   `toast.success(title, { description, action })`; `FshToaster` renders sonner's markup, which `globals.css` styles.
 - **Radix's Portal → the browser's top layer** (F2): dialogs, sheets, menus and the toasts are popovers
@@ -71,12 +71,12 @@ Conventions for every area (the reference is the roles list and its create dialo
   `useParams()` → the page's route parameter (`@page "/roles/{id}"` + `@Parameter() id`).
 - **The primitives** (`src/components/ui`): Button, Badge, Card*, Input, Label, Skeleton, Avatar, Icon (lucide nodes:
   `<Icon icon="@Plus" class="size-4" />`), Dialog + DialogContent/Header/Title/Description/Body/Footer, SheetContent,
-  DropdownMenu + Trigger/Content/Item/Label/Separator, Select (filter), Switch, Table*, ConfirmDialog, LiveInputText. `asChild` →
+  DropdownMenu + Trigger/Content/Item/Label/Separator, Select (filter), Switch, Table*, ConfirmDialog. `asChild` →
   the variants function on the element: `<a href="…" class="@buttonVariants({ variant: "outline" })">`.
 - **The list kit** (`src/components/list`): EntityPageHeader, PageHeader, Stat/StatStrip, ErrorBand, LoadingRow,
   Pagination, FilterBar, Field, FormSelect (list/select.tsx — the name `Select` is the filter one), FormShell/
   FormSection/FormActions, SettingsSection/SettingsField, ToneIconTile; and `src/components`: EmptyState, KpiTile,
-  Monogram, SectionRule, ForbiddenView, FocusFirstError.
+  Monogram, SectionRule, ForbiddenView.
 
 ## Phases
 
@@ -116,8 +116,8 @@ Conventions for every area (the reference is the roles list and its create dialo
 | F12 | Tooling | In `tsazor check`, a value typed `unknown` couldn't be passed to a component parameter typed `unknown` (`payload="@event.payload"`: TS2345, `AttributeValue` excludes `unknown`); Blazor's AddAttribute takes `object?` | Fixed: `addAttribute` has a second signature for `unknown` (the first keeps a lambda's contextual typing) |
 | F13 | Tooling | A default import of a `.tsazor` through the `@/` alias was typed as the ambient `ComponentType`, not the class: `<LayoutView Layout="@AppShell">` failed with TS1360. F4 covered the metadata; the type checker's shadow modules rewrote only relative `.tsazor` imports | Fixed: the shadows follow tsconfig `paths` too; a shadow-module test |
 | F14 | Runtime (parity) | Blazor's "custom input" idiom — inherit InputText, render `@attributes="AdditionalAttributes" class="@CssClass"` — gets the validation class and `aria-invalid` from the base. Tsazor had neither `CssClass` nor the attributes; two areas re-implemented both | Added: `cssClass` and `attributesWithValidation` (Blazor's rule). Deviation: Blazor writes aria-invalid into AdditionalAttributes itself; here `additionalAttributes` stays the caller's, because the skins show the invalid state only after a submit (their deliberate design). A forms test |
-| F15 | Forms (React) | react-hook-form's `register()` sees every keystroke (a live preview, a derived identifier, `isDirty` enabling Save); InputText binds on `change` | Port: `components/ui/LiveInputText` (binds per keystroke, validates on change, re-validates per keystroke while invalid — RHF's reValidateMode). Proposal: an `immediate` option on InputText (MudBlazor's `Immediate`) |
-| F16 | Forms (React) | react-hook-form focuses the first invalid field after a failed submit (`shouldFocusError`, on by default); EditForm (Blazor's too) leaves the focus on the button | Port: `<FocusFirstError />` inside the form. Proposal: an EditForm option or a library component |
+| F15 | Forms (React) | react-hook-form's `register()` sees every keystroke (a live preview, a derived identifier, `isDirty` enabling Save); InputText binds on `change` | **Fixed** (owner 2026-10-13): `immediate` on InputText and InputTextArea — binds per keystroke, the field change on `change`, re-validation per keystroke while the field has a message; the port's LiveInputText is gone |
+| F16 | Forms (React) | react-hook-form focuses the first invalid field after a failed submit (`shouldFocusError`, on by default); EditForm (Blazor's too) leaves the focus on the button | **Fixed** (owner 2026-10-13): the runtime's `<FocusOnInvalidSubmit />` inside the EditForm (named as FocusOnNavigate, `selector` default `[aria-invalid="true"]`); the port's FocusFirstError is gone |
 | F17 | Language | A slot can't be left out conditionally: React's `footer={cond ? <x/> : undefined}`; a written `<Footer>` is always set, so the section draws an empty stripe (a variant of F3) | Port: two branches, or a wrapper that forwards its fragment value (`footer="@(cond ? footer : undefined)"`). Razor templates (F3) would make it a one-liner |
 | F18 | Library | The headless kit's overlays focus their first focusable element only when the app passes `initialFocus`; Radix focuses the first tabbable by default (a date input, a textarea) | Port: DialogContent and SheetContent pass `[autofocus]`, else the first focusable |
 | F19 | Tooling | Without metadata (before F4), a method group passed to a parameter not named `On*` was emitted bare (`valueChanged="@onImageChange"` lost `this`), and TZS027 named an unrelated `<Button>` for a slot of an unresolved component. Both were dev-server only (the plugin bundle predated F4) | Gone with F4. Proposals: treat `*Changed` like `On*` when the metadata is unknown; TZS027 should say the parent is unknown |

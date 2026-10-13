@@ -1419,6 +1419,17 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
             }
           ],
           "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
+        },
+        {
+          "name": "immediate",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "InputText",
+          "default": "false",
+          "inferredType": "boolean",
+          "doc": "Binds on every keystroke (MudBlazor's `Immediate`; a superset of Blazor's InputText, which binds on `change`):\nthe value follows `input`, the form hears of the field change on `change` as before — and while the field has a\nmessage, on every keystroke, so the message goes as soon as the value is fixed."
         }
       ],
       "doc": "Blazor's InputText: single-line string input.",
@@ -1509,6 +1520,17 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
             }
           ],
           "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
+        },
+        {
+          "name": "immediate",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "InputTextArea",
+          "default": "false",
+          "inferredType": "boolean",
+          "doc": "Binds on every keystroke, as InputText's `immediate`."
         }
       ],
       "doc": "Blazor's InputTextArea: multi-line string input.",
@@ -2197,6 +2219,50 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         }
       ],
       "doc": "Blazor's ValidationSummary: lists all validation messages of the EditContext, in Blazor's markup —\n`<ul class=\"validation-errors\">` with a `<li class=\"validation-message\">` per message.",
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "FocusOnInvalidSubmit": {
+      "name": "FocusOnInvalidSubmit",
+      "file": "src/forms/focus-on-invalid-submit.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "FocusOnInvalidSubmit",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "cascading": {
+            "type": "EditContext"
+          },
+          "doc": "The enclosing form's EditContext (cascaded by EditForm)."
+        },
+        {
+          "name": "selector",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "FocusOnInvalidSubmit",
+          "default": "'[aria-invalid=\"true\"]'",
+          "inferredType": "string",
+          "doc": "CSS selector of the invalid fields, as FocusOnNavigate's `selector`."
+        }
+      ],
+      "doc": "Focuses the first invalid field after a submit that found errors — react-hook-form's `shouldFocusError`, which is\non by default there; Blazor's EditForm leaves the focus on the submit button. A superset component, named after\nBlazor's FocusOnNavigate and EditForm's OnInvalidSubmit: place it inside an EditForm.\n\nWhen the form validates (a submit; an own `editContext.validate()` counts too), the first element of the form that\nmatches `selector` — by default the fields InputBase marks `aria-invalid=\"true\"`, in the form's order — takes the\nfocus once that render is on the screen. A valid form keeps the focus where it is. Renders nothing.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

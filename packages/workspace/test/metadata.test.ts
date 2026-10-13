@@ -185,7 +185,7 @@ describe("runtime manifest", () => {
       [
         "AuthorizeRouteView", "AuthorizeView", "Await", "CascadingAuthenticationState", "CascadingValue", "DataAnnotationsValidator", "DynamicComponent", "EditForm",
         "ErrorBoundary",
-        "FocusOnNavigate",
+        "FocusOnInvalidSubmit", "FocusOnNavigate",
         "HeadContent", "HeadOutlet",
         "InputCheckbox", "InputDate", "InputFile", "InputNumber", "InputSelect", "InputText", "InputTextArea", "LayoutView",
         "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "SectionContent", "SectionOutlet", "SectionOutletContentRenderer", "StandardSchemaValidator",

@@ -112,6 +112,7 @@ export { InputBase } from "./forms/input-base.js";
 export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect, type InputDateType } from "./forms/input-text.js";
 export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
+export { FocusOnInvalidSubmit } from "./forms/focus-on-invalid-submit.js";
 export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";
 export { StandardSchemaValidator, standardSchemaField, type StandardSchemaIssue, type StandardSchemaResult, type StandardSchemaV1 } from "./forms/standard-schema-validator.js";
 export { enableDataAnnotationsValidation } from "./forms/edit-context.js";

@@ -151,6 +151,8 @@ export interface FakeStore<T> {
 
 // focusBySelector: re-exported from @tsazor/runtime
 
+// FocusOnInvalidSubmit: re-exported from @tsazor/runtime
+
 // FocusOnNavigate: re-exported from @tsazor/runtime
 
 // formatMessage: re-exported from @tsazor/runtime

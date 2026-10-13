@@ -1,5 +1,8 @@
 import { resolveValidationMessage, rulesForField, validationRulesOf, type ValidationRule } from "./validation-attributes.js";
 
+/** @internal The `<form>` an EditForm renders for a context (FocusOnInvalidSubmit finds its fields there). */
+export const formElements = new WeakMap<EditContext, HTMLFormElement>();
+
 /**
  * EditContext, port of Blazor's EditContext.cs (src/Components/Forms/src):
  * change tracking and validation state for a model object, used by EditForm

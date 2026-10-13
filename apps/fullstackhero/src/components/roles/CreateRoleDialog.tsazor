@@ -5,7 +5,7 @@
    field (react-hook-form's shouldFocusError). *@
 @import { Shield } from "lucide"
 @import { z } from "zod"
-@import { EditForm, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
 @import { upsertRole } from "@/api/roles"
 @import { ApiRequestError } from "@/lib/api-client"
 @import { queryClient } from "@/lib/query-client"
@@ -33,7 +33,7 @@
         @* ── Form ── *@
         <EditForm id="cr-form" Model="@model" OnValidSubmit="@submit" novalidate>
             <StandardSchemaValidator Schema="@schema" />
-            <FocusFirstError />
+            <FocusOnInvalidSubmit />
             <DialogBody class="space-y-4">
                 <Field id="cr-name" label="Name" required for="name">
                     <InputText id="cr-name" placeholder="Support agent" autocomplete="off" class="@inputClass" @bind-Value="model.name" />

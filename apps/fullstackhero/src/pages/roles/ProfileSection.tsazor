@@ -1,13 +1,13 @@
 @* pages/roles/detail.tsx's ProfileSection: the role's name and description. react-hook-form + zodResolver become
    EditForm + StandardSchemaValidator over the original's zod schema; `isDirty` is the model compared with the role's
-   values (react-hook-form's defaultValues), so the fields bind per keystroke (LiveInputText: InputText binds on
-   change, and Save would stay disabled until the field loses focus); an invalid submit focuses the first invalid
-   field (FocusFirstError, react-hook-form's shouldFocusError). Reset puts the values back, and a changed role (after
-   a save) re-syncs the form, as the original's `reset()` effect. System roles can't be renamed. *@
+   values (react-hook-form's defaultValues), so the fields bind per keystroke (InputText's `immediate`: without it,
+   InputText binds on change, and Save would stay disabled until the field loses focus); an invalid submit focuses
+   the first invalid field (FocusOnInvalidSubmit, react-hook-form's shouldFocusError). Reset puts the values back,
+   and a changed role (after a save) re-syncs the form, as the original's `reset()` effect. System roles can't be
+   renamed. *@
 @import { ShieldCheck } from "lucide"
 @import { z } from "zod"
-@import { EditForm, StandardSchemaValidator } from "@tsazor/runtime"
-@import LiveInputText from "@/components/ui/LiveInputText.tsazor"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
 @import { upsertRole, type RoleDto } from "@/api/roles"
 @import { ApiRequestError } from "@/lib/api-client"
 @import { queryClient } from "@/lib/query-client"
@@ -16,7 +16,7 @@
 
 <EditForm Model="@model" OnValidSubmit="@submit">
     <StandardSchemaValidator Schema="@ProfileSection.profileSchema" />
-    <FocusFirstError />
+    <FocusOnInvalidSubmit />
     <SettingsSection title="Profile" icon="@ShieldCheck" description="@(disabled ? "Name and description — system roles cannot be renamed." : "Name and description shown to operators when assigning users to this role.")">
         <Footer>
             <div class="flex items-center gap-2">
@@ -31,10 +31,10 @@
         <ChildContent>
             <div class="grid gap-4 md:grid-cols-2">
                 <Field id="name" label="Name" required for="name">
-                    <LiveInputText id="name" disabled="@disabled" class="@inputClass" @bind-Value="model.name" />
+                    <InputText immediate id="name" disabled="@disabled" class="@inputClass" @bind-Value="model.name" />
                 </Field>
                 <Field id="description" label="Description" for="description">
-                    <LiveInputText id="description" class="@inputClass" @bind-Value="model.description" />
+                    <InputText immediate id="description" class="@inputClass" @bind-Value="model.description" />
                 </Field>
             </div>
         </ChildContent>

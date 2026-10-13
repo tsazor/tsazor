@@ -1,19 +1,18 @@
 @* components/users/create-user-dialog.tsx: register a user in the current tenant (emailed a confirmation link), then
    open their detail page. react-hook-form + zodResolver become EditForm + StandardSchemaValidator over the original's
    zod schema (unchanged — the password confirmation is a refinement that speaks on its own field); `register("x")` is
-   a LiveInputText bound to the model (per keystroke, a message goes as soon as the value is fixed), `errors.x?.
-   message` Field's `for="x"`, and an invalid submit focuses the first invalid field (FocusFirstError, react-hook-
-   form's shouldFocusError). The submit sends the schema's parsed (trimmed) values, as handleSubmit does. The form
+   an `immediate` InputText bound to the model (per keystroke, a message goes as soon as the value is fixed),
+   `errors.x?.message` Field's `for="x"`, and an invalid submit focuses the first invalid field
+   (FocusOnInvalidSubmit, react-hook-form's shouldFocusError). The submit sends the schema's parsed (trimmed) values, as handleSubmit does. The form
    validates natively too, as the original's (no noValidate): a malformed email is the browser's to report first. *@
 @import { KeyRound, User as UserIcon, Users } from "lucide"
 @import { z } from "zod"
-@import { EditForm, StandardSchemaValidator } from "@tsazor/runtime"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
 @import { registerUser } from "@/api/users"
 @import { describeError } from "@/lib/api-client"
 @import { queryClient } from "@/lib/query-client"
 @import { toast } from "@/lib/toast"
 @import { inputClass } from "@/components/ui/variants"
-@import LiveInputText from "@/components/ui/LiveInputText.tsazor"
 @import SectionLabel from "./SectionLabel.tsazor"
 @inject NavigationManager navigation
 
@@ -37,7 +36,7 @@
         @* ── Form ── *@
         <EditForm Model="@model" OnValidSubmit="@submit">
             <StandardSchemaValidator Schema="@schema" />
-            <FocusFirstError />
+            <FocusOnInvalidSubmit />
             <DialogBody class="space-y-6">
                 @* ── Identity section ── *@
                 <div class="space-y-3">
@@ -46,23 +45,23 @@
                     <div class="space-y-4">
                         <div class="grid gap-4 sm:grid-cols-2">
                             <Field id="cu-firstName" label="First name" required for="firstName">
-                                <LiveInputText id="cu-firstName" autocomplete="given-name" class="@inputClass" @bind-Value="model.firstName" />
+                                <InputText immediate id="cu-firstName" autocomplete="given-name" class="@inputClass" @bind-Value="model.firstName" />
                             </Field>
                             <Field id="cu-lastName" label="Last name" required for="lastName">
-                                <LiveInputText id="cu-lastName" autocomplete="family-name" class="@inputClass" @bind-Value="model.lastName" />
+                                <InputText immediate id="cu-lastName" autocomplete="family-name" class="@inputClass" @bind-Value="model.lastName" />
                             </Field>
                         </div>
 
                         <Field id="cu-userName" label="Username" required hint="Letters, digits, dot, dash or underscore. 3–32 characters." for="userName">
-                            <LiveInputText id="cu-userName" placeholder="m.chen" autocomplete="off" class="@monoInputClass" @bind-Value="model.userName" />
+                            <InputText immediate id="cu-userName" placeholder="m.chen" autocomplete="off" class="@monoInputClass" @bind-Value="model.userName" />
                         </Field>
 
                         <Field id="cu-email" label="Email" required for="email">
-                            <LiveInputText id="cu-email" type="email" placeholder="user@example.com" autocomplete="email" class="@monoInputClass" @bind-Value="model.email" />
+                            <InputText immediate id="cu-email" type="email" placeholder="user@example.com" autocomplete="email" class="@monoInputClass" @bind-Value="model.email" />
                         </Field>
 
                         <Field id="cu-phoneNumber" label="Phone (optional)" for="phoneNumber">
-                            <LiveInputText id="cu-phoneNumber" type="tel" placeholder="+1 555 0100" autocomplete="tel" class="@monoInputClass" @bind-Value="model.phoneNumber" />
+                            <InputText immediate id="cu-phoneNumber" type="tel" placeholder="+1 555 0100" autocomplete="tel" class="@monoInputClass" @bind-Value="model.phoneNumber" />
                         </Field>
                     </div>
                 </div>
@@ -73,10 +72,10 @@
                     <div class="h-px bg-[var(--color-border)] opacity-60"></div>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <Field id="cu-password" label="Password" required for="password">
-                            <LiveInputText id="cu-password" type="password" autocomplete="new-password" class="@monoInputClass" @bind-Value="model.password" />
+                            <InputText immediate id="cu-password" type="password" autocomplete="new-password" class="@monoInputClass" @bind-Value="model.password" />
                         </Field>
                         <Field id="cu-confirmPassword" label="Confirm password" required for="confirmPassword">
-                            <LiveInputText id="cu-confirmPassword" type="password" autocomplete="new-password" class="@monoInputClass" @bind-Value="model.confirmPassword" />
+                            <InputText immediate id="cu-confirmPassword" type="password" autocomplete="new-password" class="@monoInputClass" @bind-Value="model.confirmPassword" />
                         </Field>
                     </div>
                 </div>

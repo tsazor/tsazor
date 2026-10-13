@@ -145,4 +145,38 @@ export abstract class InputBase<TValue> extends ComponentBase {
       this.currentValue = extract(e);
     });
   }
+
+  /**
+   * The handlers of an input that binds on every keystroke (InputText's `immediate`, react-hook-form's
+   * `register()`): `input` sets the value (ValueChanged) and — while the field has a message — tells the form, so
+   * the message goes as soon as the value is fixed (react-hook-form's reValidateMode); `change` tells the form, as
+   * the plain bind does (validation, the modified state).
+   */
+  protected addImmediateHandlers(b: RenderTreeBuilder, extract: (e: Event) => TValue): void {
+    b.addEventHandler(
+      this.nextSequence(),
+      "oninput",
+      EventCallback.bind(this, (e: Event) => {
+        const value = extract(e);
+        if (Object.is(value, this.Value)) return;
+        this.Value = value;
+        void this.ValueChanged?.invokeAsync(value);
+        if (this.ValueExpression && this.editContext && !this.editContext.isValid(this.ValueExpression)) {
+          this.editContext.notifyFieldChanged(this.ValueExpression, value);
+        }
+      }),
+    );
+    b.addEventHandler(
+      this.nextSequence(),
+      "onchange",
+      EventCallback.bind(this, (e: Event) => {
+        const value = extract(e);
+        if (!Object.is(value, this.Value)) {
+          this.currentValue = value;
+        } else if (this.ValueExpression && this.editContext) {
+          this.editContext.notifyFieldChanged(this.ValueExpression, value);
+        }
+      }),
+    );
+  }
 }

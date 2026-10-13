@@ -4,12 +4,21 @@ import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tr
 
 /** Blazor's InputText: single-line string input. */
 export class InputText extends InputBase<string> {
+  /**
+   * Binds on every keystroke (MudBlazor's `Immediate`; a superset of Blazor's InputText, which binds on `change`):
+   * the value follows `input`, the form hears of the field change on `change` as before — and while the field has a
+   * message, on every keystroke, so the message goes as soon as the value is fixed.
+   */
+  @Parameter() immediate = false;
+
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     this.beginRender();
     b.openElement(this.nextSequence(), "input");
     b.addAttribute(this.nextSequence(), "value", this.currentValue ?? "");
     this.applyCommonAttributes(b);
-    b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler((e) => (e.target as HTMLInputElement).value));
+    const valueOf = (e: Event): string => (e.target as HTMLInputElement).value;
+    if (this.immediate) this.addImmediateHandlers(b, valueOf);
+    else b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler(valueOf));
     this.captureElement(b);
     b.closeElement();
   }
@@ -17,12 +26,17 @@ export class InputText extends InputBase<string> {
 
 /** Blazor's InputTextArea: multi-line string input. */
 export class InputTextArea extends InputBase<string> {
+  /** Binds on every keystroke, as InputText's `immediate`. */
+  @Parameter() immediate = false;
+
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     this.beginRender();
     b.openElement(this.nextSequence(), "textarea");
     b.addAttribute(this.nextSequence(), "value", this.currentValue ?? "");
     this.applyCommonAttributes(b);
-    b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler((e) => (e.target as HTMLTextAreaElement).value));
+    const valueOf = (e: Event): string => (e.target as HTMLTextAreaElement).value;
+    if (this.immediate) this.addImmediateHandlers(b, valueOf);
+    else b.addEventHandler(this.nextSequence(), "onchange", this.changeHandler(valueOf));
     this.captureElement(b);
     b.closeElement();
   }

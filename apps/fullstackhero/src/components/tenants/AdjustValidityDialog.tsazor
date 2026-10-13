@@ -4,7 +4,7 @@
    one, prefilled with the tenant's current validity each time the dialog opens. *@
 @import { CalendarCog } from "lucide"
 @import { z } from "zod"
-@import { EditForm, InputText, StandardSchemaValidator } from "@tsazor/runtime"
+@import { EditForm, FocusOnInvalidSubmit, InputText, StandardSchemaValidator } from "@tsazor/runtime"
 @import { adjustTenantValidity } from "@/api/tenants"
 @import { queryClient } from "@/lib/query-client"
 @import { toast } from "@/lib/toast"
@@ -27,7 +27,7 @@
 
         <EditForm id="av-form" Model="@model" OnValidSubmit="@submit">
             <StandardSchemaValidator Schema="@schema" />
-            <FocusFirstError />
+            <FocusOnInvalidSubmit />
             <DialogBody class="space-y-4">
                 <Field id="av-validUpto" label="Valid until" required hint="Backdating is allowed. No invoice is issued for an adjustment." for="validUpto">
                     <InputText id="av-validUpto" type="date" class="@inputClass" @bind-Value="model.validUpto" />

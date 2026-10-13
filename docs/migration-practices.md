@@ -415,9 +415,10 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
     change one (the page instance stays, inputs keep their focus);
   - a hook that holds state → a class with `subscribe` that the component `observe`s.
 - **Forms:** react-hook-form's `register()` binds per keystroke, InputText on `change` — a live preview or an
-  `isDirty`-gated Save needs an input that binds on `input` (F15). react-hook-form focuses the first invalid field
-  after a failed submit; EditForm doesn't (F16). Playwright's `fill` fires no `change`: the bound value arrives with
-  the next action's blur. react-hook-form shows messages only after the first submit; Blazor's timing shows a field's
+  `isDirty`-gated Save takes `<InputText immediate>`, which also re-validates per keystroke while the field has a
+  message, as react-hook-form's reValidateMode (F15). react-hook-form focuses the first invalid field after a failed
+  submit; EditForm doesn't, so put a `<FocusOnInvalidSubmit />` in the form (F16). Playwright's `fill` fires no
+  `change`: without `immediate` the bound value arrives with the next action's blur. react-hook-form shows messages only after the first submit; Blazor's timing shows a field's
   message when it is left.
 - **A controlled input that rejects a keystroke** (`onChange={e => setYear(e.target.value.replace(/\D/g, ""))}`):
   React writes the state back into the DOM after each change; Tsazor and Blazor write `value` only when the rendered
