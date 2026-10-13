@@ -1,5 +1,8 @@
 # Handoff: component library, core extensions, tutorial (status 2026-10-07, evening)
 
+> **Newer: [handoff-2026-10-13-decisions.md](handoff-2026-10-13-decisions.md)** — the owner's decisions after the
+> fullstackhero port and their order. Read that first.
+
 **Read first:** this document, then [roadmap-1.0.md](roadmap-1.0.md) and
 [design-component-library.md](design-component-library.md). Branch `roadmap/phase-0`, HEAD `92f2b89`,
 everything pushed.
