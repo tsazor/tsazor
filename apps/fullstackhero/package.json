@@ -12,6 +12,7 @@
     "test": "vitest run",
     "check": "tsazor check",
     "acceptance": "node scripts/acceptance.mjs",
+    "verify": "node scripts/acceptance.mjs",
     "visual": "node scripts/visual.mjs"
   },
   "dependencies": {

@@ -45,7 +45,9 @@ judged with a sense of proportion ([port-fluentcms.md](port-fluentcms.md)).
 - **Acceptance test:** the original's Playwright suite (`clients/admin/tests`, 111 tests in 30 specs, every API call
   mocked with `page.route`) runs **unchanged** against the port: `pnpm --filter fullstackhero acceptance [words]`
   (`--original` runs it against the original admin: 111/111 in Edge). Edge needs `--lang=en-US`: Playwright's
-  `locale` alone leaves Edge's `Intl` default at the system language ("129,50 $" on a German Windows).
+  `locale` alone leaves Edge's `Intl` default at the system language ("129,50 $" on a German Windows). It is a gate
+  (owner 2026-10-13): `pnpm --filter fullstackhero verify` in `pnpm gates` and CI's e2e job (Edge), which clones the
+  upstream and installs its admin's packages on the first run.
 - **Backend:** .NET 10 + Aspire (Postgres, Valkey, RustFS in Docker). Not yet run: Docker Desktop on the dev machine
   hangs in "starting" (2026-10-13). The acceptance suite needs no backend.
 - **Ports:** the port's dev server 5372 (`PORT=` for parallel runs), preview 5373; the original admin 5173.

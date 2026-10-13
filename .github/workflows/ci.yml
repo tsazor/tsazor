@@ -89,6 +89,8 @@ jobs:
         run: pnpm --filter migration-sample verify
       - name: The FluentCMS port — upstream FluentCMS, the BFF and the app (docs/port-fluentcms.md)
         run: pnpm --filter fluentcms verify
+      - name: The fullstackhero port — its original's Playwright suite, unchanged (docs/port-fullstackhero.md)
+        run: pnpm --filter fullstackhero verify
       - name: Sleipnir ticker (synthetic mode)
         run: |
           dotnet build apps/sleipnir-ticker/api

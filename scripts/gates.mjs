@@ -38,6 +38,7 @@ const GATES = [
   { name: "The starter (npm create tsazor)", run: [["--filter", "starter", "verify"]] },
   { name: "Incremental migration", engines: false, run: [["--filter", "migration-sample", "verify"]] },
   { name: "The FluentCMS port", engines: false, run: [["--filter", "fluentcms", "verify"]] },
+  { name: "The fullstackhero port — its original's Playwright suite", engines: false, run: [["--filter", "fullstackhero", "verify"]] },
   {
     name: "Sleipnir ticker (synthetic mode)",
     engines: false,
