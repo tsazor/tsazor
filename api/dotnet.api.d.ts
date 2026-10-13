@@ -38,6 +38,7 @@ export declare function envelopeHasErrors(body: unknown, envelope: EnvelopeOptio
 export interface EnvelopeOptions {
     data?: string;
     errors?: string;
+    succeeded?: string;
 }
 
 // formData

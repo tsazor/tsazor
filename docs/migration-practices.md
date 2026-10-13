@@ -76,11 +76,18 @@ render in the browser.
   navigate normally: it asks the BFF again (F10). An OIDC redirect stays a full navigation.
 - **Generate the clients** with `tsazor-dotnet generate`. Swashbuckle's output needs care: a missing
   `operationId`, missing `required`, multipart bodies and envelopes (F1–F3, F5, F7, F8; all handled now).
+- **A Swagger document without response types** (controllers that return `IActionResult`, DTOs shared with the
+  WebAssembly client through a common project, as hosted Blazor apps do): the generator types the requests but
+  answers `HttpResult<void>` for every response. Port the client's managers instead, as hand-written TypeScript
+  services with the DTOs ported once — the original's `Client.Infrastructure` is that layer already, and its
+  callers keep their shape (BlazorHero's `ProductManager`, B3). Annotating the controllers
+  (`[ProducesResponseType(typeof(Result<ProductResponse>), 200)]`) makes the generator usable later.
 - **Calls that throw.** Code ported from NSwag clients expects a throwing call (`catch (ApiClientException)`). Use
   a small `ensureOk(result)` helper (F13).
 - **Bearer tokens and envelopes are in `@tsazor/dotnet`.** `JwtAuthenticationStateProvider` with
   `attachJwtAuth(http, provider)` replaces the `DelegatingHandler` that adds the token, and `tsazor-dotnet generate
-  --envelope data,errors` unwraps an `ApiResult<T>`-style envelope. A hand-written client types every call itself —
+  --envelope data,errors` unwraps an `ApiResult<T>`-style envelope — `--envelope data,messages,succeeded` one with a
+  success flag, whose messages on a success ("Product Saved") are no failure (B2). A hand-written client types every call itself —
   `getJson<T>` is a cast, not a check — so declare the envelope once. Where Blazor needs a handler of its own for
   an expired token, `attachJwtAuth` logs out on the 401, and `AuthorizeRouteView` redirects to the login (V2, V3 in
   port-findings.md). Interceptors are a handler chain: a response interceptor gets the request too, and the one

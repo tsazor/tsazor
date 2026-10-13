@@ -22,7 +22,10 @@ ran their own HTTP helpers).
   - on an error status, the envelope's errors become the message, unless the body is a ProblemDetails
     with a `title` or `detail`;
   - an error object such as `{ code, description }` reads as its text, or as its code when the text
-    is empty.
+    is empty;
+  - an envelope with a success flag (`{ data, messages, succeeded }`, a `Result<T>`) takes its name as the
+    third key, `--envelope data,messages,succeeded`: then the flag decides, and the messages of a success
+    ("Product Saved") are no failure.
 - **Method names.** A method is named after its operation's `operationId`. Swashbuckle's default
   emits none. Then the name comes from the path, without the `api`/`v1` prefix:
   - `POST /api/User/Create` becomes `userCreate`;

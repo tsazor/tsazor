@@ -2,7 +2,7 @@
  * tsazor-dotnet CLI: OpenAPI ⇒ typed TS client.
  *
  *   tsazor-dotnet generate <openapi.json|https://…> --out <dir>
- *       [--name <ClientName>] [--envelope data,errors] [--base-url <url>]
+ *       [--name <ClientName>] [--envelope data,errors[,succeeded]] [--base-url <url>]
  *
  * Writes `models.ts` and `<client>.ts` to --out and prints the
  * generator warnings (documented subset). Exit: 0 green, 1 errors, 2
@@ -26,7 +26,8 @@ function version(): string {
 
 const USAGE = `Usage: tsazor-dotnet generate <openapi.json|url> --out <dir> [options]
   --name <Name>        class name of the client (default from info.title)
-  --envelope data,errors  unwrap a response envelope (e.g. FluentCMS)
+  --envelope data,errors[,succeeded]  unwrap a response envelope (e.g. FluentCMS's data,errors;
+                       BlazorHero's data,messages,succeeded — the success flag decides)
   --base-url <url>     default base URL of the generated client
 Exit: 0 green, 1 errors, 2 usage/fatal.`;
 
@@ -73,16 +74,17 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
         break;
       case "--envelope": {
         if (value === undefined) {
-          stdout("tsazor-dotnet generate: --envelope requires `data[,errors]`.");
+          stdout("tsazor-dotnet generate: --envelope requires `data[,errors[,succeeded]]`.");
           return 2;
         }
-        const [data = "", errors = ""] = value.split(",");
+        const [data = "", errors = "", succeeded = ""] = value.split(",");
         envelope = {
           ...(data.length > 0 ? { data } : {}),
           ...(errors.length > 0 ? { errors } : {}),
+          ...(succeeded.length > 0 ? { succeeded } : {}),
         };
-        if (envelope.data === undefined && envelope.errors === undefined) {
-          stdout("tsazor-dotnet generate: --envelope without a valid key (`data[,errors]`).");
+        if (envelope.data === undefined && envelope.errors === undefined && envelope.succeeded === undefined) {
+          stdout("tsazor-dotnet generate: --envelope without a valid key (`data[,errors[,succeeded]]`).");
           return 2;
         }
         break;

@@ -127,6 +127,11 @@ describe("generateClient — client", () => {
     const enveloped = generateClient(await document, { clientName: "ContosoOrders", envelope: { data: "data", errors: "errors" } });
     const clientFile = enveloped.files.find((f) => f.path === "contoso-orders.ts")!.content;
     expect(clientFile).toContain(`super(http, { envelope: { data: "data", errors: "errors" } });`);
+    // BlazorHero's Result<T>: `--envelope data,messages,succeeded` (B2).
+    const flagged = generateClient(await document, { clientName: "ContosoOrders", envelope: { data: "data", errors: "messages", succeeded: "succeeded" } });
+    expect(flagged.files.find((f) => f.path === "contoso-orders.ts")!.content).toContain(
+      `super(http, { envelope: { data: "data", errors: "messages", succeeded: "succeeded" } });`,
+    );
 
     const withBase = generateClient(await document, { clientName: "ContosoOrders", baseUrl: "https://api.contoso.example" });
     const baseFile = withBase.files.find((f) => f.path === "contoso-orders.ts")!.content;

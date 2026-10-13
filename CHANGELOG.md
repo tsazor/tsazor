@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/dotnet`: **an envelope's success flag** — `--envelope data,messages,succeeded` (`EnvelopeOptions.succeeded`)
+  for APIs whose `Result<T>` says `succeeded: false` with HTTP 200 and carries messages on a success too ("Product
+  Saved"): the flag decides, a success's messages are no failure. Without the flag the failure side decides, as
+  before.
 - `@tsazor/runtime`: **`immediate` on `InputText` and `InputTextArea`** (MudBlazor's `Immediate`; react-hook-form's
   `register()`): the value binds on every keystroke, the form hears of the field change on `change` as before — and,
   while the field has a message, on every keystroke, so the message goes as soon as the value is fixed

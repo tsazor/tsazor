@@ -34,7 +34,7 @@ import type { EnvelopeOptions } from "./http-result.js";
 export interface GenerateOptions {
   /** Class name of the client (without "Client"); default from `info.title`. */
   clientName?: string;
-  /** CLI `--envelope data,errors`. */
+  /** CLI `--envelope data,errors[,succeeded]`. */
   envelope?: EnvelopeOptions;
   /** CLI `--base-url`: by default the generated client constructs a TsazorHttp on it. */
   baseUrl?: string;
@@ -320,6 +320,7 @@ class Generator {
     const parts = [
       this.envelope.data ? `data: ${JSON.stringify(this.envelope.data)}` : "",
       this.envelope.errors ? `errors: ${JSON.stringify(this.envelope.errors)}` : "",
+      this.envelope.succeeded ? `succeeded: ${JSON.stringify(this.envelope.succeeded)}` : "",
     ].filter((part) => part.length > 0);
     return parts.length === 0 ? "" : `, { envelope: { ${parts.join(", ")} } }`;
   }

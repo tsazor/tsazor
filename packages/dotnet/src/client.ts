@@ -17,7 +17,7 @@ export type HttpMethod = (typeof HTTP_METHOD)[number];
 export interface OpenApiClientOptions {
   /** Base URL for relative paths (otherwise the TsazorHttp resolves them). */
   baseUrl?: string;
-  /** Envelope unwrapping: `{ data: T, errors: [...] }` response bodies (CLI `--envelope data,errors`). */
+  /** Envelope unwrapping: `{ data: T, errors: [...] }` response bodies, optionally with a success flag (CLI `--envelope data,errors[,succeeded]`). */
   envelope?: EnvelopeOptions;
 }
 

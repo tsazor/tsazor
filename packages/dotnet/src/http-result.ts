@@ -118,21 +118,33 @@ export function problemMessage<T>(result: HttpResult<T>): string {
 
 /**
  * Options describing a response envelope: many .NET APIs wrap every payload as
- * `{ data: T, errors: [...] }` (FluentCMS-Stil). The `errors` key marks the
+ * `{ data: T, errors: [...] }` (FluentCMS's style). The `errors` key marks the
  * failure side of the envelope — when present in a 2xx body, the call counts
  * as failed (the server kept the HTTP status clean but signalled errors).
+ * An API with a success flag (`{ data, messages, succeeded }`, BlazorHero's
+ * Result<T>) names it in `succeeded`: then the flag decides, and the messages
+ * of a successful call ("Product Saved") are no failure.
  */
 export interface EnvelopeOptions {
   /** The success side of the envelope (e.g. `"data"`); the body is unwrapped from this key. */
   data?: string;
-  /** The failure side of the envelope (e.g. `"errors"`); non-empty ⇒ failure result. */
+  /** The failure side of the envelope (e.g. `"errors"`, `"messages"`); non-empty ⇒ failure result, unless `succeeded` decides. */
   errors?: string;
+  /** The envelope's success flag (e.g. `"succeeded"`): `false` ⇒ failure result (the `errors` side its messages), `true` ⇒ success. */
+  succeeded?: string;
 }
 
-/** True when the envelope's failure side is present and non-empty in a 2xx body. */
+/**
+ * True when the envelope signals a failure in a 2xx body: its success flag is `false`, or — without a flag in the
+ * options or the body — its failure side is present and non-empty.
+ */
 export function envelopeHasErrors(body: unknown, envelope: EnvelopeOptions | undefined): boolean {
-  if (!envelope?.errors) return false;
   if (body === null || typeof body !== "object") return false;
+  if (envelope?.succeeded) {
+    const flag = (body as Record<string, unknown>)[envelope.succeeded];
+    if (typeof flag === "boolean") return !flag;
+  }
+  if (!envelope?.errors) return false;
   const errors = (body as Record<string, unknown>)[envelope.errors];
   if (errors === undefined || errors === null) return false;
   if (Array.isArray(errors)) return errors.length > 0;

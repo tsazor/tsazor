@@ -12,7 +12,7 @@
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { OpenApiClient, formData } from "../src/index.js";
-import { asProblemDetails, envelopeHasErrors, problemMessage, type EnvelopeOptions, type HttpResult } from "../src/http-result.js";
+import { asProblemDetails, buildResult, envelopeHasErrors, problemMessage, type EnvelopeOptions, type HttpResult } from "../src/http-result.js";
 import { TsazorHttp } from "@tsazor/runtime";
 
 interface OrderDto {
@@ -192,6 +192,20 @@ describe("OpenApiClient over a Node HTTP server", () => {
 
     expect(envelopeHasErrors({ data: null, errors: [] }, envelope)).toBe(false);
     expect(asProblemDetails({ title: "x", status: 500 })?.title).toBe("x");
+  });
+
+  it("lets the envelope's success flag decide: messages on a success are no failure (BlazorHero's Result<T>, B2)", () => {
+    const envelope: EnvelopeOptions = { data: "data", errors: "messages", succeeded: "succeeded" };
+    const result = (body: unknown) => buildResult<number>(new Response(null, { status: 200 }), JSON.stringify(body), envelope);
+    const saved = result({ data: 7, messages: ["Product Saved"], succeeded: true });
+    expect(saved.ok && saved.body).toBe(7);
+    const refused = result({ data: 0, messages: ["Brand not found"], succeeded: false });
+    expect(refused.ok).toBe(false);
+    expect(problemMessage(refused)).toBe("Brand not found");
+    // A body without the flag: its messages decide, as without the option.
+    expect(envelopeHasErrors({ data: 1, messages: ["Failed"] }, envelope)).toBe(true);
+    // Without the option, messages fail even a call that says it succeeded (FluentCMS's style).
+    expect(envelopeHasErrors({ data: 1, messages: ["Saved"], succeeded: true }, { data: "data", errors: "messages" })).toBe(true);
   });
 
   it("reads the envelope's errors on an error status, each error object by its text or code", async () => {
