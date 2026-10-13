@@ -35,7 +35,7 @@ Add rules to `Bread.tsazor.css` for:
 - `input.modified.valid` and `select.modified.valid` under a label, with a green border
   (`#1a7f37`),
 - the messages in red: `::deep .validation-message`,
-- the summary in red: `.summary ::deep .validation-summary` (the page wraps it in a
+- the summary in red: `.summary ::deep .validation-errors` (the page wraps it in a
   `<div class="summary">`).
 
 Press Reserve with an empty name: the border and the messages turn red. Type a name, and

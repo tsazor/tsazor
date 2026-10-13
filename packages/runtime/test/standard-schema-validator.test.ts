@@ -101,7 +101,7 @@ describe("StandardSchemaValidator", () => {
     expect(current.submitted).toEqual(["invalid"]);
     expect(context().getValidationMessages("email")).toEqual(["Enter a valid email."]);
     expect(context().getValidationMessages("password")).toEqual(["At least 8 characters."]);
-    expect([...container.querySelectorAll(".validation-summary li")].map((li) => li.textContent)).toEqual([
+    expect([...container.querySelectorAll(".validation-errors li.validation-message")].map((li) => li.textContent)).toEqual([
       "Enter a valid email.",
       "At least 8 characters.",
     ]);

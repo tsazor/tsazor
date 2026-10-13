@@ -13,6 +13,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   OS's dark mode now has all of the explicit dark theme's values (the neutral ramp, the shadows and the accent's
   hover/active steps were the light ones), and the theme-dependent aliases (`--fui-accent*`,
   `--fui-brand-background*`, `--fui-flyout-shadow`) follow the nearest theme in nested providers.
+- **Breaking (CSS) — `@tsazor/runtime`: `ValidationSummary` renders Blazor's markup:** `<ul class="validation-errors">`
+  with a `<li class="validation-message">` per message (before: `ul.validation-summary` and bare `li`s). As in Blazor,
+  the class replaces a passed `class`; the other attributes pass through. Rename `.validation-summary` in your CSS; a
+  Blazor app's `.validation-errors` / `.validation-message` rules now apply as they are.
 - `@tsazor/runtime`: **`StandardSchemaValidator`** — an EditForm validates its model with a Standard Schema: a zod
   (3.24+), Valibot or ArkType schema, react-hook-form's `zodResolver` in Blazor's shape (Blazored.FluentValidation's
   `<FluentValidationValidator />`). Issues become the fields' messages by their path (`["address", "city"]` →

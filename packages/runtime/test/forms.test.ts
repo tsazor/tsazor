@@ -105,6 +105,8 @@ class ContactFormPage extends ComponentBase {
       inner.addAttribute(18, "ValueExpression", "agree");
       inner.closeComponent();
       inner.openComponent(19, defineComponent(ValidationSummary));
+      inner.addAttribute(20, "class", "mine");
+      inner.addAttribute(21, "id", "summary");
       inner.closeComponent();
     });
     b.closeComponent();
@@ -180,7 +182,11 @@ describe("EditForm + Input* components", () => {
     await renderer.waitUntilIdle();
 
     expect(page0().submitted).toBe(false);
-    const items = [...document.querySelectorAll("ul.validation-summary li")].map((li) => li.textContent);
+    // Blazor's markup: its class replaces a passed one, the other attributes pass through.
+    const summary = document.querySelector("ul#summary")!;
+    expect(summary.getAttribute("class")).toBe("validation-errors");
+    expect([...summary.children].every((li) => li.tagName === "LI" && li.className === "validation-message")).toBe(true);
+    const items = [...summary.children].map((li) => li.textContent);
     expect(items).toContain("Email must contain @");
     expect(items).toContain("Must be 18 or older");
     expect(items).toContain("Pick a topic");
@@ -206,7 +212,7 @@ describe("EditForm + Input* components", () => {
     await renderer.waitUntilIdle();
 
     expect(page0().submitted).toBe(true);
-    expect(document.querySelector("ul.validation-summary")).toBeNull();
+    expect(document.querySelector("ul.validation-errors")).toBeNull();
   });
 
   it("does not navigate on submit (preventDefault)", async () => {

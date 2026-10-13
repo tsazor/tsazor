@@ -533,7 +533,7 @@ describe("validation-messages", () => {
   it("the summary renders nothing while the form is valid", async () => {
     const m = await mount(b);
     await openBread(m);
-    expect(m.html()).not.toContain("validation-summary");
+    expect(m.html()).not.toContain("validation-errors");
     m.dispose();
   });
 
@@ -542,7 +542,7 @@ describe("validation-messages", () => {
     await openBread(m);
     click(m);
     await m.settle();
-    expect(m.html()).toContain('<ul class="validation-summary"><li>The name field is required.</li></ul>');
+    expect(m.html()).toContain('<ul class="validation-errors"><li class="validation-message">The name field is required.</li></ul>');
     m.dispose();
   });
 });
@@ -556,7 +556,7 @@ describe("invalid-submit", () => {
     click(m);
     await m.settle();
     const html = m.html();
-    expect(html).toContain('<ul class="validation-summary"><li>The name field is required.</li></ul>');
+    expect(html).toContain('<ul class="validation-errors"><li class="validation-message">The name field is required.</li></ul>');
     expect(html).toContain('<p class="status">1 field(s) need a look.</p>');
     expect(html).not.toContain("Reserved:");
     m.dispose();
@@ -573,7 +573,7 @@ describe("invalid-submit", () => {
     await m.settle();
     const html = m.html();
     expect(html).toContain("Reserved: 1 × sourdough for Marta.");
-    expect(html).not.toContain("validation-summary");
+    expect(html).not.toContain("validation-errors");
     expect(html).not.toContain("need a look");
     m.dispose();
   });
@@ -604,7 +604,7 @@ describe("field-styles", () => {
     expect(build.css).toMatch(/label\[b-[0-9a-f]{8}\] input\.invalid/);
     expect(build.css).toMatch(/label\[b-[0-9a-f]{8}\] select\.invalid/);
     expect(build.css).toMatch(/\[b-[0-9a-f]{8}\] \.validation-message/);
-    expect(build.css).toMatch(/\.summary\[b-[0-9a-f]{8}\] \.validation-summary/);
+    expect(build.css).toMatch(/\.summary\[b-[0-9a-f]{8}\] \.validation-errors/);
   });
 });
 

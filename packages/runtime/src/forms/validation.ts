@@ -54,9 +54,12 @@ export class ValidationMessage extends ComponentBase {
   }
 }
 
-/** Blazor's ValidationSummary: lists all validation messages of the EditContext. */
+/**
+ * Blazor's ValidationSummary: lists all validation messages of the EditContext, in Blazor's markup —
+ * `<ul class="validation-errors">` with a `<li class="validation-message">` per message.
+ */
 export class ValidationSummary extends ComponentBase {
-  /** Pass-through attributes (on the <ul>). */
+  /** Pass-through attributes (on the <ul>; as in Blazor, its class `validation-errors` replaces a passed one). */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
   /** The enclosing form's EditContext (cascaded by EditForm). */
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
@@ -82,12 +85,13 @@ export class ValidationSummary extends ComponentBase {
     if (invalid.length === 0) return;
     b.openElement(this.nextSequence(), "ul");
     for (const [name, value] of Object.entries(this.additionalAttributes ?? {})) {
-      b.addAttribute(this.nextSequence(), name, value as never);
+      if (name !== "class") b.addAttribute(this.nextSequence(), name, value as never);
     }
-    b.addAttribute(this.nextSequence(), "class", `validation-summary${this.additionalAttributes?.["class"] ? ` ${this.additionalAttributes["class"]}` : ""}`);
+    b.addAttribute(this.nextSequence(), "class", "validation-errors");
     for (const field of invalid) {
       for (const message of this.editContext.getValidationMessages(field)) {
         b.openElement(this.nextSequence(), "li");
+        b.addAttribute(this.nextSequence(), "class", "validation-message");
         b.addContent(this.nextSequence(), message);
         b.closeElement();
       }

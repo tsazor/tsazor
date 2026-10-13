@@ -2173,7 +2173,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (on the <ul>)."
+          "doc": "Pass-through attributes (on the <ul>; as in Blazor, its class `validation-errors` replaces a passed one)."
         },
         {
           "name": "editContext",
@@ -2196,7 +2196,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The enclosing form's EditContext (cascaded by EditForm)."
         }
       ],
-      "doc": "Blazor's ValidationSummary: lists all validation messages of the EditContext.",
+      "doc": "Blazor's ValidationSummary: lists all validation messages of the EditContext, in Blazor's markup —\n`<ul class=\"validation-errors\">` with a `<li class=\"validation-message\">` per message.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

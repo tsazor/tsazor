@@ -30,7 +30,7 @@ await page.waitForTimeout(300);
 await page.locator("button[type=submit]").click();
 await page.waitForTimeout(200);
 check("OnInvalidSubmit fired on the untouched form", (await page.locator("p.log").textContent())?.includes("OnInvalidSubmit") === true, await page.locator("p.log").textContent());
-const summary = (await page.locator(".validation-summary, ul, p").allTextContents()).join(" ");
+const summary = (await page.locator(".validation-errors, ul, p").allTextContents()).join(" ");
 check("the Name rule message is .NET's exact text", summary.includes("The name field is required."), summary.slice(0, 200));
 check("the Email rule message is .NET's exact text", summary.includes("The email field is required."), summary.slice(0, 200));
 await page.waitForTimeout(200);

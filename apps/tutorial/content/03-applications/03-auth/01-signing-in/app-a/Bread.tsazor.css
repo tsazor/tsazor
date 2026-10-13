@@ -28,7 +28,7 @@
     color: #b3261e;
 }
 
-.summary ::deep .validation-summary {
+.summary ::deep .validation-errors {
     color: #b3261e;
     font-size: 0.95rem;
 }

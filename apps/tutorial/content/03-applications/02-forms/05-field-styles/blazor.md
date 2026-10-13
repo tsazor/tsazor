@@ -18,7 +18,7 @@ label ::deep select.invalid {
 ```
 
 Add the same for `modified valid` in green (`#1a7f37`), and color the messages
-(`::deep .validation-message`) and the summary (`.summary ::deep .validation-summary`).
+(`::deep .validation-message`) and the summary (`.summary ::deep .validation-errors`).
 Press Reserve with an empty name: red. Type a name: green.
 
 > **Coming from Blazor:** nothing new here. The classes come from the `EditContext` as in
