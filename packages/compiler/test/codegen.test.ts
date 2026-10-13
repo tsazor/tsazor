@@ -72,6 +72,21 @@ describe("codegen", () => {
     expect(code).toContain('__builder.addAttribute(4, "Variant", this.variant);');
   });
 
+  it("emits a component's own @layout as `static layout` (Blazor's [Layout]), resolved like a tag or imported", () => {
+    const resolved = gen("@inherits LayoutComponentBase\n@layout AppShell\n<div>@Body</div>", {
+      resolveComponent: (tag) => (tag === "AppShell" ? { specifier: "./AppShell.tsazor" } : null),
+    });
+    expect(resolved.code).toContain('import __tsazor_comp_AppShell from "./AppShell.tsazor";');
+    expect(resolved.code).toContain("  static layout = __tsazor_comp_AppShell;");
+    expect(resolved.metadata.layout).toBe("AppShell");
+    const imported = gen('@import AppShell from "./AppShell.tsazor"\n@layout AppShell\n<div>x</div>');
+    expect(imported.code).toContain("  static layout = AppShell;");
+    // Unresolved: the route manifest resolves a page's layout itself; nothing is emitted, nothing diagnosed.
+    const unresolved = gen('@page "/x"\n@layout MainLayout\n<p>x</p>');
+    expect(unresolved.code).not.toContain("static layout");
+    expect(unresolved.diagnostics.all.filter((d) => d.severity === "warning")).toEqual([]);
+  });
+
   it("leaves element attribute expressions unwrapped (only component tags get the EventCallback conversion)", () => {
     const { code } = gen('<a href="@target" data-on="x">y</a>@code { private target = "/"; }');
     expect(code).toContain('__builder.addAttribute(1, "href", this.target);');

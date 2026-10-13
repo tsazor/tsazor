@@ -90,6 +90,21 @@ describe("buildShadowModule", () => {
     expect(shadow!.code).not.toContain('from "../Shared/Alert.tsazor";');
   });
 
+  it("rewrites a .tsazor import through the app's tsconfig `paths` (`@/…`) to its shadow — the class, not a ComponentType", async () => {
+    const app = path.join(root, "aliased-app");
+    await mkdir(path.join(app, "src", "layouts"), { recursive: true });
+    await mkdir(path.join(app, "src", "pages"), { recursive: true });
+    await writeFile(path.join(app, "tsconfig.json"), '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }');
+    await writeFile(path.join(app, "src", "layouts", "Shell.tsazor"), "@inherits LayoutComponentBase\n<main>@Body</main>\n");
+    const shadow = await buildShadowModule(
+      path.join(app, "src", "pages", "Page.tsazor"),
+      '@import Shell from "@/layouts/Shell.tsazor"\n<LayoutView Layout="@Shell"><p>x</p></LayoutView>\n',
+      app,
+    );
+    expect(shadow!.code).toContain('import Shell from "../layouts/Shell.tsazor.gen";');
+    expect(shadow!.code).not.toContain('from "@/layouts/Shell.tsazor"');
+  });
+
   it("rewrites bare-package components to their shipped .tsazor sources", async () => {
     // Bare `@using @fake/ui` must live in _Imports.tsazor: component resolution
     // consults the imports chain only (same as the build pipeline).

@@ -751,7 +751,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The content to wrap (the layout's Body)."
         }
       ],
-      "doc": "Blazor's LayoutView: renders content inside an optional layout (without\nrouting). Used by RouteView-style callers and app code directly.",
+      "doc": "Blazor's LayoutView: renders content inside an optional layout (without\nrouting) — and that layout inside its own `@layout`, outward (renderWithLayout).\nUsed by RouteView-style callers and app code directly.",
       "base": {
         "name": "ComponentBase",
         "resolved": true
@@ -1330,7 +1330,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         }
       ],
       "doc": "Blazor's InputBase<TValue>: the foundation of the Input* component family.\nHolds the two-way value parameters, resolves the EditContext cascading\nvalue, and tracks validation state for the bound field.\n\nv1 deviation: `ValueExpression` is a plain field name string (Blazor uses a\ncompiler-generated expression); the form validators and ValidationMessage\nkey on the same string.",
@@ -1418,7 +1418,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         }
       ],
       "doc": "Blazor's InputText: single-line string input.",
@@ -1508,7 +1508,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         }
       ],
       "doc": "Blazor's InputTextArea: multi-line string input.",
@@ -1598,7 +1598,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         }
       ],
       "doc": "Blazor's InputNumber: numeric input; empty input maps to the empty string.",
@@ -1688,7 +1688,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         }
       ],
       "doc": "Blazor's InputCheckbox: boolean checkbox.",
@@ -1788,7 +1788,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         },
         {
           "name": "type",
@@ -1896,7 +1896,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
               "kind": "global"
             }
           ],
-          "doc": "Pass-through attributes (class, style, placeholder, …)."
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
         },
         {
           "name": "childContent",
@@ -2230,6 +2230,56 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         }
       ],
       "doc": "DataAnnotationsValidator, port of Blazor's DataAnnotationsValidator.cs\n(src/Components/Forms/src): inside an EditForm, it enables DataAnnotations\nvalidation of the form model on the cascaded EditContext — Tsazor's pendant\nare the field-rule decorators (validation-attributes.ts, roadmap 3.6):\n`@Required()`, `@MinLength()`, `@MaxLength()`, `@StringLength()`, `@Range()`,\n`@EmailAddress()`, `@RegularExpression()`, `@Compare()`.\n\nTiming like Blazor's DataAnnotationsEventSubscriptions:\n- a field change revalidates exactly that field (its rules; a field without\n  rules is not touched),\n- validate() (form submit) validates every decorated field of the model and\n  first clears this provider's messages.\nMessages are stored with .NET's DataAnnotations texts (field name as display\nname). Deviations: `DisableClientValidation` and the SSR client-validation\nmapping (DataAnnotationsValidator's [Inject] IServiceProvider) have no\nTsazor counterpart; the validator is the only consumer of the model rules —\nadditional custom rules go through the EditForm `validators` adapter.",
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "StandardSchemaValidator": {
+      "name": "StandardSchemaValidator",
+      "file": "src/forms/standard-schema-validator.ts",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "StandardSchemaValidator",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "cascading": {
+            "type": "EditContext"
+          },
+          "doc": "The form's EditContext (cascaded by EditForm)."
+        },
+        {
+          "name": "schema",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "StandardSchemaValidator",
+          "type": "StandardSchemaV1",
+          "references": [
+            {
+              "name": "StandardSchemaV1",
+              "kind": "local",
+              "file": "src/forms/standard-schema-validator.ts"
+            }
+          ],
+          "doc": "The schema the model must satisfy."
+        }
+      ],
+      "doc": "Tsazor extension, the Blazor shape of a form library's schema resolver (react-hook-form's `zodResolver`;\nBlazored.FluentValidation's `<FluentValidationValidator />`): inside an EditForm, it validates the form model with\na Standard Schema — a zod object, a Valibot or ArkType schema — and writes the issues as the fields' validation\nmessages, which ValidationMessage, ValidationSummary and the inputs' invalid state show as DataAnnotations' do.\n\n```razor\n<EditForm Model=\"@model\" OnValidSubmit=\"@save\">\n    <StandardSchemaValidator Schema=\"@schema\" />\n    <InputText @bind-Value=\"model.email\" />\n    <ValidationMessage For=\"email\" />\n</EditForm>\n```\n\nTiming as DataAnnotationsValidator's: a field change validates the model and updates that field's messages (a\ncross-field rule such as a password confirmation speaks on its own field); a submit (`validate()`) clears this\nvalidator's messages and writes every issue. An issue without a path is the model's (field \"\"). The schema's\ntransformed output (zod's `.trim()`) is not written back: the submit handler parses the model when it needs it.\nSynchronous, as EditContext.validate() is: a schema whose validation is async (zod's async refinements) still\nshows its messages when they arrive, but a submit doesn't wait for them — a DEV warning says so.",
       "base": {
         "name": "ComponentBase",
         "resolved": true

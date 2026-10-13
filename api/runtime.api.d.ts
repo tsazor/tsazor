@@ -596,6 +596,8 @@ export declare abstract class InputBase<TValue> extends ComponentBase {
     protected onInitialized(): void;
     dispose(): void;
     protected get fieldClass(): string;
+    protected get cssClass(): string;
+    protected get attributesWithValidation(): Record<string, unknown> | undefined;
     protected captureElement(b: RenderTreeBuilder): void;
     protected applyCommonAttributes(b: RenderTreeBuilder): void;
     private sequenceCounter;
@@ -791,6 +793,7 @@ export declare class NavigationManager {
     private popStateCallback;
     private disposed;
     private lastLocation;
+    private currentHistoryEntryState;
     private readonly historyApi;
     private readonly uriSource;
     readonly routingMode: RoutingMode;
@@ -801,6 +804,7 @@ export declare class NavigationManager {
     constructor(historyApiOrOptions?: History | NavigationManagerOptions);
     private get history();
     private get isHashMode();
+    get historyEntryState(): string | undefined;
     get uri(): string;
     private get documentLocation();
     get baseUri(): string;
@@ -810,6 +814,9 @@ export declare class NavigationManager {
     toLinkHref(href: string): string;
     toBaseRelativePath(uri: string): string;
     navigateTo(uri: string, forceLoadOrOptions?: boolean | NavigationOptions, replace?: boolean): void;
+    getUriWithQueryParameter(name: string, value: QueryParameterValue | readonly QueryParameterValue[]): string;
+    getUriWithQueryParameters(parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string;
+    getUriWithQueryParameters(uri: string, parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string;
     addLocationChanged(handler: (sender: NavigationManager, event: LocationChangedEventArgs) => void): () => void;
     registerLocationChangingHandler(handler: LocationChangingHandler): {
         dispose(): void;
@@ -981,6 +988,9 @@ export declare function queryParametersOf(modelType: unknown): ReadonlyMap<strin
 // QueryParameterType
 export type QueryParameterType = "string" | "int" | "long" | "bool" | "double" | "float" | "decimal" | "datetime" | "guid";
 
+// QueryParameterValue
+export type QueryParameterValue = string | number | bigint | boolean | Date | null | undefined;
+
 // Range
 export declare function Range(minimum: number, maximum: number, override?: ValidationMessageOverride): FieldRuleDecorator;
 
@@ -1103,6 +1113,7 @@ export declare class RenderTreeBuilder {
     closeRegion(): void;
     setKey(key: string | number | null | undefined | object): void;
     addAttribute(sequence: number, name: string, value: AttributeValue): void;
+    addAttribute(sequence: number, name: string, value: unknown): void;
     addComponentParameter(sequence: number, name: string, value: unknown): void;
     addEventHandler(sequence: number, name: string, callback: EventCallback<any> | undefined, flags?: EventHandlerFlags | number): void;
     addMultipleAttributes(sequence: number, attributes: Readonly<Record<string, unknown>> | null | undefined): void;
@@ -1355,6 +1366,54 @@ export declare class ServiceProvider {
     dispose(): void;
     private resolve;
     private construct;
+}
+
+// standardSchemaField
+export declare function standardSchemaField(issue: StandardSchemaIssue): string;
+
+// StandardSchemaIssue
+export interface StandardSchemaIssue {
+    readonly message: string;
+    readonly path?: ReadonlyArray<PropertyKey | {
+        readonly key: PropertyKey;
+    }> | undefined;
+}
+
+// StandardSchemaResult
+export type StandardSchemaResult<Output> = {
+    readonly value: Output;
+    readonly issues?: undefined;
+} | {
+    readonly issues: ReadonlyArray<StandardSchemaIssue>;
+};
+
+// StandardSchemaV1
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+    readonly "~standard": {
+        readonly version: 1;
+        readonly vendor: string;
+        readonly validate: (value: unknown) => StandardSchemaResult<Output> | Promise<StandardSchemaResult<Output>>;
+        readonly types?: {
+            readonly input: Input;
+            readonly output: Output;
+        } | undefined;
+    };
+}
+
+// StandardSchemaValidator
+export declare class StandardSchemaValidator extends ComponentBase {
+    editContext?: EditContext;
+    schema?: StandardSchemaV1;
+    private store?;
+    private originalEditContext?;
+    private subscriptions;
+    private warnedAsync;
+    protected onInitialized(): void;
+    protected onParametersSet(): void;
+    dispose(): void;
+    protected buildRenderTree(_b: RenderTreeBuilder): void;
+    private validate;
+    private apply;
 }
 
 // State

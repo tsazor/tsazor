@@ -63,6 +63,7 @@ export {
   type LocationChangingHandler,
   type NavigationOptions,
   type NavigationManagerOptions,
+  type QueryParameterValue,
   type RoutingMode,
 } from "./navigation/navigation-manager.js";
 export { MemoryHistory } from "./navigation/memory-history.js";
@@ -112,6 +113,7 @@ export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputS
 export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js";
+export { StandardSchemaValidator, standardSchemaField, type StandardSchemaIssue, type StandardSchemaResult, type StandardSchemaV1 } from "./forms/standard-schema-validator.js";
 export { enableDataAnnotationsValidation } from "./forms/edit-context.js";
 export { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "./forms/input-file.js";
 export { formatValue, parseValue } from "./forms/bind-format.js";

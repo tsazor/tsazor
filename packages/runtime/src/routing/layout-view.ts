@@ -1,11 +1,12 @@
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
-import { defineComponent } from "../components/component-definition.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import { renderWithLayout } from "./route-view.js";
 
 /**
  * Blazor's LayoutView: renders content inside an optional layout (without
- * routing). Used by RouteView-style callers and app code directly.
+ * routing) — and that layout inside its own `@layout`, outward (renderWithLayout).
+ * Used by RouteView-style callers and app code directly.
  */
 export class LayoutView extends ComponentBase {
   /** Layout component class; content renders bare when omitted. */
@@ -18,8 +19,6 @@ export class LayoutView extends ComponentBase {
       b.addContent(0, this.childContent);
       return;
     }
-    b.openComponent(0, defineComponent(this.layout));
-    b.addAttribute(1, "Body", this.childContent);
-    b.closeComponent();
+    renderWithLayout(b, this.layout, this.childContent ?? (() => {}));
   }
 }

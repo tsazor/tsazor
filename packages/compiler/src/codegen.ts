@@ -513,6 +513,7 @@ class Codegen {
     // Pre-resolve component tags so imports come out once, before the class.
     this.classifyChildContent(document.body);
     this.preResolve(document.body, this.metadata.usings);
+    const layoutLocal = this.layoutLocal();
     if (this.options.typedShadow !== undefined) this.suggestImports(memberCode, document.directives);
 
     // --- Emit the module -------------------------------------------------
@@ -584,6 +585,11 @@ class Codegen {
       this.line("  static routeTemplate = routeTemplate;");
       if (this.metadata.routeTemplates.length > 1) this.line("  static routeTemplates = routeTemplates;");
       if (this.metadata.authorize) this.line("  static routeAuthorize = routeAuthorize;");
+      this.line("");
+    }
+    if (layoutLocal !== undefined) {
+      // Blazor's [Layout]: a layout's own layout, which LayoutView and RouteView follow outward.
+      this.line(`  static layout = ${layoutLocal};`);
       this.line("");
     }
     for (const inject of this.metadata.injects) {
@@ -1038,6 +1044,25 @@ class Codegen {
       offset += part.length + 1;
     });
     this.writer.line(text, anchors);
+  }
+
+  /**
+   * The component's own `@layout` as a class it can reference (Blazor's LayoutAttribute): an imported class, or one
+   * the resolver finds as it finds tags — imported like a tag. Unresolved, nothing is emitted (the route manifest
+   * resolves a page's layout on its own).
+   */
+  private layoutLocal(): string | undefined {
+    const name = this.metadata.layout;
+    if (!name || !/^[A-Za-z_$][\w$]*$/.test(name)) return undefined;
+    if (this.importedValues.has(name)) return name;
+    const existing = this.componentLocalNames.get(name);
+    if (existing !== undefined) return existing === "__tsazor_unresolved" ? undefined : existing;
+    const resolved = this.options.resolveComponent?.(name, this.metadata.usings) ?? null;
+    if (!resolved) return undefined;
+    const local = `__tsazor_comp_${name.replace(/[^A-Za-z0-9_]/g, "_")}`;
+    this.componentLocalNames.set(name, local);
+    this.componentImports.set(name, local);
+    return local;
   }
 
   private localForComponent(tagName: string, usings: string[], pos: SourceRange): string | null {

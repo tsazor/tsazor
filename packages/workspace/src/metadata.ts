@@ -13,6 +13,7 @@ import {
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { collectImportsSync, findPackageDir, rebaseSpecifier } from "./imports.js";
+import { mapPath } from "./path-mapping.js";
 import { classNameForFile, createFileContext, type FileContext } from "./resolver.js";
 import { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";
 
@@ -163,14 +164,19 @@ export class MetadataCache {
     return [...affected];
   }
 
-  /** Resolves a relative module specifier imported by `fromFile` to a source file. */
+  /**
+   * Resolves a module specifier imported by `fromFile` to a source file: a relative one, or one the app's tsconfig
+   * `paths` map (`@/components/ui/Button.tsazor`, path-mapping.ts). Packages resolve elsewhere.
+   */
   resolveFile(specifier: string, fromFile: string): string | undefined {
-    if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) return undefined;
-    const base = path.resolve(path.dirname(fromFile), specifier);
-    const candidates = [base, ...MODULE_EXTENSIONS.map((extension) => base + extension)];
-    // tsc-style `./x.js` specifiers point at `./x.ts` sources.
-    if (/\.js$/.test(base)) candidates.splice(1, 0, base.replace(/\.js$/, ".ts"));
-    return candidates.find((candidate) => /\.(tsazor|[mc]?tsx?)$/.test(candidate) && !candidate.endsWith(".d.ts") && isFile(candidate));
+    if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) {
+      for (const mapped of mapPath(specifier, fromFile)) {
+        const file = sourceFileAt(mapped);
+        if (file) return file;
+      }
+      return undefined;
+    }
+    return sourceFileAt(path.resolve(path.dirname(fromFile), specifier));
   }
 
   /**
@@ -298,6 +304,13 @@ export class MetadataCache {
 /** The cache the resolver, the Vite plugin and the language server share. */
 export const defaultMetadataCache = new MetadataCache();
 
+/** The source file a resolved specifier names: itself, or with a module extension (`./x.js` → `./x.ts`, tsc-style). */
+function sourceFileAt(base: string): string | undefined {
+  const candidates = [base, ...MODULE_EXTENSIONS.map((extension) => base + extension)];
+  if (/\.js$/.test(base)) candidates.splice(1, 0, base.replace(/\.js$/, ".ts"));
+  return candidates.find((candidate) => /\.(tsazor|[mc]?tsx?)$/.test(candidate) && !candidate.endsWith(".d.ts") && isFile(candidate));
+}
+
 function isFile(file: string): boolean {
   try {
     return statSync(file).isFile();
@@ -345,8 +358,8 @@ export function componentMetadataForTag(
 }
 
 function importedComponent(specifier: string, imported: string, fromFile: string, cache: MetadataCache): ComponentMetadata | undefined {
-  if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) return cache.packageComponent(specifier, imported, fromFile);
   const file = cache.resolveFile(specifier, fromFile);
+  if (!file && !specifier.startsWith(".") && !path.isAbsolute(specifier)) return cache.packageComponent(specifier, imported, fromFile);
   if (!file) return undefined;
   return cache.componentOfFile(file, file.endsWith(".tsazor") || imported === "default" ? undefined : imported);
 }

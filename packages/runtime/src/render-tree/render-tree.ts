@@ -156,8 +156,14 @@ export class RenderTreeBuilder {
     }
   }
 
-  /** Blazor's AddAttribute: adds an attribute to the open element, or a parameter to the open component. */
-  addAttribute(sequence: number, name: string, value: AttributeValue): void {
+  /**
+   * Blazor's AddAttribute: adds an attribute to the open element, or a parameter to the open component. The value is
+   * any value, as Blazor's `object?` — also one typed `unknown` (a component parameter `payload: unknown` takes it;
+   * the first signature keeps a lambda's contextual typing).
+   */
+  addAttribute(sequence: number, name: string, value: AttributeValue): void;
+  addAttribute(sequence: number, name: string, value: unknown): void;
+  addAttribute(sequence: number, name: string, value: unknown): void {
     this.frames.push({ frameType: FrameType.Attribute, sequence, attributeName: name, attributeValue: value });
   }
 

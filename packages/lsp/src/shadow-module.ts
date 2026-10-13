@@ -1,5 +1,5 @@
 import { compile, type ExpressionValue, type ImportSuggestion, type TypedTagInferenceRequest, type UninferredTypeArguments } from "@tsazor/compiler";
-import { collectImports, createFileContext, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
+import { collectImports, createFileContext, mapPath, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -155,6 +155,17 @@ function rewriteImportLine(line: string, fileDir: string, projectRoot: string): 
       return `import ${clause} from "${specifier}.gen";`;
     }
     return line;
+  }
+
+  // Rewrite A, through the app's tsconfig `paths` (`@/components/layout/AppShell.tsazor`): the component's shadow
+  // too — else the ambient `*.tsazor` declaration types the import as a ComponentType, not its class.
+  if (specifier.endsWith(".tsazor")) {
+    const mapped = mapPath(specifier, path.join(fileDir, "_")).find((candidate) => existsSync(candidate));
+    if (mapped) {
+      let relative = toPosix(path.relative(fileDir, mapped));
+      if (!relative.startsWith(".")) relative = `./${relative}`;
+      return `import ${clause} from "${relative}.gen";`;
+    }
   }
 
   // Rewrite B: bare package specifier (e.g. @tsazor/bootstrap) → the package's

@@ -5,7 +5,7 @@
 | Directive | Example | Semantics |
 |---|---|---|
 | `@page` | `@page "/user/{Id:int}"` | Route template, see [Routes](#routes). Multiple `@page` ⇒ each template is a route (Blazor) |
-| `@layout` | `@layout MainLayout` | Layout for this route (overrides `_Imports`) |
+| `@layout` | `@layout MainLayout` | Layout for this route (overrides `_Imports`). On a layout: the layout it renders inside (nested layouts, Blazor's `[Layout]`; emitted as `static layout`, followed outward by RouteView and LayoutView) |
 | `@using` | `@using ./Shared` | Component tags and `@inject`/`@inherits` types (see Getting Started) |
 | `@import` | `@import { Status, formatDate } from "./utils"` | TypeScript import for markup and `@code` (see below); inherited from `_Imports.tsazor` |
 | `@inject` | `@inject NavigationManager Nav` | DI: field initializer `inject(<Type>)` |

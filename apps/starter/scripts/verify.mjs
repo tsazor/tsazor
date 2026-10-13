@@ -133,7 +133,9 @@ try {
       say((await page.locator("[aria-live=polite]").count()) > 0, "the library's toast region is in the layout");
     }
     const bodyFont = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
-    say(bodyFont.startsWith(variant.bodyFont), `the body's typeface is ${variant.rootProperty ? "the library's" : "the template's"} (${bodyFont.split(",")[0]})`);
+    // Chromium quotes a family name with spaces in the computed value, Firefox doesn't: compare without the quotes.
+    const unquoted = (value) => value.replace(/"/g, "");
+    say(unquoted(bodyFont).startsWith(unquoted(variant.bodyFont)), `the body's typeface is ${variant.rootProperty ? "the library's" : "the template's"} (${bodyFont.split(",")[0]})`);
     await axeClean("/");
 
     await page.getByRole("link", { name: "Counter" }).click();

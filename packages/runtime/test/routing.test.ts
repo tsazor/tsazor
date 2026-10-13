@@ -259,6 +259,72 @@ describe("Router + RouteView + NavLink", () => {
     expect(document.querySelector("h1")).toBeNull();
   });
 
+  it("wraps a nested layout in its own @layout, outward (Blazor's LayoutView), keeping the outer one across pages", async () => {
+    // SettingsLayout's `@layout MainLayout` — the compiler's `static layout` (Blazor's [Layout]).
+    class SettingsLayout extends LayoutComponentBase {
+      static layout = MainLayout;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "section");
+        b.addAttribute(1, "class", "settings");
+        this.Body?.(b);
+        b.closeElement();
+      }
+    }
+    // A layout chain that comes back to itself ends at the repeat.
+    class Loop extends LayoutComponentBase {
+      static layout: unknown;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openElement(0, "div");
+        b.addAttribute(1, "class", "loop");
+        this.Body?.(b);
+        b.closeElement();
+      }
+    }
+    Loop.layout = Loop;
+    class LoopPage extends ComponentBase {
+      static layout = Loop;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, "looped");
+      }
+    }
+    const nested = [
+      { template: "/", type: HomePage, layout: MainLayout },
+      { template: "/settings", type: CounterPage, layout: SettingsLayout },
+      // No manifest layout: the page's own (Blazor's [Layout] on the page).
+      { template: "/loop", type: LoopPage },
+    ];
+    const navigation = freshNavigation();
+    navigation.navigateTo("/");
+    const renderer = buildApp(navigation);
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(Router));
+        b.addAttribute(1, "Routes", nested);
+        b.addAttribute(2, "Found", (routeData: unknown) => (inner: RenderTreeBuilder) => {
+          inner.openComponent(0, defineComponent(RouteView));
+          inner.addAttribute(1, "RouteData", routeData);
+          inner.closeComponent();
+        });
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    await renderer.waitUntilIdle();
+    const shell = document.querySelector(".layout");
+    expect(document.querySelector(".settings")).toBeNull();
+
+    navigation.navigateTo("/settings");
+    await renderer.waitUntilIdle();
+    expect(document.querySelector(".layout main .settings h1")?.textContent).toBe("Counter: 0");
+    // The shell is the same element: MainLayout kept its instance.
+    expect(document.querySelector(".layout")).toBe(shell);
+
+    navigation.navigateTo("/loop");
+    await renderer.waitUntilIdle();
+    expect(document.querySelectorAll(".loop")).toHaveLength(1);
+    expect(document.querySelector(".loop")?.textContent).toBe("looped");
+  });
+
   it("does not intercept ctrl-clicks or external links", async () => {
     const navigation = freshNavigation();
     navigation.navigateTo("/");

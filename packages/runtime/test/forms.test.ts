@@ -135,6 +135,8 @@ describe("EditForm + Input* components", () => {
     expect(message?.textContent).toBe("Email must contain @");
     // Blazor's EditContext.FieldCssClass: modified + invalid ⇒ "modified invalid".
     expect(input.className).toBe("modified invalid");
+    // Blazor's InputBase: aria-invalid="true" while the field has messages.
+    expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(page().model.email).toBe("not-an-email");
 
     input.value = "me@tsazor.dev";
@@ -143,6 +145,7 @@ describe("EditForm + Input* components", () => {
 
     expect(document.querySelector("span.validation-message")).toBeNull();
     expect(input.className).toBe("modified valid");
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
   });
 
   it("coerces number and checkbox values", async () => {
@@ -230,6 +233,73 @@ async function render(): Promise<{ renderer: Renderer; page: () => ContactFormPa
 afterEach(() => {
   document.body.innerHTML = "";
 });
+
+describe("an input's validation attributes (Blazor's UpdateAdditionalValidationAttributes and CssClass)", () => {
+  /** Blazor's "custom input" idiom: inherit an input, render your own markup with the attributes and CssClass. */
+  class LiveText extends InputText {
+    protected override buildRenderTree(b: RenderTreeBuilder): void {
+      b.openElement(0, "input");
+      b.addMultipleAttributes(1, this.attributesWithValidation);
+      b.addAttribute(2, "class", this.cssClass);
+      b.addAttribute(3, "value", this.currentValue ?? "");
+      b.addEventHandler(4, "oninput", EventCallback.bind(this, (e: Event) => { this.currentValue = (e.target as HTMLInputElement).value; }));
+      b.closeElement();
+    }
+  }
+
+  it("puts aria-invalid into the attributes while the field has messages — a caller's own then, none while valid", async () => {
+    const model = { name: "", code: "" };
+    class Page extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(EditForm));
+        b.addAttribute(1, "Model", model);
+        b.addAttribute(2, "Validators", { name: (v: unknown) => (v ? null : "Required"), code: (v: unknown) => (v === "ok" ? null : "Wrong") });
+        b.addContent(3, () => (inner: RenderTreeBuilder) => {
+          inner.openComponent(0, defineComponent(LiveText));
+          inner.addAttribute(1, "Value", model.name);
+          inner.addAttribute(2, "ValueChanged", EventCallback.bind(this, (v: string) => { model.name = v; }));
+          inner.addAttribute(3, "ValueExpression", "name");
+          inner.addAttribute(4, "class", "field");
+          inner.closeComponent();
+          inner.openComponent(5, defineComponent(InputText));
+          inner.addAttribute(6, "Value", model.code);
+          inner.addAttribute(7, "ValueChanged", EventCallback.bind(this, (v: string) => { model.code = v; }));
+          inner.addAttribute(8, "ValueExpression", "code");
+          inner.addAttribute(9, "aria-invalid", "grammar");
+          inner.closeComponent();
+        });
+        b.closeComponent();
+      }
+    }
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const renderer = new Renderer();
+    renderer.renderInContainer(Page, container);
+    await renderer.waitUntilIdle();
+    const [live, code] = [...container.querySelectorAll("input")];
+    expect(live!.hasAttribute("aria-invalid")).toBe(false);
+    // A valid field carries no aria-invalid — Blazor drops even the caller's then.
+    expect(code!.hasAttribute("aria-invalid")).toBe(false);
+
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { cancelable: true }));
+    await renderer.waitUntilIdle();
+    // The markup subclass gets the state through attributesWithValidation and cssClass, as Blazor's custom inputs do.
+    expect(live!.getAttribute("aria-invalid")).toBe("true");
+    expect(live!.className).toBe("field invalid");
+    expect(code!.getAttribute("aria-invalid")).toBe("grammar");
+
+    live!.value = "Ada";
+    live!.dispatchEvent(new Event("input"));
+    code!.value = "ok";
+    code!.dispatchEvent(new Event("change"));
+    await renderer.waitUntilIdle();
+    expect(live!.hasAttribute("aria-invalid")).toBe(false);
+    expect(live!.className).toBe("field modified valid");
+    // Valid: no aria-invalid, not even the caller's (Blazor removes it too).
+    expect(code!.hasAttribute("aria-invalid")).toBe(false);
+  });
+});
+
 describe("InputDate (Blazor's InputDateType) and InputNumber with null", () => {
   /** Mounts one input bound to `value` and returns the element and what it reported. */
   async function mountInput(component: unknown, value: unknown, extra: Record<string, unknown> = {}) {

@@ -29,4 +29,5 @@ export {
   type ManifestEntry,
   type MetadataCacheOptions,
 } from "./metadata.js";
+export { mapPath } from "./path-mapping.js";
 export { RUNTIME_MANIFEST } from "./runtime-manifest.generated.js";

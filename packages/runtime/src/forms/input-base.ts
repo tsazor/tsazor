@@ -25,7 +25,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
   @Parameter() ValueExpression?: string;
   /** Resolved from the nearest EditForm (by-type cascading). */
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
-  /** Pass-through attributes (class, style, placeholder, …). */
+  /** Pass-through attributes (class, style, placeholder, …), as the caller gave them. */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
   /**
@@ -56,6 +56,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
 
   protected override onInitialized(): void {
     if (this.editContext) {
+      // Blazor's OnValidateStateChanged.
       this.editContextUnsubscribe = this.editContext.subscribe(() => this.stateHasChangedInternal());
     }
   }
@@ -76,6 +77,32 @@ export abstract class InputBase<TValue> extends ComponentBase {
     return isValid ? "valid" : "invalid";
   }
 
+  /** Blazor's CssClass: the caller's `class` and the field's validation class, for a component's own markup. */
+  protected get cssClass(): string {
+    const userClass = typeof this.additionalAttributes?.["class"] === "string" ? (this.additionalAttributes["class"] as string) : undefined;
+    return [userClass, this.fieldClass].filter(Boolean).join(" ");
+  }
+
+  /**
+   * The attributes with Blazor's validation state (its UpdateAdditionalValidationAttributes, which writes it into
+   * AdditionalAttributes): `aria-invalid="true"` while the field has messages (a caller's own value kept then),
+   * none — not even the caller's — while it has none. For a component that inherits an input and renders its own
+   * markup: `<input @attributes="@attributesWithValidation" class="@cssClass" …>`. (Deviation: Blazor changes
+   * AdditionalAttributes itself; here they stay the caller's, so a skin that shows the invalid state only after a
+   * submit decides that itself.) Outside an EditForm, the attributes as given.
+   */
+  protected get attributesWithValidation(): Record<string, unknown> | undefined {
+    const attributes = this.additionalAttributes;
+    if (!this.editContext || !this.ValueExpression) return attributes;
+    const hasAriaInvalid = attributes !== undefined && "aria-invalid" in attributes;
+    if (this.editContext.getValidationMessages(this.ValueExpression).length > 0) {
+      return hasAriaInvalid ? attributes : { ...attributes, "aria-invalid": "true" };
+    }
+    if (!hasAriaInvalid) return attributes;
+    const { "aria-invalid": _removed, ...rest } = attributes!;
+    return rest;
+  }
+
   /** Captures the rendered input as `element` (after its attributes, before its content). */
   protected captureElement(b: RenderTreeBuilder): void {
     b.addElementReferenceCapture(this.nextSequence(), (element) => {
@@ -86,7 +113,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
   /** Merges validation class with pass-through attributes for one element. */
   protected applyCommonAttributes(b: RenderTreeBuilder): void {
     const fieldClass = this.fieldClass;
-    const extra = this.additionalAttributes;
+    const extra = this.attributesWithValidation;
     const userClass = typeof extra?.["class"] === "string" ? (extra["class"] as string) : undefined;
     if (fieldClass || userClass) {
       const combined = [userClass, fieldClass].filter(Boolean).join(" ");

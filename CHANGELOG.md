@@ -5,6 +5,36 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/runtime`: **`StandardSchemaValidator`** — an EditForm validates its model with a Standard Schema: a zod
+  (3.24+), Valibot or ArkType schema, react-hook-form's `zodResolver` in Blazor's shape (Blazored.FluentValidation's
+  `<FluentValidationValidator />`). Issues become the fields' messages by their path (`["address", "city"]` →
+  `address.city`; none → the model's); a field change updates that field's, a submit all of them. The
+  `StandardSchemaV1` interface (the spec's, no dependency), `StandardSchemaResult`, `StandardSchemaIssue` and
+  `standardSchemaField` are exported.
+- `@tsazor/runtime`, `@tsazor/compiler` (Blazor parity): **nested layouts** — a layout's own `@layout` is followed,
+  as Blazor's LayoutView follows `[Layout]`: a Settings layout with `@layout MainLayout` renders inside it, and the
+  outer layout keeps its instance across pages that share it. The compiler emits a component's own `@layout` as
+  `static layout`; `RouteView`, `LayoutView` and `AuthorizeRouteView` wrap outward along the chain, and RouteView
+  takes the page's own layout when the route gives none.
+- `@tsazor/runtime` (Blazor parity): `NavigationManager.getUriWithQueryParameter(name, value)` and
+  `getUriWithQueryParameters([uri,] parameters)`, Blazor's NavigationManagerExtensions — set, replace (in place, names
+  case-insensitive) or remove (null) query parameters, arrays as repeated keys, the fragment kept; booleans as Blazor
+  writes them (`True`), dates as ISO 8601 (what `@SupplyParameterFromQuery()` reads back). `QueryParameterValue` is
+  exported.
+- `@tsazor/runtime`: `RenderTreeBuilder.addAttribute` also takes a value typed `unknown` (Blazor's `object?`): in
+  `tsazor check`, `payload="@event.payload"` on a parameter typed `unknown` failed with TS2345.
+- `@tsazor/runtime` (Blazor parity): `InputBase` offers Blazor's `cssClass` (the caller's class and the validation
+  class) and `attributesWithValidation` (the attributes with Blazor's aria-invalid rule) for a component that inherits
+  an input and renders its own markup.
+- `@tsazor/lsp` (`tsazor check`, the language server): a `.tsazor` imported through tsconfig `paths`
+  (`@import AppShell from "@/components/layout/AppShell.tsazor"`) is typed as its class, not as a `ComponentType`.
+- `@tsazor/runtime` (Blazor parity): the inputs (`InputBase`) carry `aria-invalid="true"` while their field has
+  validation messages, as Blazor's — a caller's own `aria-invalid` is kept then, and dropped while the field is valid.
+- `@tsazor/runtime` (Blazor parity): `NavigationManager.historyEntryState`, Blazor's `HistoryEntryState`: the state
+  the navigation to the current entry passed, restored on back and forward and after a reload.
+- `@tsazor/workspace` (the compiler's metadata, the Vite plugin, `tsazor check`, the language server): an app's
+  tsconfig `paths` are followed — `@/components/ui/Button.tsazor`, `@/api/users` (the `@/*` alias shadcn and Vite's
+  React template set up). A parameter typed from such a module was "unknown" (TZS026) and `count="5"` passed "5".
 - `@tsazor/fluent`, `@tsazor/bootstrap`: `Typography`'s `as` picks the element apart from the style (MudText's
   `HtmlTag`, Fluent UI React's `as`): `<Typography variant="h5" as="h1">` is a page's h1 in an h5's size. The
   Bootstrap skin gives the element Bootstrap's heading class (`<h1 class="h5">`).

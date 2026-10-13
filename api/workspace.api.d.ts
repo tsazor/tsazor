@@ -112,6 +112,9 @@ export interface ManifestEntry {
     localExport?: string;
 }
 
+// mapPath
+export declare function mapPath(specifier: string, fromFile: string): string[];
+
 // MetadataCache
 export declare class MetadataCache {
     private readonly modules;

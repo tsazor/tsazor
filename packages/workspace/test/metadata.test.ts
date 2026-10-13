@@ -188,7 +188,7 @@ describe("runtime manifest", () => {
         "FocusOnNavigate",
         "HeadContent", "HeadOutlet",
         "InputCheckbox", "InputDate", "InputFile", "InputNumber", "InputSelect", "InputText", "InputTextArea", "LayoutView",
-        "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "SectionContent", "SectionOutlet", "SectionOutletContentRenderer",
+        "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "SectionContent", "SectionOutlet", "SectionOutletContentRenderer", "StandardSchemaValidator",
         "ValidationMessage", "ValidationSummary", "Virtualize",
       ].sort(),
     );
@@ -208,5 +208,32 @@ describe("type aliases from packages (component library vocabulary)", () => {
     const intent = metadata?.parameters.find((p) => p.name === "intent");
     expect(intent?.category).toBe("string");
     expect(intent?.uncertain).toBeUndefined();
+  });
+});
+
+describe("tsconfig paths (the app's own alias: `@/…`, as shadcn and Vite's React template set it up)", () => {
+  it("follows `@/*` to the app's modules and components, from the nearest tsconfig (comments, extends)", async () => {
+    const app = path.join(root, "aliased");
+    await mkdir(path.join(app, "src", "lib"), { recursive: true });
+    await mkdir(path.join(app, "src", "ui"), { recursive: true });
+    await mkdir(path.join(app, "src", "pages"), { recursive: true });
+    await writeFile(path.join(app, "package.json"), "{}");
+    // The paths live in the extended config, relative to it (no baseUrl).
+    await writeFile(path.join(app, "tsconfig.base.json"), '{\n  "compilerOptions": {\n    // the app\'s alias\n    "paths": { "@/*": ["./src/*"], },\n  },\n}\n');
+    await writeFile(path.join(app, "tsconfig.json"), '{ /* app */ "extends": "./tsconfig.base.json", "compilerOptions": { "strict": true } }\n');
+    await writeFile(path.join(app, "_Imports.tsazor"), RT_IMPORTS);
+    await writeFile(path.join(app, "src", "lib", "tone.ts"), 'export type Tone = "primary" | "muted";\n');
+    await writeFile(path.join(app, "src", "ui", "Tile.tsazor"), '@import type { Tone } from "@/lib/tone"\n<span></span>\n@code {\n  @Parameter() tone: Tone = "primary";\n  @Parameter() size = 2;\n}\n');
+    const probe = path.join(app, "src", "pages", "Probe.tsazor");
+    await writeFile(probe, '@import Tile from "@/ui/Tile.tsazor"\n<Tile tone="muted" />\n');
+    const context = createFileContext(probe, await collectImports(path.dirname(probe), app));
+    const imports = [{ specifier: "@/ui/Tile.tsazor", bindings: [{ local: "Tile", imported: "default", typeOnly: false }] }];
+    const metadata = componentMetadataForTag(context, "Tile", [], imports as never, new MetadataCache());
+    expect(metadata?.parameters.map((p) => [p.name, p.category, p.uncertain])).toEqual([
+      ["tone", "string", undefined],
+      ["size", "value", undefined],
+    ]);
+    // A bare specifier no pattern matches stays a package.
+    expect(new MetadataCache().resolveFile("lucide", probe)).toBeUndefined();
   });
 });

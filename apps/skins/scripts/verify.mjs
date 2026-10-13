@@ -422,9 +422,14 @@ try {
     await timeIs("delivery", "14:30:00");
     say((await deliveryTime.inputValue()) === "14:30", "time picker: German typing (14.30)");
     const reminder = times.getByLabel("Reminder");
-    await reminder.fill("07:15");
-    await timeIs("reminder", "07:15:00");
-    say((await reminder.getAttribute("type")) === "time", "time picker: renderStyle native, the browser's time input, read back as ISO");
+    // Playwright's WebKit on Windows has no time input (the element falls back to type="text"); Safari on macOS has.
+    if (await reminder.evaluate((input) => input.type === "time")) {
+      await reminder.fill("07:15");
+      await timeIs("reminder", "07:15:00");
+      say((await reminder.getAttribute("type")) === "time", "time picker: renderStyle native, the browser's time input, read back as ISO");
+    } else {
+      console.log("SKIP  time picker: renderStyle native — this engine has no time input");
+    }
 
     /* Masked input: the text takes its shape as it is typed; the caret stays after what was typed; a clean value. */
     const maskedFields = page.locator("section", { has: page.getByRole("heading", { name: "Masked input", exact: true }) });

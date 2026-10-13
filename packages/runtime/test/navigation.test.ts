@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ComponentBase,
   defineComponent,
+  MemoryHistory,
   NavigationLock,
   NavigationManager,
   Renderer,
@@ -46,6 +47,25 @@ describe("navigateTo", () => {
       ["/b", false, undefined],
       ["/c", false, "s1"],
     ]);
+  });
+
+  it("keeps the current entry's state as historyEntryState: set by a navigation, restored on back and on load", async () => {
+    const entries = new MemoryHistory(`${location.origin}/`);
+    const nav = new NavigationManager({ history: entries, location: entries });
+    managers.push(nav);
+    expect(nav.historyEntryState).toBeUndefined();
+    nav.navigateTo("/login", { historyEntryState: "/tenants" });
+    expect(nav.historyEntryState).toBe("/tenants");
+    nav.navigateTo("/");
+    expect(nav.historyEntryState).toBeUndefined();
+    entries.back();
+    await tick();
+    expect(nav.uri).toBe(`${location.origin}/login`);
+    expect(nav.historyEntryState).toBe("/tenants");
+    // A reload: a new manager on the same entry reads its state.
+    const reloaded = new NavigationManager({ history: entries, location: entries });
+    managers.push(reloaded);
+    expect(reloaded.historyEntryState).toBe("/tenants");
   });
 
   it("is synchronous without handlers", () => {
@@ -178,5 +198,26 @@ describe("NavigationLock component", () => {
     renderer.disposeComponent(state);
     nav.navigateTo("/unlocked");
     expect(location.pathname).toBe("/unlocked");
+  });
+});
+
+describe("getUriWithQueryParameter(s) (Blazor's NavigationManagerExtensions)", () => {
+  it("replaces a parameter where it is, appends a new one, removes on null, and keeps the rest and the fragment", () => {
+    const nav = fresh();
+    nav.navigateTo("/audits?type=Security&page=3&q=a%20b#top");
+    expect(nav.getUriWithQueryParameter("page", 1)).toBe(`${location.origin}/audits?type=Security&page=1&q=a%20b#top`);
+    expect(nav.getUriWithQueryParameter("Page", null)).toBe(`${location.origin}/audits?type=Security&q=a%20b#top`);
+    expect(nav.getUriWithQueryParameter("severity", "high & low")).toBe(`${location.origin}/audits?type=Security&page=3&q=a%20b&severity=high%20%26%20low#top`);
+    expect(nav.getUriWithQueryParameters({ type: undefined, page: undefined, q: undefined })).toBe(`${location.origin}/audits#top`);
+  });
+
+  it("writes one occurrence per array value — in place first, the rest appended — and formats as Blazor", () => {
+    const nav = fresh();
+    expect(nav.getUriWithQueryParameters("/x?tag=a&other=1&tag=b&tag=c", { tag: ["x", "y"] })).toBe("/x?tag=x&other=1&tag=y");
+    expect(nav.getUriWithQueryParameters("/x?tag=a", { tag: ["x", null, "z"] })).toBe("/x?tag=x&tag=z");
+    expect(nav.getUriWithQueryParameters("/x", { on: true, off: false, n: 2.5, big: 10n, at: new Date(Date.UTC(2026, 9, 13, 8, 30)), s: "it's (ok)*!" })).toBe(
+      "/x?on=True&off=False&n=2.5&big=10&at=2026-10-13T08%3A30%3A00.000Z&s=it%27s%20%28ok%29%2A%21",
+    );
+    expect(() => nav.getUriWithQueryParameters("/x", { "": 1 })).toThrow("Cannot have empty query parameter names.");
   });
 });

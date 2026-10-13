@@ -272,6 +272,8 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 
 // QueryParameterType: re-exported from @tsazor/runtime
 
+// QueryParameterValue: re-exported from @tsazor/runtime
+
 // Range: re-exported from @tsazor/runtime
 
 // RegularExpression: re-exported from @tsazor/runtime
@@ -377,6 +379,16 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // ServiceLifetime: re-exported from @tsazor/runtime
 
 // ServiceProvider: re-exported from @tsazor/runtime
+
+// standardSchemaField: re-exported from @tsazor/runtime
+
+// StandardSchemaIssue: re-exported from @tsazor/runtime
+
+// StandardSchemaResult: re-exported from @tsazor/runtime
+
+// StandardSchemaV1: re-exported from @tsazor/runtime
+
+// StandardSchemaValidator: re-exported from @tsazor/runtime
 
 // State: re-exported from @tsazor/runtime
 

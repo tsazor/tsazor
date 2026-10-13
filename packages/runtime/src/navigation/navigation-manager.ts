@@ -62,6 +62,7 @@ export class NavigationManager {
   private disposed = false;
   /** Last location announced through LocationChanged (restore target for a cancelled popstate). */
   private lastLocation: string | undefined;
+  private currentHistoryEntryState: string | undefined;
 
   private readonly historyApi: History | undefined;
   /** URI source when the document's location is not the route space (MemoryHistory). */
@@ -106,6 +107,7 @@ export class NavigationManager {
       const state = this.history.state as HistoryState | null;
       if (typeof state?._index === "number") {
         this.currentHistoryIndex = state._index;
+        this.currentHistoryEntryState = state.userState;
       } else if (state === null || state === undefined) {
         this.history.replaceState({ _index: 0 } satisfies HistoryState, "");
       }
@@ -119,6 +121,15 @@ export class NavigationManager {
 
   private get isHashMode(): boolean {
     return this.routingMode === "hash";
+  }
+
+  /**
+   * Blazor's HistoryEntryState: the state of the current history entry — what the navigation to it passed as
+   * `historyEntryState`, restored on back and forward and after a reload; undefined when it passed none. A page
+   * reads it when it renders (a login's "where the user came from", passed by the redirect to it).
+   */
+  get historyEntryState(): string | undefined {
+    return this.currentHistoryEntryState;
   }
 
   /**
@@ -266,6 +277,31 @@ export class NavigationManager {
       }
     };
     this.runLocationChanging(this.toAbsoluteUri(uri), state, false, perform);
+  }
+
+  /**
+   * Blazor's GetUriWithQueryParameter: the current URI with one query parameter set — replaced where it is (the
+   * first occurrence; a name is matched case-insensitively), appended when absent, removed (every occurrence) for
+   * null or undefined. An array writes one occurrence per value. `navigateTo(nav.getUriWithQueryParameter("page", 2))`.
+   */
+  getUriWithQueryParameter(name: string, value: QueryParameterValue | readonly QueryParameterValue[]): string {
+    return this.getUriWithQueryParameters({ [name]: value });
+  }
+
+  /**
+   * Blazor's GetUriWithQueryParameters: the URI (the current one by default) with several query parameters set at
+   * once, as getUriWithQueryParameter — the others and the fragment stay. Values are written as Blazor writes them
+   * (invariant numbers, `True`/`False`), dates as ISO 8601 (what `@SupplyParameterFromQuery()` reads back).
+   */
+  getUriWithQueryParameters(parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string;
+  getUriWithQueryParameters(uri: string, parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string;
+  getUriWithQueryParameters(
+    uriOrParameters: string | Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>,
+    maybeParameters?: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>,
+  ): string {
+    const uri = typeof uriOrParameters === "string" ? uriOrParameters : this.uri;
+    const parameters = (typeof uriOrParameters === "string" ? maybeParameters : uriOrParameters) ?? {};
+    return withQueryParameters(uri, parameters);
   }
 
   /** Blazor's LocationChanged. */
@@ -692,6 +728,7 @@ export class NavigationManager {
 
   private raiseLocationChanged(uri: string, isIntercepted: boolean, historyEntryState: string | undefined, scrollTarget: string | undefined): void {
     this.lastLocation = uri;
+    this.currentHistoryEntryState = historyEntryState;
     if (scrollTarget !== undefined) this.scrollTarget = scrollTarget;
     const event: LocationChangedEventArgs = { location: uri, isNavigationIntercepted: isIntercepted, isIntercepted, historyEntryState };
     for (const handler of [...this.locationChangedHandlers]) {
@@ -836,6 +873,71 @@ function isMemoryHistory(history: History | undefined): history is History & { r
 }
 
 /** Blazor's NavigationOptions (plus `replace`, the former Tsazor spelling of ReplaceHistoryEntry). */
+/** A query parameter's value for getUriWithQueryParameter(s): null or undefined removes the parameter. */
+export type QueryParameterValue = string | number | bigint | boolean | Date | null | undefined;
+
+/** Uri.EscapeDataString: RFC 3986's unreserved characters stay, everything else is escaped (also `!'()*`). */
+function escapeDataString(value: string): string {
+  return encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
+function formatQueryValue(value: Exclude<QueryParameterValue, null | undefined>): string {
+  if (typeof value === "boolean") return value ? "True" : "False";
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
+}
+
+/** Blazor's GetUriWithQueryParameters (NavigationManagerExtensions.cs) over a URI string. */
+export function withQueryParameters(uri: string, parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string {
+  const hashStart = uri.indexOf("#");
+  const hash = hashStart < 0 ? "" : uri.slice(hashStart);
+  const withoutHash = hashStart < 0 ? uri : uri.slice(0, hashStart);
+  const queryStart = withoutHash.indexOf("?");
+  const base = queryStart < 0 ? withoutHash : withoutHash.slice(0, queryStart);
+  const query = queryStart < 0 ? "" : withoutHash.slice(queryStart + 1);
+
+  // Each parameter's values in order; a null value (or a null element) consumes an occurrence without writing one.
+  const sources = new Map<string, { name: string; values: Array<string | null>; next: number }>();
+  for (const [name, value] of Object.entries(parameters)) {
+    if (name === "") throw new Error("Cannot have empty query parameter names.");
+    const list = Array.isArray(value) ? (value as readonly QueryParameterValue[]) : value === null || value === undefined ? [] : [value as QueryParameterValue];
+    sources.set(name.toLowerCase(), {
+      name: escapeDataString(name),
+      values: list.map((item) => (item === null || item === undefined ? null : escapeDataString(formatQueryValue(item)))),
+      next: 0,
+    });
+  }
+
+  const pairs: string[] = [];
+  for (const pair of query === "" ? [] : query.split("&")) {
+    if (pair === "") continue;
+    const equals = pair.indexOf("=");
+    const encodedName = equals < 0 ? pair : pair.slice(0, equals);
+    let name: string;
+    try {
+      name = decodeURIComponent(encodedName.replace(/\+/g, " "));
+    } catch {
+      name = encodedName;
+    }
+    const source = sources.get(name.toLowerCase());
+    if (source === undefined) {
+      pairs.push(pair);
+      continue;
+    }
+    if (source.next < source.values.length) {
+      const value = source.values[source.next++];
+      if (value !== null) pairs.push(`${source.name}=${value}`);
+    }
+  }
+  for (const source of sources.values()) {
+    for (; source.next < source.values.length; source.next++) {
+      const value = source.values[source.next];
+      if (value !== null) pairs.push(`${source.name}=${value}`);
+    }
+  }
+  return `${base}${pairs.length > 0 ? `?${pairs.join("&")}` : ""}${hash}`;
+}
+
 export interface NavigationOptions {
   /** Bypass client-side routing: full page load. */
   readonly forceLoad?: boolean;

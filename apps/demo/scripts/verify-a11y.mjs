@@ -153,7 +153,8 @@ try {
   check(formViolations.length === 0, `axe /components with form errors${formViolations.length ? `: ${formViolations.join(" | ")}` : ""}`);
   await name.fill("Marta");
   await name.dispatchEvent("change");
-  await page.getByLabel("Bread").selectOption("rye");
+  // Exact: "Bread" is also a substring of the breadcrumb nav's label.
+  await page.getByLabel("Bread", { exact: true }).selectOption("rye");
   await page.getByRole("button", { name: "Reserve" }).click();
   await page.waitForFunction(() => document.querySelector(".order-status")?.textContent?.includes("Reserved"));
   check((await page.locator(".invalid-feedback").count()) === 0, "form: fixed and submitted, no messages left");
