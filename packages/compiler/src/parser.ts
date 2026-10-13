@@ -10,6 +10,7 @@ import type {
   ExpressionNode,
   IfNode,
   MarkupNode,
+  RazorTemplate,
   SwitchCase,
   SwitchNode,
   ForNode,
@@ -440,7 +441,8 @@ class Parser {
       this.i = src.length;
       return;
     }
-    const close = this.code.scanBalanced(brace);
+    const templates: RazorTemplate[] = [];
+    const close = this.scanMemberCode(brace, templates);
     if (close < 0) {
       this.diagnostics.error("TZS006", this.rangeFrom(pos, brace + 1), "Code block never closes.");
       this.i = src.length;
@@ -453,6 +455,7 @@ class Parser {
       endPos: this.locator(close),
       codeStart: this.locator(brace + 1),
       member: true,
+      ...(templates.length > 0 ? { templates } : {}),
     };
     if (this.nesting > 0) {
       this.diagnostics.error("TZS013", this.rangeFrom(pos, close), `'@${word}' blocks are only allowed at document level.`);
@@ -461,6 +464,45 @@ class Parser {
     }
     this.i = close;
     this.skipOwnLine();
+  }
+
+  /**
+   * The balanced `{ … }` of an `@code` block (index after its `}`, or -1), reading each Razor template on the way —
+   * `@<tag>…</tag>`, an `@` right before a tag in TypeScript (a decorator is `@name`) — as one markup element.
+   * Markup may hold anything TypeScript can't scan (an apostrophe in text, a `{` in an attribute), so the template
+   * is parsed before the scan goes on after it.
+   */
+  private scanMemberCode(brace: number, templates: RazorTemplate[]): number {
+    const src = this.source;
+    // A scanner of its own: the markup parser uses this.code for the expressions inside the template.
+    const scanner = new CodeScanner(src);
+    scanner.reset(brace);
+    const first = scanner.next();
+    const opened = scanner.depth;
+    if (first.start !== brace || opened !== 1) return -1;
+    for (;;) {
+      const token = scanner.next();
+      if (token.kind === ts.SyntaxKind.EndOfFileToken) return -1;
+      if (token.kind === ts.SyntaxKind.AtToken && src[token.end] === "<" && isTagStart(src[token.end + 1])) {
+        scanner.resume(this.parseTemplate(token.start, brace + 1, templates));
+        continue;
+      }
+      if (scanner.depth === 0) return token.end;
+    }
+  }
+
+  /** One Razor template from its `@` (absolute `at`): the element as markup; returns the index after it. */
+  private parseTemplate(at: number, codeStart: number, templates: RazorTemplate[]): number {
+    const saved = this.i;
+    this.i = at + 1;
+    const children: MarkupNode[] = [];
+    this.nesting++;
+    this.parseNode(children);
+    this.nesting--;
+    const end = this.i;
+    this.i = saved;
+    templates.push({ start: at - codeStart, end: end - codeStart, children, pos: this.locator(at), endPos: this.locator(end) });
+    return end;
   }
 
   /** `@{ … }`: a code-first block without a scope of its own. */
@@ -602,10 +644,15 @@ class Parser {
     const info = analyzeStatements(code);
     const first = info.errors[0];
     if (first) {
+      // A Razor template (`@<tag>`) is a value of member code; TypeScript stops at its `@` or `<`.
+      const at = start + first.offset;
+      const template = (src[at] === "@" && src[at + 1] === "<") || (src[at - 1] === "@" && src[at] === "<");
       this.diagnostics.error(
         "TZS015",
         this.range(start + first.offset, start + first.offset + first.length),
-        `${first.message} (markup inside code must start with a tag, '@:' or '<text>').`,
+        template
+          ? `${first.message} (a Razor template '@<…>' is a value in @code: declare it there, e.g. 'private readonly row: RenderFragment = @<li>…</li>;').`
+          : `${first.message} (markup inside code must start with a tag, '@:' or '<text>').`,
       );
     }
     out.push({ kind: "statement", code, declares: info.declares, readonly: info.readonly, pos: this.locator(start), endPos: this.locator(end) });

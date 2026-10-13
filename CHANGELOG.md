@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- `@tsazor/compiler` (Blazor parity): **Razor templates in `@code`** — `@<tag>…</tag>` is a `RenderFragment`
+  (`private readonly footer: RenderFragment = @<footer>…</footer>;`), and a lambda over one a `RenderFragment<T>`
+  (`(pet: Pet) => @<li>@pet.name</li>`), as Blazor's templated delegates. The template reads the component's members
+  and the names the code declares around it (a lambda's parameters, a method's locals); `tsazor check` types its
+  markup. A slot left out conditionally is a value then: `Footer="@(cond ? footer : undefined)"`. In an inline
+  `@{ }` block a template is TZS015, which points to `@code`. `maskedCode` (the code with its templates masked) and
+  the `RazorTemplate` node are exported for tools that read `@code` with TypeScript.
 - **Behavior — `@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap`: the overlays are in the browser's top layer**
   (Radix's Portal without a portal; the DOM and the component tree stay): `topLayer`, an attachment that shows the
   element as a manual popover and undoes the popover's own box at zero specificity (a constructed sheet, no

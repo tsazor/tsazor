@@ -6,42 +6,39 @@
 @import { ApiRequestError } from "@/lib/api-client"
 @import { queryClient } from "@/lib/query-client"
 @import { toast } from "@/lib/toast"
-@import OptionalFooterSection from "../../components/users/OptionalFooterSection.tsazor"
 @import RoleRow from "./RoleRow.tsazor"
 
-<OptionalFooterSection title="Role assignment" icon="@ShieldCheck" description="@description" showFooter="@(!loading && roles.length > 0)">
-    <Footer>
-        <div class="flex items-center gap-2">
-            <Button onClick="@save" disabled="@(dirtyCount === 0 || saving)" class="h-9 rounded-lg px-4 text-[13px]">
-                <Icon icon="@Check" class="mr-1 h-3.5 w-3.5" />
-                @(saving ? "Saving…" : "Save changes")
-            </Button>
-            <Button variant="outline" onClick="@discard" disabled="@(dirtyCount === 0 || saving)" class="h-9 rounded-lg px-4 text-[13px]">
-                Discard
-            </Button>
-        </div>
-    </Footer>
-    <ChildContent>
-        @if (error) {
-            <ErrorBand message="@describeErr(error)" />
-        } else if (loading) {
-            <p class="text-sm text-[var(--color-muted-foreground)]">
-                Loading
-                <span class="caret text-[var(--color-accent-signal)]"></span>
-            </p>
-        } else if (roles.length === 0) {
-            <p class="text-sm text-[var(--color-muted-foreground)]">No roles defined for this tenant.</p>
-        } else {
-            <ul class="divide-y divide-[var(--color-border)]">
-                @foreach (const r of roles) {
-                    <RoleRow @key="r.roleId" role="@r" enabled="@(!!draft[r.roleId])" changed="@(Boolean(draft[r.roleId]) !== Boolean(original[r.roleId]))" onToggle="@(() => toggle(r.roleId))" />
-                }
-            </ul>
-        }
-    </ChildContent>
-</OptionalFooterSection>
+<SettingsSection title="Role assignment" icon="@ShieldCheck" description="@description" footer="@(!loading && roles.length > 0 ? footer : undefined)">
+    @if (error) {
+        <ErrorBand message="@describeErr(error)" />
+    } else if (loading) {
+        <p class="text-sm text-[var(--color-muted-foreground)]">
+            Loading
+            <span class="caret text-[var(--color-accent-signal)]"></span>
+        </p>
+    } else if (roles.length === 0) {
+        <p class="text-sm text-[var(--color-muted-foreground)]">No roles defined for this tenant.</p>
+    } else {
+        <ul class="divide-y divide-[var(--color-border)]">
+            @foreach (const r of roles) {
+                <RoleRow @key="r.roleId" role="@r" enabled="@(!!draft[r.roleId])" changed="@(Boolean(draft[r.roleId]) !== Boolean(original[r.roleId]))" onToggle="@(() => toggle(r.roleId))" />
+            }
+        </ul>
+    }
+</SettingsSection>
 
 @code {
+    /** React's `footer={cond ? <…/> : undefined}`: a Razor template the section gets only then (F17). */
+    private readonly footer: RenderFragment = @<div class="flex items-center gap-2">
+        <Button onClick="@save" disabled="@(dirtyCount === 0 || saving)" class="h-9 rounded-lg px-4 text-[13px]">
+            <Icon icon="@Check" class="mr-1 h-3.5 w-3.5" />
+            @(saving ? "Saving…" : "Save changes")
+        </Button>
+        <Button variant="outline" onClick="@discard" disabled="@(dirtyCount === 0 || saving)" class="h-9 rounded-lg px-4 text-[13px]">
+            Discard
+        </Button>
+    </div>;
+
     @Parameter() userId!: string;
     @Parameter() roles: UserRoleDto[] = [];
     @Parameter() loading: boolean = false;

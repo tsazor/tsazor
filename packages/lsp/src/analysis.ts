@@ -4,6 +4,7 @@ import {
   bindablePairs,
   childNodes,
   compile,
+  maskedCode,
   type CodeBlockNode,
   parseDocument,
   DiagnosticBag,
@@ -150,7 +151,7 @@ export interface Refactor {
 function memberBlocks(file: AnalyzedFile): Array<{ code: string; start: { line: number; column: number } }> {
   return file.document.body
     .filter((node): node is CodeBlockNode => node.kind === "codeBlock" && node.member === true && node.codeStart !== undefined)
-    .map((node) => ({ code: node.code, start: node.codeStart! }));
+    .map((node) => ({ code: maskedCode(node), start: node.codeStart! }));
 }
 
 /** LSP position (0-based line) of an offset inside a code block. */

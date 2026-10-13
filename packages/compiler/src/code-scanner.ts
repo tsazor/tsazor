@@ -111,6 +111,15 @@ export class CodeScanner {
     };
   }
 
+  /**
+   * Continues the token stream at `index` with the open brackets kept, after a value the caller read itself (a
+   * Razor template in `@code`): a `/` that follows divides.
+   */
+  resume(index: number): void {
+    this.scanner.resetTokenState(index);
+    this.prev = SK.Identifier;
+  }
+
   /** First token at or after `index` (trivia skipped), without state. */
   peek(index: number): CodeToken {
     this.reset(index);

@@ -1150,6 +1150,38 @@ it is no longer rendered as `ChildContent` or as a component:
   runs on the click. Capture the value first (`const current = user;`) or read it through a
   getter.
 
+### Razor templates in `@code`
+
+As in Blazor ("Razor templates", templated delegates), `@<tag>…</tag>` in `@code` is a
+`RenderFragment`, and a lambda over one is a `RenderFragment<T>`:
+
+```razor
+<Card Footer="@(showFooter ? footer : undefined)">…</Card>
+<ul>@foreach (const pet of pets) { @petTemplate(pet) }</ul>
+
+@code {
+    private readonly footer: RenderFragment = @<footer>Saved @savedAt.</footer>;
+    private readonly petTemplate = (pet: Pet): RenderFragment => @<li>Pet: @pet.name</li>;
+
+    private rows(items: Item[]): RenderFragment {
+        const total = items.length;
+        return @<p>@total items</p>;
+    }
+}
+```
+
+- The `@` sits right before the tag (a decorator is `@name`); the template is one element, with
+  anything markup holds — components, `@if`/`@foreach`, events, `@bind`. It becomes
+  `(__builder) => { … }` in its place, so it reads the component's members (`this` in a class
+  field's arrow function is the component) and the names the code declares around it — a
+  lambda's parameters, a method's locals — as Razor's C# lambda does.
+- A slot left out conditionally is a value: `Footer="@(cond ? footer : undefined)"` (React's
+  `footer={cond ? <x/> : undefined}`); a written `<Footer>` element is always set.
+- Templates live in `@code` (a code-behind `X.tsazor.ts` is plain TypeScript and has none). In
+  an inline `@{ }` block a template is TZS015, which says to declare it in `@code`.
+- `tsazor check` types the markup: `(pet: Pet) => @<li>@pet.nickname</li>` is TS2339 on its
+  line.
+
 ### Await (Tsazor extension)
 
 ```razor
@@ -1278,6 +1310,7 @@ typed:
 | `<InputFile>` | yes (3.7) — `InputFileChangeEventArgs` with native `File` objects instead of `IBrowserFile` (`OpenReadStream` does not exist) |
 | `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; any component, no `@Parameter()` needed (Blazor 8); key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
 | Named child slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identical (2.3 — see [Templated components](#templated-components-named-slots-and-template-contexts-23)) |
+| Razor templates (`RenderFragment t = @<p>…</p>;`, `(pet) => @<li>…</li>`) | yes, in `@code` ([Razor templates](#razor-templates-in-code)); in `@{ }` ⇒ TZS015 |
 | `@inherits`, partials (code-behind) | `@inherits` yes; code-behind (`X.tsazor.ts`, via inheritance — [docs/code-behind.md](code-behind.md)) yes |
 | `@authorize` | yes (Tsazor extension replacing `[Authorize]`; bare or with `{ roles, policy }`; inherited through `_Imports`, `@allowAnonymous` opts out) |
 | `@implements` | accepted, ignored (TS interfaces are structural) |

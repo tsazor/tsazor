@@ -1,6 +1,4 @@
-@* pages/settings/sessions.tsx's section body — the empty note or the session rows. Its own component because the
-   section is written twice (with and without the footer: React passes `footer={cond ? <…/> : undefined}`, and a
-   slot can't be left out conditionally without a Razor template, port-fullstackhero.md F3). *@
+@* pages/settings/sessions.tsx's section body — the empty note or the session rows. *@
 @import type { UserSessionDto } from "@/api/sessions"
 @import SessionRow from "./SessionRow.tsazor"
 

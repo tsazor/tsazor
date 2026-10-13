@@ -19,7 +19,7 @@
  * Positions: LSP (0-based line/character) in, completions out. The compiler's
  * AST spans are 1-based/0-based-columns — nodeAt already handles the shift.
  */
-import type { CodeBlockNode, ComponentParameter, ElementNode, ExpressionNode, MarkupNode } from "@tsazor/compiler";
+import { maskedCode, type CodeBlockNode, type ComponentParameter, type ElementNode, type ExpressionNode, type MarkupNode } from "@tsazor/compiler";
 import {
   RUNTIME_MANIFEST,
   RUNTIME_PACKAGE,
@@ -485,7 +485,7 @@ function memberCandidates(analyzed: AnalyzedFile, prefix: string, extra: readonl
 function memberCodeSources(analyzed: AnalyzedFile): string[] {
   return analyzed.document.body
     .filter((n): n is CodeBlockNode => n.kind === "codeBlock" && n.member === true)
-    .map((n) => n.code);
+    .map((n) => maskedCode(n));
 }
 
 /** The sibling X.tsazor.ts code-behind source, if present. */

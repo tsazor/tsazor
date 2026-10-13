@@ -21,36 +21,28 @@
     <ErrorBand message="@(query.result.error instanceof ApiRequestError ? (query.result.error.problem?.detail ?? query.result.error.message) : "Failed to load sessions.")" />
 } else {
     <div class="space-y-5 fsh-enter">
-        @if (activeOtherCount > 0) {
-            <SettingsSection title="Active sessions" icon="@MonitorSmartphone" description="@description">
-                <Footer>
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div class="flex items-start gap-2 text-xs">
-                            <Icon icon="@AlertTriangle" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-warning)]" />
-                            <span class="text-[var(--color-muted-foreground)]">
-                                @activeOtherCount other @(activeOtherCount === 1 ? "session is" : "sessions are") active.
-                                Sign them all out at once if you suspect an account compromise.
-                            </span>
-                        </div>
-                        <Button variant="outline" size="sm" onClick="@revokeAll" disabled="@revokingAll">
-                            <Icon icon="@LogOut" class="mr-1.5 h-3.5 w-3.5" />
-                            @(revokingAll ? "Signing out…" : "Sign out everywhere else")
-                        </Button>
-                    </div>
-                </Footer>
-                <ChildContent>
-                    <SessionList sessions="@sorted" busyIds="@busyIds" onRevoke="@revokeOne" />
-                </ChildContent>
-            </SettingsSection>
-        } else {
-            <SettingsSection title="Active sessions" icon="@MonitorSmartphone" description="@description">
-                <SessionList sessions="@sorted" busyIds="@busyIds" onRevoke="@revokeOne" />
-            </SettingsSection>
-        }
+        <SettingsSection title="Active sessions" icon="@MonitorSmartphone" description="@description" footer="@(activeOtherCount > 0 ? signOutEverywhere : undefined)">
+            <SessionList sessions="@sorted" busyIds="@busyIds" onRevoke="@revokeOne" />
+        </SettingsSection>
     </div>
 }
 
 @code {
+    /** React's `footer={activeOthers > 0 ? <…/> : undefined}`: a Razor template, passed only then (F17). */
+    private readonly signOutEverywhere: RenderFragment = @<div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-start gap-2 text-xs">
+            <Icon icon="@AlertTriangle" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-warning)]" />
+            <span class="text-[var(--color-muted-foreground)]">
+                @activeOtherCount other @(activeOtherCount === 1 ? "session is" : "sessions are") active.
+                Sign them all out at once if you suspect an account compromise.
+            </span>
+        </div>
+        <Button variant="outline" size="sm" onClick="@revokeAll" disabled="@revokingAll">
+            <Icon icon="@LogOut" class="mr-1.5 h-3.5 w-3.5" />
+            @(revokingAll ? "Signing out…" : "Sign out everywhere else")
+        </Button>
+    </div>;
+
     private readonly description = "Every browser or device currently signed into your account. Revoking a session signs that device out within ~10 seconds.";
 
     private readonly query = new Query(() => ({

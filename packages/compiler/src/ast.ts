@@ -49,6 +49,33 @@ export interface CodeBlockNode extends SourceSpan {
    *  Razor semantics: the block opens no scope — its locals stay visible to
    *  the markup that follows. */
   children?: MarkupNode[];
+  /** @code only: its Razor templates (`@<tag>…</tag>`, a RenderFragment), in source order. */
+  templates?: RazorTemplate[];
+}
+
+/**
+ * A Razor template in `@code` (Blazor's templated delegate): `@<tag>…</tag>` is a `RenderFragment`, so
+ * `(item: T) => @<li>@item.name</li>` is a `RenderFragment<T>`. `start`/`end` are offsets in the block's code,
+ * from the `@` to the end of the element.
+ */
+export interface RazorTemplate extends SourceSpan {
+  start: number;
+  end: number;
+  /** The element, parsed as markup. */
+  children: MarkupNode[];
+}
+
+/**
+ * A code block's code with its Razor templates masked: each becomes `0` padded with spaces (line breaks kept),
+ * so TypeScript reads the members around them at their own offsets.
+ */
+export function maskedCode(block: Pick<CodeBlockNode, "code" | "templates">): string {
+  let code = block.code;
+  for (const template of block.templates ?? []) {
+    const span = code.slice(template.start, template.end).replace(/[^\n]/g, " ");
+    code = code.slice(0, template.start) + "0" + span.slice(1) + code.slice(template.end);
+  }
+  return code;
 }
 
 /**
@@ -173,7 +200,7 @@ export function childNodes(node: MarkupNode): MarkupNode[] {
     case "while":
       return node.children;
     case "codeBlock":
-      return node.children ?? [];
+      return [...(node.children ?? []), ...(node.templates ?? []).flatMap((template) => template.children)];
     case "if":
       return node.branches.flatMap((branch) => branch.children);
     case "switch":

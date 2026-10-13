@@ -1,26 +1,18 @@
 @* pages/billing/plans-list.tsx's "All plans" SettingsSection. The original passes its footer as
-   `footer={canManageBilling ? <Button>New plan</Button> : undefined}`: a ReactNode that may be absent. A slot can't
-   be conditional, and a fragment written in code (Razor's `@<Button>…</Button>`) doesn't exist yet (F3), so the
-   branch is here: with `canManage` the section has its footer with "New plan", without it none. *@
+   `footer={canManageBilling ? <Button>New plan</Button> : undefined}`, a ReactNode that may be absent: here a Razor
+   template, passed only with `canManage`. *@
 @import { Plus, Tag } from "lucide"
 
-@if (canManage) {
-    <SettingsSection icon="@Tag" title="All plans" description="Pricing schedule used by tenant subscriptions and invoice generation.">
-        <Footer>
-            <Button onClick="@(() => onCreate?.invokeAsync())">
-                <Icon icon="@Plus" class="mr-1 h-4 w-4" /> New plan
-            </Button>
-        </Footer>
-        <ChildContent>@childContent</ChildContent>
-    </SettingsSection>
-} else {
-    <SettingsSection icon="@Tag" title="All plans" description="Pricing schedule used by tenant subscriptions and invoice generation.">
-        @childContent
-    </SettingsSection>
-}
+<SettingsSection icon="@Tag" title="All plans" description="Pricing schedule used by tenant subscriptions and invoice generation." footer="@(canManage ? newPlan : undefined)">
+    @childContent
+</SettingsSection>
 
 @code {
     @Parameter() canManage: boolean = false;
     @Parameter() onCreate?: EventCallback;
     @Parameter() childContent?: RenderFragment;
+
+    private readonly newPlan: RenderFragment = @<Button onClick="@(() => onCreate?.invokeAsync())">
+        <Icon icon="@Plus" class="mr-1 h-4 w-4" /> New plan
+    </Button>;
 }

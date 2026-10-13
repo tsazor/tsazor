@@ -400,9 +400,11 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
   `value`/`onChange` becomes `value`/`valueChanged` (`@bind-value`); a context provider (`useTheme`, `useAuth`)
   becomes a service the component injects and observes.
 - **JSX → Razor:** `className` → `class`, `{cond && <x/>}` → `@if (cond) { <x/> }`, `.map(...)` →
-  `@foreach (const x of xs)` with `@key`. Two traps: Razor reads `Overview@if (…)` as an email address (an `@` after
-  a letter is text; write `<text>Overview</text>@if (…)`), and `const body = <div/>` inside a function has no
-  counterpart yet (F3) — make it a small component. A cva variant type stays as it is: a parameter typed
+  `@foreach (const x of xs)` with `@key`. A trap: Razor reads `Overview@if (…)` as an email address (an `@` after a
+  letter is text; write `<text>Overview</text>@if (…)`). `const body = <div/>` is a Razor template in `@code`,
+  `private readonly body: RenderFragment = @<div/>;` — and `(row) => <tr/>` is `(row: Row) => @<tr/>` (F3);
+  `footer={cond ? <x/> : undefined}` is `Footer="@(cond ? footer : undefined)"` over one (F17). A cva variant type
+  stays as it is: a parameter typed
   `VariantProps<typeof buttonVariants>["variant"]` takes `variant="outline"` as text, and `tsazor check` checks it
   against cva's variants (F1).
 - **Routes:** each page's `@page` replaces the route table; nested routes with an `<Outlet/>` become nested layouts;

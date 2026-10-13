@@ -181,6 +181,7 @@ export interface CodeBlockNode extends SourceSpan {
     member?: boolean;
     codeStart?: SourceSpan["pos"];
     children?: MarkupNode[];
+    templates?: RazorTemplate[];
 }
 
 // CodegenOptions
@@ -565,6 +566,9 @@ interface MapEntry {
 // MarkupNode
 export type MarkupNode = TextNode | DirectiveNode | ElementNode | ExpressionNode | CodeBlockNode | StatementNode | BlockNode | TextTagNode | IfNode | ForNode | WhileNode | TryNode | SwitchNode;
 
+// maskedCode
+export declare function maskedCode(block: Pick<CodeBlockNode, "code" | "templates">): string;
+
 // MetadataHost
 export interface MetadataHost {
     resolveModule(specifier: string, fromFile: string): ModuleMetadata | undefined;
@@ -658,6 +662,13 @@ export declare function parseImportDirective(value: string): ParsedImport;
 export interface RawAttributeValue {
     text: string;
     start: SourceSpan["pos"];
+}
+
+// RazorTemplate
+export interface RazorTemplate extends SourceSpan {
+    start: number;
+    end: number;
+    children: MarkupNode[];
 }
 
 // referencesOf

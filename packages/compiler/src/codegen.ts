@@ -8,7 +8,7 @@ import type {
   MarkupNode,
   StatementNode,
 } from "./ast.js";
-import { childNodes } from "./ast.js";
+import { childNodes, maskedCode, type RazorTemplate } from "./ast.js";
 import { DiagnosticBag, type DiagnosticFix, type SourcePos, type SourceRange, type TextEdit } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
@@ -497,8 +497,10 @@ class Codegen {
       this.inheritsBase = this.options.codeBehindClass;
     }
 
-    // Collect member code blocks and scan for runtime API usage.
-    const memberCode = document.body.filter((n): n is Extract<MarkupNode, { kind: "codeBlock" }> => n.kind === "codeBlock" && n.member === true);
+    // Collect member code blocks and scan for runtime API usage. The analyses read the code with its Razor
+    // templates masked (TypeScript can't read markup); the emission writes each template as a fragment.
+    const memberBlocks = document.body.filter((n): n is Extract<MarkupNode, { kind: "codeBlock" }> => n.kind === "codeBlock" && n.member === true);
+    const memberCode = memberBlocks.map((block) => (block.templates ? { ...block, code: maskedCode(block) } : block));
     const renderBody = document.body.filter((n) => !(n.kind === "codeBlock" && n.member === true));
 
     const memberSource = memberCode.map((n) => n.code).join("\n");
@@ -613,9 +615,10 @@ class Codegen {
     if (this.metadata.injects.length > 0) this.line("");
 
     // @code blocks verbatim, re-indented into the class.
-    for (const block of memberCode) {
+    for (const block of memberBlocks) {
       this.commentLine(`/* @code (${this.options.fileName ?? ""}:${block.pos.line}) */`);
-      this.emitCodeVerbatim(block.code, block.codeStart ?? { line: block.pos.line, column: 0 }, 2);
+      if (block.templates) this.emitMemberCodeWithTemplates(block, block.templates);
+      else this.emitCodeVerbatim(block.code, block.codeStart ?? { line: block.pos.line, column: 0 }, 2);
       this.line("");
     }
     // `@Bindable()` (Tsazor extension): the members it synthesizes, typed
@@ -1654,6 +1657,58 @@ class Codegen {
       lineStart = lineEnd + 1;
     });
     this.writer.line(text, anchors);
+  }
+
+  /**
+   * `@code` with Razor templates (F3/F17, Blazor's templated delegates): the code verbatim around them, and each
+   * template as a fragment in its place — `(__builder: RenderTreeBuilder) => { … }`, its element emitted as a
+   * fragment body is, with a sequence scope of its own. The names the code declares around a template (a lambda's
+   * parameters, a method's locals) are locals of its markup, so `(item: Item) => @<li>@item.name</li>` reads the
+   * parameter. In a class field the arrow function's `this` is the component.
+   */
+  private emitMemberCodeWithTemplates(block: CodeBlockNode, templates: readonly RazorTemplate[]): void {
+    const origin = block.codeStart ?? { line: block.pos.line, column: 0 };
+    const masked = maskedCode(block);
+    let cursor = 0;
+    let carry = "";
+    for (const template of templates) {
+      const piece = this.verbatimPiece(block.code.slice(cursor, template.start), advancePos(origin, block.code.slice(0, cursor)), 2, carry);
+      const opener = `(${BUILDER}: ${alias("RenderTreeBuilder")}) => {`;
+      this.writer.line(piece.text + opener, [...piece.anchors, { offset: piece.text.length, srcLine: template.pos.line - 1, srcCol: template.pos.column }]);
+      this.enterScope();
+      this.withScope(() => {
+        for (const name of templateLocals(masked, template.start)) this.locals.set(name, "assignable");
+        this.emitNodes(template.children, template.pos);
+      });
+      this.leaveScope();
+      cursor = template.end;
+      carry = "  }";
+    }
+    const tail = this.verbatimPiece(block.code.slice(cursor), advancePos(origin, block.code.slice(0, cursor)), 2, carry);
+    this.writer.line(tail.text, tail.anchors);
+  }
+
+  /**
+   * Code verbatim, re-indented by `indent` — as emitCodeVerbatim writes it — with its anchors; `carry` opens the
+   * first line instead of the indent (the `}` of a template the code continues after).
+   */
+  private verbatimPiece(code: string, origin: SourcePos, indent: number, carry: string): { text: string; anchors: WriterAnchor[] } {
+    const prefix = " ".repeat(indent);
+    const anchors: WriterAnchor[] = [];
+    let text = carry;
+    let lineStart = 0;
+    const lines = code.split("\n");
+    lines.forEach((line, index) => {
+      const pad = index === 0 && carry !== "" ? "" : line.length > 0 ? prefix : "";
+      const shift = text.length + pad.length - lineStart;
+      if (line.trim().length > 0) {
+        const firstContent = line.length - line.trimStart().length;
+        anchors.push({ offset: shift + lineStart + firstContent, srcLine: origin.line - 1 + index, srcCol: (index === 0 ? origin.column : 0) + firstContent });
+      }
+      text += pad + line + (index < lines.length - 1 ? "\n" : "");
+      lineStart += line.length + 1;
+    });
+    return { text, anchors };
   }
 
   private emitNodes(nodes: MarkupNode[], pos: SourcePos): void {
@@ -3553,4 +3608,40 @@ function refMember(ref: Extract<AttributeNode, { kind: "ref" }>): Extract<Attrib
   if (match[1] === undefined) return ref;
   const codeStart = ref.codeStart === undefined ? undefined : { ...ref.codeStart, column: ref.codeStart.column + "this.".length };
   return { ...ref, code: match[2]!, codeStart };
+}
+
+/**
+ * The names the member code declares around a Razor template (F3) — the parameters of the functions it sits in
+ * and the variables of their blocks — read from the code with its templates masked (`start`: the template's offset).
+ */
+function templateLocals(masked: string, start: number): string[] {
+  const head = "class __Template {\n";
+  const file = ts.createSourceFile("template.ts", `${head}${masked}\n}`, ts.ScriptTarget.Latest, true);
+  const position = head.length + start;
+  let innermost: ts.Node | undefined;
+  const visit = (node: ts.Node): void => {
+    if (position < node.getStart(file) || position >= node.getEnd()) return;
+    innermost = node;
+    node.forEachChild(visit);
+  };
+  visit(file);
+  const names = new Set<string>();
+  const bind = (name: ts.BindingName): void => {
+    if (ts.isIdentifier(name)) names.add(name.text);
+    else for (const element of name.elements) if (!ts.isOmittedExpression(element)) bind(element.name);
+  };
+  for (let node = innermost; node !== undefined; node = node.parent) {
+    if (ts.isFunctionLike(node)) for (const parameter of node.parameters) bind(parameter.name);
+    if (ts.isBlock(node) || ts.isCaseClause(node) || ts.isDefaultClause(node)) {
+      for (const statement of node.statements) {
+        if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) bind(declaration.name);
+        else if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name) names.add(statement.name.text);
+      }
+    }
+    if ((ts.isForStatement(node) || ts.isForOfStatement(node) || ts.isForInStatement(node)) && node.initializer && ts.isVariableDeclarationList(node.initializer)) {
+      for (const declaration of node.initializer.declarations) bind(declaration.name);
+    }
+    if (ts.isCatchClause(node) && node.variableDeclaration) bind(node.variableDeclaration.name);
+  }
+  return [...names];
 }

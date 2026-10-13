@@ -44,7 +44,7 @@ export {
 } from "./metadata.js";
 export { TSScanner } from "./scanner.js";
 export type * from "./ast.js";
-export { childNodes } from "./ast.js";
+export { childNodes, maskedCode } from "./ast.js";
 export { scopeSelector } from "./scoped-css.js";
 export { bindableMembers, bindablePairs, type BindableMember, type BindablePair } from "./bindable.js";
 export { advancePos } from "./writer.js";

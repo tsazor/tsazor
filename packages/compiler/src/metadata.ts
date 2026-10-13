@@ -1,5 +1,5 @@
 import ts from "typescript";
-import type { CodeBlockNode } from "./ast.js";
+import { maskedCode, type CodeBlockNode } from "./ast.js";
 import { DiagnosticBag } from "./diagnostics.js";
 import { parseImportDirective, type ImportInfo } from "./imports.js";
 import { parseDocument } from "./parser.js";
@@ -337,7 +337,7 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
 
   const body = document.body
     .filter((node): node is CodeBlockNode => node.kind === "codeBlock" && node.member === true)
-    .map((node) => node.code)
+    .map((node) => maskedCode(node))
     .join("\n");
   const typeParameters = typeParameterTexts.length > 0 ? `<${typeParameterTexts.join(", ")}>` : "";
   const heritage = inherits ? ` extends ${inherits}` : "";
