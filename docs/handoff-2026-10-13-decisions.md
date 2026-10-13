@@ -1,5 +1,37 @@
 # Handoff: the owner's decisions after the fullstackhero port (2026-10-13)
 
+> **Update (2026-10-13, later the same day) — all twelve decisions are implemented:**
+>
+> | Item | Commit |
+> |---|---|
+> | B20 FluentProvider `"system"` (light pins; space-toggle aliases follow the nearest theme) | `90d1ba0` |
+> | F5 ValidationSummary in Blazor's markup | `1b44a08` |
+> | F1 computed parameter types take text as text | `b42d35f` |
+> | B12 `@authorize` in `_Imports` inherited, `@allowAnonymous` | `e7d2cf9` |
+> | F15 `immediate`, F16 `<FocusOnInvalidSubmit />` | `80ae76d` (+ `a33e8a3` runtime doc gaps) |
+> | B2 `--envelope data,messages,succeeded`, B3 lesson | `78e187a` |
+> | F2 overlays in the top layer (`topLayer` in @tsazor/ui, both skins) | `9186844` |
+> | C12 fullstackhero acceptance is a gate (`pnpm --filter fullstackhero verify`, CI e2e) | `51b96b4` |
+> | F3/F17 Razor templates in `@code` (+ fullstackhero's OptionalFooterSection and two-branch sections gone) | `b32af2a` |
+> | C11 StandardSchemaValidator stays public | nothing to do |
+>
+> Checks: root vitest 2546/2546, tutorial 1255/1255, fullstackhero acceptance 111/111. A full `pnpm gates` (all
+> three browsers) over B20…C12: 33 of 35 green; after F3 all gates once more in Edge: 13 of 15. The red ones:
+> - **fullstackhero:** a fresh headless Edge sometimes closes right after its launch (`browser.newContext: … has
+>   been closed`, always before a test's first step; 2 of 7 runs lost one test). The gate now retries as the
+>   original's CI does (`--retries=2`) and names any test that passed only on a retry (`802f567`).
+> - **Edge's Blazor parity, `DynamicContent_AppendItemsWhileAtBottom_ViewportStaysStable`:** red in every full gate
+>   run (from F1 on), green alone and in its group (124/124, 3×). Bisected with `--suite virtualize` in a worktree:
+>   3d46416, B20+F5, F1, B2 and F2 all 514/514; HEAD once red — but the parity app built with and without F1, and
+>   with and without F3, is byte-identical (same content hashes in both skins). So the code under test is the same:
+>   a timing flake of that test in Edge under load, not a regression. Worth a closer look at the test's wait (it
+>   measures right after the status text appears) — not changed here.
+>
+> Pushed through `802f567` (2026-10-13).
+>
+> Working tricks of this session: `stage-hunks.mjs` (scratchpad) stages chosen hunks of a file (`git apply
+> --cached`), for docs that carry two items' changes; a `git rm` stays staged — don't commit with it unintended.
+
 **Read first:** this document, then [port-fullstackhero.md](port-fullstackhero.md) (findings F1–F20) and the
 update box of [handoff-2026-10-07-component-library.md](handoff-2026-10-07-component-library.md) (the earlier
 state). Branch `roadmap/phase-0`, HEAD `9f46c04`, everything pushed.
