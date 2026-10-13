@@ -11,7 +11,7 @@ export interface ScannedRoute {
   componentPath: string;
   /** Absolute path of the layout .tsazor, when the page (or _Imports) sets one. */
   layoutPath?: string;
-  /** @authorize or `@attribute [Authorize]` → protected route ({} → auth suffices). */
+  /** @authorize, its own or inherited from the _Imports chain → protected route ({} → auth suffices). */
   authorize?: boolean;
   /** Roles/policy of `[Authorize(Roles = "…", Policy = "…")]` — the route's AuthorizationRequirements. */
   authorizeRequirements?: { roles?: string[]; policy?: string };
@@ -64,10 +64,11 @@ export async function scanRoutes(root: string): Promise<ScannedRoute[]> {
     const source = await readFile(filePath, "utf8");
     if (!/@page\b/.test(source)) continue;
     const className = classNameForFile(filePath);
-    const result = compile(source, { className, fileName: filePath, generateSourceMap: false });
-    if (!result.metadata.routeTemplate) continue;
     const chain = await collectImports(path.dirname(filePath), root);
     const context = createFileContext(filePath, chain);
+    // The chain's @authorize / @allowAnonymous merge into the page's requirements (B12).
+    const result = compile(source, { className, fileName: filePath, generateSourceMap: false, inheritedAuthorization: context.inheritedAuthorization });
+    if (!result.metadata.routeTemplate) continue;
     let layoutPath: string | undefined;
     if (result.metadata.layout) {
       layoutPath = context.resolveLayout(result.metadata.layout);

@@ -12,8 +12,10 @@
  *   sources, plus the package manifests.
  */
 import {
+  compile,
   extractModuleMetadata,
   extractTsazorMetadata,
+  inheritedAuthorizationOf,
   parseDocument,
   parseImportDirective,
   resolveComponentMetadata as resolveClassMetadata,
@@ -23,6 +25,7 @@ import {
   type ComponentManifest,
   type ComponentMetadata,
   type ImportInfo,
+  type InheritedAuthorization,
   type MetadataHost,
   type ModuleMetadata,
   type ResolvedComponent,
@@ -103,6 +106,8 @@ interface ImportsLayer {
   dir: string;
   imports: ImportInfo[];
   usings: string[];
+  /** Its @authorize / @allowAnonymous, which the pages below inherit (B12). */
+  authorization?: InheritedAuthorization;
 }
 
 /** The `_Imports.tsazor` files above `file` (nearest first). */
@@ -119,6 +124,12 @@ function importsChain(files: Files, file: string): ImportsLayer[] {
           const parsed = parseImportDirective(directive.value);
           if (parsed.ok) layer.imports.push(parsed.info);
         } else if (directive.name === "using") layer.usings.push(directive.value.trim());
+      }
+      if (document.directives.some((directive) => directive.name === "authorize" || directive.name === "allowAnonymous")) {
+        // The requirement as the compiler reads it (@tsazor/workspace's collectImports does the same).
+        const compiled = compile(files[candidate]!, { className: "_Imports", fileName: candidate, generateSourceMap: false });
+        const authorization = inheritedAuthorizationOf(compiled.metadata, candidate);
+        if (authorization) layer.authorization = authorization;
       }
       layers.push(layer);
     }
@@ -137,7 +148,7 @@ export interface ProjectResolver {
   /** The resolution part of the compile options for one file. */
   optionsFor(file: string): Pick<
     CompileOptions,
-    "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports"
+    "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports" | "inheritedAuthorization"
   >;
 }
 
@@ -283,6 +294,7 @@ export function createResolver(files: Files): ProjectResolver {
         resolveType,
         resolveUsing,
         inheritedImports: inherited,
+        inheritedAuthorization: chain.flatMap((layer) => (layer.authorization ? [{ ...layer.authorization, file: relativeSpecifier(fileDir, layer.file).replace(/^\.\//, "") }] : [])),
       };
     },
   };

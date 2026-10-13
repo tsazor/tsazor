@@ -11,7 +11,8 @@
 | `@inject` | `@inject NavigationManager Nav` | DI: field initializer `inject(<Type>)` |
 | `@inherits` | `@inherits LayoutComponentBase` | Base class (default: `ComponentBase`) |
 | `@typeparam` | `@typeparam TItem` / `@typeparam T extends X` | Generic type parameters (declarative in v1); a C# constraint `where T : …` ⇒ error TZS021 pointing to `extends` |
-| `@authorize` | `@authorize` / `@authorize({ roles: ["Admin"], policy: "P" })` | The route requires sign-in (and roles/policy) — see [@authorize and @attribute](#authorize-and-attribute) |
+| `@authorize` | `@authorize` / `@authorize({ roles: ["Admin"], policy: "P" })` | The route requires sign-in (and roles/policy); in `_Imports.tsazor`, every page below — see [@authorize and @attribute](#authorize-and-attribute) |
+| `@allowAnonymous` | `@allowAnonymous` | The page (in `_Imports.tsazor`: every page below) opts out of an inherited `@authorize` (Blazor's `[AllowAnonymous]`) |
 | `@attribute` | `@attribute @tracked()` | TS class decorator; C# attributes (`[Authorize]`) ⇒ error TZS021 with the TS form |
 | `@code` / `@functions` | `@code { … }` | TypeScript class members, verbatim |
 | `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | `@namespace App.Pages` | Blazor-only: accepted and ignored (`@rendermode`/`@preservewhitespace` with warning TZS014) |
@@ -177,7 +178,8 @@ and `@attribute @decorator(…)` (a real class decorator):
 | `@authorize({ roles: ["A", "B"], policy: "P" })` | The route's `AuthorizationRequirements` (`{ roles: [...] }` / `{ policy: "P" }`), checked by `AuthorizeRouteView` (roles: at least one; policy: registered in `AuthorizationService.policies`) |
 | `@attribute @tracked("x")` (TS form: value starts with `@`) | A real class decorator, emitted verbatim above `export default class` (standard TC39 decorator, like `@Parameter`: `(value, context: ClassDecoratorContext)`); names come in via `@import` |
 | `@attribute [Authorize]`, `[Authorize(Roles = "A, B", Policy = "P")]`, `[Authorize("P")]` | Error TZS021 with the TS form (`@authorize`, `@authorize({ roles: ["A", "B"], policy: "P" })`) |
-| `@attribute [AllowAnonymous]` | Error TZS021: remove it — a page is anonymous as long as it declares no `@authorize` |
+| `@allowAnonymous` | The page opts out of every `@authorize`, its own and inherited (Blazor's `[AllowAnonymous]`); in `_Imports.tsazor`, every page below |
+| `@attribute [AllowAnonymous]` | Error TZS021 with the TS form `@allowAnonymous` |
 | `@attribute @CascadingTypeParameter("TItem")` | The type parameter cascades to the components inside (see [templated components](#templated-components-named-slots-and-template-contexts-23)); `[CascadingTypeParameter(nameof(TItem))]` ⇒ TZS021 with this form as its fix |
 | Any other C# attribute (`[StreamRendering]`; `[Route(…)]` ⇒ `@page`) | Error TZS021: remove it or write it as a TS decorator |
 
@@ -188,8 +190,13 @@ and `@attribute @decorator(…)` (a real class decorator):
 - Multiple `@authorize` must all be satisfied (like multiple `[Authorize]` in Blazor). Two with
   `roles` (or two with `policy`) cannot be represented in `AuthorizationRequirements` (one role list,
   one policy) ⇒ error TZS019 instead of a silent weakening.
-- **No inheritance:** `@authorize` applies per page; in `_Imports.tsazor` it has no effect
-  (warning TZS014). That is also why no opt-out (Blazor's `[AllowAnonymous]`) is needed.
+- **Inherited through `_Imports.tsazor`** (Blazor's `@attribute [Authorize]` in `_Imports.razor`): an
+  `@authorize` there protects every page below it, and a page's own `@authorize` adds to it (both must
+  pass: `@authorize` in `_Imports` plus `@authorize({ policy: "Brands.View" })` on a page is sign-in and
+  that policy). An inherited role list (or policy) next to the page's own, or two from two `_Imports`
+  layers, cannot be represented ⇒ TZS019 on the page's `@authorize` (or its `@page`).
+- **`@allowAnonymous`** (Blazor's `[AllowAnonymous]`) wins over all of them — on a page (the sign-in
+  page under a protected `_Imports`) or in an `_Imports.tsazor` (a public folder). It takes no value.
 - As in Blazor, the requirement only applies to routes (`@page` + `AuthorizeRouteView`), not
   to embedded components. Unreadable `@attribute` values (`@attribute Authorize`) ⇒ TZS019.
 - Like Blazor's `RenderFragment<AuthenticationState>`, `<NotAuthorized>` receives the
@@ -1272,7 +1279,7 @@ typed:
 | `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; any component, no `@Parameter()` needed (Blazor 8); key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
 | Named child slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identical (2.3 — see [Templated components](#templated-components-named-slots-and-template-contexts-23)) |
 | `@inherits`, partials (code-behind) | `@inherits` yes; code-behind (`X.tsazor.ts`, via inheritance — [docs/code-behind.md](code-behind.md)) yes |
-| `@authorize` | yes (Tsazor extension replacing `[Authorize]`; bare or with `{ roles, policy }`; not inherited through `_Imports`) |
+| `@authorize` | yes (Tsazor extension replacing `[Authorize]`; bare or with `{ roles, policy }`; inherited through `_Imports`, `@allowAnonymous` opts out) |
 | `@implements` | accepted, ignored (TS interfaces are structural) |
 | `@attach`, `@attach:<name>` | Tsazor extension ([@attach](#attach-tsazor-extension)); Razor renders an attribute literally named `@attach` |
 
@@ -1296,7 +1303,7 @@ text and applied together — where an API form falls inside a rewritten
 |---|---|
 | `@foreach (var x in xs)` (also `(string s in xs)`, `(var (k, v) in pairs)`) | `@foreach (const x of xs)` / `const [k, v] of pairs` |
 | `$"…{x}…"`, `$@"…"`, `@"…"` | Template literal `` `…${x}…` `` (hole layout `{x,2:C}` is dropped, `@` in the hole is dropped) |
-| `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | `@authorize({ roles, policy })` / `@page "…"` / line removed |
+| `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | `@authorize({ roles, policy })` / `@page "…"` / `@allowAnonymous` |
 | `@typeparam T where T : IItem` | `@typeparam T extends IItem` |
 | `var` (TZS022) | `let` |
 
@@ -1347,7 +1354,7 @@ text }] }`, exposed in the LSP as a quick fix (code action):
 |---|---|
 | `TZS021` `@foreach (var x in xs)` / `(string s in xs)` / `(var (k, v) in pairs)` | Header code ⇒ `const x of xs` / `const [k, v] of pairs` |
 | `TZS021` `@typeparam T where T : IItem` | Clause ⇒ `extends IItem` (none for `struct`/`class`/`new` …) |
-| `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Directive ⇒ `@authorize…` / `@page "…"` / line removed (only with one attribute per list, only literal values) |
+| `TZS021` `@attribute [Authorize(…)]` / `[Route("…")]` / `[AllowAnonymous]` | Directive ⇒ `@authorize…` / `@page "…"` / `@allowAnonymous` (only with one attribute per list, only literal values) |
 | `TZS022` `var` | ⇒ `let` |
 | `TZS030` `@Bindable() value = 0` | ⇒ `@Bindable() accessor value = 0` |
 | `TZS032` a member under Blazor's lifecycle name (`onInitializedAsync`, `OnParametersSet`, `Dispose`, …) | Name ⇒ Tsazor's hook (`onInitialized`, `onParametersSet`, `dispose`); the hook may be `async` |

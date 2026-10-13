@@ -853,7 +853,7 @@ describe("imports-file", () => {
     m.dispose();
   });
 
-  it("nested _Imports files stack; unused inherited imports are dropped from the output; @authorize doesn't inherit", () => {
+  it("nested _Imports files stack; unused inherited imports are dropped from the output; @authorize inherits", () => {
     const files = {
       "_Imports.tsazor": `@import { a } from "./values"\n`,
       "sub/_Imports.tsazor": `@import { b } from "../values"\n`,
@@ -866,7 +866,10 @@ describe("imports-file", () => {
     const build = buildProject({ ...files, "App.tsazor": `@using ./sub\n<Leaf />` });
     expect(build.modules["$app/sub/Leaf.tsazor"]!.code).toContain('from "$app/values.ts"');
     expect(build.modules["$app/Plain.tsazor"]!.code).not.toContain("values");
-    expect(codes({ "_Imports.tsazor": "@authorize\n", "App.tsazor": "<p>x</p>" })).toEqual(["warning:TZS014"]);
+    // B12: a page inherits the _Imports chain's @authorize (Blazor's @attribute [Authorize]); @allowAnonymous opts out.
+    const guarded = buildProject({ "_Imports.tsazor": "@authorize\n", "App.tsazor": "<p>x</p>", "Home.tsazor": '@page "/"\n<p>home</p>', "Login.tsazor": '@page "/login"\n@allowAnonymous\n<p>login</p>' });
+    expect(guarded.diagnostics).toEqual([]);
+    expect(guarded.routes.map((route) => [route.template, route.authorize])).toEqual([["/", {}], ["/login", undefined]]);
     // Mistakes in _Imports.tsazor are reported on it (engine: as @tsazor/workspace does).
     const broken = buildProject({ "_Imports.tsazor": "@import formatMoney\n@using ./nowhere\n", "App.tsazor": "<p>x</p>" }).diagnostics;
     expect(broken.map((d) => `${d.file} ${d.severity} ${d.code}`)).toEqual(["_Imports.tsazor error TZS016", "_Imports.tsazor warning TZS018"]);

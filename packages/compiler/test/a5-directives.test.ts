@@ -224,6 +224,39 @@ describe("@attribute (C19)", () => {
     expect(code).not.toContain("roles: [");
   });
 
+  it("a page inherits the _Imports chain's @authorize; @allowAnonymous opts it out (B12)", () => {
+    const signIn = [{ authorize: {}, file: "../_Imports.tsazor" }];
+    const inherited = gen('@page "/x"\n<p>x</p>', { inheritedAuthorization: signIn });
+    expect(inherited.diagnostics.all).toEqual([]);
+    expect([inherited.metadata.authorize, inherited.metadata.authorizeData]).toEqual([true, undefined]);
+    expect(inherited.code).toContain("export const routeAuthorize = true;");
+    // Blazor ANDs the page's [Authorize(Policy = …)] with the inherited [Authorize].
+    const policy = gen('@page "/x"\n@authorize({ policy: "Brands.View" })\n<p>x</p>', { inheritedAuthorization: signIn });
+    expect(policy.metadata.authorizeData).toEqual({ policy: "Brands.View" });
+    expect(gen('@page "/x"\n<p>x</p>', { inheritedAuthorization: [{ authorize: { roles: ["Admin"] } }] }).metadata.authorizeData).toEqual({ roles: ["Admin"] });
+    // [AllowAnonymous] wins over every [Authorize]: on the page, or in a (nearer or farther) _Imports.
+    const login = gen('@page "/login"\n@allowAnonymous\n<p>x</p>', { inheritedAuthorization: signIn });
+    expect(login.diagnostics.all).toEqual([]);
+    expect([login.metadata.authorize, login.metadata.allowAnonymous]).toEqual([undefined, true]);
+    expect(login.code).not.toContain("routeAuthorize");
+    expect(gen('@page "/x"\n@authorize\n<p>x</p>', { inheritedAuthorization: [{ allowAnonymous: true }, ...signIn] }).metadata.authorize).toBeUndefined();
+    // Only pages: a component below the _Imports carries no route requirements.
+    expect(gen("<p>x</p>", { inheritedAuthorization: signIn }).metadata.authorize).toBeUndefined();
+    expect(gen('@page "/x"\n@allowAnonymous true\n<p>x</p>').diagnostics.errors.map((d) => [d.code, d.message])).toEqual([["TZS019", "Invalid @attribute directive. @allowAnonymous takes no value."]]);
+  });
+
+  it("refuses inherited requirements it cannot combine, on the page's @authorize or its @page", () => {
+    const roles = [{ authorize: { roles: ["Admin"] }, file: "../_Imports.tsazor" }];
+    const own = gen('@page "/x"\n@authorize({ roles: ["Editor"] })\n<p>x</p>', { inheritedAuthorization: roles }).diagnostics.errors;
+    expect(own.map((d) => [d.code, d.pos.line, d.message])).toEqual([
+      ["TZS019", 2, "Invalid @attribute directive. This @authorize with roles cannot be combined with the one inherited from ../_Imports.tsazor — use one role list and one policy."],
+    ]);
+    const twoLayers = gen('@page "/x"\n<p>x</p>', { inheritedAuthorization: [{ authorize: { policy: "A" }, file: "_Imports.tsazor" }, { authorize: { policy: "B" }, file: "../_Imports.tsazor" }] });
+    expect(twoLayers.diagnostics.errors.map((d) => [d.code, d.pos.line, d.message])).toEqual([
+      ["TZS019", 1, "Invalid @attribute directive. The page inherits @authorize with a policy from _Imports.tsazor and from ../_Imports.tsazor; they cannot be combined — use one role list and one policy."],
+    ]);
+  });
+
   it("refuses requirements it cannot combine and non-literal values", () => {
     const codes = (source: string) => gen(source).diagnostics.errors.map((d) => d.code);
     expect(codes('@authorize({ roles: ["A"] })\n@authorize({ roles: ["B"] })\n<p/>')).toEqual(["TZS019"]);
@@ -244,7 +277,7 @@ describe("@attribute (C19)", () => {
     );
     expect(messages('@attribute [Authorize("CanEdit")]\n<p/>')[0]![2]).toContain(`use '@authorize({ policy: "CanEdit" })'`);
     expect(messages("@attribute [Authorize(Roles = RoleNames.Admin)]\n<p/>")[0]![2]).toContain("with string literals");
-    expect(messages("@attribute [AllowAnonymous]\n<p/>")[0]![2]).toContain("a page is anonymous unless it declares @authorize");
+    expect(messages("@attribute [AllowAnonymous]\n<p/>")[0]![2]).toContain("use '@allowAnonymous'");
     expect(messages('@attribute [Route("/x")]\n<p/>')[0]![2]).toContain(`use '@page "…"'`);
     // One error per attribute of a list; nothing reaches the route metadata.
     const { diagnostics, metadata, code } = gen('@page "/x"\n@attribute [CascadingTypeParameter(nameof(TItem)), Microsoft.AspNetCore.Authorization.AuthorizeAttribute]\n<p/>');

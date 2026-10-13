@@ -38,9 +38,20 @@ export interface RouteSignature {
   layout?: string;
   authorize?: boolean;
   authorizeData?: { roles?: string[]; policy?: string };
+  /** An `_Imports.tsazor`'s `@allowAnonymous`, which its pages inherit (B12). */
+  allowAnonymous?: boolean;
 }
 
 type CodegenMetadata = CodegenResult["metadata"];
+
+/** The authorization part of a route signature: a page's effective requirements, an _Imports' own directives. */
+function authorizationOf(metadata: CodegenMetadata): Omit<RouteSignature, "templates" | "layout"> {
+  return {
+    ...(metadata.authorize === true ? { authorize: true } : {}),
+    ...(metadata.authorizeData !== undefined ? { authorizeData: metadata.authorizeData } : {}),
+    ...(metadata.allowAnonymous === true ? { allowAnonymous: true } : {}),
+  };
+}
 
 /**
  * Everything the transform of a .tsazor file recorded — the edges
@@ -98,7 +109,7 @@ export class TransformRegistry {
     if (isImports) {
       record.unresolvedTags = [];
       record.layoutName = metadata.layout;
-      record.routes = { templates: [] };
+      record.routes = { templates: [], ...authorizationOf(metadata) };
       return;
     }
     record.unresolvedTags = [...metadata.unresolvedTags];
@@ -106,8 +117,7 @@ export class TransformRegistry {
     record.routes = {
       templates: [...metadata.routeTemplates],
       ...(metadata.layout !== undefined ? { layout: metadata.layout } : {}),
-      ...(metadata.authorize === true ? { authorize: true } : {}),
-      ...(metadata.authorizeData !== undefined ? { authorizeData: metadata.authorizeData } : {}),
+      ...authorizationOf(metadata),
     };
   }
 
@@ -229,9 +239,12 @@ export async function planInvalidation(context: WatchEventContext): Promise<Inva
   if (isImportsFile(file)) {
     const previous = registry.get(file);
     const layoutChanged = previous !== undefined && previous.layoutName !== (metadata?.layout ?? undefined);
+    // Its @authorize / @allowAnonymous reach every page below it (B12).
+    const authorizationChanged =
+      previous !== undefined && metadata !== undefined && signatureOf(previous.routes) !== signatureOf({ templates: [], ...authorizationOf(metadata) });
     registry.recordDynamic(file, metadata, true);
     plan.retransform = mark([...dependents, ...(await listTsazorUnder(path.dirname(file)))]);
-    plan.routesModule = metadata !== undefined && layoutChanged;
+    plan.routesModule = metadata !== undefined && (layoutChanged || authorizationChanged);
     return plan;
   }
 
@@ -277,8 +290,7 @@ function routesSignatureChanged(previous: RouteSignature | undefined, metadata: 
   const after: RouteSignature = {
     templates: metadata.routeTemplates,
     ...(metadata.layout !== undefined ? { layout: metadata.layout } : {}),
-    ...(metadata.authorize === true ? { authorize: true } : {}),
-    ...(metadata.authorizeData !== undefined ? { authorizeData: metadata.authorizeData } : {}),
+    ...authorizationOf(metadata),
   };
   return signatureOf(previous) !== signatureOf(after);
 }
@@ -289,6 +301,7 @@ function signatureOf(routes: RouteSignature | undefined): string {
     layout: routes?.layout,
     authorize: routes?.authorize === true,
     authorizeData: routes?.authorizeData !== undefined ? { ...routes.authorizeData } : undefined,
+    allowAnonymous: routes?.allowAnonymous === true,
   });
 }
 

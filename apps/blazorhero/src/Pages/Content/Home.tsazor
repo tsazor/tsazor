@@ -1,8 +1,6 @@
-@* Client/Pages/Content/Home.razor: MudExpansionPanels as an Accordion, MudList of links as a ListGroup. Its
-   _Imports.razor made it a signed-in page (B12). *@
+@* Client/Pages/Content/Home.razor: MudExpansionPanels as an Accordion, MudList of links as a ListGroup. *@
 @page "/home"
 @page "/"
-@authorize
 
 <div class="bh-home">
     <Icon value="@BlazorHeroLogo" size="250" class="bh-home__logo" />

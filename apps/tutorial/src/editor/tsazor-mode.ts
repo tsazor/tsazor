@@ -81,7 +81,7 @@ const TS_TYPES = new Set(["string", "number", "boolean", "bigint", "unknown", "a
 const VOID_ELEMENTS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
 
 const CONTROL = /^(if|else|foreach|for|while|do|switch|try|catch|finally)\b/;
-const DIRECTIVES = /^(page|layout|using|import|inject|inherits|typeparam|implements|namespace|attribute|authorize|rendermode|preservewhitespace)\b/;
+const DIRECTIVES = /^(page|layout|using|import|inject|inherits|typeparam|implements|namespace|attribute|authorize|allowAnonymous|rendermode|preservewhitespace)\b/;
 
 export function startState(): TsazorState {
   return {

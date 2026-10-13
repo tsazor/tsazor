@@ -1,4 +1,4 @@
-import { compile, type ImportInfo, type TszDiagnostic } from "@tsazor/compiler";
+import { compile, inheritedAuthorizationOf, type ImportInfo, type InheritedAuthorization, type TszDiagnostic } from "@tsazor/compiler";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
@@ -14,6 +14,8 @@ export interface ImportsLayer {
   imports: ImportInfo[];
   /** @layout from the file, if any. */
   layout?: string;
+  /** Its @authorize / @allowAnonymous, which the pages below inherit (B12); `file` is absolute. */
+  authorization?: InheritedAuthorization;
   /** Diagnostics of the _Imports file itself (invalid @import, missing @using dir, …). */
   diagnostics: readonly TszDiagnostic[];
 }
@@ -66,27 +68,17 @@ export function collectImportsSync(fileDir: string, root: string): ImportsChain 
         generateSourceMap: false,
         resolveUsing: (value) => checkUsing(value, dir),
       });
-      // @authorize is per page (route metadata), never inherited — said
-      // instead of dropped silently; a page is anonymous unless it declares one.
-      const authorizeAt = result.metadata.authorize ? /^[ \t]*@authorize\b/m.exec(source) : null;
-      const authorizeLine = authorizeAt ? source.slice(0, authorizeAt.index).split("\n").length : 0;
-      const authorizeColumn = authorizeAt ? authorizeAt[0].indexOf("@") : 0;
-      const inheritance: TszDiagnostic[] = authorizeAt
-        ? [{
-            code: "TZS014",
-            severity: "warning",
-            message: "Ignored directive or clause. @authorize in _Imports.tsazor is not inherited — declare it on each page that requires it.",
-            pos: { line: authorizeLine, column: authorizeColumn },
-            endPos: { line: authorizeLine, column: authorizeColumn + "@authorize".length },
-          }]
-        : [];
+      // @authorize / @allowAnonymous pass on to the pages below (B12: Blazor's
+      // `@attribute [Authorize]` in _Imports.razor).
+      const authorization = inheritedAuthorizationOf(result.metadata, importsPath);
       layers.push({
         dir,
         file: importsPath,
         usings: result.metadata.usings,
         imports: result.metadata.imports,
         layout: result.metadata.layout,
-        diagnostics: [...result.diagnostics.all, ...inheritance],
+        ...(authorization ? { authorization } : {}),
+        diagnostics: [...result.diagnostics.all],
       });
     }
     if (current === stop || !current.startsWith(stop)) break;
@@ -122,6 +114,16 @@ export function inheritedImports(fileDir: string, chain: ImportsChain): ImportIn
     }
   }
   return imports;
+}
+
+/**
+ * The chain's @authorize / @allowAnonymous as a page in `fileDir` inherits them, nearest layer first; each layer's
+ * file relative to the page (the page's diagnostics name it).
+ */
+export function inheritedAuthorization(fileDir: string, chain: ImportsChain): InheritedAuthorization[] {
+  return chain.layers.flatMap((layer) =>
+    layer.authorization ? [{ ...layer.authorization, file: path.relative(path.resolve(fileDir), layer.file).replace(/\\/g, "/") }] : [],
+  );
 }
 
 /** Rewrites a `./`/`../` specifier written in `fromDir` so it resolves the same from `toDir`. */

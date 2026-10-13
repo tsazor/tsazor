@@ -154,6 +154,17 @@ describe("planInvalidation: semantics", () => {
     expect(registry.get(importsFile)?.layoutName).toBe("FancyLayout");
   });
 
+  it("_Imports.tsazor: a changed @authorize or @allowAnonymous updates the route manifest (B12)", async () => {
+    const registry = new TransformRegistry();
+    const importsFile = path.join(root, "_Imports.tsazor");
+    const update = (next: Metadata) => planInvalidation(context(importsFile, "update", registry, next, { listTsazorUnder: async () => [] }));
+    registry.recordDynamic(importsFile, metadata({ layout: "MainLayout" }), true);
+    expect((await update(metadata({ layout: "MainLayout", authorize: true }))).routesModule).toBe(true);
+    expect((await update(metadata({ layout: "MainLayout", authorize: true, authorizeData: { policy: "Staff" } }))).routesModule).toBe(true);
+    expect((await update(metadata({ layout: "MainLayout", authorize: true, authorizeData: { policy: "Staff" } }))).routesModule).toBe(false);
+    expect((await update(metadata({ layout: "MainLayout", allowAnonymous: true }))).routesModule).toBe(true);
+  });
+
   it("_Imports.tsazor without a previous entry (startup) does not update the manifest", async () => {
     const registry = new TransformRegistry();
     const importsFile = path.join(root, "_Imports.tsazor");

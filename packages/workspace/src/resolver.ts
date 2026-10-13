@@ -1,4 +1,4 @@
-import type { CompileOptions, ComponentMetadata, ImportInfo, ResolvedComponent, ResolvedType } from "@tsazor/compiler";
+import type { CompileOptions, ComponentMetadata, ImportInfo, InheritedAuthorization, ResolvedComponent, ResolvedType } from "@tsazor/compiler";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins.js";
@@ -8,6 +8,7 @@ import {
   checkUsing,
   dirsInclude,
   enclosingDirs,
+  inheritedAuthorization,
   inheritedImports,
   isPathLikeUsing,
   relativeSpecifier,
@@ -25,6 +26,8 @@ export interface FileContext {
   chain: ImportsChain;
   /** The chain's @import directives, rebased to this file (nearest layer first). */
   inheritedImports: ImportInfo[];
+  /** The chain's @authorize / @allowAnonymous, nearest layer first (B12). */
+  inheritedAuthorization: InheritedAuthorization[];
   /** Resolves a component tag; `usings` are the file's own @using values. */
   resolveComponent: (tagName: string, usings: string[]) => ResolvedComponent | null;
   /**
@@ -108,6 +111,7 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
     className: classNameForFile(resolved),
     chain,
     inheritedImports: inheritedImports(fileDir, chain),
+    inheritedAuthorization: inheritedAuthorization(fileDir, chain),
     resolveComponent: (tagName, usings) => {
       // Enclosing namespaces: the nearest directory wins outright.
       for (const dir of enclosing) {
@@ -175,7 +179,7 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
  */
 export function resolutionOptions(context: FileContext): Pick<
   CompileOptions,
-  "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports"
+  "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports" | "inheritedAuthorization"
 > {
   return {
     className: context.className,
@@ -185,6 +189,7 @@ export function resolutionOptions(context: FileContext): Pick<
     resolveType: (name, usings) => context.resolveType(name, usings),
     resolveUsing: (value) => context.resolveUsing(value),
     inheritedImports: context.inheritedImports,
+    inheritedAuthorization: context.inheritedAuthorization,
   };
 }
 

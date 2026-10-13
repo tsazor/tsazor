@@ -202,7 +202,7 @@ describe("diagnostic fixes (A7)", () => {
     expect(compileDiagnostics("@typeparam T where T : struct\n").find((d) => d.code === "TZS021")!.fix).toBeUndefined();
   });
 
-  it("TZS021 @attribute: the directive, replaced by its TS form or removed with its line", () => {
+  it("TZS021 @attribute: the directive, replaced by its TS form", () => {
     const authorize = '@attribute [Authorize(Roles = "Admin, Editor")]\n<p/>';
     const a = compileDiagnostics(authorize).find((d) => d.code === "TZS021")!;
     expect(textOf(authorize, a)).toBe('@attribute [Authorize(Roles = "Admin, Editor")]');
@@ -210,7 +210,7 @@ describe("diagnostic fixes (A7)", () => {
 
     const anonymous = "@page \"/\"\n@attribute [AllowAnonymous]\n<p/>";
     const b = compileDiagnostics(anonymous).find((d) => d.code === "TZS021")!;
-    expect(applyFix(anonymous, b)).toBe("@page \"/\"\n<p/>");
+    expect(applyFix(anonymous, b)).toBe("@page \"/\"\n@allowAnonymous\n<p/>");
 
     const route = '@attribute [Route("/x")]\n';
     expect(applyFix(route, compileDiagnostics(route).find((d) => d.code === "TZS021")!)).toBe('@page "/x"\n');

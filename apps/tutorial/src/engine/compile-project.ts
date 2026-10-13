@@ -90,8 +90,7 @@ export function buildProject(files: Files, options: BuildOptions = {}): ProjectB
 /**
  * `_Imports.tsazor` is directive-only: no module, but its mistakes (an
  * invalid `@import`, a `@using` folder that doesn't exist) are reported on
- * it — as @tsazor/workspace's `collectImports` does, including the TZS014
- * for an `@authorize` that would not be inherited.
+ * it — as @tsazor/workspace's `collectImports` does.
  */
 function diagnoseImports(file: string, source: string, resolver: ReturnType<typeof createResolver>, diagnostics: Diagnostic[]): void {
   let compiled: ReturnType<typeof compile>;
@@ -102,21 +101,6 @@ function diagnoseImports(file: string, source: string, resolver: ReturnType<type
     return;
   }
   for (const diagnostic of compiled.diagnostics.all) diagnostics.push(fromCompiler(file, diagnostic));
-  const authorize = compiled.metadata.authorize ? /^[ \t]*@authorize\b/m.exec(source) : null;
-  if (authorize) {
-    const line = source.slice(0, authorize.index).split("\n").length;
-    const column = authorize[0].indexOf("@");
-    diagnostics.push({
-      file,
-      line,
-      column,
-      endLine: line,
-      endColumn: column + "@authorize".length,
-      severity: "warning",
-      code: "TZS014",
-      message: "Ignored directive or clause. @authorize in _Imports.tsazor is not inherited — declare it on each page that requires it.",
-    });
-  }
 }
 
 function buildComponent(

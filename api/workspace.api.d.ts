@@ -64,6 +64,7 @@ export interface FileContext {
     className: string;
     chain: ImportsChain;
     inheritedImports: ImportInfo[];
+    inheritedAuthorization: InheritedAuthorization[];
     resolveComponent: (tagName: string, usings: string[]) => ResolvedComponent | null;
     resolveComponentMetadata: (tagName: string, usings: string[], imports?: readonly ImportInfo[]) => ComponentMetadata | null;
     resolveType: (name: string, usings: string[]) => ResolvedType | null;
@@ -93,8 +94,12 @@ export interface ImportsLayer {
     usings: string[];
     imports: ImportInfo[];
     layout?: string;
+    authorization?: InheritedAuthorization;
     diagnostics: readonly TszDiagnostic[];
 }
+
+// inheritedAuthorization
+export declare function inheritedAuthorization(fileDir: string, chain: ImportsChain): InheritedAuthorization[];
 
 // inheritedImports
 export declare function inheritedImports(fileDir: string, chain: ImportsChain): ImportInfo[];
@@ -156,7 +161,7 @@ export declare function rebaseSpecifier(specifier: string, fromDir: string, toDi
 export declare function relativeSpecifier(fromDir: string, target: string): string;
 
 // resolutionOptions
-export declare function resolutionOptions(context: FileContext): Pick<CompileOptions, "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports">;
+export declare function resolutionOptions(context: FileContext): Pick<CompileOptions, "className" | "fileName" | "resolveComponent" | "resolveComponentMetadata" | "resolveType" | "resolveUsing" | "inheritedImports" | "inheritedAuthorization">;
 
 // RUNTIME_COMPONENTS
 export declare const RUNTIME_COMPONENTS: ReadonlySet<string>;

@@ -18,6 +18,7 @@ export { explainExpressionValue, type ExpressionValue } from "./expression-value
 export { unresolvedName, type ImportSuggestion } from "./import-suggestions.js";
 export { explainTypeScriptError } from "./ts-hints.js";
 export { RESERVED_MEMBERS, OVERRIDABLE_MEMBERS } from "./reserved-members.js";
+export { inheritedAuthorizationOf, type AuthorizeRequirement, type InheritedAuthorization } from "./attributes.js";
 export { parseImportDirective, importStatements, scanModuleExports, type ImportInfo, type ImportBinding, type ParsedImport, type ModuleExports } from "./imports.js";
 export {
   extractModuleMetadata,

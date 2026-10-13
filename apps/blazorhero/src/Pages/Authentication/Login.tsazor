@@ -5,6 +5,7 @@
    edit), which a disabled button would never let happen. MudForm is no <form>; FluentForm is, so novalidate keeps
    the browser's own check of the email field from stopping the submit before the validators speak. *@
 @page "/login"
+@allowAnonymous
 @import { TokenRequest } from "../../Application/Identity"
 @import { tokenRequestValidators } from "../../Application/Validators/Identity"
 @import { Toaster } from "@tsazor/fluent"

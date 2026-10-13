@@ -100,13 +100,19 @@ describe("collectImports", () => {
     expect(codes).toEqual(["error:TZS016", "warning:TZS018", "warning:TZS018"]);
   });
 
-  it("says that @authorize in an _Imports file is not inherited (TZS014)", async () => {
+  it("passes an _Imports file's @authorize and @allowAnonymous on to the pages below (B12)", async () => {
     const dir = path.join(root, "Guarded");
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "_Imports.tsazor"), "@using ./x\n@authorize\n");
-    const diagnostics = (await collectImports(dir, dir)).layers[0]!.diagnostics.filter((d) => d.code === "TZS014");
-    expect(diagnostics.map((d) => [d.severity, d.pos])).toEqual([["warning", { line: 2, column: 0 }]]);
-    expect(diagnostics[0]!.message).toContain("not inherited");
+    await mkdir(path.join(dir, "Public"), { recursive: true });
+    await writeFile(path.join(dir, "_Imports.tsazor"), '@authorize({ policy: "Staff" })\n');
+    await writeFile(path.join(dir, "Public", "_Imports.tsazor"), "@allowAnonymous\n");
+    const outer = await collectImports(dir, dir);
+    expect(outer.layers[0]!.diagnostics).toEqual([]);
+    expect(createFileContext(path.join(dir, "Page.tsazor"), outer).inheritedAuthorization).toEqual([{ authorize: { policy: "Staff" }, file: "_Imports.tsazor" }]);
+    const inner = await collectImports(path.join(dir, "Public"), dir);
+    expect(createFileContext(path.join(dir, "Public", "Page.tsazor"), inner).inheritedAuthorization).toEqual([
+      { allowAnonymous: true, file: "_Imports.tsazor" },
+      { authorize: { policy: "Staff" }, file: "../_Imports.tsazor" },
+    ]);
   });
 });
 

@@ -92,6 +92,12 @@ export type AttributeNode = (SourceSpan & {
     codeStarts?: Partial<Record<"expression" | BindModifier, SourceSpan["pos"]>>;
 });
 
+// AuthorizeRequirement
+export interface AuthorizeRequirement {
+    roles?: string[];
+    policy?: string;
+}
+
 // BindableMember
 export interface BindableMember {
     name: string;
@@ -184,6 +190,7 @@ export interface CodegenOptions {
     resolveType?: (name: string, usings: string[]) => ResolvedType | null;
     imports?: string[];
     inheritedImports?: readonly ImportInfo[];
+    inheritedAuthorization?: readonly InheritedAuthorization[];
     resolveUsing?: (value: string) => string | null;
     usingSpecifiers?: Record<string, string>;
     fileName?: string;
@@ -218,6 +225,7 @@ export interface CodegenResult {
             roles?: string[];
             policy?: string;
         };
+        allowAnonymous?: boolean;
         usings: string[];
         imports: ImportInfo[];
         injects: Array<{
@@ -531,6 +539,20 @@ export interface ImportSuggestion {
 
 // inferTypeArgument
 export declare function inferTypeArgument(sourceFile: ts.SourceFile, checker: ts.TypeChecker, offset: number, request: TypedTagInferenceRequest): string | undefined;
+
+// InheritedAuthorization
+export interface InheritedAuthorization {
+    authorize?: AuthorizeRequirement;
+    allowAnonymous?: boolean;
+    file?: string;
+}
+
+// inheritedAuthorizationOf
+export declare function inheritedAuthorizationOf(metadata: {
+    authorize?: boolean;
+    authorizeData?: AuthorizeRequirement;
+    allowAnonymous?: boolean;
+}, file?: string): InheritedAuthorization | undefined;
 
 // MapEntry
 interface MapEntry {

@@ -12,7 +12,7 @@ import { childNodes } from "./ast.js";
 import { DiagnosticBag, type DiagnosticFix, type SourcePos, type SourceRange, type TextEdit } from "./diagnostics.js";
 import { decodeHtmlEntities } from "./entities.js";
 import { LIB_GLOBALS } from "./globals.generated.js";
-import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement } from "./attributes.js";
+import { directiveReplacementOf, parseAttributeLists, parseAuthorizeArgument, typescriptFormOf, type AuthorizeRequirement, type InheritedAuthorization } from "./attributes.js";
 import { firstInterpolatedSpan, interpolatedStringFix } from "./interpolated.js";
 import { importStatements, parseImportDirective, type ImportInfo } from "./imports.js";
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
@@ -66,6 +66,11 @@ export interface CodegenOptions {
    * file itself (or a nearer layer) already declares is dropped.
    */
   inheritedImports?: readonly ImportInfo[];
+  /**
+   * The `@authorize` / `@allowAnonymous` of the _Imports.tsazor chain, nearest first (B12): a page inherits them,
+   * as Blazor applies an _Imports.razor's `@attribute [Authorize]` to every page below it.
+   */
+  inheritedAuthorization?: readonly InheritedAuthorization[];
   /** Checks one of the file's `@using` values; a returned message becomes a TZS018 warning. */
   resolveUsing?: (value: string) => string | null;
   /** Map of usings to emit as plain module imports (namespace → specifier). */
@@ -195,6 +200,8 @@ export interface CodegenResult {
     /** Roles/policy of `@authorize({ roles: […], policy: "…" })` (the
      *  route's AuthorizationRequirements); absent = authentication suffices. */
     authorizeData?: { roles?: string[]; policy?: string };
+    /** `@allowAnonymous` (Blazor's [AllowAnonymous]): the page opts out of every @authorize, its own and inherited. */
+    allowAnonymous?: boolean;
     usings: string[];
     /** The file's own `@import` directives, parsed (invalid ones are dropped). */
     imports: ImportInfo[];
@@ -378,6 +385,8 @@ class Codegen {
   private readonly decorators: DirectiveNode[] = [];
   /** Requirements of each `@authorize` (all must pass, like Blazor's several `[Authorize]`). */
   private readonly authorizeRequirements: Array<AuthorizeRequirement & { range: SourceRange }> = [];
+  /** The first `@page` directive: where a conflict between inherited `@authorize`s is reported. */
+  private pageRange?: SourceRange;
 
   constructor(
     private readonly options: CodegenOptions,
@@ -399,12 +408,18 @@ class Codegen {
           // Multiple @page directives: every template is a route (Blazor).
           this.metadata.routeTemplates.push(unquote(d.value));
           this.metadata.routeTemplate ??= unquote(d.value);
+          this.pageRange ??= directiveRange(d);
           break;
         case "layout":
           this.metadata.layout = d.value.trim();
           break;
         case "authorize":
           this.authorizeDirective(d);
+          break;
+        case "allowAnonymous":
+          // Blazor's [AllowAnonymous]: the page opts out of the @authorize it inherits (B12).
+          if (d.value.trim() !== "") this.diagnostics.error("TZS019", directiveValueRange(d), "@allowAnonymous takes no value.");
+          this.metadata.allowAnonymous = true;
           break;
         case "attribute":
           this.attributeDirective(d);
@@ -850,18 +865,40 @@ class Codegen {
     }
   }
 
-  /** Merges the `@authorize` directives into the route metadata. */
+  /**
+   * Merges the `@authorize` directives into the route metadata: a page's own and the ones it inherits from the
+   * _Imports.tsazor chain (B12). `@allowAnonymous` — on the page or in the chain — wins over all of them, as
+   * Blazor's [AllowAnonymous] does.
+   */
   private resolveAuthorization(): void {
-    if (this.authorizeRequirements.length === 0) return;
+    const inherited = this.metadata.routeTemplates.length > 0 ? (this.options.inheritedAuthorization ?? []) : [];
+    if (this.metadata.allowAnonymous || inherited.some((layer) => layer.allowAnonymous)) return;
+    const requirements: Array<AuthorizeRequirement & { range?: SourceRange; file?: string }> = [
+      ...this.authorizeRequirements,
+      ...inherited.flatMap((layer) => (layer.authorize ? [{ ...layer.authorize, ...(layer.file !== undefined ? { file: layer.file } : {}) }] : [])),
+    ];
+    if (requirements.length === 0) return;
     this.metadata.authorize = true;
-    const withRoles = this.authorizeRequirements.filter((a) => a.roles !== undefined);
-    const withPolicy = this.authorizeRequirements.filter((a) => a.policy !== undefined);
+    const withRoles = requirements.filter((a) => a.roles !== undefined);
+    const withPolicy = requirements.filter((a) => a.policy !== undefined);
     // Every @authorize must pass (Blazor ANDs several [Authorize]);
     // AuthorizationRequirements holds one role set and one policy, so a
     // second of either cannot be represented — refused instead of weakening
-    // the check.
-    for (const extra of [...withRoles.slice(1), ...withPolicy.slice(1)]) {
-      this.diagnostics.error("TZS019", extra.range, "Several @authorize with roles (or with a policy) cannot be combined — use one role list and one policy.");
+    // the check. The page's own come first: an inherited one conflicts with
+    // the page's (reported there) or with another inherited one (on @page).
+    for (const list of [withRoles, withPolicy]) {
+      const kind = list === withRoles ? "roles" : "a policy";
+      const first = list[0];
+      for (const extra of list.slice(1)) {
+        const from = extra.file ?? "_Imports.tsazor";
+        if (extra.range !== undefined) {
+          this.diagnostics.error("TZS019", extra.range, "Several @authorize with roles (or with a policy) cannot be combined — use one role list and one policy.");
+        } else if (first?.range !== undefined) {
+          this.diagnostics.error("TZS019", first.range, `This @authorize with ${kind} cannot be combined with the one inherited from ${from} — use one role list and one policy.`);
+        } else if (this.pageRange !== undefined) {
+          this.diagnostics.error("TZS019", this.pageRange, `The page inherits @authorize with ${kind} from ${first?.file ?? "_Imports.tsazor"} and from ${from}; they cannot be combined — use one role list and one policy.`);
+        }
+      }
     }
     const roles = withRoles[0]?.roles;
     const policy = withPolicy[0]?.policy;

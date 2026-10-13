@@ -6,6 +6,7 @@ export {
   checkUsing,
   enclosingDirs,
   findPackageDir,
+  inheritedAuthorization,
   inheritedImports,
   isPathLikeUsing,
   rebaseSpecifier,

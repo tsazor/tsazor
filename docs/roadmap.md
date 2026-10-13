@@ -643,7 +643,7 @@ of a block or in all if/else branches counts). `@attribute [X]` ⇒ TZS021 with 
 remove, `[Route]` ⇒ `@page`, otherwise decorator/remove); `@authorize({ roles, policy })` as a
 TS object literal (TS parser, literals only, multi-line allowed; otherwise TZS019), manifest form as in
 A5. `@authorize` is **not** inherited via `_Imports` (TZS014 warning there) ⇒ no opt-out
-needed. `@typeparam T where T : X` ⇒ TZS021 (`'@typeparam T extends X'`). Migrated: 9
+needed (superseded 2026-10-13, B12: inherited, with `@allowAnonymous` as the opt-out). `@typeparam T where T : X` ⇒ TZS021 (`'@typeparam T extends X'`). Migrated: 9
 `@foreach` headers in Pizza and Bench; repo build without warnings. Probe: new category "C# forms
 (codemod-fixable)" (see 0.5). Gates: 752/752 tests, LSP smokes, Pizza, Gallery, Sleipnir,
 Demo (components 31, scoped, code-behind, debugging, counter-state) green.

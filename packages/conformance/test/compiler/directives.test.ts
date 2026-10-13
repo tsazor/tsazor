@@ -92,7 +92,7 @@ describe("C19 — @attribute", () => {
       ["TZS021", "error", 3],
     ]);
     expect(diagnostics[0]!.message).toContain(`use '@authorize({ roles: ["A", "B"] })'`);
-    expect(diagnostics[1]!.message).toContain("a page is anonymous unless it declares @authorize");
+    expect(diagnostics[1]!.message).toContain("use '@allowAnonymous'");
     expect(diagnostics[2]!.message).toContain("use a TS class decorator ('@attribute @decorator(…)'), or remove it");
   });
 

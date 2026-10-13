@@ -128,9 +128,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS014",
     severity: "warning",
     description:
-      "A Blazor-only directive with no effect in Tsazor: `@rendermode` or `@preservewhitespace`. Also reported for `@authorize` in `_Imports.tsazor`, which is not inherited by the pages below it.",
+      "A Blazor-only directive with no effect in Tsazor: `@rendermode` or `@preservewhitespace`.",
     example: "@rendermode InteractiveServer\n\n<p>Hello</p>\n",
-    fix: "Remove the directive; for `@authorize`, declare it on each page that requires it.",
+    fix: "Remove the directive.",
   },
   {
     code: "TZS015",
@@ -168,7 +168,7 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS019",
     severity: "error",
     description:
-      "An `@attribute` value that is neither a TS class decorator (`@attribute @x()`) nor a readable C# attribute list (`@attribute Authorize`), an invalid `@authorize` argument (not an object literal with literal `roles`/`policy`), or several `@authorize` with roles or with a policy, which cannot be combined.",
+      "An `@attribute` value that is neither a TS class decorator (`@attribute @x()`) nor a readable C# attribute list (`@attribute Authorize`), an invalid `@authorize` argument (not an object literal with literal `roles`/`policy`), a value after `@allowAnonymous`, or several `@authorize` with roles or with a policy — the page's own or inherited from `_Imports.tsazor` — which cannot be combined.",
     example: "@authorize({ role: \"Admin\" })\n\n<h1>Admin</h1>\n",
     fix: "Use `@authorize`, `@authorize({ roles: [\"Admin\"], policy: \"P\" })` (one role list and one policy per page), or `@attribute @decorator(…)`.",
   },

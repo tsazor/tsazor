@@ -37,6 +37,7 @@ const DIRECTIVES: Record<string, "supported" | "ignored"> = {
   attribute: "supported",
   typeparam: "supported",
   authorize: "supported",
+  allowAnonymous: "supported",
   namespace: "ignored",
   rendermode: "ignored",
   preservewhitespace: "ignored",

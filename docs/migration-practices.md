@@ -55,6 +55,9 @@ render in the browser.
   - Data a service loads belongs in the Router's `OnNavigateAsync`, so the hold waits for it. Data loaded on
     `LocationChanged` isn't waited for.
 - **`@rendermode` goes away** (TZS014). Everything is interactive.
+- **`@attribute [Authorize]` in `_Imports.razor` stays where it is** as `@authorize`, and the sign-in pages'
+  `[AllowAnonymous]` becomes `@allowAnonymous` (the TZS021 fix writes both). A page's own
+  `[Authorize(Policy = …)]` adds to the inherited one, as in Blazor (B12).
 - **Static SSR forms** (`[SupplyParameterFromForm]`, `FormName`, `Enhance`) become interactive `EditForm`s. The
   original's static contact form bound nothing for visitors (U4).
 - **Enhanced-navigation hooks.** Scripts that listen for the original's "after enhanced navigation" event bind

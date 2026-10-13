@@ -81,6 +81,7 @@ describe("completeAt — directives", () => {
     expect(labels).toContain("page");
     expect(labels).toContain("inject");
     expect(labels).toContain("authorize");
+    expect(labels).toContain("allowAnonymous");
     expect(labels).toContain("code");
   });
 

@@ -13,6 +13,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   OS's dark mode now has all of the explicit dark theme's values (the neutral ramp, the shadows and the accent's
   hover/active steps were the light ones), and the theme-dependent aliases (`--fui-accent*`,
   `--fui-brand-background*`, `--fui-flyout-shadow`) follow the nearest theme in nested providers.
+- **Breaking — `@tsazor/compiler`, `@tsazor/workspace`, `@tsazor/vite-plugin`: `@authorize` in `_Imports.tsazor` is
+  inherited** (Blazor's `@attribute [Authorize]` in `_Imports.razor`): it protects every page below it, and a page's
+  own `@authorize` adds to it (sign-in from `_Imports` plus a page's policy). The new directive **`@allowAnonymous`**
+  (Blazor's `[AllowAnonymous]`) opts a page — or, in an `_Imports.tsazor`, a folder — out of all of them; the TZS021
+  fix for `@attribute [AllowAnonymous]` now writes it. A role list (or policy) inherited next to the page's own is
+  TZS019. Before, `@authorize` in `_Imports` had no effect (TZS014). `CompileOptions.inheritedAuthorization`,
+  `inheritedAuthorizationOf` and `FileContext.inheritedAuthorization` carry the chain's directives.
 - **Breaking — `@tsazor/compiler`: computed parameter types take text as text** (Razor decides from the real type):
   a parameter typed with an indexed access (`VariantProps<typeof buttonVariants>["variant"]`), a conditional or
   mapped type, `typeof`, `keyof` or a lib utility over one lowers `variant="outline"` as the text `"outline"`, as a

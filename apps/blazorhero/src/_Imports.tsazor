@@ -1,5 +1,6 @@
-@* Client/_Imports.razor. Its `@attribute [Authorize]` protects every page; Tsazor's @authorize doesn't inherit
-   (TZS014), so each page that needs a user says so itself (port-blazorhero.md, B12). *@
+@* Client/_Imports.razor. Its `@attribute [Authorize]` protects every page; the sign-in page opts out with
+   @allowAnonymous, as the original's [AllowAnonymous] (port-blazorhero.md, B12). *@
+@authorize
 @using @tsazor/fluent
 @using ./Shared
 @using ./Shared/Components

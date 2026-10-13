@@ -15,6 +15,31 @@ export interface AuthorizeRequirement {
 }
 
 /**
+ * What one `_Imports.tsazor` passes on to the pages below it (B12, Blazor's `@attribute [Authorize]` and
+ * `[AllowAnonymous]` in an _Imports.razor): its `@authorize` requirement and its `@allowAnonymous`.
+ */
+export interface InheritedAuthorization {
+  /** The layer's `@authorize` (`{}`: authentication suffices); absent when it has none. */
+  authorize?: AuthorizeRequirement;
+  allowAnonymous?: boolean;
+  /** The _Imports file, as the page's diagnostics name it. */
+  file?: string;
+}
+
+/** The authorization an `_Imports.tsazor` passes on, from its compiled metadata; undefined when it passes none. */
+export function inheritedAuthorizationOf(
+  metadata: { authorize?: boolean; authorizeData?: AuthorizeRequirement; allowAnonymous?: boolean },
+  file?: string,
+): InheritedAuthorization | undefined {
+  if (!metadata.authorize && !metadata.allowAnonymous) return undefined;
+  return {
+    ...(metadata.authorize ? { authorize: { ...(metadata.authorizeData ?? {}) } } : {}),
+    ...(metadata.allowAnonymous ? { allowAnonymous: true } : {}),
+    ...(file !== undefined ? { file } : {}),
+  };
+}
+
+/**
  * The value of `@authorize` after the directive name: empty, or one TS
  * object literal in parentheses — `({ roles: ["A", "B"], policy: "P" })` —
  * parsed with the TS parser; only string literals are accepted (the
@@ -114,8 +139,7 @@ export function parseAttributeLists(text: string): CSharpAttribute[] | null {
  * The TS replacement of one C# attribute, for the TZS021 message (the
  * codemod's mapping): `[Authorize(Roles = "A, B", Policy = "P")]` ⇒
  * `@authorize({ roles: ["A", "B"], policy: "P" })`, `[AllowAnonymous]` ⇒
- * remove (pages are anonymous unless they declare `@authorize`), anything
- * else ⇒ remove, or a TS class decorator.
+ * `@allowAnonymous`, anything else ⇒ remove, or a TS class decorator.
  */
 export function typescriptFormOf(attribute: CSharpAttribute): string {
   switch (attribute.name) {
@@ -124,7 +148,7 @@ export function typescriptFormOf(attribute: CSharpAttribute): string {
       return form === null ? "'@authorize({ roles: [\"…\"], policy: \"…\" })' with string literals" : `'${form}'`;
     }
     case "AllowAnonymous":
-      return "no directive — a page is anonymous unless it declares @authorize (which is not inherited)";
+      return "'@allowAnonymous'";
     case "Route":
       return "'@page \"…\"'";
     case "CascadingTypeParameter": {
@@ -139,7 +163,7 @@ export function typescriptFormOf(attribute: CSharpAttribute): string {
 /**
  * The directive that mechanically replaces `@attribute [<attribute>]` (the
  * TZS021 fix): `@authorize…` for a literal `[Authorize]`, `@page "…"` for a
- * literal `[Route("…")]`, "" (remove) for `[AllowAnonymous]`; null when the
+ * literal `[Route("…")]`, `@allowAnonymous` for `[AllowAnonymous]`; null when the
  * replacement needs a decision (decorator or removal, non-literal values).
  */
 export function directiveReplacementOf(attribute: CSharpAttribute): string | null {
@@ -147,7 +171,7 @@ export function directiveReplacementOf(attribute: CSharpAttribute): string | nul
     case "Authorize":
       return authorizeDirectiveOf(attribute);
     case "AllowAnonymous":
-      return attribute.args.length === 0 ? "" : null;
+      return attribute.args.length === 0 ? "@allowAnonymous" : null;
     case "Route": {
       const template = attribute.args.length === 1 && attribute.args[0]!.name === undefined ? csharpString(attribute.args[0]!.value) : null;
       return template === null ? null : `@page ${JSON.stringify(template)}`;
