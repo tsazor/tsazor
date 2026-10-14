@@ -80,6 +80,8 @@ export default class Avatar extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// AvatarColor: re-exported from @tsazor/ui
+
 // Badge
 export default class Badge extends ComponentBase {
     intent: Intent;
@@ -222,6 +224,8 @@ export default class CarouselItem extends ComponentBase {
     dispose(): void;
 }
 
+// CarouselLabels: re-exported from @tsazor/ui
+
 // Checkbox
 export default class Checkbox extends InputBase<boolean> {
     ariaLabel?: string;
@@ -269,6 +273,8 @@ export default class Chip<TValue> extends ComponentBase {
     dispose(): void;
 }
 
+// ChipSelectionMode: re-exported from @tsazor/ui
+
 // ChipSet
 export default class ChipSet<TValue> extends ComponentBase {
     selectionMode: ChipSelectionMode;
@@ -286,6 +292,8 @@ export default class ChipSet<TValue> extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
+
+// ChipSetModel: re-exported from @tsazor/ui
 
 // Collapse
 export default class Collapse extends ComponentBase {
@@ -329,6 +337,8 @@ export default class ColorPickerInput extends InputBase<string> {
     ariaLabel?: string;
 }
 
+// ColorPickerLabels: re-exported from @tsazor/ui
+
 // ColumnAlign: re-exported from @tsazor/ui
 
 // DataGrid
@@ -361,6 +371,8 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     refreshDataAsync(): Promise<void>;
     sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;
 }
+
+// DataGridModel: re-exported from @tsazor/ui
 
 // DateInput
 export default class DateInput extends InputBase<string> {
@@ -768,6 +780,8 @@ export default class NumberInput extends InputBase<number> {
     id?: string;
 }
 
+// OptionsSearchEventArgs: re-exported from @tsazor/ui
+
 // Orientation: re-exported from @tsazor/ui
 
 // Overflow
@@ -828,6 +842,8 @@ export default class Paginator extends ComponentBase {
     pageSizeOptions?: number[];
     pageSizeLabel?: string;
 }
+
+// PatternMask: re-exported from @tsazor/ui
 
 // Placement: re-exported from @tsazor/ui
 
@@ -911,6 +927,8 @@ export default class RatingDisplay extends ComponentBase {
     labels?: Partial<RatingLabels>;
     additionalAttributes?: Record<string, unknown>;
 }
+
+// RatingLabels: re-exported from @tsazor/ui
 
 // ScrollToTop
 export default class ScrollToTop extends ComponentBase {
@@ -1048,6 +1066,8 @@ export default class Splitter extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
 }
 
+// SplitterEventArgs: re-exported from @tsazor/ui
+
 // SplitterPane
 export default class SplitterPane extends ComponentBase {
     size?: string;
@@ -1060,6 +1080,8 @@ export default class SplitterPane extends ComponentBase {
     childContent?: RenderFragment;
     dispose(): void;
 }
+
+// SplitterResizeEventArgs: re-exported from @tsazor/ui
 
 // Stack
 export default class Stack extends ComponentBase {
@@ -1305,3 +1327,9 @@ export default class WizardStep extends ComponentBase {
     childContent?: RenderFragment;
     dispose(): void;
 }
+
+// WizardStepChangeEventArgs: re-exported from @tsazor/ui
+
+// WizardStepSequence: re-exported from @tsazor/ui
+
+// WizardStepStatus: re-exported from @tsazor/ui

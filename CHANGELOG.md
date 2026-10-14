@@ -128,6 +128,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - The skins (S2): a component's cascading members (`Tab.tabs`, `MenuItem.menu`, `Chip.set`, the forms'
     `editContext`, … 15 per skin) are no longer in its declaration: markup can't set them, and their names differed
     per skin. The component manifest keeps them for the tools.
+  - The skins (S4): `OptionsSearchEventArgs` is one class, in `@tsazor/ui` (each skin had its own copy, and its
+    declaration imported a shipped `.ts` source); the skins re-export it. Each skin re-exports every ui type its
+    components' parameters name — 13 were missing (`AvatarColor`, `ChipSetModel`, `DataGridModel`,
+    `SplitterEventArgs`, `WizardStepChangeEventArgs`, …) — through `buildLibrary`'s new `reexportTypes` option.
   - `@tsazor/ui` (U4): names that collided or differed from the skins'. The type `Toast` is `ToastEntry` and
     `Hotkey` is `KeyCombination` (both skins have components of those names; the Bootstrap skin no longer
     re-exports the type as `Toast`). The behavior `dismissable` is `dismissible` (`DismissibleOptions`), as the

@@ -515,6 +515,14 @@ export interface LibraryTexts {
     readonly locale: string;
 }
 
+// OptionsSearchEventArgs
+export declare class OptionsSearchEventArgs<TOption> {
+    readonly text: string;
+    readonly signal: AbortSignal;
+    items: readonly TOption[];
+    constructor(text: string, signal: AbortSignal);
+}
+
 // Orientation
 export type Orientation = "horizontal" | "vertical";
 

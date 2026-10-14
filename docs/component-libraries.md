@@ -87,7 +87,8 @@ const result = await buildLibrary({
   internal: ["GridRow"],                         // compiled for the others, not exported
   aliases: { Modal: "Dialog" },                  // more names for a component
   exports: ['export { addMyComponents } from "./services.js"'],
-  typeExports: ['export type { Intent } from "@tsazor/ui"'],
+  reexportTypes: ["@tsazor/ui"],                 // the types the parameters name, from the index
+  typeExports: ['export type { ToastOptions } from "@tsazor/ui"'],
   stylesheet: { file: "my-components.css" },
 });
 if (result.errors.length > 0) process.exit(1);

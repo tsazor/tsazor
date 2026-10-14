@@ -31,6 +31,11 @@ export interface BuildLibraryOptions {
   /** Index statements of the declarations only: `export type { Intent } from "@tsazor/ui"`. */
   typeExports?: readonly string[];
   /**
+   * Packages whose types the components' parameters and methods name, re-exported from the index as types — an app
+   * imports `Intent` from the library, not from its dependency. Names `exports` already exports are left out.
+   */
+  reexportTypes?: readonly string[];
+  /**
    * Declarations written as given (file name → text), over what the build derived: a helper whose declaration
    * TypeScript can't derive from its file alone (a return type it would have to infer).
    */
@@ -159,7 +164,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     ...Object.entries(aliases).map(([alias, target]) => `export { default as ${alias} } from "./${target}.js"`),
   ].map(statement);
   await writeFile(path.join(outDir, "index.js"), `${index.join("\n")}\n`);
-  await writeFile(path.join(outDir, "index.d.ts"), `${[...index, ...(options.typeExports ?? []).map(statement)].join("\n")}\n`);
+  await writeFile(path.join(outDir, "index.d.ts"), `${[...index, ...referencedTypeExports(manifest, options), ...(options.typeExports ?? []).map(statement)].join("\n")}\n`);
 
   if (options.stylesheet !== undefined) {
     const styles: string[] = [];
@@ -176,6 +181,27 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   const components = [...exported, ...Object.keys(aliases)];
   log(`[${packageName}] built ${files.length} component(s) -> ${path.relative(packageDir, outDir).replace(/\\/g, "/")}/`);
   return { components, errors: [] };
+}
+
+/** `reexportTypes`: one `export type` statement per package, of the names the components' signatures import from it. */
+function referencedTypeExports(manifest: ReturnType<typeof buildPackageManifest>, options: BuildLibraryOptions): string[] {
+  const packages = options.reexportTypes ?? [];
+  if (packages.length === 0) return [];
+  const exported = new Set(
+    [...(options.exports ?? []), ...(options.typeExports ?? [])].flatMap((line) => /\{([^}]*)\}/.exec(line)?.[1]?.split(",").map((name) => name.trim().replace(/^type\s+/, "").split(/\s+as\s+/).pop()!) ?? []),
+  );
+  const names = new Map<string, Set<string>>(packages.map((name) => [name, new Set<string>()]));
+  for (const component of Object.values(manifest.components)) {
+    for (const member of [...component.parameters, ...(component.methods ?? [])]) {
+      for (const reference of member.references ?? []) {
+        if (reference.kind !== "import" || reference.specifier === undefined) continue;
+        const imported = reference.imported ?? reference.name;
+        if (imported === "default" || imported === "*" || exported.has(imported)) continue;
+        names.get(reference.specifier)?.add(imported);
+      }
+    }
+  }
+  return [...names].filter(([, set]) => set.size > 0).map(([name, set]) => `export type { ${[...set].sort().join(", ")} } from "${name}";`);
 }
 
 /** A built module's relative imports point at the built siblings: `./Tab.tsazor`, `./ids` and `./x.ts` → `./….js`. */

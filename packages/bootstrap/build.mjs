@@ -13,6 +13,8 @@ const result = await buildLibrary({
   exports: [
     // Plain helpers the package exports besides its components.
     'export { tooltip } from "./tooltip-attachment.js"',
+    // What an Autocomplete's onOptionsSearch handler gets.
+    'export { OptionsSearchEventArgs } from "@tsazor/ui"',
     // The services the components use, in one call (package.json `tsazor.setup` names it).
     'export { addBootstrap } from "./services.js"',
     // The toast service comes with the skin: register it, inject it, call show().
@@ -26,9 +28,11 @@ const result = await buildLibrary({
     // FileUpload's uploader (`uploadTo(url)`) and file sizes.
     'export { formatFileSize, uploadFile, uploadTo } from "@tsazor/ui"',
   ],
+  // The types the components' parameters name come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
+  reexportTypes: ["@tsazor/ui"],
   typeExports: [
-    // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
-    'export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, ToastAction, ToastEntry, ToastOptions, TreeViewItem } from "@tsazor/ui"',
+    // And the types of the services and the grid model it re-exports.
+    'export type { DialogOptions, DialogParameters, DialogResult, GridItemsProviderRequest, GridItemsProviderResult, HexColor, SortDirection, SortedProperty, ToastAction, ToastEntry, ToastOptions } from "@tsazor/ui"',
   ],
   // The exported helpers' declarations, with their docs.
   declarations: {

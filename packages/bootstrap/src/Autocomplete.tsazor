@@ -12,7 +12,7 @@
 @import { SearchRunner, comboboxKeyAction, filterOptions, hasSubmitAttempt, toggleOption } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withClass } from "./attributes"
-@import { OptionsSearchEventArgs } from "./autocomplete-search"
+@import { OptionsSearchEventArgs } from "@tsazor/ui"
 @import { libraryTexts } from "@tsazor/ui"
 
 <div @attributes="@withClass("mb-3 tz-autocomplete", this.additionalAttributes)">

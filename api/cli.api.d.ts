@@ -14,6 +14,7 @@ export interface BuildLibraryOptions {
     aliases?: Readonly<Record<string, string>>;
     exports?: readonly string[];
     typeExports?: readonly string[];
+    reexportTypes?: readonly string[];
     declarations?: Readonly<Record<string, string>>;
     stylesheet?: {
         readonly file: string;

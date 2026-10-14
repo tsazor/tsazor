@@ -24,13 +24,15 @@ const result = await buildLibrary({
     // Plain helpers the package exports besides its components.
     'export { tooltip } from "./tooltip-attachment.js"',
     // What an Autocomplete's onOptionsSearch handler gets.
-    'export { OptionsSearchEventArgs } from "./autocomplete-search.js"',
+    'export { OptionsSearchEventArgs } from "@tsazor/ui"',
     // The services the components use, in one call (package.json `tsazor.setup` names it).
     'export { addFluent } from "./services.js"',
   ],
+  // The types the components' parameters name come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
+  reexportTypes: ["@tsazor/ui"],
   typeExports: [
-    // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
-    'export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, ToastAction, ToastEntry, ToastOptions, TreeViewItem } from "@tsazor/ui"',
+    // And the types of the services and the grid model it re-exports.
+    'export type { DialogOptions, DialogParameters, DialogResult, GridItemsProviderRequest, GridItemsProviderResult, HexColor, SortDirection, SortedProperty, ToastAction, ToastEntry, ToastOptions } from "@tsazor/ui"',
     // The public design tokens (FluentProvider's tokenOverrides).
     'export type { FluentBrandStep, FluentToken, FluentTokenOverrides } from "./tokens.js"',
   ],
@@ -39,19 +41,6 @@ const result = await buildLibrary({
     "tokens.d.ts": readFileSync(new URL("./src/tokens.ts", import.meta.url), "utf8"),
     "tooltip-attachment.d.ts":
       'import type { Attachment } from "@tsazor/runtime";\nimport type { Placement } from "@tsazor/ui";\n/** A Fluent tooltip on any element: `<button @attach="tooltip(\'Save\')">`; the same text gives the same attachment. */\nexport declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;\n',
-    "autocomplete-search.d.ts": [
-      "/** What an Autocomplete's `onOptionsSearch` handler gets: the text; the handler sets `items`. `signal` aborts when a newer search starts. */",
-      "export declare class OptionsSearchEventArgs<TOption> {",
-      "  /** The options to show; set by the handler. */",
-      "  items: readonly TOption[];",
-      "  /** What the user typed. */",
-      "  readonly text: string;",
-      "  /** Aborts when a newer search starts. */",
-      "  readonly signal: AbortSignal;",
-      "  constructor(text: string, signal: AbortSignal);",
-      "}",
-      "",
-    ].join("\n"),
     "services.d.ts":
       'import type { ServiceCollection } from "@tsazor/runtime";\n/** Registers the services the Fluent components use (the `Toaster` and the `DialogService`): `createTsazorApp({ services: addFluent })`. */\nexport declare function addFluent(services: ServiceCollection): void;\n',
   },

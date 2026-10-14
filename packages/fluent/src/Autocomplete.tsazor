@@ -13,7 +13,7 @@
 @import { topLayer } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"
-@import { OptionsSearchEventArgs } from "./autocomplete-search"
+@import { OptionsSearchEventArgs } from "@tsazor/ui"
 @import { libraryTexts } from "@tsazor/ui"
 
 <div @attributes="@this.rootAttributes">

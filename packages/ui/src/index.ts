@@ -49,6 +49,7 @@ export { WizardStepChangeEventArgs, type WizardStepSequence, type WizardStepStat
 export { AVATAR_COLORS, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";
 export { createLayer, type Layer } from "./layers.js";
+export { OptionsSearchEventArgs } from "./combobox.js";
 export { hideFromTopLayer, raiseInTopLayer, showInTopLayer, topLayer } from "./behaviors/top-layer.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";
 export { dismissible, type DismissibleOptions, type DismissReason } from "./behaviors/dismissible.js";
