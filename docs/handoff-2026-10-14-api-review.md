@@ -30,6 +30,10 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
 | D4 dates in the CultureService culture (`LibraryTexts.locale`), D5 one default intent, D12 async policies (`addPolicy`), D14 HttpResult doc, D15 Toaster note | `e39c0f1` |
 | D13 generated client: `options?: RequestOptions`, header warning, `--path-value` (B4), naming contract; fix: the client ignored its TsazorHttp's baseUrl/defaultHeaders | `895a110` |
 | D10 manifest across versions: rules, TZS036, 1.0 fixture | `b150b0b` |
+| D7 typed `FluentTokenOverrides` | `79c881c` |
+| D6 one `Table` in both skins (`TItem`, items or childContent) | `a693660` |
+| D9 `tsazor build-lib` / `buildLibrary` (the four libraries build through it; lockfile: importer lines only) | `0e34430` |
+| D8/U1 `@tsazor/ui/kit` (~150 helpers; public snapshot 1367 → 782 lines; copy-in pins `@tsazor/ui` exactly) | `78bb24b` |
 
 The runtime's public snapshot: 1988 → ~1690 lines (exports added for R7). Open in Part 2: ui (U1 `/kit`, U2–U5),
 the skins (S1–S5), the tools (T2 CLI validation/exit codes, T3 diagnostic prefix, T4 routes type, T6 output
@@ -45,8 +49,9 @@ different `@types/node` in the store; not from these changes).
 1. ~~E10~~ — decided (owner: "E10 okay", `f8b63fe`): Node 22.12 is the floor; a sentence says the time spans are
    plans of a small project, not service levels.
 2. **The API review:** Parts 1 and 2 approved (owner: "die öffentliche API so schlank wie möglich") — in progress.
-   Part 3 answered ("alle nach Empfehlung"): done D1–D5, D10–D15; open D6 (one Table, `TItem`), D7 (typed
-   FluentToken set), D8/U1 (`/kit`), D9 (library build façade).
+   Part 3 answered ("alle nach Empfehlung") and done: D1–D15. Next: Part 2's rest — U2 (the skins' Icon `name`,
+   DialogReference ctor, setTotalItemCount; the label constants, openLayer and builtInIcons are in `/kit` now), U3,
+   U4, U5, S1–S5, T2, T4, T6, X5, the gates, Part 5's bugs.
 3. ~~SECURITY.md's commitments~~ — no deadlines (owner: "kein professionelles Projekt, mit Zusagen vorsichtig").
 4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
    notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
