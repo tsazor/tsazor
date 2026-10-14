@@ -2,9 +2,9 @@
 /**
  * The release rehearsal (docs/design-release.md): what a user gets from a registry, before anything goes to npm.
  *
- *   a fresh Verdaccio in a temp directory → every package packed, checked and published to it (release.mjs) →
- *   the dist-tags → `npm create tsazor@<version>` with @tsazor/fluent and --dotnet, from that registry →
- *   `npm install` (the starter's) → the installed versions → tsazor check, vite build, the app's test
+ *   a fresh Verdaccio in a temp directory → every package packed, checked and published to it (release.mjs), the
+ *   SBOM written → the dist-tags → `npm create tsazor@<version>` with @tsazor/fluent and --dotnet, from that
+ *   registry → `npm install` (the starter's) → the installed versions → tsazor check, vite build, the app's test
  *
  * Unlike the tarball smoke it goes through a registry: npm resolving the packages and their ranges, the dist-tag,
  * `npm create`, and the starter asking the registry for the library's setup.
@@ -39,18 +39,28 @@ try {
   // Every npm below asks this registry only, with the rehearsal's user.
   const env = { npm_config_registry: registry.url, npm_config_userconfig: userconfig };
 
-  const { version, tag, tarballs } = publishAll({ registry: registry.url, userconfig, out: path.join(scratch, "tarballs") });
+  const { version, tag, tarballs, sbom } = publishAll({ registry: registry.url, userconfig, out: path.join(scratch, "tarballs") });
   check(true, `${tarballs.length} packages packed, checked and published as ${version} (${tag})`);
+  const bom = JSON.parse(readFileSync(sbom, "utf8"));
+  const listed = tarballs.filter(({ name }) => bom.components.some((c) => c.name === name && c.version === version && c.hashes?.length));
+  check(bom.bomFormat === "CycloneDX" && listed.length === tarballs.length, `the SBOM lists the ${listed.length} packages with their hashes (${bom.components.length} components)`);
   const tags = JSON.parse(run("npm", ["view", "@tsazor/runtime", "dist-tags", "--json"], scratch, env, "npm view dist-tags"));
   check(tags[distTag(version)] === version, `the dist-tag ${distTag(version)} is ${version}`);
 
   run("npm", ["create", `tsazor@${version}`, "app", "--", "--ui", "@tsazor/fluent", "--dotnet"], scratch, env, "npm create tsazor");
   const app = path.join(scratch, "app");
   check(existsSync(path.join(app, "node_modules", "@tsazor", "fluent")), "npm create tsazor wrote the app with @tsazor/fluent and installed it");
-  const installed = (name) => JSON.parse(readFileSync(path.join(app, "node_modules", ...name.split("/"), "package.json"), "utf8")).version;
+  const installed = (name) => {
+    const manifest = path.join(app, "node_modules", ...name.split("/"), "package.json");
+    if (existsSync(manifest)) return JSON.parse(readFileSync(manifest, "utf8")).version;
+    // Not where npm hoists it (seen once, 2026-10-14, for @tsazor/ui): where it is instead, so one run shows why.
+    const ls = shell("npm", ["ls", name, "--all"], { cwd: app, env: { ...process.env, ...env } });
+    return `missing; npm ls: ${`${ls.stdout}${ls.stderr}`.trim().replace(/\s+/g, " ")}`;
+  };
   const names = ["@tsazor/runtime", "@tsazor/fluent", "@tsazor/ui", "@tsazor/dotnet", "@tsazor/cli", "@tsazor/vite-plugin"];
-  const wrong = names.filter((name) => installed(name) !== version);
-  check(wrong.length === 0, `the app installed ${version} of ${names.join(", ")}${wrong.length ? ` — not of ${wrong.join(", ")}` : ""}`);
+  const versions = new Map(names.map((name) => [name, installed(name)]));
+  const wrong = names.filter((name) => versions.get(name) !== version);
+  check(wrong.length === 0, `the app installed ${version} of ${names.join(", ")}${wrong.length ? ` — not of ${wrong.map((name) => `${name} (${versions.get(name)})`).join(", ")}` : ""}`);
 
   run("node", ["node_modules/@tsazor/cli/dist/bin.js", "check", "."], app, env, "tsazor check");
   check(true, "tsazor check");

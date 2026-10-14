@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Release:** every release has a CycloneDX SBOM of its packages and their dependencies (`pnpm release:sbom`;
+  the release workflow attests it for the tarballs), and the repository a `SECURITY.md` with the disclosure process.
+  `@tsazor/fluent-icons`, `@tsazor/bootstrap-icons`, `@tsazor/fluent` and `@tsazor/bootstrap` carry the license of the
+  icons they are generated from (Fluent System Icons, Bootstrap Icons; both MIT) in their `LICENSE`.
 - `@tsazor/compiler` (Blazor parity): **Razor templates in `@code`** — `@<tag>…</tag>` is a `RenderFragment`
   (`private readonly footer: RenderFragment = @<footer>…</footer>;`), and a lambda over one a `RenderFragment<T>`
   (`(pet: Pet) => @<li>@pet.name</li>`), as Blazor's templated delegates. The template reads the component's members

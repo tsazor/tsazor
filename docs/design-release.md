@@ -35,6 +35,7 @@ provenance part of E3.
 |---|---|
 | `pnpm release:version 1.0.0-next.2` | Sets the version in every published package and opens a CHANGELOG section for it. Commit it. |
 | `pnpm release:pack` | Packs every published package into `.release/` and checks the tarballs (D-P5). Needs `pnpm -r build`. |
+| `pnpm release:sbom` | Packs, then writes the release's SBOM to `.release/tsazor-<version>.cdx.json` (see "The SBOM"). Every publish writes it too, before anything goes out. |
 | `pnpm registry` | Starts the local Verdaccio (`http://localhost:4873`, storage in `~/.tsazor/registry`; `@tsazor/*` and `create-tsazor` only from there, everything else proxied from npm). |
 | `pnpm release:local` | Packs and publishes the current version to the local registry, dist-tag `next` for a prerelease. A version is published once: bump first. |
 | `pnpm rehearsal` | The rehearsal gate (CI's check job, so `ci:local` too): a fresh Verdaccio in a temp directory, every package published to it, then `npm create tsazor` with Fluent and `--dotnet` from that registry, `npm install`, `tsazor check`, `vite build`, the app's test, the dist-tags. |
@@ -53,12 +54,37 @@ A package's first publish to a registry sets `latest` as well, whatever the tag;
 in their `files`), `tsazor --version` said 0.2.0 and `tsazor-dotnet --version` 0.1.0 (constants; now read from the
 package), eleven packages had no README, none had a LICENSE, and `@tsazor/lsp` had no `files` list.
 
+## The SBOM (E3)
+
+One [CycloneDX](https://cyclonedx.org/) document per release describes what a user installs: every published
+package with its tarball's SHA-512 (npm's `integrity`), and the dependencies npm resolves for them. pnpm has no SBOM
+command, and `npm sbom` can't read a pnpm workspace, so `release.mjs` installs the packed tarballs with npm into an
+empty project, as an app would, and runs `npm sbom` there. Then it makes the document the release's:
+
+- the root is the release (`tsazor`, type `framework`), not the private project npm sees;
+- the packages' `distribution` links point at npm's tarballs, not at the build machine's files;
+- peers stay out: Vite and Bootstrap are the app's choice (`--legacy-peer-deps`, which also keeps
+  `@tsazor/runtime`, a peer of the libraries, from being dropped as one); the `@tsazor` peers are added back as
+  dependencies;
+- code generated or copied from another project is the package's `pedigree`: the icon packages and both skins
+  come from `@fluentui/svg-icons` and `bootstrap-icons`, at the versions their workspace packages pin;
+- the serial number is set anew: npm 11 redacts its own UUID as if it were a secret (`urn:uuid:***`).
+
+It fails when a tarball is missing from the document or its hash differs. The third-party versions are those the
+ranges resolve to on the day of the release, and esbuild's optional platform package is the build machine's
+(Linux on release day). The rehearsal checks that the SBOM lists every package; on release day `release.yml`
+attests it for the tarballs (`actions/attest-sbom`, Sigstore, the signed part next to npm's provenance) and keeps
+it as a workflow artifact.
+
 ## Release day (prepared, not active)
 
 `.github/workflows/release.yml` publishes from `tsazor/tsazor`, started by hand (workflow_dispatch, like all of CI).
 It runs only there and when the repository variable `RELEASE_ENABLED` is `true`. Steps: build, tests, API snapshot,
-tarball smoke, `release.mjs pack`, then `npm publish --provenance` for each tarball (dist-tag `next` for a
-prerelease, else `latest`).
+tarball smoke, `release.mjs pack`, the SBOM, then `npm publish --provenance` for each tarball (dist-tag `next` for a
+prerelease, else `latest`), and the SBOM's attestation.
+
+Before the first release, in the repository's settings: turn on **private vulnerability reporting** (Security →
+Advisories), the channel [SECURITY.md](../SECURITY.md) names.
 
 To check on release day (the sources disagree): npm lets a Trusted Publisher be configured only for a package that
 exists. So the first release goes through the workflow with a short-lived granular token (`NPM_TOKEN`, provenance

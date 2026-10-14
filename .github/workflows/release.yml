@@ -18,6 +18,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # Trusted Publishing and provenance (OIDC)
+      attestations: write # the SBOM's attestation
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -34,9 +35,22 @@ jobs:
       - run: pnpm api:check
       - run: pnpm smoke
       - run: pnpm rehearsal
-      - name: Publish (dist-tag next for a prerelease, else latest)
+      - name: Publish (dist-tag next for a prerelease, else latest) and write the SBOM
         run: node scripts/release.mjs publish --registry https://registry.npmjs.org/ --provenance
         env:
           # The first release only: a short-lived granular token (design-release.md, release day). Later releases go
           # through Trusted Publishing and need none.
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Find the SBOM
+        id: sbom
+        run: echo "path=$(ls .release/tsazor-*.cdx.json)" >> "$GITHUB_OUTPUT"
+      # Signs the SBOM for the tarballs (Sigstore, as npm's provenance): `gh attestation verify <tarball> --repo
+      # tsazor/tsazor --predicate-type https://cyclonedx.org/bom` checks it, and the attestation keeps the SBOM.
+      - uses: actions/attest-sbom@v2
+        with:
+          subject-path: .release/*.tgz
+          sbom-path: ${{ steps.sbom.outputs.path }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: ${{ steps.sbom.outputs.path }}

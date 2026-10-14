@@ -16,6 +16,7 @@
     "smoke": "node scripts/tarball-smoke.mjs",
     "release:version": "node scripts/release.mjs version",
     "release:pack": "node scripts/release.mjs pack",
+    "release:sbom": "node scripts/release.mjs sbom",
     "release:local": "node scripts/release.mjs publish --local",
     "registry": "node scripts/registry.mjs",
     "rehearsal": "node scripts/registry-rehearsal.mjs",
