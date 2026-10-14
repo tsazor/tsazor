@@ -25,7 +25,8 @@
 >   3d46416, B20+F5, F1, B2 and F2 all 514/514; HEAD once red — but the parity app built with and without F1, and
 >   with and without F3, is byte-identical (same content hashes in both skins). So the code under test is the same:
 >   a timing flake of that test in Edge under load, not a regression. Worth a closer look at the test's wait (it
->   measures right after the status text appears) — not changed here.
+>   measures right after the status text appears) — not changed here. **Fixed 2026-10-14 (`f6fe15b`):** not load
+>   but a race in the test's "before" read; see [handoff-2026-10-14-api-review.md](handoff-2026-10-14-api-review.md).
 >
 > Pushed through `802f567` (2026-10-13).
 >

@@ -192,7 +192,9 @@ architecture and security take priority.
   default (owner, 2026-10-09), `routing.holdPreviousPage: false` turns it off. Found by the FluentCMS port (F39);
   done 2026-10-09, [design-navigation-hold.md](design-navigation-hold.md).
 - **E10 — Support policy:** LTS window and deprecation rules, extending the stability promise. **Draft
-  (2026-10-14):** [support-policy.md](support-policy.md), six recommended decisions (D-S1…D-S6) for the owner.
+  (2026-10-14):** [support-policy.md](support-policy.md), seven recommended decisions (D-S1…D-S7) for the owner.
+  **API review (2026-10-14):** [api-review-1.0.md](api-review-1.0.md), the basis for the freeze: what the promise
+  covers (public, ABI, internal), what to hide or rename before 1.0, fifteen decisions, the gates.
 
 ## 6 — Release infrastructure
 

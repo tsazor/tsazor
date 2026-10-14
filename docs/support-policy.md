@@ -1,7 +1,7 @@
 # Support policy
 
 Status: **draft (2026-10-14), for the owner's decision.** Roadmap item E10 ([roadmap-1.0.md](roadmap-1.0.md)). Each
-decision below is a recommendation (D-S1 … D-S6) with its alternatives; once decided, this page states the policy
+decision below is a recommendation (D-S1 … D-S7) with its alternatives; once decided, this page states the policy
 and the "Draft" notes go.
 
 The [stability promise](design-principles.md#type-safety-is-a-requirement--the-stability-promise) says what stays
@@ -63,6 +63,14 @@ and which platforms a version runs on.
 
 - **D-S6 — End of life is announced, not discovered.** When a major ships, this page states the end date of the
   previous one's maintenance; the date is also in the release notes. After it, the version gets nothing more.
+
+- **D-S7 — What the promise covers** (from the [API review](api-review-1.0.md), Part 1). Three tiers: **public**
+  (the app-facing APIs, the CLI's commands, flags and exit codes, the TZS codes), **ABI** (what compiled `.tsazor`
+  code calls, and the component manifest: additive only, so a library built with 1.x runs on every later 1.y), and
+  **internal** (the programmatic APIs of compiler, workspace and lsp, `@tsazor/runtime/internal`, `@tsazor/ui/kit`:
+  released in lockstep, may change in any minor). Diagnostic texts, TypeScript's own codes and generated names are not
+  covered. Growth rules: literal unions may gain members in a minor; contracts that libraries implement gain only
+  optional members; ComponentBase gains public members only in a major.
 
 ## Security
 
