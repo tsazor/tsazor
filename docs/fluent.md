@@ -64,7 +64,11 @@ ramp, elevation shadows 2–28, motion durations/easings and control heights
 
 `FluentProvider` accepts single-token `tokenOverrides` (`{ "--fui-radius-md": "12px" }`)
 rendered as inline `--fui-*` styles over its subtree — the MudBlazor token
-override model.
+override model. The keys are typed (`FluentToken`): the brand ramp, the
+semantic colors (backgrounds, foregrounds, strokes, the accent and the brand
+fills), radii, spacing, type, motion and shadows. The sheet's other tokens —
+the theme toggles, the neutral ramp, the controls' own — are internal and may
+change in any release.
 
 ## Components (launch set)
 

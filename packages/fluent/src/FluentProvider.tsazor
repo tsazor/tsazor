@@ -2,6 +2,7 @@
     to scope the --fui-* token palette (system | light | dark) and apply tokenOverrides as inline
     custom properties. It also cascades the theme as "FluentTheme" to descendants. *@
 @import { withAttributes } from "./attributes"
+@import type { FluentTokenOverrides } from "./tokens"
 
 <div @attributes="@this.providerAttributes">@childContent</div>
 
@@ -12,9 +13,10 @@
      * "dark" pin it, even under a dark OS. Mirrored to the data-fluent-theme
      * attribute, so the provider scopes a theme without touching <html>. */
     @Parameter() theme: "system" | "light" | "dark" = "system";
-    /** MudBlazor-style TokenOverrides: inline `--fui-*` custom-property values
-     * layered on top of the shipped token sheet. */
-    @Parameter() tokenOverrides?: Record<string, string>;
+    /** MudBlazor-style TokenOverrides: values for the public tokens (the brand
+     * ramp, the semantic colors, shape, space, type, motion; `FluentToken`),
+     * set inline over the subtree: `{ "--fui-brand-80": "#1565C0" }`. */
+    @Parameter() tokenOverrides?: FluentTokenOverrides;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
     /** The themed subtree (usually the whole app). */

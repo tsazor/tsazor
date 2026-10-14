@@ -38,3 +38,21 @@ describe("tokens.css themes", () => {
     expect([dark.get("--fui-if-light"), dark.get("--fui-if-dark")]).toEqual(["", "initial"]);
   });
 });
+
+describe("the public tokens (D7: FluentToken, tokenOverrides)", () => {
+  const typesFile = readFileSync(path.resolve(import.meta.dirname, "..", "src", "tokens.ts"), "utf8");
+  const steps = [.../FluentBrandStep =([^;]+);/.exec(typesFile)![1]!.matchAll(/\d+/g)].map(([step]) => `--fui-brand-${step}`);
+  const named = [...typesFile.matchAll(/^\s*\| "(--fui-[a-z0-9-]+)"$/gm)].map(([, name]) => name!);
+  const declared = new Set([...sheet.matchAll(/^\s*(--fui-[a-z0-9-]+)\s*:/gm)].map(([, name]) => name!));
+
+  it("are tokens of the sheet: the brand ramp and the semantic ones", () => {
+    expect(steps).toHaveLength(16);
+    expect(named.length).toBeGreaterThan(40);
+    expect([...steps, ...named].filter((name) => !declared.has(name))).toEqual([]);
+  });
+
+  it("leave the theme toggles, the neutral ramp and the controls' tokens internal", () => {
+    const internal = [...steps, ...named].filter((name) => /^--fui-(if-|neutral-|control-|z-)/.test(name));
+    expect(internal).toEqual([]);
+  });
+});

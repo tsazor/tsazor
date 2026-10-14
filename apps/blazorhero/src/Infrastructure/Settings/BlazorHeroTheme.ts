@@ -1,4 +1,4 @@
-import { icon } from "@tsazor/fluent";
+import { icon, type FluentTokenOverrides } from "@tsazor/fluent";
 
 /**
  * Client.Infrastructure/Settings/BlazorHeroTheme.cs as Fluent token overrides: BlazorHero's blue as the brand ramp,
@@ -8,7 +8,7 @@ import { icon } from "@tsazor/fluent";
  * is the darker blue of the same Material palette that passes both, #1565C0 (5.5:1 on the page). The dark theme's
  * accent, brand-100, stays #2196F3 (4.6:1 on its dark surfaces); its fills are brand-70.
  */
-export const tokenOverrides: Readonly<Record<string, string>> = {
+export const tokenOverrides: FluentTokenOverrides = {
     "--fui-brand-40": "#082F6E",
     "--fui-brand-60": "#0B3C8A",
     "--fui-brand-70": "#0D47A1",

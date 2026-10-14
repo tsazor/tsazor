@@ -526,6 +526,9 @@ export default class FileUpload extends ComponentBase {
 
 // FileUploadMode: re-exported from @tsazor/ui
 
+// FluentBrandStep
+export type FluentBrandStep = 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 | 110 | 120 | 130 | 140 | 150 | 160;
+
 // FluentForm
 export default class FluentForm extends ComponentBase {
     model: object;
@@ -539,10 +542,16 @@ export default class FluentForm extends ComponentBase {
 // FluentProvider
 export default class FluentProvider extends ComponentBase {
     theme: "system" | "light" | "dark";
-    tokenOverrides?: Record<string, string>;
+    tokenOverrides?: FluentTokenOverrides;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
 }
+
+// FluentToken
+export type FluentToken = `--fui-brand-${FluentBrandStep}` | "--fui-background-1" | "--fui-background-2" | "--fui-background-3" | "--fui-background-4" | "--fui-background-5" | "--fui-foreground-1" | "--fui-foreground-2" | "--fui-foreground-3" | "--fui-foreground-disabled" | "--fui-foreground-on-brand" | "--fui-stroke-1" | "--fui-stroke-2" | "--fui-accent" | "--fui-accent-hover" | "--fui-accent-active" | "--fui-brand-background" | "--fui-brand-background-hover" | "--fui-brand-background-pressed" | "--fui-radius-none" | "--fui-radius-sm" | "--fui-radius-md" | "--fui-radius-lg" | "--fui-radius-circular" | "--fui-spacing-xs" | "--fui-spacing-s" | "--fui-spacing-m" | "--fui-spacing-l" | "--fui-spacing-xl" | "--fui-spacing-xxl" | "--fui-spacing-xxxl" | "--fui-font-family" | "--fui-font-family-mono" | "--fui-font-size-caption" | "--fui-font-size-caption-lg" | "--fui-font-size-body" | "--fui-font-size-body-lg" | "--fui-font-size-subtitle" | "--fui-font-size-title" | "--fui-font-size-display" | "--fui-font-weight-regular" | "--fui-font-weight-semibold" | "--fui-font-weight-bold" | "--fui-line-height" | "--fui-line-height-caption" | "--fui-duration-fast" | "--fui-duration-normal" | "--fui-duration-gentle" | "--fui-duration-slow" | "--fui-ease-standard" | "--fui-ease-decelerate" | "--fui-ease-accelerate" | "--fui-shadow-2" | "--fui-shadow-4" | "--fui-shadow-8" | "--fui-shadow-16" | "--fui-shadow-28";
+
+// FluentTokenOverrides
+export type FluentTokenOverrides = Partial<Record<FluentToken, string>>;
 
 // Form
 export default class FluentForm extends ComponentBase {

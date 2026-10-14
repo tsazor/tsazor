@@ -83,6 +83,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     texts followed the culture and the dates the page, so German labels came with US dates. Calendar, DatePicker,
     TimePicker and RatingDisplay re-render when the culture changes; a `locale` parameter still wins.
     `LibraryTexts.locale` is that locale; `pageLocale` is in `library-texts`.
+  - `@tsazor/fluent` (D7): `FluentProvider`'s `tokenOverrides` is `FluentTokenOverrides`: its keys are the public
+    tokens (`FluentToken`) — the brand ramp (`--fui-brand-10` … `-160`), the backgrounds, foregrounds and strokes,
+    the accent and the brand fills, radii, spacing, type, motion and shadows. The sheet's other tokens (the theme
+    toggles, the neutral ramp, the controls' own) are internal; overriding one is a type error.
   - `@tsazor/bootstrap` (D5): the default `intent`s are the Fluent skin's, so a skin switch keeps every button's look:
     a `Badge` is `primary`, a `Button` and a `Dropdown` `secondary` (before: `secondary`, `primary`, `primary`). A
     button that should stand out says `intent="primary"`.

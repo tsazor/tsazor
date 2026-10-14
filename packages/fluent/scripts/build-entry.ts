@@ -155,6 +155,9 @@ const index = `${exports.map((line) => `${line};`).join("\n")}\n`;
 await writeFile(path.join(distDir, "index.js"), index);
 // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/fluent"`.
 await writeFile(path.join(distDir, "index.d.ts"), `${index}export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, ToastAction, ToastOptions, TreeViewItem } from "@tsazor/ui";\n`);
+// The public design tokens (FluentProvider's tokenOverrides): src/tokens.ts holds types only.
+await writeFile(path.join(distDir, "tokens.d.ts"), await readFile(path.join(srcDir, "tokens.ts"), "utf8"));
+await writeFile(path.join(distDir, "index.d.ts"), 'export type { FluentBrandStep, FluentToken, FluentTokenOverrides } from "./tokens.js";\n', { flag: "a" });
 // The plain helpers' declarations (they are transpiled without .d.ts).
 await writeFile(
   path.join(distDir, "tooltip-attachment.d.ts"),

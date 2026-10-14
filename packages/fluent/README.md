@@ -23,7 +23,8 @@ import "@tsazor/fluent/fluent.css";
 Theming: `FluentProvider`'s `theme` is `"system"` by default (the OS's preference) or pins
 `"light"` / `"dark"`; `data-fluent-theme` on `<html>` (or any element) does the same, plus a compact
 density attribute. `FluentProvider` takes `tokenOverrides` for
-single-token customizations.
+single-token customizations, typed as `FluentTokenOverrides`: the brand ramp and the
+semantic tokens are public, the sheet's other tokens internal.
 
 ## The Add-CLI (copy-in)
 
