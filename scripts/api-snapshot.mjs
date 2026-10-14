@@ -18,6 +18,7 @@
  * a list of subpaths only those (`["./internal"]` in @tsazor/runtime). They are snapshotted too,
  * so a change stays visible, but they are outside the stability promise: no changelog entry.
  *
+ * An own export that takes the name of one its `export * from` re-exports (the local one wins silently) fails too.
  * A public declaration that names a type of its own package which no public entry exports fails the
  * check too (API Extractor's "forgotten export"): apps couldn't name the type, and a change to it
  * would pass unseen. Export the type, or keep the declaration out of the public entries.
@@ -72,6 +73,32 @@ function surfaceOf(packageName, entryFile) {
     blocks.push([`// ${name}`, ...printed].join("\n"));
   }
   return `${blocks.join("\n\n")}\n`;
+}
+
+/**
+ * The names an entry's own exports take from an `export * from "…"` of it: the local export wins silently, so a name
+ * of @tsazor/testing's would hide the runtime's. `[name, star module]` for each.
+ */
+function shadowedStarExports(entryFile) {
+  const program = ts.createProgram([entryFile], { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, skipLibCheck: true });
+  const checker = program.getTypeChecker();
+  const source = program.getSourceFile(entryFile);
+  const moduleSymbol = source && checker.getSymbolAtLocation(source);
+  if (!moduleSymbol) return [];
+  const resolve = (symbol) => (symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol);
+  const own = checker.getExportsOfModule(moduleSymbol);
+  const shadowed = [];
+  for (const statement of source.statements) {
+    if (!ts.isExportDeclaration(statement) || statement.exportClause || !statement.moduleSpecifier) continue;
+    const star = checker.getSymbolAtLocation(statement.moduleSpecifier);
+    if (!star) continue;
+    const starred = new Map(checker.getExportsOfModule(star).map((symbol) => [symbol.getName(), symbol]));
+    for (const exported of own) {
+      const theirs = starred.get(exported.getName());
+      if (theirs && resolve(theirs) !== resolve(exported)) shadowed.push([exported.getName(), statement.moduleSpecifier.text]);
+    }
+  }
+  return shadowed;
 }
 
 function packages() {
@@ -183,6 +210,12 @@ for (const { dir, manifest } of packages()) {
     const section = `/* ${manifest.name}${subpath === "." ? "" : subpath.slice(1)} */\n\n${surfaceOf(manifest.name, entry)}`;
     (isInternal(manifest, subpath) ? internalSections : sections).push(section);
     if (!isInternal(manifest, subpath)) publicEntries.push(entry);
+  }
+  for (const entry of publicEntries) {
+    for (const [name, star] of shadowedStarExports(entry)) {
+      failed = true;
+      console.error(`${manifest.name}: its own ${name} hides ${star}'s, which its \`export *\` re-exports — rename one.`);
+    }
   }
   for (const [name, owners] of forgottenExports(manifest.name, publicEntries)) {
     failed = true;
