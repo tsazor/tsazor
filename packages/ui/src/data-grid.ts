@@ -398,7 +398,7 @@ export class DataGridModel<T> {
   }
 
   /** One window of rows from the `ItemsProvider`, sorted like the grid (a running window request is aborted). */
-  async provideRange(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>> {
+  async provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>> {
     const provider = this.source.itemsProvider;
     if (provider === undefined) return { items: [], totalItemCount: 0 };
     this.abort?.abort();

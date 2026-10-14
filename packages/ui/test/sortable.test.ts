@@ -36,16 +36,16 @@ function makeList(id: string, names: string[], group?: string) {
     count: state.items.length,
     isFixed: (index) => state.items[index] === "Fixed",
     itemAt: (index) => state.items[index],
-    move: async (from, to) => {
+    moveAsync: async (from, to) => {
       state.items = moveItem(state.items, from, to);
       render();
     },
-    remove: async (index, args) => {
+    removeAsync: async (index, args) => {
       state.items = state.items.filter((_, at) => at !== index);
       state.removes.push(args);
       render();
     },
-    add: async (item, index, args) => {
+    addAsync: async (item, index, args) => {
       state.items = [...state.items.slice(0, index), item as string, ...state.items.slice(index)];
       state.adds.push(args);
       render();

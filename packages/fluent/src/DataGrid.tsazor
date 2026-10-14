@@ -186,7 +186,7 @@ type IconValue,
 
     /** Virtualized rows of an ItemsProvider: the grid's request for the window in view. */
     private readonly virtualProvider = async (request: { startIndex: number; count: number; signal: AbortSignal }) => {
-        const result = await this.model.provideRange(request.startIndex, request.count, request.signal);
+        const result = await this.model.provideRangeAsync(request.startIndex, request.count, request.signal);
         this.windowIndex.clear();
         result.items.forEach((item, offset) => this.windowIndex.set(item, request.startIndex + offset));
         if (this.totalCount !== result.totalItemCount) {

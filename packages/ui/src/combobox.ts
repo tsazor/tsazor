@@ -14,7 +14,7 @@ export class SearchRunner<TOption> {
 
     constructor(private readonly search: (text: string, signal: AbortSignal) => Promise<readonly TOption[]> | readonly TOption[]) {}
 
-    async run(text: string): Promise<readonly TOption[] | undefined> {
+    async runAsync(text: string): Promise<readonly TOption[] | undefined> {
         this.current?.abort();
         const controller = new AbortController();
         this.current = controller;

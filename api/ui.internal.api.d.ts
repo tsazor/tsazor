@@ -412,7 +412,7 @@ export declare class SearchRunner<TOption> {
     private readonly search;
     private current?;
     constructor(search: (text: string, signal: AbortSignal) => Promise<readonly TOption[]> | readonly TOption[]);
-    run(text: string): Promise<readonly TOption[] | undefined>;
+    runAsync(text: string): Promise<readonly TOption[] | undefined>;
     cancel(): void;
 }
 
@@ -447,9 +447,9 @@ export interface SortableListHandle {
     readonly count: number;
     isFixed(index: number): boolean;
     itemAt(index: number): unknown;
-    move(from: number, to: number): Promise<void>;
-    remove(index: number, args: SortableListEventArgs): Promise<void>;
-    add(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
+    moveAsync(from: number, to: number): Promise<void>;
+    removeAsync(index: number, args: SortableListEventArgs): Promise<void>;
+    addAsync(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
     announce(text: string): void;
 }
 

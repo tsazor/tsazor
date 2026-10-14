@@ -5,8 +5,8 @@ describe("SearchRunner: the newest search wins", () => {
   it("aborts the search before and drops its late answer", async () => {
     const pending: Array<{ text: string; signal: AbortSignal; resolve: (options: string[]) => void }> = [];
     const runner = new SearchRunner<string>((text, signal) => new Promise((resolve) => pending.push({ text, signal, resolve })));
-    const first = runner.run("re");
-    const second = runner.run("red");
+    const first = runner.runAsync("re");
+    const second = runner.runAsync("red");
     expect(pending[0]!.signal.aborted).toBe(true);
     expect(pending[1]!.signal.aborted).toBe(false);
     // The older answer arrives last: it is dropped.
@@ -24,21 +24,21 @@ describe("SearchRunner: the newest search wins", () => {
         setTimeout(() => resolve([text]), 5);
       }),
     );
-    const overtaken = runner.run("a");
-    const latest = runner.run("ab");
+    const overtaken = runner.runAsync("a");
+    const latest = runner.runAsync("ab");
     expect(await overtaken).toBeUndefined();
     expect(await latest).toEqual(["ab"]);
-    await expect(runner.run("boom")).rejects.toThrow("server down");
+    await expect(runner.runAsync("boom")).rejects.toThrow("server down");
   });
 
   it("takes a synchronous search too, and cancel aborts the one in flight", async () => {
-    expect(await new SearchRunner<number>((text) => [text.length]).run("abc")).toEqual([3]);
+    expect(await new SearchRunner<number>((text) => [text.length]).runAsync("abc")).toEqual([3]);
     let signal: AbortSignal | undefined;
     const runner = new SearchRunner<string>((_, s) => {
       signal = s;
       return new Promise(() => undefined);
     });
-    void runner.run("x");
+    void runner.runAsync("x");
     runner.cancel();
     expect(signal!.aborted).toBe(true);
   });

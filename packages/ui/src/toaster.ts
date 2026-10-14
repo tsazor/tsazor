@@ -78,7 +78,7 @@ export class Toaster {
   }
 
   /** Runs a toast's action and closes the toast (a skin's action button calls it). */
-  async act(id: number): Promise<void> {
+  async actAsync(id: number): Promise<void> {
     const entry = this.entries.find((candidate) => candidate.id === id);
     if (!entry?.action) return;
     this.dismiss(id);

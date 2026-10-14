@@ -32,7 +32,7 @@
                     }
                 </div>
                 @if (item.action) {
-                    <button type="button" data-button data-action class="fsh-toast-action" @onclick="() => toaster.act(item.id)">@item.action.label</button>
+                    <button type="button" data-button data-action class="fsh-toast-action" @onclick="() => toaster.actAsync(item.id)">@item.action.label</button>
                 }
                 <button type="button" aria-label="Close toast" data-close-button class="fsh-toast-close" @onclick="() => toaster.dismiss(item.id)">
                     <Icon icon="@X" />

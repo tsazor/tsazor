@@ -116,8 +116,8 @@ export declare class ChipSetModel<T> {
     get selected(): readonly T[];
     setSelected(selected: readonly T[]): void;
     isSelected(value: T): boolean;
-    click(value: T): Promise<void>;
-    close(value: T, index?: number): Promise<void>;
+    clickAsync(value: T): Promise<void>;
+    closeAsync(value: T, index?: number): Promise<void>;
     subscribe(listener: () => void): () => void;
 }
 
@@ -166,7 +166,7 @@ export declare class DataGridModel<T> {
     refreshDataAsync(): Promise<void>;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
-    provideRange(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
+    provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
     private request;
     dispose(): void;
 }
@@ -677,7 +677,7 @@ export declare class Toaster {
     get toasts(): readonly Toast[];
     show(options: ToastOptions): number;
     dismiss(id: number): void;
-    act(id: number): Promise<void>;
+    actAsync(id: number): Promise<void>;
     pause(id: number): void;
     resume(id: number): void;
     subscribe(listener: () => void): () => void;

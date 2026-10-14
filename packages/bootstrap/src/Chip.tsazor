@@ -139,14 +139,14 @@
     }
 
     private async handleClick(e: MouseEvent): Promise<void> {
-        if (this.set !== undefined) await this.set.click(this.key);
+        if (this.set !== undefined) await this.set.clickAsync(this.key);
         else if (this.selectedChanged !== undefined) await this.selectedChanged.invokeAsync(!this.selected);
         await this.onClick?.invokeAsync(e);
     }
 
     private async close(): Promise<void> {
         await this.onClose?.invokeAsync(this.value ?? (this.text as TValue | undefined));
-        await this.set?.close(this.key);
+        await this.set?.closeAsync(this.key);
     }
 
     /** Delete or Backspace closes a closable chip; the set moves the focus to the chip that takes its place. */
@@ -156,6 +156,6 @@
         const chip = (e.currentTarget as HTMLElement).closest("[data-chip]");
         const chips = chip?.parentElement ? [...chip.parentElement.querySelectorAll(":scope > [data-chip]")] : [];
         await this.onClose?.invokeAsync(this.value ?? (this.text as TValue | undefined));
-        await this.set?.close(this.key, chip ? chips.indexOf(chip) : undefined);
+        await this.set?.closeAsync(this.key, chip ? chips.indexOf(chip) : undefined);
     }
 }

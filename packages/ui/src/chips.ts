@@ -73,7 +73,7 @@ export class ChipSetModel<T> {
   }
 
   /** A click on a chip: the new selection, reported. */
-  async click(value: T): Promise<void> {
+  async clickAsync(value: T): Promise<void> {
     if (this.readOnly || this.disabled || this.mode === "none") return;
     const next = nextChipSelection(this.mode, this.#selected, value, this.equals);
     if (next.length === this.#selected.length && next.every((item, i) => this.equals(item, this.#selected[i] as T))) return;
@@ -83,7 +83,7 @@ export class ChipSetModel<T> {
   }
 
   /** A chip's close button (or Delete on it); `index` is its place when the keyboard closed it. */
-  async close(value: T, index?: number): Promise<void> {
+  async closeAsync(value: T, index?: number): Promise<void> {
     if (this.readOnly || this.disabled) return;
     this.focusAfterClose = index;
     await this.onClose?.(value);

@@ -24,7 +24,7 @@
                 }
             </div>
             @if (toast.action) {
-                <button type="button" class="@actionClass" @onclick="() => toaster.act(toast.id)">@toast.action.label</button>
+                <button type="button" class="@actionClass" @onclick="() => toaster.actAsync(toast.id)">@toast.action.label</button>
             }
             <button type="button" class="fui-toast__close" aria-label="@t("close")" @onclick="() => toaster.dismiss(toast.id)"><Icon value="@Dismiss20Regular" size="16" /></button>
         </div>

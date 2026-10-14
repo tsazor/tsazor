@@ -36,8 +36,8 @@ describe("ChipSetModel", () => {
       reported.push(values);
     };
     model.subscribe(() => notified++);
-    await model.click("a");
-    await model.click("b");
+    await model.clickAsync("a");
+    await model.clickAsync("b");
     expect(model.isSelected("a") && model.isSelected("b")).toBe(true);
     expect(reported).toEqual([["a"], ["a", "b"]]);
     expect(notified).toBe(2);
@@ -51,17 +51,17 @@ describe("ChipSetModel", () => {
     const { ChipSetModel } = await import("../src/index");
     const model = new ChipSetModel<string>();
     model.readOnly = true;
-    await model.click("a");
+    await model.clickAsync("a");
     expect(model.selected).toEqual([]);
     model.readOnly = false;
     model.mode = "none";
-    await model.click("a");
+    await model.clickAsync("a");
     expect(model.selected).toEqual([]);
     const closed: string[] = [];
     model.onClose = (value) => {
       closed.push(value);
     };
-    await model.close("a", 2);
+    await model.closeAsync("a", 2);
     expect(closed).toEqual(["a"]);
     expect(model.focusAfterClose).toBe(2);
   });

@@ -110,15 +110,15 @@
         count: this.items.length,
         isFixed: (index) => this.isFixed(index),
         itemAt: (index) => this.items[index],
-        move: async (from, to) => {
+        moveAsync: async (from, to) => {
             await this.changed(moveItem(this.items, from, to));
             await this.onUpdate?.invokeAsync(new SortableListEventArgs(from, to, this.listId, this.listId));
         },
-        remove: async (index, args) => {
+        removeAsync: async (index, args) => {
             await this.changed(this.items.filter((_, at) => at !== index));
             await this.onRemove?.invokeAsync(args);
         },
-        add: async (item, index, args) => {
+        addAsync: async (item, index, args) => {
             await this.changed([...this.items.slice(0, index), item as TItem, ...this.items.slice(index)]);
             await this.onAdd?.invokeAsync(args);
         },

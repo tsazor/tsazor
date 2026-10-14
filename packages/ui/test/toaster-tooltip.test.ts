@@ -39,13 +39,13 @@ describe("Toaster", () => {
     const id = toaster.show({ message: "Hi from John", action: { label: "Chat?", onClick: () => void opened.push("chat/john") } });
     expect(toaster.toasts[0]!.action?.label).toBe("Chat?");
 
-    await toaster.act(id);
+    await toaster.actAsync(id);
 
     expect(opened).toEqual(["chat/john"]);
     expect(toaster.toasts).toHaveLength(0);
     // A toast without an action, or one that is gone, does nothing.
-    await toaster.act(toaster.show({ message: "Saved" }));
-    await toaster.act(id);
+    await toaster.actAsync(toaster.show({ message: "Saved" }));
+    await toaster.actAsync(id);
     expect(opened).toHaveLength(1);
     expect(toaster.toasts).toHaveLength(1);
   });

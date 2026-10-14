@@ -70,11 +70,11 @@ export interface SortableListHandle {
   isFixed(index: number): boolean;
   itemAt(index: number): unknown;
   /** Moves an item within the list. */
-  move(from: number, to: number): Promise<void>;
+  moveAsync(from: number, to: number): Promise<void>;
   /** An item leaves for another list (unless the list clones). */
-  remove(index: number, args: SortableListEventArgs): Promise<void>;
+  removeAsync(index: number, args: SortableListEventArgs): Promise<void>;
   /** An item arrives from another list. */
-  add(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
+  addAsync(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
   /** Says something to screen readers. */
   announce(text: string): void;
 }
@@ -242,8 +242,8 @@ export function sortableList(handle: () => SortableListHandle, options: { indica
       const target = to.handle();
       const args = new SortableListEventArgs(fromIndex, toIndex, source.id, target.id);
       const item = source.itemAt(fromIndex);
-      if (!source.clone) await source.remove(fromIndex, args);
-      await target.add(item, toIndex, args);
+      if (!source.clone) await source.removeAsync(fromIndex, args);
+      await target.addAsync(item, toIndex, args);
     };
 
     /**
@@ -276,7 +276,7 @@ export function sortableList(handle: () => SortableListHandle, options: { indica
         const { origin, name, index } = held;
         grab = undefined;
         arrange();
-        if (origin.list === self) await settings.move(index, origin.index);
+        if (origin.list === self) await settings.moveAsync(index, origin.index);
         else await transfer(self, index, origin.list, origin.index);
         await focusItem(origin.list, origin.index, () => origin.list.handle().labels.canceled(name));
         return;
@@ -284,7 +284,7 @@ export function sortableList(handle: () => SortableListHandle, options: { indica
       if (held !== undefined && along.includes(key)) {
         const to = held.index + (key === along[0] ? -1 : 1);
         if (!settings.sort || to < 0 || to >= settings.count) return;
-        await settings.move(held.index, to);
+        await settings.moveAsync(held.index, to);
         held.index = to;
         arrange();
         await focusItem(self, to, (count) => settings.labels.moved(held.name, to + 1, count));
@@ -440,7 +440,7 @@ export function sortableList(handle: () => SortableListHandle, options: { indica
       target = undefined;
       if (!moving || !commit || to === undefined) return;
       if (to.list === self) {
-        if (to.index !== index) await handle().move(index, to.index);
+        if (to.index !== index) await handle().moveAsync(index, to.index);
       } else {
         await transfer(self, index, to.list, to.index);
       }
