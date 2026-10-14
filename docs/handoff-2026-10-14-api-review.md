@@ -16,6 +16,26 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
 
 `ci:local` green for `96e1bbd` (the SBOM under npm 10 too). Nothing was pushed yet today when this was written.
 
+## The API review's Parts 1 and 2 in progress (owner: "so schlank wie möglich")
+
+| Step | Commit |
+|---|---|
+| E10 decided, Node 22.12, SECURITY.md without deadlines | `f8b63fe` |
+| THIRD-PARTY-NOTICES (owner: "ist ja auch gerecht so") | `1a64f8f` |
+| R1 ComponentBase plumbing private (`componentInternals`), R2/R8 `@tsazor/runtime/internal`, R3 real enums; testing without `renderer`; Part 1 tiers in api-snapshot (`api/*.internal.api.d.ts`; compiler, workspace, lsp internal) | `665d343` |
+| R4 aliases removed, R5 `stripInternal` (tags reviewed one by one), `TsazorApp` without `renderer` | `8901d94` |
+| R6 `#private` in extendable bases, R7 exports + the forgotten-export gate, T1 vite-plugin root, T5 `staticMarkup`/`renderHints` gone, X1 dotnet | `21c5c70` |
+| X2 `JwtClaims` JSON values, X3 charts math, X4 worker | `959b6c8` (pushed) |
+
+The runtime's public snapshot: 1988 → ~1690 lines (exports added for R7). Open in Part 2: ui (U1 `/kit`, U2–U5),
+the skins (S1–S5), the tools (T2 CLI validation/exit codes, T3 diagnostic prefix, T4 routes type, T6 output
+format), X5 (testing/runtime name collision check), the remaining gates (skin manifest diff, ABI pin test, bin smoke),
+Part 5's bugs. Working tricks: scripts with CRLF-tolerant anchors in the scratchpad; a strict consumer
+(`skipLibCheck: false`) over the dist declarations after a `stripInternal` change; `gen-runtime-manifest.mjs` after a
+runtime component changes. Two conformance tests failed once each under full-suite load (bind-format,
+class-fields), green alone. `vite.config.ts` of blazorhero/fluentcms fails plain `tsc` (two vite copies with
+different `@types/node` in the store; not from these changes).
+
 ## Waiting for the owner
 
 1. ~~E10~~ — decided (owner: "E10 okay", `f8b63fe`): Node 22.12 is the floor; a sentence says the time spans are
