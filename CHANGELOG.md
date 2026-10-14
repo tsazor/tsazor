@@ -123,6 +123,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     for the eight that didn't: `ChipSetModel.clickAsync`/`closeAsync`, `DataGridModel.provideRangeAsync`,
     `Toaster.actAsync`, and in the kit `SearchRunner.runAsync` and `SortableListHandle`'s
     `moveAsync`/`removeAsync`/`addAsync`.
+  - `@tsazor/bootstrap` (S1): a `Toast` component with the Fluent skin's parameters (`intent`, `title`, content,
+    `dismissible`, `onDismissed`), for a toast placed by hand; the name was ui's type before (U4).
+  - The skins (S2): a component's cascading members (`Tab.tabs`, `MenuItem.menu`, `Chip.set`, the forms'
+    `editContext`, … 15 per skin) are no longer in its declaration: markup can't set them, and their names differed
+    per skin. The component manifest keeps them for the tools.
   - `@tsazor/ui` (U4): names that collided or differed from the skins'. The type `Toast` is `ToastEntry` and
     `Hotkey` is `KeyCombination` (both skins have components of those names; the Bootstrap skin no longer
     re-exports the type as `Toast`). The behavior `dismissable` is `dismissible` (`DismissibleOptions`), as the

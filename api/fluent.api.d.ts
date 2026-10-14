@@ -12,7 +12,6 @@ export default class Accordion extends ComponentBase {
 export default class AccordionItem extends ComponentBase {
     title: string;
     childContent?: RenderFragment;
-    accordion?: Accordion;
 }
 
 // addFluent
@@ -56,7 +55,6 @@ export default class Autocomplete<TOption> extends ComponentBase {
     selectedOptionChanged?: EventCallback<TOption | null>;
     selectedOptionExpression?: string;
     selectedOptionsExpression?: string;
-    editContext?: EditContext;
     maximumSelectedOptions?: number;
     maximumOptionsSearch: number;
     disabled: boolean;
@@ -225,7 +223,6 @@ export default class Carousel<TData> extends ComponentBase {
 export default class CarouselItem extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
-    owner?: unknown;
     dispose(): void;
 }
 
@@ -272,7 +269,6 @@ export default class Chip<TValue> extends ComponentBase {
     onClose?: EventCallback<TValue | undefined>;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
-    set?: ChipSetModel<TValue>;
     dispose(): void;
 }
 
@@ -410,7 +406,6 @@ export default class DatePicker extends InputBase<string> {
 // Dialog
 export default class Dialog extends ComponentBase {
     isOpen?: boolean;
-    hosted?: DialogReference;
     title?: string;
     size: "small" | "medium" | "large" | "xlarge";
     ariaLabel?: string;
@@ -476,7 +471,6 @@ export default class MenuItem extends ComponentBase {
     childContent?: RenderFragment;
     iconStart?: IconValue;
     iconEnd?: IconValue;
-    menu?: Menu;
 }
 
 // FileInput
@@ -572,7 +566,6 @@ export default class FormField extends ComponentBase {
     help?: string;
     for?: string;
     childContent?: RenderFragment;
-    editContext?: EditContext;
     dispose(): void;
 }
 
@@ -740,7 +733,6 @@ export default class MenuItem extends ComponentBase {
     childContent?: RenderFragment;
     iconStart?: IconValue;
     iconEnd?: IconValue;
-    menu?: Menu;
 }
 
 // MultiSplitter
@@ -764,7 +756,6 @@ export default class SplitterPane extends ComponentBase {
     collapsed: boolean;
     label?: string;
     childContent?: RenderFragment;
-    splitter?: Splitter;
     dispose(): void;
 }
 
@@ -894,7 +885,6 @@ export default class Progress extends ComponentBase {
 
 // PropertyColumn
 export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
-    grid?: DataGridModel<TGridItem>;
     property: (item: TGridItem) => TProp;
     format?: (value: TProp) => string;
     title?: string;
@@ -1101,7 +1091,6 @@ export default class SplitterPane extends ComponentBase {
     collapsed: boolean;
     label?: string;
     childContent?: RenderFragment;
-    splitter?: Splitter;
     dispose(): void;
 }
 
@@ -1131,7 +1120,6 @@ export default class Tab extends ComponentBase {
     iconStart?: IconValue;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
-    owner?: unknown;
 }
 
 // Table
@@ -1162,7 +1150,6 @@ export default class Tabs extends ComponentBase {
 
 // TemplateColumn
 export default class TemplateColumn<TGridItem> extends ComponentBase {
-    grid?: DataGridModel<TGridItem>;
     childContent?: (item: TGridItem) => RenderFragment;
     title: string;
     sortBy?: GridSort<TGridItem>;
@@ -1229,7 +1216,6 @@ export default class TimelineItem extends ComponentBase {
     itemDot?: RenderFragment;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
-    timelineAlign?: "start" | "center" | "end";
 }
 
 // TimePicker
@@ -1351,6 +1337,5 @@ export default class WizardStep extends ComponentBase {
     iconNext?: IconValue;
     onChange?: EventCallback<WizardStepChangeEventArgs>;
     childContent?: RenderFragment;
-    wizard?: Wizard;
     dispose(): void;
 }

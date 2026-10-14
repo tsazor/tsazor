@@ -583,7 +583,7 @@ export function componentTypeDeclaration(
 
   const base = entry.base;
   for (const parameter of entry.parameters) {
-    if (parameter.declaredBy !== ownName) continue;
+    if (parameter.declaredBy !== ownName || parameter.cascading) continue;
     collectReferences(parameter.references, true);
   }
   for (const method of entry.methods ?? []) {
@@ -615,7 +615,8 @@ export function componentTypeDeclaration(
 
   lines.push(`export default class ${exportName}${typeDecl} extends ${baseName}${baseArgs} {`);
   for (const parameter of entry.parameters) {
-    if (parameter.declaredBy !== ownName) continue;
+    // A cascading member is the component's own wiring: not settable from markup, so not part of its type.
+    if (parameter.declaredBy !== ownName || parameter.cascading) continue;
     if (parameter.doc) lines.push(`  /** ${parameter.doc.replace(/\n/g, " ")} */`);
     // No annotation: the literal initializer's type (`wrap = false` is a boolean), else `unknown`.
     lines.push(`  ${parameter.name}${parameter.optional ? "?" : ""}: ${parameter.type ?? parameter.inferredType ?? "unknown"};`);
