@@ -7,7 +7,7 @@
     renderStyle native takes the browser's time input instead. Text that is no time goes to validation as it was
     typed. Validation state and message as with TextInput — the same parameters as the Fluent skin's TimePicker. *@
 @import {
-    anchoredPosition, createLayer, dismissable, parseIsoTime, uniqueId, type HourCycle, type IsoTime,
+    anchoredPosition, createLayer, dismissible, parseIsoTime, uniqueId, type HourCycle, type IsoTime,
 } from "@tsazor/ui"
 @import {
     edgeEnabledOption, FieldState, formatTimeField, formatTimePickerValue, initialTimeOption, nextEnabledOption,
@@ -100,7 +100,7 @@
 
     /** The list is an overlay layer: inside a Modal, Escape closes the list first. */
     private readonly layer = createLayer();
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.setOpen(false), ignore: () => [this.fieldBox] });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.setOpen(false), ignore: () => [this.fieldBox] });
     private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
 
     private get locales(): string {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { anchoredPosition, createLayer, dismissable, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
+import { anchoredPosition, createLayer, dismissible, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
 import { computePosition, FieldState } from "../src/kit";
 
 afterEach(() => {
@@ -48,13 +48,13 @@ describe("focusTrap", () => {
   });
 });
 
-describe("dismissable", () => {
+describe("dismissible", () => {
   it("dismisses on Escape and on a press outside, ignoring listed elements", () => {
     const host = html(`<button id="toggle">t</button><ul id="menu"><li>x</li></ul><p id="away">away</p>`);
     const onDismiss = vi.fn();
     const menu = host.querySelector<HTMLElement>("#menu")!;
     const toggle = host.querySelector<HTMLElement>("#toggle")!;
-    const cleanup = dismissable({ onDismiss, ignore: () => [toggle] })(menu) as () => void;
+    const cleanup = dismissible({ onDismiss, ignore: () => [toggle] })(menu) as () => void;
 
     menu.querySelector("li")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     toggle.dispatchEvent(new Event("pointerdown", { bubbles: true }));
@@ -72,8 +72,8 @@ describe("dismissable", () => {
     const host = html(`<div id="dialog"><ul id="menu"></ul></div>`);
     const dialogDismiss = vi.fn();
     const menuDismiss = vi.fn();
-    dismissable({ onDismiss: dialogDismiss })(host.querySelector<HTMLElement>("#dialog")!);
-    const closeMenu = dismissable({ onDismiss: menuDismiss })(host.querySelector<HTMLElement>("#menu")!) as () => void;
+    dismissible({ onDismiss: dialogDismiss })(host.querySelector<HTMLElement>("#dialog")!);
+    const closeMenu = dismissible({ onDismiss: menuDismiss })(host.querySelector<HTMLElement>("#menu")!) as () => void;
     key(document.body, "Escape");
     expect([menuDismiss.mock.calls.length, dialogDismiss.mock.calls.length]).toEqual([1, 0]);
     closeMenu();
@@ -89,11 +89,11 @@ describe("layers", () => {
     const layer = createLayer();
     const dialogDismiss = vi.fn();
     focusTrap({ layer })(dialog);
-    dismissable({ layer, onDismiss: dialogDismiss })(dialog);
+    dismissible({ layer, onDismiss: dialogDismiss })(dialog);
     // The trap still wraps: the dismiss of the same overlay doesn't sit above it.
     host.querySelector<HTMLElement>("#b")!.focus();
     expect(key(document.activeElement!, "Tab").defaultPrevented).toBe(true);
-    const closeMenu = dismissable({ onDismiss: vi.fn() })(host.querySelector<HTMLElement>("#menu")!) as () => void;
+    const closeMenu = dismissible({ onDismiss: vi.fn() })(host.querySelector<HTMLElement>("#menu")!) as () => void;
     key(document.body, "Escape");
     expect(dialogDismiss).not.toHaveBeenCalled();
     closeMenu();

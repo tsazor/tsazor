@@ -6,7 +6,7 @@
     parameters as the Fluent skin's Overflow. *@
 @typeparam TItem
 @import type { Attachment } from "@tsazor/runtime"
-@import { anchoredPosition, createLayer, dismissable, uniqueId, type Orientation } from "@tsazor/ui"
+@import { anchoredPosition, createLayer, dismissible, uniqueId, type Orientation } from "@tsazor/ui"
 @import { overflowFit } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withClass } from "./attributes"
@@ -76,7 +76,7 @@
     private button?: HTMLButtonElement;
     private readonly popupId = uniqueId("tz-overflow");
     private readonly layer = createLayer();
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
     private readonly position = anchoredPosition({ anchor: () => this.button, placement: "bottom-end" });
 
     /** The items it renders (all, or up to maxRenderedItems). */

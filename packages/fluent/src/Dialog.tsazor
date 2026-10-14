@@ -6,7 +6,7 @@
     closing rules from `show`, and Escape, the backdrop and Close cancel it. *@
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"
-@import { createLayer, DialogReference, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { createLayer, DialogReference, dismissible, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 @import { topLayer } from "@tsazor/ui"
 @import { libraryTexts } from "@tsazor/ui"
 
@@ -59,7 +59,7 @@
     private readonly layer = createLayer();
     private readonly trap = focusTrap({ layer: this.layer });
     private readonly lock = scrollLock;
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
     private generatedId?: string;
 

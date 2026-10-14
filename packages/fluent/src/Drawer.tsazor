@@ -3,7 +3,7 @@
     the page behind doesn't scroll, and focus returns when it closes. It does not close itself:
     Escape, a click on the backdrop or the close button raise onClosed, and the parent sets `isOpen`
     to false. *@
-@import { createLayer, dismissable, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
+@import { createLayer, dismissible, focusTrap, scrollLock, uniqueId, type DismissReason } from "@tsazor/ui"
 @import { topLayer } from "@tsazor/ui"
 @import { Dismiss20Regular } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"
@@ -48,7 +48,7 @@
     private readonly layer = createLayer();
     private readonly trap = focusTrap({ layer: this.layer });
     private readonly lock = scrollLock;
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
     private get panelClass(): string {
         return `fui-drawer fui-drawer--${this.placement}`;

@@ -28,7 +28,7 @@ const result = await buildLibrary({
   ],
   typeExports: [
     // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
-    'export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, Toast, ToastAction, ToastOptions, TreeViewItem } from "@tsazor/ui"',
+    'export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, ToastAction, ToastEntry, ToastOptions, TreeViewItem } from "@tsazor/ui"',
   ],
   // The exported helpers' declarations, with their docs.
   declarations: {

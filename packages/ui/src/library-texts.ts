@@ -109,7 +109,7 @@ export const libraryTextDefaults = {
   "fileUpload.progress": "Loading {number}/{count} - {name}",
   "fileUpload.completed": "Completed",
   "fileUpload.canceled": "Canceled",
-  // The errorMessage of onFileError (FileCountExceeded, MaximumSizeReached), Fluent UI Blazor's wording.
+  // The errorMessage of onFileError ("file-count-exceeded", "maximum-size-reached"), Fluent UI Blazor's wording.
   "fileUpload.fileCountExceeded": "The maximum number of files has been exceeded.",
   "fileUpload.fileSizeExceeded": "The maximum size allowed is reached",
 

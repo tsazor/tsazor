@@ -86,7 +86,7 @@ describe("runFileUpload", () => {
     const { log, callbacks } = recorder();
     const done = await runFileUpload([file("a", 1), file("b", 1), file("c", 1)], options({ maximumFileCount: 2 }), callbacks);
     expect(done).toEqual([]);
-    expect(log.errors).toEqual([{ errorCode: "FileCountExceeded", errorMessage: "The maximum number of files has been exceeded.", fileCount: 3 }]);
+    expect(log.errors).toEqual([{ errorCode: "file-count-exceeded", errorMessage: "The maximum number of files has been exceeded.", fileCount: 3 }]);
     expect(log.uploaded).toEqual([]);
   });
 
@@ -98,7 +98,7 @@ describe("runFileUpload", () => {
         return "ok";
       },
     }), callbacks);
-    expect(log.errors.map((error) => [error.errorCode, error.fileName])).toEqual([["MaximumSizeReached", "big.txt"], ["UploadFailed", "bad.txt"]]);
+    expect(log.errors.map((error) => [error.errorCode, error.fileName])).toEqual([["maximum-size-reached", "big.txt"], ["upload-failed", "bad.txt"]]);
     expect(done.map((args) => args.errorMessage)).toEqual(["The maximum size allowed is reached", "Server said no", undefined]);
     expect(log.uploaded.map((args) => args.name)).toEqual(["ok.txt"]);
   });

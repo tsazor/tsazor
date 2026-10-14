@@ -76,12 +76,12 @@ export class FileUploadEventArgs {
 
 /** Why a file or a run failed (Fluent UI Blazor's `FluentInputFileErrorEventArgs`). */
 export interface FileUploadErrorEventArgs {
-  /** FileCountExceeded, MaximumSizeReached or UploadFailed. */
-  readonly errorCode: "FileCountExceeded" | "MaximumSizeReached" | "UploadFailed";
+  /** What went wrong (Fluent UI Blazor's FileCountExceeded, MaximumSizeReached and UploadFailed). */
+  readonly errorCode: "file-count-exceeded" | "maximum-size-reached" | "upload-failed";
   readonly errorMessage: string;
   /** The file concerned. */
   readonly fileName?: string;
-  /** How many files were chosen (FileCountExceeded). */
+  /** How many files were chosen ("file-count-exceeded"). */
   readonly fileCount?: number;
 }
 
@@ -141,7 +141,7 @@ export interface FileUploadCallbacks {
 export async function runFileUpload(files: readonly File[], options: FileUploadOptions, callbacks: FileUploadCallbacks): Promise<FileUploadEventArgs[]> {
   if (files.length > options.maximumFileCount) {
     await callbacks.fileError?.({
-      errorCode: "FileCountExceeded",
+      errorCode: "file-count-exceeded",
       errorMessage: options.labels.fileCountExceeded ?? englishFileUploadLabels.fileCountExceeded!,
       fileCount: files.length,
     });
@@ -160,7 +160,7 @@ export async function runFileUpload(files: readonly File[], options: FileUploadO
     done.push(args);
     if (file.size > options.maximumFileSize) {
       args.errorMessage = labels.fileSizeExceeded ?? englishFileUploadLabels.fileSizeExceeded!;
-      await callbacks.fileError?.({ errorCode: "MaximumSizeReached", errorMessage: args.errorMessage, fileName: file.name });
+      await callbacks.fileError?.({ errorCode: "maximum-size-reached", errorMessage: args.errorMessage, fileName: file.name });
       continue;
     }
     const title = labels.progress(index + 1, files.length, file.name);
@@ -185,7 +185,7 @@ export async function runFileUpload(files: readonly File[], options: FileUploadO
       } catch (error) {
         if (args.isCancelled) break;
         args.errorMessage = error instanceof Error ? error.message : String(error);
-        await callbacks.fileError?.({ errorCode: "UploadFailed", errorMessage: args.errorMessage, fileName: file.name });
+        await callbacks.fileError?.({ errorCode: "upload-failed", errorMessage: args.errorMessage, fileName: file.name });
         continue;
       }
     } else if (options.mode === "buffer") {

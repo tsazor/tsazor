@@ -7,7 +7,7 @@
     instead. Text that is no time goes to validation as it was typed. Inside a FluentForm it shows the field's first
     validation message once a submit was attempted. *@
 @import {
-    anchoredPosition, createLayer, dismissable, parseIsoTime, uniqueId, type HourCycle, type IsoTime,
+    anchoredPosition, createLayer, dismissible, parseIsoTime, uniqueId, type HourCycle, type IsoTime,
 } from "@tsazor/ui"
 @import {
     edgeEnabledOption, FieldState, formatTimeField, formatTimePickerValue, initialTimeOption, nextEnabledOption,
@@ -99,7 +99,7 @@
 
     /** The list is an overlay layer: inside a Dialog, Escape closes the list first. */
     private readonly layer = createLayer();
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.setOpen(false), ignore: () => [this.fieldBox] });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.setOpen(false), ignore: () => [this.fieldBox] });
     private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
 
     private get locales(): string {

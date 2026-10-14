@@ -1,10 +1,10 @@
 @* components/ui/dialog.tsx's DialogContent: the overlay and the centered panel, with the Close button in its corner.
    Radix's behavior comes from @tsazor/ui: the focus moves in and stays (focusTrap, back to the opener on close), the
    page behind doesn't scroll (scrollLock), and Escape or a press outside the panel asks the Dialog to close
-   (dismissable) — one layer, so a menu open in it closes first. Radix's Portal is the browser's top layer
+   (dismissible) — one layer, so a menu open in it closes first. Radix's Portal is the browser's top layer
    (lib/top-layer.ts). Radix animates the exit; this unmounts at once. *@
 @import { X } from "lucide"
-@import { createLayer, dismissable, focusableElements, focusTrap, scrollLock } from "@tsazor/ui"
+@import { createLayer, dismissible, focusableElements, focusTrap, scrollLock } from "@tsazor/ui"
 @import { cn } from "@/lib/cn"
 @import { topLayer, topLayerClass } from "@/lib/top-layer"
 @import Dialog from "./Dialog.tsazor"
@@ -31,7 +31,7 @@
     // Radix focuses the element marked autofocus, else the first focusable one (the close button comes last).
     private readonly trap = focusTrap({ layer: this.layer, initialFocus: (element) => element.querySelector<HTMLElement>("[autofocus]") ?? focusableElements(element)[0] ?? null });
     private readonly lock = scrollLock;
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.close() });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close() });
 
     private readonly closeClass = cn(
         "absolute top-3.5 right-3.5 size-9 rounded-lg flex items-center justify-center",

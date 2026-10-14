@@ -8,7 +8,7 @@
     the form was submitted the field shows its validation message. *@
 @typeparam TOption
 @import { EditContext } from "@tsazor/runtime"
-@import { anchoredPosition, dismissable, uniqueId } from "@tsazor/ui"
+@import { anchoredPosition, dismissible, uniqueId } from "@tsazor/ui"
 @import { SearchRunner, comboboxKeyAction, filterOptions, hasSubmitAttempt, toggleOption } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
@@ -109,7 +109,7 @@
 
     private readonly runner = new SearchRunner<TOption>((text, signal) => this.search(text, signal));
     private readonly position = anchoredPosition({ anchor: () => this.field, placement: () => "bottom-start" });
-    private readonly dismiss = dismissable({ onDismiss: () => this.close(), ignore: () => [this.field] });
+    private readonly dismiss = dismissible({ onDismiss: () => this.close(), ignore: () => [this.field] });
 
     protected override onInitialized(): void {
         this.disposeSignal.addEventListener("abort", () => this.runner.cancel());

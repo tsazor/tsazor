@@ -1219,9 +1219,9 @@ export default class TimePicker extends InputBase<string> {
     ariaLabel?: string;
 }
 
-// Toast: re-exported from @tsazor/ui
-
 // ToastAction: re-exported from @tsazor/ui
+
+// ToastEntry: re-exported from @tsazor/ui
 
 // Toaster: re-exported from @tsazor/ui
 

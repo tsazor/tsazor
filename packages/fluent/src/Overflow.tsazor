@@ -5,7 +5,7 @@
     takes over the button. The overflowed items stay in the page, out of sight and out of the tab order. *@
 @typeparam TItem
 @import type { Attachment } from "@tsazor/runtime"
-@import { anchoredPosition, createLayer, dismissable, uniqueId, type Orientation } from "@tsazor/ui"
+@import { anchoredPosition, createLayer, dismissible, uniqueId, type Orientation } from "@tsazor/ui"
 @import { overflowFit } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
@@ -75,7 +75,7 @@
     private button?: HTMLButtonElement;
     private readonly popupId = uniqueId("fui-overflow");
     private readonly layer = createLayer();
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
     private readonly position = anchoredPosition({ anchor: () => this.button, placement: "bottom-end" });
 
     /** The items it renders (all, or up to maxRenderedItems). */

@@ -123,6 +123,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     for the eight that didn't: `ChipSetModel.clickAsync`/`closeAsync`, `DataGridModel.provideRangeAsync`,
     `Toaster.actAsync`, and in the kit `SearchRunner.runAsync` and `SortableListHandle`'s
     `moveAsync`/`removeAsync`/`addAsync`.
+  - `@tsazor/ui` (U4): names that collided or differed from the skins'. The type `Toast` is `ToastEntry` and
+    `Hotkey` is `KeyCombination` (both skins have components of those names; the Bootstrap skin no longer
+    re-exports the type as `Toast`). The behavior `dismissable` is `dismissible` (`DismissibleOptions`), as the
+    skins spell their parameters. `FileUploadErrorEventArgs.errorCode` is `"file-count-exceeded"`,
+    `"maximum-size-reached"` or `"upload-failed"`, kebab case like every other value union.
   - `@tsazor/cli` (D9): **a component library builds without Tsazor's internal packages** — `tsazor build-lib [dir]
     [--stylesheet <file>]`, and `buildLibrary(options)` for a build script that needs internal components, aliases or
     re-exports (`docs/component-libraries.md`, "Building a library"). It compiles the components as the Vite plugin

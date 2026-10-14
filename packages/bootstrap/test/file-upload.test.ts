@@ -97,9 +97,9 @@ describe("FileUpload", () => {
   it("too many files and a file too large raise onFileError", async () => {
     const { Host, zone, result } = await mount({ multiple: true, maximumFileCount: 1, maximumFileSize: 100 });
     await drop(zone, [file("a", 1), file("b", 1)], result);
-    expect(Host.last!.errors.map((error) => error.errorCode)).toEqual(["FileCountExceeded"]);
+    expect(Host.last!.errors.map((error) => error.errorCode)).toEqual(["file-count-exceeded"]);
     await drop(zone, [file("big", 500)], result);
-    expect(Host.last!.errors.map((error) => [error.errorCode, error.fileName])).toEqual([["FileCountExceeded", undefined], ["MaximumSizeReached", "big"]]);
+    expect(Host.last!.errors.map((error) => [error.errorCode, error.fileName])).toEqual([["file-count-exceeded", undefined], ["maximum-size-reached", "big"]]);
     expect(Host.last!.uploaded).toEqual([]);
   });
 

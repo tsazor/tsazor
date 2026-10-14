@@ -19,7 +19,7 @@ export interface AnchoredPositionOptions {
 export type Appearance = "solid" | "outline" | "subtle" | "transparent";
 
 // ariaKeyShortcuts
-export declare function ariaKeyShortcuts(hotkey: Hotkey): string;
+export declare function ariaKeyShortcuts(hotkey: KeyCombination): string;
 
 // AVATAR_COLORS
 export declare const AVATAR_COLORS: readonly [
@@ -214,11 +214,11 @@ export declare class DialogService {
     private changed;
 }
 
-// dismissable
-export declare function dismissable(options: DismissableOptions): Attachment<HTMLElement>;
+// dismissible
+export declare function dismissible(options: DismissibleOptions): Attachment<HTMLElement>;
 
-// DismissableOptions
-export interface DismissableOptions {
+// DismissibleOptions
+export interface DismissibleOptions {
     layer?: object;
     onDismiss: (reason: DismissReason) => void;
     escape?: boolean;
@@ -234,7 +234,7 @@ export type FileUploader = (file: File, progress: (loaded: number) => void, sign
 
 // FileUploadErrorEventArgs
 export interface FileUploadErrorEventArgs {
-    readonly errorCode: "FileCountExceeded" | "MaximumSizeReached" | "UploadFailed";
+    readonly errorCode: "file-count-exceeded" | "maximum-size-reached" | "upload-failed";
     readonly errorMessage: string;
     readonly fileName?: string;
     readonly fileCount?: number;
@@ -350,15 +350,6 @@ export type HexColor = string;
 // hideFromTopLayer
 export declare function hideFromTopLayer(element: HTMLElement): void;
 
-// Hotkey
-export interface Hotkey {
-    readonly key: string;
-    readonly ctrl: boolean;
-    readonly alt: boolean;
-    readonly shift: boolean;
-    readonly meta: boolean;
-}
-
 // HourCycle
 export type HourCycle = "h12" | "h23";
 
@@ -386,6 +377,15 @@ export declare function isoTime(hours: number, minutes: number, seconds?: number
 
 // IsoTime
 export type IsoTime = string;
+
+// KeyCombination
+export interface KeyCombination {
+    readonly key: string;
+    readonly ctrl: boolean;
+    readonly alt: boolean;
+    readonly shift: boolean;
+    readonly meta: boolean;
+}
 
 // LibraryPluralText
 export type LibraryPluralText = LibraryText extends infer Name ? (Name extends `${infer Base}.other` ? Base : never) : never;
@@ -654,8 +654,14 @@ export interface SplitterResizeEventArgs {
     readonly newSize: number;
 }
 
-// Toast
-export interface Toast {
+// ToastAction
+export interface ToastAction {
+    readonly label: string;
+    readonly onClick: () => void | Promise<void>;
+}
+
+// ToastEntry
+export interface ToastEntry {
     readonly id: number;
     readonly title?: string;
     readonly message?: string;
@@ -663,18 +669,12 @@ export interface Toast {
     readonly action?: ToastAction;
 }
 
-// ToastAction
-export interface ToastAction {
-    readonly label: string;
-    readonly onClick: () => void | Promise<void>;
-}
-
 // Toaster
 export declare class Toaster {
     private entries;
     private next;
     private readonly listeners;
-    get toasts(): readonly Toast[];
+    get toasts(): readonly ToastEntry[];
     show(options: ToastOptions): number;
     dismiss(id: number): void;
     actAsync(id: number): Promise<void>;

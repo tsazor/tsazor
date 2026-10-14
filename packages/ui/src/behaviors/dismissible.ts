@@ -4,8 +4,8 @@ import { isTopLayer, openLayer } from "../layers.js";
 /** Why a layer asks to be dismissed. */
 export type DismissReason = "escape" | "outside";
 
-/** Options of `dismissable`. */
-export interface DismissableOptions {
+/** Options of `dismissible`. */
+export interface DismissibleOptions {
   /**
    * The overlay this belongs to (`createLayer()`): a dialog's focus trap and its dismiss handling
    * share one, so they count as one layer. Default: a layer of its own.
@@ -34,11 +34,11 @@ export interface DismissableOptions {
  * <ul role="menu" @attach="dismiss">…</ul>
  *
  * @code {
- *   dismiss = dismissable({ onDismiss: () => this.close(), ignore: () => [this.toggle] });
+ *   dismiss = dismissible({ onDismiss: () => this.close(), ignore: () => [this.toggle] });
  * }
  * ```
  */
-export function dismissable(options: DismissableOptions): Attachment<HTMLElement> {
+export function dismissible(options: DismissibleOptions): Attachment<HTMLElement> {
   return (element) => {
     const document = element.ownerDocument;
     const layer = options.layer ?? {};

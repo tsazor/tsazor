@@ -232,7 +232,7 @@ export interface HighlightOptions {
 export declare function highlightTerms(highlightedText: string | undefined, delimiters?: string, more?: readonly string[]): string[];
 
 // hotkeyApplies
-export declare function hotkeyApplies(target: EventTarget | null, hotkey: Hotkey, inTextFields?: boolean): boolean;
+export declare function hotkeyApplies(target: EventTarget | null, hotkey: KeyCombination, inTextFields?: boolean): boolean;
 
 // Hsv
 export interface Hsv {
@@ -296,7 +296,7 @@ export declare function markSubmitAttempt(context: EditContext): void;
 export declare function maskInput(input: HTMLInputElement, mask: PatternMask): string;
 
 // matchesHotkey
-export declare function matchesHotkey(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">, hotkey: Hotkey): boolean;
+export declare function matchesHotkey(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">, hotkey: KeyCombination): boolean;
 
 // monthNames
 export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
@@ -353,7 +353,7 @@ export declare function pageLocale(): string;
 export declare function parseDateField(text: string, locale: string): IsoDate | undefined;
 
 // parseHotkey
-export declare function parseHotkey(text: string, apple?: boolean): Hotkey | undefined;
+export declare function parseHotkey(text: string, apple?: boolean): KeyCombination | undefined;
 
 // parsePickerValue
 export declare function parsePickerValue(text: string, view: CalendarView, locale: string): IsoDate | undefined;

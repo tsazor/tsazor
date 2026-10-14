@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { dismissable } from "../src/behaviors/dismissable.js";
+import { dismissible } from "../src/behaviors/dismissible.js";
 import { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayPress } from "../src/behaviors/overlay.js";
 
 const cleanups: (() => void)[] = [];
@@ -128,7 +128,7 @@ describe("overlayBehavior", () => {
     let dialogDismissed = 0;
     const dialog = document.createElement("div");
     document.body.append(dialog);
-    const detach = dismissable({ onDismiss: () => dialogDismissed++ })(dialog);
+    const detach = dismissible({ onDismiss: () => dialogDismissed++ })(dialog);
     if (typeof detach === "function") cleanups.push(detach);
     const presses = attach(overlay, "page");
     expect(key("Escape").defaultPrevented).toBe(true);
@@ -139,7 +139,7 @@ describe("overlayBehavior", () => {
   it("over a region: Escape reaches it only while it has the focus", () => {
     const { save, field, overlay } = page();
     let dialogDismissed = 0;
-    const detach = dismissable({ onDismiss: () => dialogDismissed++ })(document.querySelector("main")!);
+    const detach = dismissible({ onDismiss: () => dialogDismissed++ })(document.querySelector("main")!);
     if (typeof detach === "function") cleanups.push(detach);
     save.focus();
     const presses = attach(overlay, "region");

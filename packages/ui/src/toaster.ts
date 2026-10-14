@@ -22,7 +22,7 @@ export interface ToastAction {
 }
 
 /** One toast on screen. */
-export interface Toast {
+export interface ToastEntry {
   readonly id: number;
   readonly title?: string;
   readonly message?: string;
@@ -30,7 +30,7 @@ export interface Toast {
   readonly action?: ToastAction;
 }
 
-interface Entry extends Toast {
+interface Entry extends ToastEntry {
   timeout: number;
   remaining: number;
   started: number;
@@ -53,7 +53,7 @@ export class Toaster {
   private readonly listeners = new Set<() => void>();
 
   /** The toasts on screen, oldest first. */
-  get toasts(): readonly Toast[] {
+  get toasts(): readonly ToastEntry[] {
     return this.entries;
   }
 

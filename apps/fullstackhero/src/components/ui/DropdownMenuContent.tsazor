@@ -1,9 +1,9 @@
 @* components/ui/dropdown-menu.tsx's DropdownMenuContent: the menu panel under its trigger, in the browser's top layer
    (Radix's Portal; lib/top-layer.ts), placed by @tsazor/ui's anchoredPosition (Radix's align, sideOffset; flipped
    when there is no room). Arrow keys, Home, End and typeahead move between the items (rovingFocus); Escape, Tab or a
-   press outside close it (dismissable). Radix's CSS variables are set, so the original's classes work unchanged:
+   press outside close it (dismissible). Radix's CSS variables are set, so the original's classes work unchanged:
    --radix-dropdown-menu-trigger-width (the Selects' width), -content-available-height, -content-transform-origin. *@
-@import { anchoredPosition, createLayer, dismissable, focusElement, rovingFocus } from "@tsazor/ui"
+@import { anchoredPosition, createLayer, dismissible, focusElement, rovingFocus } from "@tsazor/ui"
 @import type { Placement } from "@tsazor/ui"
 @import { cn } from "@/lib/cn"
 @import { topLayer } from "@/lib/top-layer"
@@ -27,7 +27,7 @@
     private readonly layer = createLayer();
     private readonly position = anchoredPosition({ anchor: () => this.menu?.trigger, placement: () => this.placement, offset: this.sideOffset });
     private readonly keys = rovingFocus({ items: "[role=menuitem]:not([data-disabled])", orientation: "vertical", loop: false, typeahead: true });
-    private readonly dismiss = dismissable({
+    private readonly dismiss = dismissible({
         layer: this.layer,
         onDismiss: (reason) => this.dismissed(reason),
         // The trigger toggles: a press on it is its own.

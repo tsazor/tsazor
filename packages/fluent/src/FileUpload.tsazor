@@ -43,9 +43,9 @@
 
     /** Lets the user choose (or drop) several files. */
     @Parameter() multiple: boolean = false;
-    /** The most files in one go; more raise onFileError (FileCountExceeded). 10 by default. */
+    /** The most files in one go; more raise onFileError ("file-count-exceeded"). 10 by default. */
     @Parameter() maximumFileCount: number = 10;
-    /** The largest file in bytes; a larger one raises onFileError (MaximumSizeReached) and is skipped. 10 MiB by default. */
+    /** The largest file in bytes; a larger one raises onFileError ("maximum-size-reached") and is skipped. 10 MiB by default. */
     @Parameter() maximumFileSize: number = 10 * 1024 * 1024;
     /** The chunk size in bytes in buffer mode. */
     @Parameter() bufferSize: number = 10 * 1024;
@@ -176,7 +176,7 @@
         if (input) input.value = "";
         if (files.length === 0) return;
         if (files.length > this.maximumFileCount) {
-            await this.onFileError?.invokeAsync({ errorCode: "FileCountExceeded", errorMessage: "The maximum number of files has been exceeded.", fileCount: files.length });
+            await this.onFileError?.invokeAsync({ errorCode: "file-count-exceeded", errorMessage: "The maximum number of files has been exceeded.", fileCount: files.length });
             return;
         }
         if (this.onInputFileChange) {

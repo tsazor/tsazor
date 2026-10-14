@@ -4,7 +4,7 @@
     Home, End and typing move between items. Choosing an item or pressing Escape closes the menu and
     returns focus to the toggle; Tab or a click outside closes it too. The menu is positioned next to
     the toggle and flips up when there is no room below. *@
-@import { anchoredPosition, dismissable, rovingFocus, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { anchoredPosition, dismissible, rovingFocus, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
 @import { topLayer } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
 
@@ -54,7 +54,7 @@
     private readonly menuId = `${this.toggleId}-menu`;
 
     private readonly keys = rovingFocus({ items: "[role=menuitem]", orientation: "vertical", typeahead: true });
-    private readonly dismiss = dismissable({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
+    private readonly dismiss = dismissible({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
     private readonly position = anchoredPosition({ anchor: () => this.toggleButton, placement: () => this.placement });
     private readonly focusFirst = (menu: HTMLElement): void => {
         const items = menu.querySelectorAll<HTMLElement>("[role=menuitem]:not([disabled])");

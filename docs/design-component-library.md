@@ -39,7 +39,7 @@ has almost none. That is the gap "one core" closes.
 
 ```
 @tsazor/ui            behavior core: no markup styling, no CSS
-  behaviors/          attachments: focusTrap, dismissable (Escape, click outside),
+  behaviors/          attachments: focusTrap, dismissible (Escape, click outside),
                       rovingFocus, anchoredPosition, typeahead, scrollLock
   state/              headless models: DialogState, DisclosureState, TabsState,
                       SelectionModel, DataGridModel (sort, filter, page, select)
@@ -50,7 +50,7 @@ has almost none. That is the gap "one core" closes.
 ```
 
 - **Behaviors are attachments.** F2's `@attach` is exactly the shape a headless behavior needs:
-  `<div @attach="focusTrap" @attach:dismiss="dismissable({ onDismiss: close })">`. The skins use
+  `<div @attach="focusTrap" @attach:dismiss="dismissible({ onDismiss: close })">`. The skins use
   them, and so can an app's own markup — the core is useful without either skin.
 - **State models are plain classes**, testable without a DOM (`DataGridModel` sorts and pages
   arrays or calls an items provider). Skins render them.
@@ -127,7 +127,7 @@ it on Blazor's QuickGrid**, which every Blazor team can use today:
 ## 7. Order of work
 
 1. **Core skeleton:** `@tsazor/ui` with the behaviors Dialog, Tabs and Dropdown need
-   (focusTrap, dismissable, rovingFocus, anchoredPosition) — this closes the E9 keyboard gap.
+   (focusTrap, dismissible, rovingFocus, anchoredPosition) — this closes the E9 keyboard gap.
 2. **Bootstrap skin on the core:** rename `@tsazor/components` → `@tsazor/bootstrap`, adopt the
    vocabulary, add the missing form inputs (on `FieldBase`), Toast, Drawer, Tooltip.
 3. **Fluent skin on the core:** move its behavior into the core, adopt the vocabulary.

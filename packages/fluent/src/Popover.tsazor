@@ -2,7 +2,7 @@
     labelled by its title) for details, a short form or help. Focus moves into the popover when it
     opens; Escape, the close button or a click outside closes it, and Escape returns focus to the
     button. It is positioned next to the button and flips when there is no room. *@
-@import { anchoredPosition, dismissable, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
+@import { anchoredPosition, dismissible, uniqueId, type Appearance, type DismissReason, type Intent, type Size } from "@tsazor/ui"
 @import { topLayer } from "@tsazor/ui"
 @import { buttonClasses } from "./vocabulary"
 @import { Dismiss20Regular } from "./core-icons"
@@ -48,7 +48,7 @@
     private readonly panelId = uniqueId("fui-popover");
     private readonly titleId = `${this.panelId}-title`;
 
-    private readonly dismiss = dismissable({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
+    private readonly dismiss = dismissible({ onDismiss: (reason) => this.dismissed(reason), ignore: () => [this.toggleButton] });
     private readonly position = anchoredPosition({ anchor: () => this.toggleButton, placement: () => this.placement });
     private readonly focusPanel = (panel: HTMLElement): void => {
         panel.focus({ preventScroll: true });

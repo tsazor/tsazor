@@ -5,7 +5,7 @@
    pauses while the pointer is over it or the focus is in it. The region lives in the top layer, above an open dialog
    as sonner's (lib/top-layer.ts). *@
 @import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from "lucide"
-@import type { Toast } from "@tsazor/ui"
+@import type { ToastEntry } from "@tsazor/ui"
 @import { raiseInTopLayer } from "@/lib/top-layer"
 @import { toaster } from "@/lib/toast"
 @inject ThemeService theme
@@ -60,15 +60,15 @@
     }
 
     /** visibleToasts={4}, newest first. */
-    private get visible(): readonly Toast[] {
+    private get visible(): readonly ToastEntry[] {
         return toaster.toasts.slice(-4).reverse();
     }
 
-    private type(item: Toast): string {
+    private type(item: ToastEntry): string {
         return { success: "success", danger: "error", warning: "warning", info: "info" }[item.intent as string] ?? "default";
     }
 
-    private glyph(item: Toast) {
+    private glyph(item: ToastEntry) {
         return { success: CheckCircle2, danger: AlertCircle, warning: AlertTriangle }[item.intent as string] ?? Info;
     }
 }

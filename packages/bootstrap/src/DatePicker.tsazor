@@ -7,7 +7,7 @@
     date goes to validation as it was typed (as with a NumberInput). Validation state and message as with TextInput —
     the same parameters as the Fluent skin's DatePicker. *@
 @import {
-    anchoredPosition, createLayer, dismissable, focusTrap, parseIsoDate, type CalendarDay, type CalendarLabels,
+    anchoredPosition, createLayer, dismissible, focusTrap, parseIsoDate, type CalendarDay, type CalendarLabels,
     type CalendarView, type IsoDate,
 } from "@tsazor/ui"
 @import { dateFieldPlaceholder, FieldState, formatPickerValue, parsePickerValue } from "@tsazor/ui/kit"
@@ -94,7 +94,7 @@
 
     /** The trap and the dismiss handling are one overlay layer (inside a Dialog, Escape closes the calendar first). */
     private readonly layer = createLayer();
-    private readonly dismiss = dismissable({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
+    private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close(), ignore: () => [this.button] });
     private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
     private readonly trap = focusTrap({ layer: this.layer, initialFocus: (popup) => popup.querySelector<HTMLElement>("[role=grid] [tabindex='0']") });
 

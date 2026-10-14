@@ -1264,6 +1264,8 @@ export default class Toast extends ComponentBase {
 
 // ToastAction: re-exported from @tsazor/ui
 
+// ToastEntry: re-exported from @tsazor/ui
+
 // Toaster: re-exported from @tsazor/ui
 
 // ToastOptions: re-exported from @tsazor/ui
