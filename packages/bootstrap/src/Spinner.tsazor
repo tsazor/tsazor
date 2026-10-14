@@ -10,6 +10,7 @@
     @if (label) {
         <span>@label</span>
     }
+    @childContent
 </span>
 
 @code {
@@ -23,6 +24,8 @@
     @Parameter() size: "small" | "medium" | "large" = "medium";
     /** Visible text next to the spinner ("Loading orders…"). */
     @Parameter() label?: string;
+    /** Content of its own after the label (a cancel link). */
+    @Parameter() childContent?: RenderFragment;
     /** The status region's accessible name. */
     @Parameter() ariaLabel?: string | null;
     /** `@attributes` pass-through (class appends). */

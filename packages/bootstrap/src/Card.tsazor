@@ -1,9 +1,11 @@
 @** Renders Bootstrap's `.card`, a bordered content container. Compose it from CardHeader, CardBody
     (with CardTitle) and CardFooter children. *@
 @import { withClass } from "./attributes"
-<div @attributes="@withClass("card", additionalAttributes)">@childContent</div>
+<div aria-label="@ariaLabel" role="@(ariaLabel ? "region" : null)" @attributes="@withClass("card", additionalAttributes)">@childContent</div>
 
 @code {
+    /** The card's accessible name, which makes it a region for screen readers; none by default. */
+    @Parameter() ariaLabel: string | null = null;
     /** The card's parts: CardHeader, CardBody, CardFooter or other content. */
     @Parameter() childContent?: RenderFragment;
     /** `@attributes` pass-through (class appends). */

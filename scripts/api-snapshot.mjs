@@ -19,6 +19,8 @@
  * so a change stays visible, but they are outside the stability promise: no changelog entry.
  *
  * An own export that takes the name of one its `export * from` re-exports (the local one wins silently) fails too.
+ * So does a difference between the skins' components (their manifests: components, parameters, types, defaults) that
+ * api/skin-parity.json doesn't list with a reason, and a listed one that is gone.
  * A public declaration that names a type of its own package which no public entry exports fails the
  * check too (API Extractor's "forgotten export"): apps couldn't name the type, and a change to it
  * would pass unseen. Export the type, or keep the declaration out of the public entries.
@@ -99,6 +101,62 @@ function shadowedStarExports(entryFile) {
     }
   }
   return shadowed;
+}
+
+/**
+ * The skins' differences that api/skin-parity.json doesn't explain: a component, a parameter (not settable from markup:
+ * cascading members aside) or a type only one skin has, a default that differs — each would make a skin switch more than
+ * one line, or fall through silently as an HTML attribute on a component that captures unmatched ones. And the listed
+ * differences that are gone, so the list stays true.
+ */
+function skinParity() {
+  const skins = ["@tsazor/bootstrap", "@tsazor/fluent"];
+  const manifests = skins.map((name) => {
+    const file = path.join(root, "packages", name.replace("@tsazor/", ""), "dist", "tsazor-components.json");
+    return existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).components : undefined;
+  });
+  if (manifests.some((manifest) => manifest === undefined)) return [];
+  const allowed = JSON.parse(readFileSync(path.join(apiDir, "skin-parity.json"), "utf8"));
+  const used = new Set();
+  const problems = [];
+  const check = (section, key, problem) => {
+    if (allowed[section]?.[key] !== undefined) used.add(`${section}:${key}`);
+    else problems.push(`${problem} (or list it in api/skin-parity.json with the reason)`);
+  };
+  const parameters = (component) => new Map(component.parameters.filter((parameter) => !parameter.cascading).map((parameter) => [parameter.name, parameter]));
+  for (const [index, name] of skins.entries()) {
+    const own = manifests[index];
+    const other = manifests[1 - index];
+    for (const component of Object.keys(own)) {
+      if (!(component in other)) check("components", `${name}:${component}`, `${component} is only in ${name}`);
+    }
+    for (const component of Object.keys(own).filter((component) => component in other)) {
+      const theirs = parameters(other[component]);
+      for (const [parameter] of parameters(own[component])) {
+        if (!theirs.has(parameter)) check("parameters", `${name}:${component}.${parameter}`, `${component}.${parameter} is only in ${name}`);
+      }
+    }
+  }
+  for (const component of Object.keys(manifests[0]).filter((component) => component in manifests[1])) {
+    const fluent = parameters(manifests[1][component]);
+    for (const [parameter, bootstrap] of parameters(manifests[0][component])) {
+      const other = fluent.get(parameter);
+      if (!other) continue;
+      const typeOf = (p) => p.type ?? p.inferredType ?? "unknown";
+      if (typeOf(bootstrap) !== typeOf(other)) {
+        problems.push(`${component}.${parameter} is ${typeOf(bootstrap)} in @tsazor/bootstrap, ${typeOf(other)} in @tsazor/fluent`);
+      }
+      if (bootstrap.default !== other.default) {
+        check("defaults", `${component}.${parameter}`, `${component}.${parameter} defaults to ${bootstrap.default} in @tsazor/bootstrap, ${other.default} in @tsazor/fluent`);
+      }
+    }
+  }
+  for (const section of ["components", "parameters", "defaults"]) {
+    for (const key of Object.keys(allowed[section] ?? {})) {
+      if (!used.has(`${section}:${key}`)) problems.push(`api/skin-parity.json lists ${key} (${section}), but the skins agree there now: remove it`);
+    }
+  }
+  return problems;
 }
 
 function packages() {
@@ -226,6 +284,10 @@ for (const { dir, manifest } of packages()) {
   snapshot(`${base}.api.d.ts`, sections.length > 0 ? `${header("")}${sections.join("\n")}` : undefined, manifest.name, false);
   const internalNote = " (internal: not covered by the stability promise, docs/support-policy.md D-S7)";
   snapshot(`${base}.internal.api.d.ts`, internalSections.length > 0 ? `${header(internalNote)}${internalSections.join("\n")}` : undefined, manifest.name, true);
+}
+for (const problem of skinParity()) {
+  failed = true;
+  console.error(`skin parity: ${problem}`);
 }
 if (failed) {
   console.error("\nIf the change is intended: `pnpm api:update`, and note a public API change in the changelog.");

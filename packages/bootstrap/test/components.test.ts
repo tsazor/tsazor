@@ -94,6 +94,27 @@ describe("Button", () => {
   });
 });
 
+describe("what the Fluent skin had and this one lacked (parity)", () => {
+  it("Button: aria-describedby and a circular shape; Card: a labelled region", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Button);
+      b.addAttribute(1, "ariaDescribedBy", "hint");
+      b.addAttribute(2, "shape", "circular");
+      b.addAttribute(3, "childContent", text("Save"));
+      b.closeComponent();
+      b.openComponent(4, Card);
+      b.addAttribute(5, "ariaLabel", "Order");
+      b.closeComponent();
+    });
+    const button = container.querySelector("button")!;
+    expect(button.getAttribute("aria-describedby")).toBe("hint");
+    expect(button.className).toContain("rounded-pill");
+    const card = container.querySelector(".card")!;
+    expect(card.getAttribute("aria-label")).toBe("Order");
+    expect(card.getAttribute("role")).toBe("region");
+  });
+});
+
 describe("Icon", () => {
   it("draws its value as a decorative .bi svg, and nothing without one", async () => {
     const { container } = await renderTree((b) => {

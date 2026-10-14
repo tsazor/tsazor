@@ -111,6 +111,8 @@ export default class BreadcrumbItem extends ComponentBase {
 // Button
 export default class Button extends ComponentBase {
     ariaLabel?: string;
+    ariaDescribedBy?: string;
+    shape: "rounded" | "circular";
     intent: Intent;
     appearance: Appearance;
     size: Size;
@@ -168,6 +170,7 @@ export default class Calendar extends InputBase<string> {
 
 // Card
 export default class Card extends ComponentBase {
+    ariaLabel: string | null;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -417,6 +420,7 @@ export default class Dialog extends ComponentBase {
     isOpen?: boolean;
     title?: string;
     ariaLabel?: string;
+    id?: string;
     size: "small" | "medium" | "large" | "xlarge";
     centered: boolean;
     closeOnBackdrop: boolean;
@@ -714,6 +718,7 @@ export default class Dialog extends ComponentBase {
     isOpen?: boolean;
     title?: string;
     ariaLabel?: string;
+    id?: string;
     size: "small" | "medium" | "large" | "xlarge";
     centered: boolean;
     closeOnBackdrop: boolean;
@@ -1051,6 +1056,7 @@ export default class Spinner extends ComponentBase {
     kind: "border" | "grow";
     size: "small" | "medium" | "large";
     label?: string;
+    childContent?: RenderFragment;
     ariaLabel?: string | null;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -1132,6 +1138,7 @@ export default class Table<TItem> extends ComponentBase {
 export default class Tabs extends ComponentBase {
     childContent?: RenderFragment;
     ariaLabel?: string;
+    id?: string;
     onSelected?: EventCallback<number>;
     additionalAttributes?: Record<string, unknown>;
 }

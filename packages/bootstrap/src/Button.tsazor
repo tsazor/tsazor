@@ -6,14 +6,18 @@
 @import { buttonClasses } from "./vocabulary"
 @import { withClass } from "./attributes"
 @if (href !== undefined) {
-    <a href="@(disabled ? null : href)" aria-disabled="@(disabled ? "true" : null)" aria-label="@ariaLabel" @attributes="@withClass(disabled ? `${buttonClass} disabled` : buttonClass, additionalAttributes)" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="@this.startIconClass" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="@this.endIconClass" />}</a>
+    <a href="@(disabled ? null : href)" aria-disabled="@(disabled ? "true" : null)" aria-label="@ariaLabel" aria-describedby="@ariaDescribedBy" @attributes="@withClass(disabled ? `${buttonClass} disabled` : buttonClass, additionalAttributes)" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="@this.startIconClass" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="@this.endIconClass" />}</a>
 } else {
-    <button type="@type" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(buttonClass, additionalAttributes)" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="@this.startIconClass" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="@this.endIconClass" />}</button>
+    <button type="@type" disabled="@disabled" aria-label="@ariaLabel" aria-describedby="@ariaDescribedBy" @attributes="@withClass(buttonClass, additionalAttributes)" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="@this.startIconClass" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="@this.endIconClass" />}</button>
 }
 
 @code {
     /** The accessible name when there is no visible label. */
     @Parameter() ariaLabel?: string;
+    /** Ids of what describes the button, for screen readers (aria-describedby). */
+    @Parameter() ariaDescribedBy?: string;
+    /** rounded (default) or circular (a pill; round when it has only an icon), as the Fluent skin's. */
+    @Parameter() shape: "rounded" | "circular" = "rounded";
     /** The color role: primary, secondary (default, as in the Fluent skin), success, danger, warning, info or neutral. */
     @Parameter() intent: Intent = "secondary";
     /** Visual weight: solid (default), outline, subtle or transparent (a link-styled button). */
@@ -38,7 +42,8 @@
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get buttonClass(): string {
-        return buttonClasses(this.intent, this.appearance, this.size);
+        const classes = buttonClasses(this.intent, this.appearance, this.size);
+        return this.shape === "circular" ? `${classes} rounded-pill` : classes;
     }
 
     /** A label gets the icon's spacing; an icon-only button needs none. */

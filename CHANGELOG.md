@@ -178,6 +178,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   answered `initialize` only after shadowing every `.tsazor` of the workspace (minutes in a monorepo; the scan had no
   `await`): the scan now runs after the answer, a file at a time. The watched-files registration, which stood after
   a `return`, runs again.
+- **The skins take the same parameters** — a gate (`api/skin-parity.json`, in `pnpm api:check`) compares their
+  components and fails on a difference it doesn't list with a reason: on a component that captures unmatched
+  attributes, a parameter only one skin knows fell through silently as an HTML attribute. What it found the Bootstrap
+  skin now has, as the Fluent skin: `Button`'s `ariaDescribedBy` and `shape`, `Card`'s `ariaLabel` (a labelled
+  region), `Dialog`'s and `Tabs`' `id`, `Spinner`'s content.
 - **`@tsazor/charts` speaks the culture's language:** a chart's and a sparkline's names, the table's summary and the
   description a screen reader reads ("Line chart: Rye from 98 to 182, over Mon to Sat.") are library texts
   (`tsazor.ui.chart.*`, `tsazor.ui.sparkline.*`), and their numbers format in the culture (D4). `ariaLabel` and

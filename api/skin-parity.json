@@ -1,0 +1,32 @@
+{
+  "about": "The intended differences between the skins' components (scripts/api-snapshot.mjs fails on any other): a component, a parameter or a default only one skin has, each with its reason. A skin switch is one line because everything else is the same.",
+  "components": {
+    "@tsazor/bootstrap:Modal": "Bootstrap's name for the Dialog (an alias, D-C3)",
+    "@tsazor/fluent:FluentForm": "Fluent UI Blazor's name for the Form (Form is an alias of it)",
+    "@tsazor/fluent:FluentProvider": "the theme root of Fluent's design tokens; Bootstrap themes with data-bs-theme",
+    "@tsazor/fluent:Indicator": "Fluent's status dot; Bootstrap has no counterpart",
+    "@tsazor/fluent:Spacer": "Fluent UI Blazor's FluentSpacer; Bootstrap spaces with its utilities"
+  },
+  "parameters": {
+    "@tsazor/bootstrap:Badge.pill": "Bootstrap's rounded-pill badge; Fluent's badges are round already",
+    "@tsazor/bootstrap:Checkbox.switch": "Bootstrap draws a switch as a checkbox (form-switch); Fluent has the Switch component",
+    "@tsazor/bootstrap:Dialog.centered": "Bootstrap's modal-dialog-centered; Fluent centers every dialog",
+    "@tsazor/bootstrap:Progress.striped": "Bootstrap's progress-bar-striped; Fluent's bar has no stripes",
+    "@tsazor/bootstrap:Progress.animated": "Bootstrap's progress-bar-animated (the stripes move)",
+    "@tsazor/bootstrap:Spinner.intent": "Bootstrap's colored spinners; Fluent's spinner is the brand color",
+    "@tsazor/bootstrap:Spinner.kind": "Bootstrap's spinner-border and spinner-grow",
+    "@tsazor/bootstrap:ButtonGroup.size": "Bootstrap's btn-group-sm/-lg; in Fluent each Button takes its size",
+    "@tsazor/bootstrap:Pagination.size": "Bootstrap's pagination-sm/-lg",
+    "@tsazor/bootstrap:Paginator.size": "Bootstrap's pagination-sm/-lg, through its Pagination",
+    "@tsazor/fluent:Badge.appearance": "Fluent's filled, tint, outline and ghost badges; Bootstrap has one look",
+    "@tsazor/fluent:Badge.size": "Fluent's badge sizes; Bootstrap's badge follows the text around it",
+    "@tsazor/fluent:Card.appearance": "Fluent's filled card; Bootstrap's card has one look"
+  },
+  "defaults": {
+    "ColorPickerInput.iconPalette": "each skin's own palette icon",
+    "Overlay.backgroundColor": "each skin's own surface token",
+    "Rating.fullIcon": "each skin's own star icon",
+    "Rating.emptyIcon": "each skin's own star icon",
+    "RatingDisplay.shape": "each skin's own star icon"
+  }
+}
