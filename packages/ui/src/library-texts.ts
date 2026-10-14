@@ -127,6 +127,25 @@ export const libraryTextDefaults = catalog({
   "sortableList.movedToList": "{item}, moved to {list}, position {position} of {count}.",
   "sortableList.dropped": "{item}, put down at position {position} of {count}.",
   "sortableList.canceled": "{item}, put back.",
+  // @tsazor/charts: the names a screen reader hears, and the words of a chart's description.
+  "chart.label": "Chart",
+  "chart.table": "The data",
+  "chart.line": "Line chart",
+  "chart.area": "Area chart",
+  "chart.bar": "Bar chart",
+  "chart.stackedBar": "Stacked bar chart",
+  "chart.donut": "Donut chart",
+  "chart.pie": "Pie chart",
+  "chart.of": "{chart} of {series}",
+  "chart.slice": "{label} {value} ({share}%)",
+  "chart.noValues": "{series}: no values",
+  "chart.at": "{series} at {value}",
+  "chart.range": "{series} from {low} to {high}",
+  "chart.summary": "{chart}: {parts}.",
+  "chart.summaryOver": "{chart}: {parts}, over {first} to {last}.",
+  "sparkline.label": "Trend",
+  "sparkline.noValues": "{label}: no values",
+  "sparkline.summary": "{label}: from {low} to {high}, now {last}",
 });
 
 /** The catalog's type: its names, each a `string` — the English wording is a value, not part of the type. */

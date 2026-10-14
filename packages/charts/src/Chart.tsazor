@@ -8,10 +8,11 @@
 @import { areaPath, arcPath, chartSummary, linearScale, linePath, pieSlices, stackSeries, valueAxis } from "./chart-math"
 @import type { ChartOptions, ChartSeries, ChartType } from "./chart-types"
 @import type { ValueAxis } from "./chart-math"
+@import { libraryTexts } from "@tsazor/ui"
 
 <figure @attributes="@this.rootAttributes">
     <svg class="tz-chart__svg" viewBox="@(`0 0 ${this.width} ${this.height}`)" role="@(this.interactive ? "group" : "img")" aria-labelledby="@this.titleId" aria-describedby="@this.descId">
-        <title id="@this.titleId">@this.ariaLabel</title>
+        <title id="@this.titleId">@this.name</title>
         <desc id="@this.descId">@this.summary</desc>
         @if (this.radial) {
             @for (let i = 0; i < this.slices.length; i++) {
@@ -84,9 +85,9 @@
     }
     @if (this.showTable) {
         <details class="tz-chart__data">
-            <summary>@this.tableLabel</summary>
+            <summary>@this.tableName</summary>
             <table class="tz-chart__table">
-                <caption>@this.ariaLabel</caption>
+                <caption>@this.name</caption>
                 @if (this.radial) {
                     <thead><tr><th scope="col"></th><th scope="col">@(this.chartSeries[0]?.name ?? "")</th></tr></thead>
                     <tbody>
@@ -116,8 +117,8 @@
     @Parameter() chartLabels: string[] = [];
     /** How it draws (`ChartOptions`). */
     @Parameter() chartOptions?: ChartOptions;
-    /** The chart's name for screen readers and the table's caption. */
-    @Parameter() ariaLabel: string = "Chart";
+    /** The chart's name for screen readers and the table's caption; by default the library text "Chart". */
+    @Parameter() ariaLabel?: string;
     /** The drawing's width in SVG units; it scales to its container (650). */
     @Parameter() width: number = 650;
     /** The drawing's height in SVG units (350). */
@@ -132,8 +133,8 @@
     @Parameter() canHideSeries: boolean = false;
     /** The numbers in a table under the chart (default). */
     @Parameter() showTable: boolean = true;
-    /** The table's summary line. */
-    @Parameter() tableLabel: string = "The data";
+    /** The table's summary line; by default the library text "The data". */
+    @Parameter() tableLabel?: string;
     /** `@attributes` on the figure (class appends). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
@@ -169,7 +170,17 @@
 
     /** A value as the axis, the table and the summary write it. */
     private readonly format = (value: number): string =>
-        this.options.yAxisFormat?.(value) ?? new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
+        this.options.yAxisFormat?.(value) ?? new Intl.NumberFormat(this.t.locale, { maximumFractionDigits: 2 }).format(value);
+
+    private readonly t = libraryTexts();
+
+    private get name(): string {
+        return this.ariaLabel ?? this.t("chart.label");
+    }
+
+    private get tableName(): string {
+        return this.tableLabel ?? this.t("chart.table");
+    }
 
     private colorOf(index: number): string {
         const palette = this.options.chartPalette;
@@ -178,7 +189,7 @@
 
     private get summary(): string {
         const shown = this.radial ? this.chartSeries.slice(0, 1) : this.chartSeries.filter((_, i) => !this.hidden.has(i));
-        return chartSummary(this.chartType, shown, this.chartLabels, this.format);
+        return chartSummary(this.chartType, shown, this.chartLabels, this.format, this.t);
     }
 
     private get legend(): string[] {

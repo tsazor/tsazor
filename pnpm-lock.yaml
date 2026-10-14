@@ -679,6 +679,9 @@ importers:
       '@tsazor/testing':
         specifier: workspace:*
         version: link:../testing
+      '@tsazor/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@tsazor/workspace':
         specifier: workspace:*
         version: link:../workspace

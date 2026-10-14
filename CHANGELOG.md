@@ -178,6 +178,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   answered `initialize` only after shadowing every `.tsazor` of the workspace (minutes in a monorepo; the scan had no
   `await`): the scan now runs after the answer, a file at a time. The watched-files registration, which stood after
   a `return`, runs again.
+- **`@tsazor/charts` speaks the culture's language:** a chart's and a sparkline's names, the table's summary and the
+  description a screen reader reads ("Line chart: Rye from 98 to 182, over Mon to Sat.") are library texts
+  (`tsazor.ui.chart.*`, `tsazor.ui.sparkline.*`), and their numbers format in the culture (D4). `ariaLabel` and
+  `tableLabel` are optional (their defaults are the texts). `@tsazor/ui` is a peer dependency now.
+- **Fixed — `@tsazor/ui`: `scrollLock` let the page shift** when a dialog opened where the scrollbar takes room
+  (Windows, Linux): the scrollbar's width goes to the body's padding while the page is locked, as Bootstrap's modal
+  does.
 - **Fixed — `@tsazor/dotnet`: an `integer[]` or `boolean[]` query parameter** generated a client that failed strict
   `tsc` (`queryString` took `string[]` only).
 - **Fixed — `@tsazor/dotnet`: a generated client used neither the `baseUrl` nor the `defaultHeaders` of its

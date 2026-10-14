@@ -500,6 +500,24 @@ export declare const libraryTextDefaults: {
     readonly "sortableList.movedToList": string;
     readonly "sortableList.dropped": string;
     readonly "sortableList.canceled": string;
+    readonly "chart.label": string;
+    readonly "chart.table": string;
+    readonly "chart.line": string;
+    readonly "chart.area": string;
+    readonly "chart.bar": string;
+    readonly "chart.stackedBar": string;
+    readonly "chart.donut": string;
+    readonly "chart.pie": string;
+    readonly "chart.of": string;
+    readonly "chart.slice": string;
+    readonly "chart.noValues": string;
+    readonly "chart.at": string;
+    readonly "chart.range": string;
+    readonly "chart.summary": string;
+    readonly "chart.summaryOver": string;
+    readonly "sparkline.label": string;
+    readonly "sparkline.noValues": string;
+    readonly "sparkline.summary": string;
 };
 
 // libraryTextKey

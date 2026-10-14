@@ -114,6 +114,24 @@ describe("scrollLock", () => {
     second();
     expect(document.body.style.overflow).toBe("auto");
   });
+
+  it("gives the scrollbar's width to the body's padding while it locks, so the page doesn't shift", () => {
+    const host = html(`<div id="a"></div>`);
+    const root = document.documentElement;
+    const clientWidth = Object.getOwnPropertyDescriptor(Element.prototype, "clientWidth");
+    Object.defineProperty(root, "clientWidth", { configurable: true, get: () => window.innerWidth - 17 });
+    document.body.style.paddingRight = "4px";
+    try {
+      const unlock = scrollLock()(host.querySelector<HTMLElement>("#a")!) as () => void;
+      expect(document.body.style.paddingRight).toBe("21px");
+      unlock();
+      expect(document.body.style.paddingRight).toBe("4px");
+    } finally {
+      if (clientWidth) Object.defineProperty(root, "clientWidth", clientWidth);
+      else delete (root as unknown as { clientWidth?: number }).clientWidth;
+      document.body.style.paddingRight = "";
+    }
+  });
 });
 
 describe("rovingFocus", () => {

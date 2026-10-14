@@ -52,13 +52,15 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@tsazor/runtime": "workspace:*"
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/ui": "workspace:*"
   },
   "devDependencies": {
     "@tsazor/cli": "workspace:*",
     "@tsazor/compiler": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/testing": "workspace:*",
+    "@tsazor/ui": "workspace:*",
     "@tsazor/workspace": "workspace:*",
     "esbuild": "^0.28.2",
     "typescript": "^5.9.2",

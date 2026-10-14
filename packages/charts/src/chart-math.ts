@@ -3,6 +3,8 @@
  * stacks of stacked bars, the arcs of a pie or a donut, and the words a screen reader reads for a chart. Pure, so
  * the components only draw.
  */
+import type { LibraryTexts } from "@tsazor/ui";
+import { englishLibraryTexts } from "@tsazor/ui/kit";
 
 /** A value axis: from `min` to `max` in steps of `step`, the ticks included. */
 export interface ValueAxis {
@@ -136,20 +138,24 @@ export function chartSummary(
   series: readonly { name: string; data: readonly number[] }[],
   labels: readonly string[],
   format: (value: number) => string,
+  t: LibraryTexts = englishLibraryTexts,
 ): string {
-  const kinds = { line: "Line chart", area: "Area chart", bar: "Bar chart", "stacked-bar": "Stacked bar chart", donut: "Donut chart", pie: "Pie chart" };
+  const kinds = { line: "chart.line", area: "chart.area", bar: "chart.bar", "stacked-bar": "chart.stackedBar", donut: "chart.donut", pie: "chart.pie" } as const;
+  const kind = t(kinds[type]);
   if (type === "donut" || type === "pie") {
     const values = series[0]?.data ?? [];
     const slices = pieSlices(values);
-    const parts = values.map((value, i) => `${labels[i] ?? `${i + 1}`} ${format(value)} (${Math.round(slices[i]!.share * 100)}%)`);
-    return `${kinds[type]}${series[0]?.name ? ` of ${series[0].name}` : ""}: ${parts.join(", ")}.`;
+    const parts = values.map((value, i) => t("chart.slice", { label: labels[i] ?? `${i + 1}`, value: format(value), share: Math.round(slices[i]!.share * 100) }));
+    const chart = series[0]?.name ? t("chart.of", { chart: kind, series: series[0].name }) : kind;
+    return t("chart.summary", { chart, parts: parts.join(", ") });
   }
   const parts = series.map((s) => {
-    if (s.data.length === 0) return `${s.name}: no values`;
+    if (s.data.length === 0) return t("chart.noValues", { series: s.name });
     const low = Math.min(...s.data);
     const high = Math.max(...s.data);
-    return low === high ? `${s.name} at ${format(low)}` : `${s.name} from ${format(low)} to ${format(high)}`;
+    return low === high ? t("chart.at", { series: s.name, value: format(low) }) : t("chart.range", { series: s.name, low: format(low), high: format(high) });
   });
-  const span = labels.length > 1 ? `, over ${labels[0]} to ${labels[labels.length - 1]}` : "";
-  return `${kinds[type]}: ${parts.join("; ")}${span}.`;
+  return labels.length > 1
+    ? t("chart.summaryOver", { chart: kind, parts: parts.join("; "), first: labels[0], last: labels[labels.length - 1] })
+    : t("chart.summary", { chart: kind, parts: parts.join("; ") });
 }

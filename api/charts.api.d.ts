@@ -8,7 +8,7 @@ export default class Chart extends ComponentBase {
     chartSeries: ChartSeries[];
     chartLabels: string[];
     chartOptions?: ChartOptions;
-    ariaLabel: string;
+    ariaLabel?: string;
     width: number;
     height: number;
     legendPosition: "bottom" | "end";
@@ -16,7 +16,7 @@ export default class Chart extends ComponentBase {
     selectedIndexChanged?: EventCallback<number>;
     canHideSeries: boolean;
     showTable: boolean;
-    tableLabel: string;
+    tableLabel?: string;
     additionalAttributes?: Record<string, unknown>;
 }
 
@@ -56,7 +56,7 @@ export default class Sparkline extends ComponentBase {
     smooth: boolean;
     strokeWidth: number;
     color?: string;
-    ariaLabel: string;
+    ariaLabel?: string;
     format?: (value: number) => string;
     additionalAttributes?: Record<string, unknown>;
 }

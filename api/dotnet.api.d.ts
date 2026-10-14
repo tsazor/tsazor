@@ -113,7 +113,7 @@ export interface ProblemDetails {
 export declare function problemMessage<T>(result: HttpResult<T>): string;
 
 // queryString
-export declare function queryString(params: Record<string, string | number | boolean | string[] | null | undefined> | undefined): string;
+export declare function queryString(params: Record<string, string | number | boolean | readonly (string | number | boolean)[] | null | undefined> | undefined): string;
 
 // RequestOptions
 export interface RequestOptions {

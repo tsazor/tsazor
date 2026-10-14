@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { render, renderTree, type RenderResult } from "@tsazor/testing";
-import { ComponentBase, EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
+import { ComponentBase, CultureService, EventCallback, StringLocalizer, type RenderTreeBuilder } from "@tsazor/runtime";
 import { Chart, Sparkline } from "../dist/index.js";
 
 const mounted: RenderResult[] = [];
@@ -148,5 +148,47 @@ describe("Sparkline", () => {
     expect(svg.getAttribute("aria-label")).toBe("Loaves: from 98 to 182, now 150");
     expect(svg.querySelector(".tz-sparkline__line")!.getAttribute("d")!.startsWith("M3,")).toBe(true);
     expect(svg.querySelector(".tz-sparkline__dot")!.getAttribute("cx")).toBe("97");
+  });
+});
+
+describe("the charts' texts and numbers (library texts, the culture)", () => {
+  const GERMAN = {
+    "tsazor.ui.chart.label": "Diagramm",
+    "tsazor.ui.chart.table": "Die Daten",
+    "tsazor.ui.chart.bar": "Balkendiagramm",
+    "tsazor.ui.chart.range": "{series} von {low} bis {high}",
+    "tsazor.ui.chart.summaryOver": "{chart}: {parts}, von {first} bis {last}.",
+    "tsazor.ui.sparkline.summary": "{label}: von {low} bis {high}, zuletzt {last}",
+  };
+
+  it("speak the culture's language and write its numbers, as the skins' texts do", async () => {
+    const culture = new CultureService("de-DE");
+    const localizer = new StringLocalizer({ culture, defaultCulture: "en", tables: { de: GERMAN } });
+    const result = await renderTree(
+      (b) => {
+        b.openComponent(0, Chart);
+        b.addAttribute(1, "chartType", "bar");
+        b.addAttribute(2, "chartSeries", [{ name: "Umsatz", data: [1234.5, 2000] }]);
+        b.addAttribute(3, "chartLabels", ["Mo", "Di"]);
+        b.closeComponent();
+        b.openComponent(4, Sparkline);
+        b.addAttribute(5, "data", [1.5, 2.25]);
+        b.addAttribute(6, "ariaLabel", "Brote");
+        b.closeComponent();
+      },
+      {
+        services: (services) => {
+          services.registerValue(CultureService as never, culture);
+          services.registerValue(StringLocalizer as never, localizer);
+        },
+      },
+    );
+    mounted.push(result);
+    await result.settle();
+    const figure = result.container.querySelector("figure")!;
+    expect(figure.querySelector("title")!.textContent).toBe("Diagramm");
+    expect(figure.querySelector("summary")!.textContent).toBe("Die Daten");
+    expect(figure.querySelector("desc")!.textContent).toBe("Balkendiagramm: Umsatz von 1.234,5 bis 2.000, von Mo bis Di.");
+    expect(result.container.querySelector(".tz-sparkline")!.getAttribute("aria-label")).toBe("Brote: von 1,5 bis 2,25, zuletzt 2,25");
   });
 });
