@@ -2,11 +2,6 @@
 
 /* @tsazor/runtime/internal */
 
-// AuthenticationStateSubscribeOptions
-export interface AuthenticationStateSubscribeOptions {
-    onPending?: () => void;
-}
-
 // CascadeEntry
 export interface CascadeEntry {
     readonly value: unknown;

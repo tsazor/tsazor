@@ -217,7 +217,7 @@ frames when it contains an `@` expression or directive attribute, a component, a
 (`input`, `textarea`, `select`, `option`), a `value`/`checked`/`selected` or `style` attribute (a
 strict CSP blocks styles in parsed markup), or a shape the HTML parser would rebuild (`<p>` around
 a `<div>`, `<table>` without `<tbody>`, `<pre>`, `<template>`, unknown camelCase SVG names). The
-Vite plugin's `staticMarkup: false` turns blocks off (an escape hatch for one release). Details:
+Vite plugin's `optimize: false` turns blocks off, with the other optimizations. Details:
 [design-static-markup.md](design-static-markup.md).
 
 **Stable event handlers (render hints, H1).** `@onclick="e => select(e, row)"` is a new closure on
@@ -233,7 +233,7 @@ counting `@for` variable or anything else keeps the closure per render. Method g
 handler as a parameter re-renders with its parent exactly as in Blazor — parameter change detection
 treats a handler that captures locals as changed, like C#'s `Delegate.Equals` does for a closure (a
 new target every render); only the DOM diff uses the stable form. The Vite plugin's
-`renderHints: false` emits a closure per render. Details: [design-render-hints.md](design-render-hints.md).
+`optimize: false` emits a closure per render. Details: [design-render-hints.md](design-render-hints.md).
 
 **Skipping unchanged keyed rows (render hints, H2).** A re-render builds every row of a list again
 and the diff walks each one, frame by frame — in Blazor, too. Tsazor chooses to skip a row that
@@ -256,7 +256,7 @@ without it. The row qualifies only when nothing in it depends on more than those
 - content that is a `RenderFragment` is never reused (a fragment builds frames of its own).
 
 A handler closure H1 cannot make stable (a `let` capture) is new every render, so its row is built
-every time. Typed shadows, `renderHints: false` and `optimize: false` emit today's code. Selecting
+every time. Typed shadows and `optimize: false` emit today's code. Selecting
 one row among 11k: ~13.5 → ~8 ms.
 
 **Stable child content (H4).** In C#, a child content lambda that uses only `this` is
@@ -268,8 +268,8 @@ same function on every render: a page that re-renders keeps its head's styleshee
 removing and re-adding them. Child content that uses an outer local (a loop variable, a markup local,
 an enclosing template's `context`) stays a new closure per render, as in C#. Fragments you write by
 hand in TypeScript follow the same rule only if you keep one function per instance (a field), as
-Blazor's method groups do. This is parity, not an optimization: `renderHints: false` keeps it, only
-`optimize: false` turns it off. Details: [design-render-hints.md](design-render-hints.md).
+Blazor's method groups do. This is parity, not an optimization: only `optimize: false` turns it
+off. Details: [design-render-hints.md](design-render-hints.md).
 
 **`optimize: false`.** One switch (compiler and Vite plugin) turns off every invisible compiler
 optimization — today `staticMarkup` and `renderHints`: the generated code is then what Razor would

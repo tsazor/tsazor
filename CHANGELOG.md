@@ -32,6 +32,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     `{ lifetime: "transient" }`; singleton stays the default).
   - `createTsazorApp` returns the exported `TsazorApp` without `renderer` (tests: `rendererOf(app)` in
     `@tsazor/runtime/internal`).
+  - The types the public API names are exported: `TsazorApp`, `EventSubscription` (EditContext's events are
+    subscriptions now; only EditContext invokes them), `DataAnnotationsValidationOptions`,
+    `ValidationMessagesLocalizer`, `AuthenticationStateChangedHandler`, `AuthenticationStateSubscribeOptions`,
+    `ParameterDecoratorContext`, `QueryParameterDecorator`, `FieldRuleDecorator`, `ValidationMessageOverride`,
+    `ValidationMessageContext`, `ValidationRuleParams`. `ErrorBoundaryBase` no longer names `IErrorBoundary`.
+  - Classes apps extend keep their state in `#private` fields (`AuthenticationStateProvider`, `InputBase`,
+    `ErrorBoundaryBase`): a subclass may use those names.
+  - `@tsazor/vite-plugin`: the root entry exports `tsazor` (also the default) and `TsazorPluginOptions` only. The
+    options `staticMarkup` and `renderHints` (one-release escape hatches) are gone; `optimize: false` turns every
+    compiler optimization off.
+  - `@tsazor/dotnet`: the HTTP helpers (`buildResult`, `sendForResult`, `unwrapEnvelope`, `parseBodyText`, …,
+    `HTTP_METHOD`, `HttpBody`) and the generator's internals (`main`, `flattenAllOf`, `resolveSchemaRef`, …,
+    `OpenApiMethod`) are no exports any more; `HttpMethod` is a plain union.
   - The runtime's published declarations leave out what is marked `@internal` (`stripInternal`): Virtualize's measuring
     state, EditContext's field-state bookkeeping, NavigationManager's holds and `setNavigationLock`,
     `AuthenticationStateProvider.peekState`, and more. `EditContext.notifyValidationStateChanged` is public (Blazor's

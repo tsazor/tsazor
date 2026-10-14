@@ -1922,8 +1922,8 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
             },
             {
               "name": "ModelValidator",
-              "kind": "local",
-              "file": "src/forms/edit-form.ts"
+              "kind": "runtime",
+              "imported": "ModelValidator"
             }
           ],
           "doc": "Field name → validator function (the adapter for logic a decorator rule cannot express)."

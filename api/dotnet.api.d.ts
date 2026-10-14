@@ -11,9 +11,6 @@ export declare function asValidationProblem(body: unknown): ValidationProblemDet
 // attachJwtAuth
 export declare function attachJwtAuth(http: TsazorHttp, provider: JwtAuthenticationStateProvider, options?: JwtAuthOptions): () => void;
 
-// buildResult
-export declare function buildResult<T>(response: Response, text: string, envelope: EnvelopeOptions | undefined): HttpResult<T>;
-
 // CookieAuthenticationStateProvider
 export declare class CookieAuthenticationStateProvider extends AuthenticationStateProvider {
     private readonly http;
@@ -28,12 +25,6 @@ export interface CookieAuthOptions {
     endpoint?: string;
 }
 
-// envelopeErrorMessages
-export declare function envelopeErrorMessages(body: unknown, envelope: EnvelopeOptions | undefined): string[];
-
-// envelopeHasErrors
-export declare function envelopeHasErrors(body: unknown, envelope: EnvelopeOptions | undefined): boolean;
-
 // EnvelopeOptions
 export interface EnvelopeOptions {
     data?: string;
@@ -44,20 +35,8 @@ export interface EnvelopeOptions {
 // formData
 export declare function formData(fields: Record<string, unknown>): FormData;
 
-// HTTP_METHOD
-export declare const HTTP_METHOD: readonly [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE"
-];
-
-// HttpBody
-export type HttpBody = unknown;
-
 // HttpMethod
-export type HttpMethod = (typeof HTTP_METHOD)[number];
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 // HttpResult
 export type HttpResult<T> = {
@@ -69,7 +48,7 @@ export type HttpResult<T> = {
 } | {
     ok: false;
     status: number;
-    body: HttpBody;
+    body: unknown;
     problem: ProblemDetails | null;
     validationErrors?: Record<string, string[]>;
     headers: Headers;
@@ -114,9 +93,6 @@ export interface OpenApiClientOptions {
     envelope?: EnvelopeOptions;
 }
 
-// parseBodyText
-export declare function parseBodyText(text: string): HttpBody;
-
 // ProblemDetails
 export interface ProblemDetails {
     type?: string;
@@ -134,21 +110,12 @@ export declare function problemMessage<T>(result: HttpResult<T>): string;
 // queryString
 export declare function queryString(params: Record<string, string | number | boolean | string[] | null | undefined> | undefined): string;
 
-// sendForResult
-export declare function sendForResult<T>(http: TsazorHttp, request: Request, envelope: EnvelopeOptions | undefined): Promise<HttpResult<T>>;
-
-// unwrapEnvelope
-export declare function unwrapEnvelope(body: unknown, envelope: EnvelopeOptions | undefined): unknown;
-
 // ValidationProblemDetails
 export interface ValidationProblemDetails extends ProblemDetails {
     errors?: Record<string, string[]>;
 }
 
 /* @tsazor/dotnet/generator */
-
-// flattenAllOf
-export declare function flattenAllOf(document: OpenApiDocument, schema: OpenApiSchema): OpenApiSchema;
 
 // generateClient
 export declare function generateClient(document: OpenApiDocument, options?: GenerateOptions): Generation;
@@ -176,9 +143,6 @@ export interface Generation {
 // loadOpenApiDocument
 export declare function loadOpenApiDocument(source: string): Promise<OpenApiDocument>;
 
-// main
-export declare function main(argv: readonly string[], stdout: (line: string) => void): Promise<number>;
-
 // OpenApiDocument
 export interface OpenApiDocument {
     openapi?: string;
@@ -186,14 +150,11 @@ export interface OpenApiDocument {
         title?: string;
         version?: string;
     };
-    paths?: Record<string, Record<string, OpenApiOperation | "$ref" | unknown>>;
+    paths?: Record<string, Record<string, unknown>>;
     components?: {
         schemas?: Record<string, OpenApiSchema>;
     };
 }
-
-// OpenApiMethod
-export type OpenApiMethod = (typeof HTTP_METHODS)[number];
 
 // OpenApiOperation
 export interface OpenApiOperation {
@@ -270,17 +231,3 @@ export interface OpenApiSchema {
     minimum?: number;
     maximum?: number;
 }
-
-// resolveSchemaLike
-export declare function resolveSchemaLike(document: OpenApiDocument, value: OpenApiSchema | {
-    $ref: string;
-}): OpenApiSchema;
-
-// resolveSchemaRef
-export declare function resolveSchemaRef(document: OpenApiDocument, ref: string): OpenApiSchema;
-
-// schemaNullable
-export declare function schemaNullable(schema: OpenApiSchema): boolean;
-
-// schemaType
-export declare function schemaType(schema: OpenApiSchema): string | undefined;

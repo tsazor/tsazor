@@ -63,7 +63,8 @@ type ComponentClass = abstract new () => unknown;
 type MetadataObject = Record<PropertyKey, unknown>;
 
 /** The members a parameter decorator may sit on (a plain field is the norm). */
-type ParameterDecoratorContext = ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext;
+/** What `@Parameter()` and `@CascadingParameter()` decorate: a field, an accessor or a setter. */
+export type ParameterDecoratorContext = ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext;
 
 /**
  * Bumped by `defineParameter` (a registration after the class definition):
@@ -97,7 +98,7 @@ export function getOwnParameterMetadata(type: ComponentClass): ReadonlyMap<strin
  * the entry goes into the class's own decorator metadata.
  */
 export function defineParameter(
-  type: ComponentClass,
+  type: abstract new (...args: never[]) => unknown,
   propertyName: string,
   options: Omit<ParameterMeta, "propertyName"> = {},
 ): void {

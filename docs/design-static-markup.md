@@ -159,7 +159,8 @@ map maps a block to its first element's start. Hot reload replaces a changed blo
 - **D-S4 — parse once, clone per insertion**, for compiler blocks and `MarkupString` alike.
   *Recommended.* Without it F1a is slower than today in loops.
 - **D-S5 — `staticMarkup: false` as an escape hatch for one release**, then removed.
-  *Recommended.*
+  *Recommended.* Removed before 1.0 (2026-10-14, the API review's T5): the Vite plugin's `optimize: false` turns
+  blocks off with the other optimizations.
 
 ## 8. Results (2026-10-04)
 

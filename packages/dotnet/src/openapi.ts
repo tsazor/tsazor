@@ -60,7 +60,7 @@ export interface OpenApiSchema {
 export interface OpenApiDocument {
   openapi?: string;
   info?: { title?: string; version?: string };
-  paths?: Record<string, Record<string, OpenApiOperation | "$ref" | unknown>>;
+  paths?: Record<string, Record<string, unknown>>;
   components?: { schemas?: Record<string, OpenApiSchema> };
 }
 

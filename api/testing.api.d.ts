@@ -20,7 +20,11 @@
 
 // AuthenticationState: re-exported from @tsazor/runtime
 
+// AuthenticationStateChangedHandler: re-exported from @tsazor/runtime
+
 // AuthenticationStateProvider: re-exported from @tsazor/runtime
+
+// AuthenticationStateSubscribeOptions: re-exported from @tsazor/runtime
 
 // AuthorizationPolicy: re-exported from @tsazor/runtime
 
@@ -82,6 +86,8 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 
 // CultureService: re-exported from @tsazor/runtime
 
+// DataAnnotationsValidationOptions: re-exported from @tsazor/runtime
+
 // DataAnnotationsValidationSubscription: re-exported from @tsazor/runtime
 
 // DataAnnotationsValidator: re-exported from @tsazor/runtime
@@ -110,6 +116,8 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 
 // EventHandlerFlags: re-exported from @tsazor/runtime
 
+// EventSubscription: re-exported from @tsazor/runtime
+
 // FakeLocalization
 export interface FakeLocalization {
     readonly culture: CultureService;
@@ -134,6 +142,8 @@ export interface FakeStore<T> {
 }
 
 // FieldIdentifier: re-exported from @tsazor/runtime
+
+// FieldRuleDecorator: re-exported from @tsazor/runtime
 
 // FocusOnInvalidSubmit: re-exported from @tsazor/runtime
 
@@ -223,6 +233,8 @@ export interface FakeStore<T> {
 
 // Parameter: re-exported from @tsazor/runtime
 
+// ParameterDecoratorContext: re-exported from @tsazor/runtime
+
 // ParameterMeta: re-exported from @tsazor/runtime
 
 // ParametersOf
@@ -235,6 +247,8 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 // PlaceholderContext: re-exported from @tsazor/runtime
 
 // PlaceholdersOf: re-exported from @tsazor/runtime
+
+// QueryParameterDecorator: re-exported from @tsazor/runtime
 
 // QueryParameterMeta: re-exported from @tsazor/runtime
 
@@ -363,9 +377,17 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // ValidationMessage: re-exported from @tsazor/runtime
 
+// ValidationMessageContext: re-exported from @tsazor/runtime
+
+// ValidationMessageOverride: re-exported from @tsazor/runtime
+
+// ValidationMessagesLocalizer: re-exported from @tsazor/runtime
+
 // ValidationMessageStore: re-exported from @tsazor/runtime
 
 // ValidationRule: re-exported from @tsazor/runtime
+
+// ValidationRuleParams: re-exported from @tsazor/runtime
 
 // ValidationSummary: re-exported from @tsazor/runtime
 

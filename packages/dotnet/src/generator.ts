@@ -5,18 +5,11 @@
  */
 export {
   loadOpenApiDocument,
-  resolveSchemaRef,
-  resolveSchemaLike,
-  flattenAllOf,
-  schemaNullable,
-  schemaType,
   type OpenApiDocument,
   type OpenApiOperation,
   type OpenApiParameter,
   type OpenApiRequestBody,
   type OpenApiResponse,
   type OpenApiSchema,
-  type OpenApiMethod,
 } from "./openapi.js";
 export { generateClient, type GenerateOptions, type GeneratedFile, type Generation } from "./generate.js";
-export { main } from "./cli.js";

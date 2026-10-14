@@ -58,9 +58,13 @@ export interface ValidationMessageOverride {
 
 /** The named values the reserved `tsazor.validation.<kind>` keys receive as params. */
 export interface ValidationRuleParams {
+  /** The lower bound: `MinLength`, `StringLength`'s minimum, `Range`'s minimum. */
   readonly min?: number;
+  /** The upper bound: `MaxLength`, `StringLength`, `Range`'s maximum. */
   readonly max?: number;
+  /** `RegularExpression`'s pattern. */
   readonly pattern?: string;
+  /** `Compare`'s other property. */
   readonly other?: string;
 }
 

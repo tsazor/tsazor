@@ -31,4 +31,4 @@ export { queryParametersOf } from "./routing/supply-parameter-from-query.js";
 // Forms' and auth's helpers
 export { validationRulesOf } from "./forms/validation-attributes.js";
 export { standardSchemaField } from "./forms/standard-schema-validator.js";
-export { watchAuthenticationState, type AuthenticationStateSubscribeOptions } from "./auth/authentication-state-provider.js";
+export { watchAuthenticationState } from "./auth/authentication-state-provider.js";

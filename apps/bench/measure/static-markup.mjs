@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
  * F1a A/B (docs/design-static-markup.md §5): the Tsazor bench app built with
- * static markup blocks and without (TSAZOR_STATIC_MARKUP=0), measured on the
+ * the compiler's optimizations and without (TSAZOR_OPTIMIZE=0: no static markup
+ * blocks, and no stable handlers either, since the per-optimization switches
+ * went before 1.0), measured on the
  * static-heavy `/cards` page — 3,000 cards whose chrome is static and whose
  * price is dynamic. Median of N in-browser cycles:
  *
@@ -33,7 +35,7 @@ function build(staticMarkup) {
     cwd: appDir,
     shell: true,
     stdio: "inherit",
-    env: { ...process.env, TSAZOR_STATIC_MARKUP: staticMarkup ? "1" : "0" },
+    env: { ...process.env, TSAZOR_OPTIMIZE: staticMarkup ? "1" : "0" },
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

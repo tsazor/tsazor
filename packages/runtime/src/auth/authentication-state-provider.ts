@@ -1,7 +1,8 @@
 import type { Token } from "../di/service-collection.js";
 import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
 
-type AuthenticationStateChangedHandler = (state: AuthenticationState) => void;
+/** A handler for `AuthenticationStateProvider.subscribe` (Blazor's AuthenticationStateChanged event). */
+export type AuthenticationStateChangedHandler = (state: AuthenticationState) => void;
 
 /** Options for `AuthenticationStateProvider.subscribe`. */
 export interface AuthenticationStateSubscribeOptions {
@@ -15,15 +16,15 @@ export interface AuthenticationStateSubscribeOptions {
  * runtime only consumes it via the ServiceProvider.
  */
 export abstract class AuthenticationStateProvider {
-  private readonly subscribers = new Set<{ handler: AuthenticationStateChangedHandler; onPending?: () => void }>();
-  private cachedState?: AuthenticationState;
+  readonly #subscribers = new Set<{ handler: AuthenticationStateChangedHandler; onPending?: () => void }>();
+  #cachedState: AuthenticationState | undefined;
 
   /** Resolves the current state; may be async (e.g. validating a token). */
   abstract getAuthenticationStateAsync(): Promise<AuthenticationState>;
 
   /** @internal The most recently resolved state, if any (no request started). */
   peekState(): AuthenticationState | undefined {
-    return this.cachedState;
+    return this.#cachedState;
   }
 
   /**
@@ -32,10 +33,10 @@ export abstract class AuthenticationStateProvider {
    * that arrives after a newer notification is stale and dropped.
    */
   get notificationVersion(): number {
-    return this.version;
+    return this.#version;
   }
 
-  private version = 0;
+  #version = 0;
 
   /**
    * Blazor's NotifyAuthenticationStateChanged (login/logout happened). Takes
@@ -47,29 +48,29 @@ export abstract class AuthenticationStateProvider {
    * rejected one counts as signed out.
    */
   protected notifyAuthenticationStateChanged(state: AuthenticationState | Promise<AuthenticationState>): void {
-    const version = ++this.version;
+    const version = ++this.#version;
     if (!isPromiseLike(state)) {
-      this.publish(state);
+      this.#publish(state);
       return;
     }
-    for (const subscriber of [...this.subscribers]) {
+    for (const subscriber of [...this.#subscribers]) {
       subscriber.onPending?.();
     }
     state.then(
       (resolved) => {
-        if (this.version === version) this.publish(resolved);
+        if (this.#version === version) this.#publish(resolved);
       },
       (error: unknown) => {
         // eslint-disable-next-line no-console
         console.error("[tsazor] The state passed to notifyAuthenticationStateChanged() failed:", error);
-        if (this.version === version) this.publish(ANONYMOUS);
+        if (this.#version === version) this.#publish(ANONYMOUS);
       },
     );
   }
 
-  private publish(state: AuthenticationState): void {
-    this.cachedState = state;
-    for (const subscriber of [...this.subscribers]) {
+  #publish(state: AuthenticationState): void {
+    this.#cachedState = state;
+    for (const subscriber of [...this.#subscribers]) {
       subscriber.handler(state);
     }
   }
@@ -81,9 +82,9 @@ export abstract class AuthenticationStateProvider {
    */
   subscribe(handler: AuthenticationStateChangedHandler, options: AuthenticationStateSubscribeOptions = {}): () => void {
     const subscriber = { handler, onPending: options.onPending };
-    this.subscribers.add(subscriber);
+    this.#subscribers.add(subscriber);
     return () => {
-      this.subscribers.delete(subscriber);
+      this.#subscribers.delete(subscriber);
     };
   }
 }

@@ -102,6 +102,6 @@ Reading notes:
 
 ## F1a — static markup blocks (Tsazor only)
 
-`measure/static-markup.mjs` builds the Tsazor app with and without static markup blocks
-(`TSAZOR_STATIC_MARKUP=0`) and times the `/cards` page: 3,000 cards with static chrome and a
+`measure/static-markup.mjs` builds the Tsazor app with and without the compiler's optimizations
+(`TSAZOR_OPTIMIZE=0`: no static markup blocks, no stable handlers) and times the `/cards` page: 3,000 cards with static chrome and a
 dynamic price. Results and the rows A/B: [docs/design-static-markup.md §8](../../docs/design-static-markup.md#8-results-2026-10-04).

@@ -52,7 +52,7 @@ export type HttpResult<T> =
       ok: false;
       status: number;
       /** The raw body: parsed JSON when parseable, else the raw text, else undefined. */
-      body: HttpBody;
+      body: unknown;
       /** The RFC 9457 ProblemDetails when the body is one (content type or shape), else null. */
       problem: ProblemDetails | null;
       /** Field errors when the body is a ValidationProblemDetails, else undefined. */

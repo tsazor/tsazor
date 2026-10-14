@@ -36,7 +36,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
    */
   element?: HTMLElement;
 
-  private editContextUnsubscribe?: () => void;
+  #editContextUnsubscribe: (() => void) | undefined;
 
   /** Blazor's CurrentValue. */
   get currentValue(): TValue | null | undefined {
@@ -58,14 +58,14 @@ export abstract class InputBase<TValue> extends ComponentBase {
   protected override onInitialized(): void {
     if (this.editContext) {
       // Blazor's OnValidateStateChanged.
-      this.editContextUnsubscribe = this.editContext.onValidationStateChanged.subscribe(() => componentInternals.requestRender(this));
+      this.#editContextUnsubscribe = this.editContext.onValidationStateChanged.subscribe(() => componentInternals.requestRender(this));
     }
   }
 
   /** Stops listening to the EditContext's change notifications. */
   dispose(): void {
-    this.editContextUnsubscribe?.();
-    this.editContextUnsubscribe = undefined;
+    this.#editContextUnsubscribe?.();
+    this.#editContextUnsubscribe = undefined;
   }
 
   /** Blazor's FieldClass: validation CSS class for the bound field. */
@@ -128,16 +128,16 @@ export abstract class InputBase<TValue> extends ComponentBase {
     }
   }
 
-  private sequenceCounter = 0;
+  #sequenceCounter = 0;
 
   /** @internal Monotone sequence helper for concrete inputs. */
   protected nextSequence(): number {
-    return this.sequenceCounter++;
+    return this.#sequenceCounter++;
   }
 
   /** @internal Resets the per-render sequence counter. */
   protected beginRender(): void {
-    this.sequenceCounter = 0;
+    this.#sequenceCounter = 0;
   }
 
   /** Builds a change handler that extracts the DOM value and runs the bind flow. */

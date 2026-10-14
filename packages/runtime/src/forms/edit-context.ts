@@ -34,12 +34,15 @@ export class EditContext {
   /** The object being edited (Blazor's `EditContext.Model`). */
   readonly model: object;
 
+  readonly #fieldChanged = new EventSet<(editContext: EditContext, field: string, value: unknown) => void>();
+  readonly #validationRequested = new EventSet<(editContext: EditContext) => void>();
+  readonly #validationStateChanged = new EventSet<(editContext: EditContext) => void>();
   /** Blazor's OnFieldChanged: a field was marked modified. */
-  readonly onFieldChanged: EventSet<(editContext: EditContext, field: string, value: unknown) => void>;
+  readonly onFieldChanged: EventSubscription<(editContext: EditContext, field: string, value: unknown) => void> = this.#fieldChanged;
   /** Blazor's OnValidationRequested: validate() runs the validation pass. */
-  readonly onValidationRequested: EventSet<(editContext: EditContext) => void>;
+  readonly onValidationRequested: EventSubscription<(editContext: EditContext) => void> = this.#validationRequested;
   /** Blazor's OnValidationStateChanged: messages changed during a pass. */
-  readonly onValidationStateChanged: EventSet<(editContext: EditContext) => void>;
+  readonly onValidationStateChanged: EventSubscription<(editContext: EditContext) => void> = this.#validationStateChanged;
 
   private readonly fieldStates = new Map<string, FieldState>();
   /** The function-map adapter (EditForm's `validators`), writing the built-in store. */
@@ -49,9 +52,6 @@ export class EditContext {
   /** Creates a context for `model` with no messages and no modified fields (Blazor's `new EditContext(model)`). */
   constructor(model: object) {
     this.model = model;
-    this.onFieldChanged = new EventSet();
-    this.onValidationRequested = new EventSet();
-    this.onValidationStateChanged = new EventSet();
     this.builtinStore = this.createValidationMessageStore();
   }
 
@@ -65,7 +65,7 @@ export class EditContext {
    * validator calls it after it updated its ValidationMessageStore).
    */
   notifyValidationStateChanged(): void {
-    this.onValidationStateChanged.invoke(this);
+    this.#validationStateChanged.invoke(this);
   }
 
   /**
@@ -76,7 +76,7 @@ export class EditContext {
    */
   notifyFieldChanged(field: string, value?: unknown): void {
     this.ensureFieldState(field).isModified = true;
-    this.onFieldChanged.invoke(this, field, value);
+    this.#fieldChanged.invoke(this, field, value);
     this.applyFunctionValidator(field, value);
     // Legacy semantic: every change notifies the listeners (a no-rule field
     // keeps no messages — its failed input became valid by editing).
@@ -110,7 +110,7 @@ export class EditContext {
     for (const field of this.fieldValidators.keys()) {
       this.builtinStore.clear(field);
     }
-    this.onValidationRequested.invoke(this);
+    this.#validationRequested.invoke(this);
     for (const [field, validator] of this.fieldValidators) {
       this.applyFunctionValidator(field, (this.model as Record<string, unknown>)[field]);
     }
@@ -284,8 +284,17 @@ export class ValidationMessageStore {
   }
 }
 
-/** Blazor's event pair (Subscribe/Unsubscribe without .NET events). */
-class EventSet<Handler extends (...args: never[]) => void> {
+/**
+ * One of EditContext's events (Blazor's `event EventHandler<…>`): `subscribe` adds a handler and returns the function
+ * that removes it. `observe(editContext.onValidationStateChanged)` re-renders a component on it.
+ */
+export interface EventSubscription<Handler extends (...args: never[]) => void> {
+  /** Adds a handler; returns the function that removes it. */
+  subscribe(handler: Handler): () => void;
+}
+
+/** The event behind an EventSubscription: only its owner invokes it. */
+class EventSet<Handler extends (...args: never[]) => void> implements EventSubscription<Handler> {
   private readonly handlers = new Set<Handler>();
 
   subscribe(handler: Handler): () => void {
@@ -322,6 +331,7 @@ export interface DataAnnotationsValidationSubscription {
 export interface ValidationMessagesLocalizer {
   /** Looks a message up, undefined when missing (StringLocalizer.raw). */
   raw(key: string): string | undefined;
+  /** Calls `listener` when the culture changes or a table arrives (validation runs again); returns the unsubscribe function. */
   subscribe(listener: () => void): () => void;
 }
 

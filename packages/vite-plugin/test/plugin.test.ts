@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { tsazor } from "../src";
 import { generateRoutesModule } from "../src/routes";
-import { lazyRouteFilter } from "../src/index";
+import { lazyRouteFilter } from "../src/lazy-routes";
 import { processScopedCss, scopeHashFor, scopeSelector } from "../src/scoped-css";
 
 const COUNTER = /* tsazor */ `
@@ -174,17 +174,14 @@ describe("tsazor vite plugin", () => {
     expect({ line: traced.line, column: traced.column }).toEqual({ line: 2, column: 22 });
   });
 
-  it("renderHints: false and optimize: false emit a closure per render (D-R4)", async () => {
+  it("optimize: false emits a closure per render and no markup blocks (D-R4)", async () => {
     const source = "@foreach (const row of rows) {\n    <a @onclick=\"() => select(row)\">x</a>\n}\n<p><b>static</b></p>\n@code { rows = [1]; select(r: number) {} }\n";
-    for (const options of [{ renderHints: false }, { optimize: false }]) {
-      const plugin = tsazor({ root, ...options });
-      (plugin.configResolved as unknown as (config: { root: string }) => void)({ root });
-      const code = (await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Hints.tsazor")))!.code as string;
-      expect(code).toContain("bind(this, () => this.select(row))");
-      expect(code).not.toContain("__tsazor_h0");
-      // optimize: false turns static markup blocks off, too.
-      expect(code.includes("addMarkupContent")).toBe(!("optimize" in options));
-    }
+    const plugin = tsazor({ root, optimize: false });
+    (plugin.configResolved as unknown as (config: { root: string }) => void)({ root });
+    const code = (await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Hints.tsazor")))!.code as string;
+    expect(code).toContain("bind(this, () => this.select(row))");
+    expect(code).not.toContain("__tsazor_h0");
+    expect(code).not.toContain("addMarkupContent");
   });
 
   it("compiles _Imports.tsazor to an empty module", async () => {

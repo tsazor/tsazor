@@ -1,17 +1,14 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { compile, type TszDiagnostic } from "@tsazor/compiler";
-import { createFilter, type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
+import { type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
 import { isImportsFile, TransformRegistry } from "./invalidate.js";
 import { tsazorHotUpdate } from "./hot-update.js";
+import { lazyRouteFilter } from "./lazy-routes.js";
 import { generateRoutesModule, listTsazorFilesUnder, scanRoutes, scanRootOf, scanTsazorModules } from "./routes.js";
 import { processScopedCss, scopeHashFor } from "./scoped-css.js";
 import { transformTsazor } from "./transform.js";
 
-export { transformTsazor, type TransformTsazorOptions, type TransformTsazorResult } from "./transform.js";
-export { formatCheckDiagnostic, runBuildCheck } from "./check-hook.js";
-export { isImportsFile, normalizeFileKey, planInvalidation, TransformRegistry, type InvalidationPlan } from "./invalidate.js";
-export { tsazorHotUpdate } from "./hot-update.js";
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
@@ -25,15 +22,8 @@ export interface TsazorPluginOptions {
    *  runs it in the background (at start and after each change) and prints
    *  the findings without blocking anything (S3). */
   check?: boolean;
-  /** F1a: static subtrees as one markup block each (default true). `false` emits
-   *  element frames throughout — an escape hatch for one release (design-static-markup.md D-S5). */
-  staticMarkup?: boolean;
-  /** H1: event-handler lambdas become stable handlers — re-rendering an
-   *  unchanged row swaps no listener (default true). `false` emits a new
-   *  closure per render, as Razor does (design-render-hints.md D-R4). */
-  renderHints?: boolean;
-  /** Every invisible compiler optimization (default true). `false` turns
-   *  `staticMarkup` and `renderHints` (and later ones) off — the generated
+  /** Every invisible compiler optimization (default true): static subtrees as markup blocks (F1a) and stable
+   *  event handlers (H1), and later ones. `false` turns them off — the generated
    *  code is then what Razor would generate: a diagnostic and emergency
    *  switch (A/B measurements, a suspected optimizer bug), not a recommended mode.
    *  It also caches no child content (H4), so section content is rebuilt on
@@ -185,8 +175,6 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         return { code: "export default null;\n", map: null };
       }
       const result = await transformTsazor(code, filePath, projectRoot, {
-        ...(options.staticMarkup === false ? { staticMarkup: false } : {}),
-        ...(options.renderHints === false ? { renderHints: false } : {}),
         ...(options.optimize === false ? { optimize: false } : {}),
       });
       registry.recordTransform(filePath, result.metadata, result.componentFiles);
@@ -275,10 +263,3 @@ function reportDiagnostics(diagnostics: { all: readonly { code: string; message:
 }
 
 export default tsazor;
-/** The `lazyRoutes` option as a predicate over a page's absolute path. */
-export function lazyRouteFilter(lazyRoutes: boolean | string[] | undefined, root: string): (componentPath: string) => boolean {
-  if (lazyRoutes === true) return () => true;
-  if (!lazyRoutes || lazyRoutes.length === 0) return () => false;
-  const filter = createFilter(lazyRoutes, null, { resolve: root });
-  return (componentPath) => filter(componentPath);
-}

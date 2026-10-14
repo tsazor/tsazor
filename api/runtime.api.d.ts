@@ -35,15 +35,20 @@ export declare class AuthenticationState {
     constructor(user: ClaimsPrincipal);
 }
 
+// AuthenticationStateChangedHandler
+export type AuthenticationStateChangedHandler = (state: AuthenticationState) => void;
+
 // AuthenticationStateProvider
 export declare abstract class AuthenticationStateProvider {
-    private readonly subscribers;
-    private cachedState?;
+    #private;
     abstract getAuthenticationStateAsync(): Promise<AuthenticationState>;
-    private version;
     protected notifyAuthenticationStateChanged(state: AuthenticationState | Promise<AuthenticationState>): void;
-    private publish;
     subscribe(handler: AuthenticationStateChangedHandler, options?: AuthenticationStateSubscribeOptions): () => void;
+}
+
+// AuthenticationStateSubscribeOptions
+export interface AuthenticationStateSubscribeOptions {
+    onPending?: () => void;
 }
 
 // AuthorizationPolicy
@@ -267,6 +272,11 @@ export declare class CultureService {
     private change;
 }
 
+// DataAnnotationsValidationOptions
+export interface DataAnnotationsValidationOptions {
+    readonly localizer?: ValidationMessagesLocalizer;
+}
+
 // DataAnnotationsValidationSubscription
 export interface DataAnnotationsValidationSubscription {
     dispose(): void;
@@ -290,7 +300,7 @@ export declare const defaultAuthorizationService: AuthorizationService;
 export declare function defineComponent<T extends abstract new (...args: never[]) => ComponentBase>(type: T): ComponentDefinition;
 
 // defineParameter
-export declare function defineParameter(type: ComponentClass, propertyName: string, options?: Omit<ParameterMeta, "propertyName">): void;
+export declare function defineParameter(type: abstract new (...args: never[]) => unknown, propertyName: string, options?: Omit<ParameterMeta, "propertyName">): void;
 
 // DynamicComponent
 export declare class DynamicComponent extends ComponentBase {
@@ -303,10 +313,11 @@ export declare class DynamicComponent extends ComponentBase {
 
 // EditContext
 export declare class EditContext {
+    #private;
     readonly model: object;
-    readonly onFieldChanged: EventSet<(editContext: EditContext, field: string, value: unknown) => void>;
-    readonly onValidationRequested: EventSet<(editContext: EditContext) => void>;
-    readonly onValidationStateChanged: EventSet<(editContext: EditContext) => void>;
+    readonly onFieldChanged: EventSubscription<(editContext: EditContext, field: string, value: unknown) => void>;
+    readonly onValidationRequested: EventSubscription<(editContext: EditContext) => void>;
+    readonly onValidationStateChanged: EventSubscription<(editContext: EditContext) => void>;
     private readonly fieldStates;
     private readonly fieldValidators;
     private readonly builtinStore;
@@ -359,13 +370,12 @@ export declare class ErrorBoundary extends ErrorBoundaryBase {
 }
 
 // ErrorBoundaryBase
-export declare abstract class ErrorBoundaryBase extends ComponentBase implements IErrorBoundary {
+export declare abstract class ErrorBoundaryBase extends ComponentBase {
+    #private;
     childContent?: RenderFragment;
     errorContent?: (error: unknown) => RenderFragment;
     maximumErrorCount: number;
-    readonly isErrorBoundary: true;
     protected currentException: unknown;
-    private errorCount;
     handleException(error: unknown): void;
     recover(): void;
     protected onError(error: unknown): void | Promise<void>;
@@ -401,11 +411,19 @@ export declare enum EventHandlerFlags {
     StopPropagation = 2
 }
 
+// EventSubscription
+export interface EventSubscription<Handler extends (...args: never[]) => void> {
+    subscribe(handler: Handler): () => void;
+}
+
 // FieldIdentifier
 export interface FieldIdentifier {
     readonly fieldName: string;
     readonly model: unknown;
 }
+
+// FieldRuleDecorator
+export type FieldRuleDecorator = (value: unknown, context: ClassFieldDecoratorContext) => void;
 
 // FocusOnInvalidSubmit
 export declare class FocusOnInvalidSubmit extends ComponentBase {
@@ -469,13 +487,13 @@ export declare function inject<T>(token: Token<T>): T;
 
 // InputBase
 export declare abstract class InputBase<TValue> extends ComponentBase {
+    #private;
     Value?: TValue | null;
     ValueChanged?: EventCallback<TValue>;
     ValueExpression?: string;
     editContext?: EditContext;
     additionalAttributes?: Record<string, unknown>;
     element?: HTMLElement;
-    private editContextUnsubscribe?;
     get currentValue(): TValue | null | undefined;
     set currentValue(value: TValue);
     protected onInitialized(): void;
@@ -485,7 +503,6 @@ export declare abstract class InputBase<TValue> extends ComponentBase {
     protected get attributesWithValidation(): Record<string, unknown> | undefined;
     protected captureElement(b: RenderTreeBuilder): void;
     protected applyCommonAttributes(b: RenderTreeBuilder): void;
-    private sequenceCounter;
     protected changeHandler(extract: (e: Event) => TValue): EventCallback<Event>;
     protected addImmediateHandlers(b: RenderTreeBuilder, extract: (e: Event) => TValue): void;
 }
@@ -792,6 +809,9 @@ export declare function Parameter(options?: {
     captureUnmatchedValues?: boolean;
 }): (value: unknown, context: ParameterDecoratorContext) => void;
 
+// ParameterDecoratorContext
+export type ParameterDecoratorContext = ClassFieldDecoratorContext | ClassAccessorDecoratorContext | ClassSetterDecoratorContext;
+
 // ParameterMeta
 export interface ParameterMeta {
     readonly propertyName: string;
@@ -835,6 +855,9 @@ export interface PlaceholderContext {
 export type PlaceholdersOf<Message extends string> = Message extends `${string}{{${infer Rest}` ? PlaceholdersOf<Rest> : Message extends `${string}{${infer Name}}${infer Rest}` ? Name extends "" ? never : {
     [K in Name]: string | number;
 } & PlaceholdersOf<Rest> : unknown;
+
+// QueryParameterDecorator
+export type QueryParameterDecorator = (value: unknown, context: ClassFieldDecoratorContext) => void;
 
 // QueryParameterMeta
 export interface QueryParameterMeta {
@@ -1251,6 +1274,28 @@ export declare class ValidationMessage extends ComponentBase {
     private nextSequence;
 }
 
+// ValidationMessageContext
+export interface ValidationMessageContext {
+    readonly displayName: string;
+    readonly min?: number;
+    readonly max?: number;
+    readonly pattern?: string;
+    readonly other?: string;
+}
+
+// ValidationMessageOverride
+export interface ValidationMessageOverride {
+    readonly message?: string;
+    readonly messageKey?: string;
+    readonly messageFactory?: (context: ValidationMessageContext) => string;
+}
+
+// ValidationMessagesLocalizer
+export interface ValidationMessagesLocalizer {
+    raw(key: string): string | undefined;
+    subscribe(listener: () => void): () => void;
+}
+
 // ValidationMessageStore
 export declare class ValidationMessageStore {
     readonly editContext: EditContext;
@@ -1269,6 +1314,14 @@ export interface ValidationRule {
     readonly params: Readonly<ValidationRuleParams>;
     readonly override?: ValidationMessageOverride;
     validate(value: unknown, model: object, displayName: string): string | null;
+}
+
+// ValidationRuleParams
+export interface ValidationRuleParams {
+    readonly min?: number;
+    readonly max?: number;
+    readonly pattern?: string;
+    readonly other?: string;
 }
 
 // ValidationSummary

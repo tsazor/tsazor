@@ -16,7 +16,7 @@ export { isIErrorBoundary, type IErrorBoundary } from "./error-boundary-contract
  * (fatal — the renderer routes it to its error handler, Blazor to
  * HandleException).
  */
-export abstract class ErrorBoundaryBase extends ComponentBase implements IErrorBoundary {
+export abstract class ErrorBoundaryBase extends ComponentBase {
   /** The content rendered while there is no error. */
   @Parameter() childContent?: RenderFragment;
 
@@ -32,16 +32,17 @@ export abstract class ErrorBoundaryBase extends ComponentBase implements IErrorB
    */
   @Parameter() maximumErrorCount: number = 100;
 
+  /** @internal How the renderer recognizes an error boundary (Blazor's IErrorBoundary). */
   readonly isErrorBoundary = true as const;
 
   /** The handled error while in the error state (Blazor's CurrentException). */
   protected currentException: unknown = null;
 
-  private errorCount = 0;
+  #errorCount = 0;
 
   /** Blazor's IErrorBoundary.HandleException. Throws (fatal) over the limit. */
   handleException(error: unknown): void {
-    if (++this.errorCount > this.maximumErrorCount) {
+    if (++this.#errorCount > this.maximumErrorCount) {
       // Over the maximum between recoveries: rethrow, as in Blazor's
       // HandleException (its caller makes it fatal). The current error is not
       // adopted; the boundary keeps its previous state.
@@ -64,7 +65,7 @@ export abstract class ErrorBoundaryBase extends ComponentBase implements IErrorB
    */
   recover(): void {
     if (this.currentException !== null) {
-      this.errorCount = 0;
+      this.#errorCount = 0;
       this.currentException = null;
       componentInternals.requestRender(this);
     }

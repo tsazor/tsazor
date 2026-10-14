@@ -5,10 +5,10 @@ import { EventCallback } from "../components/event-callback.js";
 import { EventHandlerFlags } from "../render-tree/frame-type.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
-import { EditContext, formElements } from "./edit-context.js";
+import { EditContext, formElements, type ModelValidator } from "./edit-context.js";
 
 /** Function-based validator (the adapter; rules come from the field decorators). */
-export type ModelValidator = (value: unknown, model: unknown) => string | null;
+export type { ModelValidator } from "./edit-context.js";
 
 /**
  * Stable identity for an EditContext, mirroring Blazor's

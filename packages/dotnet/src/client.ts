@@ -9,9 +9,9 @@ import { TsazorHttp } from "@tsazor/runtime";
 import { sendForResult, type EnvelopeOptions, type HttpResult } from "./http-result.js";
 
 /** The HTTP methods a generated client operation can use. */
-export const HTTP_METHOD = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
-/** One of `HTTP_METHOD`: the method argument of `OpenApiClient.call`. */
-export type HttpMethod = (typeof HTTP_METHOD)[number];
+export const HTTP_METHOD: readonly HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+/** The method argument of `OpenApiClient.call`. */
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** Options for a generated client: base URL and envelope unwrapping. */
 export interface OpenApiClientOptions {

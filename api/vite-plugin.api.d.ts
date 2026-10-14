@@ -5,82 +5,13 @@
 // default
 export declare function tsazor(options?: TsazorPluginOptions): Plugin;
 
-// formatCheckDiagnostic
-export declare function formatCheckDiagnostic(root: string, diagnostic: CheckDiagnostic): string;
-
-// InvalidationPlan
-export interface InvalidationPlan {
-    retransform: string[];
-    routesModule: boolean;
-    fullReload: boolean;
-}
-
-// isImportsFile
-export declare function isImportsFile(file: string): boolean;
-
-// lazyRouteFilter
-export declare function lazyRouteFilter(lazyRoutes: boolean | string[] | undefined, root: string): (componentPath: string) => boolean;
-
-// normalizeFileKey
-export declare function normalizeFileKey(file: string): string;
-
-// planInvalidation
-export declare function planInvalidation(context: WatchEventContext): Promise<InvalidationPlan>;
-
-// runBuildCheck
-export declare function runBuildCheck(root: string, log: (line: string) => void): Promise<CheckDiagnostic[]>;
-
-// TransformRegistry
-export declare class TransformRegistry {
-    private readonly records;
-    get(file: string): TransformRecord | undefined;
-    files(): string[];
-    private entryFor;
-    recordDynamic(file: string, metadata: CodegenMetadata | undefined, isImports: boolean): void;
-    recordTransform(file: string, metadata: CodegenMetadata, componentFiles: Iterable<string>): void;
-    remove(file: string): void;
-    consumersOf(componentFile: string): string[];
-    filesWithUnresolvedTag(tag: string): string[];
-    hasLayoutNameOf(className: string): boolean;
-}
-
-// transformTsazor
-export declare function transformTsazor(code: string, filePath: string, projectRoot: string, options?: TransformTsazorOptions): Promise<TransformTsazorResult>;
-
-// TransformTsazorOptions
-export interface TransformTsazorOptions {
-    sourceMap?: boolean;
-    hmr?: boolean;
-    staticMarkup?: boolean;
-    renderHints?: boolean;
-    optimize?: boolean;
-}
-
-// TransformTsazorResult
-export interface TransformTsazorResult {
-    code: string;
-    map: string | null;
-    diagnostics: DiagnosticBag;
-    importsDiagnostics: ReadonlyArray<{
-        file: string;
-        diagnostic: TszDiagnostic;
-    }>;
-    componentFiles: string[];
-    metadata: CompileResult["metadata"];
-}
-
 // tsazor
 export declare function tsazor(options?: TsazorPluginOptions): Plugin;
-
-// tsazorHotUpdate
-export declare function tsazorHotUpdate(options: TsazorHotUpdateOptions, defaultModules?: ReadonlyArray<HotModuleNode>): Promise<unknown[] | undefined>;
 
 // TsazorPluginOptions
 export interface TsazorPluginOptions {
     root?: string;
     check?: boolean;
-    staticMarkup?: boolean;
-    renderHints?: boolean;
     optimize?: boolean;
     lazyRoutes?: boolean | string[];
 }

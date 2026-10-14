@@ -5,7 +5,7 @@ export { FrameType, EventHandlerFlags } from "./render-tree/frame-type.js";
 // Components
 export { ComponentBase } from "./components/component-base.js";
 export { ParameterView } from "./components/parameter-view.js";
-export { Parameter, CascadingParameter, defineParameter, type CascadingTypeToken, type ParameterMeta } from "./components/parameter-metadata.js";
+export { Parameter, CascadingParameter, defineParameter, type CascadingTypeToken, type ParameterDecoratorContext, type ParameterMeta } from "./components/parameter-metadata.js";
 export { Bindable, type BindableOptions } from "./components/bindable.js";
 export { State } from "./components/state.js";
 export { CascadingTypeParameter } from "./components/cascading-type-parameter.js";
@@ -75,7 +75,7 @@ export { LayoutComponentBase } from "./routing/layout-component-base.js";
 export { Router, type NavigationContext } from "./routing/router.js";
 export { RouteView } from "./routing/route-view.js";
 export { LayoutView } from "./routing/layout-view.js";
-export { SupplyParameterFromQuery, type QueryParameterType, type QueryParameterMeta } from "./routing/supply-parameter-from-query.js";
+export { SupplyParameterFromQuery, type QueryParameterDecorator, type QueryParameterType, type QueryParameterMeta } from "./routing/supply-parameter-from-query.js";
 export { NavLink, NavLinkMatch } from "./routing/nav-link.js";
 export { PageTitle } from "./routing/page-title.js";
 export { FocusOnNavigate } from "./routing/focus-on-navigate.js";
@@ -93,7 +93,15 @@ export {
 export { TsazorHttp, TsazorHttpError, type TsazorHttpOptions, type RequestInterceptor, type ResponseInterceptor } from "./data/tsazor-http.js";
 
 // Forms
-export { EditContext, ValidationMessageStore, type FieldIdentifier, type DataAnnotationsValidationSubscription } from "./forms/edit-context.js";
+export {
+  EditContext,
+  ValidationMessageStore,
+  type DataAnnotationsValidationOptions,
+  type DataAnnotationsValidationSubscription,
+  type EventSubscription,
+  type FieldIdentifier,
+  type ValidationMessagesLocalizer,
+} from "./forms/edit-context.js";
 export type { ModelValidator } from "./forms/edit-form.js";
 export { InputBase } from "./forms/input-base.js";
 export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect, type InputDateType } from "./forms/input-text.js";
@@ -114,12 +122,16 @@ export {
   EmailAddress,
   RegularExpression,
   Compare,
+  type FieldRuleDecorator,
+  type ValidationMessageContext,
+  type ValidationMessageOverride,
   type ValidationRule,
+  type ValidationRuleParams,
 } from "./forms/validation-attributes.js";
 
 // Auth (Blazor's Microsoft.AspNetCore.Components.Authorization analogue)
 export { ANONYMOUS, AuthenticationState, anonymousUser, createUser, type ClaimsPrincipal, type Claim } from "./auth/authentication-state.js";
-export { AuthenticationStateProvider } from "./auth/authentication-state-provider.js";
+export { AuthenticationStateProvider, type AuthenticationStateChangedHandler, type AuthenticationStateSubscribeOptions } from "./auth/authentication-state-provider.js";
 export { AuthorizationService, defaultAuthorizationService, type AuthorizationPolicy, type AuthorizationRequirements } from "./auth/authorization.js";
 export { AuthorizeView } from "./auth/authorize-view.js";
 export { CascadingAuthenticationState } from "./auth/cascading-authentication-state.js";
