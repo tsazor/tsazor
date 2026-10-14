@@ -3,7 +3,7 @@
     aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
-@import { hasSubmitAttempt } from "@tsazor/ui"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
 
 @inherits InputBase<boolean>
 

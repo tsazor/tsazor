@@ -104,6 +104,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     `--path-value version=1` (`pathValues`) writes a fixed path value into the URLs and leaves it out of the
     signatures and the names: URL-segment API versioning (`api/v{version}/…`, BlazorHero's B4). The README documents
     the naming rules as the contract: in 1.x the same document gives the same names.
+  - `@tsazor/ui` (D8, U1): **the skins' component helpers moved to `@tsazor/ui/kit`**, which is not covered by
+    the stability promise (D-S7) and may change in any release. Among the ~150 helpers are the calendar and time math
+    (`addDays`, `formatDateField`, `parseTimeField`, …), the color conversions, the components' keyboard maps,
+    the label constants and builders (`calendarLabels`, `ratingLabelsFrom`, …), `FieldState`, `openLayer`,
+    `builtInIcons` and `iconSize`. The root entry keeps what an app or a library author builds on: the vocabulary,
+    the behaviors and their options, `createLayer`, the focus helpers, `uniqueId`, the services (`Toaster`,
+    `DialogService`, file uploads), the DataGrid model, `libraryTexts` and its catalog, the types the skins'
+    parameters name, and `isoDate`/`parseIsoDate`/`today`, `isoTime`/`parseIsoTime`, `ariaKeyShortcuts`,
+    `PatternMask`, `AVATAR_COLORS`. `npx @tsazor/fluent add` asks to install `@tsazor/ui` at the exact version
+    of the copied components.
   - `@tsazor/cli` (D9): **a component library builds without Tsazor's internal packages** — `tsazor build-lib [dir]
     [--stylesheet <file>]`, and `buildLibrary(options)` for a build script that needs internal components, aliases or
     re-exports (`docs/component-libraries.md`, "Building a library"). It compiles the components as the Vite plugin

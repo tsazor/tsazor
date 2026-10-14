@@ -4,7 +4,8 @@
     `size` in px (16–128). `active` rings it (or shadows it, `activeAppearance`) for someone present; `active="false"`
     dims it. With onClick it is a button (Enter and Space click it). `name` is its accessible name and, with `tooltip`,
     its tooltip. A badge (presence, a count) goes in its content. *@
-@import { avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type IconValue } from "@tsazor/ui"
+@import { type AvatarColor, type IconValue } from "@tsazor/ui"
+@import { avatarColorFor, avatarIconSize, avatarInitials } from "@tsazor/ui/kit"
 @import { Person20Regular } from "./core-icons"
 @import { withAttributes } from "./attributes"
 @import { tooltip as tooltipAttachment } from "./tooltip-attachment"

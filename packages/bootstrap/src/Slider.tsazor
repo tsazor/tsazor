@@ -5,7 +5,8 @@
     a mark per step, with `tickMarkLabels` under them; `valueLabel` shows the value, through `valueFormat` ("40 %"),
     which screen readers read too (aria-valuetext). Validation state and message as with TextInput — the same
     parameters as the Fluent skin's Slider. *@
-@import { FieldState, ImmediateInput, sliderFraction, sliderTicks, type Orientation } from "@tsazor/ui"
+@import { type Orientation } from "@tsazor/ui"
+@import { FieldState, ImmediateInput, sliderFraction, sliderTicks } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 @inherits InputBase<number>

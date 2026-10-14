@@ -6,11 +6,13 @@
     Each slide is a group named "2 of 5"; a slide a person turns to is announced, one that turns by itself isn't — the
     same parameters as the Fluent skin's Carousel. *@
 @typeparam TData
-@import { carouselRotates, carouselStep, carouselSwipe, type CarouselLabels } from "@tsazor/ui"
+@import { type CarouselLabels } from "@tsazor/ui"
+@import { carouselRotates, carouselStep, carouselSwipe } from "@tsazor/ui/kit"
 @import type { Attachment } from "@tsazor/runtime"
 @import { withClass } from "./attributes"
 @import { PauseFill, PlayFill } from "./core-icons"
-@import { libraryTexts, carouselLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { carouselLabelsFrom } from "@tsazor/ui/kit"
 
 <section aria-roledescription="@t("carousel.roleDescription")" @attributes="@this.rootAttributes" @onpointerenter="this.enter" @onpointerleave="this.leave" @onfocusin="this.focusIn" @onfocusout="this.focusOut" @attach="this.swipe">
     @if (this.autoCycle) {

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { anchoredPosition, computePosition, createLayer, dismissable, FieldState, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
+import { anchoredPosition, createLayer, dismissable, focusTrap, rovingFocus, scrollLock, uniqueId } from "../src/index";
+import { computePosition, FieldState } from "../src/kit";
 
 afterEach(() => {
   document.body.innerHTML = "";

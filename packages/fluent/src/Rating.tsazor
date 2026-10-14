@@ -5,10 +5,12 @@
     (`hoveredValueChanged`). `fullIcon` and `emptyIcon` draw the stars, `size` and `color` (brand, marigold, neutral;
     Fluent UI's) style them. `readOnly` shows the value only (or take a RatingDisplay). *@
 @import type { IconValue } from "@tsazor/ui"
-@import { ratingClickValue, ratingKeyTarget, uniqueId, type RatingLabels } from "@tsazor/ui"
+@import { uniqueId, type RatingLabels } from "@tsazor/ui"
+@import { ratingClickValue, ratingKeyTarget } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 @import { Star20Filled, Star20Regular } from "./core-icons"
-@import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { ratingLabelsFrom } from "@tsazor/ui/kit"
 
 @inherits InputBase<number>
 

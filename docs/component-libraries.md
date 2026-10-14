@@ -4,7 +4,10 @@ Tsazor has no built-in component library and no "official" one. A library is an 
 `.tsazor` components, and an app uses it with `@using <package>`. `@tsazor/bootstrap` and
 `@tsazor/fluent` are two such libraries. They are built on [`@tsazor/ui`](../packages/ui), the
 toolkit for any library author, which provides behaviors, the DataGrid model and the shared
-vocabulary. This page describes what a library declares so that tools can work with it. The
+vocabulary. Its root entry is covered by the stability promise. `@tsazor/ui/kit` holds the
+helpers of the skins' components (calendar and color math, keyboard maps, label builders,
+form-field state): use them if they fit, but they may change in any release, so a library that
+imports them depends on `@tsazor/ui` at an exact version. This page describes what a library declares so that tools can work with it. The
 packages above serve as the reference implementation.
 
 ## What a library's `package.json` declares

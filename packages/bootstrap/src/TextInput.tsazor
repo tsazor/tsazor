@@ -3,7 +3,8 @@
     a submit attempt it shows the first message below (`.invalid-feedback`, linked with
     aria-describedby, aria-invalid). `mask` shapes the text as it is typed (MudBlazor's `Mask`: a PatternMask,
     "(000) 000-0000"). `contentBefore` and `contentAfter` make it an input group (MudBlazor's adornments). *@
-@import { FieldState, ImmediateInput, maskInput, toMask, type PatternMask } from "@tsazor/ui"
+@import { type PatternMask } from "@tsazor/ui"
+@import { FieldState, ImmediateInput, maskInput, toMask } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 @inherits InputBase<string>

@@ -5,7 +5,8 @@
     takes over the button. The overflowed items stay in the page, out of sight and out of the tab order. *@
 @typeparam TItem
 @import type { Attachment } from "@tsazor/runtime"
-@import { anchoredPosition, createLayer, dismissable, overflowFit, uniqueId, type Orientation } from "@tsazor/ui"
+@import { anchoredPosition, createLayer, dismissable, uniqueId, type Orientation } from "@tsazor/ui"
+@import { overflowFit } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"

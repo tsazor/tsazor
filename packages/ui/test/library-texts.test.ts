@@ -4,17 +4,11 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CultureService, StringLocalizer } from "@tsazor/runtime";
+import { libraryTextDefaults, libraryTextKey } from "../src/index";
 import {
-  carouselLabelsFrom,
-  dateFieldPlaceholder,
-  describeColor,
-  englishLibraryTexts,
-  libraryPlural,
-  libraryText,
-  libraryTextDefaults,
-  libraryTextKey,
+  carouselLabelsFrom, dateFieldPlaceholder, describeColor, englishLibraryTexts, libraryPlural, libraryText,
   ratingLabelsFrom,
-} from "../src/index";
+} from "../src/kit";
 
 function localizer(culture: string, tables: Record<string, Record<string, string>> = {}) {
   return new StringLocalizer({ culture: new CultureService(culture), tables, defaultCulture: "en" });

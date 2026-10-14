@@ -6,12 +6,11 @@
     `handle` lets only an element with the class sortable-grab start a drag, `itemFilter` keeps items in place, `clone`
     leaves a copy behind, `drop` and `sort` turn taking and reordering off. *@
 @typeparam TItem
-@import {
-    moveItem, sortableList, SortableListEventArgs, uniqueId,
-    type Orientation, type SortableListHandle, type SortableListLabels,
-} from "@tsazor/ui"
+@import { SortableListEventArgs, uniqueId, type Orientation, type SortableListLabels } from "@tsazor/ui"
+@import { moveItem, sortableList, type SortableListHandle } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
-@import { libraryTexts, sortableListLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { sortableListLabelsFrom } from "@tsazor/ui/kit"
 
 <ul @attributes="@this.listAttributes" @attach="this.behavior">
     @for (let i = 0; i < this.items.length; i++) {

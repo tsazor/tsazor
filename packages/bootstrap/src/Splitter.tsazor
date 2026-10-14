@@ -4,7 +4,8 @@
     expands a collapsible pane. A pane's `size`, `min` and `max` take % or px. onResize reports a pane's new size (in
     percent); onCollapse and onExpand can be cancelled. The bars follow the window splitter pattern
     (role="separator", aria-valuenow). *@
-@import { resizeSplitter, SplitterEventArgs, splitterKeyDelta, splitterPercent, type Orientation, type SplitterResizeEventArgs } from "@tsazor/ui"
+@import { SplitterEventArgs, type Orientation, type SplitterResizeEventArgs } from "@tsazor/ui"
+@import { resizeSplitter, splitterKeyDelta, splitterPercent } from "@tsazor/ui/kit"
 @import type SplitterPane from "./SplitterPane.tsazor"
 @import { withClass } from "./attributes"
 

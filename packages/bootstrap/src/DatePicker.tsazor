@@ -7,9 +7,10 @@
     date goes to validation as it was typed (as with a NumberInput). Validation state and message as with TextInput —
     the same parameters as the Fluent skin's DatePicker. *@
 @import {
-    anchoredPosition, createLayer, dateFieldPlaceholder, dismissable, FieldState, focusTrap, formatPickerValue,
-    parseIsoDate, parsePickerValue, type CalendarDay, type CalendarLabels, type CalendarView, type IsoDate,
+    anchoredPosition, createLayer, dismissable, focusTrap, parseIsoDate, type CalendarDay, type CalendarLabels,
+    type CalendarView, type IsoDate,
 } from "@tsazor/ui"
+@import { dateFieldPlaceholder, FieldState, formatPickerValue, parsePickerValue } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 @import { Calendar3 } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"

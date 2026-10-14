@@ -4,7 +4,8 @@
     step list may open: nothing (linear, the default), any step, or the visited ones. `stepperPosition` puts the list at
     the start (default; on top when the wizard is narrow) or on top; `displayStepNumber` shows the numbers in the
     bullets. `buttonTemplate` replaces the buttons (it gets the current index; `goToStepAsync` moves from your code). *@
-@import { isWizardStepClickable, nextWizardStep, previousWizardStep, uniqueId, WizardStepChangeEventArgs, wizardStepStatus, type IconValue, type WizardStepSequence, type WizardStepStatus } from "@tsazor/ui"
+@import { uniqueId, WizardStepChangeEventArgs, type IconValue, type WizardStepSequence, type WizardStepStatus } from "@tsazor/ui"
+@import { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardStepStatus } from "@tsazor/ui/kit"
 @import type WizardStep from "./WizardStep.tsazor"
 @import { CheckCircleFill, Circle, CircleFill } from "./core-icons"
 @import { withClass } from "./attributes"

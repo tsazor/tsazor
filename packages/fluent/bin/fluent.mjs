@@ -19,6 +19,8 @@ import { availableComponents as componentsIn, collectClosure as closureIn } from
 
 const FLUENT_SRC = fileURLToPath(new URL("../src", import.meta.url));
 const FLUENT_STYLES = fileURLToPath(new URL("../src/styles", import.meta.url));
+/** The version the copies come from: @tsazor/ui is released in lockstep with it. */
+const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const availableComponents = () => componentsIn(FLUENT_SRC);
 const collectClosure = (name) => closureIn(FLUENT_SRC, name);
 
@@ -125,8 +127,10 @@ Next steps:
 ${styleImports}
      (tokens.css defines the --fui-* design tokens, controls.css the component chrome,
      avatar-colors.css the avatars' named colors.)
-  2. The components use the behavior core (focus trap, Escape, roving focus, ids):
-       npm install @tsazor/ui
+  2. The components use the behavior core (focus trap, Escape, roving focus, ids)
+     and its kit (@tsazor/ui/kit), whose helpers may change in any release —
+     install @tsazor/ui at exactly the version they were copied from:
+       npm install --save-exact @tsazor/ui@${VERSION}
   3. Use <${entry.name} /> in your markup — app components resolve by name.
   4. The copy is yours: edit it freely. npm-shipped and copied components
      coexist because all classes are globally unique (fui-*).`);

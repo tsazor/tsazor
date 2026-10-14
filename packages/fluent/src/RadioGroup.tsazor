@@ -2,7 +2,7 @@
     string value out of `options`. The arrow keys move between the options, as browsers do for
     radio groups. Inside a FluentForm it shows the field's first validation message once a submit
     was attempted. *@
-@import { FieldState } from "@tsazor/ui"
+@import { FieldState } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 @inherits InputBase<string>

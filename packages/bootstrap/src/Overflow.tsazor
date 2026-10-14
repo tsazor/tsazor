@@ -6,7 +6,8 @@
     parameters as the Fluent skin's Overflow. *@
 @typeparam TItem
 @import type { Attachment } from "@tsazor/runtime"
-@import { anchoredPosition, createLayer, dismissable, overflowFit, uniqueId, type Orientation } from "@tsazor/ui"
+@import { anchoredPosition, createLayer, dismissable, uniqueId, type Orientation } from "@tsazor/ui"
+@import { overflowFit } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"

@@ -5,8 +5,9 @@
     dialog; Escape closes it too, the focus back on the button. Alt+ArrowDown in the field opens it. `hideTextInput`
     leaves the button alone. Text that is no color goes to validation as it was typed. *@
 @import {
-    anchoredPosition, createLayer, dismissable, FieldState, focusTrap, normalizeHexColor, type ColorPickerLabels, type IconValue,
+    anchoredPosition, createLayer, dismissable, focusTrap, type ColorPickerLabels, type IconValue,
 } from "@tsazor/ui"
+@import { FieldState, normalizeHexColor } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 @import { Color20Regular } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"

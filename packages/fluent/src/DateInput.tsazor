@@ -3,7 +3,7 @@
     or with `type` (Blazor's InputDateType) `"2026-10-07T09:30"`, `"2026-10"` or `"09:30"`; a plain
     string has no time zone to shift the day. Inside a FluentForm it shows the field's first
     validation message once a submit was attempted. *@
-@import { FieldState } from "@tsazor/ui"
+@import { FieldState } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 @inherits InputBase<string>

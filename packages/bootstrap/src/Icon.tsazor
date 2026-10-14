@@ -3,7 +3,8 @@
     parameters as the Fluent skin's Icon. Decorative (aria-hidden) by default; with a title (or ariaLabel) it gets
     role="img". An unknown name falls back to check. *@
 @import { MarkupString } from "@tsazor/runtime"
-@import { builtInIcons, iconSize, type IconValue } from "@tsazor/ui"
+@import { type IconValue } from "@tsazor/ui"
+@import { builtInIcons, iconSize } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 <svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>

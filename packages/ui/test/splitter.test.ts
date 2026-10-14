@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resizeSplitter, splitterKeyDelta, splitterPercent } from "../src/index";
+import { resizeSplitter, splitterKeyDelta, splitterPercent } from "../src/kit";
 
 describe("splitterPercent", () => {
   it("reads percents and pixels as percents of the splitter", () => {

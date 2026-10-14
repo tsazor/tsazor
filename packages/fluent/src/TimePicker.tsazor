@@ -7,10 +7,12 @@
     instead. Text that is no time goes to validation as it was typed. Inside a FluentForm it shows the field's first
     validation message once a submit was attempted. *@
 @import {
-    anchoredPosition, createLayer, dismissable, edgeEnabledOption, FieldState, formatTimeField, formatTimePickerValue,
-    initialTimeOption, nextEnabledOption, normalizeIsoTime, parseIsoTime, parseTimeField, timeFieldPlaceholder,
-    timeOptions, uniqueId, type HourCycle, type IsoTime,
+    anchoredPosition, createLayer, dismissable, parseIsoTime, uniqueId, type HourCycle, type IsoTime,
 } from "@tsazor/ui"
+@import {
+    edgeEnabledOption, FieldState, formatTimeField, formatTimePickerValue, initialTimeOption, nextEnabledOption,
+    normalizeIsoTime, parseTimeField, timeFieldPlaceholder, timeOptions,
+} from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 @import { Clock20Regular } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"

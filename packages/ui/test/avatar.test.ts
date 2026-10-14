@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AVATAR_COLORS, avatarColorFor, avatarIconSize, avatarInitials } from "../src/index";
+import { AVATAR_COLORS } from "../src/index";
+import { avatarColorFor, avatarIconSize, avatarInitials } from "../src/kit";
 
 describe("avatarInitials (Fluent UI's getInitials)", () => {
   it("takes the first and the last word's first letters", () => {

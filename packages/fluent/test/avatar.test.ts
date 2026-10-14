@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { renderTree, type RenderResult } from "@tsazor/testing";
 import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
-import { avatarColorFor } from "@tsazor/ui";
+import { avatarColorFor } from "@tsazor/ui/kit";
 import { Avatar } from "../dist/index.js";
 
 let mounted: RenderResult[] = [];

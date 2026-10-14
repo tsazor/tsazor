@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isWizardStepClickable, nextWizardStep, previousWizardStep, WizardStepChangeEventArgs, wizardStepStatus } from "../src/index";
+import { WizardStepChangeEventArgs } from "../src/index";
+import { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardStepStatus } from "../src/kit";
 
 describe("wizard navigation (Fluent UI Blazor's FluentWizard)", () => {
   it("next and previous skip disabled steps; -1 at the ends", () => {

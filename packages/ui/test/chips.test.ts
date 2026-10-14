@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextChipSelection } from "../src/index";
+import { nextChipSelection } from "../src/kit";
 
 describe("nextChipSelection (MudBlazor's SelectionMode)", () => {
   it("single keeps one chip, and a click on it keeps it", () => {

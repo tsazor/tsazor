@@ -9,7 +9,11 @@
 @import Defer from "./Defer.tsazor"
 @import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
-@import { DataGridModel, toggleAll, toggleSelection, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode, type IconValue } from "@tsazor/ui"
+@import {
+DataGridModel, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode,
+type IconValue,
+} from "@tsazor/ui"
+@import { toggleAll, toggleSelection } from "@tsazor/ui/kit"
 @import { libraryTexts } from "@tsazor/ui"
 
 <CascadingValue Value="model">

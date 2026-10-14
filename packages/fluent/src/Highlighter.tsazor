@@ -2,7 +2,7 @@
     search terms marked (`<mark>`) — `highlightedText`, split at any of `delimiters` (" ,;"), and the terms of
     `highlightedTexts`. `caseSensitive`; `untilNextBoundary` runs a match on to the end of its word. The text stays
     text: markup in it is shown, not rendered. Attributes go on each mark. *@
-@import { highlightFragments, highlightTerms } from "@tsazor/ui"
+@import { highlightFragments, highlightTerms } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 @foreach (const fragment of this.fragments) {

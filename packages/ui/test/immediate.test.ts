@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ImmediateInput } from "../src/index";
+import { ImmediateInput } from "../src/kit";
 
 afterEach(() => {
   vi.useRealTimers();

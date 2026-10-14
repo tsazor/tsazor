@@ -19,9 +19,16 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./kit": {
+      "types": "./dist/kit.d.ts",
+      "default": "./dist/kit.js"
     }
   },
   "sideEffects": false,
+  "tsazor": {
+    "internal": ["./kit"]
+  },
   "files": [
     "dist",
     "!dist/.tsbuildinfo"

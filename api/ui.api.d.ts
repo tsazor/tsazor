@@ -2,15 +2,6 @@
 
 /* @tsazor/ui */
 
-// addDays
-export declare function addDays(date: IsoDate, days: number): IsoDate;
-
-// addMonths
-export declare function addMonths(date: IsoDate, months: number): IsoDate;
-
-// addYears
-export declare function addYears(date: IsoDate, years: number): IsoDate;
-
 // anchoredPosition
 export declare function anchoredPosition(options: AnchoredPositionOptions): Attachment<HTMLElement>;
 
@@ -67,20 +58,8 @@ export declare const AVATAR_COLORS: readonly [
 // AvatarColor
 export type AvatarColor = "neutral" | "brand" | "colorful" | AvatarNamedColor;
 
-// avatarColorFor
-export declare function avatarColorFor(color: AvatarColor, name: string | null | undefined, key?: string): AvatarColor;
-
-// avatarIconSize
-export declare function avatarIconSize(size: number): number;
-
-// avatarInitials
-export declare function avatarInitials(name: string | null | undefined, rtl?: boolean): string;
-
 // AvatarNamedColor
 export type AvatarNamedColor = (typeof AVATAR_COLORS)[number];
-
-// builtInIcons
-export declare const builtInIcons: Readonly<Record<string, IconValue>>;
 
 // CalendarDay
 export interface CalendarDay {
@@ -93,15 +72,6 @@ export interface CalendarDay {
     readonly isInactive: boolean;
 }
 
-// calendarKeyTarget
-export declare function calendarKeyTarget(date: IsoDate, key: {
-    key: string;
-    shiftKey?: boolean;
-}, firstDay: number, rtl?: boolean): IsoDate | undefined;
-
-// calendarLabels
-export declare const calendarLabels: CalendarLabels;
-
 // CalendarLabels
 export interface CalendarLabels {
     readonly previousMonth: string;
@@ -112,23 +82,11 @@ export interface CalendarLabels {
     readonly nextYears: string;
 }
 
-// calendarLabelsFrom
-export declare function calendarLabelsFrom(t: LibraryTexts): CalendarLabels;
-
 // CalendarSelectMode
 export type CalendarSelectMode = "single" | "multiple" | "range";
 
 // CalendarView
 export type CalendarView = "days" | "months" | "years";
-
-// calendarWeeks
-export declare function calendarWeeks(month: IsoDate, firstDayOfWeek: number): IsoDate[][];
-
-// calendarYears
-export declare function calendarYears(date: IsoDate): number[];
-
-// carouselLabels
-export declare const carouselLabels: CarouselLabels;
 
 // CarouselLabels
 export interface CarouselLabels {
@@ -139,25 +97,6 @@ export interface CarouselLabels {
     pause: string;
     play: string;
 }
-
-// carouselLabelsFrom
-export declare function carouselLabelsFrom(t: LibraryTexts): CarouselLabels;
-
-// carouselRotates
-export declare function carouselRotates(state: {
-    autoCycle: boolean;
-    count: number;
-    paused: boolean;
-    hovered: boolean;
-    focused: boolean;
-    reducedMotion: boolean;
-}): boolean;
-
-// carouselStep
-export declare function carouselStep(index: number, step: number, count: number): number | undefined;
-
-// carouselSwipe
-export declare function carouselSwipe(dx: number, dy: number, rtl?: boolean, threshold?: number): "next" | "previous" | undefined;
 
 // ChipSelectionMode
 export type ChipSelectionMode = "none" | "single" | "toggle" | "multiple";
@@ -182,15 +121,6 @@ export declare class ChipSetModel<T> {
     subscribe(listener: () => void): () => void;
 }
 
-// clampDate
-export declare function clampDate(date: IsoDate, min?: IsoDate | null, max?: IsoDate | null): IsoDate;
-
-// closestColor
-export declare function closestColor(palette: readonly string[], color: string): HexColor | undefined;
-
-// colorPickerLabels
-export declare const colorPickerLabels: ColorPickerLabels;
-
 // ColorPickerLabels
 export interface ColorPickerLabels {
     swatch: (color: HexColor) => string;
@@ -200,50 +130,8 @@ export interface ColorPickerLabels {
     hueValue: (hue: number, color: HexColor) => string;
 }
 
-// colorPickerLabelsFrom
-export declare function colorPickerLabelsFrom(t: LibraryTexts): ColorPickerLabels;
-
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
-
-// comboboxKeyAction
-export declare function comboboxKeyAction(key: string, state: {
-    open: boolean;
-    active: number;
-    count: number;
-    inputEmpty: boolean;
-    multiple: boolean;
-}): ComboboxKeyAction;
-
-// ComboboxKeyAction
-export type ComboboxKeyAction = {
-    kind: "open";
-    active: number;
-} | {
-    kind: "move";
-    active: number;
-} | {
-    kind: "select";
-    index: number;
-} | {
-    kind: "close";
-} | {
-    kind: "remove-last";
-} | {
-    kind: "none";
-};
-
-// compareValues
-export declare function compareValues(a: unknown, b: unknown): number;
-
-// computePosition
-export declare function computePosition(anchor: DOMRectReadOnly, floating: {
-    width: number;
-    height: number;
-}, placement: Placement, offset: number): {
-    left: number;
-    top: number;
-};
 
 // createLayer
 export declare function createLayer(): object;
@@ -282,34 +170,6 @@ export declare class DataGridModel<T> {
     private request;
     dispose(): void;
 }
-
-// dateFieldPlaceholder
-export declare function dateFieldPlaceholder(locale: string, t?: LibraryTexts): string;
-
-// DateLimits
-export interface DateLimits {
-    readonly minDate?: IsoDate | null;
-    readonly maxDate?: IsoDate | null;
-    readonly disabledDateFunc?: (date: IsoDate) => boolean;
-}
-
-// DateRange
-export interface DateRange {
-    readonly start?: IsoDate;
-    readonly end?: IsoDate;
-}
-
-// datesOfRange
-export declare function datesOfRange(range: DateRange): IsoDate[];
-
-// dayOfWeek
-export declare function dayOfWeek(date: IsoDate): number;
-
-// daysInMonth
-export declare function daysInMonth(year: number, month: number): number;
-
-// describeColor
-export declare function describeColor(text: string, t?: LibraryTexts): string;
 
 // DialogOptions
 export interface DialogOptions<TComponent extends ComponentBase = ComponentBase> {
@@ -369,37 +229,6 @@ export interface DismissableOptions {
 // DismissReason
 export type DismissReason = "escape" | "outside";
 
-// edgeEnabledOption
-export declare function edgeEnabledOption(step: 1 | -1, disabled: readonly boolean[]): number;
-
-// englishLibraryTexts
-export declare const englishLibraryTexts: LibraryTexts;
-
-// FieldState
-export declare class FieldState {
-    private readonly prefix;
-    private generated;
-    constructor(prefix?: string);
-    id(explicit?: string | null): string;
-    helpId(explicit?: string | null): string;
-    messageId(explicit?: string | null): string;
-    message(context: EditContext | null | undefined, expression: string | null | undefined): string;
-    validity(fieldClass: string | null | undefined): FieldValidity;
-    aria(message: string, hasHelp?: boolean, explicitId?: string | null): Record<string, string | undefined>;
-}
-
-// FieldValidity
-export type FieldValidity = "invalid" | "valid" | "none";
-
-// FileUploadCallbacks
-export interface FileUploadCallbacks {
-    progress(percent: number, title: string, details: ProgressFileDetails): void | Promise<void>;
-    progressChange?(args: FileUploadEventArgs): void | Promise<void>;
-    fileUploaded?(args: FileUploadEventArgs): void | Promise<void>;
-    fileError?(error: FileUploadErrorEventArgs): void | Promise<void>;
-    completed?(files: FileUploadEventArgs[]): void | Promise<void>;
-}
-
 // FileUploader
 export type FileUploader = (file: File, progress: (loaded: number) => void, signal: AbortSignal) => Promise<unknown>;
 
@@ -430,9 +259,6 @@ export declare class FileUploadEventArgs {
     get lastModified(): number;
 }
 
-// fileUploadLabels
-export declare const fileUploadLabels: FileUploadLabels;
-
 // FileUploadLabels
 export interface FileUploadLabels {
     readonly loading: string;
@@ -443,27 +269,8 @@ export interface FileUploadLabels {
     readonly fileSizeExceeded?: string;
 }
 
-// fileUploadLabelsFrom
-export declare function fileUploadLabelsFrom(t: LibraryTexts): FileUploadLabels;
-
 // FileUploadMode
 export type FileUploadMode = "buffer" | "stream";
-
-// FileUploadOptions
-export interface FileUploadOptions {
-    readonly maximumFileCount: number;
-    readonly maximumFileSize: number;
-    readonly bufferSize: number;
-    readonly mode: FileUploadMode;
-    readonly upload?: FileUploader;
-    readonly labels: FileUploadLabels;
-}
-
-// filterOptions
-export declare function filterOptions<TOption>(options: readonly TOption[], text: string, optionText: (option: TOption) => string): TOption[];
-
-// firstDayOfWeek
-export declare function firstDayOfWeek(locale: string): number;
 
 // focusableElements
 export declare function focusableElements(container: ParentNode): HTMLElement[];
@@ -481,29 +288,8 @@ export interface FocusTrapOptions {
     restoreFocus?: boolean;
 }
 
-// formatDateField
-export declare function formatDateField(date: IsoDate, locale: string): string;
-
 // formatFileSize
 export declare function formatFileSize(bytes: number, locale?: string): string;
-
-// formatIsoDate
-export declare function formatIsoDate(date: IsoDate, locale: string, options: Intl.DateTimeFormatOptions): string;
-
-// formatPickerValue
-export declare function formatPickerValue(value: IsoDate, view: CalendarView, locale: string): string;
-
-// formatRatingCount
-export declare function formatRatingCount(count: number, locale?: string): string;
-
-// formatRatingValue
-export declare function formatRatingValue(value: number, locale?: string): string;
-
-// formatTimeField
-export declare function formatTimeField(time: IsoTime, locale: string, hourCycle?: HourCycle): string;
-
-// formatTimePickerValue
-export declare function formatTimePickerValue(value: string, locale: string, hourCycle?: HourCycle): string;
 
 // GridColumn
 export interface GridColumn<T> {
@@ -558,41 +344,11 @@ export interface GridSource<T> {
     pagination?: PaginationState;
 }
 
-// hasChildren
-export declare function hasChildren(item: TreeViewItem): boolean;
-
-// hasSubmitAttempt
-export declare function hasSubmitAttempt(context: EditContext | null | undefined): boolean;
-
 // HexColor
 export type HexColor = string;
 
-// hexToHsv
-export declare function hexToHsv(text: string): Hsv | undefined;
-
-// hexToRgb
-export declare function hexToRgb(text: string): Rgb | undefined;
-
 // hideFromTopLayer
 export declare function hideFromTopLayer(element: HTMLElement): void;
-
-// HighlightFragment
-export interface HighlightFragment {
-    readonly text: string;
-    readonly highlighted: boolean;
-}
-
-// highlightFragments
-export declare function highlightFragments(text: string, terms: readonly string[], options?: HighlightOptions): HighlightFragment[];
-
-// HighlightOptions
-export interface HighlightOptions {
-    caseSensitive?: boolean;
-    untilNextBoundary?: boolean;
-}
-
-// highlightTerms
-export declare function highlightTerms(highlightedText: string | undefined, delimiters?: string, more?: readonly string[]): string[];
 
 // Hotkey
 export interface Hotkey {
@@ -603,30 +359,11 @@ export interface Hotkey {
     readonly meta: boolean;
 }
 
-// hotkeyApplies
-export declare function hotkeyApplies(target: EventTarget | null, hotkey: Hotkey, inTextFields?: boolean): boolean;
-
 // HourCycle
 export type HourCycle = "h12" | "h23";
 
-// Hsv
-export interface Hsv {
-    readonly h: number;
-    readonly s: number;
-    readonly v: number;
-}
-
-// hsvToHex
-export declare function hsvToHex(hsv: Hsv): HexColor;
-
-// hsvToRgb
-export declare function hsvToRgb({ h, s, v }: Hsv): Rgb;
-
 // icon
 export declare function icon(name: string, svg: string, viewBox?: string): IconValue;
-
-// iconSize
-export declare function iconSize(value: IconValue): number;
 
 // IconValue
 export interface IconValue {
@@ -635,32 +372,8 @@ export interface IconValue {
     readonly content: string;
 }
 
-// ImmediateInput
-export declare class ImmediateInput {
-    #private;
-    constructor(signal?: AbortSignal);
-    input(event: Event, delay: number, apply: (value: string) => void): void;
-    cancel(): void;
-    get pending(): boolean;
-}
-
-// initiallyExpanded
-export declare function initiallyExpanded(items: readonly TreeViewItem[]): Set<string>;
-
-// initialTimeOption
-export declare function initialTimeOption(options: readonly IsoTime[], value: string | undefined, disabled: readonly boolean[]): number;
-
 // Intent
 export type Intent = "primary" | "secondary" | "success" | "danger" | "warning" | "info" | "neutral";
-
-// isApplePlatform
-export declare function isApplePlatform(): boolean;
-
-// isDateDisabled
-export declare function isDateDisabled(date: IsoDate, limits: DateLimits): boolean;
-
-// isMonthDisabled
-export declare function isMonthDisabled(year: number, month: number, limits: DateLimits, checkAllDays?: boolean): boolean;
 
 // isoDate
 export declare function isoDate(year: number, month: number, day: number): IsoDate;
@@ -674,26 +387,8 @@ export declare function isoTime(hours: number, minutes: number, seconds?: number
 // IsoTime
 export type IsoTime = string;
 
-// isTopLayer
-export declare function isTopLayer(key: object): boolean;
-
-// isTypingTarget
-export declare function isTypingTarget(target: EventTarget | null): boolean;
-
-// isWizardStepClickable
-export declare function isWizardStepClickable(index: number, current: number, sequence: WizardStepSequence, maxVisited: number, disabled: boolean): boolean;
-
-// isYearDisabled
-export declare function isYearDisabled(year: number, limits: DateLimits, checkAllDays?: boolean): boolean;
-
-// libraryPlural
-export declare function libraryPlural(localizer: StringLocalizer, text: LibraryPluralText, count: number, params?: Record<string, unknown>): string;
-
 // LibraryPluralText
 export type LibraryPluralText = LibraryText extends infer Name ? (Name extends `${infer Base}.other` ? Base : never) : never;
-
-// libraryText
-export declare function libraryText(localizer: StringLocalizer, text: LibraryText, params?: Record<string, unknown>): string;
 
 // LibraryText
 export type LibraryText = keyof typeof libraryTextDefaults;
@@ -815,74 +510,11 @@ export interface LibraryTexts {
     readonly locale: string;
 }
 
-// markSubmitAttempt
-export declare function markSubmitAttempt(context: EditContext): void;
-
-// maskInput
-export declare function maskInput(input: HTMLInputElement, mask: PatternMask): string;
-
-// matchesHotkey
-export declare function matchesHotkey(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">, hotkey: Hotkey): boolean;
-
-// monthNames
-export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
-
-// moveItem
-export declare function moveItem<T>(list: readonly T[], from: number, to: number): T[];
-
-// nextChipSelection
-export declare function nextChipSelection<T>(mode: ChipSelectionMode, selected: readonly T[], value: T, equals?: (a: T, b: T) => boolean): T[];
-
-// nextDateRange
-export declare function nextDateRange(range: DateRange, clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): DateRange;
-
-// nextEnabledOption
-export declare function nextEnabledOption(from: number, step: 1 | -1, disabled: readonly boolean[]): number;
-
-// nextMultipleDates
-export declare function nextMultipleDates(selected: readonly IsoDate[], clicked: IsoDate, hover?: (date: IsoDate) => IsoDate[]): IsoDate[];
-
-// nextWizardStep
-export declare function nextWizardStep(disabled: readonly boolean[], from: number): number;
-
-// normalizeHexColor
-export declare function normalizeHexColor(text: string): HexColor | undefined;
-
-// normalizeIsoTime
-export declare function normalizeIsoTime(text: string): IsoTime | undefined;
-
-// openLayer
-export declare function openLayer(key: object): () => void;
-
 // Orientation
 export type Orientation = "horizontal" | "vertical";
 
-// overflowFit
-export declare function overflowFit(sizes: readonly number[], available: number, more: number, gap?: number): number;
-
-// overlayBackground
-export declare function overlayBackground(color: string, opacity: number): string;
-
-// overlayBehavior
-export declare function overlayBehavior(options: OverlayBehaviorOptions): Attachment<HTMLElement>;
-
-// OverlayBehaviorOptions
-export interface OverlayBehaviorOptions {
-    blocks: "page" | "region" | "none";
-    onPress: (press: OverlayPress) => void;
-}
-
 // OverlayCloseMode
 export type OverlayCloseMode = "all" | "inside" | "outside" | "manual";
-
-// overlayClosesOn
-export declare function overlayClosesOn(mode: OverlayCloseMode, press: OverlayPress): boolean;
-
-// OverlayPress
-export type OverlayPress = "escape" | "inside" | "outside";
-
-// pageLocale
-export declare function pageLocale(): string;
 
 // PaginationChange
 export type PaginationChange = "page" | "total";
@@ -903,12 +535,6 @@ export declare class PaginationState {
     private notify;
 }
 
-// parseDateField
-export declare function parseDateField(text: string, locale: string): IsoDate | undefined;
-
-// parseHotkey
-export declare function parseHotkey(text: string, apple?: boolean): Hotkey | undefined;
-
 // parseIsoDate
 export declare function parseIsoDate(text: string | null | undefined): {
     year: number;
@@ -922,12 +548,6 @@ export declare function parseIsoTime(text: string): {
     minutes: number;
     seconds: number;
 } | undefined;
-
-// parsePickerValue
-export declare function parsePickerValue(text: string, view: CalendarView, locale: string): IsoDate | undefined;
-
-// parseTimeField
-export declare function parseTimeField(text: string, locale: string): IsoTime | undefined;
 
 // PatternMask
 export declare class PatternMask {
@@ -954,9 +574,6 @@ export interface PatternMaskOptions {
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
 
-// previousWizardStep
-export declare function previousWizardStep(disabled: readonly boolean[], from: number): number;
-
 // ProgressFileDetails
 export interface ProgressFileDetails {
     readonly index: number;
@@ -964,57 +581,14 @@ export interface ProgressFileDetails {
     readonly percentage: number;
 }
 
-// propertyPath
-export declare function propertyPath(property: (item: never) => unknown): string | undefined;
-
-// propertyTitle
-export declare function propertyTitle(property: (item: never) => unknown): string | undefined;
-
 // raiseInTopLayer
 export declare function raiseInTopLayer(element: HTMLElement, since: number): number;
-
-// rangeOfDates
-export declare function rangeOfDates(dates: readonly IsoDate[]): DateRange;
-
-// ratingClickValue
-export declare function ratingClickValue(item: number, value: number): number;
-
-// ratingFill
-export declare function ratingFill(item: number, value: number): number;
-
-// ratingKeyTarget
-export declare function ratingKeyTarget(key: {
-    key: string;
-    shiftKey?: boolean;
-}, value: number, max: number, rtl?: boolean): number | undefined;
-
-// ratingLabels
-export declare const ratingLabels: RatingLabels;
 
 // RatingLabels
 export interface RatingLabels {
     item: (value: number, max: number) => string;
     display: (value: string, max: number, count: string | undefined) => string;
 }
-
-// ratingLabelsFrom
-export declare function ratingLabelsFrom(t: LibraryTexts): RatingLabels;
-
-// resizeSplitter
-export declare function resizeSplitter(sizes: readonly number[], bar: number, delta: number, mins: readonly number[], maxs: readonly number[]): number[];
-
-// Rgb
-export interface Rgb {
-    readonly r: number;
-    readonly g: number;
-    readonly b: number;
-}
-
-// rgbToHex
-export declare function rgbToHex({ r, g, b }: Rgb): HexColor;
-
-// rgbToHsv
-export declare function rgbToHsv({ r, g, b }: Rgb): Hsv;
 
 // rovingFocus
 export declare function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement>;
@@ -1028,20 +602,8 @@ export interface RovingFocusOptions {
     typeahead?: boolean;
 }
 
-// runFileUpload
-export declare function runFileUpload(files: readonly File[], options: FileUploadOptions, callbacks: FileUploadCallbacks): Promise<FileUploadEventArgs[]>;
-
 // scrollLock
 export declare const scrollLock: Attachment<HTMLElement>;
-
-// SearchRunner
-export declare class SearchRunner<TOption> {
-    private readonly search;
-    private current?;
-    constructor(search: (text: string, signal: AbortSignal) => Promise<readonly TOption[]> | readonly TOption[]);
-    run(text: string): Promise<readonly TOption[] | undefined>;
-    cancel(): void;
-}
 
 // SelectionMode
 export type SelectionMode = "none" | "single" | "multiple";
@@ -1052,23 +614,6 @@ export declare function showInTopLayer(element: HTMLElement): boolean;
 // Size
 export type Size = "small" | "medium" | "large";
 
-// sliderFraction
-export declare function sliderFraction(value: number, min: number, max: number): number;
-
-// sliderTicks
-export declare function sliderTicks(min: number, max: number, step: number, limit?: number): number[];
-
-// sortableInsertIndex
-export declare function sortableInsertIndex(rects: readonly DOMRect[], point: {
-    x: number;
-    y: number;
-}, orientation: Orientation): number;
-
-// sortableList
-export declare function sortableList(handle: () => SortableListHandle, options: {
-    indicatorClass: string;
-}): Attachment<HTMLElement>;
-
 // SortableListEventArgs
 export declare class SortableListEventArgs {
     readonly oldIndex: number;
@@ -1077,29 +622,6 @@ export declare class SortableListEventArgs {
     readonly toListId: string | undefined;
     constructor(oldIndex: number, newIndex: number, fromListId: string | undefined, toListId: string | undefined);
 }
-
-// SortableListHandle
-export interface SortableListHandle {
-    readonly id: string;
-    readonly group?: string;
-    readonly clone: boolean;
-    readonly drop: boolean;
-    readonly sort: boolean;
-    readonly handle?: string;
-    readonly orientation: Orientation;
-    readonly name: string;
-    readonly labels: SortableListLabels;
-    readonly count: number;
-    isFixed(index: number): boolean;
-    itemAt(index: number): unknown;
-    move(from: number, to: number): Promise<void>;
-    remove(index: number, args: SortableListEventArgs): Promise<void>;
-    add(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
-    announce(text: string): void;
-}
-
-// sortableListLabels
-export declare const sortableListLabels: SortableListLabels;
 
 // SortableListLabels
 export interface SortableListLabels {
@@ -1110,9 +632,6 @@ export interface SortableListLabels {
     readonly dropped: (item: string, position: number, count: number) => string;
     readonly canceled: (item: string) => string;
 }
-
-// sortableListLabelsFrom
-export declare function sortableListLabelsFrom(t: LibraryTexts): SortableListLabels;
 
 // SortDirection
 export type SortDirection = "auto" | "ascending" | "descending";
@@ -1130,38 +649,11 @@ export declare class SplitterEventArgs {
     constructor(paneIndex: number);
 }
 
-// splitterKeyDelta
-export declare function splitterKeyDelta(key: string, orientation: "horizontal" | "vertical", shift: boolean, rtl?: boolean): number | undefined;
-
-// splitterPercent
-export declare function splitterPercent(length: string | null | undefined, splitterPixels: number): number | undefined;
-
 // SplitterResizeEventArgs
 export interface SplitterResizeEventArgs {
     readonly paneIndex: number;
     readonly newSize: number;
 }
-
-// startOfMonth
-export declare function startOfMonth(date: IsoDate): IsoDate;
-
-// startOfWeek
-export declare function startOfWeek(date: IsoDate, firstDayOfWeek: number): IsoDate;
-
-// swatchKeyTarget
-export declare function swatchKeyTarget(key: {
-    key: string;
-    ctrlKey?: boolean;
-}, index: number, count: number, columns: number, rtl?: boolean): number | undefined;
-
-// swatchPalette
-export declare const swatchPalette: readonly string[];
-
-// timeFieldPlaceholder
-export declare function timeFieldPlaceholder(locale: string, hourCycle?: HourCycle, t?: LibraryTexts): string;
-
-// timeOptions
-export declare function timeOptions(startHour?: number, endHour?: number, increment?: number): IsoTime[];
 
 // Toast
 export interface Toast {
@@ -1206,22 +698,6 @@ export interface ToastOptions {
 // today
 export declare function today(now?: Date): IsoDate;
 
-// toggleAll
-export declare function toggleAll<T>(selected: readonly T[], rows: readonly T[]): T[];
-
-// toggleOption
-export declare function toggleOption<TOption>(selected: readonly TOption[], option: TOption, options: {
-    multiple: boolean;
-    maximum?: number;
-    key: (option: TOption) => unknown;
-}): TOption[];
-
-// toggleSelection
-export declare function toggleSelection<T>(selected: readonly T[], item: T, mode: SelectionMode): T[];
-
-// toMask
-export declare function toMask(mask: PatternMask | string | undefined): PatternMask | undefined;
-
 // toolbarFocus
 export declare function toolbarFocus(options?: ToolbarFocusOptions): Attachment<HTMLElement>;
 
@@ -1243,27 +719,6 @@ export interface TooltipOptions {
 
 // topLayer
 export declare const topLayer: Attachment<HTMLElement>;
-
-// treeKeyAction
-export declare function treeKeyAction(items: readonly TreeViewItem[], expanded: ReadonlySet<string>, focusedId: string, key: string): TreeKeyAction | null;
-
-// TreeKeyAction
-export type TreeKeyAction = {
-    readonly kind: "focus";
-    readonly id: string;
-} | {
-    readonly kind: "expand";
-    readonly id: string;
-} | {
-    readonly kind: "collapse";
-    readonly id: string;
-} | {
-    readonly kind: "select";
-    readonly id: string;
-};
-
-// treePath
-export declare function treePath(items: readonly TreeViewItem[], id: string): string[] | undefined;
 
 // TreeViewItem
 export interface TreeViewItem {
@@ -1312,43 +767,6 @@ export interface UploadResponse {
 // uploadTo
 export declare function uploadTo(url: string, options?: Omit<UploadFileOptions, "onProgress" | "signal">): FileUploader;
 
-// VisibleTreeItem
-export interface VisibleTreeItem {
-    readonly item: TreeViewItem;
-    readonly level: number;
-    readonly parentId: string | undefined;
-}
-
-// visibleTreeItems
-export declare function visibleTreeItems(items: readonly TreeViewItem[], expanded: ReadonlySet<string>): VisibleTreeItem[];
-
-// weekdayNames
-export declare function weekdayNames(locale: string, firstDay: number, width: "narrow" | "short" | "long"): string[];
-
-// wheelKeyTarget
-export declare function wheelKeyTarget(key: {
-    key: string;
-}, index: number, rowSizes: readonly number[], rtl?: boolean): number | undefined;
-
-// wheelLayout
-export declare function wheelLayout(rowSizes: readonly number[], size?: number, padding?: number): WheelLayout;
-
-// WheelLayout
-export interface WheelLayout {
-    readonly viewBox: string;
-    readonly hexagons: readonly {
-        readonly cx: number;
-        readonly cy: number;
-        readonly points: string;
-    }[];
-}
-
-// wheelPalette
-export declare const wheelPalette: readonly string[];
-
-// wheelRowSizes
-export declare const wheelRowSizes: readonly number[];
-
 // WizardStepChangeEventArgs
 export declare class WizardStepChangeEventArgs {
     readonly targetIndex: number;
@@ -1359,9 +777,6 @@ export declare class WizardStepChangeEventArgs {
 
 // WizardStepSequence
 export type WizardStepSequence = "linear" | "any" | "visited";
-
-// wizardStepStatus
-export declare function wizardStepStatus(index: number, current: number): WizardStepStatus;
 
 // WizardStepStatus
 export type WizardStepStatus = "previous" | "current" | "next";

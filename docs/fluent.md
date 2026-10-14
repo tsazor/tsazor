@@ -30,7 +30,10 @@ npx @tsazor/fluent add ToastRegion --root apps/my-app --print
 Copy-in mode writes `src/components/<Name>.tsazor` (+ sidecar CSS) plus every
 sibling component the markup needs, and the token files once into
 `src/styles/`. `--print` shows the plan dry-run, `--overwrite` replaces. The
-CLI never edits your files; it prints the next steps.
+CLI never edits your files; it prints the next steps. The copies import the
+helpers of `@tsazor/ui/kit`, which may change in any release, so the app
+installs `@tsazor/ui` at exactly the version they came from (the CLI prints
+`npm install --save-exact @tsazor/ui@<version>`).
 
 Copied and npm-shipped components coexist: all classes are globally unique
 (`fui-<block>__<element>--<modifier>`) and the dist build ships the same

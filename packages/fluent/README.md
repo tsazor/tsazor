@@ -38,7 +38,8 @@ Copies real `.tsazor` sources (component + sidecar CSS + needed siblings) into
 dry-run. The copied sources compile through your own vite-plugin pipeline —
 they are yours to edit. They expect the standard runtime `@import` set in your
 `_Imports.tsazor` (see `docs/getting-started.md`), like `src/_Imports.tsazor`
-in this package.
+in this package. They import `@tsazor/ui/kit`, whose helpers may change in any release:
+install `@tsazor/ui` at exactly the version they came from (`npm install --save-exact`, as the CLI prints).
 
 ## Docs
 

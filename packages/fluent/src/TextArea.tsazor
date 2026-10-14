@@ -2,8 +2,9 @@
     label; the value updates on change. Inside a FluentForm it shows the field's first validation
     message (role="alert", aria-invalid, aria-describedby) once a submit was attempted. *@
 @import { withAttributes } from "./attributes"
-@import { uniqueId, ImmediateInput } from "@tsazor/ui"
-@import { hasSubmitAttempt } from "@tsazor/ui"
+@import { uniqueId } from "@tsazor/ui"
+@import { ImmediateInput } from "@tsazor/ui/kit"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
 
 @inherits InputBase<string>
 

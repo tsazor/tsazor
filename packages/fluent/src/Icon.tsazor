@@ -2,7 +2,8 @@
     `icon()` from @tsazor/ui), or a `name` from the small built-in set. Decorative (aria-hidden) by default; with a
     title (or ariaLabel) it gets role="img". An unknown name falls back to check. *@
 @import { MarkupString } from "@tsazor/runtime"
-@import { builtInIcons, iconSize, type IconValue } from "@tsazor/ui"
+@import { type IconValue } from "@tsazor/ui"
+@import { builtInIcons, iconSize } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 <svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>

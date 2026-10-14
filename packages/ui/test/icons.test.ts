@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { builtInIcons, icon, iconSize } from "../src/index";
+import { icon } from "../src/index";
+import { builtInIcons, iconSize } from "../src/kit";
 
 describe("icon()", () => {
   it("takes an SVG's inner markup, with the default 24px viewBox", () => {

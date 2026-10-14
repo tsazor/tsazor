@@ -2,7 +2,7 @@
     several string values out of `options`: the value is the array of the checked options' values,
     in the order of `options`. Inside a FluentForm it shows the field's first validation message
     once a submit was attempted. *@
-@import { FieldState } from "@tsazor/ui"
+@import { FieldState } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 @inherits InputBase<string[]>

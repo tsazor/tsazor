@@ -6,12 +6,14 @@
     is marked when the color isn't in it. `onPick` is raised by a deliberate choice (a click, Enter or Space, the end
     of a drag) — a ColorPickerInput closes on it. *@
 @import type { Attachment } from "@tsazor/runtime"
+@import { type ColorPickerLabels, type Orientation } from "@tsazor/ui"
 @import {
     closestColor, hexToHsv, hsvToHex, normalizeHexColor, swatchKeyTarget, swatchPalette, wheelKeyTarget,
-    wheelLayout, wheelPalette, wheelRowSizes, type ColorPickerLabels, type Hsv, type Orientation,
-} from "@tsazor/ui"
+    wheelLayout, wheelPalette, wheelRowSizes, type Hsv,
+} from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
-@import { libraryTexts, colorPickerLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { colorPickerLabelsFrom } from "@tsazor/ui/kit"
 
 <div @attributes="@this.rootAttributes" @ref="root">
     @if (this.view === "hsv") {

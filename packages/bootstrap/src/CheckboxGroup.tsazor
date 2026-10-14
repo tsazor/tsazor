@@ -2,7 +2,7 @@
     for several string values out of `options`: the value is the array of the checked options' values, in the order
     of `options`. Validation state and message as with TextInput — the same parameters as the Fluent skin's
     CheckboxGroup. *@
-@import { FieldState } from "@tsazor/ui"
+@import { FieldState } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 @inherits InputBase<string[]>

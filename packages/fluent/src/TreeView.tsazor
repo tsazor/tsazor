@@ -3,7 +3,8 @@
     move between the visible nodes and open or close them, Home and End jump, Enter and Space
     select. A click selects a node; its chevron opens and closes it. The selected node's ancestors
     start open, so the selection is in view. *@
-@import { initiallyExpanded, treeKeyAction, treePath, visibleTreeItems, type TreeViewItem } from "@tsazor/ui"
+@import { type TreeViewItem } from "@tsazor/ui"
+@import { initiallyExpanded, treeKeyAction, treePath, visibleTreeItems } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 <ul role="tree" @attributes="@this.treeAttributes" @ref="root" @onkeydown="handleKeydown">

@@ -4,7 +4,7 @@
     `for` names the model field whose first message is shown after a submit attempt, as the skin's
     inputs do. *@
 @import { EditContext } from "@tsazor/runtime"
-@import { hasSubmitAttempt } from "@tsazor/ui"
+@import { hasSubmitAttempt } from "@tsazor/ui/kit"
 
 <div class="mb-3">
     @if (label) {

@@ -6,10 +6,12 @@
     marigold: warning) style them. `readOnly` shows the value only (or take a RatingDisplay) — the same parameters as
     the Fluent skin's Rating. *@
 @import type { IconValue } from "@tsazor/ui"
-@import { ratingClickValue, ratingKeyTarget, uniqueId, type RatingLabels } from "@tsazor/ui"
+@import { uniqueId, type RatingLabels } from "@tsazor/ui"
+@import { ratingClickValue, ratingKeyTarget } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 @import { Star, StarFill } from "./core-icons"
-@import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { ratingLabelsFrom } from "@tsazor/ui/kit"
 
 @inherits InputBase<number>
 

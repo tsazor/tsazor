@@ -4,7 +4,7 @@
     `hideChildContentOnRepress` the next press hides it again. The key's default action and propagation stop
     (`preventEventPropagation`). Tell screen-reader users where the shortcut leads: `aria-keyshortcuts` on that control
     (`ariaKeyShortcuts(parseHotkey(keys))` in @tsazor/ui writes it). *@
-@import { hotkeyApplies, matchesHotkey, parseHotkey } from "@tsazor/ui"
+@import { hotkeyApplies, matchesHotkey, parseHotkey } from "@tsazor/ui/kit"
 
 @if (this.contentShown) {
     @childContent

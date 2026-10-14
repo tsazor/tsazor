@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { DataGridModel, GridSort, PaginationState, compareValues, propertyPath, propertyTitle, toggleAll, toggleSelection, type GridColumn, type GridItemsProviderRequest } from "../src/index";
+import { DataGridModel, GridSort, PaginationState, type GridColumn, type GridItemsProviderRequest } from "../src/index";
+import { compareValues, propertyPath, propertyTitle, toggleAll, toggleSelection } from "../src/kit";
 
 interface Order {
   id: number;

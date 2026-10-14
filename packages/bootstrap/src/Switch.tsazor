@@ -1,7 +1,7 @@
 @** A Bootstrap toggle switch (`.form-check.form-switch`, `role="switch"`; InputBase<boolean> — bind it
     with @bind) with its label to the right. The same as `<Checkbox Switch="true">`, under the name
     both skins share. Validation state and message as with TextInput. *@
-@import { FieldState } from "@tsazor/ui"
+@import { FieldState } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 @inherits InputBase<boolean>

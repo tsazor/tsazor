@@ -6,7 +6,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { CascadingValue, EditContext, EventCallback, ValidationMessageStore, type RenderFragment } from "@tsazor/runtime";
-import { markSubmitAttempt } from "@tsazor/ui";
+import { markSubmitAttempt } from "@tsazor/ui/kit";
 import { Button, ButtonGroup, DateInput, FileInput, FormField, Popover, Skeleton } from "../dist/index.js";
 
 const SKIN = {

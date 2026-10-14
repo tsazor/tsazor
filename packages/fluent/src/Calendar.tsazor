@@ -6,14 +6,18 @@
     day or a week, Home and End to the week's ends, Page Up and Page Down by a month (with Shift a year), Enter or
     Space picks. The names and the week's first day come from `locale`. *@
 @import {
-    addDays, addMonths, addYears, calendarKeyTarget, calendarWeeks, calendarYears, clampDate,
-    datesOfRange, daysInMonth, firstDayOfWeek, formatIsoDate, isDateDisabled, isMonthDisabled, isoDate, isYearDisabled, monthNames,
-    nextDateRange, nextMultipleDates, parseIsoDate, rangeOfDates, startOfMonth, today, uniqueId, weekdayNames,
-    type CalendarDay, type CalendarLabels, type CalendarSelectMode, type CalendarView, type DateLimits, type IsoDate,
+    isoDate, parseIsoDate, today, uniqueId, type CalendarDay, type CalendarLabels, type CalendarSelectMode,
+    type CalendarView, type IsoDate,
 } from "@tsazor/ui"
+@import {
+    addDays, addMonths, addYears, calendarKeyTarget, calendarWeeks, calendarYears, clampDate, datesOfRange,
+    daysInMonth, firstDayOfWeek, formatIsoDate, isDateDisabled, isMonthDisabled, isYearDisabled, monthNames,
+    nextDateRange, nextMultipleDates, rangeOfDates, startOfMonth, weekdayNames, type DateLimits,
+} from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 @import { ArrowDown20Regular, ArrowUp20Regular } from "./core-icons"
-@import { libraryTexts, calendarLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { calendarLabelsFrom } from "@tsazor/ui/kit"
 
 @inherits InputBase<string>
 

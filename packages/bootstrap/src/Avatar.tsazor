@@ -3,7 +3,8 @@
     the name) or a named color, drawn as a tint of Bootstrap's nearest hue; `shape` circular | square; `size` in px.
     `active` rings it, `active="false"` dims it. With onClick it is a button (Enter and Space click it). `name` is its
     accessible name and, with `tooltip`, its tooltip. A badge goes in its content. *@
-@import { avatarColorFor, avatarIconSize, avatarInitials, type AvatarColor, type IconValue } from "@tsazor/ui"
+@import { type AvatarColor, type IconValue } from "@tsazor/ui"
+@import { avatarColorFor, avatarIconSize, avatarInitials } from "@tsazor/ui/kit"
 @import { PersonFill } from "./core-icons"
 @import { withClass } from "./attributes"
 @import { avatarColors } from "./vocabulary"

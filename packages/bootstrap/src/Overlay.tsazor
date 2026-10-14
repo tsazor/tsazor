@@ -6,7 +6,8 @@
     too, unless manual. interactive blocks nothing. It shows a Spinner unless childContent says otherwise — the same
     parameters as the Fluent skin's Overlay; the background is the page's (--bs-body-bg), so it fades what it covers. *@
 @import type { Attachment } from "@tsazor/runtime"
-@import { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayCloseMode, type OverlayPress } from "@tsazor/ui"
+@import { type OverlayCloseMode } from "@tsazor/ui"
+@import { overlayBackground, overlayBehavior, overlayClosesOn, type OverlayPress } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { libraryTexts } from "@tsazor/ui"

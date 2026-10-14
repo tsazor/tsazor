@@ -1,6 +1,7 @@
 @** One node of a TreeView, and — rendering itself — its open subtree. The item's iconStart and iconEnd frame its
     text; iconCollapsed and iconExpanded replace the chevron in their state. *@
-@import { hasChildren, type IconValue, type TreeViewItem } from "@tsazor/ui"
+@import { type IconValue, type TreeViewItem } from "@tsazor/ui"
+@import { hasChildren } from "@tsazor/ui/kit"
 @import { ChevronRight12Regular } from "./core-icons"
 @import type { TreeHost } from "./tree-host"
 

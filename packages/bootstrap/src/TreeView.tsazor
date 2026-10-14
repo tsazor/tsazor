@@ -3,7 +3,8 @@
     move between the visible nodes and open or close them, Home and End jump, Enter and Space
     select. A click selects a node; its chevron opens and closes it. The selected node's ancestors
     start open, so the selection is in view — the same parameters as the Fluent skin's TreeView. *@
-@import { initiallyExpanded, treeKeyAction, treePath, visibleTreeItems, type TreeViewItem } from "@tsazor/ui"
+@import { type TreeViewItem } from "@tsazor/ui"
+@import { initiallyExpanded, treeKeyAction, treePath, visibleTreeItems } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 <ul role="tree" aria-label="@this.ariaLabel" @attributes="@withClass("tz-tree", this.additionalAttributes)" @ref="root" @onkeydown="handleKeydown">

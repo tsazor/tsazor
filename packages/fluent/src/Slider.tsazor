@@ -5,7 +5,8 @@
     `immediate` false. `tickMarks` draws a mark per step, with `tickMarkLabels` under them; `valueLabel` shows the
     value, through `valueFormat` ("40 %"), which screen readers read too (aria-valuetext). Inside a FluentForm it
     shows the field's first validation message once a submit was attempted. *@
-@import { hasSubmitAttempt, ImmediateInput, sliderFraction, sliderTicks, uniqueId, type Orientation } from "@tsazor/ui"
+@import { uniqueId, type Orientation } from "@tsazor/ui"
+@import { hasSubmitAttempt, ImmediateInput, sliderFraction, sliderTicks } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
 @inherits InputBase<number>

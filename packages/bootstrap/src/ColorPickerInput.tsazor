@@ -6,8 +6,9 @@
     the field opens it. `hideTextInput` leaves the button alone. Text that is no color goes to validation as it was
     typed — the same parameters as the Fluent skin's ColorPickerInput. *@
 @import {
-    anchoredPosition, createLayer, dismissable, FieldState, focusTrap, normalizeHexColor, type ColorPickerLabels, type IconValue,
+    anchoredPosition, createLayer, dismissable, focusTrap, type ColorPickerLabels, type IconValue,
 } from "@tsazor/ui"
+@import { FieldState, normalizeHexColor } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 @import { Palette } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"

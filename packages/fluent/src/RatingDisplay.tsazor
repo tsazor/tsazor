@@ -4,10 +4,12 @@
     1,234 ratings" (`labels`). `shape` is the star's icon; `size` and `color` (neutral, brand, marigold) as the
     Rating's. *@
 @import type { IconValue } from "@tsazor/ui"
-@import { formatRatingCount, formatRatingValue, ratingFill, type RatingLabels } from "@tsazor/ui"
+@import { type RatingLabels } from "@tsazor/ui"
+@import { formatRatingCount, formatRatingValue, ratingFill } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 @import { Star20Filled } from "./core-icons"
-@import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { ratingLabelsFrom } from "@tsazor/ui/kit"
 
 <div role="img" @attributes="@this.rootAttributes">
     @if (this.compact) {

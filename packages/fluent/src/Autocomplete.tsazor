@@ -8,7 +8,8 @@
     the form was submitted the field shows its validation message. *@
 @typeparam TOption
 @import { EditContext } from "@tsazor/runtime"
-@import { SearchRunner, anchoredPosition, comboboxKeyAction, dismissable, filterOptions, hasSubmitAttempt, toggleOption, uniqueId } from "@tsazor/ui"
+@import { anchoredPosition, dismissable, uniqueId } from "@tsazor/ui"
+@import { SearchRunner, comboboxKeyAction, filterOptions, hasSubmitAttempt, toggleOption } from "@tsazor/ui/kit"
 @import { topLayer } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { Dismiss20Regular } from "./core-icons"

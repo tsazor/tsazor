@@ -7,12 +7,13 @@
     open the chooser — the same parameters as the Fluent skin's FileUpload. *@
 @import { InputFile, InputFileChangeEventArgs, type Attachment } from "@tsazor/runtime"
 @import {
-    runFileUpload, uniqueId,
-    type FileUploader, type FileUploadErrorEventArgs, type FileUploadEventArgs, type FileUploadLabels, type FileUploadMode,
-    type ProgressFileDetails,
+    uniqueId, type FileUploader, type FileUploadErrorEventArgs, type FileUploadEventArgs, type FileUploadLabels,
+    type FileUploadMode, type ProgressFileDetails,
 } from "@tsazor/ui"
+@import { runFileUpload } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
-@import { libraryTexts, fileUploadLabelsFrom } from "@tsazor/ui"
+@import { libraryTexts } from "@tsazor/ui"
+@import { fileUploadLabelsFrom } from "@tsazor/ui/kit"
 
 <div @attributes="@withClass(this.uploadClass, this.additionalAttributes)">
     <label class="tz-file-upload__zone" aria-hidden="@(this.dragDropZoneVisible ? null : "true")" @attach="this.dropZone">

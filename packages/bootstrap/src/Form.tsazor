@@ -4,7 +4,7 @@
     Button with type="submit" inside. In a WizardStep the wizard submits it before it moves on. *@
 @using @tsazor/runtime
 @import type { EditContext } from "@tsazor/runtime"
-@import { markSubmitAttempt } from "@tsazor/ui"
+@import { markSubmitAttempt } from "@tsazor/ui/kit"
 
 <EditForm @attributes="additionalAttributes" Model="@model" Validators="@validators" OnValidSubmit="@handleValidSubmit" OnInvalidSubmit="@handleInvalidSubmit" Context="formContext" novalidate><WizardFormLink editContext="@formContext" onValid="@this.wizardValid" onInvalid="@this.wizardInvalid" />@childContent(formContext)</EditForm>
 
