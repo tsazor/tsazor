@@ -150,11 +150,17 @@ export class ProjectRegistry implements ShadowLookup {
    *  scan, now tsconfig-partitioned). Fire-and-forget per file; returns the
    *  scanned count. */
   async scanAll(): Promise<number> {
+    // After the caller's turn (the initialize answer goes out first), then one file at a time with the event loop free
+    // in between: a monorepo has a thousand .tsazor files, and the requests that arrive meanwhile must not wait for all.
+    await yieldToEventLoop();
     const seen = new Map<string, string>(); // lowercased key → real-case path
     for (const root of this.workspaceRoots) {
       for (const file of findTsazorFiles(root)) seen.set(toFileKey(path.resolve(file)), file);
     }
-    for (const file of seen.values()) void this.ensureTsazor(file).catch(() => undefined);
+    for (const file of seen.values()) {
+      await this.ensureTsazor(file).catch(() => undefined);
+      await yieldToEventLoop();
+    }
     return seen.size;
   }
 
@@ -208,4 +214,9 @@ export class ProjectRegistry implements ShadowLookup {
       .map((key) => this.files.get(key))
       .filter((file): file is string => file !== undefined);
   }
+}
+
+/** A macrotask's pause: what is queued (a request, a document change) runs first. */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
 }

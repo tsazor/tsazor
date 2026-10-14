@@ -173,6 +173,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     read is the error TZS036 in `tsazor check` (before: silent, its tags unresolved); a newer format version is the
     warning TZS036, and its components are read as far as this version knows them. The Vite plugin prints both
     once. A test reads a manifest written by 1.0 in every later 1.x.
+- **Fixed — `@tsazor/lsp`: the language server can run from an npm install** — `tsazor-lsp` (stdio), with its
+  `vscode-languageserver` packages as dependencies (they were dev dependencies, and the package had no bin). It
+  answered `initialize` only after shadowing every `.tsazor` of the workspace (minutes in a monorepo; the scan had no
+  `await`): the scan now runs after the answer, a file at a time. The watched-files registration, which stood after
+  a `return`, runs again.
+- **Fixed — `@tsazor/dotnet`: an `integer[]` or `boolean[]` query parameter** generated a client that failed strict
+  `tsc` (`queryString` took `string[]` only).
 - **Fixed — `@tsazor/dotnet`: a generated client used neither the `baseUrl` nor the `defaultHeaders` of its
   `TsazorHttp`** — a relative path went to the page's origin, so `--base-url` (which generates
   `new TsazorHttp({ baseUrl })`) did nothing. The client's own `baseUrl` option still wins; the call's headers win over

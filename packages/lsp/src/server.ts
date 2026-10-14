@@ -398,6 +398,14 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
     return [...fixes, ...imports, ...inferred, ...refactors];
   });
 
+  // Watched files need dynamic registration (the LSP static capability is
+  // client-side only). Handlers installed above. (It stood after the return and never ran.)
+  connection.onInitialized(() => {
+    void connection.client.register(DidChangeWatchedFilesNotification.type, {
+      watchers: [{ globPattern: "**/*.tsazor" }, { globPattern: "**/tsconfig.json" }],
+    });
+  });
+
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
@@ -407,14 +415,6 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       completionProvider: { triggerCharacters: ["<", "@", " ", "."], resolveProvider: true },
     },
   };
-
-  // Watched files need dynamic registration (the LSP static capability is
-  // client-side only). Handlers installed above.
-  connection.onInitialized(() => {
-    void connection.client.register(DidChangeWatchedFilesNotification.type, {
-      watchers: [{ globPattern: "**/*.tsazor" }, { globPattern: "**/tsconfig.json" }],
-    });
-  });
 });
 
 documents.listen(connection);

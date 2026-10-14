@@ -843,6 +843,12 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vscode-languageserver:
+        specifier: ^9.0.1
+        version: 9.0.1
+      vscode-languageserver-textdocument:
+        specifier: ^1.0.12
+        version: 1.0.15
     devDependencies:
       '@types/node':
         specifier: ^20.17.0
@@ -850,12 +856,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@20.19.43)(happy-dom@18.0.1)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
-      vscode-languageserver:
-        specifier: ^9.0.1
-        version: 9.0.1
-      vscode-languageserver-textdocument:
-        specifier: ^1.0.12
-        version: 1.0.15
 
   packages/markdown:
     dependencies:

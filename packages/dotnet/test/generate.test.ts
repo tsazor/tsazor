@@ -154,6 +154,30 @@ describe("generateClient — client", () => {
   });
 });
 
+describe("generateClient — query arrays", () => {
+  it("types an integer[] query parameter so the client passes strict tsc (queryString took string[] only)", async () => {
+    const document = {
+      openapi: "3.0.1",
+      info: { title: "Shop", version: "1" },
+      paths: {
+        "/api/items": {
+          get: {
+            operationId: "ListItems",
+            parameters: [
+              { name: "ids", in: "query", schema: { type: "array", items: { type: "integer", format: "int32" } } },
+              { name: "flags", in: "query", schema: { type: "array", items: { type: "boolean" } } },
+            ],
+            responses: { "200": { description: "OK" } },
+          },
+        },
+      },
+    } as unknown as OpenApiDocument;
+    const generation = generateClient(document, { clientName: "Shop" });
+    expect(generation.files.find((f) => f.path === "shop.ts")!.content).toContain("    ids?: number[];");
+    expect(await typeErrors(generation.files, "query-arrays")).toBe("");
+  });
+});
+
 describe("generateClient — path values and parameters outside the signature (D13)", () => {
   const versioned: OpenApiDocument = {
     openapi: "3.0.1",

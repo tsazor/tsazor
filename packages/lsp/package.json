@@ -13,6 +13,9 @@
   },
   "type": "module",
   "description": "Language server for Tsazor (.tsazor): live compiler diagnostics, hover and go-to-definition.",
+  "bin": {
+    "tsazor-lsp": "./dist/bin.js"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -46,13 +49,13 @@
   "dependencies": {
     "@tsazor/compiler": "workspace:*",
     "@tsazor/workspace": "workspace:*",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
-    "vscode-languageserver-textdocument": "^1.0.12",
-    "vitest": "^3.2.4",
-    "vscode-languageserver": "^9.0.1"
+    "vitest": "^3.2.4"
   },
   "tsazor": {
     "internal": true

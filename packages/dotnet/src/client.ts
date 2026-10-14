@@ -102,7 +102,9 @@ export function formData(fields: Record<string, unknown>): FormData {
  * the parameter, arrays are sent as repeated keys (ASP.NET Core:
  * `?tag=a&tag=b`). Returns `"?a=1"` or `""` (nothing appended).
  */
-export function queryString(params: Record<string, string | number | boolean | string[] | null | undefined> | undefined): string {
+export function queryString(
+  params: Record<string, string | number | boolean | readonly (string | number | boolean)[] | null | undefined> | undefined,
+): string {
   if (params === undefined) return "";
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
