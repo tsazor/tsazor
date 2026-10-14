@@ -1,15 +1,18 @@
 /**
  * Tsazor CLI: the gate form of the type layer — `tsazor check` reports
  * compiler + TypeScript diagnostics for every project `.tsazor` and exits
- * nonzero on errors — and `tsazor codemod` (2.5), the `.razor` → `.tsazor`
- * migration command (dry-run by default, `--write` beside the source).
+ * nonzero on errors — `tsazor codemod` (2.5), the `.razor` → `.tsazor`
+ * migration command (dry-run by default, `--write` beside the source), and
+ * `tsazor build-lib`, a component library's build (`buildLibrary`).
  */
 import { readFileSync } from "node:fs";
 import { checkProject } from "@tsazor/lsp";
+import { buildLibrary } from "./build-library.js";
 import { codemodProject } from "./codemod.js";
 
 export { checkProject, type CheckResult, type CheckDiagnostic } from "@tsazor/lsp";
 export { codemodProject, findRazorFiles, type CodemodOptions, type CodemodReport, type CodemodFileReport } from "./codemod.js";
+export { buildLibrary, type BuildLibraryOptions, type BuildLibraryResult } from "./build-library.js";
 
 /** The package's own version (one for every package, design-release.md D-P1) — read when asked: a bundler that loads
  * this module (the tutorial's tests) has no file URL to read it from. */
@@ -27,7 +30,7 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     return 0;
   }
   const help = rootArgument === "--help" || rootArgument === "-h";
-  if ((command !== "check" && command !== "codemod") || help) {
+  if ((command !== "check" && command !== "codemod" && command !== "build-lib") || help) {
     stdout("Usage: tsazor check [project-root]");
     stdout("  Compiler and TypeScript diagnostics for every .tsazor under root.");
     stdout("  Exit code 1 when any error is found.");
@@ -36,7 +39,34 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     stdout("  payloads (TZS021 C# forms, TZS022 var, TZS024 interpolated strings)");
     stdout("  and the PascalCase API forms; writes <name>.tsazor beside the source");
     stdout("  with --write, reports the dry-run otherwise.");
+    stdout("Usage: tsazor build-lib [package-dir] [--stylesheet <file>]");
+    stdout("  Builds a component library: src/*.tsazor and src/*.ts into dist/, with the");
+    stdout("  component manifest, the declarations and the index; --stylesheet joins");
+    stdout("  src/styles/*.css and the components' sidecar CSS into dist/<file>.");
     return help ? 0 : 2;
+  }
+  if (command === "build-lib") {
+    const options = [...extra];
+    let stylesheet: string | undefined;
+    // `tsazor build-lib --stylesheet x.css`: the package directory is the current one.
+    const packageDir = rootArgument === undefined || rootArgument.startsWith("--") ? "." : rootArgument;
+    if (rootArgument?.startsWith("--")) options.unshift(rootArgument);
+    while (options.length > 0) {
+      const option = options.shift()!;
+      const value = options.shift();
+      if (option !== "--stylesheet" || value === undefined) {
+        stdout("Usage: tsazor build-lib [package-dir] [--stylesheet <file>]");
+        return 2;
+      }
+      stylesheet = value;
+    }
+    try {
+      const result = await buildLibrary({ packageDir, ...(stylesheet !== undefined ? { stylesheet: { file: stylesheet } } : {}), log: stdout });
+      return result.errors.length > 0 ? 1 : 0;
+    } catch (error) {
+      stdout(`tsazor build-lib failed: ${error instanceof Error ? error.message : String(error)}`);
+      return 2;
+    }
   }
   if (command === "codemod" && rootArgument === undefined) {
     stdout("Usage: tsazor codemod <path> [--write]");

@@ -1,31 +1,42 @@
 /**
- * Library build for @tsazor/bootstrap: compiles every src/*.tsazor through the
- * real compiler + workspace resolution, transpiles with esbuild and rewrites
- * sibling .tsazor imports to the built .js outputs. The bundle itself is
- * esbuild-bundled to a scratch runner first (raw node ESM cannot load the
- * compiler's extensionless dist imports).
+ * Library build for @tsazor/bootstrap through `buildLibrary` (@tsazor/cli): the components, the helpers, the manifest
+ * and the declarations, and tsazor-bootstrap.css — the sidecar CSS of the components Bootstrap has no classes for
+ * (Timeline, …), in its variables, imported after bootstrap.css.
  */
-import { build } from "esbuild";
-import { pathToFileURL } from "node:url";
+import { buildLibrary } from "@tsazor/cli";
 
-await build({
-  entryPoints: ["scripts/build-entry.ts"],
-  bundle: true,
-  platform: "node",
-  format: "esm",
-  outfile: ".build/runner.mjs",
-  external: ["esbuild", "node:*"],
-  // The bundled compiler pulls in TypeScript (CommonJS: require, __filename).
-  banner: {
-    js: [
-      'import { createRequire as __tsazorRequire } from "node:module";',
-      'import { fileURLToPath as __tsazorPath } from "node:url";',
-      "const require = __tsazorRequire(import.meta.url);",
-      "const __filename = __tsazorPath(import.meta.url);",
-      'const __dirname = __tsazorPath(new URL(".", import.meta.url));',
-    ].join(" "),
+const result = await buildLibrary({
+  // Compiled for the components that use them, not exported (DataGrid's Defer).
+  internal: ["Defer", "TreeViewNode", "ChipContent", "WizardStepHeader", "WizardFormLink"],
+  // Extra export names for a component (D-C3): Bootstrap calls the dialog a modal.
+  aliases: { Modal: "Dialog", Menu: "Dropdown", MenuItem: "DropdownItem", MultiSplitter: "Splitter", MultiSplitterPane: "SplitterPane" },
+  exports: [
+    // Plain helpers the package exports besides its components.
+    'export { tooltip } from "./tooltip-attachment.js"',
+    // The services the components use, in one call (package.json `tsazor.setup` names it).
+    'export { addBootstrap } from "./services.js"',
+    // The toast service comes with the skin: register it, inject it, call show().
+    'export { Toaster } from "@tsazor/ui"',
+    // Dialogs opened from code: the service and the reference a dialog closes (MudBlazor's IDialogService).
+    'export { DialogReference, DialogService } from "@tsazor/ui"',
+    // An app's own icons (`icon(name, svg)`), so it needs no other package for them.
+    'export { icon } from "@tsazor/ui"',
+    // The DataGrid's sorting and paging state come with the skin too.
+    'export { GridSort, PaginationState } from "@tsazor/ui"',
+    // FileUpload's uploader (`uploadTo(url)`) and file sizes.
+    'export { formatFileSize, uploadFile, uploadTo } from "@tsazor/ui"',
+  ],
+  typeExports: [
+    // The shared vocabulary types come with the skin: `@import type { Intent } from "@tsazor/bootstrap"`.
+    'export type { Appearance, CalendarDay, CalendarLabels, CalendarSelectMode, CalendarView, ColumnAlign, DialogOptions, DialogParameters, DialogResult, FileUploadErrorEventArgs, FileUploadEventArgs, FileUploadLabels, FileUploadMode, FileUploader, GridColumn, GridItemsProvider, GridItemsProviderRequest, GridItemsProviderResult, HexColor, HourCycle, IconValue, Intent, IsoDate, IsoTime, Orientation, OverlayCloseMode, Placement, ProgressFileDetails, SelectionMode, Size, SortableListEventArgs, SortableListLabels, SortDirection, SortedProperty, Toast, ToastAction, ToastOptions, TreeViewItem } from "@tsazor/ui"',
+  ],
+  // The exported helpers' declarations, with their docs.
+  declarations: {
+    "tooltip-attachment.d.ts":
+      'import type { Attachment } from "@tsazor/runtime";\nimport type { Placement } from "@tsazor/ui";\n/** A Bootstrap tooltip on any element: `<button @attach="tooltip(\'Save\')">`; the same text gives the same attachment. */\nexport declare function tooltip(text: string, placement?: Placement): Attachment<HTMLElement>;\n',
+    "services.d.ts":
+      'import type { ServiceCollection } from "@tsazor/runtime";\n/** Registers the services the Bootstrap components use (the `Toaster` and the `DialogService`): `createTsazorApp({ services: addBootstrap })`. */\nexport declare function addBootstrap(services: ServiceCollection): void;\n',
   },
-  logLevel: "silent",
+  stylesheet: { file: "tsazor-bootstrap.css", header: "/* @tsazor/bootstrap: the components Bootstrap has no classes for, in its variables. */\n" },
 });
-
-await import(pathToFileURL(".build/runner.mjs").href);
+if (result.errors.length > 0) process.exit(1);

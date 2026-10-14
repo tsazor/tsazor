@@ -55,6 +55,7 @@
     "@tsazor/runtime": "workspace:*"
   },
   "devDependencies": {
+    "@tsazor/cli": "workspace:*",
     "@tsazor/compiler": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/testing": "workspace:*",

@@ -68,6 +68,7 @@
     "@tsazor/runtime": "workspace:*"
   },
   "devDependencies": {
+    "@tsazor/cli": "workspace:*",
     "@tsazor/compiler": "workspace:*",
     "@tsazor/fluent-icons": "workspace:*",
     "@tsazor/runtime": "workspace:*",

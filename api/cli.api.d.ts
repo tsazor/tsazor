@@ -2,6 +2,35 @@
 
 /* @tsazor/cli */
 
+// buildLibrary
+export declare function buildLibrary(options?: BuildLibraryOptions): Promise<BuildLibraryResult>;
+
+// BuildLibraryOptions
+export interface BuildLibraryOptions {
+    packageDir?: string;
+    srcDir?: string;
+    outDir?: string;
+    internal?: readonly string[];
+    aliases?: Readonly<Record<string, string>>;
+    exports?: readonly string[];
+    typeExports?: readonly string[];
+    declarations?: Readonly<Record<string, string>>;
+    stylesheet?: {
+        readonly file: string;
+        readonly header?: string;
+    };
+    log?: (line: string) => void;
+}
+
+// BuildLibraryResult
+export interface BuildLibraryResult {
+    readonly components: readonly string[];
+    readonly errors: readonly {
+        readonly file: string;
+        readonly message: string;
+    }[];
+}
+
 // CheckDiagnostic: re-exported from @tsazor/lsp
 
 // checkProject: re-exported from @tsazor/lsp

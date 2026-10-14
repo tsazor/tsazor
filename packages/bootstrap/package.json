@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@tsazor/bootstrap-icons": "workspace:*",
+    "@tsazor/cli": "workspace:*",
     "@tsazor/compiler": "workspace:*",
     "@tsazor/runtime": "workspace:*",
     "@tsazor/testing": "workspace:*",

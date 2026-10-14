@@ -1,0 +1,91 @@
+/**
+ * D9: `buildLibrary` / `tsazor build-lib` — a component library's build without Tsazor's internal packages: the
+ * components compiled as the Vite plugin compiles them, the helpers beside them, the manifest and the declarations,
+ * the index and one stylesheet; a stale output removed, a compile error reported (exit 1).
+ */
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { buildLibrary, main } from "../src/index";
+
+const roots: string[] = [];
+afterEach(async () => {
+  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
+});
+
+/** A small library: a component with a sidecar, an internal part, a helper, a shared stylesheet. */
+async function library(files: Record<string, string> = {}): Promise<string> {
+  const root = await mkdtemp(path.join(tmpdir(), "tsazor-build-lib-"));
+  roots.push(root);
+  const sources: Record<string, string> = {
+    "package.json": JSON.stringify({ name: "my-lib", type: "module", tsazor: { components: "./dist/tsazor-components.json" } }),
+    "src/Greeting.tsazor": '@import { shout } from "./helper"\n<p class="greeting">@shout(this.name)</p><Part />\n@code {\n    /** Who is greeted. */\n    @Parameter() name = "world";\n}\n',
+    "src/Greeting.tsazor.css": ".greeting { color: teal; }\n",
+    "src/Part.tsazor": "<span>part</span>\n",
+    "src/helper.ts": "/** The text in capitals. */\nexport function shout(text: string): string {\n  return text.toUpperCase();\n}\n",
+    "src/styles/base.css": ":root { --my-lib-gap: 4px; }\n",
+    ...files,
+  };
+  for (const [file, text] of Object.entries(sources)) {
+    await mkdir(path.dirname(path.join(root, file)), { recursive: true });
+    await writeFile(path.join(root, file), text);
+  }
+  return root;
+}
+
+const read = (root: string, file: string) => readFile(path.join(root, "dist", file), "utf8");
+
+describe("buildLibrary (D9)", () => {
+  it("builds the components, the helpers, the manifest, the declarations, the index and the stylesheet", async () => {
+    const root = await library();
+    await mkdir(path.join(root, "dist"), { recursive: true });
+    await writeFile(path.join(root, "dist", "Removed.js"), "// an earlier build's\n");
+    const lines: string[] = [];
+    const result = await buildLibrary({
+      packageDir: root,
+      internal: ["Part"],
+      aliases: { Hello: "Greeting" },
+      exports: ['export { shout } from "./helper.js"'],
+      typeExports: ['export type { RenderFragment } from "@tsazor/runtime"'],
+      stylesheet: { file: "my-lib.css", header: "/* my-lib */" },
+      log: (line) => lines.push(line),
+    });
+    expect(result).toEqual({ components: ["Greeting", "Hello"], errors: [] });
+    expect(lines).toEqual(["[my-lib] built 2 component(s) -> dist/"]);
+
+    const greeting = await read(root, "Greeting.js");
+    expect(greeting).toContain('from "./helper.js"');
+    expect(greeting).toContain('from "./Part.js"');
+    expect(greeting).not.toContain(".tsazor");
+    expect(existsSync(path.join(root, "dist", "Part.js"))).toBe(true);
+    expect(await read(root, "index.js")).toBe(
+      'export { default as Greeting } from "./Greeting.js";\nexport { shout } from "./helper.js";\nexport { default as Hello } from "./Greeting.js";\n',
+    );
+    expect(await read(root, "index.d.ts")).toContain('export type { RenderFragment } from "@tsazor/runtime";\n');
+    const manifest = JSON.parse(await read(root, "tsazor-components.json")) as { package: string; components: Record<string, { parameters: { name: string; doc?: string }[] }> };
+    expect(manifest.package).toBe("my-lib");
+    expect(Object.keys(manifest.components)).toEqual(["Greeting", "Hello"]);
+    expect(manifest.components.Greeting!.parameters[0]).toMatchObject({ name: "name", doc: "Who is greeted." });
+    expect(await read(root, "Greeting.d.ts")).toContain("name: string;");
+    expect(await read(root, "helper.d.ts")).toContain("export declare function shout(text: string): string;");
+    expect(await read(root, "my-lib.css")).toBe(
+      "/* my-lib */\n/* base.css */\n:root { --my-lib-gap: 4px; }\n\n/* Greeting (.tsazor.css) */\n.greeting { color: teal; }\n\n",
+    );
+    expect(existsSync(path.join(root, "dist", "Removed.js"))).toBe(false);
+  });
+
+  it("is `tsazor build-lib [dir] [--stylesheet <file>]`: 0 when it built, 1 on a compile error, 2 on a wrong option", async () => {
+    const out: string[] = [];
+    const ok = await library();
+    expect(await main(["node", "tsazor", "build-lib", ok, "--stylesheet", "my-lib.css"], (line) => out.push(line))).toBe(0);
+    expect(existsSync(path.join(ok, "dist", "my-lib.css"))).toBe(true);
+
+    const broken = await library({ "src/Broken.tsazor": "<p>@(1 + </p>\n" });
+    expect(await main(["node", "tsazor", "build-lib", broken], (line) => out.push(line))).toBe(1);
+    expect(out.join("\n")).toContain("[my-lib] compile errors in Broken.tsazor");
+
+    expect(await main(["node", "tsazor", "build-lib", ok, "--minify"], (line) => out.push(line))).toBe(2);
+  });
+});

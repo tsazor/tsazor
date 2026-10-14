@@ -104,6 +104,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     `--path-value version=1` (`pathValues`) writes a fixed path value into the URLs and leaves it out of the
     signatures and the names: URL-segment API versioning (`api/v{version}/…`, BlazorHero's B4). The README documents
     the naming rules as the contract: in 1.x the same document gives the same names.
+  - `@tsazor/cli` (D9): **a component library builds without Tsazor's internal packages** — `tsazor build-lib [dir]
+    [--stylesheet <file>]`, and `buildLibrary(options)` for a build script that needs internal components, aliases or
+    re-exports (`docs/component-libraries.md`, "Building a library"). It compiles the components as the Vite plugin
+    does, transpiles the helpers with the declarations TypeScript derives, writes the manifest, the declarations,
+    the index and one stylesheet, and removes what an earlier build wrote and this one didn't. The four libraries
+    of the repository build through it; their `scripts/build-entry.ts` copies are gone (the output is the same; the
+    skins' internal helpers now have declarations too).
   - The component manifest across versions (D10, `docs/component-libraries.md`): `tsazorComponentManifest` stays 1
     in 1.x, a minor adds optional fields only, a reader ignores the fields it doesn't know. A manifest that can't be
     read is the error TZS036 in `tsazor check` (before: silent, its tags unresolved); a newer format version is the

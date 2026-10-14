@@ -32,7 +32,7 @@ packages above serve as the reference implementation.
 
 - **`tsazor.components`:** the component manifest, which holds every component's parameters
   ([architecture.md](architecture.md), "Manifests"). Editors and `tsazor check` read it instead
-  of the sources. `buildPackageManifest` from `@tsazor/compiler` writes it at build time.
+  of the sources. The library build writes it (see "Building a library").
 - **`tsazor.setup`:** what an app needs besides `@using`. `npm create tsazor --ui <package>` reads
   it and writes the setup into the new app:
   - **`styles`:** module specifiers that the app's `Program.ts` imports, either your own CSS
@@ -53,6 +53,43 @@ packages above serve as the reference implementation.
   are there already.
 - **The keyword `tsazor-components`:** `npm create tsazor` lists the packages the registry finds
   under this keyword when it asks for a library.
+
+## Building a library
+
+`tsazor build-lib` (from `@tsazor/cli`, a dev dependency) builds the package as the Vite plugin
+compiles an app:
+
+```json
+"scripts": { "build": "tsazor build-lib --stylesheet my-components.css" }
+```
+
+- every `src/*.tsazor` (but `_Imports.tsazor`) becomes `dist/<Name>.js`, exported from
+  `dist/index.js`, with a declaration `dist/<Name>.d.ts` from its parameters;
+- every `src/*.ts` helper becomes `dist/<name>.js` beside them, with the declaration TypeScript
+  derives from the file alone (a function needs its return type written for that);
+- `dist/tsazor-components.json` is the manifest;
+- with `--stylesheet`, `src/styles/*.css` and each component's `<Name>.tsazor.css` are joined
+  into `dist/<file>` in that order.
+
+A library that needs more writes a build script around `buildLibrary`, which takes the same
+defaults:
+
+```js
+// build.mjs — "build": "node build.mjs"
+import { buildLibrary } from "@tsazor/cli";
+
+const result = await buildLibrary({
+  internal: ["GridRow"],                         // compiled for the others, not exported
+  aliases: { Modal: "Dialog" },                  // more names for a component
+  exports: ['export { addMyComponents } from "./services.js"'],
+  typeExports: ['export type { Intent } from "@tsazor/ui"'],
+  stylesheet: { file: "my-components.css" },
+});
+if (result.errors.length > 0) process.exit(1);
+```
+
+`@tsazor/bootstrap`, `@tsazor/fluent`, `@tsazor/charts` and `@tsazor/markdown` build this way
+(their `build.mjs`).
 
 ## The manifest across versions
 

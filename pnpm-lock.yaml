@@ -621,6 +621,9 @@ importers:
       '@tsazor/bootstrap-icons':
         specifier: workspace:*
         version: link:../bootstrap-icons
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
@@ -664,6 +667,9 @@ importers:
 
   packages/charts:
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
@@ -694,6 +700,15 @@ importers:
       '@tsazor/lsp':
         specifier: workspace:*
         version: link:../lsp
+      '@tsazor/workspace':
+        specifier: workspace:*
+        version: link:../workspace
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
     devDependencies:
       '@types/node':
         specifier: ^20.17.0
@@ -770,6 +785,9 @@ importers:
         specifier: workspace:*
         version: link:../ui
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
@@ -848,6 +866,9 @@ importers:
         specifier: ^18.0.14
         version: 18.0.14
     devDependencies:
+      '@tsazor/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@tsazor/compiler':
         specifier: workspace:*
         version: link:../compiler
