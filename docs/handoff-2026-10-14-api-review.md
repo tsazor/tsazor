@@ -38,6 +38,8 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
 | The library build type-checks its sources (found 8 errors per skin); S3 typed validators, NumberInput min/max/step | `2d8986d` |
 | S1 Bootstrap Toast, S2 cascading members out of declarations, S4 OptionsSearchEventArgs in ui + `reexportTypes`, S5 Wizard labels, Skeleton circular | `11190c6` `b01293b` `ef78ae1` |
 | T2 exit codes, T4 routes type, T6 plugin line format, X5 star-export shadowing gate; an ItemsProvider test raced in WSL | `040feb1` `024f65b` `a1669d0` `2405bc4` `b0b0b48` |
+| Part 5: lsp server runs from npm (`tsazor-lsp`) and answers initialize at once (the scan blocked minutes), dotnet integer[] queries, charts texts/numbers, scrollLock scrollbar | `4c2e2cb` `37949fa` |
+| Part 4 gates: skin parity (`api/skin-parity.json`; Bootstrap got Button ariaDescribedBy/shape, Card ariaLabel, …), bin smoke, ABI pin (`api/abi.json`), snapshot shows ambient modules + deprecation tags | `fb5f9eb` `fb18d8c` `dbc591e` `c39f70e` |
 
 The runtime's public snapshot: 1988 → ~1690 lines (exports added for R7). Open in Part 2: ui (U1 `/kit`, U2–U5),
 the skins (S1–S5), the tools (T2 CLI validation/exit codes, T3 diagnostic prefix, T4 routes type, T6 output
@@ -53,9 +55,8 @@ different `@types/node` in the store; not from these changes).
 1. ~~E10~~ — decided (owner: "E10 okay", `f8b63fe`): Node 22.12 is the floor; a sentence says the time spans are
    plans of a small project, not service levels.
 2. **The API review:** Parts 1 and 2 approved (owner: "die öffentliche API so schlank wie möglich") — in progress.
-   Part 3 answered ("alle nach Empfehlung") and done: D1–D15. Part 2 done too (R, T, X, U, S). Open: the gates
-   (skin manifest diff, ABI pin test, bin smoke) and Part 5's bugs (lsp/server deps and bin, ui scrollLock, chart
-   texts and number locale, bootstrap a11y params).
+   The whole review is done: Parts 1–5 (policy, slimming, D1–D15, the gates, the bugs). Pushed through the commit
+   that adds this line.
 3. ~~SECURITY.md's commitments~~ — no deadlines (owner: "kein professionelles Projekt, mit Zusagen vorsichtig").
 4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
    notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
