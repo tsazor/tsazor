@@ -135,7 +135,7 @@ Notes on the important ones:
   (Tab/Shift+Tab), Escape and backdrop dismissal for the top dialog only (nested
   dialogs close one at a time), body scroll lock and focus restore.
 - **ToastRegion/Toast**: the app's toasts are the `Toaster` service (`@tsazor/ui`,
-  re-exported): register it (`services.registerType(Toaster, { singleton: true })`),
+  re-exported): register it (`services.registerType(Toaster, { lifetime: "singleton" })`),
   inject it anywhere and call `show({ title, message, intent, timeout })`; one
   `ToastRegion` (`position`: top/bottom-start/end) shows them, pausing while the
   pointer or focus is on a toast. Danger toasts announce as `role="alert"`, inside an

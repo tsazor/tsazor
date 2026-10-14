@@ -5,7 +5,7 @@ import type { RenderHandle } from "../renderer/render-handle.js";
 import type { RenderErrorPhase } from "../renderer/renderer.js";
 
 /**
- * @internal ComponentBase's plumbing: what the renderer, the runtime's own components and @tsazor/testing reach into
+ * ComponentBase's plumbing: what the renderer, the runtime's own components and @tsazor/testing reach into
  * (`@tsazor/runtime/internal`). Functions over the component's private state, not members, so that no name of an
  * app's component collides with them and none is taken from it (TZS031 guards only the deliberate API).
  * ComponentBase's static block fills it in.
@@ -43,5 +43,5 @@ export interface ComponentInternals {
   applyParameters(component: ComponentBase, parameters: ParameterView): void;
 }
 
-/** @internal See ComponentInternals. */
+/** See ComponentInternals. */
 export const componentInternals = {} as ComponentInternals;

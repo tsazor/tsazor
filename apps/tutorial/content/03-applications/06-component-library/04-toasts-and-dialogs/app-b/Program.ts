@@ -6,6 +6,6 @@ createTsazorApp({
     root: App,
     services: (services) => {
         // The app's toasts: any component injects it; a ToastRegion shows them.
-        services.registerType(Toaster, { singleton: true });
+        services.registerType(Toaster, { lifetime: "singleton" });
     },
 });

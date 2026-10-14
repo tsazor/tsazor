@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ComponentBase, createTsazorApp, defineComponent, Router, RouteView } from "../src/index";
 import type { NavigationContext, RenderFragment, RenderTreeBuilder, TsazorApp } from "../src/index";
+import { rendererOf } from "../src/internal";
 
 /** A promise the test resolves by hand. */
 function deferred(): { promise: Promise<void>; resolve: () => void } {
@@ -141,7 +142,7 @@ async function start(
     ...(options.holdPreviousPage === undefined ? {} : { routing: { holdPreviousPage: options.holdPreviousPage } }),
   });
   // A first page whose work never ends is never idle.
-  await (options.idle === false ? nextTask() : app.renderer.waitUntilIdle());
+  await (options.idle === false ? nextTask() : rendererOf(app).waitUntilIdle());
   return app;
 }
 
@@ -242,7 +243,7 @@ describe("holding the previous page on navigation", () => {
     await transitions[0]!.updateCallbackDone;
     expect(transitions[0]!.shown).toBe("Navigating");
     gate.resolve();
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     await nextTask();
     expect(heading()).toBe("Orders");
   });
@@ -319,7 +320,7 @@ describe("holding the previous page on navigation", () => {
     expect(heading()).toBe("loading");
     expect(transitions).toHaveLength(0);
     data.resolve();
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(heading()).toBe("Orders");
   });
 

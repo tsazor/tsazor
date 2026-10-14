@@ -76,11 +76,24 @@ export interface LocalizationOptions {
   readonly tables?: Readonly<Record<string, StringTableSource>>;
 }
 
+/** A running app (`createTsazorApp`'s result): its root services, its NavigationManager, and the way to stop it. */
 export interface TsazorApp {
-  readonly renderer: Renderer;
+  /** The root service provider (`options.services`' registrations and the built-in ones). */
   readonly services: ServiceProvider;
+  /** The app's NavigationManager. */
   readonly navigationManager: NavigationManager;
+  /** Removes the app: its components, its DOM and its global listeners. */
   dispose(): void;
+}
+
+/** Each app's renderer, for Tsazor's tests (`rendererOf` in @tsazor/runtime/internal). */
+const renderers = new WeakMap<TsazorApp, Renderer>();
+
+/** The renderer behind an app (@tsazor/runtime/internal: tests wait for it, the SSR spike reads it). */
+export function rendererOf(app: TsazorApp): Renderer {
+  const renderer = renderers.get(app);
+  if (renderer === undefined) throw new Error("rendererOf: not an app createTsazorApp returned.");
+  return renderer;
 }
 
 /**
@@ -151,8 +164,7 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   globals.__tsazor = hmrBridge;
   let disposed = false;
 
-  return {
-    renderer,
+  const app: TsazorApp = {
     services,
     navigationManager: services.get(NavigationManager as unknown as Token<NavigationManager>),
     /**
@@ -178,4 +190,6 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
       if (globals.__tsazor === hmrBridge) delete globals.__tsazor;
     },
   };
+  renderers.set(app, renderer);
+  return app;
 }

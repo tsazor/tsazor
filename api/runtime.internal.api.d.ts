@@ -215,6 +215,9 @@ export declare class Renderer {
     private swapState;
 }
 
+// rendererOf
+export declare function rendererOf(app: TsazorApp): Renderer;
+
 // RenderError
 export interface RenderError {
     readonly error: unknown;

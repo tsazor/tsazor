@@ -4,7 +4,7 @@
 @import { NavLink, NavLinkMatch } from "@tsazor/runtime"
 @import type { IconValue } from "@tsazor/ui"
 
-<NavLink Href="@href" Match="@match" CssClass="fui-navbar__link">@if (iconStart) {<Icon value="@iconStart" class="fui-navbar__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-navbar__icon" />}</NavLink>
+<NavLink Href="@href" Match="@match" class="fui-navbar__link">@if (iconStart) {<Icon value="@iconStart" class="fui-navbar__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-navbar__icon" />}</NavLink>
 
 @code {
     /** The target, as for NavLink. */

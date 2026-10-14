@@ -17,7 +17,7 @@
             <ul class="nav nav-pills flex-column gap-1">
                 @foreach (const link of section.links) {
                     <li class="nav-item">
-                        <NavLink cssClass="nav-link tz-nav__link" activeClass="active" href="@link.href" target="@link.target" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
+                        <NavLink class="nav-link tz-nav__link" activeClass="active" href="@link.href" target="@link.target" match="@(link.match ?? NavLinkMatch.Prefix)" title="@this.titleOf(link)">
                             @if (link.icon) {
                                 <Icon value="@link.icon" class="@(link.iconActive ? "tz-nav__icon tz-nav__icon--rest" : "tz-nav__icon")" />
                             }

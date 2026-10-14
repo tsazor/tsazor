@@ -6,6 +6,6 @@ createTsazorApp({
     root: App,
     services: (services) => {
         // One worker for the app; it starts on the first call.
-        services.registerType(OrdersWorker, { singleton: true });
+        services.registerType(OrdersWorker, { lifetime: "singleton" });
     },
 });

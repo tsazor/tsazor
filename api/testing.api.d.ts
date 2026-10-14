@@ -351,6 +351,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // TransitionSettings: re-exported from @tsazor/runtime
 
+// TsazorApp: re-exported from @tsazor/runtime
+
 // TsazorAppOptions: re-exported from @tsazor/runtime
 
 // TsazorHttp: re-exported from @tsazor/runtime

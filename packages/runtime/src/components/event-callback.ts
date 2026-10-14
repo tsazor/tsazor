@@ -17,7 +17,7 @@ export class EventCallback<TArg = unknown> {
   ) {}
 
   /**
-   * @internal Compiler API (render hints, H1 — docs/design-render-hints.md).
+   * Compiler ABI (generated code calls it) (render hints, H1 — docs/design-render-hints.md).
    * A callback whose handler is `factory.apply(receiver, args)`, created on
    * first use: the compiler hoists an event-handler lambda into a method of
    * the component (`__tsazor_h0(row) { return (e) => this.select(e, row); }`)

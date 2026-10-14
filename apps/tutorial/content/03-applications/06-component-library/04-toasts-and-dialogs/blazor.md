@@ -13,7 +13,7 @@ import { Toaster } from "@tsazor/bootstrap";
 ```
 
 ```ts
-services.registerType(Toaster, { singleton: true });
+services.registerType(Toaster, { lifetime: "singleton" });
 ```
 
 — place `<ToastRegion />` once, inject it with `@import { Toaster } from "@tsazor/bootstrap"` and
@@ -21,5 +21,5 @@ services.registerType(Toaster, { singleton: true });
 `this.toaster.show({ title: "Deleted", message: "Order 101 is gone.", intent: "success" })`.
 
 > **Coming from Blazor:** `Toaster` is MudBlazor's `ISnackbar` / Radzen's `NotificationService`;
-> `registerType(…, { singleton: true })` is `AddSingleton`. The `Dialog` stays declarative
+> `registerType(…, { lifetime: "singleton" })` is `AddSingleton`. The `Dialog` stays declarative
 > (`IsOpen` + `OnClosed`) rather than an `IDialogService` — the parent owns whether it's open.

@@ -8,6 +8,7 @@
 export { componentInternals, type ComponentInternals } from "./components/component-internals.js";
 
 // The renderer
+export { rendererOf } from "./app.js";
 export { Renderer, type RenderBatch, type RenderError, type RenderErrorHandler, type RenderErrorPhase } from "./renderer/renderer.js";
 export { ComponentState, type CascadeEntry } from "./renderer/component-state.js";
 export { DomRenderer } from "./renderer/dom-renderer.js";

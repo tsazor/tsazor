@@ -34,11 +34,6 @@ export class NavLink extends ComponentBase {
   @Parameter() match: NavLinkMatch = NavLinkMatch.Prefix;
   /** Class added while active. */
   @Parameter() activeClass = "active";
-  /**
-   * Static classes always present on the anchor.
-   * @deprecated Write `class="…"` as in Blazor; the active class joins it.
-   */
-  @Parameter() cssClass = "";
   /** Any other attribute (`class`, `target`, `title`, `aria-*` …) goes onto the anchor: Blazor's `AdditionalAttributes`. */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
   /** Link content (markup between the NavLink tags). */
@@ -68,7 +63,7 @@ export class NavLink extends ComponentBase {
     }
     b.addAttribute(2, "href", href);
     // Blazor's CssClass: the class attribute and, while active, the active class; no attribute when both are empty.
-    const cssClass = joinClasses(userClass, this.cssClass, active ? this.activeClass : "");
+    const cssClass = joinClasses(userClass, active ? this.activeClass : "");
     if (cssClass !== "") b.addAttribute(3, "class", cssClass);
     if (active) b.addAttribute(4, "aria-current", "page");
     b.addContent(5, this.childContent);

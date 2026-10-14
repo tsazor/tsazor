@@ -29,6 +29,7 @@ import {
 import {
   matchRoute,
   Renderer,
+  rendererOf,
 } from "@tsazor/runtime/internal";
 
 afterEach(() => {
@@ -178,19 +179,19 @@ describe("SupplyParameterFromQuery — RouteView interactions", () => {
     root.id = "app";
     document.body.appendChild(root);
     const app = createTsazorApp({ root: App, routes: [{ template: "/", type: CounterPage } as RouteEntry] });
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("output")?.textContent).toBe("null");
 
     app.navigationManager.navigateTo("/?page=2");
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("output")?.textContent).toBe("2");
 
     app.navigationManager.navigateTo("/?page=5");
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("output")?.textContent).toBe("5");
 
     app.navigationManager.navigateTo("/");
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("output")?.textContent).toBe("null");
     app.dispose();
   });
@@ -235,10 +236,10 @@ describe("SupplyParameterFromQuery — RouteView interactions", () => {
       });
       app.navigationManager.navigateTo("/orders");
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await app.renderer.waitUntilIdle();
+      await rendererOf(app).waitUntilIdle();
       app.navigationManager.navigateTo("/orders?state=open");
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await app.renderer.waitUntilIdle();
+      await rendererOf(app).waitUntilIdle();
       expect(calls).toEqual(["init null", "set null", "set open"]);
       app.dispose();
     });
@@ -285,16 +286,16 @@ describe("SupplyParameterFromQuery on any component (Blazor 8)", () => {
     root.id = "app";
     document.body.appendChild(root);
     const app = createTsazorApp({ root: App, routes: [{ template: "/roles", type: Shell } as RouteEntry] });
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("output")?.textContent).toBe("7");
 
     app.navigationManager.navigateTo("/roles?id=8");
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("output")?.textContent).toBe("8");
 
     // A navigation that leaves its value alone doesn't set it again.
     app.navigationManager.navigateTo("/roles?id=8&tab=2");
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(calls).toEqual(["set 7", "set 8"]);
     app.dispose();
   });

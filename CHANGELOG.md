@@ -24,6 +24,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     `instance` are `readonly`.
   - `@tsazor/compiler`, `@tsazor/workspace` and `@tsazor/lsp` are internal packages: their programmatic APIs serve
     Tsazor's tools, released in lockstep (snapshots in `api/*.internal.api.d.ts`).
+  - The pre-1.0 aliases are gone: `NavLink`'s `cssClass` (write `class`), `Virtualize`'s `itemTemplate` and
+    `overscan` (`ItemContent`/`ChildContent`, `OverscanCount`), `NavigationOptions.replace` (`replaceHistoryEntry`),
+    `LocationChangedEventArgs.isIntercepted` (`isNavigationIntercepted`), `NavigationManager.toAbsolute`
+    (`toAbsoluteUri`), `EditContext.subscribe` (`onValidationStateChanged.subscribe`; to observe it,
+    `observe(editContext.onValidationStateChanged)`), and the DI option `{ singleton }` (`{ lifetime: "singleton" }`,
+    `{ lifetime: "transient" }`; singleton stays the default).
+  - `createTsazorApp` returns the exported `TsazorApp` without `renderer` (tests: `rendererOf(app)` in
+    `@tsazor/runtime/internal`).
+  - The runtime's published declarations leave out what is marked `@internal` (`stripInternal`): Virtualize's measuring
+    state, EditContext's field-state bookkeeping, NavigationManager's holds and `setNavigationLock`,
+    `AuthenticationStateProvider.peekState`, and more. `EditContext.notifyValidationStateChanged` is public (Blazor's
+    API for custom validators); `EventCallback.bindWith` and `RenderTreeBuilder.reuseKeyed` stay as the compiler's
+    ABI.
 - **Breaking — the tools need Node 22.12 or later** (`engines.node` of cli, compiler, workspace, lsp, vite-plugin,
   dotnet and create-tsazor; before: 20.19). Node 20 reached its end of life on 2026-04-30; the support policy
   (`docs/support-policy.md`) follows the Node.js LTS lines.

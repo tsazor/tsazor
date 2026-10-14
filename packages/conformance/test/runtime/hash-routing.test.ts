@@ -15,12 +15,13 @@ import {
   type LocationChangedEventArgs,
   type RouteEntry,
 } from "@tsazor/runtime";
+import { rendererOf } from "@tsazor/runtime/internal";
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const settleFor = async (app: { renderer: { waitUntilIdle(): Promise<void> } }) => {
   for (let i = 0; i < 3; i++) {
     await tick();
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
   }
 };
 

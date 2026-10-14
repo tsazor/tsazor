@@ -774,17 +774,6 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "Class added while active."
         },
         {
-          "name": "cssClass",
-          "category": "string",
-          "optional": false,
-          "hasInitializer": true,
-          "member": "field",
-          "declaredBy": "NavLink",
-          "default": "\"\"",
-          "inferredType": "string",
-          "doc": "Static classes always present on the anchor.\n@deprecated Write `class=\"…\"` as in Blazor; the active class joins it."
-        },
-        {
           "name": "additionalAttributes",
           "category": "captureUnmatchedValues",
           "optional": true,
@@ -1001,28 +990,6 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "TItem"
         },
         {
-          "name": "itemTemplate",
-          "category": "RenderFragment<T>",
-          "optional": true,
-          "hasInitializer": false,
-          "member": "field",
-          "declaredBy": "Virtualize",
-          "type": "(item: TItem) => RenderFragment",
-          "references": [
-            {
-              "name": "TItem",
-              "kind": "typeParameter"
-            },
-            {
-              "name": "RenderFragment",
-              "kind": "runtime",
-              "imported": "RenderFragment"
-            }
-          ],
-          "doc": "Tsazor's earlier name of the item template; `ItemContent` and the child content win.",
-          "typeArgument": "TItem"
-        },
-        {
           "name": "placeholder",
           "category": "RenderFragment<T>",
           "optional": true,
@@ -1121,16 +1088,6 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "default": "15",
           "inferredType": "number",
           "doc": "How many items render above and below the visible ones."
-        },
-        {
-          "name": "overscan",
-          "category": "value",
-          "optional": true,
-          "hasInitializer": false,
-          "member": "field",
-          "declaredBy": "Virtualize",
-          "type": "number",
-          "doc": "Tsazor's earlier name of `OverscanCount`; it wins when set."
         },
         {
           "name": "spacerElement",

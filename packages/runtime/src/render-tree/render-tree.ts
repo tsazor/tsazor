@@ -288,7 +288,7 @@ export class RenderTreeBuilder {
   }
 
   /**
-   * @internal H2 render hints (docs/design-render-hints.md), called by
+   * Compiler ABI (generated code calls it): H2 render hints (docs/design-render-hints.md), called by
    * generated code before a keyed `@foreach` row: when the previous render
    * built a row at the same `site` with the same `key` from the same
    * `values` (every dynamic value of the row, in evaluation order), its

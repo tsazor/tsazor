@@ -113,7 +113,7 @@
     protected override onInitialized(): void {
         this.disposeSignal.addEventListener("abort", () => this.runner.cancel());
         // A validation or a submit elsewhere in the form changes what this field shows.
-        if (this.editContext) this.observe(this.editContext);
+        if (this.editContext) this.observe(this.editContext.onValidationStateChanged);
     }
 
     /** The bound field, for the form. */

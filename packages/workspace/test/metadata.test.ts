@@ -84,7 +84,7 @@ describe("resolveComponentMetadata (FileContext)", () => {
     expect(names(greeter)).toEqual(["Name", "NameChanged", "theme"]);
     expect(greeter?.parameters[0]).toMatchObject({ category: "string", doc: "Who to greet." });
     expect(greeter?.parameters[2]?.cascading).toEqual({ name: "theme" });
-    expect(names(context.resolveComponentMetadata("NavLink", []))).toEqual(["href", "match", "activeClass", "cssClass", "additionalAttributes", "childContent"]);
+    expect(names(context.resolveComponentMetadata("NavLink", []))).toEqual(["href", "match", "activeClass", "additionalAttributes", "childContent"]);
     const chip = context.resolveComponentMetadata("Chip", []);
     expect(chip?.parameters.map((p) => [p.name, p.category])).toEqual([["label", "string"], ["onRemove", "EventCallback<T>"]]);
     expect(chip?.file).toBe(path.join(root, "node_modules", "@fake", "lib", "src", "Chip.tsazor"));

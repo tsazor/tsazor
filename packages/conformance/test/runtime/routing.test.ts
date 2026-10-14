@@ -23,6 +23,7 @@ import {
   matchRoute,
   Renderer,
   watchAuthenticationState,
+  rendererOf,
 } from "@tsazor/runtime/internal";
 
 class PageA {}
@@ -348,7 +349,7 @@ describe("R15 — app.dispose()", () => {
     root.id = "app";
     document.body.appendChild(root);
     const app = createTsazorApp({ root: App, routes: [{ template: "/", type: Home }] });
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("a")?.textContent).toBe("go");
     const changed: string[] = [];
     app.navigationManager.addLocationChanged((_, e) => changed.push(e.location));

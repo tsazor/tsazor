@@ -22,7 +22,7 @@ const api = {
 `OrdersWorker` (in `orders-client.ts`) is the typed client. Register it and inject it:
 
 ```ts
-services.registerType(OrdersWorker, { singleton: true });
+services.registerType(OrdersWorker, { lifetime: "singleton" });
 ```
 
 ```tsazor

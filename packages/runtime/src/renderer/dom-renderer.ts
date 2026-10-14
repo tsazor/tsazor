@@ -42,11 +42,11 @@ export class DomRenderer implements EventHandlerHost {
   /** F4/F5: the batch's motion work (see MotionHost); null while there is none. Rolled back like attachmentWork. */
   private motionWork: MotionWork[] | null = null;
 
-  /** @internal Created by `Renderer`, which owns exactly one DomRenderer. */
+  /** Created by `Renderer`, which owns exactly one DomRenderer. */
   constructor(private readonly renderer: Renderer) {}
 
   /**
-   * @internal Runs a DOM event's handler for a listener bound while
+   * Runs a DOM event's handler for a listener bound while
    * rendering `state`: the invocation is tracked by this DomRenderer's own
    * renderer (waitUntilIdle), failures go to its error handler.
    */
@@ -214,21 +214,21 @@ export class DomRenderer implements EventHandlerHost {
     for (const node of level.list()) motionHost!.measure(node, work);
   }
 
-  /** @internal F4/F5: hands the batch's motion work over (null when there is none) and starts a new list. */
+  /** F4/F5: hands the batch's motion work over (null when there is none) and starts a new list. */
   takeMotionWork(): MotionWork[] | null {
     const work = this.motionWork;
     this.motionWork = null;
     return work;
   }
 
-  /** @internal F2: hands the batch's attachment work over (null when there is none) and starts a new list. */
+  /** F2: hands the batch's attachment work over (null when there is none) and starts a new list. */
   takeAttachmentWork(): unknown[] | null {
     const work = this.attachmentWork;
     this.attachmentWork = null;
     return work;
   }
 
-  /** @internal Replaces the slot-children map after a render pass. */
+  /** Replaces the slot-children map after a render pass. */
   commitSlotChildren(state: ComponentState): void {
     state.slotChildren.clear();
     for (const [key, value] of state.newSlotChildren) {

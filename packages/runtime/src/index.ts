@@ -126,4 +126,4 @@ export { CascadingAuthenticationState } from "./auth/cascading-authentication-st
 export { AuthorizeRouteView } from "./auth/authorize-route-view.js";
 
 // App bootstrap
-export { createTsazorApp, type TsazorAppOptions, type RoutingOptions, type LocalizationOptions } from "./app.js";
+export { createTsazorApp, type TsazorApp, type TsazorAppOptions, type RoutingOptions, type LocalizationOptions } from "./app.js";

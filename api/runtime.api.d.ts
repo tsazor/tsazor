@@ -40,8 +40,6 @@ export declare abstract class AuthenticationStateProvider {
     private readonly subscribers;
     private cachedState?;
     abstract getAuthenticationStateAsync(): Promise<AuthenticationState>;
-    peekState(): AuthenticationState | undefined;
-    get notificationVersion(): number;
     private version;
     protected notifyAuthenticationStateChanged(state: AuthenticationState | Promise<AuthenticationState>): void;
     private publish;
@@ -252,7 +250,6 @@ export declare class CultureInfo {
     dateFormat(options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat;
     formatNumber(value: number, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date, options?: Intl.DateTimeFormatOptions): string;
-    get locale(): string;
 }
 
 // CultureService
@@ -318,18 +315,12 @@ export declare class EditContext {
     notifyValidationStateChanged(): void;
     notifyFieldChanged(field: string, value?: unknown): void;
     setValidator(field: string, validator: ModelValidator): void;
-    subscribe(listener: () => void): () => void;
     markAsUnmodified(field: string): void;
     isModified(field: string): boolean;
     validate(): boolean;
     isValid(field?: string): boolean;
     getValidationMessages(field?: string): string[];
     getInvalidFields(): string[];
-    hasValidationMessages(): boolean;
-    private ensureFieldState;
-    fieldStateFor(field: string): FieldState | undefined;
-    associateFieldState(field: string, store: ValidationMessageStore): FieldState;
-    dissociateFieldState(field: string, store: ValidationMessageStore): void;
     private applyFunctionValidator;
 }
 
@@ -400,7 +391,6 @@ export declare class EventCallback<TArg = unknown> {
     ]): Promise<void>;
     get hasDelegate(): boolean;
     equals(other: EventCallback<never>): boolean;
-    equalsAsParameter(other: EventCallback<never>): boolean;
     private createDelegate;
 }
 
@@ -496,8 +486,6 @@ export declare abstract class InputBase<TValue> extends ComponentBase {
     protected captureElement(b: RenderTreeBuilder): void;
     protected applyCommonAttributes(b: RenderTreeBuilder): void;
     private sequenceCounter;
-    protected nextSequence(): number;
-    protected beginRender(): void;
     protected changeHandler(extract: (e: Event) => TValue): EventCallback<Event>;
     protected addImmediateHandlers(b: RenderTreeBuilder, extract: (e: Event) => TValue): void;
 }
@@ -595,7 +583,6 @@ export interface LocalizationOptions {
 export interface LocationChangedEventArgs {
     readonly location: string;
     readonly isNavigationIntercepted: boolean;
-    readonly isIntercepted: boolean;
     readonly historyEntryState?: string;
 }
 
@@ -696,7 +683,6 @@ export declare class NavigationManager {
     get baseUri(): string;
     get baseRelativePath(): string;
     toAbsoluteUri(relativeUri: string): string;
-    toAbsolute(uri: string): string;
     toLinkHref(href: string): string;
     toBaseRelativePath(uri: string): string;
     navigateTo(uri: string, forceLoadOrOptions?: boolean | NavigationOptions, replace?: boolean): void;
@@ -707,13 +693,8 @@ export declare class NavigationManager {
     registerLocationChangingHandler(handler: LocationChangingHandler): {
         dispose(): void;
     };
-    setNavigationLock(lockId: string, callback: (uri: string, isIntercepted: boolean) => boolean | Promise<boolean>): void;
-    releaseNavigationLock(lockId: string): void;
-    addNavigationHold(hold: NavigationHold, timeout: number): () => void;
-    holdFor(work: Promise<unknown>): void;
     private interceptionEnabled;
     enableNavigationInterception(): void;
-    takeScrollTarget(): string | undefined;
     private isSamePageWithHash;
     private scrollOnSamePage;
     private onDocumentClick;
@@ -757,7 +738,6 @@ export interface NavigationManagerOptions {
 export interface NavigationOptions {
     readonly forceLoad?: boolean;
     readonly replaceHistoryEntry?: boolean;
-    readonly replace?: boolean;
     readonly historyEntryState?: string;
 }
 
@@ -766,7 +746,6 @@ export declare class NavLink extends ComponentBase {
     href: string;
     match: NavLinkMatch;
     activeClass: string;
-    cssClass: string;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
     private readonly navigation;
@@ -821,7 +800,6 @@ export interface ParameterMeta {
     readonly cascadingType?: CascadingTypeToken;
     readonly captureUnmatchedValues?: boolean;
     readonly query?: QueryParameterMeta;
-    readonly store?: symbol;
 }
 
 // ParameterView
@@ -907,7 +885,6 @@ export declare class RenderTreeBuilder {
     addElementReferenceCapture(sequence: number, action: (element: Element) => void): void;
     addComponentReferenceCapture(sequence: number, action: (component: ComponentBase) => void): void;
     reuseKeyed(site: readonly number[], key: unknown, values: readonly unknown[]): boolean;
-    setReuseSource(source: RenderTreeBuilder | null): void;
     private reuseRecordOf;
     clear(): void;
     private closeOpenFrame;
@@ -1039,12 +1016,8 @@ export declare class SectionContent extends ComponentBase {
 export declare class SectionOutlet extends ComponentBase {
     sectionName?: string;
     sectionId?: unknown;
-    currentContentProvider: {
-        childContent?: RenderFragment | undefined;
-    } | null;
     private subscribedIdentifier?;
     private get registry();
-    contentUpdated(provider: SectionContentLike | null): void;
     protected applyParameterValues(parameters: ParameterView): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     dispose(): void;
@@ -1054,11 +1027,9 @@ export declare class SectionOutlet extends ComponentBase {
 export declare class ServiceCollection {
     private readonly registrations;
     register<T>(token: Token<T>, factory: (services: ServiceProvider) => T, options?: {
-        singleton?: boolean;
         lifetime?: ServiceLifetime;
     }): this;
     registerType<T>(token: Token<T>, options?: {
-        singleton?: boolean;
         lifetime?: ServiceLifetime;
     }): this;
     registerValue<T>(token: Token<T>, value: T): this;
@@ -1075,7 +1046,6 @@ export declare class ServiceProvider {
     private readonly instances;
     private readonly tracked;
     private disposed;
-    constructor(registrations: Map<Token<never>, Registration>, root?: ServiceProvider);
     createScope(): ServiceProvider;
     get<T>(token: Token<T>): T;
     tryGet<T>(token: Token<T>): T | undefined;
@@ -1214,6 +1184,13 @@ export interface TransitionSettings {
     readonly reducedMotion?: "respect" | "ignore";
 }
 
+// TsazorApp
+export interface TsazorApp {
+    readonly services: ServiceProvider;
+    readonly navigationManager: NavigationManager;
+    dispose(): void;
+}
+
 // TsazorAppOptions
 export interface TsazorAppOptions {
     root: ComponentDefinition | (abstract new () => ComponentBase);
@@ -1282,7 +1259,6 @@ export declare class ValidationMessageStore {
     add(field: string, message: string): void;
     addAll(field: string, messages: readonly string[]): void;
     clear(field?: string): void;
-    messagesFor(state: FieldState): string[];
     private getOrCreate;
     private clearState;
 }
@@ -1312,14 +1288,12 @@ export declare class ValidationSummary extends ComponentBase {
 export declare class Virtualize<TItem = unknown> extends ComponentBase {
     childContent?: (item: TItem) => RenderFragment;
     itemContent?: (item: TItem) => RenderFragment;
-    itemTemplate?: (item: TItem) => RenderFragment;
     placeholder?: (context: PlaceholderContext) => RenderFragment;
     emptyContent?: RenderFragment;
     itemSize: number;
     itemsProvider?: VirtualizeItemsProvider<TItem>;
     items?: readonly TItem[];
     overscanCount: number;
-    overscan?: number;
     spacerElement: string;
     maxItemCount: number;
     anchorMode: VirtualizeAnchorMode;
@@ -1328,14 +1302,11 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private viewport;
     private spacerBefore;
     private spacerAfter;
-    itemsBefore: number;
     private visibleItemCapacity;
     private unusedItemCapacity;
     private itemCount;
     private loadedItemsStartIndex;
     private renderedItemsBefore;
-    lastRenderedItemCount: number;
-    lastRenderedPlaceholderCount: number;
     private recalibratedItemSize;
     private lastSetItemSize;
     private loadedItems;
@@ -1352,9 +1323,6 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private itemTemplateInUse;
     private placeholderInUse;
     private loading;
-    totalMeasuredHeight: number;
-    measuredItemCount: number;
-    pendingScrollToBottom: boolean;
     private lastRenderedAnchorMode;
     private pendingAnchorRestore;
     private deferAnchorRestoreClear;
@@ -1381,9 +1349,6 @@ export declare class Virtualize<TItem = unknown> extends ComponentBase {
     private getMeasuredItemHeight;
     private updateItemSizeFromRenderedContent;
     private cancelInFlightScrollForUserInteraction;
-    isScrollToItemPending(): boolean;
-    spacerBeforeVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
-    spacerAfterVisible(spacerSize: number, spacerSeparation: number, containerSize: number, reason: SpacerVisibilityReason): void;
     private updateWindowFromViewport;
     private grownWindow;
     private advanceInitialIndexPhase;

@@ -41,7 +41,7 @@
         if (this.editContext === this.subscribed) return;
         this.unsubscribe?.();
         this.subscribed = this.editContext;
-        this.unsubscribe = this.editContext?.subscribe(() => this.stateHasChanged());
+        this.unsubscribe = this.editContext?.onValidationStateChanged.subscribe(() => this.stateHasChanged());
     }
 
     private get wrapperClass(): string {

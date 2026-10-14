@@ -64,7 +64,7 @@ export class DialogReference<TData = unknown> {
  * Opens components as dialogs (MudBlazor's `IDialogService`, Fluent UI Blazor's and Radzen's `DialogService`): the
  * page shows one and awaits its result; a skin's `DialogProvider`, placed once in the layout, renders them. Inside,
  * the dialog gets its `DialogReference` as a cascading value and its skin's `Dialog` the title and closing rules.
- * Register it once: `services.registerType(DialogService, { singleton: true })` (the skins' setup does).
+ * Register it once: `services.registerType(DialogService, { lifetime: "singleton" })` (the skins' setup does).
  */
 export class DialogService {
   private open: DialogReference<unknown>[] = [];

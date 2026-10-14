@@ -30,7 +30,7 @@ const api = {
 worker. Register it in `Program.ts`, like any service:
 
 ```ts
-services.registerType(OrdersWorker, { singleton: true });
+services.registerType(OrdersWorker, { lifetime: "singleton" });
 ```
 
 Then inject it in `App.tsazor` and await the result:

@@ -59,19 +59,9 @@ describe("lifetimes", () => {
     expect(root.get(Clock)).not.toBe(first.get(Clock));
   });
 
-  it("keeps the previous `singleton` option forms working", () => {
-    const root = new ServiceCollection()
-      .register(Clock, () => new Clock(), { singleton: true })
-      .register(Logger, () => new Logger([]), { singleton: false })
-      .build();
-    const scope = root.createScope();
-    expect(scope.get(Clock)).toBe(root.get(Clock));
-    expect(root.get(Logger)).not.toBe(root.get(Logger));
-  });
-
   it("creates transients fresh per resolve, against the requesting provider", () => {
     const collection = new ServiceCollection();
-    collection.register(Session, () => new Session([]), { singleton: false });
+    collection.register(Session, () => new Session([]), { lifetime: "transient" });
     const root = collection.build();
     const scope = root.createScope();
     expect(root.get(Session)).not.toBe(scope.get(Session));

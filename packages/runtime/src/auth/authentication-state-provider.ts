@@ -21,13 +21,13 @@ export abstract class AuthenticationStateProvider {
   /** Resolves the current state; may be async (e.g. validating a token). */
   abstract getAuthenticationStateAsync(): Promise<AuthenticationState>;
 
-  /** The most recently resolved state, if any (no request started). */
+  /** @internal The most recently resolved state, if any (no request started). */
   peekState(): AuthenticationState | undefined {
     return this.cachedState;
   }
 
   /**
-   * Bumped by every notification. watchAuthenticationState compares it
+   * @internal Bumped by every notification. watchAuthenticationState compares it
    * before and after its getAuthenticationStateAsync() request: a result
    * that arrives after a newer notification is stale and dropped.
    */

@@ -14,7 +14,7 @@ export interface RenderHandle {
   /** Registers in-flight async work so waitUntilIdle includes it (Blazor awaits async operations similarly). */
   track(promise: Promise<unknown>): Promise<unknown>;
   /**
-   * @internal Routes a failure of this component to the renderer's error
+   * Routes a failure of this component to the renderer's error
    * path (nearest ErrorBoundary, else the error handler) — for work that
    * runs outside a render pass, event handler or lifecycle hook
    * (`@Bindable` callbacks, `observe` notifications).

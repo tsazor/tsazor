@@ -24,9 +24,9 @@ const app = createTsazorApp({
     // App-wide state that outlives page navigation (/counter-persistent).
     services.registerValue(CounterState, new CounterState());
     // The CSV worker (/worker): one client for the app; the worker starts on the first call.
-    services.registerType(CsvWorker, { singleton: true });
+    services.registerType(CsvWorker, { lifetime: "singleton" });
     // The app's toasts (ToastRegion in the layout shows them).
-    services.registerType(Toaster, { singleton: true });
+    services.registerType(Toaster, { lifetime: "singleton" });
   },
 });
 

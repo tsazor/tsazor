@@ -15,6 +15,7 @@ import {
 } from "@tsazor/runtime";
 import { settle as settleRenderer, type Build } from "./host.js";
 import { compileFiles, createTestRenderer } from "../harness.js";
+import { rendererOf } from "@tsazor/runtime/internal";
 
 /** Root whose render tree is a plain build function (test-local Host). */
 class Root extends ComponentBase {
@@ -138,7 +139,7 @@ describe("HeadOutlet/HeadContent (3.4)", () => {
     document.body.appendChild(appDiv);
     const { createTsazorApp } = await import("@tsazor/runtime");
     const app = createTsazorApp({ root: App as never, selector: "#app" });
-    await settleRenderer(app.renderer);
+    await settleRenderer(rendererOf(app));
 
     expect(appDiv.textContent).toContain("body");
     expect(document.title).toBe("App Title");

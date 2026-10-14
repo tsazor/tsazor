@@ -17,6 +17,7 @@ import {
   type TsazorApp,
 } from "@tsazor/runtime";
 import { compileFiles, diagnosticsOf, errorCodes, mount, normalizeHtml, type Files } from "../harness.js";
+import { rendererOf } from "@tsazor/runtime/internal";
 
 const grid = `@typeparam TItem
 <table>@foreach (const item of Items) {<tr>@RowTemplate(item)</tr>}</table>
@@ -130,9 +131,9 @@ describe("App.razor shapes over the built-in components", () => {
       routes: entries,
       services: (services) => services.registerValue(AuthenticationStateProvider as Token<AuthenticationStateProvider>, new Provider(state)),
     });
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await app.renderer.waitUntilIdle();
+    await rendererOf(app).waitUntilIdle();
     return normalizeHtml(root.innerHTML);
   }
 

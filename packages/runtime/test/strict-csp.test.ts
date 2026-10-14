@@ -5,6 +5,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { ComponentBase, createTsazorApp, type RenderTreeBuilder } from "../src/index";
+import { rendererOf } from "../src/internal";
 
 class Styled extends ComponentBase {
   protected override buildRenderTree(b: RenderTreeBuilder): void {
@@ -23,7 +24,7 @@ async function render(strictCsp: boolean | undefined): Promise<HTMLElement> {
   root.id = "app";
   document.body.appendChild(root);
   const app = createTsazorApp({ root: Styled, ...(strictCsp === undefined ? {} : { strictCsp }) });
-  await app.renderer.waitUntilIdle();
+  await rendererOf(app).waitUntilIdle();
   const p = root.querySelector("p")!;
   app.dispose();
   root.remove(); // the next app looks up #app again

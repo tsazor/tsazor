@@ -9,6 +9,6 @@ import type { ServiceCollection } from "@tsazor/runtime";
 
 /** Registers the `Toaster` (shown by a `<ToastRegion />`) and the `DialogService` (shown by a `<DialogProvider />`), one each per app. */
 export function addFluent(services: ServiceCollection): void {
-  services.registerType(Toaster, { singleton: true });
-  services.registerType(DialogService, { singleton: true });
+  services.registerType(Toaster, { lifetime: "singleton" });
+  services.registerType(DialogService, { lifetime: "singleton" });
 }

@@ -20,6 +20,6 @@ createTsazorApp({
   root: App,
   routes,
   services: (services) => {
-    services.registerType(Toaster, { singleton: true });
+    services.registerType(Toaster, { lifetime: "singleton" });
   },
 });

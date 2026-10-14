@@ -29,7 +29,6 @@ export const formElements = new WeakMap<EditContext, HTMLFormElement>();
  *   or after this call — the function validator needs the value as written.
  * - The DataAnnotations validator is synchronous (one event pass, no
  *   `AddAsyncValidator`): Tsazor's validators are pure functions.
- * - `Subscribe` (legacy Tsazor API) is `onValidationStateChanged.subscribe`.
  */
 export class EditContext {
   /** The object being edited (Blazor's `EditContext.Model`). */
@@ -61,7 +60,10 @@ export class EditContext {
     return new ValidationMessageStore(this);
   }
 
-  /** @internal Marks the validation state changed (all listeners re-render). */
+  /**
+   * Blazor's NotifyValidationStateChanged: tells the listeners that the validation messages changed (a custom
+   * validator calls it after it updated its ValidationMessageStore).
+   */
   notifyValidationStateChanged(): void {
     this.onValidationStateChanged.invoke(this);
   }
@@ -86,10 +88,6 @@ export class EditContext {
     this.fieldValidators.set(field, validator);
   }
 
-  /** Legacy Tsazor API: `onValidationStateChanged.subscribe` (see InputBase). */
-  subscribe(listener: () => void): () => void {
-    return this.onValidationStateChanged.subscribe(() => listener());
-  }
 
   /** Blazor's MarkAsUnmodified. */
   markAsUnmodified(field: string): void {
@@ -263,6 +261,7 @@ export class ValidationMessageStore {
   }
 
   /** This store's messages for a field. */
+  /** @internal */
   messagesFor(state: FieldState): string[] {
     return this.messagesByField.get(state) ?? [];
   }
@@ -321,7 +320,7 @@ export interface DataAnnotationsValidationSubscription {
  * `subscribe` re-runs validation when the culture changes or a table arrives.
  */
 export interface ValidationMessagesLocalizer {
-  /** @internal Reserved/override key lookup (StringLocalizer.raw). */
+  /** Looks a message up, undefined when missing (StringLocalizer.raw). */
   raw(key: string): string | undefined;
   subscribe(listener: () => void): () => void;
 }

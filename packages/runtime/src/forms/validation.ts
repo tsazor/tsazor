@@ -20,7 +20,7 @@ export class ValidationMessage extends ComponentBase {
 
   protected override onInitialized(): void {
     if (this.editContext) {
-      this.editContextUnsubscribe = this.editContext.subscribe(() => componentInternals.requestRender(this));
+      this.editContextUnsubscribe = this.editContext.onValidationStateChanged.subscribe(() => componentInternals.requestRender(this));
     }
   }
 
@@ -69,7 +69,7 @@ export class ValidationSummary extends ComponentBase {
 
   protected override onInitialized(): void {
     if (this.editContext) {
-      this.editContextUnsubscribe = this.editContext.subscribe(() => componentInternals.requestRender(this));
+      this.editContextUnsubscribe = this.editContext.onValidationStateChanged.subscribe(() => componentInternals.requestRender(this));
     }
   }
 

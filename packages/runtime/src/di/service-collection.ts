@@ -29,21 +29,18 @@ export class ServiceCollection {
 
   /**
    * Blazor's AddSingleton/AddScoped/AddTransient with a factory: `factory`
-   * runs against the resolving provider. The lifetime defaults to singleton;
-   * `{ singleton: false }` means transient. A second registration for the
-   * same token replaces the first.
+   * runs against the resolving provider. The lifetime defaults to singleton
+   * (`{ lifetime: "scoped" }`, `{ lifetime: "transient" }`). A second
+   * registration for the same token replaces the first.
    */
-  register<T>(token: Token<T>, factory: (services: ServiceProvider) => T, options?: { singleton?: boolean; lifetime?: ServiceLifetime }): this {
-    // `{ singleton: true }` (the previous default) stays a singleton,
-    // `{ singleton: false }` stays a transient (fresh per resolve); `lifetime`
-    // is the explicit form for both and adds "scoped".
-    const lifetime = options?.lifetime ?? (options?.singleton === false ? "transient" : "singleton");
+  register<T>(token: Token<T>, factory: (services: ServiceProvider) => T, options?: { lifetime?: ServiceLifetime }): this {
+    const lifetime = options?.lifetime ?? "singleton";
     this.registrations.set(token as unknown as Token<never>, { factory: factory as (s: ServiceProvider) => unknown, lifetime });
     return this;
   }
 
   /** Registers `type` so instances resolve via `new type(services)`. */
-  registerType<T>(token: Token<T>, options?: { singleton?: boolean; lifetime?: ServiceLifetime }): this {
+  registerType<T>(token: Token<T>, options?: { lifetime?: ServiceLifetime }): this {
     const ctor = token as unknown as abstract new (s: ServiceProvider) => T;
     return this.register(token as unknown as Token<never>, (s) => Reflect.construct(ctor as unknown as new (s: ServiceProvider) => T, [s]) as T, options);
   }

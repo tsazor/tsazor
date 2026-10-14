@@ -18,7 +18,7 @@ import { Toaster } from "@tsazor/bootstrap";
 ```
 
 ```ts
-services.registerType(Toaster, { singleton: true });
+services.registerType(Toaster, { lifetime: "singleton" });
 ```
 
 Place one `<ToastRegion />` in `App.tsazor` — it shows the toasts — and inject the service:

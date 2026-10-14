@@ -212,8 +212,6 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
   @Parameter() childContent?: (item: TItem) => RenderFragment;
   /** The item template (Blazor's ItemContent). */
   @Parameter() itemContent?: (item: TItem) => RenderFragment;
-  /** Tsazor's earlier name of the item template; `ItemContent` and the child content win. */
-  @Parameter() itemTemplate?: (item: TItem) => RenderFragment;
   /** What shows for an item that is not loaded yet; by default an empty block of the measured item height. */
   @Parameter() placeholder?: (context: PlaceholderContext) => RenderFragment;
   /** What shows when the list is empty (after a load; not while loading). */
@@ -226,8 +224,6 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
   @Parameter() items?: readonly TItem[];
   /** How many items render above and below the visible ones. */
   @Parameter() overscanCount = 15;
-  /** Tsazor's earlier name of `OverscanCount`; it wins when set. */
-  @Parameter() overscan?: number;
   /** The spacers' tag: `tr` inside a `<tbody>`, `li` in a list. */
   @Parameter() spacerElement = "div";
   /** At most this many items (plus the overscan) render, however large the viewport: a safeguard. */
@@ -296,7 +292,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
   }
 
   private get effectiveOverscanCount(): number {
-    return this.overscan ?? this.overscanCount;
+    return this.overscanCount;
   }
 
   private get canDetectPrepend(): boolean {
@@ -462,7 +458,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
     } else {
       throw new Error("Virtualize requires either the 'Items' or 'ItemsProvider' parameters to be specified and non-null.");
     }
-    this.itemTemplateInUse = this.itemContent ?? this.childContent ?? this.itemTemplate;
+    this.itemTemplateInUse = this.itemContent ?? this.childContent;
     this.placeholderInUse = this.placeholder ?? ((context) => this.defaultPlaceholder(context));
   }
 

@@ -632,7 +632,7 @@ classes (identity-based — TS instead of interfaces):
 |---|---|
 | `register(Foo, (services) => new Foo(services.get(Bar)))` | singleton (default) — instance at the root provider, shared across all scopes |
 | `…, { lifetime: "scoped" }` | scoped — one instance per service scope (`createScope()`), Blazor's `AddScoped` |
-| `…, { lifetime: "transient" }` or `{ singleton: false }` (old form) | transient — new per resolution |
+| `…, { lifetime: "transient" }` | transient — new per resolution |
 | `registerType(Foo, options?)` | Factory `new Foo(services)` with the lifetime from the options |
 | `registerValue(Foo, instance)` | Constant — disposed by its owner, not by the provider |
 

@@ -235,7 +235,7 @@ const RESERVED = new Set<PropertyKey>(["then", "terminate", "dispose", "construc
  *   () => new Worker(new URL("./import.worker.ts", import.meta.url), { type: "module" }),
  * ) {}
  *
- * // Program.ts: services.registerType(ImportWorker, { singleton: true });
+ * // Program.ts: services.registerType(ImportWorker, { lifetime: "singleton" });
  * // a component: @inject ImportWorker importer — await this.importer.parseCsv(file)
  * ```
  *

@@ -41,7 +41,7 @@ interface Entry extends Toast {
  * The app's toasts, as a service (MudBlazor's ISnackbar, Radzen's
  * NotificationService): any component injects it and calls `show`; a skin's
  * `ToastRegion` renders the list. Register it once:
- * `services.registerType(Toaster, { singleton: true })`.
+ * `services.registerType(Toaster, { lifetime: "singleton" })`.
  *
  * Toasts that close by themselves pause while the pointer is over them or
  * focus is in them (WCAG 2.2.1, Timing Adjustable) — the region calls

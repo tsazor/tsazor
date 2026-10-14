@@ -337,7 +337,7 @@ export class Renderer {
     return this.trackFor(undefined, promise, label);
   }
 
-  /** @internal `track` for work of a component (`owner`): once it is disposed, a navigation no longer waits for the work. */
+  /** `track` for work of a component (`owner`): once it is disposed, a navigation no longer waits for the work. */
   trackFor<T>(owner: ComponentState | undefined, promise: Promise<T>, label: string): Promise<T> {
     this.inFlight.set(promise, { label, seq: this.trackedCount++, owner });
     void promise.finally(() => this.inFlight.delete(promise)).catch(() => undefined);
@@ -349,13 +349,13 @@ export class Renderer {
   /** How much work was tracked so far: the next work's `seq`. */
   private trackedCount = 0;
 
-  /** @internal The navigation hold (createTsazorApp): marks the work tracked so far; `settledSince` doesn't wait for it. */
+  /** The navigation hold (createTsazorApp): marks the work tracked so far; `settledSince` doesn't wait for it. */
   markWork(): number {
     return this.trackedCount;
   }
 
   /**
-   * @internal The navigation hold: resolves once `navigationWork` (the Router's OnNavigateAsync) is
+   * The navigation hold: resolves once `navigationWork` (the Router's OnNavigateAsync) is
    * done, no batch is scheduled and the work tracked since `mark` is done — but for the work of
    * components disposed meanwhile (a page navigated away from) — or at `deadline` (a `Date.now()`
    * time) with work still running. Never rejects.
@@ -758,7 +758,7 @@ export class Renderer {
   }
 
   /**
-   * @internal The defined batch end: `listener` runs after every batch, once
+   * The defined batch end: `listener` runs after every batch, once
    * its queue is empty, after the components' onAfterRender calls. Returns an
    * unsubscribe function.
    */
@@ -778,7 +778,7 @@ export class Renderer {
   }
 
   /**
-   * @internal Routes a component failure to its handler. Blazor's
+   * Routes a component failure to its handler. Blazor's
    * HandleExceptionViaErrorBoundary: a failure with an identified component
    * (everything but dispose and batch-internal failures) is offered to the
    * nearest error boundary along the logical parent chain; without one,

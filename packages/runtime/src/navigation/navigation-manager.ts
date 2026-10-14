@@ -218,11 +218,6 @@ export class NavigationManager {
     }
   }
 
-  /** Former name of toAbsoluteUri (kept for existing callers). */
-  toAbsolute(uri: string): string {
-    return this.toAbsoluteUri(uri);
-  }
-
   /**
    * The href to render for a link to `href` (NavLink uses it). History mode:
    * unchanged (Blazor renders the Href as written). Hash mode: targets inside
@@ -256,8 +251,8 @@ export class NavigationManager {
    */
   navigateTo(uri: string, forceLoadOrOptions?: boolean | NavigationOptions, replace?: boolean): void {
     const options: NavigationOptions =
-      typeof forceLoadOrOptions === "object" ? forceLoadOrOptions : { forceLoad: forceLoadOrOptions ?? false, replace: replace ?? false };
-    const replaceEntry = options.replaceHistoryEntry ?? options.replace ?? false;
+      typeof forceLoadOrOptions === "object" ? forceLoadOrOptions : { forceLoad: forceLoadOrOptions ?? false, replaceHistoryEntry: replace ?? false };
+    const replaceEntry = options.replaceHistoryEntry ?? false;
     const state = options.historyEntryState;
     const target = this.toAbsoluteUri(uri);
     if (!options.forceLoad && this.isWithinBaseUriSpace(target) && this.isSamePageWithHash(target)) {
@@ -326,9 +321,9 @@ export class NavigationManager {
   }
 
   /**
-   * Registers a navigation lock under an id (replacing an existing one with
+   * @internal Registers a navigation lock under an id (replacing an existing one with
    * that id). The callback returns whether the navigation may continue.
-   * Thin wrapper over registerLocationChangingHandler.
+   * Thin wrapper over registerLocationChangingHandler (Blazor has none; apps use that or `<NavigationLock>`).
    */
   setNavigationLock(lockId: string, callback: (uri: string, isIntercepted: boolean) => boolean | Promise<boolean>): void {
     this.locks.get(lockId)?.dispose();
@@ -340,7 +335,7 @@ export class NavigationManager {
     this.locks.set(lockId, registration);
   }
 
-  /** Removes the navigation lock registered under `lockId`. */
+  /** @internal Removes the navigation lock registered under `lockId`. */
   releaseNavigationLock(lockId: string): void {
     this.locks.get(lockId)?.dispose();
     this.locks.delete(lockId);
@@ -730,7 +725,7 @@ export class NavigationManager {
     this.lastLocation = uri;
     this.currentHistoryEntryState = historyEntryState;
     if (scrollTarget !== undefined) this.scrollTarget = scrollTarget;
-    const event: LocationChangedEventArgs = { location: uri, isNavigationIntercepted: isIntercepted, isIntercepted, historyEntryState };
+    const event: LocationChangedEventArgs = { location: uri, isNavigationIntercepted: isIntercepted, historyEntryState };
     for (const handler of [...this.locationChangedHandlers]) {
       handler(this, event);
     }
@@ -937,14 +932,12 @@ export function withQueryParameters(uri: string, parameters: Readonly<Record<str
   return `${base}${pairs.length > 0 ? `?${pairs.join("&")}` : ""}${hash}`;
 }
 
-/** Blazor's NavigationOptions (plus `replace`, the former Tsazor spelling of ReplaceHistoryEntry). */
+/** Blazor's NavigationOptions. */
 export interface NavigationOptions {
   /** Bypass client-side routing: full page load. */
   readonly forceLoad?: boolean;
   /** Replace the current history entry instead of pushing a new one. */
   readonly replaceHistoryEntry?: boolean;
-  /** Alias of replaceHistoryEntry. */
-  readonly replace?: boolean;
   /** State stored with the history entry (LocationChangedEventArgs.historyEntryState). */
   readonly historyEntryState?: string;
 }
@@ -976,8 +969,6 @@ export interface LocationChangedEventArgs {
   readonly location: string;
   /** Blazor's IsNavigationIntercepted: true for an intercepted link click. */
   readonly isNavigationIntercepted: boolean;
-  /** Former Tsazor name of isNavigationIntercepted. */
-  readonly isIntercepted: boolean;
   /** The state stored with the new history entry (`NavigationOptions.historyEntryState`), if any. */
   readonly historyEntryState?: string;
 }

@@ -117,7 +117,7 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
     this.editContextUnsubscribe?.();
     this.currentEditContext = context;
     this.applyValidators();
-    this.editContextUnsubscribe = context.subscribe(() => componentInternals.requestRender(this));
+    this.editContextUnsubscribe = context.onValidationStateChanged.subscribe(() => componentInternals.requestRender(this));
   }
 
   private applyValidators(): void {

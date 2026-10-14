@@ -58,7 +58,7 @@ export abstract class InputBase<TValue> extends ComponentBase {
   protected override onInitialized(): void {
     if (this.editContext) {
       // Blazor's OnValidateStateChanged.
-      this.editContextUnsubscribe = this.editContext.subscribe(() => componentInternals.requestRender(this));
+      this.editContextUnsubscribe = this.editContext.onValidationStateChanged.subscribe(() => componentInternals.requestRender(this));
     }
   }
 

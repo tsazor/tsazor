@@ -18,7 +18,7 @@ const app = createTsazorApp({
   services: (services) => {
     services.registerValue(ThemeState, themeState);
     // The app's toasts: components inject it, the Feedback page's ToastRegion shows them.
-    services.registerType(Toaster, { singleton: true });
+    services.registerType(Toaster, { lifetime: "singleton" });
   },
 });
 

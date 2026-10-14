@@ -27,37 +27,37 @@ export class ComponentState {
   disposed = false;
   /** Distance from the root component: the render queue's parent-first order. */
   readonly depth: number;
-  /** @internal Render-queue bookkeeping (see RenderQueue). */
+  /** Render-queue bookkeeping (see RenderQueue). */
   renderQueued = false;
-  /** @internal */
+  /** (internal entry) */
   renderQueueOrder = 0;
-  /** @internal Render passes in the current batch (render-loop guard). */
+  /** Render passes in the current batch (render-loop guard). */
   batchRenderCount = 0;
   /**
-   * @internal Blazor's AddToRenderQueue(boundary, empty): a one-shot fragment
+   * Blazor's AddToRenderQueue(boundary, empty): a one-shot fragment
    * the component's NEXT render pass builds instead of its own output. Set by
    * the error-boundary routing (handleComponentError), consumed by
    * renderComponent — the error-state render is queued after it.
    */
   forcedRenderFragment: ((builder: RenderTreeBuilder) => void) | null = null;
   /**
-   * @internal Cascading subscriptions (Blazor's CascadingParameterState):
+   * Cascading subscriptions (Blazor's CascadingParameterState):
    * the non-fixed suppliers this component's cascading parameters resolved
    * to (plus "pending" by-type candidates), null when there are none.
    */
   cascadingSuppliers: ComponentState[] | null = null;
-  /** @internal Supplier side: the consumers subscribed to this component's cascadeValue. */
+  /** Supplier side: the consumers subscribed to this component's cascadeValue. */
   subscribers: Set<ComponentState> | null = null;
-  /** @internal Supplier side: cascadeValue at the last render pass (change detection). */
+  /** Supplier side: cascadeValue at the last render pass (change detection). */
   lastCascadeValue: unknown = undefined;
   /**
-   * @internal Blazor's _latestDirectParametersSnapshot: the parent-supplied
+   * Blazor's _latestDirectParametersSnapshot: the parent-supplied
    * parameters of the last set, kept for components with cascading
    * parameters so a cascade notification can re-set them.
    */
   directParameters: ReadonlyMap<string, unknown> | null = null;
   /**
-   * @internal `@SupplyParameterFromQuery` fields: the values last supplied from the URL's query,
+   * `@SupplyParameterFromQuery` fields: the values last supplied from the URL's query,
    * null when the component has none (or the parent passes them all). A navigation re-sets the
    * parameters when one of them changes.
    */
