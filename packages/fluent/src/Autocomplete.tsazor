@@ -39,7 +39,7 @@
         <span class="fui-input__message" role="alert" id="@this.messageId">@this.message</span>
     }
     @if (this.open) {
-        <ul class="fui-autocomplete__list" role="listbox" id="@this.listId" aria-label="@(label ?? ariaLabel)" aria-multiselectable="@(multiple ? "true" : null)" @attach:top="topLayer" @attach="position" @attach:dismiss="dismiss">
+        <ul class="fui-autocomplete__list" role="listbox" id="@this.listId" aria-label="@(label ?? ariaLabel)" aria-multiselectable="@(multiple ? "true" : null)" @attach:top="topLayer()" @attach="position" @attach:dismiss="dismiss">
             @for (let i = 0; i < this.options.length; i++) {
                 <li class="@this.optionClass(i)" role="option" id="@this.optionId(i)" aria-selected="@(this.isSelected(this.options[i]!) ? "true" : "false")" @onmousedown:preventDefault @onclick="() => this.pick(this.options[i]!)">
                     @if (optionTemplate !== undefined) {

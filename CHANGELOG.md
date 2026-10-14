@@ -128,6 +128,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     re-exports the type as `Toast`). The behavior `dismissable` is `dismissible` (`DismissibleOptions`), as the
     skins spell their parameters. `FileUploadErrorEventArgs.errorCode` is `"file-count-exceeded"`,
     `"maximum-size-reached"` or `"upload-failed"`, kebab case like every other value union.
+  - `@tsazor/ui` (U5): shapes. `scrollLock()` and `topLayer()` are factories like every other behavior
+    (`@attach="topLayer()"`, `private readonly lock = scrollLock()`); each returns one attachment for every call, so a
+    render keeps it attached. `createLayer()` returns an opaque `Layer` (the `layer` option of `focusTrap` and
+    `dismissible` takes one), `raiseInTopLayer(element)` keeps its count itself (no `since` to pass back),
+    `libraryTextDefaults` is typed with `string` values (its English wording is no longer part of the type), and
+    `GridItemsProviderResult.items` is a `readonly` array.
   - `@tsazor/cli` (D9): **a component library builds without Tsazor's internal packages** — `tsazor build-lib [dir]
     [--stylesheet <file>]`, and `buildLibrary(options)` for a build script that needs internal components, aliases or
     re-exports (`docs/component-libraries.md`, "Building a library"). It compiles the components as the Vite plugin

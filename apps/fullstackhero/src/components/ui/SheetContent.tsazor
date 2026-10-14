@@ -8,7 +8,7 @@
 @import Dialog from "./Dialog.tsazor"
 
 @if (dialog?.open) {
-    <div popover="manual" class="@topLayerClass" @attach="topLayer">
+    <div popover="manual" class="@topLayerClass" @attach="topLayer()">
         <div data-slot="dialog-overlay" data-state="open" class="fixed inset-0 z-50 bg-[oklch(0_0_0_/_0.4)] backdrop-blur-[6px] data-[state=open]:animate-fsh-overlay-in" @attach="lock"></div>
         <div role="dialog" aria-modal="true" aria-labelledby="@dialog.titleId" aria-describedby="@dialog.descriptionId" data-state="open" tabindex="-1"
              @attributes="@this.attributes" @attach="trap" @attach:dismiss="dismiss">
@@ -31,7 +31,7 @@
     private readonly layer = createLayer();
     // Radix focuses the element marked autofocus, else the first focusable one (the close button comes last).
     private readonly trap = focusTrap({ layer: this.layer, initialFocus: (element) => element.querySelector<HTMLElement>("[autofocus]") ?? focusableElements(element)[0] ?? null });
-    private readonly lock = scrollLock;
+    private readonly lock = scrollLock();
     private readonly dismiss = dismissible({ layer: this.layer, onDismiss: () => this.close() });
 
     private readonly closeClass = cn(

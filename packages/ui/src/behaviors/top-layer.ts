@@ -7,7 +7,7 @@ import type { Attachment } from "@tsazor/runtime";
  * tree, its cascading values and its events are unchanged. Radix's Portal without a portal (Blazor has none either).
  *
  * ```razor
- * <div class="fui-dialog-overlay" @attach:layer="topLayer" @attach="trap">…</div>
+ * <div class="fui-dialog-overlay" @attach:layer="topLayer()" @attach="trap">…</div>
  * ```
  *
  * Make it the overlay root's FIRST attachment: a popover is `display: none` until it is shown, and the attachments
@@ -17,7 +17,12 @@ import type { Attachment } from "@tsazor/runtime";
  * colors) at zero specificity: the component's own rules place and paint it. Without the Popover API (an old
  * engine, a DOM test environment) the element stays where its CSS puts it.
  */
-export const topLayer: Attachment<HTMLElement> = (element) => {
+export function topLayer(): Attachment<HTMLElement> {
+  return showWhileAttached;
+}
+
+/** topLayer's attachment, one for every call: a render that calls `topLayer()` again keeps it attached. */
+const showWhileAttached: Attachment<HTMLElement> = (element) => {
   if (!showInTopLayer(element)) return;
   return () => hideFromTopLayer(element);
 };
@@ -48,19 +53,22 @@ export function hideFromTopLayer(element: HTMLElement): void {
  */
 let shownCount = 0;
 
+/** The count when each raised element was last shown. */
+const raisedAt = new WeakMap<HTMLElement, number>();
+
 /**
- * Shows `element` in the top layer, or — when it is there already and another element entered it since `since` (a
- * previous return value) — on top of it again. Returns the count to pass next time. Hiding and showing restarts the
- * element's CSS animations, so call it when its content changes anyway (a new toast), not on every render.
+ * Shows `element` in the top layer, or — when it is there already and another element entered it since — on top of
+ * it again. Hiding and showing restarts the element's CSS animations, so call it when its content changes anyway (a
+ * new toast), not on every render.
  */
-export function raiseInTopLayer(element: HTMLElement, since: number): number {
-  if (typeof element.showPopover !== "function" || !element.isConnected) return since;
+export function raiseInTopLayer(element: HTMLElement): void {
+  if (typeof element.showPopover !== "function" || !element.isConnected) return;
   if (isOpen(element)) {
-    if (since === shownCount) return since;
+    if (raisedAt.get(element) === shownCount) return;
     element.hidePopover();
   }
   showInTopLayer(element);
-  return shownCount;
+  raisedAt.set(element, shownCount);
 }
 
 function isOpen(element: HTMLElement): boolean {

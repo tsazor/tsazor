@@ -44,13 +44,12 @@
     }
 
     private region?: HTMLElement;
-    private raisedSince = 0;
     private newestToast?: number;
 
     /** The container lies in the browser's top layer, so a toast shows above an open modal, as Bootstrap's z-index does. */
     private readonly topLayer = (element: HTMLElement): (() => void) => {
         this.region = element;
-        this.raisedSince = raiseInTopLayer(element, 0);
+        raiseInTopLayer(element);
         return () => {
             hideFromTopLayer(element);
             this.region = undefined;
@@ -60,7 +59,7 @@
     /** A new toast after an overlay opened: the container shows itself on top of the top layer again. */
     protected override onAfterRender(): void {
         const newest = this.toaster.toasts.at(-1)?.id;
-        if (this.region && newest !== undefined && newest !== this.newestToast) this.raisedSince = raiseInTopLayer(this.region, this.raisedSince);
+        if (this.region && newest !== undefined && newest !== this.newestToast) raiseInTopLayer(this.region);
         this.newestToast = newest;
     }
 

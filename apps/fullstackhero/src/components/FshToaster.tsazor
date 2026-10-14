@@ -44,7 +44,6 @@
 
 @code {
     private region?: HTMLOListElement;
-    private raisedAt = -1;
 
     protected override onInitialized(): void {
         this.observe(toaster);
@@ -55,7 +54,7 @@
         // Shown while there are toasts, and above an overlay that opened since.
         const region = this.region;
         if (!region) return;
-        if (this.visible.length > 0) this.raisedAt = raiseInTopLayer(region, this.raisedAt);
+        if (this.visible.length > 0) raiseInTopLayer(region);
         else if (region.matches(":popover-open")) region.hidePopover();
     }
 

@@ -30,7 +30,7 @@
         </button>
     </div>
     @if (this.open) {
-        <div class="fui-color-picker-input__popup" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("colorPicker.button"))" @attach:top="topLayer" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
+        <div class="fui-color-picker-input__popup" role="dialog" aria-modal="true" aria-label="@(this.buttonLabel ?? t("colorPicker.button"))" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position" @attach:trap="this.trap">
             <ColorPicker selectedColor="@this.color" selectedColorChanged="@this.changed" onPick="@this.picked" view="@this.view" palette="@this.palette" findClosestColor="@this.findClosestColor" labels="@this.labels" />
         </div>
     }

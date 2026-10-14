@@ -1,5 +1,5 @@
 import type { Attachment } from "@tsazor/runtime";
-import { isTopLayer, openLayer } from "../layers.js";
+import { isTopLayer, openLayer, type Layer } from "../layers.js";
 
 /** Why a layer asks to be dismissed. */
 export type DismissReason = "escape" | "outside";
@@ -10,7 +10,7 @@ export interface DismissibleOptions {
    * The overlay this belongs to (`createLayer()`): a dialog's focus trap and its dismiss handling
    * share one, so they count as one layer. Default: a layer of its own.
    */
-  layer?: object;
+  layer?: Layer;
   /** Called when the user asks to close the layer; the component then closes it (or not). */
   onDismiss: (reason: DismissReason) => void;
   /** React to Escape. Default true. */

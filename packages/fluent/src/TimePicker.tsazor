@@ -36,7 +36,7 @@
                     @ref="button" @onmousedown:preventDefault @onclick="this.toggle"><Icon value="@Clock20Regular" /></button>
         </div>
         @if (this.open) {
-            <ul class="fui-time-picker__list" role="listbox" id="@this.listId" aria-label="@(this.label ?? this.ariaLabel ?? this.buttonLabel ?? t("timePicker.button"))" @ref="list" @attach:top="topLayer" @attach="this.dismiss" @attach:position="this.position">
+            <ul class="fui-time-picker__list" role="listbox" id="@this.listId" aria-label="@(this.label ?? this.ariaLabel ?? this.buttonLabel ?? t("timePicker.button"))" @ref="list" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position">
                 @for (let i = 0; i < this.options.length; i++) {
                     <li class="@this.optionClass(i)" role="option" id="@this.optionId(i)" aria-selected="@(this.options[i] === this.selected ? "true" : "false")"
                         aria-disabled="@(this.optionDisabled[i] ? "true" : null)" @onmousedown:preventDefault @onclick="() => this.pickAt(i)">@this.optionText(this.options[i]!)</li>

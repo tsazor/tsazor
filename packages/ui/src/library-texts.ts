@@ -9,7 +9,7 @@ import { formatMessage, inject, StringLocalizer } from "@tsazor/runtime";
  * passes. A text that depends on a count has one entry per plural category of `Intl.PluralRules` — `….one`,
  * `….other`, and in a table also `….few`, `….many`, … as the language needs them.
  */
-export const libraryTextDefaults = {
+export const libraryTextDefaults = catalog({
   // Shared by several components.
   "close": "Close",
   "remove": "Remove {name}",
@@ -127,7 +127,12 @@ export const libraryTextDefaults = {
   "sortableList.movedToList": "{item}, moved to {list}, position {position} of {count}.",
   "sortableList.dropped": "{item}, put down at position {position} of {count}.",
   "sortableList.canceled": "{item}, put back.",
-} as const satisfies Record<string, string>;
+});
+
+/** The catalog's type: its names, each a `string` — the English wording is a value, not part of the type. */
+function catalog<Texts extends Record<string, string>>(texts: Texts): { readonly [Name in keyof Texts]: string } {
+  return texts;
+}
 
 /** The name of a library text: "close", "paginator.page", … */
 export type LibraryText = keyof typeof libraryTextDefaults;

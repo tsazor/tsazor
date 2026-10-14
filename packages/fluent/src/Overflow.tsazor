@@ -30,7 +30,7 @@
         }
     </button>
     @if (this.open) {
-        <div class="fui-overflow__popup" id="@this.popupId" role="group" aria-label="@this.moreLabel" @attach:top="topLayer" @attach="this.dismiss" @attach:position="this.position">
+        <div class="fui-overflow__popup" id="@this.popupId" role="group" aria-label="@this.moreLabel" @attach:top="topLayer()" @attach="this.dismiss" @attach:position="this.position">
             @if (this.overflowTemplate !== undefined) {
                 @this.overflowTemplate({ overflowed: this.overflowed, count: this.overflowed.length })
             } else {

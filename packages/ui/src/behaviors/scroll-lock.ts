@@ -9,10 +9,10 @@ let restore = "";
  * goes away.
  *
  * ```razor
- * <div class="backdrop" @attach="scrollLock">…</div>
+ * <div class="backdrop" @attach="scrollLock()">…</div>
  * ```
  */
-export const scrollLock: Attachment<HTMLElement> = (element) => {
+const lockScroll: Attachment<HTMLElement> = (element) => {
   const body = element.ownerDocument.body;
   if (locks++ === 0) {
     restore = body.style.overflow;
@@ -22,3 +22,8 @@ export const scrollLock: Attachment<HTMLElement> = (element) => {
     if (--locks === 0) body.style.overflow = restore;
   };
 };
+
+/** The attachment that locks the page's scrolling while it is attached; the same one on every call, so a render keeps it. */
+export function scrollLock(): Attachment<HTMLElement> {
+  return lockScroll;
+}

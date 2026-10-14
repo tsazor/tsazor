@@ -171,7 +171,7 @@ export interface GridItemsProviderRequest<T> {
 
 /** An `ItemsProvider`'s answer: one page of rows and the count of all. */
 export interface GridItemsProviderResult<T> {
-  items: T[];
+  items: readonly T[];
   totalItemCount: number;
 }
 

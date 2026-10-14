@@ -11,7 +11,7 @@
 @import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
-    <div class="fui-dialog-overlay" @attach:top="topLayer" @attach="trap" @attach:lock="lock">
+    <div class="fui-dialog-overlay" @attach:top="topLayer()" @attach="trap" @attach:lock="lock">
         <div role="dialog" aria-modal="true" @attributes="@this.dialogAttributes" @attach="dismiss">
             @if (this.shownTitle) {
                 <div class="fui-dialog__header">
@@ -58,7 +58,7 @@
     /** The trap and the dismiss handling are one overlay layer (nested dialogs close one at a time). */
     private readonly layer = createLayer();
     private readonly trap = focusTrap({ layer: this.layer });
-    private readonly lock = scrollLock;
+    private readonly lock = scrollLock();
     private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
     private generatedId?: string;

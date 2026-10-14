@@ -134,7 +134,7 @@ export interface ColorPickerLabels {
 export type ColumnAlign = "start" | "center" | "end";
 
 // createLayer
-export declare function createLayer(): object;
+export declare function createLayer(): Layer;
 
 // DataGridModel
 export declare class DataGridModel<T> {
@@ -219,7 +219,7 @@ export declare function dismissible(options: DismissibleOptions): Attachment<HTM
 
 // DismissibleOptions
 export interface DismissibleOptions {
-    layer?: object;
+    layer?: Layer;
     onDismiss: (reason: DismissReason) => void;
     escape?: boolean;
     outside?: boolean;
@@ -283,7 +283,7 @@ export declare function focusTrap(options?: FocusTrapOptions): Attachment<HTMLEl
 
 // FocusTrapOptions
 export interface FocusTrapOptions {
-    layer?: object;
+    layer?: Layer;
     initialFocus?: "first" | "container" | ((element: HTMLElement) => HTMLElement | null);
     restoreFocus?: boolean;
 }
@@ -322,7 +322,7 @@ export interface GridItemsProviderRequest<T> {
 
 // GridItemsProviderResult
 export interface GridItemsProviderResult<T> {
-    items: T[];
+    items: readonly T[];
     totalItemCount: number;
 }
 
@@ -387,6 +387,11 @@ export interface KeyCombination {
     readonly meta: boolean;
 }
 
+// Layer
+export interface Layer {
+    readonly __tsazorLayer: true;
+}
+
 // LibraryPluralText
 export type LibraryPluralText = LibraryText extends infer Name ? (Name extends `${infer Base}.other` ? Base : never) : never;
 
@@ -395,106 +400,106 @@ export type LibraryText = keyof typeof libraryTextDefaults;
 
 // libraryTextDefaults
 export declare const libraryTextDefaults: {
-    readonly close: "Close";
-    readonly remove: "Remove {name}";
-    readonly loading: "Loading…";
-    readonly noEntries: "No entries";
-    readonly "pagination.label": "Pagination";
-    readonly "pagination.first": "First page";
-    readonly "pagination.previous": "Previous page";
-    readonly "pagination.next": "Next page";
-    readonly "pagination.last": "Last page";
-    readonly "pagination.goTo": "Go to page {page}";
-    readonly "pagination.previousText": "Previous";
-    readonly "pagination.nextText": "Next";
-    readonly "paginator.label": "Pages";
-    readonly "paginator.page": "Page {page} of {pages}";
-    readonly "paginator.items.one": "{count} item";
-    readonly "paginator.items.other": "{count} items";
-    readonly "paginator.pageSize": "Rows per page";
-    readonly "dataGrid.selectAll": "Select all rows";
-    readonly "dataGrid.selected": "Selected";
-    readonly "dataGrid.selectRow": "Select row {row}";
-    readonly "sidebarNav.label": "Main navigation";
-    readonly "scrollToTop.label": "Back to top";
-    readonly "breadcrumb.label": "breadcrumb";
-    readonly "splitter.resize": "Resize";
-    readonly "overflow.more.one": "{count} more: {names}";
-    readonly "overflow.more.other": "{count} more: {names}";
-    readonly "wizard.label": "Steps";
-    readonly "wizard.previous": "Previous";
-    readonly "wizard.next": "Next";
-    readonly "wizard.done": "Done";
-    readonly "carousel.label": "Slides";
-    readonly "carousel.roleDescription": "carousel";
-    readonly "carousel.slideRoleDescription": "slide";
-    readonly "carousel.previous": "Previous slide";
-    readonly "carousel.next": "Next slide";
-    readonly "carousel.slide": "{position} of {count}";
-    readonly "carousel.bullet": "Slide {position}";
-    readonly "carousel.pause": "Stop the slides";
-    readonly "carousel.play": "Start the slides";
-    readonly "calendar.previousMonth": "Previous month";
-    readonly "calendar.nextMonth": "Next month";
-    readonly "calendar.previousYear": "Previous year";
-    readonly "calendar.nextYear": "Next year";
-    readonly "calendar.previousYears": "Previous years";
-    readonly "calendar.nextYears": "Next years";
-    readonly "datePicker.button": "Choose date";
-    readonly "timePicker.button": "Choose time";
-    readonly "dateField.year": "YYYY";
-    readonly "dateField.month": "MM";
-    readonly "dateField.day": "DD";
-    readonly "timeField.hour": "hh";
-    readonly "timeField.minute": "mm";
-    readonly "colorPicker.label": "Color";
-    readonly "colorPicker.button": "Choose color";
-    readonly "colorPicker.swatch": "{color}, {hex}";
-    readonly "colorPicker.square": "Saturation and brightness";
-    readonly "colorPicker.squareRoleDescription": "2D slider";
-    readonly "colorPicker.squareValue": "Saturation {saturation}%, brightness {brightness}%";
-    readonly "colorPicker.hue": "Hue";
-    readonly "colorPicker.hueValue": "{hue} degrees, {color}";
-    readonly "color.light": "light {color}";
-    readonly "color.dark": "dark {color}";
-    readonly "color.black": "black";
-    readonly "color.white": "white";
-    readonly "color.gray": "gray";
-    readonly "color.lightGray": "light gray";
-    readonly "color.darkGray": "dark gray";
-    readonly "color.red": "red";
-    readonly "color.orange": "orange";
-    readonly "color.yellow": "yellow";
-    readonly "color.lime": "lime";
-    readonly "color.green": "green";
-    readonly "color.teal": "teal";
-    readonly "color.cyan": "cyan";
-    readonly "color.blue": "blue";
-    readonly "color.purple": "purple";
-    readonly "color.magenta": "magenta";
-    readonly "color.pink": "pink";
-    readonly "fileUpload.dropFile": "Drop a file here, or click to choose";
-    readonly "fileUpload.dropFiles": "Drop files here, or click to choose";
-    readonly "fileUpload.progressLabel": "Upload progress";
-    readonly "fileUpload.loading": "Loading...";
-    readonly "fileUpload.progress": "Loading {number}/{count} - {name}";
-    readonly "fileUpload.completed": "Completed";
-    readonly "fileUpload.canceled": "Canceled";
-    readonly "fileUpload.fileCountExceeded": "The maximum number of files has been exceeded.";
-    readonly "fileUpload.fileSizeExceeded": "The maximum size allowed is reached";
-    readonly "rating.label": "Rating";
-    readonly "rating.stars.one": "{count} star";
-    readonly "rating.stars.other": "{count} stars";
-    readonly "rating.display": "Rated {value} out of {max}";
-    readonly "rating.displayWithCount": "Rated {value} out of {max}, {ratings}";
-    readonly "rating.ratings.one": "{count} rating";
-    readonly "rating.ratings.other": "{count} ratings";
-    readonly "sortableList.instructions": "Press Space to pick the item up, the arrow keys to move it, Space to put it down, Escape to put it back.";
-    readonly "sortableList.grabbed": "{item}, picked up. Position {position} of {count}.";
-    readonly "sortableList.moved": "{item}, position {position} of {count}.";
-    readonly "sortableList.movedToList": "{item}, moved to {list}, position {position} of {count}.";
-    readonly "sortableList.dropped": "{item}, put down at position {position} of {count}.";
-    readonly "sortableList.canceled": "{item}, put back.";
+    readonly close: string;
+    readonly remove: string;
+    readonly loading: string;
+    readonly noEntries: string;
+    readonly "pagination.label": string;
+    readonly "pagination.first": string;
+    readonly "pagination.previous": string;
+    readonly "pagination.next": string;
+    readonly "pagination.last": string;
+    readonly "pagination.goTo": string;
+    readonly "pagination.previousText": string;
+    readonly "pagination.nextText": string;
+    readonly "paginator.label": string;
+    readonly "paginator.page": string;
+    readonly "paginator.items.one": string;
+    readonly "paginator.items.other": string;
+    readonly "paginator.pageSize": string;
+    readonly "dataGrid.selectAll": string;
+    readonly "dataGrid.selected": string;
+    readonly "dataGrid.selectRow": string;
+    readonly "sidebarNav.label": string;
+    readonly "scrollToTop.label": string;
+    readonly "breadcrumb.label": string;
+    readonly "splitter.resize": string;
+    readonly "overflow.more.one": string;
+    readonly "overflow.more.other": string;
+    readonly "wizard.label": string;
+    readonly "wizard.previous": string;
+    readonly "wizard.next": string;
+    readonly "wizard.done": string;
+    readonly "carousel.label": string;
+    readonly "carousel.roleDescription": string;
+    readonly "carousel.slideRoleDescription": string;
+    readonly "carousel.previous": string;
+    readonly "carousel.next": string;
+    readonly "carousel.slide": string;
+    readonly "carousel.bullet": string;
+    readonly "carousel.pause": string;
+    readonly "carousel.play": string;
+    readonly "calendar.previousMonth": string;
+    readonly "calendar.nextMonth": string;
+    readonly "calendar.previousYear": string;
+    readonly "calendar.nextYear": string;
+    readonly "calendar.previousYears": string;
+    readonly "calendar.nextYears": string;
+    readonly "datePicker.button": string;
+    readonly "timePicker.button": string;
+    readonly "dateField.year": string;
+    readonly "dateField.month": string;
+    readonly "dateField.day": string;
+    readonly "timeField.hour": string;
+    readonly "timeField.minute": string;
+    readonly "colorPicker.label": string;
+    readonly "colorPicker.button": string;
+    readonly "colorPicker.swatch": string;
+    readonly "colorPicker.square": string;
+    readonly "colorPicker.squareRoleDescription": string;
+    readonly "colorPicker.squareValue": string;
+    readonly "colorPicker.hue": string;
+    readonly "colorPicker.hueValue": string;
+    readonly "color.light": string;
+    readonly "color.dark": string;
+    readonly "color.black": string;
+    readonly "color.white": string;
+    readonly "color.gray": string;
+    readonly "color.lightGray": string;
+    readonly "color.darkGray": string;
+    readonly "color.red": string;
+    readonly "color.orange": string;
+    readonly "color.yellow": string;
+    readonly "color.lime": string;
+    readonly "color.green": string;
+    readonly "color.teal": string;
+    readonly "color.cyan": string;
+    readonly "color.blue": string;
+    readonly "color.purple": string;
+    readonly "color.magenta": string;
+    readonly "color.pink": string;
+    readonly "fileUpload.dropFile": string;
+    readonly "fileUpload.dropFiles": string;
+    readonly "fileUpload.progressLabel": string;
+    readonly "fileUpload.loading": string;
+    readonly "fileUpload.progress": string;
+    readonly "fileUpload.completed": string;
+    readonly "fileUpload.canceled": string;
+    readonly "fileUpload.fileCountExceeded": string;
+    readonly "fileUpload.fileSizeExceeded": string;
+    readonly "rating.label": string;
+    readonly "rating.stars.one": string;
+    readonly "rating.stars.other": string;
+    readonly "rating.display": string;
+    readonly "rating.displayWithCount": string;
+    readonly "rating.ratings.one": string;
+    readonly "rating.ratings.other": string;
+    readonly "sortableList.instructions": string;
+    readonly "sortableList.grabbed": string;
+    readonly "sortableList.moved": string;
+    readonly "sortableList.movedToList": string;
+    readonly "sortableList.dropped": string;
+    readonly "sortableList.canceled": string;
 };
 
 // libraryTextKey
@@ -581,7 +586,7 @@ export interface ProgressFileDetails {
 }
 
 // raiseInTopLayer
-export declare function raiseInTopLayer(element: HTMLElement, since: number): number;
+export declare function raiseInTopLayer(element: HTMLElement): void;
 
 // RatingLabels
 export interface RatingLabels {
@@ -602,7 +607,7 @@ export interface RovingFocusOptions {
 }
 
 // scrollLock
-export declare const scrollLock: Attachment<HTMLElement>;
+export declare function scrollLock(): Attachment<HTMLElement>;
 
 // SelectionMode
 export type SelectionMode = "none" | "single" | "multiple";
@@ -717,7 +722,7 @@ export interface TooltipOptions {
 }
 
 // topLayer
-export declare const topLayer: Attachment<HTMLElement>;
+export declare function topLayer(): Attachment<HTMLElement>;
 
 // TreeViewItem
 export interface TreeViewItem {

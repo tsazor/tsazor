@@ -42,7 +42,7 @@ describe("topLayer (F2)", () => {
 
   it("shows the element as a manual popover, marked for the box reset; the cleanup hides it", () => {
     const dialog = element();
-    const cleanup = topLayer(dialog) as () => void;
+    const cleanup = topLayer()(dialog) as () => void;
     expect(dialog.getAttribute("popover")).toBe("manual");
     expect(dialog.hasAttribute("data-top-layer")).toBe(true);
     expect(shown).toEqual([dialog]);
@@ -50,22 +50,27 @@ describe("topLayer (F2)", () => {
     expect(shown).toEqual([]);
   });
 
+  it("is one attachment for every call, so a render keeps it", () => {
+    expect(topLayer()).toBe(topLayer());
+  });
+
   it("stacks in the order shown: a menu opened in a dialog lies above it", () => {
     const dialog = element();
     const menu = element();
-    topLayer(dialog);
-    topLayer(menu);
+    topLayer()(dialog);
+    topLayer()(menu);
     expect(shown).toEqual([dialog, menu]);
   });
 
   it("raises the toasts above an overlay shown after them — only then, so their animations don't replay", () => {
     const toasts = element();
-    let since = raiseInTopLayer(toasts, 0);
+    raiseInTopLayer(toasts);
     expect(shown).toEqual([toasts]);
-    expect(raiseInTopLayer(toasts, since)).toBe(since); // nothing new: stays as it is
+    raiseInTopLayer(toasts); // nothing new: stays as it is
+    expect(shown).toEqual([toasts]);
     const dialog = element();
-    topLayer(dialog);
-    since = raiseInTopLayer(toasts, since);
+    topLayer()(dialog);
+    raiseInTopLayer(toasts);
     expect(shown).toEqual([dialog, toasts]);
     hideFromTopLayer(toasts);
     expect(shown).toEqual([dialog]);
@@ -73,8 +78,8 @@ describe("topLayer (F2)", () => {
 
   it("adopts the box reset once per document, at zero specificity", () => {
     if (!("adoptedStyleSheets" in document) || typeof CSSStyleSheet !== "function") return;
-    topLayer(element());
-    topLayer(element());
+    topLayer()(element());
+    topLayer()(element());
     const rules = document.adoptedStyleSheets.flatMap((sheet) => [...sheet.cssRules].map((rule) => rule.cssText));
     expect(rules.filter((rule) => rule.includes("[data-top-layer]"))).toHaveLength(1);
     expect(rules.find((rule) => rule.includes("[data-top-layer]"))).toMatch(/^:where\(\[data-top-layer\]\)/);
@@ -84,8 +89,9 @@ describe("topLayer (F2)", () => {
 describe("topLayer without the Popover API", () => {
   it("leaves the element as it is", () => {
     const dialog = element();
-    expect(topLayer(dialog)).toBeUndefined();
+    expect(topLayer()(dialog)).toBeUndefined();
     expect(dialog.hasAttribute("popover")).toBe(false);
-    expect(raiseInTopLayer(dialog, 3)).toBe(3);
+    raiseInTopLayer(dialog);
+    expect(dialog.hasAttribute("popover")).toBe(false);
   });
 });

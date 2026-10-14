@@ -11,7 +11,7 @@
 <span class="fui-popover-anchor">
     <button class="@toggleClass" type="button" aria-expanded="@expandedText" aria-controls="@panelControls" @ref="toggleButton" @onclick="toggle">@label</button>
     @if (open) {
-        <div class="fui-popover" role="dialog" id="@panelId" aria-labelledby="@labelledBy" aria-label="@panelLabel" tabindex="-1" @attach:top="topLayer" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
+        <div class="fui-popover" role="dialog" id="@panelId" aria-labelledby="@labelledBy" aria-label="@panelLabel" tabindex="-1" @attach:top="topLayer()" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
             @if (title) {
                 <div class="fui-popover__header">
                     <span class="fui-popover__title" id="@titleId">@title</span>

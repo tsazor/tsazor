@@ -9,8 +9,8 @@
 @import { libraryTexts } from "@tsazor/ui"
 
 @if (isOpen) {
-    <div class="fui-drawer-backdrop" @attach="topLayer"></div>
-    <div class="@panelClass" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="additionalAttributes" @attach:top="topLayer" @attach="trap" @attach:lock="lock" @attach:dismiss="dismiss">
+    <div class="fui-drawer-backdrop" @attach="topLayer()"></div>
+    <div class="@panelClass" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="@labelledBy" aria-label="@ariaLabel" @attributes="additionalAttributes" @attach:top="topLayer()" @attach="trap" @attach:lock="lock" @attach:dismiss="dismiss">
         <div class="fui-drawer__header">
             @if (title) {
                 <h2 class="fui-drawer__title" id="@titleId">@title</h2>
@@ -47,7 +47,7 @@
     /** The trap and the dismiss handling are one overlay layer. */
     private readonly layer = createLayer();
     private readonly trap = focusTrap({ layer: this.layer });
-    private readonly lock = scrollLock;
+    private readonly lock = scrollLock();
     private readonly dismiss = dismissible({ layer: this.layer, onDismiss: (reason) => this.dismissed(reason) });
 
     private get panelClass(): string {

@@ -30,7 +30,13 @@ export function isTopLayer(key: object): boolean {
   return stack[stack.length - 1]?.key === key;
 }
 
+/** A layer's identity (`createLayer()`): opaque, compared by reference. */
+export interface Layer {
+  readonly __tsazorLayer: true;
+}
+
 /** A fresh layer key, for the behaviors of one overlay to share. */
-export function createLayer(): object {
-  return {};
+export function createLayer(): Layer {
+  // The brand is a type only: a layer is any fresh object.
+  return {} as Layer;
 }

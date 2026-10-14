@@ -6,7 +6,7 @@
  * job, and @tsazor/ui's `topLayer` puts an overlay there (port-fullstackhero.md, F2):
  *
  * ```razor
- * <div class="@topLayerClass" @attach="topLayer">…</div>
+ * <div class="@topLayerClass" @attach="topLayer()">…</div>
  * ```
  *
  * Attach it to the overlay's outermost element, first: a parent's attachments run before its children's, so the

@@ -17,7 +17,7 @@
         }
     </button>
     @if (open) {
-        <ul class="dropdown-menu show" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach:top="topLayer" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
+        <ul class="dropdown-menu show" role="menu" id="@menuId" aria-labelledby="@toggleId" @onkeydown="menuKeydown" @attach:top="topLayer()" @attach="keys" @attach:dismiss="dismiss" @attach:position="position" @attach:focus="focusFirst">@childContent</ul>
     }
 </div>
 

@@ -106,8 +106,8 @@ describe("scrollLock", () => {
   it("counts nested locks", () => {
     const host = html(`<div id="a"></div><div id="b"></div>`);
     document.body.style.overflow = "auto";
-    const first = scrollLock(host.querySelector<HTMLElement>("#a")!) as () => void;
-    const second = scrollLock(host.querySelector<HTMLElement>("#b")!) as () => void;
+    const first = scrollLock()(host.querySelector<HTMLElement>("#a")!) as () => void;
+    const second = scrollLock()(host.querySelector<HTMLElement>("#b")!) as () => void;
     expect(document.body.style.overflow).toBe("hidden");
     first();
     expect(document.body.style.overflow).toBe("hidden");

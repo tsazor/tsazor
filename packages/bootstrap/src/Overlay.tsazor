@@ -13,7 +13,7 @@
 @import { libraryTexts } from "@tsazor/ui"
 
 @if (this.shown) {
-    <div @attributes="@this.overlayAttributes" @attach:top="@(this.fullScreen ? topLayer : null)" @attach="@this.behavior">
+    <div @attributes="@this.overlayAttributes" @attach:top="@(this.fullScreen ? topLayer() : null)" @attach="@this.behavior">
         <div class="tz-overlay__content">
             @if (childContent) {
                 @childContent

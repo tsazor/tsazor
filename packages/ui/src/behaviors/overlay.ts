@@ -117,7 +117,7 @@ export function overlayBehavior(options: OverlayBehaviorOptions): Attachment<HTM
       const covered = invoker !== null && (blocks === "page" || (scope?.contains(invoker) ?? false));
       if (scope !== null) cleanups.push(inertOutside(element, scope));
       if (blocks === "page") {
-        const unlock = scrollLock(element);
+        const unlock = scrollLock()(element);
         if (typeof unlock === "function") cleanups.push(unlock);
       }
       if (blocks === "page" || covered) {

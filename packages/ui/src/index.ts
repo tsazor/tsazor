@@ -48,7 +48,7 @@ export { SortableListEventArgs, type SortableListLabels } from "./sortable.js";
 export { WizardStepChangeEventArgs, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";
-export { createLayer } from "./layers.js";
+export { createLayer, type Layer } from "./layers.js";
 export { hideFromTopLayer, raiseInTopLayer, showInTopLayer, topLayer } from "./behaviors/top-layer.js";
 export { focusTrap, type FocusTrapOptions } from "./behaviors/focus-trap.js";
 export { dismissible, type DismissibleOptions, type DismissReason } from "./behaviors/dismissible.js";

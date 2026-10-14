@@ -1,6 +1,6 @@
 import type { Attachment } from "@tsazor/runtime";
 import { focusableElements, focusElement } from "../focus.js";
-import { isTopLayer, openLayer } from "../layers.js";
+import { isTopLayer, openLayer, type Layer } from "../layers.js";
 
 /** Options of `focusTrap`. */
 export interface FocusTrapOptions {
@@ -8,7 +8,7 @@ export interface FocusTrapOptions {
    * The overlay this belongs to (`createLayer()`): a dialog's focus trap and its dismiss handling
    * share one, so they count as one layer. Default: a layer of its own.
    */
-  layer?: object;
+  layer?: Layer;
   /**
    * What gets focus when the trap starts: `"first"` (default) the first
    * focusable element, `"container"` the element itself, or a function that

@@ -10,7 +10,7 @@
 <span class="d-inline-block">
     <button class="@toggleClass" type="button" aria-expanded="@expandedText" aria-controls="@panelControls" @ref="toggleButton" @onclick="toggle">@label</button>
     @if (open) {
-        <div class="popover bs-popover-auto show" role="dialog" id="@panelId" aria-labelledby="@titleId" aria-label="@panelLabel" tabindex="-1" @attach:top="topLayer" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
+        <div class="popover bs-popover-auto show" role="dialog" id="@panelId" aria-labelledby="@titleId" aria-label="@panelLabel" tabindex="-1" @attach:top="topLayer()" @attach="dismiss" @attach:position="position" @attach:focus="focusPanel">
             @if (title) {
                 <div class="popover-header d-flex align-items-center">
                     <span class="flex-grow-1" id="@titleId">@title</span>
