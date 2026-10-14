@@ -23,5 +23,7 @@ Wrap the Orders link the way you would in Blazor:
 Marta doesn't see the link; Bea does.
 
 > **Coming from Blazor:** `Roles` takes a comma-separated list, and one role is enough.
-> Policies are plain functions instead of requirement classes: register them by name in
-> `AuthorizationService.policies` (`(user) => boolean`) and refer to them with `Policy`.
+> Policies are plain functions instead of requirement classes: register them by name with
+> `authorization.addPolicy(name, (user) => boolean)` and refer to them with `Policy`. A policy may
+> return a promise (a check on the server), as an async handler does; `AuthorizeView` shows
+> `Authorizing` meanwhile.

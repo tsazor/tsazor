@@ -10,7 +10,7 @@
 @import {
     addDays, addMonths, addYears, calendarKeyTarget, calendarWeeks, calendarYears, clampDate,
     datesOfRange, daysInMonth, firstDayOfWeek, formatIsoDate, isDateDisabled, isMonthDisabled, isoDate, isYearDisabled, monthNames,
-    nextDateRange, nextMultipleDates, pageLocale, parseIsoDate, rangeOfDates, startOfMonth, today, uniqueId, weekdayNames,
+    nextDateRange, nextMultipleDates, parseIsoDate, rangeOfDates, startOfMonth, today, uniqueId, weekdayNames,
     type CalendarDay, type CalendarLabels, type CalendarSelectMode, type CalendarView, type DateLimits, type IsoDate,
 } from "@tsazor/ui"
 @import { withClass } from "./attributes"
@@ -103,7 +103,7 @@
     @Parameter() disabledSelectable: boolean = true;
     /** The day number: numeric ("7", default) or 2-digit ("07") (`DayFormat`). */
     @Parameter() dayFormat: "numeric" | "2-digit" = "numeric";
-    /** The locale of the names and of the week's first day ("de-DE"; Fluent UI Blazor's `Culture`). Default: the page's lang, else the browser's. */
+    /** The locale of the names and of the week's first day ("de-DE"; Fluent UI Blazor's `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
     @Parameter() locale?: string;
     /** The week's first day, 0 (Sunday) to 6, instead of the locale's (MudBlazor's `FirstDayOfWeek`). */
     @Parameter() firstDayOfWeek?: number;
@@ -175,7 +175,7 @@
     }
 
     private get locales(): string {
-        return this.locale ?? pageLocale();
+        return this.locale ?? this.t.locale;
     }
 
     private get firstDay(): number {

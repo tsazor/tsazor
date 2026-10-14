@@ -812,6 +812,7 @@ export declare function libraryTexts(): LibraryTexts;
 export interface LibraryTexts {
     (text: LibraryText, params?: Record<string, unknown>): string;
     plural(text: LibraryPluralText, count: number, params?: Record<string, unknown>): string;
+    readonly locale: string;
 }
 
 // markSubmitAttempt

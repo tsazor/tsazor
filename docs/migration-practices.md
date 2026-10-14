@@ -166,6 +166,10 @@ render in the browser.
   `close(data)` and `cancel()`; `<MudDialog>` becomes the skin's `<Dialog>` without `isOpen` (its `TitleContent`
   is `show`'s title, `DialogActions` its `footer`). Put `<DialogProvider />` into the layout, as `MudDialogProvider`
   (`npm create tsazor --ui` does). A dialog inside it that the code opens and closes keeps its `isOpen` (B6).
+- **Toasts and snackbars are the `Toaster`.** MudBlazor's `ISnackbar.Add(message, Severity.Success)`, Fluent UI
+  Blazor's `IToastService` and Radzen's `NotificationService` become `toaster.show({ message, intent: "success" })`
+  (`@inject Toaster toaster`, from `@tsazor/ui`), shown by the skin's `<ToastRegion />` in the layout. The name stays
+  `Toaster`, not `ToastService`: look for it there.
 - **The app frame** — `MudLayout`, `MudAppBar`, a persistent `MudDrawer`, `MudMainContent` — is one `AppLayout`
   with `header`, `nav` and `@bind-navOpen` (B8); a signed-out page's bar alone is an `AppLayout` without `nav`. The
   bar's buttons take its colour as MudBlazor's `Color.Inherit` did: write them `appearance="transparent"` (B16). A
@@ -182,6 +186,10 @@ render in the browser.
   `libraryTextDefaults` in `@tsazor/ui`. A per-instance text such as MudTablePager's `RowsPerPageString` stays a
   parameter (`pageSizeLabel`). Counted texts take an entry per plural category (`….one`, `….other`, and `….few`,
   `….many` where your language has them).
+- **`CurrentCulture` is the `CultureService`.** Where Blazor sets `CultureInfo.CurrentCulture`, set the culture
+  service (`setExplicit("de-DE")`, or the app's default culture): the texts and the dates and numbers of the components
+  (Calendar, DatePicker, TimePicker, RatingDisplay) follow it together and re-render on a change. A component's
+  `Culture` parameter is `Locale` and still wins; with no culture set (the invariant one) they take the page's `lang`.
 - **MudForm becomes `FluentForm`, and that is a `<form>`.** MudForm is a `div`, so the browser never checked its
   fields. `FluentForm` (as Blazor's `EditForm`) is a real form: a `type="email"` field gets the browser's own check
   first, which stops the submit with the browser's bubble before your validators speak. Write `novalidate` on the
@@ -465,7 +473,8 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
 
 ## Tests
 
-- **bUnit becomes `@tsazor/testing`.** `waitUntilIdle` names the work it still waits for (F35). A Virtualize
+- **bUnit becomes `@tsazor/testing`.** `render(Component, { parameters })` mounts it, `settle()` waits until the
+  renders and the async work are done and names the work it still waits for (F35). A Virtualize
   renders its rows up to `MaxItemCount`, as with bUnit.
 - **A test DOM has no layout.** Put what depends on layout (virtualization, anchoring, scrolling, painted frames)
   in browser tests (Playwright). Run them in all three engines. Under Bootstrap, scroll with `behavior: "instant"`

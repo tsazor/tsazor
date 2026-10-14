@@ -9,15 +9,32 @@
 
 @code {
     private readonly L = localizerFor("NavMenu");
-    private allowed: (policy: string) => boolean = () => false;
+    /** The policies the links ask for; the original awaits AuthorizeAsync for each before it renders them. */
+    private static readonly policies = [
+        Permissions.Hangfire.View,
+        Permissions.Dashboards.View,
+        Permissions.AuditTrails.View,
+        Permissions.Documents.View,
+        Permissions.DocumentTypes.View,
+        Permissions.Users.View,
+        Permissions.Roles.View,
+        Permissions.Communication.Chat,
+        Permissions.Products.View,
+        Permissions.Brands.View,
+    ];
+    private granted = new Set<string>();
 
     protected override async onParametersSet(): Promise<void> {
         const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
-        this.allowed = (policy) => this.authorization.isAuthorized(user, { policy });
+        const granted = new Set<string>();
+        for (const policy of NavMenu.policies) {
+            if (await this.authorization.isAuthorized(user, { policy })) granted.add(policy);
+        }
+        this.granted = granted;
     }
 
     private get links() {
-        const can = this.allowed;
+        const can = (policy: string) => this.granted.has(policy);
         return [
             { href: "/", label: this.L("Home"), match: NavLinkMatch.All, icon: Icons.Home },
             ...(can(Permissions.Hangfire.View) ? [{ href: "/jobs", label: "Hangfire", icon: Icons.Briefcase, target: "_blank" }] : []),
@@ -27,7 +44,7 @@
     }
 
     private get sections() {
-        const can = this.allowed;
+        const can = (policy: string) => this.granted.has(policy);
         const section = (heading: string, links: { href: string; label: string; icon: typeof Icons.Home }[]) => links.length > 0 ? [{ heading, links }] : [];
         return [
             ...section(this.L("Personal"), [

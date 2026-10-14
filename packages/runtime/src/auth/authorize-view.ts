@@ -6,7 +6,7 @@ import type { CascadingValueSupplier } from "../renderer/cascading-value.js";
 import type { ServiceProvider } from "../di/service-collection.js";
 import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
 import { watchAuthenticationState } from "./authentication-state-provider.js";
-import { AuthorizationService, defaultAuthorizationService, type AuthorizationRequirements } from "./authorization.js";
+import { AuthorizationDecision, AuthorizationService, defaultAuthorizationService, type AuthorizationRequirements } from "./authorization.js";
 
 /**
  * Blazor's AuthorizeView: renders authorized/not-authorized content based on
@@ -44,6 +44,7 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
 
   private authenticationState?: AuthenticationState;
   private resolved = false;
+  readonly #decision = new AuthorizationDecision();
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
@@ -76,7 +77,19 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
       return;
     }
     const state = this.authenticationState ?? ANONYMOUS;
-    if (this.isAuthorized(state)) {
+    const authorized = this.#decision.decide(
+      this.authorizationService(),
+      state.user,
+      this.requirements(),
+      () => componentInternals.requestRender(this),
+      (error) => componentInternals.reportError(this, error, "lifecycle"),
+    );
+    if (authorized === undefined) {
+      // An async policy is deciding: Authorizing, as Blazor awaits AuthorizeAsync.
+      this.authorizing?.(b);
+      return;
+    }
+    if (authorized) {
       if (this.authorized) {
         b.addContent(0, this.authorized(state));
       } else if (this.childContent) {
@@ -85,10 +98,6 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
     } else if (this.notAuthorized) {
       b.addContent(2, this.notAuthorized(state));
     }
-  }
-
-  private isAuthorized(state: AuthenticationState): boolean {
-    return this.authorizationService().isAuthorized(state.user, this.requirements());
   }
 
   private requirements(): AuthorizationRequirements {

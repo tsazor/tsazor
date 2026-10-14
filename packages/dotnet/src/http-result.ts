@@ -38,7 +38,11 @@ export interface ValidationProblemDetails extends ProblemDetails {
 /** A response body's shape marker: JSON value or unreadable/raw text. */
 export type HttpBody = unknown;
 
-/** Result of a typed backend call — `ok` distinguishes success from failure; neither throws. */
+/**
+ * Result of a typed backend call: `ok` tells a success from an HTTP error status, and an error status is a value, not an
+ * exception. A request that gets no response at all — the network is down, the request was aborted — rejects, as
+ * `fetch` and .NET's HttpClient do (`TypeError`, `AbortError`).
+ */
 export type HttpResult<T> =
   | {
       ok: true;

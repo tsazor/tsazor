@@ -90,8 +90,6 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 
 // DataAnnotationsValidator: re-exported from @tsazor/runtime
 
-// defaultAuthorizationService: re-exported from @tsazor/runtime
-
 // defineComponent: re-exported from @tsazor/runtime
 
 // defineParameter: re-exported from @tsazor/runtime

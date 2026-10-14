@@ -4,7 +4,7 @@
     out of 5, 1,234 ratings" (`labels`). `shape` is the star's icon; `size` and `color` as the Rating's — the same
     parameters as the Fluent skin's RatingDisplay. *@
 @import type { IconValue } from "@tsazor/ui"
-@import { formatRatingCount, formatRatingValue, pageLocale, ratingFill, type RatingLabels } from "@tsazor/ui"
+@import { formatRatingCount, formatRatingValue, ratingFill, type RatingLabels } from "@tsazor/ui"
 @import { withClass } from "./attributes"
 @import { StarFill } from "./core-icons"
 @import { libraryTexts, ratingLabelsFrom } from "@tsazor/ui"
@@ -46,7 +46,7 @@
     @Parameter() size: "small" | "medium" | "large" = "medium";
     /** The stars' color: neutral (default), brand (primary) or marigold (warning). */
     @Parameter() color: "neutral" | "brand" | "marigold" = "neutral";
-    /** The locale of the numbers ("de-DE"). Default: the page's lang, else the browser's. */
+    /** The locale of the numbers ("de-DE"). Default: the CultureService's culture, else the page's lang, else the browser's. */
     @Parameter() locale?: string;
     /** The text alternative ("Rated 3.5 out of 5, 1,234 ratings"; English by default). */
     @Parameter() labels?: Partial<RatingLabels>;
@@ -54,7 +54,7 @@
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private get locales(): string {
-        return this.locale ?? pageLocale();
+        return this.locale ?? this.t.locale;
     }
 
     private get valueText(): string {

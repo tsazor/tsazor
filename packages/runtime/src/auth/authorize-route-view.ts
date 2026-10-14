@@ -5,7 +5,7 @@ import type { ServiceProvider } from "../di/service-collection.js";
 import { renderWithLayout, RouteView } from "../routing/route-view.js";
 import { ANONYMOUS, AuthenticationState } from "./authentication-state.js";
 import { watchAuthenticationState } from "./authentication-state-provider.js";
-import { AuthorizationService, defaultAuthorizationService } from "./authorization.js";
+import { AuthorizationDecision, AuthorizationService, defaultAuthorizationService } from "./authorization.js";
 
 /**
  * Blazor's AuthorizeRouteView: like RouteView, but the matched page only
@@ -27,6 +27,7 @@ export class AuthorizeRouteView extends RouteView {
 
   private authenticationState?: AuthenticationState;
   private resolved = false;
+  readonly #decision = new AuthorizationDecision();
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
@@ -60,9 +61,23 @@ export class AuthorizeRouteView extends RouteView {
     const state = this.authenticationState ?? ANONYMOUS;
     const requirements = this.routeData.route.authorize;
     // No requirements on the entry → public page (render for anyone).
-    if (requirements && !this.authorizationService().isAuthorized(state.user, requirements)) {
-      this.renderInDefaultLayout(b, (this.notAuthorized ?? defaultNotAuthorized)(state));
-      return;
+    if (requirements) {
+      const authorized = this.#decision.decide(
+        this.authorizationService(),
+        state.user,
+        requirements,
+        () => componentInternals.requestRender(this),
+        (error) => componentInternals.reportError(this, error, "lifecycle"),
+      );
+      if (authorized === undefined) {
+        // An async policy is deciding: Authorizing, as Blazor awaits AuthorizeAsync.
+        this.renderInDefaultLayout(b, this.authorizing ?? defaultAuthorizing);
+        return;
+      }
+      if (!authorized) {
+        this.renderInDefaultLayout(b, (this.notAuthorized ?? defaultNotAuthorized)(state));
+        return;
+      }
     }
     if (this.authorized) {
       b.addContent(11, this.authorized(state));

@@ -8,8 +8,8 @@
 <span @attributes="@withClass(badgeClass, additionalAttributes)">@if (iconStart) {<Icon value="@iconStart" size="12" title="@iconLabel" class="@(childContent ? "me-1" : null)" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" size="12" title="@iconLabel" class="@(childContent ? "ms-1" : null)" />}</span>
 
 @code {
-    /** The color role: primary, secondary (default), success, danger, warning, info or neutral. */
-    @Parameter() intent: Intent = "secondary";
+    /** The color role: primary (default, as in the Fluent skin), secondary, success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "primary";
     /** Rounded pill shape. */
     @Parameter() pill: boolean = false;
     /** The badge text. */

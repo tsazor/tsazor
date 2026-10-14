@@ -36,7 +36,7 @@ const authenticationManager = new AuthenticationManager(tokens, localStorage, st
 // AddAuthorizationCore(RegisterPermissionClaims): one policy per permission, met by the user's Permission claim.
 const authorization = new AuthorizationService();
 for (const permission of registeredPermissions()) {
-    authorization.policies[permission] = (user) => user.claims.some((claim) => claim.type === ApplicationClaimTypes.Permission && claim.value === permission);
+    authorization.addPolicy(permission, (user) => user.claims.some((claim) => claim.type === ApplicationClaimTypes.Permission && claim.value === permission));
 }
 
 const app = createTsazorApp({

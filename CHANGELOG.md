@@ -73,6 +73,21 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - (D11, T3) `tsazor check` reports a tsconfig that isn't strict as the error TZS033 (was the warning `TSZSTRICT`):
     strict is the only supported configuration. The check's other codes are TZS034 (a file not readable, was
     `TSZECHECK`) and TZS035 (the compiler failed, was `TSZE000`); all are in the diagnostics reference.
+  - (D12) A policy may decide asynchronously, as Blazor's `AuthorizeAsync`: `AuthorizationPolicy` returns
+    `boolean | Promise<boolean>`, and so does `AuthorizationService.isAuthorized`. Policies are registered with
+    `addPolicy(name, policy)` (the `policies` record is gone). `AuthorizeView` and `AuthorizeRouteView` show
+    `Authorizing` while an async policy decides. `defaultAuthorizationService` is no export any more (an app with
+    policies registers its own service).
+  - `@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap` (D4): dates and numbers format in the `CultureService`'s
+    culture, as Blazor's `CurrentCulture` does, then (for the invariant culture) in the page's `lang` — before, the
+    texts followed the culture and the dates the page, so German labels came with US dates. Calendar, DatePicker,
+    TimePicker and RatingDisplay re-render when the culture changes; a `locale` parameter still wins.
+    `LibraryTexts.locale` is that locale; `pageLocale` is in `library-texts`.
+  - `@tsazor/bootstrap` (D5): the default `intent`s are the Fluent skin's, so a skin switch keeps every button's look:
+    a `Badge` is `primary`, a `Button` and a `Dropdown` `secondary` (before: `secondary`, `primary`, `primary`). A
+    button that should stand out says `intent="primary"`.
+  - `@tsazor/dotnet` (D14): the doc of `HttpResult` says what the generated client does: an HTTP status is a result
+    (`ok: false`), a network error or an abort rejects.
 - **Breaking — the tools need Node 22.12 or later** (`engines.node` of cli, compiler, workspace, lsp, vite-plugin,
   dotnet and create-tsazor; before: 20.19). Node 20 reached its end of life on 2026-04-30; the support policy
   (`docs/support-policy.md`) follows the Node.js LTS lines.

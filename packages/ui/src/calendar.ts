@@ -7,6 +7,8 @@
 
 import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
 
+export { pageLocale } from "./library-texts.js";
+
 /** A date as ISO text, `"2026-10-10"`. */
 export type IsoDate = string;
 
@@ -93,13 +95,6 @@ export function startOfMonth(date: IsoDate): IsoDate {
 /** The first day of `date`'s week, for weeks that start on `firstDayOfWeek` (0 Sunday … 6 Saturday). */
 export function startOfWeek(date: IsoDate, firstDayOfWeek: number): IsoDate {
   return addDays(date, -((dayOfWeek(date) - firstDayOfWeek + 7) % 7));
-}
-
-/** The locale a calendar uses when none is given: the page's `lang`, else the browser's language. */
-export function pageLocale(): string {
-  if (typeof document !== "undefined" && document.documentElement.lang) return document.documentElement.lang;
-  if (typeof navigator !== "undefined" && navigator.language) return navigator.language;
-  return "en-US";
 }
 
 /** Today in the browser's time zone. */

@@ -52,7 +52,7 @@ export interface AuthenticationStateSubscribeOptions {
 }
 
 // AuthorizationPolicy
-export type AuthorizationPolicy = (user: ClaimsPrincipal) => boolean;
+export type AuthorizationPolicy = (user: ClaimsPrincipal) => boolean | Promise<boolean>;
 
 // AuthorizationRequirements
 export interface AuthorizationRequirements {
@@ -62,12 +62,14 @@ export interface AuthorizationRequirements {
 
 // AuthorizationService
 export declare class AuthorizationService {
-    readonly policies: Record<string, AuthorizationPolicy>;
-    isAuthorized(user: ClaimsPrincipal, requirements?: AuthorizationRequirements): boolean;
+    #private;
+    addPolicy(name: string, policy: AuthorizationPolicy): this;
+    isAuthorized(user: ClaimsPrincipal, requirements?: AuthorizationRequirements): boolean | Promise<boolean>;
 }
 
 // AuthorizeRouteView
 export declare class AuthorizeRouteView extends RouteView {
+    #private;
     authorized?: (state: AuthenticationState) => RenderFragment;
     notAuthorized?: (state: AuthenticationState) => RenderFragment;
     authorizing?: RenderFragment;
@@ -83,6 +85,7 @@ export declare class AuthorizeRouteView extends RouteView {
 
 // AuthorizeView
 export declare class AuthorizeView extends ComponentBase implements CascadingValueSupplier {
+    #private;
     policy?: string;
     roles?: readonly string[] | string;
     childContent?: (state: AuthenticationState) => RenderFragment;
@@ -99,7 +102,6 @@ export declare class AuthorizeView extends ComponentBase implements CascadingVal
     protected onInitialized(): void;
     dispose(): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
-    private isAuthorized;
     private requirements;
     private normalizedRoles;
     private authorizationService;
@@ -287,9 +289,6 @@ export declare class DataAnnotationsValidator extends ComponentBase {
     dispose(): void;
     protected buildRenderTree(_b: RenderTreeBuilder): void;
 }
-
-// defaultAuthorizationService
-export declare const defaultAuthorizationService: AuthorizationService;
 
 // defineComponent
 export declare function defineComponent<T extends abstract new (...args: never[]) => ComponentBase>(type: T): ComponentDefinition;

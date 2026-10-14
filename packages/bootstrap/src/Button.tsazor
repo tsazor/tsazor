@@ -14,8 +14,8 @@
 @code {
     /** The accessible name when there is no visible label. */
     @Parameter() ariaLabel?: string;
-    /** The color role: primary, secondary, success, danger, warning, info or neutral. */
-    @Parameter() intent: Intent = "primary";
+    /** The color role: primary, secondary (default, as in the Fluent skin), success, danger, warning, info or neutral. */
+    @Parameter() intent: Intent = "secondary";
     /** Visual weight: solid (default), outline, subtle or transparent (a link-styled button). */
     @Parameter() appearance: Appearance = "solid";
     /** small, medium (default) or large. */

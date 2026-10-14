@@ -26,7 +26,7 @@ describe("components", () => {
   it("shows parameters as markup names with their defaults", () => {
     const button = reference.packages.find((pkg) => pkg.slug === "bootstrap")!.components.find((component) => component.name === "Button")!;
     const intent = button.parameters.find((parameter) => parameter.name === "Intent")!;
-    expect(intent).toMatchObject({ type: "Intent", default: '"primary"', required: false });
+    expect(intent).toMatchObject({ type: "Intent", default: '"secondary"', required: false });
     expect(button.summary).not.toMatch(/<p>/);
   });
 

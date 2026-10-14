@@ -152,7 +152,7 @@
             </Tooltip>
             <Drawer IsOpen="@drawerOpen" Title="Filters" Placement="end" OnClosed="@closeDrawer">
                 <Checkbox Label="Only open orders" @bind-Value="onlyOpen" />
-                <Button OnClick="@closeDrawer">Apply</Button>
+                <Button Intent="primary" OnClick="@closeDrawer">Apply</Button>
             </Drawer>
         </CardBody>
     </Card>
@@ -173,7 +173,7 @@
                 <RadioGroup Label="Slicing" Options="@slicing" Inline="@true" @bind-Value="order.slicing" />
                 <TextArea Label="Note" Rows="2" @bind-Value="order.note" />
                 <Checkbox Label="Send me a reminder" Switch="@true" @bind-Value="order.reminder" />
-                <Button Type="submit">Reserve</Button>
+                <Button Intent="primary" Type="submit">Reserve</Button>
                 <span class="ms-2 order-status">@orderStatus</span>
             </Form>
         </CardBody>

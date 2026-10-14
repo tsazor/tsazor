@@ -7,7 +7,7 @@
     date goes to validation as it was typed (as with a NumberInput). Validation state and message as with TextInput —
     the same parameters as the Fluent skin's DatePicker. *@
 @import {
-    anchoredPosition, createLayer, dateFieldPlaceholder, dismissable, FieldState, focusTrap, formatPickerValue, pageLocale,
+    anchoredPosition, createLayer, dateFieldPlaceholder, dismissable, FieldState, focusTrap, formatPickerValue,
     parseIsoDate, parsePickerValue, type CalendarDay, type CalendarLabels, type CalendarView, type IsoDate,
 } from "@tsazor/ui"
 @import { withClass } from "./attributes"
@@ -61,7 +61,7 @@
     @Parameter() disabledSelectable: boolean = true;
     /** The calendar's day numbers: numeric (default) or 2-digit (`DayFormat`). */
     @Parameter() dayFormat: "numeric" | "2-digit" = "numeric";
-    /** The locale of the text and the calendar ("de-DE"; `Culture`). Default: the page's lang, else the browser's. */
+    /** The locale of the text and the calendar ("de-DE"; `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
     @Parameter() locale?: string;
     /** The week's first day, 0 (Sunday) to 6, instead of the locale's (MudBlazor's `FirstDayOfWeek`). */
     @Parameter() firstDayOfWeek?: number;
@@ -98,7 +98,7 @@
     private readonly trap = focusTrap({ layer: this.layer, initialFocus: (popup) => popup.querySelector<HTMLElement>("[role=grid] [tabindex='0']") });
 
     private get locales(): string {
-        return this.locale ?? pageLocale();
+        return this.locale ?? this.t.locale;
     }
 
     private get message(): string {

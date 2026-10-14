@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { CultureService, StringLocalizer, type RenderFragment, type RenderTreeBuilder } from "@tsazor/runtime";
-import { DataGrid, PaginationState, Paginator, PropertyColumn } from "../dist/index.js";
+import { DataGrid, DatePicker, PaginationState, Paginator, PropertyColumn } from "../dist/index.js";
 
 type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
@@ -82,5 +82,31 @@ describe("library texts in the skin", () => {
     culture.setExplicit("de-DE");
     await settle(renderer);
     expect(nav().getAttribute("aria-label")).toBe("Orders pages");
+  });
+
+  it("format dates in the CultureService's culture when the component has no locale (D4)", async () => {
+    const culture = new CultureService("en-US");
+    const localizer = new StringLocalizer({ culture, defaultCulture: "en", tables: {} });
+    const renderer = await renderTree(
+      (b) => {
+        b.openComponent(0, DatePicker);
+        b.addAttribute(1, "value", "2026-10-10");
+        b.addAttribute(2, "label", "Pickup");
+        b.closeComponent();
+      },
+      {
+        services: (services) => {
+          services.registerValue(CultureService as never, culture);
+          services.registerValue(StringLocalizer as never, localizer);
+        },
+      },
+    );
+    await renderer.settle();
+    const input = () => renderer.container.querySelector("input")!;
+    expect(input().value).toBe("10/10/2026");
+
+    culture.setExplicit("de-DE");
+    await settle(renderer);
+    expect(input().value).toBe("10.10.2026");
   });
 });

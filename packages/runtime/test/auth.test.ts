@@ -169,7 +169,7 @@ describe("AuthorizeView", () => {
 
   it("enforces roles (array or comma-separated) and named policies", async () => {
     const service = new AuthorizationService();
-    service.policies["admin-only"] = (user) => user.roles.includes("admin");
+    service.addPolicy("admin-only", (user) => user.roles.includes("admin"));
     const provider = new TestAuthProvider();
     provider.signIn(createUser({ name: "bob", roles: ["moderator"] }));
 
@@ -209,6 +209,34 @@ describe("AuthorizeView", () => {
 
     await render({ Policy: "does-not-exist" });
     expect(document.body.textContent).toContain("denied");
+  });
+
+  it("waits for an async policy: Authorizing meanwhile, then its decision (Blazor's AuthorizeAsync)", async () => {
+    const service = new AuthorizationService();
+    const decisions: ((granted: boolean) => void)[] = [];
+    service.addPolicy("remote", () => new Promise<boolean>((resolve) => decisions.push(resolve)));
+    const provider = new TestAuthProvider();
+    provider.signIn(createUser({ name: "bob" }));
+    const renderer = buildApp(provider, (collection) => collection.registerValue(AuthorizationService, service));
+    class App extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, defineComponent(AuthorizeView));
+        b.addAttribute(1, "Policy", "remote");
+        b.addAttribute(2, "ChildContent", stateFragment("granted"));
+        b.addAttribute(3, "NotAuthorized", stateFragment("denied"));
+        b.addAttribute(4, "Authorizing", ((t: RenderTreeBuilder) => t.addContent(0, "checking")) as never);
+        b.closeComponent();
+      }
+    }
+    renderer.renderInContainer(App, container());
+    await settle(renderer);
+    expect(document.body.textContent).toContain("checking");
+    // A render meanwhile asks the policy no second time.
+    expect(decisions).toHaveLength(1);
+    decisions[0]!(true);
+    await settle(renderer);
+    expect(document.body.textContent).toContain("granted");
+    expect(decisions).toHaveLength(1);
   });
 
   it("re-renders when the authentication state changes (login/logout)", async () => {

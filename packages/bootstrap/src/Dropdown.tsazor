@@ -29,7 +29,7 @@
     /** The toggle's accessible name, for a `labelContent` without text. */
     @Parameter() ariaLabel?: string;
     /** The toggle's color role. */
-    @Parameter() intent: Intent = "primary";
+    @Parameter() intent: Intent = "secondary";
     /** The toggle's visual weight. */
     @Parameter() appearance: Appearance = "solid";
     /** The toggle's size. */

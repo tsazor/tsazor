@@ -130,7 +130,7 @@ export {
 // Auth (Blazor's Microsoft.AspNetCore.Components.Authorization analogue)
 export { ANONYMOUS, AuthenticationState, anonymousUser, createUser, type ClaimsPrincipal, type Claim } from "./auth/authentication-state.js";
 export { AuthenticationStateProvider, type AuthenticationStateChangedHandler, type AuthenticationStateSubscribeOptions } from "./auth/authentication-state-provider.js";
-export { AuthorizationService, defaultAuthorizationService, type AuthorizationPolicy, type AuthorizationRequirements } from "./auth/authorization.js";
+export { AuthorizationService, type AuthorizationPolicy, type AuthorizationRequirements } from "./auth/authorization.js";
 export { AuthorizeView } from "./auth/authorize-view.js";
 export { CascadingAuthenticationState } from "./auth/cascading-authentication-state.js";
 export { AuthorizeRouteView } from "./auth/authorize-route-view.js";

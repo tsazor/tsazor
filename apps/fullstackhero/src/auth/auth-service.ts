@@ -222,6 +222,6 @@ export class AuthService extends AuthenticationStateProvider {
 /** One policy per permission (the original's RouteGuard `perms`): met when the user holds it. */
 export function permissionPolicies(authorization: AuthorizationService, permissions: readonly string[]): void {
   for (const permission of permissions) {
-    authorization.policies[permission] = (user) => user.claims.some((claim) => claim.type === PERMISSION_CLAIM && claim.value === permission);
+    authorization.addPolicy(permission, (user) => user.claims.some((claim) => claim.type === PERMISSION_CLAIM && claim.value === permission));
   }
 }

@@ -8,7 +8,7 @@
     validation message once a submit was attempted. *@
 @import {
     anchoredPosition, createLayer, dismissable, edgeEnabledOption, FieldState, formatTimeField, formatTimePickerValue,
-    initialTimeOption, nextEnabledOption, normalizeIsoTime, pageLocale, parseIsoTime, parseTimeField, timeFieldPlaceholder,
+    initialTimeOption, nextEnabledOption, normalizeIsoTime, parseIsoTime, parseTimeField, timeFieldPlaceholder,
     timeOptions, uniqueId, type HourCycle, type IsoTime,
 } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
@@ -69,7 +69,7 @@
     @Parameter() disabledTimeFunc?: (time: IsoTime) => boolean;
     /** The list of times (default), or the browser's own time input (`RenderStyle`'s Native). */
     @Parameter() renderStyle: "list" | "native" = "list";
-    /** The locale of the text ("de-DE"; `Culture`). Default: the page's lang, else the browser's. */
+    /** The locale of the text ("de-DE"; `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's. */
     @Parameter() locale?: string;
     /** 12 hours with AM and PM, or 24, instead of the locale's (MudBlazor's `AmPm`). */
     @Parameter() hourCycle?: HourCycle;
@@ -101,7 +101,7 @@
     private readonly position = anchoredPosition({ anchor: () => this.fieldBox, placement: "bottom-start" });
 
     private get locales(): string {
-        return this.locale ?? pageLocale();
+        return this.locale ?? this.t.locale;
     }
 
     private get options(): IsoTime[] {

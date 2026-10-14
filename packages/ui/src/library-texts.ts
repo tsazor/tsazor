@@ -164,19 +164,44 @@ function englishPlural(text: LibraryPluralText, count: number, values: Record<st
   return formatMessage(libraryTextDefaults[`${text}.${category}` as LibraryText], values);
 }
 
-/** What `libraryTexts()` returns: a library text by name (`t("close")`), and one for a count (`t.plural(…)`). */
+/**
+ * What `libraryTexts()` returns: a library text by name (`t("close")`), one for a count (`t.plural(…)`), and the
+ * locale dates and numbers format in (`t.locale`).
+ */
 export interface LibraryTexts {
   (text: LibraryText, params?: Record<string, unknown>): string;
   plural(text: LibraryPluralText, count: number, params?: Record<string, unknown>): string;
+  /**
+   * The locale of dates and numbers: the CultureService's culture (Blazor's CurrentCulture), else — for the invariant
+   * culture — the page's `lang`, else the browser's language. A component's `locale` parameter overrides it.
+   */
+  readonly locale: string;
+}
+
+/** The locale without a culture: the page's `lang`, else the browser's language, else "en-US". */
+export function pageLocale(): string {
+  if (typeof document !== "undefined" && document.documentElement.lang) return document.documentElement.lang;
+  if (typeof navigator !== "undefined" && navigator.language) return navigator.language;
+  return "en-US";
+}
+
+/** A LibraryTexts from its parts; `locale` stays a getter, asked on every read (Object.assign would copy its value). */
+function textsOf(
+  text: (text: LibraryText, params?: Record<string, unknown>) => string,
+  plural: LibraryTexts["plural"],
+  locale: () => string,
+): LibraryTexts {
+  return Object.defineProperties(text, {
+    plural: { value: plural },
+    locale: { get: locale },
+  }) as LibraryTexts;
 }
 
 /** The library texts in English, without a localizer: the defaults of the `*Labels` constants (`carouselLabels`, …). */
-export const englishLibraryTexts: LibraryTexts = Object.assign(
-  (text: LibraryText, params?: Record<string, unknown>) => formatMessage(libraryTextDefaults[text], params),
-  {
-    plural: (text: LibraryPluralText, count: number, params?: Record<string, unknown>) =>
-      englishPlural(text, count, { count: new Intl.NumberFormat("en").format(count), ...params }),
-  },
+export const englishLibraryTexts: LibraryTexts = textsOf(
+  (text, params) => formatMessage(libraryTextDefaults[text], params),
+  (text, count, params) => englishPlural(text, count, { count: new Intl.NumberFormat("en").format(count), ...params }),
+  pageLocale,
 );
 
 /**
@@ -186,7 +211,9 @@ export const englishLibraryTexts: LibraryTexts = Object.assign(
  */
 export function libraryTexts(): LibraryTexts {
   const localizer = inject(StringLocalizer);
-  const texts = ((text: LibraryText, params?: Record<string, unknown>) => libraryText(localizer, text, params)) as LibraryTexts;
-  texts.plural = (text, count, params) => libraryPlural(localizer, text, count, params);
-  return texts;
+  return textsOf(
+    (text, params) => libraryText(localizer, text, params),
+    (text, count, params) => libraryPlural(localizer, text, count, params),
+    () => localizer.culture || pageLocale(),
+  );
 }

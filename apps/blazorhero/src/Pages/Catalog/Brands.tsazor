@@ -104,13 +104,13 @@
 
     protected override async onInitialized(): Promise<void> {
         const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
-        const can = (policy: string) => this.authorization.isAuthorized(user, { policy });
-        this.canCreateBrands = can(Permissions.Brands.Create);
-        this.canEditBrands = can(Permissions.Brands.Edit);
-        this.canDeleteBrands = can(Permissions.Brands.Delete);
-        this.canExportBrands = can(Permissions.Brands.Export);
-        this.canSearchBrands = can(Permissions.Brands.Search);
-        this.canImportBrands = can(Permissions.Brands.Import);
+        const can = async (policy: string): Promise<boolean> => this.authorization.isAuthorized(user, { policy });
+        this.canCreateBrands = await can(Permissions.Brands.Create);
+        this.canEditBrands = await can(Permissions.Brands.Edit);
+        this.canDeleteBrands = await can(Permissions.Brands.Delete);
+        this.canExportBrands = await can(Permissions.Brands.Export);
+        this.canSearchBrands = await can(Permissions.Brands.Search);
+        this.canImportBrands = await can(Permissions.Brands.Import);
 
         await this.getBrandsAsync();
         this.loaded = true;
