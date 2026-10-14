@@ -34,6 +34,10 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
 | D6 one `Table` in both skins (`TItem`, items or childContent) | `a693660` |
 | D9 `tsazor build-lib` / `buildLibrary` (the four libraries build through it; lockfile: importer lines only) | `0e34430` |
 | D8/U1 `@tsazor/ui/kit` (~150 helpers; public snapshot 1367 → 782 lines; copy-in pins `@tsazor/ui` exactly) | `78bb24b` |
+| U2 no built-in icon names/English label constants, private DialogReference ctor; U3 Async rule; U4 ToastEntry, KeyCombination, dismissible, kebab error codes; U5 behavior factories, opaque Layer | `dbca18d` `9ac659b` `cff1063` `e1ff738` |
+| The library build type-checks its sources (found 8 errors per skin); S3 typed validators, NumberInput min/max/step | `2d8986d` |
+| S1 Bootstrap Toast, S2 cascading members out of declarations, S4 OptionsSearchEventArgs in ui + `reexportTypes`, S5 Wizard labels, Skeleton circular | `11190c6` `b01293b` `ef78ae1` |
+| T2 exit codes, T4 routes type, T6 plugin line format, X5 star-export shadowing gate; an ItemsProvider test raced in WSL | `040feb1` `024f65b` `a1669d0` `2405bc4` `b0b0b48` |
 
 The runtime's public snapshot: 1988 → ~1690 lines (exports added for R7). Open in Part 2: ui (U1 `/kit`, U2–U5),
 the skins (S1–S5), the tools (T2 CLI validation/exit codes, T3 diagnostic prefix, T4 routes type, T6 output
@@ -49,9 +53,9 @@ different `@types/node` in the store; not from these changes).
 1. ~~E10~~ — decided (owner: "E10 okay", `f8b63fe`): Node 22.12 is the floor; a sentence says the time spans are
    plans of a small project, not service levels.
 2. **The API review:** Parts 1 and 2 approved (owner: "die öffentliche API so schlank wie möglich") — in progress.
-   Part 3 answered ("alle nach Empfehlung") and done: D1–D15. Next: Part 2's rest — U2 (the skins' Icon `name`,
-   DialogReference ctor, setTotalItemCount; the label constants, openLayer and builtInIcons are in `/kit` now), U3,
-   U4, U5, S1–S5, T2, T4, T6, X5, the gates, Part 5's bugs.
+   Part 3 answered ("alle nach Empfehlung") and done: D1–D15. Part 2 done too (R, T, X, U, S). Open: the gates
+   (skin manifest diff, ABI pin test, bin smoke) and Part 5's bugs (lsp/server deps and bin, ui scrollLock, chart
+   texts and number locale, bootstrap a11y params).
 3. ~~SECURITY.md's commitments~~ — no deadlines (owner: "kein professionelles Projekt, mit Zusagen vorsichtig").
 4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
    notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
