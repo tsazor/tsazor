@@ -12,7 +12,9 @@
  *   2. the starter's Vitest test, which renders a page via @tsazor/testing,
  *   3. `tsazor check` (the @tsazor/cli bin of the installed tarball),
  *   4. the @tsazor/dotnet entry points, CLI generation and a type check of
- *      the generated output.
+ *      the generated output,
+ *   5. every shipped package's bin, from the install: each answers (`--version`,
+ *      `list`, `--help`), and `tsazor-lsp` an LSP `initialize` over stdio.
  *
  * The script is the CI gate: exit 0 only when every check is green.
  * Run it after `pnpm -r build` (the tarballs must contain finished dists;
@@ -231,6 +233,47 @@ if (missing.length > 0) {
 `);
 await gate("@tsazor/fluent ships its copy-in CLI", ["node", ["fluent-cli.mjs"], app]);
 await gate("dotnet output type check", ["node", ["node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--moduleResolution", "bundler", "--module", "ESNext", "src/dotnet-api/models.ts", "src/dotnet-api/smoke-api.ts"], app]);
+
+// Every bin of a shipped package runs from the install. A bin added later needs its line here.
+const BIN_ARGS = { tsazor: ["--version"], "tsazor-dotnet": ["--version"], "tsazor-fluent": ["list"] };
+writeFileSync(join(app, "lsp-smoke.mjs"), `import { spawn } from "node:child_process";
+const child = spawn(process.execPath, [process.argv[2]], { stdio: ["pipe", "pipe", "inherit"] });
+const request = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { processId: null, rootUri: null, capabilities: {} } });
+child.stdin.write(\`Content-Length: \${Buffer.byteLength(request)}\\r\\n\\r\\n\${request}\`);
+let buffer = Buffer.alloc(0);
+const timer = setTimeout(() => { console.error("tsazor-lsp: no answer to initialize within 30 s"); child.kill(); process.exit(1); }, 30000);
+child.stdout.on("data", (chunk) => {
+  buffer = Buffer.concat([buffer, chunk]);
+  for (;;) {
+    const text = buffer.toString("latin1");
+    const header = /Content-Length: (\\d+)\\r\\n\\r\\n/.exec(text);
+    if (!header) return;
+    const start = header.index + header[0].length;
+    const length = Number(header[1]);
+    if (buffer.length < start + length) return;
+    const message = JSON.parse(buffer.subarray(start, start + length).toString("utf8"));
+    buffer = buffer.subarray(start + length);
+    if (message.id === 1) {
+      clearTimeout(timer);
+      child.kill();
+      if (!message.result?.capabilities) { console.error("tsazor-lsp: " + JSON.stringify(message).slice(0, 200)); process.exit(1); }
+      console.log("tsazor-lsp answered initialize");
+      process.exit(0);
+    }
+  }
+});
+`);
+for (const name of tarballByPkg.keys()) {
+  const dir = name === "create-tsazor" ? join(starter, "package") : join(app, "node_modules", name);
+  const bins = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).bin ?? {};
+  for (const [bin, target] of Object.entries(typeof bins === "string" ? { [name]: bins } : bins)) {
+    const entry = join(dir, target);
+    if (bin === "tsazor-lsp") await gate(`bin ${bin}`, ["node", ["lsp-smoke.mjs", JSON.stringify(entry)], app]);
+    else if (bin === "create-tsazor") await gate(`bin ${bin}`, ["node", [JSON.stringify(entry), "--help"], app]);
+    else if (BIN_ARGS[bin]) await gate(`bin ${bin}`, ["node", [JSON.stringify(entry), ...BIN_ARGS[bin]], app]);
+    else failures.push(`bin ${bin} of ${name} has no smoke (scripts/tarball-smoke.mjs, BIN_ARGS)`);
+  }
+}
 
 async function gate(name, [cmd, args, cwd]) {
   step(name);
