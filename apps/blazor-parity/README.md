@@ -37,4 +37,6 @@ contract: a new group is a new file in `tests/<suite>/`, a new suite a new folde
 Each ported test keeps Blazor's name (a Theory's arguments in parentheses), its waits and its tolerances,
 with a `// Blazor: <TestName>` line. Where Tsazor deliberately fixes a Blazor bug
 ([design-virtualize.md](../../docs/design-virtualize.md) §6), the test asserts the fix and says
-`// Tsazor deviation A<n>`. A test that can't apply is listed as `SKIP` with the reason.
+`// Tsazor deviation A<n>`. Where a Blazor wait holds only because Selenium's round trips are slow (the state it
+reads before acting hasn't settled yet), the port waits for the settled state and says why in a comment. A test
+that can't apply is listed as `SKIP` with the reason.

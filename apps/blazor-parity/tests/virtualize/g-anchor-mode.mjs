@@ -592,7 +592,11 @@ export const tests = [
 
       // Scroll to the bottom edge.
       await container.evaluate((el) => { el.scrollTop = el.scrollHeight; });
-      await waitTrue(async () => (await bottomGap(container)) < 2);
+      // Blazor waits for the gap only. Right after the jump the gap is already 0 while the spacers still hold the
+      // ItemSize estimate (50px; the rows measure 62px) and the tail isn't rendered: the jump is still in flight.
+      // Selenium's round trips let it land before the click; Playwright's don't, and an append that overtakes the
+      // jump lands at the new bottom (half the runs in Edge). So the bottom edge here is the last row rendered.
+      await waitTrue(async () => (await count(container, "[data-index='499']")) > 0 && (await bottomGap(container)) < 2);
 
       const scrollTopBefore = await getScrollTop(container);
 

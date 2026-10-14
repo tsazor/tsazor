@@ -31,6 +31,11 @@ know first.
    it flaky (A12, A15).
    - Port the skipped and quarantined tests too, and run them. Two of Blazor's marked real bugs (#66509,
      #68777), fixed in Tsazor (A6, A13).
+   - A flaky test that fails with the same numbers every time is no timing noise. Read the state it measures
+     "before". A Selenium wait can hold only because WebDriver's round trips are slow, while the state it reads
+     hasn't settled yet. Playwright acts sooner and loses the race half the time (one of Blazor's Virtualize tests:
+     "at the bottom" was read while the list still used the estimated row height). Wait for the settled state, and
+     say so in the port.
 7. **Check a "C# does the same" against the Razor compiler.** A scratch `dotnet new razorclasslib` with
    `Nullable` on answers in a minute. A note from the tutorial port said C#'s nullable analysis drops a narrowing
    in child content too; it doesn't, and three ports and a dogfood paid for the workaround before F15 was fixed.
