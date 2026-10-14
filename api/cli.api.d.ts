@@ -19,6 +19,7 @@ export interface BuildLibraryOptions {
         readonly file: string;
         readonly header?: string;
     };
+    check?: boolean;
     log?: (line: string) => void;
 }
 

@@ -1,11 +1,13 @@
 /**
- * `buildLibrary` (and `tsazor build-lib`): a component library's build, as the Vite plugin compiles an app — each
+ * `buildLibrary` (and `tsazor build-lib`): a component library's build, as an app's — the sources type-checked first
+ * (`tsazor check`), then, as the Vite plugin compiles an app, each
  * `src/*.tsazor` through the compiler with the workspace's resolution, its standard decorators lowered; the plain
  * `.ts` helpers beside them; the component manifest (`tsazor-components.json`) and a declaration per component; the
  * index; and, if asked for, one stylesheet of the shared styles and the components' sidecars. docs/component-libraries.md
  * describes the package around it.
  */
 import { compile } from "@tsazor/compiler";
+import { checkProject } from "@tsazor/lsp";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
@@ -38,6 +40,11 @@ export interface BuildLibraryOptions {
    * (`X.tsazor.css`), under `header` (a comment). Without it the sidecars stay unjoined.
    */
   stylesheet?: { readonly file: string; readonly header?: string };
+  /**
+   * Type-checks the sources first, as `tsazor check` (and an app's build) does: an error stops the build. The
+   * package needs a strict tsconfig.json for it. Default: true.
+   */
+  check?: boolean;
   /** Where the build reports. Default: the console. */
   log?: (line: string) => void;
 }
@@ -46,7 +53,7 @@ export interface BuildLibraryOptions {
 export interface BuildLibraryResult {
   /** The exported components, aliases included. */
   readonly components: readonly string[];
-  /** A component that didn't compile: its file and the errors. */
+  /** A component that didn't type-check or compile: its file and the errors. */
   readonly errors: readonly { readonly file: string; readonly message: string }[];
 }
 
@@ -59,6 +66,17 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   const packageName = (JSON.parse(await readFile(path.join(packageDir, "package.json"), "utf8")) as { name?: string }).name ?? path.basename(packageDir);
   const internal = new Set(options.internal ?? []);
   const aliases = options.aliases ?? {};
+
+  if (options.check !== false) {
+    const checked = await checkProject(srcDir);
+    const shown = (file: string) => path.relative(packageDir, file).replace(/\\/g, "/");
+    for (const d of checked.diagnostics) log(`${shown(d.file)}(${d.line},${d.column}) ${d.code} ${d.message}`);
+    const failed = checked.diagnostics.filter((d) => d.severity === "error");
+    if (failed.length > 0) {
+      log(`[${packageName}] tsazor check: ${failed.length} error(s) — nothing was built`);
+      return { components: [], errors: failed.map((d) => ({ file: shown(d.file), message: `  ${d.code} (${d.line}:${d.column}): ${d.message}` })) };
+    }
+  }
 
   // A running dev server keeps reading the output while it is rebuilt: files are overwritten in place, and only the
   // ones this build didn't write are removed at the end.

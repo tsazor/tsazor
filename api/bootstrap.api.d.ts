@@ -340,7 +340,7 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     items?: TGridItem[];
     itemsProvider?: GridItemsProvider<TGridItem>;
     pagination?: PaginationState;
-    itemKey?: (item: TGridItem) => unknown;
+    itemKey?: (item: TGridItem) => string | number | object;
     childContent?: RenderFragment;
     emptyContent?: RenderFragment;
     loadingContent?: RenderFragment;
@@ -526,7 +526,7 @@ export default class FileUpload extends ComponentBase {
 // Form
 export default class Form extends ComponentBase {
     model: object;
-    validators?: Record<string, unknown>;
+    validators?: Record<string, ModelValidator>;
     onValidSubmit?: EventCallback<EditContext>;
     onInvalidSubmit?: EventCallback<EditContext>;
     childContent?: (context: EditContext) => RenderFragment;
@@ -770,9 +770,9 @@ export default class NumberInput extends InputBase<number> {
     label?: string;
     help?: string;
     placeholder?: string;
-    min?: number;
-    max?: number;
-    step?: number;
+    min: number | null;
+    max: number | null;
+    step: number | null;
     disabled: boolean;
     required: boolean;
     id?: string;

@@ -39,29 +39,35 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     stdout("  payloads (TZS021 C# forms, TZS022 var, TZS024 interpolated strings)");
     stdout("  and the PascalCase API forms; writes <name>.tsazor beside the source");
     stdout("  with --write, reports the dry-run otherwise.");
-    stdout("Usage: tsazor build-lib [package-dir] [--stylesheet <file>]");
+    stdout("Usage: tsazor build-lib [package-dir] [--stylesheet <file>] [--no-check]");
     stdout("  Builds a component library: src/*.tsazor and src/*.ts into dist/, with the");
-    stdout("  component manifest, the declarations and the index; --stylesheet joins");
-    stdout("  src/styles/*.css and the components' sidecar CSS into dist/<file>.");
+    stdout("  component manifest, the declarations and the index, after type-checking");
+    stdout("  the sources (--no-check skips it); --stylesheet joins src/styles/*.css and");
+    stdout("  the components' sidecar CSS into dist/<file>.");
     return help ? 0 : 2;
   }
   if (command === "build-lib") {
     const options = [...extra];
     let stylesheet: string | undefined;
+    let check = true;
     // `tsazor build-lib --stylesheet x.css`: the package directory is the current one.
     const packageDir = rootArgument === undefined || rootArgument.startsWith("--") ? "." : rootArgument;
     if (rootArgument?.startsWith("--")) options.unshift(rootArgument);
     while (options.length > 0) {
       const option = options.shift()!;
+      if (option === "--no-check") {
+        check = false;
+        continue;
+      }
       const value = options.shift();
       if (option !== "--stylesheet" || value === undefined) {
-        stdout("Usage: tsazor build-lib [package-dir] [--stylesheet <file>]");
+        stdout("Usage: tsazor build-lib [package-dir] [--stylesheet <file>] [--no-check]");
         return 2;
       }
       stylesheet = value;
     }
     try {
-      const result = await buildLibrary({ packageDir, ...(stylesheet !== undefined ? { stylesheet: { file: stylesheet } } : {}), log: stdout });
+      const result = await buildLibrary({ packageDir, check, ...(stylesheet !== undefined ? { stylesheet: { file: stylesheet } } : {}), log: stdout });
       return result.errors.length > 0 ? 1 : 0;
     } catch (error) {
       stdout(`tsazor build-lib failed: ${error instanceof Error ? error.message : String(error)}`);

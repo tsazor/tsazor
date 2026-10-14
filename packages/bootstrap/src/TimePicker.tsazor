@@ -202,7 +202,7 @@
             e.preventDefault();
             // On what the field says now: a typed time counts before its change event.
             const typed = parseTimeField((e.target as HTMLInputElement).value, this.locales);
-            this.openAt(initialTimeOption(this.options, typed ?? this.currentValue, disabled));
+            this.openAt(initialTimeOption(this.options, typed ?? this.currentValue ?? undefined, disabled));
             return;
         }
         let next: number | undefined;
@@ -234,7 +234,7 @@
             return;
         }
         this.element?.focus({ preventScroll: true });
-        this.openAt(initialTimeOption(this.options, this.currentValue, this.optionDisabled));
+        this.openAt(initialTimeOption(this.options, this.currentValue ?? undefined, this.optionDisabled));
     }
 
     private openAt(active: number): void {

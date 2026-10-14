@@ -3,7 +3,7 @@
     `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them (WCAG 2.2.1), and can be closed with their button. The
     region is a polite live region; `danger` toasts are announced as alerts. *@
-@import { Toaster, hideFromTopLayer, raiseInTopLayer, type Toast } from "@tsazor/ui"
+@import { Toaster, hideFromTopLayer, raiseInTopLayer, type ToastEntry } from "@tsazor/ui"
 @import { withAttributes } from "./attributes"
 @import { buttonClasses, statusColor } from "./vocabulary"
 @import { Dismiss20Regular } from "./core-icons"
@@ -74,11 +74,11 @@
     /** A toast's action: a transparent brand button, as Fluent's toast actions are links in the brand color. */
     private readonly actionClass = `${buttonClasses("primary", "transparent", "small")} fui-toast__action`;
 
-    private toastClass(toast: Toast): string {
+    private toastClass(toast: ToastEntry): string {
         return `fui-toast fui-toast--${statusColor(toast.intent)}`;
     }
 
-    private roleOf(toast: Toast): string | null {
+    private roleOf(toast: ToastEntry): string | null {
         return toast.intent === "danger" ? "alert" : null;
     }
 }

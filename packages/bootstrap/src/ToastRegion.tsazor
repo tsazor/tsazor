@@ -3,7 +3,7 @@
     `show({ title, message, intent, action })`. Toasts close themselves after their timeout, pause while the
     pointer is over them or focus is in them, and can be closed with their button. The region is a
     polite live region; `danger` toasts are announced as alerts. *@
-@import { Toaster, hideFromTopLayer, raiseInTopLayer, type Toast } from "@tsazor/ui"
+@import { Toaster, hideFromTopLayer, raiseInTopLayer, type ToastEntry } from "@tsazor/ui"
 @import { backgroundColor } from "./vocabulary"
 @inject Toaster toaster
 @import { withClass } from "./attributes"
@@ -68,16 +68,16 @@
         return `toast-container position-fixed p-3 ${vertical}-0 ${horizontal}-0`;
     }
 
-    private toastClass(toast: Toast): string {
+    private toastClass(toast: ToastEntry): string {
         return `toast show align-items-center border-0 text-bg-${backgroundColor(toast.intent)}`;
     }
 
-    private roleOf(toast: Toast): string | null {
+    private roleOf(toast: ToastEntry): string | null {
         return toast.intent === "danger" ? "alert" : null;
     }
 
     /** Light text and a white close button on the strong colors. */
-    private themeOf(toast: Toast): string | null {
+    private themeOf(toast: ToastEntry): string | null {
         return toast.intent === "primary" || toast.intent === "secondary" || toast.intent === "success" || toast.intent === "danger" ? "dark" : null;
     }
 }

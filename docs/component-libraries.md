@@ -59,8 +59,10 @@ packages above serve as the reference implementation.
 
 ## Building a library
 
-`tsazor build-lib` (from `@tsazor/cli`, a dev dependency) builds the package as the Vite plugin
-compiles an app:
+`tsazor build-lib` (from `@tsazor/cli`, a dev dependency) builds the package as an app is built:
+the sources are type-checked first (`tsazor check`, so the package needs a strict
+`tsconfig.json`), and an error stops the build; then they compile as the Vite plugin compiles an
+app:
 
 ```json
 "scripts": { "build": "tsazor build-lib --stylesheet my-components.css" }

@@ -21,6 +21,7 @@ async function library(files: Record<string, string> = {}): Promise<string> {
   roots.push(root);
   const sources: Record<string, string> = {
     "package.json": JSON.stringify({ name: "my-lib", type: "module", tsazor: { components: "./dist/tsazor-components.json" } }),
+    "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, target: "ES2022", module: "ESNext", moduleResolution: "bundler", noEmit: true }, include: ["src"] }),
     "src/Greeting.tsazor": '@import { shout } from "./helper"\n<p class="greeting">@shout(this.name)</p><Part />\n@code {\n    /** Who is greeted. */\n    @Parameter() name = "world";\n}\n',
     "src/Greeting.tsazor.css": ".greeting { color: teal; }\n",
     "src/Part.tsazor": "<span>part</span>\n",
@@ -84,7 +85,16 @@ describe("buildLibrary (D9)", () => {
 
     const broken = await library({ "src/Broken.tsazor": "<p>@(1 + </p>\n" });
     expect(await main(["node", "tsazor", "build-lib", broken], (line) => out.push(line))).toBe(1);
+    expect(out.join("\n")).toContain("src/Broken.tsazor(1,4) TZS003");
+    expect(out.join("\n")).toContain("[my-lib] tsazor check: 2 error(s) — nothing was built");
+    expect(existsSync(path.join(broken, "dist"))).toBe(false);
+    // Without the check the compiler reports it.
+    expect(await main(["node", "tsazor", "build-lib", broken, "--no-check"], (line) => out.push(line))).toBe(1);
     expect(out.join("\n")).toContain("[my-lib] compile errors in Broken.tsazor");
+
+    const mistyped = await library({ "src/Count.tsazor": "<p>@this.count.toFixed(1)</p>\n@code {\n    @Parameter() count?: number;\n}\n" });
+    expect(await main(["node", "tsazor", "build-lib", mistyped], (line) => out.push(line))).toBe(1);
+    expect(out.join("\n")).toMatch(/src\/Count\.tsazor\(1,\d+\) TS2532/);
 
     expect(await main(["node", "tsazor", "build-lib", ok, "--minify"], (line) => out.push(line))).toBe(2);
   });

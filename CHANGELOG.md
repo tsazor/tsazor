@@ -140,7 +140,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     does, transpiles the helpers with the declarations TypeScript derives, writes the manifest, the declarations,
     the index and one stylesheet, and removes what an earlier build wrote and this one didn't. The four libraries
     of the repository build through it; their `scripts/build-entry.ts` copies are gone (the output is the same; the
-    skins' internal helpers now have declarations too).
+    skins' internal helpers now have declarations too). It type-checks the sources first, as an app's build does
+    (`check: false`, `--no-check`): the skins' sources were never type-checked, and the check found what it fixed —
+    `DataGrid`'s `itemKey` returns `string | number | object` (Blazor's `ItemKey`), `Form`'s and `FluentForm`'s
+    `validators` is `Record<string, ModelValidator>` (S3; it was `unknown`), and a form without content no longer
+    throws. Bootstrap's `NumberInput` takes `min`, `max` and `step` as `number | null`, as Fluent's does (S3).
   - The component manifest across versions (D10, `docs/component-libraries.md`): `tsazorComponentManifest` stays 1
     in 1.x, a minor adds optional fields only, a reader ignores the fields it doesn't know. A manifest that can't be
     read is the error TZS036 in `tsazor check` (before: silent, its tags unresolved); a newer format version is the

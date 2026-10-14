@@ -63,8 +63,9 @@
             if (window[0] > 2) window.unshift("gap" as unknown as number);
             window.unshift(1);
         }
-        if (window[window.length - 1] < total) {
-            if (window[window.length - 1] < total - 1) window.push("gap" as unknown as number);
+        const last = window[window.length - 1];
+        if (last !== undefined && last < total) {
+            if (last < total - 1) window.push("gap" as unknown as number);
             window.push(total);
         }
         return window as Array<number | "gap">;

@@ -28,12 +28,12 @@
     @Parameter() help?: string;
     /** Placeholder text. */
     @Parameter() placeholder?: string;
-    /** The smallest allowed value. */
-    @Parameter() min?: number;
-    /** The largest allowed value. */
-    @Parameter() max?: number;
-    /** The step of the spinner buttons. */
-    @Parameter() step?: number;
+    /** The smallest allowed value (null: none), as the Fluent skin's. */
+    @Parameter() min: number | null = null;
+    /** The largest allowed value (null: none). */
+    @Parameter() max: number | null = null;
+    /** The step of the spinner buttons (null: the browser's). */
+    @Parameter() step: number | null = null;
     /** Disables the field. */
     @Parameter() disabled: boolean = false;
     /** Marks the field as required. */

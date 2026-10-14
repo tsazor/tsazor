@@ -343,7 +343,7 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     items?: TGridItem[];
     itemsProvider?: GridItemsProvider<TGridItem>;
     pagination?: PaginationState;
-    itemKey?: (item: TGridItem) => unknown;
+    itemKey?: (item: TGridItem) => string | number | object;
     childContent?: RenderFragment;
     emptyContent?: RenderFragment;
     loadingContent?: RenderFragment;
@@ -532,7 +532,7 @@ export type FluentBrandStep = 10 | 20 | 30 | 40 | 50 | 60 | 70 | 80 | 90 | 100 |
 // FluentForm
 export default class FluentForm extends ComponentBase {
     model: object;
-    validators?: Record<string, unknown>;
+    validators?: Record<string, ModelValidator>;
     onValidSubmit?: EventCallback<EditContext>;
     onInvalidSubmit?: EventCallback<EditContext>;
     additionalAttributes?: Record<string, unknown>;
@@ -556,7 +556,7 @@ export type FluentTokenOverrides = Partial<Record<FluentToken, string>>;
 // Form
 export default class FluentForm extends ComponentBase {
     model: object;
-    validators?: Record<string, unknown>;
+    validators?: Record<string, ModelValidator>;
     onValidSubmit?: EventCallback<EditContext>;
     onInvalidSubmit?: EventCallback<EditContext>;
     additionalAttributes?: Record<string, unknown>;

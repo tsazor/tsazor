@@ -112,7 +112,7 @@ type IconValue,
     /** Paging state shared with a Paginator; without it, the grid shows all rows. */
     @Parameter() pagination?: PaginationState;
     /** A row's identity for `@key` (default: the item itself); keeps row state across sorting. */
-    @Parameter() itemKey?: (item: TGridItem) => unknown;
+    @Parameter() itemKey?: (item: TGridItem) => string | number | object;
     /** The columns: PropertyColumn and TemplateColumn. */
     @Parameter() childContent?: RenderFragment;
     /** Shown when there are no rows (default "No entries"). */
@@ -298,8 +298,8 @@ type IconValue,
         return this.model.sortByColumnAsync(column);
     }
 
-    private keyOf(item: TGridItem): unknown {
-        return this.itemKey ? this.itemKey(item) : item;
+    private keyOf(item: TGridItem): string | number | object | null | undefined {
+        return this.itemKey ? this.itemKey(item) : (item as string | number | object | null | undefined);
     }
 
     private isSelected(item: TGridItem): boolean {
