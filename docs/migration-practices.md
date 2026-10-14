@@ -315,7 +315,8 @@ render in the browser.
   render) posts each file with its progress, and the API stores it (an ASP.NET minimal API takes it as an
   `IFormFile`). `Mode.Buffer` hands `onFileUploaded` the whole `buffer` (a `Uint8Array`), each chunk
   arriving in `onProgressChange`. MudBlazor's `MudFileUpload` with an activator button becomes a `FileUpload` with
-  `AnchorId` and `DragDropZoneVisible="false"`.
+  `AnchorId` and `DragDropZoneVisible="false"`. `OnFileError`'s codes are strings in kebab case, as every value
+  union in Tsazor: `FileCountExceeded` is `"file-count-exceeded"`, `MaximumSizeReached` `"maximum-size-reached"`.
 - **`IBrowserFile` is the browser's `File`.** `e.File.Name`/`Size`/`ContentType`/`LastModified` are
   `e.file.name`/`size`/`type`/`lastModified` (milliseconds). `OpenReadStream(maxSize)` + a `StreamReader` or a
   `byte[]` buffer becomes `await file.text()` or `new Uint8Array(await file.arrayBuffer())`; the cap guarded
