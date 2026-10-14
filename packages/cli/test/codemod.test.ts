@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { codemodProject, findRazorFiles } from "../src/codemod";
-import { main } from "../src/index";
+import { main } from "../src/main";
 
 let root = "";
 
@@ -60,7 +60,8 @@ describe("tsazor codemod", () => {
   it("main() prints usage on an unknown command and the summary on codemod", async () => {
     const lines: string[] = [];
     expect(await main(["node", "tsazor", "nope"], (l) => lines.push(l))).toBe(2);
-    expect(lines[0]).toBe("Usage: tsazor check [project-root]");
+    expect(lines[0]).toBe('tsazor: unknown command "nope".');
+    expect(lines[1]).toBe("Usage: tsazor check [project-root]");
     expect(lines.join("\n")).toContain("Usage: tsazor codemod <path> [--write]");
 
     const out: string[] = [];
@@ -69,9 +70,16 @@ describe("tsazor codemod", () => {
     expect(out.at(-1)).toContain("(dry-run — pass --write)");
   });
 
-  it("main() reports a missing input tree", async () => {
+  it("main() reports a missing path, and a tree without .razor files, as setup errors (2)", async () => {
     const out: string[] = [];
-    expect(await main(["node", "tsazor", "codemod", path.join(root, "nowhere")], (l) => out.push(l))).toBe(1);
-    expect(out.join("\n")).toContain("no .razor files");
+    expect(await main(["node", "tsazor", "codemod", path.join(root, "nowhere")], () => {}, (l) => out.push(l))).toBe(2);
+    expect(out[0]).toMatch(/^tsazor codemod: no such path/);
+    const empty = await mkdtemp(path.join(tmpdir(), "tsazor-codemod-empty-"));
+    try {
+      expect(await main(["node", "tsazor", "codemod", empty], () => {}, (l) => out.push(l))).toBe(2);
+      expect(out.at(-1)).toContain("no .razor files");
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
   });
 });

@@ -8,7 +8,8 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildLibrary, main } from "../src/index";
+import { buildLibrary } from "../src/index";
+import { main } from "../src/main";
 
 const roots: string[] = [];
 afterEach(async () => {

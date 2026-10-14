@@ -8,7 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { main } from "../src/index";
+import { main } from "../src/main";
 
 let root = "";
 const cwd = process.cwd();
@@ -44,7 +44,17 @@ describe("tsazor check — default root", () => {
 
     const codemod: string[] = [];
     expect(await main(["node", "tsazor", "codemod"], (l) => codemod.push(l))).toBe(2);
-    expect(codemod).toEqual(["Usage: tsazor codemod <path> [--write]"]);
+    expect(codemod[0]).toBe("tsazor codemod: which path?");
+  });
+
+  it("a root that doesn't exist, an unknown option or a second path is a usage error (2) on stderr, not a green gate", async () => {
+    for (const args of [["check", "./typo"], ["check", "--json"], ["check", root, root], ["build-lib", "--minify"], []]) {
+      const out: string[] = [];
+      const err: string[] = [];
+      expect(await main(["node", "tsazor", ...args], (l) => out.push(l), (l) => err.push(l)), args.join(" ")).toBe(2);
+      expect(out, args.join(" ")).toEqual([]);
+      expect(err[0], args.join(" ")).toMatch(/^tsazor/);
+    }
   });
 });
 

@@ -19,5 +19,10 @@ npm install -D @tsazor/cli
   components, aliases, re-exports) calls `buildLibrary(options)`; see
   [component libraries](../../docs/component-libraries.md#building-a-library).
 
+Every command exits with the same codes: 0 when it is done and has nothing to report (`--help`, `--version` too),
+1 on findings (`check` or `build-lib` found errors), 2 on wrong usage or setup — an unknown command or option, a
+path that doesn't exist, nothing to work on, a crash. Usage errors and failures go to stderr, so `tsazor check ./typo`
+fails a gate instead of checking nothing.
+
 See [migrating from Blazor](../../docs/migration.md) and the
 [C# to TypeScript cheat sheet](../../docs/csharp-to-typescript.md).

@@ -135,6 +135,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - The skins (S5): the Wizard's `labelPrevious`, `labelNext` and `labelDone` are one `labels` (`WizardLabels`,
     any of them), as Carousel's and Rating's; Skeleton's `shape="circle"` is `"circular"`, as Avatar's, Chip's and
     Image's. (Table's `compact` became `small` with D6.)
+  - `@tsazor/cli` (T2): one exit-code table for every command — 0 done, 1 findings, 2 usage or setup. An unknown
+    option, a second path or a path that doesn't exist is 2 on stderr (`tsazor check ./typo` and
+    `tsazor check --json` printed "0 file(s)" and exited 0: a gate that checked nothing passed); so is
+    `tsazor codemod` on a tree without `.razor` files (it was 1). `--help` is 0 for every command. `main` and
+    `findRazorFiles` are no exports any more (the command line is the `tsazor` bin).
   - `@tsazor/ui` (U4): names that collided or differed from the skins'. The type `Toast` is `ToastEntry` and
     `Hotkey` is `KeyCombination` (both skins have components of those names; the Bootstrap skin no longer
     re-exports the type as `Toast`). The behavior `dismissable` is `dismissible` (`DismissibleOptions`), as the

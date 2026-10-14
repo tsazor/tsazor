@@ -67,9 +67,3 @@ export interface CodemodReport {
     readonly withRemainingErrors: number;
     readonly crashes: number;
 }
-
-// findRazorFiles
-export declare function findRazorFiles(root: string): string[];
-
-// main
-export declare function main(argv: readonly string[], stdout: (line: string) => void): Promise<number>;
