@@ -1,0 +1,10 @@
+{
+  "name": "legacy-lib",
+  "version": "1.0.0",
+  "exports": {
+    ".": "./index.js"
+  },
+  "tsazor": {
+    "components": "./tsazor-components.json"
+  }
+}

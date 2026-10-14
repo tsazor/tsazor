@@ -28,6 +28,7 @@ export {
   categorizeType,
   referencesOf,
   RUNTIME_MODULE,
+  COMPONENT_MANIFEST_VERSION,
   type ParameterCategory,
   type ComponentParameter,
   type ComponentMethod,

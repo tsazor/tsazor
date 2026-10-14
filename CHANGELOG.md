@@ -94,6 +94,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     `--path-value version=1` (`pathValues`) writes a fixed path value into the URLs and leaves it out of the
     signatures and the names: URL-segment API versioning (`api/v{version}/…`, BlazorHero's B4). The README documents
     the naming rules as the contract: in 1.x the same document gives the same names.
+  - The component manifest across versions (D10, `docs/component-libraries.md`): `tsazorComponentManifest` stays 1
+    in 1.x, a minor adds optional fields only, a reader ignores the fields it doesn't know. A manifest that can't be
+    read is the error TZS036 in `tsazor check` (before: silent, its tags unresolved); a newer format version is the
+    warning TZS036, and its components are read as far as this version knows them. The Vite plugin prints both
+    once. A test reads a manifest written by 1.0 in every later 1.x.
 - **Fixed — `@tsazor/dotnet`: a generated client used neither the `baseUrl` nor the `defaultHeaders` of its
   `TsazorHttp`** — a relative path went to the page's origin, so `--base-url` (which generates
   `new TsazorHttp({ baseUrl })`) did nothing. The client's own `baseUrl` option still wins; the call's headers win over

@@ -160,6 +160,7 @@ export declare const CHECK_CODES: {
     readonly notStrict: "TZS033";
     readonly unreadable: "TZS034";
     readonly compilerFailure: "TZS035";
+    readonly manifest: "TZS036";
 };
 
 // childNodes
@@ -289,9 +290,12 @@ export interface CompileResult {
     importSuggestions?: readonly ImportSuggestion[];
 }
 
+// COMPONENT_MANIFEST_VERSION
+export declare const COMPONENT_MANIFEST_VERSION = 1;
+
 // ComponentManifest
 export interface ComponentManifest {
-    tsazorComponentManifest: 1;
+    tsazorComponentManifest: typeof COMPONENT_MANIFEST_VERSION;
     package?: string;
     components: Record<string, ComponentMetadata>;
 }
@@ -400,6 +404,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS033: "TypeScript isn't strict.";
     readonly TZS034: "File not readable.";
     readonly TZS035: "The compiler failed.";
+    readonly TZS036: "Component manifest unreadable or newer.";
 };
 
 // DiagnosticBag

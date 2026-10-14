@@ -299,4 +299,11 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
       "The compiler threw instead of reporting a diagnostic: a bug in Tsazor. The message is the exception's; the file isn't type-checked.",
     fix: "Please report it with the component's source. Meanwhile, rewriting the construct the message names usually avoids it.",
   },
+  {
+    code: "TZS036",
+    severity: "error",
+    description:
+      "A component package's manifest (`tsazor.components` in its package.json) can't be read — not JSON, or no `components` — so none of its tags resolve (each would be a TZS005). As a warning: the manifest is a newer format version than this Tsazor reads; its components are read as far as this version knows them.",
+    fix: "Unreadable: reinstall or rebuild the package. Newer: update Tsazor to the package's version, or use a release of the package built for this Tsazor.",
+  },
 ];

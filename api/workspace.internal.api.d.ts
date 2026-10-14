@@ -117,6 +117,14 @@ export interface ManifestEntry {
     localExport?: string;
 }
 
+// ManifestProblem
+export interface ManifestProblem {
+    packageName: string;
+    file: string;
+    severity: "error" | "warning";
+    message: string;
+}
+
 // mapPath
 export declare function mapPath(specifier: string, fromFile: string): string[];
 
@@ -125,6 +133,9 @@ export declare class MetadataCache {
     private readonly modules;
     private readonly components;
     private readonly manifests;
+    private readonly problems;
+    private manifestUses;
+    private readonly manifestLastUse;
     private readonly roots;
     private readonly runtimeDir;
     constructor(options?: MetadataCacheOptions);
@@ -135,6 +146,8 @@ export declare class MetadataCache {
         manifest: ComponentManifest;
         file?: string;
     } | undefined;
+    manifestMark(): number;
+    manifestProblems(since?: number): ManifestProblem[];
     dependenciesOf(file: string, exportName?: string): string[];
     dependentsOf(file: string): string[];
     invalidate(file: string): string[];

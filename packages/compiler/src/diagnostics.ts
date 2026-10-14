@@ -82,6 +82,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS033: "TypeScript isn't strict.",
   TZS034: "File not readable.",
   TZS035: "The compiler failed.",
+  TZS036: "Component manifest unreadable or newer.",
 } as const;
 
 

@@ -152,9 +152,15 @@ export interface ComponentMetadata {
   incomplete?: boolean;
 }
 
+/**
+ * The format version this Tsazor writes and reads. In 1.x it stays 1: a minor release adds optional fields only, and
+ * a reader ignores the fields it doesn't know (docs/component-libraries.md, "The manifest across versions").
+ */
+export const COMPONENT_MANIFEST_VERSION = 1;
+
 /** Generated per package (`dist/tsazor-components.json`, referenced from package.json `tsazor.components`). */
 export interface ComponentManifest {
-  tsazorComponentManifest: 1;
+  tsazorComponentManifest: typeof COMPONENT_MANIFEST_VERSION;
   package?: string;
   components: Record<string, ComponentMetadata>;
 }

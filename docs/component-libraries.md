@@ -54,6 +54,25 @@ packages above serve as the reference implementation.
 - **The keyword `tsazor-components`:** `npm create tsazor` lists the packages the registry finds
   under this keyword when it asks for a library.
 
+## The manifest across versions
+
+A library is built with one Tsazor and used in an app with another: a library built with
+Tsazor 1.4 ends up in an app on 1.1. The manifest's format follows these rules:
+
+- **Its version is `tsazorComponentManifest: 1` for all of 1.x.** A 1.x release adds optional
+  fields only. It never removes a field, renames one or changes its meaning.
+- **A reader ignores the fields it doesn't know.** An app on 1.1 reads a 1.4 manifest as far as
+  1.1 knows the format. What the newer fields add (a hint, a doc link) is missing there, but
+  every component resolves.
+- **A newer format version is reported, not silent.** A 2.x library in a 1.x app is the warning
+  TZS036 in `tsazor check` and in the Vite plugin. The components are still read as far as this
+  version knows them. A manifest that can't be read (not JSON, no `components`) is the error
+  TZS036 at the manifest. It names the cause, where otherwise the package's tags would only be
+  unresolved (TZS005) or untyped.
+
+A test reads a manifest written by Tsazor 1.0 (`packages/workspace/test/fixtures/manifest-1.0`)
+in every later 1.x release.
+
 ## In an app, by hand
 
 Without the starter, the same setup takes three steps:

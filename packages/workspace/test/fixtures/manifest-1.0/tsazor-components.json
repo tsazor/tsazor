@@ -1,0 +1,1167 @@
+{
+  "tsazorComponentManifest": 1,
+  "package": "legacy-lib",
+  "components": {
+    "Badge": {
+      "name": "Badge",
+      "file": "src/Badge.tsazor",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "intent",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Badge",
+          "default": "\"primary\"",
+          "type": "Intent",
+          "references": [
+            {
+              "name": "Intent",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "Intent",
+              "file": "src/Badge.tsazor"
+            }
+          ],
+          "doc": "The color role: primary (default, as in the Fluent skin), secondary, success, danger, warning, info or neutral."
+        },
+        {
+          "name": "pill",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Badge",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Rounded pill shape."
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Badge",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The badge text."
+        },
+        {
+          "name": "iconStart",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Badge",
+          "type": "IconValue",
+          "references": [
+            {
+              "name": "IconValue",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IconValue",
+              "file": "src/Badge.tsazor"
+            }
+          ],
+          "doc": "An icon before the text (Fluent UI Blazor's `IconStart`)."
+        },
+        {
+          "name": "iconEnd",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Badge",
+          "type": "IconValue",
+          "references": [
+            {
+              "name": "IconValue",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IconValue",
+              "file": "src/Badge.tsazor"
+            }
+          ],
+          "doc": "An icon after the text (`IconEnd`)."
+        },
+        {
+          "name": "iconLabel",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Badge",
+          "type": "string",
+          "doc": "The icons' accessible name (`IconLabel`); without it they are decorative."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Badge",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Further attributes for the badge element."
+        }
+      ],
+      "doc": "Renders Bootstrap's `.badge`, a small label for counts or status, colored by its intent\n(`text-bg-*`) and optionally pill-shaped. `iconStart`/`iconEnd` add an icon at the badge's text size;\n`iconLabel` names it.",
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "Button": {
+      "name": "Button",
+      "file": "src/Button.tsazor",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "ariaLabel",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "string",
+          "doc": "The accessible name when there is no visible label."
+        },
+        {
+          "name": "intent",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Button",
+          "default": "\"secondary\"",
+          "type": "Intent",
+          "references": [
+            {
+              "name": "Intent",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "Intent",
+              "file": "src/Button.tsazor"
+            }
+          ],
+          "doc": "The color role: primary, secondary (default, as in the Fluent skin), success, danger, warning, info or neutral."
+        },
+        {
+          "name": "appearance",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Button",
+          "default": "\"solid\"",
+          "type": "Appearance",
+          "references": [
+            {
+              "name": "Appearance",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "Appearance",
+              "file": "src/Button.tsazor"
+            }
+          ],
+          "doc": "Visual weight: solid (default), outline, subtle or transparent (a link-styled button)."
+        },
+        {
+          "name": "size",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Button",
+          "default": "\"medium\"",
+          "type": "Size",
+          "references": [
+            {
+              "name": "Size",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "Size",
+              "file": "src/Button.tsazor"
+            }
+          ],
+          "doc": "small, medium (default) or large."
+        },
+        {
+          "name": "disabled",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Button",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Disables the native button; it then raises no clicks."
+        },
+        {
+          "name": "type",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "Button",
+          "default": "\"button\"",
+          "type": "\"button\" | \"submit\" | \"reset\"",
+          "doc": "The button's `type` attribute."
+        },
+        {
+          "name": "href",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "string",
+          "doc": "Renders a link styled as the button (`<a href class=\"btn\">`); a disabled one has no href."
+        },
+        {
+          "name": "onClick",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "EventCallback<MouseEvent>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "MouseEvent",
+              "kind": "global"
+            }
+          ],
+          "doc": "Fired when the button is clicked, with the click event.",
+          "typeArgument": "MouseEvent"
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The button's label."
+        },
+        {
+          "name": "iconStart",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "IconValue",
+          "references": [
+            {
+              "name": "IconValue",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IconValue",
+              "file": "src/Button.tsazor"
+            }
+          ],
+          "doc": "An icon before the label (Fluent UI Blazor's `IconStart`)."
+        },
+        {
+          "name": "iconEnd",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "IconValue",
+          "references": [
+            {
+              "name": "IconValue",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IconValue",
+              "file": "src/Button.tsazor"
+            }
+          ],
+          "doc": "An icon after the label (`IconEnd`)."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "Button",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Further attributes for the `<button>` (`aria-label`, `title`, …)."
+        }
+      ],
+      "doc": "Renders a native `<button>` styled with Bootstrap's `.btn` classes: an intent (its color role),\nan appearance (solid, outline, subtle or transparent) and a size. It raises onClick on click,\nEnter or Space. With `href` it is a link that looks like a button (Bootstrap's `<a class=\"btn\">`).\n`iconStart`/`iconEnd` put an icon before or after the label; without a label, give it an ariaLabel.",
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "DatePicker": {
+      "name": "DatePicker",
+      "file": "src/DatePicker.tsazor",
+      "isComponent": true,
+      "typeParameters": [],
+      "parameters": [
+        {
+          "name": "value",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "string | null",
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
+        },
+        {
+          "name": "valueChanged",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "EventCallback<string>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            }
+          ],
+          "doc": "Invoked when the user edits the input (compiler @bind-Value emits this).",
+          "typeArgument": "string"
+        },
+        {
+          "name": "valueExpression",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "string",
+          "doc": "Field name used for EditContext registration and validation."
+        },
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "cascading": {
+            "type": "EditContext"
+          },
+          "doc": "Resolved from the nearest EditForm (by-type cascading)."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
+        },
+        {
+          "name": "label",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "The field's label (clicking it focuses the text field)."
+        },
+        {
+          "name": "help",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "A hint below the field, linked to it for screen readers."
+        },
+        {
+          "name": "placeholder",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "The text field's placeholder; by default the locale's pattern (\"MM/DD/YYYY\")."
+        },
+        {
+          "name": "view",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "\"days\"",
+          "type": "CalendarView",
+          "references": [
+            {
+              "name": "CalendarView",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "CalendarView",
+              "file": "src/DatePicker.tsazor"
+            }
+          ],
+          "doc": "What it picks: days (default), months or years (`View`)."
+        },
+        {
+          "name": "minDate",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "IsoDate",
+          "references": [
+            {
+              "name": "IsoDate",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IsoDate",
+              "file": "src/DatePicker.tsazor"
+            }
+          ],
+          "doc": "The first day that can be picked (ISO)."
+        },
+        {
+          "name": "maxDate",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "IsoDate",
+          "references": [
+            {
+              "name": "IsoDate",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IsoDate",
+              "file": "src/DatePicker.tsazor"
+            }
+          ],
+          "doc": "The last day that can be picked (ISO)."
+        },
+        {
+          "name": "disabledDateFunc",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "(date: IsoDate) => boolean",
+          "references": [
+            {
+              "name": "IsoDate",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "IsoDate",
+              "file": "src/DatePicker.tsazor"
+            }
+          ],
+          "doc": "Rules out single days in the calendar (`DisabledDateFunc`).",
+          "delegate": true
+        },
+        {
+          "name": "disabledCheckAllDaysOfMonthYear",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Months and years count as disabled when every day is (`DisabledCheckAllDaysOfMonthYear`)."
+        },
+        {
+          "name": "disabledSelectable",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "true",
+          "type": "boolean",
+          "doc": "Ruled-out days look disabled (default; `DisabledSelectable`)."
+        },
+        {
+          "name": "dayFormat",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "\"numeric\"",
+          "type": "\"numeric\" | \"2-digit\"",
+          "doc": "The calendar's day numbers: numeric (default) or 2-digit (`DayFormat`)."
+        },
+        {
+          "name": "locale",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "The locale of the text and the calendar (\"de-DE\"; `Culture`). Default: the CultureService's culture, else the page's lang, else the browser's."
+        },
+        {
+          "name": "firstDayOfWeek",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "number",
+          "doc": "The week's first day, 0 (Sunday) to 6, instead of the locale's (MudBlazor's `FirstDayOfWeek`)."
+        },
+        {
+          "name": "displayToday",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "true",
+          "type": "boolean",
+          "doc": "The calendar marks today (default)."
+        },
+        {
+          "name": "daysTemplate",
+          "category": "RenderFragment<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "(day: CalendarDay) => RenderFragment",
+          "references": [
+            {
+              "name": "CalendarDay",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "CalendarDay",
+              "file": "src/DatePicker.tsazor"
+            },
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "A calendar day's content instead of its number (`DaysTemplate`).",
+          "typeArgument": "CalendarDay"
+        },
+        {
+          "name": "labels",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "Partial<CalendarLabels>",
+          "references": [
+            {
+              "name": "Partial",
+              "kind": "global"
+            },
+            {
+              "name": "CalendarLabels",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "CalendarLabels",
+              "file": "src/DatePicker.tsazor"
+            }
+          ],
+          "doc": "The calendar buttons' texts (English by default)."
+        },
+        {
+          "name": "buttonLabel",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "The button's and the dialog's name."
+        },
+        {
+          "name": "onCalendarOpen",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "EventCallback<boolean>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            }
+          ],
+          "doc": "Raised with true when the calendar opens and false when it closes (`OnCalendarOpen`).",
+          "typeArgument": "boolean"
+        },
+        {
+          "name": "disabled",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Disables the field and the button."
+        },
+        {
+          "name": "readOnly",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Shows the value without letting it change."
+        },
+        {
+          "name": "required",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Marks the field as required (the native attribute)."
+        },
+        {
+          "name": "id",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "The text field's id; generated when omitted."
+        },
+        {
+          "name": "ariaLabel",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DatePicker",
+          "type": "string",
+          "doc": "The text field's accessible name when there is no label."
+        }
+      ],
+      "doc": "A Bootstrap date picker (an `.input-group` of a `.form-control` and a button; Fluent UI Blazor's FluentDatePicker,\nMudBlazor's MudDatePicker; InputBase — bind it\nwith @bind-value): a text field for the date as the locale writes it (\"10/10/2026\", \"10.10.2026\"; ISO works too)\nand a button that opens a Calendar in a dialog. The value is an ISO date (\"2026-10-10\"), which no time zone\nshifts. The calendar opens on the value (or today) with its keys; a picked day or Escape closes it and the focus\ngoes back. Alt+ArrowDown in the field opens it too. `view` months or years picks a month or a year. Text that is no\ndate goes to validation as it was typed (as with a NumberInput). Validation state and message as with TextInput —\nthe same parameters as the Fluent skin's DatePicker.",
+      "base": {
+        "name": "InputBase",
+        "resolved": true,
+        "typeArguments": [
+          "string"
+        ]
+      }
+    },
+    "DataGrid": {
+      "name": "DataGrid",
+      "file": "src/DataGrid.tsazor",
+      "isComponent": true,
+      "typeParameters": [
+        {
+          "name": "TGridItem"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "items",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "TGridItem[]",
+          "references": [
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "The rows, sorted and paged by the grid. Set this or itemsProvider."
+        },
+        {
+          "name": "itemsProvider",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "GridItemsProvider<TGridItem>",
+          "references": [
+            {
+              "name": "GridItemsProvider",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "GridItemsProvider",
+              "file": "src/DataGrid.tsazor"
+            },
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "Loads the rows of a page on demand (server-side paging and sorting). Set this or items.",
+          "delegate": true
+        },
+        {
+          "name": "pagination",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "PaginationState",
+          "references": [
+            {
+              "name": "PaginationState",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "PaginationState",
+              "file": "src/DataGrid.tsazor"
+            }
+          ],
+          "doc": "Paging state shared with a Paginator; without it, the grid shows all rows."
+        },
+        {
+          "name": "itemKey",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "(item: TGridItem) => unknown",
+          "references": [
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "A row's identity for `@key` (default: the item itself); keeps row state across sorting.",
+          "delegate": true
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The columns: PropertyColumn and TemplateColumn."
+        },
+        {
+          "name": "emptyContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Shown when there are no rows (default \"No entries\")."
+        },
+        {
+          "name": "loadingContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "Shown while an itemsProvider loads and no rows are shown yet (default \"Loading…\")."
+        },
+        {
+          "name": "selectionMode",
+          "category": "string",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "\"none\"",
+          "type": "SelectionMode",
+          "references": [
+            {
+              "name": "SelectionMode",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "SelectionMode",
+              "file": "src/DataGrid.tsazor"
+            }
+          ],
+          "doc": "none (default), single (radio buttons) or multiple (checkboxes, with \"select all\")."
+        },
+        {
+          "name": "selectedItems",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "accessor",
+          "declaredBy": "DataGrid",
+          "default": "[]",
+          "type": "TGridItem[]",
+          "references": [
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "The selected rows; bind it with `@bind-selectedItems`.",
+          "bindable": {
+            "changed": "selectedItemsChanged"
+          }
+        },
+        {
+          "name": "selectedItemsChanged",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "EventCallback<TGridItem[]>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "Change callback of the two-way parameter 'selectedItems' (synthesized by @Bindable(); `@bind-selectedItems` sets it).",
+          "synthesizedBy": "selectedItems",
+          "typeArgument": "TGridItem[]"
+        },
+        {
+          "name": "ariaLabel",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "string",
+          "doc": "Names the table for screen readers."
+        },
+        {
+          "name": "striped",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Shades alternating rows (table-striped)."
+        },
+        {
+          "name": "hover",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Highlights the row under the pointer (table-hover)."
+        },
+        {
+          "name": "bordered",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Draws borders on all cells (table-bordered)."
+        },
+        {
+          "name": "small",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "The compact table-sm variant."
+        },
+        {
+          "name": "responsive",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Wraps the table in .table-responsive for horizontal scrolling."
+        },
+        {
+          "name": "virtualize",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Renders only the rows in view (runtime Virtualize): for thousands of rows. Put the grid in a\nscrolling container with a height; it doesn't combine with pagination."
+        },
+        {
+          "name": "itemSize",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "41",
+          "type": "number",
+          "doc": "The estimated row height in px when virtualized, until the rendered rows are measured (QuickGrid's ItemSize)."
+        },
+        {
+          "name": "overscanCount",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "3",
+          "type": "number",
+          "doc": "Rows rendered above and below the visible ones when virtualized."
+        },
+        {
+          "name": "anchorMode",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "VirtualizeAnchorMode.Start",
+          "type": "VirtualizeAnchorMode",
+          "references": [
+            {
+              "name": "VirtualizeAnchorMode",
+              "kind": "runtime",
+              "imported": "VirtualizeAnchorMode"
+            }
+          ],
+          "doc": "Virtualized: how the grid behaves at its edges when rows arrive (QuickGrid's AnchorMode). `End` follows\nrows appended at the bottom, as a log or a feed."
+        },
+        {
+          "name": "itemComparer",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "(a: TGridItem, b: TGridItem) => boolean",
+          "references": [
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "Virtualized with an itemsProvider: whether two rows are the same row, to tell rows inserted above from\nrows appended (QuickGrid's ItemComparer). Compare by key when the provider returns fresh objects.",
+          "delegate": true
+        },
+        {
+          "name": "initialItemIndex",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "0",
+          "type": "number",
+          "doc": "Virtualized: the row to scroll to on the first render (QuickGrid's InitialItemIndex)."
+        },
+        {
+          "name": "stickyHeader",
+          "category": "value",
+          "optional": false,
+          "hasInitializer": true,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "default": "false",
+          "type": "boolean",
+          "doc": "Keeps the header row visible while the page (or a scrolling parent) scrolls."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "DataGrid",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Further attributes for the table element (class adds to the table's classes)."
+        }
+      ],
+      "doc": "A data grid on Bootstrap's `.table`, shaped like Blazor's QuickGrid: the columns are child\ncomponents (PropertyColumn, TemplateColumn) and take the row type from the grid. Rows come\nfrom `items` (sorted and paged here) or an `itemsProvider` (sorted and paged by your code or a\nserver, with an AbortSignal). Sortable columns sort on a click on their header (`aria-sort`);\nwith a `pagination` state, a Paginator pages the grid. `selectionMode` adds a selection column\n(checkboxes or radio buttons) bound to `selectedItems`.",
+      "cascadingTypeParameters": [
+        "TGridItem"
+      ],
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      },
+      "methods": [
+        {
+          "name": "scrollToItemAsync",
+          "parameters": "index: number, signal?: AbortSignal",
+          "returnType": "Promise<void>",
+          "doc": "Virtualized: scrolls so the row at `index` is at the top (QuickGrid's ScrollToItemAsync). A newer call\nsupersedes this one, which then resolves; it rejects only when `signal` aborts.",
+          "declaredBy": "DataGrid",
+          "references": [
+            {
+              "name": "AbortSignal",
+              "kind": "global"
+            },
+            {
+              "name": "Promise",
+              "kind": "global"
+            }
+          ]
+        },
+        {
+          "name": "refreshDataAsync",
+          "parameters": "",
+          "returnType": "Promise<void>",
+          "doc": "Reloads the rows (QuickGrid's RefreshDataAsync) — after the provider's data changed.",
+          "declaredBy": "DataGrid",
+          "references": [
+            {
+              "name": "Promise",
+              "kind": "global"
+            }
+          ]
+        },
+        {
+          "name": "sortByColumnAsync",
+          "parameters": "column: GridColumn<TGridItem>, direction?: \"auto\" | \"ascending\" | \"descending\"",
+          "returnType": "Promise<void>",
+          "doc": "Sorts by a column, as a click on its header does (QuickGrid's SortByColumnAsync).",
+          "declaredBy": "DataGrid",
+          "references": [
+            {
+              "name": "GridColumn",
+              "kind": "import",
+              "specifier": "@tsazor/ui",
+              "imported": "GridColumn",
+              "file": "src/DataGrid.tsazor"
+            },
+            {
+              "name": "TGridItem",
+              "kind": "typeParameter"
+            },
+            {
+              "name": "Promise",
+              "kind": "global"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

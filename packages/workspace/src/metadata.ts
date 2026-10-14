@@ -1,4 +1,5 @@
 import {
+  COMPONENT_MANIFEST_VERSION,
   extractModuleMetadata,
   extractTsazorMetadata,
   resolveComponentMetadata,
@@ -78,6 +79,11 @@ export class MetadataCache {
   private readonly modules = new Map<string, ModuleEntry>();
   private readonly components = new Map<string, ComponentEntry>();
   private readonly manifests = new Map<string, { stamp: string; manifest: ComponentManifest | undefined }>();
+  /** What was wrong with a manifest file, as last read (TZS036). */
+  private readonly problems = new Map<string, ManifestProblem>();
+  /** A counter of manifest lookups, and each manifest file's last one: `manifestProblems(since)`. */
+  private manifestUses = 0;
+  private readonly manifestLastUse = new Map<string, number>();
   private readonly roots = new Map<string, string>();
   private readonly runtimeDir: string | undefined;
 
@@ -117,17 +123,49 @@ export class MetadataCache {
     if (!packageDir) return undefined;
     const file = manifestFileOf(packageDir);
     if (!file) return undefined;
+    this.manifestLastUse.set(file, ++this.manifestUses);
     const stamp = stampOf(file);
     const cached = this.manifests.get(file);
     if (cached && cached.stamp === stamp) return cached.manifest ? { manifest: cached.manifest, file } : undefined;
     let manifest: ComponentManifest | undefined;
+    let problem: Omit<ManifestProblem, "packageName" | "file"> | undefined;
     try {
-      manifest = absolutizeManifest(JSON.parse(readFileSync(file, "utf8")) as ComponentManifest, packageDir);
-    } catch {
+      const raw = JSON.parse(readFileSync(file, "utf8")) as { tsazorComponentManifest?: unknown; components?: unknown } | null;
+      if (typeof raw !== "object" || raw === null || typeof raw.components !== "object" || raw.components === null) {
+        problem = { severity: "error", message: "is not a component manifest (no `components`)" };
+      } else {
+        const version = raw.tsazorComponentManifest;
+        if (typeof version === "number" && version > COMPONENT_MANIFEST_VERSION) {
+          problem = {
+            severity: "warning",
+            message: `is format version ${version}, newer than this Tsazor reads (${COMPONENT_MANIFEST_VERSION}): update Tsazor, or use a release of the package built for this one`,
+          };
+        }
+        // Read as far as this version knows it: fields it doesn't know are ignored.
+        manifest = absolutizeManifest(raw as ComponentManifest, packageDir);
+      }
+    } catch (error) {
       manifest = undefined;
+      problem = { severity: "error", message: `can't be read (${error instanceof Error ? error.message : String(error)})` };
     }
     this.manifests.set(file, { stamp, manifest });
+    if (problem) this.problems.set(file, { packageName: name, file, ...problem, message: `The component manifest of "${name}" ${problem.message}.` });
+    else this.problems.delete(file);
     return manifest ? { manifest, file } : undefined;
+  }
+
+  /** A mark for `manifestProblems(since)`: a check run asks only about the manifests it used itself. */
+  manifestMark(): number {
+    return this.manifestUses;
+  }
+
+  /**
+   * The manifests that are unreadable or newer than this Tsazor (`tsazor check` reports them, TZS036): every one read
+   * so far, or those used after the mark `since`.
+   */
+  manifestProblems(since?: number): ManifestProblem[] {
+    const problems = [...this.problems.values()];
+    return since === undefined ? problems : problems.filter((problem) => (this.manifestLastUse.get(problem.file) ?? 0) > since);
   }
 
   /** Files the component's metadata was built from (itself first). Empty until it was resolved. */
@@ -365,6 +403,15 @@ function importedComponent(specifier: string, imported: string, fromFile: string
 }
 
 /* Manifests --------------------------------------------------------------------- */
+
+/** A package manifest the cache couldn't read (an error) or read only partly, being newer (a warning). */
+export interface ManifestProblem {
+  packageName: string;
+  /** The manifest file. */
+  file: string;
+  severity: "error" | "warning";
+  message: string;
+}
 
 export interface ManifestEntry {
   /** Export name of the component (the tag). */

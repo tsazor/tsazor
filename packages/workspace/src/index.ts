@@ -28,6 +28,7 @@ export {
   componentTypeDeclarations,
   manifestEntriesOfModule,
   type ManifestEntry,
+  type ManifestProblem,
   type MetadataCacheOptions,
 } from "./metadata.js";
 export { mapPath } from "./path-mapping.js";

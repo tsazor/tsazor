@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { compile, type TszDiagnostic } from "@tsazor/compiler";
+import { CHECK_CODES, compile, type TszDiagnostic } from "@tsazor/compiler";
+import { defaultMetadataCache } from "@tsazor/workspace";
 import { type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
 import { isImportsFile, TransformRegistry } from "./invalidate.js";
 import { tsazorHotUpdate } from "./hot-update.js";
@@ -180,6 +181,7 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
       registry.recordTransform(filePath, result.metadata, result.componentFiles);
       reportImportsDiagnostics(result.importsDiagnostics);
       reportDiagnostics(result.diagnostics, filePath);
+      reportManifestProblems();
       return { code: result.code, map: result.map };
     },
   };
@@ -198,6 +200,20 @@ async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): 
   for (const url of await scanTsazorModules(projectRoot)) {
     // warmupRequest logs pre-transform errors itself; it never rejects.
     await server.warmupRequest(url);
+  }
+}
+
+/** Manifest problems already printed (TZS036): once per manifest file and message. */
+const reportedManifestProblems = new Set<string>();
+
+/** A package's component manifest that is unreadable or newer than this Tsazor: said once, as the check says it. */
+function reportManifestProblems(): void {
+  for (const problem of defaultMetadataCache.manifestProblems()) {
+    const key = `${problem.file}\n${problem.message}`;
+    if (reportedManifestProblems.has(key)) continue;
+    reportedManifestProblems.add(key);
+    // eslint-disable-next-line no-console
+    console.warn(`[tsazor] ${problem.severity} ${CHECK_CODES.manifest} (${problem.file}): ${problem.message}`);
   }
 }
 

@@ -6,4 +6,6 @@ export const CHECK_CODES = {
   unreadable: "TZS034",
   /** The compiler threw instead of reporting (a bug in Tsazor). */
   compilerFailure: "TZS035",
+  /** A package's component manifest is unreadable, or newer than this Tsazor reads. */
+  manifest: "TZS036",
 } as const;

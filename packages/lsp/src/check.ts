@@ -5,6 +5,7 @@
  * gate form of the same pipeline the language server runs live.
  */
 import { CHECK_CODES, explainTypeScriptError } from "@tsazor/compiler";
+import { defaultMetadataCache } from "@tsazor/workspace";
 import { analyzeSource } from "./analysis.js";
 import { ProjectRegistry } from "./projects.js";
 import { tsDiagnostics } from "./ts-features.js";
@@ -19,7 +20,7 @@ export interface CheckDiagnostic {
   /** 1-based line / column of the diagnostic (source coordinates). */
   line: number;
   column: number;
-  /** Diagnostic code: `TZS…` (the compiler's and the check's own, TZS033–TZS035) or `TS…` (the type layer). */
+  /** Diagnostic code: `TZS…` (the compiler's and the check's own, TZS033–TZS036) or `TS…` (the type layer). */
   code: string;
   severity: "error" | "warning";
   message: string;
@@ -40,6 +41,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
   const files = findTsazorFiles(projectRoot);
   const diagnostics: CheckDiagnostic[] = [];
   const registry = new ProjectRegistry([projectRoot]);
+  const manifestMark = defaultMetadataCache.manifestMark();
   try {
     // Pass 1 (compiler layer) + shadow build for every file — the type layer
     // only starts once the whole shadow graph is registered: a consumer
@@ -67,6 +69,10 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
       }
       if (options?.tsDiagnostics === false) continue;
       entries.set(file, await registry.ensureTsazor(file, source));
+    }
+    // TZS036: a package manifest pass 1 read is unreadable (its tags were TZS005) or newer than this Tsazor.
+    for (const problem of defaultMetadataCache.manifestProblems(manifestMark)) {
+      diagnostics.push({ file: problem.file, line: 1, column: 1, code: CHECK_CODES.manifest, severity: problem.severity, message: problem.message });
     }
     if (options?.tsDiagnostics !== false) {
       diagnostics.push(...strictWarnings(files));
