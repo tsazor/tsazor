@@ -26,6 +26,10 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
 | R4 aliases removed, R5 `stripInternal` (tags reviewed one by one), `TsazorApp` without `renderer` | `8901d94` |
 | R6 `#private` in extendable bases, R7 exports + the forgotten-export gate, T1 vite-plugin root, T5 `staticMarkup`/`renderHints` gone, X1 dotnet | `21c5c70` |
 | X2 `JwtClaims` JSON values, X3 charts math, X4 worker | `959b6c8` (pushed) |
+| Part 3 (owner: "alle nach Empfehlung"): D1 InputBase/ValidationMessage camelCase, D2 field paths, D3 TS event vocabulary, D11/T3 TZS033–TZS035 | `21ee1be` |
+| D4 dates in the CultureService culture (`LibraryTexts.locale`), D5 one default intent, D12 async policies (`addPolicy`), D14 HttpResult doc, D15 Toaster note | `e39c0f1` |
+| D13 generated client: `options?: RequestOptions`, header warning, `--path-value` (B4), naming contract; fix: the client ignored its TsazorHttp's baseUrl/defaultHeaders | `895a110` |
+| D10 manifest across versions: rules, TZS036, 1.0 fixture | `b150b0b` |
 
 The runtime's public snapshot: 1988 → ~1690 lines (exports added for R7). Open in Part 2: ui (U1 `/kit`, U2–U5),
 the skins (S1–S5), the tools (T2 CLI validation/exit codes, T3 diagnostic prefix, T4 routes type, T6 output
@@ -41,7 +45,8 @@ different `@types/node` in the store; not from these changes).
 1. ~~E10~~ — decided (owner: "E10 okay", `f8b63fe`): Node 22.12 is the floor; a sentence says the time spans are
    plans of a small project, not service levels.
 2. **The API review:** Parts 1 and 2 approved (owner: "die öffentliche API so schlank wie möglich") — in progress.
-   Part 3 (D1…D15) still needs the owner's answers.
+   Part 3 answered ("alle nach Empfehlung"): done D1–D5, D10–D15; open D6 (one Table, `TItem`), D7 (typed
+   FluentToken set), D8/U1 (`/kit`), D9 (library build façade).
 3. ~~SECURITY.md's commitments~~ — no deadlines (owner: "kein professionelles Projekt, mit Zusagen vorsichtig").
 4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
    notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
