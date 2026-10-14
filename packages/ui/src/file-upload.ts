@@ -109,8 +109,8 @@ export function fileUploadLabelsFrom(t: LibraryTexts): FileUploadLabels {
   };
 }
 
-/** The default progress texts, Fluent UI Blazor's. */
-export const fileUploadLabels: FileUploadLabels = fileUploadLabelsFrom(englishLibraryTexts);
+/** The progress texts in English, Fluent UI Blazor's: what a label the caller left out falls back to. */
+const englishFileUploadLabels: FileUploadLabels = fileUploadLabelsFrom(englishLibraryTexts);
 
 /** How a run goes. */
 export interface FileUploadOptions {
@@ -142,7 +142,7 @@ export async function runFileUpload(files: readonly File[], options: FileUploadO
   if (files.length > options.maximumFileCount) {
     await callbacks.fileError?.({
       errorCode: "FileCountExceeded",
-      errorMessage: options.labels.fileCountExceeded ?? fileUploadLabels.fileCountExceeded!,
+      errorMessage: options.labels.fileCountExceeded ?? englishFileUploadLabels.fileCountExceeded!,
       fileCount: files.length,
     });
     return [];
@@ -159,7 +159,7 @@ export async function runFileUpload(files: readonly File[], options: FileUploadO
     const args = new FileUploadEventArgs(file, index, all);
     done.push(args);
     if (file.size > options.maximumFileSize) {
-      args.errorMessage = labels.fileSizeExceeded ?? fileUploadLabels.fileSizeExceeded!;
+      args.errorMessage = labels.fileSizeExceeded ?? englishFileUploadLabels.fileSizeExceeded!;
       await callbacks.fileError?.({ errorCode: "MaximumSizeReached", errorMessage: args.errorMessage, fileName: file.name });
       continue;
     }

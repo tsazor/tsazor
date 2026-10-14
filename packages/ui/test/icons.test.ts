@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { icon } from "../src/index";
-import { builtInIcons, iconSize } from "../src/kit";
+import { iconSize } from "../src/kit";
 
 describe("icon()", () => {
   it("takes an SVG's inner markup, with the default 24px viewBox", () => {
@@ -18,15 +18,6 @@ describe("icon()", () => {
 
   it("an explicit viewBox wins", () => {
     expect(icon("box", '<svg viewBox="0 0 16 16"><rect/></svg>', "0 0 32 32").viewBox).toBe("0 0 32 32");
-  });
-});
-
-describe("builtInIcons", () => {
-  it("has the skins' small stroke set, each with its own path", () => {
-    const names = Object.keys(builtInIcons);
-    expect(names).toContain("close");
-    expect(names).toContain("download");
-    expect(new Set(names.map((name) => builtInIcons[name]!.content)).size).toBe(names.length);
   });
 });
 

@@ -95,16 +95,21 @@ describe("Button", () => {
 });
 
 describe("Icon", () => {
-  it("draws a built-in icon by name as a decorative .bi svg", async () => {
+  it("draws its value as a decorative .bi svg, and nothing without one", async () => {
     const { container } = await renderTree((b) => {
       b.openComponent(0, Icon);
-      b.addAttribute(1, "name", "close");
+      b.addAttribute(1, "value", icon("close", '<path d="M3 3l10 10M13 3L3 13"/>', "0 0 16 16"));
       b.closeComponent();
     });
     const svg = container.querySelector("svg.bi")!;
     expect(svg.getAttribute("width")).toBe("16");
     expect(svg.getAttribute("aria-hidden")).toBe("true");
-    expect(svg.querySelector("path")!.getAttribute("d")).toBe("M3 3l14 14M17 3L3 17");
+    expect(svg.querySelector("path")!.getAttribute("d")).toBe("M3 3l10 10M13 3L3 13");
+    const empty = await renderTree((b) => {
+      b.openComponent(0, Icon);
+      b.closeComponent();
+    });
+    expect(empty.container.querySelector("svg")).toBeNull();
   });
 
   it("draws an app's own icon, named by its title", async () => {

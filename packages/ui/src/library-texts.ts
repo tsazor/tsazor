@@ -197,7 +197,7 @@ function textsOf(
   }) as LibraryTexts;
 }
 
-/** The library texts in English, without a localizer: the defaults of the `*Labels` constants (`carouselLabels`, …). */
+/** The library texts in English, without a localizer: what a label builder (`carouselLabelsFrom`, …) gives outside a component. */
 export const englishLibraryTexts: LibraryTexts = textsOf(
   (text, params) => formatMessage(libraryTextDefaults[text], params),
   (text, count, params) => englishPlural(text, count, { count: new Intl.NumberFormat("en").format(count), ...params }),

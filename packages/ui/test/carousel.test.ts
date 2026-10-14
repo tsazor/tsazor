@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { carouselLabels, carouselRotates, carouselStep, carouselSwipe } from "../src/carousel.js";
+import { carouselLabelsFrom, carouselRotates, carouselStep, carouselSwipe } from "../src/carousel.js";
+import { englishLibraryTexts } from "../src/library-texts.js";
+
+const carouselLabels = carouselLabelsFrom(englishLibraryTexts);
 
 describe("carousel", () => {
   it("steps through the slides, wrapping around", () => {

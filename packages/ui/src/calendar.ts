@@ -308,8 +308,6 @@ export function calendarLabelsFrom(t: LibraryTexts): CalendarLabels {
   };
 }
 
-/** The calendar's default texts, in English. */
-export const calendarLabels: CalendarLabels = calendarLabelsFrom(englishLibraryTexts);
 
 /** What keeps a date from being picked: before minDate, after maxDate, or disabledDateFunc. */
 export interface DateLimits {

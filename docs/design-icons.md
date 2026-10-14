@@ -78,7 +78,7 @@ is trusted: it comes from a package or from the app's own code, never from user 
   same parameters (done in step 1); it sits on the text's baseline (`vertical-align: -0.125em`, as
   bootstrap-icons.css sets `.bi`). Both skins export `icon()` and `IconValue`, so an app needs no other package for
   its own icons.
-- The built-in stroke set (`name="close"`) stays for now, so nothing breaks. The skins' own components switch to
+- The built-in stroke set (`name="close"`) stayed until 1.0 (U2 removed it with `Icon`'s `name`). The skins' own components switch to
   the generated values of their own set, so a skin's icons look alike (done in step 4, D-I4): in Fluent, Alert's
   status icons (MessageBar's filled Info, CheckmarkCircle, Warning, DismissCircle), every close button (Dismiss),
   the pagers (ChevronDoubleLeft … ChevronDoubleRight), the grid's sort arrows (ArrowSort, ArrowSortUp,
@@ -109,7 +109,7 @@ is trusted: it comes from a package or from the app's own code, never from user 
    `IconResource.resx`, 38 icons) became `src/Components/IconName.ts`, made with `icon()` by `scripts/icons.mjs`,
    so the port writes `IconName.Delete` as the original does. The row actions are icon buttons with the label as
    tooltip and name, as FluentCMS's `ActionButtons` cascade `TableAction`; files, folders and field types show
-   their icons. `name` and `builtInIcons` are deprecated: nothing in the repo uses them any more.
+   their icons. `name` and `builtInIcons` were deprecated then, and removed before 1.0 (U2).
 
 ## 5. Decisions (recommendations; D-L5 left the details to them)
 

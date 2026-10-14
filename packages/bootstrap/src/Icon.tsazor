@@ -1,20 +1,20 @@
 @** An inline SVG icon (`.bi`, as Bootstrap Icons draws them), in currentColor: a `value` (an `IconValue`: a generated
-    set's, or an app's own made with `icon()` from @tsazor/ui), or a `name` from the small built-in set — the same
-    parameters as the Fluent skin's Icon. Decorative (aria-hidden) by default; with a title (or ariaLabel) it gets
-    role="img". An unknown name falls back to check. *@
+    set's, or an app's own made with `icon()` from @tsazor/ui) — the same parameters as the Fluent skin's Icon.
+    Decorative (aria-hidden) by default; with a title (or ariaLabel) it gets role="img". Without a value it renders
+    nothing. *@
 @import { MarkupString } from "@tsazor/runtime"
 @import { type IconValue } from "@tsazor/ui"
-@import { builtInIcons, iconSize } from "@tsazor/ui/kit"
+@import { iconSize } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
-<svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>
+@if (this.value !== undefined) {
+    <svg @attributes="@this.iconAttributes(this.value)">@(new MarkupString(this.value.content))</svg>
+}
 
 @code {
-    /** The icon: a generated set's value, or an app's own from `icon()`. Wins over name. */
+    /** The icon: a generated set's value, or an app's own from `icon()`. */
     @Parameter() value?: IconValue;
-    /** @deprecated The small built-in set: use `value` with a generated set (`Icons.Regular.Size20.Search`) or an app's own `icon()`. A name from it: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove, folder, folder-up, document, image, download. */
-    @Parameter() name?: string;
-    /** Pixel size (width/height). By default the icon's own size (16 for Bootstrap Icons); 16 for a `name`. */
+    /** Pixel size (width/height). By default the icon's own size (16 for Bootstrap Icons). */
     @Parameter() size?: number;
     /** The icon's color (any CSS color); by default the text color around it. */
     @Parameter() color?: string;
@@ -29,16 +29,12 @@
         return this.size ?? (this.value === undefined ? 16 : iconSize(this.value));
     }
 
-    private get icon(): IconValue {
-        return this.value ?? builtInIcons[this.name ?? ""] ?? (builtInIcons["check"] as IconValue);
-    }
-
-    private get iconAttributes(): Record<string, unknown> {
+    private iconAttributes(icon: IconValue): Record<string, unknown> {
         const label = this.ariaLabel ?? this.title;
         return withClass("bi", {
             width: this.pixels,
             height: this.pixels,
-            viewBox: this.icon.viewBox,
+            viewBox: icon.viewBox,
             fill: "currentColor",
             // On the text's baseline, as bootstrap-icons.css sets `.bi`.
             style: this.color === undefined ? "vertical-align: -0.125em" : `vertical-align: -0.125em; color: ${this.color}`,

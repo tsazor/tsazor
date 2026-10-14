@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  fileUploadLabels,
+  fileUploadLabelsFrom,
   formatFileSize,
   runFileUpload,
   type FileUploadCallbacks,
@@ -8,6 +8,9 @@ import {
   type FileUploadEventArgs,
   type FileUploadOptions,
 } from "../src/file-upload.js";
+import { englishLibraryTexts } from "../src/library-texts.js";
+
+const fileUploadLabels = fileUploadLabelsFrom(englishLibraryTexts);
 
 const file = (name: string, size: number) => new File([new Uint8Array(size).map((_, index) => index % 256)], name, { type: "text/plain" });
 

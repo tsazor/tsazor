@@ -191,7 +191,7 @@ export declare class DialogReference<TData = unknown> {
     private readonly remove;
     readonly result: Promise<DialogResult<TData>>;
     private settle;
-    constructor(id: number, component: abstract new (...args: never[]) => ComponentBase, options: DialogOptions, remove: (dialog: DialogReference<TData>) => boolean);
+    private constructor();
     close(data?: TData): void;
     cancel(): void;
 }
@@ -530,7 +530,6 @@ export declare class PaginationState {
     get lastPageIndex(): number | undefined;
     setCurrentPageIndexAsync(pageIndex: number): Promise<void>;
     setItemsPerPageAsync(itemsPerPage: number): Promise<void>;
-    setTotalItemCount(count: number): void;
     subscribe(listener: (change?: PaginationChange) => void): () => void;
     private notify;
 }

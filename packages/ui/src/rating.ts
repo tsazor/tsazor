@@ -68,8 +68,6 @@ export function ratingLabelsFrom(t: LibraryTexts): RatingLabels {
   };
 }
 
-export const ratingLabels: RatingLabels = ratingLabelsFrom(englishLibraryTexts);
-
 /** A rating value as the locale writes it, one decimal at most: "3.5", "3,5" (de-DE), "4". */
 export function formatRatingValue(value: number, locale?: string): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);

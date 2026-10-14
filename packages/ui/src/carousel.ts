@@ -53,5 +53,3 @@ export function carouselLabelsFrom(t: LibraryTexts): CarouselLabels {
     play: t("carousel.play"),
   };
 }
-
-export const carouselLabels: CarouselLabels = carouselLabelsFrom(englishLibraryTexts);

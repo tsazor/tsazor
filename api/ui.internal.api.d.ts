@@ -20,17 +20,11 @@ export declare function avatarIconSize(size: number): number;
 // avatarInitials
 export declare function avatarInitials(name: string | null | undefined, rtl?: boolean): string;
 
-// builtInIcons
-export declare const builtInIcons: Readonly<Record<string, IconValue>>;
-
 // calendarKeyTarget
 export declare function calendarKeyTarget(date: IsoDate, key: {
     key: string;
     shiftKey?: boolean;
 }, firstDay: number, rtl?: boolean): IsoDate | undefined;
-
-// calendarLabels
-export declare const calendarLabels: CalendarLabels;
 
 // calendarLabelsFrom
 export declare function calendarLabelsFrom(t: LibraryTexts): CalendarLabels;
@@ -40,9 +34,6 @@ export declare function calendarWeeks(month: IsoDate, firstDayOfWeek: number): I
 
 // calendarYears
 export declare function calendarYears(date: IsoDate): number[];
-
-// carouselLabels
-export declare const carouselLabels: CarouselLabels;
 
 // carouselLabelsFrom
 export declare function carouselLabelsFrom(t: LibraryTexts): CarouselLabels;
@@ -68,9 +59,6 @@ export declare function clampDate(date: IsoDate, min?: IsoDate | null, max?: Iso
 
 // closestColor
 export declare function closestColor(palette: readonly string[], color: string): HexColor | undefined;
-
-// colorPickerLabels
-export declare const colorPickerLabels: ColorPickerLabels;
 
 // colorPickerLabelsFrom
 export declare function colorPickerLabelsFrom(t: LibraryTexts): ColorPickerLabels;
@@ -172,9 +160,6 @@ export interface FileUploadCallbacks {
     fileError?(error: FileUploadErrorEventArgs): void | Promise<void>;
     completed?(files: FileUploadEventArgs[]): void | Promise<void>;
 }
-
-// fileUploadLabels
-export declare const fileUploadLabels: FileUploadLabels;
 
 // fileUploadLabelsFrom
 export declare function fileUploadLabelsFrom(t: LibraryTexts): FileUploadLabels;
@@ -289,9 +274,6 @@ export declare function isDateDisabled(date: IsoDate, limits: DateLimits): boole
 // isMonthDisabled
 export declare function isMonthDisabled(year: number, month: number, limits: DateLimits, checkAllDays?: boolean): boolean;
 
-// isTopLayer
-export declare function isTopLayer(key: object): boolean;
-
 // isTypingTarget
 export declare function isTypingTarget(target: EventTarget | null): boolean;
 
@@ -342,9 +324,6 @@ export declare function normalizeHexColor(text: string): HexColor | undefined;
 
 // normalizeIsoTime
 export declare function normalizeIsoTime(text: string): IsoTime | undefined;
-
-// openLayer
-export declare function openLayer(key: object): () => void;
 
 // overflowFit
 export declare function overflowFit(sizes: readonly number[], available: number, more: number, gap?: number): number;
@@ -405,9 +384,6 @@ export declare function ratingKeyTarget(key: {
     key: string;
     shiftKey?: boolean;
 }, value: number, max: number, rtl?: boolean): number | undefined;
-
-// ratingLabels
-export declare const ratingLabels: RatingLabels;
 
 // ratingLabelsFrom
 export declare function ratingLabelsFrom(t: LibraryTexts): RatingLabels;
@@ -476,9 +452,6 @@ export interface SortableListHandle {
     add(item: unknown, index: number, args: SortableListEventArgs): Promise<void>;
     announce(text: string): void;
 }
-
-// sortableListLabels
-export declare const sortableListLabels: SortableListLabels;
 
 // sortableListLabelsFrom
 export declare function sortableListLabelsFrom(t: LibraryTexts): SortableListLabels;

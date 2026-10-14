@@ -597,7 +597,6 @@ export default class Hotkey extends ComponentBase {
 // Icon
 export default class Icon extends ComponentBase {
     value?: IconValue;
-    name?: string;
     size?: number;
     color?: string;
     title?: string;

@@ -114,6 +114,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     parameters name, and `isoDate`/`parseIsoDate`/`today`, `isoTime`/`parseIsoTime`, `ariaKeyShortcuts`,
     `PatternMask`, `AVATAR_COLORS`. `npx @tsazor/fluent add` asks to install `@tsazor/ui` at the exact version
     of the copied components.
+  - `@tsazor/ui`, the skins (U2): `Icon`'s deprecated `name` and the small built-in set behind it (`builtInIcons`)
+    are gone; an `Icon` without `value` renders nothing. The six English label constants (`calendarLabels`,
+    `ratingLabels`, …) are gone: the components take the localized library texts, and `*LabelsFrom(texts)` builds
+    a set. `openLayer` and `isTopLayer` stay inside ui. `DialogReference` has a private constructor (the
+    `DialogService` makes them), and `PaginationState.setTotalItemCount` (the grid's) left the declarations.
   - `@tsazor/cli` (D9): **a component library builds without Tsazor's internal packages** — `tsazor build-lib [dir]
     [--stylesheet <file>]`, and `buildLibrary(options)` for a build script that needs internal components, aliases or
     re-exports (`docs/component-libraries.md`, "Building a library"). It compiles the components as the Vite plugin

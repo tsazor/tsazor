@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { moveItem, sortableInsertIndex, sortableList, sortableListLabels, type SortableListEventArgs } from "../src/sortable.js";
+import { moveItem, sortableInsertIndex, sortableList, sortableListLabelsFrom, type SortableListEventArgs } from "../src/sortable.js";
+import { englishLibraryTexts } from "../src/library-texts.js";
+
+const sortableListLabels = sortableListLabelsFrom(englishLibraryTexts);
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {

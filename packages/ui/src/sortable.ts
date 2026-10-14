@@ -48,8 +48,6 @@ export function sortableListLabelsFrom(t: LibraryTexts): SortableListLabels {
   };
 }
 
-export const sortableListLabels: SortableListLabels = sortableListLabelsFrom(englishLibraryTexts);
-
 /** What a list tells its behavior, and what the behavior asks of it. */
 export interface SortableListHandle {
   readonly id: string;

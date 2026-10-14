@@ -207,8 +207,6 @@ export function colorPickerLabelsFrom(t: LibraryTexts): ColorPickerLabels {
   };
 }
 
-export const colorPickerLabels: ColorPickerLabels = colorPickerLabelsFrom(englishLibraryTexts);
-
 /**
  * A color's name for a screen reader, from its hue and lightness ("dark blue", "light red", "gray") — what a swatch
  * says besides its hex code, so a choice doesn't rest on seeing the color (WCAG 1.4.1). The names are library

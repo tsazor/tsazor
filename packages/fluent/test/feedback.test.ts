@@ -46,9 +46,11 @@ afterAll(() => {
 });
 
 describe("Icon", () => {
-  it("renders the named inline path hidden from assistive tech", async () => {
+  const chevron = icon("chevron-right", '<path d="M8 3l7 7-7 7"/>', "0 0 20 20");
+
+  it("renders its value's inline path hidden from assistive tech", async () => {
     const result = await renderOne(Icon, (b) => {
-      b.addAttribute(1, "name", "chevron-right");
+      b.addAttribute(1, "value", chevron);
       b.addAttribute(2, "size", 20);
     });
     const svg = result.container.querySelector(".fui-icon")!;
@@ -59,19 +61,15 @@ describe("Icon", () => {
     result.dispose();
   });
 
-  it("draws each file icon with its own path, not the fallback", async () => {
-    const paths = new Set<string>();
-    for (const name of ["check", "folder", "folder-up", "document", "image", "download"]) {
-      const result = await renderOne(Icon, (b) => b.addAttribute(1, "name", name));
-      paths.add(result.container.querySelector("path")!.getAttribute("d")!);
-      result.dispose();
-    }
-    expect(paths.size).toBe(6);
+  it("renders nothing without a value", async () => {
+    const result = await renderOne(Icon, () => {});
+    expect(result.container.querySelector("svg")).toBeNull();
+    result.dispose();
   });
 
   it("exposes role=img with an accessible label when one is given", async () => {
     const result = await renderOne(Icon, (b) => {
-      b.addAttribute(1, "name", "check");
+      b.addAttribute(1, "value", chevron);
       b.addAttribute(2, "ariaLabel", "Completed");
     });
     const svg = result.container.querySelector(".fui-icon")!;
@@ -100,19 +98,9 @@ describe("Icon with a value", () => {
     result.dispose();
   });
 
-  it("a value wins over a name", async () => {
-    const result = await renderOne(Icon, (b) => {
-      b.addAttribute(1, "name", "close");
-      b.addAttribute(2, "value", icon("dot", '<circle cx="12" cy="12" r="4"/>'));
-    });
-    expect(result.container.querySelector("circle")).not.toBeNull();
-    expect(result.container.querySelector("path")).toBeNull();
-    result.dispose();
-  });
-
   it("a title names it (role=img), and color sets the CSS color", async () => {
     const result = await renderOne(Icon, (b) => {
-      b.addAttribute(1, "name", "check");
+      b.addAttribute(1, "value", icon("dot", '<circle cx="12" cy="12" r="4"/>'));
       b.addAttribute(2, "title", "Saved");
       b.addAttribute(3, "color", "green");
     });

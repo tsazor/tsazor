@@ -43,13 +43,11 @@ afterEach(() => {
 const keep = (result: RenderResult) => (mounted.push(result), result);
 
 describe("Icon", () => {
-  it("draws a value at its own size, as Fluent UI Blazor does; a name at 16", async () => {
+  it("draws a value at its own size, as Fluent UI Blazor does", async () => {
     const own = keep(await renderOne(Icon, (b) => b.addAttribute(1, "value", folder)));
     expect(own.container.querySelector("svg")!.getAttribute("width")).toBe("16");
     const twenty = keep(await renderOne(Icon, (b) => b.addAttribute(1, "value", save)));
     expect(twenty.container.querySelector("svg")!.getAttribute("width")).toBe("20");
-    const named = keep(await renderOne(Icon, (b) => b.addAttribute(1, "name", "check")));
-    expect(named.container.querySelector("svg")!.getAttribute("width")).toBe("16");
   });
 
   it("a class of null keeps the icon's own", async () => {

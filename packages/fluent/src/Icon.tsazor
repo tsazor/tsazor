@@ -1,19 +1,19 @@
 @** An inline SVG icon, drawn in currentColor: a `value` (an `IconValue`: a generated set's, or an app's own made with
-    `icon()` from @tsazor/ui), or a `name` from the small built-in set. Decorative (aria-hidden) by default; with a
-    title (or ariaLabel) it gets role="img". An unknown name falls back to check. *@
+    `icon()` from @tsazor/ui). Decorative (aria-hidden) by default; with a
+    title (or ariaLabel) it gets role="img". Without a value it renders nothing. *@
 @import { MarkupString } from "@tsazor/runtime"
 @import { type IconValue } from "@tsazor/ui"
-@import { builtInIcons, iconSize } from "@tsazor/ui/kit"
+@import { iconSize } from "@tsazor/ui/kit"
 @import { withAttributes } from "./attributes"
 
-<svg @attributes="@this.iconAttributes">@(new MarkupString(this.icon.content))</svg>
+@if (this.value !== undefined) {
+    <svg @attributes="@this.iconAttributes(this.value)">@(new MarkupString(this.value.content))</svg>
+}
 
 @code {
-    /** The icon (Fluent UI Blazor's `Value`): a generated set's value, or an app's own from `icon()`. Wins over name. */
+    /** The icon (Fluent UI Blazor's `Value`): a generated set's value, or an app's own from `icon()`. */
     @Parameter() value?: IconValue;
-    /** @deprecated The small built-in set: use `value` with a generated set (`Icons.Regular.Size20.Search`) or an app's own `icon()`. A name from it: chevron-left, chevron-right, close, check, arrow-left, arrow-right, arrow-up, arrow-down, search, add, remove, folder, folder-up, document, image, download. */
-    @Parameter() name?: string;
-    /** Pixel size (width/height). By default the icon's own size, as in Fluent UI Blazor (`Size20` is 20px); 16 for a `name`. */
+    /** Pixel size (width/height). By default the icon's own size, as in Fluent UI Blazor (`Size20` is 20px). */
     @Parameter() size?: number;
     /** The icon's color (any CSS color); by default the text color around it. */
     @Parameter() color?: string;
@@ -28,21 +28,17 @@
         return this.size ?? (this.value === undefined ? 16 : iconSize(this.value));
     }
 
-    private get icon(): IconValue {
-        return this.value ?? builtInIcons[this.name ?? ""] ?? (builtInIcons["check"] as IconValue);
-    }
-
     private get label(): string | undefined {
         return this.ariaLabel ?? this.title;
     }
 
-    private get iconAttributes(): Record<string, unknown> {
+    private iconAttributes(icon: IconValue): Record<string, unknown> {
         const label = this.label;
         return withAttributes({
             class: "fui-icon",
             width: this.pixels,
             height: this.pixels,
-            viewBox: this.icon.viewBox,
+            viewBox: icon.viewBox,
             fill: "currentColor",
             style: this.color === undefined ? null : `color: ${this.color}`,
             // aria-hidden takes string semantics (booleans render as empty attributes).

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatRatingCount, formatRatingValue, ratingClickValue, ratingFill, ratingKeyTarget, ratingLabels } from "../src/rating.js";
+import { formatRatingCount, formatRatingValue, ratingClickValue, ratingFill, ratingKeyTarget, ratingLabelsFrom } from "../src/rating.js";
+import { englishLibraryTexts } from "../src/library-texts.js";
+
+const ratingLabels = ratingLabelsFrom(englishLibraryTexts);
 
 describe("ratings", () => {
   it("fills the stars up to the value, a fraction for the one in between", () => {

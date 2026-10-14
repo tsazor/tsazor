@@ -34,8 +34,7 @@ export class DialogReference<TData = unknown> {
   readonly result: Promise<DialogResult<TData>>;
   private settle!: (result: DialogResult<TData>) => void;
 
-  /** @internal Made by `DialogService.show`. */
-  constructor(
+  private constructor(
     /** One id per dialog of the service. */
     readonly id: number,
     /** The component shown as the dialog. */
@@ -47,6 +46,16 @@ export class DialogReference<TData = unknown> {
     this.result = new Promise((resolve) => {
       this.settle = resolve;
     });
+  }
+
+  /** @internal Made by `DialogService.show`. */
+  static create<TData>(
+    id: number,
+    component: abstract new (...args: never[]) => ComponentBase,
+    options: DialogOptions,
+    remove: (dialog: DialogReference<TData>) => boolean,
+  ): DialogReference<TData> {
+    return new DialogReference(id, component, options, remove);
   }
 
   /** Closes the dialog with `data` (MudBlazor's `Close(DialogResult.Ok(data))`). */
@@ -83,7 +92,7 @@ export class DialogService {
   ): DialogReference<unknown> {
     // Typed for the caller; the provider passes the parameters on by name.
     const stored = options as unknown as DialogOptions;
-    const dialog = new DialogReference<unknown>(this.next++, component, stored, (closing) => this.removed(closing));
+    const dialog = DialogReference.create<unknown>(this.next++, component, stored, (closing) => this.removed(closing));
     this.open = [...this.open, dialog];
     this.changed();
     return dialog;

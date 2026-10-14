@@ -6,7 +6,7 @@
  */
 
 export { englishLibraryTexts, libraryPlural, libraryText } from "./library-texts.js";
-export { builtInIcons, iconSize } from "./icons.js";
+export { iconSize } from "./icons.js";
 export { nextChipSelection } from "./chips.js";
 export { resizeSplitter, splitterKeyDelta, splitterPercent } from "./splitter.js";
 export { sliderFraction, sliderTicks } from "./slider.js";
@@ -17,13 +17,11 @@ export {
   ratingClickValue,
   ratingFill,
   ratingKeyTarget,
-  ratingLabels,
   ratingLabelsFrom,
 } from "./rating.js";
 export { hotkeyApplies, isApplePlatform, isTypingTarget, matchesHotkey, parseHotkey } from "./hotkeys.js";
 export {
   closestColor,
-  colorPickerLabels,
   colorPickerLabelsFrom,
   describeColor,
   hexToHsv,
@@ -41,7 +39,7 @@ export {
   type WheelLayout,
 } from "./color.js";
 export { swatchPalette, wheelPalette, wheelRowSizes } from "./color-palettes.js";
-export { carouselLabels, carouselLabelsFrom, carouselRotates, carouselStep, carouselSwipe } from "./carousel.js";
+export { carouselLabelsFrom, carouselRotates, carouselStep, carouselSwipe } from "./carousel.js";
 export { maskInput, toMask } from "./mask.js";
 export { overflowFit } from "./overflow.js";
 export {
@@ -60,7 +58,6 @@ export {
   addMonths,
   addYears,
   calendarKeyTarget,
-  calendarLabels,
   calendarLabelsFrom,
   calendarWeeks,
   calendarYears,
@@ -89,18 +86,16 @@ export {
   type DateLimits,
   type DateRange,
 } from "./calendar.js";
-export { fileUploadLabels, fileUploadLabelsFrom, runFileUpload, type FileUploadCallbacks, type FileUploadOptions } from "./file-upload.js";
+export { fileUploadLabelsFrom, runFileUpload, type FileUploadCallbacks, type FileUploadOptions } from "./file-upload.js";
 export {
   moveItem,
   sortableInsertIndex,
   sortableList,
-  sortableListLabels,
   sortableListLabelsFrom,
   type SortableListHandle,
 } from "./sortable.js";
 export { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardStepStatus } from "./wizard.js";
 export { avatarColorFor, avatarIconSize, avatarInitials } from "./avatar.js";
-export { isTopLayer, openLayer } from "./layers.js";
 export {
   overlayBackground,
   overlayBehavior,
