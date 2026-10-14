@@ -18,12 +18,11 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
 
 ## Waiting for the owner
 
-1. **E10, D-S1…D-S7** ([support-policy.md](support-policy.md)): LTS window 12 months, deprecation rules, Node 22 as
-   the floor before 1.0 (Node 20 is end-of-life), what the promise covers.
-2. **The API review** ([api-review-1.0.md](api-review-1.0.md)): Part 2 is recommended in full (hide, remove, rename;
-   no trade-offs); Part 3 has fifteen decisions (D1…D15), each with a recommendation. Once decided, the work order is
-   in its last section.
-3. **SECURITY.md's commitments:** 5 working days to confirm, 14 to assess, 90 to fix — the owner's to accept.
+1. ~~E10~~ — decided (owner: "E10 okay", `f8b63fe`): Node 22.12 is the floor; a sentence says the time spans are
+   plans of a small project, not service levels.
+2. **The API review:** Parts 1 and 2 approved (owner: "die öffentliche API so schlank wie möglich") — in progress.
+   Part 3 (D1…D15) still needs the owner's answers.
+3. ~~SECURITY.md's commitments~~ — no deadlines (owner: "kein professionelles Projekt, mit Zusagen vorsichtig").
 4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
    notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
 5. Still open from before: the Docker containers of fullstackhero's Aspire backend are "persistent" (keep or
