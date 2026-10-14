@@ -68,7 +68,8 @@ for, not guaranteed service levels.
 
 - **D-S7 — What the promise covers** (from the [API review](api-review-1.0.md), Part 1). Three tiers: **public**
   (the app-facing APIs, the CLI's commands, flags and exit codes, the TZS codes), **ABI** (what compiled `.tsazor`
-  code calls, and the component manifest: additive only, so a library built with 1.x runs on every later 1.y), and
+  code calls, listed in [api/abi.json](../api/abi.json) and pinned by a test, and the component manifest: additive
+  only, so a library built with 1.x runs on every later 1.y), and
   **internal** (the programmatic APIs of compiler, workspace and lsp, `@tsazor/runtime/internal`, `@tsazor/ui/kit`:
   released in lockstep, may change in any minor). Diagnostic texts, TypeScript's own codes and generated names are not
   covered. Growth rules: literal unions may gain members in a minor; contracts that libraries implement gain only
