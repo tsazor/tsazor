@@ -27,8 +27,15 @@ const check = (ok, label) => {
   if (!ok) failed++;
 };
 
+/**
+ * The environment of a user's shell: without the `npm_*` variables of a package manager that started the rehearsal.
+ * npm takes `npm_config_*` as its configuration, so under `pnpm rehearsal` (CI) pnpm's `npm_config_user_agent`
+ * reached the starter, which then installed with pnpm (whose layout has no @tsazor/ui at the top).
+ */
+const shellEnv = Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^npm_/i.test(name)));
+
 function run(command, args, cwd, env, label) {
-  const result = shell(command, args, { cwd, env: { ...process.env, ...env } });
+  const result = shell(command, args, { cwd, env: { ...shellEnv, ...env } });
   if (result.status !== 0) throw new Error(`${label} failed:\n${result.stdout}${result.stderr}`);
   return result.stdout;
 }
@@ -53,8 +60,8 @@ try {
   const installed = (name) => {
     const manifest = path.join(app, "node_modules", ...name.split("/"), "package.json");
     if (existsSync(manifest)) return JSON.parse(readFileSync(manifest, "utf8")).version;
-    // Not where npm hoists it (seen once, 2026-10-14, for @tsazor/ui): where it is instead, so one run shows why.
-    const ls = shell("npm", ["ls", name, "--all"], { cwd: app, env: { ...process.env, ...env } });
+    // Not where npm hoists it: where it is instead, so a failing run shows why (2026-10-14: a pnpm layout).
+    const ls = shell("npm", ["ls", name, "--all"], { cwd: app, env: { ...shellEnv, ...env } });
     return `missing; npm ls: ${`${ls.stdout}${ls.stderr}`.trim().replace(/\s+/g, " ")}`;
   };
   const names = ["@tsazor/runtime", "@tsazor/fluent", "@tsazor/ui", "@tsazor/dotnet", "@tsazor/cli", "@tsazor/vite-plugin"];
