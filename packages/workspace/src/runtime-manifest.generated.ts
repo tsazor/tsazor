@@ -532,7 +532,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "member": "field",
           "declaredBy": "Router",
           "default": "[]",
-          "type": "RouteManifestEntry[]",
+          "type": "readonly RouteManifestEntry[]",
           "references": [
             {
               "name": "RouteManifestEntry",

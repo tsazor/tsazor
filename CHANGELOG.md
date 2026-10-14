@@ -135,6 +135,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - The skins (S5): the Wizard's `labelPrevious`, `labelNext` and `labelDone` are one `labels` (`WizardLabels`,
     any of them), as Carousel's and Rating's; Skeleton's `shape="circle"` is `"circular"`, as Avatar's, Chip's and
     Image's. (Table's `compact` became `small` with D6.)
+  - `@tsazor/vite-plugin`, `@tsazor/runtime` (T4): `virtual:tsazor-routes` is typed `readonly RouteManifestEntry[]`
+    (a lazy route has no `type` until it loads; it was `RouteEntry[]`), and `createTsazorApp({ routes })`,
+    `Router`'s `routes` and the route table take a readonly list.
   - `@tsazor/cli` (T2): one exit-code table for every command — 0 done, 1 findings, 2 usage or setup. An unknown
     option, a second path or a path that doesn't exist is 2 on stderr (`tsazor check ./typo` and
     `tsazor check --json` printed "0 file(s)" and exited 0: a gate that checked nothing passed); so is

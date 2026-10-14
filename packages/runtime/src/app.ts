@@ -19,7 +19,7 @@ export interface TsazorAppOptions {
   /** DI registrations (Blazor's ConfigureServices analogue). */
   services?: (services: ServiceCollection) => void;
   /** Route manifest (from `virtual:tsazor-routes`, eager and lazy entries); Router falls back to it. */
-  routes?: RouteManifestEntry[];
+  routes?: readonly RouteManifestEntry[];
   /** DOM selector for the app root (default: #app). */
   selector?: string;
   /** Shared NavigationManager; a fresh one is created when omitted. */

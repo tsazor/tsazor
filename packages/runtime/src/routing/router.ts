@@ -73,7 +73,7 @@ export interface NavigationContext {
  */
 export class Router extends ComponentBase {
   /** The app's route manifest (template + component per @page; lazy entries load on first navigation). */
-  @Parameter() routes: RouteManifestEntry[] = [];
+  @Parameter() routes: readonly RouteManifestEntry[] = [];
   /** RenderFragment factory receiving the RouteData (Blazor's <Found Context>). */
   @Parameter() found?: (routeData: RouteData) => RenderFragment;
   /** Content rendered when no route matches (Blazor's <NotFound>). */

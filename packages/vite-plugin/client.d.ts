@@ -17,9 +17,12 @@ declare module "*.tsazor" {
 }
 
 declare module "virtual:tsazor-routes" {
-  import type { RouteEntry } from "@tsazor/runtime";
+  import type { RouteManifestEntry } from "@tsazor/runtime";
 
-  /** One entry per `@page` route, as generated at build time. */
-  const routes: RouteEntry[];
+  /**
+   * One entry per `@page` route, as generated at build time; a lazy route (the plugin's `lazyRoutes`) loads its
+   * component on the first visit and has no `type` until then.
+   */
+  const routes: readonly RouteManifestEntry[];
   export default routes;
 }

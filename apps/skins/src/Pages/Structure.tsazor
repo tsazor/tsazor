@@ -34,7 +34,7 @@
     </Stack>
     <Alert Intent="warning" Dismissible="@true">The oven is being serviced on Monday.</Alert>
     <div class="demo-row" role="region" aria-busy="true" aria-label="Loading the customer">
-        <Skeleton Shape="circle" Width="48px" />
+        <Skeleton Shape="circular" Width="48px" />
         <div style="flex: 1"><Skeleton Lines="2" /></div>
     </div>
 </section>

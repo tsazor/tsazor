@@ -45,7 +45,7 @@
 <section class="demo">
     <h2>Skeleton</h2>
     <div class="demo-row skeleton-demo" role="region" aria-busy="true" aria-label="Loading the customer">
-        <Skeleton Shape="circle" Width="48px" />
+        <Skeleton Shape="circular" Width="48px" />
         <div style="flex: 1"><Skeleton Lines="3" /></div>
     </div>
 </section>

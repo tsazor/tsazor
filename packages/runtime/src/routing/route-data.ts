@@ -84,7 +84,7 @@ export class RouteManifest {
   /** Wraps the app's route entries for registration in DI. */
   constructor(
     /** The routes, in manifest order (the Router sorts them by precedence). */
-    readonly entries: RouteManifestEntry[],
+    readonly entries: readonly RouteManifestEntry[],
   ) {}
 }
 

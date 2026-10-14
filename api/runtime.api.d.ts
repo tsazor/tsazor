@@ -952,8 +952,8 @@ export interface RouteEntry {
 
 // RouteManifest
 export declare class RouteManifest {
-    readonly entries: RouteManifestEntry[];
-    constructor(entries: RouteManifestEntry[]);
+    readonly entries: readonly RouteManifestEntry[];
+    constructor(entries: readonly RouteManifestEntry[]);
 }
 
 // RouteManifestEntry
@@ -967,7 +967,7 @@ export interface RouteMatch {
 
 // Router
 export declare class Router extends ComponentBase {
-    routes: RouteManifestEntry[];
+    routes: readonly RouteManifestEntry[];
     found?: (routeData: RouteData) => RenderFragment;
     notFound?: RenderFragment;
     onNavigateAsync?: EventCallback<NavigationContext> | ((context: NavigationContext) => void | Promise<void>);
@@ -1205,7 +1205,7 @@ export interface TsazorApp {
 export interface TsazorAppOptions {
     root: ComponentDefinition | (abstract new () => ComponentBase);
     services?: (services: ServiceCollection) => void;
-    routes?: RouteManifestEntry[];
+    routes?: readonly RouteManifestEntry[];
     selector?: string;
     navigationManager?: NavigationManager;
     routing?: RoutingOptions;
