@@ -2,7 +2,7 @@
 
 import type { NewOrder, Order } from "./models";
 
-import { OpenApiClient, queryString, type HttpResult } from "@tsazor/dotnet";
+import { OpenApiClient, queryString, type HttpResult, type RequestOptions } from "@tsazor/dotnet";
 import { TsazorHttp } from "@tsazor/runtime";
 
 /** Query parameters of the getOrders operation. */
@@ -15,11 +15,11 @@ export class BakeryClient extends OpenApiClient {
         super(http);
     }
 
-    getOrders(query?: GetOrdersQuery): Promise<HttpResult<Order[]>> {
-        return this.call("GET", `/api/orders${queryString(query)}`);
+    getOrders(query?: GetOrdersQuery, options?: RequestOptions): Promise<HttpResult<Order[]>> {
+        return this.call("GET", `/api/orders${queryString(query)}`, undefined, options);
     }
 
-    createOrder(body: NewOrder): Promise<HttpResult<Order>> {
-        return this.call("POST", `/api/orders`, body);
+    createOrder(body: NewOrder, options?: RequestOptions): Promise<HttpResult<Order>> {
+        return this.call("POST", `/api/orders`, body, options);
     }
 }

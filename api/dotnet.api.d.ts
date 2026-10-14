@@ -88,7 +88,7 @@ export declare abstract class OpenApiClient {
     protected readonly envelope?: EnvelopeOptions;
     private readonly baseUrl?;
     constructor(http: TsazorHttp, options?: OpenApiClientOptions);
-    protected call<T>(method: HttpMethod, url: string, body?: unknown): Promise<HttpResult<T>>;
+    protected call<T>(method: HttpMethod, url: string, body?: unknown, options?: RequestOptions): Promise<HttpResult<T>>;
     private resolveUrl;
 }
 
@@ -115,6 +115,12 @@ export declare function problemMessage<T>(result: HttpResult<T>): string;
 // queryString
 export declare function queryString(params: Record<string, string | number | boolean | string[] | null | undefined> | undefined): string;
 
+// RequestOptions
+export interface RequestOptions {
+    signal?: AbortSignal;
+    headers?: Record<string, string>;
+}
+
 // ValidationProblemDetails
 export interface ValidationProblemDetails extends ProblemDetails {
     errors?: Record<string, string[]>;
@@ -137,6 +143,7 @@ export interface GenerateOptions {
     envelope?: EnvelopeOptions;
     baseUrl?: string;
     clientFile?: string;
+    pathValues?: Record<string, string>;
 }
 
 // Generation

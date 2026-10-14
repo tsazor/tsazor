@@ -107,17 +107,17 @@ describe("generateClient — client", () => {
     expect(clientFile).toContain(`import type { CreateOrderDto, CustomerDetailsDto, OrderDto, OrderStatus } from "./models";`);
     // GET with query
     expect(clientFile).toContain(
-      `listOrders(query?: ListOrdersQuery): Promise<HttpResult<OrderDto[]>> {`,
+      `listOrders(query?: ListOrdersQuery, options?: RequestOptions): Promise<HttpResult<OrderDto[]>> {`,
     );
-    expect(clientFile).toContain(`return this.call("GET", \`/api/orders\${queryString(query)}\`);`);
+    expect(clientFile).toContain(`return this.call("GET", \`/api/orders\${queryString(query)}\`, undefined, options);`);
     // path parameter interpolated
-    expect(clientFile).toContain(`getOrder(id: number): Promise<HttpResult<OrderDto>> {`);
-    expect(clientFile).toContain(`return this.call("GET", \`/api/orders/\${encodeURIComponent(id)}\`);`);
+    expect(clientFile).toContain(`getOrder(id: number, options?: RequestOptions): Promise<HttpResult<OrderDto>> {`);
+    expect(clientFile).toContain(`return this.call("GET", \`/api/orders/\${encodeURIComponent(id)}\`, undefined, options);`);
     // POST with body
-    expect(clientFile).toContain(`createOrder(body: CreateOrderDto): Promise<HttpResult<OrderDto>> {`);
-    expect(clientFile).toContain(`return this.call("POST", \`/api/orders\`, body);`);
+    expect(clientFile).toContain(`createOrder(body: CreateOrderDto, options?: RequestOptions): Promise<HttpResult<OrderDto>> {`);
+    expect(clientFile).toContain(`return this.call("POST", \`/api/orders\`, body, options);`);
     // 204 without schema ⇒ void
-    expect(clientFile).toContain(`deleteOrder(id: number): Promise<HttpResult<void>> {`);
+    expect(clientFile).toContain(`deleteOrder(id: number, options?: RequestOptions): Promise<HttpResult<void>> {`);
     // query interface with array parameter (type alias — queryString contract)
     expect(clientFile).toContain(`export type ListOrdersQuery = {`);
     expect(clientFile).toContain(`    tags?: string[];`);
@@ -144,6 +144,66 @@ describe("generateClient — client", () => {
     // Warnings: only the documented subset (inline object in the fixture).
     expect(generation.warnings).toEqual([`Schema "metadata": inline object without $ref → Record<string, unknown>`]);
   });
+
+  it("ends every method with the call's options — an AbortSignal, headers of this request (D13)", async () => {
+    const clientFile = generateClient(await document, { clientName: "ContosoOrders" }).files.find((f) => f.path === "contoso-orders.ts")!.content;
+    const methods = [...clientFile.matchAll(/^ {4}(\w+)\((.*)\): Promise<HttpResult</gm)];
+    expect(methods.length).toBeGreaterThan(0);
+    for (const [, , parameters] of methods) expect(parameters).toMatch(/(^|, )options\?: RequestOptions$/);
+    expect(clientFile).toContain('import { OpenApiClient, queryString, type HttpResult, type RequestOptions } from "@tsazor/dotnet";');
+  });
+});
+
+describe("generateClient — path values and parameters outside the signature (D13)", () => {
+  const versioned: OpenApiDocument = {
+    openapi: "3.0.1",
+    info: { title: "Hero", version: "1" },
+    paths: {
+      "/api/v{version}/Brands": {
+        get: {
+          parameters: [
+            { name: "version", in: "path", required: true, schema: { type: "string" } },
+            { name: "X-Tenant", in: "header", schema: { type: "string" } },
+          ],
+          responses: { "200": { description: "OK" } },
+        },
+      },
+      "/api/v{version}/Brands/{id}": {
+        delete: {
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "integer" } },
+            { name: "version", in: "path", required: true, schema: { type: "string" } },
+          ],
+          responses: { "200": { description: "OK" } },
+        },
+      },
+    },
+  } as unknown as OpenApiDocument;
+  const clientOf = (generation: ReturnType<typeof generateClient>) => generation.files.find((f) => f.path === "hero.ts")!.content;
+
+  it("without a value, the version is a parameter of every method and of its name (B4)", () => {
+    const client = clientOf(generateClient(versioned, { clientName: "Hero" }));
+    expect(client).toContain("getBrands(version: string, options?: RequestOptions)");
+  });
+
+  it("writes a fixed path value into the URLs and leaves it out of the signatures and the names", () => {
+    const generation = generateClient(versioned, { clientName: "Hero", pathValues: { version: "1" } });
+    const client = clientOf(generation);
+    expect(client).toContain("getBrands(options?: RequestOptions): Promise<HttpResult<void>> {");
+    expect(client).toContain('return this.call("GET", `/api/v1/Brands`, undefined, options);');
+    expect(client).toContain("deleteBrands(id: number, options?: RequestOptions)");
+    expect(client).toContain('return this.call("DELETE", `/api/v1/Brands/${encodeURIComponent(id)}`, undefined, options);');
+    expect(client).not.toContain("version");
+  });
+
+  it("warns about a path value no path uses, and about header parameters, with the way to send them", () => {
+    const { warnings } = generateClient(versioned, { clientName: "Hero", pathValues: { version: "1", tenant: "a" } });
+    expect(warnings).toContain('Path value "tenant": no path has a {tenant} parameter.');
+    expect(warnings).toContain(
+      "1 header parameter(s) are not in the method signatures (X-Tenant on GET /api/v1/Brands): " +
+        "send them with the call's options ({ headers }) or an interceptor of the TsazorHttp.",
+    );
+  });
 });
 
 describe("generateClient — Swashbuckle's defaults (no operationId, an envelope)", () => {
@@ -152,7 +212,10 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
   );
   const generate = async () =>
     generateClient(await defaults, { clientName: "Cms", envelope: { data: "data", errors: "errors" } });
-  const signatures = (client: string) => [...client.matchAll(/^ {4}(\w+)\((.*)\): Promise<HttpResult<(.*)>> \{$/gm)].map((m) => `${m[1]}(${m[2]}): ${m[3]}`);
+  const signatures = (client: string) =>
+    [...client.matchAll(/^ {4}(\w+)\((.*)\): Promise<HttpResult<(.*)>> \{$/gm)].map(
+      (m) => `${m[1]}(${m[2]!.replace(/(, )?options\?: RequestOptions$/, "")}): ${m[3]}`,
+    );
 
   it("derives the method names from the path, without the api/v1 prefix", async () => {
     const client = (await generate()).files.find((f) => f.path === "cms.ts")!.content;
@@ -199,11 +262,11 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
 
   it("sends a multipart/form-data body (file uploads) as FormData, its files as Blobs", async () => {
     const client = (await generate()).files.find((f) => f.path === "cms.ts")!.content;
-    expect(client).toContain('import { OpenApiClient, formData, queryString, type HttpResult } from "@tsazor/dotnet";');
+    expect(client).toContain('import { OpenApiClient, formData, queryString, type HttpResult, type RequestOptions } from "@tsazor/dotnet";');
     expect(client).toContain(
       ["export type FileUploadForm = {", "    files?: Blob[];", "    note: string;", "    cover?: Blob;", "};"].join("\n"),
     );
-    expect(client).toContain('return this.call("POST", `/api/File/Upload${queryString(query)}`, formData(body));');
+    expect(client).toContain('return this.call("POST", `/api/File/Upload${queryString(query)}`, formData(body), options);');
     // Without a multipart operation there is nothing to import.
     const json = generateClient(await document, { clientName: "ContosoOrders" }).files.find((f) => f.path === "contoso-orders.ts")!.content;
     expect(json).not.toContain("formData");

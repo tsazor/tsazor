@@ -40,6 +40,11 @@ export interface GenerateOptions {
   baseUrl?: string;
   /** File name of the client (without .ts); default from clientName (kebab-case). */
   clientFile?: string;
+  /**
+   * CLI `--path-value name=value`: path parameters with a fixed value, written into the URLs and left out of the
+   * signatures and the names — URL-segment API versioning, `api/v{version}/…` with `{ version: "1" }`.
+   */
+  pathValues?: Record<string, string>;
 }
 
 export interface GeneratedFile {
@@ -57,7 +62,7 @@ export function generateClient(document: OpenApiDocument, options: GenerateOptio
   const warnings: string[] = [];
   const clientName = (options.clientName ?? pascal(document.info?.title ?? "Api")).replace(/Client$/, "") || "Api";
   const clientFile = options.clientFile ?? kebab(clientName);
-  const gen = new Generator(document, clientName, clientFile, options.envelope, options.baseUrl, warnings);
+  const gen = new Generator(document, clientName, clientFile, options.envelope, options.baseUrl, options.pathValues ?? {}, warnings);
   return { files: gen.files(), warnings };
 }
 
@@ -72,6 +77,7 @@ class Generator {
     private readonly clientFile: string,
     private readonly envelope: EnvelopeOptions | undefined,
     private readonly baseUrl: string | undefined,
+    private readonly pathValues: Record<string, string>,
     private readonly warnings: string[],
   ) {}
 
@@ -294,7 +300,7 @@ class Generator {
     const usesQuery = operations.some((op) => op.queryInterface !== undefined);
     const usesForm = operations.some((op) => op.bodyType?.form !== undefined);
     out.push(
-      `import { OpenApiClient${usesForm ? ", formData" : ""}${usesQuery ? ", queryString" : ""}, type HttpResult } from "@tsazor/dotnet";`,
+      `import { OpenApiClient${usesForm ? ", formData" : ""}${usesQuery ? ", queryString" : ""}, type HttpResult, type RequestOptions } from "@tsazor/dotnet";`,
       'import { TsazorHttp } from "@tsazor/runtime";',
       "",
     );
@@ -327,20 +333,52 @@ class Generator {
 
   private operations(): OperationGen[] {
     const entries: OperationEntry[] = [];
-    for (const [path, pathItem] of Object.entries(this.document.paths ?? {})) {
+    const usedPathValues = new Set<string>();
+    for (const [documentPath, pathItem] of Object.entries(this.document.paths ?? {})) {
       const item = pathItem as Record<string, unknown>;
       const pathItemParameters = (Array.isArray(item.parameters) ? item.parameters : []) as (OpenApiParameter | { $ref: string })[];
+      // A fixed path value is part of the URL, as if the server had written it there (SubstituteApiVersionInUrl).
+      let path = documentPath;
+      const fixed = new Set<string>();
+      for (const [name, value] of Object.entries(this.pathValues)) {
+        if (!path.includes(`{${name}}`)) continue;
+        path = path.split(`{${name}}`).join(encodeURIComponent(value));
+        fixed.add(name);
+        usedPathValues.add(name);
+      }
       for (const method of HTTP_METHODS) {
         const operation = item[method] as OpenApiOperation | undefined;
         if (operation === undefined || operation === null) continue;
-        const parameters = [...pathItemParameters, ...(operation.parameters ?? [])].map(
-          (p) => resolveSchemaLike(this.document, p as unknown as OpenApiSchema) as unknown as OpenApiParameter,
-        );
+        const parameters = [...pathItemParameters, ...(operation.parameters ?? [])]
+          .map((p) => resolveSchemaLike(this.document, p as unknown as OpenApiSchema) as unknown as OpenApiParameter)
+          .filter((p) => !(p.in === "path" && fixed.has(p.name)));
         entries.push({ method: method as OpenApiMethod, path, operation, parameters });
       }
     }
+    for (const name of Object.keys(this.pathValues)) {
+      if (!usedPathValues.has(name)) this.warn(`Path value "${name}": no path has a {${name}} parameter.`);
+    }
+    this.unsentParameters(entries);
     const names = this.methodNames(entries);
     return entries.map((entry, index) => this.operation(entry, names[index]!));
+  }
+
+  /**
+   * Header and cookie parameters have no place in the signatures: one warning each, with an example. A header goes
+   * with the call's `options.headers` or an interceptor of the TsazorHttp; the browser sends its cookies itself.
+   */
+  private unsentParameters(entries: OperationEntry[]): void {
+    for (const [location, advice] of [
+      ["header", "send them with the call's options ({ headers }) or an interceptor of the TsazorHttp"],
+      ["cookie", "the browser sends its cookies itself"],
+    ] as const) {
+      const found = entries.flatMap((entry) => entry.parameters.filter((p) => p.in === location).map((p) => ({ entry, p })));
+      if (found.length === 0) continue;
+      const { entry, p } = found[0]!;
+      this.warn(
+        `${found.length} ${location} parameter(s) are not in the method signatures (${p.name} on ${entry.method.toUpperCase()} ${entry.path}): ${advice}.`,
+      );
+    }
   }
 
   private operation(entry: OperationEntry, name: string): OperationGen {
@@ -359,6 +397,7 @@ class Generator {
     }
     const query = queryParameters.length > 0 ? this.queryEntry(name, queryParameters) : undefined;
     if (query) signatureParts.push(query.signature);
+    signatureParts.push("options?: RequestOptions");
 
     // URL: path template interpolated, query string appended at the end.
     let inner = path;
@@ -373,7 +412,7 @@ class Generator {
     if (doc) lines.push(doc);
     lines.push(
       `    ${name}(${signatureParts.join(", ")}): Promise<HttpResult<${responseType?.type ?? "void"}>> {`,
-      `        return this.call(${JSON.stringify(method.toUpperCase())}, ${url}${bodyType ? (bodyType.form ? ", formData(body)" : ", body") : ""});`,
+      `        return this.call(${JSON.stringify(method.toUpperCase())}, ${url}, ${bodyType ? (bodyType.form ? "formData(body)" : "body") : "undefined"}, options);`,
       "    }",
     );
     return {

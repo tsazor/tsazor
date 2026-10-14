@@ -1219,6 +1219,8 @@ export declare class TsazorHttp {
     private readonly requestInterceptors;
     private readonly responseInterceptors;
     constructor(options?: TsazorHttpOptions);
+    get baseUrl(): string | undefined;
+    get defaultHeaders(): Readonly<Record<string, string>>;
     addRequestInterceptor(interceptor: RequestInterceptor): () => void;
     addResponseInterceptor(interceptor: ResponseInterceptor): () => void;
     send(request: Request): Promise<Response>;

@@ -88,6 +88,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     button that should stand out says `intent="primary"`.
   - `@tsazor/dotnet` (D14): the doc of `HttpResult` says what the generated client does: an HTTP status is a result
     (`ok: false`), a network error or an abort rejects.
+  - `@tsazor/dotnet` (D13): every generated method takes `options?: RequestOptions` last — an `AbortSignal` and the
+    headers of this request (`OpenApiClient.call` takes them as its fourth argument); regenerate a checked-in client to
+    get them. Header and cookie parameters, which the signatures leave out, are named in a warning.
+    `--path-value version=1` (`pathValues`) writes a fixed path value into the URLs and leaves it out of the
+    signatures and the names: URL-segment API versioning (`api/v{version}/…`, BlazorHero's B4). The README documents
+    the naming rules as the contract: in 1.x the same document gives the same names.
+- **Fixed — `@tsazor/dotnet`: a generated client used neither the `baseUrl` nor the `defaultHeaders` of its
+  `TsazorHttp`** — a relative path went to the page's origin, so `--base-url` (which generates
+  `new TsazorHttp({ baseUrl })`) did nothing. The client's own `baseUrl` option still wins; the call's headers win over
+  the defaults. `TsazorHttp` has `baseUrl` and `defaultHeaders` (read-only, HttpClient's `BaseAddress` and
+  `DefaultRequestHeaders`).
 - **Breaking — the tools need Node 22.12 or later** (`engines.node` of cli, compiler, workspace, lsp, vite-plugin,
   dotnet and create-tsazor; before: 20.19). Node 20 reached its end of life on 2026-04-30; the support policy
   (`docs/support-policy.md`) follows the Node.js LTS lines.

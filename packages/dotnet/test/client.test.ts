@@ -11,7 +11,7 @@
  */
 import { createServer, type Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { OpenApiClient, formData } from "../src/index.js";
+import { OpenApiClient, formData, type RequestOptions } from "../src/index.js";
 import { asProblemDetails, buildResult, envelopeHasErrors, problemMessage, type EnvelopeOptions, type HttpResult } from "../src/http-result.js";
 import { TsazorHttp } from "@tsazor/runtime";
 
@@ -245,5 +245,54 @@ describe("multipart/form-data (file uploads)", () => {
     expect(form.get("meta")).toBe('{"size":2}');
     expect(form.get("count")).toBe("3");
     expect(form.get("flag")).toBe("false");
+  });
+});
+
+describe("the call's options (D13)", () => {
+  class OptionsClient extends OpenApiClient {
+    getOrder(id: number, options?: RequestOptions) {
+      return this.call<OrderDto>("GET", `/api/orders/${id}`, undefined, options);
+    }
+  }
+  const json = () => new Response("{}", { headers: { "content-type": "application/json" } });
+
+  it("sends this call's headers over the client's, with its AbortSignal", async () => {
+    let sent: Request | undefined;
+    const http = new TsazorHttp({ fetch: async (request) => ((sent = request as Request), json()) });
+    const controller = new AbortController();
+    await new OptionsClient(http, { baseUrl: "http://orders.test" }).getOrder(1, { signal: controller.signal, headers: { "if-match": '"v2"', accept: "application/problem+json" } });
+    expect(sent!.headers.get("if-match")).toBe('"v2"');
+    expect(sent!.headers.get("accept")).toBe("application/problem+json");
+    controller.abort();
+    expect(sent!.signal.aborted).toBe(true);
+  });
+
+  it("resolves against the TsazorHttp's base URL and sends its default headers (what --base-url generates)", async () => {
+    let sent: Request | undefined;
+    const http = new TsazorHttp({
+      baseUrl: "https://orders.test/",
+      defaultHeaders: { "x-app": "shop", accept: "application/vnd.shop+json" },
+      fetch: async (request) => ((sent = request as Request), json()),
+    });
+    await new OptionsClient(http).getOrder(1, { headers: { "x-app": "admin" } });
+    expect(sent!.url).toBe("https://orders.test/api/orders/1");
+    expect(sent!.headers.get("accept")).toBe("application/vnd.shop+json");
+    expect(sent!.headers.get("x-app")).toBe("admin");
+    // The client's own baseUrl option still wins.
+    await new OptionsClient(http, { baseUrl: "https://other.test" }).getOrder(2);
+    expect(sent!.url).toBe("https://other.test/api/orders/2");
+  });
+
+  it("rejects with an AbortError when the call is aborted, as fetch does", async () => {
+    const http = new TsazorHttp({
+      fetch: (request) =>
+        new Promise<Response>((_resolve, reject) => {
+          (request as Request).signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        }),
+    });
+    const controller = new AbortController();
+    const pending = new OptionsClient(http, { baseUrl: "http://orders.test" }).getOrder(1, { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
   });
 });

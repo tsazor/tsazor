@@ -66,6 +66,16 @@ export class TsazorHttp {
   /** Creates a client with an optional base URL, default headers and `fetch` replacement. */
   constructor(private readonly options: TsazorHttpOptions = {}) {}
 
+  /** The URL relative request URLs resolve against (HttpClient's `BaseAddress`); a typed client built on this one uses it. */
+  get baseUrl(): string | undefined {
+    return this.options.baseUrl;
+  }
+
+  /** The headers every request carries unless it sets its own (HttpClient's `DefaultRequestHeaders`). */
+  get defaultHeaders(): Readonly<Record<string, string>> {
+    return this.options.defaultHeaders ?? {};
+  }
+
   /**
    * Adds an interceptor that runs on every outgoing request, in the order
    * added (e.g. to set an auth header). Returns a function that removes it.

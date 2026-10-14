@@ -2,7 +2,7 @@
  * tsazor-dotnet CLI: OpenAPI ⇒ typed TS client.
  *
  *   tsazor-dotnet generate <openapi.json|https://…> --out <dir>
- *       [--name <ClientName>] [--envelope data,errors[,succeeded]] [--base-url <url>]
+ *       [--name <ClientName>] [--envelope data,errors[,succeeded]] [--base-url <url>] [--path-value <name>=<value>]…
  *
  * Writes `models.ts` and `<client>.ts` to --out and prints the
  * generator warnings (documented subset). Exit: 0 green, 1 errors, 2
@@ -29,6 +29,9 @@ const USAGE = `Usage: tsazor-dotnet generate <openapi.json|url> --out <dir> [opt
   --envelope data,errors[,succeeded]  unwrap a response envelope (e.g. FluentCMS's data,errors;
                        BlazorHero's data,messages,succeeded — the success flag decides)
   --base-url <url>     default base URL of the generated client
+  --path-value <name>=<value>  a path parameter with a fixed value, written into the URLs (URL-segment
+                       API versioning: --path-value version=1 turns api/v{version}/brands into api/v1/brands);
+                       repeatable
 Exit: 0 green, 1 errors, 2 usage/fatal.`;
 
 export async function main(argv: readonly string[], stdout: (line: string) => void): Promise<number> {
@@ -53,6 +56,7 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
   let clientName: string | undefined;
   let envelope: EnvelopeOptions | undefined;
   let baseUrl: string | undefined;
+  const pathValues: Record<string, string> = {};
   const extraArgs = [...extra];
   while (extraArgs.length > 0) {
     const option = extraArgs.shift()!;
@@ -96,6 +100,15 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
         }
         baseUrl = value;
         break;
+      case "--path-value": {
+        const separator = value?.indexOf("=") ?? -1;
+        if (value === undefined || separator <= 0) {
+          stdout("tsazor-dotnet generate: --path-value requires <name>=<value>.");
+          return 2;
+        }
+        pathValues[value.slice(0, separator)] = value.slice(separator + 1);
+        break;
+      }
       default:
         stdout(`tsazor-dotnet generate: unknown option "${option}".`);
         stdout(USAGE);
@@ -115,7 +128,7 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     stdout(`tsazor-dotnet generate: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
-  const generation = generateClient(document, { clientName, envelope, baseUrl });
+  const generation = generateClient(document, { clientName, envelope, baseUrl, pathValues });
   await mkdir(out, { recursive: true });
   for (const file of generation.files) {
     await writeFile(path.join(out, file.path), file.content, "utf8");

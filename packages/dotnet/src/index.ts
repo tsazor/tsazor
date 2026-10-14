@@ -13,6 +13,7 @@ export {
   formData,
   queryString,
   type OpenApiClientOptions,
+  type RequestOptions,
   type HttpMethod,
 } from "./client.js";
 export {

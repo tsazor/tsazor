@@ -30,8 +30,24 @@ ran their own HTTP helpers).
   emits none. Then the name comes from the path, without the `api`/`v1` prefix:
   - `POST /api/User/Create` becomes `userCreate`;
   - names that collide get the HTTP method (`getOrders`, `postOrders`), and then the path
-    parameters (`getOrdersById`);
+    parameters (`getOrdersById`), and then a counter (`orders2`);
   - one warning names the fix: set operationIds on the server (Swashbuckle: `CustomOperationIds`).
+
+  These rules are part of the package's contract: in 1.x the same document gives the same names.
+  A derived name depends on the other operations, though: when an endpoint is added, `orders` can
+  become `getOrders` because a `POST` now shares its path. operationIds give names that never move.
+- **The call's options.** Every method takes `options?: RequestOptions` last: an `AbortSignal`
+  (the call then rejects with an `AbortError`, as `fetch` does) and `headers` of this request only.
+
+  ```ts
+  await client.getOrder(1, { signal: controller.signal, headers: { "If-Match": etag } });
+  ```
+
+  Header parameters of an operation are not in the signatures; one warning names them and this way
+  to send them (or an interceptor of the `TsazorHttp`). Cookie parameters are left to the browser.
+- **API versions in the URL.** URL-segment versioning without `SubstituteApiVersionInUrl` makes
+  `{version}` a parameter of every method (`getBrands("1")`). `--path-value version=1` writes the
+  value into the URLs (`/api/v1/Brands`) and leaves it out of the signatures and the names.
 - **File uploads.** An operation with a `multipart/form-data` body (an ASP.NET Core `IFormFile` or
   `IEnumerable<IFormFile>` parameter) takes a body type of its own, `<Operation>Form`, in the client file:
   - `format: binary` is a `Blob`, so a `File` from `<input type="file">` (or `InputFile`) goes in as it is;
@@ -96,6 +112,8 @@ npx tsazor-dotnet generate openapi.json --out src/api --name ContosoOrders
 # with an envelope and a fixed base URL:
 npx tsazor-dotnet generate https://my.app/swagger/v1/swagger.json \
     --out src/api --envelope data,errors --base-url https://my.app
+# an API versioned in the URL (api/v{version}/…):
+npx tsazor-dotnet generate swagger.json --out src/api --path-value version=1
 ```
 
 ```ts

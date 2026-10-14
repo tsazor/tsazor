@@ -2,7 +2,7 @@
 
 import type { AccountChangePasswordRequest, AccountUpdateRequest, ApiTokenCreateRequest, ApiTokenDetailResponse, ApiTokenUpdateRequest, BlockCreateRequest, BlockDetailResponse, BlockUpdateRequest, ContentDetailResponse, ContentTypeCreateRequest, ContentTypeDetailResponse, ContentTypeField, ContentTypeUpdateRequest, FileDetailResponse, FileMoveRequest, FileRenameRequest, FolderCreateRequest, FolderDetailResponse, FolderMoveRequest, FolderRenameRequest, GlobalSettingsResponse, GlobalSettingsUpdateRequest, LayoutCreateRequest, LayoutDetailResponse, LayoutUpdateRequest, PageCreateRequest, PageDetailResponse, PageParentDetailResponse, PageUpdateRequest, PluginContentDetailResponse, PluginDefinitionCreateRequest, PluginDefinitionDetailResponse, PluginDetailResponse, PluginInitialCreateRequest, PluginUpdateColsRequest, PluginUpdateOrdersRequest, Policy, RoleCreateRequest, RoleDetailResponse, RoleUpdateRequest, SettingsDetailResponse, SettingsUpdateRequest, SetupRequest, SiteCreateRequest, SiteDetailResponse, SiteUpdateRequest, UserCreateRequest, UserDetailResponse, UserLoginRequest, UserLoginResponse, UserRegisterRequest, UserRoleUpdateRequest, UserSendPasswordResetTokenRequest, UserSetPasswordRequest, UserUpdateRequest, UserValidatePasswordResetTokenRequest } from "./models";
 
-import { OpenApiClient, formData, queryString, type HttpResult } from "@tsazor/dotnet";
+import { OpenApiClient, formData, queryString, type HttpResult, type RequestOptions } from "@tsazor/dotnet";
 import { TsazorHttp } from "@tsazor/runtime";
 
 /** Query parameters of the apiTokenRegenerateSecret operation. */
@@ -96,395 +96,395 @@ export class FluentCmsClient extends OpenApiClient {
         super(http, { envelope: { data: "data", errors: "errors" } });
     }
 
-    accountRegister(body: UserRegisterRequest): Promise<HttpResult<UserDetailResponse>> {
-        return this.call("POST", `/api/Account/Register`, body);
+    accountRegister(body: UserRegisterRequest, options?: RequestOptions): Promise<HttpResult<UserDetailResponse>> {
+        return this.call("POST", `/api/Account/Register`, body, options);
     }
 
-    accountAuthenticate(body: UserLoginRequest): Promise<HttpResult<UserLoginResponse>> {
-        return this.call("POST", `/api/Account/Authenticate`, body);
+    accountAuthenticate(body: UserLoginRequest, options?: RequestOptions): Promise<HttpResult<UserLoginResponse>> {
+        return this.call("POST", `/api/Account/Authenticate`, body, options);
     }
 
-    accountChangePassword(body: AccountChangePasswordRequest): Promise<HttpResult<boolean>> {
-        return this.call("POST", `/api/Account/ChangePassword`, body);
+    accountChangePassword(body: AccountChangePasswordRequest, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("POST", `/api/Account/ChangePassword`, body, options);
     }
 
-    accountSendPasswordResetToken(body: UserSendPasswordResetTokenRequest): Promise<HttpResult<boolean>> {
-        return this.call("POST", `/api/Account/SendPasswordResetToken`, body);
+    accountSendPasswordResetToken(body: UserSendPasswordResetTokenRequest, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("POST", `/api/Account/SendPasswordResetToken`, body, options);
     }
 
-    accountValidatePasswordResetToken(body: UserValidatePasswordResetTokenRequest): Promise<HttpResult<boolean>> {
-        return this.call("POST", `/api/Account/ValidatePasswordResetToken`, body);
+    accountValidatePasswordResetToken(body: UserValidatePasswordResetTokenRequest, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("POST", `/api/Account/ValidatePasswordResetToken`, body, options);
     }
 
-    accountGetCurrent(): Promise<HttpResult<UserDetailResponse>> {
-        return this.call("GET", `/api/Account/GetCurrent`);
+    accountGetCurrent(options?: RequestOptions): Promise<HttpResult<UserDetailResponse>> {
+        return this.call("GET", `/api/Account/GetCurrent`, undefined, options);
     }
 
-    accountUpdate(body: AccountUpdateRequest): Promise<HttpResult<UserDetailResponse>> {
-        return this.call("POST", `/api/Account/Update`, body);
+    accountUpdate(body: AccountUpdateRequest, options?: RequestOptions): Promise<HttpResult<UserDetailResponse>> {
+        return this.call("POST", `/api/Account/Update`, body, options);
     }
 
-    apiTokenGetAll(): Promise<HttpResult<ApiTokenDetailResponse[] | null>> {
-        return this.call("GET", `/api/ApiToken/GetAll`);
+    apiTokenGetAll(options?: RequestOptions): Promise<HttpResult<ApiTokenDetailResponse[] | null>> {
+        return this.call("GET", `/api/ApiToken/GetAll`, undefined, options);
     }
 
-    apiTokenGetById(id: string): Promise<HttpResult<ApiTokenDetailResponse>> {
-        return this.call("GET", `/api/ApiToken/GetById/${encodeURIComponent(id)}`);
+    apiTokenGetById(id: string, options?: RequestOptions): Promise<HttpResult<ApiTokenDetailResponse>> {
+        return this.call("GET", `/api/ApiToken/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    apiTokenCreate(body: ApiTokenCreateRequest): Promise<HttpResult<ApiTokenDetailResponse>> {
-        return this.call("POST", `/api/ApiToken/Create`, body);
+    apiTokenCreate(body: ApiTokenCreateRequest, options?: RequestOptions): Promise<HttpResult<ApiTokenDetailResponse>> {
+        return this.call("POST", `/api/ApiToken/Create`, body, options);
     }
 
-    apiTokenUpdate(body: ApiTokenUpdateRequest): Promise<HttpResult<ApiTokenDetailResponse>> {
-        return this.call("PUT", `/api/ApiToken/Update`, body);
+    apiTokenUpdate(body: ApiTokenUpdateRequest, options?: RequestOptions): Promise<HttpResult<ApiTokenDetailResponse>> {
+        return this.call("PUT", `/api/ApiToken/Update`, body, options);
     }
 
-    apiTokenRegenerateSecret(query?: ApiTokenRegenerateSecretQuery): Promise<HttpResult<ApiTokenDetailResponse>> {
-        return this.call("PUT", `/api/ApiToken/RegenerateSecret${queryString(query)}`);
+    apiTokenRegenerateSecret(query?: ApiTokenRegenerateSecretQuery, options?: RequestOptions): Promise<HttpResult<ApiTokenDetailResponse>> {
+        return this.call("PUT", `/api/ApiToken/RegenerateSecret${queryString(query)}`, undefined, options);
     }
 
-    apiTokenDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/ApiToken/Delete/${encodeURIComponent(id)}`);
+    apiTokenDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/ApiToken/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    apiTokenGetPolicies(): Promise<HttpResult<Policy[] | null>> {
-        return this.call("GET", `/api/ApiToken/GetPolicies`);
+    apiTokenGetPolicies(options?: RequestOptions): Promise<HttpResult<Policy[] | null>> {
+        return this.call("GET", `/api/ApiToken/GetPolicies`, undefined, options);
     }
 
-    blockGetById(id: string): Promise<HttpResult<BlockDetailResponse>> {
-        return this.call("GET", `/api/Block/GetById/${encodeURIComponent(id)}`);
+    blockGetById(id: string, options?: RequestOptions): Promise<HttpResult<BlockDetailResponse>> {
+        return this.call("GET", `/api/Block/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    blockGetAllForSite(query?: BlockGetAllForSiteQuery): Promise<HttpResult<BlockDetailResponse[] | null>> {
-        return this.call("GET", `/api/Block/GetAllForSite${queryString(query)}`);
+    blockGetAllForSite(query?: BlockGetAllForSiteQuery, options?: RequestOptions): Promise<HttpResult<BlockDetailResponse[] | null>> {
+        return this.call("GET", `/api/Block/GetAllForSite${queryString(query)}`, undefined, options);
     }
 
-    blockCreate(body: BlockCreateRequest): Promise<HttpResult<BlockDetailResponse>> {
-        return this.call("POST", `/api/Block/Create`, body);
+    blockCreate(body: BlockCreateRequest, options?: RequestOptions): Promise<HttpResult<BlockDetailResponse>> {
+        return this.call("POST", `/api/Block/Create`, body, options);
     }
 
-    blockUpdate(body: BlockUpdateRequest): Promise<HttpResult<BlockDetailResponse>> {
-        return this.call("PUT", `/api/Block/Update`, body);
+    blockUpdate(body: BlockUpdateRequest, options?: RequestOptions): Promise<HttpResult<BlockDetailResponse>> {
+        return this.call("PUT", `/api/Block/Update`, body, options);
     }
 
-    blockDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Block/Delete/${encodeURIComponent(id)}`);
+    blockDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Block/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    contentGetAll(contentTypeSlug: string, query?: ContentGetAllQuery): Promise<HttpResult<ContentDetailResponse[] | null>> {
-        return this.call("GET", `/api/Content/${encodeURIComponent(contentTypeSlug)}/GetAll${queryString(query)}`);
+    contentGetAll(contentTypeSlug: string, query?: ContentGetAllQuery, options?: RequestOptions): Promise<HttpResult<ContentDetailResponse[] | null>> {
+        return this.call("GET", `/api/Content/${encodeURIComponent(contentTypeSlug)}/GetAll${queryString(query)}`, undefined, options);
     }
 
-    contentGetById(contentTypeSlug: string, id: string, query?: ContentGetByIdQuery): Promise<HttpResult<ContentDetailResponse>> {
-        return this.call("GET", `/api/Content/${encodeURIComponent(contentTypeSlug)}/GetById/${encodeURIComponent(id)}${queryString(query)}`);
+    contentGetById(contentTypeSlug: string, id: string, query?: ContentGetByIdQuery, options?: RequestOptions): Promise<HttpResult<ContentDetailResponse>> {
+        return this.call("GET", `/api/Content/${encodeURIComponent(contentTypeSlug)}/GetById/${encodeURIComponent(id)}${queryString(query)}`, undefined, options);
     }
 
-    contentCreate(contentTypeSlug: string, body: Record<string, unknown>, query?: ContentCreateQuery): Promise<HttpResult<ContentDetailResponse>> {
-        return this.call("POST", `/api/Content/${encodeURIComponent(contentTypeSlug)}/Create${queryString(query)}`, body);
+    contentCreate(contentTypeSlug: string, body: Record<string, unknown>, query?: ContentCreateQuery, options?: RequestOptions): Promise<HttpResult<ContentDetailResponse>> {
+        return this.call("POST", `/api/Content/${encodeURIComponent(contentTypeSlug)}/Create${queryString(query)}`, body, options);
     }
 
-    contentUpdate(contentTypeSlug: string, id: string, body: Record<string, unknown>, query?: ContentUpdateQuery): Promise<HttpResult<ContentDetailResponse>> {
-        return this.call("PUT", `/api/Content/${encodeURIComponent(contentTypeSlug)}/Update/${encodeURIComponent(id)}${queryString(query)}`, body);
+    contentUpdate(contentTypeSlug: string, id: string, body: Record<string, unknown>, query?: ContentUpdateQuery, options?: RequestOptions): Promise<HttpResult<ContentDetailResponse>> {
+        return this.call("PUT", `/api/Content/${encodeURIComponent(contentTypeSlug)}/Update/${encodeURIComponent(id)}${queryString(query)}`, body, options);
     }
 
-    contentDelete(contentTypeSlug: string, id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Content/${encodeURIComponent(contentTypeSlug)}/Delete/${encodeURIComponent(id)}`);
+    contentDelete(contentTypeSlug: string, id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Content/${encodeURIComponent(contentTypeSlug)}/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    contentTypeGetBySlug(slug: string, query?: ContentTypeGetBySlugQuery): Promise<HttpResult<ContentTypeDetailResponse>> {
-        return this.call("GET", `/api/ContentType/GetBySlug/${encodeURIComponent(slug)}${queryString(query)}`);
+    contentTypeGetBySlug(slug: string, query?: ContentTypeGetBySlugQuery, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse>> {
+        return this.call("GET", `/api/ContentType/GetBySlug/${encodeURIComponent(slug)}${queryString(query)}`, undefined, options);
     }
 
-    contentTypeGetById(id: string): Promise<HttpResult<ContentTypeDetailResponse>> {
-        return this.call("GET", `/api/ContentType/GetById/${encodeURIComponent(id)}`);
+    contentTypeGetById(id: string, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse>> {
+        return this.call("GET", `/api/ContentType/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    contentTypeGetAll(query?: ContentTypeGetAllQuery): Promise<HttpResult<ContentTypeDetailResponse[] | null>> {
-        return this.call("GET", `/api/ContentType/GetAll${queryString(query)}`);
+    contentTypeGetAll(query?: ContentTypeGetAllQuery, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse[] | null>> {
+        return this.call("GET", `/api/ContentType/GetAll${queryString(query)}`, undefined, options);
     }
 
-    contentTypeCreate(body: ContentTypeCreateRequest): Promise<HttpResult<ContentTypeDetailResponse>> {
-        return this.call("POST", `/api/ContentType/Create`, body);
+    contentTypeCreate(body: ContentTypeCreateRequest, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse>> {
+        return this.call("POST", `/api/ContentType/Create`, body, options);
     }
 
-    contentTypeUpdate(body: ContentTypeUpdateRequest): Promise<HttpResult<ContentTypeDetailResponse>> {
-        return this.call("PUT", `/api/ContentType/Update`, body);
+    contentTypeUpdate(body: ContentTypeUpdateRequest, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse>> {
+        return this.call("PUT", `/api/ContentType/Update`, body, options);
     }
 
-    contentTypeDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/ContentType/Delete/${encodeURIComponent(id)}`);
+    contentTypeDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/ContentType/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    contentTypeSetField(id: string, body: ContentTypeField): Promise<HttpResult<ContentTypeDetailResponse>> {
-        return this.call("PUT", `/api/ContentType/SetField/${encodeURIComponent(id)}`, body);
+    contentTypeSetField(id: string, body: ContentTypeField, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse>> {
+        return this.call("PUT", `/api/ContentType/SetField/${encodeURIComponent(id)}`, body, options);
     }
 
-    contentTypeDeleteField(id: string, name: string): Promise<HttpResult<ContentTypeDetailResponse>> {
-        return this.call("DELETE", `/api/ContentType/DeleteField/${encodeURIComponent(id)}/${encodeURIComponent(name)}`);
+    contentTypeDeleteField(id: string, name: string, options?: RequestOptions): Promise<HttpResult<ContentTypeDetailResponse>> {
+        return this.call("DELETE", `/api/ContentType/DeleteField/${encodeURIComponent(id)}/${encodeURIComponent(name)}`, undefined, options);
     }
 
-    fileGetById(id: string): Promise<HttpResult<FileDetailResponse>> {
-        return this.call("GET", `/api/File/GetById/${encodeURIComponent(id)}`);
+    fileGetById(id: string, options?: RequestOptions): Promise<HttpResult<FileDetailResponse>> {
+        return this.call("GET", `/api/File/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    fileUpload(body: FileUploadForm, query?: FileUploadQuery): Promise<HttpResult<FileDetailResponse[] | null>> {
-        return this.call("POST", `/api/File/Upload${queryString(query)}`, formData(body));
+    fileUpload(body: FileUploadForm, query?: FileUploadQuery, options?: RequestOptions): Promise<HttpResult<FileDetailResponse[] | null>> {
+        return this.call("POST", `/api/File/Upload${queryString(query)}`, formData(body), options);
     }
 
-    fileDownloadById(id: string): Promise<HttpResult<void>> {
-        return this.call("GET", `/api/File/Download/${encodeURIComponent(id)}`);
+    fileDownloadById(id: string, options?: RequestOptions): Promise<HttpResult<void>> {
+        return this.call("GET", `/api/File/Download/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    fileDownload(query?: FileDownloadQuery): Promise<HttpResult<void>> {
-        return this.call("GET", `/api/File/Download${queryString(query)}`);
+    fileDownload(query?: FileDownloadQuery, options?: RequestOptions): Promise<HttpResult<void>> {
+        return this.call("GET", `/api/File/Download${queryString(query)}`, undefined, options);
     }
 
-    fileDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/File/Delete/${encodeURIComponent(id)}`);
+    fileDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/File/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    fileRename(body: FileRenameRequest): Promise<HttpResult<FileDetailResponse>> {
-        return this.call("PUT", `/api/File/Rename`, body);
+    fileRename(body: FileRenameRequest, options?: RequestOptions): Promise<HttpResult<FileDetailResponse>> {
+        return this.call("PUT", `/api/File/Rename`, body, options);
     }
 
-    fileMove(body: FileMoveRequest): Promise<HttpResult<FileDetailResponse>> {
-        return this.call("PUT", `/api/File/Move`, body);
+    fileMove(body: FileMoveRequest, options?: RequestOptions): Promise<HttpResult<FileDetailResponse>> {
+        return this.call("PUT", `/api/File/Move`, body, options);
     }
 
-    robotsTxt(): Promise<HttpResult<void>> {
-        return this.call("GET", `/robots.txt`);
+    robotsTxt(options?: RequestOptions): Promise<HttpResult<void>> {
+        return this.call("GET", `/robots.txt`, undefined, options);
     }
 
-    sitemapXml(): Promise<HttpResult<void>> {
-        return this.call("GET", `/sitemap.xml`);
+    sitemapXml(options?: RequestOptions): Promise<HttpResult<void>> {
+        return this.call("GET", `/sitemap.xml`, undefined, options);
     }
 
-    folderGetAll(siteId: string): Promise<HttpResult<FolderDetailResponse>> {
-        return this.call("GET", `/api/Folder/GetAll/${encodeURIComponent(siteId)}`);
+    folderGetAll(siteId: string, options?: RequestOptions): Promise<HttpResult<FolderDetailResponse>> {
+        return this.call("GET", `/api/Folder/GetAll/${encodeURIComponent(siteId)}`, undefined, options);
     }
 
-    folderGetById(id: string): Promise<HttpResult<FolderDetailResponse>> {
-        return this.call("GET", `/api/Folder/GetById/${encodeURIComponent(id)}`);
+    folderGetById(id: string, options?: RequestOptions): Promise<HttpResult<FolderDetailResponse>> {
+        return this.call("GET", `/api/Folder/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    folderCreate(body: FolderCreateRequest): Promise<HttpResult<FolderDetailResponse>> {
-        return this.call("POST", `/api/Folder/Create`, body);
+    folderCreate(body: FolderCreateRequest, options?: RequestOptions): Promise<HttpResult<FolderDetailResponse>> {
+        return this.call("POST", `/api/Folder/Create`, body, options);
     }
 
-    folderRename(body: FolderRenameRequest): Promise<HttpResult<FolderDetailResponse>> {
-        return this.call("PUT", `/api/Folder/Rename`, body);
+    folderRename(body: FolderRenameRequest, options?: RequestOptions): Promise<HttpResult<FolderDetailResponse>> {
+        return this.call("PUT", `/api/Folder/Rename`, body, options);
     }
 
-    folderMove(body: FolderMoveRequest): Promise<HttpResult<FolderDetailResponse>> {
-        return this.call("PUT", `/api/Folder/Move`, body);
+    folderMove(body: FolderMoveRequest, options?: RequestOptions): Promise<HttpResult<FolderDetailResponse>> {
+        return this.call("PUT", `/api/Folder/Move`, body, options);
     }
 
-    folderGetParentFolders(id: string): Promise<HttpResult<FolderDetailResponse[] | null>> {
-        return this.call("GET", `/api/Folder/GetParentFolders/${encodeURIComponent(id)}`);
+    folderGetParentFolders(id: string, options?: RequestOptions): Promise<HttpResult<FolderDetailResponse[] | null>> {
+        return this.call("GET", `/api/Folder/GetParentFolders/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    folderDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Folder/Delete/${encodeURIComponent(id)}`);
+    folderDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Folder/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    globalSettingsGet(): Promise<HttpResult<GlobalSettingsResponse>> {
-        return this.call("GET", `/api/GlobalSettings/Get`);
+    globalSettingsGet(options?: RequestOptions): Promise<HttpResult<GlobalSettingsResponse>> {
+        return this.call("GET", `/api/GlobalSettings/Get`, undefined, options);
     }
 
-    globalSettingsUpdate(body: GlobalSettingsUpdateRequest): Promise<HttpResult<GlobalSettingsResponse>> {
-        return this.call("POST", `/api/GlobalSettings/Update`, body);
+    globalSettingsUpdate(body: GlobalSettingsUpdateRequest, options?: RequestOptions): Promise<HttpResult<GlobalSettingsResponse>> {
+        return this.call("POST", `/api/GlobalSettings/Update`, body, options);
     }
 
-    layoutGetBySiteId(query?: LayoutGetBySiteIdQuery): Promise<HttpResult<LayoutDetailResponse[] | null>> {
-        return this.call("GET", `/api/Layout/GetBySiteId${queryString(query)}`);
+    layoutGetBySiteId(query?: LayoutGetBySiteIdQuery, options?: RequestOptions): Promise<HttpResult<LayoutDetailResponse[] | null>> {
+        return this.call("GET", `/api/Layout/GetBySiteId${queryString(query)}`, undefined, options);
     }
 
-    layoutGetAll(): Promise<HttpResult<LayoutDetailResponse[] | null>> {
-        return this.call("GET", `/api/Layout/GetAll`);
+    layoutGetAll(options?: RequestOptions): Promise<HttpResult<LayoutDetailResponse[] | null>> {
+        return this.call("GET", `/api/Layout/GetAll`, undefined, options);
     }
 
-    layoutGet(id: string): Promise<HttpResult<LayoutDetailResponse>> {
-        return this.call("GET", `/api/Layout/Get/${encodeURIComponent(id)}`);
+    layoutGet(id: string, options?: RequestOptions): Promise<HttpResult<LayoutDetailResponse>> {
+        return this.call("GET", `/api/Layout/Get/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    layoutCreate(body: LayoutCreateRequest): Promise<HttpResult<LayoutDetailResponse>> {
-        return this.call("POST", `/api/Layout/Create`, body);
+    layoutCreate(body: LayoutCreateRequest, options?: RequestOptions): Promise<HttpResult<LayoutDetailResponse>> {
+        return this.call("POST", `/api/Layout/Create`, body, options);
     }
 
-    layoutUpdate(body: LayoutUpdateRequest): Promise<HttpResult<LayoutDetailResponse>> {
-        return this.call("PUT", `/api/Layout/Update`, body);
+    layoutUpdate(body: LayoutUpdateRequest, options?: RequestOptions): Promise<HttpResult<LayoutDetailResponse>> {
+        return this.call("PUT", `/api/Layout/Update`, body, options);
     }
 
-    layoutDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Layout/Delete/${encodeURIComponent(id)}`);
+    layoutDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Layout/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pageGetAll(siteId: string): Promise<HttpResult<PageDetailResponse[] | null>> {
-        return this.call("GET", `/api/Page/GetAll/${encodeURIComponent(siteId)}`);
+    pageGetAll(siteId: string, options?: RequestOptions): Promise<HttpResult<PageDetailResponse[] | null>> {
+        return this.call("GET", `/api/Page/GetAll/${encodeURIComponent(siteId)}`, undefined, options);
     }
 
-    pageGetById(id: string): Promise<HttpResult<PageDetailResponse>> {
-        return this.call("GET", `/api/Page/GetById/${encodeURIComponent(id)}`);
+    pageGetById(id: string, options?: RequestOptions): Promise<HttpResult<PageDetailResponse>> {
+        return this.call("GET", `/api/Page/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pageGetByUrl(query?: PageGetByUrlQuery): Promise<HttpResult<PageParentDetailResponse>> {
-        return this.call("GET", `/api/Page/GetByUrl${queryString(query)}`);
+    pageGetByUrl(query?: PageGetByUrlQuery, options?: RequestOptions): Promise<HttpResult<PageParentDetailResponse>> {
+        return this.call("GET", `/api/Page/GetByUrl${queryString(query)}`, undefined, options);
     }
 
-    pageCreate(body: PageCreateRequest): Promise<HttpResult<PageDetailResponse>> {
-        return this.call("POST", `/api/Page/Create`, body);
+    pageCreate(body: PageCreateRequest, options?: RequestOptions): Promise<HttpResult<PageDetailResponse>> {
+        return this.call("POST", `/api/Page/Create`, body, options);
     }
 
-    pageUpdate(body: PageUpdateRequest): Promise<HttpResult<PageDetailResponse>> {
-        return this.call("PUT", `/api/Page/Update`, body);
+    pageUpdate(body: PageUpdateRequest, options?: RequestOptions): Promise<HttpResult<PageDetailResponse>> {
+        return this.call("PUT", `/api/Page/Update`, body, options);
     }
 
-    pageDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Page/Delete/${encodeURIComponent(id)}`);
+    pageDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Page/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pluginGetById(id: string): Promise<HttpResult<PluginDetailResponse>> {
-        return this.call("GET", `/api/Plugin/GetById/${encodeURIComponent(id)}`);
+    pluginGetById(id: string, options?: RequestOptions): Promise<HttpResult<PluginDetailResponse>> {
+        return this.call("GET", `/api/Plugin/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pluginInitialCreate(body: PluginInitialCreateRequest): Promise<HttpResult<PluginDetailResponse>> {
-        return this.call("POST", `/api/Plugin/InitialCreate`, body);
+    pluginInitialCreate(body: PluginInitialCreateRequest, options?: RequestOptions): Promise<HttpResult<PluginDetailResponse>> {
+        return this.call("POST", `/api/Plugin/InitialCreate`, body, options);
     }
 
-    pluginUpdateOrders(body: PluginUpdateOrdersRequest): Promise<HttpResult<PluginDetailResponse[] | null>> {
-        return this.call("PUT", `/api/Plugin/UpdateOrders`, body);
+    pluginUpdateOrders(body: PluginUpdateOrdersRequest, options?: RequestOptions): Promise<HttpResult<PluginDetailResponse[] | null>> {
+        return this.call("PUT", `/api/Plugin/UpdateOrders`, body, options);
     }
 
-    pluginUpdateCols(body: PluginUpdateColsRequest): Promise<HttpResult<PluginDetailResponse>> {
-        return this.call("PUT", `/api/Plugin/UpdateCols`, body);
+    pluginUpdateCols(body: PluginUpdateColsRequest, options?: RequestOptions): Promise<HttpResult<PluginDetailResponse>> {
+        return this.call("PUT", `/api/Plugin/UpdateCols`, body, options);
     }
 
-    pluginDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Plugin/Delete/${encodeURIComponent(id)}`);
+    pluginDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Plugin/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pluginContentGetAll(pluginContentTypeName: string, pluginId: string): Promise<HttpResult<PluginContentDetailResponse[] | null>> {
-        return this.call("GET", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/GetAll/${encodeURIComponent(pluginId)}`);
+    pluginContentGetAll(pluginContentTypeName: string, pluginId: string, options?: RequestOptions): Promise<HttpResult<PluginContentDetailResponse[] | null>> {
+        return this.call("GET", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/GetAll/${encodeURIComponent(pluginId)}`, undefined, options);
     }
 
-    pluginContentGetById(pluginContentTypeName: string, pluginId: string, id: string): Promise<HttpResult<PluginContentDetailResponse>> {
-        return this.call("GET", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/GetById/${encodeURIComponent(pluginId)}/${encodeURIComponent(id)}`);
+    pluginContentGetById(pluginContentTypeName: string, pluginId: string, id: string, options?: RequestOptions): Promise<HttpResult<PluginContentDetailResponse>> {
+        return this.call("GET", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/GetById/${encodeURIComponent(pluginId)}/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pluginContentCreate(pluginContentTypeName: string, pluginId: string, body: Record<string, unknown>): Promise<HttpResult<PluginContentDetailResponse>> {
-        return this.call("POST", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/Create/${encodeURIComponent(pluginId)}`, body);
+    pluginContentCreate(pluginContentTypeName: string, pluginId: string, body: Record<string, unknown>, options?: RequestOptions): Promise<HttpResult<PluginContentDetailResponse>> {
+        return this.call("POST", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/Create/${encodeURIComponent(pluginId)}`, body, options);
     }
 
-    pluginContentUpdate(pluginContentTypeName: string, pluginId: string, id: string, body: Record<string, unknown>): Promise<HttpResult<PluginContentDetailResponse>> {
-        return this.call("PUT", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/Update/${encodeURIComponent(pluginId)}/${encodeURIComponent(id)}`, body);
+    pluginContentUpdate(pluginContentTypeName: string, pluginId: string, id: string, body: Record<string, unknown>, options?: RequestOptions): Promise<HttpResult<PluginContentDetailResponse>> {
+        return this.call("PUT", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/Update/${encodeURIComponent(pluginId)}/${encodeURIComponent(id)}`, body, options);
     }
 
-    pluginContentDelete(pluginContentTypeName: string, pluginId: string, id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/Delete/${encodeURIComponent(pluginId)}/${encodeURIComponent(id)}`);
+    pluginContentDelete(pluginContentTypeName: string, pluginId: string, id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/PluginContent/${encodeURIComponent(pluginContentTypeName)}/Delete/${encodeURIComponent(pluginId)}/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    pluginDefinitionCreate(body: PluginDefinitionCreateRequest): Promise<HttpResult<PluginDefinitionDetailResponse>> {
-        return this.call("POST", `/api/PluginDefinition/Create`, body);
+    pluginDefinitionCreate(body: PluginDefinitionCreateRequest, options?: RequestOptions): Promise<HttpResult<PluginDefinitionDetailResponse>> {
+        return this.call("POST", `/api/PluginDefinition/Create`, body, options);
     }
 
-    pluginDefinitionGetAll(): Promise<HttpResult<PluginDefinitionDetailResponse[] | null>> {
-        return this.call("GET", `/api/PluginDefinition/GetAll`);
+    pluginDefinitionGetAll(options?: RequestOptions): Promise<HttpResult<PluginDefinitionDetailResponse[] | null>> {
+        return this.call("GET", `/api/PluginDefinition/GetAll`, undefined, options);
     }
 
-    roleGetAll(query?: RoleGetAllQuery): Promise<HttpResult<RoleDetailResponse[] | null>> {
-        return this.call("GET", `/api/Role/GetAll${queryString(query)}`);
+    roleGetAll(query?: RoleGetAllQuery, options?: RequestOptions): Promise<HttpResult<RoleDetailResponse[] | null>> {
+        return this.call("GET", `/api/Role/GetAll${queryString(query)}`, undefined, options);
     }
 
-    roleGetById(id: string): Promise<HttpResult<RoleDetailResponse>> {
-        return this.call("GET", `/api/Role/GetById/${encodeURIComponent(id)}`);
+    roleGetById(id: string, options?: RequestOptions): Promise<HttpResult<RoleDetailResponse>> {
+        return this.call("GET", `/api/Role/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    roleCreate(body: RoleCreateRequest): Promise<HttpResult<RoleDetailResponse>> {
-        return this.call("POST", `/api/Role/Create`, body);
+    roleCreate(body: RoleCreateRequest, options?: RequestOptions): Promise<HttpResult<RoleDetailResponse>> {
+        return this.call("POST", `/api/Role/Create`, body, options);
     }
 
-    roleUpdate(body: RoleUpdateRequest): Promise<HttpResult<RoleDetailResponse>> {
-        return this.call("PUT", `/api/Role/Update`, body);
+    roleUpdate(body: RoleUpdateRequest, options?: RequestOptions): Promise<HttpResult<RoleDetailResponse>> {
+        return this.call("PUT", `/api/Role/Update`, body, options);
     }
 
-    roleDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Role/Delete/${encodeURIComponent(id)}`);
+    roleDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Role/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    settingsUpdate(body: SettingsUpdateRequest): Promise<HttpResult<SettingsDetailResponse>> {
-        return this.call("PUT", `/api/Settings/Update`, body);
+    settingsUpdate(body: SettingsUpdateRequest, options?: RequestOptions): Promise<HttpResult<SettingsDetailResponse>> {
+        return this.call("PUT", `/api/Settings/Update`, body, options);
     }
 
-    setupIsInitialized(): Promise<HttpResult<boolean>> {
-        return this.call("GET", `/api/Setup/IsInitialized`);
+    setupIsInitialized(options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("GET", `/api/Setup/IsInitialized`, undefined, options);
     }
 
-    setupStart(body: SetupRequest): Promise<HttpResult<boolean>> {
-        return this.call("POST", `/api/Setup/Start`, body);
+    setupStart(body: SetupRequest, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("POST", `/api/Setup/Start`, body, options);
     }
 
-    setupGetTemplates(): Promise<HttpResult<string[] | null>> {
-        return this.call("GET", `/api/Setup/GetTemplates`);
+    setupGetTemplates(options?: RequestOptions): Promise<HttpResult<string[] | null>> {
+        return this.call("GET", `/api/Setup/GetTemplates`, undefined, options);
     }
 
-    siteGetAll(): Promise<HttpResult<SiteDetailResponse[] | null>> {
-        return this.call("GET", `/api/Site/GetAll`);
+    siteGetAll(options?: RequestOptions): Promise<HttpResult<SiteDetailResponse[] | null>> {
+        return this.call("GET", `/api/Site/GetAll`, undefined, options);
     }
 
-    siteGetById(id: string): Promise<HttpResult<SiteDetailResponse>> {
-        return this.call("GET", `/api/Site/GetById/${encodeURIComponent(id)}`);
+    siteGetById(id: string, options?: RequestOptions): Promise<HttpResult<SiteDetailResponse>> {
+        return this.call("GET", `/api/Site/GetById/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    siteCreate(body: SiteCreateRequest): Promise<HttpResult<SiteDetailResponse>> {
-        return this.call("POST", `/api/Site/Create`, body);
+    siteCreate(body: SiteCreateRequest, options?: RequestOptions): Promise<HttpResult<SiteDetailResponse>> {
+        return this.call("POST", `/api/Site/Create`, body, options);
     }
 
-    siteUpdate(body: SiteUpdateRequest): Promise<HttpResult<SiteDetailResponse>> {
-        return this.call("PUT", `/api/Site/Update`, body);
+    siteUpdate(body: SiteUpdateRequest, options?: RequestOptions): Promise<HttpResult<SiteDetailResponse>> {
+        return this.call("PUT", `/api/Site/Update`, body, options);
     }
 
-    siteDelete(siteId: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/Site/Delete/${encodeURIComponent(siteId)}`);
+    siteDelete(siteId: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/Site/Delete/${encodeURIComponent(siteId)}`, undefined, options);
     }
 
-    siteGetRobotsTxt(query?: SiteGetRobotsTxtQuery): Promise<HttpResult<string | null>> {
-        return this.call("GET", `/api/Site/GetRobotsTxt${queryString(query)}`);
+    siteGetRobotsTxt(query?: SiteGetRobotsTxtQuery, options?: RequestOptions): Promise<HttpResult<string | null>> {
+        return this.call("GET", `/api/Site/GetRobotsTxt${queryString(query)}`, undefined, options);
     }
 
-    siteGetSitemapXml(query?: SiteGetSitemapXmlQuery): Promise<HttpResult<string | null>> {
-        return this.call("GET", `/api/Site/GetSitemapXml${queryString(query)}`);
+    siteGetSitemapXml(query?: SiteGetSitemapXmlQuery, options?: RequestOptions): Promise<HttpResult<string | null>> {
+        return this.call("GET", `/api/Site/GetSitemapXml${queryString(query)}`, undefined, options);
     }
 
-    userGetAll(): Promise<HttpResult<UserDetailResponse[] | null>> {
-        return this.call("GET", `/api/User/GetAll`);
+    userGetAll(options?: RequestOptions): Promise<HttpResult<UserDetailResponse[] | null>> {
+        return this.call("GET", `/api/User/GetAll`, undefined, options);
     }
 
-    userGet(userId: string): Promise<HttpResult<UserDetailResponse>> {
-        return this.call("GET", `/api/User/Get/${encodeURIComponent(userId)}`);
+    userGet(userId: string, options?: RequestOptions): Promise<HttpResult<UserDetailResponse>> {
+        return this.call("GET", `/api/User/Get/${encodeURIComponent(userId)}`, undefined, options);
     }
 
-    userUpdate(body: UserUpdateRequest): Promise<HttpResult<UserDetailResponse>> {
-        return this.call("PUT", `/api/User/Update`, body);
+    userUpdate(body: UserUpdateRequest, options?: RequestOptions): Promise<HttpResult<UserDetailResponse>> {
+        return this.call("PUT", `/api/User/Update`, body, options);
     }
 
-    userSetPassword(body: UserSetPasswordRequest): Promise<HttpResult<boolean>> {
-        return this.call("PUT", `/api/User/SetPassword`, body);
+    userSetPassword(body: UserSetPasswordRequest, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("PUT", `/api/User/SetPassword`, body, options);
     }
 
-    userCreate(body: UserCreateRequest): Promise<HttpResult<UserDetailResponse>> {
-        return this.call("POST", `/api/User/Create`, body);
+    userCreate(body: UserCreateRequest, options?: RequestOptions): Promise<HttpResult<UserDetailResponse>> {
+        return this.call("POST", `/api/User/Create`, body, options);
     }
 
-    userDelete(id: string): Promise<HttpResult<boolean>> {
-        return this.call("DELETE", `/api/User/Delete/${encodeURIComponent(id)}`);
+    userDelete(id: string, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("DELETE", `/api/User/Delete/${encodeURIComponent(id)}`, undefined, options);
     }
 
-    userRoleGetUserRoles(query?: UserRoleGetUserRolesQuery): Promise<HttpResult<RoleDetailResponse[] | null>> {
-        return this.call("GET", `/api/UserRole/GetUserRoles${queryString(query)}`);
+    userRoleGetUserRoles(query?: UserRoleGetUserRolesQuery, options?: RequestOptions): Promise<HttpResult<RoleDetailResponse[] | null>> {
+        return this.call("GET", `/api/UserRole/GetUserRoles${queryString(query)}`, undefined, options);
     }
 
-    userRoleUpdate(body: UserRoleUpdateRequest): Promise<HttpResult<boolean>> {
-        return this.call("PUT", `/api/UserRole/Update`, body);
+    userRoleUpdate(body: UserRoleUpdateRequest, options?: RequestOptions): Promise<HttpResult<boolean>> {
+        return this.call("PUT", `/api/UserRole/Update`, body, options);
     }
 }

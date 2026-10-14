@@ -13,9 +13,20 @@ export const HTTP_METHOD: readonly HttpMethod[] = ["GET", "POST", "PUT", "PATCH"
 /** The method argument of `OpenApiClient.call`. */
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+/**
+ * The last argument of every generated method: this call's own settings. The client's `TsazorHttp` interceptors
+ * (auth headers, logging) still run.
+ */
+export interface RequestOptions {
+  /** Aborts the request; the call then rejects with an `AbortError`, as `fetch` does. */
+  signal?: AbortSignal;
+  /** Headers of this request only (an `If-Match`, a header parameter of the operation); they win over the client's. */
+  headers?: Record<string, string>;
+}
+
 /** Options for a generated client: base URL and envelope unwrapping. */
 export interface OpenApiClientOptions {
-  /** Base URL for relative paths (otherwise the TsazorHttp resolves them). */
+  /** Base URL for relative paths; by default the TsazorHttp's `baseUrl`. */
   baseUrl?: string;
   /** Envelope unwrapping: `{ data: T, errors: [...] }` response bodies, optionally with a success flag (CLI `--envelope data,errors[,succeeded]`). */
   envelope?: EnvelopeOptions;
@@ -40,15 +51,21 @@ export abstract class OpenApiClient {
     this.envelope = options.envelope;
   }
 
-  /** Runs the operation and reads the body itself (non-throwing). */
-  protected call<T>(method: HttpMethod, url: string, body?: unknown): Promise<HttpResult<T>> {
-    const headers: Record<string, string> = { accept: "application/json" };
+  /**
+   * Runs the operation and reads the body itself (non-throwing). The headers are the TsazorHttp's default headers,
+   * the body's content type, then the call's own.
+   */
+  protected call<T>(method: HttpMethod, url: string, body?: unknown, options?: RequestOptions): Promise<HttpResult<T>> {
+    const headers = new Headers({ accept: "application/json", ...this.http.defaultHeaders });
     // A multipart body (file uploads) goes as it is: the browser writes its content type with the boundary.
     const form = body instanceof FormData;
-    if (body !== undefined && !form) headers["content-type"] = "application/json";
+    if (form) headers.delete("content-type");
+    else if (body !== undefined) headers.set("content-type", "application/json");
+    for (const [name, value] of Object.entries(options?.headers ?? {})) headers.set(name, value);
     const request = new Request(this.resolveUrl(url), {
       method,
       headers,
+      ...(options?.signal !== undefined ? { signal: options.signal } : {}),
       ...(body !== undefined ? { body: form ? body : JSON.stringify(body) } : {}),
     });
     return sendForResult<T>(this.http, request, this.envelope);
@@ -56,7 +73,7 @@ export abstract class OpenApiClient {
 
   private resolveUrl(url: string): string {
     if (/^https?:\/\//i.test(url)) return url;
-    const base = this.baseUrl?.replace(/\/$/, "") ?? "";
+    const base = (this.baseUrl ?? this.http.baseUrl)?.replace(/\/$/, "") ?? "";
     return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
   }
 }
