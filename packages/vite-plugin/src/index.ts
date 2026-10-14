@@ -179,8 +179,8 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         ...(options.optimize === false ? { optimize: false } : {}),
       });
       registry.recordTransform(filePath, result.metadata, result.componentFiles);
-      reportImportsDiagnostics(result.importsDiagnostics);
-      reportDiagnostics(result.diagnostics, filePath);
+      reportImportsDiagnostics(projectRoot, result.importsDiagnostics);
+      reportDiagnostics(projectRoot, result.diagnostics, filePath);
       reportManifestProblems();
       return { code: result.code, map: result.map };
     },
@@ -213,8 +213,26 @@ function reportManifestProblems(): void {
     if (reportedManifestProblems.has(key)) continue;
     reportedManifestProblems.add(key);
     // eslint-disable-next-line no-console
-    console.warn(`[tsazor] ${problem.severity} ${CHECK_CODES.manifest} (${problem.file}): ${problem.message}`);
+    console.warn(`[tsazor] ${problem.file.replace(/\\/g, "/")}(1,1) ${CHECK_CODES.manifest} ${problem.message}`);
   }
+}
+
+/** A compiler diagnostic. */
+interface LocatedDiagnostic {
+  code: string;
+  message: string;
+  severity: string;
+  /** 1-based line, 0-based column (the compiler's). */
+  pos: { line: number; column: number };
+}
+
+/**
+ * A diagnostic as `tsazor check` writes it — `src/Pages/Home.tsazor(4,12) TZS005 message`: the path relative to the
+ * project, line and column 1-based — so the dev server, the build and the check read alike.
+ */
+function diagnosticLine(root: string, file: string, diagnostic: LocatedDiagnostic): string {
+  const relative = path.relative(root, file).replace(/\\/g, "/");
+  return `${relative}(${diagnostic.pos.line},${diagnostic.pos.column + 1}) ${diagnostic.code} ${diagnostic.message}`;
 }
 
 /** _Imports warnings already printed (every file in the folder shares them). */
@@ -225,7 +243,7 @@ const reportedImportsWarnings = new Set<string>();
  * through the files that inherit it: errors (e.g. an invalid @import) fail
  * the importing module, warnings are printed once per location.
  */
-function reportImportsDiagnostics(entries: ReadonlyArray<{ file: string; diagnostic: TszDiagnostic }>): void {
+function reportImportsDiagnostics(root: string, entries: ReadonlyArray<{ file: string; diagnostic: TszDiagnostic }>): void {
   const errors = entries.filter((entry) => entry.diagnostic.severity === "error");
   for (const { file, diagnostic } of entries) {
     if (diagnostic.severity !== "warning") continue;
@@ -233,14 +251,12 @@ function reportImportsDiagnostics(entries: ReadonlyArray<{ file: string; diagnos
     if (reportedImportsWarnings.has(key)) continue;
     reportedImportsWarnings.add(key);
     // eslint-disable-next-line no-console
-    console.warn(`[tsazor] warning ${diagnostic.code} (${file}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`);
+    console.warn(`[tsazor] ${diagnosticLine(root, file, diagnostic)}`);
   }
   if (errors.length === 0) return;
   const first = errors[0]!;
-  const details = errors
-    .map(({ file, diagnostic }) => `  ${diagnostic.code} (${file}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`)
-    .join("\n");
-  const error = new Error(`[tsazor] compile errors in ${first.file}\n${details}`);
+  const details = errors.map(({ file, diagnostic }) => `  ${diagnosticLine(root, file, diagnostic)}`).join("\n");
+  const error = new Error(`[tsazor] compile errors\n${details}`);
   (error as unknown as { id: string }).id = first.file;
   (error as unknown as { loc: { file: string; line: number; column: number } }).loc = {
     file: first.file,
@@ -254,21 +270,17 @@ function reportImportsDiagnostics(entries: ReadonlyArray<{ file: string; diagnos
  * The compiler never fails silently: errors are thrown as a located error
  * (Vite's dev-server overlay picks it up), warnings go to the console.
  */
-function reportDiagnostics(diagnostics: { all: readonly { code: string; message: string; severity: string; pos: { line: number; column: number } }[] }, filePath: string): void {
+function reportDiagnostics(root: string, diagnostics: { all: readonly LocatedDiagnostic[] }, filePath: string): void {
   for (const diagnostic of diagnostics.all) {
     if (diagnostic.severity === "warning") {
       // eslint-disable-next-line no-console
-      console.warn(
-        `[tsazor] warning ${diagnostic.code} (${filePath}:${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`,
-      );
+      console.warn(`[tsazor] ${diagnosticLine(root, filePath, diagnostic)}`);
     }
   }
   const errors = diagnostics.all.filter((diagnostic) => diagnostic.severity === "error");
   if (errors.length === 0) return;
-  const details = errors
-    .map((diagnostic) => `  ${diagnostic.code} (${diagnostic.pos.line}:${diagnostic.pos.column}): ${diagnostic.message}`)
-    .join("\n");
-  const error = new Error(`[tsazor] compile errors in ${filePath}\n${details}`);
+  const details = errors.map((diagnostic) => `  ${diagnosticLine(root, filePath, diagnostic)}`).join("\n");
+  const error = new Error(`[tsazor] compile errors\n${details}`);
   (error as unknown as { id: string; loc: { file: string; line: number; column: number } }).id = filePath;
   (error as unknown as { loc: { file: string; line: number; column: number } }).loc = {
     file: filePath,

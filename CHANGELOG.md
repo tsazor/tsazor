@@ -135,6 +135,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - The skins (S5): the Wizard's `labelPrevious`, `labelNext` and `labelDone` are one `labels` (`WizardLabels`,
     any of them), as Carousel's and Rating's; Skeleton's `shape="circle"` is `"circular"`, as Avatar's, Chip's and
     Image's. (Table's `compact` became `small` with D6.)
+  - `@tsazor/vite-plugin` (T6): its compile errors and warnings read as `tsazor check` writes them —
+    `src/Pages/Home.tsazor(4,12) TZS005 message`, the path relative to the project, line and column 1-based (the
+    column was 0-based, and the order different). The dev-server overlay's location is unchanged.
   - `@tsazor/vite-plugin`, `@tsazor/runtime` (T4): `virtual:tsazor-routes` is typed `readonly RouteManifestEntry[]`
     (a lazy route has no `type` until it loads; it was `RouteEntry[]`), and `createTsazorApp({ routes })`,
     `Router`'s `routes` and the route table take a readonly list.

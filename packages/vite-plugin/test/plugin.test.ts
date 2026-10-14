@@ -197,6 +197,15 @@ describe("tsazor vite plugin", () => {
     ).rejects.toThrow(/TZS002/);
   });
 
+  it("writes a diagnostic as tsazor check does: file(line,column) CODE message, 1-based (T6)", async () => {
+    const plugin = await createPlugin();
+    const failure = await Promise.resolve(plugin.transform?.call({} as never, "<p>@(1 + </p>\n", path.join(root, "Pages", "Broken.tsazor"))).then(
+      () => undefined,
+      (error: unknown) => error as Error,
+    );
+    expect(failure?.message).toMatch(/^\[tsazor\] compile errors\n {2}Pages\/Broken\.tsazor\(1,4\) TZS003 /);
+  });
+
   it("resolves the virtual routes module id", async () => {
     const plugin = await createPlugin();
     expect(plugin.resolveId?.call({} as never, "virtual:tsazor-routes")).toBe("\0virtual:tsazor-routes");
