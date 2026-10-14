@@ -1136,13 +1136,17 @@ export default class Tab extends ComponentBase {
 }
 
 // Table
-export default class Table<TRow> extends ComponentBase {
-    items: TRow[];
+export default class Table<TItem> extends ComponentBase {
+    items?: readonly TItem[];
     headerContent?: RenderFragment;
-    rowContent?: (item: TRow) => RenderFragment;
+    rowContent?: (item: TItem) => RenderFragment;
+    childContent?: RenderFragment;
     striped: boolean;
+    bordered: boolean;
     hover: boolean;
-    compact: boolean;
+    small: boolean;
+    dark: boolean;
+    responsive: boolean;
     emptyText?: string;
     colSpan: number;
     additionalAttributes?: Record<string, unknown>;

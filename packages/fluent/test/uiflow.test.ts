@@ -111,6 +111,30 @@ describe("Table", () => {
     expect(container.querySelector("tbody")!.textContent).toContain("No entries");
     expect(container.querySelector("tbody")).toBeTruthy();
   });
+
+  it("takes its rows as child content, dark, bordered and scrolling — the Bootstrap skin's shape (D6)", async () => {
+    const { container } = await renderTree((b) => {
+      b.openComponent(0, Table);
+      b.addAttribute(1, "bordered", true);
+      b.addAttribute(2, "dark", true);
+      b.addAttribute(3, "responsive", true);
+      b.addAttribute(4, "childContent", (inner: RenderTreeBuilder) => {
+        inner.openElement(0, "tbody");
+        inner.openElement(1, "tr");
+        inner.openElement(2, "td");
+        inner.addContent(3, "cell");
+        inner.closeElement();
+        inner.closeElement();
+        inner.closeElement();
+      });
+      b.closeComponent();
+    });
+    const table = container.querySelector(".fui-table-wrap--scroll > table")!;
+    expect(table.className).toBe("fui-table fui-table--bordered fui-table--dark");
+    expect(table.getAttribute("data-fluent-theme")).toBe("dark");
+    expect(table.querySelector("thead")).toBeNull();
+    expect(table.textContent).toBe("cell");
+  });
 });
 
 /** Compact-variant nav host (NavLink needs the NavigationManager service). */

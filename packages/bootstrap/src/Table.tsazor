@@ -1,29 +1,72 @@
-@** Renders a `<table>` with Bootstrap's `.table` classes (striped, bordered, hover, small, dark),
-    optionally wrapped for horizontal scrolling. Supply the table rows as child content. *@
+@** A `<table>` with Bootstrap's `.table` classes, in one of two ways: `items` with a `rowContent` template builds one
+    row per item (and `headerContent` the thead), with an empty-state row when there are none; or `childContent`
+    holds the table's rows as written (thead, tbody). The same parameters as the Fluent skin's Table. For
+    column-driven tables — sorting, paging, selection — use DataGrid. *@
 @import { withClass } from "./attributes"
-@if (responsive) {
-    <div class="table-responsive"><table @attributes="@withClass(tableClass, additionalAttributes)">@childContent</table></div>
+@import { libraryTexts } from "@tsazor/ui"
+
+@typeparam TItem
+
+@if (this.responsive) {
+    <div class="table-responsive">@this.table</div>
 } else {
-    <table @attributes="@withClass(tableClass, additionalAttributes)">@childContent</table>
+    @this.table
 }
 
 @code {
+    private readonly t = libraryTexts();
+
+    /** The items, one row each through `rowContent` (filter, sort and paging live in the host app). */
+    @Parameter() items?: readonly TItem[];
+    /** The thead's content (the column headers) when the rows come from `items`. */
+    @Parameter() headerContent?: RenderFragment;
+    /** One item's row (`RenderFragment<TItem>`): `<RowContent Context="order"><tr>…</tr></RowContent>`. */
+    @Parameter() rowContent?: (item: TItem) => RenderFragment;
+    /** The table's content as written — thead, tbody and rows — when there are no `items`. */
+    @Parameter() childContent?: RenderFragment;
     /** Shades alternating rows (table-striped). */
     @Parameter() striped: boolean = false;
     /** Draws borders on all cells (table-bordered). */
     @Parameter() bordered: boolean = false;
     /** Highlights the row under the pointer (table-hover). */
     @Parameter() hover: boolean = false;
-    /** Renders the compact table-sm variant. */
+    /** Dense rows (table-sm). */
     @Parameter() small: boolean = false;
-    /** Renders the dark table variant (table-dark). */
+    /** The dark variant (table-dark). */
     @Parameter() dark: boolean = false;
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
-    /** The table's content: thead, tbody and rows. */
-    @Parameter() childContent?: RenderFragment;
+    /** The empty-state row's text when `items` is empty; by default the library text "No entries". */
+    @Parameter() emptyText?: string;
+    /** How many columns the empty-state row spans. */
+    @Parameter() colSpan: number = 1;
     /** `@attributes` pass-through (class appends). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly table: RenderFragment = @<table @attributes="@withClass(this.tableClass, this.additionalAttributes)">
+        @if (this.fromItems) {
+            <thead>@this.headerContent</thead>
+            <tbody>
+                @if (this.rows.length === 0) {
+                    <tr><td colspan="@this.colSpan" class="text-center text-body-secondary py-3">@(this.emptyText ?? this.t("noEntries"))</td></tr>
+                }
+                @for (const item of this.rows) {
+                    @this.rowContent?.(item)
+                }
+            </tbody>
+        } else {
+            @this.childContent
+        }
+    </table>;
+
+    /** The rows come from `items` (and `rowContent`); otherwise the child content is the table's. */
+    private get fromItems(): boolean {
+        return this.items !== undefined || this.rowContent !== undefined;
+    }
+
+    private get rows(): readonly TItem[] {
+        return this.items ?? [];
+    }
 
     private get tableClass(): string {
         const parts = ["table"];

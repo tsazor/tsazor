@@ -144,10 +144,12 @@ Notes on the important ones:
   `ToastRegion` (`position`: top/bottom-start/end) shows them, pausing while the
   pointer or focus is on a toast. Danger toasts announce as `role="alert"`, inside an
   `aria-live="polite"` region. `Toast` alone is one toast you place yourself.
-- **Table**: generic via `@typeparam TRow`; you own filter/sort/paging and pass
+- **Table**: generic via `@typeparam TItem`; you own filter/sort/paging and pass
   `items` + `headerContent` + `rowContent`
-  (`(row: TRow) => RenderFragment` — the 2.4 templated-component standard; see
-  the gallery's orders page).
+  (`(item: TItem) => RenderFragment` — the 2.4 templated-component standard; see
+  the gallery's orders page), or write the rows as child content. The same
+  parameters as `@tsazor/bootstrap`'s Table (`striped`, `bordered`, `hover`,
+  `small`, `dark`, `responsive`).
 - **DataGrid**: shaped like Blazor's QuickGrid and the same as `@tsazor/bootstrap`'s (the logic is
   `DataGridModel` in `@tsazor/ui`): `PropertyColumn` (`Property="(o) => o.total"`, `Format`, `Title`
   — default: the property's name —, `Sortable`, `IsDefaultSortColumn`, `Align`) and `TemplateColumn`

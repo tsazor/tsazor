@@ -770,6 +770,38 @@ describe("Table", () => {
     expect(table.className).toContain("table-hover");
     expect(table.textContent).toContain("cell");
   });
+
+  it("builds one row per item from rowContent, with an empty-state row — the Fluent skin's shape (D6)", async () => {
+    const mount = (items: { name: string }[]) =>
+      renderTree((b) => {
+        b.openComponent(0, Table);
+        b.addAttribute(1, "items", items);
+        b.addAttribute(2, "small", true);
+        b.addAttribute(3, "colSpan", 2);
+        b.addAttribute(4, "headerContent", (head: typeof b) => {
+          head.openElement(0, "tr");
+          head.openElement(1, "th");
+          head.addContent(2, "Name");
+          head.closeElement();
+          head.closeElement();
+        });
+        b.addAttribute(5, "rowContent", (item: { name: string }) => (row: typeof b) => {
+          row.openElement(0, "tr");
+          row.openElement(1, "td");
+          row.addContent(2, item.name);
+          row.closeElement();
+          row.closeElement();
+        });
+        b.closeComponent();
+      });
+    const { container } = await mount([{ name: "Ada" }, { name: "Linus" }]);
+    expect(container.querySelector("table")!.className).toBe("table table-sm");
+    expect(container.querySelector("thead th")!.textContent).toBe("Name");
+    expect([...container.querySelectorAll("tbody td")].map((td) => td.textContent)).toEqual(["Ada", "Linus"]);
+    const empty = (await mount([])).container.querySelector("tbody td")!;
+    expect(empty.textContent).toBe("No entries");
+    expect(empty.getAttribute("colspan")).toBe("2");
+  });
 });
 
 describe("Navbar, Spinner, Collapse", () => {

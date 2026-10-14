@@ -83,6 +83,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     texts followed the culture and the dates the page, so German labels came with US dates. Calendar, DatePicker,
     TimePicker and RatingDisplay re-render when the culture changes; a `locale` parameter still wins.
     `LibraryTexts.locale` is that locale; `pageLocale` is in `library-texts`.
+  - `@tsazor/fluent`, `@tsazor/bootstrap` (D6): `Table` has one shape in both skins, the union of the two. It is
+    generic (`@typeparam TItem`; Fluent's was `TRow`). Either `items` with `rowContent` (and `headerContent`, an
+    empty-state row with `emptyText` and `colSpan`) builds the rows, or `childContent` holds them as written. The
+    styles are `striped`, `bordered`, `hover`, `small`, `dark` and `responsive`. Fluent's `compact` is `small`, as
+    in both DataGrids; Bootstrap's Table takes `items`, Fluent's takes `childContent`, `bordered`, `dark` and
+    `responsive`.
   - `@tsazor/fluent` (D7): `FluentProvider`'s `tokenOverrides` is `FluentTokenOverrides`: its keys are the public
     tokens (`FluentToken`) — the brand ramp (`--fui-brand-10` … `-160`), the backgrounds, foregrounds and strokes,
     the accent and the brand fills, radii, spacing, type, motion and shadows. The sheet's other tokens (the theme
