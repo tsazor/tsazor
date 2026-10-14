@@ -21,9 +21,10 @@ export const formElements = new WeakMap<EditContext, HTMLFormElement>();
  *   messages; the Input* components re-render on it).
  *
  * Deviations (all deliberate, documented in the docs):
- * - Field identifiers are plain field-name strings, not expression-based
- *   `FieldIdentifier`s (TS has no expression trees; the compiler emits the
- *   binding's last member name as `ValueExpression`).
+ * - Field identifiers are strings, not expression-based `FieldIdentifier`s (TS has
+ *   no expression trees): the compiler emits the binding's path below the model
+ *   as `valueExpression` (`model.billing.street` ⇒ `"billing.street"`), the
+ *   key StandardSchemaValidator gives a nested issue too.
  * - `notifyFieldChanged(field, value)` carries the new value (Blazor reads the
  *   property) because a Tsazor model is updated by the compiler's bind before
  *   or after this call — the function validator needs the value as written.
@@ -112,7 +113,7 @@ export class EditContext {
     }
     this.#validationRequested.invoke(this);
     for (const [field, validator] of this.fieldValidators) {
-      this.applyFunctionValidator(field, (this.model as Record<string, unknown>)[field]);
+      this.applyFunctionValidator(field, fieldValue(this.model, field));
     }
     this.notifyValidationStateChanged();
     return !this.hasValidationMessages();
@@ -316,12 +317,6 @@ function dataAnnotationsRules(editContext: EditContext, field: string): readonly
   return rulesForField(editContext.model, field);
 }
 
-/** One DataAnnotations validation provider — the port of EditContext.EnableDataAnnotationsValidation. */
-export interface DataAnnotationsValidationSubscription {
-  /** Removes the validator from the EditContext (Blazor returns an IDisposable). */
-  dispose(): void;
-}
-
 /**
  * E8 (design-localization.md §4): what the DataAnnotations pass needs from a
  * StringLocalizer — structural, so the forms module carries no localization
@@ -357,7 +352,7 @@ export interface DataAnnotationsValidationOptions {
 export function enableDataAnnotationsValidation(
   editContext: EditContext,
   options: DataAnnotationsValidationOptions = {},
-): DataAnnotationsValidationSubscription {
+): () => void {
   const localizer = options.localizer;
   const store = editContext.createValidationMessageStore();
   // The fields that currently hold this provider's messages — the culture
@@ -376,7 +371,7 @@ export function enableDataAnnotationsValidation(
     const displayName = field;
     const messages: string[] = [];
     for (const rule of rules) {
-      const english = rule.validate(value !== undefined ? value : (model as Record<string, unknown>)[field], model, displayName);
+      const english = rule.validate(value !== undefined ? value : fieldValue(model, field), model, displayName);
       if (english) messages.push(resolve(rule, displayName, english));
     }
     if (messages.length > 0) {
@@ -409,17 +404,16 @@ export function enableDataAnnotationsValidation(
   // that hold messages — the store writes notify, so the form re-renders.
   const unsubscribeLocalizer = localizer?.subscribe(() => {
     for (const field of [...fieldsWithMessages]) {
-      validateField(editContext, field, (editContext.model as Record<string, unknown>)[field]);
+      validateField(editContext, field, fieldValue(editContext.model, field));
     }
   });
 
-  return {
-    dispose() {
-      unsubscribeFieldChanged();
-      unsubscribeValidationRequested();
-      unsubscribeLocalizer?.();
-      store.clear();
-    },
+  // Removes the validator from the EditContext (Blazor returns an IDisposable).
+  return () => {
+    unsubscribeFieldChanged();
+    unsubscribeValidationRequested();
+    unsubscribeLocalizer?.();
+    store.clear();
   };
 }
 
@@ -428,10 +422,13 @@ function validationRulesOfFieldMap(model: object): ReadonlyMap<string, readonly 
   return validationRulesOf((model as { constructor?: unknown }).constructor ?? Object);
 }
 
-/** The FieldIdentifier concept: model + field name (Tsazor: field name only). */
-export interface FieldIdentifier {
-  /** The field's name on the model (Blazor's `FieldName`). */
-  readonly fieldName: string;
-  /** The object that owns the field (Blazor's `Model`). */
-  readonly model: unknown;
+/** A field's value: the model's property, or for a path (`"billing.street"`) the property at its end. */
+export function fieldValue(model: object, field: string): unknown {
+  if (!field.includes(".")) return (model as Record<string, unknown>)[field];
+  let value: unknown = model;
+  for (const segment of field.split(".")) {
+    if (value === null || value === undefined) return undefined;
+    value = (value as Record<string, unknown>)[segment];
+  }
+  return value;
 }

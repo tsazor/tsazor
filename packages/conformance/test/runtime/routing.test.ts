@@ -177,7 +177,7 @@ describe("R15 — navigation lock", () => {
     const nav = track(new NavigationManager());
     nav.enableNavigationInterception();
     const changed: string[] = [];
-    nav.addLocationChanged((_, e) => changed.push(e.location));
+    nav.addLocationChanged((e) => changed.push(e.location));
     const asked: { uri: string; intercepted: boolean }[] = [];
     nav.setNavigationLock("lock", (uri, intercepted) => {
       asked.push({ uri, intercepted });
@@ -208,7 +208,7 @@ describe("R15 — navigation lock", () => {
     nav.navigateTo("/first");
     nav.navigateTo("/second");
     const changed: string[] = [];
-    nav.addLocationChanged((_, e) => changed.push(e.location));
+    nav.addLocationChanged((e) => changed.push(e.location));
     const asked: string[] = [];
     nav.setNavigationLock("lock", (uri) => {
       asked.push(uri);
@@ -352,7 +352,7 @@ describe("R15 — app.dispose()", () => {
     await rendererOf(app).waitUntilIdle();
     expect(root.querySelector("a")?.textContent).toBe("go");
     const changed: string[] = [];
-    app.navigationManager.addLocationChanged((_, e) => changed.push(e.location));
+    app.navigationManager.addLocationChanged((e) => changed.push(e.location));
 
     app.dispose();
     expect(root.innerHTML).toBe("");

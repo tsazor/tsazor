@@ -4,7 +4,7 @@
  * (TS syntactic + semantic diagnostics, filtered like the LSP layer). The
  * gate form of the same pipeline the language server runs live.
  */
-import { explainTypeScriptError } from "@tsazor/compiler";
+import { CHECK_CODES, explainTypeScriptError } from "@tsazor/compiler";
 import { analyzeSource } from "./analysis.js";
 import { ProjectRegistry } from "./projects.js";
 import { tsDiagnostics } from "./ts-features.js";
@@ -19,7 +19,7 @@ export interface CheckDiagnostic {
   /** 1-based line / column of the diagnostic (source coordinates). */
   line: number;
   column: number;
-  /** Diagnostic code: `TZS…` (compiler), `TS…` (type layer) or `TSZ…` (the check itself: `TSZSTRICT`, `TSZECHECK`). */
+  /** Diagnostic code: `TZS…` (the compiler's and the check's own, TZS033–TZS035) or `TS…` (the type layer). */
   code: string;
   severity: "error" | "warning";
   message: string;
@@ -51,7 +51,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
       try {
         source = readFileSync(file, "utf8");
       } catch {
-        diagnostics.push({ file, line: 1, column: 1, code: "TSZECHECK", severity: "error", message: "file is not readable" });
+        diagnostics.push({ file, line: 1, column: 1, code: CHECK_CODES.unreadable, severity: "error", message: "file is not readable" });
         continue;
       }
       for (const diagnostic of (await analyzeSource(file, source, projectRoot)).diagnostics) {
@@ -118,7 +118,7 @@ const STRICT_FLAGS = ["noImplicitAny", "strictNullChecks", "strictFunctionTypes"
 
 /**
  * S2: Tsazor supports strict TypeScript only — the docs, templates, the
- * tutorial and the typed shadows assume it. One warning (`TSZSTRICT`) per
+ * tutorial and the typed shadows assume it. One error (TZS033) per
  * tsconfig of the checked files that leaves `strict` (or one of its flags)
  * off. A file without a tsconfig is checked with Tsazor's strict defaults.
  */
@@ -140,8 +140,8 @@ function strictWarnings(files: readonly string[]): CheckDiagnostic[] {
       file: config,
       line: 1,
       column: 1,
-      code: "TSZSTRICT",
-      severity: "warning",
+      code: CHECK_CODES.notStrict,
+      severity: "error",
       message: `${what}. Tsazor supports strict TypeScript only: set "strict": true in compilerOptions (and drop the overrides). Without it, null checks and implicit-any errors go unreported and the typed checks of the markup lose their guarantees.`,
     });
   }

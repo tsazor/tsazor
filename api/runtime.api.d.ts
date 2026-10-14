@@ -277,15 +277,10 @@ export interface DataAnnotationsValidationOptions {
     readonly localizer?: ValidationMessagesLocalizer;
 }
 
-// DataAnnotationsValidationSubscription
-export interface DataAnnotationsValidationSubscription {
-    dispose(): void;
-}
-
 // DataAnnotationsValidator
 export declare class DataAnnotationsValidator extends ComponentBase {
     editContext?: EditContext;
-    private subscription?;
+    private disableValidation?;
     private originalEditContext?;
     protected onInitialized(): void;
     protected onParametersSet(): void;
@@ -363,7 +358,7 @@ export declare class EditForm extends ComponentBase implements CascadingValueSup
 export declare function EmailAddress(override?: ValidationMessageOverride): FieldRuleDecorator;
 
 // enableDataAnnotationsValidation
-export declare function enableDataAnnotationsValidation(editContext: EditContext, options?: DataAnnotationsValidationOptions): DataAnnotationsValidationSubscription;
+export declare function enableDataAnnotationsValidation(editContext: EditContext, options?: DataAnnotationsValidationOptions): () => void;
 
 // ErrorBoundary
 export declare class ErrorBoundary extends ErrorBoundaryBase {
@@ -414,12 +409,6 @@ export declare enum EventHandlerFlags {
 // EventSubscription
 export interface EventSubscription<Handler extends (...args: never[]) => void> {
     subscribe(handler: Handler): () => void;
-}
-
-// FieldIdentifier
-export interface FieldIdentifier {
-    readonly fieldName: string;
-    readonly model: unknown;
 }
 
 // FieldRuleDecorator
@@ -488,9 +477,9 @@ export declare function inject<T>(token: Token<T>): T;
 // InputBase
 export declare abstract class InputBase<TValue> extends ComponentBase {
     #private;
-    Value?: TValue | null;
-    ValueChanged?: EventCallback<TValue>;
-    ValueExpression?: string;
+    value?: TValue | null;
+    valueChanged?: EventCallback<TValue>;
+    valueExpression?: string;
     editContext?: EditContext;
     additionalAttributes?: Record<string, unknown>;
     element?: HTMLElement;
@@ -662,7 +651,7 @@ export declare class NavigationLock extends ComponentBase {
     onBeforeInternalNavigation?: EventCallback<LocationChangingContext> | ((context: LocationChangingContext) => void | Promise<void>);
     confirmExternalNavigation: boolean;
     private readonly navigation;
-    private registration?;
+    private unregister?;
     private beforeUnloadInstalled;
     private readonly onBeforeUnload;
     protected onAfterRender(): void;
@@ -706,10 +695,9 @@ export declare class NavigationManager {
     getUriWithQueryParameter(name: string, value: QueryParameterValue | readonly QueryParameterValue[]): string;
     getUriWithQueryParameters(parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string;
     getUriWithQueryParameters(uri: string, parameters: Readonly<Record<string, QueryParameterValue | readonly QueryParameterValue[]>>): string;
-    addLocationChanged(handler: (sender: NavigationManager, event: LocationChangedEventArgs) => void): () => void;
-    registerLocationChangingHandler(handler: LocationChangingHandler): {
-        dispose(): void;
-    };
+    addLocationChanged(handler: (event: LocationChangedEventArgs) => void): () => void;
+    subscribe(listener: (event: LocationChangedEventArgs) => void): () => void;
+    registerLocationChangingHandler(handler: LocationChangingHandler): () => void;
     private interceptionEnabled;
     enableNavigationInterception(): void;
     private isSamePageWithHash;
@@ -1262,7 +1250,7 @@ export interface TsazorHttpOptions {
 
 // ValidationMessage
 export declare class ValidationMessage extends ComponentBase {
-    For?: string;
+    for?: string;
     additionalAttributes?: Record<string, unknown>;
     editContext?: EditContext;
     private editContextUnsubscribe?;

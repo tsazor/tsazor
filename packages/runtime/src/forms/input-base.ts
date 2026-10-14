@@ -19,11 +19,11 @@ export abstract class InputBase<TValue> extends ComponentBase {
    * The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a
    * `string | null` field binds to a text input, which hands back a string.
    */
-  @Parameter() Value?: TValue | null;
+  @Parameter() value?: TValue | null;
   /** Invoked when the user edits the input (compiler @bind-Value emits this). */
-  @Parameter() ValueChanged?: EventCallback<TValue>;
+  @Parameter() valueChanged?: EventCallback<TValue>;
   /** Field name used for EditContext registration and validation. */
-  @Parameter() ValueExpression?: string;
+  @Parameter() valueExpression?: string;
   /** Resolved from the nearest EditForm (by-type cascading). */
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
   /** Pass-through attributes (class, style, placeholder, …), as the caller gave them. */
@@ -40,18 +40,18 @@ export abstract class InputBase<TValue> extends ComponentBase {
 
   /** Blazor's CurrentValue. */
   get currentValue(): TValue | null | undefined {
-    return this.Value;
+    return this.value;
   }
 
   set currentValue(value: TValue) {
-    if (Object.is(value, this.Value)) return;
-    this.Value = value;
+    if (Object.is(value, this.value)) return;
+    this.value = value;
     // Blazor's order: ValueChanged first (the bound model field is written by
     // the synchronous part of the @bind setter), then NotifyFieldChanged — so
     // validators that read the model see the new value.
-    void this.ValueChanged?.invokeAsync(value);
-    if (this.ValueExpression && this.editContext) {
-      this.editContext.notifyFieldChanged(this.ValueExpression, value);
+    void this.valueChanged?.invokeAsync(value);
+    if (this.valueExpression && this.editContext) {
+      this.editContext.notifyFieldChanged(this.valueExpression, value);
     }
   }
 
@@ -70,9 +70,9 @@ export abstract class InputBase<TValue> extends ComponentBase {
 
   /** Blazor's FieldClass: validation CSS class for the bound field. */
   protected get fieldClass(): string {
-    if (!this.editContext || !this.ValueExpression) return "";
-    const isValid = this.editContext.getValidationMessages(this.ValueExpression).length === 0;
-    const isModified = this.editContext.isModified(this.ValueExpression);
+    if (!this.editContext || !this.valueExpression) return "";
+    const isValid = this.editContext.getValidationMessages(this.valueExpression).length === 0;
+    const isModified = this.editContext.isModified(this.valueExpression);
     // Blazor's EditContext.FieldCssClass: the four documented states.
     if (isModified) return isValid ? "modified valid" : "modified invalid";
     return isValid ? "valid" : "invalid";
@@ -94,9 +94,9 @@ export abstract class InputBase<TValue> extends ComponentBase {
    */
   protected get attributesWithValidation(): Record<string, unknown> | undefined {
     const attributes = this.additionalAttributes;
-    if (!this.editContext || !this.ValueExpression) return attributes;
+    if (!this.editContext || !this.valueExpression) return attributes;
     const hasAriaInvalid = attributes !== undefined && "aria-invalid" in attributes;
-    if (this.editContext.getValidationMessages(this.ValueExpression).length > 0) {
+    if (this.editContext.getValidationMessages(this.valueExpression).length > 0) {
       return hasAriaInvalid ? attributes : { ...attributes, "aria-invalid": "true" };
     }
     if (!hasAriaInvalid) return attributes;
@@ -159,11 +159,11 @@ export abstract class InputBase<TValue> extends ComponentBase {
       "oninput",
       EventCallback.bind(this, (e: Event) => {
         const value = extract(e);
-        if (Object.is(value, this.Value)) return;
-        this.Value = value;
-        void this.ValueChanged?.invokeAsync(value);
-        if (this.ValueExpression && this.editContext && !this.editContext.isValid(this.ValueExpression)) {
-          this.editContext.notifyFieldChanged(this.ValueExpression, value);
+        if (Object.is(value, this.value)) return;
+        this.value = value;
+        void this.valueChanged?.invokeAsync(value);
+        if (this.valueExpression && this.editContext && !this.editContext.isValid(this.valueExpression)) {
+          this.editContext.notifyFieldChanged(this.valueExpression, value);
         }
       }),
     );
@@ -172,10 +172,10 @@ export abstract class InputBase<TValue> extends ComponentBase {
       "onchange",
       EventCallback.bind(this, (e: Event) => {
         const value = extract(e);
-        if (!Object.is(value, this.Value)) {
+        if (!Object.is(value, this.value)) {
           this.currentValue = value;
-        } else if (this.ValueExpression && this.editContext) {
-          this.editContext.notifyFieldChanged(this.ValueExpression, value);
+        } else if (this.valueExpression && this.editContext) {
+          this.editContext.notifyFieldChanged(this.valueExpression, value);
         }
       }),
     );

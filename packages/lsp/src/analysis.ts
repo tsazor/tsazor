@@ -2,6 +2,7 @@ import {
   advancePos,
   bindableMembers,
   bindablePairs,
+  CHECK_CODES,
   childNodes,
   compile,
   maskedCode,
@@ -78,7 +79,7 @@ export async function analyzeSource(filePath: string, source: string, projectRoo
     // The compiler throws for codegen-level failures; surface the message.
     document = { directives: [], body: [], codeBlocks: [] };
     diagnostics = [{
-      code: "TSZE000",
+      code: CHECK_CODES.compilerFailure,
       message: error instanceof Error ? error.message : String(error),
       severity: "error",
       pos: { line: 1, column: 0 },

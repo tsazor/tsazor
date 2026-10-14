@@ -1,5 +1,5 @@
 /**
- * S2: `tsazor check` warns (TSZSTRICT) about a tsconfig that is not strict —
+ * S2: `tsazor check` reports an error (TZS033) for a tsconfig that is not strict —
  * strict TypeScript is the only supported configuration.
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -22,16 +22,16 @@ async function project(compilerOptions: Record<string, unknown>): Promise<string
 }
 
 const strictWarnings = async (dir: string) =>
-  (await checkProject(dir)).diagnostics.filter((d) => d.code === "TSZSTRICT").map((d) => ({ severity: d.severity, file: path.basename(d.file), message: d.message }));
+  (await checkProject(dir)).diagnostics.filter((d) => d.code === "TZS033").map((d) => ({ severity: d.severity, file: path.basename(d.file), message: d.message }));
 
 describe("tsazor check: strict TypeScript (S2)", () => {
   it("is quiet for a strict tsconfig", async () => {
     expect(await strictWarnings(await project({ strict: true }))).toEqual([]);
   });
 
-  it("warns once when strict is off", async () => {
+  it("reports one error when strict is off", async () => {
     expect(await strictWarnings(await project({}))).toEqual([
-      { severity: "warning", file: "tsconfig.json", message: expect.stringMatching(/^'strict' is not on\. Tsazor supports strict TypeScript only/) },
+      { severity: "error", file: "tsconfig.json", message: expect.stringMatching(/^'strict' is not on\. Tsazor supports strict TypeScript only/) },
     ]);
   });
 

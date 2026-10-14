@@ -155,6 +155,13 @@ export interface CatchClause {
 // categorizeType
 export declare function categorizeType(text: string, references: readonly TypeReference[], host: MetadataHost): Categorized;
 
+// CHECK_CODES
+export declare const CHECK_CODES: {
+    readonly notStrict: "TZS033";
+    readonly unreadable: "TZS034";
+    readonly compilerFailure: "TZS035";
+};
+
 // childNodes
 export declare function childNodes(node: MarkupNode): MarkupNode[];
 
@@ -366,10 +373,8 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS004: "Invalid implicit expression.";
     readonly TZS005: "Unresolved component tag.";
     readonly TZS006: "Unclosed code block.";
-    readonly TZS007: "Duplicate attribute.";
     readonly TZS008: "Unsupported directive attribute.";
     readonly TZS009: "Missing attribute value.";
-    readonly TZS010: "Invalid implicit expression terminator.";
     readonly TZS011: "Conflicting code-behind.";
     readonly TZS012: "Unsupported C# construct.";
     readonly TZS013: "Directive not allowed here.";
@@ -392,6 +397,9 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS030: "@Bindable()/@State() needs an auto-accessor of its own.";
     readonly TZS031: "Name reserved by ComponentBase.";
     readonly TZS032: "Blazor lifecycle name — Tsazor never calls it.";
+    readonly TZS033: "TypeScript isn't strict.";
+    readonly TZS034: "File not readable.";
+    readonly TZS035: "The compiler failed.";
 };
 
 // DiagnosticBag

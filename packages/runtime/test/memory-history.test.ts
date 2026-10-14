@@ -95,7 +95,7 @@ describe("NavigationManager over a MemoryHistory", () => {
   it("navigates synchronously and fires LocationChanged; back/forward run through popstate", async () => {
     const { history, navigation } = memory();
     const events: LocationChangedEventArgs[] = [];
-    navigation.addLocationChanged((_, event) => events.push(event));
+    navigation.addLocationChanged((event) => events.push(event));
     navigation.navigateTo("/a");
     navigation.navigateTo("/b?q=1");
     expect(events.map((event) => event.location)).toEqual([`${location.origin}/a`, `${location.origin}/b?q=1`]);
@@ -130,7 +130,7 @@ describe("hash mode over a MemoryHistory (the preview's document has no usable l
     expect(navigation.toLinkHref("orders?state=open")).toBe("#/orders?state=open");
 
     const seen: string[] = [];
-    navigation.addLocationChanged((_sender, event: LocationChangedEventArgs) => seen.push(event.location));
+    navigation.addLocationChanged((event: LocationChangedEventArgs) => seen.push(event.location));
     navigation.navigateTo("orders?state=open");
     expect(history.href).toBe("http://localhost/app/index.html?token=abc#/orders?state=open");
     expect(navigation.uri).toBe("http://localhost/app/orders?state=open");

@@ -166,7 +166,7 @@ async function boot(initialUrl: string, navigationManager?: NavigationManager): 
   });
   apps.push(app);
   const events: LocationChangedEventArgs[] = [];
-  app.navigationManager.addLocationChanged((_, e) => events.push(e));
+  app.navigationManager.addLocationChanged((e) => events.push(e));
   await settleFor(app);
   return { app, nav: app.navigationManager, root, events };
 }

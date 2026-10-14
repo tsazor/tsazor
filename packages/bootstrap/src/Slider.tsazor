@@ -85,7 +85,7 @@
     }
 
     private get message(): string {
-        return this.field.message(this.editContext, this.ValueExpression);
+        return this.field.message(this.editContext, this.valueExpression);
     }
 
     /** The value the thumb shows: the moving one, else the bound one, else min. */

@@ -1176,7 +1176,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       ],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "value",
           "optional": true,
           "hasInitializer": false,
@@ -1192,7 +1192,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1214,7 +1214,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "TValue"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1274,7 +1274,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1284,7 +1284,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1302,7 +1302,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "string"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1375,7 +1375,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1385,7 +1385,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1403,7 +1403,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "string"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1476,7 +1476,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1486,7 +1486,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1504,7 +1504,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "number | string"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1566,7 +1566,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "value",
           "optional": true,
           "hasInitializer": false,
@@ -1576,7 +1576,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1594,7 +1594,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "boolean"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1656,7 +1656,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1672,7 +1672,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1694,7 +1694,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "Date | string"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1774,7 +1774,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "Value",
+          "name": "value",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -1784,7 +1784,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
         },
         {
-          "name": "ValueChanged",
+          "name": "valueChanged",
           "category": "EventCallback<T>",
           "optional": true,
           "hasInitializer": false,
@@ -1802,7 +1802,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
           "typeArgument": "string"
         },
         {
-          "name": "ValueExpression",
+          "name": "valueExpression",
           "category": "string",
           "optional": true,
           "hasInitializer": false,
@@ -2050,7 +2050,7 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
       "typeParameters": [],
       "parameters": [
         {
-          "name": "For",
+          "name": "for",
           "category": "string",
           "optional": true,
           "hasInitializer": false,

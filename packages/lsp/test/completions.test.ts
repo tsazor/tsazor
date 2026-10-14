@@ -142,7 +142,7 @@ describe("completeAt — attributes", () => {
   it("offers inherited parameters (code-behind base, runtime InputBase)", async () => {
     expect(await complete("<Fancy \n", 0, 7)).toEqual(expect.arrayContaining(["own", "behind"]));
     const textBox = await complete("<TextBox \n", 0, 9);
-    expect(textBox).toEqual(expect.arrayContaining(["Value", "ValueChanged", "@bind-Value"]));
+    expect(textBox).toEqual(expect.arrayContaining(["value", "valueChanged", "@bind-value"]));
     expect(textBox).not.toContain("editContext");
   });
 

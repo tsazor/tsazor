@@ -279,4 +279,24 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     example: "<p>@text</p>\n\n@code {\n  text = \"\";\n  protected async onInitializedAsync() {\n    this.text = \"loaded\";\n  }\n}\n",
     fix: "Rename it to Tsazor's hook (quick fix): `protected override async onInitialized(): Promise<void>`.",
   },
+  {
+    code: "TZS033",
+    severity: "error",
+    description:
+      "`tsazor check` (and the Vite plugin's check) found a tsconfig of the checked files that leaves `strict` off, or switches one of its flags (`strictNullChecks`, `noImplicitAny`, …) off again. Tsazor supports strict TypeScript only: without it, null checks and implicit-any errors go unreported and the typed checks of the markup lose their guarantees. Reported once per tsconfig, at its first line.",
+    fix: "Set `\"strict\": true` in the tsconfig's `compilerOptions` and drop the overrides.",
+  },
+  {
+    code: "TZS034",
+    severity: "error",
+    description: "`tsazor check` could not read a `.tsazor` file it found (permissions, a file removed while checking).",
+    fix: "Make the file readable, or remove it from the project.",
+  },
+  {
+    code: "TZS035",
+    severity: "error",
+    description:
+      "The compiler threw instead of reporting a diagnostic: a bug in Tsazor. The message is the exception's; the file isn't type-checked.",
+    fix: "Please report it with the component's source. Meanwhile, rewriting the construct the message names usually avoids it.",
+  },
 ];

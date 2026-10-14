@@ -580,8 +580,11 @@ bind to a non-assignable local — `const` (TS2588), `function`/`class`/`enum`, 
 `@import` (TS2632, unless a member has the same name) — and to the variable of a
 `for…of`/`for…in` loop (C#: CS1656; also with `let`: the assignment would only hit this
 iteration's copy and be lost on the next render). Bind to a member instead (`item.name`)
-or via an index (`@for (let i = 0; …)` + `items[i]`). `ValueExpression` (the field name for `EditContext`) is the last
-member name of the path (`Model!.Title` ⇒ `"Title"`, `map["k"]` ⇒ `"k"`), also from `:get`.
+or via an index (`@for (let i = 0; …)` + `items[i]`). `valueExpression` (the field key for `EditContext`) is the path
+below the variable that holds the model (`Model!.Title` ⇒ `"Title"`, `model.billing.street` ⇒ `"billing.street"`,
+`model.items[0].name` ⇒ `"items.0.name"`), also from `:get`; StandardSchemaValidator keys a nested issue the same
+way. A path with an index known only at run time (`items[i].name`) keys by its last member. DataAnnotations rules
+apply to the model's own properties, as in Blazor before .NET 10's nested validation.
 
 **Combinations** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` together with
 `:get`; `:get` without `:set` and vice versa; `:set` together with `:after` (call the `:after` code from

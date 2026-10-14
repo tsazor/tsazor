@@ -57,6 +57,22 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     `AuthenticationStateProvider.peekState`, and more. `EditContext.notifyValidationStateChanged` is public (Blazor's
     API for custom validators); `EventCallback.bindWith` and `RenderTreeBuilder.reuseKeyed` stay as the compiler's
     ABI.
+- **Breaking — the API review's decisions** (`docs/api-review-1.0.md`, Part 3; owner: "alle nach Empfehlung"):
+  - `@tsazor/runtime` (D1): `InputBase`'s `Value`, `ValueChanged`, `ValueExpression` are `value`, `valueChanged`,
+    `valueExpression`; `ValidationMessage`'s `For` is `for` (TypeScript's camelCase; markup matches parameters
+    case-insensitively, so `@bind-Value` and `For="…"` stay). A custom input writes `this.value`. `LayoutComponentBase`'s
+    `Body` stays: layouts read it as `@Body`.
+  - (D2) A binding's field key is its path below the model: `model.billing.street` ⇒ `"billing.street"` (was
+    `"street"`), `model.items[0].name` ⇒ `"items.0.name"` — the key `StandardSchemaValidator` gives a nested issue,
+    whose messages now reach the nested input. One level (`model.title` ⇒ `"title"`) is unchanged. `EditForm`'s
+    `validators` and `ValidationMessage`'s `for` name nested fields by path. The unused `FieldIdentifier` type is gone.
+  - (D3) `addLocationChanged`'s handler gets the event only (no `sender`); `registerLocationChangingHandler` and
+    `enableDataAnnotationsValidation` return the function that removes them (no `{ dispose() }`;
+    `DataAnnotationsValidationSubscription` is gone); `NavigationManager.subscribe` makes it a source for
+    `observe(navigation)`.
+  - (D11, T3) `tsazor check` reports a tsconfig that isn't strict as the error TZS033 (was the warning `TSZSTRICT`):
+    strict is the only supported configuration. The check's other codes are TZS034 (a file not readable, was
+    `TSZECHECK`) and TZS035 (the compiler failed, was `TSZE000`); all are in the diagnostics reference.
 - **Breaking — the tools need Node 22.12 or later** (`engines.node` of cli, compiler, workspace, lsp, vite-plugin,
   dotnet and create-tsazor; before: 20.19). Node 20 reached its end of life on 2026-04-30; the support policy
   (`docs/support-policy.md`) follows the Node.js LTS lines.

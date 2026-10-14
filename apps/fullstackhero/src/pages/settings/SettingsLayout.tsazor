@@ -80,7 +80,7 @@
 @code {
     protected override onInitialized(): void {
         // React Router's useLocation(): every navigation re-renders the masthead and the nav.
-        this.observe({ subscribe: (listener: () => void) => this.navigation.addLocationChanged(listener) });
+        this.observe(this.navigation);
     }
 
     private get pathname(): string {

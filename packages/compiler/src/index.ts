@@ -12,6 +12,7 @@ export {
   type DiagnosticCode,
   DIAGNOSTIC_MESSAGES,
 } from "./diagnostics.js";
+export { CHECK_CODES } from "./check-codes.js";
 export { DIAGNOSTIC_CATALOG, RETIRED_DIAGNOSTIC_CODES, type DiagnosticInfo } from "./diagnostic-catalog.js";
 export { buildSourceMap, type SourceMapEntry } from "./source-map.js";
 export { explainExpressionValue, type ExpressionValue } from "./expression-values.js";

@@ -343,7 +343,7 @@ describe("localized validation messages (E8 §4, D-L7)", () => {
       "Quantity is mandatory.", // a fixed message override ignores the culture
     ]);
     warn.mockRestore();
-    subscription.dispose();
+    subscription();
     localizer.dispose();
   });
 
@@ -361,7 +361,7 @@ describe("localized validation messages (E8 §4, D-L7)", () => {
       "The field 'email' is not a valid e-mail address.",
       "Quantity is mandatory.",
     ]);
-    subscription.dispose();
+    subscription();
     localizer.dispose();
   });
 
@@ -372,7 +372,7 @@ describe("localized validation messages (E8 §4, D-L7)", () => {
     const subscription = enableDataAnnotationsValidation(context, { localizer });
     culture.setExplicit("en-US"); // never validated → nothing to re-localize
     expect(context.getValidationMessages()).toEqual([]);
-    subscription.dispose();
+    subscription();
     localizer.dispose();
   });
 
@@ -385,7 +385,7 @@ describe("localized validation messages (E8 §4, D-L7)", () => {
     const subscription = enableDataAnnotationsValidation(context);
     expect(context.validate()).toBe(false);
     expect(context.getValidationMessages()).toEqual(["text braucht mindestens 3 Zeichen."]);
-    subscription.dispose();
+    subscription();
   });
 });
 

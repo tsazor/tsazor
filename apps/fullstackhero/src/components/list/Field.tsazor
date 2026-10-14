@@ -37,7 +37,7 @@
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     protected override onInitialized(): void {
-        if (this.editContext) this.observe({ subscribe: (listener: () => void) => this.editContext!.onValidationStateChanged.subscribe(listener) });
+        if (this.editContext) this.observe(this.editContext.onValidationStateChanged);
     }
 
     private get message(): string | undefined {

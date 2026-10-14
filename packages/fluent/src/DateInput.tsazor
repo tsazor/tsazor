@@ -42,7 +42,7 @@
     private readonly field = new FieldState("fui-date");
 
     private get message(): string {
-        return this.field.message(this.editContext, this.ValueExpression);
+        return this.field.message(this.editContext, this.valueExpression);
     }
 
     private get validity(): string {

@@ -59,7 +59,7 @@ describe("DataAnnotations field rules", () => {
       "The field password must be a string with a minimum length of 4 and a maximum length of 12.",
       "'confirmedPassword' and 'password' do not match.",
     ]);
-    unsubscribe.dispose();
+    unsubscribe();
   });
 
   it("a valid model yields no messages and validate() returns true", () => {
@@ -75,7 +75,7 @@ describe("DataAnnotations field rules", () => {
     const unsubscribe = enableDataAnnotationsValidation(context);
     expect(context.validate()).toBe(true);
     expect(context.getValidationMessages()).toEqual([]);
-    unsubscribe.dispose();
+    unsubscribe();
   });
 
   it("a field change revalidates exactly that field (Blazor's OnFieldChanged handler)", () => {
@@ -94,7 +94,7 @@ describe("DataAnnotations field rules", () => {
     expect(context.getValidationMessages("age")).toEqual(["The field age must be between 18 and 99."]);
     context.notifyFieldChanged("age", 50);
     expect(context.getValidationMessages("age")).toEqual([]);
-    unsubscribe.dispose();
+    unsubscribe();
   });
 
   it("Required judges .NET-style: whitespace strings missing, booleans non-strings valid", () => {
@@ -114,7 +114,7 @@ describe("DataAnnotations field rules", () => {
     // allowEmptyStrings: the empty string is valid (Blazor's RequiredAttribute).
     context.notifyFieldChanged("optional", "");
     expect(context.getValidationMessages("optional")).toEqual([]);
-    unsubscribe.dispose();
+    unsubscribe();
   });
 
   it("multiple rules on one field append their messages in declaration order", () => {
@@ -130,7 +130,7 @@ describe("DataAnnotations field rules", () => {
       "The field mail must be a string or array type with a minimum length of '5'.",
       "The mail field is not a valid e-mail address.",
     ]);
-    unsubscribe.dispose();
+    unsubscribe();
   });
 });
 
@@ -224,6 +224,6 @@ describe("EditForm + DataAnnotationsValidator submit semantics", () => {
     expect(context.getValidationMessages("title")).toEqual(["custom rule: forbidden"]);
     context.notifyFieldChanged("title", "allowed");
     expect(context.getValidationMessages("title")).toEqual([]);
-    unsubscribe.dispose();
+    unsubscribe();
   });
 });

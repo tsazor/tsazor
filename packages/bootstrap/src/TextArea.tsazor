@@ -43,7 +43,7 @@
     private readonly field = new FieldState("tz-textarea");
 
     private get message(): string {
-        return this.field.message(this.editContext, this.ValueExpression);
+        return this.field.message(this.editContext, this.valueExpression);
     }
 
     private get inputClass(): string {

@@ -127,7 +127,7 @@ export async function buildShadowModule(
       ...(compiled.importSuggestions !== undefined ? { importSuggestions: compiled.importSuggestions } : {}),
     };
   } catch {
-    // Compiler-level failures (TSZE000-style) → no type layer; the v1 layer
+    // Compiler-level failures (TZS035-style) → no type layer; the v1 layer
     // still publishes compiler diagnostics.
     return null;
   }

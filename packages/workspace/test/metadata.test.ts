@@ -113,9 +113,9 @@ describe("resolveComponentMetadata (FileContext)", () => {
     const context = await contextFor("Pages/Home.tsazor");
     expect(names(context.resolveComponentMetadata("MainLayout", []))).toEqual(["Body"]);
     const textBox = context.resolveComponentMetadata("TextBox", []);
-    expect(textBox?.parameters.find((p) => p.name === "Value")).toMatchObject({ category: "string", type: "string | null" });
-    expect(textBox?.parameters.find((p) => p.name === "ValueChanged")).toMatchObject({ typeArgument: "string" });
-    expect(names(textBox)).toEqual(["Value", "ValueChanged", "ValueExpression", "editContext", "additionalAttributes", "label"]);
+    expect(textBox?.parameters.find((p) => p.name === "value")).toMatchObject({ category: "string", type: "string | null" });
+    expect(textBox?.parameters.find((p) => p.name === "valueChanged")).toMatchObject({ typeArgument: "string" });
+    expect(names(textBox)).toEqual(["value", "valueChanged", "valueExpression", "editContext", "additionalAttributes", "label"]);
   });
 });
 

@@ -53,8 +53,9 @@ describe("diagnostic catalog", () => {
   });
 
   // Without an example: the codes that need a workspace — code-behind (TZS011),
-  // @using resolution (TZS017, TZS018) and component metadata (TZS025–TZS029).
+  // @using resolution (TZS017, TZS018) and component metadata (TZS025–TZS029) — and
+  // the check's own (TZS033–TZS035: a tsconfig, an unreadable file, a compiler bug).
   it("has an example for most codes", () => {
-    expect(withExamples.length).toBeGreaterThanOrEqual(DIAGNOSTIC_CATALOG.length - 8);
+    expect(withExamples.length).toBeGreaterThanOrEqual(DIAGNOSTIC_CATALOG.length - 11);
   });
 });

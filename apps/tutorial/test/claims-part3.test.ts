@@ -218,7 +218,7 @@ describe("navigation", () => {
     // navigation; the Orders page carries the lock.
     const files = {
       ...b,
-      "Home.tsazor": `@page "/"\n@import Orders from "./Orders.tsazor"\n@inject NavigationManager navigation\n<h1>The Daily Loaf</h1>\n\n@code {\n    static log: string[] = [];\n\n    override onInitialized() {\n        this.navigation.addLocationChanged((_sender, event) => Home.log.push(event.location));\n        this.navigation.registerLocationChangingHandler((context) => {\n            if (Orders.locked) context.preventNavigation();\n        });\n    }\n}\n`,
+      "Home.tsazor": `@page "/"\n@import Orders from "./Orders.tsazor"\n@inject NavigationManager navigation\n<h1>The Daily Loaf</h1>\n\n@code {\n    static log: string[] = [];\n\n    override onInitialized() {\n        this.navigation.addLocationChanged((event) => Home.log.push(event.location));\n        this.navigation.registerLocationChangingHandler((context) => {\n            if (Orders.locked) context.preventNavigation();\n        });\n    }\n}\n`,
       "Orders.tsazor": `@page "/orders"\n<h2>Orders</h2>\n<button class="lock" @onclick="lock">lock</button>\n\n@code {\n    static locked = false;\n\n    lock() {\n        Orders.locked = true;\n    }\n}\n`,
     };
     const m = await mount(files);

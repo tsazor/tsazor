@@ -1,7 +1,9 @@
 # API review before the 1.0 freeze
 
-Status: **2026-10-14, for the owner's decision.** The basis for the freeze (roadmap step "API review", after E3 and
-E10). Five reviews of the snapshots in `api/` — the runtime; @tsazor/ui; the two skins against each other; the tools
+Status: **decided 2026-10-14 (owner):** Parts 1 and 2 "so schlank wie möglich", Part 3 "alle nach Empfehlung" (D1…D15
+as recommended). Progress: [handoff-2026-10-14-api-review.md](handoff-2026-10-14-api-review.md).
+
+The basis for the freeze (roadmap step "API review", after E3 and E10). Five reviews of the snapshots in `api/` — the runtime; @tsazor/ui; the two skins against each other; the tools
 (compiler, workspace, lsp, cli, vite-plugin); dotnet, testing, charts, worker and markdown. Every finding was checked in
 the source and its usages counted (`apps/`, `packages/`, without node_modules, dist and .backend); the behavioral ones
 were run (the CLI's exit codes, a strict `tsc` over generated code, `isolatedModules`).

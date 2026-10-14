@@ -106,8 +106,8 @@ would be checked as a legacy decorator and rejected at runtime):
 - **`strict: true` is the supported configuration** — and the only one. Templates, the tutorial
   and the typed checks of the markup assume it: without strict null checks a missing value slips
   through `@if` and bindings unnoticed, and without `noImplicitAny` an untyped lambda parameter
-  disables the checks behind it. `tsazor check` (and the Vite plugin's `check` option) warn with
-  `TSZSTRICT` when the tsconfig leaves `strict` off or switches one of its flags off again.
+  disables the checks behind it. `tsazor check` (and the Vite plugin's `check` option) report the error
+  TZS033 when the tsconfig leaves `strict` off or switches one of its flags off again.
   Inference does most of the typing; annotate where it can't see far enough (parameters,
   empty arrays).
 - `target` ES2022 or newer ⇒ `useDefineForClassFields` is `true` (the TS default), matching the

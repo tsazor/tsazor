@@ -40,7 +40,7 @@
         this.observe(this.shell);
         this.observe(this.auth.changes);
         this.follow();
-        this.observe({ subscribe: (listener: () => void) => this.navigation.addLocationChanged(listener) }, () => {
+        this.observe(this.navigation, () => {
             this.follow();
             // Close the drawer on route changes (e.g. browser back/forward).
             this.shell.setMobileNavOpen(false);

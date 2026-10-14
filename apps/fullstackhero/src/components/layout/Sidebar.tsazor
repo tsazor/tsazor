@@ -62,7 +62,7 @@
         this.observe(this.auth.changes);
         this.follow();
         // Re-sync the open section on every route change.
-        this.observe({ subscribe: (listener: () => void) => this.navigation.addLocationChanged(listener) }, () => this.follow());
+        this.observe(this.navigation, () => this.follow());
     }
 
     private follow(): void {

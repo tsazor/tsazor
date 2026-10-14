@@ -18,7 +18,7 @@ export class NavigationLock extends ComponentBase {
   @Parameter() confirmExternalNavigation = false;
 
   private readonly navigation = this.inject(NavigationManager);
-  private registration?: { dispose(): void };
+  private unregister?: () => void;
   private beforeUnloadInstalled = false;
   /** Per instance, so one lock's removal does not drop another's listener. */
   private readonly onBeforeUnload = (event: BeforeUnloadEvent): void => {
@@ -29,11 +29,11 @@ export class NavigationLock extends ComponentBase {
 
   protected override onAfterRender(): void {
     const hasHandler = this.onBeforeInternalNavigation !== undefined;
-    if (hasHandler && !this.registration) {
-      this.registration = this.navigation.registerLocationChangingHandler((context) => this.invokeHandler(context));
-    } else if (!hasHandler && this.registration) {
-      this.registration.dispose();
-      this.registration = undefined;
+    if (hasHandler && !this.unregister) {
+      this.unregister = this.navigation.registerLocationChangingHandler((context) => this.invokeHandler(context));
+    } else if (!hasHandler && this.unregister) {
+      this.unregister();
+      this.unregister = undefined;
     }
     if (typeof window === "undefined") return;
     if (this.confirmExternalNavigation && !this.beforeUnloadInstalled) {
@@ -58,8 +58,8 @@ export class NavigationLock extends ComponentBase {
 
   /** Unregisters the location-changing handler and removes the `beforeunload` listener. */
   dispose(): void {
-    this.registration?.dispose();
-    this.registration = undefined;
+    this.unregister?.();
+    this.unregister = undefined;
     if (this.beforeUnloadInstalled) {
       window.removeEventListener("beforeunload", this.onBeforeUnload);
       this.beforeUnloadInstalled = false;

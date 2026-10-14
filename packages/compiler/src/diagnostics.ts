@@ -55,10 +55,8 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS004: "Invalid implicit expression.",
   TZS005: "Unresolved component tag.",
   TZS006: "Unclosed code block.",
-  TZS007: "Duplicate attribute.",
   TZS008: "Unsupported directive attribute.",
   TZS009: "Missing attribute value.",
-  TZS010: "Invalid implicit expression terminator.",
   TZS011: "Conflicting code-behind.",
   TZS012: "Unsupported C# construct.",
   TZS013: "Directive not allowed here.",
@@ -81,7 +79,11 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS030: "@Bindable()/@State() needs an auto-accessor of its own.",
   TZS031: "Name reserved by ComponentBase.",
   TZS032: "Blazor lifecycle name — Tsazor never calls it.",
+  TZS033: "TypeScript isn't strict.",
+  TZS034: "File not readable.",
+  TZS035: "The compiler failed.",
 } as const;
+
 
 const CODES = DIAGNOSTIC_MESSAGES;
 

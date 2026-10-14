@@ -156,8 +156,8 @@
     /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
     private get message(): string {
         if (!hasSubmitAttempt(this.editContext)) return "";
-        if (!this.editContext || !this.ValueExpression) return "";
-        return this.editContext.getValidationMessages(this.ValueExpression)[0] ?? "";
+        if (!this.editContext || !this.valueExpression) return "";
+        return this.editContext.getValidationMessages(this.valueExpression)[0] ?? "";
     }
 
     private handleInput(e: Event): void {

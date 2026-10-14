@@ -10,7 +10,7 @@ import { EditContext } from "./edit-context.js";
  */
 export class ValidationMessage extends ComponentBase {
   /** Field name to display messages for (matches the form's validator keys). */
-  @Parameter() For?: string;
+  @Parameter() for?: string;
   /** Pass-through attributes. */
   @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
   /** The enclosing form's EditContext (cascaded by EditForm). */
@@ -32,8 +32,8 @@ export class ValidationMessage extends ComponentBase {
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {
     this.beginRender();
-    if (!this.editContext || !this.For) return;
-    const messages = this.editContext.getValidationMessages(this.For);
+    if (!this.editContext || !this.for) return;
+    const messages = this.editContext.getValidationMessages(this.for);
     if (messages.length === 0) return;
     for (const message of messages) {
       b.openElement(this.nextSequence(), "span");

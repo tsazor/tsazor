@@ -257,7 +257,7 @@ describe("holding the previous page on navigation", () => {
       { template: "/admin", type: loadingPage("Admin", () => admin.promise) },
     ]);
     const announced: string[] = [];
-    app.navigationManager.addLocationChanged((_, event) => announced.push(pathOf(event.location)));
+    app.navigationManager.addLocationChanged((event) => announced.push(pathOf(event.location)));
     // One before the browser captured the page (the Router renders the current URL: Admin)…
     app.navigationManager.navigateTo("/admin");
     app.navigationManager.navigateTo("/admin?tab=2");

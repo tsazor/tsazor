@@ -79,8 +79,8 @@
     /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
     private get message(): string {
         if (!hasSubmitAttempt(this.editContext)) return "";
-        if (!this.editContext || !this.ValueExpression) return "";
-        const messages = this.editContext.getValidationMessages(this.ValueExpression);
+        if (!this.editContext || !this.valueExpression) return "";
+        const messages = this.editContext.getValidationMessages(this.valueExpression);
         return messages[0] ?? "";
     }
 

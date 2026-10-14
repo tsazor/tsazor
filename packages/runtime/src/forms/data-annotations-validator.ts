@@ -4,7 +4,7 @@ import { getCurrentServices } from "../di/service-provider.js";
 import type { Token } from "../di/service-collection.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { EditContext } from "./edit-context.js";
-import { enableDataAnnotationsValidation, type DataAnnotationsValidationSubscription } from "./edit-context.js";
+import { enableDataAnnotationsValidation } from "./edit-context.js";
 import { StringLocalizer } from "../localization/string-localizer.js";
 
 /**
@@ -30,7 +30,7 @@ export class DataAnnotationsValidator extends ComponentBase {
   /** Blazor's [CascadingParameter] EditContext CurrentEditContext (by type). */
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
 
-  private subscription?: DataAnnotationsValidationSubscription;
+  private disableValidation?: () => void;
   private originalEditContext?: EditContext;
 
   protected override onInitialized(): void {
@@ -46,7 +46,7 @@ export class DataAnnotationsValidator extends ComponentBase {
     // tree has no provider at all) — and no auto-render subscription is
     // needed here: the validation pass's re-run notifies the form.
     const localizer = getCurrentServices(this)?.tryGet(StringLocalizer as unknown as Token<StringLocalizer>);
-    this.subscription = enableDataAnnotationsValidation(this.editContext, { localizer });
+    this.disableValidation = enableDataAnnotationsValidation(this.editContext, { localizer });
   }
 
   protected override onParametersSet(): void {
@@ -58,8 +58,8 @@ export class DataAnnotationsValidator extends ComponentBase {
 
   /** Detaches the validation handlers from the EditContext and removes the validator's messages. */
   dispose(): void {
-    this.subscription?.dispose();
-    this.subscription = undefined;
+    this.disableValidation?.();
+    this.disableValidation = undefined;
   }
 
   protected override buildRenderTree(_b: RenderTreeBuilder): void {

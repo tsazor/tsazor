@@ -56,7 +56,9 @@ Conventions of the Razor *template language* — not of C# — stay:
   or Svelte templates. Inside the `@code` block, `this.` remains mandatory.
 - **Parameter names are matched case-insensitively in markup.** That way ported markup
   (`<Button Appearance="…">`) stays unchanged while the TS class keeps idiomatic camelCase
-  (`appearance`). Members are not switched to PascalCase.
+  (`appearance`). Members are not switched to PascalCase: `InputBase`'s `value`/`valueChanged`/`valueExpression` and
+  `ValidationMessage`'s `for` follow the rule (2026-10-14). One named exception: `LayoutComponentBase.Body` stays
+  PascalCase, because every Blazor layout reads it as `@Body` in markup, where the free name is the member.
 - **Bare text in a code context is an error** — this follows from Razor's markup/code boundary,
   not from C#.
 

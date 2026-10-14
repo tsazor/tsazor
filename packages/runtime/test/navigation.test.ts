@@ -36,7 +36,7 @@ describe("navigateTo", () => {
   it("pushes by default, replaces with replace / replaceHistoryEntry, and carries historyEntryState", () => {
     const nav = fresh();
     const events: LocationChangedEventArgs[] = [];
-    nav.addLocationChanged((_, e) => events.push(e));
+    nav.addLocationChanged((e) => events.push(e));
     const length = history.length;
     nav.navigateTo("/a");
     expect(history.length).toBe(length + 1);
@@ -104,8 +104,8 @@ describe("navigateTo", () => {
     await tick();
     await tick();
     expect(location.pathname).toBe("/");
-    first.dispose();
-    second.dispose();
+    first();
+    second();
 
     const errors: unknown[] = [];
     const original = console.error;
@@ -118,7 +118,7 @@ describe("navigateTo", () => {
       await tick();
       expect(location.pathname).toBe("/");
       expect(errors).toHaveLength(1);
-      failing.dispose();
+      failing();
     } finally {
       console.error = original;
     }
@@ -148,7 +148,7 @@ describe("popstate", () => {
   it("without a handler notifies LocationChanged (not intercepted)", async () => {
     const nav = fresh();
     const events: LocationChangedEventArgs[] = [];
-    nav.addLocationChanged((_, e) => events.push(e));
+    nav.addLocationChanged((e) => events.push(e));
     history.pushState(null, "", "/popped");
     window.dispatchEvent(new PopStateEvent("popstate"));
     await tick();
@@ -160,7 +160,7 @@ describe("popstate", () => {
     nav.navigateTo("/current");
     nav.setNavigationLock("l", () => false);
     const events: string[] = [];
-    nav.addLocationChanged((_, e) => events.push(e.location));
+    nav.addLocationChanged((e) => events.push(e.location));
     // An entry not created by the NavigationManager (no _index in its state).
     history.pushState({ foreign: true }, "", "/foreign");
     window.dispatchEvent(new PopStateEvent("popstate"));

@@ -41,7 +41,7 @@
     private readonly field = new FieldState("tz-radio");
 
     private get message(): string {
-        return this.field.message(this.editContext, this.ValueExpression);
+        return this.field.message(this.editContext, this.valueExpression);
     }
 
     private get checkClass(): string {

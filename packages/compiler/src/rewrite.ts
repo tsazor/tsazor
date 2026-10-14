@@ -362,12 +362,38 @@ export function checkBindTarget(code: string): BindTarget {
     break;
   }
   if (ts.isIdentifier(outer)) return { ok: true, field: outer.text, identifier: outer.text };
-  if (ts.isPropertyAccessExpression(outer)) return { ok: true, field: outer.name.text };
-  if (ts.isElementAccessExpression(outer)) {
-    const argument = outer.argumentExpression;
-    return { ok: true, field: ts.isStringLiteralLike(argument) ? argument.text : undefined };
-  }
+  if (ts.isPropertyAccessExpression(outer) || ts.isElementAccessExpression(outer)) return { ok: true, field: bindFieldPath(outer, unwrap) };
   return { ok: false, reason: "is not assignable (expected a field, property or element access)" };
+}
+
+/**
+ * The EditContext field key of a member path: the path below the variable that holds the model (`model.billing.street`
+ * ⇒ `"billing.street"`, `Model!.Title` ⇒ `"Title"`, `this.model.title` ⇒ `"title"`, `model.items[0].name` ⇒
+ * `"items.0.name"`; StandardSchemaValidator keys its issues the same way). A path with an index only known at run time (`items[i].name`) keys by its last member, as one
+ * level did before; a last segment without a name has none.
+ */
+function bindFieldPath(outer: ts.PropertyAccessExpression | ts.ElementAccessExpression, unwrap: (node: ts.Expression) => ts.Expression): string | undefined {
+  const segments: string[] = [];
+  let dynamic = false;
+  let node: ts.Expression = outer;
+  for (;;) {
+    if (ts.isPropertyAccessExpression(node)) {
+      segments.unshift(node.name.text);
+      node = unwrap(node.expression);
+    } else if (ts.isElementAccessExpression(node)) {
+      const argument = node.argumentExpression;
+      if (ts.isStringLiteralLike(argument) || ts.isNumericLiteral(argument)) segments.unshift(argument.text);
+      else dynamic = true;
+      node = unwrap(node.expression);
+    } else {
+      if (ts.isIdentifier(node)) segments.unshift(node.text);
+      else if (node.kind !== ts.SyntaxKind.ThisKeyword) dynamic = true;
+      break;
+    }
+  }
+  const last = ts.isPropertyAccessExpression(outer) ? outer.name.text : ts.isStringLiteralLike(outer.argumentExpression) ? outer.argumentExpression.text : undefined;
+  if (dynamic || last === undefined) return last;
+  return segments.length >= 2 ? segments.slice(1).join(".") : segments[0];
 }
 
 /* Member collection ---------------------------------------------------------- */

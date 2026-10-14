@@ -46,10 +46,10 @@ import { scrollToElement } from "./dom-wrapper.js";
  * page follows the link (the browser doesn't hit-test meanwhile).
  */
 export class NavigationManager {
-  private readonly locationChangedHandlers = new Set<(sender: NavigationManager, event: LocationChangedEventArgs) => void>();
+  private readonly locationChangedHandlers = new Set<(event: LocationChangedEventArgs) => void>();
   private readonly locationChangingHandlers = new Set<LocationChangingHandler>();
   /** Lock id → handler registration (setNavigationLock). */
-  private readonly locks = new Map<string, { dispose(): void }>();
+  private readonly locks = new Map<string, () => void>();
   /** Internal URI store for non-DOM environments (happy-dom tests have window). */
   private internalUri = "http://localhost/";
   /** Blazor's `_index` in history.state: position of the current entry. */
@@ -299,10 +299,20 @@ export class NavigationManager {
     return withQueryParameters(uri, parameters);
   }
 
-  /** Blazor's LocationChanged. */
-  addLocationChanged(handler: (sender: NavigationManager, event: LocationChangedEventArgs) => void): () => void {
+  /** Blazor's LocationChanged: `handler` runs after every URL change; the returned function removes it. */
+  addLocationChanged(handler: (event: LocationChangedEventArgs) => void): () => void {
     this.locationChangedHandlers.add(handler);
-    return () => this.locationChangedHandlers.delete(handler);
+    return () => {
+      this.locationChangedHandlers.delete(handler);
+    };
+  }
+
+  /**
+   * The location changes as a source for a component's `observe` (`this.observe(navigation)` re-renders on each):
+   * the same as `addLocationChanged`.
+   */
+  subscribe(listener: (event: LocationChangedEventArgs) => void): () => void {
+    return this.addLocationChanged(listener);
   }
 
   /**
@@ -311,12 +321,10 @@ export class NavigationManager {
    * handlers run concurrently; one prevention cancels the navigation. A
    * throwing handler prevents it too (the error is logged).
    */
-  registerLocationChangingHandler(handler: LocationChangingHandler): { dispose(): void } {
+  registerLocationChangingHandler(handler: LocationChangingHandler): () => void {
     this.locationChangingHandlers.add(handler);
-    return {
-      dispose: () => {
-        this.locationChangingHandlers.delete(handler);
-      },
+    return () => {
+      this.locationChangingHandlers.delete(handler);
     };
   }
 
@@ -326,7 +334,7 @@ export class NavigationManager {
    * Thin wrapper over registerLocationChangingHandler (Blazor has none; apps use that or `<NavigationLock>`).
    */
   setNavigationLock(lockId: string, callback: (uri: string, isIntercepted: boolean) => boolean | Promise<boolean>): void {
-    this.locks.get(lockId)?.dispose();
+    this.locks.get(lockId)?.();
     const registration = this.registerLocationChangingHandler(async (context) => {
       if (!(await callback(context.targetLocation, context.isNavigationIntercepted))) {
         context.preventNavigation();
@@ -337,7 +345,7 @@ export class NavigationManager {
 
   /** @internal Removes the navigation lock registered under `lockId`. */
   releaseNavigationLock(lockId: string): void {
-    this.locks.get(lockId)?.dispose();
+    this.locks.get(lockId)?.();
     this.locks.delete(lockId);
   }
 
@@ -727,7 +735,7 @@ export class NavigationManager {
     if (scrollTarget !== undefined) this.scrollTarget = scrollTarget;
     const event: LocationChangedEventArgs = { location: uri, isNavigationIntercepted: isIntercepted, historyEntryState };
     for (const handler of [...this.locationChangedHandlers]) {
-      handler(this, event);
+      handler(event);
     }
   }
 
