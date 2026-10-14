@@ -107,9 +107,12 @@ describe("DataGrid", () => {
     const requests: GridItemsProviderRequest<Order>[] = [];
     const pagination = new PaginationState();
     pagination.itemsPerPage = 2;
+    // The first page waits until the test has seen the loading state (a timer raced a busy machine).
+    let openFirst: () => void = () => {};
+    const first = new Promise<void>((resolve) => (openFirst = resolve));
     const provider = async (request: GridItemsProviderRequest<Order>) => {
       requests.push(request);
-      await new Promise((resolve) => setTimeout(resolve, 5));
+      await (requests.length === 1 ? first : new Promise((resolve) => setTimeout(resolve, 5)));
       const rows = request.applySorting(orders).slice(request.startIndex, request.startIndex + request.count!);
       return { items: rows, totalItemCount: orders.length };
     };
@@ -121,7 +124,7 @@ describe("DataGrid", () => {
     await renderer.settle();
     expect(container.querySelector("tbody")!.textContent).toContain("Loading…");
     expect(container.querySelector("table")!.getAttribute("aria-busy")).toBe("true");
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    openFirst();
     await settle(renderer);
     expect(texts(container, "tbody td")).toEqual(["Ali", "Jonas"]);
     expect(container.querySelector("table")!.hasAttribute("aria-busy")).toBe(false);

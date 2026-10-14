@@ -481,3 +481,6 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
 - **A test DOM has no layout.** Put what depends on layout (virtualization, anchoring, scrolling, painted frames)
   in browser tests (Playwright). Run them in all three engines. Under Bootstrap, scroll with `behavior: "instant"`
   before measuring: its reboot scrolls smoothly (L10).
+- **A loading state needs a gate, not a timer.** To see a grid's "Loading…" or a spinner, let the fake
+  `ItemsProvider` (or service) wait on a promise the test resolves after it looked — a provider that waits 5 ms has
+  answered already on a busy CI machine, and the test fails only there.
