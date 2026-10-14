@@ -18,4 +18,16 @@ export interface TsazorPluginOptions {
 
 /* @tsazor/vite-plugin/client */
 
-// (no exports)
+// declare module "*.tsazor"
+declare module "*.tsazor" {
+    import type { ComponentType } from "@tsazor/runtime";
+    const component: ComponentType;
+    export default component;
+}
+
+// declare module "virtual:tsazor-routes"
+declare module "virtual:tsazor-routes" {
+    import type { RouteManifestEntry } from "@tsazor/runtime";
+    const routes: readonly RouteManifestEntry[];
+    export default routes;
+}

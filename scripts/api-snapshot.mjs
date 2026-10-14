@@ -36,6 +36,26 @@ const check = process.argv.includes("--check");
 
 const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
 
+/**
+ * The `@deprecated` and `@internal` tags of a declaration and its members, one line each
+ * (`// @deprecated Foo.bar: use baz`): a deprecation or an internal member that reaches the declarations is an API
+ * fact the printed signature doesn't show (the printer drops comments, so a doc edit doesn't change the snapshot).
+ */
+function tagLines(node, path = []) {
+  const name = node.name && (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) || ts.isPrivateIdentifier(node.name)) ? node.name.text : undefined;
+  const here = name === undefined ? path : [...path, name];
+  const lines = ts
+    .getJSDocTags(node)
+    .filter((tag) => tag.tagName.text === "deprecated" || tag.tagName.text === "internal")
+    .map((tag) => {
+      const comment = typeof tag.comment === "string" ? tag.comment : ts.getTextOfJSDocComment(tag.comment) ?? "";
+      return `// @${tag.tagName.text} ${here.join(".")}${comment.trim() ? `: ${comment.trim().split("\n")[0]}` : ""}`;
+    });
+  const members = ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node) ? node.members : ts.isVariableStatement(node) ? node.declarationList.declarations : [];
+  for (const member of members) lines.push(...tagLines(member, here));
+  return lines;
+}
+
 /** The printable statement of a declaration (a variable's whole statement). */
 function statementOf(declaration) {
   if (ts.isVariableDeclaration(declaration)) return declaration.parent.parent;
@@ -56,7 +76,11 @@ function surfaceOf(packageName, entryFile) {
   const checker = program.getTypeChecker();
   const source = program.getSourceFile(entryFile);
   const moduleSymbol = source && checker.getSymbolAtLocation(source);
-  if (!moduleSymbol) return "// (no exports)\n";
+  // What the entry declares for modules it doesn't own (`/client`: `declare module "virtual:tsazor-routes"`).
+  const ambient = (source?.statements ?? [])
+    .filter((statement) => ts.isModuleDeclaration(statement) && ts.isStringLiteral(statement.name))
+    .map((statement) => `// declare module "${statement.name.text}"\n${printer.printNode(ts.EmitHint.Unspecified, statement, source)}`);
+  if (!moduleSymbol) return ambient.length > 0 ? `${ambient.join("\n\n")}\n` : "// (no exports)\n";
   const exports = checker.getExportsOfModule(moduleSymbol).sort((a, b) => a.getName().localeCompare(b.getName()));
   const blocks = [];
   for (const exported of exports) {
@@ -70,7 +94,7 @@ function surfaceOf(packageName, entryFile) {
     }
     const printed = [...new Set(declarations.map((declaration) => {
       const statement = statementOf(declaration);
-      return printer.printNode(ts.EmitHint.Unspecified, statement, statement.getSourceFile());
+      return [printer.printNode(ts.EmitHint.Unspecified, statement, statement.getSourceFile()), ...tagLines(statement)].join("\n");
     }))];
     blocks.push([`// ${name}`, ...printed].join("\n"));
   }
