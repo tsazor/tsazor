@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "tsazor check && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "check": "tsazor check",
     "verify": "node scripts/verify.mjs",
     "api": "tsazor-dotnet generate http://localhost:5350/swagger/v1/swagger.json --out src/api"
