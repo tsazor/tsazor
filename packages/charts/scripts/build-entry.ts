@@ -78,11 +78,9 @@ await writeFile(path.join(distDir, "tsazor-components.json"), `${JSON.stringify(
 
 const index = [
   ...files.map((file) => `export { default as ${path.basename(file, ".tsazor")} } from "./${path.basename(file, ".tsazor")}.js";`),
-  // The math on its own, for an app that draws a chart of its own (a scale, a curve, the arcs of a donut).
-  'export { areaPath, arcPath, chartSummary, linearScale, linePath, niceStep, pieSlices, stackSeries, valueAxis } from "./chart-math.js";',
 ].join("\n");
 await writeFile(path.join(distDir, "index.js"), `${index}\n`);
-await writeFile(path.join(distDir, "index.d.ts"), `${index}\nexport type { Point, ValueAxis } from "./chart-math.js";\nexport type { ChartOptions, ChartSeries, ChartType } from "./chart-types.js";\n`);
+await writeFile(path.join(distDir, "index.d.ts"), `${index}\nexport type { ChartOptions, ChartSeries, ChartType } from "./chart-types.js";\n`);
 // Written, not copied: a copy keeps the source's time, and removeStale would take it for stale.
 await writeFile(path.join(distDir, "charts.css"), await readFile(path.join(srcDir, "charts.css"), "utf8"));
 console.log(`[${NAME}] built ${files.length} component(s) -> dist/`);

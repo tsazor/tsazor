@@ -36,5 +36,3 @@ import "@tsazor/charts/charts.css";
 - **Accessible:** a figure named `AriaLabel` and described in words ("Line chart: Rye from 98 to 182, over Mon to
   Sat"); the numbers follow in a table (`ShowTable`, default on). With `@bind-SelectedIndex` each series or slice is a
   button the keyboard chooses; `CanHideSeries` turns the legend into checkboxes. A point's value shows on hover.
-- **The math on its own** (`valueAxis`, `linePath`, `arcPath`, `pieSlices`, `stackSeries`, `chartSummary`) for a
-  chart an app draws itself ([guide-charts.md](../../docs/guide-charts.md)).

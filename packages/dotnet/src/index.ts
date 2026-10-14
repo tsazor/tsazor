@@ -31,4 +31,5 @@ export {
   type CookieAuthOptions,
   type JwtAuthOptions,
   type JwtClaims,
+  type JwtClaimValue,
 } from "./auth.js";

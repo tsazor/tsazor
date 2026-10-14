@@ -3,13 +3,18 @@
 /* @tsazor/worker */
 
 // defineWorker
-export declare function defineWorker<Api extends object>(factory: () => WorkerLike, options?: WorkerOptions): new () => WorkerClient<Api>;
+export declare function defineWorker<Api extends object>(factory: () => WorkerLike, options?: DefineWorkerOptions): new () => WorkerClient<Api>;
+
+// DefineWorkerOptions
+export interface DefineWorkerOptions {
+    pool?: number | "auto";
+}
 
 // exposeWorker
 export declare function exposeWorker<Api extends object>(api: Api, scope?: WorkerScope): Api;
 
 // inProcessWorker
-export declare function inProcessWorker<Api extends object>(api: Api, options?: WorkerOptions): WorkerClient<Api>;
+export declare function inProcessWorker<Api extends object>(api: Api, options?: DefineWorkerOptions): WorkerClient<Api>;
 
 // transfer
 export declare function transfer<T>(value: T, transferables: readonly Transferable[]): T;
@@ -19,21 +24,6 @@ export declare const WORKER_SCOPE: unique symbol;
 
 // WorkerClient
 export type WorkerClient<Api> = WorkerProxy<Api> & WorkerControl;
-
-// WorkerConnection
-export declare class WorkerConnection {
-    private readonly factory;
-    private readonly slots;
-    private readonly size;
-    constructor(factory: () => WorkerLike, options?: WorkerOptions);
-    call(method: string, args: readonly unknown[]): Promise<unknown>;
-    terminate(): void;
-    private post;
-    private pick;
-    private start;
-    private receive;
-    private failAll;
-}
 
 // WorkerControl
 export interface WorkerControl {
@@ -49,14 +39,9 @@ export interface WorkerLike {
     terminate(): void;
 }
 
-// WorkerOptions
-export interface WorkerOptions {
-    pool?: number | "auto";
-}
-
 // WorkerProxy
 export type WorkerProxy<Api> = {
-    readonly [K in keyof Api as Api[K] extends (...args: never[]) => unknown ? K : never]: Api[K] extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never;
+    readonly [K in keyof Api as K extends "terminate" | "dispose" | "then" | "constructor" ? never : Api[K] extends (...args: never[]) => unknown ? K : never]: Api[K] extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never;
 };
 
 // WorkerScope

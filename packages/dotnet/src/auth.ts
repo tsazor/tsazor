@@ -92,8 +92,11 @@ export class CookieAuthenticationStateProvider extends AuthenticationStateProvid
 
 /* JWT ------------------------------------------------------------------------ */
 
-/** The decoded JWT payload: claims as ASP.NET Core writes them into the token. */
-export type JwtClaims = Record<string, string | number | string[] | undefined>;
+/** One claim's value in a JWT payload: any JSON value (`email_verified: true`, an `address` object, a list). */
+export type JwtClaimValue = string | number | boolean | null | readonly JwtClaimValue[] | { readonly [key: string]: JwtClaimValue };
+
+/** The decoded JWT payload: claims as ASP.NET Core and other issuers write them into the token. */
+export type JwtClaims = Record<string, JwtClaimValue | undefined>;
 
 /** Microsoft's long claim URIs (Identity → JWT, without short name). */
 export const NAME_ID_CLAIM = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier";
@@ -142,7 +145,7 @@ export function principalFromJwt(claims: JwtClaims): ClaimsPrincipal {
   for (const [type, value] of Object.entries(claims)) {
     if (value === undefined) continue;
     for (const single of Array.isArray(value) ? value : [value]) {
-      list.push({ type, value: String(single) });
+      list.push({ type, value: claimString(single) });
     }
   }
   return {
@@ -155,7 +158,7 @@ export function principalFromJwt(claims: JwtClaims): ClaimsPrincipal {
   };
 }
 
-function claimValue(claims: JwtClaims, ...types: string[]): string | number | string[] | undefined {
+function claimValue(claims: JwtClaims, ...types: string[]): JwtClaimValue | undefined {
   for (const type of types) {
     const value = claims[type];
     if (value !== undefined) return value;
@@ -166,11 +169,17 @@ function claimValue(claims: JwtClaims, ...types: string[]): string | number | st
 function claimText(claims: JwtClaims, type: string): string | undefined {
   const value = claims[type];
   if (value === undefined) return undefined;
-  return Array.isArray(value) ? (value[0] !== undefined ? String(value[0]) : undefined) : String(value);
+  if (Array.isArray(value)) return value[0] !== undefined ? claimString(value[0]) : undefined;
+  return claimString(value);
 }
 
-function toStringList(value: string | number | string[]): string[] {
-  return Array.isArray(value) ? value.map(String) : [String(value)];
+function toStringList(value: JwtClaimValue): string[] {
+  return Array.isArray(value) ? value.map(claimString) : [claimString(value)];
+}
+
+/** A claim value as the text a Claim holds: an object or a list as JSON, as .NET's JwtSecurityTokenHandler does. */
+function claimString(value: JwtClaimValue): string {
+  return typeof value === "object" && value !== null ? JSON.stringify(value) : String(value);
 }
 
 function toClaims(record: Record<string, string | string[]>): Claim[] {

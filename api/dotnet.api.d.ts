@@ -75,7 +75,12 @@ export interface JwtAuthOptions {
 }
 
 // JwtClaims
-export type JwtClaims = Record<string, string | number | string[] | undefined>;
+export type JwtClaims = Record<string, JwtClaimValue | undefined>;
+
+// JwtClaimValue
+export type JwtClaimValue = string | number | boolean | null | readonly JwtClaimValue[] | {
+    readonly [key: string]: JwtClaimValue;
+};
 
 // OpenApiClient
 export declare abstract class OpenApiClient {

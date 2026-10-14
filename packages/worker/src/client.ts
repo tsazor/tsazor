@@ -24,8 +24,8 @@ export interface WorkerLike {
   terminate(): void;
 }
 
-/** Options of `defineWorker`. */
-export interface WorkerOptions {
+/** Options of `defineWorker` (not lib.dom's `WorkerOptions`, which the factory passes to `new Worker`). */
+export interface DefineWorkerOptions {
   /**
    * Up to this many workers share the calls (each call goes to the least
    * busy one); `"auto"`: one per CPU core but one. Default 1.
@@ -35,15 +35,19 @@ export interface WorkerOptions {
 
 /**
  * The client side of a worker API: each function becomes an async method
- * (its result as a promise of the awaited value).
+ * (its result as a promise of the awaited value). `terminate`, `dispose`, `then` and `constructor` are the client's
+ * own (WorkerControl); an API function of that name can't be called through the client.
  */
 export type WorkerProxy<Api> = {
-  readonly [K in keyof Api as Api[K] extends (...args: never[]) => unknown ? K : never]: Api[K] extends (...args: infer A) => infer R
+  readonly [K in keyof Api as K extends "terminate" | "dispose" | "then" | "constructor" ? never : Api[K] extends (...args: never[]) => unknown ? K : never]: Api[K] extends (...args: infer A) => infer R
     ? (...args: A) => Promise<Awaited<R>>
     : never;
 };
 
-/** What every worker client has besides the API's methods. */
+/**
+ * What every worker client has besides the API's methods. A member added here in a 1.x release is symbol-keyed, so it
+ * never takes the name of an API function.
+ */
 export interface WorkerControl {
   /** Stops the worker(s) now; pending calls reject. The next call starts a fresh one. */
   terminate(): void;
@@ -76,7 +80,7 @@ export class WorkerConnection {
   /** `factory` starts one worker; `options.pool` caps how many run at once. */
   constructor(
     private readonly factory: () => WorkerLike,
-    options: WorkerOptions = {},
+    options: DefineWorkerOptions = {},
   ) {
     const pool = options.pool ?? 1;
     const cores = typeof navigator !== "undefined" && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 2;
@@ -242,7 +246,7 @@ const RESERVED = new Set<PropertyKey>(["then", "terminate", "dispose", "construc
  * The worker starts on the first call. `terminate()` (or `dispose()`, which
  * DI calls) stops it.
  */
-export function defineWorker<Api extends object>(factory: () => WorkerLike, options?: WorkerOptions): new () => WorkerClient<Api> {
+export function defineWorker<Api extends object>(factory: () => WorkerLike, options?: DefineWorkerOptions): new () => WorkerClient<Api> {
   return class WorkerClientBase {
     constructor() {
       const connection = new WorkerConnection(factory, options);

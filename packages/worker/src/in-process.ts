@@ -1,4 +1,4 @@
-import { WorkerConnection, proxyFor, type WorkerClient, type WorkerLike, type WorkerOptions } from "./client.js";
+import { WorkerConnection, proxyFor, type WorkerClient, type WorkerLike, type DefineWorkerOptions } from "./client.js";
 import { exposeWorker } from "./expose.js";
 
 /**
@@ -12,7 +12,7 @@ import { exposeWorker } from "./expose.js";
  * services.registerValue(ImportWorker, inProcessWorker<ImportApi>(api));
  * ```
  */
-export function inProcessWorker<Api extends object>(api: Api, options?: WorkerOptions): WorkerClient<Api> {
+export function inProcessWorker<Api extends object>(api: Api, options?: DefineWorkerOptions): WorkerClient<Api> {
   const connection = new WorkerConnection(() => channelWorker(api), options);
   return proxyFor<Api>({}, (method, args) => connection.call(method, args), () => connection.terminate());
 }

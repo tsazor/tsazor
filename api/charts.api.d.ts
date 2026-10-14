@@ -2,12 +2,6 @@
 
 /* @tsazor/charts */
 
-// arcPath
-export declare function arcPath(cx: number, cy: number, radius: number, inner: number, start: number, end: number): string;
-
-// areaPath
-export declare function areaPath(points: readonly Point[], baseline: number, smooth?: boolean): string;
-
 // Chart
 export default class Chart extends ComponentBase {
     chartType: ChartType;
@@ -50,42 +44,8 @@ export interface ChartSeries {
     readonly data: readonly number[];
 }
 
-// chartSummary
-export declare function chartSummary(type: "line" | "area" | "bar" | "stacked-bar" | "donut" | "pie", series: readonly {
-    name: string;
-    data: readonly number[];
-}[], labels: readonly string[], format: (value: number) => string): string;
-
 // ChartType
 export type ChartType = "line" | "area" | "bar" | "stacked-bar" | "donut" | "pie";
-
-// linearScale
-export declare function linearScale(domain: readonly [
-    number,
-    number
-], range: readonly [
-    number,
-    number
-]): (value: number) => number;
-
-// linePath
-export declare function linePath(points: readonly Point[], smooth?: boolean): string;
-
-// niceStep
-export declare function niceStep(rough: number): number;
-
-// pieSlices
-export declare function pieSlices(values: readonly number[]): {
-    start: number;
-    end: number;
-    share: number;
-}[];
-
-// Point
-export interface Point {
-    readonly x: number;
-    readonly y: number;
-}
 
 // Sparkline
 export default class Sparkline extends ComponentBase {
@@ -99,26 +59,4 @@ export default class Sparkline extends ComponentBase {
     ariaLabel: string;
     format?: (value: number) => string;
     additionalAttributes?: Record<string, unknown>;
-}
-
-// stackSeries
-export declare function stackSeries(series: readonly (readonly number[])[]): {
-    from: number;
-    to: number;
-}[][];
-
-// valueAxis
-export declare function valueAxis(low: number, high: number, options?: {
-    maxTicks?: number;
-    step?: number;
-    min?: number;
-    max?: number;
-}): ValueAxis;
-
-// ValueAxis
-export interface ValueAxis {
-    readonly min: number;
-    readonly max: number;
-    readonly step: number;
-    readonly ticks: readonly number[];
 }

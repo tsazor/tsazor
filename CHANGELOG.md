@@ -44,7 +44,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     compiler optimization off.
   - `@tsazor/dotnet`: the HTTP helpers (`buildResult`, `sendForResult`, `unwrapEnvelope`, `parseBodyText`, …,
     `HTTP_METHOD`, `HttpBody`) and the generator's internals (`main`, `flattenAllOf`, `resolveSchemaRef`, …,
-    `OpenApiMethod`) are no exports any more; `HttpMethod` is a plain union.
+    `OpenApiMethod`) are no exports any more; `HttpMethod` is a plain union. `JwtClaims` holds JSON values
+    (`JwtClaimValue`: booleans, objects, lists as real tokens carry them); an object claim's `Claim.value` is its JSON
+    text, not `"[object Object]"`.
+  - `@tsazor/charts`: the chart math (`linePath`, `arcPath`, `pieSlices`, `chartSummary`, …) is no export any more;
+    for an app's own SVG chart the guide recommends a layout library (d3).
+  - `@tsazor/worker`: `WorkerConnection` is no export; `WorkerOptions` is `DefineWorkerOptions` (lib.dom has a
+    `WorkerOptions`); `WorkerProxy` leaves out API functions named `terminate`, `dispose`, `then` or `constructor` (the
+    client's own).
   - The runtime's published declarations leave out what is marked `@internal` (`stripInternal`): Virtualize's measuring
     state, EditContext's field-state bookkeeping, NavigationManager's holds and `setNavigationLock`,
     `AuthenticationStateProvider.peekState`, and more. `EditContext.notifyValidationStateChanged` is public (Blazor's
