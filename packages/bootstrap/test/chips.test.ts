@@ -15,9 +15,9 @@ afterEach(() => {
 
 const keep = (result: RenderResult) => (mounted.push(result), result);
 const settle = async (result: RenderResult) => {
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 };
 
 /** A page with a set of fruit chips bound to `selected`, whose closed chips leave `fruits`. */

@@ -29,7 +29,7 @@ function componentBaseMembers(): string[] {
 describe("names reserved by ComponentBase (TZS031)", () => {
   it("every non-private ComponentBase member is reserved or an overridable hook", () => {
     const members = componentBaseMembers();
-    expect(members.length).toBeGreaterThan(20);
+    expect(members.length).toBeGreaterThan(10);
     const undecided = members.filter((name) => !RESERVED_MEMBERS.has(name) && !OVERRIDABLE_MEMBERS.has(name));
     expect(undecided, "add each to RESERVED_MEMBERS or OVERRIDABLE_MEMBERS in compiler/src/reserved-members.ts").toEqual([]);
     const stale = [...RESERVED_MEMBERS, ...OVERRIDABLE_MEMBERS].filter((name) => !members.includes(name));

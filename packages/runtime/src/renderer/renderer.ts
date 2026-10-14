@@ -1,3 +1,5 @@
+import { componentInternals } from "../components/component-internals.js";
+import { parameterInfoOf } from "../components/parameter-metadata.js";
 import { getFrameSubtreeLength, type RenderFragment, type RenderTreeFrame } from "../render-tree/render-tree.js";
 import { FrameType } from "../render-tree/frame-type.js";
 import { attributeMap, computeDiff, type DiffOptions, type RenderTreeDiff } from "../render-tree/diff.js";
@@ -181,15 +183,14 @@ export class Renderer {
     // notifications (design-localization.md §3).
     const autoObserve: unknown[] = [];
     const component = withServices(this.services, () => Reflect.construct(definition.type as unknown as new () => ComponentBase, []), autoObserve);
-    for (const service of autoObserve) component.autoObserveInternal(service);
-    component.componentServices = this.services;
+    for (const service of autoObserve) componentInternals.autoObserve(component, service);
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);
     (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.trackFor(state, promise, `${componentName(state)}: tracked work`);
     (state.renderHandle as { reportError?: unknown }).reportError = (error: unknown, phase: RenderErrorPhase) => this.handleComponentError(error, state, phase);
     (state.renderHandle as { sectionRegistry?: unknown }).sectionRegistry = this.sectionRegistry;
     Object.defineProperty(state.renderHandle, "isRenderingInProgress", { get: () => this.batchInProgress });
-    component.renderHandle = state.renderHandle;
+    componentInternals.attach(component, state.renderHandle, this.services);
     this.states.set(id, state);
     return state;
   }
@@ -371,7 +372,7 @@ export class Renderer {
   }
 
   private buildParameterView(state: ComponentState, direct: ReadonlyMap<string, unknown>): ParameterView {
-    const { cascading } = state.component.getParameterInfo();
+    const { cascading } = parameterInfoOf(state.component);
     if (cascading.length === 0) return ParameterView.fromAttributes(direct.entries());
     const values = new Map(direct);
     const subscriptions: ComponentState[] = [];
@@ -407,7 +408,7 @@ export class Renderer {
     const passed = new Set([...direct.keys()].map((name) => name.toLowerCase()));
     const supplied = fields.filter((meta) => !passed.has(meta.propertyName.toLowerCase()));
     if (supplied.length === 0) return values;
-    const services = state.component.componentServices as ServiceProvider | undefined;
+    const services = componentInternals.services(state.component) as ServiceProvider | undefined;
     const navigation = services?.tryGet(NavigationManager as unknown as Token<NavigationManager>);
     if (navigation === undefined || navigation === null) {
       throw new Error("@SupplyParameterFromQuery() needs a NavigationManager service to read the query from.");
@@ -453,7 +454,7 @@ export class Renderer {
       }
       let current: Map<string, unknown>;
       try {
-        const fields = state.component.getParameterInfo().cascading.filter((meta) => meta.query !== undefined);
+        const fields = parameterInfoOf(state.component).cascading.filter((meta) => meta.query !== undefined);
         current = this.queryValues(state, fields, state.directParameters ?? EMPTY_PARAMETERS);
       } catch (error) {
         this.handleComponentError(error, state, "lifecycle");
@@ -561,7 +562,7 @@ export class Renderer {
     const component = state.component as unknown as { dispose?: () => void; disposeAsync?: () => unknown };
     // disposeSignal / track teardown first: the user's dispose already sees
     // an aborted disposeSignal. Never throws (subscription errors are routed).
-    state.component.disposeInternal();
+    componentInternals.dispose(state.component);
     // F2: the component's attachments are cleaned up before its own dispose.
     attachmentHost?.dispose(state, this.attachmentFailed);
     try {
@@ -658,7 +659,7 @@ export class Renderer {
     for (const state of states) {
       if (state.disposed) continue;
       try {
-        const pending = state.component.notifyAfterRender();
+        const pending = componentInternals.notifyAfterRender(state.component);
         if (isPromiseLike(pending)) {
           this.trackFor(state, Promise.resolve(pending).then(undefined, (error) => this.handleComponentError(error, state, "afterRender")), `${componentName(state)}: onAfterRender`);
         }
@@ -679,8 +680,8 @@ export class Renderer {
     const component = state.component;
     // shouldRender was consulted when the render was requested
     // (stateHasChanged, Blazor semantics); the first render always happens.
-    if (component.firstRenderCompleted && !component.pendingRender) return false;
-    component.clearPendingRender();
+    if (componentInternals.firstRenderCompleted(component) && !componentInternals.hasPendingRender(component)) return false;
+    componentInternals.clearPendingRender(component);
     if (state.batchRenderCount++ === 0) this.batchStates.push(state);
     if (state.batchRenderCount > MAX_RENDERS_PER_BATCH) {
       this.handleComponentError(
@@ -712,7 +713,7 @@ export class Renderer {
       if (forcedFragment !== null) {
         forcedFragment(builder);
       } else {
-        component.renderCurrentOutput(builder);
+        componentInternals.renderOutput(component, builder);
       }
       newFrames = builder.getFrames();
       phase = "diff";
@@ -738,7 +739,7 @@ export class Renderer {
     }
     this.dom.commitSlotChildren(state);
     state.currentRenderTree = newFrames;
-    component.markFirstRenderCompleted();
+    componentInternals.markFirstRenderCompleted(component);
     try {
       // Change detection compares against the previous tree's frames.
       this.updateChildren(state, oldFrames, newFrames, diff, disposed);
@@ -751,7 +752,7 @@ export class Renderer {
       // The forced pass was Blazor's separate queue entry; the error content
       // (the component's own output) renders again, as in Blazor's next
       // StateHasChanged entry.
-      component.stateHasChangedInternal();
+      componentInternals.requestRender(component);
     }
     return true;
   }
@@ -921,7 +922,7 @@ export class Renderer {
         delete (component as unknown as Record<string, unknown>)[key];
       }
     }
-    component.forceRenderInternal();
+    componentInternals.forceRender(component);
   }
 
   // #endregion

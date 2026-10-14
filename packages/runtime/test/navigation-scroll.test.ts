@@ -5,7 +5,8 @@
  * LocationChanging/LocationChanged.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ComponentBase, defineComponent, NavigationManager, Renderer, Router, RouteView, ServiceCollection } from "../src/index";
+import { ComponentBase, defineComponent, NavigationManager, Router, RouteView, ServiceCollection } from "../src/index";
+import { Renderer } from "../src/internal";
 import type { RenderTreeBuilder } from "../src/index";
 
 class LongPage extends ComponentBase {

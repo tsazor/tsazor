@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { CascadingParameter, Parameter } from "../components/parameter-metadata.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
@@ -19,7 +20,7 @@ export class ValidationMessage extends ComponentBase {
 
   protected override onInitialized(): void {
     if (this.editContext) {
-      this.editContextUnsubscribe = this.editContext.subscribe(() => this.stateHasChangedInternal());
+      this.editContextUnsubscribe = this.editContext.subscribe(() => componentInternals.requestRender(this));
     }
   }
 
@@ -68,7 +69,7 @@ export class ValidationSummary extends ComponentBase {
 
   protected override onInitialized(): void {
     if (this.editContext) {
-      this.editContextUnsubscribe = this.editContext.subscribe(() => this.stateHasChangedInternal());
+      this.editContextUnsubscribe = this.editContext.subscribe(() => componentInternals.requestRender(this));
     }
   }
 

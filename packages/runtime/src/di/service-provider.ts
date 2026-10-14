@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import type { ComponentBase } from "../components/component-base.js";
 import type { ServiceProvider, Token } from "./service-collection.js";
 
@@ -79,5 +80,5 @@ export function inject<T>(token: Token<T>): T {
 
 /** The provider the renderer used to construct this component. */
 export function getCurrentServices(component: ComponentBase): ServiceProvider | null {
-  return (component.componentServices as ServiceProvider | null) ?? activeProvider;
+  return (componentInternals.services(component) as ServiceProvider | null) ?? activeProvider;
 }

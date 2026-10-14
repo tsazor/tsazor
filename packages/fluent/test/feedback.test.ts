@@ -17,9 +17,9 @@ import {
 
 /** Waits out the microtask render queue plus the settle timer. */
 async function settle(result: RenderResult): Promise<void> {
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 }
 
 /** Renders a component with param attributes plus an optional child slot. */

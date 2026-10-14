@@ -7,11 +7,11 @@ import { renderTree } from "@tsazor/testing";
 import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
 import { Autocomplete, FluentForm, OptionsSearchEventArgs } from "../dist/index.js";
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 beforeAll(() => {
@@ -31,16 +31,16 @@ async function mount(attributes: Record<string, unknown>) {
     b.addAttribute(21, "selectedOptionChanged", EventCallback.unbound((value: unknown) => void changes.push(value)));
     b.closeComponent();
   });
-  await settle(mounted.renderer);
+  await mounted.settle();
   const input = mounted.container.querySelector<HTMLInputElement>("input[role=combobox]")!;
   const type = async (text: string) => {
     input.value = text;
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    await settle(mounted.renderer);
+    await mounted.settle();
   };
   const key = async (name: string) => {
     input.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }));
-    await settle(mounted.renderer);
+    await mounted.settle();
   };
   const options = () => [...mounted.container.querySelectorAll("[role=option]")].map((option) => option.textContent?.trim());
   return { ...mounted, input, type, key, options, changes };
@@ -60,7 +60,7 @@ describe("Autocomplete", () => {
   });
 
   it("moves with the arrows (aria-activedescendant), picks with Enter, shows a removable chip", async () => {
-    const { container, input, type, key, changes, renderer } = await mount({ items: COLORS });
+    const { container, input, type, key, changes, ...renderer } = await mount({ items: COLORS });
     await type("re");
     await key("ArrowDown");
     await key("ArrowDown");
@@ -101,7 +101,7 @@ describe("Autocomplete", () => {
     const search = EventCallback.unbound((args: OptionsSearchEventArgs<string>) =>
       new Promise<void>((resolve) => pending.push({ args, resolve })),
     );
-    const { input, options, renderer } = await mount({ onOptionsSearch: search });
+    const { input, options, ...renderer } = await mount({ onOptionsSearch: search });
     // The searches stay open until the test answers them: let the input handlers start, without waiting for them.
     for (const text of ["r", "re"]) {
       input.value = text;
@@ -124,7 +124,7 @@ describe("Autocomplete in a form", () => {
   it("takes part as an input (MudAutocomplete's For): the message after a submit, a pick validates the field again", async () => {
     const model = { brand: null as string | null };
     let validSubmits = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, FluentForm);
       b.addAttribute(1, "model", model);
       b.addAttribute(2, "validators", { brand: (value: unknown) => (value ? null : "Brand is required!") });

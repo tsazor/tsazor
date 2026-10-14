@@ -12,15 +12,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ComponentBase,
-  Renderer,
   Virtualize,
   VirtualizeAnchorMode,
-  type RenderError,
   type RenderFragment,
   type RenderTreeBuilder,
   type VirtualizeItemsProvider,
   type VirtualizeItemsProviderRequest,
 } from "../src/index";
+import {
+  Renderer,
+  type RenderError,
+} from "../src/internal";
 import { setVirtualizeViewportFactory } from "../src/data/virtualize";
 import { SpacerVisibilityReason, ViewportFillDirection, type VirtualizeViewport } from "../src/data/virtualize-viewport";
 import { useCssomStyles } from "../src/renderer/dom-attributes";

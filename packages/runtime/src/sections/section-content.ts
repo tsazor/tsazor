@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import type { ParameterView } from "../components/parameter-view.js";
@@ -28,11 +29,11 @@ export class SectionContent extends ComponentBase {
   private registeredIsDefaultContent?: boolean;
 
   private get registry(): SectionRegistry {
-    return this.renderHandle.sectionRegistry;
+    return componentInternals.renderHandle(this)!.sectionRegistry;
   }
 
   /** Blazor's SetParametersAsync registration part (after parameter assignment). */
-  override applyParameterValues(parameters: ParameterView): void {
+  protected override applyParameterValues(parameters: ParameterView): void {
     super.applyParameterValues(parameters);
     const identifier = resolveSectionIdentifier("SectionContent", this.sectionName, this.sectionId);
     if (identifier !== this.registeredIdentifier || this.isDefaultContent !== this.registeredIsDefaultContent) {

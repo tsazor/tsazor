@@ -4,7 +4,9 @@
  * the first render and while the component builds its render tree.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, Renderer, State, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, State, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
+import { componentInternals } from "../src/components/component-internals";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -79,7 +81,7 @@ describe("@State (F6)", () => {
       }
     }
     const { component, renderer } = await mount(Counting);
-    (component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    componentInternals.requestRender(component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
     expect(component.builds).toBe(2);
   });

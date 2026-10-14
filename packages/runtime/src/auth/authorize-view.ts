@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
@@ -46,18 +47,18 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
-    const services = this.componentServices as ServiceProvider | undefined;
+    const services = componentInternals.services(this) as ServiceProvider | undefined;
     this.unsubscribe = watchAuthenticationState(
       services,
       (state) => {
         this.authenticationState = state;
         this.resolved = true;
-        this.stateHasChangedInternal();
+        componentInternals.requestRender(this);
       },
       () => {
         // A promise was notified: Authorizing until it resolves, as Blazor awaits the Task.
         this.resolved = false;
-        this.stateHasChangedInternal();
+        componentInternals.requestRender(this);
       },
     );
   }
@@ -102,7 +103,7 @@ export class AuthorizeView extends ComponentBase implements CascadingValueSuppli
   }
 
   private authorizationService(): AuthorizationService {
-    const services = this.componentServices as ServiceProvider | undefined;
+    const services = componentInternals.services(this) as ServiceProvider | undefined;
     return services?.tryGet(AuthorizationService) ?? defaultAuthorizationService;
   }
 }

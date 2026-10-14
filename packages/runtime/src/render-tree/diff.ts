@@ -7,7 +7,7 @@ import { EventCallback } from "../components/event-callback.js";
  * Edit kinds of a render tree diff, mirroring Blazor's RenderTreeEditType
  * (same names and values, so the JS BrowserRenderer semantics carry over).
  */
-export const enum RenderTreeEditType {
+export enum RenderTreeEditType {
   /** Insert the frame `referenceFrameIndex` (new tree, whole subtree) before `siblingIndex`. */
   PrependFrame = 1,
   /** Remove the logical child at `siblingIndex`. */

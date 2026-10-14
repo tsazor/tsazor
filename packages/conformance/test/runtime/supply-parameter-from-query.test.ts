@@ -14,10 +14,8 @@ import {
   createTsazorApp,
   createUser,
   defineComponent,
-  matchRoute,
   NavigationManager,
   Parameter,
-  Renderer,
   RouteView,
   Router,
   ServiceCollection,
@@ -28,6 +26,10 @@ import {
   type RouteData,
   type RouteEntry,
 } from "@tsazor/runtime";
+import {
+  matchRoute,
+  Renderer,
+} from "@tsazor/runtime/internal";
 
 afterEach(() => {
   document.body.innerHTML = "";

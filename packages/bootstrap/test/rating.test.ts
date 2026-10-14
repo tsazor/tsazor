@@ -36,7 +36,7 @@ async function rating(attrs: Record<string, unknown> = {}, value = 3) {
   }
   const result = await render(Host);
   mounted.push(result);
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   const group = () => result.container.querySelector<HTMLElement>("[role=radiogroup]")!;
   const radios = () => [...result.container.querySelectorAll<HTMLInputElement>("input[type=radio]")];
   const key = async (target: Element, name: string, init: KeyboardEventInit = {}) => {
@@ -129,7 +129,7 @@ describe("RatingDisplay", () => {
       b.closeComponent();
     });
     mounted.push(result);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     return result.container.querySelector<HTMLElement>("[role=img]")!;
   }
 

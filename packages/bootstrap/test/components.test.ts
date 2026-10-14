@@ -55,16 +55,16 @@ beforeAll(() => {
 });
 
 /** Waits out the microtask render queue plus the settle timer. */
-async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer"]): Promise<void> {
-  await renderer.waitUntilIdle();
+async function settle(renderer: Pick<Awaited<ReturnType<typeof renderTree>>, "settle">): Promise<void> {
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 describe("Button", () => {
   it("renders variant classes and fires onClick", async () => {
     let clicks = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Button);
       b.addAttribute(1, "intent", "success");
       b.addAttribute(2, "appearance", "outline");
@@ -143,7 +143,7 @@ describe("Badge", () => {
 describe("Alert", () => {
   it("renders and dismisses, firing onDismissed", async () => {
     let dismissed = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Alert);
       b.addAttribute(1, "intent", "warning");
       b.addAttribute(2, "dismissible", true);
@@ -203,7 +203,7 @@ describe("Modal", () => {
 
   it("shows title, body and fires onClosed from the close button", async () => {
     let closed = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Modal);
       b.addAttribute(1, "isOpen", true);
       b.addAttribute(2, "title", "Confirm");
@@ -223,7 +223,7 @@ describe("Modal", () => {
 
   it("does not close when the dialog body is clicked", async () => {
     let closed = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Modal);
       b.addAttribute(1, "isOpen", true);
       b.addAttribute(2, "onClosed", EventCallback.unbound(() => {
@@ -254,7 +254,7 @@ describe("Dialog (the modal dialog pattern, on @tsazor/ui)", () => {
   }
 
   it("is a labelled modal dialog that takes focus and locks the page scroll", async () => {
-    const { container, renderer } = await open(() => {});
+    const { container, ...renderer } = await open(() => {});
     await settle(renderer);
     const dialog = container.querySelector<HTMLElement>("[role=dialog]")!;
     expect(dialog.getAttribute("aria-modal")).toBe("true");
@@ -265,7 +265,7 @@ describe("Dialog (the modal dialog pattern, on @tsazor/ui)", () => {
 
   it("asks to close on Escape and on a press on the backdrop, not inside", async () => {
     let closed = 0;
-    const { container, renderer } = await open(() => closed++);
+    const { container, ...renderer } = await open(() => closed++);
     await settle(renderer);
     container.querySelector(".modal-body")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     expect(closed).toBe(0);
@@ -284,7 +284,7 @@ describe("Form + inputs (FieldState from @tsazor/ui)", () => {
   it("links label, help and message; shows the message only after a submit; turns valid when fixed", async () => {
     const model = { name: "", size: "" };
     let invalidSubmits = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Form);
       b.addAttribute(1, "model", model);
       b.addAttribute(2, "validators", { name: (value: unknown) => (value ? null : "Name is required") });
@@ -346,7 +346,7 @@ describe("Form + inputs (FieldState from @tsazor/ui)", () => {
 describe("Drawer, ToastRegion, Tooltip", () => {
   it("Drawer is a modal dialog sliding in from its edge, closing on Escape", async () => {
     let closed = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Drawer);
       b.addAttribute(1, "isOpen", true);
       b.addAttribute(2, "placement", "end");
@@ -370,7 +370,7 @@ describe("Drawer, ToastRegion, Tooltip", () => {
 
   it("ToastRegion renders the Toaster's toasts and closes one with its button", async () => {
     const toaster = new Toaster();
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       (b) => {
         b.openComponent(0, ToastRegion);
         b.closeComponent();
@@ -392,7 +392,7 @@ describe("Drawer, ToastRegion, Tooltip", () => {
 
   it("ToastRegion shows a toast's action: a click runs it and closes the toast", async () => {
     const toaster = new Toaster();
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       (b) => {
         b.openComponent(0, ToastRegion);
         b.closeComponent();
@@ -419,7 +419,7 @@ describe("Drawer, ToastRegion, Tooltip", () => {
   });
 
   it("Tooltip describes the element inside it", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Tooltip);
       b.addAttribute(1, "text", "Save the order");
       b.addAttribute(2, "childContent", (inner: typeof b) => {
@@ -446,7 +446,7 @@ describe("Tabs + Tab", () => {
   }
 
   it("renders the nav after registration and switches panes on click", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Tabs);
       b.addAttribute(1, "childContent", (inner: typeof b) => {
         inner.openComponent(0, Tab);
@@ -481,7 +481,7 @@ describe("Tabs + Tab", () => {
 
   it("follows the tabs pattern: roving tabindex, arrow keys, ids linking tab and panel", async () => {
     const selected: number[] = [];
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Tabs);
       b.addAttribute(1, "onSelected", EventCallback.unbound((index: number) => {
         selected.push(index);
@@ -514,7 +514,7 @@ describe("Tabs + Tab", () => {
 
 describe("Accordion + AccordionItem", () => {
   it("opens one item at a time", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Accordion);
       b.addAttribute(1, "childContent", (inner: typeof b) => {
         for (let i = 0; i < 2; i++) {
@@ -545,7 +545,7 @@ describe("Accordion + AccordionItem", () => {
 describe("Dropdown + DropdownItem", () => {
   it("toggles the menu, selects an item and closes", async () => {
     let selected = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Dropdown);
       b.addAttribute(1, "label", "Menu");
       b.addAttribute(2, "childContent", (inner: typeof b) => {
@@ -571,7 +571,7 @@ describe("Dropdown + DropdownItem", () => {
   });
 
   it("opens from labelContent — the user's avatar, as MudBlazor's ActivatorContent — named by ariaLabel", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Dropdown);
       b.addAttribute(1, "labelContent", (inner: typeof b) => {
         inner.openElement(0, "span");
@@ -596,7 +596,7 @@ describe("Dropdown + DropdownItem", () => {
   });
 
   it("follows the menu button pattern: arrow keys open and move, Escape closes and returns focus", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Dropdown);
       b.addAttribute(1, "label", "Order");
       b.addAttribute(2, "childContent", (inner: typeof b) => {
@@ -645,7 +645,7 @@ describe("Progress", () => {
 describe("Pagination", () => {
   it("marks the active page and reports changes", async () => {
     let page = 1;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Pagination);
       b.addAttribute(1, "page", page);
       b.addAttribute(2, "pageCount", 3);
@@ -694,7 +694,7 @@ describe("Breadcrumb + BreadcrumbItem", () => {
 
   it("renders an entry with onClick as a button that raises it", async () => {
     let clicks = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, BreadcrumbItem);
       b.addAttribute(1, "onClick", EventCallback.unbound(() => { clicks++; }));
       b.addAttribute(2, "childContent", text("images"));
@@ -712,7 +712,7 @@ describe("Breadcrumb + BreadcrumbItem", () => {
 describe("ListGroup + ListGroupItem", () => {
   it("renders anchors and fires clicks on plain items", async () => {
     let clicked = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, ListGroup);
       b.addAttribute(1, "childContent", (inner: typeof b) => {
         inner.openComponent(0, ListGroupItem);
@@ -801,7 +801,7 @@ describe("Navbar, Spinner, Collapse", () => {
 
   it("collapses and expands", async () => {
     let open = false;
-    const { container, renderer, rerender } = await renderTree((b) => {
+    const { container, rerender, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Collapse);
       b.addAttribute(1, "isOpen", open);
       b.addAttribute(2, "childContent", text("Hidden"));
@@ -816,7 +816,7 @@ describe("Navbar, Spinner, Collapse", () => {
 describe("callbacks are awaited (Blazor: await OnClick.InvokeAsync)", () => {
   it("a Button waits for an async onClick, and its failure reaches the ErrorBoundary", async () => {
     let finished = false;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, ErrorBoundary);
       b.addAttribute(1, "childContent", ((inner) => {
         inner.openComponent(0, Button);
@@ -833,7 +833,7 @@ describe("callbacks are awaited (Blazor: await OnClick.InvokeAsync)", () => {
     });
     container.querySelector("button")!.click();
     // The renderer tracks the click until the handler is done (render().click() in tests waits on this).
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(finished).toBe(true);
     expect(container.textContent).toBe("caught: save failed");
   });

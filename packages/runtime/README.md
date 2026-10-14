@@ -27,6 +27,10 @@ createTsazorApp({
 
 The fastest start is `npm create tsazor@latest my-app`.
 
+`@tsazor/runtime/internal` holds the renderer's machinery for Tsazor's own packages and tests. It may change in any
+release and is not covered by the stability promise ([support policy](../../docs/support-policy.md), D-S7); apps
+use `@tsazor/runtime`.
+
 - [Getting started](../../docs/getting-started.md)
 - [Language reference](../../docs/language-reference.md)
 - [Migrating from Blazor](../../docs/migration.md)

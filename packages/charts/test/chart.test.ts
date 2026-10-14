@@ -27,7 +27,7 @@ async function chart(attrs: Record<string, unknown>): Promise<HTMLElement> {
     b.closeComponent();
   });
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result.container.querySelector<HTMLElement>("figure")!;
 }
 
@@ -94,12 +94,12 @@ describe("Chart", () => {
     const series = () => [...svg.querySelectorAll<HTMLElement>(".tz-chart__series")];
     expect(series().map((s) => s.getAttribute("aria-label"))).toEqual(["Rye: 98 to 182", "Spelt: 38 to 75"]);
     series()[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(Host.last!.selected).toBe(1);
     expect(series()[1]!.getAttribute("aria-pressed")).toBe("true");
     expect(series()[0]!.getAttribute("class")).toContain("tz-chart--dimmed");
     series()[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(Host.last!.selected).toBe(-1);
   });
 
@@ -112,11 +112,11 @@ describe("Chart", () => {
       b.closeComponent();
     });
     mounted.push(result);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     const boxes = [...result.container.querySelectorAll<HTMLInputElement>("input[type=checkbox]")];
     expect(boxes.map((box) => box.checked)).toEqual([true, true]);
     boxes[0]!.click();
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(result.container.querySelectorAll(".tz-chart__series")).toHaveLength(1);
     expect(result.container.querySelector("desc")!.textContent).toBe("Line chart: Spelt from 38 to 75, over Mon to Sat.");
   });
@@ -142,7 +142,7 @@ describe("Sparkline", () => {
       b.closeComponent();
     });
     mounted.push(result);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     const svg = result.container.querySelector("svg")!;
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.getAttribute("aria-label")).toBe("Loaves: from 98 to 182, now 150");

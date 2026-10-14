@@ -150,6 +150,11 @@ export function getParameterInfo(type: ComponentClass): ParameterInfo {
   return info;
 }
 
+/** The cached ParameterInfo of a component instance's class. */
+export function parameterInfoOf(component: object): ParameterInfo {
+  return getParameterInfo(Object.getPrototypeOf(component).constructor as ComponentClass);
+}
+
 /** Looks up inherited parameter metadata (own class wins over base class); cached per class, do not mutate. */
 export function findParameterMetadata(type: ComponentClass): Map<string, ParameterMeta> {
   return getParameterInfo(type).all as Map<string, ParameterMeta>;

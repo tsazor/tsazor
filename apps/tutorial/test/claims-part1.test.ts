@@ -7,7 +7,8 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { render, type ComponentBase, type Renderer } from "@tsazor/testing";
+import { render, type ComponentBase } from "@tsazor/testing";
+import { componentInternals } from "@tsazor/runtime/internal";
 import { buildProject, type Files } from "../src/engine/compile-project";
 import { scopeCss } from "../src/engine/scoped-css";
 import { TypeChecker } from "../src/engine/type-check";
@@ -23,7 +24,6 @@ afterAll(() => rmSync(gateDir, { recursive: true, force: true }));
 
 interface Mounted {
   container: HTMLElement;
-  renderer: Renderer;
   instance: ComponentBase & Record<string, unknown>;
   /** Markup without the renderer's boundary comments and scope attributes. */
   html(): string;
@@ -45,13 +45,12 @@ async function mount(files: Files): Promise<Mounted> {
   const result = await render(module.default);
   return {
     container: result.container,
-    renderer: result.renderer,
     instance: result.instance as ComponentBase & Record<string, unknown>,
     html: () =>
       result.container.innerHTML.replace(/<!--\/?bl-tsazor:[^>]*-->/g, "").replace(/\s+b-[0-9a-f]{8}=""/g, ""),
     settle: async (ms = 0) => {
       await new Promise((resolve) => setTimeout(resolve, ms));
-      await result.renderer.waitUntilIdle();
+      await result.settle();
     },
     dispose: () => result.dispose(),
   };
@@ -202,15 +201,14 @@ describe("external-data", () => {
   it("observe returns a function that stops early; (signal, notify) aborts its signal; disposeSignal aborts on removal", async () => {
     const files: Files = {
       "App.tsazor": `<button @onclick="() => show = !show">t</button>\n@if (show) {\n    <Child />\n}\n@code {\n    show = true;\n}\n`,
-      "Child.tsazor": `@import { store } from "./store"\n<p>@store.value</p>\n@code {\n    static log: string[] = [];\n    stop = () => {};\n    override onInitialized() {\n        this.stop = this.observe(store);\n        this.observe((signal, notify) => { signal.addEventListener("abort", () => Child.log.push("hatch aborted")); void notify; });\n        this.disposeSignal.addEventListener("abort", () => Child.log.push("disposed"));\n    }\n}\n`,
+      "Child.tsazor": `@import { store } from "./store"\n<p>@store.value</p>\n@code {\n    static log: string[] = [];\n    static last: Child | undefined;\n    stop = () => {};\n    override onInitialized() {\n        Child.last = this;\n        this.stop = this.observe(store);\n        this.observe((signal, notify) => { signal.addEventListener("abort", () => Child.log.push("hatch aborted")); void notify; });\n        this.disposeSignal.addEventListener("abort", () => Child.log.push("disposed"));\n    }\n}\n`,
       "store.ts": store,
     };
     expect(typeCodes(files)).toEqual([]);
     const m = await mount(files);
-    const childModule = (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "Child.tsazor.js")).href)) as { default: { log: string[] } };
+    const childModule = (await import(pathToFileURL(path.join(gateDir, String(counter - 1), "Child.tsazor.js")).href)) as { default: { log: string[]; last: { stop(): void } } };
     const { store: s } = await storeOf();
-    const childState = [1, 2, 3, 4].map((id) => m.renderer.getComponentState(id)).find((state) => state?.component.constructor.name === "Child");
-    const child = childState!.component as unknown as { stop(): void };
+    const child = childModule.default.last;
     child.stop();
     s.emit(5);
     await m.settle();
@@ -251,7 +249,7 @@ describe("lifecycle", () => {
     const m = await mount(files);
     expect(m.html()).toContain("<p>a yes</p>"); // state set in onInitialized is in the first render
     m.instance.label = "b";
-    m.instance.stateHasChangedInternal();
+    componentInternals.requestRender(m.instance);
     await m.settle();
     click(m);
     await m.settle();
@@ -484,7 +482,7 @@ describe("loading-data", () => {
     for (const module of Object.values(build.modules)) {
       writeFileSync(path.join(dir, `${module.file}.js`), module.code.replace(/(["'])\$app\/([^"']+)\1/g, "$1./$2.js$1"));
     }
-    const { Renderer } = await import("@tsazor/runtime");
+    const { Renderer } = await import("@tsazor/runtime/internal");
     const App = ((await import(pathToFileURL(path.join(dir, "App.tsazor.js")).href)) as { default: never }).default;
     const data = (await import(pathToFileURL(path.join(dir, "data.ts.js")).href)) as { release: (items: string[]) => void };
     const container = document.createElement("div");
@@ -570,7 +568,7 @@ describe("event-modifiers", () => {
     m.container.querySelector("a")!.dispatchEvent(link);
     expect(link.defaultPrevented).toBe(false);
     m.instance.block = true;
-    m.instance.stateHasChangedInternal();
+    componentInternals.requestRender(m.instance);
     await m.settle();
     const blocked = new MouseEvent("click", { bubbles: true, cancelable: true });
     m.container.querySelector("a")!.dispatchEvent(blocked);

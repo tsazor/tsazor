@@ -45,7 +45,7 @@ async function mount(attrs: Record<string, unknown> = {}) {
   const input = result.container.querySelector<HTMLInputElement>("input")!;
   const button = result.container.querySelector<HTMLButtonElement>("button")!;
   const dialog = () => result.container.querySelector<HTMLElement>("[role=dialog]");
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   return { Host, result, input, button, dialog, idle };
 }
 

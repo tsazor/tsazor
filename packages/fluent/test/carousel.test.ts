@@ -43,7 +43,12 @@ async function carousel(attrs: Record<string, unknown> = {}, slides: string[] | 
   }
   const result = await render(Host);
   mounted.push(result);
-  const idle = () => result.renderer.waitUntilIdle();
+  // settle() lets one timer tick pass; under fake timers it is advanced by hand.
+  const idle = async () => {
+    const settled = result.settle();
+    if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(0);
+    await settled;
+  };
   const root = () => result.container.querySelector<HTMLElement>("section")!;
   const shown = () => [...result.container.querySelectorAll<HTMLElement>("[aria-roledescription=slide]")].filter((slide) => !slide.hidden).map((slide) => slide.textContent);
   const button = (name: string) => [...result.container.querySelectorAll<HTMLButtonElement>("button")].find((candidate) => (candidate.getAttribute("aria-label") ?? candidate.textContent) === name)!;

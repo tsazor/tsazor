@@ -10,6 +10,7 @@ import { attachmentHost } from "./attachment-host.js";
 import { motionHost, type MotionWork } from "./motion-host.js";
 import { LogicalChildren, LogicalRange, markLeaving, nextLogicalSibling, removeLogicalChild } from "./logical-range.js";
 import type { Renderer } from "./renderer.js";
+import { componentInternals } from "../components/component-internals.js";
 
 /**
  * Applies a diff's edit list to the real DOM (Blazor's BrowserRenderer). The
@@ -89,7 +90,7 @@ export class DomRenderer implements EventHandlerHost {
     /** F2: whether this pass already queued the check for removed attached elements. */
     let removed = false;
     /** F4: whether this is the component's first render (local intros don't play). */
-    const firstPass = !state.component.firstRenderCompleted;
+    const firstPass = !componentInternals.firstRenderCompleted(state.component);
 
     for (let i = 0; i < edits.length; i++) {
       const edit = edits[i]!;

@@ -5,6 +5,25 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Breaking — the public API is what the stability promise covers** (`docs/support-policy.md`, D-S7; the API review,
+  `docs/api-review-1.0.md`):
+  - `@tsazor/runtime`: **ComponentBase's plumbing is private.** `renderHandle`, `componentServices`,
+    `stateHasChangedInternal` and the other renderer hooks are gone from components; the renderer and the runtime's
+    own components reach them through `componentInternals` in `@tsazor/runtime/internal`. A component's `@code` may now
+    use those names (TZS031 reserves only the deliberate API). `applyParameterValues` is `protected`. Library
+    components call `stateHasChanged()`.
+  - `@tsazor/runtime/internal` (new, not covered by the promise): `Renderer`, `ComponentState`, `DomRenderer`,
+    `Dispatcher`, `RenderHandle`, `RenderError`, the diff (`computeDiff`, `RenderTreeEditType`, …), and helpers apps
+    never used: `toComponentDefinition`, `isComponentDefinition`, `IErrorBoundary`, `SectionRegistry`,
+    `SectionOutletContentRenderer` (no longer a tag), `headSectionId`, `titleSectionId`, `focusBySelector`,
+    `getRouteTable`, `RouteTable`, `matchRoute`, `parseRouteTemplate`, `isLazyRoute`, `queryParametersOf`,
+    `validationRulesOf`, `standardSchemaField`, `watchAuthenticationState`.
+  - `FrameType`, `EventHandlerFlags` (and the internal `RenderTreeEditType`) are real enums: a `declare const enum`
+    can't be used under `isolatedModules` (TS2748), i.e. in a Vite app.
+  - `@tsazor/testing`: `RenderResult` has no `renderer` any more; `settle()` waits for the render. `container` and
+    `instance` are `readonly`.
+  - `@tsazor/compiler`, `@tsazor/workspace` and `@tsazor/lsp` are internal packages: their programmatic APIs serve
+    Tsazor's tools, released in lockstep (snapshots in `api/*.internal.api.d.ts`).
 - **Breaking — the tools need Node 22.12 or later** (`engines.node` of cli, compiler, workspace, lsp, vite-plugin,
   dotnet and create-tsazor; before: 20.19). Node 20 reached its end of life on 2026-04-30; the support policy
   (`docs/support-policy.md`) follows the Node.js LTS lines.

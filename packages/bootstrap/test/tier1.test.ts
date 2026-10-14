@@ -18,11 +18,11 @@ const SKIN = {
 
 const text = (content: string): RenderFragment => (b) => b.addContent(0, content);
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 beforeAll(() => {
@@ -52,7 +52,7 @@ describe("ButtonGroup", () => {
 describe("DateInput", () => {
   it("binds the ISO date text and keeps min and max", async () => {
     const values: string[] = [];
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, DateInput);
       b.addAttribute(1, "label", "Delivery");
       b.addAttribute(2, "value", "2026-10-07");
@@ -112,7 +112,7 @@ describe("FormField", () => {
     const model = { color: "" };
     const context = new EditContext(model);
     const store = new ValidationMessageStore(context);
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, CascadingValue);
       b.addAttribute(1, "value", context);
       b.addAttribute(2, "childContent", (inner: typeof b) => {
@@ -167,7 +167,7 @@ describe("Skeleton", () => {
 
 describe("Popover", () => {
   it("opens a dialog labelled by its title, takes focus, and Escape returns it to the button", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Popover);
       b.addAttribute(1, "label", "Details");
       b.addAttribute(2, "title", "Order 101");

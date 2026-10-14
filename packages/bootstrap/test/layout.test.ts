@@ -12,7 +12,7 @@ const text = (content: string): RenderFragment => (b) => b.addContent(0, content
 describe("Switch", () => {
   it("is a role=switch checkbox in .form-switch and reports the new value", async () => {
     const values: boolean[] = [];
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Switch);
       b.addAttribute(1, "label", "Reminders");
       b.addAttribute(2, "value", false);
@@ -27,7 +27,7 @@ describe("Switch", () => {
     expect(container.querySelector(`label[for="${input.id}"]`)!.textContent).toBe("Reminders");
     input.checked = true;
     input.dispatchEvent(new Event("change", { bubbles: true }));
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(values).toEqual([true]);
   });
 });

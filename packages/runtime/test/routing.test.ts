@@ -10,12 +10,14 @@ import {
   NavLink,
   NavLinkMatch,
   Parameter,
-  Renderer,
   RouteView,
   Router,
   ServiceCollection,
-  matchRoute,
 } from "../src/index";
+import {
+  Renderer,
+  matchRoute,
+} from "../src/internal";
 import { defineComponent } from "../src/index";
 import { navLinkMatches } from "../src/routing/nav-link";
 import type { RenderFragment, RenderTreeBuilder } from "../src/index";

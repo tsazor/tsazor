@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { defineComponent } from "../components/component-definition.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
@@ -23,7 +24,7 @@ export class HeadOutlet extends ComponentBase {
     // its logical-element map, Tsazor recognizes its range-marker comments —
     // same observable rule).
     this.defaultTitle = getAndRemoveExistingTitle();
-    this.stateHasChangedInternal();
+    componentInternals.requestRender(this);
   }
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {

@@ -61,7 +61,7 @@ async function mount(attrs: Record<string, unknown> = {}, visible = true, conten
   }
   const result = await render(Host);
   hosts.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   const host = Host.last!;
   return {
     host,
@@ -69,9 +69,9 @@ async function mount(attrs: Record<string, unknown> = {}, visible = true, conten
     overlay: () => result.container.querySelector<HTMLElement>(`.${PREFIX}-overlay`),
     field: () => result.container.querySelector<HTMLInputElement>("#field")!,
     settle: async () => {
-      await result.renderer.waitUntilIdle();
+      await result.settle();
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await result.renderer.waitUntilIdle();
+      await result.settle();
     },
   };
 }

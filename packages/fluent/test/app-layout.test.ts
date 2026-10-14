@@ -51,7 +51,7 @@ class Shell extends ComponentBase {
 async function mount(): Promise<RenderResult> {
   const result = await render(Shell);
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result;
 }
 
@@ -71,24 +71,24 @@ describe("AppLayout", () => {
 
   it("hides and shows the column with navOpen; a click on the page keeps it in a wide window", async () => {
     windowWidth(1400);
-    const { container, renderer } = await mount();
+    const { container, ...renderer } = await mount();
     Shell.last!.open = false;
     Shell.last!.stateHasChanged();
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(column(container).hidden).toBe(true);
 
     Shell.last!.open = true;
     Shell.last!.stateHasChanged();
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     container.querySelector("main")!.click();
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(column(container).hidden).toBe(false);
     expect(Shell.last!.open).toBe(true);
   });
 
   it("starts closed in a narrow window and tells the parent; opened there, Escape and a click on the page close it", async () => {
     windowWidth(600);
-    const { container, renderer } = await mount();
+    const { container, ...renderer } = await mount();
     expect(Shell.last!.open).toBe(false);
     expect(column(container).hidden).toBe(true);
 
@@ -98,10 +98,10 @@ describe("AppLayout", () => {
     ]) {
       Shell.last!.open = true;
       Shell.last!.stateHasChanged();
-      await renderer.waitUntilIdle();
+      await renderer.settle();
       expect(column(container).hidden).toBe(false);
       close();
-      await renderer.waitUntilIdle();
+      await renderer.settle();
       expect(column(container).hidden).toBe(true);
       expect(Shell.last!.open).toBe(false);
     }

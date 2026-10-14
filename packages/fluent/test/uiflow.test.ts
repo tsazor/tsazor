@@ -7,12 +7,6 @@ import { render, renderTree } from "@tsazor/testing";
 import { ComponentBase, NavigationManager, NavLinkMatch, type RenderTreeBuilder } from "@tsazor/runtime";
 import { SidebarNav, Table } from "../dist/index.js";
 
-/** Waits out the microtask render queue plus the settle timer. */
-async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer"]): Promise<void> {
-  await renderer.waitUntilIdle();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
-}
 
 interface OrderRow {
   id: number;
@@ -69,7 +63,7 @@ async function renderTable(items: OrderRow[]): Promise<ReturnType<typeof renderT
     b.addAttribute(5, "striped", true);
     b.closeComponent();
   });
-  await settle(result.renderer);
+  await result.settle();
   return result;
 }
 
@@ -139,7 +133,7 @@ describe("SidebarNav", () => {
     const result = await render(NavHost, {
       services: (services) => services.registerValue(NavigationManager as never, navigation),
     });
-    await settle(result.renderer);
+    await result.settle();
 
     const links = [...result.container.querySelectorAll(".fui-nav__link")];
     expect(links.map(a => a.textContent)).toEqual(["Overview", "Orders", "Settings"]);
@@ -156,7 +150,7 @@ describe("SidebarNav", () => {
     const result = await render(CompactNavHost, {
       services: (services) => services.registerValue(NavigationManager as never, navigation),
     });
-    await settle(result.renderer);
+    await result.settle();
     const nav = result.container.querySelector("nav")!;
     expect(nav.getAttribute("aria-label")).toBe("Rail");
     expect(nav.className).toBe("fui-nav fui-nav--compact");

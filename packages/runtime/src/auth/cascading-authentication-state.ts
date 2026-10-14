@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
@@ -32,10 +33,10 @@ export class CascadingAuthenticationState extends ComponentBase implements Casca
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
-    const services = this.componentServices as ServiceProvider | undefined;
+    const services = componentInternals.services(this) as ServiceProvider | undefined;
     this.unsubscribe = watchAuthenticationState(services, (state) => {
       this.authenticationState = state;
-      this.stateHasChangedInternal();
+      componentInternals.requestRender(this);
     });
   }
 

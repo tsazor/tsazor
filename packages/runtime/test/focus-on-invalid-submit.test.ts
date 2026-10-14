@@ -3,7 +3,8 @@
  * aria-invalid, in form order) takes the focus, as react-hook-form's shouldFocusError.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, EditForm, EventCallback, FocusOnInvalidSubmit, InputText, Renderer, defineComponent, type EditContext, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EditForm, EventCallback, FocusOnInvalidSubmit, InputText, defineComponent, type EditContext, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
 
 class SignUp extends ComponentBase {
   static withFocus = true;

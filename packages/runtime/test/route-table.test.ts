@@ -3,7 +3,8 @@
  * template parsing errors (TemplateParser) and each route constraint.
  */
 import { describe, expect, it } from "vitest";
-import { matchRoute, parseRouteTemplate, RouteTable, type RouteEntry } from "../src/index";
+import { type RouteEntry } from "../src/index";
+import { matchRoute, parseRouteTemplate, RouteTable } from "../src/internal";
 
 class A {}
 class B {}

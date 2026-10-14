@@ -65,16 +65,16 @@ describe("TextInput contentBefore / contentAfter", () => {
   });
 
   it("the button after the text switches the type, and the input stays the same element with its value", async () => {
-    const { container, renderer } = await mount();
+    const { container, ...renderer } = await mount();
     const input = container.querySelector<HTMLInputElement>("input")!;
     input.value = "123Pa$$word!";
     input.dispatchEvent(new Event("change", { bubbles: true }));
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(Login.last!.password).toBe("123Pa$$word!");
     expect(input.type).toBe("password");
 
     container.querySelector<HTMLButtonElement>(".input-group > button")!.click();
-    await renderer.waitUntilIdle();
+    await renderer.settle();
 
     expect(container.querySelector("input")).toBe(input);
     expect(input.type).toBe("text");

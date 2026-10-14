@@ -14,17 +14,19 @@ import {
   HeadOutlet,
   MemoryHistory,
   NavigationManager,
-  Renderer,
   RouteManifest,
   ServiceCollection,
   StringLocalizer,
   type ComponentBase,
-  type ComponentState,
-  type RenderError,
   type RouteEntry,
   type TsazorAppOptions,
   type Token,
 } from "@tsazor/testing";
+import {
+  Renderer,
+  type ComponentState,
+  type RenderError,
+} from "@tsazor/runtime/internal";
 import { MODULE_PREFIX, type ProjectBuild } from "../src/engine/compile-project";
 import { run, type TestResult } from "../src/preview/mini-test";
 

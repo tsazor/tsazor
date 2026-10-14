@@ -114,7 +114,7 @@ describe("Markdown", () => {
       b.closeComponent();
     });
     mounted.push(block);
-    await block.renderer.waitUntilIdle();
+    await block.settle();
     const root = block.container.querySelector("div.tz-markdown")!;
     expect(root.className).toBe("tz-markdown answer");
     expect(markup(root)).toBe("<p>Hello <em>world</em></p>\n");
@@ -125,7 +125,7 @@ describe("Markdown", () => {
       b.closeComponent();
     });
     mounted.push(line);
-    await line.renderer.waitUntilIdle();
+    await line.settle();
     expect(markup(line.container.querySelector("span.tz-markdown")!)).toBe("<strong>x</strong>");
   });
 
@@ -148,10 +148,10 @@ describe("Markdown", () => {
     }
     const result = await render(Chat);
     mounted.push(result);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(result.container.querySelector(".tz-markdown")!.textContent).toBe("Hel\n");
     result.container.querySelector("button")!.click();
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     const root = result.container.querySelector(".tz-markdown")!;
     expect(root.querySelector("br")).not.toBeNull();
     expect(root.querySelector("strong")!.textContent).toBe("there");

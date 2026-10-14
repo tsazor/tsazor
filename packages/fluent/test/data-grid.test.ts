@@ -22,10 +22,10 @@ const orders: Order[] = [
   { id: 4, customer: "Ali", total: 18 },
 ];
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
   for (let i = 0; i < 3; i++) {
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 }
@@ -49,7 +49,7 @@ const texts = (container: Element, selector: string): string[] => [...container.
 
 describe("DataGrid", () => {
   it("renders a header per column and a row per item; titles come from the property lambda", async () => {
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ items: orders, ariaLabel: "Orders" }, (b) => {
         component(b, 0, PropertyColumn, { property: customer });
         component(b, 10, PropertyColumn, { property: total, title: "Total", format: (v: number) => v.toFixed(2), align: "end" });
@@ -64,7 +64,7 @@ describe("DataGrid", () => {
   });
 
   it("sorts on a header click and says so with aria-sort", async () => {
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ items: orders }, (b) => {
         component(b, 0, PropertyColumn, { property: customer, sortable: true });
         component(b, 10, PropertyColumn, { property: total, sortable: true, isDefaultSortColumn: true, initialSortDirection: "descending" });
@@ -86,7 +86,7 @@ describe("DataGrid", () => {
   it("pages with a Paginator on a shared PaginationState", async () => {
     const pagination = new PaginationState();
     pagination.itemsPerPage = 3;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       component(b, 0, DataGrid, { items: orders, pagination, childContent: ((inner: RenderTreeBuilder) => component(inner, 0, PropertyColumn, { property: customer })) as RenderFragment });
       component(b, 10, Paginator, { state: pagination });
     });
@@ -113,12 +113,12 @@ describe("DataGrid", () => {
       const rows = request.applySorting(orders).slice(request.startIndex, request.startIndex + request.count!);
       return { items: rows, totalItemCount: orders.length };
     };
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ itemsProvider: provider, pagination }, (b) => {
         component(b, 0, PropertyColumn, { property: customer, sortable: true, isDefaultSortColumn: true });
       }),
     );
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(container.querySelector("tbody")!.textContent).toContain("Loading…");
     expect(container.querySelector("table")!.getAttribute("aria-busy")).toBe("true");
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -142,7 +142,7 @@ describe("DataGrid", () => {
       requests.push(request);
       return { items: orders.slice(request.startIndex, request.startIndex + request.count!), totalItemCount: orders.length };
     };
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       component(b, 0, DataGrid, { itemsProvider: provider, pagination, childContent: ((inner: RenderTreeBuilder) => component(inner, 0, PropertyColumn, { property: customer })) as RenderFragment });
       component(b, 10, Paginator, { state: pagination, pageSizeOptions: [2, 4], pageSizeLabel: "Rows per page:" });
     });
@@ -170,7 +170,7 @@ describe("DataGrid", () => {
       requests.push(request);
       return { items: orders, totalItemCount: orders.length };
     };
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ itemsProvider: provider }, (b) => {
         component(b, 0, TemplateColumn, {
           title: "Customer",
@@ -190,7 +190,7 @@ describe("DataGrid", () => {
 
   it("selects rows with checkboxes and reports them through selectedItemsChanged", async () => {
     let selected: Order[] = [];
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ items: orders, selectionMode: "multiple", selectedItemsChanged: EventCallback.unbound((value: Order[]) => { selected = value; }) }, (b) => {
         component(b, 0, PropertyColumn, { property: customer });
       }),
@@ -209,7 +209,7 @@ describe("DataGrid", () => {
   });
 
   it("renders a TemplateColumn with the row as context and sorts it by its sortBy", async () => {
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ items: orders }, (b) => {
         component(b, 0, TemplateColumn, {
           title: "Order",
@@ -232,7 +232,7 @@ describe("DataGrid", () => {
 
   it("collects the columns on every render: a column shown conditionally comes and goes", async () => {
     let showTotal = true;
-    const { container, renderer, instance } = await renderTree(
+    const { container, instance, ...renderer } = await renderTree(
       grid({ items: orders.slice(0, 1) }, (b) => {
         component(b, 0, PropertyColumn, { property: customer });
         if (showTotal) component(b, 10, PropertyColumn, { property: total });
@@ -248,7 +248,7 @@ describe("DataGrid", () => {
   });
 
   it("shows the empty content without rows", async () => {
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ items: [] }, (b) => component(b, 0, PropertyColumn, { property: customer })),
     );
     await settle(renderer);
@@ -261,7 +261,7 @@ describe("DataGrid virtualize", () => {
   const many: Order[] = Array.from({ length: 1_000 }, (_, i) => ({ id: i + 1, customer: `C${String(1000 - i).padStart(4, "0")}`, total: i }));
 
   it("renders only the rows in view between tr spacers, and says how many rows there are", async () => {
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ items: many, virtualize: true, itemSize: 40 }, (b) => {
         component(b, 0, PropertyColumn, { property: (o: Order) => o.id, sortable: true });
         component(b, 10, PropertyColumn, { property: customer, sortable: true });
@@ -293,7 +293,7 @@ describe("DataGrid virtualize", () => {
       const sorted = request.applySorting(many);
       return { items: sorted.slice(request.startIndex, request.startIndex + request.count!), totalItemCount: many.length };
     };
-    const { container, renderer } = await renderTree(
+    const { container, ...renderer } = await renderTree(
       grid({ itemsProvider: provider, virtualize: true, itemSize: 40 }, (b) => {
         component(b, 0, PropertyColumn, { property: customer, sortable: true });
       }),

@@ -1,6 +1,7 @@
 import { ComponentBase, isPromiseLike } from "./component-base.js";
 import { Parameter } from "./parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
+import { componentInternals } from "./component-internals.js";
 
 /** How a promise settled, as an `<Await>` saw it. */
 type Settlement = { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly error: unknown };
@@ -116,10 +117,10 @@ export class Await<TValue = unknown> extends ComponentBase {
       if (signal.aborted || !Object.is(this.#source, source)) return;
       this.#settlement = settlement;
       if (!settlement.ok && this.#catch === undefined) {
-        this.reportErrorInternal(settlement.error, "lifecycle");
+        componentInternals.reportError(this, settlement.error, "lifecycle");
         return;
       }
-      this.stateHasChangedInternal();
+      componentInternals.requestRender(this);
     };
     const settled = Promise.resolve(source).then(
       (value) => settle({ ok: true, value }),
@@ -131,7 +132,7 @@ export class Await<TValue = unknown> extends ComponentBase {
       this.#release = resolve;
       signal.addEventListener("abort", () => resolve(), { once: true });
     });
-    this.renderHandle.track(Promise.race([settled, released]));
+    componentInternals.renderHandle(this)!.track(Promise.race([settled, released]));
   }
 
   protected override buildRenderTree(b: RenderTreeBuilder): void {

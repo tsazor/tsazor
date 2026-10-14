@@ -1,3 +1,4 @@
+import { componentInternals } from "./component-internals.js";
 import type { RenderFragment } from "../render-tree/render-tree.js";
 import type { ComponentBase } from "./component-base.js";
 
@@ -39,7 +40,7 @@ export class ParameterView {
 
   /** Blazor's SetParameterProperties: writes the parameters into the component's `@Parameter` properties via `applyParameterValues` (throws on an undeclared parameter without a captureUnmatchedValues property). */
   setParameterProperties(component: ComponentBase): void {
-    component.applyParameterValues(this);
+    componentInternals.applyParameters(component, this);
   }
 
   /** Blazor's ToDictionary: the parameters as a new plain object. */

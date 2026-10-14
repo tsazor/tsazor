@@ -10,12 +10,14 @@ import {
   AuthorizeRouteView,
   ComponentBase,
   defineComponent,
-  Renderer,
   ServiceCollection,
   TsazorHttp,
   type ClaimsPrincipal,
   type RenderTreeBuilder,
 } from "@tsazor/runtime";
+import {
+  Renderer,
+} from "@tsazor/runtime/internal";
 import {
   CookieAuthenticationStateProvider,
   JwtAuthenticationStateProvider,

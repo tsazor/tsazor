@@ -384,36 +384,6 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true
       }
     },
-    "SectionOutletContentRenderer": {
-      "name": "SectionOutletContentRenderer",
-      "file": "src/sections/section-outlet.ts",
-      "isComponent": true,
-      "typeParameters": [],
-      "parameters": [
-        {
-          "name": "content",
-          "category": "RenderFragment",
-          "optional": true,
-          "hasInitializer": false,
-          "member": "field",
-          "declaredBy": "SectionOutletContentRenderer",
-          "type": "RenderFragment",
-          "references": [
-            {
-              "name": "RenderFragment",
-              "kind": "runtime",
-              "imported": "RenderFragment"
-            }
-          ],
-          "doc": "The content of the provider currently shown."
-        }
-      ],
-      "doc": "Blazor's SectionOutlet.SectionOutletContentRenderer: opens a fresh component\ninstance per content provider — when the content switches, this instance and\nits logical parent are rebuilt, so anything derived from the parent chain\n(error boundaries, cascades) is re-evaluated for the new content.",
-      "base": {
-        "name": "ComponentBase",
-        "resolved": true
-      }
-    },
     "SectionContent": {
       "name": "SectionContent",
       "file": "src/sections/section-content.ts",

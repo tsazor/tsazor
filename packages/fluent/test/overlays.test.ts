@@ -10,11 +10,11 @@ import { Drawer, Dropdown, DropdownItem, Menu, MenuItem, Tooltip } from "../dist
 
 const text = (content: string): RenderFragment => (b) => b.addContent(0, content);
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 beforeAll(() => {
@@ -29,7 +29,7 @@ describe("Menu + MenuItem", () => {
 
   it("toggles the menu, selects an item and closes", async () => {
     let selected = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Menu);
       b.addAttribute(1, "label", "Actions");
       b.addAttribute(2, "childContent", (inner: typeof b) => {
@@ -55,7 +55,7 @@ describe("Menu + MenuItem", () => {
   });
 
   it("opens from labelContent — the user's avatar, as MudBlazor's ActivatorContent — named by ariaLabel", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Menu);
       b.addAttribute(1, "label", "ignored");
       b.addAttribute(2, "labelContent", (inner: typeof b) => {
@@ -91,7 +91,7 @@ describe("Menu + MenuItem", () => {
   });
 
   it("follows the menu button pattern: arrow keys open and move, Escape closes and returns focus", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Menu);
       b.addAttribute(1, "label", "Order");
       b.addAttribute(2, "childContent", (inner: typeof b) => {
@@ -124,7 +124,7 @@ describe("Menu + MenuItem", () => {
 describe("Drawer", () => {
   it("is a modal panel on its edge: focus moves in, Escape asks to close", async () => {
     let closed = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Drawer);
       b.addAttribute(1, "isOpen", true);
       b.addAttribute(2, "placement", "end");
@@ -151,7 +151,7 @@ describe("Drawer", () => {
 
 describe("Tooltip", () => {
   it("describes the element inside it, in Fluent's tooltip classes", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Tooltip);
       b.addAttribute(1, "text", "Save the order");
       b.addAttribute(2, "childContent", (inner: typeof b) => {

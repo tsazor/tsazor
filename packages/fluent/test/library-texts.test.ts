@@ -7,10 +7,10 @@ import { renderTree } from "@tsazor/testing";
 import { CultureService, StringLocalizer, type RenderFragment, type RenderTreeBuilder } from "@tsazor/runtime";
 import { DataGrid, PaginationState, Paginator, PropertyColumn } from "../dist/index.js";
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
   for (let i = 0; i < 3; i++) {
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 }
@@ -54,14 +54,14 @@ async function mount(paginator: Record<string, unknown> = {}) {
       },
     },
   );
-  await settle(mounted.renderer);
+  await mounted.settle();
   const nav = () => mounted.container.querySelector("nav")!;
   return { ...mounted, culture, nav };
 }
 
 describe("library texts in the skin", () => {
   it("are English by default and follow the culture into the app's table", async () => {
-    const { culture, nav, renderer } = await mount();
+    const { culture, nav, ...renderer } = await mount();
     expect(nav().getAttribute("aria-label")).toBe("Pages");
     expect(nav().textContent).toContain("Page 1 of 2");
     expect(nav().textContent).toContain("4 items");
@@ -78,7 +78,7 @@ describe("library texts in the skin", () => {
   });
 
   it("give way to a text parameter", async () => {
-    const { culture, nav, renderer } = await mount({ ariaLabel: "Orders pages" });
+    const { culture, nav, ...renderer } = await mount({ ariaLabel: "Orders pages" });
     culture.setExplicit("de-DE");
     await settle(renderer);
     expect(nav().getAttribute("aria-label")).toBe("Orders pages");

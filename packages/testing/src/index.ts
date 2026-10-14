@@ -2,7 +2,6 @@ import {
   ComponentBase,
   CultureService,
   defineComponent,
-  Renderer,
   ServiceCollection,
   StringLocalizer,
   type AttributeValue,
@@ -11,6 +10,7 @@ import {
   type StringTable,
   type Token,
 } from "@tsazor/runtime";
+import { componentInternals, Renderer } from "@tsazor/runtime/internal";
 
 /**
  * A Virtualize in a test DOM has no layout, so no spacer ever comes into view. As bUnit does for Blazor's
@@ -65,11 +65,9 @@ const IDLE_TIMEOUT = 4_000;
  */
 export interface RenderResult<TComponent extends ComponentBase = ComponentBase> {
   /** The DOM output container (attached to document.body). */
-  container: HTMLElement;
-  /** The renderer that hosts the component, with the services from `RenderOptions.services`. */
-  renderer: Renderer;
+  readonly container: HTMLElement;
   /** The component instance. */
-  instance: TComponent;
+  readonly instance: TComponent;
   /** The rendered HTML, without the renderer's boundary comments. */
   readonly markup: string;
   /** The first element matching `selector`; throws when there is none (bUnit's Find). */
@@ -156,7 +154,6 @@ export async function render<TComponent extends ComponentBase>(
   };
   const result: RenderResult<TComponent> = {
     container,
-    renderer,
     get instance() {
       return instance!;
     },
@@ -177,12 +174,12 @@ export async function render<TComponent extends ComponentBase>(
     },
     setParameters: async (next) => {
       parameters = { ...parameters, ...next };
-      (host.component as ComponentBase).stateHasChangedInternal();
+      componentInternals.requestRender(host.component as ComponentBase);
       await settle();
     },
     settle,
     rerender: async () => {
-      instance!.stateHasChangedInternal();
+      componentInternals.requestRender(instance!);
       await renderer.waitUntilIdle({ timeout: IDLE_TIMEOUT });
       rethrow();
     },

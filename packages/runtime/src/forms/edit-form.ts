@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import { EventCallback } from "../components/event-callback.js";
@@ -116,7 +117,7 @@ export class EditForm extends ComponentBase implements CascadingValueSupplier {
     this.editContextUnsubscribe?.();
     this.currentEditContext = context;
     this.applyValidators();
-    this.editContextUnsubscribe = context.subscribe(() => this.stateHasChangedInternal());
+    this.editContextUnsubscribe = context.subscribe(() => componentInternals.requestRender(this));
   }
 
   private applyValidators(): void {

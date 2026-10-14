@@ -48,7 +48,7 @@ async function mount(attrs: Record<string, unknown> = {}) {
   const root = result.container.firstElementChild as HTMLElement;
   const cell = (value: string) => root.querySelector<HTMLElement>(`[data-value="${value}"]`)!;
   const title = () => root.querySelector(`.${PREFIX}-calendar__title`)!.textContent!.trim();
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   return { Host, result, root, cell, title, idle };
 }
 

@@ -17,12 +17,14 @@ import {
   type ClaimsPrincipal,
   defineComponent,
   CascadingParameter,
-  Renderer,
   ServiceCollection,
   type RenderFragment,
   type RenderTreeBuilder,
   createUser,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 
 /* Test provider ------------------------------------------------------------ */
 

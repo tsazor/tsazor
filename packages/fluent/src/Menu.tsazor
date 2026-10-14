@@ -105,6 +105,6 @@
         if (!this.open) return;
         this.open = false;
         if (returnFocus) this.toggleButton?.focus({ preventScroll: true });
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 }

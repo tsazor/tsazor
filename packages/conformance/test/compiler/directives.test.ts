@@ -8,14 +8,16 @@ import {
   AuthenticationStateProvider,
   AuthorizeRouteView,
   ComponentBase,
-  Renderer,
   ServiceCollection,
   createUser,
   defineComponent,
-  matchRoute,
   type ClaimsPrincipal,
   type RenderTreeBuilder,
 } from "@tsazor/runtime";
+import {
+  Renderer,
+  matchRoute,
+} from "@tsazor/runtime/internal";
 import { generateRoutesModule, scanRoutes } from "../../../vite-plugin/src/routes.js";
 import { compileFiles, diagnosticsOf, errorCodes, mount } from "../harness.js";
 

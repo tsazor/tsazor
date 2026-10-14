@@ -34,13 +34,13 @@ class Page extends ComponentBase {
 
 describe("web components interop (direction A)", () => {
   it("renders custom elements as plain elements with slot-projected children", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Page);
       b.closeComponent();
     });
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await renderer.waitUntilIdle();
+    await renderer.settle();
 
     const widget = container.querySelector("my-widget")!;
     expect(widget).not.toBeNull();

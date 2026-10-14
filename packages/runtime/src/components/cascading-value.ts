@@ -36,7 +36,7 @@ export class CascadingValue extends ComponentBase implements CascadingValueSuppl
     return this.name ?? undefined;
   }
 
-  override applyParameterValues(parameters: ParameterView): void {
+  protected override applyParameterValues(parameters: ParameterView): void {
     super.applyParameterValues(parameters);
     // Blazor: consumers decided at resolution time whether to subscribe.
     if (this.initialIsFixed === undefined) {

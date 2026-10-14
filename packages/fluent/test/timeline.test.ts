@@ -25,7 +25,7 @@ async function timeline(attrs: (b: RenderTreeBuilder) => void, items: (c: Render
     b.closeComponent();
   });
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result.container.querySelector<HTMLElement>("ol")!;
 }
 

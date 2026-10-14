@@ -9,6 +9,7 @@ import { compile } from "../src/compile";
 import path from "node:path";
 
 const RUNTIME = path.resolve(__dirname, "../../runtime/src/index.ts");
+const RUNTIME_INTERNAL = path.resolve(__dirname, "../../runtime/src/internal.ts");
 
 async function instantiate(tsCode: string, stubs?: { name: string; contents: string }[]): Promise<Record<string, unknown>> {
   const stubPlugin = {
@@ -30,7 +31,7 @@ async function instantiate(tsCode: string, stubs?: { name: string; contents: str
   // The wrapper imports the compiled component and re-exports the runtime,
   // so the test and the component share ONE runtime module instance — a
   // second copy would break `instanceof EventCallback` checks in the renderer.
-  const wrapper = `import Comp from "tsazor:component";\nexport default Comp;\nexport * from "@tsazor/runtime";\n`;
+  const wrapper = `import Comp from "tsazor:component";\nexport default Comp;\nexport * from "@tsazor/runtime";\nexport { Renderer } from ${JSON.stringify(RUNTIME_INTERNAL)};\n`;
   const result = await esbuild.build({
     stdin: { contents: wrapper, resolveDir: process.cwd(), loader: "ts", sourcefile: "wrapper.ts" },
     bundle: true,
@@ -69,7 +70,7 @@ describe("compiler end-to-end (markup → generated module → runtime DOM)", ()
 
     const mod = await instantiate(code);
     const Counter = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Counter as never, container);
@@ -125,7 +126,7 @@ export default class Greeter extends ComponentBase {
 
     const mod = await instantiate(code, [{ name: "./Greeter.tsazor", contents: stubGreeter }]);
     const Parent = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Parent as never, container);
@@ -173,7 +174,7 @@ export default class Greeter extends ComponentBase {
 
     const mod = await instantiate(code);
     const BindDemo = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(BindDemo as never, container);
@@ -227,7 +228,7 @@ export default class Stepper extends ComponentBase {
 
     const mod = await instantiate(code, [{ name: "./Stepper.tsazor", contents: stubStepper }]);
     const Demo = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Demo as never, container);
@@ -290,7 +291,7 @@ export default class Stepper extends ComponentBase {
 
     const mod = await instantiate(code);
     const Scoped = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Scoped as never, container);
@@ -328,7 +329,7 @@ export default class BeCode extends ComponentBase {
 
     const mod = await instantiate(code, [{ name: "./Counter.tsazor.ts", contents: sidecar }]);
     const Counter = mod.default as abstract new () => unknown;
-    const { Renderer } = mod as unknown as typeof import("../../runtime/src/index");
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
     const container = document.createElement("div");
     const renderer = new Renderer();
     renderer.renderInContainer(Counter as never, container);

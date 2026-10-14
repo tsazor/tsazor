@@ -59,7 +59,7 @@ async function drop(zone: HTMLElement, files: File[], result: RenderResult): Pro
   Object.defineProperty(event, "dataTransfer", { value: { files } });
   zone.dispatchEvent(event);
   await new Promise((resolve) => setTimeout(resolve, 20));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 }
 
 describe("FileUpload", () => {
@@ -112,10 +112,10 @@ describe("FileUpload", () => {
   it("files dragged over mark the zone", async () => {
     const { root, zone, result } = await mount();
     zone.dispatchEvent(new Event("dragover", { bubbles: true, cancelable: true }));
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(root.className).toContain(`${PREFIX}-file-upload--dragover`);
     zone.dispatchEvent(new Event("dragleave", { bubbles: true }));
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(root.className).not.toContain(`${PREFIX}-file-upload--dragover`);
   });
 

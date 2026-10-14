@@ -48,11 +48,6 @@ export declare abstract class AuthenticationStateProvider {
     subscribe(handler: AuthenticationStateChangedHandler, options?: AuthenticationStateSubscribeOptions): () => void;
 }
 
-// AuthenticationStateSubscribeOptions
-export interface AuthenticationStateSubscribeOptions {
-    onPending?: () => void;
-}
-
 // AuthorizationPolicy
 export type AuthorizationPolicy = (user: ClaimsPrincipal) => boolean;
 
@@ -130,13 +125,6 @@ export interface BindableOptions {
 // bindMethod
 export declare function bindMethod<T>(receiver: unknown, method: T): T;
 
-// CascadeEntry
-export interface CascadeEntry {
-    readonly value: unknown;
-    readonly name?: string;
-    readonly typeToken?: abstract new (...args: never[]) => unknown;
-}
-
 // CascadingAuthenticationState
 export declare class CascadingAuthenticationState extends ComponentBase implements CascadingValueSupplier {
     childContent?: RenderFragment;
@@ -177,7 +165,7 @@ export declare class CascadingValue extends ComponentBase implements CascadingVa
     private initialIsFixed?;
     get cascadeValue(): unknown;
     get cascadeName(): string | undefined;
-    applyParameterValues(parameters: ParameterView): void;
+    protected applyParameterValues(parameters: ParameterView): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
 }
 
@@ -210,37 +198,19 @@ export declare function Compare(otherField: string, override?: ValidationMessage
 // ComponentBase
 export declare abstract class ComponentBase {
     #private;
-    renderHandle: RenderHandle;
-    componentServices: unknown;
     setParametersAsync(parameters: ParameterView): Promise<void>;
-    applyParameterValues(parameters: ParameterView): void;
+    protected applyParameterValues(parameters: ParameterView): void;
     protected onInitialized(): void | Promise<void>;
     protected onParametersSet(): void | Promise<void>;
     protected onAfterRender(firstRender: boolean): void | Promise<void>;
     protected shouldRender(): boolean;
     protected stateHasChanged(): void;
-    stateHasChangedInternal(): void;
-    stateFieldChangedInternal(): void;
-    forceRenderInternal(): void;
     protected buildRenderTree(builder: RenderTreeBuilder): void;
-    onAfterRenderInternal(callback: (firstRender: boolean) => void | Promise<void>): void;
-    notifyAfterRender(): void | Promise<void>;
-    get pendingRender(): boolean;
-    renderCurrentOutput(builder: RenderTreeBuilder): void;
-    clearPendingRender(): void;
-    get isInitialized(): boolean;
-    get firstRenderCompleted(): boolean;
-    markFirstRenderCompleted(): void;
-    getAllParameterMetadata(): Map<string, ParameterMeta>;
-    getParameterInfo(): ParameterInfo;
     protected renderFragment(builder: RenderTreeBuilder, fragment: RenderFragment): void;
     protected inject<T>(token: abstract new (...args: never[]) => T): T;
     get disposeSignal(): AbortSignal;
     protected dispatchExceptionAsync(error: unknown): Promise<void>;
     protected observe<T>(source: ObserveSource<T>, onNext?: (value: T) => void): () => void;
-    autoObserveInternal(source: unknown): void;
-    reportErrorInternal(error: unknown, phase: RenderErrorPhase): void;
-    disposeInternal(): void;
 }
 
 // ComponentDefinition
@@ -248,43 +218,8 @@ export interface ComponentDefinition<T extends ComponentBase = ComponentBase> {
     readonly type: abstract new () => T;
 }
 
-// ComponentState
-export declare class ComponentState {
-    readonly id: number;
-    readonly component: ComponentBase;
-    readonly parent: ComponentState | null;
-    readonly range: LogicalRange;
-    readonly slotChildren: Map<number, ComponentState>;
-    readonly newSlotChildren: Map<number, ComponentState>;
-    currentRenderTree: RenderTreeFrame[];
-    readonly renderBuilders: readonly [
-        RenderTreeBuilder,
-        RenderTreeBuilder
-    ];
-    renderPass: number;
-    disposed: boolean;
-    readonly depth: number;
-    renderQueued: boolean;
-    renderQueueOrder: number;
-    batchRenderCount: number;
-    forcedRenderFragment: ((builder: RenderTreeBuilder) => void) | null;
-    cascadingSuppliers: ComponentState[] | null;
-    subscribers: Set<ComponentState> | null;
-    lastCascadeValue: unknown;
-    directParameters: ReadonlyMap<string, unknown> | null;
-    lastQueryValues: Map<string, unknown> | null;
-    definition: ComponentDefinition;
-    readonly renderHandle: RenderHandle;
-    get startMarker(): Comment;
-    get endMarker(): Comment;
-    constructor(id: number, component: ComponentBase, definition: ComponentDefinition, parent: ComponentState | null);
-}
-
 // ComponentType
 export type ComponentType<T extends ComponentBase = ComponentBase> = ComponentDefinition<T> | (abstract new () => T);
-
-// computeDiff
-export declare function computeDiff(oldTree: RenderTreeFrame[], newTree: RenderTreeFrame[], options?: DiffOptions): RenderTreeDiff;
 
 // configureTransitions
 export declare function configureTransitions(settings: TransitionSettings): void;
@@ -360,49 +295,12 @@ export declare function defineComponent<T extends abstract new (...args: never[]
 // defineParameter
 export declare function defineParameter(type: ComponentClass, propertyName: string, options?: Omit<ParameterMeta, "propertyName">): void;
 
-// DiffOptions
-export interface DiffOptions {
-    isSameComponentType?: (oldType: unknown, newType: unknown) => boolean;
-}
-
-// Dispatcher
-export declare class Dispatcher {
-    private queue;
-    private scheduled;
-    private running;
-    invoke<T>(work: () => T): Promise<T>;
-    private schedule;
-    private flush;
-}
-
-// DomRenderer
-export declare class DomRenderer implements EventHandlerHost {
-    private readonly renderer;
-    private readonly journal;
-    private applying;
-    private attachmentWork;
-    private motionWork;
-    constructor(renderer: Renderer);
-    invokeEventHandler(state: ComponentState, callback: EventCallback<never>, event: Event): void;
-    applyEdits(state: ComponentState, frames: RenderTreeFrame[], edits: RenderTreeEdit[]): void;
-    private applyEditsJournaled;
-    private queueAttachment;
-    private queueDirective;
-    private queueMotion;
-    private measureLevel;
-    takeMotionWork(): MotionWork[] | null;
-    takeAttachmentWork(): unknown[] | null;
-    commitSlotChildren(state: ComponentState): void;
-    private insertFrame;
-    private insertChildFrames;
-}
-
 // DynamicComponent
 export declare class DynamicComponent extends ComponentBase {
     type: ComponentType | null;
     parameters?: Record<string, unknown>;
     instance: ComponentBase | null;
-    applyParameterValues(parameters: ParameterView): void;
+    protected applyParameterValues(parameters: ParameterView): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
 }
 
@@ -507,7 +405,7 @@ export declare class EventCallback<TArg = unknown> {
 }
 
 // EventHandlerFlags
-export declare const enum EventHandlerFlags {
+export declare enum EventHandlerFlags {
     None = 0,
     PreventDefault = 1,
     StopPropagation = 2
@@ -518,9 +416,6 @@ export interface FieldIdentifier {
     readonly fieldName: string;
     readonly model: unknown;
 }
-
-// focusBySelector
-export declare function focusBySelector(selector: string): void;
 
 // FocusOnInvalidSubmit
 export declare class FocusOnInvalidSubmit extends ComponentBase {
@@ -552,7 +447,7 @@ export declare function formatMessage(template: string, params?: Record<string, 
 export declare function formatValue(value: unknown, format: string | undefined, culture?: string | CultureInfo): string;
 
 // FrameType
-export declare const enum FrameType {
+export declare enum FrameType {
     Element = 1,
     Text = 2,
     Attribute = 3,
@@ -564,9 +459,6 @@ export declare const enum FrameType {
     ComponentReferenceCapture = 9,
     Attachment = 10
 }
-
-// getRouteTable
-export declare function getRouteTable(routes: readonly RouteManifestEntry[]): RouteTable;
 
 // HeadContent
 export declare class HeadContent extends ComponentBase {
@@ -580,15 +472,6 @@ export declare class HeadOutlet extends ComponentBase {
     protected onAfterRender(firstRender: boolean): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     private readonly buildDefaultTitle;
-}
-
-// headSectionId
-export declare const headSectionId: unique symbol;
-
-// IErrorBoundary
-export interface IErrorBoundary {
-    readonly isErrorBoundary: true;
-    handleException(error: unknown): void;
 }
 
 // inject
@@ -677,15 +560,6 @@ export declare class InputTextArea extends InputBase<string> {
 // isCascadingValueSupplier
 export declare function isCascadingValueSupplier(value: unknown): value is CascadingValueSupplier;
 
-// isComponentDefinition
-export declare function isComponentDefinition(value: unknown): value is ComponentDefinition;
-
-// isIErrorBoundary
-export declare function isIErrorBoundary(component: unknown): component is ComponentBase & IErrorBoundary;
-
-// isLazyRoute
-export declare function isLazyRoute(route: RouteManifestEntry): route is LazyRouteEntry;
-
 // LayoutComponentBase
 export declare abstract class LayoutComponentBase extends ComponentBase {
     Body?: RenderFragment;
@@ -743,9 +617,6 @@ export declare class MarkupString {
     constructor(value: string);
     toString(): string;
 }
-
-// matchRoute
-export declare function matchRoute(routes: readonly RouteManifestEntry[], path: string): RouteMatch | null;
 
 // MaxLength
 export declare function MaxLength(length: number, override?: ValidationMessageOverride): FieldRuleDecorator;
@@ -973,9 +844,6 @@ export declare class ParameterView {
     ]>;
 }
 
-// parseRouteTemplate
-export declare function parseRouteTemplate(template: string): ParsedRoute;
-
 // parseValue
 export declare function parseValue(text: string, format: string | undefined, culture?: string | CultureInfo): string | number | Date | null;
 
@@ -997,9 +865,6 @@ export interface QueryParameterMeta {
     readonly multiple?: boolean;
 }
 
-// queryParametersOf
-export declare function queryParametersOf(modelType: unknown): ReadonlyMap<string, QueryParameterMeta>;
-
 // QueryParameterType
 export type QueryParameterType = "string" | "int" | "long" | "bool" | "double" | "float" | "decimal" | "datetime" | "guid";
 
@@ -1012,103 +877,8 @@ export declare function Range(minimum: number, maximum: number, override?: Valid
 // RegularExpression
 export declare function RegularExpression(pattern: string, override?: ValidationMessageOverride): FieldRuleDecorator;
 
-// RenderBatch
-export interface RenderBatch {
-    readonly renderedComponents: readonly ComponentState[];
-}
-
-// Renderer
-export declare class Renderer {
-    readonly dispatcher: Dispatcher;
-    private readonly dom;
-    private readonly states;
-    private nextComponentId;
-    private readonly renderQueue;
-    private scheduledBatch;
-    private batchInProgress;
-    private firstBatchDone;
-    private readonly batchStates;
-    private readonly batchCompletedListeners;
-    private readonly services;
-    readonly sectionRegistry: SectionRegistry;
-    errorHandler: RenderErrorHandler;
-    constructor(services?: ServiceProvider);
-    get serviceScope(): ServiceProvider;
-    getComponentState(id: number): ComponentState | undefined;
-    renderInContainer(component: ComponentDefinition | (abstract new () => ComponentBase), container: Element): ComponentState;
-    private createComponentState;
-    private instantiateChildren;
-    private fireComponentCaptures;
-    private updateChildren;
-    private abortPass;
-    private isSameComponentType;
-    private readonly diffOptions;
-    setComponentParameters(state: ComponentState, attributes: Map<string, {
-        frame: RenderTreeFrame;
-    }>): void;
-    private supplyParameters;
-    track<T>(promise: Promise<T>, label?: string): Promise<T>;
-    trackFor<T>(owner: ComponentState | undefined, promise: Promise<T>, label: string): Promise<T>;
-    private readonly inFlight;
-    private trackedCount;
-    markWork(): number;
-    settledSince(mark: number, deadline: number, navigationWork?: readonly Promise<unknown>[]): Promise<void>;
-    private buildParameterView;
-    private queryValues;
-    private readonly querySubscribers;
-    private queryNavigation;
-    private queryNavigationUnsubscribe;
-    private notifyQuerySubscribers;
-    private resolveCascade;
-    private updateCascadingSubscriptions;
-    private removeCascadingSubscriptions;
-    private notifyCascadingSubscribers;
-    disposeComponent(root: ComponentState): void;
-    private disposeInstance;
-    private enqueueRender;
-    private processRenderQueue;
-    private readonly leftDom;
-    private readonly attachmentFailed;
-    private invokeAfterRender;
-    private renderComponent;
-    onBatchCompleted(listener: (batch: RenderBatch) => void): () => void;
-    private notifyBatchCompleted;
-    handleComponentError(error: unknown, component: ComponentState | null, phase: RenderErrorPhase): void;
-    private routeToErrorBoundary;
-    waitUntilIdle(options?: {
-        timeout?: number;
-    }): Promise<void>;
-    private beforeDeadline;
-    private readonly hmrSwappedNames;
-    hmrSwap(oldType: unknown, newComponentType: unknown): number;
-    wasHmrSwapped(className: string): boolean;
-    private swapState;
-}
-
-// RenderError
-export interface RenderError {
-    readonly error: unknown;
-    readonly component: ComponentState | null;
-    readonly phase: RenderErrorPhase;
-}
-
-// RenderErrorHandler
-export type RenderErrorHandler = (error: RenderError) => void;
-
-// RenderErrorPhase
-export type RenderErrorPhase = "render" | "diff" | "apply" | "lifecycle" | "afterRender" | "event" | "dispose" | "batch";
-
 // RenderFragment
 export type RenderFragment = (builder: RenderTreeBuilder) => void;
-
-// RenderHandle
-export interface RenderHandle {
-    render(fragment?: RenderFragment): void;
-    readonly isRenderingInProgress: boolean;
-    track(promise: Promise<unknown>): Promise<unknown>;
-    reportError(error: unknown, phase: RenderErrorPhase): void;
-    readonly sectionRegistry: SectionRegistry;
-}
 
 // RenderTreeBuilder
 export declare class RenderTreeBuilder {
@@ -1143,36 +913,6 @@ export declare class RenderTreeBuilder {
     private closeOpenFrame;
 }
 
-// RenderTreeDiff
-export interface RenderTreeDiff {
-    readonly edits: RenderTreeEdit[];
-    readonly components: number[];
-    readonly disposedComponents: number[];
-}
-
-// RenderTreeEdit
-export interface RenderTreeEdit {
-    readonly type: RenderTreeEditType;
-    readonly siblingIndex: number;
-    readonly referenceFrameIndex: number;
-    readonly moveToSiblingIndex: number;
-    readonly removedAttributeName: string | null;
-}
-
-// RenderTreeEditType
-export declare const enum RenderTreeEditType {
-    PrependFrame = 1,
-    RemoveFrame = 2,
-    SetAttribute = 3,
-    RemoveAttribute = 4,
-    UpdateText = 5,
-    StepIn = 6,
-    StepOut = 7,
-    UpdateMarkup = 8,
-    PermutationListEntry = 9,
-    PermutationListEnd = 10
-}
-
 // RenderTreeFrame
 export interface RenderTreeFrame {
     readonly frameType: FrameType;
@@ -1205,9 +945,6 @@ export type RequestInterceptor = (request: Request) => Request | Promise<Request
 export declare function Required(options?: {
     allowEmptyStrings?: boolean;
 } & ValidationMessageOverride): FieldRuleDecorator;
-
-// resolveSectionIdentifier
-export declare function resolveSectionIdentifier(componentName: string, sectionName: string | null | undefined, sectionId: unknown): unknown;
 
 // ResponseInterceptor
 export type ResponseInterceptor = (response: Response, request: Request) => Response | Promise<Response>;
@@ -1266,14 +1003,6 @@ export declare class Router extends ComponentBase {
     dispose(): void;
 }
 
-// RouteTable
-export declare class RouteTable {
-    readonly entries: readonly RouteTableEntry[];
-    private constructor();
-    static create(routes: readonly RouteManifestEntry[]): RouteTable;
-    match(path: string): RouteMatch | null;
-}
-
 // RouteValue
 export type RouteValue = string | number | bigint | boolean | Date | null;
 
@@ -1302,13 +1031,8 @@ export declare class SectionContent extends ComponentBase {
     private registeredIdentifier?;
     private registeredIsDefaultContent?;
     private get registry();
-    applyParameterValues(parameters: ParameterView): void;
+    protected applyParameterValues(parameters: ParameterView): void;
     dispose(): void;
-}
-
-// SectionContentLike
-export interface SectionContentLike {
-    childContent?: RenderFragment | undefined;
 }
 
 // SectionOutlet
@@ -1321,32 +1045,9 @@ export declare class SectionOutlet extends ComponentBase {
     private subscribedIdentifier?;
     private get registry();
     contentUpdated(provider: SectionContentLike | null): void;
-    applyParameterValues(parameters: ParameterView): void;
+    protected applyParameterValues(parameters: ParameterView): void;
     protected buildRenderTree(b: RenderTreeBuilder): void;
     dispose(): void;
-}
-
-// SectionOutletContentRenderer
-export declare class SectionOutletContentRenderer extends ComponentBase {
-    content?: RenderFragment;
-    protected buildRenderTree(b: RenderTreeBuilder): void;
-}
-
-// SectionOutletLike
-export interface SectionOutletLike {
-    contentUpdated(provider: SectionContentLike | null): void;
-}
-
-// SectionRegistry
-export declare class SectionRegistry {
-    private readonly providersByIdentifier;
-    private readonly subscribersByIdentifier;
-    addProvider(identifier: unknown, provider: SectionContentLike, isDefaultProvider: boolean): void;
-    removeProvider(identifier: unknown, provider: SectionContentLike): void;
-    subscribe(identifier: unknown, outlet: SectionOutletLike): void;
-    unsubscribe(identifier: unknown): void;
-    notifyContentProviderChanged(identifier: unknown, provider: SectionContentLike): void;
-    private notifyForSubscriber;
 }
 
 // ServiceCollection
@@ -1382,9 +1083,6 @@ export declare class ServiceProvider {
     private resolve;
     private construct;
 }
-
-// standardSchemaField
-export declare function standardSchemaField(issue: StandardSchemaIssue): string;
 
 // StandardSchemaIssue
 export interface StandardSchemaIssue {
@@ -1491,12 +1189,6 @@ export declare function SupplyParameterFromQuery(options?: {
     multiple?: boolean;
 }): QueryParameterDecorator;
 
-// titleSectionId
-export declare const titleSectionId: unique symbol;
-
-// toComponentDefinition
-export declare function toComponentDefinition(value: ComponentDefinition | (abstract new () => ComponentBase)): ComponentDefinition;
-
 // Token
 export type Token<T> = abstract new (...args: never[]) => T;
 
@@ -1602,9 +1294,6 @@ export interface ValidationRule {
     readonly override?: ValidationMessageOverride;
     validate(value: unknown, model: object, displayName: string): string | null;
 }
-
-// validationRulesOf
-export declare function validationRulesOf(modelType: unknown): ReadonlyMap<string, readonly ValidationRule[]>;
 
 // ValidationSummary
 export declare class ValidationSummary extends ComponentBase {
@@ -1747,9 +1436,6 @@ export interface VirtualizeItemsProviderResult<TItem> {
     items?: Iterable<TItem>;
     totalItemCount?: number;
 }
-
-// watchAuthenticationState
-export declare function watchAuthenticationState(services: ServiceProviderLike | undefined, apply: (state: AuthenticationState) => void, onPending?: () => void): () => void;
 
 /* @tsazor/runtime/transition */
 

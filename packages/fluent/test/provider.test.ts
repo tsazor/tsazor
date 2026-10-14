@@ -4,10 +4,10 @@ import { CascadingParameter, ComponentBase, RenderTreeBuilder } from "@tsazor/ru
 import { FluentProvider } from "../dist/index.js";
 
 /** Waits out the microtask render queue plus the settle timer. */
-async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer"]): Promise<void> {
-  await renderer.waitUntilIdle();
+async function settle(renderer: Pick<Awaited<ReturnType<typeof renderTree>>, "settle">): Promise<void> {
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 /** A descendant that reads the provider's cascade by name. */
@@ -51,7 +51,7 @@ describe("FluentProvider", () => {
   });
 
   it("cascades the theme by name to descendants", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, FluentProvider);
       b.addAttribute(1, "theme", "dark");
       b.addAttribute(2, "childContent", (inner: RenderTreeBuilder) => {

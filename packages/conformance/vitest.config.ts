@@ -11,6 +11,8 @@ const src = (pkg: string) => fileURLToPath(new URL(`../${pkg}/src/index.ts`, imp
 export default defineConfig({
   resolve: {
     alias: {
+      // Before "@tsazor/runtime", which would take the subpath as a path under src/index.ts.
+      "@tsazor/runtime/internal": fileURLToPath(new URL("../runtime/src/internal.ts", import.meta.url)),
       "@tsazor/runtime": src("runtime"),
       "@tsazor/compiler": src("compiler"),
       "@tsazor/workspace": src("workspace"),

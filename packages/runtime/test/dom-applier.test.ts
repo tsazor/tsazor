@@ -1,3 +1,4 @@
+import { componentInternals } from "../src/components/component-internals";
 /**
  * DOM applier (roadmap B3): the logical-range abstraction (insert, move,
  * remove, nesting, permutations), transactional application (a failed pass
@@ -5,7 +6,8 @@
  * (review R10).
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, EventCallback, Parameter, Renderer, defineComponent, type RenderError, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EventCallback, Parameter, defineComponent, type RenderTreeBuilder } from "../src/index";
+import { Renderer, type RenderError } from "../src/internal";
 import type { ComponentState } from "../src/renderer/component-state";
 import { LogicalChildren, LogicalRange, lastNodeOf, removeLogicalChild } from "../src/renderer/logical-range";
 import { DomJournal } from "../src/renderer/dom-journal";
@@ -56,7 +58,7 @@ async function mount(build: Build): Promise<{ container: HTMLElement; renderer: 
   const state = renderer.renderInContainer(Fn, container);
   const component = state.component as Fn;
   component.build = build;
-  component.stateHasChangedInternal();
+  componentInternals.requestRender(component);
   await renderer.waitUntilIdle();
   return {
     container,
@@ -65,7 +67,7 @@ async function mount(build: Build): Promise<{ container: HTMLElement; renderer: 
     errors,
     async update(next?: Build) {
       if (next) component.build = next;
-      component.stateHasChangedInternal();
+      componentInternals.requestRender(component);
       await renderer.waitUntilIdle();
     },
   };

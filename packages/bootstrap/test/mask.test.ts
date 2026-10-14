@@ -35,7 +35,7 @@ async function field(mask: PatternMask | string, value = "", extra: Record<strin
   const result = await render(Host);
   mounted.push(result);
   const input = result.container.querySelector<HTMLInputElement>("input")!;
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   const type = async (text: string) => {
     input.focus();
     input.value = text;

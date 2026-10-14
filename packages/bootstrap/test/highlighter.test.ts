@@ -23,7 +23,7 @@ async function highlight(attrs: Record<string, unknown>): Promise<HTMLElement> {
     b.closeElement();
   });
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result.container.querySelector("p")!;
 }
 

@@ -1,3 +1,4 @@
+import { componentInternals } from "./component-internals.js";
 import type { ComponentBase } from "./component-base.js";
 
 /**
@@ -90,10 +91,10 @@ export class EventCallback<TArg = unknown> {
     // its intermediate state — and, for an async handler, again once it
     // completes (CallStateHasChangedOnAsyncCompletion). A failed async handler
     // does not re-render a second time; its error propagates.
-    this.receiver?.stateHasChangedInternal();
+    if (this.receiver !== null) componentInternals.requestRender(this.receiver);
     if (result instanceof Promise) {
       await result;
-      this.receiver?.stateHasChangedInternal();
+      if (this.receiver !== null) componentInternals.requestRender(this.receiver);
     }
   }
 

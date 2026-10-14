@@ -3,13 +3,16 @@ import {
   ComponentBase,
   EventCallback,
   RenderTreeBuilder,
-  Renderer,
   Parameter,
   CascadingParameter,
   defineComponent,
   isCascadingValueSupplier,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 import type { RenderFragment } from "../src/index";
+import { componentInternals } from "../src/components/component-internals";
 
 class Counter extends ComponentBase {
   count = 0;
@@ -269,12 +272,12 @@ describe("Renderer", () => {
 
     const component = state.component as unknown as { label: string | null };
     component.label = "Icon only";
-    component["stateHasChangedInternal"]();
+    componentInternals.requestRender(component);
     await renderer.waitUntilIdle();
     expect(button.getAttribute("aria-label")).toBe("Icon only");
 
     component.label = null;
-    component["stateHasChangedInternal"]();
+    componentInternals.requestRender(component);
     await renderer.waitUntilIdle();
     expect(button.hasAttribute("aria-label")).toBe(false);
   });
@@ -298,7 +301,7 @@ describe("Renderer", () => {
     // Simulate a parent update: change a field and re-render.
     const component = state.component as unknown as { message: string };
     component.message = "second";
-    component["stateHasChangedInternal"]();
+    componentInternals.requestRender(component);
     await renderer.waitUntilIdle();
 
     expect(container.querySelector("h1")?.textContent).toBe("second");
@@ -346,8 +349,8 @@ describe("Renderer", () => {
     await renderer.waitUntilIdle();
     expect(container.querySelector("div")?.textContent).toBe("light");
 
-    (rootState.component as unknown as { themeValue: string; stateHasChangedInternal(): void }).themeValue = "solar";
-    (rootState.component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    (rootState.component as unknown as { themeValue: string }).themeValue = "solar";
+    componentInternals.requestRender(rootState.component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
 
     expect(container.querySelector("div")?.textContent).toBe("solar");
@@ -376,8 +379,8 @@ describe("Renderer", () => {
     const second = container.querySelectorAll("li")[1]!;
     expect(container.querySelectorAll("li")).toHaveLength(3);
 
-    (state.component as unknown as { items: string[]; stateHasChangedInternal(): void }).items = ["a", "c"];
-    (state.component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    (state.component as unknown as { items: string[] }).items = ["a", "c"];
+    componentInternals.requestRender(state.component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
 
     const remaining = [...container.querySelectorAll("li")];

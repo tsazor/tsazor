@@ -18,16 +18,16 @@ beforeAll(() => {
 });
 
 /** Waits out the microtask render queue plus the settle timer. */
-async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer"]): Promise<void> {
-  await renderer.waitUntilIdle();
+async function settle(renderer: Pick<Awaited<ReturnType<typeof renderTree>>, "settle">): Promise<void> {
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 describe("Button", () => {
   it("renders the brand button for intent primary and fires onClick", async () => {
     let clicks = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Button);
       b.addAttribute(1, "intent", "primary");
       b.addAttribute(2, "size", "large");
@@ -47,7 +47,7 @@ describe("Button", () => {
 
   it("renders the disabled attribute and swallows clicks", async () => {
     let clicks = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Button);
       b.addAttribute(1, "disabled", true);
       b.addAttribute(2, "onClick", EventCallback.unbound(() => {
@@ -176,7 +176,7 @@ describe("Divider", () => {
 describe("callbacks are awaited (Blazor: await OnClick.InvokeAsync)", () => {
   it("a Button waits for an async onClick, and its failure reaches the ErrorBoundary", async () => {
     let finished = false;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, ErrorBoundary);
       b.addAttribute(1, "childContent", ((inner) => {
         inner.openComponent(0, Button);
@@ -193,7 +193,7 @@ describe("callbacks are awaited (Blazor: await OnClick.InvokeAsync)", () => {
     });
     container.querySelector("button")!.click();
     // The renderer tracks the click until the handler is done (render().click() in tests waits on this).
-    await renderer.waitUntilIdle();
+    await renderer.settle();
     expect(finished).toBe(true);
     expect(container.textContent).toBe("caught: save failed");
   });

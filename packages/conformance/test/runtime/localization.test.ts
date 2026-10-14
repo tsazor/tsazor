@@ -20,12 +20,14 @@ import {
   parseValue,
   Range,
   Required,
-  Renderer,
   type ComponentBase,
   ServiceCollection,
   StringLocalizer,
   type Token,
 } from "@tsazor/runtime";
+import {
+  Renderer,
+} from "@tsazor/runtime/internal";
 import { compileFiles, diagnosticsOf, errorCodes, mount, normalizeHtml } from "../harness.js";
 
 afterEach(() => {

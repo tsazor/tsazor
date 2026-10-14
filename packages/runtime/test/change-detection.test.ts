@@ -3,7 +3,8 @@
  * ParameterView.DefinitelyEquals) and the per-class parameter metadata cache.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, EventCallback, Parameter, Renderer, bindMethod, defineComponent, type RenderFragment, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EventCallback, Parameter, bindMethod, defineComponent, type RenderFragment, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
 import { mayHaveChanged } from "../src/components/change-detection";
 import { defineParameter, findParameterMetadata, getParameterInfo } from "../src/components/parameter-metadata";
 

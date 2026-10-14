@@ -5,7 +5,8 @@
  * had a handler before, and a replaced handler is the one that runs.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, Renderer, ServiceCollection } from "../src/index";
+import { ComponentBase, ServiceCollection } from "../src/index";
+import { Renderer } from "../src/internal";
 import type { RenderTreeBuilder } from "../src/index";
 
 type Mode = { kind: "string"; text: string } | { kind: "handler"; run: () => void };

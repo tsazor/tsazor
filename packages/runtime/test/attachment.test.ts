@@ -3,14 +3,17 @@ import {
   addAttachment,
   ComponentBase,
   ErrorBoundary,
-  Renderer,
   RenderTreeBuilder,
-  RenderTreeEditType,
-  computeDiff,
   defineComponent,
   type Attachment,
   type RenderFragment,
 } from "../src/index";
+import {
+  Renderer,
+  RenderTreeEditType,
+  computeDiff,
+} from "../src/internal";
+import { componentInternals } from "../src/components/component-internals";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -36,7 +39,7 @@ async function mount<T extends ComponentBase>(type: new () => T): Promise<Mounte
     renderer,
     component,
     async rerender() {
-      (component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+      componentInternals.requestRender(component as unknown as ComponentBase);
       await renderer.waitUntilIdle();
     },
   };
@@ -268,7 +271,7 @@ describe("@attach (F2)", () => {
           // A render requested while rendering joins the running batch.
           this.hideAgain = false;
           this.show = false;
-          (this as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+          componentInternals.requestRender(this as unknown as ComponentBase);
         }
       }
     }
@@ -332,7 +335,7 @@ describe("@attach (F2)", () => {
     const state = renderer.renderInContainer(Page, container);
     await renderer.waitUntilIdle();
     (state.component as Page).show = false;
-    (state.component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    componentInternals.requestRender(state.component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
     expect(phases).toEqual(["afterRender: cleanup failed"]);
   });
@@ -363,7 +366,7 @@ describe("@attach (F2)", () => {
     const state = renderer.renderInContainer(Page, container);
     await renderer.waitUntilIdle();
     (state.component as Page).broken = true;
-    (state.component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+    componentInternals.requestRender(state.component as unknown as ComponentBase);
     await renderer.waitUntilIdle();
     expect(phases).toEqual(["apply"]);
     expect(container.querySelector("div")).toBeNull();

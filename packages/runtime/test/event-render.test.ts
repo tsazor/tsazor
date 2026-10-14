@@ -4,7 +4,8 @@
  * handler — again once it completes; a failed async handler renders once.
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, EventCallback, Renderer, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EventCallback, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
 
 class Busy extends ComponentBase {
   busy = false;

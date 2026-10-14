@@ -125,14 +125,14 @@
     /** @internal CarouselItem joins; its place is its index. */
     registerItem(item: object): number {
         if (!this.items.includes(item)) this.items.push(item);
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
         return this.items.indexOf(item);
     }
 
     /** @internal CarouselItem leaves. */
     unregisterItem(item: object): void {
         this.items = this.items.filter((candidate) => candidate !== item);
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 
     /** @internal CarouselItem asks for its index and whether it is shown. */

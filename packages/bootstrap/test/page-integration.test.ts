@@ -13,7 +13,8 @@ import { transformSync } from "esbuild";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Renderer, ServiceCollection } from "@tsazor/runtime";
+import { ServiceCollection } from "@tsazor/runtime";
+import { Renderer } from "@tsazor/runtime/internal";
 import { Toaster } from "@tsazor/ui";
 
 /** The services the page injects (the demo's Program.ts registers them). */

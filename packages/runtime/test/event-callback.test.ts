@@ -4,7 +4,9 @@
  * arguments; the handler is created on first use; invocation as `bind`.
  */
 import { describe, expect, it, vi } from "vitest";
-import { ComponentBase, EventCallback, Renderer, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EventCallback, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
+import { componentInternals } from "../src/components/component-internals";
 
 class Owner extends ComponentBase {
   picked: unknown[] = [];
@@ -60,7 +62,7 @@ describe("EventCallback.bindWith", () => {
 
   it("re-renders the owner after the handler, and after an async handler completes", async () => {
     const receiver = new Owner();
-    const render = vi.spyOn(receiver, "stateHasChangedInternal").mockImplementation(() => {});
+    const render = vi.spyOn(componentInternals, "requestRender").mockImplementation(() => {});
     let release!: () => void;
     const callback = EventCallback.bindWith(receiver, function () {
       return () => new Promise<void>((resolve) => (release = resolve));
@@ -70,6 +72,7 @@ describe("EventCallback.bindWith", () => {
     release();
     await done;
     expect(render).toHaveBeenCalledTimes(2);
+    render.mockRestore();
   });
 
   it("routes a failing handler to the renderer's error handler, like bind", async () => {

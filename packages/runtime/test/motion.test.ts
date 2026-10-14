@@ -4,13 +4,16 @@ import {
   addTransition,
   ComponentBase,
   configureTransitions,
-  Renderer,
   RenderTreeBuilder,
   type Animate,
   type Transition,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 import { crossfade, fade } from "../src/transition";
 import { flip } from "../src/animate";
+import { componentInternals } from "../src/components/component-internals";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
@@ -40,7 +43,7 @@ async function mount<T extends ComponentBase>(type: new () => T): Promise<Mounte
     container,
     component,
     async rerender() {
-      (component as unknown as { stateHasChangedInternal(): void }).stateHasChangedInternal();
+      componentInternals.requestRender(component as unknown as ComponentBase);
       await renderer.waitUntilIdle();
     },
   };

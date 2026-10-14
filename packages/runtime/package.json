@@ -20,6 +20,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./internal": {
+      "types": "./dist/internal.d.ts",
+      "default": "./dist/internal.js"
+    },
     "./transition": {
       "types": "./dist/transition.d.ts",
       "default": "./dist/transition.js"
@@ -38,7 +42,10 @@
     "./dist/components/parameter-metadata.js"
   ],
   "tsazor": {
-    "components": "./dist/tsazor-components.json"
+    "components": "./dist/tsazor-components.json",
+    "internal": [
+      "./internal"
+    ]
   },
   "files": [
     "dist",

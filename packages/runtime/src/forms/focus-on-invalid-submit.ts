@@ -2,6 +2,7 @@ import { ComponentBase } from "../components/component-base.js";
 import { CascadingParameter, Parameter } from "../components/parameter-metadata.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import { EditContext, formElements } from "./edit-context.js";
+import { componentInternals } from "../components/component-internals.js";
 
 /**
  * Focuses the first invalid field after a submit that found errors — react-hook-form's `shouldFocusError`, which is
@@ -28,7 +29,7 @@ export class FocusOnInvalidSubmit extends ComponentBase {
     }
     this.unsubscribe = editContext.onValidationRequested.subscribe(() => {
       this.focusAfterRender = true;
-      this.stateHasChangedInternal();
+      componentInternals.requestRender(this);
     });
   }
 

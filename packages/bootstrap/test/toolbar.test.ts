@@ -33,7 +33,7 @@ async function toolbar(attrs: (b: RenderTreeBuilder) => void): Promise<HTMLEleme
     b.closeComponent();
   });
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result.container.querySelector<HTMLElement>("[role=toolbar]")!;
 }
 

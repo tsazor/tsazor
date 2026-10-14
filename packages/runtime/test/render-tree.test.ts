@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RenderTreeBuilder, FrameType, getFrameChildren, getFrameSubtreeLength } from "../src/render-tree/render-tree";
-import { ComponentBase, Parameter, Renderer } from "../src/index";
+import { ComponentBase, Parameter } from "../src/index";
+import { Renderer } from "../src/internal";
 
 describe("RenderTreeBuilder", () => {
   it("builds a flat tree with resolved subtree lengths", () => {

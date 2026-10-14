@@ -1,10 +1,12 @@
+import { componentInternals } from "../src/components/component-internals";
 /**
  * Edit-list tests for the RenderTreeDiffBuilder port (roadmap B1): the diff is
  * pure data, so these check edits and component lists directly, plus a few
  * DOM-level checks of the applier.
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, Parameter, RenderTreeBuilder, Renderer, computeDiff, defineComponent, type RenderError, type RenderTreeDiff, type RenderTreeFrame } from "../src/index";
+import { ComponentBase, Parameter, RenderTreeBuilder, defineComponent, type RenderTreeFrame } from "../src/index";
+import { Renderer, computeDiff, type RenderError, type RenderTreeDiff } from "../src/internal";
 import { RenderTreeEditType } from "../src/render-tree/diff";
 
 type Build = (b: RenderTreeBuilder) => void;
@@ -315,7 +317,7 @@ describe("DomRenderer — applying edits", () => {
 
     const host = state.component as Host;
     host.order = ["c", "a", "b"];
-    host.stateHasChangedInternal();
+    componentInternals.requestRender(host);
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("ccaabb");
   });
@@ -339,7 +341,7 @@ describe("DomRenderer — applying edits", () => {
     expect(renderer.getComponentState(child.id)).toBe(child);
 
     show = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("");
     expect(child.disposed).toBe(true);
@@ -367,7 +369,7 @@ describe("DomRenderer — applying edits", () => {
     const errors: RenderError[] = [];
     renderer.errorHandler = (error) => errors.push(error);
     dup = true;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(errors.map((e) => [String(e.error), e.component, e.phase])).toEqual([
       [expect.stringMatching(/same key value/), state, "diff"],
@@ -375,7 +377,7 @@ describe("DomRenderer — applying edits", () => {
     expect(container.textContent).toBe("12");
 
     dup = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("12");
   });

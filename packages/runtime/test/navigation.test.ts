@@ -9,12 +9,14 @@ import {
   MemoryHistory,
   NavigationLock,
   NavigationManager,
-  Renderer,
   ServiceCollection,
   type LocationChangedEventArgs,
   type LocationChangingContext,
   type RenderTreeBuilder,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 
 const managers: NavigationManager[] = [];
 function fresh(): NavigationManager {

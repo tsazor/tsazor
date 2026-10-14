@@ -28,7 +28,7 @@ describe("createFakeLocalization", () => {
 
     const before = result.instance.renders;
     fake.switchTo("de-DE");
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(result.container.textContent).toBe("Hallo");
     expect(result.instance.renders - before).toBe(1); // coalesced like a hand-written observe
   });

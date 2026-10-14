@@ -17,13 +17,13 @@ import {
 } from "../dist/index.js";
 
 /** The renderer type returned by renderTree. */
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 
 /** Waits out the microtask render queue plus the settle timer. */
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 /** The small contact model every form test binds to. */
@@ -58,7 +58,7 @@ async function renderForm(
   child: (b: RenderTreeBuilder) => void,
   onValidSubmit?: () => void,
 ): Promise<{ container: HTMLElement; renderer: Renderer }> {
-  const { container, renderer } = await renderTree(b => {
+  const { container, ...renderer } = await renderTree(b => {
     b.openComponent(0, FluentForm);
     b.addAttribute(1, "model", model);
     b.addAttribute(2, "validators", formValidators());
@@ -184,7 +184,7 @@ describe("NumberInput inside FluentForm", () => {
 describe("Switch", () => {
   it("toggles through the role=switch native control", async () => {
     const captured: boolean[] = [];
-    const { container, renderer } = await renderTree(b => {
+    const { container, ...renderer } = await renderTree(b => {
       b.openComponent(0, Switch);
       b.addAttribute(1, "label", "Auto theme");
       b.addAttribute(2, "value", false);

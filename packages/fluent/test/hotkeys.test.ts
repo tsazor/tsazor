@@ -46,7 +46,7 @@ async function hotkey(attrs: Record<string, unknown>) {
   }
   const result = await render(Host);
   mounted.push(result);
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   const shown = () => result.container.querySelector(".shortcuts") !== null;
   return { Host, result, idle, shown, field: () => result.container.querySelector<HTMLInputElement>("#field")! };
 }
@@ -133,7 +133,7 @@ describe("KeyCode", () => {
       b.closeComponent();
     });
     mounted.push(result);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     return { result, downs, ups, inside: () => result.container.querySelector("#inside"), anchor: () => result.container.querySelector("#anchor")! };
   }
 

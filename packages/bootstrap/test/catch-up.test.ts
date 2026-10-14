@@ -8,11 +8,13 @@ import { render, renderTree } from "@tsazor/testing";
 import { ComponentBase, EventCallback, NavigationManager, NavLinkMatch, type RenderTreeBuilder } from "@tsazor/runtime";
 import { CheckboxGroup, SidebarNav } from "../dist/index.js";
 
-async function settle(renderer: Awaited<ReturnType<typeof renderTree>>["renderer"]): Promise<void> {
-  await renderer.waitUntilIdle();
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
+async function settle(renderer: Renderer): Promise<void> {
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
+
 
 const navigations: NavigationManager[] = [];
 afterEach(() => {
@@ -23,7 +25,7 @@ afterEach(() => {
 describe("CheckboxGroup", () => {
   it("checks the bound values, reports the new array in the options' order, and keeps values it doesn't show", async () => {
     const reported: string[][] = [];
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, CheckboxGroup);
       b.addAttribute(1, "label", "Roles");
       b.addAttribute(2, "options", [{ value: "admins", label: "Administrators" }, { value: "editors", label: "Editors" }, { value: "guests", label: "Guests", disabled: true }]);
@@ -69,7 +71,7 @@ async function nav(path: string, compact = false) {
   navigation.navigateTo(path);
   NavHost.compact = compact;
   const result = await render(NavHost, { services: (services) => services.registerValue(NavigationManager as never, navigation) });
-  await settle(result.renderer);
+  await result.settle();
   return result;
 }
 

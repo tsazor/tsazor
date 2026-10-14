@@ -1,9 +1,9 @@
-import type { ParameterInfo, ParameterMeta } from "./parameter-metadata.js";
 import type { ParameterView } from "./parameter-view.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
 import type { RenderHandle } from "../renderer/render-handle.js";
 import type { RenderErrorPhase } from "../renderer/renderer.js";
-import { findParameterMetadata, getParameterInfo } from "./parameter-metadata.js";
+import { parameterInfoOf } from "./parameter-metadata.js";
+import { componentInternals } from "./component-internals.js";
 import { collectAutoObserve, getCurrentServices, isAutoRender } from "../di/service-provider.js";
 import { DEV, release, type ObserveListener, type ObserveSource, type ObserveTeardown } from "./observe.js";
 
@@ -20,19 +20,16 @@ export const completedLifecycle: Promise<void> = Promise.resolve();
  * Blazor's async lifecycle orchestration (see setParametersAsync).
  */
 export abstract class ComponentBase {
-  /** @internal Assigned by the renderer at instantiation time. */
-  renderHandle!: RenderHandle;
-
-  /** @internal The DI scope the renderer used to construct this component. */
-  componentServices: unknown;
-
+  /** Assigned by the renderer at instantiation time (componentInternals.attach). */
+  #renderHandle: RenderHandle | undefined;
+  /** The DI scope the renderer used to construct this component. */
+  #services: unknown;
   #initialized = false;
   #hasPendingRender = false;
   #firstRenderDone = false;
   /** F6: buildRenderTree is running (a `@State` assignment there schedules nothing). */
   #building = false;
   #hasCalledOnAfterRender = false;
-  readonly #afterRenderCallbacks: Array<(firstRender: boolean) => void | Promise<void>> = [];
   #disposed = false;
   /** Created on first use of disposeSignal (most components never ask). */
   #disposeController: AbortController | null = null;
@@ -96,9 +93,9 @@ export abstract class ComponentBase {
    * the captureUnmatchedValues property, or throws like Blazor's
    * ParameterView.SetParameterProperties when there is none.
    */
-  applyParameterValues(parameters: ParameterView): void {
+  protected applyParameterValues(parameters: ParameterView): void {
     // Cached per class (B6); Blazor matches attribute names case-insensitively.
-    const { all: metadata, caseFolded, captureUnmatchedProperty: captureProperty } = this.getParameterInfo();
+    const { all: metadata, caseFolded, captureUnmatchedProperty: captureProperty } = parameterInfoOf(this);
     // Blazor's [Parameter(CaptureUnmatchedValues = true)] (ComponentProperties.
     // SetProperties): the unmatched attributes of THIS parameter set form a
     // fresh dictionary — attributes the parent stopped passing disappear. With
@@ -144,39 +141,20 @@ export abstract class ComponentBase {
     return true;
   }
 
-  /** Blazor's StateHasChanged. */
+  /**
+   * Blazor's StateHasChanged: at most one queued render; the first render always happens, later ones only when
+   * shouldRender() agrees.
+   */
   protected stateHasChanged(): void {
-    this.stateHasChangedInternal();
+    this.#requestRender();
   }
 
-  /**
-   * @internal Public re-render request (used by the event system). Blazor's
-   * StateHasChanged: at most one queued render; the first render always
-   * happens, later ones only when shouldRender() agrees.
-   */
-  stateHasChangedInternal(): void {
-    if (this.#hasPendingRender || !this.renderHandle) return;
+  #requestRender(): void {
+    if (this.#hasPendingRender || !this.#renderHandle) return;
     if (!this.#firstRenderDone || this.shouldRender()) {
       this.#hasPendingRender = true;
-      this.renderHandle.render();
+      this.#renderHandle.render();
     }
-  }
-
-  /**
-   * @internal F6: a `@State` field changed — stateHasChanged, except before
-   * the first render (it comes anyway) and while this component builds its
-   * render tree (it would render again and again).
-   */
-  stateFieldChangedInternal(): void {
-    if (!this.#firstRenderDone || this.#building) return;
-    this.stateHasChangedInternal();
-  }
-
-  /** @internal Queues a render regardless of shouldRender (hot reload, Blazor's IsRenderingOnMetadataUpdate). */
-  forceRenderInternal(): void {
-    if (this.#hasPendingRender || !this.renderHandle) return;
-    this.#hasPendingRender = true;
-    this.renderHandle.render();
   }
 
   /**
@@ -184,77 +162,6 @@ export abstract class ComponentBase {
    * this (generated code); hand-built components override it as well.
    */
   protected buildRenderTree(builder: RenderTreeBuilder): void {}
-
-  /** Adds a callback to run after the next render (Blazor's OnAfterRender contract for fragments). */
-  onAfterRenderInternal(callback: (firstRender: boolean) => void | Promise<void>): void {
-    this.#afterRenderCallbacks.push(callback);
-  }
-
-  /**
-   * @internal Blazor's IHandleAfterRender.OnAfterRenderAsync, called by the
-   * renderer once the batch that rendered this component completed.
-   * `firstRender` is true on the first call per instance. Like Blazor, a
-   * completed (async) onAfterRender does not trigger a render.
-   */
-  notifyAfterRender(): void | Promise<void> {
-    const firstRender = !this.#hasCalledOnAfterRender;
-    this.#hasCalledOnAfterRender = true;
-    if (this.#afterRenderCallbacks.length === 0) {
-      return this.onAfterRender(firstRender);
-    }
-    const callbacks = this.#afterRenderCallbacks.splice(0);
-    return (async () => {
-      for (const cb of callbacks) {
-        await cb(firstRender);
-      }
-      await this.onAfterRender(firstRender);
-    })();
-  }
-
-  /** @internal Whether a render is queued but not yet flushed. */
-  get pendingRender(): boolean {
-    return this.#hasPendingRender;
-  }
-
-  /** @internal Renderer entry: builds the current output (wraps protected buildRenderTree). */
-  renderCurrentOutput(builder: RenderTreeBuilder): void {
-    this.#building = true;
-    try {
-      this.buildRenderTree(builder);
-    } finally {
-      this.#building = false;
-    }
-  }
-
-  /** @internal */
-  clearPendingRender(): void {
-    this.#hasPendingRender = false;
-  }
-
-  /** @internal */
-  get isInitialized(): boolean {
-    return this.#initialized;
-  }
-
-  /** @internal Whether the component has produced output at least once. */
-  get firstRenderCompleted(): boolean {
-    return this.#firstRenderDone;
-  }
-
-  /** @internal */
-  markFirstRenderCompleted(): void {
-    this.#firstRenderDone = true;
-  }
-
-  /** All parameter metadata including inherited members (own class wins); cached per class, do not mutate. */
-  getAllParameterMetadata(): Map<string, ParameterMeta> {
-    return findParameterMetadata(Object.getPrototypeOf(this).constructor as abstract new () => unknown);
-  }
-
-  /** @internal The cached per-class parameter lookup (see getParameterInfo). */
-  getParameterInfo(): ParameterInfo {
-    return getParameterInfo(Object.getPrototypeOf(this).constructor as abstract new () => unknown);
-  }
 
   /** Renders a fragment that is not part of buildRenderTree (e.g. a child content wrapper). */
   protected renderFragment(builder: RenderTreeBuilder, fragment: RenderFragment): void {
@@ -270,8 +177,8 @@ export abstract class ComponentBase {
     const service = provider.get(token);
     // E8 auto-render: a culture-aware service injected from a lifecycle method
     // is observed here (a construction-time call is collected and drained by
-    // the renderer — autoObserveInternal); anything else is just resolved.
-    if (isAutoRender(service) && !collectAutoObserve(service)) this.autoObserveInternal(service);
+    // the renderer — componentInternals.autoObserve); anything else is just resolved.
+    if (isAutoRender(service) && !collectAutoObserve(service)) this.#autoObserve(service);
     return service;
   }
 
@@ -294,7 +201,7 @@ export abstract class ComponentBase {
    * can't see — a callback from a DOM listener, a timer or a behavior the component set up itself.
    */
   protected dispatchExceptionAsync(error: unknown): Promise<void> {
-    this.reportErrorInternal(error, "event");
+    this.#reportError(error, "event");
     return Promise.resolve();
   }
 
@@ -332,7 +239,7 @@ export abstract class ComponentBase {
     let teardown: ObserveTeardown;
     let controller: AbortController | undefined;
     const fail = (error: unknown): void => {
-      if (active) this.reportErrorInternal(error, "lifecycle");
+      if (active) this.#reportError(error, "lifecycle");
     };
     const notify = (value?: T): void => {
       if (!active) return;
@@ -344,7 +251,7 @@ export abstract class ComponentBase {
           return;
         }
       }
-      this.stateHasChangedInternal();
+      this.#requestRender();
     };
     const entry = {
       source,
@@ -354,7 +261,7 @@ export abstract class ComponentBase {
         observed.delete(entry);
         controller?.abort();
         const pending = release(teardown);
-        if (isPromiseLike(pending)) Promise.resolve(pending).catch((error) => this.reportErrorInternal(error, "dispose"));
+        if (isPromiseLike(pending)) Promise.resolve(pending).catch((error) => this.#reportError(error, "dispose"));
       },
     };
     observed.add(entry);
@@ -391,12 +298,11 @@ export abstract class ComponentBase {
   }
 
   /**
-   * @internal E8 auto-render (design-localization.md §3): the renderer drains
-   * here the marked services resolved during construction (`@inject` field
-   * initializers) — a culture-aware service re-renders this component on its
+   * E8 auto-render (design-localization.md §3): the renderer drains here the marked services resolved during
+   * construction (`@inject` field initializers) — a culture-aware service re-renders this component on its
    * notifications, the same subscription a hand-written `observe` would build.
    */
-  autoObserveInternal(source: unknown): void {
+  #autoObserve(source: unknown): void {
     // Injected again (a second localizer, a lifecycle method that runs on every parameter set): already observed.
     const observed = (this.#autoObserved ??= new Set());
     if (observed.has(source)) return;
@@ -405,22 +311,20 @@ export abstract class ComponentBase {
   }
 
   /**
-   * @internal Routes a failure of work outside the render pipeline
-   * (`@Bindable` callbacks, `observe`) to the renderer's error path; an
-   * unmounted component logs it.
+   * Routes a failure of work outside the render pipeline (`@Bindable` callbacks, `observe`) to the renderer's error
+   * path; an unmounted component logs it.
    */
-  reportErrorInternal(error: unknown, phase: RenderErrorPhase): void {
-    if (this.renderHandle) this.renderHandle.reportError(error, phase);
+  #reportError(error: unknown, phase: RenderErrorPhase): void {
+    if (this.#renderHandle) this.#renderHandle.reportError(error, phase);
     // eslint-disable-next-line no-console
     else console.error(`[tsazor] ${this.constructor.name}:`, error);
   }
 
   /**
-   * @internal Called by the renderer when it disposes the component, before
-   * dispose/disposeAsync: aborts disposeSignal and ends every observed
-   * subscription. Teardown failures go to the dispose error path.
+   * Called by the renderer when it disposes the component, before dispose/disposeAsync: aborts disposeSignal and ends
+   * every observed subscription. Teardown failures go to the dispose error path.
    */
-  disposeInternal(): void {
+  #dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
     this.#disposeController?.abort();
@@ -429,9 +333,66 @@ export abstract class ComponentBase {
       try {
         entry.stop();
       } catch (error) {
-        this.reportErrorInternal(error, "dispose");
+        this.#reportError(error, "dispose");
       }
     }
+  }
+
+  /**
+   * Blazor's IHandleAfterRender.OnAfterRenderAsync, called by the renderer once the batch that rendered this component
+   * completed: `firstRender` is true on the first call per instance. Like Blazor, a completed (async) onAfterRender does
+   * not trigger a render.
+   */
+  #notifyAfterRender(): void | Promise<void> {
+    const firstRender = !this.#hasCalledOnAfterRender;
+    this.#hasCalledOnAfterRender = true;
+    return this.onAfterRender(firstRender);
+  }
+
+  /** Builds the current output (wraps the protected buildRenderTree); a `@State` assignment meanwhile schedules nothing (F6). */
+  #renderOutput(builder: RenderTreeBuilder): void {
+    this.#building = true;
+    try {
+      this.buildRenderTree(builder);
+    } finally {
+      this.#building = false;
+    }
+  }
+
+  static {
+    Object.assign(componentInternals, {
+      attach(component: ComponentBase, handle: RenderHandle, services: unknown): void {
+        component.#renderHandle = handle;
+        component.#services = services;
+      },
+      renderHandle: (component: ComponentBase): RenderHandle | undefined => component.#renderHandle,
+      services: (component: ComponentBase): unknown => component.#services,
+      requestRender: (component: ComponentBase): void => component.#requestRender(),
+      stateFieldChanged(component: ComponentBase): void {
+        // F6: before the first render it comes anyway; while building, it would render again and again.
+        if (!component.#firstRenderDone || component.#building) return;
+        component.#requestRender();
+      },
+      forceRender(component: ComponentBase): void {
+        if (component.#hasPendingRender || !component.#renderHandle) return;
+        component.#hasPendingRender = true;
+        component.#renderHandle.render();
+      },
+      notifyAfterRender: (component: ComponentBase): void | Promise<void> => component.#notifyAfterRender(),
+      hasPendingRender: (component: ComponentBase): boolean => component.#hasPendingRender,
+      clearPendingRender(component: ComponentBase): void {
+        component.#hasPendingRender = false;
+      },
+      renderOutput: (component: ComponentBase, builder: RenderTreeBuilder): void => component.#renderOutput(builder),
+      firstRenderCompleted: (component: ComponentBase): boolean => component.#firstRenderDone,
+      markFirstRenderCompleted(component: ComponentBase): void {
+        component.#firstRenderDone = true;
+      },
+      autoObserve: (component: ComponentBase, source: unknown): void => component.#autoObserve(source),
+      reportError: (component: ComponentBase, error: unknown, phase: RenderErrorPhase): void => component.#reportError(error, phase),
+      dispose: (component: ComponentBase): void => component.#dispose(),
+      applyParameters: (component: ComponentBase, parameters: ParameterView): void => component.applyParameterValues(parameters),
+    } satisfies typeof componentInternals);
   }
 }
 

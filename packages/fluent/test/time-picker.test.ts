@@ -37,7 +37,7 @@ async function mount(attrs: Record<string, unknown> = {}, value = "14:30:00") {
   }
   const result = await render(Host);
   hosts.push(result);
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   const input = () => result.container.querySelector<HTMLInputElement>("input")!;
   const list = () => result.container.querySelector<HTMLElement>("[role=listbox]");
   const options = () => [...result.container.querySelectorAll<HTMLElement>("[role=option]")];

@@ -8,12 +8,12 @@ import { renderTree } from "@tsazor/testing";
 import { ServiceCollection } from "@tsazor/runtime";
 import { addFluent, ToastRegion, Toaster, Toast } from "../dist/index.js";
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 async function renderRegion(toaster: Toaster, position?: string) {
@@ -42,7 +42,7 @@ describe("ToastRegion", () => {
 
   it("shows the Toaster's toasts in a polite live region, colored by intent", async () => {
     const toaster = new Toaster();
-    const { container, renderer } = await renderRegion(toaster);
+    const { container, ...renderer } = await renderRegion(toaster);
     toaster.show({ title: "Saved", message: "Order 101", intent: "success", timeout: 0 });
     toaster.show({ message: "Offline", intent: "danger", timeout: 0 });
     toaster.show({ message: "Synced", intent: "primary", timeout: 0 });
@@ -58,7 +58,7 @@ describe("ToastRegion", () => {
 
   it("closes a toast with its button", async () => {
     const toaster = new Toaster();
-    const { container, renderer } = await renderRegion(toaster);
+    const { container, ...renderer } = await renderRegion(toaster);
     toaster.show({ message: "One", timeout: 0 });
     toaster.show({ message: "Two", timeout: 0 });
     await settle(renderer);
@@ -70,7 +70,7 @@ describe("ToastRegion", () => {
 
   it("shows a toast's action as a button: a click runs it and closes the toast", async () => {
     const toaster = new Toaster();
-    const { container, renderer } = await renderRegion(toaster);
+    const { container, ...renderer } = await renderRegion(toaster);
     const opened: string[] = [];
     toaster.show({ message: "Hi from John", timeout: 0, action: { label: "Chat?", onClick: () => void opened.push("chat") } });
     toaster.show({ message: "Saved", timeout: 0 });
@@ -88,16 +88,22 @@ describe("ToastRegion", () => {
   it("closes a toast after its timeout, but not while the pointer is over it", async () => {
     vi.useFakeTimers();
     const toaster = new Toaster();
-    const { container, renderer } = await renderRegion(toaster);
+    const { container, ...renderer } = await renderRegion(toaster);
+    // settle() lets one timer tick pass; under fake timers it is advanced by hand.
+    const settle = async () => {
+      const settled = renderer.settle();
+      await vi.advanceTimersByTimeAsync(0);
+      await settled;
+    };
     toaster.show({ message: "Saved", timeout: 1000 });
-    await renderer.waitUntilIdle();
+    await settle();
     const toast = container.querySelector<HTMLElement>(".fui-toast")!;
     toast.dispatchEvent(new MouseEvent("mouseenter"));
     vi.advanceTimersByTime(5000);
     expect(toaster.toasts).toHaveLength(1);
     toast.dispatchEvent(new MouseEvent("mouseleave"));
     vi.advanceTimersByTime(1000);
-    await renderer.waitUntilIdle();
+    await settle();
     expect(toaster.toasts).toHaveLength(0);
     expect(container.querySelectorAll(".fui-toast")).toHaveLength(0);
   });

@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import { inject } from "../di/service-provider.js";
@@ -47,7 +48,7 @@ export class NavLink extends ComponentBase {
   private unsubscribe?: () => void;
 
   protected override onInitialized(): void {
-    this.unsubscribe = this.navigation.addLocationChanged(() => this.stateHasChangedInternal());
+    this.unsubscribe = this.navigation.addLocationChanged(() => componentInternals.requestRender(this));
   }
 
   /** Stops listening to location changes. */

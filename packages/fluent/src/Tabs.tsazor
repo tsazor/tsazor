@@ -55,14 +55,14 @@
         this.tabs.push(tab);
         // The tab list only exists after the children have registered, so the
         // nav needs one more render pass than the initial one.
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 
     /** @internal Switches the active tab (no-op out of range or same index). */
     select(index: number): Promise<void> | undefined {
         if (index < 0 || index >= this.tabs.length || index === this.activeIndexInternal) return undefined;
         this.activeIndexInternal = index;
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
         return this.onSelected?.invokeAsync(index);
     }
 

@@ -114,7 +114,7 @@
         if (this.stepList.includes(step)) return;
         step.index = this.stepList.length;
         this.stepList.push(step);
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 
     /** @internal Called by WizardStep as it goes. */
@@ -125,12 +125,12 @@
         this.stepList.forEach((other, index) => {
             other.index = index;
         });
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 
     /** @internal A step's label, summary or disabled state changed. */
     refresh(): void {
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 
     private clickable(step: WizardStep): boolean {
@@ -169,7 +169,7 @@
         this.value = index;
         this.maxVisited = Math.max(this.maxVisited, index);
         for (const step of this.stepList) step.refreshPanel();
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
         await this.valueChanged?.invokeAsync(index);
     }
 

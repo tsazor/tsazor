@@ -22,8 +22,6 @@
 
 // AuthenticationStateProvider: re-exported from @tsazor/runtime
 
-// AuthenticationStateSubscribeOptions: re-exported from @tsazor/runtime
-
 // AuthorizationPolicy: re-exported from @tsazor/runtime
 
 // AuthorizationRequirements: re-exported from @tsazor/runtime
@@ -41,8 +39,6 @@
 // BindableOptions: re-exported from @tsazor/runtime
 
 // bindMethod: re-exported from @tsazor/runtime
-
-// CascadeEntry: re-exported from @tsazor/runtime
 
 // CascadingAuthenticationState: re-exported from @tsazor/runtime
 
@@ -66,11 +62,7 @@
 
 // ComponentDefinition: re-exported from @tsazor/runtime
 
-// ComponentState: re-exported from @tsazor/runtime
-
 // ComponentType: re-exported from @tsazor/runtime
-
-// computeDiff: re-exported from @tsazor/runtime
 
 // configureTransitions: re-exported from @tsazor/runtime
 
@@ -99,12 +91,6 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 // defineComponent: re-exported from @tsazor/runtime
 
 // defineParameter: re-exported from @tsazor/runtime
-
-// DiffOptions: re-exported from @tsazor/runtime
-
-// Dispatcher: re-exported from @tsazor/runtime
-
-// DomRenderer: re-exported from @tsazor/runtime
 
 // DynamicComponent: re-exported from @tsazor/runtime
 
@@ -149,8 +135,6 @@ export interface FakeStore<T> {
 
 // FieldIdentifier: re-exported from @tsazor/runtime
 
-// focusBySelector: re-exported from @tsazor/runtime
-
 // FocusOnInvalidSubmit: re-exported from @tsazor/runtime
 
 // FocusOnNavigate: re-exported from @tsazor/runtime
@@ -161,15 +145,9 @@ export interface FakeStore<T> {
 
 // FrameType: re-exported from @tsazor/runtime
 
-// getRouteTable: re-exported from @tsazor/runtime
-
 // HeadContent: re-exported from @tsazor/runtime
 
 // HeadOutlet: re-exported from @tsazor/runtime
-
-// headSectionId: re-exported from @tsazor/runtime
-
-// IErrorBoundary: re-exported from @tsazor/runtime
 
 // inject: re-exported from @tsazor/runtime
 
@@ -195,12 +173,6 @@ export interface FakeStore<T> {
 
 // isCascadingValueSupplier: re-exported from @tsazor/runtime
 
-// isComponentDefinition: re-exported from @tsazor/runtime
-
-// isIErrorBoundary: re-exported from @tsazor/runtime
-
-// isLazyRoute: re-exported from @tsazor/runtime
-
 // LayoutComponentBase: re-exported from @tsazor/runtime
 
 // LayoutView: re-exported from @tsazor/runtime
@@ -218,8 +190,6 @@ export interface FakeStore<T> {
 // LocationChangingHandler: re-exported from @tsazor/runtime
 
 // MarkupString: re-exported from @tsazor/runtime
-
-// matchRoute: re-exported from @tsazor/runtime
 
 // MaxLength: re-exported from @tsazor/runtime
 
@@ -260,8 +230,6 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 
 // ParameterView: re-exported from @tsazor/runtime
 
-// parseRouteTemplate: re-exported from @tsazor/runtime
-
 // parseValue: re-exported from @tsazor/runtime
 
 // PlaceholderContext: re-exported from @tsazor/runtime
@@ -269,8 +237,6 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 // PlaceholdersOf: re-exported from @tsazor/runtime
 
 // QueryParameterMeta: re-exported from @tsazor/runtime
-
-// queryParametersOf: re-exported from @tsazor/runtime
 
 // QueryParameterType: re-exported from @tsazor/runtime
 
@@ -283,19 +249,7 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 // render
 export declare function render<TComponent extends ComponentBase>(component: ComponentType<TComponent> | (abstract new (...args: never[]) => TComponent), options?: RenderOptions<TComponent>): Promise<RenderResult<TComponent>>;
 
-// RenderBatch: re-exported from @tsazor/runtime
-
-// Renderer: re-exported from @tsazor/runtime
-
-// RenderError: re-exported from @tsazor/runtime
-
-// RenderErrorHandler: re-exported from @tsazor/runtime
-
-// RenderErrorPhase: re-exported from @tsazor/runtime
-
 // RenderFragment: re-exported from @tsazor/runtime
-
-// RenderHandle: re-exported from @tsazor/runtime
 
 // RenderOptions
 export interface RenderOptions<TComponent extends ComponentBase = ComponentBase> {
@@ -305,9 +259,8 @@ export interface RenderOptions<TComponent extends ComponentBase = ComponentBase>
 
 // RenderResult
 export interface RenderResult<TComponent extends ComponentBase = ComponentBase> {
-    container: HTMLElement;
-    renderer: Renderer;
-    instance: TComponent;
+    readonly container: HTMLElement;
+    readonly instance: TComponent;
     readonly markup: string;
     find(selector: string): HTMLElement;
     findAll(selector: string): HTMLElement[];
@@ -324,12 +277,6 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // RenderTreeBuilder: re-exported from @tsazor/runtime
 
-// RenderTreeDiff: re-exported from @tsazor/runtime
-
-// RenderTreeEdit: re-exported from @tsazor/runtime
-
-// RenderTreeEditType: re-exported from @tsazor/runtime
-
 // RenderTreeFrame: re-exported from @tsazor/runtime
 
 // requestImageFileAsync: re-exported from @tsazor/runtime
@@ -337,8 +284,6 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // RequestInterceptor: re-exported from @tsazor/runtime
 
 // Required: re-exported from @tsazor/runtime
-
-// resolveSectionIdentifier: re-exported from @tsazor/runtime
 
 // ResponseInterceptor: re-exported from @tsazor/runtime
 
@@ -354,8 +299,6 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // Router: re-exported from @tsazor/runtime
 
-// RouteTable: re-exported from @tsazor/runtime
-
 // RouteValue: re-exported from @tsazor/runtime
 
 // RouteView: re-exported from @tsazor/runtime
@@ -366,23 +309,13 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // SectionContent: re-exported from @tsazor/runtime
 
-// SectionContentLike: re-exported from @tsazor/runtime
-
 // SectionOutlet: re-exported from @tsazor/runtime
-
-// SectionOutletContentRenderer: re-exported from @tsazor/runtime
-
-// SectionOutletLike: re-exported from @tsazor/runtime
-
-// SectionRegistry: re-exported from @tsazor/runtime
 
 // ServiceCollection: re-exported from @tsazor/runtime
 
 // ServiceLifetime: re-exported from @tsazor/runtime
 
 // ServiceProvider: re-exported from @tsazor/runtime
-
-// standardSchemaField: re-exported from @tsazor/runtime
 
 // StandardSchemaIssue: re-exported from @tsazor/runtime
 
@@ -408,10 +341,6 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // SupplyParameterFromQuery: re-exported from @tsazor/runtime
 
-// titleSectionId: re-exported from @tsazor/runtime
-
-// toComponentDefinition: re-exported from @tsazor/runtime
-
 // Token: re-exported from @tsazor/runtime
 
 // Transition: re-exported from @tsazor/runtime
@@ -436,8 +365,6 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 
 // ValidationRule: re-exported from @tsazor/runtime
 
-// validationRulesOf: re-exported from @tsazor/runtime
-
 // ValidationSummary: re-exported from @tsazor/runtime
 
 // Virtualize: re-exported from @tsazor/runtime
@@ -449,5 +376,3 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // VirtualizeItemsProviderRequest: re-exported from @tsazor/runtime
 
 // VirtualizeItemsProviderResult: re-exported from @tsazor/runtime
-
-// watchAuthenticationState: re-exported from @tsazor/runtime

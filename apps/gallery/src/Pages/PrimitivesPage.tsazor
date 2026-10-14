@@ -99,6 +99,6 @@
     private async setPage(next: number): Promise<void> {
         if (next < 1 || next > 12 || next === this.page) return;
         this.page = next;
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 }

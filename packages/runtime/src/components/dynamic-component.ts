@@ -21,7 +21,7 @@ export class DynamicComponent extends ComponentBase {
   /** Blazor's Instance: the rendered component instance. */
   instance: ComponentBase | null = null;
 
-  override applyParameterValues(parameters: ParameterView): void {
+  protected override applyParameterValues(parameters: ParameterView): void {
     // Blazor's manual parameter assignment accepts only Type and Parameters
     // (case-insensitive) and rejects everything else BEFORE assigning anything.
     for (const [name] of parameters.entries()) {

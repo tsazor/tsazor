@@ -22,7 +22,7 @@ async function one(component: ComponentType, attrs: Record<string, unknown>, tex
     b.closeComponent();
   });
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result.container.firstElementChild as HTMLElement;
 }
 
@@ -106,7 +106,7 @@ describe("ScrollToTop", () => {
     }
     const result = await render(Host);
     mounted.push(result);
-    const idle = () => result.renderer.waitUntilIdle();
+    const idle = () => result.settle();
     const scroller = result.container.querySelector<HTMLElement>("#scroller")!;
     const button = () => result.container.querySelector<HTMLButtonElement>("button");
     expect(button()).toBeNull();

@@ -9,9 +9,7 @@ import {
   EditContext,
   EditForm,
   EventCallback,
-  Renderer,
   StandardSchemaValidator,
-  standardSchemaField,
   ValidationMessage,
   ValidationSummary,
   type RenderTreeBuilder,
@@ -20,6 +18,10 @@ import {
   type StandardSchemaV1,
   ComponentBase,
 } from "../src/index";
+import {
+  Renderer,
+  standardSchemaField,
+} from "../src/internal";
 
 type Signup = { email: string; password: string; confirm: string };
 

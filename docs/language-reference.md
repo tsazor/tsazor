@@ -751,9 +751,8 @@ entries) does not change language on a culture switch. Store the **key**, transl
   slot context is named `context` by default:
   `<ErrorContent Context="error">…@error.message…</ErrorContent>`. `maximumErrorCount`
   (default 100, as in Blazor) counts errors between two `recover()` calls; beyond that
-  the error is fatal and reaches `renderer.errorHandler`. Custom boundaries inherit from
-  `ErrorBoundaryBase` (or implement `IErrorBoundary`: `isErrorBoundary = true` +
-  `handleException`); the `onError` hook logs to the console by default (Blazor logs through the
+  the error is fatal and is logged to the console. Custom boundaries inherit from
+  `ErrorBoundaryBase`; the `onError` hook logs to the console by default (Blazor logs through the
   injected `IErrorBoundaryLogger` — Tsazor does not have this service).
 
 - `DynamicComponent` (3.2) renders a component chosen at runtime (Blazor's
@@ -1219,15 +1218,15 @@ Tsazor and stays the better fit when code needs the data too.
   `WeakMap`).
 - **Errors:** a rejection `Catch` renders is no component failure. **Without `Catch`, the
   rejection fails the component** (phase `lifecycle`): the nearest `ErrorBoundary` shows it,
-  otherwise `renderer.errorHandler` gets it. Nothing is swallowed silently.
+  otherwise it is logged to the console. Nothing is swallowed silently.
 - **Typing:** `TValue` is inferred from `For` through the awaited type (`Promise<User> |
   undefined` → `User`), so the `Then` context is typed; `TValue="User"` on the tag is the
   explicit fallback. The `Catch` context is `unknown`, TypeScript's `catch` semantics; like
   `ErrorBoundary`'s `ErrorContent` context, the check leaves it unchecked, so narrow it yourself
   (`@(err instanceof Error ? err.message : String(err))`) where the reason may not be an
   `Error`.
-- **Idle:** the current pending promise counts for `renderer.waitUntilIdle()` (tests,
-  `@tsazor/testing`'s `settle`), like an async `onInitialized`; a replaced one stops counting.
+- **Idle:** the current pending promise counts for `@tsazor/testing`'s `settle()`, like an async
+  `onInitialized`; a replaced one stops counting.
 - **Not a thenable:** the parameters are write-only (setters), so an `Await` instance (`@ref`)
   has no readable `then` and is never mistaken for a promise by `await` or `Promise.resolve`.
 

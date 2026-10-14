@@ -13,9 +13,9 @@ const save = icon("save", '<svg viewBox="0 0 16 16"><path d="M1 1h14"/></svg>');
 const open = icon("open", '<svg viewBox="0 0 16 16"><path d="M2 2h12"/></svg>');
 
 async function settle(result: RenderResult): Promise<void> {
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 }
 
 async function renderOne(component: unknown, attrs: (b: RenderTreeBuilder) => void): Promise<RenderResult> {

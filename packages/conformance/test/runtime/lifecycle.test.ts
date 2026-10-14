@@ -3,7 +3,8 @@
  * Review §3: R5, R6, R7, R9, R13.
  */
 import { describe, expect, it, vi } from "vitest";
-import { ComponentBase, defineComponent, Renderer, type RenderTreeBuilder } from "@tsazor/runtime";
+import { ComponentBase, defineComponent, type RenderTreeBuilder } from "@tsazor/runtime";
+import { Renderer } from "@tsazor/runtime/internal";
 import { createTestRenderer } from "../harness.js";
 import { host, settle } from "./host.js";
 

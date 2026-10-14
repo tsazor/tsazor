@@ -8,20 +8,20 @@ import { EventCallback, type RenderTreeBuilder } from "@tsazor/runtime";
 import { Tabs, Tab } from "../dist/index.js";
 
 /** The renderer type returned by renderTree. */
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 
 /** Waits out the microtask render queue plus the settle timer. */
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 /** Renders a Tabs with three labelled tabs and per-tab panel text. */
 async function renderTabs(
   onSelected?: (index: number) => void,
 ): Promise<{ container: HTMLElement; renderer: Renderer }> {
-  const { container, renderer } = await renderTree(b => {
+  const { container, ...renderer } = await renderTree(b => {
     b.openComponent(0, Tabs);
     b.addAttribute(1, "id", "demo-tabs");
     if (onSelected) {

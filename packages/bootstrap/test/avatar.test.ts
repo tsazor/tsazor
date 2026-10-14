@@ -21,7 +21,7 @@ async function avatar(attrs: (b: RenderTreeBuilder) => void): Promise<HTMLElemen
     b.closeComponent();
   });
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return result.container.querySelector<HTMLElement>("[class*=rounded]")!;
 }
 

@@ -6,7 +6,9 @@
  * equals the diff of the same render built without reuse.
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, EventCallback, Parameter, RenderTreeBuilder, Renderer, computeDiff, defineComponent, type RenderTreeFrame } from "../src/index";
+import { ComponentBase, EventCallback, Parameter, RenderTreeBuilder, defineComponent, type RenderTreeFrame } from "../src/index";
+import { Renderer, computeDiff } from "../src/internal";
+import { componentInternals } from "../src/components/component-internals";
 
 interface Row {
   id: number;
@@ -206,7 +208,7 @@ describe("H2 — DOM and child components", () => {
       cells: () => [...state.slotChildren.values()].map((child) => child.component as Cell),
       async update(change: (t: Table) => void) {
         change(table);
-        table.stateHasChangedInternal();
+        componentInternals.requestRender(table);
         await renderer.waitUntilIdle();
       },
     };

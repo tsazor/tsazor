@@ -46,7 +46,7 @@ async function probe(component: ComponentType, attrs: Record<string, unknown> = 
     { services: (services) => services.registerValue(Toaster, new Toaster()) },
   );
   mounted.push(result);
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   const element = result.container.querySelector<HTMLElement>("[data-probe]");
   if (element === null) throw new Error(`${component.name}: no element took the attributes`);
   return element;
@@ -89,7 +89,7 @@ describe("@attributes on the Bootstrap components", () => {
       b.closeComponent();
     });
     mounted.push(result);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     const panel = result.container.querySelector<HTMLElement>("[role=tabpanel]")!;
     expect(panel.className).toBe("tab-pane fade show active extra");
     expect(panel.getAttribute("data-probe")).toBe("yes");

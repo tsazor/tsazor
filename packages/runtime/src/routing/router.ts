@@ -17,6 +17,7 @@ import {
   type RouteMatch,
   type RouteTable,
 } from "./route-data.js";
+import { componentInternals } from "../components/component-internals.js";
 
 /** Lazy pages by loader: loading (shared promise) and loaded. */
 const loadingRoutes = new WeakMap<LazyRouteEntry["load"], Promise<LoadedRoute>>();
@@ -92,7 +93,7 @@ export class Router extends ComponentBase {
   protected override onInitialized(): void {
     if (this.routes.length === 0) {
       // Fall back to the app-provided manifest (createTsazorApp `routes` option).
-      const services = this.componentServices as ServiceProvider | null;
+      const services = componentInternals.services(this) as ServiceProvider | null;
       const manifest = services?.tryGet(RouteManifest as unknown as Token<RouteManifest>);
       if (manifest) this.routes = manifest.entries;
     }
@@ -120,7 +121,7 @@ export class Router extends ComponentBase {
     const matched = getRouteTable(this.routes).match(this.navigation.baseRelativePath);
     const lazy = matched && isLazyRoute(matched.route) && !loadedRoutes.has(matched.route.load) ? matched.route : undefined;
     if (!handler && !lazy) {
-      if (!initial) this.stateHasChangedInternal();
+      if (!initial) componentInternals.requestRender(this);
       return;
     }
     const controller = new AbortController();
@@ -129,7 +130,7 @@ export class Router extends ComponentBase {
     // Shows Navigating (or keeps the current output) meanwhile; the first
     // render follows initialization anyway. Without Navigating a held
     // navigation waits for it too; with it, the app shows its own waiting state.
-    if (!initial) this.stateHasChangedInternal();
+    if (!initial) componentInternals.requestRender(this);
     const running = this.run(handler, lazy, context, controller);
     if (this.navigating === undefined) this.navigation.holdFor(running);
   }
@@ -151,7 +152,7 @@ export class Router extends ComponentBase {
     // A superseded navigation renders nothing: the newer one does.
     if (this.pending !== controller) return;
     this.pending = undefined;
-    this.stateHasChangedInternal();
+    componentInternals.requestRender(this);
   }
 
   /** Loads a lazy page once (shared by every Router and template of that page). */

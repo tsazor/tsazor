@@ -47,7 +47,7 @@ async function mount(attrs: Record<string, unknown> = {}) {
 async function move(result: RenderResult, input: HTMLInputElement, value: string, eventName = "input"): Promise<void> {
   input.value = value;
   input.dispatchEvent(new Event(eventName, { bubbles: true }));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
 }
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -72,7 +72,7 @@ describe("Slider", () => {
     expect(result.container.querySelector("output")!.textContent).toBe("60");
     expect(input.value).toBe("60");
     await pause(60);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(Host.last!.volume).toBe(60);
     expect(input.value).toBe("60");
   });

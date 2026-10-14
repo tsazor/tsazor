@@ -2,7 +2,7 @@
  * Frame discriminators for the flat render tree, mirroring Blazor's
  * RenderTreeFrame.FrameType.
  */
-export const enum FrameType {
+export enum FrameType {
   /** Element frame; children occupy the frames until its subtree ends. */
   Element = 1,
   /** Text content (string or number rendered as text). */
@@ -30,7 +30,7 @@ export const enum FrameType {
 }
 
 /** Flags carried on attribute frames for event handler directives. */
-export const enum EventHandlerFlags {
+export enum EventHandlerFlags {
   None = 0,
   PreventDefault = 1 << 0,
   StopPropagation = 1 << 1,

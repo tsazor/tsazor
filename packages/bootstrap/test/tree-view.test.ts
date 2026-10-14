@@ -7,11 +7,11 @@ import { renderTree } from "@tsazor/testing";
 import { EventCallback } from "@tsazor/runtime";
 import { TreeView, type TreeViewItem } from "../dist/index.js";
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 beforeAll(() => {
@@ -36,7 +36,7 @@ async function mountTree(selected: TreeViewItem | null) {
     b.addAttribute(4, "ariaLabel", "Parent page");
     b.closeComponent();
   });
-  await settle(mounted.renderer);
+  await mounted.settle();
   const node = (id: string) => mounted.container.querySelector<HTMLElement>(`[data-tree-id="${id}"]`);
   return { ...mounted, picked, node };
 }
@@ -55,7 +55,7 @@ describe("TreeView", () => {
   });
 
   it("a click selects that node only, the chevron opens and closes, a disabled node isn't selected", async () => {
-    const { renderer, picked, node } = await mountTree(null);
+    const { picked, node, ...renderer } = await mountTree(null);
     expect(node("detail")).toBeNull();
     node("blogs")!.querySelector<HTMLElement>(".tz-tree__chevron")!.click();
     await settle(renderer);
@@ -71,7 +71,7 @@ describe("TreeView", () => {
   });
 
   it("the keyboard: Down moves the focus, Right opens, Enter selects", async () => {
-    const { container, renderer, picked, node } = await mountTree(null);
+    const { container, picked, node, ...renderer } = await mountTree(null);
     const tree = container.querySelector<HTMLElement>("[role=tree]")!;
     const press = async (key: string) => {
       tree.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));

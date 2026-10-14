@@ -3,7 +3,8 @@
  * function, so each test builds exactly the frames it needs — independent of
  * the compiler.
  */
-import { ComponentBase, Parameter, type Renderer, type RenderTreeBuilder } from "@tsazor/runtime";
+import { ComponentBase, Parameter, type RenderTreeBuilder } from "@tsazor/runtime";
+import { type Renderer } from "@tsazor/runtime/internal";
 import { createTestRenderer, rethrowRenderErrors } from "../harness.js";
 
 export type Build = (b: RenderTreeBuilder) => void;

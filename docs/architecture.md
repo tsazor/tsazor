@@ -128,7 +128,8 @@ Browser ──(Renderer)──►  RenderTree frames ──(diff)──►  edit
   `disposeAsync`, the renderer calls `ComponentBase.disposeInternal()`, which aborts the
   (lazily created) `disposeSignal` and stops every observed subscription (a throwing
   unsubscribe → phase `dispose`). An `observe` notification calls `onNext`, then
-  `stateHasChangedInternal()` — so it joins the render queue like any request and a burst
+  `componentInternals.requestRender` (ComponentBase's private plumbing, `@tsazor/runtime/internal`) — so it joins
+  the render queue like any request and a burst
   coalesces into one render. Work outside the render pipeline reports failures through
   `RenderHandle.reportError(error, phase)` (internal) into `handleComponentError`:
   `onNext`/source errors as `lifecycle`, a failing `@Bindable` change callback as `event`

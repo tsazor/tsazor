@@ -14,12 +14,14 @@ import {
   InputNumber,
   InputSelect,
   InputText,
-  Renderer,
   ValidationMessage,
   ValidationSummary,
   defineComponent,
   type RenderTreeBuilder,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 import { formatDateInput } from "../src/forms/input-text";
 
 /** The form demo page: EditForm with validators, three bound inputs. */

@@ -40,7 +40,7 @@ async function overflow(attrs: Record<string, unknown> = {}) {
   mounted.push(result);
   const idle = async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await result.renderer.waitUntilIdle();
+    await result.settle();
   };
   await idle();
   const more = () => result.container.querySelector<HTMLButtonElement>("button[aria-label$='Barley']")!;

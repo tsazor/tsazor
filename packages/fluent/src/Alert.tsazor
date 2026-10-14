@@ -57,7 +57,7 @@
 
     private async dismiss(e: MouseEvent): Promise<void> {
         this.visible = false;
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
         await this.onDismissed?.invokeAsync(e);
     }
 }

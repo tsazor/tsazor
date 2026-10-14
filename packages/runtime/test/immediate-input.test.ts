@@ -10,12 +10,14 @@ import {
   EventCallback,
   InputText,
   InputTextArea,
-  Renderer,
   ValidationMessage,
   defineComponent,
   type EditContext,
   type RenderTreeBuilder,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 
 let current: NamePage | undefined;
 

@@ -5,7 +5,8 @@
  * field and an `@code` parameter.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { Renderer, ServiceCollection, type ComponentBase } from "@tsazor/runtime";
+import { ServiceCollection, type ComponentBase } from "@tsazor/runtime";
+import { Renderer } from "@tsazor/runtime/internal";
 import { compileFiles, normalizeHtml } from "../harness.js";
 
 afterEach(() => {

@@ -1,10 +1,12 @@
+import { componentInternals } from "../src/components/component-internals";
 /**
  * M3 acceptance tests: complete parameter system — ChildContent via markup
  * (addContent inside a component frame), CaptureUnmatchedValues, and async
  * lifecycle orchestration (onInitialized delays the first render).
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, RenderTreeBuilder, Renderer, Parameter, defineComponent, EventCallback } from "../src/index";
+import { ComponentBase, RenderTreeBuilder, Parameter, defineComponent, EventCallback } from "../src/index";
+import { Renderer } from "../src/internal";
 import type { RenderFragment } from "../src/index";
 
 class Card extends ComponentBase {
@@ -78,7 +80,7 @@ describe("child content (Blazor's markup-inside-component syntax)", () => {
     expect(container.querySelector("footer")?.textContent).toBe("one");
 
     (state.component as unknown as { text: string }).text = "two";
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.querySelector("footer")?.textContent).toBe("two");
   });
@@ -238,7 +240,7 @@ describe("async lifecycle orchestration", () => {
     expect(container.querySelector("span")?.textContent).toBe("a");
 
     (state.component as unknown as { value: string }).value = "b";
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.querySelector("span")?.textContent).toBe("b");
     expect(seen).toEqual(["a", "b"]);

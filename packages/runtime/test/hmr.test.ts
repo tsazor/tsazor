@@ -3,7 +3,9 @@
  * keeping instances (state retention) and re-rendering with the new markup.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, Renderer, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
+import { componentInternals } from "../src/components/component-internals";
 
 let currentInstance: unknown;
 let hostInstance: ComponentBase | undefined;
@@ -83,7 +85,7 @@ describe("HMR swap", () => {
 
     // Parent re-render: the child frame still carries the old class, but the
     // swapped child state is kept instead of being remounted.
-    hostInstance!.stateHasChangedInternal();
+    componentInternals.requestRender(hostInstance!);
     await renderer.waitUntilIdle();
     expect(currentInstance).toBe(instance);
     expect(container.textContent).toBe("V2: 3 new");

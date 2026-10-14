@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { defineComponent } from "../components/component-definition.js";
 import { Parameter } from "../components/parameter-metadata.js";
@@ -27,17 +28,17 @@ export class SectionOutlet extends ComponentBase {
   private subscribedIdentifier?: unknown;
 
   private get registry(): SectionRegistry {
-    return this.renderHandle.sectionRegistry;
+    return componentInternals.renderHandle(this)!.sectionRegistry;
   }
 
   /** @internal Blazor's ContentUpdated — called by the registry. */
   contentUpdated(provider: SectionContentLike | null): void {
     this.currentContentProvider = provider;
-    this.stateHasChangedInternal();
+    componentInternals.requestRender(this);
   }
 
   /** Blazor's SetParametersAsync registration part (after parameter assignment). */
-  override applyParameterValues(parameters: ParameterView): void {
+  protected override applyParameterValues(parameters: ParameterView): void {
     super.applyParameterValues(parameters);
     const identifier = resolveSectionIdentifier("SectionOutlet", this.sectionName, this.sectionId);
     if (identifier !== this.subscribedIdentifier) {

@@ -23,26 +23,9 @@ export const RESERVED_MEMBERS: ReadonlySet<string> = new Set([
   "dispatchExceptionAsync",
   "disposeSignal",
   "renderFragment",
-  // The renderer's plumbing.
-  "renderHandle",
-  "componentServices",
+  // The protected hook that writes the parameters (the runtime's own components override it). The renderer's
+  // plumbing is private state behind @tsazor/runtime/internal's componentInternals: it takes no name.
   "applyParameterValues",
-  "stateHasChangedInternal",
-  "forceRenderInternal",
-  "stateFieldChangedInternal",
-  "onAfterRenderInternal",
-  "notifyAfterRender",
-  "pendingRender",
-  "renderCurrentOutput",
-  "clearPendingRender",
-  "isInitialized",
-  "firstRenderCompleted",
-  "markFirstRenderCompleted",
-  "getAllParameterMetadata",
-  "getParameterInfo",
-  "autoObserveInternal",
-  "reportErrorInternal",
-  "disposeInternal",
 ]);
 
 /**

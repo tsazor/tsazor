@@ -10,11 +10,13 @@ import {
   ComponentBase,
   ErrorBoundary,
   EventCallback,
-  Renderer,
   defineComponent,
   type RenderFragment,
   type RenderTreeBuilder,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 import { getParameterInfo } from "../src/components/parameter-metadata";
 
 afterEach(() => {

@@ -267,9 +267,9 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS031",
     severity: "error",
     description:
-      "A `@code` member or an `@inject` name equals a `ComponentBase` member (`observe`, `inject`, `stateHasChanged`, `disposeSignal`, `isInitialized`, …) and would replace it. Blazor's base members are PascalCase and never meet a component's fields; Tsazor's camelCase API shares their namespace. Overriding the lifecycle hooks (`onInitialized`, `onParametersSet`, …) stays allowed.",
-    example: "@code {\n  isInitialized = false;\n}\n",
-    fix: "Rename the member or the injected service: `loaded = false` instead of `isInitialized = false`, `@inject Injector injector` instead of `@inject Injector inject`.",
+      "A `@code` member or an `@inject` name equals a `ComponentBase` member (`observe`, `inject`, `stateHasChanged`, `disposeSignal`, …) and would replace it. Blazor's base members are PascalCase and never meet a component's fields; Tsazor's camelCase API shares their namespace. Overriding the lifecycle hooks (`onInitialized`, `onParametersSet`, …) stays allowed.",
+    example: "@code {\n  observe = true;\n}\n",
+    fix: "Rename the member or the injected service: `watching = true` instead of `observe = true`, `@inject Injector injector` instead of `@inject Injector inject`.",
   },
   {
     code: "TZS032",

@@ -44,7 +44,7 @@ class Host extends ComponentBase {
   }
 }
 
-const settle = (result: RenderResult) => new Promise((resolve) => setTimeout(resolve, 50)).then(() => result.renderer.waitUntilIdle());
+const settle = (result: RenderResult) => new Promise((resolve) => setTimeout(resolve, 50)).then(() => result.settle());
 
 async function press(key: string, result: RenderResult): Promise<void> {
   document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));

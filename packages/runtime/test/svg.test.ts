@@ -5,7 +5,8 @@
  * Without it browsers render <path>/<polyline> as HTMLUnknownElement (nothing).
  */
 import { describe, expect, it } from "vitest";
-import { ComponentBase, Renderer, defineComponent, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, defineComponent, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
 
 const SVG = "http://www.w3.org/2000/svg";
 const HTML = "http://www.w3.org/1999/xhtml";

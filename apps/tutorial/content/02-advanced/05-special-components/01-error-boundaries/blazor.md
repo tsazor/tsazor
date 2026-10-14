@@ -34,5 +34,5 @@ boundary derives from `ErrorBoundaryBase` and overrides `onError`.
 > `RenderFragment<Exception>` — in JavaScript anything can be thrown. Handled errors are logged
 > to the console (there's no `IErrorBoundaryLogger` service). And an error **without** a
 > boundary doesn't tear down the app the way an unhandled exception ends a Blazor circuit: it's
-> reported (`renderer.errorHandler`, the console by default), the failed component keeps its
+> reported to the console, the failed component keeps its
 > last output, and the rest of the app keeps working.

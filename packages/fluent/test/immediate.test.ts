@@ -41,7 +41,7 @@ async function type(result: RenderResult, selector: string, text: string, eventN
   const field = result.container.querySelector<HTMLInputElement>(selector)!;
   field.value = text;
   field.dispatchEvent(new Event(eventName, { bubbles: true }));
-  await result.renderer.waitUntilIdle();
+  await result.settle();
   return field;
 }
 
@@ -58,7 +58,7 @@ for (const [field, selector] of [[TextInput, "input"], [TextArea, "textarea"]] a
       expect(input.value).toBe("sav");
       const before = Host.last!.renders;
       await pause(60);
-      await result.renderer.waitUntilIdle();
+      await result.settle();
       expect(Host.last!.query).toBe("sav");
       expect(Host.last!.renders).toBe(before + 1);
       expect(input.value).toBe("sav");

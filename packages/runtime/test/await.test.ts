@@ -5,7 +5,8 @@
  * component (ErrorBoundary).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Await, ComponentBase, ErrorBoundary, Renderer, type RenderFragment, type RenderTreeBuilder } from "../src/index";
+import { Await, ComponentBase, ErrorBoundary, type RenderFragment, type RenderTreeBuilder } from "../src/index";
+import { Renderer } from "../src/internal";
 
 afterEach(() => {
   document.body.innerHTML = "";

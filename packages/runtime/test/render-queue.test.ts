@@ -4,8 +4,10 @@
  * isolation, and independent renderers.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ComponentBase, EventCallback, Parameter, Renderer, defineComponent, type RenderBatch, type RenderError, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, EventCallback, Parameter, defineComponent, type RenderTreeBuilder } from "../src/index";
+import { Renderer, type RenderBatch, type RenderError } from "../src/internal";
 import type { ComponentState } from "../src/renderer/component-state";
+import { componentInternals } from "../src/components/component-internals";
 
 const log: string[] = [];
 const instances = new Map<string, Tree>();
@@ -117,7 +119,7 @@ describe("render queue", () => {
     await renderer.waitUntilIdle();
     other = instances.get("other")!;
     const seen = batches(renderer);
-    (state.slotChildren.values().next().value!.component as ComponentBase).stateHasChangedInternal();
+    componentInternals.requestRender(state.slotChildren.values().next().value!.component as ComponentBase);
     await renderer.waitUntilIdle();
     expect(seen).toEqual([["Trigger", "other", "Trigger"]]);
     expect(renders).toBe(3);
@@ -128,7 +130,7 @@ describe("render queue", () => {
     const observed: boolean[] = [];
     class Observer extends ComponentBase {
       protected override buildRenderTree(b: RenderTreeBuilder): void {
-        observed.push(this.renderHandle.isRenderingInProgress);
+        observed.push(componentInternals.renderHandle(this)!.isRenderingInProgress);
         b.addContent(0, "o");
       }
     }
@@ -234,7 +236,7 @@ describe("error isolation", () => {
     const bold = container.querySelector("b");
 
     flaky.fail = true;
-    flaky.stateHasChangedInternal();
+    componentInternals.requestRender(flaky);
     instances.get("ok")!.poke();
     log.length = 0;
     await renderer.waitUntilIdle();
@@ -245,7 +247,7 @@ describe("error isolation", () => {
     // The next pass diffs against the surviving tree: same element, patched.
     flaky.fail = false;
     flaky.text = "b";
-    flaky.stateHasChangedInternal();
+    componentInternals.requestRender(flaky);
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("bok");
     expect(container.querySelector("b")).toBe(bold);
@@ -292,7 +294,7 @@ describe("error isolation", () => {
     const kid = [...state.slotChildren.values()][0]!;
 
     show = true;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(errors.map((e) => [String(e.error), e.component, e.phase])).toEqual([["Error: capture failed", state, "apply"]]);
     expect(container.textContent).toBe("kid");
@@ -300,7 +302,7 @@ describe("error isolation", () => {
     expect([...state.slotChildren.values()]).toEqual([kid]);
 
     fail = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("shownextrakid");
     expect([...state.slotChildren.values()].at(-1)).toBe(kid);
@@ -336,7 +338,7 @@ describe("error isolation", () => {
     const faulty = [...state.slotChildren.values()][0]!;
     // The throwing onInitialized means no render request: nothing to click yet.
     expect(errors.map((e) => [String(e.error), e.component, e.phase])).toEqual([["Error: init", faulty, "lifecycle"]]);
-    faulty.component.stateHasChangedInternal();
+    componentInternals.requestRender(faulty.component);
     await renderer.waitUntilIdle();
     container.querySelector("button")!.click();
     await renderer.waitUntilIdle();

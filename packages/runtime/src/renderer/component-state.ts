@@ -65,7 +65,7 @@ export class ComponentState {
   /** Mutable so HMR can replace the definition in place. */
   definition: ComponentDefinition;
 
-  /** The component's `RenderHandle` (also assigned to `component.renderHandle`); the renderer wires up its methods. */
+  /** The component's `RenderHandle` (handed to it with componentInternals.attach); the renderer wires up its methods. */
   readonly renderHandle: RenderHandle;
 
   /** The comment node that marks the start of the component's DOM output. */

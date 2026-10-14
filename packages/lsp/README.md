@@ -5,3 +5,7 @@ go to definition and completion, through a typed shadow of each component — th
 
 The Tsazor extension for VS Code brings it along. Other editors start the server from `@tsazor/lsp/server` over
 stdio. See [the language server](../../docs/language-server.md).
+
+Its programmatic API (the package's exports; editors use the server process) is for Tsazor's own tools: released in
+lockstep with them, it may change in any release and is not covered by the stability promise
+([support policy](../../docs/support-policy.md), D-S7).

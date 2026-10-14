@@ -125,8 +125,8 @@ describe("a stored layout as a render tree", () => {
     it("renders the component inside the elements that hold it, its attributes as parameters (case-insensitive)", async () => {
         let layout = parseLayout('<main class="page"><h1>Title</h1><div><PluginsSection Name="Main" fluentcms /></div></main><Missing fluentcms />');
         Section.created = 0;
-        const { container, renderer, rerender } = await renderTree((b) => buildLayout(b, layout.nodes, resolve));
-        await renderer.waitUntilIdle();
+        const { container, rerender, ...renderer } = await renderTree((b) => buildLayout(b, layout.nodes, resolve));
+        await renderer.settle();
         expect(container.querySelector("main.page > div > p")?.textContent).toBe("section Main");
         expect(container.querySelector(".f-missing-component")?.textContent).toBe("The layout's component Missing doesn't exist.");
 

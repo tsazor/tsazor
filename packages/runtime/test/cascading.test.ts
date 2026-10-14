@@ -10,12 +10,14 @@ import {
   CascadingValue,
   ComponentBase,
   Parameter,
-  Renderer,
   defineComponent,
-  type ComponentState,
   type RenderFragment,
   type RenderTreeBuilder,
 } from "../src/index";
+import {
+  Renderer,
+  type ComponentState,
+} from "../src/internal";
 
 class Box {
   constructor(readonly n: number) {}

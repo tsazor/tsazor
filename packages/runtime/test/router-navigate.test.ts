@@ -5,8 +5,10 @@
  * aborts the running one, and a failing hook is a failure of the router.
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { ComponentBase, defineComponent, NavigationManager, Renderer, Router, RouteView, ServiceCollection } from "../src/index";
-import type { NavigationContext, RenderError, RenderFragment, RenderTreeBuilder } from "../src/index";
+import { ComponentBase, defineComponent, NavigationManager, Router, RouteView, ServiceCollection } from "../src/index";
+import { Renderer } from "../src/internal";
+import type { NavigationContext, RenderFragment, RenderTreeBuilder } from "../src/index";
+import type { RenderError } from "../src/internal";
 
 function page(title: string): typeof ComponentBase {
   return class extends ComponentBase {

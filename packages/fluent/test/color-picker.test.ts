@@ -42,7 +42,7 @@ async function picker(attrs: Record<string, unknown> = {}, color = "#f44236") {
   }
   const result = await render(Host);
   mounted.push(result);
-  const idle = () => result.renderer.waitUntilIdle();
+  const idle = () => result.settle();
   const radios = () => [...result.container.querySelectorAll<HTMLElement>("[role=radio]")];
   const checked = () => radios().filter((radio) => radio.getAttribute("aria-checked") === "true");
   return { Host, result, idle, radios, checked };
@@ -145,7 +145,7 @@ describe("ColorPickerInput", () => {
     }
     const result = await render(Host);
     mounted.push(result);
-    const idle = () => result.renderer.waitUntilIdle();
+    const idle = () => result.settle();
     return {
       Host,
       idle,

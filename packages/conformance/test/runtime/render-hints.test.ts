@@ -8,7 +8,8 @@
  * function on every render, as a C# lambda on `this` is an equal delegate.
  */
 import { describe, expect, it } from "vitest";
-import { EventCallback, RenderTreeBuilder, RenderTreeEditType, type Renderer, type RenderTreeEdit, type RenderTreeFrame } from "@tsazor/runtime";
+import { EventCallback, RenderTreeBuilder, type RenderTreeFrame } from "@tsazor/runtime";
+import { RenderTreeEditType, type Renderer, type RenderTreeEdit } from "@tsazor/runtime/internal";
 import { compileFiles, mount } from "../harness.js";
 // Blazor's ChangeDetection.MayHaveChanged (internal to the runtime).
 import { mayHaveChanged } from "../../../runtime/src/components/change-detection.js";

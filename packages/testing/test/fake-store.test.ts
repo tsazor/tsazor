@@ -29,7 +29,7 @@ describe("createFakeStore", () => {
     const before = result.instance.renders;
     prices.set(101);
     prices.set(102);
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     expect(result.container.textContent).toBe("$102");
     expect(result.instance.renders - before).toBe(1);
 

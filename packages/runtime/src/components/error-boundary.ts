@@ -1,3 +1,4 @@
+import { componentInternals } from "./component-internals.js";
 import { ComponentBase } from "./component-base.js";
 import { Parameter } from "./parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
@@ -51,10 +52,10 @@ export abstract class ErrorBoundaryBase extends ComponentBase implements IErrorB
       // Tracked for waitUntilIdle. Deviation: Blazor routes a faulting
       // OnErrorAsync back through the render pipeline (fatal); ours surfaces
       // as an unhandled rejection.
-      this.renderHandle.track(logged);
+      componentInternals.renderHandle(this)!.track(logged);
     }
     this.currentException = error;
-    this.stateHasChangedInternal();
+    componentInternals.requestRender(this);
   }
 
   /**
@@ -65,7 +66,7 @@ export abstract class ErrorBoundaryBase extends ComponentBase implements IErrorB
     if (this.currentException !== null) {
       this.errorCount = 0;
       this.currentException = null;
-      this.stateHasChangedInternal();
+      componentInternals.requestRender(this);
     }
   }
 

@@ -19,7 +19,7 @@ afterEach(() => {
 
 const settle = async (result: RenderResult) => {
   for (let i = 0; i < 3; i++) {
-    await result.renderer.waitUntilIdle();
+    await result.settle();
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 };

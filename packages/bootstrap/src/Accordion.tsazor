@@ -32,13 +32,13 @@
         if (this.items.includes(item)) return;
         item.setIndex(this.items.length);
         this.items.push(item);
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 
     /** @internal Toggles one item; opening one closes the others. */
     toggle(index: number): void {
         if (index < 0 || index >= this.items.length) return;
         this.openIndexInternal = this.openIndexInternal === index ? -1 : index;
-        this.stateHasChangedInternal();
+        this.stateHasChanged();
     }
 }

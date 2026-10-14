@@ -9,7 +9,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Renderer, type ComponentBase } from "@tsazor/runtime";
+import { type ComponentBase } from "@tsazor/runtime";
+import { Renderer } from "@tsazor/runtime/internal";
 import type { TszDiagnostic } from "@tsazor/compiler";
 import { transformTsazor, type TransformTsazorOptions } from "../../vite-plugin/src/transform.js";
 

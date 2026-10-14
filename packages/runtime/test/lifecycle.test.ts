@@ -1,10 +1,12 @@
+import { componentInternals } from "../src/components/component-internals";
 /**
  * Component lifecycle on top of the render batches (roadmap B4): async
  * onInitialized/onParametersSet, OnAfterRender at the batch end, ShouldRender,
  * disposal (disposeAsync, parent first) and unknown parameters.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ComponentBase, Parameter, Renderer, defineComponent, type RenderError, type RenderTreeBuilder } from "../src/index";
+import { ComponentBase, Parameter, defineComponent, type RenderTreeBuilder } from "../src/index";
+import { Renderer, type RenderError } from "../src/internal";
 import type { ComponentState } from "../src/renderer/component-state";
 
 const log: string[] = [];
@@ -475,7 +477,7 @@ describe("disposal (Blazor's disposal queue)", () => {
     );
     await renderer.waitUntilIdle();
     show = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(log).toEqual(["dispose:root", "dispose:a", "dispose:b", "dispose:a1", "dispose:a2", "dispose:b1", "dispose:b2"]);
   });
@@ -502,7 +504,7 @@ describe("disposal (Blazor's disposal queue)", () => {
     );
     await renderer.waitUntilIdle();
     show = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     const idle = renderer.waitUntilIdle();
     await flush();
     expect(log).toEqual(["disposeAsync:start"]);
@@ -542,7 +544,7 @@ describe("disposal (Blazor's disposal queue)", () => {
     );
     await renderer.waitUntilIdle();
     show = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await renderer.waitUntilIdle();
     expect(log).toEqual(["dispose:under-sync"]);
     expect(errors.map((e) => [e.error, e.phase])).toEqual([
@@ -574,7 +576,7 @@ describe("disposal (Blazor's disposal queue)", () => {
     );
     await flush();
     show = false;
-    state.component.stateHasChangedInternal();
+    componentInternals.requestRender(state.component);
     await flush();
     load.resolve();
     await renderer.waitUntilIdle();

@@ -1,3 +1,4 @@
+import { componentInternals } from "./component-internals.js";
 import type { ComponentBase } from "./component-base.js";
 import type { EventCallback } from "./event-callback.js";
 import { register } from "./parameter-metadata.js";
@@ -78,6 +79,6 @@ function invokeChanged<V>(component: ComponentBase, callback: EventCallback<V> |
   } catch (error) {
     pending = Promise.reject(error);
   }
-  const handled = pending.then(undefined, (error) => component.reportErrorInternal(error, "event"));
-  component.renderHandle?.track(handled);
+  const handled = pending.then(undefined, (error) => componentInternals.reportError(component, error, "event"));
+  componentInternals.renderHandle(component)?.track(handled);
 }

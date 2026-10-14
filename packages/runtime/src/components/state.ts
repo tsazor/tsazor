@@ -1,4 +1,5 @@
 import type { ComponentBase } from "./component-base.js";
+import { componentInternals } from "./component-internals.js";
 
 /**
  * Tsazor extension (F6): a field whose assignment renders its component.
@@ -49,7 +50,7 @@ export function State<This extends ComponentBase, V>(): (
         const slots = this as unknown as Slots;
         if (Object.is(slots[store], value)) return;
         slots[store] = value;
-        this.stateFieldChangedInternal();
+        componentInternals.stateFieldChanged(this);
       },
     };
   };

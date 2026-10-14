@@ -1,3 +1,4 @@
+import { componentInternals } from "../components/component-internals.js";
 import { ComponentBase } from "../components/component-base.js";
 import { Parameter } from "../components/parameter-metadata.js";
 import type { RenderFragment, RenderTreeBuilder } from "../render-tree/render-tree.js";
@@ -1187,7 +1188,7 @@ export class Virtualize<TItem = unknown> extends ComponentBase {
 
   /** Work waitUntilIdle (and a held navigation) waits for. */
   private track<T>(promise: Promise<T>): Promise<T> {
-    this.renderHandle?.track?.(promise);
+    componentInternals.renderHandle(this)?.track?.(promise);
     return promise;
   }
 

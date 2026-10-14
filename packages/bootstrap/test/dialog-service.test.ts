@@ -9,11 +9,11 @@ import { CascadingParameter, ComponentBase, EventCallback, Parameter, type Rende
 import { DialogReference, DialogService } from "@tsazor/ui";
 import { Button, Dialog, DialogProvider } from "../dist/index.js";
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 afterEach(() => {
@@ -75,7 +75,7 @@ const buttonNamed = (text: string) => [...document.querySelectorAll<HTMLButtonEl
 
 describe("DialogService with DialogProvider and a hosted Dialog", () => {
   it("shows a component as a dialog with show's title and parameters; its own button closes it with data", async () => {
-    const { dialogs, renderer } = await provider();
+    const { dialogs, ...renderer } = await provider();
     const shown = dialogs.show(LogoutDialog, { title: "Logout", parameters: { contentText: "Logout Confirmation" } });
     await settle(renderer);
 
@@ -92,7 +92,7 @@ describe("DialogService with DialogProvider and a hosted Dialog", () => {
   });
 
   it("Escape and the header's Close button cancel it", async () => {
-    const { dialogs, renderer } = await provider();
+    const { dialogs, ...renderer } = await provider();
     const first = dialogs.show(LogoutDialog, { title: "Logout" });
     await settle(renderer);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
@@ -108,7 +108,7 @@ describe("DialogService with DialogProvider and a hosted Dialog", () => {
   });
 
   it("show's size and closing rules win over the Dialog's own", async () => {
-    const { dialogs, renderer } = await provider();
+    const { dialogs, ...renderer } = await provider();
     const shown = dialogs.show(LogoutDialog, { title: "Logout", size: "large", closeOnEscape: false });
     await settle(renderer);
     expect(document.querySelector(".modal-dialog")!.className).toContain("modal-lg");
@@ -120,7 +120,7 @@ describe("DialogService with DialogProvider and a hosted Dialog", () => {
   });
 
   it("a declarative dialog inside stays closed until opened, and closing it leaves the shown one open", async () => {
-    const { dialogs, renderer } = await provider();
+    const { dialogs, ...renderer } = await provider();
     const shown = dialogs.show(LogoutDialog, { title: "Logout" });
     await settle(renderer);
     expect(document.querySelectorAll("[role=dialog]")).toHaveLength(1);

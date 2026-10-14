@@ -11,17 +11,19 @@ import {
   createTsazorApp,
   createUser,
   defineComponent,
-  matchRoute,
   NavigationManager,
-  Renderer,
   Router,
   RouteView,
   ServiceCollection,
-  watchAuthenticationState,
   type RenderTreeBuilder,
   type RouteData,
   type RouteEntry,
 } from "@tsazor/runtime";
+import {
+  matchRoute,
+  Renderer,
+  watchAuthenticationState,
+} from "@tsazor/runtime/internal";
 
 class PageA {}
 class PageB {}

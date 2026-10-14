@@ -10,11 +10,11 @@ import { Accordion, AccordionItem, CheckboxGroup, Collapse, ListGroup, ListGroup
 
 const text = (content: string): RenderFragment => (b) => b.addContent(0, content);
 
-type Renderer = Awaited<ReturnType<typeof renderTree>>["renderer"];
+type Renderer = Pick<Awaited<ReturnType<typeof renderTree>>, "settle">;
 async function settle(renderer: Renderer): Promise<void> {
-  await renderer.waitUntilIdle();
+  await renderer.settle();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await renderer.waitUntilIdle();
+  await renderer.settle();
 }
 
 beforeAll(() => {
@@ -24,7 +24,7 @@ beforeAll(() => {
 describe("RadioGroup", () => {
   it("renders one radio per option in a labelled fieldset and reports the choice", async () => {
     const chosen: string[] = [];
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, RadioGroup);
       b.addAttribute(1, "label", "Slicing");
       b.addAttribute(2, "options", [{ value: "whole", label: "Whole" }, { value: "sliced", label: "Sliced" }, { value: "thin", label: "Thin", disabled: true }]);
@@ -51,7 +51,7 @@ describe("RadioGroup", () => {
 describe("CheckboxGroup", () => {
   it("checks the bound values, reports the new array in the options' order, and keeps values it doesn't show", async () => {
     const reported: string[][] = [];
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, CheckboxGroup);
       b.addAttribute(1, "label", "Roles");
       b.addAttribute(2, "options", [{ value: "admins", label: "Administrators" }, { value: "editors", label: "Editors" }, { value: "guests", label: "Guests", disabled: true }]);
@@ -77,7 +77,7 @@ describe("CheckboxGroup", () => {
 
 describe("Accordion + AccordionItem", () => {
   it("opens one item at a time; the panel is a region labelled by its header", async () => {
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, Accordion);
       b.addAttribute(1, "childContent", (inner: typeof b) => {
         for (let i = 0; i < 2; i++) {
@@ -144,7 +144,7 @@ describe("Collapse, Progress", () => {
 describe("ListGroup + ListGroupItem", () => {
   it("renders li items holding links and buttons, and fires clicks", async () => {
     let clicked = 0;
-    const { container, renderer } = await renderTree((b) => {
+    const { container, ...renderer } = await renderTree((b) => {
       b.openComponent(0, ListGroup);
       b.addAttribute(1, "childContent", (inner: typeof b) => {
         inner.openComponent(0, ListGroupItem);

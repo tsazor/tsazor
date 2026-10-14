@@ -1,3 +1,4 @@
+import { componentInternals } from "../src/components/component-internals";
 /**
  * A6b: standard (TC39) parameter decorators — metadata per class in
  * `Class[Symbol.metadata]`, inheritance, the per-class cache — and the
@@ -9,12 +10,14 @@ import {
   CascadingParameter,
   ComponentBase,
   Parameter,
-  Renderer,
   ServiceCollection,
   defineComponent,
   inject,
   type RenderTreeBuilder,
 } from "../src/index";
+import {
+  Renderer,
+} from "../src/internal";
 import {
   defineParameter,
   getOwnParameterMetadata,
@@ -343,7 +346,7 @@ describe("HMR state retention with standard fields", () => {
 
     // The swapped instance reads its parameters from the new class's metadata.
     size = 5;
-    host.component.stateHasChangedInternal();
+    componentInternals.requestRender(host.component);
     await renderer.waitUntilIdle();
     expect(container.textContent).toBe("v2 L 3 getter seeded 5");
   });

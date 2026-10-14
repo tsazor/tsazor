@@ -16,7 +16,7 @@ import path from "node:path";
 import { rmSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
-import type { RenderError } from "@tsazor/testing";
+import type { RenderError } from "@tsazor/runtime/internal";
 import { InputFileChangeEventArgs } from "@tsazor/runtime";
 import { buildProject, type Files } from "../src/engine/compile-project";
 import { TypeChecker } from "../src/engine/type-check";
