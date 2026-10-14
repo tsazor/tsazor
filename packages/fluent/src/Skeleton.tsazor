@@ -14,8 +14,8 @@
 }
 
 @code {
-    /** text (default: lines), circle or rect. */
-    @Parameter() shape: "text" | "circle" | "rect" = "text";
+    /** text (default: lines), circular (as Avatar's) or rect. */
+    @Parameter() shape: "text" | "circular" | "rect" = "text";
     /** How many lines of text; the last one is shorter. */
     @Parameter() lines: number = 3;
     /** Width of a circle or rect (CSS length; default 100% for a rect, 48px for a circle). */
@@ -32,7 +32,7 @@
 
     private get rootAttributes(): Record<string, unknown> {
         if (this.shape === "text") return withAttributes({ class: "fui-skeleton fui-skeleton--text", "aria-hidden": "true" }, this.additionalAttributes);
-        const circle = this.shape === "circle";
+        const circle = this.shape === "circular";
         const width = this.width ?? (circle ? "48px" : "100%");
         const height = this.height ?? (circle ? width : "8rem");
         return withAttributes({

@@ -4,6 +4,8 @@
  */
 
 /** Which steps a click on the step list may open: none (linear: the buttons only), any, or the ones visited. */
+import type { LibraryTexts } from "./library-texts.js";
+
 export type WizardStepSequence = "linear" | "any" | "visited";
 
 /** A step before the current one, the current one, or one after it. */
@@ -49,4 +51,16 @@ export function isWizardStepClickable(
 ): boolean {
   if (disabled || index === current || sequence === "linear") return false;
   return sequence === "any" || index <= maxVisited;
+}
+
+/** A Wizard's button texts (MudBlazor's PreviousText, NextText, DoneText); `labels` overrides any of them. */
+export interface WizardLabels {
+  previous: string;
+  next: string;
+  done: string;
+}
+
+/** The Wizard's texts in the culture of `t` (the library texts "wizard.previous", …). */
+export function wizardLabelsFrom(t: LibraryTexts): WizardLabels {
+  return { previous: t("wizard.previous"), next: t("wizard.next"), done: t("wizard.done") };
 }

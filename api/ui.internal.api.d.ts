@@ -557,5 +557,8 @@ export declare const wheelPalette: readonly string[];
 // wheelRowSizes
 export declare const wheelRowSizes: readonly number[];
 
+// wizardLabelsFrom
+export declare function wizardLabelsFrom(t: LibraryTexts): WizardLabels;
+
 // wizardStepStatus
 export declare function wizardStepStatus(index: number, current: number): WizardStepStatus;

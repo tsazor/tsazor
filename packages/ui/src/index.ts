@@ -45,7 +45,7 @@ export {
   type UploadResponse,
 } from "./file-upload.js";
 export { SortableListEventArgs, type SortableListLabels } from "./sortable.js";
-export { WizardStepChangeEventArgs, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
+export { WizardStepChangeEventArgs, type WizardLabels, type WizardStepSequence, type WizardStepStatus } from "./wizard.js";
 export { AVATAR_COLORS, type AvatarColor, type AvatarNamedColor } from "./avatar.js";
 export { focusableElements, focusElement } from "./focus.js";
 export { createLayer, type Layer } from "./layers.js";

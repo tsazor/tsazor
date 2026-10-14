@@ -4,8 +4,8 @@
     step list may open: nothing (linear, the default), any step, or the visited ones. `stepperPosition` puts the list at
     the start (default; on top when the wizard is narrow) or on top; `displayStepNumber` shows the numbers in the
     bullets. `buttonTemplate` replaces the buttons (it gets the current index; `goToStepAsync` moves from your code). *@
-@import { uniqueId, WizardStepChangeEventArgs, type IconValue, type WizardStepSequence, type WizardStepStatus } from "@tsazor/ui"
-@import { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardStepStatus } from "@tsazor/ui/kit"
+@import { uniqueId, WizardStepChangeEventArgs, type IconValue, type WizardLabels, type WizardStepSequence, type WizardStepStatus } from "@tsazor/ui"
+@import { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardLabelsFrom, wizardStepStatus } from "@tsazor/ui/kit"
 @import type WizardStep from "./WizardStep.tsazor"
 @import { CheckmarkCircle20Filled, Circle20Filled, Circle20Regular } from "./core-icons"
 @import { withAttributes } from "./attributes"
@@ -41,12 +41,12 @@
                     @buttonTemplate(value)
                 } else {
                     @if (this.previousIndex >= 0) {
-                        <Button onClick="@this.previous">@(labelPrevious ?? t("wizard.previous"))</Button>
+                        <Button onClick="@this.previous">@this.texts.previous</Button>
                     }
                     @if (this.nextIndex >= 0) {
-                        <Button intent="primary" onClick="@this.next">@(labelNext ?? t("wizard.next"))</Button>
+                        <Button intent="primary" onClick="@this.next">@this.texts.next</Button>
                     } else {
-                        <Button intent="primary" onClick="@this.finish">@(labelDone ?? t("wizard.done"))</Button>
+                        <Button intent="primary" onClick="@this.finish">@this.texts.done</Button>
                     }
                 }
             </div>
@@ -56,6 +56,10 @@
 
 @code {
     private readonly t = libraryTexts();
+
+    private get texts(): WizardLabels {
+        return { ...wizardLabelsFrom(this.t), ...this.labels };
+    }
 
     /** The current step's index (two-way with @bind-value). */
     @Parameter() value: number = 0;
@@ -71,12 +75,8 @@
     @Parameter() displayStepNumber: "none" | "all" | WizardStepStatus = "none";
     /** The step list's accessible name. */
     @Parameter() ariaLabel?: string;
-    /** The Previous button's text. */
-    @Parameter() labelPrevious?: string;
-    /** The Next button's text. */
-    @Parameter() labelNext?: string;
-    /** The Done button's text. */
-    @Parameter() labelDone?: string;
+    /** The buttons' texts, any of them (`{ done: "Book" }`); the others are the library texts. */
+    @Parameter() labels?: Partial<WizardLabels>;
     /** Buttons of your own instead of Previous, Next and Done; it gets the current index. */
     @Parameter() buttonTemplate?: (index: number) => RenderFragment;
     /** The WizardSteps (Fluent UI Blazor's `Steps`). */

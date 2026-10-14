@@ -779,6 +779,13 @@ export interface UploadResponse {
 // uploadTo
 export declare function uploadTo(url: string, options?: Omit<UploadFileOptions, "onProgress" | "signal">): FileUploader;
 
+// WizardLabels
+export interface WizardLabels {
+    previous: string;
+    next: string;
+    done: string;
+}
+
 // WizardStepChangeEventArgs
 export declare class WizardStepChangeEventArgs {
     readonly targetIndex: number;

@@ -13,8 +13,8 @@
 }
 
 @code {
-    /** text (default: lines), circle or rect. */
-    @Parameter() shape: "text" | "circle" | "rect" = "text";
+    /** text (default: lines), circular (as Avatar's) or rect. */
+    @Parameter() shape: "text" | "circular" | "rect" = "text";
     /** How many lines of text; the last one is shorter. */
     @Parameter() lines: number = 3;
     /** Width of a circle or rect (CSS length; default 100% for a rect, 48px for a circle). */
@@ -30,11 +30,11 @@
     }
 
     private get blockClass(): string {
-        return this.shape === "circle" ? "placeholder-glow d-inline-block" : "placeholder-glow d-block";
+        return this.shape === "circular" ? "placeholder-glow d-inline-block" : "placeholder-glow d-block";
     }
 
     private get blockStyle(): string {
-        const circle = this.shape === "circle";
+        const circle = this.shape === "circular";
         const width = this.width ?? (circle ? "48px" : "100%");
         const height = this.height ?? (circle ? width : "8rem");
         return `width: ${width}; height: ${height}; border-radius: ${circle ? "50%" : "var(--bs-border-radius)"};`;

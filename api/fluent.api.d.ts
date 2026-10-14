@@ -1008,7 +1008,7 @@ export default class SidebarNav extends ComponentBase {
 
 // Skeleton
 export default class Skeleton extends ComponentBase {
-    shape: "text" | "circle" | "rect";
+    shape: "text" | "circular" | "rect";
     lines: number;
     width?: string;
     height?: string;
@@ -1329,15 +1329,15 @@ export default class Wizard extends ComponentBase {
     stepSequence: WizardStepSequence;
     displayStepNumber: "none" | "all" | WizardStepStatus;
     ariaLabel?: string;
-    labelPrevious?: string;
-    labelNext?: string;
-    labelDone?: string;
+    labels?: Partial<WizardLabels>;
     buttonTemplate?: (index: number) => RenderFragment;
     steps?: RenderFragment;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
     goToStepAsync(index: number, validate?: boolean): Promise<void>;
 }
+
+// WizardLabels: re-exported from @tsazor/ui
 
 // WizardStep
 export default class WizardStep extends ComponentBase {

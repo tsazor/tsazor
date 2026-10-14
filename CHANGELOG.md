@@ -132,6 +132,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     declaration imported a shipped `.ts` source); the skins re-export it. Each skin re-exports every ui type its
     components' parameters name — 13 were missing (`AvatarColor`, `ChipSetModel`, `DataGridModel`,
     `SplitterEventArgs`, `WizardStepChangeEventArgs`, …) — through `buildLibrary`'s new `reexportTypes` option.
+  - The skins (S5): the Wizard's `labelPrevious`, `labelNext` and `labelDone` are one `labels` (`WizardLabels`,
+    any of them), as Carousel's and Rating's; Skeleton's `shape="circle"` is `"circular"`, as Avatar's, Chip's and
+    Image's. (Table's `compact` became `small` with D6.)
   - `@tsazor/ui` (U4): names that collided or differed from the skins'. The type `Toast` is `ToastEntry` and
     `Hotkey` is `KeyCombination` (both skins have components of those names; the Bootstrap skin no longer
     re-exports the type as `Toast`). The behavior `dismissable` is `dismissible` (`DismissibleOptions`), as the

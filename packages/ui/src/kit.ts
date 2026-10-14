@@ -94,7 +94,7 @@ export {
   sortableListLabelsFrom,
   type SortableListHandle,
 } from "./sortable.js";
-export { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardStepStatus } from "./wizard.js";
+export { isWizardStepClickable, nextWizardStep, previousWizardStep, wizardLabelsFrom, wizardStepStatus } from "./wizard.js";
 export { avatarColorFor, avatarIconSize, avatarInitials } from "./avatar.js";
 export {
   overlayBackground,

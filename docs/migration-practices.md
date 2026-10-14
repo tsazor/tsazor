@@ -222,7 +222,8 @@ render in the browser.
   `<Wizard @bind-Value="step"><Steps><WizardStep Label="…">`; a step's `OnChange` sets `args.isCancelled`, and a
   `FluentForm` in a step is validated before Next, as an `EditForm` is in Fluent UI Blazor. `StepperPosition.Left`
   becomes `"start"`. MudBlazor's `MudStepper` maps onto it too: `ActiveIndex` is `Value`, a step's `Title` its
-  `Label`, `NonLinear` is `StepSequence="any"`.
+  `Label`, `NonLinear` is `StepSequence="any"`, and its `PreviousText`/`NextText`/`DoneText` are one `Labels`
+  (`Labels="@({ done: "Book" })"`, a TypeScript object — any of them; the others come from the library texts).
 - **Splitters.** `FluentMultiSplitter`/`FluentMultiSplitterPane` keep their names (`MultiSplitter`, `MultiSplitterPane`)
   and parameters (`Size`, `Min`, `Max`, `Collapsible`, `Resizable`, `OnResize`). MudBlazor's two-pane `MudSplitPanel`
   (`FirstPanel`, `SecondPanel`) becomes a `Splitter` with two `SplitterPane`s; `MinPanelSize` is each pane's `Min`.

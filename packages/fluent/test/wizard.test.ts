@@ -27,6 +27,7 @@ interface Options {
   cancelLeavingFirst?: boolean;
   form?: boolean;
   displayStepNumber?: string;
+  labels?: Record<string, string>;
 }
 
 /** A page with a wizard of four steps (the third disabled), its index bound to `step`. */
@@ -49,6 +50,7 @@ function pageWith(options: Options = {}) {
       }));
       if (options.sequence) b.addAttribute(4, "stepSequence", options.sequence);
       if (options.displayStepNumber) b.addAttribute(5, "displayStepNumber", options.displayStepNumber);
+      if (options.labels) b.addAttribute(7, "labels", options.labels);
       b.addAttribute(6, "steps", (c: RenderTreeBuilder) => {
         c.openComponent(0, WizardStep);
         c.addAttribute(1, "label", "Bread");
@@ -96,6 +98,12 @@ async function mount(options: Options = {}) {
 }
 
 describe("Wizard", () => {
+  it("takes its button texts from labels, any of them (S5)", async () => {
+    const { container } = await mount({ labels: { next: "Weiter" } });
+    expect(buttonNamed(container, "Weiter")).toBeDefined();
+    expect(buttonNamed(container, "Next")).toBeUndefined();
+  });
+
   it("lists the steps, shows the current one, and Next and Previous skip a disabled step", async () => {
     const { Page, result, container } = await mount();
     expect([...container.querySelectorAll(".fui-wizard__label")].map((label) => label.textContent)).toEqual(["Bread", "Day", "Payment", "Done"]);

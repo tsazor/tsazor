@@ -155,7 +155,7 @@ describe("Skeleton", () => {
     expect(root.children).toHaveLength(2);
     const circle = await renderTree((b) => {
       b.openComponent(0, Skeleton);
-      b.addAttribute(1, "shape", "circle");
+      b.addAttribute(1, "shape", "circular");
       b.addAttribute(2, "width", "40px");
       b.closeComponent();
     });
