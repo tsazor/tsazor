@@ -24,9 +24,8 @@ The earlier state is in [handoff-2026-10-13-decisions.md](handoff-2026-10-13-dec
    no trade-offs); Part 3 has fifteen decisions (D1…D15), each with a recommendation. Once decided, the work order is
    in its last section.
 3. **SECURITY.md's commitments:** 5 working days to confirm, 14 to assess, 90 to fix — the owner's to accept.
-4. **Attribution of ported code:** the runtime ports Blazor's semantics and parts of its logic (Virtualize from
-   Blazor's `Virtualize.ts`), the Fluent skin Fluent UI Blazor's components; both are MIT. Whether that needs the
-   .NET Foundation's / Microsoft's notice in `LICENSE` (as the icons now have) is a licensing question, not decided.
+4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
+   notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
 5. Still open from before: the Docker containers of fullstackhero's Aspire backend are "persistent" (keep or
    remove?); `apps/fluentcms-admin` and its lockfile change stay the owner's WIP, untouched.
 

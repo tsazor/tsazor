@@ -189,3 +189,8 @@ LSP smokes ✓ · app E2E: Pizza 20/20, Gallery, Sleipnir, demo including `verif
 Not implemented (do not start without prior agreement): Web Components
 (`defineCustomElement`), LSP rename, publishing the packages to the npm registry (they are
 packaged and tarball-tested, but not published).
+
+## License
+
+MIT, see [LICENSE](LICENSE). Code and assets that come from other projects, and their licenses, are listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
