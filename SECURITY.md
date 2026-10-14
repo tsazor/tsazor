@@ -20,14 +20,17 @@ Please include:
 
 ## What happens next
 
-- We confirm the report within **5 working days**, and tell you within **14 days** whether we accept it and how
-  severe we rate it (CVSS).
-- We fix it privately and release the fix as a patch of every package (one version for all of them). The goal is
-  **90 days** from the report at most, much sooner for a critical issue.
+Tsazor is a small project, maintained alongside other work, so there are no guaranteed response times. What you can
+expect:
+
+- We confirm the report as soon as we can, tell you whether we accept it and how severe we rate it, and keep you
+  posted while we work on it.
+- We fix it privately and release the fix as a patch of every package (one version for all of them); a critical
+  issue comes first.
 - Then we publish a GitHub security advisory, with a CVE where it applies; npm and Dependabot pick it up from
   there. We credit you in it, unless you'd rather not be named.
-- Please keep the issue confidential until the advisory is out. If we can't meet a date, we tell you and agree on a
-  new one.
+- Please keep the issue confidential until the advisory is out, and talk to us before you disclose it yourself; we
+  agree on a date together.
 
 ## Scope
 

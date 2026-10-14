@@ -5,7 +5,7 @@ the component library (Tier 1, both skins) and `@tsazor/worker`. **Scope cut (ow
 and the Sleipnir integration move after 1.0, E12 first. Both are separate, additive packages; neither
 changes the API of the runtime or the compiler. **Left for 1.0:** R2, E3, E10, the E9 screen-reader
 audit, the known follow-ups, then going public (R4, provenance). The repository stays private until then.
-(2026-10-14: R2 and E3 are done; E10 is a draft for the owner's decision.)
+(2026-10-14: R2, E3 and E10 are done; the API review is the basis of the freeze.)
 **Library completeness (owner, 2026-10-09):** 1.0 also waits for a complete component library, waves A and B of
 [design-library-completeness.md](design-library-completeness.md) (§3b).
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
@@ -191,8 +191,8 @@ architecture and security take priority.
   the new one has its data, then shows it in one step, without the empty frames of a page still loading. On by
   default (owner, 2026-10-09), `routing.holdPreviousPage: false` turns it off. Found by the FluentCMS port (F39);
   done 2026-10-09, [design-navigation-hold.md](design-navigation-hold.md).
-- **E10 — Support policy:** LTS window and deprecation rules, extending the stability promise. **Draft
-  (2026-10-14):** [support-policy.md](support-policy.md), seven recommended decisions (D-S1…D-S7) for the owner.
+- **E10 — Support policy:** LTS window and deprecation rules, extending the stability promise. **Done
+  (2026-10-14, owner):** [support-policy.md](support-policy.md), D-S1…D-S7; Node 22.12 is the tools' floor.
   **API review (2026-10-14):** [api-review-1.0.md](api-review-1.0.md), the basis for the freeze: what the promise
   covers (public, ABI, internal), what to hide or rename before 1.0, fifteen decisions, the gates.
 

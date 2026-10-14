@@ -5,6 +5,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Breaking — the tools need Node 22.12 or later** (`engines.node` of cli, compiler, workspace, lsp, vite-plugin,
+  dotnet and create-tsazor; before: 20.19). Node 20 reached its end of life on 2026-04-30; the support policy
+  (`docs/support-policy.md`) follows the Node.js LTS lines.
 - **Release:** every release has a CycloneDX SBOM of its packages and their dependencies (`pnpm release:sbom`;
   the release workflow attests it for the tarballs), and the repository a `SECURITY.md` with the disclosure process.
   `@tsazor/fluent-icons`, `@tsazor/bootstrap-icons`, `@tsazor/fluent` and `@tsazor/bootstrap` carry the license of the

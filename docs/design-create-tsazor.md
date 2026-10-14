@@ -30,7 +30,7 @@ otherwise the defaults apply. The package manager comes from `npm_config_user_ag
 `create-vite`.
 
 - Package `create-tsazor` (`packages/create-tsazor`), **no dependencies** (`node:util` `parseArgs`,
-  `node:readline`), Node 20+.
+  `node:readline`), Node 22.12+.
 - The template files ship in the package (`template/`). The `@tsazor/*` versions in the generated
   `package.json` are the starter's own version (lockstep until 1.0).
 

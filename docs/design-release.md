@@ -27,7 +27,8 @@ provenance part of E3.
 - **D-P7 — Metadata.** Every published package has `repository` (`tsazor/tsazor`, its directory), `homepage`,
   `bugs`, `license`, its own `LICENSE` copy (npm doesn't take the root's) and a `README.md`; the scoped ones
   `publishConfig.access: public`. The tools that run in Node (cli, compiler, workspace, lsp, vite-plugin, dotnet,
-  create-tsazor) declare `engines.node >=20.19` (Vite 7's floor).
+  create-tsazor) declare `engines.node >=22.12` (Vite 7's floor in the Node 22 line; Node 20 reached its end of life
+  on 2026-04-30, support-policy.md D-S5).
 
 ## The commands
 
