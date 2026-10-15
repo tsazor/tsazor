@@ -32,6 +32,7 @@ const REFERENCE_ID = "virtual:tutorial-reference";
 const RESOLVED_REFERENCE = `\0${REFERENCE_ID}`;
 
 export interface PackageBundles {
+  /** @tsazor/runtime and @tsazor/runtime/internal in one module (@tsazor/testing imports both: one renderer). */
   runtime: string;
   components: string;
   dotnet: string;
@@ -53,9 +54,11 @@ export interface PackageBundles {
 
 export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
   const require = createRequire(path.join(fromDir, "package.json"));
-  const bundle = async (entry: string, external: string[], format: "esm" | "cjs" = "esm"): Promise<string> => {
+  const bundle = async (entry: string | { readonly contents: string }, external: string[], format: "esm" | "cjs" = "esm"): Promise<string> => {
     const result = await build({
-      entryPoints: [path.isAbsolute(entry) ? entry : require.resolve(entry)],
+      ...(typeof entry === "string"
+        ? { entryPoints: [path.isAbsolute(entry) ? entry : require.resolve(entry)] }
+        : { stdin: { contents: entry.contents, resolveDir: fromDir, loader: "js" as const } }),
       bundle: true,
       format,
       platform: "browser",
@@ -70,10 +73,11 @@ export async function bundlePackages(fromDir: string): Promise<PackageBundles> {
     return result.outputFiles[0]!.text;
   };
   const [runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs] = await Promise.all([
-    bundle("@tsazor/runtime", []),
+    // Their exports don't overlap: one module serves both specifiers.
+    bundle({ contents: 'export * from "@tsazor/runtime";\nexport * from "@tsazor/runtime/internal";\n' }, []),
     bundle("@tsazor/bootstrap", ["@tsazor/runtime"]),
     bundle("@tsazor/dotnet", ["@tsazor/runtime"]),
-    bundle("@tsazor/testing", ["@tsazor/runtime"]),
+    bundle("@tsazor/testing", ["@tsazor/runtime", "@tsazor/runtime/internal"]),
     bundle(path.join(fromDir, "src", "preview", "mini-test.ts"), []),
     bundle("@tsazor/runtime/transition", ["@tsazor/runtime"]),
     bundle("@tsazor/runtime/animate", ["@tsazor/runtime"]),

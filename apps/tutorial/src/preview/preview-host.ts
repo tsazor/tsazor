@@ -106,8 +106,11 @@ function srcdoc(baseHref: string): string {
     if (event.source !== parent || !event.data || event.data.type !== "run") return;
     const { modules, runtime, components, dotnet, testing, vitest, transition, animate, easing, worker, workerCjs, css, entry, program, routes, tests } = event.data;
     const url = (code) => URL.createObjectURL(new Blob([code], { type: "text/javascript" }));
+    const runtimeUrl = url(runtime);
     const imports = {
-      "@tsazor/runtime": url(runtime),
+      "@tsazor/runtime": runtimeUrl,
+      // The same module: @tsazor/testing's renderer is the app's.
+      "@tsazor/runtime/internal": runtimeUrl,
       "@tsazor/bootstrap": url(components),
       "@tsazor/dotnet": url(dotnet),
       "@tsazor/testing": url(testing),
