@@ -6,6 +6,7 @@ and the Sleipnir integration move after 1.0, E12 first. Both are separate, addit
 changes the API of the runtime or the compiler. **Left for 1.0:** R2, E3, E10, the E9 screen-reader
 audit, the known follow-ups, then going public (R4, provenance). The repository stays private until then.
 (2026-10-14: R2, E3 and E10 are done; the API review is the basis of the freeze.)
+**2026-10-15:** the library's waves A and B are done too. What is left is listed in §7 (the way to 1.0).
 **Library completeness (owner, 2026-10-09):** 1.0 also waits for a complete component library, waves A and B of
 [design-library-completeness.md](design-library-completeness.md) (§3b).
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
@@ -277,3 +278,55 @@ architecture and security take priority.
 
 After 1.0: E12 (`@tsazor/primitives`, `@tsazor/extensions`, `Decimal` with `@bind:culture`), then the
 Sleipnir integration; SSR and fine-grained reactivity as planned.
+
+## 7 — The way to 1.0 (2026-10-15)
+
+Collected from the port documents, the design documents, the handoffs and the code (owner: "Wir müssen jetzt auf
+1.0 hinarbeiten"). The code itself has no open markers: no skipped tests, and the only TODOs are lesson stubs.
+
+### Before 1.0
+
+| Item | Why before 1.0 |
+|---|---|
+| **K.11** — `@tsazor/testing`: in happy-dom 18, `nextSibling` of a `<form>` (or `<select>`) is `null`, so updating anything after a form fails in a component test (confirmed 2026-10-15) | Every `EditForm` test can hit it |
+| **P.10** — `createTsazorApp().dispose()` doesn't dispose the service provider ([port-findings.md](port-findings.md)) | A behavior change; Blazor disposes its services |
+| **Workflows** — `release.yml` and `pages.yml` run on `ubuntu-latest`, which becomes 26 on 2026-10-19 | Pin as `ci.yml` is, before the date |
+| **DataGrid column options** — QuickGrid's and Fluent UI Blazor's `ColumnOptions` (a column's filter UI) has no counterpart | Parity with the grid both references build on; library completeness |
+| **K.7, K.8** — `@bind` converts by the element, not the bound value: `@bind:format` on a text input (Blazor's date idiom) and a `<select>` bound to a number write strings | A common Blazor idiom; changing it later changes behavior |
+| **P.5** — `RenderFragment<T>` (a template with a context) as a type | Blazor code names it everywhere; cheap now |
+| **X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"` | A name; renaming it later breaks |
+| **P.8** — an unnamed `@CascadingParameter()` without `type` takes any unnamed cascade (Blazor matches by type) | At least a diagnostic that asks for `{ type: X }` |
+| **Stale docs** — roadmap-tutorial (M4), §3c (the worker chapter exists), E8 (lesson exists), design-virtualize (status, the removed aliases), design-localization ("not yet"), the BlazorHero B3 row (cut off), a stale comment in `codegen.ts` (Virtualize is generic) | Going public |
+| **E9** — the screen-reader audit, by a person: [screen-reader-audit.md](screen-reader-audit.md) | WCAG 2.2 AA |
+
+### For the owner to decide
+
+| Item | The question |
+|---|---|
+| **X4** — `@tsazor/dotnet` maps `decimal`, `DateOnly` and `Guid` to `Decimal`/… "always on" (owner) | `Decimal` comes with E12, after 1.0: keep `string` in 1.0 and make the mapping opt-in later (no break), or wait? |
+| **The skins' own repository at 1.0** | Lockstep (one version for every package) and the skins' own versions after the move: when do they move? |
+| **The rc on npm** | A package's first publish sets `latest`: publish an rc to npm, or only 1.0.0? |
+| **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
+| **Cleanup** | `apps/fluentcms-admin` and the lockfile it changed; the fullstackhero containers |
+
+### After 1.0 (additive)
+
+Type checks and tooling: the event argument's type against the event (K.9), the LSP's squiggle after a
+`satisfies` (K.10), `tsazor check` excludes (H.4), `@ref` typing (H.6/P.7), `RenderFragment` in the auto-imports
+(P.6), a self-import hint (R.9), fullstackhero F19, a `FileSystemHost` (G.2), the recovery after a mid-line
+`@page` (two follow-up errors). Library: TreeView children on demand and as a dropdown, a virtual option list, the
+DataGrid's density and sticky header, `NumberInput`'s `immediate`, localized icon variants. Runtime: async Standard
+Schema on submit, NavLink prefetch, H3, the whitespace question (D-S2). `@tsazor/dotnet`: remote `$ref`s and the
+schemas it degrades (documented as limits). Hygiene: the tutorial's test-file type errors, assertion-free guards in
+two tests, the dev server's stale `dist` on Windows, `TS private` → `#private` (≤ 0.7 KB). Tutorial: "What's different
+from Blazor" and a codemod chapter on the Blazor track; files in the lesson editor. Measured effort figures for E7.
+
+### Release steps (design-release.md)
+
+1. The items above; the proposals that change behavior decided before the release candidate.
+2. `1.0.0-next.N` (`pnpm release:version`, `pnpm release:local`); the owner's apps run on it; then `1.0.0-rc.N`.
+3. The full CI by hand (check, e2e, engines), then `main`.
+4. The curated first commit to `tsazor/tsazor`, the repository public; its settings: private vulnerability reporting,
+   Pages (`PAGES_ENABLED`), `RELEASE_ENABLED`, the `npm` environment, a short-lived `NPM_TOKEN`.
+5. `release.yml`: provenance and the SBOM; then a Trusted Publisher per package, and the token deleted.
+6. 1.0.0. The VS Code extension's marketplace publishing is not described yet.
