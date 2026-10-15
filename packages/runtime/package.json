@@ -58,6 +58,9 @@
     "build": "tsc -b && node scripts/compact-components.mjs && node scripts/build-manifest.mjs",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@tsazor/primitives": "workspace:*"
+  },
   "devDependencies": {
     "@tsazor/compiler": "workspace:*",
     "@tsazor/workspace": "workspace:*",

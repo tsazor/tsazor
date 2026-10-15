@@ -26,6 +26,7 @@
  * resolution happens in `resolveValidationMessage` (called by the
  * DataAnnotations validation pass, which holds the StringLocalizer).
  */
+import { Decimal } from "@tsazor/primitives";
 import { ensureDecoratorMetadata } from "../components/parameter-metadata.js";
 import { formatMessage } from "../localization/string-localizer.js";
 
@@ -44,6 +45,10 @@ export interface ValidationMessageContext {
   readonly pattern?: string;
   /** Compare: the other field's name. */
   readonly other?: string;
+  /** Precision: the total digit count (significant digits). */
+  readonly precision?: number;
+  /** Precision: the decimal places (fraction digits). */
+  readonly scale?: number;
 }
 
 /** E8 (D-L7): how one rule's message can be overridden. */
@@ -66,6 +71,10 @@ export interface ValidationRuleParams {
   readonly pattern?: string;
   /** `Compare`'s other property. */
   readonly other?: string;
+  /** `Precision`'s total digit count (significant digits). */
+  readonly precision?: number;
+  /** `Precision`'s decimal places (fraction digits). */
+  readonly scale?: number;
 }
 
 /** One validation rule (one DataAnnotations attribute instance). */
@@ -176,8 +185,10 @@ export function StringLength(maximumLength: number, options?: { minimumLength?: 
 }
 
 /**
- * RangeAttribute: numeric values between min and max (inclusive). Other values
- * are not judged (deviation: .NET converts strings and throws on other types).
+ * RangeAttribute: numeric values between min and max (inclusive). A `number`
+ * compares directly, a `Decimal` compares by value (scale-aligned, so `19.90`
+ * is within `@Range(0, 100)`); other values are not judged (deviation: .NET
+ * converts strings and throws on other types).
  */
 export function Range(minimum: number, maximum: number, override?: ValidationMessageOverride): FieldRuleDecorator {
   return ruleDecorator({
@@ -185,8 +196,46 @@ export function Range(minimum: number, maximum: number, override?: ValidationMes
     params: { min: minimum, max: maximum },
     override,
     validate(value, _model, displayName) {
-      return typeof value === "number" && (value < minimum || value > maximum)
+      const below = typeof value === "number" ? value < minimum : value instanceof Decimal ? value.compare(minimum) < 0 : false;
+      const above = typeof value === "number" ? value > maximum : value instanceof Decimal ? value.compare(maximum) > 0 : false;
+      return below || above
         ? message("The field {0} must be between {1} and {2}.", displayName, minimum, maximum)
+        : null;
+    },
+  });
+}
+
+/** A Decimal's significant digit count (precision) and decimal places (scale), per .NET's `decimal(precision, scale)` storage rule. */
+function decimalPrecisionScale(value: Decimal): { precision: number; scale: number } {
+  // The unscaled integer's digits, with the trailing fractional zeros dropped —
+  // "1.50" is precision 2 scale 1, "100.00" is precision 3 scale 0.
+  let digits = (value.unscaled < 0n ? -value.unscaled : value.unscaled).toString();
+  let scale = value.scale;
+  while (scale > 0 && digits.endsWith("0")) {
+    digits = digits.slice(0, -1);
+    scale--;
+  }
+  const integralDigits = Math.max(digits.length - scale, 0);
+  return { precision: integralDigits + scale, scale };
+}
+
+/**
+ * PrecisionAttribute (.NET's `decimal(precision, scale)` storage rule, EF Core's
+ * `[Precision]`): a Decimal's significant digit count must not exceed `precision`
+ * and its decimal places must not exceed `scale` (default 0). Trailing
+ * fractional zeros and leading integer zeros are not counted. Other values are
+ * not judged.
+ */
+export function Precision(precision: number, scale = 0, override?: ValidationMessageOverride): FieldRuleDecorator {
+  return ruleDecorator({
+    kind: "precision",
+    params: { precision, scale },
+    override,
+    validate(value, _model, displayName) {
+      if (!(value instanceof Decimal)) return null;
+      const actual = decimalPrecisionScale(value);
+      return actual.precision > precision || actual.scale > scale
+        ? message("The field {0} must have at most {1} digits with {2} decimal places.", displayName, precision, scale)
         : null;
     },
   });

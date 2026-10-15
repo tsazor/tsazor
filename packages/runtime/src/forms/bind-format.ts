@@ -25,6 +25,7 @@
  * - dates: .NET's whole date and time format grammar, custom and standard,
  *   in the invariant culture (date-format.ts).
  */
+import { Decimal } from "@tsazor/primitives";
 import { CultureInfo, toCultureInfo } from "../localization/culture-info.js";
 import { formatDateTime, parseDateTime } from "./date-format.js";
 
@@ -50,6 +51,13 @@ export function formatValue(value: unknown, format: string | undefined, culture?
     const [integral, fraction] = text.split(".");
     const grouped = format.includes(",") || GROUPED.test(format) ? group(integral!) : integral!;
     return `${sign}${grouped}${fraction ? `.${fraction}` : ""}`;
+  }
+  if (value instanceof Decimal) {
+    // A Decimal formats exactly through its scaled BigInt — `number`'s drift
+    // never leaks in. With a non-invariant culture the digits go through Intl
+    // (the documented ~15-significant-digit display caveat applies).
+    if (info !== undefined && info.name !== "") return formatNumberCulture(value.toNumber(), format, info);
+    return formatDecimal(value, format);
   }
   if (value instanceof Date) return formatDateTime(value, format ?? "yyyy-MM-dd");
   return String(value);
@@ -85,6 +93,22 @@ function group(integral: string): string {
 }
 
 /**
+ * A Decimal in the invariant grammar: rounded to the format's digit count on
+ * its scaled BigInt (exact, unlike `number`), then grouped where the format
+ * asks for it. Without a format the Decimal's own fixed string renders, so a
+ * bare `@bind` on a Decimal shows "19.90" with its scale intact.
+ */
+function formatDecimal(value: Decimal, format: string | undefined): string {
+  if (format === undefined || (!NUMBER_MASK.test(format) && !FIXED.test(format) && !GROUPED.test(format))) {
+    return value.toString();
+  }
+  const text = value.round(decimalsOf(format)).toString();
+  const [integral, fraction] = text.split(".");
+  const grouped = format.includes(",") || GROUPED.test(format) ? group(integral!) : integral!;
+  return `${grouped}${fraction ? `.${fraction}` : ""}`;
+}
+
+/**
  * .NET's BindConverter.TryParse for the subset: numbers parse invariant
  * (thousands separators and whitespace removed), dates parse by the format's
  * tokens. Returns null for a value the format cannot accept — the generated
@@ -105,7 +129,15 @@ function group(integral: string): string {
  * stays a string. Returns null when the text cannot parse — the generated
  * handler then keeps the model's previous value, like the formatted bind.
  */
-export function parseBindValue(text: string, current: unknown, format?: string, culture?: string | CultureInfo): string | number | Date | null {
+export function parseBindValue(text: string, current: unknown, format?: string, culture?: string | CultureInfo): string | number | Date | Decimal | null {
+  if (current instanceof Decimal) {
+    // A Decimal parses back as a Decimal: invariant by default, the culture's
+    // separators under `@bind:culture`. The `format` (F/N/mask) does not gate
+    // the grammar, exactly as the number path ignores the digit count while
+    // parsing — a "19.90" parses whether or not `@bind:format="N2"` is set.
+    const info = culture === undefined ? undefined : toCultureInfo(culture);
+    return Decimal.parse(text, info !== undefined && info.name !== "" ? info.name : undefined);
+  }
   if (typeof current === "number") {
     const info = culture === undefined ? undefined : toCultureInfo(culture);
     const hasCulture = info !== undefined && info.name !== "";

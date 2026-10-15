@@ -117,6 +117,7 @@ export {
   MaxLength,
   StringLength,
   Range,
+  Precision,
   EmailAddress,
   RegularExpression,
   Compare,
