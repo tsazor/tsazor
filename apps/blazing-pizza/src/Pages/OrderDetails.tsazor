@@ -14,7 +14,7 @@
                 <h2>
                     Order placed @formatLongDate(this.orderWithStatus.order.createdTime)
                 </h2>
-                <p class="ml-auto mb-0">
+                <p class="ms-auto mb-0">
                     Status: <strong>@this.orderWithStatus.statusText</strong>
                 </p>
             </div>

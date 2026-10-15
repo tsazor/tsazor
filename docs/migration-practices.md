@@ -155,6 +155,13 @@ render in the browser.
 
 ## Components and libraries
 
+- **An app on Bootstrap 4 that moves to Bootstrap 5 renames its classes.** Older Blazor apps and the Blazor workshop
+  ship Bootstrap 4; a current template and `@tsazor/bootstrap` use Bootstrap 5, where the Bootstrap 4 names are gone
+  and do nothing: `ml-*`/`mr-*` → `ms-*`/`me-*` (also `pl-*`/`pr-*` → `ps-*`/`pe-*`), `custom-select` → `form-select`,
+  `badge-*` → `text-bg-*`, `btn-block` → a `d-grid` wrapper, `float-left`/`text-right` → `float-start`/`text-end`,
+  `sr-only` → `visually-hidden`. The markup ports unchanged, so nothing fails: the Blazing Pizza port's Order button
+  sat left instead of right (`ml-auto`) until its classes were renamed. Search the markup for the old names when the
+  Bootstrap version changes.
 - **Map the component library** (Fluent UI Blazor, MudBlazor) to `@tsazor/fluent` or `@tsazor/bootstrap`. A
   missing component is a finding: the completeness plan ([design-library-completeness.md](design-library-completeness.md))
   closes the gaps before 1.0. Icons are the first wall (F17). Both skins have the same components and parameters

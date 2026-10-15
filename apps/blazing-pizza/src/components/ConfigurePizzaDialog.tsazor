@@ -17,13 +17,13 @@
             <div>
                 <label>Extra Toppings:</label>
                 @if (this.toppings === null) {
-                    <select class="custom-select" disabled>
+                    <select class="form-select" disabled>
                         <option>(loading...)</option>
                     </select>
                 } else if (this.pizza.toppings.length >= 6) {
                     <div>(maximum reached)</div>
                 } else {
-                    <select class="custom-select" @onchange="toppingSelected">
+                    <select class="form-select" @onchange="toppingSelected">
                         <option value="-1" disabled selected>(select)</option>
                         @for (let i = 0; i < this.toppings.length; i++) {
                             <option value="@i">@this.toppings[i]!.name - (£@toppingFormattedPrice(this.toppings[i]!))</option>
@@ -44,11 +44,11 @@
         </div>
 
         <div class="dialog-buttons">
-            <button type="button" class="btn btn-secondary mr-auto" @onclick="cancel">Cancel</button>
+            <button type="button" class="btn btn-secondary me-auto" @onclick="cancel">Cancel</button>
             <span class="mr-center">
                 Price: <span class="price">@pizzaFormattedTotalPrice(this.pizza)</span>
             </span>
-            <button type="button" class="btn btn-success ml-auto" @onclick="confirmOrder">Order ></button>
+            <button type="button" class="btn btn-success ms-auto" @onclick="confirmOrder">Order ></button>
         </div>
     </div>
 </div>

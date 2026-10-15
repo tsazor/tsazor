@@ -93,7 +93,7 @@ async function main() {
     await page.locator(".pizza-cards li").nth(2).click();
     await page.waitForTimeout(400);
     // Toppings are name-sorted; option values are their index.
-    await page.locator(".dialog select.custom-select").selectOption("0");
+    await page.locator(".dialog select.form-select").selectOption("0");
     await page.waitForTimeout(200);
     await page.locator(".dialog-buttons .btn-success").click();
     await page.waitForTimeout(400);
