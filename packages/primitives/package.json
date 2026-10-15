@@ -1,0 +1,46 @@
+{
+  "name": "@tsazor/primitives",
+  "version": "1.0.0-next.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tsazor/tsazor.git",
+    "directory": "packages/primitives"
+  },
+  "homepage": "https://github.com/tsazor/tsazor/tree/main/packages/primitives#readme",
+  "bugs": {
+    "url": "https://github.com/tsazor/tsazor/issues"
+  },
+  "type": "module",
+  "description": "Feel-at-home value types for .NET developers in TypeScript: Decimal, DateOnly, TimeOnly, TimeSpan and Guid — immutable, arbitrary-precision, zero dependencies.",
+  "keywords": [
+    "tsazor",
+    "decimal",
+    "dateonly",
+    "timeonly",
+    "timespan",
+    "guid"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.7"
+  }
+}

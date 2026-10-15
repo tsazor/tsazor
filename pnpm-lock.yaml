@@ -897,7 +897,20 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@20.19.43)(happy-dom@21.0.1)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
 
+  packages/primitives:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@20.19.43)(happy-dom@21.0.1)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)
+
   packages/runtime:
+    dependencies:
+      '@tsazor/primitives':
+        specifier: workspace:*
+        version: link:../primitives
     devDependencies:
       '@tsazor/compiler':
         specifier: workspace:*
