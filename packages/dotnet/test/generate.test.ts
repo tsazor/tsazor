@@ -178,6 +178,82 @@ describe("generateClient — query arrays", () => {
   });
 });
 
+describe("generateClient — E12 primitives mapping", () => {
+  const ledger: OpenApiDocument = {
+    openapi: "3.0.1",
+    info: { title: "Ledger", version: "1" },
+    paths: {
+      "/api/orders": {
+        get: {
+          operationId: "listOrders",
+          parameters: [{ name: "since", in: "query", schema: { type: "string", format: "date" } }],
+          responses: {
+            "200": {
+              description: "OK",
+              content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Order" } } } },
+            },
+          },
+        },
+        post: {
+          operationId: "createOrder",
+          requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/Order" } } } },
+          responses: { "204": { description: "Created" } },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        Order: {
+          type: "object",
+          required: ["id", "total"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+            total: { type: "number", format: "decimal" },
+            placedOn: { type: "string", format: "date" },
+            delivery: { type: "string", format: "duration" },
+          },
+        },
+      },
+    },
+  } as unknown as OpenApiDocument;
+
+  it("maps decimal/date/duration/uuid to the primitives, with defaults and a hydrating fromJson", async () => {
+    const generation = generateClient(ledger, { clientName: "Ledger" });
+    const models = generation.files.find((f) => f.path === "models.ts")!.content;
+    expect(models).toContain('import { DateOnly, Decimal, Guid, TimeSpan } from "@tsazor/primitives";');
+    const order = classBodyOf(models, "Order");
+    expect(order).toContain("    id = Guid.empty;");
+    expect(order).toContain("    total = Decimal.zero;");
+    expect(order).toContain("    placedOn?: DateOnly;");
+    expect(order).toContain("    delivery?: TimeSpan;");
+    expect(order).toContain('id: Guid.parse(source["id"] as unknown as string)!,');
+    expect(order).toContain('total: Decimal.parse(source["total"] as unknown as string)!,');
+    expect(order).toContain('placedOn: source["placedOn"] == null ? undefined : DateOnly.parse(source["placedOn"] as unknown as string)!,');
+    expect(order).toContain('delivery: source["delivery"] == null ? undefined : TimeSpan.parse(source["delivery"] as unknown as string)!,');
+
+    const client = generation.files.find((f) => f.path === "ledger.ts")!.content;
+    expect(client).toContain('import { Order } from "./models";');
+    expect(client).toContain('import { DateOnly } from "@tsazor/primitives";');
+    expect(client).toContain("since?: DateOnly;");
+    expect(client).toContain(".then((result) => (result.ok ? { ...result, body: ((result.body as unknown[]) ?? []).map((item) => Order.fromJson(item))! } : result))");
+
+    // The generated pair type-checks, so the hydration round-trip is real.
+    expect(await typeErrors(generation.files, "ledger")).toBe("");
+  });
+
+  it("falls back to the plain types with the --string-primitives opt-out (X4)", () => {
+    const generation = generateClient(ledger, { clientName: "Ledger", stringPrimitives: true });
+    const models = generation.files.find((f) => f.path === "models.ts")!.content;
+    expect(models).not.toContain("@tsazor/primitives");
+    const order = classBodyOf(models, "Order");
+    expect(order).toContain(`    id = "";`);
+    expect(order).toContain("    total = 0;");
+    expect(order).toContain("    placedOn?: string;");
+    expect(order).toContain("    delivery?: string;");
+    expect(order).toContain("static fromJson(data: unknown): Order { return data as Order; }");
+  });
+});
+
 describe("generateClient — path values and parameters outside the signature (D13)", () => {
   const versioned: OpenApiDocument = {
     openapi: "3.0.1",
@@ -246,9 +322,9 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
     expect(signatures(client)).toEqual([
       "userGetAll(): UserDto[] | null",
       "userCreate(body: UserCreateRequest): UserDto",
-      "userDelete(id: string): boolean",
+      "userDelete(id: Guid): boolean",
+      "fileDownloadById(id: Guid): void",
       // Same name, same method: the path parameter tells them apart.
-      "fileDownloadById(id: string): void",
       "fileDownload(query?: FileDownloadQuery): void",
       "fileUpload(body: FileUploadForm, query?: FileUploadQuery): boolean",
       "contentGetAll(contentTypeSlug: string, query?: ContentGetAllQuery): UserDto[] | null",
@@ -269,8 +345,8 @@ describe("generateClient — Swashbuckle's defaults (no operationId, an envelope
   it("reads a response-only model's value types as present, as ASP.NET Core writes them", async () => {
     const models = (await generate()).files.find((f) => f.path === "models.ts")!.content;
     const user = classBodyOf(models, "UserDto");
-    // A Guid is always there; a nullable string may be null.
-    expect(user).toContain(`    id = "";`);
+    // A Guid is always there (E12: mapped to the value type, default `Guid.empty`); a nullable string may be null.
+    expect(user).toContain(`    id = Guid.empty;`);
     expect(user).toContain("    userName?: string | null;");
     // OrderDto is a request body too: the schema's own rules (no required ⇒ optional).
     expect(classBodyOf(models, "OrderDto")).toContain("    id?: number;");
@@ -346,7 +422,10 @@ async function typeErrors(files: { path: string; content: string }[], name: stri
           types: [],
           noEmit: true,
           // No self-link for @tsazor/dotnet in pnpm — types point straight at dist.
-          paths: { "@tsazor/dotnet": ["../../../dist/index.d.ts"] },
+          paths: {
+            "@tsazor/dotnet": ["../../../dist/index.d.ts"],
+            "@tsazor/primitives": ["../../../../primitives/dist/index.d.ts"],
+          },
         },
         files: files.map((f) => f.path),
       },

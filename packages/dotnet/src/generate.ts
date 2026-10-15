@@ -15,6 +15,12 @@
  *  - Inline objects without $ref (and types without a mapping) → `Record<string,
  *    unknown>`/`unknown` with a generator warning — the subset Swashbuckle
  *    emits for DTOs is covered, everything else stays explicitly marked.
+ *  - E12: .NET value formats map to `@tsazor/primitives` by default — `format:
+ *    decimal` (a number) ⇒ `Decimal`, `date` ⇒ `DateOnly`, `duration`/`time-span`
+ *    ⇒ `TimeSpan`, `uuid` ⇒ `Guid` (the CLI `--string-primitives` opt-out keeps
+ *    them `number`/`string`). The wire format is their strings, so every model
+ *    gains a `fromJson` that `.parse`s the primitive fields, and the client's
+ *    operations hydrate the response body through it.
  */
 import {
   flattenAllOf,
@@ -45,6 +51,12 @@ export interface GenerateOptions {
    * signatures and the names — URL-segment API versioning, `api/v{version}/…` with `{ version: "1" }`.
    */
   pathValues?: Record<string, string>;
+  /**
+   * CLI `--string-primitives`: keep `format: decimal`/`date`/`duration`/`uuid` as their plain types
+   * (`number`/`string`) instead of the `@tsazor/primitives` value types. The mapping is on by default
+   * (decision X4); this switches back to `string`/`number`.
+   */
+  stringPrimitives?: boolean;
 }
 
 export interface GeneratedFile {
@@ -62,13 +74,19 @@ export function generateClient(document: OpenApiDocument, options: GenerateOptio
   const warnings: string[] = [];
   const clientName = (options.clientName ?? pascal(document.info?.title ?? "Api")).replace(/Client$/, "") || "Api";
   const clientFile = options.clientFile ?? kebab(clientName);
-  const gen = new Generator(document, clientName, clientFile, options.envelope, options.baseUrl, options.pathValues ?? {}, warnings);
+  const gen = new Generator(document, clientName, clientFile, options.envelope, options.baseUrl, options.pathValues ?? {}, options.stringPrimitives ?? false, warnings);
   return { files: gen.files(), warnings };
 }
 
 class Generator {
   /** Model type names the client file needs (written only during the client phase). */
   private readonly clientModelRefs = new Set<string>();
+  /** Model type names the client uses as *values* (a `$ref` revived via `.fromJson`) — a value import, not `import type`. */
+  private readonly clientValueRefs = new Set<string>();
+  /** `@tsazor/primitives` value types the models file uses (Decimal/DateOnly/TimeSpan/Guid). */
+  private readonly modelPrimitives = new Set<string>();
+  /** `@tsazor/primitives` value types the client file uses (params, bodies, responses). */
+  private readonly clientPrimitives = new Set<string>();
   private tracking = false;
 
   constructor(
@@ -78,6 +96,7 @@ class Generator {
     private readonly envelope: EnvelopeOptions | undefined,
     private readonly baseUrl: string | undefined,
     private readonly pathValues: Record<string, string>,
+    private readonly stringPrimitives: boolean,
     private readonly warnings: string[],
   ) {}
 
@@ -117,6 +136,10 @@ class Generator {
     const decorators = new Set(body.flatMap((line) => /^\s*@(\w+)\(/.exec(line)?.[1] ?? []));
     if (decorators.size > 0) {
       header.push(`import { ${[...decorators].sort().join(", ")} } from "@tsazor/runtime";`, "");
+    }
+    // The value types the models use (E12), from their own package.
+    if (this.modelPrimitives.size > 0) {
+      header.push(`import { ${[...this.modelPrimitives].sort().join(", ")} } from "@tsazor/primitives";`, "");
     }
     return [...header, ...body].join("\n").replace(/\n{3,}/g, "\n\n").replace(/\n+$/, "\n");
   }
@@ -158,7 +181,37 @@ class Generator {
       out.push(this.fieldLine(name, property, schemaNullable(property), present));
     }
     if (Object.keys(properties).length === 0) out.push("    // (empty schema)");
+    out.push(...this.fromJsonMethod(className, schema, responseOnly));
     out.push("}", "");
+  }
+
+  /**
+   * The static `fromJson` that revives a parsed response body into this model's typed
+   * values (E12): primitive fields are `.parse`d from their wire strings, `$ref` fields
+   * recurse, arrays `.map`. Fields without a primitive keep the spread value, so a plain
+   * model's `fromJson` is the identity cast. Every model class gets one, so a nested
+   * reference can always call it.
+   */
+  private fromJsonMethod(className: string, schema: OpenApiSchema, responseOnly: boolean): string[] {
+    const required = new Set(schema.required ?? []);
+    const overrides: string[] = [];
+    for (const [name, raw] of Object.entries(schema.properties ?? {})) {
+      const property = raw as OpenApiSchema;
+      // Same "present" rule as fieldLine: a response-only value type is always there.
+      const present = required.has(name) || (responseOnly && this.isValueType(property));
+      const revive = this.reviveExpression(property, name, `source[${JSON.stringify(name)}]`, present, schemaNullable(property));
+      if (revive !== undefined) overrides.push(`        ${fieldKey(name)}: ${revive},`);
+    }
+    if (overrides.length === 0) return [`    static fromJson(data: unknown): ${className} { return data as ${className}; }`];
+    return [
+      `    static fromJson(data: unknown): ${className} {`,
+      `        const source = data as Record<string, unknown>;`,
+      `        return {`,
+      `            ...(data as ${className}),`,
+      ...overrides,
+      `        };`,
+      `    }`,
+    ];
   }
 
   /**
@@ -209,6 +262,8 @@ class Generator {
     const type = this.typeText(property, name);
     if (isRequired && !nullable) {
       // Primitives get the .NET default; object references get definite assignment.
+      const primitive = this.primitiveDefault(type);
+      if (primitive !== undefined) return `    ${key} = ${primitive};`;
       if (type === "string") return `    ${key} = "";`;
       if (type === "number") return `    ${key} = 0;`;
       if (type === "boolean") return `    ${key} = false;`;
@@ -231,6 +286,11 @@ class Generator {
     }
     const type = schemaType(property);
     const nullSuffix = withNull && schemaNullable(property) ? " | null" : "";
+    const primitive = this.primitiveType(property);
+    if (primitive !== undefined) {
+      (this.tracking ? this.clientPrimitives : this.modelPrimitives).add(primitive);
+      return `${primitive}${nullSuffix}`;
+    }
     switch (type) {
       case "string": {
         // A file (ASP.NET Core's IFormFile): a Blob, which a File is.
@@ -279,6 +339,102 @@ class Generator {
     return property.enum.map((value) => (typeof value === "string" ? JSON.stringify(value) : String(value))).join(" | ");
   }
 
+  /**
+   * The `@tsazor/primitives` value type for a schema's .NET format, or undefined
+   * (E12, decision X4): `decimal` (a number schema) → `Decimal`, `date` → `DateOnly`,
+   * `duration`/`time-span` → `TimeSpan`, `uuid` → `Guid`. The opt-out flag
+   * `--string-primitives` leaves them as `number`/`string`.
+   */
+  private primitiveType(property: OpenApiSchema): string | undefined {
+    if (this.stringPrimitives) return undefined;
+    const type = schemaType(property);
+    const format = property.format;
+    if (format === "decimal" && (type === "number" || type === "integer")) return "Decimal";
+    if (type === "string") {
+      if (format === "date") return "DateOnly";
+      if (format === "duration" || format === "time-span") return "TimeSpan";
+      if (format === "uuid") return "Guid";
+    }
+    return undefined;
+  }
+
+  /** The .NET default initializer of a primitive type, undefined for those without one (definite assignment). */
+  private primitiveDefault(type: string): string | undefined {
+    switch (type) {
+      case "Decimal": return "Decimal.zero";
+      case "Guid": return "Guid.empty";
+      default: return undefined;
+    }
+  }
+
+  /**
+   * True when the schema contains a `@tsazor/primitives` value type, through `$ref`s
+   * (so a model whose `fromJson` does real work). A `$ref` whose model is primitive-free
+   * has an identity `fromJson` — nothing to revive, so the client skips the `.then` wrapper.
+   */
+  private containsPrimitive(schema: OpenApiSchema, seen: ReadonlySet<string> = new Set()): boolean {
+    if (this.primitiveType(schema) !== undefined) return true;
+    if (schema.$ref !== undefined) {
+      if (seen.has(schema.$ref)) return false;
+      return this.containsPrimitive(resolveSchemaRef(this.document, schema.$ref), new Set(seen).add(schema.$ref));
+    }
+    const type = schemaType(schema);
+    if (type === "array" && schema.items !== undefined) return this.containsPrimitive(schema.items as OpenApiSchema, seen);
+    if (type === "object") {
+      const additional = "additionalProperties" in schema ? schema.additionalProperties : undefined;
+      if (Object.keys(schema.properties ?? {}).length === 0 && typeof additional === "object" && additional !== null) {
+        return this.containsPrimitive(additional as OpenApiSchema, seen);
+      }
+      return Object.values(schema.properties ?? {}).some((property) => this.containsPrimitive(property as OpenApiSchema, seen));
+    }
+    return false;
+  }
+
+  /**
+   * The expression reviving a non-null wire value `expr` of `schema` into its typed value —
+   * a primitive `.parse`, a `$ref` model's `fromJson`, an array `.map`, a dictionary rebuild —
+   * or undefined when the schema's value is already correct (plain string/number/boolean/enum).
+   */
+  private reviveValue(schema: OpenApiSchema, owner: string, expr: string): string | undefined {
+    if (schema.$ref !== undefined) {
+      const name = pascal(schema.$ref.slice(schema.$ref.lastIndexOf("/") + 1));
+      const target = resolveSchemaRef(this.document, schema.$ref);
+      if (target.enum !== undefined) return undefined; // enum alias: as-is
+      if (!this.containsPrimitive(target)) return undefined; // identity fromJson — nothing to revive
+      if (this.tracking) this.clientValueRefs.add(name);
+      return `${name}.fromJson(${expr})`;
+    }
+    const type = schemaType(schema);
+    const primitive = this.primitiveType(schema);
+    if (primitive !== undefined) return `${primitive}.parse(${expr} as unknown as string)`;
+    if (type === "array" && schema.items !== undefined) {
+      const item = this.reviveValue(schema.items as OpenApiSchema, owner, "item");
+      return item === undefined ? undefined : `((${expr} as unknown[]) ?? []).map((item) => ${item})`;
+    }
+    if (type === "object" && Object.keys(schema.properties ?? {}).length === 0) {
+      const additional = "additionalProperties" in schema ? schema.additionalProperties : undefined;
+      if (typeof additional === "object" && additional !== null) {
+        const value = this.reviveValue(additional as OpenApiSchema, owner, "value");
+        if (value !== undefined) return `Object.fromEntries(Object.entries(${expr} ?? {}).map(([key, value]) => [key, ${value}]))`;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * The full revive for a wire value `expr` of `schema`, null handling included. `required`
+   * (the JSON always carries it) with a non-nullable type asserts; otherwise a null/absent
+   * value passes through as null (nullable) or undefined (optional). Undefined when no revival.
+   */
+  private reviveExpression(schema: OpenApiSchema, owner: string, expr: string, required: boolean, nullable: boolean): string | undefined {
+    const value = this.reviveValue(schema, owner, expr);
+    if (value === undefined) return undefined;
+    if (required && !nullable) return `${value}!`;
+    // A primitive's `parse` returns `T | null`, but here `expr` is non-null and the wire
+    // value is schema-valid, so the null cannot occur — assert it away on the non-nullable side.
+    return `${expr} == null ? ${nullable ? "null" : "undefined"} : ${nullable ? value : `${value}!`}`;
+  }
+
   private warn(message: string): void {
     if (!this.warnings.includes(message)) this.warnings.push(message);
   }
@@ -292,8 +448,15 @@ class Generator {
     this.tracking = false;
 
     const out: string[] = ["// GENERATED CODE — do not edit by hand.", ""];
-    if (clientModelRefs.size > 0) {
-      out.push(`import type { ${[...clientModelRefs].sort().join(", ")} } from "./models";`, "");
+    // Model references the client uses as values (a revived `$ref`'s `fromJson`) are value
+    // imports; the rest stay type-only.
+    const valueRefs = [...this.clientValueRefs].sort();
+    const typeRefs = [...this.clientModelRefs].filter((name) => !this.clientValueRefs.has(name)).sort();
+    if (valueRefs.length > 0) {
+      out.push(`import { ${valueRefs.join(", ")} } from "./models";`);
+    }
+    if (typeRefs.length > 0) {
+      out.push(`import type { ${typeRefs.join(", ")} } from "./models";`, "");
     }
     // Package imports: base class + result type always, queryString only with
     // query operations, TsazorHttp as the constructor type always.
@@ -302,8 +465,12 @@ class Generator {
     out.push(
       `import { OpenApiClient${usesForm ? ", formData" : ""}${usesQuery ? ", queryString" : ""}, type HttpResult, type RequestOptions } from "@tsazor/dotnet";`,
       'import { TsazorHttp } from "@tsazor/runtime";',
-      "",
     );
+    // The value types the client's params/bodies/responses use (E12), from their own package.
+    if (this.clientPrimitives.size > 0) {
+      out.push(`import { ${[...this.clientPrimitives].sort().join(", ")} } from "@tsazor/primitives";`);
+    }
+    out.push("");
     for (const op of operations) {
       if (op.bodyType?.form) out.push(...op.bodyType.form, "");
       if (op.queryInterface) out.push(...op.queryInterface, "");
@@ -399,10 +566,19 @@ class Generator {
     if (query) signatureParts.push(query.signature);
     signatureParts.push("options?: RequestOptions");
 
-    // URL: path template interpolated, query string appended at the end.
+    // URL: path template interpolated, query string appended at the end. A primitive
+    // value type as a path parameter stringifies through `String()` (its `toString`).
+    const primitiveParams = new Set(
+      pathParameters.filter((p) => this.primitiveType(paramSchema(this.document, p)) !== undefined).map((p) => p.name),
+    );
     let inner = path;
     if (pathParameters.length > 0) {
-      inner = path.replace(/\{([^}]+)\}/g, (_m, paramName: string) => "${encodeURIComponent(" + fieldKey(paramName) + ")}");
+      inner = path.replace(/\{([^}]+)\}/g, (_m, paramName: string) => {
+        const key = fieldKey(paramName);
+        return primitiveParams.has(paramName)
+          ? "${encodeURIComponent(String(" + key + "))}"
+          : "${encodeURIComponent(" + key + ")}";
+      });
     }
     if (query) inner += "${queryString(query)}";
     const url = "`" + inner + "`";
@@ -410,9 +586,13 @@ class Generator {
     const lines: string[] = [];
     const doc = docComment("    ", operation.summary ?? operation.description);
     if (doc) lines.push(doc);
+    const call = `this.call(${JSON.stringify(method.toUpperCase())}, ${url}, ${bodyType ? (bodyType.form ? "formData(body)" : "body") : "undefined"}, options)`;
+    const returns = responseType?.revive !== undefined
+      ? `${call}.then((result) => (result.ok ? { ...result, body: ${responseType!.revive} } : result))`
+      : call;
     lines.push(
       `    ${name}(${signatureParts.join(", ")}): Promise<HttpResult<${responseType?.type ?? "void"}>> {`,
-      `        return this.call(${JSON.stringify(method.toUpperCase())}, ${url}, ${bodyType ? (bodyType.form ? "formData(body)" : "body") : "undefined"}, options);`,
+      `        return ${returns};`,
       "    }",
     );
     return {
@@ -473,9 +653,10 @@ class Generator {
   /**
    * First 2xx response with a JSON schema (204 or no schema ⇒ void = undefined body).
    * With an envelope, the type is the envelope's `data` property: that is what
-   * the client returns as `body` (`unwrapEnvelope`).
+   * the client returns as `body` (`unwrapEnvelope`). The `revive` expression turns
+   * the parsed `result.body` back into its typed value (E12 hydration).
    */
-  private responseType(operation: OpenApiOperation, opName: string): { type: string } | undefined {
+  private responseType(operation: OpenApiOperation, opName: string): { type: string; revive?: string } | undefined {
     if (operation.responses === undefined) return undefined;
     for (const [code, raw] of Object.entries(operation.responses)) {
       if (!/^2\d\d$/.test(code)) continue;
@@ -484,8 +665,13 @@ class Generator {
       const json = content?.["application/json"] ?? (content ? Object.values(content)[0] : undefined);
       if (json?.schema === undefined) continue;
       const data = this.envelopeData(json.schema as OpenApiSchema);
-      if (data !== undefined) return { type: this.typeText(data, opName, schemaNullable(data)) };
-      return { type: this.typeText(json.schema as OpenApiSchema, opName) };
+      if (data !== undefined) {
+        const revive = this.reviveExpression(data, opName, "result.body", true, schemaNullable(data));
+        return { type: this.typeText(data, opName, schemaNullable(data)), revive };
+      }
+      const schema = json.schema as OpenApiSchema;
+      const revive = this.reviveExpression(schema, opName, "result.body", true, schemaNullable(schema));
+      return { type: this.typeText(schema, opName), revive };
     }
     return undefined;
   }
@@ -567,7 +753,7 @@ interface OperationEntry {
 
 interface OperationGen {
   lines: string[];
-  responseType?: { type: string };
+  responseType?: { type: string; revive?: string };
   bodyType?: { type: string; form?: string[] };
   queryInterface?: string[];
 }

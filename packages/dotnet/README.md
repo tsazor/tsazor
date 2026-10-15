@@ -62,6 +62,13 @@ ran their own HTTP helpers).
   generated model *classes* (`@Required()`, `@MinLength`, `@MaxLength`, `@StringLength`,
   `@Range`, `@EmailAddress`, `@RegularExpression`) — EditContext +
   `DataAnnotationsValidator` validate with them out of the box.
+- **.NET value types (E12).** The .NET value formats map to `@tsazor/primitives` by default:
+  `format: decimal` (a number) ⇒ `Decimal`, `date` ⇒ `DateOnly`, `duration`/`time-span` ⇒
+  `TimeSpan`, `uuid` ⇒ `Guid`. The wire format stays their strings (each type serializes through
+  its `toJSON()`), so the generated model classes gain a `fromJson` that parses those fields, and
+  the client's operations hydrate the response body through it — `result.body.total` is a real
+  `Decimal`, not a string. Required `Guid`/`Decimal` fields default to `Guid.empty`/`Decimal.zero`.
+  The `--string-primitives` opt-out keeps them `number`/`string`.
 - **Auth integration.** `CookieAuthenticationStateProvider` (session endpoint; `refresh()` asks
   again after a sign-in through the app's own form)
   and `JwtAuthenticationStateProvider` (local payload decoding, Microsoft claim URIs; override
@@ -77,7 +84,7 @@ ran their own HTTP helpers).
 
 | Schema | TS |
 | --- | --- |
-| `required`, not nullable | `T` (primitives with the .NET default: `""`, `0`, `false`, `[]`) |
+| `required`, not nullable | `T` (primitives with the .NET default: `""`, `0`, `false`, `[]`, `Guid.empty`, `Decimal.zero`) |
 | `required`, nullable | `T \| null = null` |
 | optional, not nullable | `?: T` |
 | optional, nullable | `?: T \| null` |
@@ -114,6 +121,8 @@ npx tsazor-dotnet generate https://my.app/swagger/v1/swagger.json \
     --out src/api --envelope data,errors --base-url https://my.app
 # an API versioned in the URL (api/v{version}/…):
 npx tsazor-dotnet generate swagger.json --out src/api --path-value version=1
+# keep the .NET value formats as plain number/string (opt out of @tsazor/primitives):
+npx tsazor-dotnet generate swagger.json --out src/api --string-primitives
 ```
 
 ```ts

@@ -3,6 +3,7 @@
  *
  *   tsazor-dotnet generate <openapi.json|https://…> --out <dir>
  *       [--name <ClientName>] [--envelope data,errors[,succeeded]] [--base-url <url>] [--path-value <name>=<value>]…
+ *       [--string-primitives]
  *
  * Writes `models.ts` and `<client>.ts` to --out and prints the
  * generator warnings (documented subset). Exit: 0 green, 1 errors, 2
@@ -32,6 +33,8 @@ const USAGE = `Usage: tsazor-dotnet generate <openapi.json|url> --out <dir> [opt
   --path-value <name>=<value>  a path parameter with a fixed value, written into the URLs (URL-segment
                        API versioning: --path-value version=1 turns api/v{version}/brands into api/v1/brands);
                        repeatable
+  --string-primitives  keep format decimal/date/duration/uuid as number/string instead of the
+                       @tsazor/primitives value types (the mapping is on by default)
 Exit: 0 green, 1 errors, 2 usage/fatal.`;
 
 export async function main(argv: readonly string[], stdout: (line: string) => void): Promise<number> {
@@ -56,6 +59,7 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
   let clientName: string | undefined;
   let envelope: EnvelopeOptions | undefined;
   let baseUrl: string | undefined;
+  let stringPrimitives = false;
   const pathValues: Record<string, string> = {};
   const extraArgs = [...extra];
   while (extraArgs.length > 0) {
@@ -109,6 +113,9 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
         pathValues[value.slice(0, separator)] = value.slice(separator + 1);
         break;
       }
+      case "--string-primitives":
+        stringPrimitives = true;
+        break;
       default:
         stdout(`tsazor-dotnet generate: unknown option "${option}".`);
         stdout(USAGE);
@@ -128,7 +135,7 @@ export async function main(argv: readonly string[], stdout: (line: string) => vo
     stdout(`tsazor-dotnet generate: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
-  const generation = generateClient(document, { clientName, envelope, baseUrl, pathValues });
+  const generation = generateClient(document, { clientName, envelope, baseUrl, pathValues, stringPrimitives });
   await mkdir(out, { recursive: true });
   for (const file of generation.files) {
     await writeFile(path.join(out, file.path), file.content, "utf8");
