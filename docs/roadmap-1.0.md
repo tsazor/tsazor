@@ -6,7 +6,9 @@ and the Sleipnir integration move after 1.0, E12 first. Both are separate, addit
 changes the API of the runtime or the compiler. **Left for 1.0:** R2, E3, E10, the E9 screen-reader
 audit, the known follow-ups, then going public (R4, provenance). The repository stays private until then.
 (2026-10-14: R2, E3 and E10 are done; the API review is the basis of the freeze.)
-**2026-10-15:** the library's waves A and B are done too. What is left is listed in §7 (the way to 1.0).
+**2026-10-15:** the library's waves A and B are done too. What is left is listed in §7 (the way to 1.0). **Scope (owner,
+2026-10-15):** E12's `@tsazor/primitives` (`Decimal`, `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid`, with the generator's
+mappings on by default, X4) and the BlazorHero port's phases 5 and 6 come before 1.0; `@tsazor/extensions` stays after.
 **Library completeness (owner, 2026-10-09):** 1.0 also waits for a complete component library, waves A and B of
 [design-library-completeness.md](design-library-completeness.md) (§3b).
 The overview for version 1. Detailed plans live in the linked roadmaps and design docs.
@@ -276,7 +278,7 @@ architecture and security take priority.
    waves A and B (§3b, 2026-10-09); R2, E3, E10, the E9 screen-reader audit, the follow-ups → 1.0 release
    candidate → public repository, docs site (R4), npm with provenance → 1.0.
 
-After 1.0: E12 (`@tsazor/primitives`, `@tsazor/extensions`, `Decimal` with `@bind:culture`), then the
+After 1.0: E12's `@tsazor/extensions` (its `@tsazor/primitives` moved before 1.0, owner 2026-10-15), then the
 Sleipnir integration; SSR and fine-grained reactivity as planned.
 
 ## 7 — The way to 1.0 (2026-10-15)
@@ -297,16 +299,18 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"`~~ **done 2026-10-15** (`"same-tab"`) | A name; renaming it later breaks |
 | ~~**Stale docs** — roadmap-tutorial (M4), §3c, E8, design-virtualize, design-localization, the BlazorHero B3 row, a comment in `codegen.ts`~~ **done 2026-10-15** | Going public |
 | **E9** — the screen-reader audit, by a person: [screen-reader-audit.md](screen-reader-audit.md) | WCAG 2.2 AA |
+| **E12 `@tsazor/primitives`** — `Decimal` (with `@bind` and validation), `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid`; `@tsazor/dotnet` maps to them by default ([design-extensions-primitives.md](design-extensions-primitives.md)) | Owner 2026-10-15 (X4): the mapping is the default from 1.0 on, so the types come first |
+| **BlazorHero phases 5 and 6** — the dashboard with charts and the chat (SignalR); the languages with right-to-left | Owner 2026-10-15: they test charts, real time and RTL in the skins before the freeze |
 
 ### For the owner to decide
 
 | Item | The question |
 |---|---|
-| **X4** — `@tsazor/dotnet` maps `decimal`, `DateOnly` and `Guid` to `Decimal`/… "always on" (owner) | `Decimal` comes with E12, after 1.0: keep `string` in 1.0 and make the mapping opt-in later (no break), or wait? |
+| ~~**X4**~~ | **Decided 2026-10-15:** E12's types before 1.0, the mapping on by default (see above) |
 | **The skins' own repository at 1.0** | Lockstep (one version for every package) and the skins' own versions after the move: when do they move? |
-| **The rc on npm** | A package's first publish sets `latest`: publish an rc to npm, or only 1.0.0? |
+| ~~**The rc on npm**~~ | **Decided 2026-10-15:** release candidates only in the local registry; npm gets 1.0.0 first |
 | **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
-| **Cleanup** | ~~`apps/fluentcms-admin` and the lockfile it changed~~ deleted 2026-10-15 (owner: "einfach löschen"; `apps/fluentcms` replaced it); the fullstackhero containers |
+| ~~**Cleanup**~~ | **Done 2026-10-15:** `apps/fluentcms-admin` deleted (`apps/fluentcms` replaced it); the fullstackhero containers, their images and volumes removed (owner) |
 
 ### After 1.0 (additive)
 
@@ -325,7 +329,8 @@ from Blazor" and a codemod chapter on the Blazor track; files in the lesson edit
 ### Release steps (design-release.md)
 
 1. The items above; the proposals that change behavior decided before the release candidate.
-2. `1.0.0-next.N` (`pnpm release:version`, `pnpm release:local`); the owner's apps run on it; then `1.0.0-rc.N`.
+2. `1.0.0-next.N` (`pnpm release:version`, `pnpm release:local`); the owner's apps run on it; then `1.0.0-rc.N` — in the
+   local registry only (owner 2026-10-15): npm's first publish, which also sets `latest`, is 1.0.0.
 3. The full CI by hand (check, e2e, engines), then `main`.
 4. The curated first commit to `tsazor/tsazor`, the repository public; its settings: private vulnerability reporting,
    Pages (`PAGES_ENABLED`), `RELEASE_ENABLED`, the `npm` environment, a short-lived `NPM_TOKEN`.
