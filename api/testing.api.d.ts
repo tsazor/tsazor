@@ -90,6 +90,8 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 
 // DataAnnotationsValidator: re-exported from @tsazor/runtime
 
+// decorateFields: re-exported from @tsazor/runtime
+
 // defineComponent: re-exported from @tsazor/runtime
 
 // defineParameter: re-exported from @tsazor/runtime
@@ -136,6 +138,8 @@ export interface FakeStore<T> {
     notify(): void;
     subscribe(listener: (value: T) => void): () => void;
 }
+
+// FieldDecorator: re-exported from @tsazor/runtime
 
 // FieldRuleDecorator: re-exported from @tsazor/runtime
 

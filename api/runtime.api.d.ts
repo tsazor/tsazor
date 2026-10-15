@@ -290,6 +290,9 @@ export declare class DataAnnotationsValidator extends ComponentBase {
     protected buildRenderTree(_b: RenderTreeBuilder): void;
 }
 
+// decorateFields
+export declare function decorateFields(type: abstract new (...args: never[]) => unknown, fields: Readonly<Record<string, readonly FieldDecorator[]>>): void;
+
 // defineComponent
 export declare function defineComponent<T extends abstract new (...args: never[]) => ComponentBase>(type: T): ComponentDefinition;
 
@@ -409,6 +412,9 @@ export declare enum EventHandlerFlags {
 export interface EventSubscription<Handler extends (...args: never[]) => void> {
     subscribe(handler: Handler): () => void;
 }
+
+// FieldDecorator
+export type FieldDecorator = (value: undefined, context: ClassFieldDecoratorContext) => unknown;
 
 // FieldRuleDecorator
 export type FieldRuleDecorator = (value: unknown, context: ClassFieldDecoratorContext) => void;

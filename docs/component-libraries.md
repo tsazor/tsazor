@@ -73,8 +73,10 @@ app:
 - every `src/*.ts` helper becomes `dist/<name>.js` beside them, with the declaration TypeScript
   derives from the file alone (a function needs its return type written for that);
 - `dist/tsazor-components.json` is the manifest;
-- `dist/_decorators.js` holds esbuild's decorator helpers once, for all the components (an app's
-  Vite plugin points it at the app's own copy, [bundle-size.md](bundle-size.md));
+- Tsazor's field decorators (`@Parameter()` and the like) are applied after each class, as in an
+  app; `dist/_decorators.js` holds esbuild's helpers for the decorators that stay, once for all
+  the components (an app's Vite plugin points it at the app's own copy, [bundle-size.md](bundle-size.md));
+- the `@code (src/X.tsazor:line)` comments name the source from the package;
 - with `--stylesheet`, `src/styles/*.css` and each component's `<Name>.tsazor.css` are joined
   into `dist/<file>` in that order.
 

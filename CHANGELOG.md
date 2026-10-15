@@ -179,6 +179,16 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   the plugin points a library's copy at the app's. A helper is shared only if its text is exactly the same, so another
   esbuild version's helpers stay where they are. All JS, gzip: the fullstackhero port −11% (318 → 283 KB), fluentcms
   −10%, the gallery −6%. Measured and compared against React in `docs/bundle-size.md`.
+- **Smaller apps — Tsazor's field decorators are applied after the class** (`@tsazor/runtime`, `@tsazor/vite-plugin`,
+  `@tsazor/cli`): `@Parameter()`, `@CascadingParameter()`, `@SupplyParameterFromQuery()` and the validation rules
+  only record the field, so the build applies them right after the class, in one `decorateFields(Class, { … })`
+  call, instead of lowering them (a few hundred bytes per class). The metadata is the same. Components, the app's own
+  `.ts` files and `tsazor build-lib` libraries get it; a class with any other decorator stays as written;
+  `optimize: false` turns it off. `decorateFields` (and its `FieldDecorator` type) is new in `@tsazor/runtime` and part
+  of the ABI (`api/abi.json`). All JS, gzip: the fullstackhero port 283 → 269 KB, fluentcms 240 → 226, the gallery
+  153 → 143 (`docs/bundle-size.md`).
+- **Fixed — `@tsazor/cli`: `tsazor build-lib` wrote the build machine's paths into `dist`** (the `@code (file:line)`
+  comments); they name the source from the package now (`src/Badge.tsazor:10`).
 - **Fixed — `@tsazor/cli`: `tsazor build-lib` could remove what it had just written** when the clock stepped back
   during the build (WSL syncs its clock with the host): it removed every file older than its start. It now removes
   only the files it didn't write.

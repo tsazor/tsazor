@@ -9,6 +9,7 @@
     "CascadingParameter",
     "CascadingTypeParameter",
     "ComponentBase",
+    "decorateFields",
     "EventCallback",
     "formatValue",
     "inject",

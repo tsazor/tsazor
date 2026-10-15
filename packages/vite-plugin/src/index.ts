@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { CHECK_CODES, compile, shareHelpers, type TszDiagnostic } from "@tsazor/compiler";
+import { CHECK_CODES, compactFieldDecorators, compile, shareHelpers, type TszDiagnostic } from "@tsazor/compiler";
 import { defaultMetadataCache } from "@tsazor/workspace";
 import { type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
 import { isImportsFile, TransformRegistry } from "./invalidate.js";
@@ -168,6 +168,13 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
         if (!existsSync(owner)) return null;
         const css = await processScopedCss(code, scopeHashFor(projectRoot, owner), filePath);
         return { code: css, map: null };
+      }
+
+      // The app's own TypeScript with Tsazor's field decorators (models with validation rules, component base classes,
+      // code-behind): the compact form a component gets, before Vite's esbuild lowers what is left. Positions stay.
+      if (/\.m?ts$/.test(filePath) && !filePath.endsWith(".d.ts") && options.optimize !== false) {
+        const compact = compactFieldDecorators(code, filePath);
+        return compact === code ? null : { code: compact, map: null };
       }
 
       if (!filePath.endsWith(".tsazor")) {

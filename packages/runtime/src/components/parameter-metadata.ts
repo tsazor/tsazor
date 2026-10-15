@@ -115,6 +115,46 @@ export function defineParameter(
   registryVersion++;
 }
 
+/** A field decorator `decorateFields` applies: Tsazor's own record the field and return nothing. */
+export type FieldDecorator = (value: undefined, context: ClassFieldDecoratorContext) => unknown;
+
+/**
+ * Compiled code's form of `@Parameter() title = ""` and the runtime's other registering field decorators (the
+ * ABI): applies each field's decorators to the class right after its definition, as the language would during it.
+ * They only record the field in the class's decorator metadata, so the metadata is the same, without the
+ * decorator lowering (a few hundred bytes per class). As the language does: fields in declaration order, each
+ * field's last decorator first, each with a context of its own. A decorator that returns an initializer or adds
+ * one can't be applied afterwards — it is an error.
+ */
+export function decorateFields(type: abstract new (...args: never[]) => unknown, fields: Readonly<Record<string, readonly FieldDecorator[]>>): void {
+  let metadata = Object.hasOwn(type, METADATA) ? (type as unknown as Record<symbol, MetadataObject | undefined>)[METADATA] : undefined;
+  if (metadata == null) {
+    // The decorator emit's shape: the base's metadata is the prototype.
+    const base = Object.getPrototypeOf(type) as Record<symbol, MetadataObject | undefined> | null;
+    metadata = Object.create(base?.[METADATA] ?? null) as MetadataObject;
+    Object.defineProperty(type, METADATA, { value: metadata, enumerable: true, configurable: true, writable: true });
+  }
+  for (const name of Object.keys(fields)) {
+    const decorators = fields[name]!;
+    for (let index = decorators.length - 1; index >= 0; index--) {
+      const context = {
+        kind: "field",
+        name,
+        static: false,
+        private: false,
+        metadata,
+        access: { has: (target: object) => name in target, get: (target: object) => (target as Record<string, unknown>)[name], set: (target: object, value: unknown) => ((target as Record<string, unknown>)[name] = value) },
+        addInitializer: () => {
+          throw new Error(`decorateFields: a decorator of '${name}' adds an initializer; it must decorate the field in the class.`);
+        },
+      } as unknown as ClassFieldDecoratorContext;
+      if (decorators[index]!(undefined, context) !== undefined) {
+        throw new Error(`decorateFields: a decorator of '${name}' returns an initializer; it must decorate the field in the class.`);
+      }
+    }
+  }
+}
+
 /**
  * Everything setParameters needs about a component class, built once per
  * class (Blazor's per-type MemberAssignment/WritersForType cache) instead of

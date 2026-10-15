@@ -77,9 +77,9 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-async function createPlugin() {
+async function createPlugin(options: { optimize?: boolean } = {}) {
   const { tsazor } = await import("../src");
-  const plugin = tsazor({ root });
+  const plugin = tsazor({ root, ...options });
   (plugin.configResolved as unknown as (config: { root: string }) => void)({ root });
   return plugin;
 }
@@ -212,8 +212,9 @@ describe("tsazor vite plugin", () => {
     const helpers = (await plugin.load?.call({} as never, "\0virtual:tsazor-decorators")) as string;
     expect(helpers).toContain("var __decorateElement");
     expect(helpers).toMatch(/\nexport \{ __[\w, ]+ \};\n$/);
-    const source = "<p>@title</p>\n@code {\n    @Parameter() title = \"\";\n}\n";
-    const result = (await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Titled.tsazor"))) as { code: string };
+    // A decorator esbuild lowers (an accessor's): its helpers come from the shared module.
+    const source = "<p>@count</p>\n@code {\n    @State() accessor count = 0;\n}\n";
+    const result = (await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Counted.tsazor"))) as { code: string };
     expect(result.code).toMatch(/^import \{ __[\w, ]+ \} from "virtual:tsazor-decorators";/);
     expect(result.code).not.toContain("var __decorateElement");
 
@@ -322,12 +323,26 @@ describe("tsazor vite plugin", () => {
     expect(result!.code).not.toContain("extends ComponentBase");
   });
 
-  it("lowers the standard decorators of the generated module", async () => {
-    const plugin = await createPlugin();
+  it("applies Tsazor's field decorators after the class; optimize: false lowers them as written", async () => {
     const source = "<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n}\n";
-    const result = await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Hello.tsazor"));
-    expect(result!.code).not.toContain("@Parameter()");
-    expect(result!.code).toMatch(/__decorateElement\(\w+, 5, "Name", \w+, Hello\)/);
+    const file = path.join(root, "Pages", "Hello.tsazor");
+    const compact = (await (await createPlugin()).transform?.call({} as never, source, file)) as { code: string };
+    expect(compact.code).not.toContain("@Parameter()");
+    expect(compact.code).toContain("__tsazor_decorateFields(Hello, { Name: [Parameter()] });");
+    expect(compact.code).not.toContain("__decorateElement");
+    const lowered = (await (await createPlugin({ optimize: false })).transform?.call({} as never, source, file)) as { code: string };
+    expect(lowered.code).toMatch(/__decorateElement\(\w+, 5, "Name", \w+, Hello\)/);
+    expect(lowered.code).not.toContain("decorateFields");
+  });
+
+  it("applies Tsazor's field decorators after the class in the app's own .ts files too", async () => {
+    const plugin = await createPlugin();
+    const model = 'import { Required } from "@tsazor/runtime";\nexport class Order {\n  @Required() name = "";\n}\n';
+    const result = (await plugin.transform?.call({} as never, model, path.join(root, "models.ts"))) as { code: string; map: null };
+    expect(result.code).toContain("} __tsazor_decorateFields(Order, { name: [Required()] });");
+    expect(result.map).toBeNull();
+    // Nothing to compact: untouched.
+    expect(await plugin.transform?.call({} as never, "export const x = 1;\n", path.join(root, "plain.ts"))).toBeNull();
   });
 
   it("makes Vite lower standard decorators in the app's own .ts files (dev targets esnext)", async () => {

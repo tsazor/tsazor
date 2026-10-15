@@ -25,7 +25,7 @@ async function library(files: Record<string, string> = {}): Promise<string> {
     "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, target: "ES2022", module: "ESNext", moduleResolution: "bundler", noEmit: true }, include: ["src"] }),
     "src/Greeting.tsazor": '@import { shout } from "./helper"\n<p class="greeting">@shout(this.name)</p><Part />\n@code {\n    /** Who is greeted. */\n    @Parameter() name = "world";\n}\n',
     "src/Greeting.tsazor.css": ".greeting { color: teal; }\n",
-    "src/Part.tsazor": "<span>part</span>\n",
+    "src/Part.tsazor": "<span>part @count</span>\n@code {\n    @State() accessor count = 0;\n}\n",
     "src/helper.ts": "/** The text in capitals. */\nexport function shout(text: string): string {\n  return text.toUpperCase();\n}\n",
     "src/styles/base.css": ":root { --my-lib-gap: 4px; }\n",
     ...files,
@@ -59,12 +59,19 @@ describe("buildLibrary (D9)", () => {
 
     const greeting = await read(root, "Greeting.js");
     expect(greeting).toContain('from "./helper.js"');
-    // esbuild's decorator helpers come from one module, not a copy in each component.
-    expect(greeting).toMatch(/^import \{ __[\w, ]+ \} from "\.\/_decorators\.js";/);
-    expect(greeting).not.toContain("var __decorateElement");
+    // Tsazor's field decorators applied after the class: no decorator lowering, no helpers.
+    expect(greeting).toContain("__tsazor_decorateFields(Greeting, { name: [Parameter()] });");
+    expect(greeting).not.toContain("__decorateElement");
+    // A decorator esbuild lowers (an accessor's) takes the helpers from one module, not a copy in each component.
+    const part = await read(root, "Part.js");
+    expect(part).toMatch(/^import \{ __[\w, ]+ \} from "\.\/_decorators\.js";/);
+    expect(part).not.toContain("var __decorateElement");
     expect(await read(root, "_decorators.js")).toContain("export { ");
     expect(greeting).toContain('from "./Part.js"');
-    expect(greeting).not.toContain(".tsazor");
+    expect(greeting).not.toMatch(/from "[^"]*\.tsazor"/);
+    // The source named from the package, no build machine's path.
+    expect(greeting).toContain("/* @code (src/Greeting.tsazor:");
+    expect(greeting).not.toContain(path.basename(root));
     expect(existsSync(path.join(root, "dist", "Part.js"))).toBe(true);
     expect(await read(root, "index.js")).toBe(
       'export { default as Greeting } from "./Greeting.js";\nexport { shout } from "./helper.js";\nexport { default as Hello } from "./Greeting.js";\n',

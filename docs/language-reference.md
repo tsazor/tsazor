@@ -271,9 +271,19 @@ hand in TypeScript follow the same rule only if you keep one function per instan
 Blazor's method groups do. This is parity, not an optimization: only `optimize: false` turns it
 off. Details: [design-render-hints.md](design-render-hints.md).
 
+**Compact field decorators.** No browser runs standard decorators yet, so the build lowers them,
+and that costs a few hundred bytes per class and per field. Tsazor's own field decorators
+(`@Parameter()`, `@CascadingParameter()`, `@SupplyParameterFromQuery()` and the validation rules
+such as `@Required()`) only record the field in the class's decorator metadata. Tsazor chooses to
+apply them right after the class instead (`decorateFields(Badge, { intent: [Parameter()] })`), the
+class keeping plain fields. The metadata is the same, in the same order. This happens to a
+component and to the app's own `.ts` files (models with validation rules, base classes,
+code-behind). A class with any other decorator stays as written: a class decorator, `@Bindable()`
+or `@State()` on an accessor, a decorator of your own. Details: [bundle-size.md](bundle-size.md).
+
 **`optimize: false`.** One switch (compiler and Vite plugin) turns off every invisible compiler
-optimization — today `staticMarkup` and `renderHints`: the generated code is then what Razor would
-generate. It is a diagnostic and emergency switch (A/B measurements, isolating a suspected
+optimization — today `staticMarkup`, `renderHints` and the compact field decorators: the
+generated code is then what Razor would generate. It is a diagnostic and emergency switch (A/B measurements, isolating a suspected
 optimizer bug), not a recommended mode. It turns stable child content (H4) off too, so section
 content is then rebuilt on every render of its component.
 

@@ -7,7 +7,7 @@
  * helpers go once into `_decorators.js`, which the components import (a copy per component was half their size). docs/component-libraries.md
  * describes the package around it.
  */
-import { compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule } from "@tsazor/compiler";
+import { compactFieldDecorators, compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule } from "@tsazor/compiler";
 import { checkProject } from "@tsazor/lsp";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
@@ -123,7 +123,8 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
         errors.push({ file, message: fileErrors.join("\n") });
         continue;
       }
-      const transpiled = transformSync(compiled.code, { ...COMPONENT_TRANSFORM, sourcefile: filePath });
+      // Tsazor's field decorators applied after the class (`decorateFields`), as an app's build does.
+      const transpiled = transformSync(compactFieldDecorators(packageRelativeSources(compiled.code, packageDir), filePath), { ...COMPONENT_TRANSFORM, sourcefile: filePath });
       await emit(`${className}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
       if (!internal.has(className)) exported.push(className);
     } catch (error) {
@@ -218,6 +219,11 @@ function builtSpecifiers(code: string): string {
     if (specifier.endsWith(".ts")) return `${from}${specifier.slice(0, -".ts".length)}.js${quote}`;
     return `${from}${specifier}.js${quote}`;
   });
+}
+
+/** The compiler's `@code (file:line)` comments name the source from the package: no build machine's path in `dist`. */
+function packageRelativeSources(code: string, packageDir: string): string {
+  return code.replace(/\/\* @code \((.+?):(\d+)\) \*\//g, (_, file: string, line: string) => `/* @code (${path.relative(packageDir, file).replace(/\\/g, "/")}:${line}) */`);
 }
 
 function statement(line: string): string {

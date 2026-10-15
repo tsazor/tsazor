@@ -73,11 +73,17 @@ different `@types/node` in the store; not from these changes).
 - **esbuild's decorator helpers are in an app once** (owner: "setze das um"): `virtual:tsazor-decorators` in the
   plugin, `dist/_decorators.js` in a library (redirected to the app's), shared only when the text is the same.
   −6 to −11% of all JS gzip in the four apps measured.
-- **Proposed, not decided:**
-  - the compiler registers `@Parameter`/`@Inject` fields through the runtime's `defineParameter()` instead of
-    decorators (an estimated 10–18 KB gzip in the fullstackhero port; the ABI pin changes);
-  - `tsazor()` returns two plugins, so plain `.ts` modules with decorators share the helpers too (about 2%);
-  - re-measure the bench: the README says 26.2 KB gzip (2026-10-06), a build today is 29.9 KB (Vue 26.3).
+- **Compact field decorators** (owner: "noch einen Schritt in Richtung kompakten Code"): the runtime's registering
+  field decorators are applied after the class by `decorateFields` (new runtime export, in `api/abi.json`) instead of
+  being lowered — components (plugin, build-lib) and the app's own `.ts` files (the plugin's pre-transform, before
+  Vite's esbuild; that also removed the helper copies of plain `.ts` modules without needing `Plugin[]`). Only
+  classes whose every decorator qualifies; positions kept (blanks, the call after the closing brace, the import at
+  the end). Another −5 to −7%: fullstackhero 269 KB gzip against React's 322.
+- **Found on the way:** `build-lib` wrote the build machine's paths into `dist` (`@code (file:line)` comments; now
+  package-relative); the tutorial's preview lacked `@tsazor/runtime/internal` in its import map since the API review
+  (`@tsazor/testing` imports it; ch18 failed — only the e2e job runs `tutorial verify`, not `ci:local`).
+- **Proposed, not decided:** re-measure the bench: the README says 26.2 KB gzip (2026-10-06), a build today is
+  29.9 KB (Vue 26.3).
 
 ## Working knowledge from today
 

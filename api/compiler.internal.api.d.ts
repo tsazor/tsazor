@@ -269,6 +269,9 @@ export interface CodemodResult {
 // codemodSource
 export declare function codemodSource(source: string, fileName?: string): CodemodResult;
 
+// compactFieldDecorators
+export declare function compactFieldDecorators(code: string, fileName?: string): string;
+
 // compile
 export declare function compile(source: string, options: CompileOptions): CompileResult;
 

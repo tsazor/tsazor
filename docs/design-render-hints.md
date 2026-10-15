@@ -145,7 +145,8 @@ rebuilt on every render of its component.
   measurements, isolating a suspected optimizer bug), not a recommended mode. The single options
   are reviewed before 1.0; `optimize` stays. The gates run with and without optimizations. **Reviewed
   (2026-10-14, the API review's T5):** the Vite plugin's `staticMarkup` and `renderHints` are gone; `optimize`
-  is its one switch (the compiler keeps the single options for its own tests).
+  is its one switch (the compiler keeps the single options for its own tests). It turns off the compact
+  field decorators (2026-10-15, `decorateFields`; language-reference.md) as well.
 
 ## Gates
 

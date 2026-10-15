@@ -1,4 +1,4 @@
-import { compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule, type CompileOptions, type SharedHelpers, type CompileResult, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
+import { compactFieldDecorators, compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule, type CompileOptions, type SharedHelpers, type CompileResult, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
 import { transformSync } from "esbuild";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -17,7 +17,10 @@ export interface TransformTsazorOptions {
   staticMarkup?: boolean;
   /** H1 render hints — stable event handlers (default true). */
   renderHints?: boolean;
-  /** Every invisible compiler optimization (default true); `false` turns `staticMarkup` and `renderHints` off. */
+  /**
+   * Every invisible compiler optimization (default true); `false` turns `staticMarkup` and `renderHints` off, and the
+   * compact field decorators (`decorateFields` instead of esbuild's decorator lowering).
+   */
   optimize?: boolean;
   /**
    * Import esbuild's decorator helpers from this module (the plugin's `virtual:tsazor-decorators`) instead of declaring
@@ -119,9 +122,11 @@ export async function transformTsazor(
   const importsDiagnostics = chain.layers.flatMap((layer) =>
     layer.diagnostics.map((diagnostic) => ({ file: layer.file, diagnostic })),
   );
+  // Tsazor's field decorators applied after the class, not lowered; every position stays, so the map does too.
+  const typescript = options.optimize === false || compiled.diagnostics.hasErrors ? compiled.code : compactFieldDecorators(compiled.code, `${filePath}.ts`);
   let transpiled: ReturnType<typeof transformSync>;
   try {
-    transpiled = transformSync(compiled.code, { ...ESBUILD_OPTIONS, sourcemap: sourceMap, sourcefile: `${filePath}.ts` });
+    transpiled = transformSync(typescript, { ...ESBUILD_OPTIONS, sourcemap: sourceMap, sourcefile: `${filePath}.ts` });
   } catch (error) {
     // Generated code from erroneous source may not parse (a TZS024 syntax
     // error): the located compiler diagnostics explain it, not esbuild.

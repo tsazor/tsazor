@@ -6,6 +6,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { compactFieldDecorators } from "../src/compact-decorators";
 import { compile } from "../src/compile";
 
 const repo = path.resolve(import.meta.dirname, "..", "..", "..");
@@ -43,7 +44,8 @@ describe("the ABI the compiler emits (api/abi.json)", () => {
     const imports: string[] = [];
     let renders = 0;
     for (const file of corpus) {
-      const { code } = compile(readFileSync(file, "utf8"), { className: "Component", fileName: file, generateSourceMap: false });
+      // As the Vite plugin and build-lib emit it: the field decorators compacted.
+      const code = compactFieldDecorators(compile(readFileSync(file, "utf8"), { className: "Component", fileName: file, generateSourceMap: false }).code);
       for (const match of code.matchAll(/\b__builder\d*\.(\w+)\(/g)) builder.push(match[1]!);
       for (const match of code.matchAll(/\b__tsazor_(?!comp_)(\w+)\.(\w+)\(/g)) statics.push(`${match[1]}.${match[2]}`);
       for (const match of code.matchAll(/\b(\w+) as __tsazor_(?!comp_)\w+/g)) imports.push(match[1]!);
