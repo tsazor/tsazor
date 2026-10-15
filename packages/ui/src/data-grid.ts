@@ -185,6 +185,8 @@ export interface GridColumn<T> {
   title: string;
   /** The header content instead of the title. */
   headerContent?: RenderFragment;
+  /** The column's options, shown below the header when the header's options button is clicked (QuickGrid's ColumnOptions). */
+  columnOptions?: RenderFragment;
   /** The cell of a row. */
   cell: (item: T) => RenderFragment;
   sortable: boolean;

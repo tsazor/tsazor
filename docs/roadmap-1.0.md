@@ -293,8 +293,8 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**K.11** — `@tsazor/testing`: in happy-dom 18, `nextSibling` of a `<form>` (or `<select>`) is `null`, so updating anything after a form fails in a component test~~ **done 2026-10-15** (happy-dom 21) | Every `EditForm` test can hit it |
 | ~~**P.10** — `createTsazorApp().dispose()` doesn't dispose the service provider~~ **done 2026-10-15** | A behavior change; Blazor disposes its services |
 | ~~**Workflows** — `release.yml` and `pages.yml` run on `ubuntu-latest`, which becomes 26 on 2026-10-19~~ **done 2026-10-15** | Pin as `ci.yml` is, before the date |
-| **DataGrid column options** — QuickGrid's and Fluent UI Blazor's `ColumnOptions` (a column's filter UI) has no counterpart | Parity with the grid both references build on; library completeness |
-| **K.7, K.8** — `@bind` converts by the element, not the bound value: `@bind:format` on a text input (Blazor's date idiom) and a `<select>` bound to a number write strings | A common Blazor idiom; changing it later changes behavior |
+| ~~**DataGrid column options** — QuickGrid's and Fluent UI Blazor's `ColumnOptions` (a column's filter UI) has no counterpart~~ **done 2026-10-15** | Parity with the grid both references build on; library completeness |
+| ~~**K.7, K.8** — `@bind` converts by the element, not the bound value: `@bind:format` on a text input (Blazor's date idiom) and a `<select>` bound to a number write strings~~ **done 2026-10-15** | A common Blazor idiom; changing it later changes behavior |
 | **P.5** — `RenderFragment<T>` (a template with a context) as a type | Blazor code names it everywhere; cheap now |
 | ~~**X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"`~~ **done 2026-10-15** (`"same-tab"`) | A name; renaming it later breaks |
 | ~~**Stale docs** — roadmap-tutorial (M4), §3c, E8, design-virtualize, design-localization, the BlazorHero B3 row, a comment in `codegen.ts`~~ **done 2026-10-15** | Going public |

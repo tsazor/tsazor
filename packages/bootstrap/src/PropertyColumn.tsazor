@@ -31,6 +31,8 @@
     @Parameter() class?: string;
     /** Header content instead of the title text. */
     @Parameter() headerContent?: RenderFragment;
+    /** Options shown below the header when its options button is clicked (QuickGrid's ColumnOptions). */
+    @Parameter() columnOptions?: RenderFragment;
 
     private register(): void {
         const grid = this.grid;
@@ -46,6 +48,7 @@
             owner: this,
             title: this.title ?? propertyTitle(property) ?? "",
             headerContent: this.headerContent,
+            columnOptions: this.columnOptions,
             cell: (item) => (builder) => builder.addContent(0, text(item)),
             sortable: this.sortable,
             sortBy: this.sortable ? GridSort.byAscending(property) : undefined,

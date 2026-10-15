@@ -86,8 +86,9 @@ describe("diagnostic ranges (A7)", () => {
     expect(covered('<input @bind="a?.b" />', "TZS008")).toBe('@bind="a?.b"');
     expect(covered('<button @onclick:prevent="x">b</button>', "TZS008")).toBe('@onclick:prevent="x"');
     expect(covered("<div @key></div>", "TZS009")).toBe("@key");
-    // A folded modifier keeps its own span.
-    expect(covered('<input @bind="v" @bind:format="yyyy" />', "TZS008")).toBe('@bind:format="yyyy"');
+    // A folded modifier keeps its own span. `@bind:format` now applies to any
+    // value bind (K.7), so the inert-format warning sits on a checkbox's checked.
+    expect(covered('<input type="checkbox" @bind="v" @bind:format="yyyy" />', "TZS008")).toBe('@bind:format="yyyy"');
   });
 
   it("TZS011/TZS014/TZS016/TZS018: the directive", () => {

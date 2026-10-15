@@ -157,10 +157,10 @@ describe("deferred content in the shadow (F15)", () => {
     const source = '<input @bind="x" @bind:after="changed" /><Grid TItem="Person" @bind-Title="name" @bind-Title:after="changed" />';
     const components = { Grid: metadataOf("Grid", { title: { category: "string", type: "string" }, titleChanged: { category: "EventCallback", type: "EventCallback<string>" } }, { typeParameters: [{ name: "TItem" }] }) };
     const shadow = gen(source, components, typedShadow).result.code;
-    expect(shadow).toContain("(__tsazor_deferred && ((__event: any) => { this.x = (__event.target as HTMLInputElement).value; void this.changed(); })(null!), null!)");
+    expect(shadow).toContain("(__tsazor_deferred && ((__event: any) => { this.x = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.x, undefined, undefined) ?? this.x) as never; void this.changed(); })(null!), null!)");
     expect(shadow).toContain("(__tsazor_deferred && ((__value: never) => { this.name = __value; void this.changed(); })(null!), null!)");
     const real = gen(source, components).result.code;
-    expect(real).toContain("async (__event) => { this.x = (__event.target as HTMLInputElement).value; await this.changed(); }");
+    expect(real).toContain("async (__event) => { this.x = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.x, undefined, undefined) ?? this.x) as never; await this.changed(); }");
     expect(real).toContain("async (__value) => { this.name = __value; await this.changed(); }");
   });
 });

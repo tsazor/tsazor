@@ -35,6 +35,7 @@ export const libraryTextDefaults = catalog({
   "dataGrid.selectAll": "Select all rows",
   "dataGrid.selected": "Selected",
   "dataGrid.selectRow": "Select row {row}",
+  "dataGrid.columnOptions": "Column options",
 
   "sidebarNav.label": "Main navigation",
   "scrollToTop.label": "Back to top",

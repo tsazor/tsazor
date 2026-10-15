@@ -284,7 +284,7 @@ describe("codegen", () => {
     const { code } = gen('<input @bind="name" />');
     expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
     expect(code).toContain(
-      '__builder.addEventHandler(2, "onchange", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__event.target as HTMLInputElement).value; }));',
+      '__builder.addEventHandler(2, "onchange", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.name, undefined, undefined) ?? this.name) as never; }));',
     );
   });
 
@@ -298,15 +298,16 @@ describe("codegen", () => {
     expect(checkbox).toContain("(__event.target as HTMLInputElement).checked");
   });
 
-  it("emits @bind:get/:set and @bind:after, and warns on @bind:format", () => {
+  it("emits @bind:get/:set and @bind:after; a format on a text input converts by value type (K.7)", () => {
     const { code, diagnostics } = gen('<input @bind:get="display" @bind:set="store" @bind:format="yyyy" />');
-    expect(code).toContain('__builder.addAttribute(1, "value", this.display);');
-    expect(code).toContain("async (__event) => { await (this.store)((__event.target as HTMLInputElement).value); }");
-    expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
+    expect(code).toContain('__builder.addAttribute(1, "value", __tsazor_formatValue(this.display, "yyyy"));');
+    expect(code).toContain("await ((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (this.store)(__tsazor_parsed as never) : undefined)(__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.display, \"yyyy\", undefined));");
+    // A text input with a format is Blazor's date idiom — no TZS008 warning.
+    expect(diagnostics.all.some((d) => d.code === "TZS008")).toBe(false);
     expect(diagnostics.hasErrors).toBe(false);
 
     const after = gen('<input @bind="name" @bind:after="done" />');
-    expect(after.code).toContain("async (__event) => { this.name = (__event.target as HTMLInputElement).value; await this.done(); }");
+    expect(after.code).toContain("async (__event) => { this.name = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.name, undefined, undefined) ?? this.name) as never; await this.done(); }");
   });
 
   it("enforces Blazor's @bind modifier combinations (RZ10004, RZ10015-RZ10019)", () => {
@@ -350,14 +351,20 @@ describe("codegen", () => {
     expect(diagnostics.all.some((d) => d.code === "TZS008")).toBe(false);
   });
 
-  it("keeps the native round trip for binds without a supported type and warns (3.7)", () => {
+  it("converts a text input's @bind by the bound value's type (K.7/K.8)", () => {
     const { code, diagnostics } = gen('<input @bind="name" @bind:format="0.00" />');
-    // String binds carry no format (Blazor's BindConverter) — plain emission.
-    expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
-    expect(code).toContain('this.name = (__event.target as HTMLInputElement).value;');
-    expect(code).not.toContain("formatValue");
-    expect(diagnostics.all.some((d) => d.code === "TZS008" && d.severity === "warning")).toBe(true);
+    // A text input now formats and parses by the value's runtime type: a Date
+    // formats with the format, a number parses back, a string keeps its native
+    // round trip (parseBindValue returns it unchanged) — so the format no
+    // longer warns.
+    expect(code).toContain('__builder.addAttribute(1, "value", __tsazor_formatValue(this.name, "0.00"));');
+    expect(code).toContain('__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.name, "0.00", undefined) ?? this.name) as never;');
+    expect(diagnostics.all.some((d) => d.code === "TZS008")).toBe(false);
     expect(diagnostics.hasErrors).toBe(false);
+
+    // A select bound without a format converts by the value's type too (K.8).
+    const select = gen('<select @bind="count"><option>1</option></select>');
+    expect(select.code).toContain('__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.count, undefined, undefined) ?? this.count) as never;');
 
     // Unformatted number/date binds keep the existing native coercion.
     const { code: number } = gen('<input type="number" @bind="amount" />');

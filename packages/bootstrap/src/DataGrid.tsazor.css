@@ -1,0 +1,44 @@
+/* DataGrid — a column header's options button and the panel it opens (QuickGrid's col-options). */
+
+/* The options panel drops below its header cell, so the header cell anchors it (sticky thead still positions it). */
+.tz-grid th {
+  position: relative;
+}
+
+.tz-grid-header {
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.tz-grid-options {
+  display: inline-flex;
+  align-items: center;
+  color: var(--bs-secondary-color);
+}
+
+.tz-grid-options:hover {
+  color: var(--bs-body-color);
+}
+
+.tz-grid-options:focus-visible {
+  outline: 2px solid var(--bs-focus-ring-color, #86b7fe);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+.tz-grid-options-panel {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  min-width: max-content;
+  padding: 0.75rem;
+  background-color: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: var(--bs-border-radius, 0.375rem);
+  box-shadow: var(--bs-box-shadow, 0 0.5rem 1rem rgba(0, 0, 0, 0.15));
+}
+
+.tz-grid th.text-end > .tz-grid-options-panel {
+  left: auto;
+  right: 0;
+}

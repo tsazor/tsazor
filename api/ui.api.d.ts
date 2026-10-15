@@ -296,6 +296,7 @@ export interface GridColumn<T> {
     readonly owner: object;
     title: string;
     headerContent?: RenderFragment;
+    columnOptions?: RenderFragment;
     cell: (item: T) => RenderFragment;
     sortable: boolean;
     sortBy?: GridSort<T>;
@@ -420,6 +421,7 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.selectAll": string;
     readonly "dataGrid.selected": string;
     readonly "dataGrid.selectRow": string;
+    readonly "dataGrid.columnOptions": string;
     readonly "sidebarNav.label": string;
     readonly "scrollToTop.label": string;
     readonly "breadcrumb.label": string;

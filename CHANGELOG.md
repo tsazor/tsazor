@@ -425,6 +425,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   `accept-language: *`, which BlazorHero's server answers with a 500; a fixed language also keeps a localizing
   server's output the same on every machine.
 
+- `@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap`: **`DataGrid` columns take `ColumnOptions`** — a fragment shown
+  below the column's header when its options button (a filter glyph, named by the `dataGrid.columnOptions` text) is
+  clicked; one column's options are open at a time. `PropertyColumn` and `TemplateColumn` take it, as QuickGrid's
+  `ColumnBase.ColumnOptions`.
+
+- `@tsazor/runtime`, `@tsazor/compiler`: **`@bind` converts by the bound value's type, not the element** (K.7/K.8). A
+  non-typed `value` bind — a text input, textarea or `<select>` — parses the change value back by the model's runtime
+  type (`parseBindValue`, new in `@tsazor/runtime`): a `number` becomes a number, a `Date` a date, a string stays a
+  string. Blazor's `<input @bind="date" @bind:format="dd.MM.yyyy" />` date idiom now works, and a `<select>` bound to a
+  number writes a number instead of a string; `@bind:format` on such a bind no longer warns TZS008.
+
 ## 1.0.0-next.1 (2026-10-12)
 
 - **Every package has one version** (lockstep, docs/design-release.md): `1.0.0-next.1` is the first prerelease, in a

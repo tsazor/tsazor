@@ -35,6 +35,7 @@ const CORE = [
   "Dismiss12Regular",
   "Dismiss20Regular",
   "DismissCircle20Filled",
+  "Filter20Regular",
   "Info20Filled",
   "Pause20Regular",
   "Person20Regular",

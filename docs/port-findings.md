@@ -276,23 +276,20 @@ The NaN guard let `Number("") === 0` through; a number input reports invalid tex
 `""`, so clearing/a typo became `0`. Blazor (`TryParse("")` fails) and the
 format path (`parseValue`) keep the old value. **Fix:** empty text keeps the value.
 
-## K. Gaps (documented, not fixed)
+## K. Gaps (documented)
 
-### 7. `@bind:format` on text inputs (Blazor's date idiom) — **open**
+### 7. `@bind:format` on text inputs (Blazor's date idiom) — **fixed** (2026-10-15)
 
 `<input @bind="date" @bind:format="dd.MM.yyyy" />` is the standard example in Blazor. The
-compiler decides conversion/format by the element (`type`), not by the field type, and
-treats this as a string bind (TZS008 warning, format has no effect). A
-runtime dispatch on the current model value (`Date`/`number` ⇒ formatValue/parseValue) would be feasible,
-but that is more than a mini-fix. Lesson "Formatted bindings" shows `type="number"` +
-`F2` and the date default and documents the deviation (Blazor track);
+compiler now lets the format apply to any `value` bind and converts a non-typed value
+bind by the bound value's runtime type (`parseBindValue`): a `Date` formats and parses
+with the format, a `number` parses back, a string keeps its native round trip.
 `language-reference.md` updated.
 
-### 8. Select/number fields: no conversion by field type
+### 8. Select/number fields: no conversion by field type — **fixed** (2026-10-15)
 
-As in 7: `@bind` on `<select>` always writes the string. Blazor converts to `int`/enum.
-`tsazor check` reports the assignment to a `number` field (TS2322) — the lesson uses
-string IDs and explains this.
+As in 7: `@bind` on `<select>` now converts by the bound value's type, so a `<select>`
+bound to a `number` writes a number, not a string (Blazor converts to `int`/enum).
 
 ### 9. The event argument type is not checked against the event name
 

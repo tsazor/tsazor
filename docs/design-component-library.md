@@ -82,8 +82,8 @@ Literal-union types everywhere (strict TS, completion in the editor).
 ## 4. Scope for 1.0
 
 **Tier 1 — in 1.0, both skins** (status 2026-10-07: all in both skins, same parameters; the
-DataGrid with sorting, paging, selection, an ItemsProvider and virtualization; filter slot and
-density are open):
+DataGrid with sorting, paging, selection, an ItemsProvider and virtualization; a built-in
+column filter and density are open — QuickGrid's `ColumnOptions` slot is in, 2026-10-15):
 
 - Actions: Button, ButtonGroup, Dropdown/Menu (keyboard, typeahead), Tooltip
 - Forms: TextInput, TextArea, NumberInput, Select, Checkbox, Switch, RadioGroup, DateInput
@@ -109,7 +109,7 @@ it on Blazor's QuickGrid**, which every Blazor team can use today:
 - `<DataGrid Items="…">` or `ItemsProvider="…"` (server-side paging/sorting, `CancellationToken`
   → `AbortSignal`), `<PropertyColumn Property="(o) => o.name" Sortable="true" />`,
   `<TemplateColumn>`, `<Paginator State="…" />`, `Virtualize="true"` (runtime `Virtualize`).
-- Beyond QuickGrid (Tier 1): row selection (single/multi), column filter slot, sticky header,
+- Beyond QuickGrid (Tier 1): row selection (single/multi), a built-in column filter, sticky header,
   density, empty/loading templates. Tier 2: column resize/reorder, grouping, inline editing,
   export.
 - `DataGridModel` lives in the core; both skins render it. A QuickGrid-shaped API also makes

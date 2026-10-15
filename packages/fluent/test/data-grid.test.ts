@@ -233,6 +233,42 @@ describe("DataGrid", () => {
     expect(texts(container, "tbody a")).toEqual(["#4", "#3", "#2", "#1"]);
   });
 
+  it("shows a column's options below its header when its options button is clicked; only one is open", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: orders }, (b) => {
+        component(b, 0, PropertyColumn, {
+          property: customer,
+          columnOptions: (inner: RenderTreeBuilder) => inner.addContent(0, "Filter customers"),
+        });
+        component(b, 10, PropertyColumn, {
+          property: total,
+          columnOptions: (inner: RenderTreeBuilder) => inner.addContent(0, "Filter totals"),
+        });
+      }),
+    );
+    await settle(renderer);
+
+    const buttons = () => [...container.querySelectorAll<HTMLButtonElement>("thead th .fui-datagrid__options")];
+    expect(buttons().map((button) => button.getAttribute("aria-label"))).toEqual(["Column options", "Column options"]);
+    expect(container.querySelector(".fui-datagrid__options-panel")).toBeNull();
+
+    buttons()[0]!.click();
+    await settle(renderer);
+    expect(container.querySelector(".fui-datagrid__options-panel")!.textContent).toBe("Filter customers");
+    expect(buttons()[0]!.getAttribute("aria-expanded")).toBe("true");
+    expect(buttons()[1]!.getAttribute("aria-expanded")).toBe("false");
+
+    buttons()[1]!.click();
+    await settle(renderer);
+    expect(container.querySelector(".fui-datagrid__options-panel")!.textContent).toBe("Filter totals");
+    expect(buttons()[0]!.getAttribute("aria-expanded")).toBe("false");
+    expect(buttons()[1]!.getAttribute("aria-expanded")).toBe("true");
+
+    buttons()[1]!.click();
+    await settle(renderer);
+    expect(container.querySelector(".fui-datagrid__options-panel")).toBeNull();
+  });
+
   it("collects the columns on every render: a column shown conditionally comes and goes", async () => {
     let showTotal = true;
     const { container, instance, ...renderer } = await renderTree(

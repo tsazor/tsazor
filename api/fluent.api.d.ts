@@ -903,6 +903,7 @@ export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     align?: ColumnAlign;
     class?: string;
     headerContent?: RenderFragment;
+    columnOptions?: RenderFragment;
 }
 
 // RadioGroup
@@ -1174,6 +1175,7 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
     align?: ColumnAlign;
     class?: string;
     headerContent?: RenderFragment;
+    columnOptions?: RenderFragment;
 }
 
 // TextArea

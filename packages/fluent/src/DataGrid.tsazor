@@ -7,7 +7,7 @@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
-@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular } from "./core-icons"
+@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular, Filter20Regular } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
 @import {
 DataGridModel, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode,
@@ -32,15 +32,26 @@ type IconValue,
                         }
                         @foreach (const column of this.model.columns) {
                             <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
-                                @if (column.sortable) {
-                                    <button type="button" class="fui-datagrid__sort" @onclick="() => this.sort(column)">
-                                        @if (column.headerContent) { @column.headerContent } else { @column.title }
-                                        <span class="fui-datagrid__sort-indicator" aria-hidden="true"><Icon value="@this.indicator(column)" size="16" /></span>
-                                    </button>
-                                } else if (column.headerContent) {
-                                    @column.headerContent
-                                } else {
-                                    @column.title
+                                <div class="fui-datagrid__header">
+                                    @if (column.columnOptions !== undefined && column.align === "end") {
+                                        <button type="button" class="fui-datagrid__options" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter20Regular" size="16" /></button>
+                                    }
+                                    @if (column.sortable) {
+                                        <button type="button" class="fui-datagrid__sort" @onclick="() => this.sort(column)">
+                                            @if (column.headerContent) { @column.headerContent } else { @column.title }
+                                            <span class="fui-datagrid__sort-indicator" aria-hidden="true"><Icon value="@this.indicator(column)" size="16" /></span>
+                                        </button>
+                                    } else if (column.headerContent) {
+                                        @column.headerContent
+                                    } else {
+                                        @column.title
+                                    }
+                                    @if (column.columnOptions !== undefined && column.align !== "end") {
+                                        <button type="button" class="fui-datagrid__options" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter20Regular" size="16" /></button>
+                                    }
+                                </div>
+                                @if (column.columnOptions !== undefined && this.optionsOwner === column.owner) {
+                                    <div class="fui-datagrid__options-panel">@column.columnOptions</div>
                                 }
                             </th>
                         }
@@ -163,6 +174,8 @@ type IconValue,
 
     private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
     private readonly groupName = uniqueId("fui-grid-select");
+    /** The column whose options panel is open (by owner, the column component's stable identity). */
+    private optionsOwner?: object;
     private rendered = false;
     private virtualizer?: Virtualize<TGridItem>;
     /** Provider mode: the rows of the loaded window with their positions (for aria-rowindex and labels). */
@@ -296,6 +309,14 @@ type IconValue,
 
     private sort(column: GridColumn<TGridItem>): Promise<void> {
         return this.model.sortByColumnAsync(column);
+    }
+
+    private toggleOptions(column: GridColumn<TGridItem>): void {
+        this.optionsOwner = this.optionsOwner === column.owner ? undefined : column.owner;
+    }
+
+    private optionsExpanded(column: GridColumn<TGridItem>): string {
+        return this.optionsOwner === column.owner ? "true" : "false";
     }
 
     private keyOf(item: TGridItem): string | number | object | null | undefined {

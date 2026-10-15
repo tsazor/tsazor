@@ -11,6 +11,19 @@
   text-align: end;
 }
 
+/* The options panel drops below its header cell, so the header cell anchors it (sticky headers already position it). */
+.fui-datagrid th {
+  position: relative;
+}
+
+/* A column header: the title (or sort button) and the options button side by side (QuickGrid's .col-header-content). */
+.fui-datagrid__header {
+  display: flex;
+  align-items: center;
+  gap: var(--fui-gap-xs, 4px);
+  min-width: 0;
+}
+
 .fui-datagrid__sort {
   display: inline-flex;
   align-items: center;
@@ -40,6 +53,45 @@
 
 th[aria-sort] .fui-datagrid__sort-indicator {
   color: var(--fui-brand-background);
+}
+
+/* The filter glyph that opens a column's options panel (QuickGrid's .col-options-button). */
+.fui-datagrid__options {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fui-foreground-3);
+  cursor: pointer;
+}
+
+.fui-datagrid__options:hover {
+  color: var(--fui-brand-background);
+}
+
+.fui-datagrid__options:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 2px;
+  border-radius: var(--fui-radius-sm);
+}
+
+/* The open column options, dropped below the header (QuickGrid's .col-options). */
+.fui-datagrid__options-panel {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  min-width: max-content;
+  padding: var(--fui-gap-md, 12px);
+  background: var(--fui-background-1);
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  box-shadow: var(--fui-shadow-16);
+}
+
+.fui-datagrid__cell--end .fui-datagrid__options-panel {
+  left: unset;
+  right: 0;
 }
 
 .fui-datagrid__select {

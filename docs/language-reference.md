@@ -570,6 +570,7 @@ Markup only starts
 | `<input type="checkbox" @bind="flag">` | `checked` + handler |
 | `<input type="number" @bind="n">`, `type="range"` | `Number()` coercion; empty or unparsable text keeps the model value (Blazor: `TryParse` fails — `Number("")` would be 0) |
 | `<input type="date" @bind="d">` | `Date` through the format `yyyy-MM-dd` (Blazor's default for date inputs): renders `formatValue(d, "yyyy-MM-dd")`, parses back as a local date; an explicit `@bind:format` replaces the default |
+| `<input @bind="n">` (text), `<textarea @bind="s">`, `<select @bind="n">` | The `value` attribute converts by the bound value's *type* at run time (K.7/K.8): a `number` parses back as a number, a `Date` as a date, anything else stays a string — so a text input with `@bind:format="dd.MM.yyyy"` works and a `<select>` bound to a number writes a number |
 | `@bind:event="oninput"` | A different DOM event |
 | `@bind:culture="c"` | E8: culture-aware *number* bind — renders/parses through `Intl` with the culture's separators; anything else warns TZS008 and stays invariant |
 | `@bind:get="v" @bind:set="store"` | Get/set side instead of `@bind` (only as a pair) |
@@ -619,13 +620,16 @@ formats — a subset, a documented deviation from the full .NET format grammar:
 - Empty text never parses as 0 (`.NET TryParse("")` fails).
 
 Not implemented: integer zero padding (`D5`/`00000#` padding) — a deviation, noted in the
-roadmap. Formats apply to `type="number"`, `type="range"` and `type="date"` inputs — the
-compiler decides by the element, because it cannot see the field's type. Blazor's idiom of a
-*text* input bound to a `DateTime` with `@bind:format="dd.MM.yyyy"` is therefore a string
-bind here (warning TZS008, format inert) — a documented deviation. Other binds keep Blazor's behavior: `:format` on a string bind and on
-a component bind is a warning TZS008 (the `BindConverter` only applies formats to types
-that carry one — strings don't; on components Blazor ignores it), and the native
-round trip is kept. `@bind:culture` (E8) applies to *number* binds only; on any other
+roadmap. A format applies to any `value` bind — `type="number"`, `type="range"`,
+`type="date"`, and also a plain text input, textarea or select (K.7/K.8). The compiler
+cannot see the field's type, so a non-typed value bind converts by the bound value's
+*runtime* type (`parseBindValue`): a `number` parses back as a number, a `Date` as a date
+(ISO by default, the format otherwise), anything else stays a string. Blazor's idiom of a
+text input bound to a `DateTime` with `@bind:format="dd.MM.yyyy"` therefore works, and a
+`<select>` bound to a `number` writes a number, not a string. Only a format on a non-value
+attribute — a checkbox's `checked`, or on a component bind — is a warning TZS008 (the
+`BindConverter` applies formats to types that carry one, strings don't; on components Blazor
+ignores it), and the native round trip is kept. `@bind:culture` (E8) applies to *number* binds only; on any other
 bind — and on components — it is a warning TZS008 and the bind stays invariant.
 
 **`@bind:culture` (E8)** is the culture-aware number bind: the value renders and parses through
@@ -1318,7 +1322,7 @@ typed:
 | Code in `@{ }` and control bodies | code-first like Razor, but TypeScript; `using (…)`, `lock`, `@await` ⇒ error |
 | `@namespace`, `@rendermode`, `@preservewhitespace` | accepted, ignored |
 | DataAnnotations validation | Decorators as the counterpart (`@Required()`, `@MaxLength(n)`, … on the model + `DataAnnotationsValidator`); the `validators` map remains as an adapter; a subset of the attributes (3.6) |
-| `@bind:format` | Subset (3.7) — number masks `F<n>`/`N<n>`/`0.00`, date tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); a plain-text value is a string literal, `@expr` an expression; on string/component binds warning TZS008 (Blazor's BindConverter behavior); `@bind:culture` on anything but a number bind warns TZS008 too |
+| `@bind:format` | Subset (3.7) — number masks `F<n>`/`N<n>`/`0.00`, date tokens (`yyyy-MM-dd` …), invariant culture (A5/B7); a plain-text value is a string literal, `@expr` an expression; applies to any `value` bind, and a non-typed one converts by the bound value's type (K.7/K.8); on non-value attributes/component binds warning TZS008 (Blazor's BindConverter behavior); `@bind:culture` on anything but a number bind warns TZS008 too |
 | `<InputFile>` | yes (3.7) — `InputFileChangeEventArgs` with native `File` objects instead of `IBrowserFile` (`OpenReadStream` does not exist) |
 | `[SupplyParameterFromQuery]` | Decorator `@SupplyParameterFromQuery({ type, multiple })` instead of Blazor's data type detection; any component, no `@Parameter()` needed (Blazor 8); key = field name (case-insensitive), absent ⇒ `null`, `multiple` collects repetitions (3.7) |
 | Named child slots (`<Found Context="…">`, `<RowTemplate Context="…">`) | identical (2.3 — see [Templated components](#templated-components-named-slots-and-template-contexts-23)) |

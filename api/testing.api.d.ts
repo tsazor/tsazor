@@ -240,6 +240,8 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 
 // ParameterView: re-exported from @tsazor/runtime
 
+// parseBindValue: re-exported from @tsazor/runtime
+
 // parseValue: re-exported from @tsazor/runtime
 
 // PlaceholderContext: re-exported from @tsazor/runtime

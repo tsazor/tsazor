@@ -96,6 +96,30 @@ function group(integral: string): string {
  * `Intl.NumberFormat().formatToParts()`, so "1.234,5" parses as 1234.5 in
  * de-DE. Without a culture everything is invariant (A5/B7).
  */
+/**
+ * K.7/K.8: `@bind` on a value attribute that is not a typed number/date input
+ * (a text input, textarea or select) converts by the bound value's type, not
+ * by the element. `current` is the model's value when the change happens: a
+ * number parses back as a number (empty or invalid text keeps it), a Date
+ * parses back as a date (ISO by default, the format otherwise), anything else
+ * stays a string. Returns null when the text cannot parse — the generated
+ * handler then keeps the model's previous value, like the formatted bind.
+ */
+export function parseBindValue(text: string, current: unknown, format?: string, culture?: string | CultureInfo): string | number | Date | null {
+  if (typeof current === "number") {
+    const info = culture === undefined ? undefined : toCultureInfo(culture);
+    const hasCulture = info !== undefined && info.name !== "";
+    // A format or a non-invariant culture parses through parseValue's number
+    // grammar; without either the element's string is an invariant number.
+    if (format !== undefined || hasCulture) return parseValue(text, format, culture);
+    if (text.trim().length === 0) return null;
+    const parsed = Number(text);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  if (current instanceof Date) return parseValue(text, format ?? "yyyy-MM-dd", culture);
+  return text;
+}
+
 export function parseValue(text: string, format: string | undefined, culture?: string | CultureInfo): string | number | Date | null {
   const info = culture === undefined ? undefined : toCultureInfo(culture);
   if (info !== undefined && info.name !== "" && (format === undefined || NUMBER_MASK.test(format) || FIXED.test(format) || GROUPED.test(format))) {

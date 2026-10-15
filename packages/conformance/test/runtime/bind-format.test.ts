@@ -7,7 +7,7 @@
  * the value semantics against .NET's BindConverter behavior for the subset.
  */
 import { describe, expect, it } from "vitest";
-import { formatValue, parseValue } from "@tsazor/runtime";
+import { formatValue, parseValue, parseBindValue } from "@tsazor/runtime";
 import { mount } from "../harness.js";
 
 describe("formatValue — numbers", () => {
@@ -142,6 +142,34 @@ describe("parseValue", () => {
   });
 });
 
+describe("parseBindValue — a value attribute converts by the bound value's type (K.7/K.8)", () => {
+  it("a number parses invariant, keeping it on empty or invalid text", () => {
+    expect(parseBindValue("42", 0)).toBe(42);
+    expect(parseBindValue("1234", 0)).toBe(1234);
+    // No group separators without a format or culture (like the number input).
+    expect(parseBindValue("1,234", 0)).toBeNull();
+    expect(parseBindValue("", 7)).toBeNull();
+    expect(parseBindValue("abc", 7)).toBeNull();
+  });
+
+  it("a number with a format parses through parseValue's grammar", () => {
+    expect(parseBindValue("2.50", 0, "0.00")).toBe(2.5);
+    expect(parseBindValue("1,234.56", 0, "N2")).toBe(1234.56);
+    expect(parseBindValue("abc", 0, "0.00")).toBeNull();
+  });
+
+  it("a Date parses ISO by default, or by the format", () => {
+    expect(parseBindValue("2024-01-05", new Date())).toEqual(new Date(2024, 0, 5));
+    expect(parseBindValue("05.01.2024", new Date(), "dd.MM.yyyy")).toEqual(new Date(2024, 0, 5));
+    expect(parseBindValue("garbage", new Date(), "yyyy-MM-dd")).toBeNull();
+  });
+
+  it("anything else stays a string (a string carries no format)", () => {
+    expect(parseBindValue("hello", "world")).toBe("hello");
+    expect(parseBindValue("2.50", "world", "0.00")).toBe("2.50");
+  });
+});
+
 describe("@bind:format through the compiler (3.7, end to end)", () => {
   it("a number input renders through the format and parses the change value", async () => {
     const m = await mount(`<input type="number" @bind="amount" @bind:format="0.00" /><p>@amount</p>
@@ -181,5 +209,45 @@ describe("@bind:format through the compiler (3.7, end to end)", () => {
     // The diff sees the formatted value unchanged → the typed text stays, as
     // in Blazor (the displayed value follows only a real value change).
     expect(input.value).toBe("");
+  });
+});
+
+describe("@bind by the bound value's type (K.7/K.8, end to end)", () => {
+  it("a text input with @bind:format formats and parses a Date (Blazor's date idiom)", async () => {
+    const m = await mount(`<input @bind="day" @bind:format="yyyy-MM-dd" /><p>@day</p>
+@code { private day = new Date(2024, 0, 5); }`);
+    const input = m.container.querySelector("input")!;
+    expect(input.value).toBe("2024-01-05");
+
+    input.value = "2024-03-10";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await m.settle();
+    expect(m.instance.day).toEqual(new Date(2024, 2, 10));
+    expect(input.value).toBe("2024-03-10");
+  });
+
+  it("a select bound to a number writes a number, not a string", async () => {
+    const m = await mount(`<select @bind="count"><option value="1">one</option><option value="2">two</option></select><p>@count</p>
+@code { private count = 1; }`);
+    const select = m.container.querySelector("select")!;
+    expect(select.value).toBe("1");
+
+    select.value = "2";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await m.settle();
+    expect(m.instance.count).toBe(2);
+    expect(typeof m.instance.count).toBe("number");
+    expect(m.container.querySelector("p")!.textContent).toBe("2");
+  });
+
+  it("a text input without a format but bound to a number parses it back", async () => {
+    const m = await mount(`<input @bind="count" /><p>@count</p>
+@code { private count = 3; }`);
+    const input = m.container.querySelector("input")!;
+    input.value = "41";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await m.settle();
+    expect(m.instance.count).toBe(41);
+    expect(typeof m.instance.count).toBe("number");
   });
 });

@@ -283,6 +283,7 @@ const alias = (name: string): string => `__tsazor_${name}`;
 const BIND_METHOD = alias("bindMethod");
 const FORMAT_VALUE = alias("formatValue");
 const FORMAT_PARSE = alias("parseValue");
+const BIND_PARSE = alias("parseBindValue");
 /** The type of a stable fragment's cache slot (H4). */
 const FRAGMENT_TYPE = `(${BUILDER}: ${alias("RenderTreeBuilder")}) => void`;
 /** The indent of a statement in the render method (stmt). */
@@ -2914,12 +2915,20 @@ class Codegen {
     // input's value is numeric like a number input's — Blazor: invariant culture).
     const isNumber = tag === "input" && (inputType === "number" || inputType === "range") && valueAttribute === "value";
     const isDate = tag === "input" && inputType === "date" && valueAttribute === "value";
+    // K.7/K.8: a value-attribute bind that is not a typed number/date input (a
+    // text input, textarea or select) converts by the bound value's type, not
+    // by the element — `@bind:format` on a text input (Blazor's date idiom)
+    // and a `<select>` bound to a number both round-trip.
+    const isStringValue = valueAttribute === "value" && !isNumber && !isDate;
     const event = attr.event ?? "onchange";
     // @bind:format on a number/date input formats the display value and parses
-    // the change value (BindConverter subset, invariant culture, 3.7). Other
-    // element binds keep the native round trip — a string carries no format,
-    // like .NET's BindConverter — so the format warns as inert there.
-    if (attr.format !== undefined && !isNumber && !isDate) {
+    // the change value (BindConverter subset, invariant culture, 3.7). K.7:
+    // a value attribute without a typed input (text input, textarea, select)
+    // formats and parses by the bound value's type instead. Only a non-value
+    // attribute (e.g. a checkbox's checked) keeps the native round trip — a
+    // boolean carries no format, like .NET's BindConverter — so the format
+    // warns as inert there.
+    if (attr.format !== undefined && valueAttribute !== "value") {
       this.diagnostics.warning("TZS008", attr.modifierSpans?.format ?? attr, `'${label}:format' applies to date and number values only (Blazor: the BindConverter applies formats to the values that have one) — this bind keeps its native round trip.`);
     }
     // E8: a culture-aware number bind formats the display value and parses the
@@ -2941,7 +2950,7 @@ class Codegen {
     // is always ISO, so the Date renders as `yyyy-MM-dd` and parses back as a
     // local date — `String(date)` would leave the input empty.
     const defaultFormat = isDate && attr.format === undefined ? "yyyy-MM-dd" : undefined;
-    const format = defaultFormat ?? (attr.format === undefined || (!isNumber && !isDate) ? undefined : attr.format.trim());
+    const format = defaultFormat ?? (attr.format === undefined || valueAttribute !== "value" ? undefined : attr.format.trim());
     // A plain-text format is a string literal (Razor: @bind:format="yyyy-MM-dd");
     // an @expression (e.g. @bind:format="@fmt") is the member reference.
     const formatEmit =
@@ -2967,6 +2976,7 @@ class Codegen {
     const formatted = format !== undefined || cultureActive;
     if (formatted) this.runtimeAliases.add("formatValue");
     if (formatted) this.runtimeAliases.add("parseValue");
+    if (isStringValue) this.runtimeAliases.add("parseBindValue");
     const formatArgument = formatEmit ?? "undefined";
     const cultureArgument = cultureEmit ?? "undefined";
 
@@ -2989,6 +2999,12 @@ class Codegen {
         parts.push(
           `${wait}((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${FORMAT_PARSE}(${extract}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""}))`,
         );
+      } else if (isStringValue) {
+        // K.7/K.8: get/set on a value attribute converts by the bound value's
+        // type; a parse failure skips the setter (Blazor: TryParse false).
+        parts.push(
+          `${wait}((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${BIND_PARSE}(${extract}, ${display}, ${formatArgument}, ${cultureArgument}))`,
+        );
       } else {
         parts.push(`${wait}(${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
       }
@@ -3004,6 +3020,10 @@ class Codegen {
         // invalid text as "" — like the formatting path (parseValue).
         const raw = "(__event.target as HTMLInputElement).value";
         parts.push(`${assignmentTarget} = ${raw}.trim() === "" || Number.isNaN(Number(${raw})) ? ${assignmentTarget} : ${extract}`);
+      } else if (isStringValue) {
+        // K.7/K.8: a value-attribute bind converts by the bound value's type;
+        // unparsable text keeps the model value (Blazor: TryParse fails).
+        parts.push(`${assignmentTarget} = (${BIND_PARSE}(${extract}, ${assignmentTarget}, ${formatArgument}, ${cultureArgument}) ?? ${assignmentTarget}) as never`);
       } else {
         parts.push(`${assignmentTarget} = ${extract}`);
       }

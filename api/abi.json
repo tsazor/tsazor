@@ -14,6 +14,7 @@
     "formatValue",
     "inject",
     "Parameter",
+    "parseBindValue",
     "parseValue",
     "RenderTreeBuilder",
     "State"

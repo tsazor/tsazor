@@ -110,7 +110,7 @@ export { DataAnnotationsValidator } from "./forms/data-annotations-validator.js"
 export { StandardSchemaValidator, type StandardSchemaIssue, type StandardSchemaResult, type StandardSchemaV1 } from "./forms/standard-schema-validator.js";
 export { enableDataAnnotationsValidation } from "./forms/edit-context.js";
 export { InputFile, InputFileChangeEventArgs, requestImageFileAsync } from "./forms/input-file.js";
-export { formatValue, parseValue } from "./forms/bind-format.js";
+export { formatValue, parseValue, parseBindValue } from "./forms/bind-format.js";
 export {
   Required,
   MinLength,

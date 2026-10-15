@@ -62,8 +62,8 @@ describe("@bind codegen (C16, C17)", () => {
   it("assigns exactly the bound target (non-null, element access)", () => {
     const { code, diagnostics } = gen('<input @bind="Model!.Title" /><input @bind="items[i].name" />\n@code { Model: { Title: string } | null = null; items: { name: string }[] = []; i = 0; }');
     expect(diagnostics.hasErrors).toBe(false);
-    expect(code).toContain("this.Model!.Title = (__event.target as HTMLInputElement).value;");
-    expect(code).toContain("this.items[this.i].name = (__event.target as HTMLInputElement).value;");
+    expect(code).toContain("this.Model!.Title = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.Model!.Title, undefined, undefined) ?? this.Model!.Title) as never;");
+    expect(code).toContain("this.items[this.i].name = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.items[this.i].name, undefined, undefined) ?? this.items[this.i].name) as never;");
   });
 
   it("rejects optional chaining with a precise diagnostic", () => {
@@ -109,7 +109,7 @@ describe("@bind codegen (C16, C17)", () => {
     const { code, diagnostics } = gen('<input @bind-value="name" @bind-value:event="oninput" /><input type="checkbox" @bind-checked="done" />');
     expect(diagnostics.all).toEqual([]);
     expect(code).toContain('__builder.addAttribute(1, "value", this.name);');
-    expect(code).toContain('__builder.addEventHandler(2, "oninput", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__event.target as HTMLInputElement).value; }));');
+    expect(code).toContain('__builder.addEventHandler(2, "oninput", __tsazor_EventCallback.bind(this, (__event) => { this.name = (__tsazor_parseBindValue((__event.target as HTMLInputElement).value, this.name, undefined, undefined) ?? this.name) as never; }));');
     expect(code).toContain('__builder.addAttribute(5, "checked", this.done);');
     expect(code).toContain("this.done = (__event.target as HTMLInputElement).checked;");
     expect(code).not.toContain("ValueChanged");

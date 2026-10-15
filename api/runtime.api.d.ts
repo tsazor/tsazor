@@ -835,6 +835,9 @@ export declare class ParameterView {
     ]>;
 }
 
+// parseBindValue
+export declare function parseBindValue(text: string, current: unknown, format?: string, culture?: string | CultureInfo): string | number | Date | null;
+
 // parseValue
 export declare function parseValue(text: string, format: string | undefined, culture?: string | CultureInfo): string | number | Date | null;
 
