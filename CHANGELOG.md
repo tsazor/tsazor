@@ -179,6 +179,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   the plugin points a library's copy at the app's. A helper is shared only if its text is exactly the same, so another
   esbuild version's helpers stay where they are. All JS, gzip: the fullstackhero port −11% (318 → 283 KB), fluentcms
   −10%, the gallery −6%. Measured and compared against React in `docs/bundle-size.md`.
+- **Behavior — `@tsazor/runtime`: `createTsazorApp().dispose()` disposes the service provider**, as Blazor's host does:
+  after the component tree, the services it created, last first. A `registerValue` constant stays with its owner;
+  `app.services` throws after `dispose()`.
 - **Smaller apps — the runtime's own components carry no decorator lowering** (`@tsazor/runtime`): tsc lowered the
   `@Parameter()` fields of `Router`, `NavLink`, `RouteView`, the layouts, `EditForm`, the inputs, `AuthorizeView` and
   the others with a copy of its helpers per module; the build re-emits those modules with `decorateFields`, as an

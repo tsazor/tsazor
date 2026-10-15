@@ -169,9 +169,11 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
     navigationManager: services.get(NavigationManager as unknown as Token<NavigationManager>),
     /**
      * Disposes the component tree (parent first), removes the rendered DOM
-     * from the container, and removes the global listeners the app installed:
-     * link interception and popstate (via its own NavigationManager) and the
-     * HMR bridge.
+     * from the container, then disposes the service provider as Blazor's host
+     * does (the services it created, last first; a `registerValue` constant
+     * stays with its owner), and removes the global listeners the app
+     * installed: link interception and popstate (via its own
+     * NavigationManager) and the HMR bridge.
      */
     dispose() {
       if (disposed) return;
@@ -186,6 +188,8 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
       renderer.disposeComponent(state);
       state.range.remove();
       releaseHold?.();
+      // The components are gone, so nothing uses the services any more.
+      services.dispose();
       ownedNavigation?.dispose();
       if (globals.__tsazor === hmrBridge) delete globals.__tsazor;
     },

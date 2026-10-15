@@ -504,13 +504,14 @@ the same boundary handles the error again until `maximumErrorCount` (100) is rea
 100 console lines, then fatal. Mechanically like Blazor, but loud; the tutorial only says "keep
 the error view simple".
 
-### 10. `createTsazorApp().dispose()` does not dispose the service provider — **open**
+### 10. `createTsazorApp().dispose()` does not dispose the service provider — **done (2026-10-15)**
 
 Noticed while writing the lifetimes lesson: `dispose()` tears down components, the head root,
 NavigationManager and the HMR bridge, but does not call `services.dispose()` — singletons with
 `dispose()` are never released (Blazor disposes the root provider on shutdown).
 Small, but a behavior change for apps with their own disposables; the tutorial makes no claim
-about it. Proposal: the app's own provider is released in `dispose()` as well.
+about it. Proposal: the app's own provider is released in `dispose()` as well. **Done:** after the component
+tree, as Blazor's host does (`packages/runtime/test/app-dispose.test.ts`).
 
 ### 11. Code-behind: markup members must be `protected`
 
