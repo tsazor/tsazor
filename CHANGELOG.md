@@ -179,6 +179,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   the plugin points a library's copy at the app's. A helper is shared only if its text is exactly the same, so another
   esbuild version's helpers stay where they are. All JS, gzip: the fullstackhero port −11% (318 → 283 KB), fluentcms
   −10%, the gallery −6%. Measured and compared against React in `docs/bundle-size.md`.
+- **Fixed — `@tsazor/cli`: `tsazor build-lib` could remove what it had just written** when the clock stepped back
+  during the build (WSL syncs its clock with the host): it removed every file older than its start. It now removes
+  only the files it didn't write.
 - **Fixed — `@tsazor/lsp`: the language server can run from an npm install** — `tsazor-lsp` (stdio), with its
   `vscode-languageserver` packages as dependencies (they were dev dependencies, and the package had no bin). It
   answered `initialize` only after shadowing every `.tsazor` of the workspace (minutes in a monorepo; the scan had no
