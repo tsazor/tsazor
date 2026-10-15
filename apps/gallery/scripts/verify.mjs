@@ -250,7 +250,7 @@ async function main() {
     /* 8b — datagrid (QuickGrid-shaped): column components, sorting, paging, selection */
     await page.click("a[href='/datagrid']");
     await page.waitForSelector(".fui-datagrid tbody tr");
-    const gridHeads = (await page.locator(".fui-datagrid thead th button").allTextContents()).map((text) => text.replace(/[▲▼↕]/g, "").trim());
+    const gridHeads = (await page.locator(".fui-datagrid thead th button.fui-datagrid__sort").allTextContents()).map((text) => text.replace(/[▲▼↕]/g, "").trim());
     check(JSON.stringify(gridHeads) === JSON.stringify(["Customer", "Placed", "Total (€)", "Status"]),
         `datagrid headers come from the column components (${gridHeads.join(", ")})`);
     check((await page.locator(".fui-datagrid th[aria-sort=ascending]").textContent()).includes("Customer"),
@@ -269,6 +269,17 @@ async function main() {
     await page.locator(".fui-datagrid tbody input[type=checkbox]").first().check();
     await page.waitForFunction(() => document.querySelector(".echo")?.textContent?.startsWith("1 selected"));
     check(true, "a row checkbox selects the row (@bind-SelectedItems)");
+
+    /* 8c — a column's ColumnOptions drops a filter below its header */
+    await page.locator(".fui-datagrid th .fui-datagrid__options").first().click();
+    await page.waitForSelector(".fui-datagrid__options-panel");
+    check((await page.locator(".fui-datagrid__options-panel").textContent()).includes("Filter customers"),
+        "ColumnOptions renders a filter below the header when its options button is clicked");
+    await page.fill(".fui-datagrid__options-panel input", "ali");
+    await page.keyboard.press("Tab");
+    await page.waitForFunction(() => document.querySelectorAll(".fui-datagrid tbody tr").length === 1);
+    check((await page.locator(".fui-datagrid tbody tr").first().textContent()).includes("Alice"),
+        "the ColumnOptions filter narrows the rows live");
 
     /* 9 — row click opens the detail dialog (back from the datagrid page) */
     await page.click("a[href='/dashboard']");
