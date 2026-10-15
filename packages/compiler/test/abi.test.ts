@@ -35,7 +35,7 @@ describe("the ABI the compiler emits (api/abi.json)", () => {
     const corpus = [
       ...["bootstrap", "fluent", "charts", "markdown"].flatMap((name) => tsazorFiles(path.join(repo, "packages", name, "src"))),
       ...readdirSync(path.join(repo, "apps"))
-        .filter((app) => app !== "fluentcms-admin" && statSync(path.join(repo, "apps", app)).isDirectory())
+        .filter((app) => statSync(path.join(repo, "apps", app)).isDirectory())
         .flatMap((app) => (statSync(path.join(repo, "apps", app, "src"), { throwIfNoEntry: false })?.isDirectory() ? tsazorFiles(path.join(repo, "apps", app, "src")) : [])),
     ];
     expect(corpus.length).toBeGreaterThan(400);

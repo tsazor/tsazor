@@ -61,7 +61,8 @@ different `@types/node` in the store; not from these changes).
 4. ~~Attribution of ported code~~ — decided (owner: "ist ja auch gerecht so"): `THIRD-PARTY-NOTICES.md` and the
    notices in the LICENSE of runtime, ui and fluent. The curated first commit of `tsazor/tsazor` must carry the file.
 5. Still open from before: the Docker containers of fullstackhero's Aspire backend are "persistent" (keep or
-   remove?); `apps/fluentcms-admin` and its lockfile change stay untouched. 2026-10-15: `apps/fluentcms-admin` is
+   remove?). `apps/fluentcms-admin` is deleted (owner 2026-10-15: "einfach löschen"); the lockfile is HEAD's again.
+   Before that: `apps/fluentcms-admin` was
    not the owner's WIP — a Claude session started it on 2026-09-30 and the committed `apps/fluentcms` replaced it.
    Proposed: delete it and reset `pnpm-lock.yaml` to HEAD; remove the six `*-5c6891ec` containers, their images and
    the `fsh-starter-postgres-data` volume. Both wait for the owner's go.

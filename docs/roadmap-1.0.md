@@ -306,7 +306,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | **The skins' own repository at 1.0** | Lockstep (one version for every package) and the skins' own versions after the move: when do they move? |
 | **The rc on npm** | A package's first publish sets `latest`: publish an rc to npm, or only 1.0.0? |
 | **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
-| **Cleanup** | `apps/fluentcms-admin` and the lockfile it changed; the fullstackhero containers |
+| **Cleanup** | ~~`apps/fluentcms-admin` and the lockfile it changed~~ deleted 2026-10-15 (owner: "einfach löschen"; `apps/fluentcms` replaced it); the fullstackhero containers |
 
 ### After 1.0 (additive)
 
