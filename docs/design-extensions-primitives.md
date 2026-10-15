@@ -122,11 +122,11 @@ services.configure(ApiOptions, { section: "api", source: import.meta.env, valida
 
 ## Order
 
-1. `Decimal`, with the `@tsazor/dotnet` mapping and `@bind`/validation support. This depends on
-   E8 culture formatting, so it comes after or together with E8.
+1. ~~`Decimal`, with the `@tsazor/dotnet` mapping and `@bind`/validation support~~ **done 2026-10-15 (E12)**.
+   This depends on E8 culture formatting, so it comes after or together with E8.
 2. `HttpClient` + factory + handlers, then the `@tsazor/dotnet` split.
 3. `Logger`, `Options`.
-4. `TimeSpan`, `DateOnly`, `TimeOnly`, `Guid` and the generator mappings.
+4. ~~`TimeSpan`, `DateOnly`, `TimeOnly`, `Guid` and the generator mappings~~ **done 2026-10-15 (E12)**.
 
 ## Decisions (2026-10-02)
 

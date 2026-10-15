@@ -282,22 +282,28 @@ debugger.
 | `x.ToString("F2")` | `x.toFixed(2)` (binary rounding: `(1.005).toFixed(2)` is `"1.00"`) |
 | `checked` overflow | none: `number` loses precision silently past 2^53 |
 
-**There is no `decimal`.** Every `number` is an IEEE 754 double. Options for money, best first:
+**Tsazor has `Decimal`** in `@tsazor/primitives` — an exact scaled integer, like .NET's `decimal`
+and unlike the IEEE 754 double that every `number` is. Options for money, best first:
 
-1. **Keep money math on the .NET backend.** `decimal` stays where it is; the frontend displays
+1. **`Decimal` from `@tsazor/primitives`.** `Decimal.from("19.99")` (or a string on the wire),
+   exact `add`/`sub`/`mul`/`div` with `MidpointRounding` modes, `format("de-DE", …)` through `Intl`.
+   `@tsazor/dotnet` maps an OpenAPI `decimal` to it and hydrates the response back to a real
+   `Decimal`; a bare `@bind` on a `Decimal` shows and parses its exact string.
+2. **Keep money math on the .NET backend.** `decimal` stays where it is; the frontend displays
    amounts and sends user input back. This is the natural split for a team that keeps its
    backend.
-2. **Integer minor units.** Store cents as a `number`: integers are exact up to
+3. **Integer minor units.** Store cents as a `number`: integers are exact up to
    `Number.MAX_SAFE_INTEGER`, about 90 trillion euros in cents. Round once at the boundary:
    `Math.round(price * 100)`.
-3. **`bigint`** for integer arithmetic beyond 2^53 (no fractions, no mixing with `number`).
-4. **A decimal library** (`decimal.js`, `big.js`, `dinero.js`) when the frontend must calculate
+4. **`bigint`** for integer arithmetic beyond 2^53 (no fractions, no mixing with `number`).
+5. **A decimal library** (`decimal.js`, `big.js`, `dinero.js`) when the frontend must calculate
    with arbitrary precision.
 
-On the wire: System.Text.Json writes `decimal` as a JSON number, and `JSON.parse` reads it as a
-double, so values with more than 15 significant digits lose precision. Where that matters,
-serialize them as strings (`JsonNumberHandling.WriteAsString`) and parse them with a decimal
-library. Format with `Intl.NumberFormat`, never by hand.
+On the wire: `@tsazor/dotnet` types `format: decimal` as `Decimal`, whose `toJSON()` is its exact
+string — so the value round-trips without the 15-significant-digit loss of a JSON number. Where a
+decimal stays a `number`, System.Text.Json writes it as a JSON number and `JSON.parse` reads it as a
+double; serialize those as strings (`JsonNumberHandling.WriteAsString`) where it matters. Format with
+`Intl.NumberFormat` (or `Decimal.format`), never by hand.
 
 ### Collections
 
@@ -336,12 +342,13 @@ and replace them rather than mutating where change tracking matters.
 | --- | --- |
 | `DateTime.Now`, `DateTime.UtcNow` | `new Date()` (an instant; it shows in local time, `toISOString()` in UTC) |
 | `DateTimeOffset` | `Date` for the instant; keep the offset separately if you need it |
-| `DateOnly` | an ISO date string, `"2026-10-02"` |
+| `DateOnly` | `DateOnly` from `@tsazor/primitives` — a real calendar date, no time zone; it maps to `Temporal.PlainDate` once available. A plain ISO date string `"2026-10-02"` still works where you only pass it through |
+| `TimeOnly` | `TimeOnly` from `@tsazor/primitives` (a time-of-day without a date or zone); otherwise a `"HH:mm:ss"` string |
 | `DateTime.Parse(iso)` | `new Date(iso)` (a date-only string is midnight **UTC**) |
 | `new DateTime(2026, 10, 2)` | `new Date(2026, 9, 2)` (months from **0**, local time) |
 | `d.Year`, `d.Month`, `d.Day` | `d.getFullYear()`, `d.getMonth() + 1`, `d.getDate()` |
 | `d.AddDays(1)` | `const next = new Date(d); next.setDate(next.getDate() + 1);` (`Date` is **mutable**: copy first) |
-| `TimeSpan` | a number of milliseconds |
+| `TimeSpan` | `TimeSpan` from `@tsazor/primitives` (`fromMinutes(5)`, `totalSeconds`, `add`); a number of milliseconds still works where you only pass it through |
 | `b - a` (a `TimeSpan`) | `b.getTime() - a.getTime()` |
 | `d.ToString("d", culture)` | `new Intl.DateTimeFormat("de-DE").format(d)` |
 | `d.ToString("o")` | `d.toISOString()` |
@@ -401,7 +408,7 @@ re-renders on every value and unsubscribes on dispose.
 | --- | --- |
 | `Console.WriteLine(x)` | `console.log(x)` (also `console.error`, `console.table`) |
 | `Debug.Assert(cond)` | `console.assert(cond)` |
-| `Guid.NewGuid()` | `crypto.randomUUID()` |
+| `Guid.NewGuid()` | `Guid.newGuid()` from `@tsazor/primitives` (or `crypto.randomUUID()` for the raw string) |
 | `new Random().Next(n)` | `Math.floor(Math.random() * n)` (`crypto.getRandomValues` for security) |
 | `JsonSerializer.Serialize(x)` | `JSON.stringify(x)` |
 | `JsonSerializer.Deserialize<T>(s)` | `JSON.parse(s) as T` (no validation: it's an assertion) |

@@ -836,7 +836,7 @@ export declare class ParameterView {
 }
 
 // parseBindValue
-export declare function parseBindValue(text: string, current: unknown, format?: string, culture?: string | CultureInfo): string | number | Date | null;
+export declare function parseBindValue(text: string, current: unknown, format?: string, culture?: string | CultureInfo): string | number | Date | Decimal | null;
 
 // parseValue
 export declare function parseValue(text: string, format: string | undefined, culture?: string | CultureInfo): string | number | Date | null;
@@ -851,6 +851,9 @@ export interface PlaceholderContext {
 export type PlaceholdersOf<Message extends string> = Message extends `${string}{{${infer Rest}` ? PlaceholdersOf<Rest> : Message extends `${string}{${infer Name}}${infer Rest}` ? Name extends "" ? never : {
     [K in Name]: string | number;
 } & PlaceholdersOf<Rest> : unknown;
+
+// Precision
+export declare function Precision(precision: number, scale?: number, override?: ValidationMessageOverride): FieldRuleDecorator;
 
 // QueryParameterDecorator
 export type QueryParameterDecorator = (value: unknown, context: ClassFieldDecoratorContext) => void;
@@ -1283,6 +1286,8 @@ export interface ValidationMessageContext {
     readonly max?: number;
     readonly pattern?: string;
     readonly other?: string;
+    readonly precision?: number;
+    readonly scale?: number;
 }
 
 // ValidationMessageOverride
@@ -1324,6 +1329,8 @@ export interface ValidationRuleParams {
     readonly max?: number;
     readonly pattern?: string;
     readonly other?: string;
+    readonly precision?: number;
+    readonly scale?: number;
 }
 
 // ValidationSummary

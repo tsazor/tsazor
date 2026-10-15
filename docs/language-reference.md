@@ -48,7 +48,7 @@ Query string and hash do not take part in matching. Invalid templates and unknow
 | `long` | `bigint` | 64-bit range; `bigint` so that values > 2^53 stay exact |
 | `bool` | `boolean` | case-insensitive (`True` ⇒ `true`) |
 | `double`, `float` | `number` | Decimal point, exponent, thousands comma (`float` via `Math.fround`) |
-| `decimal` | `number` | No exponent; JS has no decimal type (double precision) |
+| `decimal` | `number` | No exponent; a `number` here (for exact arithmetic, `Decimal` in `@tsazor/primitives`) |
 | `datetime` | `Date` | ISO `yyyy-MM-dd`, optionally `THH:mm[:ss[.f]]` and `Z`/`±hh:mm`; without an offset, local time |
 | `guid` | `string` | Formats D, N, B, P; value = URL text |
 | `alpha`, `alphaNumeric` | `string` | |
@@ -570,9 +570,9 @@ Markup only starts
 | `<input type="checkbox" @bind="flag">` | `checked` + handler |
 | `<input type="number" @bind="n">`, `type="range"` | `Number()` coercion; empty or unparsable text keeps the model value (Blazor: `TryParse` fails — `Number("")` would be 0) |
 | `<input type="date" @bind="d">` | `Date` through the format `yyyy-MM-dd` (Blazor's default for date inputs): renders `formatValue(d, "yyyy-MM-dd")`, parses back as a local date; an explicit `@bind:format` replaces the default |
-| `<input @bind="n">` (text), `<textarea @bind="s">`, `<select @bind="n">` | The `value` attribute converts by the bound value's *type* at run time (K.7/K.8): a `number` parses back as a number, a `Date` as a date, anything else stays a string — so a text input with `@bind:format="dd.MM.yyyy"` works and a `<select>` bound to a number writes a number |
+| `<input @bind="n">` (text), `<textarea @bind="s">`, `<select @bind="n">` | The `value` attribute converts by the bound value's *type* at run time (K.7/K.8): a `number` parses back as a number, a `Date` as a date, a `Decimal` as a `Decimal`, anything else stays a string — so a text input with `@bind:format="dd.MM.yyyy"` works and a `<select>` bound to a number writes a number |
 | `@bind:event="oninput"` | A different DOM event |
-| `@bind:culture="c"` | E8: culture-aware *number* bind — renders/parses through `Intl` with the culture's separators; anything else warns TZS008 and stays invariant |
+| `@bind:culture="c"` | E8: culture-aware *number* bind — renders/parses through `Intl` with the culture's separators; a `Decimal` also goes through `Intl` with its exact value; anything else warns TZS008 and stays invariant |
 | `@bind:get="v" @bind:set="store"` | Get/set side instead of `@bind` (only as a pair) |
 | `@bind:after="changed"` | Called after the assignment; a promise is awaited, then the component renders |
 | `<input @bind-value="name">`, `@bind-value:event="oninput"` | On an *element*, `@bind-<attr>` binds the attribute `<attr>` (Razor: `@bind-value` = `@bind` spelled out) with `onchange`; modifiers and `number`/`date` coercion as with `@bind`; the value comes from the change event (`checked` for checkboxes, otherwise `value`) |
@@ -613,6 +613,8 @@ formats — a subset, a documented deviation from the full .NET format grammar:
 - Numbers: `F<n>` (fixed digits), `N<n>` (thousands grouping) and the digit masks
   `0`, `0.00`, `#,##0.0` (number of digits taken from the mask, grouping as soon as it contains `,`).
   Everything else formats like `String(value)` and parses leniently (`Number` without `,`/spaces).
+  A `Decimal` field takes the same digit-count/grouping logic, so `@bind:format="N2"` rounds and
+  groups its exact value; without a format it renders/parses the exact invariant string.
 - Dates: the tokens `yyyy`, `yy`, `MM`, `dd`, `HH`, `mm`, `ss`, `M`, `d`, `H`, `m`,
   `s`; every other character is literal text (`dd.MM.yyyy`). Parsing uses a regex built from the
   format; an out-of-range value (`31.02.2024`) yields `null` — the handler keeps
@@ -624,17 +626,18 @@ roadmap. A format applies to any `value` bind — `type="number"`, `type="range"
 `type="date"`, and also a plain text input, textarea or select (K.7/K.8). The compiler
 cannot see the field's type, so a non-typed value bind converts by the bound value's
 *runtime* type (`parseBindValue`): a `number` parses back as a number, a `Date` as a date
-(ISO by default, the format otherwise), anything else stays a string. Blazor's idiom of a
+(ISO by default, the format otherwise), a `Decimal` as a `Decimal`, anything else stays a string. Blazor's idiom of a
 text input bound to a `DateTime` with `@bind:format="dd.MM.yyyy"` therefore works, and a
 `<select>` bound to a `number` writes a number, not a string. Only a format on a non-value
 attribute — a checkbox's `checked`, or on a component bind — is a warning TZS008 (the
 `BindConverter` applies formats to types that carry one, strings don't; on components Blazor
-ignores it), and the native round trip is kept. `@bind:culture` (E8) applies to *number* binds only; on any other
+ignores it), and the native round trip is kept. `@bind:culture` (E8) applies to *number* and `Decimal` binds only; on any other
 bind — and on components — it is a warning TZS008 and the bind stays invariant.
 
 **`@bind:culture` (E8)** is the culture-aware number bind: the value renders and parses through
 `Intl` with the culture's separators (`<input type="number" @bind="amount" @bind:culture="c" />`
-with an injected `CultureService C` and `c = C.current`). Without it everything stays
+with an injected `CultureService C` and `c = C.current`). A `Decimal` field does the same with
+its exact value. Without it everything stays
 exactly invariant (A5/B7) — a pure superset. Details and the whole localization surface:
 [Localization](#localization-cultureservice-stringlocalizer-bindculture).
 
@@ -715,7 +718,7 @@ createTsazorApp({
   that hold messages. Per rule, .NET's `ErrorMessage` parity:
   `@Required({ message: "…" })`, `@MinLength(1, { messageKey: "User.NameRequired" })`,
   `@Range(0, 10, { messageFactory: (ctx) => L.get("Order.Rating", ctx) })`.
-- **`@bind:culture`** — number binds only (see [@bind](#bind-blazor-net-7-semantics)); display-side
+- **`@bind:culture`** — number and `Decimal` binds (see [@bind](#bind-blazor-net-7-semantics)); display-side
   culture formatting lives on `CultureInfo.formatNumber`/`formatDate`. A5/B7 holds everywhere
   else: routing, query strings and data values stay invariant.
 
@@ -822,8 +825,10 @@ entries) does not change language on a culture switch. Store the **key**, transl
   validation model behind it. Decided per the roadmap recommendation "decorators" (enables
   5.2 schema ⇒ validators): the model declares the rules with TC39 field decorators —
   `@Required()`, `@MinLength(n)`, `@MaxLength(n)`, `@StringLength(max, { minimumLength })`,
-  `@Range(min, max)`, `@EmailAddress()`, `@RegularExpression(pattern)`,
-  `@Compare("otherField")` — as the counterpart of the DataAnnotations attributes. `<EditForm …><DataAnnotationsValidator />`
+  `@Range(min, max)`, `@Precision(precision, { scale })`, `@EmailAddress()`, `@RegularExpression(pattern)`,
+  `@Compare("otherField")` — as the counterpart of the DataAnnotations attributes. `@Range` and
+  `@Precision` accept a `Decimal` (from `@tsazor/primitives`) as well as a `number`, so money
+  fields validate exactly like .NET's `decimal`. `<EditForm …><DataAnnotationsValidator />`
   enables them on the context (Blazor's `EditContext.EnableDataAnnotationsValidation`);
   without a cascaded `EditContext` it throws Blazor's error message, and likewise on a dynamic
   context change. Error messages are the exact .NET texts

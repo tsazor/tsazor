@@ -5,6 +5,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`@tsazor/primitives` (E12): the five .NET value types.** A new dependency-free package — `Decimal`
+  (an immutable scaled integer with exact arithmetic and `MidpointRounding` modes), `DateOnly`, `TimeOnly`,
+  `TimeSpan` and `Guid`. `Decimal` is a first-class `@bind` and validation value in `@tsazor/runtime`
+  (invariant formatting through its scaled BigInt, the culture's separators under `@bind:culture`;
+  `@Range` compares it by value, and the new `@Precision(precision, scale)` judges digit count and decimal
+  places per .NET's `decimal(precision, scale)` storage rule).
+- **`@tsazor/dotnet`: .NET value formats map to `@tsazor/primitives` by default** (`decimal`/`date`/
+  `duration`/`uuid` ⇒ `Decimal`/`DateOnly`/`TimeSpan`/`Guid`; decision X4). The wire format stays their
+  strings, so every generated model class gains a `fromJson` that parses those fields and the client
+  operations hydrate the response body through it; `--string-primitives` opts back to `number`/`string`.
+  `queryString` now accepts any stringifiable value (so a `Guid`/`Decimal`/… query parameter is sent as
+  its string) and the `QueryStringScalar` type it widens to is exported.
+
 - **Breaking — the public API is what the stability promise covers** (`docs/support-policy.md`, D-S7; the API review,
   `docs/api-review-1.0.md`):
   - `@tsazor/runtime`: **ComponentBase's plumbing is private.** `renderHandle`, `componentServices`,

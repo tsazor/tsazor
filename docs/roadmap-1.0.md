@@ -299,7 +299,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"`~~ **done 2026-10-15** (`"same-tab"`) | A name; renaming it later breaks |
 | ~~**Stale docs** — roadmap-tutorial (M4), §3c, E8, design-virtualize, design-localization, the BlazorHero B3 row, a comment in `codegen.ts`~~ **done 2026-10-15** | Going public |
 | **E9** — the screen-reader audit, by a person: [screen-reader-audit.md](screen-reader-audit.md) | WCAG 2.2 AA |
-| **E12 `@tsazor/primitives`** — `Decimal` (with `@bind` and validation), `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid`; `@tsazor/dotnet` maps to them by default ([design-extensions-primitives.md](design-extensions-primitives.md)) | Owner 2026-10-15 (X4): the mapping is the default from 1.0 on, so the types come first |
+| ~~**E12 `@tsazor/primitives`** — `Decimal` (with `@bind` and validation), `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid`; `@tsazor/dotnet` maps to them by default~~ **done 2026-10-15** ([design-extensions-primitives.md](design-extensions-primitives.md)) | Owner 2026-10-15 (X4): the mapping is the default from 1.0 on, so the types come first |
 | **BlazorHero phases 5 and 6** — the dashboard with charts and the chat (SignalR); the languages with right-to-left | Owner 2026-10-15: they test charts, real time and RTL in the skins before the freeze |
 
 ### For the owner to decide

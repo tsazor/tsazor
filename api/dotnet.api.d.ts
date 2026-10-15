@@ -113,7 +113,12 @@ export interface ProblemDetails {
 export declare function problemMessage<T>(result: HttpResult<T>): string;
 
 // queryString
-export declare function queryString(params: Record<string, string | number | boolean | readonly (string | number | boolean)[] | null | undefined> | undefined): string;
+export declare function queryString(params: Record<string, QueryStringScalar | readonly QueryStringScalar[] | null | undefined> | undefined): string;
+
+// QueryStringScalar
+export type QueryStringScalar = string | number | boolean | {
+    toString(): string;
+};
 
 // RequestOptions
 export interface RequestOptions {
@@ -144,6 +149,7 @@ export interface GenerateOptions {
     baseUrl?: string;
     clientFile?: string;
     pathValues?: Record<string, string>;
+    stringPrimitives?: boolean;
 }
 
 // Generation
