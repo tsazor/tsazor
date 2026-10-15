@@ -4,7 +4,7 @@
  * the compiler's optimizations and without (TSAZOR_OPTIMIZE=0: no static markup
  * blocks, and no stable handlers either, since the per-optimization switches
  * went before 1.0), measured on the
- * static-heavy `/cards` page — 3,000 cards whose chrome is static and whose
+ * static-heavy `#/cards` page — 3,000 cards whose chrome is static and whose
  * price is dynamic. Median of N in-browser cycles:
  *
  * - show:     click → 3,000 cards in the DOM (build, diff, insert)
@@ -53,7 +53,7 @@ function serve() {
 
 async function measure(browser) {
   const page = await browser.newPage();
-  await page.goto(`http://localhost:${PORT}/cards`);
+  await page.goto(`http://localhost:${PORT}/#/cards`);
   await page.waitForSelector("#show");
   const timed = (button, done) =>
     page.evaluate(

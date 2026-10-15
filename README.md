@@ -154,6 +154,7 @@ createTsazorApp({ root: App, routes });
 - [Language Server](docs/language-server.md)
 - [Debugging in DevTools](docs/debugging.md)
 - [Bundle size (where the bytes go, against React)](docs/bundle-size.md)
+- [Compared to React and Vue (what the numbers contain, how they differ)](docs/compared-to-react-and-vue.md)
 - [Port findings (Blazing Pizza)](docs/port-findings.md)
 
 ## Status

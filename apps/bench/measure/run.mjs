@@ -30,7 +30,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /* ------------------------------------------------------------------ */
 
 const APPS = [
-  { name: "tsazor",  port: 5410, todoRoute: "/todo", rowsRoute: "/rows", kind: "vite",   dir: path.resolve(__dirname, "../tsazor") },
+  { name: "tsazor",  port: 5410, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite",   dir: path.resolve(__dirname, "../tsazor") },
+  // The same app with Tsazor's Router in hash mode (`vite build --mode router`): as a Tsazor app is usually written.
+  { name: "tsazor-router", port: 5415, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../tsazor"), pkg: "tsazor", mode: "router" },
   { name: "react",  port: 5411, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../react") },
   { name: "vue",    port: 5412, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../vue") },
   { name: "svelte", port: 5413, todoRoute: "/#/todo", rowsRoute: "/#/rows", kind: "vite", dir: path.resolve(__dirname, "../svelte") },
@@ -57,7 +59,7 @@ const MIME = {
 // `dotnet publish -o publish` puts the servable site one level down, in
 // publish/wwwroot — vite apps go straight to dist.
 const distDirOf = (app) =>
-  app.kind === "vite" ? path.join(app.dir, "dist") : path.join(app.dir, "publish", "wwwroot");
+  app.kind === "vite" ? path.join(app.dir, app.mode ? `dist-${app.mode}` : "dist") : path.join(app.dir, "publish", "wwwroot");
 
 /* ------------------------------------------------------------------ */
 /* Build                                                               */
@@ -67,7 +69,7 @@ function buildApp(app) {
   const shell = process.platform === "win32";
   if (app.kind === "vite") {
     const pnpm = shell ? "pnpm.cmd" : "pnpm";
-    return guardedRun(pnpm, ["--filter", `bench-${app.name}`, "exec", "vite", "build"], app.dir, shell);
+    return guardedRun(pnpm, ["--filter", `bench-${app.pkg ?? app.name}`, "exec", "vite", "build", ...(app.mode ? ["--mode", app.mode] : [])], app.dir, shell);
   }
   return guardedRun("dotnet", ["publish", "-c", "Release", "-o", "publish"], app.dir, false);
 }

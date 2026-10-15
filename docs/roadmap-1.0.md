@@ -246,7 +246,13 @@ architecture and security take priority.
   **After F1b (2026-10-06,** [design-render-hints.md](design-render-hints.md) **H1 + H2):** Tsazor leads
   at create 10k (283 ms), update every 10th (66), swap (94), select (7.8 vs Svelte 9.9) and remove
   (98) and in heap (15.3 MB); it trails only at append (68 vs Svelte 47 ms) and in size (26.2 KB gz
-  vs Svelte 15.1).
+  vs Svelte 15.1). **Re-measured (2026-10-15):** the Tsazor app now switches views with a hash switch
+  like the JS apps (it had measured its Router, which grew with E13 and the parity work to 29.9 KB);
+  with the runtime's components compact and the ES2022 build target it is **24.3 KB gz** (Vue 26.3), and
+  28.2 with its Router in hash mode (a second row; Vue's router adds 9.1 KB, React's 12.7 —
+  [compared-to-react-and-vue.md](compared-to-react-and-vue.md)). It keeps its leads (create 283 ms,
+  update 63, swap 100, select 8.2, remove 98, heap 15.2 MB); append varies too much between runs to
+  rank (Tsazor and Svelte take turns).
 
 ## Order (proposal)
 

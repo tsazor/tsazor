@@ -99,8 +99,8 @@ Conventions for every area (the reference is the roles list and its create dialo
    - **Visual** (`scripts/visual.mjs`: the same suite against both apps, the screenshot at each test's end compared
      pixel by pixel): 94 of 111 within 0.5%, 77 identical. The rest end mid-transition — a test that submits and
      navigates catches the original still loading its lazy chunk — or with a toast's countdown at another moment.
-   - **Size** (production build, 2026-10-15, gzip -9): the first load is 364 KB (101 KB gzip) against the original's
-     613 KB (187 KB); all chunks together 269 KB gzip against 322 KB. Where the bytes go:
+   - **Size** (production build, 2026-10-15, gzip -9): the first load is 351 KB (98 KB gzip) against the original's
+     613 KB (187 KB); all chunks together 264 KB gzip against 322 KB. Where the bytes go:
      [bundle-size.md](bundle-size.md). The framework and its built-ins weigh less than React and its libraries, and
      the compiled components weigh more than the JSX.
    - **Source:** 17,700 lines in 253 files against the original's 22,200 in 128 — fewer lines (no hook plumbing,

@@ -1,9 +1,31 @@
-@import BenchLayout from "./BenchLayout.tsazor"
-<Router>
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@BenchLayout" />
-    </Found>
-    <NotFound>
-        <nav class="bench-nav"></nav>
-    </NotFound>
-</Router>
+@* A hash switch instead of the Router, as in the other apps: the bench measures the framework, not a router.
+   RouterApp.tsazor is the same app with Tsazor's Router in hash mode (`vite build --mode router`). *@
+@import Todo from "./Pages/Todo.tsazor"
+@import Rows from "./Pages/Rows.tsazor"
+@import Cards from "./Pages/Cards.tsazor"
+<nav class="bench-nav">
+    <a href="#/todo" class="@(this.isRows ? "" : "active")">Todo</a>
+    <a href="#/rows" class="@(this.isRows ? "active" : "")">Rows</a>
+</nav>
+<main>
+    @if (this.isRows) {
+        <Rows />
+    } else if (this.isCards) {
+        <Cards />
+    } else {
+        <Todo />
+    }
+</main>
+
+@code {
+    private hash = location.hash || "#/todo";
+    private get isRows(): boolean { return this.hash.startsWith("#/rows"); }
+    private get isCards(): boolean { return this.hash.startsWith("#/cards"); }
+
+    protected override onInitialized(): void {
+        window.addEventListener("hashchange", () => {
+            this.hash = location.hash || "#/todo";
+            this.stateHasChanged();
+        });
+    }
+}

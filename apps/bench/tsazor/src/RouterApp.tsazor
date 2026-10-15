@@ -1,0 +1,10 @@
+@* The app as it is usually written: Tsazor's Router (hash mode, RouterProgram.ts), a layout, NavLink. *@
+@import BenchLayout from "./BenchLayout.tsazor"
+<Router>
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@BenchLayout" />
+    </Found>
+    <NotFound>
+        <nav class="bench-nav"></nav>
+    </NotFound>
+</Router>

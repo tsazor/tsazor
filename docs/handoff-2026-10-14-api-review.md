@@ -82,8 +82,21 @@ different `@types/node` in the store; not from these changes).
 - **Found on the way:** `build-lib` wrote the build machine's paths into `dist` (`@code (file:line)` comments; now
   package-relative); the tutorial's preview lacked `@tsazor/runtime/internal` in its import map since the API review
   (`@tsazor/testing` imports it; ch18 failed — only the e2e job runs `tutorial verify`, not `ci:local`).
-- **Proposed, not decided:** re-measure the bench: the README says 26.2 KB gzip (2026-10-06), a build today is
-  29.9 KB (Vue 26.3).
+- **The bench re-measured** (owner: "Gute Idee die bench nachzumessen"): 26.2 → 29.9 KB gzip since 2026-10-06 came
+  from E13 (+1.05), the 10-07/08 parity work (+1.3: query parameters in any component, `waitUntilIdle` labels, a
+  DEV warning that shipped), `getUriWithQueryParameter(s)` (+0.55) and the API review (+0.43) — features as methods
+  of Renderer/NavigationManager, which never tree-shake. Fixed: the runtime's 26 decorated component modules are
+  re-emitted with `decorateFields` after `tsc -b` (`packages/runtime/scripts/compact-components.mjs`; tsc's per-module
+  decorator helpers were ~0.7 KB gzip per component), the plugin builds for ES2022 unless the app sets
+  `build.target` (Vite's Safari 16 default lowered every class with a static block, private members included, to
+  WeakMaps), the DEV warning drops in production. The Tsazor bench app now uses a hash switch like the JS apps
+  (its Router had been measured since 2026-09-29, a session's choice), plus a second row `tsazor-router` with the
+  Router in hash mode (owner: "lass uns auch mit hash-Routing messen … Ich bin ein Freund von Hash-routing"):
+  **24.3 KB** (Vue 26.3), 28.2 with the Router; Vue + vue-router 35.4, React + react-router 81.9 (measured outside
+  the repo). Leads kept; append varies between runs (Tsazor and Svelte take turns). Apps: fullstackhero 264 KB
+  gzip (React 322). Owner: the differences to React and Vue must be documented — `docs/compared-to-react-and-vue.md`.
+- **Measured, not done:** TS `private` → `#private` would save ≤ 0.7 KB gzip on the bench (names survive
+  minification); inlining enum values ~0.08 KB (tsc doesn't inline `const enum` under `isolatedModules`).
 
 ## Working knowledge from today
 
