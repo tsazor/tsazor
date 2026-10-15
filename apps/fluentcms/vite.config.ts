@@ -10,7 +10,7 @@ export default defineConfig({
         port: 5342,
         strictPort: true,
         proxy: {
-            "^/(api|bff|files|_content)/": "http://localhost:5341",
+            "^/(api|bff|files|_content|swagger)/": "http://localhost:5341",
         },
     },
 });

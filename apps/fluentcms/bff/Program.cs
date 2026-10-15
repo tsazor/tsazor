@@ -54,6 +54,8 @@ builder.Services.AddReverseProxy()
             new RouteConfig { RouteId = "api", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/api/{**rest}" } },
             new RouteConfig { RouteId = "files", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/files/{**rest}" } },
             new RouteConfig { RouteId = "content", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/_content/{**rest}" } },
+            // The API documentation (/api/doc, the admin's "API documentation" link) loads its OpenAPI document from here.
+            new RouteConfig { RouteId = "swagger", ClusterId = "fluentcms", Match = new RouteMatch { Path = "/swagger/{**rest}" } },
         ],
         [
             new ClusterConfig
