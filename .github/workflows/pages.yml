@@ -22,7 +22,8 @@ concurrency:
 jobs:
   build:
     if: vars.PAGES_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    # Pinned like ci.yml's check job: the Ubuntu the release was tested on, not whatever ubuntu-latest becomes.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -43,7 +44,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

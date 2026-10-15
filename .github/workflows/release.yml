@@ -12,7 +12,8 @@ permissions:
 jobs:
   publish:
     if: github.repository == 'tsazor/tsazor' && vars.RELEASE_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    # Pinned like ci.yml's check job: the Ubuntu the release was tested on, not whatever ubuntu-latest becomes.
+    runs-on: ubuntu-24.04
     # Npm's Trusted Publisher names this environment too; its protection rules can ask for an approval.
     environment: npm
     permissions:
