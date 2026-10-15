@@ -95,6 +95,13 @@ different `@types/node` in the store; not from these changes).
   **24.3 KB** (Vue 26.3), 28.2 with the Router; Vue + vue-router 35.4, React + react-router 81.9 (measured outside
   the repo). Leads kept; append varies between runs (Tsazor and Svelte take turns). Apps: fullstackhero 264 KB
   gzip (React 322). Owner: the differences to React and Vue must be documented — `docs/compared-to-react-and-vue.md`.
+- **Toward 1.0** (owner: "Wir müssen jetzt auf 1.0 hinarbeiten"): `roadmap-1.0.md` §7 lists what is left, from three
+  agent sweeps (ports, design docs and handoffs, code markers) checked against the code. Done the same day: the
+  workflows pinned to ubuntu-24.04, P.10 (`app.dispose()` disposes the services), K.11 (happy-dom 21; its
+  `hashchange` on `pushState`/`replaceState` is neutralized in the hash-routing tests; a canceled transition's
+  `finished` is handled), X6 (`"same-tab"`), stale docs; P.8 moved after 1.0. `docs/screen-reader-audit.md` is
+  E9's checklist. Still before 1.0: the DataGrid's `ColumnOptions`, K.7/K.8 (`@bind` by the bound value), P.5
+  (`RenderFragment<T>`); the owner's decisions (X4, the skins' repo, an rc on npm, the first public commit, cleanup).
 - **Measured, not done:** TS `private` → `#private` would save ≤ 0.7 KB gzip on the bench (names survive
   minification); inlining enum values ~0.08 KB (tsc doesn't inline `const enum` under `isolatedModules`).
 
