@@ -3,10 +3,11 @@
  * (`tsazor check`), then, as the Vite plugin compiles an app, each
  * `src/*.tsazor` through the compiler with the workspace's resolution, its standard decorators lowered; the plain
  * `.ts` helpers beside them; the component manifest (`tsazor-components.json`) and a declaration per component; the
- * index; and, if asked for, one stylesheet of the shared styles and the components' sidecars. docs/component-libraries.md
+ * index; and, if asked for, one stylesheet of the shared styles and the components' sidecars. esbuild's decorator
+ * helpers go once into `_decorators.js`, which the components import (a copy per component was half their size). docs/component-libraries.md
  * describes the package around it.
  */
-import { compile } from "@tsazor/compiler";
+import { compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule } from "@tsazor/compiler";
 import { checkProject } from "@tsazor/lsp";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
@@ -93,6 +94,9 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   const layerErrors = chain.layers.flatMap((layer) =>
     layer.diagnostics.filter((d) => d.severity === "error").map((d) => `  ${d.code} (${d.pos.line}:${d.pos.column}): ${layer.file}: ${d.message}`),
   );
+  // esbuild's decorator helpers, from a probe transformed as the components are: one module the components import.
+  const helpers = sharedHelperModule(transformSync(DECORATOR_HELPER_PROBE, COMPONENT_TRANSFORM).code);
+  await writeFile(path.join(outDir, "_decorators.js"), helpers.code);
   const errors: { file: string; message: string }[] = [];
   const sidecars: string[] = [];
   const exported: string[] = [];
@@ -113,14 +117,8 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
         errors.push({ file, message: fileErrors.join("\n") });
         continue;
       }
-      const transpiled = transformSync(compiled.code, {
-        loader: "ts",
-        sourcefile: filePath,
-        // Standard decorators, lowered: the Vite plugin's emit for an app.
-        supported: { decorators: false },
-        tsconfigRaw: { compilerOptions: { target: "es2022" } },
-      });
-      await writeFile(path.join(outDir, `${className}.js`), builtSpecifiers(transpiled.code));
+      const transpiled = transformSync(compiled.code, { ...COMPONENT_TRANSFORM, sourcefile: filePath });
+      await writeFile(path.join(outDir, `${className}.js`), builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
       if (!internal.has(className)) exported.push(className);
     } catch (error) {
       errors.push({ file, message: `  ${error instanceof Error ? (error.stack ?? error.message) : String(error)}` });
@@ -203,6 +201,9 @@ function referencedTypeExports(manifest: ReturnType<typeof buildPackageManifest>
   }
   return [...names].filter(([, set]) => set.size > 0).map(([name, set]) => `export type { ${[...set].sort().join(", ")} } from "${name}";`);
 }
+
+/** How a compiled component becomes JS: standard decorators lowered, the Vite plugin's emit for an app. */
+const COMPONENT_TRANSFORM = { loader: "ts", supported: { decorators: false }, tsconfigRaw: { compilerOptions: { target: "es2022" } } } as const;
 
 /** A built module's relative imports point at the built siblings: `./Tab.tsazor`, `./ids` and `./x.ts` → `./….js`. */
 function builtSpecifiers(code: string): string {

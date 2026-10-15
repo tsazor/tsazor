@@ -173,6 +173,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     read is the error TZS036 in `tsazor check` (before: silent, its tags unresolved); a newer format version is the
     warning TZS036, and its components are read as far as this version knows them. The Vite plugin prints both
     once. A test reads a manifest written by 1.0 in every later 1.x.
+- **Smaller apps — esbuild's decorator helpers are in an app once** (`@tsazor/vite-plugin`, `@tsazor/cli`): esbuild
+  lowers the standard decorators and wrote its ~1.7 KB of helpers into every component. The plugin now serves them
+  as `virtual:tsazor-decorators`, a library built by `tsazor build-lib` ships them once as `dist/_decorators.js`, and
+  the plugin points a library's copy at the app's. A helper is shared only if its text is exactly the same, so another
+  esbuild version's helpers stay where they are. All JS, gzip: the fullstackhero port −11% (318 → 283 KB), fluentcms
+  −10%, the gallery −6%. Measured and compared against React in `docs/bundle-size.md`.
 - **Fixed — `@tsazor/lsp`: the language server can run from an npm install** — `tsazor-lsp` (stdio), with its
   `vscode-languageserver` packages as dependencies (they were dev dependencies, and the package had no bin). It
   answered `initialize` only after shadowing every `.tsazor` of the workspace (minutes in a monorepo; the scan had no

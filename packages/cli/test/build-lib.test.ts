@@ -59,6 +59,10 @@ describe("buildLibrary (D9)", () => {
 
     const greeting = await read(root, "Greeting.js");
     expect(greeting).toContain('from "./helper.js"');
+    // esbuild's decorator helpers come from one module, not a copy in each component.
+    expect(greeting).toMatch(/^import \{ __[\w, ]+ \} from "\.\/_decorators\.js";/);
+    expect(greeting).not.toContain("var __decorateElement");
+    expect(await read(root, "_decorators.js")).toContain("export { ");
     expect(greeting).toContain('from "./Part.js"');
     expect(greeting).not.toContain(".tsazor");
     expect(existsSync(path.join(root, "dist", "Part.js"))).toBe(true);

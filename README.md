@@ -153,6 +153,7 @@ createTsazorApp({ root: App, routes });
 - [Live data (server events through `observe`, with reconnects)](docs/guide-live-data.md)
 - [Language Server](docs/language-server.md)
 - [Debugging in DevTools](docs/debugging.md)
+- [Bundle size (where the bytes go, against React)](docs/bundle-size.md)
 - [Port findings (Blazing Pizza)](docs/port-findings.md)
 
 ## Status

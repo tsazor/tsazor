@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { CHECK_CODES, compile, type TszDiagnostic } from "@tsazor/compiler";
+import { CHECK_CODES, compile, shareHelpers, type TszDiagnostic } from "@tsazor/compiler";
 import { defaultMetadataCache } from "@tsazor/workspace";
 import { type EnvironmentModuleNode, type ModuleNode, type Plugin, type ViteDevServer } from "vite";
 import { isImportsFile, TransformRegistry } from "./invalidate.js";
@@ -8,11 +8,14 @@ import { tsazorHotUpdate } from "./hot-update.js";
 import { lazyRouteFilter } from "./lazy-routes.js";
 import { generateRoutesModule, listTsazorFilesUnder, scanRoutes, scanRootOf, scanTsazorModules } from "./routes.js";
 import { processScopedCss, scopeHashFor } from "./scoped-css.js";
-import { transformTsazor } from "./transform.js";
+import { sharedDecoratorHelpers, transformTsazor } from "./transform.js";
 
 
 const ROUTES_MODULE_ID = "virtual:tsazor-routes";
 const RESOLVED_ROUTES_MODULE_ID = "\0virtual:tsazor-routes";
+/** esbuild's decorator helpers, once for the app (each component imports them; they were a copy per component). */
+const DECORATORS_MODULE_ID = "virtual:tsazor-decorators";
+const RESOLVED_DECORATORS_MODULE_ID = "\0virtual:tsazor-decorators";
 
 /** Options of the `tsazor()` Vite plugin. */
 export interface TsazorPluginOptions {
@@ -134,10 +137,12 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
 
     resolveId(id) {
       if (id === ROUTES_MODULE_ID) return RESOLVED_ROUTES_MODULE_ID;
+      if (id === DECORATORS_MODULE_ID) return RESOLVED_DECORATORS_MODULE_ID;
       return null;
     },
 
     async load(id) {
+      if (id === RESOLVED_DECORATORS_MODULE_ID) return sharedDecoratorHelpers().code;
       if (id !== RESOLVED_ROUTES_MODULE_ID) return null;
       const routes = await scanRoutes(projectRoot);
       return generateRoutesModule(projectRoot, routes, lazyRouteFilter(options.lazyRoutes, projectRoot));
@@ -145,9 +150,15 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
 
     async transform(code, id) {
       const filePath = stripQuery(id);
-      if (filePath.includes("node_modules") || filePath.startsWith("\0")) {
-        return null;
+      if (filePath.startsWith("\0")) return null;
+
+      // A built library's decorator helpers (its _decorators.js, or the copy in a component built before it had one)
+      // become the app's, where they are the same text: one copy for the app, not one per library.
+      if (/\.m?js$/.test(filePath) && code.includes("var __decorateElement")) {
+        const shared = shareHelpers(code, sharedDecoratorHelpers(), DECORATORS_MODULE_ID);
+        return shared === code ? null : { code: shared, map: null };
       }
+      if (filePath.includes("node_modules")) return null;
 
       // Scoped CSS sidecar (Blazor mechanism): rewrite selectors to the scope
       // attribute of the owning .tsazor file, then hand back to Vite's CSS
@@ -177,6 +188,7 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
       }
       const result = await transformTsazor(code, filePath, projectRoot, {
         ...(options.optimize === false ? { optimize: false } : {}),
+        sharedHelpers: DECORATORS_MODULE_ID,
       });
       registry.recordTransform(filePath, result.metadata, result.componentFiles);
       reportImportsDiagnostics(projectRoot, result.importsDiagnostics);

@@ -7,7 +7,8 @@
               export default class X extends ComponentBase {
                   buildRenderTree(__builder: RenderTreeBuilder): void { … }
               }
-TS      ──(esbuild)──►  JS (sourcemap chain compiler → esbuild; standard decorators lowered)
+TS      ──(esbuild)──►  JS (sourcemap chain compiler → esbuild; standard decorators lowered,
+                          their helpers imported from virtual:tsazor-decorators, once per app)
 Browser ──(Renderer)──►  RenderTree frames ──(diff)──►  edit list ──(DomRenderer)──►  DOM
 ```
 

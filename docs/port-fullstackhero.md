@@ -99,8 +99,10 @@ Conventions for every area (the reference is the roles list and its create dialo
    - **Visual** (`scripts/visual.mjs`: the same suite against both apps, the screenshot at each test's end compared
      pixel by pixel): 94 of 111 within 0.5%, 77 identical. The rest end mid-transition — a test that submits and
      navigates catches the original still loading its lazy chunk — or with a toast's countdown at another moment.
-   - **Size** (production build): the first load is 417 KB (112 KB gzip) against the original's 628 KB (192 KB); all
-     chunks together 337 KB gzip against 339 KB.
+   - **Size** (production build, 2026-10-15, gzip -9): the first load is 374 KB (104 KB gzip) against the original's
+     613 KB (187 KB); all chunks together 283 KB gzip against 322 KB. Where the bytes go:
+     [bundle-size.md](bundle-size.md). The framework and its built-ins weigh less than React and its libraries, and
+     the compiled components weigh more than the JSX.
    - **Source:** 17,700 lines in 253 files against the original's 22,200 in 128 — fewer lines (no hook plumbing,
      Razor's markup), more files (a page's local subcomponents become files: no module scope, no Razor templates, F3).
 3. **Against the backend** — once Docker runs: the API, the realtime hub, uploads to RustFS (whose CORS allows the

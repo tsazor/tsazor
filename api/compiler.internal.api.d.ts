@@ -366,6 +366,9 @@ export interface ConditionalBranch {
     span?: SourceSpan;
 }
 
+// DECORATOR_HELPER_PROBE
+export declare const DECORATOR_HELPER_PROBE = "\nconst d = (value: unknown, _context: unknown): any => value;\n@d\nexport class Probe {\n  @d static s = 1;\n  @d static accessor sa = 1;\n  @d static sm() {}\n  @d static #sp = 1;\n  @d f = 1;\n  @d accessor a = 1;\n  @d m() {}\n  @d get g() { return 1; }\n  @d set g(_value: number) {}\n  @d #p = 1;\n  @d accessor #pa = 1;\n  @d #pm() {}\n  @d get #pg() { return 1; }\n  @d set #pg(_value: number) {}\n  read(o: object) { return [this.#p, this.#pa, this.#pm(), this.#pg, Probe.#sp, #p in o]; }\n  write() { this.#p = 2; this.#pa = 2; this.#pg = 2; Probe.#sp = 2; }\n}\n";
+
 // DIAGNOSTIC_CATALOG
 export declare const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[];
 
@@ -717,6 +720,18 @@ export declare function scanModuleExports(source: string, fileName: string): Mod
 
 // scopeSelector
 export declare function scopeSelector(selector: string, scopeHash: string): string;
+
+// sharedHelperModule
+export declare function sharedHelperModule(probeJs: string): SharedHelpers;
+
+// SharedHelpers
+export interface SharedHelpers {
+    readonly code: string;
+    readonly declarations: ReadonlySet<string>;
+}
+
+// shareHelpers
+export declare function shareHelpers(js: string, helpers: SharedHelpers, specifier: string): string;
 
 // SourceMapEntry
 export interface SourceMapEntry {

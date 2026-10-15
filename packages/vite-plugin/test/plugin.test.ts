@@ -206,6 +206,26 @@ describe("tsazor vite plugin", () => {
     expect(failure?.message).toMatch(/^\[tsazor\] compile errors\n {2}Pages\/Broken\.tsazor\(1,4\) TZS003 /);
   });
 
+  it("serves esbuild's decorator helpers once: a component imports them from virtual:tsazor-decorators", async () => {
+    const plugin = await createPlugin();
+    expect(plugin.resolveId?.call({} as never, "virtual:tsazor-decorators")).toBe("\0virtual:tsazor-decorators");
+    const helpers = (await plugin.load?.call({} as never, "\0virtual:tsazor-decorators")) as string;
+    expect(helpers).toContain("var __decorateElement");
+    expect(helpers).toMatch(/\nexport \{ __[\w, ]+ \};\n$/);
+    const source = "<p>@title</p>\n@code {\n    @Parameter() title = \"\";\n}\n";
+    const result = (await plugin.transform?.call({} as never, source, path.join(root, "Pages", "Titled.tsazor"))) as { code: string };
+    expect(result.code).toMatch(/^import \{ __[\w, ]+ \} from "virtual:tsazor-decorators";/);
+    expect(result.code).not.toContain("var __decorateElement");
+
+    // A built library's own helper module re-exports the app's; a copy another esbuild wrote differently stays.
+    const library = path.join(root, "node_modules", "lib", "dist", "_decorators.js");
+    const shared = (await plugin.transform?.call({} as never, helpers, library)) as { code: string };
+    expect(shared.code).toMatch(/^import \{ __[\w, ]+ \} from "virtual:tsazor-decorators";\s*export \{ __[\w, ]+ \};\n$/);
+    const other = helpers.replace("var __decorateElement = ", "var __decorateElement = /* another esbuild */ ");
+    const kept = (await plugin.transform?.call({} as never, other, library)) as { code: string };
+    expect(kept.code).toContain("var __decorateElement = /* another esbuild */");
+  });
+
   it("resolves the virtual routes module id", async () => {
     const plugin = await createPlugin();
     expect(plugin.resolveId?.call({} as never, "virtual:tsazor-routes")).toBe("\0virtual:tsazor-routes");

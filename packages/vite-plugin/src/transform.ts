@@ -1,4 +1,4 @@
-import { compile, type CompileOptions, type CompileResult, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
+import { compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule, type CompileOptions, type SharedHelpers, type CompileResult, type DiagnosticBag, type TszDiagnostic } from "@tsazor/compiler";
 import { transformSync } from "esbuild";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -19,6 +19,27 @@ export interface TransformTsazorOptions {
   renderHints?: boolean;
   /** Every invisible compiler optimization (default true); `false` turns `staticMarkup` and `renderHints` off. */
   optimize?: boolean;
+  /**
+   * Import esbuild's decorator helpers from this module (the plugin's `virtual:tsazor-decorators`) instead of declaring
+   * them in the component; without it each component carries its own copy (harnesses outside Vite).
+   */
+  sharedHelpers?: string;
+}
+
+/** How esbuild transforms a compiled component: standard (TC39) decorators lowered, [[Define]] class fields. */
+const ESBUILD_OPTIONS = {
+  loader: "ts",
+  // Standard (TC39) decorators and [[Define]] class fields (TS's ES2022
+  // default); no engine runs decorators natively yet, so esbuild lowers them.
+  supported: { decorators: false },
+  tsconfigRaw: { compilerOptions: { target: "es2022" } },
+} as const;
+
+let decoratorHelpers: SharedHelpers | undefined;
+
+/** esbuild's decorator helpers as one module, from a probe transformed as the components are (computed once). */
+export function sharedDecoratorHelpers(): SharedHelpers {
+  return (decoratorHelpers ??= sharedHelperModule(transformSync(DECORATOR_HELPER_PROBE, ESBUILD_OPTIONS).code));
 }
 
 /** What `transformTsazor` returns: the JS module, its sourcemap, the diagnostics and the HMR metadata. */
@@ -100,15 +121,7 @@ export async function transformTsazor(
   );
   let transpiled: ReturnType<typeof transformSync>;
   try {
-    transpiled = transformSync(compiled.code, {
-      loader: "ts",
-      sourcemap: sourceMap,
-      sourcefile: `${filePath}.ts`,
-      // Standard (TC39) decorators and [[Define]] class fields (TS's ES2022
-      // default); no engine runs decorators natively yet, so esbuild lowers them.
-      supported: { decorators: false },
-      tsconfigRaw: { compilerOptions: { target: "es2022" } },
-    });
+    transpiled = transformSync(compiled.code, { ...ESBUILD_OPTIONS, sourcemap: sourceMap, sourcefile: `${filePath}.ts` });
   } catch (error) {
     // Generated code from erroneous source may not parse (a TZS024 syntax
     // error): the located compiler diagnostics explain it, not esbuild.
@@ -120,5 +133,6 @@ export async function transformTsazor(
     ? chainSourceMaps(compiled.map!, transpiled.map!, filePath, `${path.basename(filePath)} (tsazor)`)
     : null;
   const hmr = options.hmr !== false ? hmrAppendix(context.className) : "";
-  return { code: transpiled.code + hmr, map, diagnostics: compiled.diagnostics, importsDiagnostics, componentFiles: [...componentFiles], metadata: compiled.metadata };
+  const output = options.sharedHelpers === undefined ? transpiled.code : shareHelpers(transpiled.code, sharedDecoratorHelpers(), options.sharedHelpers);
+  return { code: output + hmr, map, diagnostics: compiled.diagnostics, importsDiagnostics, componentFiles: [...componentFiles], metadata: compiled.metadata };
 }
