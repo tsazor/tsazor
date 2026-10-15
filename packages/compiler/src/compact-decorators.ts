@@ -32,11 +32,20 @@ const REGISTERING_DECORATORS: ReadonlySet<string> = new Set([
 const RUNTIME = "@tsazor/runtime";
 const HELPER = "__tsazor_decorateFields";
 
+/** Where the runtime is, for a module that isn't an app's or a library's (the runtime's own sources). */
+export interface CompactFieldDecoratorsOptions {
+  /** Whether an import specifier is the runtime (default: `@tsazor/runtime`). */
+  readonly isRuntime?: (specifier: string) => boolean;
+  /** Where `decorateFields` is imported from (default: `@tsazor/runtime`). */
+  readonly helperSpecifier?: string;
+}
+
 /** The module with its compactable classes' field decorators applied by `decorateFields` (unchanged if none). */
-export function compactFieldDecorators(code: string, fileName = "module.ts"): string {
-  if (!code.includes(RUNTIME) || !/@[A-Za-z_$][\w$]*\s*\(/.test(code)) return code;
+export function compactFieldDecorators(code: string, fileName = "module.ts", options: CompactFieldDecoratorsOptions = {}): string {
+  const isRuntime = options.isRuntime ?? ((specifier: string) => specifier === RUNTIME);
+  if ((options.isRuntime === undefined && !code.includes(RUNTIME)) || !/@[A-Za-z_$][\w$]*\s*\(/.test(code)) return code;
   const source = ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  const registering = registeringImports(source);
+  const registering = registeringImports(source, isRuntime);
   if (registering.size === 0) return code;
 
   const blanks: { start: number; end: number }[] = [];
@@ -59,14 +68,14 @@ export function compactFieldDecorators(code: string, fileName = "module.ts"): st
     last = edit.end;
   }
   out += code.slice(last);
-  return `${out}${out.endsWith("\n") ? "" : "\n"}import { decorateFields as ${HELPER} } from "${RUNTIME}";\n`;
+  return `${out}${out.endsWith("\n") ? "" : "\n"}import { decorateFields as ${HELPER} } from "${options.helperSpecifier ?? RUNTIME}";\n`;
 }
 
 /** The local names of the registering decorators the module imports from the runtime. */
-function registeringImports(source: ts.SourceFile): Set<string> {
+function registeringImports(source: ts.SourceFile, isRuntime: (specifier: string) => boolean): Set<string> {
   const locals = new Set<string>();
   for (const statement of source.statements) {
-    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) || statement.moduleSpecifier.text !== RUNTIME) continue;
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) || !isRuntime(statement.moduleSpecifier.text)) continue;
     const clause = statement.importClause;
     if (clause === undefined || clause.isTypeOnly || clause.namedBindings === undefined || !ts.isNamedImports(clause.namedBindings)) continue;
     for (const element of clause.namedBindings.elements) {

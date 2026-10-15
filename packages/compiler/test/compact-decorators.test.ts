@@ -61,6 +61,17 @@ describe("compactFieldDecorators", () => {
     expect(compact).not.toContain("__tsazor_decorateFields(B");
   });
 
+  it("compacts the runtime's own sources too: their decorators imported relatively, decorateFields from its module", () => {
+    const code = `import { Parameter } from "../components/parameter-metadata.js";\nexport class NavLink { @Parameter() href = ""; }\n`;
+    expect(compactFieldDecorators(code)).toBe(code);
+    const compact = compactFieldDecorators(code, "nav-link.ts", {
+      isRuntime: (specifier) => specifier === "../components/parameter-metadata.js",
+      helperSpecifier: "../components/parameter-metadata.js",
+    });
+    expect(compact).toContain("} __tsazor_decorateFields(NavLink, { href: [Parameter()] });");
+    expect(compact).toContain('import { decorateFields as __tsazor_decorateFields } from "../components/parameter-metadata.js";');
+  });
+
   it("leaves a module with no class to compact as it is", () => {
     const code = `import { inject } from "@tsazor/runtime";\nexport class Service { http = inject(Http); }\n`;
     expect(compactFieldDecorators(code)).toBe(code);

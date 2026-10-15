@@ -227,6 +227,14 @@ describe("tsazor vite plugin", () => {
     expect(kept.code).toContain("var __decorateElement = /* another esbuild */");
   });
 
+  it("builds for ES2022 unless the app names its target, and has esbuild lower the decorators", async () => {
+    const plugin = await createPlugin();
+    const config = plugin.config as unknown as (user: Record<string, unknown>) => Record<string, unknown> | undefined;
+    expect(config({})).toEqual({ build: { target: "es2022" }, esbuild: { supported: { decorators: false } } });
+    expect(config({ build: { target: "safari16" } })).toEqual({ esbuild: { supported: { decorators: false } } });
+    expect(config({ esbuild: false })).toEqual({ build: { target: "es2022" } });
+  });
+
   it("resolves the virtual routes module id", async () => {
     const plugin = await createPlugin();
     expect(plugin.resolveId?.call({} as never, "virtual:tsazor-routes")).toBe("\0virtual:tsazor-routes");

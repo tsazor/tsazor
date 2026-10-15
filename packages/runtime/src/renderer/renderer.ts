@@ -485,7 +485,8 @@ export class Renderer {
       if (!supplier.isFixed && !subscriptions.includes(current)) subscriptions.push(current);
       if (match === "yes") return supplier;
     }
-    if (plainObject) warnPlainObjectCascade(state.component, meta);
+    // `DEV &&` again: a production build folds it away, the warning's text with it.
+    if (DEV && plainObject) warnPlainObjectCascade(state.component, meta);
     return null;
   }
 

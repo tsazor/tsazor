@@ -270,7 +270,13 @@ export interface CodemodResult {
 export declare function codemodSource(source: string, fileName?: string): CodemodResult;
 
 // compactFieldDecorators
-export declare function compactFieldDecorators(code: string, fileName?: string): string;
+export declare function compactFieldDecorators(code: string, fileName?: string, options?: CompactFieldDecoratorsOptions): string;
+
+// CompactFieldDecoratorsOptions
+export interface CompactFieldDecoratorsOptions {
+    readonly isRuntime?: (specifier: string) => boolean;
+    readonly helperSpecifier?: string;
+}
 
 // compile
 export declare function compile(source: string, options: CompileOptions): CompileResult;

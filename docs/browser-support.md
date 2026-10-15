@@ -15,7 +15,10 @@ Older browsers are not supported. Internet Explorer never was.
 
 - **Build target ES2022.** The Vite plugin compiles `.tsazor` and `.ts` to ES2022 (class fields,
   private methods, top-level `await`, static blocks); decorators are lowered by esbuild, so no
-  browser needs native decorator support. ES2022 is what browsers from 2022/2023 on run.
+  browser needs native decorator support. ES2022 is what browsers from 2022/2023 on run. The
+  plugin also sets Vite's `build.target` to `es2022` unless the app names one: Vite's own default
+  (Safari 16.0) lacks static blocks, and esbuild then lowers every class that has one together
+  with its private members — lookups in a `WeakMap` instead of fields, slower and larger.
 - **Web standards only.** The runtime uses standard DOM APIs; nothing browser-specific, no
   user-agent checks. Features with their own requirements:
   - transitions and animations (`@transition`, `@animate`): the Web Animations API;

@@ -899,6 +899,9 @@ importers:
 
   packages/runtime:
     devDependencies:
+      '@tsazor/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@tsazor/workspace':
         specifier: workspace:*
         version: link:../workspace

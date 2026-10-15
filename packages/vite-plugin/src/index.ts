@@ -68,12 +68,16 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
     enforce: "pre",
 
     config(userConfig) {
+      // Tsazor's build target, ES2022 (docs/browser-support.md), unless the app names one: Vite's default (Safari 16)
+      // lacks static blocks, and esbuild then lowers each class that has one with all its private members — WeakMap
+      // lookups instead of fields, in the runtime's components too.
+      const build = userConfig.build?.target === undefined ? { build: { target: "es2022" } } : {};
       // The app's own .ts files (code-behind, hand-written components) use
       // the runtime's standard decorators too. Vite's dev transform targets
       // esnext, which leaves decorators as written — no engine runs them
       // natively yet, so have esbuild lower them (dev and build).
-      if (userConfig.esbuild === false) return;
-      return { esbuild: { supported: { decorators: false } } };
+      if (userConfig.esbuild === false) return build;
+      return { ...build, esbuild: { supported: { decorators: false } } };
     },
 
     configResolved(config) {

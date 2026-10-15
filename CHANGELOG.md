@@ -179,6 +179,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   the plugin points a library's copy at the app's. A helper is shared only if its text is exactly the same, so another
   esbuild version's helpers stay where they are. All JS, gzip: the fullstackhero port −11% (318 → 283 KB), fluentcms
   −10%, the gallery −6%. Measured and compared against React in `docs/bundle-size.md`.
+- **Smaller apps — the runtime's own components carry no decorator lowering** (`@tsazor/runtime`): tsc lowered the
+  `@Parameter()` fields of `Router`, `NavLink`, `RouteView`, the layouts, `EditForm`, the inputs, `AuthorizeView` and
+  the others with a copy of its helpers per module; the build re-emits those modules with `decorateFields`, as an
+  app's components are emitted (about 0.7 KB gzip less per component an app uses).
+- **Behavior — `@tsazor/vite-plugin`: an app builds for ES2022** (`build.target: "es2022"`, the target
+  `docs/browser-support.md` names) unless it sets `build.target` itself. Vite's own default (Safari 16.0) lacks
+  static blocks, and esbuild lowered every class with one, private members included, to `WeakMap` lookups.
+- **Fixed — `@tsazor/runtime`: a development-only warning** (a by-type cascade that passed a plain object) was in
+  production bundles; a production build drops it now.
 - **Smaller apps — Tsazor's field decorators are applied after the class** (`@tsazor/runtime`, `@tsazor/vite-plugin`,
   `@tsazor/cli`): `@Parameter()`, `@CascadingParameter()`, `@SupplyParameterFromQuery()` and the validation rules
   only record the field, so the build applies them right after the class, in one `decorateFields(Class, { … })`

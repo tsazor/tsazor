@@ -55,10 +55,11 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b && node scripts/build-manifest.mjs",
+    "build": "tsc -b && node scripts/compact-components.mjs && node scripts/build-manifest.mjs",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@tsazor/compiler": "workspace:*",
     "@tsazor/workspace": "workspace:*",
     "happy-dom": "^18.0.1",
     "typescript": "^5.9.2",
