@@ -7,7 +7,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildLibrary } from "../src/index";
 import { main } from "../src/main";
 
@@ -80,6 +80,21 @@ describe("buildLibrary (D9)", () => {
       "/* my-lib */\n/* base.css */\n:root { --my-lib-gap: 4px; }\n\n/* Greeting (.tsazor.css) */\n.greeting { color: teal; }\n\n",
     );
     expect(existsSync(path.join(root, "dist", "Removed.js"))).toBe(false);
+  });
+
+  it("keeps what it wrote though the clock stepped back during the build (WSL's does when it syncs)", async () => {
+    const root = await library();
+    // The build starts a minute later than the files it writes are stamped.
+    const now = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60_000);
+    try {
+      const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+      expect(result.errors).toEqual([]);
+    } finally {
+      now.mockRestore();
+    }
+    for (const file of ["_decorators.js", "Greeting.js", "Part.js", "index.js", "index.d.ts", "tsazor-components.json"]) {
+      expect(existsSync(path.join(root, "dist", file)), file).toBe(true);
+    }
   });
 
   it("is `tsazor build-lib [dir] [--stylesheet <file>]`: 0 when it built, 1 on a compile error, 2 on a wrong option", async () => {

@@ -11,7 +11,7 @@ import { compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule } fro
 import { checkProject } from "@tsazor/lsp";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
-import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 
@@ -85,8 +85,14 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   }
 
   // A running dev server keeps reading the output while it is rebuilt: files are overwritten in place, and only the
-  // ones this build didn't write are removed at the end.
-  const buildStart = Date.now();
+  // ones this build didn't write are removed at the end — known by name, not by time (a clock that stepped back
+  // mid-build, as WSL's does when it syncs, made an mtime test remove what the build had just written).
+  const written = new Set<string>();
+  const emit = async (file: string, text: string): Promise<void> => {
+    const target = path.join(outDir, file);
+    await writeFile(target, text);
+    written.add(target);
+  };
   await mkdir(outDir, { recursive: true });
 
   const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
@@ -96,7 +102,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   );
   // esbuild's decorator helpers, from a probe transformed as the components are: one module the components import.
   const helpers = sharedHelperModule(transformSync(DECORATOR_HELPER_PROBE, COMPONENT_TRANSFORM).code);
-  await writeFile(path.join(outDir, "_decorators.js"), helpers.code);
+  await emit("_decorators.js", helpers.code);
   const errors: { file: string; message: string }[] = [];
   const sidecars: string[] = [];
   const exported: string[] = [];
@@ -118,7 +124,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
         continue;
       }
       const transpiled = transformSync(compiled.code, { ...COMPONENT_TRANSFORM, sourcefile: filePath });
-      await writeFile(path.join(outDir, `${className}.js`), builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
+      await emit(`${className}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
       if (!internal.has(className)) exported.push(className);
     } catch (error) {
       errors.push({ file, message: `  ${error instanceof Error ? (error.stack ?? error.message) : String(error)}` });
@@ -134,9 +140,9 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     const source = await readFile(path.join(srcDir, name), "utf8");
     const stem = name.slice(0, -".ts".length);
     const transpiled = transformSync(source, { loader: "ts", sourcefile: path.join(srcDir, name), tsconfigRaw: { compilerOptions: { target: "es2022" } } });
-    await writeFile(path.join(outDir, `${stem}.js`), transpiled.code);
+    await emit(`${stem}.js`, transpiled.code);
     const declaration = ts.transpileDeclaration(source, { fileName: name, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } });
-    if ((declaration.diagnostics ?? []).length === 0) await writeFile(path.join(outDir, `${stem}.d.ts`), declaration.outputText);
+    if ((declaration.diagnostics ?? []).length === 0) await emit(`${stem}.d.ts`, declaration.outputText);
   }
 
   // The parameters of every component: editors and `tsazor check` read them instead of the sources (package.json
@@ -149,11 +155,11 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
       ...Object.entries(aliases).map(([alias, target]) => ({ exportName: alias, file: path.join(srcDir, `${target}.tsazor`) })),
     ],
   });
-  await writeFile(path.join(outDir, "tsazor-components.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  await emit("tsazor-components.json", `${JSON.stringify(manifest, null, 2)}\n`);
   for (const [exportName, declaration] of Object.entries(componentTypeDeclarations(manifest, { packageDir, declarationDir: outDir }))) {
-    await writeFile(path.join(outDir, `${exportName}.d.ts`), declaration);
+    await emit(`${exportName}.d.ts`, declaration);
   }
-  for (const [file, text] of Object.entries(options.declarations ?? {})) await writeFile(path.join(outDir, file), text);
+  for (const [file, text] of Object.entries(options.declarations ?? {})) await emit(file, text);
 
   // index.d.ts mirrors index.js: the type half of each re-export reads the sibling declaration.
   const index = [
@@ -161,8 +167,8 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     ...(options.exports ?? []),
     ...Object.entries(aliases).map(([alias, target]) => `export { default as ${alias} } from "./${target}.js"`),
   ].map(statement);
-  await writeFile(path.join(outDir, "index.js"), `${index.join("\n")}\n`);
-  await writeFile(path.join(outDir, "index.d.ts"), `${[...index, ...referencedTypeExports(manifest, options), ...(options.typeExports ?? []).map(statement)].join("\n")}\n`);
+  await emit("index.js", `${index.join("\n")}\n`);
+  await emit("index.d.ts", `${[...index, ...referencedTypeExports(manifest, options), ...(options.typeExports ?? []).map(statement)].join("\n")}\n`);
 
   if (options.stylesheet !== undefined) {
     const styles: string[] = [];
@@ -172,10 +178,10 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
       styles.push(`/* ${name} */\n${await readFile(path.join(stylesDir, name), "utf8")}`);
     }
     const header = options.stylesheet.header === undefined ? [] : [options.stylesheet.header];
-    await writeFile(path.join(outDir, options.stylesheet.file), `${[...header, ...styles, ...sidecars].join("\n")}\n`);
+    await emit(options.stylesheet.file, `${[...header, ...styles, ...sidecars].join("\n")}\n`);
   }
 
-  await removeStale(outDir, buildStart);
+  await removeStale(outDir, written);
   const components = [...exported, ...Object.keys(aliases)];
   log(`[${packageName}] built ${files.length} component(s) -> ${path.relative(packageDir, outDir).replace(/\\/g, "/")}/`);
   return { components, errors: [] };
@@ -219,10 +225,10 @@ function statement(line: string): string {
 }
 
 /** Removes what an earlier build wrote and this one didn't (a component renamed or deleted). */
-async function removeStale(dir: string, since: number): Promise<void> {
+async function removeStale(dir: string, written: ReadonlySet<string>): Promise<void> {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const file = path.join(dir, entry.name);
-    if (entry.isDirectory()) await removeStale(file, since);
-    else if ((await stat(file)).mtimeMs < since) await rm(file);
+    if (entry.isDirectory()) await removeStale(file, written);
+    else if (!written.has(file)) await rm(file);
   }
 }
