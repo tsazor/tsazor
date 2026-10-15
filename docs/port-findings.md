@@ -463,15 +463,17 @@ Affects LSP and `tsazor check` alike. Test: `compiler/test/typed-shadow.test.ts`
 
 ## P. Friction and deviations (documented, not fixed)
 
-### 5. `RenderFragment<T>` as a generic reference — **open**
+### 5. `RenderFragment<T>` as a generic reference — **fixed (2026-10-15)**
 
 The metadata recognizes `RenderFragment<T>` (metadata.ts: "a function type … or a generic
-`RenderFragment<T>` reference"), but the runtime type is not generic ⇒ TS2315 *Type
+`RenderFragment<T>` reference"), but the runtime type was not generic ⇒ TS2315 *Type
 'RenderFragment' is not generic.* The tutorial teaches the TS notation
-`(item: TItem) => RenderFragment` (which all runtime components use anyway). Proposal:
-`export type RenderFragment<T = void> = [T] extends [void] ? (b: RenderTreeBuilder) => void :
-(context: T) => (b: RenderTreeBuilder) => void` — a small but central type change; not
-done on the side.
+`(item: TItem) => RenderFragment` (which all runtime components use anyway). The runtime type
+is now generic — `export type RenderFragment<T = void> = [T] extends [void] ? (b:
+RenderTreeBuilder) => void : (context: T) => (b: RenderTreeBuilder) => void` — so
+`RenderFragment<T>` in `@code` type-checks (a `tsazor check` test pins it), and `RenderFragment`
+without a type argument stays the plain fragment. The runtime's own components keep the function
+spelling `(item: TItem) => RenderFragment` (equivalent, and Tsazor's internal spelling).
 
 ### 6. `RenderFragment` needs an import, `EventCallback`/`Parameter` do not
 

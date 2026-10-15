@@ -4,8 +4,11 @@ import { EventCallback } from "../components/event-callback.js";
 import type { ComponentBase } from "../components/component-base.js";
 import { MarkupString } from "../components/markup-string.js";
 
-/** A fragment of render output: writes frames into a builder. Blazor's RenderFragment. */
-export type RenderFragment = (builder: RenderTreeBuilder) => void;
+/** A fragment of render output: writes frames into a builder. Blazor's RenderFragment.
+ *  The generic form is Blazor's templated delegate `RenderFragment<T>`: a function that takes the
+ *  template context and returns the fragment — `(item: T) => @<li>…</li>`. `RenderFragment` without
+ *  a type argument stays the plain fragment. */
+export type RenderFragment<T = void> = [T] extends [void] ? (builder: RenderTreeBuilder) => void : (context: T) => (builder: RenderTreeBuilder) => void;
 
 /**
  * One entry of the flat render tree. Frames are kept as small object literals

@@ -436,6 +436,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   string. Blazor's `<input @bind="date" @bind:format="dd.MM.yyyy" />` date idiom now works, and a `<select>` bound to a
   number writes a number instead of a string; `@bind:format` on such a bind no longer warns TZS008.
 
+- `@tsazor/runtime`: **`RenderFragment<T>` is a real generic type** (P.5) — a template with a context, Blazor's
+  templated delegate. `RenderFragment<T>` in `@code` type-checks (it was TS2315 *Type 'RenderFragment' is not
+  generic*), and `RenderFragment` without a type argument stays the plain fragment. The runtime's own components keep
+  the equivalent function spelling `(item: T) => RenderFragment`.
+
 ## 1.0.0-next.1 (2026-10-12)
 
 - **Every package has one version** (lockstep, docs/design-release.md): `1.0.0-next.1` is the first prerelease, in a

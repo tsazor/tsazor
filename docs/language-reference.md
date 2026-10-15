@@ -1154,8 +1154,9 @@ it is no longer rendered as `ChildContent` or as a component:
 - **Spelling in TypeScript:** a plain fragment is `RenderFragment` (`@import type {
   RenderFragment } from "@tsazor/runtime"`, usually in `_Imports.tsazor`); Blazor's
   `RenderFragment<TItem>` is written as the function it is, `(item: TItem) => RenderFragment`,
-  and called as `@itemTemplate(item)`. (A generic `RenderFragment<T>` reference is recognized
-  by the metadata, but the runtime type is not generic — port-findings P.5.)
+  and called as `@itemTemplate(item)`. The generic `RenderFragment<T>` reference is also
+  recognized — `RenderFragment<TItem>` in `@code` type-checks — and `RenderFragment` without a
+  type argument stays the plain fragment.
 - **Narrowing reaches deferred content** (F15). A fragment body is a function that runs later,
   and TypeScript drops the narrowing of a member inside a function. `tsazor check` reads the
   markup where it is written instead, as Razor's nullable analysis does: `@if (user) {

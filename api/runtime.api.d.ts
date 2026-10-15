@@ -875,7 +875,11 @@ export declare function Range(minimum: number, maximum: number, override?: Valid
 export declare function RegularExpression(pattern: string, override?: ValidationMessageOverride): FieldRuleDecorator;
 
 // RenderFragment
-export type RenderFragment = (builder: RenderTreeBuilder) => void;
+export type RenderFragment<T = void> = [
+    T
+] extends [
+    void
+] ? (builder: RenderTreeBuilder) => void : (context: T) => (builder: RenderTreeBuilder) => void;
 
 // RenderTreeBuilder
 export declare class RenderTreeBuilder {
