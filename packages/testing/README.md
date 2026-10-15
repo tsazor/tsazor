@@ -7,6 +7,10 @@ type, and assert on what it rendered. Runs in Vitest with happy-dom.
 npm install -D @tsazor/testing vitest happy-dom
 ```
 
+Use happy-dom 20 or later: happy-dom 18 lost a `<form>`'s next sibling, so a test that updated anything after a form
+failed. happy-dom fires `hashchange` for `pushState`/`replaceState` too, which browsers don't; a hash-mode app
+ignores those for the location it is already at.
+
 ```ts
 import { expect, test } from "vitest";
 import { render } from "@tsazor/testing";

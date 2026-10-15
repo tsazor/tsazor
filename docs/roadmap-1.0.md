@@ -288,7 +288,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 
 | Item | Why before 1.0 |
 |---|---|
-| **K.11** — `@tsazor/testing`: in happy-dom 18, `nextSibling` of a `<form>` (or `<select>`) is `null`, so updating anything after a form fails in a component test (confirmed 2026-10-15) | Every `EditForm` test can hit it |
+| ~~**K.11** — `@tsazor/testing`: in happy-dom 18, `nextSibling` of a `<form>` (or `<select>`) is `null`, so updating anything after a form fails in a component test~~ **done 2026-10-15** (happy-dom 21) | Every `EditForm` test can hit it |
 | ~~**P.10** — `createTsazorApp().dispose()` doesn't dispose the service provider~~ **done 2026-10-15** | A behavior change; Blazor disposes its services |
 | ~~**Workflows** — `release.yml` and `pages.yml` run on `ubuntu-latest`, which becomes 26 on 2026-10-19~~ **done 2026-10-15** | Pin as `ci.yml` is, before the date |
 | **DataGrid column options** — QuickGrid's and Fluent UI Blazor's `ColumnOptions` (a column's filter UI) has no counterpart | Parity with the grid both references build on; library completeness |

@@ -310,14 +310,16 @@ lands behind the value. The tutorial remaps the error to attribute start…value
 has the same shift — candidate for the same fix there or a mapping entry for
 the `satisfies` type in codegen.
 
-### 11. happy-dom 18: `nextSibling` of `<select>`/`<form>` is `undefined`
+### 11. happy-dom 18: `nextSibling` of `<select>`/`<form>` is `undefined` — **done (2026-10-15)**
 
 `select.nextSibling`/`form.nextSibling` return `undefined` in happy-dom 18, although
 `childNodes` is correct. The DomRenderer walks siblings via `nextSibling` ⇒ DOM updates
 of elements *after* a select/form fail in `@tsazor/testing` ("Cannot read
 properties of null"), but not in the browser (E2E checks the select bind in Edge). Affects
 user tests with `@tsazor/testing`. Options: check a happy-dom update, or let `LogicalChildren`
-walk via `childNodes` instead of `nextSibling` (only needed for tests — not done).
+walk via `childNodes` instead of `nextSibling` (only needed for tests — not done). **Done:** happy-dom 20 fixed it;
+the repository and `npm create tsazor` use 21 (`packages/testing/test/form-siblings.test.ts`). happy-dom 19 and later
+fire `hashchange` for `pushState`/`replaceState`, which browsers don't; the hash-routing conformance tests drop those.
 
 ## L. Engine additions for the tutorial
 

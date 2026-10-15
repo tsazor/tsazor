@@ -38,6 +38,30 @@ function clickPreventedByApp(anchor: HTMLAnchorElement): boolean {
   return prevented;
 }
 
+/**
+ * happy-dom (19 and later) fires `hashchange` for a `pushState`/`replaceState` that changes the fragment; browsers
+ * don't (HTML fires it for fragment navigations only). The event comes a task later, so it would land in the next
+ * test as a navigation nobody made. This file drops one such event per such call: the tests see a browser's events.
+ */
+let pendingHistoryHashChanges = 0;
+for (const method of ["pushState", "replaceState"] as const) {
+  const original = history[method].bind(history);
+  history[method] = (state: unknown, unused: string, url?: string | URL | null): void => {
+    const before = location.hash;
+    original(state, unused, url);
+    if (location.hash !== before) pendingHistoryHashChanges++;
+  };
+}
+window.addEventListener(
+  "hashchange",
+  (event) => {
+    if (pendingHistoryHashChanges === 0) return;
+    pendingHistoryHashChanges--;
+    event.stopImmediatePropagation();
+  },
+  { capture: true },
+);
+
 /** Session history for happy-dom (its go() does not traverse same-document entries). */
 class TestHistory {
   private readonly entries: { state: unknown; url: string }[] = [{ state: history.state, url: location.href }];

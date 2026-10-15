@@ -23,7 +23,7 @@ export interface ScaffoldOptions {
 
 /** The tools of a new app, the versions this repository builds and tests with. */
 export const TOOL_VERSIONS = {
-  "happy-dom": "^18.0.1",
+  "happy-dom": "^21.0.1",
   typescript: "^5.9.2",
   vite: "^7.1.7",
   vitest: "^3.2.7",
