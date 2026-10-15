@@ -45,6 +45,10 @@ stops moving while the port goes on, judged with a sense of proportion
 
 Each phase ends with its part of `scripts/verify.mjs` (the app in a browser against the real backend).
 
+The menu links every page of the original, as the original's does. Until their phase comes, the pages of phases 3–5
+say "Not ported yet" with their phase (`Pages/Content/NotPorted.tsazor`; the owner, clicking through, took the
+"doesn't exist" page for a broken app, 2026-10-15).
+
 ## Findings
 
 | # | Area | Finding | Status |

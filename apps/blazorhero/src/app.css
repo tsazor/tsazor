@@ -225,3 +225,10 @@ h1:focus {
     flex-wrap: wrap;
     gap: var(--fui-spacing-xs);
 }
+
+/* Pages/Content/NotPorted.tsazor: the original pages this port doesn't have yet. */
+.bh-not-ported {
+    display: grid;
+    gap: 1rem;
+    max-width: 40rem;
+}

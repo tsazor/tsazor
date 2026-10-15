@@ -1,0 +1,38 @@
+@* The original's pages this port doesn't have yet (docs/port-blazorhero.md, phases 3–5). Its menu links them, as the
+   original's does, so they say so instead of "doesn't exist". *@
+@page "/dashboard"
+@page "/account"
+@page "/audit-trails"
+@page "/document-store"
+@page "/document-types"
+@page "/identity/users"
+@page "/identity/roles"
+@page "/chat"
+@inject NavigationManager navigation
+
+<div class="bh-not-ported">
+    <Typography variant="h4">@(this.current?.name ?? "This page")</Typography>
+    <Alert intent="info">
+        Not ported yet: phase @(this.current?.phase ?? "3–5") of the BlazorHero port (docs/port-blazorhero.md).
+        Ported so far: Home, and Products and Brands under Catalog.
+    </Alert>
+</div>
+
+@code {
+    /** Each route the menu links, the original's page it stands for, and the port's phase that brings it. */
+    private static readonly pages: Readonly<Record<string, { name: string; phase: number }>> = {
+        "dashboard": { name: "Dashboard", phase: 5 },
+        "account": { name: "Account", phase: 3 },
+        "audit-trails": { name: "Audit Trails", phase: 4 },
+        "document-store": { name: "Document Store", phase: 4 },
+        "document-types": { name: "Document Types", phase: 4 },
+        "identity/users": { name: "Users", phase: 3 },
+        "identity/roles": { name: "Roles", phase: 3 },
+        "chat": { name: "Chat", phase: 5 },
+    };
+
+    private get current(): { name: string; phase: number } | undefined {
+        const path = this.navigation.toBaseRelativePath(this.navigation.uri).split(/[?#]/)[0]!;
+        return NotPorted.pages[path];
+    }
+}
