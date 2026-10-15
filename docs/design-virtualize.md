@@ -1,6 +1,7 @@
 # Design: Virtualize at Blazor 11 parity
 
-Status: **decided** (owner, 2026-10-09; §7), in progress. This is the core step of
+Status: **decided** (owner, 2026-10-09; §7), **done** (2026-10-09, with Blazor's own E2E suite as a gate in
+`apps/blazor-parity`). This is the core step of
 [design-library-completeness.md](design-library-completeness.md). The behavior is specified, with source lines, in
 [blazor-virtualize-net11.md](blazor-virtualize-net11.md) (cited as *spec §n*).
 
@@ -59,17 +60,17 @@ Markup follows Razor 1:1, code stays clean TypeScript:
 |---|---|
 | `Items` | `items?: readonly TItem[]` |
 | `ItemsProvider` | `(request: { startIndex; count; signal: AbortSignal }) => Promise<{ items?: Iterable<TItem>; totalItemCount?: number }>`. Both result fields stay optional as today, a Tsazor superset: an omitted total keeps the previous one (D-V3) |
-| `ChildContent` / `ItemContent` | `(item: TItem) => RenderFragment`; `ItemContent` wins. `ItemTemplate` stays as an alias (D-V2) |
+| `ChildContent` / `ItemContent` | `(item: TItem) => RenderFragment`; `ItemContent` wins (the alias `ItemTemplate` is gone, see D-V2) |
 | `Placeholder` | `(context: { index: number; size: number }) => RenderFragment` |
 | `EmptyContent` | `RenderFragment` |
-| `ItemSize`, `OverscanCount`, `MaxItemCount`, `SpacerElement`, `InitialItemIndex` | same names; defaults 50, 15, 100, `"div"`, 0. `Overscan` stays as an alias of `OverscanCount` (D-V2) |
+| `ItemSize`, `OverscanCount`, `MaxItemCount`, `SpacerElement`, `InitialItemIndex` | same names; defaults 50, 15, 100, `"div"`, 0 (the alias `Overscan` is gone, see D-V2) |
 | `AnchorMode` | `VirtualizeAnchorMode = { None: 0, Start: 1, End: 2 } as const` (flags, `Start \| End` works); default `Start` |
 | `ItemComparer` | `(a: TItem, b: TItem) => boolean`, default `Object.is` |
 | `RefreshDataAsync()` | `refreshDataAsync(): Promise<void>` |
 | `ScrollToItemAsync(index, token)` | `scrollToItemAsync(index, signal?): Promise<void>`. It throws before the first render, and rejects only when `signal` aborts. A superseded call resolves, and so does one that a user scroll overrides |
 
-**Aliases (D-V2):** `ItemTemplate` and `Overscan` are Tsazor's earlier names. They keep working, and the docs show
-Blazor's names. Precedence: `ItemContent` › `ChildContent` › `ItemTemplate`. `Overscan` wins over `OverscanCount` when set.
+**Aliases (D-V2):** `ItemTemplate` and `Overscan` were Tsazor's earlier names and kept working as aliases until the API
+review (R4, 2026-10-14) removed them before 1.0: `ItemContent`/`ChildContent` and `OverscanCount` are the names.
 
 `Virtualize<TItem>` is a generic runtime class. The manifest lists `TItem`, and the compiler infers it from `Items` or
 `ItemsProvider` as it does for other generic components, so the item context is typed (it is `any` today).

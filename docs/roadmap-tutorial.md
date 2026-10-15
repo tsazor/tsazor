@@ -221,7 +221,8 @@ language, prices and dates) is done (2026-10-04); Next steps moved to
 `StringLocalizer` from a Program.ts's `localization` option, as
 `createTsazorApp` does.
 
-Part 3 is complete. Open for M4: the static build and the deploy target.
+Part 3 is complete. The static build and the deploy target are prepared (GitHub Pages, R4 in
+[roadmap-1.0.md](roadmap-1.0.md)); the site goes live with the public repository.
 Still open from M2: `@bind:format` on text inputs (K.7),
 handler-type checks against the event name (K.9), the TS1360 squiggle fix in the
 LSP (K.10), a `FileSystemHost` so the tutorial stops duplicating resolution,

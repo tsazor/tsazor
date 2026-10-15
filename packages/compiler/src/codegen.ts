@@ -2171,10 +2171,9 @@ class Codegen {
   /** The type of a RenderFragment<T> child content context (2.4): the
    *  parameter's `typeArgument`, resolved like a parameter type — the
    *  parameter's references bind its names, the tag's arguments substitute
-   *  its type parameters. The runtime's untyped delegate placeholder
-   *  (`unknown` — e.g. Virtualize's itemTemplate, which the runtime class
-   *  cannot make generic yet) keeps `any`: a context of `unknown` would
-   *  error every member use and tell the consumer nothing a `TItem` on the
+   *  its type parameters. A context typed `unknown` (a component that
+   *  declares no type parameter for it) keeps `any`: `unknown` would error
+   *  every member use and tell the consumer nothing a `TItem` on the
    *  component could not. */
   private shadowContextType(parameter: ComponentParameter): string | undefined {
     const typeArgument = parameter.typeArgument;

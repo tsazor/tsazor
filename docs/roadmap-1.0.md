@@ -23,7 +23,7 @@ docs, `@Bindable`/`observe`/`disposeSignal` ([design-bindable-observe.md](design
 
 M1 and M2 (Part 1) done · M3 (Part 2) done · M4 (Part 3, static deploy) in progress: Routing,
 Forms, Auth, Talking to a backend, Testing, Localization and Next steps done (all of Part 3);
-the static build and deploy target open.
+the static build and the deploy target are prepared (R4) and go live with the public repository.
 
 ## 2 — Svelte-style features ([design-svelte-features.md](design-svelte-features.md))
 
@@ -62,8 +62,8 @@ and chats ([design-virtualize.md](design-virtualize.md); the parity baseline is 
 ## 3c — Heavy work off the main thread ([design-worker.md](design-worker.md))
 
 `@tsazor/worker`, Tsazor's answer to `Task.Run`: typed calls into Web Workers, callbacks on the main
-thread, cancellation, transfer, pools, a test double. **Decided and implemented (2026-10-07,** W1–W5;
-the tutorial chapter with worker support in the preview follows).
+thread, cancellation, transfer, pools, a test double. **Decided and implemented (2026-10-07,** W1–W5,
+with the tutorial chapter and worker support in the preview).
 
 ## 4 — Stability promise and onboarding
 
@@ -155,8 +155,8 @@ architecture and security take priority.
   over. **Done (2026-10-05):** [coexistence.md](coexistence.md).
 
 **Operations**
-- **E8 — Localization and culture** (done 2026-10-02, `475cec3`; open: the tutorial lesson,
-  `Decimal` with `@bind:culture`): an `IStringLocalizer` counterpart, `CultureInfo` over `Intl`,
+- **E8 — Localization and culture** (done 2026-10-02, `475cec3`, with its tutorial lesson; `Decimal` with
+  `@bind:culture` belongs to E12, after 1.0): an `IStringLocalizer` counterpart, `CultureInfo` over `Intl`,
   `@bind:culture`, culture-aware formatting for display and input. Revisit the invariant-only policy
   (A5/B7): keep it for routing and data values, replace it for display and input.
 - **E9 — Accessibility:** audit `@tsazor/bootstrap` and `@tsazor/fluent` against WCAG 2.2 AA (EU
@@ -296,7 +296,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | **P.5** — `RenderFragment<T>` (a template with a context) as a type | Blazor code names it everywhere; cheap now |
 | **X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"` | A name; renaming it later breaks |
 | **P.8** — an unnamed `@CascadingParameter()` without `type` takes any unnamed cascade (Blazor matches by type) | At least a diagnostic that asks for `{ type: X }` |
-| **Stale docs** — roadmap-tutorial (M4), §3c (the worker chapter exists), E8 (lesson exists), design-virtualize (status, the removed aliases), design-localization ("not yet"), the BlazorHero B3 row (cut off), a stale comment in `codegen.ts` (Virtualize is generic) | Going public |
+| ~~**Stale docs** — roadmap-tutorial (M4), §3c, E8, design-virtualize, design-localization, the BlazorHero B3 row, a comment in `codegen.ts`~~ **done 2026-10-15** | Going public |
 | **E9** — the screen-reader audit, by a person: [screen-reader-audit.md](screen-reader-audit.md) | WCAG 2.2 AA |
 
 ### For the owner to decide

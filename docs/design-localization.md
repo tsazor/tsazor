@@ -396,5 +396,5 @@ Deviations and refinements found on the way:
 7. **Async loader failures warn in dev and serve the fallback chain** (a rejected import is a
    missing table, not a crash — same policy as missing keys).
 
-Not yet (from §7): the `@tsazor/testing` fake culture/localizer pair, the Part 3 tutorial
-lesson, and E12 `Decimal` composing with `@bind:culture`.
+Since done (from §7): the `@tsazor/testing` fake culture/localizer pair and the Part 3 tutorial lesson. Left for
+E12, after 1.0: `Decimal` composing with `@bind:culture`.
