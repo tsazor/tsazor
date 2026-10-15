@@ -70,7 +70,7 @@ describe("renderMarkdown", () => {
     expect(out!.getAttribute("target")).toBe("_blank");
     expect(out!.getAttribute("rel")).toBe("noopener noreferrer");
     for (const link of [inner, fragment, same]) expect(link!.hasAttribute("target")).toBe(false);
-    expect(html("[out](https://other.example/a)", { externalLinks: "same" }).querySelector("a")!.hasAttribute("target")).toBe(false);
+    expect(html("[out](https://other.example/a)", { externalLinks: "same-tab" }).querySelector("a")!.hasAttribute("target")).toBe(false);
     // A target written in the text gets the rel too.
     expect(html('<a href="/docs" target="_blank">x</a>').querySelector("a")!.getAttribute("rel")).toBe("noopener noreferrer");
   });

@@ -7,7 +7,7 @@ export default class Markdown extends ComponentBase {
     value: string;
     breaks: boolean;
     inline: boolean;
-    externalLinks: "new-tab" | "same";
+    externalLinks: "new-tab" | "same-tab";
     highlight?: (code: string, language: string) => string;
     allowTags?: string[];
     allowAttributes?: string[];
@@ -19,7 +19,7 @@ export default class Markdown extends ComponentBase {
 export interface MarkdownOptions {
     readonly breaks?: boolean;
     readonly inline?: boolean;
-    readonly externalLinks?: "new-tab" | "same";
+    readonly externalLinks?: "new-tab" | "same-tab";
     readonly highlight?: (code: string, language: string) => string;
     readonly allowTags?: readonly string[];
     readonly allowAttributes?: readonly string[];

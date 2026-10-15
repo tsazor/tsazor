@@ -179,6 +179,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   the plugin points a library's copy at the app's. A helper is shared only if its text is exactly the same, so another
   esbuild version's helpers stay where they are. All JS, gzip: the fullstackhero port −11% (318 → 283 KB), fluentcms
   −10%, the gallery −6%. Measured and compared against React in `docs/bundle-size.md`.
+- **Breaking — `@tsazor/markdown`: `externalLinks="same"` is `"same-tab"`**, the counterpart of `"new-tab"` (the API
+  review's X6).
 - **Fixed — component tests of a form: happy-dom 21** (`@tsazor/testing`'s README, `npm create tsazor`): happy-dom 18
   lost a `<form>`'s and a `<select>`'s next sibling, so a test that updated anything after a form failed. A new project
   gets happy-dom 21; an existing one updates its `happy-dom` to 20 or later.

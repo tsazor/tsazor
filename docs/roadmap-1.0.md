@@ -294,7 +294,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | **DataGrid column options** — QuickGrid's and Fluent UI Blazor's `ColumnOptions` (a column's filter UI) has no counterpart | Parity with the grid both references build on; library completeness |
 | **K.7, K.8** — `@bind` converts by the element, not the bound value: `@bind:format` on a text input (Blazor's date idiom) and a `<select>` bound to a number write strings | A common Blazor idiom; changing it later changes behavior |
 | **P.5** — `RenderFragment<T>` (a template with a context) as a type | Blazor code names it everywhere; cheap now |
-| **X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"` | A name; renaming it later breaks |
+| ~~**X6** — `@tsazor/markdown`: `externalLinks: "same"` next to `"new-tab"`~~ **done 2026-10-15** (`"same-tab"`) | A name; renaming it later breaks |
 | **P.8** — an unnamed `@CascadingParameter()` without `type` takes any unnamed cascade (Blazor matches by type) | At least a diagnostic that asks for `{ type: X }` |
 | ~~**Stale docs** — roadmap-tutorial (M4), §3c, E8, design-virtualize, design-localization, the BlazorHero B3 row, a comment in `codegen.ts`~~ **done 2026-10-15** | Going public |
 | **E9** — the screen-reader audit, by a person: [screen-reader-audit.md](screen-reader-audit.md) | WCAG 2.2 AA |

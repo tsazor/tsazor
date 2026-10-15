@@ -109,7 +109,7 @@ header and drops the CHANGELOG requirement; the READMEs say the same (workspace'
 | X3 | charts: don't export the chart math (9 functions, positional parameters, `chartSummary` with English sentences) — adding later is additive |
 | X4 | worker: unexport `WorkerConnection`; rename `WorkerOptions` (shadows lib.dom's); `WorkerProxy` maps the reserved names (`terminate`, `dispose`, `then`) to `never` |
 | X5 | testing: `RenderResult`'s fields readonly; a check that testing's own names never collide with the runtime's (its `export *` lets them shadow silently) |
-| X6 | markdown: `externalLinks: "new-tab" \| "same"` → `"same-tab"`, if at all |
+| X6 | markdown: `externalLinks: "new-tab" \| "same"` → `"same-tab"`, if at all — **done 2026-10-15** |
 
 ## Part 3 — Decisions for the owner
 

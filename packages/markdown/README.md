@@ -21,7 +21,7 @@ import "@tsazor/markdown/markdown.css";
 - **Sanitized, always.** Scripts, event handlers (`onerror`), `javascript:` links, `style` attributes and tags, and
   forms are removed. `AllowTags`/`AllowAttributes` add to the allowed set for content the app trusts more.
 - **Links.** A link to another origin opens in a new tab with `rel="noopener noreferrer"`
-  (`ExternalLinks="same"` keeps it in place); a link in the app stays in the app.
+  (`ExternalLinks="same-tab"` keeps it in the same tab); a link in the app stays in the app.
 - **GitHub Flavored Markdown:** tables, task lists (their checkboxes are named by the item's text), strikethrough,
   autolinks. `Breaks="true"` makes a single newline a line break, as chat text expects.
 - **Code.** Fenced code is shown as text with a `language-*` class. `Highlight` takes a highlighter, e.g.

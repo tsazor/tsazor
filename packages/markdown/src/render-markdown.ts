@@ -12,8 +12,8 @@ export interface MarkdownOptions {
   readonly breaks?: boolean;
   /** Only inline Markdown (emphasis, code, links): no paragraphs, lists or headings. Default false. */
   readonly inline?: boolean;
-  /** Links to another origin open in a new tab ("new-tab", the default) or in place ("same"). */
-  readonly externalLinks?: "new-tab" | "same";
+  /** Links to another origin open in a new tab ("new-tab", the default) or in the same tab ("same-tab"). */
+  readonly externalLinks?: "new-tab" | "same-tab";
   /**
    * Turns a fenced code block into HTML, e.g. with highlight.js (`(code, language) => hljs.highlight(code,
    * { language }).value`). The result is sanitized too. Without it the code is shown as text.

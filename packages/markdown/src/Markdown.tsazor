@@ -20,8 +20,8 @@
     @Parameter() breaks: boolean = false;
     /** Only inline Markdown (emphasis, code, links), rendered into a span. */
     @Parameter() inline: boolean = false;
-    /** Links to another origin open in a new tab (the default) or in place. */
-    @Parameter() externalLinks: "new-tab" | "same" = "new-tab";
+    /** Links to another origin open in a new tab (the default, "new-tab") or in the same tab ("same-tab"). */
+    @Parameter() externalLinks: "new-tab" | "same-tab" = "new-tab";
     /** Turns a fenced code block into HTML, e.g. with highlight.js; the result is sanitized too. */
     @Parameter() highlight?: (code: string, language: string) => string;
     /** Tags to allow beyond the default set, for content the app trusts more. */
