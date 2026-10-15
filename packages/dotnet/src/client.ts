@@ -103,7 +103,7 @@ export function formData(fields: Record<string, unknown>): FormData {
  * `?tag=a&tag=b`). Returns `"?a=1"` or `""` (nothing appended).
  */
 /** A single query-parameter value: the scalars, or anything that stringifies (an E12 `@tsazor/primitives` value type). */
-type QueryStringScalar = string | number | boolean | { toString(): string };
+export type QueryStringScalar = string | number | boolean | { toString(): string };
 
 export function queryString(
   params: Record<string, QueryStringScalar | readonly QueryStringScalar[] | null | undefined> | undefined,

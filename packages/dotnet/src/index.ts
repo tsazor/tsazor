@@ -15,6 +15,7 @@ export {
   type OpenApiClientOptions,
   type RequestOptions,
   type HttpMethod,
+  type QueryStringScalar,
 } from "./client.js";
 export {
   asProblemDetails,
