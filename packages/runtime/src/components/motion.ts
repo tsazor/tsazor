@@ -502,6 +502,9 @@ class Run {
       keyframes.push(toKeyframe(css(t, 1 - t)));
     }
     this.animation = element.animate(keyframes, { duration, delay: this.delay, easing: "linear", fill: "both" });
+    // A cancel rejects `finished` (AbortError); the run ends on its own timer, and nothing awaits it. Browsers mark
+    // that rejection handled; happy-dom doesn't, and a component test would report it as unhandled.
+    this.animation.finished?.catch(() => {});
   }
 
   private finish(): void {

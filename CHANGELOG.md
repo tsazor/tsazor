@@ -183,7 +183,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   review's X6).
 - **Fixed — component tests of a form: happy-dom 21** (`@tsazor/testing`'s README, `npm create tsazor`): happy-dom 18
   lost a `<form>`'s and a `<select>`'s next sibling, so a test that updated anything after a form failed. A new project
-  gets happy-dom 21; an existing one updates its `happy-dom` to 20 or later.
+  gets happy-dom 21; an existing one updates its `happy-dom` to 20 or later. A canceled transition no longer leaves an
+  unhandled rejection there (`@tsazor/runtime`: happy-dom, unlike browsers, reports a canceled animation's `finished`).
 - **Behavior — `@tsazor/runtime`: `createTsazorApp().dispose()` disposes the service provider**, as Blazor's host does:
   after the component tree, the services it created, last first. A `registerValue` constant stays with its owner;
   `app.services` throws after `dispose()`.
