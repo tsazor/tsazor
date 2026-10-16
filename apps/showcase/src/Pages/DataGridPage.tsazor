@@ -12,6 +12,7 @@
 @import GridDensityExample from "../examples/grid/grid-density.tsazor"
 @import GridAggregatesExample from "../examples/grid/grid-aggregates.tsazor"
 @import GridWidthsExample from "../examples/grid/grid-widths.tsazor"
+@import GridEditingExample from "../examples/grid/grid-editing.tsazor"
 
 <Typography Variant="h1">DataGrid</Typography>
 <Typography>
@@ -44,3 +45,6 @@
 
 <Example Title="Column width and order" Description="The header's grip moves a column (drag or arrow keys); the handle at its end resizes it."
     Id="grid/grid-widths"><GridWidthsExample /></Example>
+
+<Example Title="Inline editing" Description="Editing a row: its columns with an EditContent show the edit cells; Enter commits, Escape cancels."
+    Id="grid/grid-editing"><GridEditingExample /></Example>

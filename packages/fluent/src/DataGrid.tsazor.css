@@ -177,6 +177,11 @@ th[aria-sort] .fui-datagrid__sort-indicator {
   font-weight: 600;
 }
 
+/* The row in the grid's inline edit: it stands out from the rows around it. */
+.fui-datagrid__row--editing {
+  background: var(--fui-control-fill-subtle);
+}
+
 /* Widths: only a sized table can lay its cols out (the unsized one keeps the natural sizes). */
 .fui-datagrid--sized {
   table-layout: fixed;

@@ -1,0 +1,25 @@
+@** An editing grid: Editing="row" puts one row at a time into the edit — a column with an
+    EditContent (the row's context) shows your inputs instead of its cell; the columns without one
+    stay read-only. Enter commits, Escape cancels (a button's click commits itself, Enter on it is
+    ignored); OnEditEnded is where the app saves. The row's type flows into the EditContent too. *@
+@import { DataGrid } from "@tsazor/bootstrap"
+@import { orders, type Order } from "./orders"
+
+<DataGrid @ref="grid" Items="@orders" Editing="row" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" Title="Customer" Sortable="@true">
+        <EditContent Context="order">
+            <input class="form-control form-control-sm" value="@order.customer" @oninput="(event: Event) => order.customer = (event.target as HTMLInputElement).value" />
+        </EditContent>
+    </PropertyColumn>
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" />
+    <TemplateColumn Title="Actions" Context="order">
+        @if (this.grid?.isEditing(order) === true) {
+            <Button Size="small" Appearance="outline" OnClick="@(() => this.grid?.endEditAsync("commit"))">Save</Button>
+            <Button Size="small" Appearance="outline" OnClick="@(() => this.grid?.endEditAsync("cancel"))">Cancel</Button>
+        }
+    </TemplateColumn>
+</DataGrid>
+
+@code {
+    private grid?: DataGrid<Order>;
+}

@@ -50,6 +50,8 @@
     @Parameter() aggregateBy?: (item: TGridItem) => unknown;
     /** Formats the aggregate's value for the footer. */
     @Parameter() aggregateFormat?: (value: unknown) => string;
+    /** The cell a row in the grid's edit shows (the row's context), instead of the normal cell. */
+    @Parameter() editContent?: (item: TGridItem) => RenderFragment;
 
     private register(): void {
         const grid = this.grid;
@@ -76,6 +78,7 @@
             aggregate: this.aggregate,
             aggregateBy: this.aggregateBy,
             aggregateFormat: this.aggregateFormat,
+            editContent: this.editContent,
         });
     }
 }

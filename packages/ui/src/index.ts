@@ -80,6 +80,7 @@ export {
   type GridItemsProviderRequest,
   type GridItemsProviderResult,
   type GridSource,
+  type EditingMode,
   type PaginationChange,
   type SelectionMode,
   type SortDirection,

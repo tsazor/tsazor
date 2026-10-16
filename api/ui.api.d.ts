@@ -175,6 +175,7 @@ export declare class DataGridModel<T> {
     private provided;
     private readonly filters;
     private filterVersion;
+    private editedRowItem;
     private loadingNow;
     private abort;
     private unsubscribe;
@@ -203,6 +204,10 @@ export declare class DataGridModel<T> {
     private filtered;
     aggregateRows(scope: "all" | "page"): readonly T[];
     aggregateOf(column: GridColumn<T>, scope?: "all" | "page"): unknown;
+    get editedRow(): T | undefined;
+    isEditing(item: T): boolean;
+    editRow(item: T): void;
+    endEdit(): void;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
     provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
@@ -268,6 +273,9 @@ export interface DismissibleOptions {
 
 // DismissReason
 export type DismissReason = "escape" | "outside";
+
+// EditingMode
+export type EditingMode = "none" | "row";
 
 // FileUploader
 export type FileUploader = (file: File, progress: (loaded: number) => void, signal: AbortSignal) => Promise<unknown>;
@@ -364,6 +372,7 @@ export interface GridColumn<T> {
     aggregate?: GridAggregate<T>;
     aggregateBy?: (item: T) => unknown;
     aggregateFormat?: (value: unknown) => string;
+    editContent?: (item: T) => RenderFragment;
 }
 
 // gridFilterMatches
@@ -496,6 +505,8 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.columnOptions": string;
     readonly "dataGrid.resize": string;
     readonly "dataGrid.reorder": string;
+    readonly "dataGrid.editCommit": string;
+    readonly "dataGrid.editCancel": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
     readonly "dataGrid.filterApply": string;

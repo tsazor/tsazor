@@ -338,6 +338,57 @@ describe("DataGrid", () => {
     expect(texts(container, "tfoot tr td")).toEqual(["", "67.50", "4"]);
   });
 
+  it("edits a row: the columns' edit cells render, Enter commits, Escape cancels", async () => {
+    let ended: { item: Order; reason: string } | undefined;
+    let dataGrid: DataGrid<Order> | undefined;
+    const { container, ...renderer } = await renderTree((b) => {
+      b.openComponent(0, DataGrid as never);
+      b.addAttribute(1, "items", orders);
+      b.addAttribute(2, "editing", "row");
+      b.addAttribute(3, "ariaLabel", "Orders");
+      b.addAttribute(4, "childContent", ((inner: RenderTreeBuilder) => {
+        component(inner, 0, PropertyColumn, {
+          property: customer,
+          editContent: ((order: Order) => (cell: RenderTreeBuilder) => {
+            cell.openElement(0, "input");
+            cell.addAttribute(1, "value", order.customer);
+            cell.closeElement();
+          }) as never,
+        });
+        component(inner, 1, PropertyColumn, { property: total, title: "Total" });
+      }) as RenderFragment);
+      b.addAttribute(5, "onEditEnded", EventCallback.unbound((value: { item: Order; reason: string }) => { ended = value; }));
+      b.addComponentReferenceCapture(6, (captured) => { dataGrid = captured as DataGrid<Order>; });
+      b.closeComponent();
+    });
+    await settle(renderer);
+    expect(container.querySelectorAll("tbody input")).toHaveLength(0);
+
+    const data = dataGrid as unknown as { editRowAsync(item: Order): Promise<void>; endEditAsync(reason: string): Promise<void>; isEditing(item: Order): boolean };
+    expect(data).toBeDefined();
+    await data!.editRowAsync(orders[0]!);
+    await settle(renderer);
+    expect(container.querySelectorAll("tbody tr:first-child input")).toHaveLength(1);
+    expect(container.querySelectorAll("tbody tr input")).toHaveLength(1); // the other rows stay read-only
+    expect(data!.isEditing(orders[0]!)).toBe(true);
+    expect(container.querySelector("tbody tr:first-child")!.className).toContain("tz-grid-row-editing");
+
+    const input = container.querySelector<HTMLInputElement>("tbody tr:first-child input")!;
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle(renderer);
+    expect(ended).toEqual({ item: orders[0], reason: "cancel" });
+    expect(data!.isEditing(orders[0]!)).toBe(false);
+    expect(container.querySelectorAll("tbody input")).toHaveLength(0);
+
+    await data!.editRowAsync(orders[0]!);
+    await settle(renderer);
+    const again = container.querySelector<HTMLInputElement>("tbody tr:first-child input")!;
+    again.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await settle(renderer);
+    expect(ended).toEqual({ item: orders[0], reason: "commit" });
+    expect(container.querySelectorAll("tbody input")).toHaveLength(0);
+  });
+
   it("renders the dense table for density compact (and small, its alias)", async () => {
     const { container, ...renderer } = await renderTree(
       grid({ items: orders, density: "compact" }, (b) => component(b, 0, PropertyColumn, { property: customer })),

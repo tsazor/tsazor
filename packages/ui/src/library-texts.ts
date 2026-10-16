@@ -38,6 +38,9 @@ export const libraryTextDefaults = catalog({
   "dataGrid.columnOptions": "Column options",
   "dataGrid.resize": "Resize the column (arrow keys, Shift makes a bigger step)",
   "dataGrid.reorder": "Move the column (arrow keys, or drag it)",
+  // The grid's inline edit: the edited row's key handling belongs to the skin.
+  "dataGrid.editCommit": "Commit the edit (Enter)",
+  "dataGrid.editCancel": "Cancel the edit (Escape)",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",
   "dataGrid.filterValue": "Filter value",

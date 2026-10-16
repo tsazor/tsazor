@@ -365,6 +365,11 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     small: boolean;
     density?: "comfortable" | "compact";
     aggregateScope: AggregateScope;
+    editing: EditingMode;
+    onEditEnded?: EventCallback<{
+        item: TGridItem;
+        reason: "commit" | "cancel";
+    }>;
     responsive: boolean;
     virtualize: boolean;
     itemSize: number;
@@ -377,6 +382,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void>;
     refreshDataAsync(): Promise<void>;
     sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;
+    editRowAsync(item: TGridItem): Promise<void>;
+    endEditAsync(reason: "commit" | "cancel"): Promise<void>;
+    isEditing(item: TGridItem): boolean;
 }
 
 // DataGridModel: re-exported from @tsazor/ui
@@ -489,6 +497,8 @@ export default class DropdownItem extends ComponentBase {
     iconStart?: IconValue;
     iconEnd?: IconValue;
 }
+
+// EditingMode: re-exported from @tsazor/ui
 
 // FileInput
 export default class FileInput extends ComponentBase {
@@ -899,6 +909,7 @@ export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     filterable: boolean;
     filterKey?: string;
     aggregate?: GridAggregate<TGridItem>;
+    editContent?: (item: TGridItem) => RenderFragment;
 }
 
 // RadioGroup
@@ -1172,6 +1183,7 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
     aggregate?: GridAggregate<TGridItem>;
     aggregateBy?: (item: TGridItem) => unknown;
     aggregateFormat?: (value: unknown) => string;
+    editContent?: (item: TGridItem) => RenderFragment;
 }
 
 // TextArea

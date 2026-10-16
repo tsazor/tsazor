@@ -9,9 +9,9 @@
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
 @import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular, Drag20Regular, Filter20Regular } from "./core-icons"
-@import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
+@import { Virtualize, VirtualizeAnchorMode, EventCallback, type RenderFragment } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type AggregateScope, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
+DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
 @import { startColumnResize, startColumnReorder } from "@tsazor/ui"
@@ -101,7 +101,7 @@ type IconValue,
                                         <td class="fui-datagrid__select"><input type="radio" class="fui-datagrid__check" name="@groupName" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
                                     }
                                     @foreach (const column of this.model.orderedColumns) {
-                                        <td class="@this.cellClass(column)">@column.cell(row)</td>
+                                        <td class="@this.cellClass(column)">@this.cellContent(column, row)</td>
                                     }
                                 </tr>
                             </ItemContent>
@@ -125,14 +125,14 @@ type IconValue,
                     }
                     @for (let i = 0; i < this.rows.length; i++) {
                         const item = this.rows[i]!;
-                        <tr @key="this.keyOf(item)" class="@this.rowClass(item)">
+                        <tr @key="this.keyOf(item)" class="@this.rowClass(item)" @onkeydown="(event: KeyboardEvent) => this.editKey(item, event)">
                             @if (selectionMode === "multiple") {
                                 <td class="fui-datagrid__select"><input type="checkbox" class="fui-datagrid__check" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             } else if (selectionMode === "single") {
                                 <td class="fui-datagrid__select"><input type="radio" class="fui-datagrid__check" name="@groupName" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             }
                             @foreach (const column of this.model.orderedColumns) {
-                                <td class="@this.cellClass(column)">@column.cell(item)</td>
+                                <td class="@this.cellClass(column)">@this.cellContent(column, item)</td>
                             }
                         </tr>
                     }
@@ -220,6 +220,11 @@ type IconValue,
     @Parameter() stickyHeader: boolean = false;
     /** Further attributes for the table element (class adds to the table's classes). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The grid's inline editing: a row's columns with an EditContent render it while the row is the edited one. */
+    @Parameter() editing: EditingMode = "none";
+    /** Fired when a row's edit ends, with its Enter (commit) or Escape (cancel); the app saves there. */
+    @Parameter() onEditEnded?: EventCallback<{ item: TGridItem; reason: "commit" | "cancel" }>;
 
     private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
     private readonly groupName = uniqueId("fui-grid-select");
@@ -516,8 +521,48 @@ type IconValue,
     }
 
     private rowClass(item: TGridItem): string | null {
-        return this.selectionMode !== "none" && this.isSelected(item) ? "fui-datagrid__row--selected" : null;
+        const parts: string[] = [];
+        if (this.selectionMode !== "none" && this.isSelected(item)) parts.push("fui-datagrid__row--selected");
+        if (this.model.isEditing(item)) parts.push("fui-datagrid__row--editing");
+        return parts.length > 0 ? parts.join(" ") : null;
     }
+
+    /** A row cell's content: the column's edit cell while its row is the edited one, else its cell. */
+    private cellContent(column: GridColumn<TGridItem>, item: TGridItem): RenderFragment {
+        const editing = this.editing === "row" && this.model.isEditing(item) && column.editContent !== undefined;
+        return editing ? column.editContent!(item) : column.cell(item);
+    }
+
+    /* The grid's inline edit --------------------------------------------------- */
+
+    /** Puts a row into the grid's inline edit (the columns' edit cells render in it). */
+    async editRowAsync(item: TGridItem): Promise<void> {
+        if (this.editing !== "row") throw new Error('DataGrid: to edit a row, set editing="row".');
+        this.model.editRow(item);
+    }
+
+    /** Ends the row's edit; `onEditEnded` reports it, with the reason (the app saves on "commit"). */
+    async endEditAsync(reason: "commit" | "cancel"): Promise<void> {
+        const item = this.model.editedRow;
+        if (item === undefined) return;
+        this.model.endEdit();
+        await this.onEditEnded?.invokeAsync({ item, reason });
+    }
+
+    /** Whether `item` is the row in the grid's edit (your edit row's buttons render by it). */
+    isEditing(item: TGridItem): boolean {
+        return this.model.isEditing(item);
+    }
+
+    /** The edit's default keys: Enter commits (not on a button; its click commits itself), Escape cancels. */
+    private async editKey(item: TGridItem, event: KeyboardEvent): Promise<void> {
+        if (!this.model.isEditing(item) || (event.key !== "Enter" && event.key !== "Escape")) return;
+        if ((event.target as HTMLElement | undefined)?.tagName === "BUTTON") return;
+        event.preventDefault();
+        await this.endEditAsync(event.key === "Enter" ? "commit" : "cancel");
+    }
+
+    /** The grid's rows in the virtualized window keep their positions (for aria-rowindex and labels). */
 
     private selectLabel(index: number): string {
         const pagination = this.pagination;

@@ -279,10 +279,18 @@ export interface GridColumn<T> {
   aggregateBy?: (item: T) => unknown;
   /** Formats the aggregate's value for the footer (default: the value as text). */
   aggregateFormat?: (value: unknown) => string;
+  /**
+   * The cell of a row in the grid's inline edit (the row's columns with one render it instead of
+   * their cell; the others stay read-only).
+   */
+  editContent?: (item: T) => RenderFragment;
 }
 
 /** What a footer aggregates over: all the rows the grid holds ("all") or the current page's. */
 export type AggregateScope = "all" | "page";
+
+/** The grid's inline editing: none, or a row's edit (one row at a time; its columns with an `editContent` render it). */
+export type EditingMode = "none" | "row";
 
 /** A column's footer summary: a built-in kind over the column's values, or your own over the rows. */
 export type GridAggregate<T> = "sum" | "avg" | "count" | "min" | "max" | ((items: readonly T[]) => unknown);
@@ -358,6 +366,7 @@ export class DataGridModel<T> {
   private provided: readonly T[] = [];
   private readonly filters = new Map<object, GridFilterRule>();
   private filterVersion = 0;
+  private editedRowItem: T | undefined;
   private loadingNow = false;
   private abort: AbortController | undefined;
   private unsubscribe: (() => void) | undefined;
@@ -617,6 +626,32 @@ export class DataGridModel<T> {
     if (aggregate === undefined) return undefined;
     if (typeof aggregate === "function") return aggregate(this.aggregateRows(scope));
     return gridAggregate(aggregate, this.aggregateRows(scope).map((row) => column.aggregateBy?.(row)));
+  }
+
+  /* Inline editing ---------------------------------------------------------- */
+
+  /** The row in the grid's inline edit, if any. */
+  get editedRow(): T | undefined {
+    return this.editedRowItem;
+  }
+
+  /** Whether `item` is the row in the grid's edit. */
+  isEditing(item: T): boolean {
+    return this.editedRowItem === item;
+  }
+
+  /** Puts `item` into the row's edit; one at a time, so another row's edit ends first. */
+  editRow(item: T): void {
+    if (this.editedRowItem === item) return;
+    this.editedRowItem = item;
+    this.onChange();
+  }
+
+  /** Ends the row's edit (the app's commit or cancel already happened; the skin reports the reason). */
+  endEdit(): void {
+    if (this.editedRowItem === undefined) return;
+    this.editedRowItem = undefined;
+    this.onChange();
   }
 
   /* Virtualization --------------------------------------------------------- */

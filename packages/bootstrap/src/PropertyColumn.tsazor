@@ -43,6 +43,8 @@
      * formatted like a cell, or your own aggregate over the rows.
      */
     @Parameter() aggregate?: GridAggregate<TGridItem>;
+    /** The cell a row in the grid's edit shows (the row's context — your inputs around the row's values), instead of the property's. */
+    @Parameter() editContent?: (item: TGridItem) => RenderFragment;
 
     private register(): void {
         const grid = this.grid;
@@ -73,6 +75,7 @@
             aggregate: this.aggregate,
             aggregateBy: (item: TGridItem) => property(item),
             aggregateFormat: format !== undefined ? (value: unknown) => format(value as TProp) : undefined,
+            editContent: this.editContent,
         });
     }
 }

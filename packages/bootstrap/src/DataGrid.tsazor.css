@@ -55,6 +55,11 @@
   font-weight: 600;
 }
 
+/* The row in the grid's inline edit: it stands out from the rows around it. */
+.tz-grid-row-editing {
+  background: rgba(var(--bs-primary-rgb), 0.05);
+}
+
 /* Widths: only a sized table can lay its cols out (the unsized one keeps the natural sizes). */
 .tz-grid--sized {
   table-layout: fixed;

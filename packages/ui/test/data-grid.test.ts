@@ -306,6 +306,25 @@ describe("column order and widths", () => {
   });
 });
 
+describe("inline editing", () => {
+  it("edits one row at a time and ends it", () => {
+    const onChange = vi.fn();
+    const model = new DataGridModel<Order>(onChange);
+    expect(model.editedRow).toBeUndefined();
+    model.editRow(orders[0]!);
+    expect(model.isEditing(orders[0]!)).toBe(true);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    model.editRow(orders[1]!); // the first edit ends with the second
+    expect(model.isEditing(orders[0]!)).toBe(false);
+    expect(model.editedRow).toBe(orders[1]);
+    expect(onChange).toHaveBeenCalledTimes(2);
+    model.endEdit();
+    expect(model.editedRow).toBeUndefined();
+    model.endEdit(); // no edit: nothing changes
+    expect(onChange).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe("selection and titles", () => {
   it("single replaces, multiple toggles, select-all adds or removes the page", () => {
     const [a, b, c] = orders;
