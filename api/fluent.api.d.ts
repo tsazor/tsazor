@@ -1457,3 +1457,22 @@ export default class WizardStep extends ComponentBase {
 // WizardStepSequence: re-exported from @tsazor/ui
 
 // WizardStepStatus: re-exported from @tsazor/ui
+
+/* @tsazor/fluent/templates */
+
+// AuthLogin
+export default class AuthLogin extends ComponentBase {
+}
+
+// EmptyState
+export default class EmptyState extends ComponentBase {
+    icon?: IconValue | undefined;
+    title: string;
+    description?: string;
+    actionContent?: RenderFragment;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// SettingsPane
+export default class SettingsPane extends ComponentBase {
+}

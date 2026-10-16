@@ -1,0 +1,23 @@
+@page "/templates"
+@** The templates' page (design-extended-library.md §2.4, cluster 5): blocks the app copies in and
+    owns. The demos render the templates the packages build (dist/templates); the copies the CLI
+    hands over are the .tsazor sources of exactly these demos. *@
+@import { Typography } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import { EmptyState, AuthLogin, SettingsPane } from "@tsazor/bootstrap/templates"
+
+<Typography Variant="h1">Templates</Typography>
+<Typography>
+    Blocks the app copies in (`npx @@tsazor/bootstrap add EmptyState`) and then owns and edits:
+    not library components, the app's files. The copy carries the template's sidecar CSS and the
+    model modules it shows.
+</Typography>
+
+<Example Title="An empty state" Description="The mark, the title, one line, and the action out of it."
+    Id="templates/empty-state"><EmptyState Title="No orders yet" Description="Orders appear here when the bakery books them." /></Example>
+
+<Example Title="A login page" Description="A form with the DataAnnotations rules; the sign-in is the app's TODO."
+    Id="templates/auth-login"><AuthLogin /></Example>
+
+<Example Title="A settings pane" Description="A profile form over FormField; the save is the app's TODO."
+    Id="templates/settings-pane"><SettingsPane /></Example>

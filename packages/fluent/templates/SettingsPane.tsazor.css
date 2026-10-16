@@ -1,0 +1,12 @@
+/* SettingsPane — a copied template of the extended library (§2.4): a pane, rows to the field. */
+
+.fui-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 30rem;
+  padding: 1.5rem;
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-background-1);
+}

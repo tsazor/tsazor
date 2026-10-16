@@ -1,0 +1,4 @@
+@using @tsazor/bootstrap
+@* The templates' shared header: the skin's components resolve by tag; the copies live under the
+   app's own _Imports (which bind the skin the same way, so the copies resolve as they are). *@
+@import { Parameter, RenderFragment } from "@tsazor/runtime"

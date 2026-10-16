@@ -116,12 +116,26 @@ export class MetadataCache {
     return this.packageManifest(specifier, path.dirname(fromFile))?.manifest.components[exportName];
   }
 
-  /** The manifest of a package (the embedded runtime manifest for `@tsazor/runtime`). */
+  /** The manifest of a package (the embedded runtime manifest for `@tsazor/runtime`); a
+   *  subpath's own manifest — `@tsazor/bootstrap/templates` — comes from its own dist dir. */
   packageManifest(name: string, fromDir: string): { manifest: ComponentManifest; file?: string } | undefined {
     if (name === RUNTIME_MODULE) return { manifest: RUNTIME_MANIFEST };
-    const packageDir = findPackageDir(name, fromDir);
+    const parts = name.split("/");
+    const nameLength = name.startsWith("@") ? 2 : 1;
+    const packageSpec = parts.slice(0, nameLength).join("/");
+    const subpath = nameLength < parts.length ? parts.slice(nameLength).join("/") : undefined;
+    const packageDir = findPackageDir(packageSpec, fromDir);
     if (!packageDir) return undefined;
-    const file = manifestFileOf(packageDir);
+    // A subpath carries its own manifest next to its built index: the specifier's exports map
+    // says where (`./templates` → `./dist/templates`), and its manifest sits at its root — the
+    // sub-dir's own `package.json` has no pointer (manifestFileOf only reads the root's).
+    let file = subpath === undefined ? manifestFileOf(packageDir) : undefined;
+    if (file === undefined && subpath !== undefined) {
+      const declared = this.resolveDeclarationFile(name, path.join(fromDir, "_"));
+      const dir = declared === undefined ? path.join(packageDir, subpath) : path.dirname(declared);
+      const own = path.join(dir, "tsazor-components.json");
+      file = isFile(own) ? own : manifestFileOf(dir);
+    }
     if (!file) return undefined;
     this.manifestLastUse.set(file, ++this.manifestUses);
     const stamp = stampOf(file);

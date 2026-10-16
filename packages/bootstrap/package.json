@@ -27,7 +27,11 @@
       "default": "./dist/index.js"
     },
     "./tsazor-bootstrap.css": "./dist/tsazor-bootstrap.css",
-    "./tsazor-components.json": "./dist/tsazor-components.json"
+    "./tsazor-components.json": "./dist/tsazor-components.json",
+    "./templates": {
+      "types": "./dist/templates/index.d.ts",
+      "default": "./dist/templates/index.js"
+    }
   },
   "sideEffects": [
     "*.css"
@@ -48,7 +52,9 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "bin",
+    "templates"
   ],
   "publishConfig": {
     "access": "public"
@@ -76,5 +82,8 @@
     "esbuild": "^0.28.2",
     "happy-dom": "^21.0.1",
     "vitest": "^3.2.7"
+  },
+  "bin": {
+    "tsazor-bootstrap": "./bin/bootstrap.mjs"
   }
 }

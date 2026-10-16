@@ -30,7 +30,11 @@
       "default": "./dist/index.js"
     },
     "./fluent.css": "./dist/fluent.css",
-    "./tsazor-components.json": "./dist/tsazor-components.json"
+    "./tsazor-components.json": "./dist/tsazor-components.json",
+    "./templates": {
+      "types": "./dist/templates/index.d.ts",
+      "default": "./dist/templates/index.js"
+    }
   },
   "sideEffects": [
     "*.css"
@@ -51,7 +55,8 @@
   "files": [
     "dist",
     "src",
-    "bin"
+    "bin",
+    "templates"
   ],
   "publishConfig": {
     "access": "public"

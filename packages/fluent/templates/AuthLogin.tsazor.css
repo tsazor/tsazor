@@ -1,0 +1,17 @@
+/* AuthLogin — a copied template of the extended library (§2.4): a centered card, restrained. */
+
+.fui-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 22rem;
+  margin: 4rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--fui-stroke-1);
+  border-radius: var(--fui-radius-md);
+  background: var(--fui-background-1);
+}
+
+.fui-auth .btn[type="submit"] {
+  width: 100%;
+}

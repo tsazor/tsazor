@@ -1,0 +1,41 @@
+@page "/login"
+@** The login page, copied in (`npx @tsazor/bootstrap add AuthLogin`) and then the app's: a card
+    over the skins' Form with the DataAnnotations rules on the model; the sign-in is yours —
+    `onValidSubmit` is the TODO. The model's class is a module of its own (the copy carries it). *@
+@import { EditContext, DataAnnotationsValidator, Required } from "@tsazor/runtime"
+@import { LoginCredentials } from "./login-credentials"
+
+<Form Model="@credentials" OnValidSubmit="@this.onValidSubmit" OnInvalidSubmit="@this.onInvalidSubmit">
+    <DataAnnotationsValidator />
+    <section class="tz-auth">
+        <Typography Variant="h2">Sign in</Typography>
+        <FormField Label="E-mail" Id="auth-email" For="email">
+            <TextInput @bind-Value="@credentials.email" Type="email" Autocomplete="username" Placeholder="person@organization.example" Required="@true" />
+        </FormField>
+        <FormField Label="Password" Id="auth-password" For="password">
+            <TextInput @bind-Value="@credentials.password" Type="password" Autocomplete="current-password" Required="@true" />
+        </FormField>
+        <Button Intent="primary" Type="submit" Disabled="@busy">Sign in</Button>
+        <Typography Variant="caption">No account yet? <a href="/register">Register</a>.</Typography>
+    </section>
+</Form>
+
+@code {
+    private credentials = new LoginCredentials();
+    private busy = false;
+
+    /** The valid submit is yours (TODO): call your auth API, route on, refresh the tokens. */
+    private async onValidSubmit(context: EditContext): Promise<void> {
+        void context;
+        this.busy = true;
+        this.stateHasChanged();
+        // TODO: your auth API — e.g. await signIn(this.credentials.email ?? "", this.credentials.password ?? "");
+        this.busy = false;
+        this.stateHasChanged();
+    }
+
+    /** The invalid submit: leave it to the fields' messages (the submit attempt is recorded). */
+    private onInvalidSubmit(context: EditContext): void {
+        void context;
+    }
+}

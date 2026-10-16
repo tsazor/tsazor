@@ -44,3 +44,16 @@ const result = await buildLibrary({
   stylesheet: { file: "tsazor-bootstrap.css", header: "/* @tsazor/bootstrap: the components Bootstrap has no classes for, in its variables. */\n" },
 });
 if (result.errors.length > 0) process.exit(1);
+
+// The templates (design-extended-library.md §2.4): the copied blocks as sources in templates/.
+// Their compiled modules land in dist/templates so an app (the showcase!) can render them live;
+// the copies (the CLI's add) carry the .tsazor itself. Same checks, a build of their own.
+const templates = await buildLibrary({
+  packageDir: process.cwd(),
+  srcDir: "templates",
+  outDir: "dist/templates",
+  internal: [],
+  aliases: {},
+  exports: [],
+});
+if (templates.errors.length > 0) process.exit(1);

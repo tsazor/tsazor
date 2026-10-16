@@ -55,3 +55,31 @@ describe("npx @tsazor/fluent add", () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe("npx @tsazor/fluent add <Template>", () => {
+  /** The templates' dir: a template's closure over there (its own modules, not the components']). */
+  const templates = path.resolve(import.meta.dirname, "..", "templates");
+  const templateNames = readdirSync(templates).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").map((name) => name.replace(/.tsazor$/, ""));
+
+  it("lists them beside the components", () => {
+    const listing = execFileSync(process.execPath, [cli, "list"], { encoding: "utf8" });
+    expect(listing).toContain("Available templates");
+    expect(templateNames.length).toBeGreaterThan(0);
+  });
+
+  for (const name of templateNames) {
+    it(`closes ${name} with its own modules (.tsazor, sidecar css, the model .ts)`, () => {
+      const closure = collectClosure(templates, name);
+      expect(closure.map((entry) => entry.file).sort()).toEqual(expect.arrayContaining([`${name}.tsazor`]));
+      // The closure's files carry no unresolved relative import (the copy compiles on its own).
+      expect(unresolved(closure)).toEqual([]);
+    });
+  }
+
+  it("copies a template into the app's src/Pages with its modules, and says so", () => {
+    if (templateNames.length === 0) return;
+    const output = execFileSync(process.execPath, [cli, "add", templateNames[0]!, "--root", path.join(work, "add-template"), "--print"], { encoding: "utf8" });
+    expect(output).toContain("Pages");
+    expect(output).toContain("(a template: it lands in your src/Pages and is yours)");
+  });
+});

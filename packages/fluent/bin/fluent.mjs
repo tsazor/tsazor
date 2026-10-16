@@ -16,8 +16,10 @@ import { existsSync, mkdirSync, readFileSync, copyFileSync, readdirSync } from "
 import { join, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { availableComponents as componentsIn, collectClosure as closureIn } from "./closure.mjs";
+const collectTemplateClosure = (name) => closureIn(FLUENT_TEMPLATES, name);
 
 const FLUENT_SRC = fileURLToPath(new URL("../src", import.meta.url));
+const FLUENT_TEMPLATES = fileURLToPath(new URL("../templates", import.meta.url));
 const FLUENT_STYLES = fileURLToPath(new URL("../src/styles", import.meta.url));
 /** The version the copies come from: @tsazor/ui is released in lockstep with it. */
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
@@ -43,7 +45,30 @@ for (let i = 0; i < argv.length; i++) {
     }
 }
 
+/**
+ * The templates (design-extended-library.md §2.4) are the other copy-in kind:
+ * a block the app owns in src/Pages — its .tsazor, its sidecar CSS and its
+ * model modules, no more: the skin's own components stay npm (the copies
+ * resolve them via the app's @using).
+ */
+function planTemplateAdd(name) {
+    const files = [];
+    const pages = join(root, "src", "Pages");
+    for (const file of collectTemplateClosure(name)) {
+        files.push({ from: file.path, to: join(pages, file.file) });
+    }
+    const sidecar = join(FLUENT_TEMPLATES, `${name}.tsazor.css`);
+    if (existsSync(sidecar)) files.push({ from: sidecar, to: join(pages, `${name}.tsazor.css`) });
+    if (existsSync(FLUENT_STYLES)) {
+        for (const css of readdirSync(FLUENT_STYLES)) {
+            files.push({ from: join(FLUENT_STYLES, css), to: join(root, "src", "styles", css), once: true });
+        }
+    }
+    return files;
+}
+
 function planAdd(name) {
+    if (existsSync(join(FLUENT_TEMPLATES, `${name}.tsazor`))) return planTemplateAdd(name);
     const components = collectClosure(name);
     const files = [];
     for (const component of components) {
@@ -85,6 +110,13 @@ const command = argv[0];
 if (command === "list") {
     console.log("Available components:\n");
     for (const name of availableComponents().sort()) console.log(`  ${name}`);
+    if (existsSync(FLUENT_TEMPLATES)) {
+        const templates = readdirSync(FLUENT_TEMPLATES).filter((file) => file.endsWith(".tsazor") && file !== "_Imports.tsazor").map((file) => file.replace(/\.tsazor$/, "")).sort();
+        if (templates.length > 0) {
+            console.log("\nAvailable templates (copied into the app's src/Pages, then the app's):\n");
+            for (const name of templates) console.log(`  ${name}`);
+        }
+    }
     console.log("\nUsage: npx @tsazor/fluent add <Name> [--root <dir>] [--overwrite] [--print]");
     process.exit(0);
 }
@@ -97,6 +129,7 @@ if (command !== "add" || !target) {
 const files = planAdd(target);
 const skipped = [];
 const writes = [];
+const isTemplate = existsSync(join(FLUENT_TEMPLATES, `${target}.tsazor`));
 
 for (const file of files) {
     if (!overwrite && existsSync(file.to)) {
@@ -106,7 +139,7 @@ for (const file of files) {
     }
 }
 
-console.log(`\nAdding ${target} from @tsazor/fluent:`);
+console.log(`\nAdding ${target} from @tsazor/fluent${isTemplate ? " (a template: it lands in your src/Pages and is yours)" : ""}:`);
 for (const file of writes) console.log(`  ${file.to.replace(root, ".")}`);
 for (const file of skipped) console.log(`  ${file.to.replace(root, ".")}  (exists, skipped — use --overwrite)`);
 
@@ -117,7 +150,7 @@ if (!printOnly) {
     }
 }
 
-const entry = collectClosure(target)[0];
+const entry = isTemplate ? collectTemplateClosure(target)[0] : collectClosure(target)[0];
 const styleImports = (existsSync(FLUENT_STYLES) ? readdirSync(FLUENT_STYLES).filter((css) => css.endsWith(".css")).sort() : [])
     .map((css) => `       import "./src/styles/${css}";`)
     .join("\n");

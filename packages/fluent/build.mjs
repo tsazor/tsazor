@@ -47,3 +47,16 @@ const result = await buildLibrary({
   stylesheet: { file: "fluent.css" },
 });
 if (result.errors.length > 0) process.exit(1);
+
+// The templates (design-extended-library.md §2.4): the copied blocks as sources in templates/.
+// Their compiled modules land in dist/templates so an app (the showcase!) can render them live;
+// the copies (the CLI's add) carry the .tsazor itself.
+const templates = await buildLibrary({
+  packageDir: process.cwd(),
+  srcDir: "templates",
+  outDir: "dist/templates",
+  internal: [],
+  aliases: {},
+  exports: [],
+});
+if (templates.errors.length > 0) process.exit(1);
