@@ -109,3 +109,10 @@ export {
 export { startColumnResize, startColumnReorder, type ColumnResizeOptions, type ColumnReorderOptions } from "./grid-columns.js";
 export { startScheduleTimeDrag, isoDayTime, type ScheduleDragDraft, type ScheduleTimeDragOptions } from "./schedule-drag.js";
 export { ChatState, ChatStream, type ChatMessage } from "./chat.js";
+export {
+  PivotModel,
+  type PivotAggregate,
+  type PivotMatrix,
+  type PivotMeasure,
+  type PivotRow,
+} from "./pivot-data-grid.js";

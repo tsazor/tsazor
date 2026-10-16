@@ -33,9 +33,13 @@ export function inferTypeArgument(sourceFile: ts.SourceFile, checker: ts.TypeChe
   let argument: string | undefined;
   if (declared === request.typeParameter) {
     argument = text(type);
-  } else if (declared.endsWith("[]") && declared.slice(0, -2).trim() === request.typeParameter && checker.isArrayType(type)) {
-    const [item] = checker.getTypeArguments(type as ts.TypeReference);
-    if (item !== undefined) argument = text(item);
+  } else if (checker.isArrayType(type)) {
+    // `T[]` and `readonly T[]` (a component's API reads them both as the row list, X5).
+    const itemOf = declared.split("|").map((part) => part.trim().replace(/^readonly\s+/, "").replace(/\[\]$/, "").replace(/\[\]$/, "").trim());
+    if (itemOf.includes(request.typeParameter)) {
+      const [item] = checker.getTypeArguments(type as ts.TypeReference) ?? [];
+      if (item !== undefined) argument = text(item);
+    }
   } else if (isAwaitableOf(declared, request.typeParameter)) {
     argument = text(checker.getAwaitedType(checker.getNonNullableType(type)) ?? type);
   } else if (returnsTypeParameter(declared, request.typeParameter)) {

@@ -905,6 +905,21 @@ export default class Paginator extends ComponentBase {
 
 // PatternMask: re-exported from @tsazor/ui
 
+// PivotDataGrid
+export default class PivotDataGrid<TRow> extends ComponentBase {
+    data?: readonly TRow[];
+    rowField: (row: TRow) => unknown;
+    rowTitle: string;
+    columnField?: (row: TRow) => unknown;
+    columnName?: (value: unknown) => string;
+    measure: PivotMeasure<TRow>;
+    totalTitle: string;
+    ariaLabel?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// PivotMeasure: re-exported from @tsazor/ui
+
 // Placement: re-exported from @tsazor/ui
 
 // Popover
@@ -1464,6 +1479,10 @@ export default class WizardStep extends ComponentBase {
 export default class AuthLogin extends ComponentBase {
 }
 
+// AuthRegister
+export default class AuthRegister extends ComponentBase {
+}
+
 // EmptyState
 export default class EmptyState extends ComponentBase {
     icon?: IconValue | undefined;
@@ -1471,6 +1490,10 @@ export default class EmptyState extends ComponentBase {
     description?: string;
     actionContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
+}
+
+// OrdersCrud
+export default class OrdersCrud extends ComponentBase {
 }
 
 // SettingsPane

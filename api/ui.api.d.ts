@@ -830,6 +830,48 @@ export interface PatternMaskOptions {
     transform?: (char: string) => string;
 }
 
+// PivotAggregate
+export type PivotAggregate = "sum" | "avg" | "count" | "min" | "max";
+
+// PivotMatrix
+export interface PivotMatrix<T = unknown> {
+    columns: readonly unknown[];
+    rows: readonly PivotRow[];
+    totals: {
+        cells: (number | undefined)[];
+        grand: number | undefined;
+    };
+}
+
+// PivotMeasure
+export interface PivotMeasure<T> {
+    value: (row: T) => number | null | undefined;
+    aggregate?: PivotAggregate | ((values: readonly number[]) => number | undefined);
+    format?: (value: number | null | undefined) => string;
+}
+
+// PivotModel
+export declare class PivotModel<T> {
+    private readonly rows;
+    private readonly columns;
+    private readonly measure;
+    private readonly aggregate;
+    constructor(options: {
+        rows: (row: T) => unknown;
+        columns?: (row: T) => unknown;
+        measure: PivotMeasure<T>;
+    });
+    format(value: number | null | undefined): string;
+    compute(data: readonly T[]): PivotMatrix<T>;
+}
+
+// PivotRow
+export interface PivotRow {
+    value: unknown;
+    cells: (number | undefined)[];
+    total: number | undefined;
+}
+
 // Placement
 export type Placement = "top" | "top-start" | "top-end" | "bottom" | "bottom-start" | "bottom-end" | "left" | "left-start" | "left-end" | "right" | "right-start" | "right-end";
 

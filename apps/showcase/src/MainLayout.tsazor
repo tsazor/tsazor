@@ -24,6 +24,7 @@
                 { href: "/richtext", label: "RichText" },
                 { href: "/schedule", label: "Scheduler" },
                 { href: "/chat", label: "Chat" },
+                { href: "/pivot", label: "Pivot" },
             ],
         },
     ];
