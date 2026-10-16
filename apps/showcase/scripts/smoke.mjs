@@ -67,8 +67,8 @@ try {
 
   for (const route of ["/richtext", "/schedule"]) {
     await page.goto(`${url}${route}`);
-    await page.waitForSelector(".sz-example-demo");
-    const panels = await page.locator(".sz-example-demo .sz-code pre code").count();
+    await page.waitForSelector(".sz-code pre code");
+    const panels = await page.locator(".sz-code pre code").count();
     if (panels < 1) throw new Error(`the ${route} page shows ${panels} code panels`);
   }
 
