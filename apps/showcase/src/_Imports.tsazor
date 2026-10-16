@@ -1,0 +1,2 @@
+@using @tsazor/bootstrap
+@import { ComponentBase, LayoutComponentBase, Parameter, RenderFragment } from "@tsazor/runtime"

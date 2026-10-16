@@ -1,0 +1,14 @@
+@** A filterable grid: Filterable on a column gives it the grid's built-in filter — the filter
+    button in its header opens a panel with the operator, the value, Apply and Clear. Text
+    matches case-insensitively; with a value that parses as a number, the comparison operators
+    (greater than, less than, …) compare numerically. With an ItemsProvider, the request's
+    getFilterByProperties() carries the filters for your server query. *@
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" Sortable="@true" Filterable="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Filterable="@true" />
+</DataGrid>
+
+@code {
+}

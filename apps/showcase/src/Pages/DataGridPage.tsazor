@@ -1,0 +1,38 @@
+@page "/datagrid"
+@** The DataGrid's examples (design-extended-library.md §2.1): the ones every grid needs first,
+    then what the extended layer adds — the built-in filter and the density (2026-10-16), later
+    the aggregates, resize, editing, grouping and export as their examples arrive. *@
+@import { Typography, Paginator } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import GridBasicExample from "../examples/grid/grid-basic.tsazor"
+@import GridSortingExample from "../examples/grid/grid-sorting.tsazor"
+@import GridPaginationExample from "../examples/grid/grid-pagination.tsazor"
+@import GridSelectionExample from "../examples/grid/grid-selection.tsazor"
+@import GridFilterExample from "../examples/grid/grid-filter.tsazor"
+@import GridDensityExample from "../examples/grid/grid-density.tsazor"
+
+<Typography Variant="h1">DataGrid</Typography>
+<Typography>
+    A grid shaped like Blazor's QuickGrid: the columns are PropertyColumn and TemplateColumn
+    children, the rows come from Items (sorted and paged here) or an ItemsProvider (sorted and
+    paged by your code or a server, with an AbortSignal). The extended layer's features — the
+    built-in column filter among them — are QuickGrid-shaped extensions.
+</Typography>
+
+<Example Title="A grid over rows" Description="The columns from PropertyColumn and TemplateColumn, the data as Items."
+    Id="grid/grid-basic"><GridBasicExample /></Example>
+
+<Example Title="Sorting" Description="Sortable columns sort on a click on their header; the default sort applies without one."
+    Id="grid/grid-sorting"><GridSortingExample /></Example>
+
+<Example Title="Pagination" Description="A shared PaginationState drives the grid and the Paginator."
+    Id="grid/grid-pagination"><GridPaginationExample /></Example>
+
+<Example Title="Selection" Description="Checkboxes bound to selectedItems; radio buttons for one row."
+    Id="grid/grid-selection"><GridSelectionExample /></Example>
+
+<Example Title="The built-in filter" Description="A filterable column gets a filter in its options panel: operator, value, apply and clear."
+    Id="grid/grid-filter"><GridFilterExample /></Example>
+
+<Example Title="Density" Description="density compact is the dense table; comfortable is the normal one."
+    Id="grid/grid-density"><GridDensityExample /></Example>

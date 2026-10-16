@@ -1,0 +1,17 @@
+@page "/"
+@** The showcase's home: what this site is, and the components' index. *@
+@import { Typography } from "@tsazor/bootstrap"
+
+<Typography Variant="h1">Tsazor components</Typography>
+<Typography>
+    Live demos of the Tsazor component library in the Bootstrap skin, each beside the .tsazor source it runs —
+    the code a copy button puts on your clipboard (the Radzen and Blazorise demo sites do this the same way).
+    The same set of demos runs against the Fluent skin in the skins app.
+</Typography>
+
+<section class="sz-cards">
+    <a class="sz-card" href="/datagrid">
+        <strong>DataGrid</strong>
+        <span>Columns, sorting, paging, an ItemsProvider, selection, the built-in filter, density.</span>
+    </a>
+</section>

@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+@** The showcase's layout, in the Radzen demo site's shape: a sidebar with one
+    entry per component, the pages in a column to its right. *@
+@import { SidebarNav } from "@tsazor/bootstrap"
+
+<div class="sz-shell">
+    <aside class="sz-sidebar">
+        <a class="sz-brand" href="/">Tsazor <span>components</span></a>
+        <div class="sz-nav">
+            <SidebarNav Sections="@this.sections" AriaLabel="Components" />
+        </div>
+    </aside>
+    <main class="sz-main">
+        @Body
+    </main>
+</div>
+
+@code {
+    private readonly sections = [
+        {
+            heading: "Components",
+            links: [{ href: "/datagrid", label: "DataGrid" }],
+        },
+    ];
+}

@@ -1,0 +1,16 @@
+@** A grid over static rows: the columns come from PropertyColumn (one property per column) and
+    TemplateColumn (your own cell), the rows from Items. The title defaults to the property's
+    name, taken from the lambda; Format shapes the text of a cell. *@
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" AriaLabel="Orders" Striped="@true" Hover="@true">
+    <PropertyColumn Property="(o) => o.id" Title="#" Sortable="@true" />
+    <PropertyColumn Property="(o) => o.customer" Title="Customer" Sortable="@true" IsDefaultSortColumn="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Sortable="@true" />
+    <TemplateColumn Title="Status" Context="order">
+        <Badge Intent="@(order.paid ? "success" : "warning")">@(order.paid ? "paid" : "open")</Badge>
+    </TemplateColumn>
+</DataGrid>
+
+@code {
+}

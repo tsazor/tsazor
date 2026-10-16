@@ -168,8 +168,11 @@ The dependencies set it; nothing of this layer blocks 1.0 (§7):
 
 Per component as in the library waves: the headless behavior with keyboard tests in `@tsazor/ui`,
 a gallery page per skin, axe in CI, component docs (`@** … *@` in the reference), an API snapshot
-test. Templates: the copied files must pass `tsazor check` and the copied page must run — a
-copy-in smoke test per template (L8's tarball check extends to them).
+test. **Demos:** the components show in `apps/showcase` — a page per component in the Radzen and
+Blazorise demo sites' shape: the live demo, and beside it the `.tsazor` source it really runs,
+which copy puts on the clipboard (a vite plugin reads `src/examples` fresh, so a copied snippet is
+never a hand-kept copy of the demo). Templates: the copied files must pass `tsazor check` and the
+copied page must run — a copy-in smoke test per template (L8's tarball check extends to them).
 
 ## 7. Relation to 1.0
 
@@ -186,7 +189,7 @@ Core and component gaps found while building the extended layer. Each is fixed w
 
 | # | Where | Found | Fix |
 |---|---|---|---|
-| — | — | none yet | — |
+| X1 | `@tsazor/lsp`, the shadow graph | The showcase's first examples: an explicit `@import { DataGrid, PropertyColumn } from "@tsazor/bootstrap"` left the grid's `TGridItem` uninferred (RZ10001, the columns' lambdas fell back to `RenderTreeBuilder`); one name per `@import` and `@using` both work | The rewrite of a multi-name import binds every name to one component's shadow; fixed to split per name onto its own shadow (pending, with a regression test in `packages/lsp/test/shadow-module.test.ts`) |
 
 ## 9. Decisions needed
 

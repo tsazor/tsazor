@@ -1,0 +1,27 @@
+{
+  "name": "showcase",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The component showcase: every component live, its .tsazor source beside it with a copy button — the Radzen/Blazorise-style demo site (design-extended-library.md).",
+  "scripts": {
+    "dev": "vite --port 5353",
+    "build": "tsazor check && vite build --outDir dist",
+    "smoke": "node scripts/smoke.mjs",
+    "check": "tsazor check"
+  },
+  "dependencies": {
+    "@tsazor/bootstrap": "workspace:*",
+    "@tsazor/bootstrap-icons": "workspace:*",
+    "@tsazor/runtime": "workspace:*",
+    "@tsazor/ui": "workspace:*",
+    "@tsazor/vite-plugin": "workspace:*",
+    "bootstrap": "^5.3.8"
+  },
+  "devDependencies": {
+    "@tsazor/cli": "workspace:*",
+    "playwright-core": "^1.63.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
+  }
+}
