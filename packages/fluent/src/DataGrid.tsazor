@@ -8,12 +8,13 @@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
-@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular, Filter20Regular } from "./core-icons"
+@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular, Drag20Regular, Filter20Regular } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
 @import {
 DataGridModel, uniqueId, type AggregateScope, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
+@import { startColumnResize, startColumnReorder } from "@tsazor/ui"
 @import { toggleAll, toggleSelection } from "@tsazor/ui/kit"
 @import { libraryTexts } from "@tsazor/ui"
 
@@ -24,6 +25,14 @@ type IconValue,
         @{ this.finishColumns(); }
         <div class="@wrapperClass">
             <table class="@tableClass" aria-label="@ariaLabel" aria-busy="@busy" aria-rowcount="@rowCount" @attributes="otherAttributes">
+                <colgroup>
+                    @if (selectionMode !== "none") {
+                        <col class="fui-datagrid__col-select" />
+                    }
+                    @foreach (const column of this.model.orderedColumns) {
+                        <col style="@this.colStyle(column)" />
+                    }
+                </colgroup>
                 <thead class="@headClass">
                     <tr>
                         @if (selectionMode === "multiple") {
@@ -31,9 +40,10 @@ type IconValue,
                         } else if (selectionMode === "single") {
                             <th scope="col" class="fui-datagrid__select"><span class="fui-visually-hidden">@t("dataGrid.selected")</span></th>
                         }
-                        @foreach (const column of this.model.columns) {
+                        @foreach (const column of this.model.orderedColumns) {
                             <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
                                 <div class="fui-datagrid__header">
+                                    <div class="fui-datagrid__grip" role="button" tabindex="0" aria-label="@t("dataGrid.reorder")" @onpointerdown="(event: PointerEvent) => this.startReorder(column, event)" @onkeydown="(event: KeyboardEvent) => this.reorderKey(column, event)"><Icon value="@Drag20Regular" size="12" /></div>
                                     @if ((column.filterable || column.columnOptions !== undefined) && column.align === "end") {
                                         <button type="button" class="@this.optionsClass(column)" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter20Regular" size="16" /></button>
                                     }
@@ -72,6 +82,7 @@ type IconValue,
                                         @if (column.columnOptions !== undefined) { @column.columnOptions }
                                     </div>
                                 }
+                                <div class="fui-datagrid__resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
                             </th>
                         }
                     </tr>
@@ -89,7 +100,7 @@ type IconValue,
                                     } else if (selectionMode === "single") {
                                         <td class="fui-datagrid__select"><input type="radio" class="fui-datagrid__check" name="@groupName" aria-label="@this.selectLabel(this.virtualIndexOf(row))" checked="@this.isSelected(row)" @onchange="() => this.select(row)" /></td>
                                     }
-                                    @foreach (const column of this.model.columns) {
+                                    @foreach (const column of this.model.orderedColumns) {
                                         <td class="@this.cellClass(column)">@column.cell(row)</td>
                                     }
                                 </tr>
@@ -120,7 +131,7 @@ type IconValue,
                             } else if (selectionMode === "single") {
                                 <td class="fui-datagrid__select"><input type="radio" class="fui-datagrid__check" name="@groupName" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             }
-                            @foreach (const column of this.model.columns) {
+                            @foreach (const column of this.model.orderedColumns) {
                                 <td class="@this.cellClass(column)">@column.cell(item)</td>
                             }
                         </tr>
@@ -133,7 +144,7 @@ type IconValue,
                             @if (selectionMode !== "none") {
                                 <td></td>
                             }
-                            @foreach (const column of this.model.columns) {
+                            @foreach (const column of this.model.orderedColumns) {
                                 <td class="@this.cellClass(column)">@this.aggregateText(column)</td>
                             }
                         </tr>
@@ -228,6 +239,7 @@ type IconValue,
 
     protected override onInitialized(): void {
         this.disposeSignal.addEventListener("abort", () => this.model.dispose());
+        this.disposeSignal.addEventListener("abort", () => this.columnCleanup?.());
     }
 
     protected override onParametersSet(): void {
@@ -317,6 +329,7 @@ type IconValue,
         if (this.hover) parts.push("fui-table--hover");
         if (this.bordered) parts.push("fui-table--bordered");
         if (this.small || this.density === "compact") parts.push("fui-table--compact");
+        if (this.model.orderedColumns.some((column) => this.model.widthOf(column) !== undefined)) parts.push("fui-datagrid--sized");
         const extra = this.additionalAttributes?.["class"];
         if (typeof extra === "string" && extra.length > 0) parts.push(extra);
         return parts.join(" ");
@@ -327,6 +340,65 @@ type IconValue,
         if (this.additionalAttributes === undefined) return undefined;
         const { class: _class, ...rest } = this.additionalAttributes;
         return rest;
+    }
+
+    /** A column's width for its col, when the model holds one (the sized table lays the rest out itself). */
+    private colStyle(column: GridColumn<TGridItem>): string | null {
+        const width = this.model.widthOf(column);
+        return width === undefined ? null : `width: ${width};`;
+    }
+
+    /* Column resize and order ------------------------------------------------- */
+
+    /** A running resize's or drag's cleanup: the document listeners go when the component does. */
+    private columnCleanup: (() => void) | undefined;
+
+    /** Starts resizing from the handle at the header's end (the drag follows the pointer over the document). */
+    private startResize(column: GridColumn<TGridItem>, pointer: PointerEvent): void {
+        pointer.preventDefault();
+        const head = (pointer.currentTarget as HTMLElement).closest("th") as HTMLElement | null;
+        const set = this.model.widthOf(column);
+        const measured = head?.getBoundingClientRect().width;
+        const initial = set !== undefined ? parseFloat(set.replace(/px$/, "")) : measured !== undefined && measured > 0 ? measured : 120;
+        this.columnCleanup?.();
+        this.columnCleanup = startColumnResize({
+            pointer,
+            initialWidth: initial,
+            onResize: (width) => void this.model.setColumnWidthAsync(column, `${width}px`),
+        });
+    }
+
+    /** The handle's arrow keys resize too: 5 px at a time, 20 with Shift. Percent widths don't move by keys. */
+    private async resizeKey(column: GridColumn<TGridItem>, event: KeyboardEvent): Promise<void> {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const set = this.model.widthOf(column);
+        if (set !== undefined && !set.endsWith("px")) return;
+        const step = (event.shiftKey ? 20 : 5) * (event.key === "ArrowRight" ? 1 : -1);
+        const current = set !== undefined ? parseFloat(set.replace(/px$/, "")) : 80;
+        await this.model.setColumnWidthAsync(column, `${Math.round(current + step)}px`);
+    }
+
+    /** Starts a reorder drag from the grip (the head's th cells are the columns in display order). */
+    private startReorder(column: GridColumn<TGridItem>, pointer: PointerEvent): void {
+        const head = (pointer.currentTarget as HTMLElement).closest("thead") as HTMLElement | null;
+        const from = this.model.indexOfColumn(column);
+        if (head === null || from === -1) return;
+        this.columnCleanup?.();
+        this.columnCleanup = startColumnReorder({
+            pointer,
+            head,
+            fromIndex: from,
+            onDone: (fromIndex, toIndex) => this.model.moveColumnAsync(this.model.orderedColumns[fromIndex]!, toIndex),
+        });
+    }
+
+    /** The grip's arrow keys move the column one place. */
+    private reorderKey(column: GridColumn<TGridItem>, event: KeyboardEvent): void {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const index = this.model.indexOfColumn(column);
+        this.model.moveColumnAsync(column, index + (event.key === "ArrowRight" ? 1 : -1));
     }
 
     private get headClass(): string {

@@ -28,6 +28,7 @@ const CORE = [
   "Circle20Filled",
   "Circle20Regular",
   "ChevronDoubleLeft20Regular",
+  "Drag20Regular",
   "ChevronDoubleRight20Regular",
   "ChevronLeft20Regular",
   "ChevronRight12Regular",

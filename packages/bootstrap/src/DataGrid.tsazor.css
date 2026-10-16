@@ -55,6 +55,52 @@
   font-weight: 600;
 }
 
+/* Widths: only a sized table can lay its cols out (the unsized one keeps the natural sizes). */
+.tz-grid--sized {
+  table-layout: fixed;
+}
+
+/* The reorder grip: a grabbable, focusable handle of a column. */
+.tz-grid-grip {
+  display: inline-flex;
+  padding: 0 2px;
+  color: var(--bs-secondary-color);
+  cursor: grab;
+  border-radius: 0.25rem;
+}
+
+.tz-grid-grip:active {
+  cursor: grabbing;
+  color: var(--bs-body-color);
+}
+
+.tz-grid-grip:focus-visible {
+  outline: 2px solid var(--bs-focus-ring-color, #86b7fe);
+  outline-offset: 2px;
+}
+
+/* The resize handle at the th's end; it catches the pointer, the keyboard moves 5 px (Shift: 20). */
+.tz-grid-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 0.375rem;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.tz-grid-resize:focus-visible {
+  outline: 2px solid var(--bs-focus-ring-color, #86b7fe);
+  outline-offset: -2px;
+}
+
+/* The header a reorder drag's pointer is over (the drag marks it; the skin's CSS styles it). */
+.tz-grid th[data-tz-grid-target] {
+  box-shadow: inset 0 0 0 1px var(--bs-primary);
+}
+
 /* The built-in filter: operator, value and its actions in a row (they stay narrow). */
 .tz-grid-filter {
   display: flex;

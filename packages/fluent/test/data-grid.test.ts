@@ -329,6 +329,49 @@ describe("DataGrid", () => {
     expect(texts(container, "tfoot tr td")).toEqual(["", "67.50", "4"]);
   });
 
+  it("resizes a column by the handle's arrow keys (Shift makes a bigger step) and lays the cols out", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: orders }, (b) => {
+        component(b, 0, PropertyColumn, { property: customer });
+        component(b, 10, PropertyColumn, { property: total, title: "Total" });
+      }),
+    );
+    await settle(renderer);
+    expect(container.querySelector("table")!.className).not.toContain("fui-datagrid--sized");
+    const handle = container.querySelectorAll<HTMLDivElement>(".fui-datagrid__resize")[0]!;
+    handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 85px;");
+    expect(container.querySelector("table")!.className).toContain("fui-datagrid--sized");
+    container.querySelectorAll(".fui-datagrid__resize")[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", shiftKey: true, bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 105px;"); // 85, then 20 with Shift
+    container.querySelectorAll(".fui-datagrid__resize")[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    await settle(renderer);
+    expect(container.querySelector("col:nth-child(1)")!.getAttribute("style")).toBe("width: 100px;");
+  });
+
+  it("reorders a column by the grip's keys and renders headers, cells and foot in the new order", async () => {
+    const { container, ...renderer } = await renderTree((b) => {
+      component(b, 0, DataGrid, {
+        items: orders,
+        childContent: ((inner: RenderTreeBuilder) => {
+          component(inner, 0, PropertyColumn, { property: customer });
+          component(inner, 4, PropertyColumn, { property: total, title: "Total", aggregate: "count" });
+        }) as RenderFragment,
+      });
+    });
+    await settle(renderer);
+    expect(texts(container, "tbody tr td")).toEqual(["Marta", "12.5", "Jonas", "30", "Lena", "7", "Ali", "18"]);
+    const grips = container.querySelectorAll<HTMLDivElement>(".fui-datagrid__grip");
+    expect(grips).toHaveLength(2);
+    grips[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    await settle(renderer);
+    expect(texts(container, "thead th")).toEqual(["Total", "customer"]);
+    expect(texts(container, "tbody tr:first-child td")).toEqual(["12.5", "Marta"]);
+    expect(texts(container, "tfoot tr td")).toEqual(["4", ""]);
+  });
+
   it("renders the dense table for density compact (and small, its alias)", async () => {
     const { container, ...renderer } = await renderTree(
       grid({ items: orders, density: "compact" }, (b) => component(b, 0, PropertyColumn, { property: customer })),

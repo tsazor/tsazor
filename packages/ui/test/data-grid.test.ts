@@ -270,6 +270,42 @@ describe("column aggregates", () => {
   });
 });
 
+describe("column order and widths", () => {
+  it("keeps a reorder across renders, and joins fresh columns at the tail", () => {
+    const onChange = vi.fn();
+    const model = new DataGridModel<Order>(onChange);
+    const a = column({}), b = column({}), c = column({});
+    render(model, [a, b, c]);
+    expect(model.orderedColumns.map((entry) => entry.owner)).toEqual([a.owner, b.owner, c.owner]);
+    model.moveColumnAsync(a, 2);
+    expect(model.orderedColumns.map((entry) => entry.owner)).toEqual([b.owner, c.owner, a.owner]);
+    expect(model.indexOfColumn(c)).toBe(1);
+    expect(onChange).toHaveBeenCalled();
+    expect(model.moveColumnAsync(a, 2)).toBeUndefined(); // already there: no event
+    const before = onChange.mock.calls.length;
+    const dropped = render(model, [a, b]); // c goes away, d's nothing new
+    expect(dropped).toBe(false);
+    expect(model.orderedColumns.map((entry) => entry.owner)).toEqual([b.owner, a.owner]);
+  });
+
+  it("sets and clears a column's width; an equal set is a no-op", async () => {
+    const onChange = vi.fn();
+    const model = new DataGridModel<Order>(onChange);
+    const a = column({});
+    model.setSource({ items: orders });
+    render(model, [a]);
+    expect(model.widthOf(a)).toBeUndefined();
+    await model.setColumnWidthAsync(a, "120px");
+    expect(model.widthOf(a)).toBe("120px");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    await model.setColumnWidthAsync(a, "120px");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    await model.setColumnWidthAsync(a, undefined);
+    expect(model.widthOf(a)).toBeUndefined();
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("selection and titles", () => {
   it("single replaces, multiple toggles, select-all adds or removes the page", () => {
     const [a, b, c] = orders;

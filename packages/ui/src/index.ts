@@ -85,3 +85,4 @@ export {
   type SortDirection,
   type SortedProperty,
 } from "./data-grid.js";
+export { startColumnResize, startColumnReorder, type ColumnResizeOptions, type ColumnReorderOptions } from "./grid-columns.js";

@@ -36,6 +36,8 @@ export const libraryTextDefaults = catalog({
   "dataGrid.selected": "Selected",
   "dataGrid.selectRow": "Select row {row}",
   "dataGrid.columnOptions": "Column options",
+  "dataGrid.resize": "Resize the column (arrow keys, Shift makes a bigger step)",
+  "dataGrid.reorder": "Move the column (arrow keys, or drag it)",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",
   "dataGrid.filterValue": "Filter value",

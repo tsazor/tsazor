@@ -136,6 +136,24 @@ export interface ColorPickerLabels {
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
 
+// ColumnReorderOptions
+export interface ColumnReorderOptions {
+    pointer: PointerEvent;
+    head: HTMLElement;
+    fromIndex: number;
+    markTarget?: string;
+    onDone: (fromIndex: number, toIndex: number) => void;
+}
+
+// ColumnResizeOptions
+export interface ColumnResizeOptions {
+    pointer: PointerEvent;
+    initialWidth: number;
+    min?: number;
+    onResize: (width: number) => void;
+    onDone?: (width: number) => void;
+}
+
 // compareValues
 export declare function compareValues(a: unknown, b: unknown): number;
 
@@ -147,6 +165,8 @@ export declare class DataGridModel<T> {
     private readonly onChange;
     private collecting;
     private current;
+    private order;
+    private widths;
     private sortOwner;
     private ascending;
     private defaultSortApplied;
@@ -165,6 +185,11 @@ export declare class DataGridModel<T> {
     startCollectingColumns(): void;
     addColumn(column: GridColumn<T>): void;
     finishCollectingColumns(): boolean;
+    get orderedColumns(): readonly GridColumn<T>[];
+    indexOfColumn(column: GridColumn<T>): number;
+    moveColumnAsync(column: GridColumn<T>, toIndex: number): void;
+    widthOf(column: GridColumn<T>): string | undefined;
+    setColumnWidthAsync(column: GridColumn<T>, width: string | undefined): Promise<void>;
     get sortColumn(): GridColumn<T> | undefined;
     sortDirectionOf(column: GridColumn<T>): "ascending" | "descending" | undefined;
     sortByColumnAsync(column: GridColumn<T>, direction?: SortDirection): Promise<void>;
@@ -469,6 +494,8 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.selected": string;
     readonly "dataGrid.selectRow": string;
     readonly "dataGrid.columnOptions": string;
+    readonly "dataGrid.resize": string;
+    readonly "dataGrid.reorder": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
     readonly "dataGrid.filterApply": string;
@@ -749,6 +776,12 @@ export interface SplitterResizeEventArgs {
     readonly paneIndex: number;
     readonly newSize: number;
 }
+
+// startColumnReorder
+export declare function startColumnReorder(options: ColumnReorderOptions): () => void;
+
+// startColumnResize
+export declare function startColumnResize(options: ColumnResizeOptions): () => void;
 
 // ToastAction
 export interface ToastAction {

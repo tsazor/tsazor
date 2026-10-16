@@ -58,7 +58,7 @@ try {
   const rows = await page.locator(".sz-example-demo table tbody tr").count();
   if (rows < 4) throw new Error(`the first grid shows only ${rows} rows`);
   const examples = await page.locator(".sz-code pre code").count();
-  if (examples < 7) throw new Error(`the DataGrid page shows ${examples} code panels, expected one per example`);
+  if (examples < 8) throw new Error(`the DataGrid page shows ${examples} code panels, expected one per example`);
   const firstCode = await page.textContent(".sz-code pre code");
   if (!firstCode.includes("DataGrid Items=")) throw new Error("the code panel does not show the example's source");
 
@@ -66,7 +66,7 @@ try {
   await page.waitForFunction(() => [...document.querySelectorAll(".sz-code__bar button")].some((button) => button.textContent === "Copied"), { timeout: 5000 });
 
   if (errors.length > 0) throw new Error(`page errors: ${errors.join("; ")}`);
-  console.log("showcase smoke: home, DataGrid, six code panels, copy — ok");
+  console.log("showcase smoke: home, DataGrid, a code panel per example, copy — ok");
   await browser.close();
 } catch (error) {
   console.error(String(error));

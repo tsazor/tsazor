@@ -347,6 +347,9 @@ export interface GridSource<T> {
 export class DataGridModel<T> {
   private collecting: GridColumn<T>[] | undefined;
   private current: GridColumn<T>[] = [];
+  /** The columns' display order, by their owners: a reorder keeps it across renders. */
+  private order: object[] = [];
+  private widths = new Map<object, string>();
   private sortOwner: object | undefined;
   private ascending = true;
   private defaultSortApplied = false;
@@ -389,9 +392,56 @@ export class DataGridModel<T> {
   finishCollectingColumns(): boolean {
     if (this.collecting !== undefined) this.current = this.collecting;
     this.collecting = undefined;
+    // The display order holds over re-renders: its known columns first (in their
+    // stored order — a reorder and the widths survive), then the render's fresh
+    // ones; a dropped column loses its place.
+    const present = new Set(this.current.map((column) => column.owner));
+    this.order = [...this.order.filter((owner) => present.has(owner)), ...this.current.map((column) => column.owner).filter((owner) => !this.order.includes(owner))];
+    for (const owner of this.widths.keys()) if (!present.has(owner)) this.widths.delete(owner);
     const applied = !this.defaultSortApplied && this.sortOwner !== undefined;
     this.defaultSortApplied = true;
     return applied;
+  }
+
+  /* Column order and widths ------------------------------------------------- */
+
+  /**
+   * The columns in their display order (the skin's `th`, `col`, `tfoot` and
+   * cell loops render this, not `columns`): a reorder keeps it across renders,
+   * a markup order the app changes joins its tail.
+   */
+  get orderedColumns(): readonly GridColumn<T>[] {
+    return this.order.length === 0 ? this.current : this.order.map((owner) => this.current.find((column) => column.owner === owner)!).filter((column) => column !== undefined);
+  }
+
+  /** The column's display index in the ordered columns. */
+  indexOfColumn(column: GridColumn<T>): number {
+    return this.orderedColumns.findIndex((entry) => entry.owner === column.owner);
+  }
+
+  /** Moves a column to `toIndex` in the display order (clamped; a drag end or the grip's arrow keys); the skin re-renders. */
+  moveColumnAsync(column: GridColumn<T>, toIndex: number): void {
+    const from = this.indexOfColumn(column);
+    if (from === -1 || from === toIndex) return;
+    const clamped = Math.max(0, Math.min(this.orderedColumns.length - 1, toIndex));
+    if (clamped === from) return;
+    this.order.splice(from, 1);
+    this.order.splice(clamped, 0, column.owner);
+    this.onChange();
+  }
+
+  /** The column's width, when one is set (`"240px"`, `"20%"`). */
+  widthOf(column: GridColumn<T>): string | undefined {
+    return this.widths.get(column.owner);
+  }
+
+  /** Sets the column's width (a handle's drag or arrow keys) or clears it; the skin re-renders the col. */
+  async setColumnWidthAsync(column: GridColumn<T>, width: string | undefined): Promise<void> {
+    const active = this.widths.get(column.owner);
+    if (active === width) return;
+    if (width === undefined) this.widths.delete(column.owner);
+    else this.widths.set(column.owner, width);
+    this.onChange();
   }
 
   /* Sorting ----------------------------------------------------------------- */

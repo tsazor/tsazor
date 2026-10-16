@@ -11,6 +11,7 @@
 @import GridFilterExample from "../examples/grid/grid-filter.tsazor"
 @import GridDensityExample from "../examples/grid/grid-density.tsazor"
 @import GridAggregatesExample from "../examples/grid/grid-aggregates.tsazor"
+@import GridWidthsExample from "../examples/grid/grid-widths.tsazor"
 
 <Typography Variant="h1">DataGrid</Typography>
 <Typography>
@@ -40,3 +41,6 @@
 
 <Example Title="Aggregates" Description="A footer per column: sum, avg, count, min, max or your own, over all rows or the current page's."
     Id="grid/grid-aggregates"><GridAggregatesExample /></Example>
+
+<Example Title="Column width and order" Description="The header's grip moves a column (drag or arrow keys); the handle at its end resizes it."
+    Id="grid/grid-widths"><GridWidthsExample /></Example>

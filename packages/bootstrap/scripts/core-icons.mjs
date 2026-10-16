@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import * as Icons from "@tsazor/bootstrap-icons";
 
 /** The set's own names (`Icons.CaretUpFill`). */
-const CORE = ["ArrowDownUp", "ArrowUp", "Calendar3", "CaretDownFill", "CaretUpFill", "CheckCircleFill", "CheckLg", "ChevronLeft", "ChevronRight", "Circle", "CircleFill", "Clock", "Filter", "Palette", "PauseFill", "PersonFill", "PlayFill", "Star", "StarFill"];
+const CORE = ["ArrowDownUp", "ArrowUp", "GripVertical", "Calendar3", "CaretDownFill", "CaretUpFill", "CheckCircleFill", "CheckLg", "ChevronLeft", "ChevronRight", "Circle", "CircleFill", "Clock", "Filter", "Palette", "PauseFill", "PersonFill", "PlayFill", "Star", "StarFill"];
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const lines = [
