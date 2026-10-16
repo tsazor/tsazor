@@ -150,11 +150,19 @@ export function checkUsing(using: string, dir: string): string | null {
   return `'@using ${value}': package '${value}' is not installed (no node_modules/${value}/package.json above '${dir}').`;
 }
 
-/** Nearest `node_modules/<name>` directory above `fromDir`. */
+/** Nearest `node_modules/<name>` directory above `fromDir`; a package naming itself resolves
+ *  inside its own directory (its own sources and templates import their own name first). */
 export function findPackageDir(name: string, fromDir: string): string | undefined {
   let current = path.resolve(fromDir);
   // eslint-disable-next-line no-constant-condition
   while (true) {
+    let self = false;
+    try {
+      self = (JSON.parse(readFileSync(path.join(current, "package.json"), "utf8")) as { name?: string }).name === name;
+    } catch {
+      // No package.json here; the walk goes on.
+    }
+    if (self) return current;
     const candidate = path.join(current, "node_modules", name);
     if (existsSync(path.join(candidate, "package.json"))) return candidate;
     const parent = path.dirname(current);

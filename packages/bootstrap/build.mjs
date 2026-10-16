@@ -3,6 +3,8 @@
  * and the declarations, and tsazor-bootstrap.css — the sidecar CSS of the components Bootstrap has no classes for
  * (Timeline, …), in its variables, imported after bootstrap.css.
  */
+import path from "node:path";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { buildLibrary } from "@tsazor/cli";
 
 const result = await buildLibrary({
@@ -57,3 +59,13 @@ const templates = await buildLibrary({
   exports: [],
 });
 if (templates.errors.length > 0) process.exit(1);
+
+// The templates' compiled modules import their components as ../src/<Name>.js (resolved against
+// the source tree); in dist/templates they sit as siblings of dist/ — rewrite to ../<Name>.js.
+const templatesDir = path.join(process.cwd(), "dist", "templates");
+for (const file of readdirSync(templatesDir)) {
+  if (!file.endsWith(".js")) continue;
+  const source = readFileSync(path.join(templatesDir, file), "utf8");
+  const fixed = source.replaceAll(/from "\.\.\/src\/([A-Za-z0-9_-]+)\.js"/g, `from "../$1.js"`);
+  if (fixed !== source) writeFileSync(path.join(templatesDir, file), fixed);
+}

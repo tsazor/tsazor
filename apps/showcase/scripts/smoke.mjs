@@ -65,11 +65,11 @@ try {
   await page.locator(".sz-code__bar button").first().click();
   await page.waitForFunction(() => [...document.querySelectorAll(".sz-code__bar button")].some((button) => button.textContent === "Copied"), { timeout: 5000 });
 
-  for (const route of ["/richtext", "/schedule", "/chat"]) {
+  for (const route of ["/richtext", "/schedule", "/chat", "/templates"]) {
     await page.goto(`${url}${route}`);
     await page.waitForSelector(".sz-code pre code");
     const panels = await page.locator(".sz-code pre code").count();
-    if (panels < (route === "/schedule" ? 2 : 1)) throw new Error(`the ${route} page shows ${panels} code panels`);
+    if (panels < (route === "/schedule" ? 2 : route === "/templates" ? 3 : 1)) throw new Error(`the ${route} page shows ${panels} code panels`);
   }
 
   if (errors.length > 0) throw new Error(`page errors: ${errors.join("; ")}`);
