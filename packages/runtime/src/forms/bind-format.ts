@@ -152,6 +152,11 @@ export function parseBindValue(text: string, current: unknown, format?: string, 
   return text;
 }
 
+/**
+ * Parses `text` into the value its format and culture mean — a number's
+ * grammar, a date's pattern (in the culture's shape), else the text. The
+ * form's bind does this; the generated OpenAPI client's formats reuse it.
+ */
 export function parseValue(text: string, format: string | undefined, culture?: string | CultureInfo): string | number | Date | null {
   const info = culture === undefined ? undefined : toCultureInfo(culture);
   if (info !== undefined && info.name !== "" && (format === undefined || NUMBER_MASK.test(format) || FIXED.test(format) || GROUPED.test(format))) {

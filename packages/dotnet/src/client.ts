@@ -97,14 +97,14 @@ export function formData(fields: Record<string, unknown>): FormData {
   return form;
 }
 
+/** A single query-parameter value: the scalars, or anything that stringifies (an E12 `@tsazor/primitives` value type). */
+export type QueryStringScalar = string | number | boolean | { toString(): string };
+
 /**
  * Query-string helper for the generated methods: null/undefined skips
  * the parameter, arrays are sent as repeated keys (ASP.NET Core:
  * `?tag=a&tag=b`). Returns `"?a=1"` or `""` (nothing appended).
  */
-/** A single query-parameter value: the scalars, or anything that stringifies (an E12 `@tsazor/primitives` value type). */
-export type QueryStringScalar = string | number | boolean | { toString(): string };
-
 export function queryString(
   params: Record<string, QueryStringScalar | readonly QueryStringScalar[] | null | undefined> | undefined,
 ): string {
