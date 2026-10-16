@@ -201,6 +201,9 @@ export declare function formatTimeField(time: IsoTime, locale: string, hourCycle
 // formatTimePickerValue
 export declare function formatTimePickerValue(value: string, locale: string, hourCycle?: HourCycle): string;
 
+// gridFilterMatches
+export declare function gridFilterMatches(rule: GridFilterRule, value: unknown): boolean;
+
 // hasChildren
 export declare function hasChildren(item: TreeViewItem): boolean;
 

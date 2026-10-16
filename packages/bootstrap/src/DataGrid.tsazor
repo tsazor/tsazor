@@ -3,14 +3,15 @@
     from `items` (sorted and paged here) or an `itemsProvider` (sorted and paged by your code or a
     server, with an AbortSignal). Sortable columns sort on a click on their header (`aria-sort`);
     with a `pagination` state, a Paginator pages the grid. `selectionMode` adds a selection column
-    (checkboxes or radio buttons) bound to `selectedItems`. *@
+    (checkboxes or radio buttons) bound to `selectedItems`. A filterable column offers the built-in
+    filter (operator, value) in its options panel. `density="compact"` is the dense table. *@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
 @import { ArrowDownUp, CaretDownFill, CaretUpFill, Filter } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type GridColumn, type GridItemsProvider, type PaginationState, type SelectionMode,
+DataGridModel, uniqueId, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
 @import { toggleAll, toggleSelection } from "@tsazor/ui/kit"
@@ -33,8 +34,8 @@ type IconValue,
                         @foreach (const column of this.model.columns) {
                             <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
                                 <div class="d-flex align-items-center tz-grid-header">
-                                    @if (column.columnOptions !== undefined && column.align === "end") {
-                                        <button type="button" class="p-0 border-0 bg-transparent tz-grid-options" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter" size="12" /></button>
+                                    @if ((column.filterable || column.columnOptions !== undefined) && column.align === "end") {
+                                        <button type="button" class="@this.optionsClass(column)" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter" size="12" /></button>
                                     }
                                     @if (column.sortable) {
                                         <button type="button" class="p-0 border-0 bg-transparent text-reset fw-semibold tz-grid-sort" @onclick="() => this.sort(column)">
@@ -46,12 +47,30 @@ type IconValue,
                                     } else {
                                         @column.title
                                     }
-                                    @if (column.columnOptions !== undefined && column.align !== "end") {
-                                        <button type="button" class="p-0 border-0 bg-transparent tz-grid-options" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter" size="12" /></button>
+                                    @if ((column.filterable || column.columnOptions !== undefined) && column.align !== "end") {
+                                        <button type="button" class="@this.optionsClass(column)" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter" size="12" /></button>
                                     }
                                 </div>
-                                @if (column.columnOptions !== undefined && this.optionsOwner === column.owner) {
-                                    <div class="tz-grid-options-panel">@column.columnOptions</div>
+                                @if (this.optionsOwner === column.owner && (column.filterable || column.columnOptions !== undefined)) {
+                                    <div class="tz-grid-options-panel">
+                                        @if (column.filterable === true) {
+                                            <div class="tz-grid-filter">
+                                                <select class="form-select form-select-sm tz-grid-filter-operator" aria-label="@t("dataGrid.filterOperator")" value="@this.filterDraft(column).operator" @onchange="(event: Event) => this.setFilterOperator(column, event)">
+                                                    @foreach (const operator of this.filterOperators) {
+                                                        <option value="@operator">@t(`dataGrid.operator.${operator}`)</option>
+                                                    }
+                                                </select>
+                                                @if (this.filterNeedsValue(this.filterDraft(column).operator)) {
+                                                    <input type="text" class="form-control form-control-sm tz-grid-filter-value" aria-label="@t("dataGrid.filterValue")" value="@this.filterDraft(column).value" @oninput="(event: Event) => this.setFilterValue(column, event)" />
+                                                }
+                                                <div class="tz-grid-filter-actions">
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => this.applyFilter(column)">@t("dataGrid.filterApply")</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => this.clearFilter(column)">@t("dataGrid.filterClear")</button>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (column.columnOptions !== undefined) { @column.columnOptions }
+                                    </div>
                                 }
                             </th>
                         }
@@ -142,8 +161,10 @@ type IconValue,
     @Parameter() hover: boolean = false;
     /** Draws borders on all cells (table-bordered). */
     @Parameter() bordered: boolean = false;
-    /** The compact table-sm variant. */
+    /** The compact table variant; `small` was its name through 1.0 — new code takes `density="compact"`. */
     @Parameter() small: boolean = false;
+    /** comfortable (the normal row height) or compact (the dense table). */
+    @Parameter() density?: "comfortable" | "compact";
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
     /**
@@ -176,6 +197,12 @@ type IconValue,
     private readonly groupName = uniqueId("tz-grid-select");
     /** The column whose options panel is open (by owner, the column component's stable identity). */
     private optionsOwner?: object;
+    /** The built-in filter's operators, in the select's order. */
+    private readonly filterOperators: readonly GridFilterOperator[] = ["contains", "notContains", "startsWith", "endsWith", "equals", "notEquals", "greaterThan", "greaterThanOrEqual", "lessThan", "lessThanOrEqual", "empty", "notEmpty"];
+    /** The operators that compare by value: with a filter value that parses as a number, the filter compares numerically. */
+    private readonly compareOperators: ReadonlySet<GridFilterOperator> = new Set(["greaterThan", "greaterThanOrEqual", "lessThan", "lessThanOrEqual"]);
+    /** The unsaved filter of the open options panel, by column (it survives a re-render; the panel is the only renderer). */
+    private readonly filterDrafts = new Map<object, { operator: GridFilterOperator; value: string }>();
     private rendered = false;
     private virtualizer?: Virtualize<TGridItem>;
     /** Provider mode: the rows of the loaded window with their positions (for aria-rowindex and labels). */
@@ -267,12 +294,13 @@ type IconValue,
         return this.responsive ? "table-responsive" : null;
     }
 
+    /** The compact classes: table-sm for `small`, its alias `density="compact"`, and (once rendered) the measured rows. */
     private get tableClass(): string {
         const parts = ["table", "tz-grid"];
         if (this.striped) parts.push("table-striped");
         if (this.hover) parts.push("table-hover");
         if (this.bordered) parts.push("table-bordered");
-        if (this.small) parts.push("table-sm");
+        if (this.small || this.density === "compact") parts.push("table-sm");
         const extra = this.additionalAttributes?.["class"];
         if (typeof extra === "string" && extra.length > 0) parts.push(extra);
         return parts.join(" ");
@@ -311,8 +339,67 @@ type IconValue,
         return this.model.sortByColumnAsync(column);
     }
 
+    /* The built-in column filter ---------------------------------------------- */
+
+    /** The panel's unsaved filter for `column`; fresh from the column's active filter. */
+    private filterDraft(column: GridColumn<TGridItem>): { operator: GridFilterOperator; value: string } {
+        let draft = this.filterDrafts.get(column.owner);
+        if (draft === undefined) {
+            const active = this.model.filterOf(column);
+            draft = {
+                operator: active?.operator ?? "contains",
+                value: active?.value === undefined || typeof active.value === "boolean" ? "" : String(active.value),
+            };
+            this.filterDrafts.set(column.owner, draft);
+        }
+        return draft;
+    }
+
+    private setFilterOperator(column: GridColumn<TGridItem>, event: Event): void {
+        const target = event.target as HTMLSelectElement;
+        this.filterDrafts.set(column.owner, { operator: target.value as GridFilterOperator, value: this.filterDraft(column).value });
+    }
+
+    private setFilterValue(column: GridColumn<TGridItem>, event: Event): void {
+        this.filterDraft(column).value = (event.target as HTMLInputElement).value;
+    }
+
+    /** Whether `operator` carries a filter value (`empty` and `notEmpty` don't). */
+    private filterNeedsValue(operator: GridFilterOperator): boolean {
+        return operator !== "empty" && operator !== "notEmpty";
+    }
+
+    /** Applies the panel's draft as the column's filter (an empty value clears it). */
+    private applyFilter(column: GridColumn<TGridItem>): Promise<void> {
+        const draft = this.filterDraft(column);
+        const rule = !this.filterNeedsValue(draft.operator)
+            ? { operator: draft.operator }
+            : draft.value.trim() === ""
+              ? undefined
+              : this.compareOperators.has(draft.operator) && Number.isFinite(Number(draft.value))
+                ? { operator: draft.operator, value: Number(draft.value) }
+                : { operator: draft.operator, value: draft.value };
+        return this.model.setFilterAsync(column, rule);
+    }
+
+    /** Clears the column's filter and the panel's draft. */
+    private async clearFilter(column: GridColumn<TGridItem>): Promise<void> {
+        this.filterDrafts.delete(column.owner);
+        await this.model.setFilterAsync(column, undefined);
+    }
+
+    /** The options button of a column with an active filter says so visually. */
+    private optionsClass(column: GridColumn<TGridItem>): string | null {
+        const active = this.model.filterOf(column) !== undefined;
+        return active ? "p-0 border-0 bg-transparent tz-grid-options tz-grid-options--active" : "p-0 border-0 bg-transparent tz-grid-options";
+    }
+
     private toggleOptions(column: GridColumn<TGridItem>): void {
         this.optionsOwner = this.optionsOwner === column.owner ? undefined : column.owner;
+        // A draft belongs to the open panel; closing or switching drops it.
+        for (const owner of this.filterDrafts.keys()) {
+            if (owner !== this.optionsOwner) this.filterDrafts.delete(owner);
+        }
     }
 
     private optionsExpanded(column: GridColumn<TGridItem>): string {

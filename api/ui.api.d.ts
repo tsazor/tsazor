@@ -133,6 +133,9 @@ export interface ColorPickerLabels {
 // ColumnAlign
 export type ColumnAlign = "start" | "center" | "end";
 
+// compareValues
+export declare function compareValues(a: unknown, b: unknown): number;
+
 // createLayer
 export declare function createLayer(): Layer;
 
@@ -147,6 +150,8 @@ export declare class DataGridModel<T> {
     private source;
     private view;
     private provided;
+    private readonly filters;
+    private filterVersion;
     private loadingNow;
     private abort;
     private unsubscribe;
@@ -164,10 +169,15 @@ export declare class DataGridModel<T> {
     get loading(): boolean;
     get rows(): readonly T[];
     refreshDataAsync(): Promise<void>;
+    filterOf(column: GridColumn<T>): GridFilterRule | undefined;
+    get hasFilters(): boolean;
+    setFilterAsync(column: GridColumn<T>, rule: GridFilterRule | undefined): Promise<void>;
+    private filtered;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
     provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
     private request;
+    private filterProperties;
     dispose(): void;
 }
 
@@ -272,6 +282,13 @@ export interface FileUploadLabels {
 // FileUploadMode
 export type FileUploadMode = "buffer" | "stream";
 
+// FilteredProperty
+export interface FilteredProperty {
+    propertyName: string;
+    operator: GridFilterOperator;
+    value?: string | number | boolean | Date;
+}
+
 // focusableElements
 export declare function focusableElements(container: ParentNode): HTMLElement[];
 
@@ -305,6 +322,21 @@ export interface GridColumn<T> {
     isDefaultSortColumn?: boolean;
     align?: ColumnAlign;
     className?: string;
+    filterable?: boolean;
+    filterBy?: (item: T) => unknown;
+    filterKey?: string;
+}
+
+// gridFilterMatches
+export declare function gridFilterMatches(rule: GridFilterRule, value: unknown): boolean;
+
+// GridFilterOperator
+export type GridFilterOperator = "contains" | "notContains" | "startsWith" | "endsWith" | "equals" | "notEquals" | "greaterThan" | "greaterThanOrEqual" | "lessThan" | "lessThanOrEqual" | "empty" | "notEmpty";
+
+// GridFilterRule
+export interface GridFilterRule {
+    operator: GridFilterOperator;
+    value?: string | number | boolean | Date;
 }
 
 // GridItemsProvider
@@ -319,6 +351,7 @@ export interface GridItemsProviderRequest<T> {
     signal: AbortSignal;
     applySorting(source: readonly T[]): T[];
     getSortByProperties(): SortedProperty[];
+    getFilterByProperties(): FilteredProperty[];
 }
 
 // GridItemsProviderResult
@@ -422,6 +455,22 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.selected": string;
     readonly "dataGrid.selectRow": string;
     readonly "dataGrid.columnOptions": string;
+    readonly "dataGrid.filterOperator": string;
+    readonly "dataGrid.filterValue": string;
+    readonly "dataGrid.filterApply": string;
+    readonly "dataGrid.filterClear": string;
+    readonly "dataGrid.operator.contains": string;
+    readonly "dataGrid.operator.notContains": string;
+    readonly "dataGrid.operator.startsWith": string;
+    readonly "dataGrid.operator.endsWith": string;
+    readonly "dataGrid.operator.equals": string;
+    readonly "dataGrid.operator.notEquals": string;
+    readonly "dataGrid.operator.greaterThan": string;
+    readonly "dataGrid.operator.greaterThanOrEqual": string;
+    readonly "dataGrid.operator.lessThan": string;
+    readonly "dataGrid.operator.lessThanOrEqual": string;
+    readonly "dataGrid.operator.empty": string;
+    readonly "dataGrid.operator.notEmpty": string;
     readonly "sidebarNav.label": string;
     readonly "scrollToTop.label": string;
     readonly "breadcrumb.label": string;

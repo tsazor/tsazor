@@ -361,6 +361,7 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     hover: boolean;
     bordered: boolean;
     small: boolean;
+    density?: "comfortable" | "compact";
     responsive: boolean;
     virtualize: boolean;
     itemSize: number;
@@ -904,6 +905,8 @@ export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     class?: string;
     headerContent?: RenderFragment;
     columnOptions?: RenderFragment;
+    filterable: boolean;
+    filterKey?: string;
 }
 
 // RadioGroup
@@ -1176,6 +1179,9 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
     class?: string;
     headerContent?: RenderFragment;
     columnOptions?: RenderFragment;
+    filterable: boolean;
+    filterBy?: (item: TGridItem) => unknown;
+    filterKey?: string;
 }
 
 // TextArea

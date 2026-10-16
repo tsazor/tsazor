@@ -35,6 +35,12 @@
     @Parameter() headerContent?: RenderFragment;
     /** Options shown below the header when its options button is clicked (QuickGrid's ColumnOptions). */
     @Parameter() columnOptions?: RenderFragment;
+    /** Offers the grid's built-in filter over the values `filterBy` reads (a template column has none on its own). */
+    @Parameter() filterable: boolean = false;
+    /** The value the built-in filter tests: `(o) => o.customer`. */
+    @Parameter() filterBy?: (item: TGridItem) => unknown;
+    /** The property name an itemsProvider gets in getFilterByProperties(). */
+    @Parameter() filterKey?: string;
 
     private register(): void {
         const grid = this.grid;
@@ -55,6 +61,9 @@
             isDefaultSortColumn: this.isDefaultSortColumn,
             align: this.align,
             className: this.class,
+            filterable: this.filterable,
+            filterBy: this.filterBy,
+            filterKey: this.filterKey,
         });
     }
 }

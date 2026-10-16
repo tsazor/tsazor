@@ -269,6 +269,51 @@ describe("DataGrid", () => {
     expect(container.querySelector(".fui-datagrid__options-panel")).toBeNull();
   });
 
+  it("filters a column with the built-in filter (its apply clears on an empty value, its mark shows on the button)", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: orders }, (b) => {
+        component(b, 0, PropertyColumn, { property: customer, filterable: true });
+        component(b, 10, PropertyColumn, { property: total });
+      }),
+    );
+    await settle(renderer);
+    const options = () => [...container.querySelectorAll<HTMLButtonElement>("thead th .fui-datagrid__options")];
+    expect(options().length).toBe(1);
+    options()[0]!.click();
+    await settle(renderer);
+    const apply = () => container.querySelector<HTMLButtonElement>(".fui-datagrid__filter-actions button:first-child")!;
+    const clear = () => container.querySelector<HTMLButtonElement>(".fui-datagrid__filter-actions button:last-child")!;
+    expect(apply()!.textContent!.trim()).toBe("Apply filter");
+    expect(clear()!.textContent!.trim()).toBe("Clear filter");
+
+    // "equals Marta": the rows filter to one, the options button marks the active filter.
+    const select = container.querySelector<HTMLSelectElement>(".fui-datagrid__filter-operator")!;
+    select.value = "equals";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(renderer);
+    const input = container.querySelector<HTMLInputElement>(".fui-datagrid__filter-value")!;
+    input.value = "Marta";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await settle(renderer);
+    apply()!.click();
+    await settle(renderer);
+    expect(texts(container, "tbody tr td:first-child")).toEqual(["Marta"]);
+    expect(options()[0]!.className).toContain("fui-datagrid__options--active");
+
+    clear()!.click();
+    await settle(renderer);
+    expect(texts(container, "tbody tr td:first-child")).toEqual(["Marta", "Jonas", "Lena", "Ali"]);
+    expect(options()[0]!.className).not.toContain("fui-datagrid__options--active");
+  });
+
+  it("renders the dense table for density compact (and small, its alias)", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: orders, density: "compact" }, (b) => component(b, 0, PropertyColumn, { property: customer })),
+    );
+    await settle(renderer);
+    expect(container.querySelector("table")!.className).toContain("fui-table--compact");
+  });
+
   it("collects the columns on every render: a column shown conditionally comes and goes", async () => {
     let showTotal = true;
     const { container, instance, ...renderer } = await renderTree(

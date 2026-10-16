@@ -1,7 +1,8 @@
 @** A DataGrid column showing one property of the row: `<PropertyColumn Property="(o) => o.total"
     Format="(v) => v.toFixed(2)" Sortable="true" />`. The title defaults to the property's name,
     taken from the lambda (`(o) => o.customer` ⇒ "customer"); sorting compares the property's
-    values. Place it inside a DataGrid: it takes the grid's row type. *@
+    values. Setting `filterable="true"` offers the grid's built-in filter over the values. Place it
+    inside a DataGrid: it takes the grid's row type. *@
 @typeparam TGridItem
 @typeparam TProp
 @import { DataGridModel, GridSort, type ColumnAlign } from "@tsazor/ui"
@@ -33,6 +34,10 @@
     @Parameter() headerContent?: RenderFragment;
     /** Options shown below the header when its options button is clicked (QuickGrid's ColumnOptions). */
     @Parameter() columnOptions?: RenderFragment;
+    /** Offers the grid's built-in filter over this column's values. */
+    @Parameter() filterable: boolean = false;
+    /** The property name an itemsProvider gets in getFilterByProperties() (default: the lambda's path). */
+    @Parameter() filterKey?: string;
 
     private register(): void {
         const grid = this.grid;
@@ -57,6 +62,9 @@
             isDefaultSortColumn: this.isDefaultSortColumn,
             align: this.align,
             className: this.class,
+            filterable: this.filterable,
+            filterBy: (item: TGridItem) => property(item),
+            filterKey: this.filterKey ?? propertyPath(property),
         });
     }
 }

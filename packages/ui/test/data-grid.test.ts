@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { DataGridModel, GridSort, PaginationState, type GridColumn, type GridItemsProviderRequest } from "../src/index";
-import { compareValues, propertyPath, propertyTitle, toggleAll, toggleSelection } from "../src/kit";
+import { DataGridModel, GridSort, PaginationState, type GridColumn, type GridFilterRule, type GridItemsProviderRequest } from "../src/index";
+import { compareValues, gridFilterMatches, propertyPath, propertyTitle, toggleAll, toggleSelection } from "../src/kit";
 
 interface Order {
   id: number;
@@ -125,6 +125,95 @@ describe("DataGridModel", () => {
   it("rejects Items together with an ItemsProvider", () => {
     const model = new DataGridModel<Order>(() => undefined);
     expect(() => model.setSource({ items: orders, itemsProvider: () => ({ items: [], totalItemCount: 0 }) })).toThrow(/either Items or ItemsProvider/);
+  });
+});
+
+describe("gridFilterMatches", () => {
+  const rule = (operator: GridFilterRule["operator"], value?: GridFilterRule["value"]): GridFilterRule => ({ operator, value });
+  it("matches text case-insensitively and numbers by value", () => {
+    expect(gridFilterMatches(rule("contains", "art"), "Marta")).toBe(true);
+    expect(gridFilterMatches(rule("contains", "xyz"), "Marta")).toBe(false);
+    expect(gridFilterMatches(rule("equals", "marta"), "Marta")).toBe(true);
+    expect(gridFilterMatches(rule("notEquals", "marta"), "Marta")).toBe(false);
+    expect(gridFilterMatches(rule("startsWith", "ma"), "Marta")).toBe(true);
+    expect(gridFilterMatches(rule("endsWith", "ta"), "Marta")).toBe(true);
+    expect(gridFilterMatches(rule("notContains", "xyz"), "Marta")).toBe(true);
+  });
+
+  it("orders and emptiness: missing values never match a value rule", () => {
+    expect(gridFilterMatches(rule("greaterThan", 10), 12)).toBe(true);
+    expect(gridFilterMatches(rule("greaterThanOrEqual", 12), 12)).toBe(true);
+    expect(gridFilterMatches(rule("lessThan", 10), 7)).toBe(true);
+    expect(gridFilterMatches(rule("lessThanOrEqual", 7), 8)).toBe(false);
+    expect(gridFilterMatches(rule("lessThan", 10.5), "30")).toBe(false);
+    expect(gridFilterMatches(rule("greaterThan", 10), null)).toBe(false);
+    expect(gridFilterMatches(rule("empty"), null)).toBe(true);
+    expect(gridFilterMatches(rule("empty"), "")).toBe(true);
+    expect(gridFilterMatches(rule("notEmpty"), "")).toBe(false);
+    expect(gridFilterMatches(rule("notEmpty"), 0)).toBe(true);
+  });
+});
+
+describe("column filters", () => {
+  const filterColumn = (owner: object, filterBy: (o: Order) => unknown, extra: Partial<GridColumn<Order>> = {}): GridColumn<Order> =>
+    column(owner, { filterable: true, filterBy, filterKey: "customer", ...extra });
+
+  it("filters Items on every active filter, and the pagination total follows", async () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 2;
+    const customer = filterColumn({}, (o) => o.customer);
+    const total = filterColumn({}, (o) => o.total);
+    model.setSource({ items: orders, pagination });
+    render(model, [customer, total]);
+    await model.setFilterAsync(total, { operator: "greaterThan", value: 10 });
+    expect(model.rows.map((o) => o.id)).toEqual([1, 2]);
+    expect(pagination.totalItemCount).toBe(3);
+    await model.setFilterAsync(customer, { operator: "contains", value: "en" });
+    expect(model.rows.map((o) => o.id)).toEqual([3]);
+  });
+
+  it("clears a filter, and a same-rule set is a no-op", async () => {
+    const onChange = vi.fn();
+    const model = new DataGridModel<Order>(onChange);
+    model.setSource({ items: orders });
+    const customer = filterColumn({}, (o) => o.customer);
+    render(model, [customer]);
+    const rule: GridFilterRule = { operator: "equals", value: "Marta" };
+    await model.setFilterAsync(customer, rule);
+    expect(model.hasFilters).toBe(true);
+    await model.setFilterAsync(customer, { operator: "equals", value: "Marta" });
+    expect(model.rows.map((o) => o.id)).toEqual([1]);
+    await model.setFilterAsync(customer, undefined);
+    expect(model.hasFilters).toBe(false);
+    expect(model.rows.map((o) => o.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("keeps a virtualized grid's sortedItems filtered too", async () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    model.setSource({ items: orders });
+    const total = filterColumn({}, (o) => o.total);
+    render(model, [total]);
+    await model.setFilterAsync(total, { operator: "lessThan", value: 15 });
+    expect(model.sortedItems.map((o) => o.id)).toEqual([1, 3, 4]);
+  });
+
+  it("hands the active filters to the request as property names", async () => {
+    const requests: GridItemsProviderRequest<Order>[] = [];
+    const provider = (request: GridItemsProviderRequest<Order>) => {
+      requests.push(request);
+      const matches = (property: { propertyName: string; operator: string; value?: unknown }, order: Order): boolean =>
+        property.propertyName === "customer" ? order.customer.toLowerCase().includes(String(property.value)) : true;
+      const rows = orders.filter((order) => request.getFilterByProperties().every((property) => matches(property, order)));
+      return { items: rows, totalItemCount: rows.length };
+    };
+    const model = new DataGridModel<Order>(() => undefined);
+    model.setSource({ itemsProvider: provider });
+    const customer = filterColumn({}, (o) => o.customer);
+    render(model, [customer]);
+    await model.setFilterAsync(customer, { operator: "startsWith", value: "l" });
+    expect(model.rows.map((o) => o.id)).toEqual([3, 4]); // the provider matches "l" anywhere; "Ali" has one
+    expect(requests.at(-1)!.getFilterByProperties()).toEqual([{ propertyName: "customer", operator: "startsWith", value: "l" }]);
   });
 });
 

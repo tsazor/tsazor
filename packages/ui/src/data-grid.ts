@@ -1,10 +1,11 @@
 import type { RenderFragment } from "@tsazor/runtime";
 
 /**
- * The DataGrid core (design-component-library.md §5): what both skins share —
- * sorting (`GridSort`), paging (`PaginationState`), the `ItemsProvider`
- * contract and the `DataGridModel` that collects the columns and computes the
- * rows. Modeled on Blazor's QuickGrid; no DOM here.
+ * The DataGrid core (design-component-library.md §5, extended per
+ * design-extended-library.md §2.1): what both skins share — sorting
+ * (`GridSort`), filtering (`GridFilterRule`), paging (`PaginationState`), the
+ * `ItemsProvider` contract and the `DataGridModel` that collects the columns
+ * and computes the rows. Modeled on Blazor's QuickGrid; no DOM here.
  */
 
 /** A sort direction; `auto` toggles (ascending first, or the column's initial direction). */
@@ -167,12 +168,80 @@ export interface GridItemsProviderRequest<T> {
   applySorting(source: readonly T[]): T[];
   /** The sort as property names (the column's `sortKey`), for a server query. */
   getSortByProperties(): SortedProperty[];
+  /** The active filters as property names (the columns' `filterKey`), for a server query. */
+  getFilterByProperties(): FilteredProperty[];
 }
 
 /** An `ItemsProvider`'s answer: one page of rows and the count of all. */
 export interface GridItemsProviderResult<T> {
   items: readonly T[];
   totalItemCount: number;
+}
+
+/** The operators a column filter supports. */
+export type GridFilterOperator =
+  /** The filter text appears anywhere in the value (lower case doesn't matter). */
+  | "contains"
+  /** The filter text appears nowhere in the value. */
+  | "notContains"
+  /** The value starts with the filter text, case doesn't matter. */
+  | "startsWith"
+  /** The value ends with the filter text. */
+  | "endsWith"
+  /** Same value (as text, lower case; a number column filters numerically). */
+  | "equals"
+  /** Another value. */
+  | "notEquals"
+  /** Greater than the filter value, by value (numbers, dates), else collation. */
+  | "greaterThan"
+  | "greaterThanOrEqual"
+  | "lessThan"
+  | "lessThanOrEqual"
+  /** The value is null, undefined or an empty string. */
+  | "empty"
+  /** The value holds something. */
+  | "notEmpty";
+
+/** A column filter: the operator and its value (undefined for `empty` and `notEmpty`). */
+export interface GridFilterRule {
+  operator: GridFilterOperator;
+  value?: string | number | boolean | Date;
+}
+
+/** One active filter, for a server query (`getFilterByProperties`). */
+export interface FilteredProperty {
+  propertyName: string;
+  operator: GridFilterOperator;
+  value?: string | number | boolean | Date;
+}
+
+/** A filter's target as the text equality matches it: lower case, dates ISO. */
+function filterText(value: unknown): string {
+  return (value instanceof Date ? value.toISOString() : String(value)).toLowerCase();
+}
+
+/** Whether `value` matches `rule`: text case-insensitively, numbers and dates by value. */
+export function gridFilterMatches(rule: GridFilterRule, value: unknown): boolean {
+  const missing = value === null || value === undefined || value === "";
+  if (rule.operator === "empty") return missing;
+  if (rule.operator === "notEmpty") return !missing;
+  if (missing) return false;
+  const target = rule.value ?? "";
+  const text = filterText(value);
+  switch (rule.operator) {
+    case "contains": return text.includes(filterText(target));
+    case "notContains": return !text.includes(filterText(target));
+    case "startsWith": return text.startsWith(filterText(target));
+    case "endsWith": return text.endsWith(filterText(target));
+    case "equals": return text === filterText(target);
+    case "notEquals": return text !== filterText(target);
+    case "greaterThan": return compareValues(value, target) > 0;
+    case "greaterThanOrEqual": return compareValues(value, target) >= 0;
+    case "lessThan": return compareValues(value, target) < 0;
+    case "lessThanOrEqual": return compareValues(value, target) <= 0;
+    // Every operator is answered above; the type stays a closed union.
+    default: return true;
+  }
 }
 
 /** Loads rows on demand (server-side paging and sorting): QuickGrid's `GridItemsProvider<T>`. */
@@ -198,6 +267,12 @@ export interface GridColumn<T> {
   align?: ColumnAlign;
   /** Extra class for the column's cells. */
   className?: string;
+  /** Whether the grid offers its built-in filter for the column. */
+  filterable?: boolean;
+  /** The value the built-in filter tests (a column without one doesn't filter). */
+  filterBy?: (item: T) => unknown;
+  /** The property name a server filters by (`getFilterByProperties`); default: none filtered server-side. */
+  filterKey?: string;
 }
 
 /** Row selection: none, one row, or any number of rows. */
@@ -225,6 +300,8 @@ export class DataGridModel<T> {
   private source: GridSource<T> = {};
   private view: { key: readonly unknown[]; rows: readonly T[] } | undefined;
   private provided: readonly T[] = [];
+  private readonly filters = new Map<object, GridFilterRule>();
+  private filterVersion = 0;
   private loadingNow = false;
   private abort: AbortController | undefined;
   private unsubscribe: (() => void) | undefined;
@@ -323,11 +400,14 @@ export class DataGridModel<T> {
     if (items === undefined) return this.provided;
     const pagination = this.source.pagination;
     const column = this.sortColumn;
-    const key = [items, items.length, column?.owner, this.ascending, pagination?.currentPageIndex, pagination?.itemsPerPage];
+    const key = [items, items.length, column?.owner, this.ascending, pagination?.currentPageIndex, pagination?.itemsPerPage, this.filterVersion];
     if (this.view === undefined || key.some((part, index) => !Object.is(part, this.view!.key[index]))) {
-      const sorted = column?.sortBy ? column.sortBy.apply(items, this.ascending) : [...items];
-      pagination?.setTotalItemCount(items.length);
-      const rows = pagination ? sorted.slice(pagination.currentPageIndex * pagination.itemsPerPage, (pagination.currentPageIndex + 1) * pagination.itemsPerPage) : sorted;
+      const filtered = this.filtered(items);
+      const sorted = column?.sortBy ? column.sortBy.apply(filtered, this.ascending) : filtered;
+      pagination?.setTotalItemCount(filtered.length);
+      const rows = pagination
+        ? sorted.slice(pagination.currentPageIndex * pagination.itemsPerPage, (pagination.currentPageIndex + 1) * pagination.itemsPerPage)
+        : sorted;
       this.view = { key, rows };
     }
     return this.view.rows;
@@ -374,6 +454,48 @@ export class DataGridModel<T> {
     }
   }
 
+  /* Filtering --------------------------------------------------------------- */
+
+  /** The active filter of a column, if it has one. */
+  filterOf(column: GridColumn<T>): GridFilterRule | undefined {
+    return this.filters.get(column.owner);
+  }
+
+  /** Whether any column filters now. */
+  get hasFilters(): boolean {
+    return this.filters.size > 0;
+  }
+
+  /**
+   * Sets or clears a column's filter (the built-in filter's Apply and Clear);
+   * undefined clears. A new filter starts on the first page (like a new sort)
+   * and the grid reloads: with an ItemsProvider, the request's
+   * `getFilterByProperties` carries the filters.
+   */
+  async setFilterAsync(column: GridColumn<T>, rule: GridFilterRule | undefined): Promise<void> {
+    const active = this.filters.get(column.owner);
+    if (sameRule(active, rule)) return;
+    this.filters.delete(column.owner);
+    if (rule !== undefined) this.filters.set(column.owner, rule);
+    this.filterVersion++;
+    const pagination = this.source.pagination;
+    if (pagination && pagination.currentPageIndex !== 0) await pagination.setCurrentPageIndexAsync(0);
+    await this.refreshDataAsync();
+  }
+
+  /** The rows of `items` that match every active filter's column. */
+  private filtered(items: readonly T[]): readonly T[] {
+    if (this.filters.size === 0) return items;
+    const rules: ([(item: T) => unknown, GridFilterRule] | undefined)[] = [...this.filters].map(([owner, rule]) => {
+      const column = this.current.find((candidate) => candidate.owner === owner);
+      const filterBy = column?.filterBy;
+      return filterBy === undefined ? undefined : [filterBy, rule] as const;
+    });
+    const valueRules = rules.filter((entry) => entry !== undefined);
+    if (valueRules.length === 0) return items;
+    return items.filter((item) => valueRules.every(([filterBy, rule]) => gridFilterMatches(rule, filterBy(item))));
+  }
+
   /* Virtualization --------------------------------------------------------- */
 
   /**
@@ -388,13 +510,14 @@ export class DataGridModel<T> {
     this.virtualRefresh = refresh;
   }
 
-  /** All rows of `Items`, sorted (a virtualized grid renders a window of them). */
+  /** All rows of `Items`, filtered and sorted (a virtualized grid renders a window of them). */
   get sortedItems(): readonly T[] {
     const items = this.source.items ?? [];
     const column = this.sortColumn;
-    const key = [items, items.length, column?.owner, this.ascending];
+    const key = [items, items.length, column?.owner, this.ascending, this.filterVersion];
     if (this.sortedView === undefined || key.some((part, index) => !Object.is(part, this.sortedView!.key[index]))) {
-      this.sortedView = { key, rows: column?.sortBy ? column.sortBy.apply(items, this.ascending) : [...items] };
+      const filtered = this.filtered(items);
+      this.sortedView = { key, rows: column?.sortBy ? column.sortBy.apply(filtered, this.ascending) : filtered };
     }
     return this.sortedView.rows;
   }
@@ -429,7 +552,20 @@ export class DataGridModel<T> {
       signal,
       applySorting: (source) => (column?.sortBy ? column.sortBy.apply(source, ascending) : [...source]),
       getSortByProperties: () => (column?.sortKey ? [{ propertyName: column.sortKey, direction: ascending ? "ascending" : "descending" }] : []),
+      getFilterByProperties: () => this.filterProperties(),
     };
+  }
+
+  /** The active filters with their columns' `filterKey`, for a server query. */
+  private filterProperties(): FilteredProperty[] {
+    const result: FilteredProperty[] = [];
+    for (const [owner, rule] of this.filters) {
+      const column = this.current.find((candidate) => candidate.owner === owner);
+      if (column?.filterKey !== undefined) {
+        result.push({ propertyName: column.filterKey, operator: rule.operator, ...(rule.value === undefined ? {} : { value: rule.value }) });
+      }
+    }
+    return result;
   }
 
   /** Stops following the pagination state and aborts a running request. */
@@ -438,6 +574,12 @@ export class DataGridModel<T> {
     this.unsubscribe = undefined;
     this.abort?.abort();
   }
+}
+
+/** Whether `rule` is the filter `active` already holds (an exact rule object equals its stored copy). */
+function sameRule(active: GridFilterRule | undefined, rule: GridFilterRule | undefined): boolean {
+  if (active === rule) return true;
+  return active !== undefined && rule !== undefined && active.operator === rule.operator && active.value === rule.value;
 }
 
 /** The selection after a click on `item`'s selector: `single` replaces, `multiple` toggles. */
