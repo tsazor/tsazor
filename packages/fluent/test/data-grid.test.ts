@@ -306,6 +306,29 @@ describe("DataGrid", () => {
     expect(options()[0]!.className).not.toContain("fui-datagrid__options--active");
   });
 
+  it("renders a tfoot with the columns' aggregates; the default scope is all the rows", async () => {
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 2;
+    const { container, ...renderer } = await renderTree((b) => {
+      component(b, 0, DataGrid, {
+        items: orders,
+        pagination,
+        childContent: ((inner: RenderTreeBuilder) => {
+          component(inner, 0, PropertyColumn, { property: customer });
+          component(inner, 4, PropertyColumn, { property: total, title: "Total", aggregate: "sum", format: (v: number) => v.toFixed(2), align: "end" });
+          component(inner, 8, TemplateColumn, { title: "Orders", aggregate: "count" });
+        }) as RenderFragment,
+      });
+      component(b, 10, Paginator, { state: pagination });
+    });
+    await settle(renderer);
+    expect(container.querySelector("tfoot")!.className).toBe("fui-datagrid__foot");
+    expect(texts(container, "tfoot tr td")).toEqual(["", "67.50", "4"]);
+    container.querySelector<HTMLButtonElement>("[aria-label='Next page']")!.click();
+    await settle(renderer);
+    expect(texts(container, "tfoot tr td")).toEqual(["", "67.50", "4"]);
+  });
+
   it("renders the dense table for density compact (and small, its alias)", async () => {
     const { container, ...renderer } = await renderTree(
       grid({ items: orders, density: "compact" }, (b) => component(b, 0, PropertyColumn, { property: customer })),

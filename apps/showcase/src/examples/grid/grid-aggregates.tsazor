@@ -1,0 +1,17 @@
+@** A grid with column aggregates: Aggregate on a column puts its footer summary into the table's
+    foot — sum over the numbers here, count over all rows, your own when you pass a function. The
+    footer formats a value like a cell (the column's Format). AggregateScope="page" makes the
+    footer the current page's instead of the whole source's. *@
+@import { PaginationState } from "@tsazor/bootstrap"
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" Pagination="@pagination" AggregateScope="page" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" Title="Customer" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Aggregate="sum" />
+    <TemplateColumn Title="Orders" Aggregate="count" />
+</DataGrid>
+<Paginator State="@pagination" />
+
+@code {
+    private readonly pagination = new PaginationState();
+}

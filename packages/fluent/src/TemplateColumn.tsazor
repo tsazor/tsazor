@@ -4,7 +4,7 @@
     `sortKey` the server orders by (`sortKey="Brand"`). Place it inside a
     DataGrid: it takes the grid's row type. *@
 @typeparam TGridItem
-@import { DataGridModel, type ColumnAlign, type GridSort } from "@tsazor/ui"
+@import { DataGridModel, type ColumnAlign, type GridAggregate, type GridSort } from "@tsazor/ui"
 @{ this.register(); }
 
 @code {
@@ -41,6 +41,15 @@
     @Parameter() filterBy?: (item: TGridItem) => unknown;
     /** The property name an itemsProvider gets in getFilterByProperties(). */
     @Parameter() filterKey?: string;
+    /**
+     * The column's footer summary: a kind over the values `aggregateBy` reads, or your own over the
+     * rows; the footer shows the text of String, or your own format.
+     */
+    @Parameter() aggregate?: GridAggregate<TGridItem>;
+    /** The values the built-in aggregates read: `(o) => o.total`. */
+    @Parameter() aggregateBy?: (item: TGridItem) => unknown;
+    /** Formats the aggregate's value for the footer. */
+    @Parameter() aggregateFormat?: (value: unknown) => string;
 
     private register(): void {
         const grid = this.grid;
@@ -64,6 +73,9 @@
             filterable: this.filterable,
             filterBy: this.filterBy,
             filterKey: this.filterKey,
+            aggregate: this.aggregate,
+            aggregateBy: this.aggregateBy,
+            aggregateFormat: this.aggregateFormat,
         });
     }
 }

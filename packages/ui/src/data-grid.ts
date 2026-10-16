@@ -273,6 +273,59 @@ export interface GridColumn<T> {
   filterBy?: (item: T) => unknown;
   /** The property name a server filters by (`getFilterByProperties`); default: none filtered server-side. */
   filterKey?: string;
+  /** The column's footer summary: a kind over its values, or your own over the rows. */
+  aggregate?: GridAggregate<T>;
+  /** The values the built-in aggregates read (a PropertyColumn's property). */
+  aggregateBy?: (item: T) => unknown;
+  /** Formats the aggregate's value for the footer (default: the value as text). */
+  aggregateFormat?: (value: unknown) => string;
+}
+
+/** What a footer aggregates over: all the rows the grid holds ("all") or the current page's. */
+export type AggregateScope = "all" | "page";
+
+/** A column's footer summary: a built-in kind over the column's values, or your own over the rows. */
+export type GridAggregate<T> = "sum" | "avg" | "count" | "min" | "max" | ((items: readonly T[]) => unknown);
+
+/**
+ * A built-in aggregate over values: `count` their number, `sum` and `avg` the numbers'
+ * (other values ignored, no numbers: 0 and undefined), `min` and `max` by value order
+ * (numbers, bigints, dates and booleans by value, text by the user's collation).
+ */
+export function gridAggregate(kind: "sum" | "avg" | "count" | "min" | "max", values: readonly unknown[]): unknown {
+  switch (kind) {
+    case "count":
+      return values.length;
+    case "sum":
+    case "avg": {
+      let sum = 0;
+      let numbers = 0;
+      for (const value of values) {
+        if (typeof value === "number" && Number.isFinite(value)) {
+          sum += value;
+          numbers++;
+        }
+      }
+      if (kind === "avg") return numbers === 0 ? undefined : sum / numbers;
+      return sum;
+    }
+    case "min":
+    case "max": {
+      // An order needs a value: numbers, bigints, booleans, text and dates (gridFilterMatches's filterText shapes a date's text).
+      const orderable = (value: unknown): boolean => value instanceof Date || (typeof value === "string" || typeof value === "number" || typeof value === "bigint" || typeof value === "boolean");
+      const known = values.filter(orderable);
+      if (known.length === 0) return undefined;
+      let best: unknown = known[0]!;
+      for (const value of known.slice(1)) {
+        const order = compareValues(value, best);
+        if (kind === "min" ? order < 0 : order > 0) best = value;
+      }
+      return best;
+    }
+    // The parameter is one of the four kinds above.
+    default:
+      return undefined;
+  }
 }
 
 /** Row selection: none, one row, or any number of rows. */
@@ -494,6 +547,26 @@ export class DataGridModel<T> {
     const valueRules = rules.filter((entry) => entry !== undefined);
     if (valueRules.length === 0) return items;
     return items.filter((item) => valueRules.every(([filterBy, rule]) => gridFilterMatches(rule, filterBy(item))));
+  }
+
+  /* Aggregates -------------------------------------------------------------- */
+
+  /**
+   * The rows the footer aggregates over: the filtered and sorted source (an
+   * ItemsProvider delivers windows, so its "all" is the current window), or
+   * the current page's rows.
+   */
+  aggregateRows(scope: "all" | "page"): readonly T[] {
+    if (scope === "page" || this.source.items === undefined) return this.rows;
+    return this.sortedItems;
+  }
+
+  /** A column's footer value over the given scope (quickgrid-free: the skin renders it). */
+  aggregateOf(column: GridColumn<T>, scope: "all" | "page" = "all"): unknown {
+    const aggregate = column.aggregate;
+    if (aggregate === undefined) return undefined;
+    if (typeof aggregate === "function") return aggregate(this.aggregateRows(scope));
+    return gridAggregate(aggregate, this.aggregateRows(scope).map((row) => column.aggregateBy?.(row)));
   }
 
   /* Virtualization --------------------------------------------------------- */

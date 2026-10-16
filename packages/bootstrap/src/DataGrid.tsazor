@@ -11,7 +11,7 @@
 @import { ArrowDownUp, CaretDownFill, CaretUpFill, Filter } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
+DataGridModel, uniqueId, type AggregateScope, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
 @import { toggleAll, toggleSelection } from "@tsazor/ui/kit"
@@ -127,6 +127,18 @@ type IconValue,
                     }
                     }
                 </tbody>
+                @if (this.footColumns) {
+                    <tfoot class="tz-grid-foot">
+                        <tr>
+                            @if (selectionMode !== "none") {
+                                <td></td>
+                            }
+                            @foreach (const column of this.model.columns) {
+                                <td class="@this.cellClass(column)">@this.aggregateText(column)</td>
+                            }
+                        </tr>
+                    </tfoot>
+                }
             </table>
         </div>
     </Defer>
@@ -165,6 +177,11 @@ type IconValue,
     @Parameter() small: boolean = false;
     /** comfortable (the normal row height) or compact (the dense table). */
     @Parameter() density?: "comfortable" | "compact";
+    /**
+     * What a column's footer aggregates over: all the grid's rows (the default) or the current
+     * page's. With an ItemsProvider the grid holds one window, so the scope is that window.
+     */
+    @Parameter() aggregateScope: AggregateScope = "all";
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
     /**
@@ -337,6 +354,20 @@ type IconValue,
 
     private sort(column: GridColumn<TGridItem>): Promise<void> {
         return this.model.sortByColumnAsync(column);
+    }
+
+    /* The footer's aggregates -------------------------------------------------- */
+
+    /** True when any column has a footer summary (the tfoot renders then). */
+    private get footColumns(): boolean {
+        return this.model.columns.some((column) => column.aggregate !== undefined);
+    }
+
+    /** A footer cell's text: the aggregate's value, via the column's own format. */
+    private aggregateText(column: GridColumn<TGridItem>): string {
+        const value = this.model.aggregateOf(column, this.aggregateScope);
+        if (value === undefined) return "";
+        return column.aggregateFormat !== undefined ? column.aggregateFormat(value) : String(value);
     }
 
     /* The built-in column filter ---------------------------------------------- */

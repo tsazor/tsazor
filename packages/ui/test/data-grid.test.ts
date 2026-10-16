@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DataGridModel, GridSort, PaginationState, type GridColumn, type GridFilterRule, type GridItemsProviderRequest } from "../src/index";
+import { DataGridModel, GridSort, PaginationState, gridAggregate, type GridColumn, type GridFilterRule, type GridItemsProviderRequest } from "../src/index";
 import { compareValues, gridFilterMatches, propertyPath, propertyTitle, toggleAll, toggleSelection } from "../src/kit";
 
 interface Order {
@@ -214,6 +214,59 @@ describe("column filters", () => {
     await model.setFilterAsync(customer, { operator: "startsWith", value: "l" });
     expect(model.rows.map((o) => o.id)).toEqual([3, 4]); // the provider matches "l" anywhere; "Ali" has one
     expect(requests.at(-1)!.getFilterByProperties()).toEqual([{ propertyName: "customer", operator: "startsWith", value: "l" }]);
+  });
+});
+
+describe("gridAggregate", () => {
+  it("counts, sums and averages the numeric values", () => {
+    expect(gridAggregate("count", [1, "a", undefined, 2])).toBe(4);
+    expect(gridAggregate("sum", [1, 2.5, undefined, "x"])).toBe(3.5);
+    expect(gridAggregate("avg", [2, 4, "x"])).toBe(3);
+    expect(gridAggregate("sum", [])).toBe(0);
+    expect(gridAggregate("avg", [])).toBeUndefined();
+  });
+
+  it("picks min and max by value order, ignoring nothing but null", () => {
+    expect(gridAggregate("min", [12, 7, 30])).toBe(7);
+    expect(gridAggregate("max", [{ total: 12 }, { total: 30 }])).toBeUndefined(); // objects have no order
+    expect(gridAggregate("max", [new Date(2), new Date(5)])).toEqual(new Date(5));
+    expect(gridAggregate("min", [null, undefined])).toBeUndefined();
+    expect(gridAggregate("max", ["b", "A", "a10"])).toBe("b");
+  });
+});
+
+describe("column aggregates", () => {
+  const aggregateColumn = (owner: object, kind: GridColumn<Order>["aggregate"], extra: Partial<GridColumn<Order>> = {}): GridColumn<Order> =>
+    column(owner, { aggregate: kind, aggregateBy: (o) => o.total, ...extra });
+
+  it("computes a column's footer over all rows, and the page's rows on demand", async () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 2;
+    const total = aggregateColumn({}, "sum");
+    model.setSource({ items: orders, pagination });
+    render(model, [total]);
+    void model.rows;
+    expect(model.aggregateOf(total, "all")).toBe(12 + 30 + 12 + 7);
+    expect(model.aggregateOf(total, "page")).toBe(42); // the first page's rows
+    await pagination.setCurrentPageIndexAsync(1);
+    expect(model.aggregateOf(total, "page")).toBe(19);
+  });
+
+  it("formats and passes a custom aggregate through", () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    const custom = aggregateColumn({}, (rows) => rows.length);
+    model.setSource({ items: orders });
+    render(model, [custom]);
+    expect(model.aggregateOf(custom)).toBe(4);
+  });
+
+  it("is undefined for a column without one", () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    const plain = column({});
+    model.setSource({ items: orders.slice(0, 1) });
+    render(model, [plain]);
+    expect(model.aggregateOf(plain)).toBeUndefined();
   });
 });
 

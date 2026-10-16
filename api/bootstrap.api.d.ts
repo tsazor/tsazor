@@ -17,6 +17,8 @@ export default class AccordionItem extends ComponentBase {
 // addBootstrap
 export declare function addBootstrap(services: ServiceCollection): void;
 
+// AggregateScope: re-exported from @tsazor/ui
+
 // Alert
 export default class Alert extends ComponentBase {
     intent: Intent;
@@ -362,6 +364,7 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     bordered: boolean;
     small: boolean;
     density?: "comfortable" | "compact";
+    aggregateScope: AggregateScope;
     responsive: boolean;
     virtualize: boolean;
     itemSize: number;
@@ -564,6 +567,8 @@ export default class Grid extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }
+
+// GridAggregate: re-exported from @tsazor/ui
 
 // GridColumn: re-exported from @tsazor/ui
 
@@ -893,6 +898,7 @@ export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     columnOptions?: RenderFragment;
     filterable: boolean;
     filterKey?: string;
+    aggregate?: GridAggregate<TGridItem>;
 }
 
 // RadioGroup
@@ -1163,6 +1169,9 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
     filterable: boolean;
     filterBy?: (item: TGridItem) => unknown;
     filterKey?: string;
+    aggregate?: GridAggregate<TGridItem>;
+    aggregateBy?: (item: TGridItem) => unknown;
+    aggregateFormat?: (value: unknown) => string;
 }
 
 // TextArea

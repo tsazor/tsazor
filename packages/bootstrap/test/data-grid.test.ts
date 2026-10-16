@@ -313,6 +313,31 @@ describe("DataGrid", () => {
     expect(options()[0]!.className).not.toContain("tz-grid-options--active");
   });
 
+  it("renders a tfoot with the columns' aggregates; the scope turns with aggregateScope", async () => {
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 2;
+    const { container, ...renderer } = await renderTree((b) => {
+      component(b, 0, DataGrid, {
+        items: orders,
+        pagination,
+        childContent: ((inner: RenderTreeBuilder) => {
+          component(inner, 0, PropertyColumn, { property: customer });
+          component(inner, 4, PropertyColumn, { property: total, title: "Total", aggregate: "sum", format: (v: number) => v.toFixed(2), align: "end" });
+          component(inner, 8, TemplateColumn, { title: "Orders", aggregate: "count" });
+        }) as RenderFragment,
+      });
+      component(b, 10, Paginator, { state: pagination });
+    });
+    await settle(renderer);
+    expect(container.querySelector("tfoot")!.className).toBe("tz-grid-foot");
+    // The customer column has none (an empty cell), the total sums all rows, the count is 4.
+    expect(texts(container, "tfoot tr td")).toEqual(["", "67.50", "4"]);
+    container.querySelector<HTMLButtonElement>("[aria-label='Next page']")!.click();
+    await settle(renderer);
+    // The default scope is all: the footer is still the whole source's.
+    expect(texts(container, "tfoot tr td")).toEqual(["", "67.50", "4"]);
+  });
+
   it("renders the dense table for density compact (and small, its alias)", async () => {
     const { container, ...renderer } = await renderTree(
       grid({ items: orders, density: "compact" }, (b) => component(b, 0, PropertyColumn, { property: customer })),

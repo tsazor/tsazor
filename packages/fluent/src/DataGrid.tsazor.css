@@ -171,6 +171,12 @@ th[aria-sort] .fui-datagrid__sort-indicator {
   border: 1px solid var(--fui-stroke-1);
 }
 
+/* The footer's aggregates: separated from the rows, as strong as a header. */
+.fui-datagrid__foot td {
+  border-top: 1px solid var(--fui-stroke-2);
+  font-weight: 600;
+}
+
 .fui-table-wrap--scroll {
   overflow-x: auto;
 }

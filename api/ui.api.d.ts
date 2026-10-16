@@ -2,6 +2,9 @@
 
 /* @tsazor/ui */
 
+// AggregateScope
+export type AggregateScope = "all" | "page";
+
 // anchoredPosition
 export declare function anchoredPosition(options: AnchoredPositionOptions): Attachment<HTMLElement>;
 
@@ -173,6 +176,8 @@ export declare class DataGridModel<T> {
     get hasFilters(): boolean;
     setFilterAsync(column: GridColumn<T>, rule: GridFilterRule | undefined): Promise<void>;
     private filtered;
+    aggregateRows(scope: "all" | "page"): readonly T[];
+    aggregateOf(column: GridColumn<T>, scope?: "all" | "page"): unknown;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
     provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
@@ -308,6 +313,12 @@ export interface FocusTrapOptions {
 // formatFileSize
 export declare function formatFileSize(bytes: number, locale?: string): string;
 
+// gridAggregate
+export declare function gridAggregate(kind: "sum" | "avg" | "count" | "min" | "max", values: readonly unknown[]): unknown;
+
+// GridAggregate
+export type GridAggregate<T> = "sum" | "avg" | "count" | "min" | "max" | ((items: readonly T[]) => unknown);
+
 // GridColumn
 export interface GridColumn<T> {
     readonly owner: object;
@@ -325,6 +336,9 @@ export interface GridColumn<T> {
     filterable?: boolean;
     filterBy?: (item: T) => unknown;
     filterKey?: string;
+    aggregate?: GridAggregate<T>;
+    aggregateBy?: (item: T) => unknown;
+    aggregateFormat?: (value: unknown) => string;
 }
 
 // gridFilterMatches

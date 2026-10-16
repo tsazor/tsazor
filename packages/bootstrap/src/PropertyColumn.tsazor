@@ -5,7 +5,7 @@
     inside a DataGrid: it takes the grid's row type. *@
 @typeparam TGridItem
 @typeparam TProp
-@import { DataGridModel, GridSort, type ColumnAlign } from "@tsazor/ui"
+@import { DataGridModel, GridSort, type ColumnAlign, type GridAggregate } from "@tsazor/ui"
 @import { propertyPath, propertyTitle } from "@tsazor/ui/kit"
 @{ this.register(); }
 
@@ -38,6 +38,11 @@
     @Parameter() filterable: boolean = false;
     /** The property name an itemsProvider gets in getFilterByProperties() (default: the lambda's path). */
     @Parameter() filterKey?: string;
+    /**
+     * The column's footer summary: a kind (sum, avg, count, min, max) over the property's values,
+     * formatted like a cell, or your own aggregate over the rows.
+     */
+    @Parameter() aggregate?: GridAggregate<TGridItem>;
 
     private register(): void {
         const grid = this.grid;
@@ -65,6 +70,9 @@
             filterable: this.filterable,
             filterBy: (item: TGridItem) => property(item),
             filterKey: this.filterKey ?? propertyPath(property),
+            aggregate: this.aggregate,
+            aggregateBy: (item: TGridItem) => property(item),
+            aggregateFormat: format !== undefined ? (value: unknown) => format(value as TProp) : undefined,
         });
     }
 }
