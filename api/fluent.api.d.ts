@@ -379,6 +379,8 @@ export default class DataGrid<TGridItem> extends ComponentBase {
         item: TGridItem;
         reason: "commit" | "cancel";
     }>;
+    group?: (item: TGridItem) => unknown;
+    groupFormat?: (value: unknown) => string;
     scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void>;
     refreshDataAsync(): Promise<void>;
     sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;

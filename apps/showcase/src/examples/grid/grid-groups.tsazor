@@ -1,0 +1,10 @@
+@** A grouped grid: Group puts a collapsible header row per value (open by default, the chevron
+    turns, a group's rows underneath). Groups order by their value, the rows within a group keep
+    the sort's order; a footer aggregates over the rows, not the lines. Date values get the ISO
+    date for the header unless GroupFormat says otherwise. *@
+@import { orders, type Order } from "./orders"
+
+<DataGrid Items="@orders" Group="@(order => order.paid ? "Paid" : "Open")" AriaLabel="Orders">
+    <PropertyColumn Property="(o) => o.customer" Sortable="@true" />
+    <PropertyColumn Property="(o) => o.total" Title="Total" Align="end" />
+</DataGrid>

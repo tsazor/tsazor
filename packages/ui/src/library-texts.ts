@@ -41,6 +41,9 @@ export const libraryTextDefaults = catalog({
   // The grid's inline edit: the edited row's key handling belongs to the skin.
   "dataGrid.editCommit": "Commit the edit (Enter)",
   "dataGrid.editCancel": "Cancel the edit (Escape)",
+  "dataGrid.groupToggle": "Toggle this group's rows ({count})",
+  "dataGrid.groupCount.one": "{count} row",
+  "dataGrid.groupCount.other": "{count} rows",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",
   "dataGrid.filterValue": "Filter value",

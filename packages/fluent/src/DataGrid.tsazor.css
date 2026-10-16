@@ -182,6 +182,41 @@ th[aria-sort] .fui-datagrid__sort-indicator {
   background: var(--fui-control-fill-subtle);
 }
 
+/* The group: a full-width header row of its own; the chevron turns with the open rows underneath. */
+.fui-datagrid__group-cell {
+  padding: 0;
+}
+
+.fui-datagrid__group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fui-gap-xs, 4px);
+  padding: var(--fui-gap-xs, 4px) 0;
+  border: none;
+  background: transparent;
+  color: var(--fui-foreground-1);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fui-datagrid__group-toggle .fui-datagrid__group-chevron {
+  display: inline-flex;
+  color: var(--fui-foreground-3);
+  transition: transform 100ms ease;
+}
+
+.fui-datagrid__group-toggle[aria-expanded="false"] .fui-datagrid__group-chevron {
+  transform: rotate(-90deg);
+}
+
+.fui-datagrid__group-value {
+  font-weight: 600;
+}
+
+.fui-datagrid__group-count {
+  color: var(--fui-foreground-3);
+}
+
 /* Widths: only a sized table can lay its cols out (the unsized one keeps the natural sizes). */
 .fui-datagrid--sized {
   table-layout: fixed;

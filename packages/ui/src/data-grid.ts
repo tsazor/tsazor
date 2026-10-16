@@ -292,6 +292,15 @@ export type AggregateScope = "all" | "page";
 /** The grid's inline editing: none, or a row's edit (one row at a time; its columns with an `editContent` render it). */
 export type EditingMode = "none" | "row";
 
+/**
+ * One line the grid renders when it groups (the skin loops over `lines`): a data row, or a
+ * group's header line — its value (as the group ordered it), how many rows it holds, whether it
+ * is open (the open rows follow), and its nesting level (v1: one level, 0).
+ */
+export type GridRow<T> =
+  | { kind: "row"; item: T }
+  | { kind: "group"; value: unknown; count: number; open: boolean; depth: number };
+
 /** A column's footer summary: a built-in kind over the column's values, or your own over the rows. */
 export type GridAggregate<T> = "sum" | "avg" | "count" | "min" | "max" | ((items: readonly T[]) => unknown);
 
@@ -367,6 +376,13 @@ export class DataGridModel<T> {
   private readonly filters = new Map<object, GridFilterRule>();
   private filterVersion = 0;
   private editedRowItem: T | undefined;
+  /** The grouping (by its source, so a re-render's fresh lambda stays the same group). */
+  private groupBy: ((item: T) => unknown) | undefined;
+  private groupSource: string | undefined;
+  /** The collapsed groups, by their value's string (open is the default). */
+  private readonly groupCollapsed = new Set<string>();
+  private groupVersion = 0;
+  private lined?: { key: readonly unknown[]; lines: readonly GridRow<T>[]; indexes: Map<unknown, number> };
   private loadingNow = false;
   private abort: AbortController | undefined;
   private unsubscribe: (() => void) | undefined;
@@ -652,6 +668,81 @@ export class DataGridModel<T> {
     if (this.editedRowItem === undefined) return;
     this.editedRowItem = undefined;
     this.onChange();
+  }
+
+  /* Grouping ---------------------------------------------------------------- */
+
+  /**
+   * Sets the grouping (the grid's `group`); true when it changed and all groups opened again.
+   * The grouping compares by the lambda's source, so a re-render's fresh inline lambda keeps the
+   * group's collapse state.
+   */
+  setGroup(groupBy: ((item: T) => unknown) | undefined): boolean {
+    const source = groupBy === undefined ? undefined : Function.prototype.toString.call(groupBy);
+    if (source === this.groupSource) return false;
+    this.groupBy = groupBy;
+    this.groupSource = source;
+    this.groupCollapsed.clear();
+    this.groupVersion++;
+    return true;
+  }
+
+  /** Whether the grid groups (a source is set). */
+  get group(): ((item: T) => unknown) | undefined {
+    return this.groupBy;
+  }
+
+  /** Opens (or closes) a group's rows (the group header's toggle; the value as the model ordered it). */
+  toggleGroup(value: unknown): void {
+    const key = String(value);
+    if (!this.groupCollapsed.delete(key)) this.groupCollapsed.add(key);
+    this.groupVersion++;
+    this.onChange();
+  }
+
+  /**
+   * The view's lines: the rows, or a group's header line (its open rows follow). Without a
+   * grouping they are the rows, one level each. Groups order by their value, rows within a group
+   * keep the sort's order; the paged view groups its own page's rows.
+   */
+  get lines(): readonly GridRow<T>[] {
+    const rows = this.rows;
+    if (this.groupBy === undefined) return rows.map((item): GridRow<T> => ({ kind: "row", item }));
+    // The cache (rows, the sort's owner and direction, the page, the filters, the group's source and state):
+    const sortOwner = this.sortOwner;
+    const pagination = this.source.pagination;
+    const key = [rows, rows.length, sortOwner, this.ascending, pagination?.currentPageIndex, pagination?.itemsPerPage, this.filterVersion, this.groupSource, this.groupVersion];
+    if (this.lined === undefined || key.some((part, index) => !Object.is(part, this.lined!.key[index]))) {
+      const groups = new Map<string, { value: unknown; rows: T[] }>();
+      for (const row of rows) {
+        const value = this.groupBy!(row);
+        const groupKey = String(value);
+        const group = groups.get(groupKey);
+        if (group === undefined) groups.set(groupKey, { value, rows: [row] });
+        else group.rows.push(row);
+      }
+      const values = [...groups.values()];
+      values.sort((a, b) => compareValues(a.value, b.value));
+      const lines: GridRow<T>[] = [];
+      const indexes = new Map<unknown, number>();
+      for (const group of values) {
+        lines.push({ kind: "group", value: group.value, count: group.rows.length, open: !this.groupCollapsed.has(String(group.value)), depth: 0 });
+        if (this.groupCollapsed.has(String(group.value))) continue;
+        for (const row of group.rows) {
+          indexes.set(row, lines.push({ kind: "row", item: row }) - 1);
+        }
+      }
+      this.lined = { key, lines, indexes };
+    }
+    return this.lined.lines;
+  }
+
+  /** The index of a current row within the lines (0-based among the data rows; -1 when it isn't one). */
+  rowIndexOf(item: T): number {
+    if (this.groupBy === undefined) return this.rows.indexOf(item);
+    this.lines; // the lines' index map builds (or caches) with the view
+    const index = this.lined?.indexes.get(item);
+    return index === undefined ? -1 : index;
   }
 
   /* Virtualization --------------------------------------------------------- */

@@ -13,6 +13,7 @@
 @import GridAggregatesExample from "../examples/grid/grid-aggregates.tsazor"
 @import GridWidthsExample from "../examples/grid/grid-widths.tsazor"
 @import GridEditingExample from "../examples/grid/grid-editing.tsazor"
+@import GridGroupsExample from "../examples/grid/grid-groups.tsazor"
 
 <Typography Variant="h1">DataGrid</Typography>
 <Typography>
@@ -48,3 +49,6 @@
 
 <Example Title="Inline editing" Description="Editing a row: its columns with an EditContent show the edit cells; Enter commits, Escape cancels."
     Id="grid/grid-editing"><GridEditingExample /></Example>
+
+<Example Title="Grouping" Description="A collapsible header row per value, its rows underneath; groups by value order."
+    Id="grid/grid-groups"><GridGroupsExample /></Example>

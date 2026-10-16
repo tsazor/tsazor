@@ -58,7 +58,7 @@ try {
   const rows = await page.locator(".sz-example-demo table tbody tr").count();
   if (rows < 4) throw new Error(`the first grid shows only ${rows} rows`);
   const examples = await page.locator(".sz-code pre code").count();
-  if (examples < 9) throw new Error(`the DataGrid page shows ${examples} code panels, expected one per example`);
+  if (examples < 10) throw new Error(`the DataGrid page shows ${examples} code panels, expected one per example`);
   const firstCode = await page.textContent(".sz-code pre code");
   if (!firstCode.includes("DataGrid Items=")) throw new Error("the code panel does not show the example's source");
 

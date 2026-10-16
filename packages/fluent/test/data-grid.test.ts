@@ -423,6 +423,48 @@ describe("DataGrid", () => {
     expect(container.querySelectorAll("tbody input")).toHaveLength(0);
   });
 
+  it("groups the rows: a header per value, collapsible, the rows beneath, the foot over all", async () => {
+    const { container, ...renderer } = await renderTree((b) => {
+      component(b, 0, DataGrid, {
+        items: orders,
+        group: ((o: Order) => o.customer.length) as never,
+        childContent: ((inner: RenderTreeBuilder) => {
+          component(inner, 0, PropertyColumn, { property: customer });
+          component(inner, 4, PropertyColumn, { property: total, title: "Total", aggregate: "count" });
+        }) as RenderFragment,
+      });
+    });
+    await settle(renderer);
+    const groups = () => [...container.querySelectorAll<HTMLButtonElement>(".fui-datagrid__group-toggle")];
+    expect(groups()).toHaveLength(3);
+    const dataRows = () => texts(container, "tbody tr:not(.fui-datagrid__group) td:first-child");
+    expect(dataRows()).toEqual(["Ali", "Lena", "Marta", "Jonas"]);
+    expect(groups()[0]!.getAttribute("aria-expanded")).toBe("true");
+
+    groups()[0]!.click();
+    await settle(renderer);
+    expect(dataRows()).toEqual(["Lena", "Marta", "Jonas"]);
+    expect(groups()[0]!.getAttribute("aria-expanded")).toBe("false");
+
+    groups()[0]!.click();
+    await settle(renderer);
+    expect(dataRows()).toEqual(["Ali", "Lena", "Marta", "Jonas"]);
+    expect(texts(container, "tfoot tr td")).toEqual(["", "4"]);
+  });
+
+  it("refuses grouping together with virtualize", async () => {
+    await expect(
+      renderTree((b) => {
+        component(b, 0, DataGrid, {
+          items: orders,
+          group: ((o: Order) => o.customer.length) as never,
+          virtualize: true,
+          childContent: ((inner: RenderTreeBuilder) => component(inner, 0, PropertyColumn, { property: customer })) as RenderFragment,
+        });
+      }),
+    ).rejects.toThrow(/Virtualize and grouping/);
+  });
+
   it("renders the dense table for density compact (and small, its alias)", async () => {
     const { container, ...renderer } = await renderTree(
       grid({ items: orders, density: "compact" }, (b) => component(b, 0, PropertyColumn, { property: customer })),

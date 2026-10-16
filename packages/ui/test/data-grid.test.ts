@@ -325,6 +325,72 @@ describe("inline editing", () => {
   });
 });
 
+describe("grouping", () => {
+  it("lines a group header per value (by value order), its rows in encounter order underneath", () => {
+    const onChange = vi.fn();
+    const model = new DataGridModel<Order>(onChange);
+    model.setSource({ items: orders });
+    render(model, []);
+    model.setGroup((o) => o.customer.length);
+    expect(model.lines.map((line) => (line.kind === "group" ? `${String(line.value)}x${line.count}` : `#${line.item.id}`))).toEqual([
+      "3x1", "#4",
+      "4x1", "#3",
+      "5x2", "#1", "#2",
+    ]);
+    expect(onChange).not.toHaveBeenCalledWith(); // the grouping changed no state a re-render didn't make
+  });
+
+  it("collapses a group on toggle (its header stays), and reopens it", () => {
+    const onChange = vi.fn();
+    const model = new DataGridModel<Order>(onChange);
+    model.setSource({ items: orders });
+    render(model, []);
+    model.setGroup((o) => o.customer.length);
+    const group3 = model.lines.find((line) => line.kind === "group" && line.value === 3)!;
+    expect((group3 as { open: boolean }).open).toBe(true);
+    model.toggleGroup(3);
+    // A closed group keeps its header line; its rows go.
+    expect(model.lines.map((line) => line.kind === "group" ? String(line.value) : `#${line.item.id}`)).toEqual(["3", "4", "#3", "5", "#1", "#2"]);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    model.toggleGroup(3);
+    expect(model.lines.some((line) => line.kind === "row" && line.item.id === 4)).toBe(true);
+  });
+
+  it("keeps the collapse state across re-renders (a fresh lambda with the same source is the same group)", () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    model.setSource({ items: orders });
+    render(model, []);
+    model.setGroup((o) => o.customer.length);
+    model.toggleGroup(5);
+    render(model, []);
+    model.setGroup((o2: Order) => o2.customer.length); // a fresh lambda, same source
+    expect(model.setGroup((o2: Order) => o2.customer.length)).toBe(false);
+    expect(model.setGroup((o3: Order) => o3.customer)).toBe(true);
+  });
+
+  it("groups the current page's rows with a pagination state", () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 2;
+    model.setSource({ items: orders, pagination });
+    render(model, []);
+    model.setGroup((o) => o.customer.length);
+    void model.rows;
+    // The page's rows (Marta, jonas — both names 5 letters long) form one group of two.
+    expect(model.lines.filter((line) => line.kind === "group")).toHaveLength(1);
+    expect(model.lines).toHaveLength(3);
+  });
+
+  it("knows a row's line index among the data rows", () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    model.setSource({ items: orders });
+    render(model, []);
+    model.setGroup((o) => o.customer.length);
+    expect(model.rowIndexOf(orders[3]!)).toBe(1); // Ali: the first data row under its group
+    expect(model.rowIndexOf({ id: 9, customer: "?", total: 0 })).toBe(-1);
+  });
+});
+
 describe("selection and titles", () => {
   it("single replaces, multiple toggles, select-all adds or removes the page", () => {
     const [a, b, c] = orders;

@@ -8,10 +8,10 @@
 @typeparam TGridItem
 @attribute @CascadingTypeParameter("TGridItem")
 @import Defer from "./Defer.tsazor"
-@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular, Drag20Regular, Filter20Regular } from "./core-icons"
+@import { ArrowSort20Regular, ArrowSortDown20Regular, ArrowSortUp20Regular, CaretDown20Regular, Drag20Regular, Filter20Regular } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode, EventCallback, type RenderFragment } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
+DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
 @import { startColumnResize, startColumnReorder } from "@tsazor/ui"
@@ -123,18 +123,31 @@ type IconValue,
                             </td>
                         </tr>
                     }
-                    @for (let i = 0; i < this.rows.length; i++) {
-                        const item = this.rows[i]!;
+                    @for (let i = 0; i < this.lines.length; i++) {
+                        const line = this.lines[i]!;
+                        @if (line.kind === "group") {
+                            <tr class="fui-datagrid__group">
+                                <td colspan="@this.columnCount" class="fui-datagrid__group-cell">
+                                    <button type="button" class="fui-datagrid__group-toggle" aria-label="@t("dataGrid.groupToggle", { count: line.count })" aria-expanded="@this.groupExpanded(line.open)" @onclick="() => this.model.toggleGroup(line.value)">
+                                        <span class="fui-datagrid__group-chevron" aria-hidden="true"><Icon value="@CaretDown20Regular" size="12" /></span>
+                                        <span class="fui-datagrid__group-value">@this.groupText(line.value)</span>
+                                        <span class="fui-datagrid__group-count">(@line.count)</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        } else {
+                        const item = line.item;
                         <tr @key="this.keyOf(item)" class="@this.rowClass(item)" @onkeydown="(event: KeyboardEvent) => this.editKey(item, event)">
                             @if (selectionMode === "multiple") {
-                                <td class="fui-datagrid__select"><input type="checkbox" class="fui-datagrid__check" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                                <td class="fui-datagrid__select"><input type="checkbox" class="fui-datagrid__check" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             } else if (selectionMode === "single") {
-                                <td class="fui-datagrid__select"><input type="radio" class="fui-datagrid__check" name="@groupName" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                                <td class="fui-datagrid__select"><input type="radio" class="fui-datagrid__check" name="@groupName" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             }
                             @foreach (const column of this.model.orderedColumns) {
                                 <td class="@this.cellClass(column)">@this.cellContent(column, item)</td>
                             }
                         </tr>
+                        }
                     }
                     }
                 </tbody>
@@ -225,6 +238,14 @@ type IconValue,
     @Parameter() editing: EditingMode = "none";
     /** Fired when a row's edit ends, with its Enter (commit) or Escape (cancel); the app saves there. */
     @Parameter() onEditEnded?: EventCallback<{ item: TGridItem; reason: "commit" | "cancel" }>;
+    /**
+     * Groups the rows by the lambda's value: a group header row per value (collapsible, open by
+     * default, its rows when open), groups by their value order, the rows within a group in the
+     * sort's order. Doesn't combine with Virtualize (v1).
+     */
+    @Parameter() group?: (item: TGridItem) => unknown;
+    /** Formats a group's value for its header (default: the value as text; Date: its ISO date). */
+    @Parameter() groupFormat?: (value: unknown) => string;
 
     private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
     private readonly groupName = uniqueId("fui-grid-select");
@@ -248,7 +269,11 @@ type IconValue,
     }
 
     protected override onParametersSet(): void {
+        if (this.virtualize && this.group !== undefined) {
+            throw new Error("DataGrid: Virtualize and grouping don't combine (yet). Group a page's grid, or virtualize an ungrouped one.");
+        }
         const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
+        this.model.setGroup(this.group);
         this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshDataAsync() ?? Promise.resolve() : undefined);
         if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
     }
@@ -314,6 +339,22 @@ type IconValue,
 
     private get rows(): readonly TGridItem[] {
         return this.model.rows;
+    }
+
+    /** The view's lines (the rows, or a group's header when the grid groups). */
+    private get lines(): readonly GridRow<TGridItem>[] {
+        return this.model.lines;
+    }
+
+    /** A group's header cell's expanded state, as the string the attribute reads. */
+    private groupExpanded(open: boolean): string {
+        return open ? "true" : "false";
+    }
+
+    /** A group's value for its header (the grid's format, else the date's ISO or the text). */
+    private groupText(value: unknown): string {
+        if (this.groupFormat !== undefined) return this.groupFormat(value);
+        return value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
     }
 
     private get columnCount(): number {

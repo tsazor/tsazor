@@ -11,7 +11,7 @@
 @import { ArrowDownUp, CaretDownFill, CaretUpFill, Filter, GripVertical } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode, EventCallback, type RenderFragment } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridFilterOperator, type GridItemsProvider, type PaginationState, type SelectionMode,
+DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
 @import { startColumnResize, startColumnReorder } from "@tsazor/ui"
@@ -123,18 +123,31 @@ type IconValue,
                             </td>
                         </tr>
                     }
-                    @for (let i = 0; i < this.rows.length; i++) {
-                        const item = this.rows[i]!;
+                    @for (let i = 0; i < this.lines.length; i++) {
+                        const line = this.lines[i]!;
+                        @if (line.kind === "group") {
+                            <tr class="tz-grid-group">
+                                <td colspan="@this.columnCount" class="tz-grid-group-cell">
+                                    <button type="button" class="p-0 border-0 bg-transparent tz-grid-group-toggle" aria-label="@t("dataGrid.groupToggle", { count: line.count })" aria-expanded="@this.groupExpanded(line.open)" @onclick="() => this.model.toggleGroup(line.value)">
+                                        <span class="tz-grid-group-chevron" aria-hidden="true"><Icon value="@CaretDownFill" size="12" /></span>
+                                        <span class="fw-semibold">@this.groupText(line.value)</span>
+                                        <span class="text-body-secondary ms-1">(@line.count)</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        } else {
+                        const item = line.item;
                         <tr @key="this.keyOf(item)" class="@this.rowClass(item)" @onkeydown="(event: KeyboardEvent) => this.editKey(item, event)">
                             @if (selectionMode === "multiple") {
-                                <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                                <td class="tz-grid-select"><input type="checkbox" class="form-check-input" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             } else if (selectionMode === "single") {
-                                <td class="tz-grid-select"><input type="radio" class="form-check-input" name="@groupName" aria-label="@this.selectLabel(i)" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
+                                <td class="tz-grid-select"><input type="radio" class="form-check-input" name="@groupName" aria-label="@this.selectLabel(this.model.rowIndexOf(item))" checked="@this.isSelected(item)" @onchange="() => this.select(item)" /></td>
                             }
                             @foreach (const column of this.model.orderedColumns) {
                                 <td class="@this.cellClass(column)">@this.cellContent(column, item)</td>
                             }
                         </tr>
+                        }
                     }
                     }
                 </tbody>
@@ -197,6 +210,14 @@ type IconValue,
     @Parameter() editing: EditingMode = "none";
     /** Fired when a row's edit ends, with its Enter (commit) or Escape (cancel); the app saves there. */
     @Parameter() onEditEnded?: EventCallback<{ item: TGridItem; reason: "commit" | "cancel" }>;
+    /**
+     * Groups the rows by the lambda's value: a group header row per value (collapsible, open by
+     * default, its rows when open), groups by their value order, the rows within a group in the
+     * sort's order. Doesn't combine with Virtualize (v1).
+     */
+    @Parameter() group?: (item: TGridItem) => unknown;
+    /** Formats a group's value for its header (default: the value as text; Date: its ISO date). */
+    @Parameter() groupFormat?: (value: unknown) => string;
     /** Wraps the table in .table-responsive for horizontal scrolling. */
     @Parameter() responsive: boolean = false;
     /**
@@ -247,7 +268,11 @@ type IconValue,
     }
 
     protected override onParametersSet(): void {
+        if (this.virtualize && this.group !== undefined) {
+            throw new Error("DataGrid: Virtualize and grouping don't combine (yet). Group a page's grid, or virtualize an ungrouped one.");
+        }
         const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
+        this.model.setGroup(this.group);
         this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshDataAsync() ?? Promise.resolve() : undefined);
         if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
     }
@@ -313,6 +338,22 @@ type IconValue,
 
     private get rows(): readonly TGridItem[] {
         return this.model.rows;
+    }
+
+    /** The view's lines (the rows, or a group's header when the grid groups). */
+    private get lines(): readonly GridRow<TGridItem>[] {
+        return this.model.lines;
+    }
+
+    /** A group's header cell's expanded state, as the string the attribute reads. */
+    private groupExpanded(open: boolean): string {
+        return open ? "true" : "false";
+    }
+
+    /** A group's value for its header (the grid's format, else the date's ISO or the text). */
+    private groupText(value: unknown): string {
+        if (this.groupFormat !== undefined) return this.groupFormat(value);
+        return value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
     }
 
     private get columnCount(): number {

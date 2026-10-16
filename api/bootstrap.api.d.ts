@@ -370,6 +370,8 @@ export default class DataGrid<TGridItem> extends ComponentBase {
         item: TGridItem;
         reason: "commit" | "cancel";
     }>;
+    group?: (item: TGridItem) => unknown;
+    groupFormat?: (value: unknown) => string;
     responsive: boolean;
     virtualize: boolean;
     itemSize: number;

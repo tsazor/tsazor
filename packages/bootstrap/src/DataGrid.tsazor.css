@@ -60,6 +60,27 @@
   background: rgba(var(--bs-primary-rgb), 0.05);
 }
 
+/* The group: a full-width header row of its own; the chevron turns with the open rows underneath. */
+.tz-grid-group-cell {
+  padding: 0;
+}
+
+.tz-grid-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-block: 0.375rem;
+}
+
+.tz-grid-group-toggle .tz-grid-group-chevron {
+  display: inline-flex;
+  transition: transform 100ms ease;
+}
+
+.tz-grid-group-toggle[aria-expanded="false"] .tz-grid-group-chevron {
+  transform: rotate(-90deg);
+}
+
 /* Widths: only a sized table can lay its cols out (the unsized one keeps the natural sizes). */
 .tz-grid--sized {
   table-layout: fixed;

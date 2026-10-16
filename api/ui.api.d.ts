@@ -176,6 +176,11 @@ export declare class DataGridModel<T> {
     private readonly filters;
     private filterVersion;
     private editedRowItem;
+    private groupBy;
+    private groupSource;
+    private readonly groupCollapsed;
+    private groupVersion;
+    private lined?;
     private loadingNow;
     private abort;
     private unsubscribe;
@@ -208,6 +213,11 @@ export declare class DataGridModel<T> {
     isEditing(item: T): boolean;
     editRow(item: T): void;
     endEdit(): void;
+    setGroup(groupBy: ((item: T) => unknown) | undefined): boolean;
+    get group(): ((item: T) => unknown) | undefined;
+    toggleGroup(value: unknown): void;
+    get lines(): readonly GridRow<T>[];
+    rowIndexOf(item: T): number;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
     provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
@@ -408,6 +418,18 @@ export interface GridItemsProviderResult<T> {
     totalItemCount: number;
 }
 
+// GridRow
+export type GridRow<T> = {
+    kind: "row";
+    item: T;
+} | {
+    kind: "group";
+    value: unknown;
+    count: number;
+    open: boolean;
+    depth: number;
+};
+
 // GridSort
 export declare class GridSort<T> {
     private readonly steps;
@@ -507,6 +529,9 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.reorder": string;
     readonly "dataGrid.editCommit": string;
     readonly "dataGrid.editCancel": string;
+    readonly "dataGrid.groupToggle": string;
+    readonly "dataGrid.groupCount.one": string;
+    readonly "dataGrid.groupCount.other": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
     readonly "dataGrid.filterApply": string;
