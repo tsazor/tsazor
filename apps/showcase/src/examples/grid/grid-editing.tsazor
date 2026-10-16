@@ -1,7 +1,8 @@
 @** An editing grid: Editing="row" puts one row at a time into the edit — a column with an
     EditContent (the row's context) shows your inputs instead of its cell; the columns without one
-    stay read-only. Enter commits, Escape cancels (a button's click commits itself, Enter on it is
-    ignored); OnEditEnded is where the app saves. The row's type flows into the EditContent too. *@
+    stay read-only. The edited row's buttons (the reference's isEditing decides) start it and end
+    it; Enter commits, Escape cancels (a button's click commits itself, Enter on it is ignored);
+    OnEditEnded is where the app saves. The row's type flows into the EditContent too. *@
 @import { DataGrid } from "@tsazor/bootstrap"
 @import { orders, type Order } from "./orders"
 
@@ -16,6 +17,8 @@
         @if (this.grid?.isEditing(order) === true) {
             <Button Size="small" Appearance="outline" OnClick="@(() => this.grid?.endEditAsync("commit"))">Save</Button>
             <Button Size="small" Appearance="outline" OnClick="@(() => this.grid?.endEditAsync("cancel"))">Cancel</Button>
+        } else {
+            <Button Size="small" Appearance="outline" OnClick="@(() => this.grid?.editRowAsync(order))">Edit</Button>
         }
     </TemplateColumn>
 </DataGrid>
