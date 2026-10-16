@@ -14,6 +14,7 @@
 @import GridWidthsExample from "../examples/grid/grid-widths.tsazor"
 @import GridEditingExample from "../examples/grid/grid-editing.tsazor"
 @import GridGroupsExample from "../examples/grid/grid-groups.tsazor"
+@import GridSnapshotExample from "../examples/grid/grid-snapshot.tsazor"
 
 <Typography Variant="h1">DataGrid</Typography>
 <Typography>
@@ -52,3 +53,6 @@
 
 <Example Title="Grouping" Description="A collapsible header row per value, its rows underneath; groups by value order."
     Id="grid/grid-groups"><GridGroupsExample /></Example>
+
+<Example Title="Persistence and export" Description="The columns' state as plain data out and back (the app stores it); the rows as CSV."
+    Id="grid/grid-snapshot"><GridSnapshotExample /></Example>

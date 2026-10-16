@@ -45,6 +45,8 @@
     @Parameter() aggregate?: GridAggregate<TGridItem>;
     /** The cell a row in the grid's edit shows (the row's context — your inputs around the row's values), instead of the property's. */
     @Parameter() editContent?: (item: TGridItem) => RenderFragment;
+    /** The column's stable key (a snapshot's and a server's name for it; default: the lambda's path). */
+    @Parameter() columnKey?: string;
 
     private register(): void {
         const grid = this.grid;
@@ -76,6 +78,8 @@
             aggregateBy: (item: TGridItem) => property(item),
             aggregateFormat: format !== undefined ? (value: unknown) => format(value as TProp) : undefined,
             editContent: this.editContent,
+            columnKey: this.columnKey ?? propertyPath(property),
+            csv: (item: TGridItem) => text(item),
         });
     }
 }

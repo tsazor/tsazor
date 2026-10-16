@@ -252,6 +252,8 @@ export interface GridColumn<T> {
   /** The column component — the column's identity across renders. */
   readonly owner: object;
   title: string;
+  /** The column's stable key: what a snapshot stores and a server names (default: none; a PropertyColumn takes its property path). */
+  columnKey?: string;
   /** The header content instead of the title. */
   headerContent?: RenderFragment;
   /** The column's options, shown below the header when the header's options button is clicked (QuickGrid's ColumnOptions). */
@@ -284,6 +286,47 @@ export interface GridColumn<T> {
    * their cell; the others stay read-only).
    */
   editContent?: (item: T) => RenderFragment;
+  /** The row's text for an export (a PropertyColumn's formatted text); a column without one exports nothing. */
+  csv?: (item: T) => string;
+}
+
+/** The grid's state as plain data, the app stores where it wants and hands to `restoreColumnsAsync`. */
+export interface GridColumnsSnapshot {
+  /** A column per entry, in display order, with its set width. */
+  columns: { key: string; width?: string }[];
+  /** The sort, when the grid has one. */
+  sort?: { key: string; direction: "ascending" | "descending" };
+  /** The active filters. */
+  filters: { key: string; operator: GridFilterOperator; value?: string | number | boolean | Date }[];
+}
+
+/** What a grid's export produces and reads: the delimiter, and the columns by their `columnKey`. */
+export interface GridExportOptions {
+  /** The cell separator (default ","; ";" or "\t" for a TSV). */
+  delimiter?: "," | ";" | "\t";
+  /** The columns to export, by `columnKey`, in display order; default: every column with a text. */
+  columns?: readonly string[];
+}
+
+/** Quotes one CSV field by RFC 4180: only when it holds the delimiter, a quote or a new line. */
+function csvField(text: string, delimiter: string): string {
+  return text.includes(delimiter) || text.includes('"') || /[\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+/**
+ * The grid's rows as CSV text: the columns' titles as the header, a line per row, the cells as
+ * text (RFC 4180: the field quotes only when it holds the delimiter, a quote or a new line).
+ * A column without an `csv` (its text) exports nothing.
+ */
+export function gridExportCsv<T>(columns: readonly GridColumn<T>[], rows: readonly T[], options: GridExportOptions = {}): string {
+  const delimiter = options.delimiter ?? ",";
+  const wanted = options.columns === undefined ? undefined : new Set(options.columns);
+  const chosen = columns.filter((column) => column.csv !== undefined && (wanted === undefined || (column.columnKey !== undefined && wanted.has(column.columnKey))));
+  const lines = [chosen.map((column) => csvField(column.title, delimiter)).join(delimiter)];
+  for (const row of rows) {
+    lines.push(chosen.map((column) => csvField(column.csv!(row) ?? "", delimiter)).join(delimiter));
+  }
+  return `${lines.join("\r\n")}\r\n`;
 }
 
 /** What a footer aggregates over: all the rows the grid holds ("all") or the current page's. */
@@ -743,6 +786,62 @@ export class DataGridModel<T> {
     this.lines; // the lines' index map builds (or caches) with the view
     const index = this.lined?.indexes.get(item);
     return index === undefined ? -1 : index;
+  }
+
+  /* Column persistence ------------------------------------------------------ */
+
+  /**
+   * The grid's state as plain data: the columns in display order with their widths, the sort and
+   * the filters, each column by its `columnKey` (so a snapshot survives a reload). The app stores
+   * it where it wants — the core touches no storage.
+   */
+  snapshotColumns(): GridColumnsSnapshot {
+    const columns: GridColumnsSnapshot["columns"] = [];
+    for (const column of this.orderedColumns) {
+      const width = this.widths.get(column.owner);
+      if (column.columnKey !== undefined) columns.push({ key: column.columnKey, ...(width !== undefined ? { width } : {}) });
+    }
+    const sorted = this.sortOwner === undefined ? undefined : this.current.find((column) => column.owner === this.sortOwner);
+    const filters: GridColumnsSnapshot["filters"] = [...this.filters].flatMap(([owner, rule]) => {
+      const column = this.current.find((candidate) => candidate.owner === owner);
+      return column?.columnKey !== undefined ? [{ key: column.columnKey, operator: rule.operator, ...(rule.value === undefined ? {} : { value: rule.value }) }] : [];
+    });
+    return {
+      columns,
+      ...(this.sortOwner !== undefined && sorted?.columnKey !== undefined ? { sort: { key: sorted.columnKey, direction: this.ascending ? "ascending" : "descending" } } : {}),
+      filters,
+    };
+  }
+
+  /** Restores a snapshot (order, widths, sort, filters) and reloads the rows to match. */
+  async restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void> {
+    const byKey = new Map(this.orderedColumns.flatMap((column) => (column.columnKey === undefined ? [] : [[column.columnKey, column] as const])));
+    const ordered = snapshot.columns.flatMap((entry) => {
+      const column = byKey.get(entry.key);
+      return column === undefined ? [] : [column];
+    });
+    for (const column of byKey.values()) if (!ordered.includes(column)) ordered.push(column);
+    this.order = ordered.map((column) => column.owner);
+    this.widths.clear();
+    for (const entry of snapshot.columns) {
+      const column = byKey.get(entry.key);
+      if (column !== undefined && entry.width !== undefined) this.widths.set(column.owner, entry.width);
+    }
+    if (snapshot.sort !== undefined) {
+      const column = byKey.get(snapshot.sort.key);
+      if (column !== undefined) {
+        this.sortOwner = column.owner;
+        this.ascending = snapshot.sort.direction === "ascending";
+        this.defaultSortApplied = true;
+      }
+    } else this.sortOwner = undefined;
+    this.filters.clear();
+    for (const entry of snapshot.filters) {
+      const column = byKey.get(entry.key);
+      if (column !== undefined) this.filters.set(column.owner, entry.value === undefined ? { operator: entry.operator } : { operator: entry.operator, value: entry.value });
+    }
+    this.filterVersion++;
+    await this.refreshDataAsync();
   }
 
   /* Virtualization --------------------------------------------------------- */

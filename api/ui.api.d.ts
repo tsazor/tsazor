@@ -218,6 +218,8 @@ export declare class DataGridModel<T> {
     toggleGroup(value: unknown): void;
     get lines(): readonly GridRow<T>[];
     rowIndexOf(item: T): number;
+    snapshotColumns(): GridColumnsSnapshot;
+    restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void>;
     setVirtualization(refresh: (() => Promise<void>) | undefined): void;
     get sortedItems(): readonly T[];
     provideRangeAsync(startIndex: number, count: number, signal?: AbortSignal): Promise<GridItemsProviderResult<T>>;
@@ -366,6 +368,7 @@ export type GridAggregate<T> = "sum" | "avg" | "count" | "min" | "max" | ((items
 export interface GridColumn<T> {
     readonly owner: object;
     title: string;
+    columnKey?: string;
     headerContent?: RenderFragment;
     columnOptions?: RenderFragment;
     cell: (item: T) => RenderFragment;
@@ -383,6 +386,33 @@ export interface GridColumn<T> {
     aggregateBy?: (item: T) => unknown;
     aggregateFormat?: (value: unknown) => string;
     editContent?: (item: T) => RenderFragment;
+    csv?: (item: T) => string;
+}
+
+// GridColumnsSnapshot
+export interface GridColumnsSnapshot {
+    columns: {
+        key: string;
+        width?: string;
+    }[];
+    sort?: {
+        key: string;
+        direction: "ascending" | "descending";
+    };
+    filters: {
+        key: string;
+        operator: GridFilterOperator;
+        value?: string | number | boolean | Date;
+    }[];
+}
+
+// gridExportCsv
+export declare function gridExportCsv<T>(columns: readonly GridColumn<T>[], rows: readonly T[], options?: GridExportOptions): string;
+
+// GridExportOptions
+export interface GridExportOptions {
+    delimiter?: "," | ";" | "\t";
+    columns?: readonly string[];
 }
 
 // gridFilterMatches

@@ -484,6 +484,26 @@ describe("DataGrid", () => {
     expect(texts(container, "tfoot tr td")).toEqual(["4", ""]);
   });
 
+  it("exports the rows' CSV over the scope and snapshots the columns' state", async () => {
+    let dataGrid: DataGrid<Order> | undefined;
+    const { container, ...renderer } = await renderTree((b) => {
+      b.openComponent(0, DataGrid as never);
+      b.addAttribute(1, "items", orders);
+      b.addAttribute(2, "childContent", ((inner: RenderTreeBuilder) => {
+        component(inner, 0, PropertyColumn, { property: customer });
+        component(inner, 1, PropertyColumn, { property: total, title: "Total", format: (v: number) => v.toFixed(2) });
+      }) as RenderFragment);
+      b.addComponentReferenceCapture(2, (captured) => { dataGrid = captured as DataGrid<Order>; });
+      b.closeComponent();
+    });
+    await settle(renderer);
+    const data = dataGrid as unknown as { exportCsv(scope?: string): string; columnsSnapshot(): unknown; restoreColumnsAsync(snapshot: never): Promise<void> };
+    expect(data!.exportCsv().split("\r\n")).toEqual(["customer,Total", "Marta,12.50", "Jonas,30.00", "Lena,7.00", "Ali,18.00", ""]);
+    // The state as plain data: the columns' keys, no state set yet, no filters.
+    const snapshot = data!.columnsSnapshot();
+    expect(snapshot).toEqual({ columns: [{ key: "customer" }, { key: "total" }], filters: [] });
+  });
+
   it("collects the columns on every render: a column shown conditionally comes and goes", async () => {
     let showTotal = true;
     const { container, instance, ...renderer } = await renderTree(

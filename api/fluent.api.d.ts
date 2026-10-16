@@ -387,6 +387,9 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     editRowAsync(item: TGridItem): Promise<void>;
     endEditAsync(reason: "commit" | "cancel"): Promise<void>;
     isEditing(item: TGridItem): boolean;
+    columnsSnapshot(): GridColumnsSnapshot;
+    restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void>;
+    exportCsv(scope?: "all" | "page", delimiter?: "," | ";" | "	"): string;
 }
 
 // DataGridModel: re-exported from @tsazor/ui
@@ -609,6 +612,8 @@ export default class Grid extends ComponentBase {
 // GridAggregate: re-exported from @tsazor/ui
 
 // GridColumn: re-exported from @tsazor/ui
+
+// GridColumnsSnapshot: re-exported from @tsazor/ui
 
 // GridItemsProvider: re-exported from @tsazor/ui
 
@@ -926,6 +931,7 @@ export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     filterKey?: string;
     aggregate?: GridAggregate<TGridItem>;
     editContent?: (item: TGridItem) => RenderFragment;
+    columnKey?: string;
 }
 
 // RadioGroup
@@ -1204,6 +1210,8 @@ export default class TemplateColumn<TGridItem> extends ComponentBase {
     aggregate?: GridAggregate<TGridItem>;
     aggregateBy?: (item: TGridItem) => unknown;
     aggregateFormat?: (value: unknown) => string;
+    columnKey?: string;
+    csv?: (item: TGridItem) => string;
     editContent?: (item: TGridItem) => RenderFragment;
 }
 

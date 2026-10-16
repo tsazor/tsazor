@@ -50,6 +50,10 @@
     @Parameter() aggregateBy?: (item: TGridItem) => unknown;
     /** Formats the aggregate's value for the footer. */
     @Parameter() aggregateFormat?: (value: unknown) => string;
+    /** The column's stable key (a snapshot's name for it). */
+    @Parameter() columnKey?: string;
+    /** The row's text for an export (default: none — a template column exports nothing). */
+    @Parameter() csv?: (item: TGridItem) => string;
     /** The cell a row in the grid's edit shows (the row's context), instead of the normal cell. */
     @Parameter() editContent?: (item: TGridItem) => RenderFragment;
 
@@ -79,6 +83,8 @@
             aggregateBy: this.aggregateBy,
             aggregateFormat: this.aggregateFormat,
             editContent: this.editContent,
+            columnKey: this.columnKey,
+            csv: this.csv,
         });
     }
 }

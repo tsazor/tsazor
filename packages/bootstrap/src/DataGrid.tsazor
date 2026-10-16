@@ -11,10 +11,10 @@
 @import { ArrowDownUp, CaretDownFill, CaretUpFill, Filter, GripVertical } from "./core-icons"
 @import { Virtualize, VirtualizeAnchorMode, EventCallback, type RenderFragment } from "@tsazor/runtime"
 @import {
-DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
+DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn, type GridColumnsSnapshot, type GridFilterOperator, type GridItemsProvider, type GridRow, type PaginationState, type SelectionMode,
 type IconValue,
 } from "@tsazor/ui"
-@import { startColumnResize, startColumnReorder } from "@tsazor/ui"
+@import { gridExportCsv, startColumnResize, startColumnReorder } from "@tsazor/ui"
 @import { toggleAll, toggleSelection } from "@tsazor/ui/kit"
 @import { libraryTexts } from "@tsazor/ui"
 
@@ -594,6 +594,21 @@ type IconValue,
     /** Whether `item` is the row in the grid's edit (your edit row's buttons render by it). */
     isEditing(item: TGridItem): boolean {
         return this.model.isEditing(item);
+    }
+
+    /** The grid's state as plain data (the columns' order and widths, the sort, the filters); the app stores it where it wants. */
+    columnsSnapshot(): GridColumnsSnapshot {
+        return this.model.snapshotColumns();
+    }
+
+    /** Restores a snapshot taken with columnsSnapshot() (order, widths, sort, filters) and reloads the rows to match. */
+    restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void> {
+        return this.model.restoreColumnsAsync(snapshot);
+    }
+
+    /** The rows' CSV text (RFC 4180): the columns in display order that carry a text, over the scope (all, or the page's). */
+    exportCsv(scope: "all" | "page" = "all", delimiter: "," | ";" | "	" = ","): string {
+        return gridExportCsv(this.model.orderedColumns, this.model.aggregateRows(scope), { delimiter });
     }
 
     /** The edit's default keys: Enter commits (not on a button; its click commits itself), Escape cancels. */

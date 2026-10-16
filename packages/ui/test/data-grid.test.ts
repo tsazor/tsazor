@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { DataGridModel, GridSort, PaginationState, gridAggregate, type GridColumn, type GridFilterRule, type GridItemsProviderRequest } from "../src/index";
+import { DataGridModel, GridSort, PaginationState, gridAggregate, gridExportCsv, type GridColumn, type GridFilterRule, type GridItemsProviderRequest } from "../src/index";
 import { compareValues, gridFilterMatches, propertyPath, propertyTitle, toggleAll, toggleSelection } from "../src/kit";
 
 interface Order {
@@ -388,6 +388,68 @@ describe("grouping", () => {
     model.setGroup((o) => o.customer.length);
     expect(model.rowIndexOf(orders[3]!)).toBe(1); // Ali: the first data row under its group
     expect(model.rowIndexOf({ id: 9, customer: "?", total: 0 })).toBe(-1);
+  });
+});
+
+describe("column persistence and export", () => {
+  const keyCustomer = (owner: object, extra: Partial<GridColumn<Order>> = {}): GridColumn<Order> => column(owner, { columnKey: "customer", title: "customer", csv: (o) => o.customer, sortable: true, sortBy: GridSort.byAscending((o) => o.customer), sortKey: "customer", ...extra });
+  const keyTotal = (owner: object, extra: Partial<GridColumn<Order>> = {}): GridColumn<Order> => column(owner, { columnKey: "total", title: "total", csv: (o) => String(o.total), sortable: true, sortBy: GridSort.byAscending((o) => o.total), sortKey: "total", ...extra });
+
+  it("snapshots the order, widths, sort and filters, and restores them (by the columns' keys)", async () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    const customer = keyCustomer({});
+    const total = keyTotal({});
+    model.setSource({ items: orders });
+    render(model, [customer, total]);
+    await model.setFilterAsync(customer, { operator: "contains", value: "a" });
+    await model.setColumnWidthAsync(total, "120px");
+    model.moveColumnAsync(total, 0);
+    await model.sortByColumnAsync(total, "descending");
+    const snapshot = model.snapshotColumns();
+    expect(snapshot).toEqual({
+      columns: [{ key: "total", width: "120px" }, { key: "customer" }],
+      sort: { key: "total", direction: "descending" },
+      filters: [{ key: "customer", operator: "contains", value: "a" }],
+    });
+
+    const fresh = new DataGridModel<Order>(() => undefined);
+    fresh.setSource({ items: orders });
+    render(fresh, [keyCustomer({}), keyTotal({})]);
+    await fresh.restoreColumnsAsync(snapshot);
+    expect(fresh.orderedColumns.map((column) => column.columnKey)).toEqual(["total", "customer"]);
+    expect(fresh.widthOf(fresh.orderedColumns[0]!)).toBe("120px");
+    expect(fresh.sortColumn?.columnKey).toBe("total");
+    expect(fresh.sortDirectionOf(fresh.orderedColumns[0]!)).toBe("descending");
+    // The filter and sort shape the rows: "a" is in every name (case doesn't matter), totals descending.
+    expect(fresh.rows.map((row) => row.id)).toEqual([2, 1, 3, 4]);
+  });
+
+  it("restores a snapshot without a sort back to an unsorted grid", async () => {
+    const model = new DataGridModel<Order>(() => undefined);
+    model.setSource({ items: orders });
+    render(model, [keyCustomer({})]);
+    await model.sortByColumnAsync(model.columns[0]!);
+    await model.restoreColumnsAsync({ columns: [{ key: "customer" }], filters: [] });
+    expect(model.sortColumn).toBeUndefined();
+    expect(model.rows.map((row) => row.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it("exports the rows as CSV with RFC 4180 quoting", () => {
+    const text = gridExportCsv([keyCustomer({}), keyTotal({})], orders);
+    expect(text.split("\r\n")).toEqual(["customer,total", "Marta,12", "jonas,30", "Lena,12", "Ali,7", ""]);
+    const tricky = gridExportCsv([keyCustomer({}), keyTotal({})], [
+      { id: 9, customer: 'He said "hi"', total: 1 },
+      { id: 10, customer: "a,b", total: 2 },
+      { id: 11, customer: "line\nbreak", total: 3 },
+    ]);
+    const lines = tricky.split("\r\n");
+    expect(lines[1]).toBe('"He said ""hi""",1');
+    expect(lines[2]).toBe('"a,b",2');
+    expect(lines[3]).toBe('"line\nbreak",3');
+    const chosen = gridExportCsv([keyCustomer({}), keyTotal({})], [orders[0]!], { columns: ["total"] });
+    expect(chosen.split("\r\n")[0]).toBe("total");
+    const tab = gridExportCsv([keyCustomer({}), keyTotal({})], [orders[0]!], { delimiter: "\t" });
+    expect(tab.split("\r\n")[0]).toBe("customer\ttotal");
   });
 });
 
