@@ -222,10 +222,14 @@ th[aria-sort] .fui-datagrid__sort-indicator {
   table-layout: fixed;
 }
 
-/* The reorder grip: a grabbable, focusable handle of a column. */
+/* The reorder grip: a grabbable, focusable handle of a column — its tap target is 24 px (a 20 px icon needs it alone). */
 .fui-datagrid__grip {
   display: inline-flex;
-  padding: 0 2px;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-inline-start: calc(var(--fui-gap-xs, 4px) * -1);
   color: var(--fui-foreground-3);
   cursor: grab;
   border-radius: var(--fui-radius-sm);

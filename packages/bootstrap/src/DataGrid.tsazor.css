@@ -86,10 +86,14 @@
   table-layout: fixed;
 }
 
-/* The reorder grip: a grabbable, focusable handle of a column. */
+/* The reorder grip: a grabbable, focusable handle of a column — its tap target is 24 px. */
 .tz-grid-grip {
   display: inline-flex;
-  padding: 0 2px;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-inline-start: -0.25rem;
   color: var(--bs-secondary-color);
   cursor: grab;
   border-radius: 0.25rem;

@@ -35,6 +35,7 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /** The packages that ship externally (order: leaves first, irrelevant anyway — overrides take care of it). */
 const SHIPPED = [
+  "primitives",
   "compiler",
   "workspace",
   "runtime",
@@ -235,7 +236,7 @@ await gate("@tsazor/fluent ships its copy-in CLI", ["node", ["fluent-cli.mjs"], 
 await gate("dotnet output type check", ["node", ["node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--target", "ES2022", "--moduleResolution", "bundler", "--module", "ESNext", "src/dotnet-api/models.ts", "src/dotnet-api/smoke-api.ts"], app]);
 
 // Every bin of a shipped package runs from the install. A bin added later needs its line here.
-const BIN_ARGS = { tsazor: ["--version"], "tsazor-dotnet": ["--version"], "tsazor-fluent": ["list"] };
+const BIN_ARGS = { tsazor: ["--version"], "tsazor-dotnet": ["--version"], "tsazor-fluent": ["list"], "tsazor-bootstrap": ["list"] };
 writeFileSync(join(app, "lsp-smoke.mjs"), `import { spawn } from "node:child_process";
 const child = spawn(process.execPath, [process.argv[2]], { stdio: ["pipe", "pipe", "inherit"] });
 const request = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { processId: null, rootUri: null, capabilities: {} } });

@@ -82,7 +82,7 @@ type IconValue,
                                         @if (column.columnOptions !== undefined) { @column.columnOptions }
                                     </div>
                                 }
-                                <div class="tz-grid-resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
+                                <div class="tz-grid-resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" aria-valuenow="@this.widthNow(column)" aria-valuemin="40" aria-valuemax="1920" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
                             </th>
                         }
                     </tr>
@@ -392,6 +392,12 @@ type IconValue,
     private colStyle(column: GridColumn<TGridItem>): string | null {
         const width = this.model.widthOf(column);
         return width === undefined ? null : `width: ${width};`;
+    }
+
+    /** The handle's valuenow: the column's set width in px (its default when unset). */
+    private widthNow(column: GridColumn<TGridItem>): number {
+        const set = this.model.widthOf(column);
+        return set === undefined ? 120 : Math.round(parseFloat(set.replace(/px$/, "")));
     }
 
     /* Column resize and order ------------------------------------------------- */
