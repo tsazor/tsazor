@@ -18,4 +18,8 @@
         <strong>RichText</strong>
         <span>An external engine's wrapper: value in and out as HTML, sanitize on read, the engine stays the app's.</span>
     </a>
+    <a class="sz-card" href="/schedule">
+        <strong>Scheduler</strong>
+        <span>Month, week and day views; all-day rows; overlapping timed appointments in lanes.</span>
+    </a>
 </section>

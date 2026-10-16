@@ -1,0 +1,19 @@
+@** A scheduler with a week's meetings: the toolbar moves the window (previous, today, next),
+    the switcher changes between month, week and day; overlapping timed appointments lay side by
+    side, all-day ones in their row. Selecting a chip reports it (the details are yours). *@
+@import { type ScheduleAppointment } from "@tsazor/ui"
+
+<Scheduler Appointments="@appointments" OnAppointmentSelected="@((appointment) => lastSelected = appointment)" AriaLabel="Meetings">
+</Scheduler>
+<p>@(lastSelected?.title ?? "Nothing selected")</p>
+
+@code {
+    private lastSelected?: ScheduleAppointment;
+    private readonly appointments: ScheduleAppointment[] = [
+        { title: "Standup", start: "2026-10-15T09:00", end: "2026-10-15T09:15" },
+        { title: "Review", start: "2026-10-15T09:00", end: "2026-10-15T10:00", intent: "success" },
+        { title: "Roadmap", start: "2026-10-15T13:00", end: "2026-10-15T14:30", intent: "info" },
+        { title: "Days off", start: "2026-10-16", end: "2026-10-18", allDay: true, intent: "info" },
+        { title: "Release", start: "2026-10-21T10:00", end: "2026-10-21T11:00", intent: "danger" },
+    ];
+}

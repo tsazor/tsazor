@@ -65,8 +65,15 @@ try {
   await page.locator(".sz-code__bar button").first().click();
   await page.waitForFunction(() => [...document.querySelectorAll(".sz-code__bar button")].some((button) => button.textContent === "Copied"), { timeout: 5000 });
 
+  for (const route of ["/richtext", "/schedule"]) {
+    await page.goto(`${url}${route}`);
+    await page.waitForSelector(".sz-example-demo");
+    const panels = await page.locator(".sz-example-demo .sz-code pre code").count();
+    if (panels < 1) throw new Error(`the ${route} page shows ${panels} code panels`);
+  }
+
   if (errors.length > 0) throw new Error(`page errors: ${errors.join("; ")}`);
-  console.log("showcase smoke: home, DataGrid, a code panel per example, copy — ok");
+  console.log("showcase smoke: home, DataGrid, RichText, Scheduler, a code panel per example, copy — ok");
   await browser.close();
 } catch (error) {
   console.error(String(error));

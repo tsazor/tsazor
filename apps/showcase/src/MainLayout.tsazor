@@ -22,6 +22,7 @@
             links: [
                 { href: "/datagrid", label: "DataGrid" },
                 { href: "/richtext", label: "RichText" },
+                { href: "/schedule", label: "Scheduler" },
             ],
         },
     ];

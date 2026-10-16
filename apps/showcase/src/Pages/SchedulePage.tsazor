@@ -1,0 +1,16 @@
+@page "/schedule"
+@** The Scheduler's examples (design-extended-library.md §2.2, cluster 3): the views and
+    navigation first, the drag's editing when it arrives. *@
+@import { Typography } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import ScheduleViewsExample from "../examples/schedule/schedule-views.tsazor"
+
+<Typography Variant="h1">Scheduler</Typography>
+<Typography>
+    Appointments over days on the calendar's doctrine (ISO dates without a zone): month, week and
+    day views driven by a shared model; all-day appointments in a row of their own; timed ones
+    side by side in lanes where they overlap; the chip's colors come from the intents.
+</Typography>
+
+<Example Title="Views and navigation" Description="The toolbar moves the window today by today; the switcher changes between month, week and day."
+    Id="schedule/schedule-views"><ScheduleViewsExample /></Example>
