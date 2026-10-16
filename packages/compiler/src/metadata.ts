@@ -62,6 +62,8 @@ export interface TypeReference {
 export interface TypeParameterInfo {
   name: string;
   constraint?: string;
+  /** Where the constraint's names come from (their imports), so a d.ts can import them. */
+  constraintReferences?: TypeReference[];
   default?: string;
 }
 
@@ -429,7 +431,7 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
   const record: ClassRecord = {
     name,
     abstract: hasModifier(cls, ts.SyntaxKind.AbstractKeyword),
-    typeParameters: (cls.typeParameters ?? []).map((parameter) => typeParameterInfo(parameter, file)),
+    typeParameters: (cls.typeParameters ?? []).map((parameter) => typeParameterInfo(parameter, file, module, new Set(cls.typeParameters?.map((p) => p.name.text) ?? []))),
     parameters: [],
   };
   const doc = jsDocOf(cls);
@@ -550,9 +552,13 @@ export function bindableValueType(parameter: Pick<OwnParameter, "type" | "inferr
   return parameter.type ?? parameter.inferredType ?? "unknown";
 }
 
-function typeParameterInfo(parameter: ts.TypeParameterDeclaration, file: ts.SourceFile): TypeParameterInfo {
+function typeParameterInfo(parameter: ts.TypeParameterDeclaration, file: ts.SourceFile, module: ModuleMetadata, typeParameters: ReadonlySet<string>): TypeParameterInfo {
   const info: TypeParameterInfo = { name: parameter.name.text };
-  if (parameter.constraint) info.constraint = parameter.constraint.getText(file);
+  if (parameter.constraint) {
+    info.constraint = parameter.constraint.getText(file);
+    const references = referencesOf(info.constraint, module, typeParameters);
+    if (references.length > 0) info.constraintReferences = references;
+  }
   if (parameter.default) info.default = parameter.default.getText(file);
   return info;
 }

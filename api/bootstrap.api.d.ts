@@ -659,6 +659,8 @@ export default class Image extends ComponentBase {
 
 // IsoDate: re-exported from @tsazor/ui
 
+// IsoDateTime: re-exported from @tsazor/ui
+
 // IsoTime: re-exported from @tsazor/ui
 
 // KeyCode
@@ -981,6 +983,16 @@ export default class Scheduler<TAppointment extends ScheduleAppointment> extends
     monthChips: number;
     ariaLabel?: string;
     onAppointmentSelected?: EventCallback<TAppointment>;
+    onAppointmentCreated?: EventCallback<{
+        date: IsoDate;
+        start: IsoDateTime;
+        end: IsoDateTime;
+    }>;
+    onAppointmentMoved?: EventCallback<{
+        appointment: TAppointment;
+        start: IsoDateTime;
+        end: IsoDateTime;
+    }>;
     additionalAttributes?: Record<string, unknown>;
 }
 

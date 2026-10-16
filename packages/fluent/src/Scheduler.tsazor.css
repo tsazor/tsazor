@@ -199,19 +199,36 @@
 
 .fui-schedule-appointment--warning {
   background: var(--fui-color-status-warning-background-1, var(--fui-brand-background));
-  color: var(--fui-foreground-on-brand-primary, var(--fui-color-neutral-foreground-inverted, #ffffff));
+  color: var(--fui-color-neutral-foreground-inverted, #ffffff);
 }
 
 .fui-schedule-appointment--info {
   background: var(--fui-color-status-info-background-1, var(--fui-brand-background));
-  color: var(--fui-foreground-on-brand-primary, var(--fui-color-neutral-foreground-inverted, #ffffff));
+  color: var(--fui-color-neutral-foreground-inverted, #ffffff);
 }
 
 .fui-schedule-appointment--neutral {
   background: var(--bs-secondary-bg);
-  color: var(--fui-foreground-on-brand-primary, var(--fui-color-neutral-foreground-inverted, #ffffff));
+  color: var(--fui-color-neutral-foreground-inverted, #ffffff);
 }
 
 .fui-schedule-appointment--selected {
   box-shadow: 0 0 0 0.125rem var(--bs-body-bg), 0 0 0 0.25rem currentcolor;
+}
+
+/* Creation: an empty day column takes the drag; the day's data attribute carries the date. */
+.fui-schedule-day-col {
+  cursor: cell;
+}
+
+/* The handle at a timed block's end; the keyboard resizes as the handle's arrows don't (the chip's keys move). */
+.fui-schedule-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 6px;
+  border-radius: 0 0 var(--fui-radius-sm) var(--fui-radius-sm);
+  cursor: ns-resize;
+  touch-action: none;
 }

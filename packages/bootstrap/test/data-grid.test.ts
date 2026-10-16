@@ -619,6 +619,22 @@ function schedulerOf(attrs: Attrs, extra?: (b: RenderTreeBuilder) => void): Prom
 }
 
 describe("Scheduler", () => {
+  it("moves a chip by its arrow keys; the commit reports the keep-the-length span", async () => {
+    const moved: { appointment: ScheduleAppointment; start: string; end: string }[] = [];
+    const { container, ...renderer } = await schedulerOf({ appointments: meetings, view: "day" }, (b) => {
+      b.addAttribute(9, "onAppointmentMoved", EventCallback.unbound((value: { appointment: ScheduleAppointment; start: string; end: string }) => { moved.push(value); }));
+    });
+    await settle(renderer);
+    const chip = container.querySelector<HTMLButtonElement>(".tz-schedule-block > button")!;
+    expect(chip.tagName).toBe("BUTTON");
+    chip.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await settle(renderer);
+    expect(moved[0]!.start).toBe(day + "T09:15"); // one slot down, the 15-minute length kept
+    chip.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", shiftKey: true, bubbles: true }));
+    await settle(renderer);
+    expect(moved[1]!.start).toBe(day + "T10:00"); // 60 with Shift from the chip's own start (the app re-feeds first in a real app)
+  });
+
   it("shows the month's 42 cells with today, chips with intents, and out-of-month days", async () => {
     const { container, ...renderer } = await schedulerOf({ appointments: meetings, view: "month", ariaLabel: "Meetings" });
     await settle(renderer);

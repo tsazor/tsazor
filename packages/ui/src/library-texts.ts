@@ -55,6 +55,7 @@ export const libraryTextDefaults = catalog({
   "schedule.allDay": "All day",
   "schedule.appointment": "{appointment}, {time}",
   "schedule.appointmentHours": "{start} to {end}",
+  "schedule.resize": "Resize the appointment (arrow keys)",
   "schedule.more": "{count} more",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",

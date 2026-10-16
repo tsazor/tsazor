@@ -518,6 +518,9 @@ export type IsoDate = string;
 // IsoDateTime
 export type IsoDateTime = string;
 
+// isoDayTime
+export declare function isoDayTime(date: IsoDate, minutes: number): string;
+
 // isoTime
 export declare function isoTime(hours: number, minutes: number, seconds?: number): IsoTime;
 
@@ -584,6 +587,7 @@ export declare const libraryTextDefaults: {
     readonly "schedule.allDay": string;
     readonly "schedule.appointment": string;
     readonly "schedule.appointmentHours": string;
+    readonly "schedule.resize": string;
     readonly "schedule.more": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
@@ -864,6 +868,12 @@ export interface ScheduleDay {
     timed: readonly ScheduleBlock[];
 }
 
+// ScheduleDragDraft
+export interface ScheduleDragDraft {
+    fromMinutes: number;
+    toMinutes: number;
+}
+
 // ScheduleModel
 export declare class ScheduleModel {
     private readonly onChange;
@@ -883,6 +893,19 @@ export declare class ScheduleModel {
     navigate(direction: "previous" | "next" | "today"): void;
     get days(): readonly ScheduleDay[];
     private dayOf;
+}
+
+// ScheduleTimeDragOptions
+export interface ScheduleTimeDragOptions {
+    pointer: PointerEvent;
+    column: HTMLElement;
+    mode: "create" | "move" | "resize";
+    fromMinutes: number;
+    toMinutes: number;
+    grabOffset?: number;
+    preview?: HTMLElement;
+    onPreview?: (draft: ScheduleDragDraft) => void;
+    onDone: (draft: ScheduleDragDraft) => void;
 }
 
 // ScheduleView
@@ -946,6 +969,9 @@ export declare function startColumnReorder(options: ColumnReorderOptions): () =>
 
 // startColumnResize
 export declare function startColumnResize(options: ColumnResizeOptions): () => void;
+
+// startScheduleTimeDrag
+export declare function startScheduleTimeDrag(options: ScheduleTimeDragOptions): () => void;
 
 // ToastAction
 export interface ToastAction {

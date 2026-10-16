@@ -215,3 +215,20 @@
 .tz-schedule-appointment--selected {
   box-shadow: 0 0 0 0.125rem var(--bs-body-bg), 0 0 0 0.25rem currentcolor;
 }
+
+/* Creation: an empty day column takes the drag; the day's data attribute carries the date. */
+.tz-schedule-day-col {
+  cursor: cell;
+}
+
+/* The handle at a timed block's end; the keyboard resizes as the handle's arrows don't (the chip's keys move). */
+.tz-schedule-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 6px;
+  border-radius: 0 0 var(--bs-border-radius-sm, 0.25rem) var(--bs-border-radius-sm, 0.25rem);
+  cursor: ns-resize;
+  touch-action: none;
+}

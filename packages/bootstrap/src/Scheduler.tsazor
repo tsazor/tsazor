@@ -4,12 +4,12 @@
     extend ScheduleAppointment. Clicking an appointment selects it and reports it; a month cell
     with more appointments than it shows opens its day (the `more` button). *@
 @typeparam TAppointment extends ScheduleAppointment
-@import {
-ScheduleModel, libraryTexts,
-formatIsoDate, pageLocale, weekdayNames,
-type IsoDate, type ScheduleAppointment, type ScheduleBlock, type ScheduleDay, type ScheduleView, type WeekStartsOn,
-} from "@tsazor/ui"
 @import { EventCallback } from "@tsazor/runtime"
+@import {
+ScheduleModel, libraryTexts, isoDayTime, parseIsoDateTime, startScheduleTimeDrag,
+formatIsoDate, pageLocale, weekdayNames,
+type IsoDate, type IsoDateTime, type ScheduleAppointment, type ScheduleBlock, type ScheduleDay, type ScheduleView, type WeekStartsOn,
+} from "@tsazor/ui"
 @import { ChevronLeft, ChevronRight } from "./core-icons"
 
 <section class="tz-schedule" aria-label="@(ariaLabel ?? t("schedule.label"))" @attributes="otherAttributes">
@@ -64,10 +64,11 @@ type IsoDate, type ScheduleAppointment, type ScheduleBlock, type ScheduleDay, ty
             </div>
             <div class="tz-schedule-columns">
                 @foreach (const day of this.model.days) {
-                    <div class="@this.dayClass(day)">
+                    <div class="@this.dayClass(day) tz-schedule-day-col" data-tz-schedule-column="@day.date" @onpointerdown="@((event: PointerEvent) => this.startCreate(day.date, event))">
                         @foreach (const block of day.timed) {
                             <div class="tz-schedule-block" style="@this.blockStyle(block)">
-                                <button type="button" class="@this.appointmentClass(block.appointment)" aria-pressed="@this.selectedText(block.appointment)" aria-label="@this.appointmentLabel(block.appointment)" @onclick="@(() => this.select(block.appointment))">@block.appointment.title</button>
+                                <button type="button" class="@this.appointmentClass(block.appointment)" aria-pressed="@this.selectedText(block.appointment)" aria-label="@this.appointmentLabel(block.appointment)" @onpointerdown="@((event: PointerEvent) => this.startMove(block.appointment, event))" @onkeydown="@((event: KeyboardEvent) => this.moveByKey(block.appointment, event))" @onclick="@(() => this.select(block.appointment))">@block.appointment.title</button>
+                                <div class="tz-schedule-resize" role="separator" aria-label="@t("schedule.resize")" @onpointerdown="@((event: PointerEvent) => this.startResizeEnd(block.appointment, event))"></div>
                             </div>
                         }
                     </div>
@@ -93,6 +94,10 @@ type IsoDate, type ScheduleAppointment, type ScheduleBlock, type ScheduleDay, ty
     @Parameter() ariaLabel?: string;
     /** Fired with the appointment the user selected (the details are yours: a Dialog, a Drawer). */
     @Parameter() onAppointmentSelected?: EventCallback<TAppointment>;
+    /** Fired with a drag's new range (a pointer down on a day's empty column); the app adds the appointment. */
+    @Parameter() onAppointmentCreated?: EventCallback<{ date: IsoDate; start: IsoDateTime; end: IsoDateTime }>;
+    /** Fired with a moved or resized appointment's new span (same day in v1); the app owns the change. */
+    @Parameter() onAppointmentMoved?: EventCallback<{ appointment: TAppointment; start: IsoDateTime; end: IsoDateTime }>;
     /** Further attributes for the section (class adds to its classes). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
@@ -190,10 +195,115 @@ type IsoDate, type ScheduleAppointment, type ScheduleBlock, type ScheduleDay, ty
     }
 
     /** Selects an appointment and reports it (the selected one deselects on a second click). */
+    /** Selects an appointment and reports it (the selected one deselects on a second click). */
     private async select(appointment: ScheduleAppointment): Promise<void> {
         this.model.select(appointment);
         // The chip is a member of the app's appointments: the model's base is enough for it.
         await this.onAppointmentSelected?.invokeAsync(appointment as TAppointment);
+    }
+
+    /* The appointments' drag (create, move, resize) ---------------------------- */
+
+    /** A running drag's cleanup: the document listeners go when the component does. */
+    private scheduleCleanup: (() => void) | undefined;
+
+    /** A pointer down on a day column (on nothing) creates: the drag grows the new range beneath the pointer. */
+    private startCreate(date: IsoDate, pointer: PointerEvent): void {
+        const column = pointer.currentTarget as HTMLElement;
+        pointer.preventDefault();
+        this.scheduleCleanup?.();
+        this.scheduleCleanup = startScheduleTimeDrag({
+            pointer,
+            column,
+            mode: "create",
+            fromMinutes: 0,
+            toMinutes: 15,
+            onDone: (draft) => void this.created(date, draft),
+        });
+    }
+
+    /** A pointer down on a chip moves it (the grab point stays under the pointer; a plain click still selects). */
+    private startMove(appointment: ScheduleAppointment, pointer: PointerEvent): void {
+        const column = (pointer.currentTarget as HTMLElement).closest("[data-tz-schedule-column]") as HTMLElement;
+        const date = column.getAttribute("data-tz-schedule-column") as IsoDate;
+        const rect = column.getBoundingClientRect();
+        const minutesAt = (atY: number): number => ((atY - rect.top) / rect.height) * 1440;
+        const parts = this.dayMinutesOf(appointment, date);
+        const grabOffset = Math.max(0, minutesAt(pointer.clientY) - parts.from);
+        const block = (pointer.currentTarget as HTMLElement).closest(".tz-schedule-block") as HTMLElement;
+        this.scheduleCleanup?.();
+        this.scheduleCleanup = startScheduleTimeDrag({
+            pointer,
+            column,
+            mode: "move",
+            fromMinutes: parts.from,
+            toMinutes: parts.to,
+            grabOffset,
+            preview: block,
+            onDone: (draft) => void this.commit(appointment, date, draft),
+        });
+        pointer.stopPropagation(); // the column's create must not start
+    }
+
+    /** The handle at a block's end resizes (its start stays). */
+    private startResizeEnd(appointment: ScheduleAppointment, pointer: PointerEvent): void {
+        const column = (pointer.currentTarget as HTMLElement).closest("[data-tz-schedule-column]") as HTMLElement;
+        const date = column.getAttribute("data-tz-schedule-column") as IsoDate;
+        const block = (pointer.currentTarget as HTMLElement).closest(".tz-schedule-block") as HTMLElement;
+        const parts = this.dayMinutesOf(appointment, date);
+        this.scheduleCleanup?.();
+        this.scheduleCleanup = startScheduleTimeDrag({
+            pointer,
+            column,
+            mode: "resize",
+            fromMinutes: parts.from,
+            toMinutes: parts.to,
+            preview: block,
+            onDone: (draft) => void this.commit(appointment, date, draft),
+        });
+        pointer.stopPropagation();
+    }
+
+    /** A chip's arrow keys move it: 15 minutes at a time, 60 with Shift; the commit is the event's. */
+    private async moveByKey(appointment: ScheduleAppointment, event: KeyboardEvent): Promise<void> {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        event.preventDefault();
+        const column = (event.target as HTMLElement).closest("[data-tz-schedule-column]") as HTMLElement | null;
+        if (column === null) return;
+        const date = column.getAttribute("data-tz-schedule-column") as IsoDate;
+        const step = (event.shiftKey ? 60 : 15) * (event.key === "ArrowDown" ? 1 : -1);
+        const parts = this.dayMinutesOf(appointment, date);
+        const from = Math.max(0, Math.min(1440 - (parts.to - parts.from), parts.from + step));
+        await this.commit(appointment, date, { fromMinutes: from, toMinutes: from + (parts.to - parts.from) });
+    }
+
+    /** An appointment's span on `date`'s clock (a multi-day one starts at 0 and ends at 1440). */
+    private dayMinutesOf(appointment: ScheduleAppointment, date: IsoDate): { from: number; to: number } {
+        const start = parseIsoDateTime(appointment.start);
+        const end = parseIsoDateTime(appointment.end ?? appointment.start);
+        return {
+            from: start?.date === date ? (start?.minutes ?? 0) : 0,
+            to: end?.date === date ? (end?.minutes ?? 1440) : 1440,
+        };
+    }
+
+    /** The drag's draft became a new appointment: the app owns the change. */
+    private async created(date: IsoDate, draft: { fromMinutes: number; toMinutes: number }): Promise<void> {
+        if (draft.fromMinutes === draft.toMinutes) return; // a click: nothing created
+        await this.onAppointmentCreated?.invokeAsync({ date, start: isoDayTime(date, draft.fromMinutes), end: isoDayTime(date, draft.toMinutes) });
+        this.stateHasChanged();
+    }
+
+    /** The move's or resize's draft: the app owns the change; the pointer's no-move is no draft. */
+    private async commit(appointment: ScheduleAppointment, date: IsoDate, draft: { fromMinutes: number; toMinutes: number }): Promise<void> {
+        const parts = this.dayMinutesOf(appointment, date);
+        if (parts.from === draft.fromMinutes && parts.to === draft.toMinutes) {
+            this.scheduleCleanup?.();
+            this.scheduleCleanup = undefined;
+            return; // the pointer stayed: a plain select
+        }
+        await this.onAppointmentMoved?.invokeAsync({ appointment: appointment as TAppointment, start: isoDayTime(date, draft.fromMinutes), end: isoDayTime(date, draft.toMinutes) });
+        this.stateHasChanged();
     }
 
     private get otherAttributes(): Record<string, unknown> | undefined {

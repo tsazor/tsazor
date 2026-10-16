@@ -863,6 +863,7 @@ export interface TypedTagInferenceRequest {
 export interface TypeParameterInfo {
     name: string;
     constraint?: string;
+    constraintReferences?: TypeReference[];
     default?: string;
 }
 
