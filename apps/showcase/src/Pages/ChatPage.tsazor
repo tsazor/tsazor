@@ -1,0 +1,16 @@
+@page "/chat"
+@** The Chat's examples (design-extended-library.md §2.3, cluster 4): a state, the roles'
+    bubbles, the streaming answer — the provider is the app's. *@
+@import { Typography } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import ChatStateExample from "../examples/chat/chat-state.tsazor"
+
+<Typography Variant="h1">Chat</Typography>
+<Typography>
+    The chat's pieces: a `ChatState` (the list, the streaming draft — no provider, no key, the
+    app feeds its own source), the `Chat` (bubbles by role, the assistant's Markdown, the list
+    pinned to its bottom while the answer streams), and the `PromptInput` (Enter sends and clears).
+</Typography>
+
+<Example Title="A chat with a local provider" Description="Ask something: the answer streams in pieces; the bottom pins itself while it grows."
+    Id="chat/chat-state"><ChatStateExample /></Example>

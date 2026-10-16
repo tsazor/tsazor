@@ -59,6 +59,7 @@
     "core-icons": "node scripts/core-icons.mjs"
   },
   "dependencies": {
+    "@tsazor/markdown": "workspace:*",
     "@tsazor/ui": "workspace:*"
   },
   "peerDependencies": {

@@ -1,0 +1,59 @@
+@** The chat's prompt line (design-extended-library.md §2.3): an input that grows with its text,
+    Enter sends (Shift+Enter breaks a line), the send clears (an empty send does nothing); the
+    handler is yours: it appends to your ChatState and streams an answer from your source. Bind
+    with `@bind-Value` when you need the draft's text. Disabled inputs don't send. *@
+@inherits InputBase<string>
+@import { EventCallback } from "@tsazor/runtime"
+@import { libraryTexts } from "@tsazor/ui"
+
+<div class="fui-prompt" @attributes="otherAttributes">
+    <textarea class="form-control fui-prompt-text" rows="1" placeholder="@placeholder" value="@displayValue" @oninput="(event: Event) => this.typed(event)" @onkeydown="@((event: KeyboardEvent) => this.keydown(event))" @ref="element"></textarea>
+    <Button Intent="primary" OnClick="@(() => this.send())" Disabled="@this.canSend === false" AriaLabel="Send the prompt">@t("prompt.send")</Button>
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The send handler: append to your state and stream from your source; the input clears when it fires. */
+    @Parameter() onSend?: EventCallback<string>;
+    /** The input's placeholder. */
+    @Parameter() placeholder?: string;
+    /** Disables the input and the send. */
+    @Parameter() disabled: boolean = false;
+
+    private get displayValue(): string {
+        return this.value ?? "";
+    }
+
+    /** Whether the send is allowed now (not disabled, and something to send). */
+    private get canSend(): boolean {
+        return !this.disabled && (this.value?.trim().length ?? 0) > 0;
+    }
+
+    /** An input: the text into the bound value (the parent's re-render passes it back). */
+    private typed(event: Event): void {
+        this.currentValue = (event.target as HTMLTextAreaElement).value;
+    }
+
+    /** A keystroke: Enter (without Shift) sends; the rest types. */
+    private async keydown(event: KeyboardEvent): Promise<void> {
+        if (event.key !== "Enter" || event.shiftKey || this.disabled) return;
+        event.preventDefault();
+        await this.send();
+    }
+
+    /** Sends the prompt's text and clears the line (the button's click lands here too). */
+    async send(): Promise<void> {
+        if (!this.canSend) return;
+        const prompt = this.value!.trim();
+        (this.element as HTMLTextAreaElement).value = "";
+        this.currentValue = "";
+        await this.onSend?.invokeAsync(prompt);
+    }
+
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

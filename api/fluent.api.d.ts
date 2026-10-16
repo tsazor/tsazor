@@ -232,6 +232,20 @@ export default class CarouselItem extends ComponentBase {
 
 // CarouselLabels: re-exported from @tsazor/ui
 
+// Chat
+export default class Chat<TMessage extends ChatMessage> extends ComponentBase {
+    state?: ChatState<TMessage>;
+    messages?: readonly TMessage[];
+    streaming: boolean;
+    markdown: boolean;
+    emptyContent?: RenderFragment;
+    footerContent?: RenderFragment;
+    ariaLabel?: string;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// ChatState: re-exported from @tsazor/ui
+
 // Checkbox
 export default class Checkbox extends InputBase<boolean> {
     label?: string;
@@ -916,6 +930,14 @@ export default class Progress extends ComponentBase {
 
 // ProgressFileDetails: re-exported from @tsazor/ui
 
+// PromptInput
+export default class PromptInput extends InputBase<string> {
+    onSend?: EventCallback<string>;
+    placeholder?: string;
+    disabled: boolean;
+    send(): Promise<void>;
+}
+
 // PropertyColumn
 export default class PropertyColumn<TGridItem, TProp> extends ComponentBase {
     property: (item: TGridItem) => TProp;
@@ -993,6 +1015,7 @@ export default class RichText extends InputBase<string> {
 export default class Scheduler<TAppointment extends ScheduleAppointment> extends ComponentBase {
     appointments?: readonly TAppointment[];
     view?: ScheduleView;
+    anchor?: IsoDate;
     weekStartsOn?: WeekStartsOn;
     monthChips: number;
     ariaLabel?: string;

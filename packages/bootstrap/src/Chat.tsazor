@@ -1,0 +1,84 @@
+@** A chat's messages as bubbles by role (design-extended-library.md §2.3): the assistant's text
+    as Markdown (a single newline breaks the line, as chat comments do; sanitized), the user's as
+    plain text; the list stays pinned to its bottom while an answer streams (the runtime's
+    Virtualize at End). Feed `state` (ChatState: append, beginStream, clear); or a read-only list
+    via `messages`. A footer content (your PromptInput) composes below the list. *@
+@typeparam TMessage extends ChatMessage
+@import { Virtualize, VirtualizeAnchorMode } from "@tsazor/runtime"
+@import { Markdown } from "@tsazor/markdown"
+@import { libraryTexts, type ChatMessage, type ChatState, type ChatStream } from "@tsazor/ui"
+
+<div class="tz-chat" @attributes="otherAttributes">
+    <div class="tz-chat-scroll" role="log" aria-label="@(ariaLabel ?? t("chat.label"))">
+        @if (this.lines.length === 0) {
+            <div class="tz-chat-empty">@if (emptyContent) { @emptyContent }</div>
+        }
+        <Virtualize Items="@this.lines" AnchorMode="@VirtualizeAnchorMode.End" ItemSize="72" OverscanCount="4" SpacerElement="div">
+            <ItemContent Context="message">
+                <div class="@this.messageClass(message)">
+                    <span class="tz-chat-role" aria-hidden="true">@this.roleMark(message)</span>
+                    @if (message.text === "" && this.busy()) {
+                        <div class="tz-chat-typing" aria-hidden="true"><span></span><span></span><span></span></div>
+                    } else if (message.role === "assistant" && markdown) {
+                        <Markdown Value="@message.text" Breaks="@true" />
+                    } else {
+                        <span class="tz-chat-text">@message.text</span>
+                    }
+                </div>
+            </ItemContent>
+        </Virtualize>
+    </div>
+    @if (footerContent !== undefined) {
+        <div class="tz-chat-footer">@footerContent</div>
+    }
+</div>
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The chat's state (its list, its streams, its streaming flag). */
+    @Parameter() state?: ChatState<TMessage>;
+    /** A read-only list when there is no state of your own. */
+    @Parameter() messages?: readonly TMessage[];
+    /** Without a state: whether an answer is streaming now (the typing indicator). */
+    @Parameter() streaming: boolean = false;
+    /** Whether the assistant's text renders as Markdown (default; the user's never does). */
+    @Parameter() markdown: boolean = true;
+    /** The empty chat's content (default: none). */
+    @Parameter() emptyContent?: RenderFragment;
+    /** The prompt beneath the list (your PromptInput). */
+    @Parameter() footerContent?: RenderFragment;
+    /** Names the log for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Further attributes for the wrapper (class adds to its classes). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    /** The lines: the state's list, or the read-only one (the draft included while it streams). */
+    private get lines(): readonly TMessage[] {
+        if (this.state !== undefined) return this.state.messages;
+        return this.messages ?? [];
+    }
+
+    /** A message's bubble: its role's side, and the streaming draft's shape. */
+    private messageClass(message: TMessage): string {
+        const parts: string[] = ["tz-chat-message", `tz-chat-message--${message.role}`];
+        if (message.text === "" && this.busy()) parts.push("tz-chat-message--draft");
+        return parts.join(" ");
+    }
+
+    /** The role's mark (a monogram for now: A or Y). */
+    private roleMark(message: TMessage): string {
+        return message.role === "user" ? "Y" : "A";
+    }
+
+    /** Whether an answer is streaming now (the state's flag or yours). */
+    private busy(): boolean {
+        return this.state !== undefined ? this.state.streaming : this.streaming;
+    }
+
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

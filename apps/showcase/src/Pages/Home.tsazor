@@ -22,4 +22,8 @@
         <strong>Scheduler</strong>
         <span>Month, week and day views; all-day rows; overlapping timed appointments in lanes.</span>
     </a>
+    <a class="sz-card" href="/chat">
+        <strong>Chat</strong>
+        <span>A state that streams, the roles' bubbles, Markdown in the answers; the provider stays the app's.</span>
+    </a>
 </section>

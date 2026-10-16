@@ -101,6 +101,39 @@ export interface CarouselLabels {
     play: string;
 }
 
+// ChatMessage
+export interface ChatMessage {
+    role: "user" | "assistant" | "system";
+    text: string;
+}
+
+// ChatState
+export declare class ChatState<TMessage extends ChatMessage = ChatMessage> {
+    private readonly onChange;
+    private store;
+    private stream;
+    private streamingNow;
+    constructor(onChange: () => void);
+    get messages(): readonly TMessage[];
+    get streaming(): boolean;
+    append(message: TMessage): void;
+    setMessages(messages: readonly TMessage[] | undefined): boolean;
+    beginStream(): ChatStream;
+    streamText(stream: ChatStream): string;
+    clear(): void;
+}
+
+// ChatStream
+export declare class ChatStream {
+    private state;
+    private closed;
+    constructor(state: ChatState);
+    append(delta: string): void;
+    done(): void;
+    abort(): void;
+    get text(): string;
+}
+
 // ChipSelectionMode
 export type ChipSelectionMode = "none" | "single" | "toggle" | "multiple";
 
@@ -589,6 +622,8 @@ export declare const libraryTextDefaults: {
     readonly "schedule.appointmentHours": string;
     readonly "schedule.resize": string;
     readonly "schedule.more": string;
+    readonly "chat.label": string;
+    readonly "prompt.send": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
     readonly "dataGrid.filterApply": string;

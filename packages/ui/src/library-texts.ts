@@ -57,6 +57,9 @@ export const libraryTextDefaults = catalog({
   "schedule.appointmentHours": "{start} to {end}",
   "schedule.resize": "Resize the appointment (arrow keys)",
   "schedule.more": "{count} more",
+
+  "chat.label": "Chat messages",
+  "prompt.send": "Send",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",
   "dataGrid.filterValue": "Filter value",

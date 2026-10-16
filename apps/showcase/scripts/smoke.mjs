@@ -65,7 +65,7 @@ try {
   await page.locator(".sz-code__bar button").first().click();
   await page.waitForFunction(() => [...document.querySelectorAll(".sz-code__bar button")].some((button) => button.textContent === "Copied"), { timeout: 5000 });
 
-  for (const route of ["/richtext", "/schedule"]) {
+  for (const route of ["/richtext", "/schedule", "/chat"]) {
     await page.goto(`${url}${route}`);
     await page.waitForSelector(".sz-code pre code");
     const panels = await page.locator(".sz-code pre code").count();
