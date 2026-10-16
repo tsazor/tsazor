@@ -107,10 +107,27 @@ export async function buildShadowModule(
       },
     });
 
-    const code = compiled.code
-      .split("\n")
-      .map((line) => rewriteImportLine(line, fileDir, projectRoot))
-      .join("\n");
+    // The import rewrites (rewriteImportLine) may split one compiled import
+    // line into several (rewrite B's per-component shadows). The compiler's
+    // mappings were computed for the pre-split code: every generated line
+    // after a split shifts with it, or the map sends the type layer to the
+    // wrong statement — X1 (the showcase's multi-name component `@import` left
+    // a DataGrid's TGridItem uninferred, RZ10001) came from exactly that.
+    const rawLines = compiled.code.split("\n");
+    const outLines: string[] = [];
+    const inserted = new Array<number>(rawLines.length); // how many extra lines each raw line became
+    let shiftSum = 0;
+    const cumulative: number[] = [];
+    for (let index = 0; index < rawLines.length; index++) {
+      cumulative.push(shiftSum);
+      const parts = rewriteImportLine(rawLines[index]!, fileDir, projectRoot).split("\n");
+      inserted[index] = parts.length - 1;
+      shiftSum += inserted[index]!;
+      for (const part of parts) outLines.push(part);
+    }
+    const mappings = (compiled.mappings ?? []).map((entry) => ({ ...entry, genLine: entry.genLine + (cumulative[Math.min(entry.genLine - 1, cumulative.length - 1)] ?? 0) }));
+
+    const code = outLines.join("\n");
 
     return {
       virtualPath: shadowPathFor(filePath),
@@ -119,7 +136,7 @@ export async function buildShadowModule(
       // by name too — apps import package components as named imports
       // (`import { Button } from "@tsazor/fluent"` → rewrite B → shadow).
       code: `${code.trimEnd()}\nexport { ${context.className} };\n`,
-      map: new TsazorGenMap(compiled.mappings ?? []),
+      map: new TsazorGenMap(mappings),
       className: context.className,
       ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),
       ...(compiled.uninferredTypeArguments !== undefined ? { uninferredTypeArguments: compiled.uninferredTypeArguments } : {}),

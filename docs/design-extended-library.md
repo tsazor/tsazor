@@ -189,7 +189,7 @@ Core and component gaps found while building the extended layer. Each is fixed w
 
 | # | Where | Found | Fix |
 |---|---|---|---|
-| X1 | `@tsazor/lsp`, the shadow graph | The showcase's first examples: an explicit `@import { DataGrid, PropertyColumn } from "@tsazor/bootstrap"` left the grid's `TGridItem` uninferred (RZ10001, the columns' lambdas fell back to `RenderTreeBuilder`); one name per `@import` and `@using` both work | The rewrite of a multi-name import binds every name to one component's shadow; fixed to split per name onto its own shadow (pending, with a regression test in `packages/lsp/test/shadow-module.test.ts`) |
+| X1 | `@tsazor/lsp`, the shadow graph | The showcase's first examples: an explicit `@import { DataGrid, PropertyColumn } from "@tsazor/bootstrap"` left the grid's `TGridItem` uninferred (RZ10001, the columns' lambdas fell back to `RenderTreeBuilder`); one name per `@import` and `@using` both work | The multi-name import split into per-name shadow lines without shifting the compiler's mappings: every later generated line was off by one and the type layer read the wrong statement, so the second pass's answer silently found nothing. Fixed in shadow-module.ts — the mappings shift with each split (2026-10-16; `test/shadow-module.test.ts` regression test) |
 
 ## 9. Decisions needed
 

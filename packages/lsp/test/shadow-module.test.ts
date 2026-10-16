@@ -140,6 +140,27 @@ describe("buildShadowModule", () => {
     expect(code).not.toContain('from "@fake/ui"');
   });
 
+  it("shifts the mappings when a multi-name import splits into per-name shadows (X1)", async () => {
+    // `{ Badge, Chip }` in one @import became two import lines while the
+    // compiler's mappings still counted one: every later generated line
+    // shifted, and the type layer read the wrong statement — a grid's
+    // TGridItem (its second pass) then stayed unanswered (RZ10001) and the
+    // columns' lambdas fell back to RenderTreeBuilder.
+    const shadow = await buildShadowModule(
+      path.join(root, "Pages", "Split.tsazor"),
+      '@import { Badge, Chip } from "@fake/ui"\n<p>@count</p>\n\n@code {\n    count = 3;\n}\n',
+      root,
+    );
+    const lines = shadow!.code.split("\n");
+    expect(lines.some((line) => line.includes("Badge.tsazor.gen.ts"))).toBe(true);
+    expect(lines.some((line) => line.includes("Chip.tsazor.gen.ts"))).toBe(true);
+    // The statement after the split-imports still maps onto its own source line.
+    const stmtLine = lines.findIndex((line) => line.includes("this.count"));
+    expect(stmtLine).toBeGreaterThan(0);
+    expect(shadow!.map.genToSrc(stmtLine, 4)).toEqual({ line: 1, character: 3 });
+    expect(shadow!.map.srcToGen(1, 4)?.line).toBe(stmtLine);
+  });
+
   it("keeps an inline type beside a component in one import (`{ Badge, type BadgeSize }`)", async () => {
     // The type's name used to be dropped: the import split into the component's shadow and nothing else.
     const shadow = await buildShadowModule(
