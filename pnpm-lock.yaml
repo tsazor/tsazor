@@ -645,6 +645,9 @@ importers:
 
   packages/bootstrap:
     dependencies:
+      '@tsazor/markdown':
+        specifier: workspace:*
+        version: link:../markdown
       '@tsazor/ui':
         specifier: workspace:*
         version: link:../ui
@@ -818,6 +821,9 @@ importers:
 
   packages/fluent:
     dependencies:
+      '@tsazor/markdown':
+        specifier: workspace:*
+        version: link:../markdown
       '@tsazor/ui':
         specifier: workspace:*
         version: link:../ui

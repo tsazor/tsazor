@@ -160,17 +160,24 @@ What each cluster exercises in the core; the failures surface as X-findings, fix
 | Spreadsheet | `Decimal` and the E12 primitives in an editing loop, virtualization at scale (10⁴+ cells), undo over `@bind` |
 | RichText2 wrapper | an external imperative widget through Tsazor's lifecycle — teardown across re-renders, two-way sync while the editor mutates itself, focus across the boundary |
 
-## 5. Order of work (proposal)
+## 5. Order of work (clusters 1–6 done, 2026-10-16)
 
-The dependencies set it; nothing of this layer blocks 1.0 (§7):
+The dependencies set it; nothing of this layer blocks 1.0 (§7). Status:
 
-1. **DataGrid advanced** (§2.1) — the backbone; PivotDataGrid builds on it.
-2. **RichText2 wrapper** (§2.7) — small, and an early lifecycle test; RichText2 is near release.
-3. **Scheduler** (§2.2) — drag and layers on a proven engine.
-4. **AI components** (§2.3) — streaming; reuses the Markdown and Virtualize lessons.
-5. **Templates and blocks** (§2.4) — composition over every component above.
-6. **PivotDataGrid** (§2.5).
-7. **Spreadsheet** (§2.6) — its own package and engine, the long pole.
+1. ~~**DataGrid advanced** (§2.1)~~ — done (8/8: filter, density, aggregates, resize/reorder,
+   editing, grouping, persistence, export).
+2. ~~**RichText2 wrapper** (§2.7)~~ — done (the engine joins when RichText2 is on npm).
+3. ~~**Scheduler** (§2.2)~~ — done (month/week/day, the drag's create/move/resize; cross-day
+   moves and recurrence stay out, as decided).
+4. ~~**AI components** (§2.3)~~ — done (ChatState, Chat, PromptInput).
+5. ~~**Templates and blocks** (§2.4)~~ — done (EmptyState, AuthLogin, AuthRegister,
+   SettingsPane, OrdersCrud; the bootstrap CLI as D-X8).
+6. ~~**PivotDataGrid** (§2.5)~~ — done.
+7. **Spreadsheet** (§2.6) — the long pole, on the owner's word (D-X4: no formulas in v1).
+
+Open as well: the tutorial's four test failures (K.7/K.8 — before the extended session) and the
+collective of the first external integration's feedback (the untracked feedback.md) into
+[docs/migration-practices.md](migration-practices.md).
 
 ## 6. Quality bar
 
