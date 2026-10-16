@@ -987,6 +987,19 @@ export default class RichText extends InputBase<string> {
 
 // RichTextFactory: re-exported from @tsazor/ui
 
+// Scheduler
+export default class Scheduler<TAppointment extends ScheduleAppointment> extends ComponentBase {
+    appointments?: readonly TAppointment[];
+    view?: ScheduleView;
+    weekStartsOn?: WeekStartsOn;
+    monthChips: number;
+    ariaLabel?: string;
+    onAppointmentSelected?: EventCallback<TAppointment>;
+    additionalAttributes?: Record<string, unknown>;
+}
+
+// ScheduleView: re-exported from @tsazor/ui
+
 // ScrollToTop
 export default class ScrollToTop extends ComponentBase {
     selector?: string;
@@ -1367,6 +1380,8 @@ export default class Typography extends ComponentBase {
 // uploadFile: re-exported from @tsazor/ui
 
 // uploadTo: re-exported from @tsazor/ui
+
+// WeekStartsOn: re-exported from @tsazor/ui
 
 // Wizard
 export default class Wizard extends ComponentBase {

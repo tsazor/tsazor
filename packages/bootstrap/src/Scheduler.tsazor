@@ -1,0 +1,204 @@
+@** A scheduler over days, on the calendar doctrine (ISO dates without a zone): month, week and
+    day views, all-day appointments in a row of their own, timed appointments side by side in
+    lanes where they overlap. The model lives in @tsazor/ui (ScheduleModel); your appointments
+    extend ScheduleAppointment. Clicking an appointment selects it and reports it; a month cell
+    with more appointments than it shows opens its day (the `more` button). *@
+@typeparam TAppointment extends ScheduleAppointment
+@import {
+ScheduleModel, libraryTexts,
+formatIsoDate, pageLocale, weekdayNames,
+type IsoDate, type ScheduleAppointment, type ScheduleBlock, type ScheduleDay, type ScheduleView, type WeekStartsOn,
+} from "@tsazor/ui"
+@import { EventCallback } from "@tsazor/runtime"
+@import { ChevronLeft, ChevronRight } from "./core-icons"
+
+<section class="tz-schedule" aria-label="@(ariaLabel ?? t("schedule.label"))" @attributes="otherAttributes">
+    <div class="tz-schedule-toolbar">
+        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("previous"))" AriaLabel="@t("schedule.previous")"><Icon value="@ChevronLeft" size="14" /></Button>
+        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("today"))">@t("schedule.today")</Button>
+        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("next"))" AriaLabel="@t("schedule.next")"><Icon value="@ChevronRight" size="14" /></Button>
+        <span class="tz-schedule-period">@this.period</span>
+        <div class="tz-schedule-views" role="group" aria-label="@t("schedule.label")">
+            @foreach (const candidate of ["month", "week", "day"] as const) {
+                <Button Size="small" Appearance="@(this.currentView === candidate ? "solid" : "outline")" OnClick="@(() => this.model.setView(candidate, this.model.anchor))">@t(`schedule.${candidate}`)</Button>
+            }
+        </div>
+    </div>
+    <div class="tz-schedule-head" aria-hidden="true">
+        @foreach (const name of this.headNames) {
+            <span class="tz-schedule-head-day">@name</span>
+        }
+    </div>
+    @if (this.currentView === "month") {
+        <div class="tz-schedule-month">
+            @foreach (const day of this.model.days) {
+                <div class="@this.dayClass(day)" @onclick="@(() => this.model.setView("day", day.date))">
+                    <div class="tz-schedule-day-number">@this.dayLabel(day.date)</div>
+                    @foreach (const appointment of this.monthChipsOf(day)) {
+                        <button type="button" class="@this.appointmentClass(appointment)" aria-pressed="@this.selectedText(appointment)" @onclick="@((event: MouseEvent) => this.selectChip(appointment, event))">@appointment.title</button>
+                    }
+                    @if (day.allDay.length + day.timed.length > this.monthChips) {
+                        <button type="button" class="tz-schedule-more p-0 border-0 bg-transparent" @onclick="@(() => this.model.setView("day", day.date))">@t("schedule.more", { count: day.allDay.length + day.timed.length - this.monthChips })</button>
+                    }
+                </div>
+            }
+        </div>
+    } else {
+        <div class="tz-schedule-all-day">
+            <span class="tz-schedule-all-day-label">@t("schedule.allDay")</span>
+            <div class="tz-schedule-all-day-days">
+                @foreach (const day of this.model.days) {
+                    <div class="@this.dayClass(day)">
+                        @foreach (const appointment of day.allDay) {
+                            <button type="button" class="@this.appointmentClass(appointment)" aria-pressed="@this.selectedText(appointment)" @onclick="@(() => this.select(appointment))">@appointment.title</button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="tz-schedule-timegrid">
+            <div class="tz-schedule-hours" aria-hidden="true">
+                @foreach (const hour of this.hourLabels) {
+                    <span class="tz-schedule-hour">@hour</span>
+                }
+            </div>
+            <div class="tz-schedule-columns">
+                @foreach (const day of this.model.days) {
+                    <div class="@this.dayClass(day)">
+                        @foreach (const block of day.timed) {
+                            <div class="tz-schedule-block" style="@this.blockStyle(block)">
+                                <button type="button" class="@this.appointmentClass(block.appointment)" aria-pressed="@this.selectedText(block.appointment)" aria-label="@this.appointmentLabel(block.appointment)" @onclick="@(() => this.select(block.appointment))">@block.appointment.title</button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    /** The class month view's blocks carry; the union needs the appointment's own shape. */
+    private readonly t = libraryTexts();
+
+    /** The app's appointments (they extend ScheduleAppointment). */
+    @Parameter() appointments?: readonly TAppointment[];
+    /** The view the scheduler starts and, when set later, returns to: month (default), week, day. */
+    @Parameter() view?: ScheduleView;
+    /** Where a week starts, as the weekday index counts: Sunday 0, Monday 1 (the default). */
+    @Parameter() weekStartsOn?: WeekStartsOn;
+    /** A month cell shows up to this many appointment chips before the `more` button (default 3). */
+    @Parameter() monthChips: number = 3;
+    /** Names the section for screen readers. */
+    @Parameter() ariaLabel?: string;
+    /** Fired with the appointment the user selected (the details are yours: a Dialog, a Drawer). */
+    @Parameter() onAppointmentSelected?: EventCallback<TAppointment>;
+    /** Further attributes for the section (class adds to its classes). */
+    @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
+
+    private readonly model = new ScheduleModel(() => this.stateHasChanged());
+
+    protected override onParametersSet(): void {
+        if (this.weekStartsOn !== undefined) this.model.weekStartsOn = this.weekStartsOn;
+        const changed = this.model.setAppointments(this.appointments);
+        if (this.view !== undefined) this.model.setView(this.view);
+        if (changed) this.stateHasChanged();
+    }
+
+    /** The model's current view (the switcher and the views follow it, not the parameter). */
+    private get currentView(): ScheduleView {
+        return this.model.currentView;
+    }
+
+    /** The view's period, from the anchor: the month, the week's from–to or the day. */
+    private get period(): string {
+        const locale = pageLocale();
+        const anchor = this.model.anchor;
+        const at = (date: string, options: Intl.DateTimeFormatOptions): string => new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+        if (this.currentView === "month") return at(anchor, { month: "long", year: "numeric" });
+        if (this.currentView === "week") {
+            const days = this.model.days;
+            const first = days[0]!.date;
+            const last = days[days.length - 1]!.date;
+            return `${at(first, { day: "numeric", month: "short" })} – ${at(last, { day: "numeric", month: "short", year: "numeric" })}`;
+        }
+        return at(anchor, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+
+    /** The weekday names of the view's columns; week and day name the actual days. */
+    private get headNames(): readonly string[] {
+        const locale = pageLocale();
+        const names = weekdayNames(locale, this.model.weekStartsOn, "short");
+        if (this.currentView === "month") return names;
+        return this.model.days.map((day) => `${names[day.weekday]!} ${formatIsoDate(day.date, locale, { day: "numeric", month: "short" })}`);
+    }
+
+    /** The day's own number for a cell. */
+    private dayLabel(date: IsoDate): string {
+        return formatIsoDate(date, pageLocale(), { day: "numeric" });
+    }
+
+    /** The hours' labels, 00:00 to 23:00 of the locale's clock. */
+    private readonly hourLabels: readonly string[] = Array.from({ length: 24 }, (_, hour) => {
+        const at = new Date(0);
+        at.setUTCHours(hour);
+        return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" }).format(at);
+    });
+
+    /** Where a timed block sits in its day's column (top and height as percentages of 24 h; the lane beside its neighbors). */
+    private blockStyle(block: ScheduleBlock): string {
+        const laneShare = 100 / block.lanes;
+        return `top: ${(block.fromMinutes / 1440 * 100).toFixed(3)}%; height: ${((block.toMinutes - block.fromMinutes) / 1440 * 100).toFixed(3)}%; left: ${(block.lane * laneShare).toFixed(3)}%; width: ${laneShare.toFixed(3)}%;`;
+    }
+
+    /** A day's chips: the all-day's first, then the timed's, up to the cell's limit. */
+    private monthChipsOf(day: ScheduleDay): readonly ScheduleAppointment[] {
+        return [...day.allDay, ...day.timed.map((block) => block.appointment)].slice(0, this.monthChips);
+    }
+
+    /** A cell's classes: today and a month cell's out-of-month say so. */
+    private dayClass(day: ScheduleDay): string | null {
+        const parts: string[] = ["tz-schedule-day"];
+        if (day.isToday) parts.push("tz-schedule-day--today");
+        if (day.isOutOfMonth) parts.push("tz-schedule-day--out");
+        return parts.join(" ");
+    }
+
+    /** An appointment chip's classes: the intent, the selection, and for timed ones their shape. */
+    private appointmentClass(appointment: ScheduleAppointment): string {
+        const parts: string[] = ["tz-schedule-appointment", `tz-schedule-appointment--${appointment.intent ?? "primary"}`];
+        if (this.model.isSelected(appointment)) parts.push("tz-schedule-appointment--selected");
+        return parts.join(" ");
+    }
+
+    /** The chip's selected state as text (an attribute keeps booleans out). */
+    private selectedText(appointment: ScheduleAppointment): string {
+        return this.model.isSelected(appointment) ? "true" : "false";
+    }
+
+    /** The chip's label for screen readers: the title and its time. */
+    private appointmentLabel(appointment: ScheduleAppointment): string {
+        const locale = pageLocale();
+        const clock = (text: string): string => new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(new Date(text));
+        return this.t("schedule.appointment", { appointment: appointment.title, time: `${clock(appointment.start)}–${clock(appointment.end ?? appointment.start)}` });
+    }
+
+    /** Selects an appointment and reports it (the selected one deselects; a day-cell click must not fire). */
+    private async selectChip(appointment: ScheduleAppointment, event: MouseEvent): Promise<void> {
+        event.stopPropagation();
+        await this.select(appointment);
+    }
+
+    /** Selects an appointment and reports it (the selected one deselects on a second click). */
+    private async select(appointment: ScheduleAppointment): Promise<void> {
+        this.model.select(appointment);
+        // The chip is a member of the app's appointments: the model's base is enough for it.
+        await this.onAppointmentSelected?.invokeAsync(appointment as TAppointment);
+    }
+
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

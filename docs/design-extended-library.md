@@ -198,6 +198,7 @@ Core and component gaps found while building the extended layer. Each is fixed w
 | # | Where | Found | Fix |
 |---|---|---|---|
 | X1 | `@tsazor/lsp`, the shadow graph | The showcase's first examples: an explicit `@import { DataGrid, PropertyColumn } from "@tsazor/bootstrap"` left the grid's `TGridItem` uninferred (RZ10001, the columns' lambdas fell back to `RenderTreeBuilder`); one name per `@import` and `@using` both work | The multi-name import split into per-name shadow lines without shifting the compiler's mappings: every later generated line was off by one and the type layer read the wrong statement, so the second pass's answer silently found nothing. Fixed in shadow-module.ts — the mappings shift with each split (2026-10-16; `test/shadow-module.test.ts` regression test) |
+| X2 | the published declarations | The Scheduler's constrained type parameter (`@typeparam TAppointment extends ScheduleAppointment`): the generated `Scheduler.d.ts` wrote the constraint but not the import of its name — the declarations failed their own type-check without skipLibCheck | The extraction records the constraint's references (`TypeParameterInfo.constraintReferences`), and a component's d.ts collects them like a parameter's (fixed 2026-10-16; both skins' `test/declarations.test.ts` keep the check) |
 
 ## 9. Decisions needed
 

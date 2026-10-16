@@ -228,6 +228,12 @@ export declare class DataGridModel<T> {
     dispose(): void;
 }
 
+// DayTime
+export interface DayTime {
+    date: IsoDate;
+    minutes: number;
+}
+
 // DialogOptions
 export interface DialogOptions<TComponent extends ComponentBase = ComponentBase> {
     readonly title?: string;
@@ -357,6 +363,9 @@ export interface FocusTrapOptions {
 
 // formatFileSize
 export declare function formatFileSize(bytes: number, locale?: string): string;
+
+// formatIsoDate
+export declare function formatIsoDate(date: IsoDate, locale: string, options: Intl.DateTimeFormatOptions): string;
 
 // gridAggregate
 export declare function gridAggregate(kind: "sum" | "avg" | "count" | "min" | "max", values: readonly unknown[]): unknown;
@@ -506,6 +515,9 @@ export declare function isoDate(year: number, month: number, day: number): IsoDa
 // IsoDate
 export type IsoDate = string;
 
+// IsoDateTime
+export type IsoDateTime = string;
+
 // isoTime
 export declare function isoTime(hours: number, minutes: number, seconds?: number): IsoTime;
 
@@ -562,6 +574,17 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.groupToggle": string;
     readonly "dataGrid.groupCount.one": string;
     readonly "dataGrid.groupCount.other": string;
+    readonly "schedule.label": string;
+    readonly "schedule.previous": string;
+    readonly "schedule.next": string;
+    readonly "schedule.today": string;
+    readonly "schedule.month": string;
+    readonly "schedule.week": string;
+    readonly "schedule.day": string;
+    readonly "schedule.allDay": string;
+    readonly "schedule.appointment": string;
+    readonly "schedule.appointmentHours": string;
+    readonly "schedule.more": string;
     readonly "dataGrid.filterOperator": string;
     readonly "dataGrid.filterValue": string;
     readonly "dataGrid.filterApply": string;
@@ -691,6 +714,9 @@ export interface LibraryTexts {
     readonly locale: string;
 }
 
+// monthNames
+export declare function monthNames(locale: string, width: "narrow" | "short" | "long"): string[];
+
 // OptionsSearchEventArgs
 export declare class OptionsSearchEventArgs<TOption> {
     readonly text: string;
@@ -704,6 +730,9 @@ export type Orientation = "horizontal" | "vertical";
 
 // OverlayCloseMode
 export type OverlayCloseMode = "all" | "inside" | "outside" | "manual";
+
+// pageLocale
+export declare function pageLocale(): string;
 
 // PaginationChange
 export type PaginationChange = "page" | "total";
@@ -729,6 +758,9 @@ export declare function parseIsoDate(text: string | null | undefined): {
     month: number;
     day: number;
 } | undefined;
+
+// parseIsoDateTime
+export declare function parseIsoDateTime(text: string | null | undefined): DayTime | undefined;
 
 // parseIsoTime
 export declare function parseIsoTime(text: string): {
@@ -802,6 +834,59 @@ export interface RovingFocusOptions {
     onMove?: (index: number, item: HTMLElement) => void;
     typeahead?: boolean;
 }
+
+// ScheduleAppointment
+export interface ScheduleAppointment {
+    id?: string | number;
+    title: string;
+    start: IsoDateTime;
+    end?: IsoDateTime;
+    allDay?: boolean;
+    intent?: Intent;
+}
+
+// ScheduleBlock
+export interface ScheduleBlock {
+    appointment: ScheduleAppointment;
+    fromMinutes: number;
+    toMinutes: number;
+    lane: number;
+    lanes: number;
+}
+
+// ScheduleDay
+export interface ScheduleDay {
+    date: IsoDate;
+    weekday: number;
+    isToday: boolean;
+    isOutOfMonth: boolean;
+    allDay: readonly ScheduleAppointment[];
+    timed: readonly ScheduleBlock[];
+}
+
+// ScheduleModel
+export declare class ScheduleModel {
+    private readonly onChange;
+    private appointments;
+    private view;
+    private anchorDay;
+    private selectedAppointment;
+    weekStartsOn: number;
+    constructor(onChange: () => void);
+    setAppointments(appointments: readonly ScheduleAppointment[] | undefined): boolean;
+    setView(view: ScheduleView, anchor?: IsoDate): boolean;
+    get anchor(): IsoDate;
+    get currentView(): ScheduleView;
+    get selected(): ScheduleAppointment | undefined;
+    select(appointment: ScheduleAppointment | undefined): void;
+    isSelected(appointment: ScheduleAppointment): boolean;
+    navigate(direction: "previous" | "next" | "today"): void;
+    get days(): readonly ScheduleDay[];
+    private dayOf;
+}
+
+// ScheduleView
+export type ScheduleView = "month" | "week" | "day";
 
 // scrollLock
 export declare function scrollLock(): Attachment<HTMLElement>;
@@ -973,6 +1058,12 @@ export interface UploadResponse {
 
 // uploadTo
 export declare function uploadTo(url: string, options?: Omit<UploadFileOptions, "onProgress" | "signal">): FileUploader;
+
+// weekdayNames
+export declare function weekdayNames(locale: string, firstDay: number, width: "narrow" | "short" | "long"): string[];
+
+// WeekStartsOn
+export type WeekStartsOn = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 // WizardLabels
 export interface WizardLabels {

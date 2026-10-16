@@ -582,6 +582,9 @@ export function componentTypeDeclaration(
   };
 
   const base = entry.base;
+  for (const parameter of entry.typeParameters) {
+    collectReferences(parameter.constraintReferences, true);
+  }
   for (const parameter of entry.parameters) {
     if (parameter.declaredBy !== ownName || parameter.cascading) continue;
     collectReferences(parameter.references, true);

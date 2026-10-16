@@ -44,6 +44,18 @@ export const libraryTextDefaults = catalog({
   "dataGrid.groupToggle": "Toggle this group's rows ({count})",
   "dataGrid.groupCount.one": "{count} row",
   "dataGrid.groupCount.other": "{count} rows",
+
+  "schedule.label": "Scheduler",
+  "schedule.previous": "Previous",
+  "schedule.next": "Next",
+  "schedule.today": "Today",
+  "schedule.month": "Month",
+  "schedule.week": "Week",
+  "schedule.day": "Day",
+  "schedule.allDay": "All day",
+  "schedule.appointment": "{appointment}, {time}",
+  "schedule.appointmentHours": "{start} to {end}",
+  "schedule.more": "{count} more",
   // The built-in column filter (design-extended-library.md §2.1).
   "dataGrid.filterOperator": "Filter operator",
   "dataGrid.filterValue": "Filter value",

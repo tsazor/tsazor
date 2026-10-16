@@ -6,7 +6,8 @@
 import { describe, expect, it } from "vitest";
 import { renderTree } from "@tsazor/testing";
 import { EventCallback, type RenderFragment, type RenderTreeBuilder } from "@tsazor/runtime";
-import { DataGrid, GridSort, PaginationState, Paginator, PropertyColumn, TemplateColumn } from "../dist/index.js";
+import { addDays, today, type ScheduleAppointment } from "@tsazor/ui";
+import { DataGrid, GridSort, PaginationState, Paginator, PropertyColumn, Scheduler, TemplateColumn } from "../dist/index.js";
 import type { GridItemsProviderRequest } from "../dist/index.js";
 
 interface Order {
@@ -587,5 +588,96 @@ describe("DataGrid virtualize", () => {
     await expect(
       renderTree(grid({ items: many, virtualize: true, pagination: new PaginationState() }, (b) => component(b, 0, PropertyColumn, { property: customer }))),
     ).rejects.toThrow(/Virtualize and Pagination/);
+  });
+});
+
+/**
+ * The Scheduler over the compiled component (the extended layer's cluster 3):
+ * views, navigation, chips with intent and selection, the all-day row and the
+ * timegrid.
+ */
+const day = today();
+const dayAfter = (d: string, n: number): string => {
+  const date = new Date(d + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() + n);
+  return date.toISOString().slice(0, 10);
+};
+const meetings: ScheduleAppointment[] = [
+  { title: "Standup", start: day + "T09:00", end: day + "T09:15" },
+  { title: "Review", start: day + "T09:00", end: day + "T10:00", intent: "success" },
+  { title: "Off days", start: day, end: dayAfter(day, 2), allDay: true, intent: "info" },
+];
+
+function schedulerOf(attrs: Attrs, extra?: (b: RenderTreeBuilder) => void): Promise<{ container: HTMLElement; settle: Renderer["settle"] }> {
+  return renderTree((b) => {
+    b.openComponent(0, Scheduler as never);
+    let sequence = 1;
+    for (const [name, value] of Object.entries(attrs)) b.addAttribute(sequence++, name, value as never);
+    extra?.(b);
+    b.closeComponent();
+  });
+}
+
+describe("Scheduler", () => {
+  it("shows the month's 42 cells with today, chips with intents, and out-of-month days", async () => {
+    const { container, ...renderer } = await schedulerOf({ appointments: meetings, view: "month", ariaLabel: "Meetings" });
+    await settle(renderer);
+    const cells = container.querySelectorAll(".tz-schedule-month .tz-schedule-day");
+    expect(cells).toHaveLength(42);
+    expect(container.querySelector(".tz-schedule-day--today")).not.toBeNull();
+    const numbers = [...cells].map((cell) => cell.querySelector(".tz-schedule-day-number")!.textContent!.trim());
+    expect(numbers.at(0)).toBeTruthy();
+    // Chips: the month of today holds the 15th's two and the 16th's all-day one.
+    const chips = container.querySelectorAll<HTMLButtonElement>(".tz-schedule-month .tz-schedule-appointment");
+    expect(chips.length).toBeGreaterThanOrEqual(3);
+    expect([...chips].some((chip) => chip.className.includes("tz-schedule-appointment--success"))).toBe(true);
+    expect([...chips].some((chip) => chip.className.includes("tz-schedule-appointment--info"))).toBe(true);
+  });
+
+  it("selects through the chip and reports it; the selected one says aria-pressed", async () => {
+    const selected: ScheduleAppointment[] = [];
+    const { container, ...renderer } = await schedulerOf({ appointments: meetings, view: "day" }, (b) => {
+      b.addAttribute(9, "onAppointmentSelected", EventCallback.unbound((appointment: ScheduleAppointment) => { selected.push(appointment); }));
+    });
+    await settle(renderer);
+    const chips = () => [...container.querySelectorAll<HTMLButtonElement>(".tz-schedule-block > button")];
+    expect(chips()).toHaveLength(2); // the Standup and the Review on today's day
+    chips()[0]!.click();
+    await settle(renderer);
+    expect(chips()[0]!.getAttribute("aria-pressed")).toBe("true");
+    expect(selected).toHaveLength(1);
+  });
+
+  it("shows the week's all-day row and laid-out timegrid; the more button leads to the day", async () => {
+    const { container, ...renderer } = await schedulerOf({ appointments: meetings, view: "week" });
+    await settle(renderer);
+    // The all-day row: the 16th's Off holiday, with its 3-day span per day.
+    expect(container.querySelectorAll(".tz-schedule-all-day .tz-schedule-appointment").length).toBeGreaterThanOrEqual(1);
+    // The timegrid: 24 hour labels; blocks absolutely placed by lane.
+    expect(container.querySelectorAll(".tz-schedule-hour")).toHaveLength(24);
+    const blocks = [...container.querySelectorAll<HTMLElement>(".tz-schedule-block")];
+    expect(blocks.length).toBeGreaterThanOrEqual(2);
+    expect(blocks[0]!.getAttribute("style")).toContain("left: 0.000%");
+    expect(blocks.some((block) => block.getAttribute("style")!.includes("left: 50.000%"))).toBe(true); // the second lane beside it
+  });
+
+  it("navigate buttons move the window; the view buttons switch it", async () => {
+    const { container, ...renderer } = await schedulerOf({ appointments: meetings, view: "week" });
+    await settle(renderer);
+    const period = () => container.querySelector(".tz-schedule-period")!.textContent!;
+    const toolbar = () => [...container.querySelectorAll<HTMLButtonElement>(".tz-schedule-toolbar button")];
+    const before = period();
+    toolbar()[2]!.click(); // next
+    await settle(renderer);
+    expect(period()).not.toBe(before);
+    toolbar()[1]!.click(); // today (labelled by its text)
+    await settle(renderer);
+    expect(period()).toBe(before);
+    // The view switcher: day solid when active.
+    const viewButtons = () => [...container.querySelectorAll<HTMLButtonElement>(".tz-schedule-views button")];
+    viewButtons()[2]!.click();
+    await settle(renderer);
+    expect(viewButtons()[2]!.className).not.toContain("btn-outline"); // the solid appearance marks the active view
+    expect(container.querySelector(".tz-schedule-timegrid")).not.toBeNull();
   });
 });
