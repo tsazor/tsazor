@@ -12,6 +12,10 @@
 <section class="sz-cards">
     <a class="sz-card" href="/datagrid">
         <strong>DataGrid</strong>
-        <span>Columns, sorting, paging, an ItemsProvider, selection, the built-in filter, density.</span>
+        <span>Columns, sorting, paging, an ItemsProvider, selection, the built-in filter, density, aggregates, resize and order, editing, grouping, persistence, export.</span>
+    </a>
+    <a class="sz-card" href="/richtext">
+        <strong>RichText</strong>
+        <span>An external engine's wrapper: value in and out as HTML, sanitize on read, the engine stays the app's.</span>
     </a>
 </section>

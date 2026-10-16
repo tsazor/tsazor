@@ -1,0 +1,34 @@
+@** A rich-text editor over an external engine: the `RichText` wrapper (in both skins) builds the
+    engine you hand it on an area, binds the value two-way (`@bind-Value`, HTML), and destroys the
+    engine when it goes away. This demo's engine is a 20-line contenteditable speaking the
+    wrapper's contract; a real engine takes the same seam — RichText2's is
+    `(element) => new RichTextEditorCore(element, { sanitizeHtml: true, toolbar: { items: [...] } })`. *@
+@import type { RichTextFactory, RichTextEditorContract } from "@tsazor/ui"
+
+<RichText Create="@this.createEditor" AriaLabel="A text to edit" @bind-Value="@html" />
+<p>The value: <code>@(html === null || html === undefined ? "" : html)</code></p>
+
+@code {
+    private html = "<p>Write <b>bold</b> text</p>";
+
+    /** A minimal engine over the contract: a contenteditable whose input events ARE the changes. */
+    private readonly createEditor: RichTextFactory = (element) => {
+        element.contentEditable = "true";
+        element.innerHTML = "";
+        const listeners: ((data: { html: string }) => void)[] = [];
+        const onInput = (): void => {
+            for (const listener of listeners) listener({ html: element.innerHTML });
+        };
+        element.addEventListener("input", onInput);
+        return {
+            getHTML: () => element.innerHTML,
+            setHTML: (html) => { element.innerHTML = html; },
+            on: (_event, handler) => listeners.push(handler),
+            destroy: () => {
+                element.removeEventListener("input", onInput);
+                element.contentEditable = "false";
+                element.innerHTML = "";
+            },
+        } satisfies RichTextEditorContract;
+    };
+}

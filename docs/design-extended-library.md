@@ -108,19 +108,27 @@ copy/paste) plus the rendered sheet. V1 scope: editing experience only — cells
 navigation, paste, undo, basic formatting (bold, align, number formats through
 `@tsazor/primitives`). Formulas are D-X4 and come later, a project of their own like charts were.
 
-### 2.7 Rich text — the RichText2 wrapper (owner decision, 2026-10-16)
+### 2.7 Rich text — the RichText2 wrapper (done, 2026-10-16)
 
 - A `RichText` component in both skins: the wrapper the owner asked into the library. It mounts
-  RichText2 over `@attach`, binds value two-way (`@bind-Value` in HTML as its value) and leaves
-  the toolbar to RichText2, with the skins' chrome around it (Dialog, Popover, overflow).
-- Dependency-free: the wrapper calls the editor through a one-method contract
-  (`createEditor(element, options)`-shaped — value in, change events out; D-X9) and RichText2
-  provides the factory. The app adds RichText2 to its `package.json` itself; the
-  zero-dependency policy survives, and a different editor can serve behind the same contract.
-- `value` is user-authored HTML, the classic XSS vector: sanitization on read by default, as
-  `@tsazor/markdown` does it (D-L3), switchable off (D-X10). The wrapper's own chrome (toolbar,
-  dialogs) meets the library's a11y bar; the editor surface itself stays RichText2's quality.
-- The contract's exact shape is finalized once RichText2's API is read (it is near release).
+  RichText2 over `@attach`… — as shipped, the engine mounts itself **onto the wrapper's
+  area** by the factory the app passes; `@inherits InputBase<string>` covers the two-way value,
+  the EditContext validation and the area's focus element. Destroyed on dispose. The wrapper's
+  stress test (an external widget's DOM under a re-render) is a runtime regression test
+  (`packages/runtime/test/foreign-dom.test.ts`): the renderer diffs only its frames, so the
+  engine's DOM survives — the pattern Blazor's own widget integrations use, proven here.
+- Dependency-free (D-X9, as proposed): the factory is the seam. `@tsazor/ui` declares
+  `RichTextEditorContract` (`getHTML`/`setHTML`/`on("change")`/`destroy`) and `RichTextFactory`;
+  RichText2's core speaks the shape natively; the app adds the engine to its `package.json` and
+  passes `(element) => new RichTextEditorCore(element, { … })`.
+- **D-X10, refined when shipped:** sanitize is a `sanitize?: (html: string) => string` parameter,
+  **none by default** — not the default-on of the proposal. Sanitizing every keystroke's HTML
+  mangles real editor content; the wrapper renders the content in the engine's own surface, not
+  as text. An app opts in loudly (RichText2 ships its own `HTMLSanitizer` and a `sanitizeHtml`
+  config); a wrapper value bound into *another* component's markup is the app's markup, not the
+  library's. The old `value` is user HTML: the rule stands in the docs.
+- The showcase's example mounts a 20-line contenteditable speaking the contract; RichText2 takes
+  the same seam when it is on npm.
 
 ## 3. Package cut
 
@@ -204,4 +212,4 @@ Core and component gaps found while building the extended layer. Each is fixed w
 | D-X7 | Findings prefix | X1, X2, … (L is the waves', E is the primitives') |
 | D-X8 | Copy-in for Bootstrap | A `npx` CLI like Fluent's, at least for templates |
 | D-X9 | The RichText2 wrapper in the library | **Yes (owner, 2026-10-16).** Dependency-free wrapper in both skins over a `createEditor`-shaped contract; RichText2 provides the factory, the app adds the engine |
-| D-X10 | Rich text sanitization | `@tsazor/markdown`'s rule (D-L3): sanitize on read by default, switchable off; refined when RichText2's API is read |
+| D-X10 | Rich text sanitization | **Refined when shipped (2026-10-16):** `sanitize` is the wrapper's `(html) => string` parameter, none by default — a per-keystroke sanitizer mangles real editor content; the app opts in loudly (RichText2's HTMLSanitizer or its `sanitizeHtml` config). The docs' XSS note stands |

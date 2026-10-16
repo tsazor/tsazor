@@ -1,0 +1,67 @@
+@** A rich-text editor around an external engine (design-extended-library.md §2.7); bind it with
+    `@bind-Value`. The engine builds itself on the wrapper's area (`create`, RichText2's:
+    `(element) => new RichTextEditorCore(element, { … })`); the value is HTML, the engine's change
+    events feed it; `sanitize` shapes the value on read — none by default, the app opts in (the
+    editor's content is user HTML, the classic XSS vector; RichText2 ships a sanitizer and a
+    `sanitizeHtml` config). In a Form it validates through EditContext like every input.
+    A re-render leaves the engine's DOM untouched; when the component goes away, the engine is
+    destroyed. *@
+@inherits InputBase<string>
+@import { type RichTextEditorContract, type RichTextFactory } from "@tsazor/ui"
+
+<div class="@this.areaClass" aria-label="@ariaLabel" @ref="element" @attributes="@this.otherAttributes"></div>
+
+@code {
+    /** The engine's factory: makes the editor on an element, with the engine's own config. */
+    @Parameter() create!: RichTextFactory;
+    /** Shapes the engine's HTML on its way into the value (none by default). */
+    @Parameter() sanitize?: (html: string) => string;
+    /** The area's accessible name, when it has no visible label. */
+    @Parameter() ariaLabel?: string;
+
+    private editor?: RichTextEditorContract;
+    /** The last HTML the engine reported: the outside value that is only the engine's echo writes nothing back. */
+    private lastEmitted: string | undefined;
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (!firstRender) return;
+        const initial = this.value;
+        this.editor = this.create(this.element!);
+        this.editor.on("change", (data: { html: string }) => {
+            this.lastEmitted = this.sanitize !== undefined ? this.sanitize(data.html) : data.html;
+            if (this.lastEmitted !== this.value) this.currentValue = this.lastEmitted;
+        });
+        if (initial !== undefined && initial !== null && initial !== "") {
+            this.editor.setHTML(initial);
+            this.lastEmitted = initial;
+        }
+    }
+
+    protected override onParametersSet(): void {
+        // Only an outside change to the value reaches the engine: its echo is already there.
+        const outside = this.value;
+        if (this.editor !== undefined && outside !== undefined && outside !== null && outside !== this.lastEmitted) {
+            this.editor.setHTML(outside);
+            this.lastEmitted = outside;
+        }
+    }
+
+    protected override onInitialized(): void {
+        this.disposeSignal.addEventListener("abort", () => {
+            this.editor?.destroy();
+            this.editor = undefined;
+        });
+    }
+
+    private get areaClass(): string | null {
+        const extra = this.additionalAttributes?.["class"];
+        return typeof extra === "string" && extra.length > 0 ? `tz-rich-text ${extra}` : "tz-rich-text";
+    }
+
+    /** The captured attributes without class (that one joins the area's classes). */
+    private get otherAttributes(): Record<string, unknown> | undefined {
+        if (this.additionalAttributes === undefined) return undefined;
+        const { class: _class, ...rest } = this.additionalAttributes;
+        return rest;
+    }
+}

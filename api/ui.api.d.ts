@@ -778,6 +778,19 @@ export interface RatingLabels {
     display: (value: string, max: number, count: string | undefined) => string;
 }
 
+// RichTextEditorContract
+export interface RichTextEditorContract {
+    getHTML(): string;
+    setHTML(html: string): void;
+    on(event: "change", handler: (data: {
+        html: string;
+    }) => void): void;
+    destroy(): void;
+}
+
+// RichTextFactory
+export type RichTextFactory = (element: HTMLElement, config?: unknown) => RichTextEditorContract;
+
 // rovingFocus
 export declare function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement>;
 

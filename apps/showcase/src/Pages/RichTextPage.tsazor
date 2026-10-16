@@ -1,0 +1,18 @@
+@page "/richtext"
+@** The RichText wrapper's examples (design-extended-library.md §2.7): the wrapper builds the
+    engine an app hands it; the engine stays external (D-X9), the value is HTML, a `sanitize`
+    shapes it on read (D-X10). *@
+@import { Typography } from "@tsazor/bootstrap"
+@import Example from "../Example.tsazor"
+@import RichTextStubExample from "../examples/richtext/richtext-stub.tsazor"
+
+<Typography Variant="h1">RichText</Typography>
+<Typography>
+    A rich-text editor over the engine an app brings: `create` builds it on the wrapper's area,
+    the value is HTML and two-way like every input (the value's bind; EditContext validation in a
+    form included), and the engine is destroyed when the wrapper goes away. The wrapper imports
+    no engine — the factory is the seam; RichText2's core speaks the contract natively.
+</Typography>
+
+<Example Title="The wrapper and an engine" Description="Type in the area: the value's HTML echoes underneath, through the contract."
+    Id="richtext/richtext-stub"><RichTextStubExample /></Example>

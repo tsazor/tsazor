@@ -964,6 +964,15 @@ export default class RatingDisplay extends ComponentBase {
 
 // RatingLabels: re-exported from @tsazor/ui
 
+// RichText
+export default class RichText extends InputBase<string> {
+    create: RichTextFactory;
+    sanitize?: (html: string) => string;
+    ariaLabel?: string;
+}
+
+// RichTextFactory: re-exported from @tsazor/ui
+
 // ScrollToTop
 export default class ScrollToTop extends ComponentBase {
     selector?: string;

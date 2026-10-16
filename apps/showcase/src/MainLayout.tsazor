@@ -19,7 +19,10 @@
     private readonly sections = [
         {
             heading: "Components",
-            links: [{ href: "/datagrid", label: "DataGrid" }],
+            links: [
+                { href: "/datagrid", label: "DataGrid" },
+                { href: "/richtext", label: "RichText" },
+            ],
         },
     ];
 }
