@@ -4,6 +4,7 @@
 @import { Typography } from "@tsazor/bootstrap"
 @import Example from "../Example.tsazor"
 @import ScheduleViewsExample from "../examples/schedule/schedule-views.tsazor"
+@import ScheduleDragExample from "../examples/schedule/schedule-drag.tsazor"
 
 <Typography Variant="h1">Scheduler</Typography>
 <Typography>
@@ -14,3 +15,6 @@
 
 <Example Title="Views and navigation" Description="The toolbar moves the window today by today; the switcher changes between month, week and day."
     Id="schedule/schedule-views"><ScheduleViewsExample /></Example>
+
+<Example Title="Drag" Description="Drag the empty time of a column to create; drag a chip to move it; its end's handle resizes. Your events own the change."
+    Id="schedule/schedule-drag"><ScheduleDragExample /></Example>

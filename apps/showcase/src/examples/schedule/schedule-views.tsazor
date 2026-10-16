@@ -3,8 +3,7 @@
     side, all-day ones in their row. Selecting a chip reports it (the details are yours). *@
 @import { type ScheduleAppointment } from "@tsazor/ui"
 
-<Scheduler Appointments="@appointments" OnAppointmentSelected="@((appointment) => lastSelected = appointment)" AriaLabel="Meetings">
-</Scheduler>
+<Scheduler Appointments="@appointments" Anchor="2026-10-14" OnAppointmentSelected="@((appointment) => lastSelected = appointment)" AriaLabel="Meetings" />
 <p>@(lastSelected?.title ?? "Nothing selected")</p>
 
 @code {

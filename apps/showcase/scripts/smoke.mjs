@@ -69,7 +69,7 @@ try {
     await page.goto(`${url}${route}`);
     await page.waitForSelector(".sz-code pre code");
     const panels = await page.locator(".sz-code pre code").count();
-    if (panels < 1) throw new Error(`the ${route} page shows ${panels} code panels`);
+    if (panels < (route === "/schedule" ? 2 : 1)) throw new Error(`the ${route} page shows ${panels} code panels`);
   }
 
   if (errors.length > 0) throw new Error(`page errors: ${errors.join("; ")}`);

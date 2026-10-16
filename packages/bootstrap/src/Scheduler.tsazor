@@ -56,7 +56,7 @@ type IsoDate, type IsoDateTime, type ScheduleAppointment, type ScheduleBlock, ty
                 }
             </div>
         </div>
-        <div class="tz-schedule-timegrid">
+        <div class="tz-schedule-timegrid" @ref="timegrid">
             <div class="tz-schedule-hours" aria-hidden="true">
                 @foreach (const hour of this.hourLabels) {
                     <span class="tz-schedule-hour">@hour</span>
@@ -84,8 +84,10 @@ type IsoDate, type IsoDateTime, type ScheduleAppointment, type ScheduleBlock, ty
 
     /** The app's appointments (they extend ScheduleAppointment). */
     @Parameter() appointments?: readonly TAppointment[];
-    /** The view the scheduler starts and, when set later, returns to: month (default), week, day. */
+    /** The view the scheduler starts with (month is the default); the model navigates it from there on. */
     @Parameter() view?: ScheduleView;
+    /** The day the window starts on (default: today), a day inside it; the navigation moves the anchor itself. */
+    @Parameter() anchor?: IsoDate;
     /** Where a week starts, as the weekday index counts: Sunday 0, Monday 1 (the default). */
     @Parameter() weekStartsOn?: WeekStartsOn;
     /** A month cell shows up to this many appointment chips before the `more` button (default 3). */
@@ -102,11 +104,25 @@ type IsoDate, type IsoDateTime, type ScheduleAppointment, type ScheduleBlock, ty
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private readonly model = new ScheduleModel(() => this.stateHasChanged());
+    private timegrid?: HTMLElement;
+
+    private settingsApplied = false;
+
+    protected override onAfterRender(firstRender: boolean): void {
+        if (firstRender && this.timegrid !== undefined) {
+            // The working hours are where the day starts; the scroll is 8/24 of the grid, scale-free.
+            this.timegrid.scrollTop = this.timegrid.scrollHeight / 3;
+        }
+    }
 
     protected override onParametersSet(): void {
         if (this.weekStartsOn !== undefined) this.model.weekStartsOn = this.weekStartsOn;
         const changed = this.model.setAppointments(this.appointments);
-        if (this.view !== undefined) this.model.setView(this.view);
+        // The view and anchor parameters are the start's settings: the model navigates from there on.
+        if (!this.settingsApplied) {
+            if (this.view !== undefined) this.model.setView(this.view, this.anchor);
+            this.settingsApplied = true;
+        }
         if (changed) this.stateHasChanged();
     }
 
