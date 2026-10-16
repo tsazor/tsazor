@@ -10,7 +10,6 @@
     "build": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint .",
     "demo:dev": "pnpm --filter demo dev",
     "demo:build": "pnpm --filter demo build",
     "smoke": "node scripts/tarball-smoke.mjs",
