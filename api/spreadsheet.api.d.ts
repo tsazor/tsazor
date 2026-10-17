@@ -18,7 +18,7 @@ export interface CellRange {
 }
 
 // CellValue
-export type CellValue = string | number | undefined;
+export type CellValue = unknown;
 
 // columnNumber
 export declare function columnNumber(column: string): number;
@@ -29,8 +29,40 @@ export declare function formatAddress(cell: Cell): CellAddress;
 // formatColumn
 export declare function formatColumn(number: number): string;
 
+// formatTsv
+export declare function formatTsv(rows: readonly (readonly string[])[]): string;
+
+// FreeSheetSource
+export declare class FreeSheetSource implements SheetSource {
+    readonly rowCount: number;
+    readonly columnCount: number;
+    private readonly cells;
+    constructor(size?: {
+        rows?: number;
+        columns?: number;
+    });
+    valueAt(row: number, column: number): CellValue;
+    write(row: number, column: number, value: CellValue): boolean;
+    parse(_row: number, _column: number, text: string): ParsedCell;
+    text(row: number, column: number): string;
+}
+
 // parseAddress
 export declare function parseAddress(text: CellAddress | null | undefined): Cell | undefined;
+
+// ParsedCell
+export type ParsedCell = {
+    value: CellValue;
+} | null;
+
+// parseTsv
+export declare function parseTsv(text: string): string[][];
+
+// PasteResult
+export interface PasteResult {
+    written: number;
+    refused: number;
+}
 
 // rangeHolds
 export declare function rangeHolds(range: CellRange, cell: Cell): boolean;
@@ -41,34 +73,82 @@ export declare function rangeRectangle(range: CellRange): {
     to: Cell;
 };
 
+// RecordChange
+export interface RecordChange<T> {
+    record: T;
+    index: number;
+    values: Partial<T>;
+}
+
+// RecordSheetSource
+export declare class RecordSheetSource<T extends object> implements SheetSource {
+    readonly records: readonly T[];
+    readonly columns: readonly SheetColumn<T>[];
+    private readonly originals;
+    constructor(records: readonly T[], columns: readonly SheetColumn<T>[]);
+    get rowCount(): number;
+    get columnCount(): number;
+    valueAt(row: number, column: number): CellValue;
+    write(row: number, column: number, value: CellValue): boolean;
+    parse(_row: number, column: number, text: string): ParsedCell;
+    text(row: number, column: number): string;
+    changes(): RecordChange<T>[];
+    get dirty(): boolean;
+    accept(): void;
+}
+
+// SheetColumn
+export interface SheetColumn<T> {
+    field: keyof T & string;
+    title?: string;
+    type?: "text" | "number";
+    readOnly?: boolean;
+    parse?: (text: string) => ParsedCell;
+    format?: (value: CellValue) => string;
+}
+
 // SheetModel
 export declare class SheetModel {
     private readonly onChange;
-    private cells;
+    readonly source: SheetSource;
     private fromCell;
     private toCell;
     private readonly steps;
     private undone;
     private clipboard;
-    constructor(onChange: () => void);
-    private key;
+    constructor(onChange: () => void, source?: SheetSource);
     private normalize;
     valueOf(cell: CellAddress | Cell | null | undefined): CellValue;
-    setAsync(cell: CellAddress | Cell, value: CellValue): Promise<void>;
+    textOf(cell: CellAddress | Cell | null | undefined): string;
+    setAsync(cell: CellAddress | Cell, value: CellValue): Promise<boolean>;
+    setTextAsync(cell: CellAddress | Cell, text: string): Promise<boolean>;
+    private required;
     private apply;
-    private write;
     select(from: CellAddress | Cell, to?: CellAddress | Cell): void;
     get selection(): CellRange | undefined;
     isSelected(cell: CellAddress | Cell): boolean;
+    private selectedCells;
     selectedValues(): {
         addresses: CellAddress[];
         values: CellValue[];
     };
     copy(): void;
-    pasteAsync(at: CellAddress | Cell): Promise<void>;
+    copyText(): string;
+    pasteAsync(at: CellAddress | Cell): Promise<PasteResult>;
+    pasteTextAsync(at: CellAddress | Cell, text: string): Promise<PasteResult>;
     get canPaste(): boolean;
     get canUndo(): boolean;
     get canRedo(): boolean;
     undoAsync(): Promise<void>;
     redoAsync(): Promise<void>;
+}
+
+// SheetSource
+export interface SheetSource {
+    readonly rowCount: number;
+    readonly columnCount: number;
+    valueAt(row: number, column: number): CellValue;
+    write(row: number, column: number, value: CellValue): boolean;
+    parse(row: number, column: number, text: string): ParsedCell;
+    text(row: number, column: number): string;
 }
