@@ -2,8 +2,9 @@
 
 **Read first:** this document, then the findings table in [design-extended-library.md](design-extended-library.md) (§8, X1–X9).
 The earlier state is in [handoff-2026-10-14-api-review.md](handoff-2026-10-14-api-review.md); the extended library itself in
-[handoff-2026-10-16](../../.claude/projects/D--Own-Tsazor/memory/handoff-doc-2026-10-16.md — summarized there: clusters 1–6 + showcase shipped, X1–X5).
-Branch `roadmap/phase-0`, pushed through `a75e1f2` (8 commits), then `66833d7` (X9, unpushed).
+[design-extended-library.md](design-extended-library.md) (§5: clusters 1–6 and the showcase shipped; §8: X1–X5).
+Branch `roadmap/phase-0`, pushed through `3e418ba` (X9 and this handoff included). The review of this session's
+work, later the same day, is the last section.
 
 ## Done in this session, in one table
 
@@ -88,8 +89,9 @@ showcase is supposed to deliver ("copied snippet = what the page runs, and it mu
 - The parity suite is timing-sensitive at ~1 in 4 runs because of X8; everything else in this session's suites was
   deterministic. The gates' full parity run passes except for that one test when it fires.
 - `feedback.md` / `feedback-2.md` remain untracked and untouched (owner: "Lass den erst mal da liegen und arbeite … weiter").
-- Pushes: `220166c..a75e1f2` pushed as the session's milestone batch; `66833d7` (X9) is **unpushed** — it goes out
-  with the next batch.
+  Integrated later the same day (I1–I9 in [migration-practices.md](migration-practices.md)); the files themselves
+  stay out of the repository (owner).
+- Pushes: `220166c..a75e1f2` pushed as the session's milestone batch, then `66833d7` (X9) with this handoff.
 
 ## Owner-gated queue (unchanged by this session, one addition)
 
@@ -98,6 +100,29 @@ showcase is supposed to deliver ("copied snippet = what the page runs, and it mu
 | **X8** (new) | the provider-expansion re-point — the one reproducible flake left in the parity suite |
 | Spreadsheet, cluster 7 chrome | only "on the owner's word" (design doc: markup v1 without formulas per D-X4) |
 | RichText2 engine swap | one line once RichText2 is on npm (the showcase's stub factory already points there) |
-| feedback.md / feedback-2.md integrate | into `docs/migration-practices.md` per the collector rule |
+| ~~feedback.md / feedback-2.md integrate~~ | done later the same day (I1–I9, see the review below) |
 | Tutorial K.7/K.8 failures | 4 pre-existing test failures, untouched this session |
 | BlazorHero phases 5/6, E9 person | the standing 1.0 blockers with FluentCMS |
+
+## Review of this session's work (2026-10-17, later)
+
+The report and this handoff held; four things didn't, and the external integration's feedback came in alongside.
+
+| Found | Done |
+|---|---|
+| X7's own jump scroll made every handled Home/End a jump: a tab list, listbox or rating in a row (or anywhere on a window-scrolled page) sent the list to the edge | A17: a key a widget already handled is no jump key (`d199e72`, E2E `Tsazor_HomeHandledByAWidgetInARow_…`); X7's "unit-tested" corrected — the E2E covers it |
+| X9 had no test | `build-lib.test.ts` builds a decorated helper (fails on the pre-fix code) |
+| The spreadsheet model: a paste was n undo steps and n renders; the stack copied itself on every set (20,000 sets 850 ms, quadratic); a `{ column: "B" }` cell missed its A1 twin | a step holds all cells of an action (a paste is one step, one render), the stack grows in place (12 ms), keys lowercase the column; the header no longer promises CSV text |
+| `packages/primitives` and `packages/spreadsheet` were missing from the root vitest projects (`pnpm test` green without them; CI's `pnpm -r test` ran them); `api:check` failed on the spreadsheet's missing snapshot | both in the projects; `api/spreadsheet.api.d.ts` written |
+| The feedback (I1–I9): inherited `@import`s and `@inject` lost their errors, class-level errors were dropped (that hid a real `Rating` bug), skin parameter types from `@tsazor/ui` were `any` under pnpm, `@bind` errors came fourfold, `@bind:event` on a component vanished, TZS024 cascaded | `3c68a92`, `f92151c`, `0d611e6`; see CHANGELOG and migration-practices.md |
+
+Open, for the owner:
+
+- **The spreadsheet's data source.** The model is a free A1 sheet; a data-driven app wants a sheet over records
+  (rows from the backend, columns its properties, typed cells, the changes as patches to save). Proposal: a source
+  interface before the chrome, with a record adapter and the free sheet as two implementations. Also open: TSV in
+  and out of the system clipboard (pasting from Excel).
+- **The CHANGELOG has no entries for the extended line** (DataGrid advanced, RichText, Scheduler, AI, templates,
+  PivotDataGrid, spreadsheet), though they change the skins' public API: a section of their own, or entries as they
+  stabilize?
+- X8 as above.
