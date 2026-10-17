@@ -45,6 +45,9 @@ hold up 1.0, and they are not covered by the stability promise until they say so
   - `Rating` (both skins): an unbound rating's first arrow key picked `NaN` — its star count getter was named
     `value` and shadowed by InputBase's parameter field.
 
+- **`Virtualize` (`@tsazor/runtime`), A17** (`docs/design-virtualize.md`): Home or End that a widget in the list
+  already handled (a tab list, a listbox, a rating) is no jump key — the list jumped to its edge.
+
 - **`@tsazor/primitives` (E12): the five .NET value types.** A new dependency-free package — `Decimal`
   (an immutable scaled integer with exact arithmetic and `MidpointRounding` modes), `DateOnly`, `TimeOnly`,
   `TimeSpan` and `Guid`. `Decimal` is a first-class `@bind` and validation value in `@tsazor/runtime`
