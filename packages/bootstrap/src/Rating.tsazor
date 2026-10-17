@@ -54,7 +54,7 @@
     private focusPending = false;
     private group?: HTMLDivElement;
 
-    private get value(): number {
+    private get rating(): number {
         return this.currentValue ?? 0;
     }
 
@@ -64,7 +64,7 @@
 
     /** A star drawn full: up to the previewed value while the pointer is over the stars, else up to the value. */
     private shown(item: number): boolean {
-        return item <= (this.hovered ?? this.value);
+        return item <= (this.hovered ?? this.rating);
     }
 
     private itemClass(item: number): string {
@@ -86,7 +86,7 @@
         this.focusPending = false;
         // The radio of the value; with none, the first (the group's tab stop then).
         const radios = this.group.querySelectorAll<HTMLInputElement>("input");
-        radios[Math.max(0, this.value - 1)]?.focus();
+        radios[Math.max(0, this.rating - 1)]?.focus();
     }
 
     private clicked(e: MouseEvent, item: number): void {
@@ -95,7 +95,7 @@
             e.preventDefault();
             return;
         }
-        this.currentValue = ratingClickValue(item, this.value);
+        this.currentValue = ratingClickValue(item, this.rating);
     }
 
     private keydown(e: KeyboardEvent): void {
@@ -104,7 +104,7 @@
         e.preventDefault();
         if (this.readOnly || this.disabled) return;
         const rtl = getComputedStyle(e.target as Element).direction === "rtl";
-        const next = ratingKeyTarget(e, this.value, this.max, rtl);
+        const next = ratingKeyTarget(e, this.rating, this.max, rtl);
         if (next === undefined) return;
         this.currentValue = next;
         this.focusPending = true;

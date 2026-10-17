@@ -88,6 +88,27 @@ describe("Rating", () => {
     expect(Host.last!.value).toBe(4);
   });
 
+  it("unbound, it starts from none: the first arrow picks the first star", async () => {
+    // The star count reads a getter of its own: one named `value` was shadowed by InputBase's parameter field, so
+    // the arrows computed from `undefined` (NaN).
+    let picked: number | undefined;
+    class Unbound extends ComponentBase {
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.openComponent(0, Rating);
+        b.addAttribute(1, "valueChanged", EventCallback.bind(this, (next: number) => {
+          picked = next;
+        }));
+        b.closeComponent();
+      }
+    }
+    const result = await render(Unbound);
+    mounted.push(result);
+    const first = result.container.querySelector<HTMLInputElement>("input[type=radio]")!;
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+    await result.settle();
+    expect(picked).toBe(1);
+  });
+
   it("the pointer previews a value and tells the parent", async () => {
     const { Host, idle, group } = await rating({}, 1);
     const labels = [...group().querySelectorAll("label")];
