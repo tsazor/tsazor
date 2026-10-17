@@ -4,7 +4,7 @@ The model of a spreadsheet for Tsazor apps: cells in A1 notation, ranges, an und
 and dependency-free. Part of Tsazor's extended line (post-1.0; the API may still change). Formulas come later, as a
 package of their own (D-X4); the rendered sheet comes on top of this model.
 
-See [`docs/design-extended-library.md`](../../docs/design-extended-library.md) §2.6 and D-X11.
+See [`docs/design-extended-library.md`](https://github.com/tsazor/tsazor/blob/main/docs/design-extended-library.md) §2.6 and D-X11.
 
 The values live in a source. A data-driven app edits the records it loaded from its backend, as in Excel, and saves
 what changed:

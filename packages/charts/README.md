@@ -1,8 +1,8 @@
 # @tsazor/charts
 
-Charts for [Tsazor](../../README.md): line, area, bar, stacked bar, donut and pie charts and sparklines, drawn as SVG in
+Charts for [Tsazor](https://github.com/tsazor/tsazor#readme): line, area, bar, stacked bar, donut and pie charts and sparklines, drawn as SVG in
 the colors of the skin on the page — Fluent's or Bootstrap's — with no chart library and no canvas. MudBlazor's
-`MudChart` is the model ([design-charts.md](../../docs/design-charts.md)).
+`MudChart` is the model ([design-charts.md](https://github.com/tsazor/tsazor/blob/main/docs/design-charts.md)).
 
 ```bash
 pnpm add @tsazor/charts

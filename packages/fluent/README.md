@@ -1,6 +1,6 @@
 # @tsazor/fluent
 
-Fluent 2 design system for [Tsazor](../../README.md) — token-driven, accessible
+Fluent 2 design system for [Tsazor](https://github.com/tsazor/tsazor#readme) — token-driven, accessible
 components written in `.tsazor`. No external UI kit underneath: the tokens and
 chrome are in-house, and the **components belong to you** (copy-in via the CLI).
 
@@ -43,7 +43,7 @@ install `@tsazor/ui` at exactly the version they came from (`npm install --save-
 
 ## Docs
 
-Full documentation lives in [`docs/fluent.md`](../../docs/fluent.md).
+Full documentation lives in [`docs/fluent.md`](https://github.com/tsazor/tsazor/blob/main/docs/fluent.md).
 The gallery app (`apps/gallery`) demonstrates every component plus an
 admin dashboard (filter/sort/paging table, validated form, dialogs, toasts)
 with light/dark theming.

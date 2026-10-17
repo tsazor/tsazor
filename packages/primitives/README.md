@@ -5,7 +5,7 @@ Feel-at-home value types for .NET developers writing TypeScript: `Decimal`, `Dat
 `List<T>`/LINQ wrappers here, because every TS library already expects real arrays and maps. The types
 are immutable and zero-dependency, written in idiomatic TypeScript with recognizable .NET concepts.
 
-See [`docs/design-extensions-primitives.md`](../../docs/design-extensions-primitives.md) for the design
+See [`docs/design-extensions-primitives.md`](https://github.com/tsazor/tsazor/blob/main/docs/design-extensions-primitives.md) for the design
 and decisions (X1–X4).
 
 ```ts

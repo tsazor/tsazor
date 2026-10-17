@@ -29,6 +29,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - `registerServiceDefault(token, create)` is public: a library's service works without the app registering it,
     built from its dependencies (`(services) => new TooltipService(services.get(NavigationManager))`); an app's own
     registration wins.
+- **What a package consumer reads**: `@tsazor/runtime`'s README maps Blazor's APIs to Tsazor's (parameters with
+  logic as setters, `EventCallback`, DI with factories and `tryGet`, `ParameterView`, `FieldCssClass`, the culture's
+  number format, `@(…)`), and every package README links to the repository and npm — the relative links led nowhere
+  in an installed package.
 - **A missing import in markup is named** (`tsazor check`, the editor): `Shade="Shade.Dark"` without importing the
   enum read `Shade` as a member, "Property 'Shade' does not exist on type 'Page'"; the message now names the
   `@import` and offers it as a quick fix. A type a file resolves by name keeps the file's own case (`./shade`, not the

@@ -1,8 +1,8 @@
 # @tsazor/bootstrap
 
-[Bootstrap 5](https://getbootstrap.com/) components for [Tsazor](../../README.md), written in `.tsazor`: buttons,
+[Bootstrap 5](https://getbootstrap.com/) components for [Tsazor](https://github.com/tsazor/tsazor#readme), written in `.tsazor`: buttons,
 forms and inputs, dialogs, menus, tabs, a DataGrid in the manner of QuickGrid, date and time pickers, toasts,
-and the rest of the library — the same components and parameters as [`@tsazor/fluent`](../fluent), in Bootstrap's
+and the rest of the library — the same components and parameters as [`@tsazor/fluent`](https://www.npmjs.com/package/@tsazor/fluent), in Bootstrap's
 look.
 
 ```bash

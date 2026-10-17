@@ -1,6 +1,6 @@
 # @tsazor/testing
 
-Component tests for [Tsazor](../../README.md), in the manner of bUnit: render a component, find elements, click,
+Component tests for [Tsazor](https://github.com/tsazor/tsazor#readme), in the manner of bUnit: render a component, find elements, click,
 type, and assert on what it rendered. Runs in Vitest with happy-dom.
 
 ```bash
@@ -27,5 +27,5 @@ test("Click me increments the count", async () => {
 ```
 
 `render(Component, { parameters, services })` passes parameters and registers fakes; `createFakeStore` and
-`createFakeLocalization` stand in for state and translations. See [patterns](../../docs/patterns.md) for testable
+`createFakeLocalization` stand in for state and translations. See [patterns](https://github.com/tsazor/tsazor/blob/main/docs/patterns.md) for testable
 components.

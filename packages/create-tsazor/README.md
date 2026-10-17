@@ -1,6 +1,6 @@
 # create-tsazor
 
-Creates a [Tsazor](../../README.md) app in the shape of `dotnet new blazorwasm` — a layout with a nav menu, Home,
+Creates a [Tsazor](https://github.com/tsazor/tsazor#readme) app in the shape of `dotnet new blazorwasm` — a layout with a nav menu, Home,
 Counter and Weather, a component test — with strict TypeScript and Vite.
 
 ```bash

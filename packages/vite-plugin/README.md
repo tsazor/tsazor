@@ -1,6 +1,6 @@
 # @tsazor/vite-plugin
 
-The Vite plugin of [Tsazor](../../README.md): compiles `.tsazor` components, applies their scoped CSS
+The Vite plugin of [Tsazor](https://github.com/tsazor/tsazor#readme): compiles `.tsazor` components, applies their scoped CSS
 (`X.tsazor.css`), builds the route table from the `@page` directives (`virtual:tsazor-routes`) and keeps hot module
 replacement working.
 
@@ -25,4 +25,4 @@ For plain `tsc` over your own `.ts` files, add the ambient types of `.tsazor` mo
 ```
 
 Type errors inside components come from `tsazor check` (`@tsazor/cli`). See
-[getting started](../../docs/getting-started.md).
+[getting started](https://github.com/tsazor/tsazor/blob/main/docs/getting-started.md).

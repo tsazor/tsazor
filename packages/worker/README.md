@@ -1,6 +1,6 @@
 # @tsazor/worker
 
-Heavy work off the main thread for [Tsazor](../../README.md) apps — the answer to Blazor's `Task.Run`: typed calls
+Heavy work off the main thread for [Tsazor](https://github.com/tsazor/tsazor#readme) apps — the answer to Blazor's `Task.Run`: typed calls
 into a Web Worker, with progress callbacks, cancellation through an `AbortSignal`, transferables, errors that arrive
 as errors, pools, and an in-process double for tests.
 
@@ -32,4 +32,4 @@ export class ImportWorker extends defineWorker<ImportApi>(
 ```
 
 Register `ImportWorker` as a service and call `await this.importer.parseCsv(file, onProgress, this.disposeSignal)`
-in a component. See [the design](../../docs/design-worker.md).
+in a component. See [the design](https://github.com/tsazor/tsazor/blob/main/docs/design-worker.md).

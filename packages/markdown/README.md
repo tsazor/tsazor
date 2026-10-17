@@ -1,6 +1,6 @@
 # @tsazor/markdown
 
-Markdown for [Tsazor](../../README.md): a `Markdown` component that renders GitHub Flavored Markdown with
+Markdown for [Tsazor](https://github.com/tsazor/tsazor#readme): a `Markdown` component that renders GitHub Flavored Markdown with
 [marked](https://marked.js.org) and sanitizes the result with [DOMPurify](https://github.com/cure53/DOMPurify). The
 text is never trusted, so an app can show an agent's answer or a user's comment without knowing about XSS.
 

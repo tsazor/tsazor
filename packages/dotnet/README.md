@@ -78,7 +78,7 @@ ran their own HTTP helpers).
   it expires (attach it after an interceptor that throws on error statuses, as .NET's handler
   chain is built). The cookie provider (the BFF pattern, token in an HttpOnly cookie) is the
   recommended default; JWT in the browser only with a stated reason, kept in memory — see
-  [docs/auth.md](../../docs/auth.md).
+  [docs/auth.md](https://github.com/tsazor/tsazor/blob/main/docs/auth.md).
 
 ## Nullability rules
 
