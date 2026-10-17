@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.2 (2026-10-17)
+
 ### The extended line (post-1.0, developed alongside — its API may still change)
 
 The components data-driven apps need beyond Blazor's set (`docs/design-extended-library.md`; D-X2: they don't
