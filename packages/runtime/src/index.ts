@@ -39,6 +39,7 @@ export { isCascadingValueSupplier, type CascadingValueSupplier } from "./rendere
 
 // DI
 export { ServiceCollection, ServiceProvider, type ServiceLifetime, type Token } from "./di/service-collection.js";
+export { registerServiceDefault, type ServiceDefault } from "./di/service-defaults.js";
 export { inject } from "./di/service-provider.js";
 
 // Localization (E8): CultureInfo over Intl, the app-wide CultureService, the

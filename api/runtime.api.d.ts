@@ -894,6 +894,9 @@ export type QueryParameterValue = string | number | bigint | boolean | Date | nu
 // Range
 export declare function Range(minimum: number, maximum: number, override?: ValidationMessageOverride): FieldRuleDecorator;
 
+// registerServiceDefault
+export declare function registerServiceDefault<T>(token: Token<T>, create: ServiceDefault<T>): void;
+
 // RegularExpression
 export declare function RegularExpression(pattern: string, override?: ValidationMessageOverride): FieldRuleDecorator;
 
@@ -1081,6 +1084,9 @@ export declare class ServiceCollection {
     registerValue<T>(token: Token<T>, value: T): this;
     build(): ServiceProvider;
 }
+
+// ServiceDefault
+export type ServiceDefault<T> = (services: ServiceProvider) => T;
 
 // ServiceLifetime
 export type ServiceLifetime = "singleton" | "scoped" | "transient";

@@ -112,3 +112,23 @@ describe("tsazor check — code-behind and imported sources", () => {
     expect(result.diagnostics.filter((d) => !(d.file.endsWith("Panel.tsazor.ts") && d.code === "TS2322"))).toEqual([]);
   });
 });
+
+describe("tsazor check — every source the tsconfig includes", () => {
+  it("checks a helper no component imports (a library's index exports it): a Radzen port's F1", async () => {
+    const orphan = await mkdtemp(path.join(tmpdir(), "tsazor-check-orphan-"));
+    try {
+      await writeFile(
+        path.join(orphan, "tsconfig.json"),
+        JSON.stringify({ compilerOptions: { target: "ES2022", module: "ESNext", moduleResolution: "bundler", strict: true, skipLibCheck: true, noEmit: true }, include: ["src"] }),
+      );
+      await mkdir(path.join(orphan, "src", "utilities"), { recursive: true });
+      await writeFile(path.join(orphan, "src", "Hello.tsazor"), "<p>hello</p>\n");
+      await writeFile(path.join(orphan, "src", "utilities", "format.ts"), 'export const width: number = "wide";\n');
+      const result = await checkProject(orphan);
+      const helper = result.diagnostics.filter((d) => d.file.endsWith("format.ts"));
+      expect(helper.map((d) => [d.code, d.line])).toEqual([["TS2322", 1]]);
+    } finally {
+      await rm(orphan, { recursive: true, force: true });
+    }
+  });
+});

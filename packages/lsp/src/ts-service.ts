@@ -147,6 +147,19 @@ function loadAmbientDeclarations(projectRoot: string, configPath?: string): stri
   }
 }
 
+/** The tsconfig's own sources (`.ts`, no declarations): `tsazor check`'s extra roots (includeProjectSources). */
+function loadProjectSources(projectRoot: string, configPath?: string): string[] {
+  try {
+    const config = configPath ?? ts.findConfigFile(projectRoot, ts.sys.fileExists, "tsconfig.json");
+    if (!config) return [];
+    const parsed = ts.readConfigFile(config, ts.sys.readFile);
+    if (parsed.error) return [];
+    return ts.parseJsonConfigFileContent(parsed.config, ts.sys, path.dirname(config)).fileNames.filter((name) => /\.(ts|tsx|mts|cts)$/.test(name) && !/\.d\.[mc]?ts$/.test(name));
+  } catch {
+    return [];
+  }
+}
+
 function loadProjectOptions(projectRoot: string, configPath?: string): ts.CompilerOptions {
   const fallback = fallbackCompilerOptions();
   try {
@@ -195,10 +208,14 @@ export class TsazorTypeService {
   private readonly lookup?: ShadowLookup;
   /** The tsconfig's .d.ts files — extra program roots next to the shadows. */
   private readonly ambientDeclarations: readonly string[];
+  /** The tsconfig's `.ts` sources, roots too once `includeProjectSources` asked for them (`tsazor check`). */
+  private projectSources: readonly string[] = [];
+  private readonly configPath: string | undefined;
 
   constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup) {
     this.projectRoot = path.resolve(projectRoot);
     this.lookup = lookup;
+    this.configPath = configPath;
     const options = loadProjectOptions(this.projectRoot, configPath);
     this.ambientDeclarations = loadAmbientDeclarations(this.projectRoot, configPath);
     this.ls = ts.createLanguageService(this.createHost(options));
@@ -206,6 +223,15 @@ export class TsazorTypeService {
 
   dispose(): void {
     this.ls.dispose();
+  }
+
+  /**
+   * Makes every `.ts` source the tsconfig includes part of the program — not only those a component imports — so
+   * `projectSourceFiles` covers a library's helpers that only its index exports (`tsazor check`; the editor
+   * keeps the smaller program).
+   */
+  includeProjectSources(): void {
+    this.projectSources = loadProjectSources(this.projectRoot, this.configPath);
   }
 
   /* ------------------------------------------------------------------ */
@@ -530,6 +556,7 @@ export class TsazorTypeService {
       getCompilationSettings: () => options,
       getScriptFileNames: () => [
         ...this.ambientDeclarations,
+        ...this.projectSources,
         ...[...this.entries.values()].map((entry) => entry.shadow.virtualPath),
         ...[...this.variants.values()].map((v) => v.path),
       ],

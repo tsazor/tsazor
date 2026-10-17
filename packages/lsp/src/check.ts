@@ -97,6 +97,9 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
       const seen = new Set<string>();
       const projects = new Set([...entries.keys()].map((file) => registry.projectFor(file)));
       for (const project of projects) {
+        // Every .ts the tsconfig includes, not only those a component imports: a library's helper that only its
+        // index exports was never checked (a Radzen port's F1).
+        project.service.includeProjectSources();
         for (const source of project.service.projectSourceFiles(project.root)) {
           const key = path.resolve(source).toLowerCase();
           if (seen.has(key)) continue;

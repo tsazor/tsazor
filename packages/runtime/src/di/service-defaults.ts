@@ -12,7 +12,13 @@ export type ServiceDefault<T> = (services: ServiceProvider) => T;
 
 const defaults = new Map<Token<unknown>, ServiceDefault<unknown>>();
 
-/** @internal Called at module level by the module that defines `token`. */
+/**
+ * Gives `token` a default: a provider that has no registration for it creates it from `create` — a singleton of
+ * the root — and an app's own registration wins. Called at module level by the module that defines the service, so
+ * a component library's services work without the app registering each (a TooltipService that needs the
+ * NavigationManager: `registerServiceDefault(TooltipService, (services) => new TooltipService(services.get(NavigationManager)))`).
+ * An app that never imports the module doesn't bundle the service.
+ */
 export function registerServiceDefault<T>(token: Token<T>, create: ServiceDefault<T>): void {
   defaults.set(token as Token<unknown>, create as ServiceDefault<unknown>);
 }

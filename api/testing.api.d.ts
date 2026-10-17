@@ -264,6 +264,8 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 
 // Range: re-exported from @tsazor/runtime
 
+// registerServiceDefault: re-exported from @tsazor/runtime
+
 // RegularExpression: re-exported from @tsazor/runtime
 
 // render
@@ -332,6 +334,8 @@ export declare function renderTree(build: (b: RenderTreeBuilder) => void, option
 // SectionOutlet: re-exported from @tsazor/runtime
 
 // ServiceCollection: re-exported from @tsazor/runtime
+
+// ServiceDefault: re-exported from @tsazor/runtime
 
 // ServiceLifetime: re-exported from @tsazor/runtime
 

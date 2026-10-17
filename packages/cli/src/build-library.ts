@@ -9,7 +9,7 @@
  */
 import { compactFieldDecorators, compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule } from "@tsazor/compiler";
 import { checkProject } from "@tsazor/lsp";
-import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
+import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, importKindOf, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -102,8 +102,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   const nested = await nestedComponents(srcDir);
   if (nested.length > 0) {
     const nestedErrors = nested.map((file) => ({ file, message: "  a component in a subfolder is not built: a library's components live at the top level of its src/ (subfolders hold the .ts helpers)" }));
-    for (const error of nestedErrors) log(`[${packageName}] ${error.file}
-${error.message}`);
+    for (const error of nestedErrors) log(`[${packageName}] ${error.file}\n${error.message}`);
     return { components: [], errors: nestedErrors };
   }
   const chain = await collectImports(srcDir, packageDir);
@@ -162,6 +161,16 @@ ${error.message}`);
     if ((declaration.diagnostics ?? []).length === 0) await emit(`${stem}.d.ts`, declaration.outputText);
   }
 
+  // A hand-written component — `src/<Name>.ts` exporting its component class `<Name>`, file and class one name as
+  // for a .tsazor — joins the manifest and the index like a compiled one (a Radzen port's F16/F18: its parameters
+  // were unknown to every consumer, TZS026, and the index had no type for it). Its declaration is tsc's.
+  const handWritten = new Map<string, "named" | "default">();
+  for (const name of (await readdir(srcDir)).filter((name) => /^[A-Z]\w*\.ts$/.test(name))) {
+    const stem = name.slice(0, -".ts".length);
+    const kind = importKindOf(path.join(srcDir, name), stem);
+    if (kind !== undefined && !files.includes(`${stem}.tsazor`)) handWritten.set(stem, kind);
+  }
+
   // The parameters of every component: editors and `tsazor check` read them instead of the sources (package.json
   // `tsazor.components` points here), and a declaration per component is written from them.
   const manifest = buildPackageManifest({
@@ -169,18 +178,21 @@ ${error.message}`);
     packageName,
     entries: [
       ...exported.map((name) => ({ exportName: name, file: path.join(srcDir, `${name}.tsazor`) })),
+      ...[...handWritten].filter(([name]) => !internal.has(name)).map(([name, kind]) => ({ exportName: name, file: path.join(srcDir, `${name}.ts`), localExport: kind === "named" ? name : "default" })),
       ...Object.entries(aliases).map(([alias, target]) => ({ exportName: alias, file: path.join(srcDir, `${target}.tsazor`) })),
     ],
   });
   await emit("tsazor-components.json", `${JSON.stringify(manifest, null, 2)}\n`);
+  const handWrittenComponents = [...handWritten].filter(([name]) => manifest.components[name] !== undefined);
   for (const [exportName, declaration] of Object.entries(componentTypeDeclarations(manifest, { packageDir, declarationDir: outDir }))) {
-    await emit(`${exportName}.d.ts`, declaration);
+    if (!handWritten.has(exportName)) await emit(`${exportName}.d.ts`, declaration);
   }
   for (const [file, text] of Object.entries(options.declarations ?? {})) await emit(file, text);
 
   // index.d.ts mirrors index.js: the type half of each re-export reads the sibling declaration.
   const index = [
     ...exported.map((name) => `export { default as ${name} } from "./${name}.js"`),
+    ...handWrittenComponents.map(([name, kind]) => (kind === "named" ? `export { ${name} } from "./${name}.js"` : `export { default as ${name} } from "./${name}.js"`)),
     ...(options.exports ?? []),
     ...Object.entries(aliases).map(([alias, target]) => `export { default as ${alias} } from "./${target}.js"`),
   ].map(statement);
@@ -199,7 +211,7 @@ ${error.message}`);
   }
 
   await removeStale(outDir, written);
-  const components = [...exported, ...Object.keys(aliases)];
+  const components = [...exported, ...handWrittenComponents.map(([name]) => name), ...Object.keys(aliases)];
   log(`[${packageName}] built ${files.length} component(s) -> ${path.relative(packageDir, outDir).replace(/\\/g, "/")}/`);
   return { components, errors: [] };
 }

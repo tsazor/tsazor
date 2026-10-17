@@ -103,7 +103,7 @@ describe("buildLibrary (D9)", () => {
       "src/helper.ts": "/** The text with an exclamation mark. */\nexport function exclaim(text: string): string {\n  return `${text}!`;\n}\n",
       "src/enums/index.ts": 'export { Tone } from "./tone.js";\n',
       "src/enums/tone.ts": 'export enum Tone {\n  Loud = "loud",\n}\n',
-      "src/base/store.ts": 'import { State } from "@tsazor/runtime";\n\nexport class Store {\n  @State() accessor count = 0;\n}\n',
+      "src/base/store.ts": "function logged(_target: unknown, _context: ClassAccessorDecoratorContext): void {}\n\nexport class Store {\n  @logged accessor count = 0;\n}\n",
     });
     const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
     expect(result.errors).toEqual([]);
@@ -119,6 +119,25 @@ describe("buildLibrary (D9)", () => {
     expect(existsSync(path.join(root, "dist", "utilities", "text.d.ts"))).toBe(true);
     // The component exports its class by name as well: the named import resolves in the built module.
     expect(await read(root, "Part.js")).toMatch(/export \{[^}]*\bPart\b[^}]*\}/);
+  });
+
+  it("takes a hand-written component — src/<Name>.ts exporting <Name> — into the manifest and the index", async () => {
+    // A Radzen port's F16/F18: a component written in TypeScript was in dist but in neither the manifest (its
+    // parameters unknown to consumers, TZS026) nor the index's types. A helper module named otherwise stays a helper.
+    const root = await library({
+      "src/Badge.ts": 'import { ComponentBase, Parameter, type RenderTreeBuilder } from "@tsazor/runtime";\n\n/** A label. */\nexport class Badge extends ComponentBase {\n  /** Its text. */\n  @Parameter() text = "";\n\n  protected override buildRenderTree(b: RenderTreeBuilder): void {\n    b.openElement(0, "span");\n    b.addContent(1, this.text);\n    b.closeElement();\n  }\n}\n',
+      "src/base/tinted.ts": 'import { ComponentBase } from "@tsazor/runtime";\n\nexport abstract class Tinted extends ComponentBase {}\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+    expect(result.errors).toEqual([]);
+    expect(result.components).toContain("Badge");
+    const manifest = JSON.parse(await read(root, "tsazor-components.json")) as { components: Record<string, { parameters: { name: string }[] }> };
+    expect(manifest.components["Badge"]?.parameters.map((parameter) => parameter.name)).toContain("text");
+    expect(manifest.components["Tinted"]).toBeUndefined();
+    expect(await read(root, "index.js")).toContain('export { Badge } from "./Badge.js";');
+    expect(await read(root, "index.d.ts")).toContain('export { Badge } from "./Badge.js";');
+    // Its declaration is tsc's, the class itself.
+    expect(await read(root, "Badge.d.ts")).toContain("export declare class Badge extends ComponentBase");
   });
 
   it("refuses a component in a subfolder instead of leaving it out of dist", async () => {

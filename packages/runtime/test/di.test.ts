@@ -150,3 +150,21 @@ describe("the provider as a service (Blazor's IServiceProvider)", () => {
     expect(scope.get(ServiceProvider).tryGet(Clock)).toBeInstanceOf(Clock);
   });
 });
+
+describe("a service default a library registers (registerServiceDefault)", () => {
+  it("creates the service without the app registering it, from its dependencies; an app's registration wins", async () => {
+    const { registerServiceDefault } = await import("../src/index");
+    class Navigation {}
+    class TooltipService {
+      constructor(readonly navigation: Navigation) {}
+    }
+    registerServiceDefault(TooltipService, (services) => new TooltipService(services.get(Navigation)));
+    const provider = new ServiceCollection().registerType(Navigation).build();
+    const tooltip = provider.createScope().get(TooltipService);
+    expect(tooltip.navigation).toBe(provider.get(Navigation));
+    // A singleton of the root.
+    expect(provider.get(TooltipService)).toBe(tooltip);
+    const own = new TooltipService(new Navigation());
+    expect(new ServiceCollection().registerValue(TooltipService, own).build().get(TooltipService)).toBe(own);
+  });
+});

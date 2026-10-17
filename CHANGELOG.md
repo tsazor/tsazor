@@ -21,6 +21,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - `ParameterView.fromDictionary(object)`, toDictionary's counterpart (Blazor's FromDictionary).
   - `CultureInfo.numberFormatInfo` (.NET's NumberFormat): the culture's decimal and group separators, percent,
     signs, NaN and infinity symbols.
+- **For component library authors** (the same port's F1, F16/F18, F60):
+  - `tsazor check` (and `build-lib`'s check) covers every `.ts` source the tsconfig includes — a helper that only the
+    library's index exports went unchecked.
+  - A hand-written component — `src/<Name>.ts` exporting its component class `<Name>` — joins the manifest and the
+    index like a compiled one: its parameters are known to consumers (no TZS026), its type is tsc's declaration.
+  - `registerServiceDefault(token, create)` is public: a library's service works without the app registering it,
+    built from its dependencies (`(services) => new TooltipService(services.get(NavigationManager))`); an app's own
+    registration wins.
 - **A missing import in markup is named** (`tsazor check`, the editor): `Shade="Shade.Dark"` without importing the
   enum read `Shade` as a member, "Property 'Shade' does not exist on type 'Page'"; the message now names the
   `@import` and offers it as a quick fix. A type a file resolves by name keeps the file's own case (`./shade`, not the

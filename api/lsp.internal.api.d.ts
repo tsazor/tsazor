@@ -126,8 +126,11 @@ export declare class TsazorTypeService {
     private readonly building;
     private readonly lookup?;
     private readonly ambientDeclarations;
+    private projectSources;
+    private readonly configPath;
     constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup);
     dispose(): void;
+    includeProjectSources(): void;
     ensureTsazor(tsazorPath: string, source?: string): Promise<ShadowEntry | null>;
     openTsazor(tsazorPath: string, source: string): Promise<ShadowEntry | null>;
     private openFromDisk;
