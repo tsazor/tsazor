@@ -16,7 +16,26 @@ import { spawn, spawnSync } from "node:child_process";
 import * as playwright from "playwright-core";
 import { BROWSER, launchBrowser } from "../../../scripts/browsers.mjs";
 
-const PORT = process.env.GALLERY_PORT ?? "5321";
+// The app's port: GALLERY_PORT, or the first free one from 5321 on — these
+// are machine-shared dev ports. A foreign app on the port is never "ours"
+// (its own feeds would be mounted and networkidle could never fire): we
+// always spawn an own vite and never reuse a reachable server.
+const GALLERY_PORT = process.env.GALLERY_PORT;
+const BASE_PORT = Number(GALLERY_PORT ?? 5321);
+const PORT = GALLERY_PORT !== undefined
+    ? BASE_PORT
+    : await (async () => {
+        for (let attempt = 0; attempt < 10; attempt++) {
+            const candidate = BASE_PORT + attempt;
+            try {
+                await fetch(`http://localhost:${candidate}/`);
+            } catch {
+                return candidate; // nothing answered: free
+            }
+        }
+        throw new Error(`no free port for the gallery in ${BASE_PORT}–${BASE_PORT + 9} (set GALLERY_PORT)`);
+    })();
+const PORT_TEXT = String(PORT);
 const APP = `http://localhost:${PORT}`;
 
 let spawned = [];
@@ -31,10 +50,9 @@ async function reachable(url) {
 }
 
 async function ensureServer() {
-    if (!(await reachable(APP))) {
-        spawned.push(spawn("npx", ["vite", "--port", PORT, "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
-        console.log(`started vite dev server on :${PORT}`);
-    }
+    // Always our own vite; nothing reachable counts as ours (the port note above).
+    spawned.push(spawn("npx", ["vite", "--port", PORT_TEXT, "--strictPort"], { shell: true, stdio: "ignore", env: { ...process.env } }));
+    console.log(`started vite dev server on :${PORT}`);
     const deadline = Date.now() + 30_000;
     while (!(await reachable(APP))) {
         if (Date.now() > deadline) throw new Error(`gallery did not come up within 30s (stale process on :${PORT}?)`);
