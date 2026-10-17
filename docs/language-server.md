@@ -158,10 +158,15 @@ with a real `ts.LanguageService` (volar-style "shadow modules"):
   `null`/`[]` instead of a wrong answer — the v1 fallback renders the feature
   exactly as before, the TS layer can only add.
 - **Diagnostics** (`source: "tsazor-ts"`, toggle per workspace via
-  `initializationOptions.tsDiagnostics`): mapped semantic diagnostics only —
-  anything that does not map back onto `.tsazor` source (codegen plumbing,
-  synthetic regions) is dropped, so squiggles are anchored on real source by
-  construction. Capped at 200.
+  `initializationOptions.tsDiagnostics`): mapped onto the `.tsazor` source.
+  An error that does not map (codegen plumbing: the class declaration, a
+  resolved component's import, a missing `@tsazor/runtime`) is not dropped: it
+  is reported once on the file's first line, quoting the generated line —
+  "declared but never used" in generated code excepted. Errors of inherited
+  `@import`s belong to the `_Imports.tsazor` that declares them: its shadow is
+  its own imports, mapped onto the directives. One error at one position is
+  reported once (a `@bind` expression is emitted for the value and the
+  write-back). Capped at 200.
 - **Go-to-definition** targets shadow modules map back onto their originating
   `.tsazor` (with a real span); disk targets (`TickerStore.ts`, d.ts) are
   returned verbatim.

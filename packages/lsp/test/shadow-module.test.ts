@@ -220,9 +220,18 @@ describe("buildShadowModule", () => {
     expect(tsazorOfShadowPath(shadow!.virtualPath)?.replace(/\\/g, "/")).toContain("/Pages/Demo.tsazor");
   });
 
-  it("maps the _Imports.tsazor chain to trivial modules", async () => {
-    const importsShadow = await buildShadowModule(path.join(root, "_Imports.tsazor"), "@using ./Shared\n", root);
-    expect(importsShadow!.code).toBe("export default null;\n");
+  it("makes an _Imports.tsazor's shadow its own @imports, each mapped onto its directive", async () => {
+    const usingsOnly = await buildShadowModule(path.join(root, "_Imports.tsazor"), "@using ./Shared\n", root);
+    expect(usingsOnly!.code).toBe("export {};\n");
+    const imports = await buildShadowModule(
+      path.join(root, "_Imports.tsazor"),
+      '@using ./Shared\n@import type { Entry } from "./store"\n@import { fmt,\n    parse } from "./util"\n',
+      root,
+    );
+    expect(imports!.code).toBe('import type { Entry } from "./store";\nimport { fmt,\n    parse } from "./util";\nexport {};\n');
+    // The first import's specifier: generated column 27, source line 2 behind `@import ` (0-based: line 1, column 28).
+    expect(imports!.map.genToSrc(0, 27)).toEqual({ line: 1, character: 28 });
+    expect(imports!.map.genToSrc(2, 4)).toEqual({ line: 3, character: 4 });
   });
 
   it("stays graceful on broken markup (lenient parser; v1 layer carries diagnostics)", async () => {

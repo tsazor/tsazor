@@ -3,10 +3,11 @@
  * components compiled as the Vite plugin compiles them, the helpers beside them, the manifest and the declarations,
  * the index and one stylesheet; a stale output removed, a compile error reported (exit 1).
  */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildLibrary } from "../src/index";
 import { main } from "../src/main";
@@ -34,6 +35,10 @@ async function library(files: Record<string, string> = {}): Promise<string> {
     await mkdir(path.dirname(path.join(root, file)), { recursive: true });
     await writeFile(path.join(root, file), text);
   }
+  // The library's @tsazor/runtime: the workspace's own package, linked as pnpm links it (the check reports a
+  // runtime it can't resolve).
+  await mkdir(path.join(root, "node_modules", "@tsazor"), { recursive: true });
+  await symlink(fileURLToPath(new URL("../../runtime", import.meta.url)), path.join(root, "node_modules", "@tsazor", "runtime"), "junction");
   return root;
 }
 

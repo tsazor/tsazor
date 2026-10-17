@@ -92,10 +92,25 @@ describe("@bind codegen (C16, C17)", () => {
   });
 
   it("@bind-Value:event names the change callback parameter on components", () => {
-    const { code } = gen('<Field @bind-Value="v" @bind-Value:event="OnChanged" />', component);
+    const changing = withComponents({ Field: metadataOf("Field", { Value: "value", ValueChanged: "EventCallback<T>", OnChanged: "EventCallback<T>" }) });
+    const { code } = gen('<Field @bind-Value="v" @bind-Value:event="OnChanged" />', changing);
     expect(code).toContain('"OnChanged", __tsazor_EventCallback.bind(this,');
     expect(code).not.toContain('"ValueChanged"');
     expect(gen('<Field @bind-Value="v" @bind-Value:event="on-x" />', component).diagnostics.errors.map((d) => d.code)).toEqual(["TZS008"]);
+  });
+
+  it("@bind:event naming no callback the component declares is TZS008 — a capturing component would swallow it", () => {
+    const input = withComponents({
+      TextInput: metadataOf("TextInput", { value: "value", valueChanged: "EventCallback<T>", immediate: "value", additionalAttributes: "captureUnmatchedValues" }),
+    });
+    const { code, diagnostics } = gen('<TextInput @bind="v" @bind:event="oninput" />', input);
+    expect(diagnostics.errors.map((d) => d.code)).toEqual(["TZS008"]);
+    expect(diagnostics.errors[0]!.message).toBe(
+      "Unsupported directive attribute. '@bind:event' on a component names its change callback parameter, and <TextInput> has none named 'oninput': the bound value would never come back. For updates per keystroke, <TextInput> has `immediate`. To run code after a change, use '@bind:after'.",
+    );
+    expect(code).not.toContain('"oninput"');
+    // Parameters not fully known: no claim.
+    expect(gen('<TextInput @bind="v" @bind:event="oninput" />', withComponents({ TextInput: metadataOf("TextInput", { value: "value" }, { incomplete: true }) })).diagnostics.errors).toEqual([]);
   });
 
   it("applies the .NET 7 combination rules to component binds", () => {

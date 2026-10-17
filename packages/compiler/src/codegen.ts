@@ -288,6 +288,8 @@ const BIND_PARSE = alias("parseBindValue");
 const FRAGMENT_TYPE = `(${BUILDER}: ${alias("RenderTreeBuilder")}) => void`;
 /** The indent of a statement in the render method (stmt). */
 const STMT_INDENT = "    ";
+/** Where a bind's bound expression goes in its statements (stmtBound): each occurrence maps onto its source. */
+const BOUND = "\u0001bound\u0001";
 
 export function generateCode(document: DocumentNode, options: CodegenOptions, diagnostics: DiagnosticBag): CodegenResult {
   return new Codegen(options, diagnostics).run(document);
@@ -381,6 +383,8 @@ class Codegen {
   /** Own `@import` directives to emit verbatim, and the inherited statements that survive shadowing. */
   private readonly ownImportDirectives: Array<{ value: string; pos: SourcePos; valueStart: SourcePos }> = [];
   private readonly inheritedImportLines: string[] = [];
+  /** Where each `@inject`'s type starts (parallel to metadata.injects): the member line maps onto it. */
+  private readonly injectTypeStarts: Array<SourcePos | undefined> = [];
   private inheritsBase = "ComponentBase";
   /** `@attribute @decorator(…)` directives, emitted on the class. */
   private readonly decorators: DirectiveNode[] = [];
@@ -441,6 +445,7 @@ class Codegen {
           const type = parts.slice(0, -1).join(" ");
           if (RESERVED_MEMBERS.has(name)) this.diagnostics.error("TZS031", directiveRange(d), reservedMessage(name, "an injected service"));
           this.metadata.injects.push({ type, name });
+          this.injectTypeStarts.push(d.valueStart);
           this.resolveType(type);
           break;
         }
@@ -610,9 +615,12 @@ class Codegen {
       this.line(`  static layout = ${layoutLocal};`);
       this.line("");
     }
-    for (const inject of this.metadata.injects) {
-      this.line(`  private readonly ${inject.name} = ${alias("inject")}(${inject.type});`);
-    }
+    this.metadata.injects.forEach((inject, index) => {
+      // The service key maps onto the directive's type, so an error on it (a type-only import, TS1361) lands there.
+      const prefix = `  private readonly ${inject.name} = ${alias("inject")}(`;
+      const typeStart = this.injectTypeStarts[index];
+      this.writer.line(`${prefix}${inject.type});`, typeStart ? [{ offset: prefix.length, srcLine: typeStart.line - 1, srcCol: typeStart.column }] : undefined);
+    });
     if (this.metadata.injects.length > 0) this.line("");
 
     // @code blocks verbatim, re-indented into the class.
@@ -1062,7 +1070,9 @@ class Codegen {
         this.inheritedImportLines.push(...importStatements(inherited));
         continue;
       }
-      const bindings = inherited.bindings.filter((binding) => !this.importedNames.has(binding.local));
+      // The component's own class is in scope as itself: an _Imports that imports it (for its siblings) doesn't
+      // import it into its own module (it would clash with the class declaration).
+      const bindings = inherited.bindings.filter((binding) => !this.importedNames.has(binding.local) && binding.local !== this.options.className);
       if (bindings.length === 0) continue;
       const info = { ...inherited, bindings };
       bind(info);
@@ -1198,25 +1208,34 @@ class Codegen {
     // trimmed leading whitespace may span lines.
     const lead = code.slice(0, code.length - code.trimStart().length);
     const result = this.rewrite(trimmed, "expression", origin === undefined ? undefined : advancePos(origin, lead));
-    if (syntaxAt !== undefined) this.reportSyntax("TZS024", result, trimmed, advancePos(syntaxAt, lead));
+    // A C# string reported as TZS024 is no TypeScript at all: in a typed shadow it stands as an `any`, so the type
+    // layer doesn't add three errors of its own to the one that names the fix (TS1005, `$` unknown, the arguments).
+    if (syntaxAt !== undefined && this.reportSyntax("TZS024", result, trimmed, advancePos(syntaxAt, lead)) && this.options.typedShadow !== undefined) {
+      this.pendingExprEntries = [];
+      return { ...result, text: "(null! as any)" };
+    }
     return result;
   }
 
   /** The first syntax error of a rewritten snippet (later ones usually follow
    *  from it). A C# interpolated/verbatim string is the common cause — TZS024
    *  gets its mechanical rewrite (template literal) as an A7 fix. */
-  private reportSyntax(code: "TZS015" | "TZS024", result: RewriteResult, text: string, start: SourcePos): void {
+  private reportSyntax(code: "TZS015" | "TZS024", result: RewriteResult, text: string, start: SourcePos): boolean {
     const first = result.syntaxErrors[0];
-    if (!first) return;
+    if (!first) return false;
     const at = advancePos(start, text.slice(0, first.offset));
     const range = textRange(at, text.slice(first.offset, first.offset + first.length));
     const fix = interpolatedStringFix(text, start);
     if (fix === undefined) {
       this.diagnostics.error(code, range, first.message);
-      return;
+      return false;
     }
     const quoted = firstInterpolatedSpan(text)!;
-    this.diagnostics.error(code, range, `${quoted.startsWith("$") ? "C# interpolated string" : "C# verbatim string"} ${quoted} — use a template literal. (${first.message})`, fix);
+    // The message names the result, as the other C# forms' messages do: the command line has no quick fix to show.
+    const template = fix.edits[0]!.text.replace(/\s+/g, " ");
+    const shown = template.length > 60 ? `${template.slice(0, 59)}…` : template;
+    this.diagnostics.error(code, range, `${quoted.startsWith("$") ? "C# interpolated string" : "C# verbatim string"} ${quoted} — use the template literal ${shown} (the quick fix writes it).`, fix);
+    return true;
   }
 
   /** The A4 rule for names no scope of the snippet binds. */
@@ -1620,6 +1639,37 @@ class Codegen {
       { offset: indent.length, srcLine: pos.line - 1, srcCol: pos.column },
       ...this.pendingExprEntries.map((p) => ({ offset: exprBase + p.outOffset, srcLine: p.srcLine, srcCol: p.srcCol })),
     ]);
+    this.pendingExprEntries = [];
+  }
+
+  /**
+   * A bind's statement: each BOUND in `text` becomes the bound expression, mapped token by token onto its source —
+   * the value and the write-back are the same expression, so an error in it lands once, where it is written (the
+   * coarse statement anchor sent it columns past the attribute, once per copy). Plumbing after an occurrence maps
+   * to the statement's start again.
+   */
+  private stmtBound(text: string, pos: SourcePos, bound: string, entries: readonly PendingEntry[]): void {
+    const statement: WriterAnchor = { offset: STMT_INDENT.length, srcLine: pos.line - 1, srcCol: pos.column };
+    const anchors: WriterAnchor[] = [statement];
+    let out = STMT_INDENT;
+    let rest = text;
+    for (let at = rest.indexOf(BOUND); at >= 0; at = rest.indexOf(BOUND)) {
+      out += rest.slice(0, at);
+      const start = out.length;
+      // The character before it too: a check wraps the value (`(value) satisfies T`) and TS reports from the `(`.
+      const first = entries[0];
+      if (first !== undefined && start > STMT_INDENT.length) anchors.push({ offset: start - 1, srcLine: first.srcLine, srcCol: first.srcCol });
+      anchors.push(...entries.map((entry) => ({ offset: start + entry.outOffset, srcLine: entry.srcLine, srcCol: entry.srcCol })));
+      out += bound;
+      rest = rest.slice(at + BOUND.length);
+      // A parameter type's check (`(value) satisfies T`): TS reports at `satisfies` — on the value it checks.
+      if (first !== undefined && rest.startsWith(") satisfies ")) {
+        anchors.push({ offset: out.length, srcLine: first.srcLine, srcCol: first.srcCol }, { offset: out.length + 2, srcLine: first.srcLine, srcCol: first.srcCol });
+      } else {
+        anchors.push({ ...statement, offset: out.length });
+      }
+    }
+    this.writer.line(out + rest, anchors);
     this.pendingExprEntries = [];
   }
 
@@ -2960,8 +3010,11 @@ class Codegen {
           ? JSON.stringify(format)
           : this.expr(attr.format!, undefined, attr.codeStarts?.format);
 
-    // Value side: @bind or @bind:get.
-    const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
+    // Value side: @bind or @bind:get — baked with its source position, so every copy of it maps token by token.
+    const displayStart = attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression;
+    const display = this.expr(attr.get ?? attr.expression ?? "", displayStart, displayStart);
+    const boundEntries = displayStart !== undefined ? this.pendingExprEntries : [];
+    this.pendingExprEntries = [];
     if (display.length === 0) {
       this.diagnostics.error("TZS009", attr, `'${label}' requires an expression.`);
       return;
@@ -3003,14 +3056,16 @@ class Codegen {
         // K.7/K.8: get/set on a value attribute converts by the bound value's
         // type; a parse failure skips the setter (Blazor: TryParse false).
         parts.push(
-          `${wait}((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${BIND_PARSE}(${extract}, ${display}, ${formatArgument}, ${cultureArgument}))`,
+          `${wait}((__tsazor_parsed: unknown) => __tsazor_parsed !== null ? (${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__tsazor_parsed as never) : undefined)(${BIND_PARSE}(${extract}, ${BOUND}, ${formatArgument}, ${cultureArgument}))`,
         );
       } else {
         parts.push(`${wait}(${this.expr(attr.set, undefined, attr.codeStarts?.set)})(${extract})`);
       }
     } else {
-      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
-      if (assignmentTarget === null) return;
+      const target = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
+      if (target === null) return;
+      // The write-back target is the bound expression baked again: the same text, so the same source tokens.
+      const assignmentTarget = target === display ? BOUND : target;
       if (formatted && (isNumber || isDate)) {
         // A parse failure skips the setter (Blazor: TryParse false → no write).
         parts.push(`${assignmentTarget} = (${FORMAT_PARSE}(${extract}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""}) ?? ${assignmentTarget}) as never`);
@@ -3032,14 +3087,13 @@ class Codegen {
     const async = !shadow && (attr.set !== undefined || attr.after !== undefined) ? "async " : "";
     const handler = shadow ? this.deferredCall(`(__event: any) => { ${parts.join("; ")}; }`) : `${async}(__event) => { ${parts.join("; ")}; }`;
 
-    this.stmt(
-      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${formatted ? `${FORMAT_VALUE}(${display}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""})` : display});`,
+    this.stmtBound(
+      `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(valueAttribute)}, ${formatted ? `${FORMAT_VALUE}(${BOUND}, ${formatArgument}${cultureEmit !== undefined ? `, ${cultureArgument}` : ""})` : BOUND});`,
       pos,
+      display,
+      boundEntries,
     );
-    this.stmt(
-      `${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, ${handler}));`,
-      pos,
-    );
+    this.stmtBound(`${BUILDER}.addEventHandler(${this.seq()}, ${JSON.stringify(event)}, ${this.eventCallback()}.bind(this, ${handler}));`, pos, display, boundEntries);
   }
 
   /**
@@ -3135,7 +3189,10 @@ class Codegen {
     pos: SourcePos,
     component?: ComponentTarget,
   ): void {
-    const display = this.expr(attr.get ?? attr.expression ?? "", undefined, attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression);
+    const displayStart = attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression;
+    const display = this.expr(attr.get ?? attr.expression ?? "", displayStart, displayStart);
+    const boundEntries = displayStart !== undefined ? this.pendingExprEntries : [];
+    this.pendingExprEntries = [];
     if (display.length === 0) {
       this.diagnostics.error("TZS009", attr, `${label} requires an expression.`);
       return;
@@ -3145,6 +3202,18 @@ class Codegen {
     const changed = attr.event !== undefined ? attr.event.trim() : `${target}Changed`;
     if (!bareIdentifier(changed)) {
       this.diagnostics.error("TZS008", attr.modifierSpans?.event ?? attr, `'${label}:event' on a component names its change callback parameter (e.g. '${target}Changed'), got '${changed}'.`);
+      return;
+    }
+    // A callback the component doesn't declare would land among its unmatched attributes (a capturing component
+    // takes any name), and no value would ever come back. The element habit `:event="oninput"` meets this first.
+    const metadata = component?.complete ? component.metadata : null;
+    if (attr.event !== undefined && metadata && findParameter(metadata, changed) === undefined) {
+      const immediate = findParameter(metadata, "immediate") !== undefined ? ` For updates per keystroke, <${component!.tag}> has \`immediate\`.` : "";
+      this.diagnostics.error(
+        "TZS008",
+        attr.modifierSpans?.event ?? attr,
+        `'${label}:event' on a component names its change callback parameter, and <${component!.tag}> has none named '${changed}': the bound value would never come back.${immediate} To run code after a change, use '${label}:after'.`,
+      );
       return;
     }
 
@@ -3158,8 +3227,9 @@ class Codegen {
     if (attr.set !== undefined) {
       handler = `${async}(${value}) => { ${wait}(${this.expr(attr.set, undefined, attr.codeStarts?.set)})(__value); }`;
     } else {
-      const assignmentTarget = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
-      if (assignmentTarget === null) return;
+      const target = this.bindAssignmentTarget(attr.expression ?? "", label, attr, attr.codeStarts?.expression !== undefined);
+      if (target === null) return;
+      const assignmentTarget = target === display ? BOUND : target;
       handler = attr.after !== undefined
         ? `${async}(${value}) => { ${assignmentTarget} = __value; ${wait}${this.afterCall(attr.after, attr.codeStarts?.after)}; }`
         : `(${value}) => { ${assignmentTarget} = __value; }`;
@@ -3174,8 +3244,8 @@ class Codegen {
     const changedParameter = component ? this.componentParameter(component, changed, attr.modifierSpans?.event ?? attr) : undefined;
     // 2.4: the bound value is checked against the target parameter's type
     // (an explicit pair and a @Bindable() parameter alike).
-    const checkedDisplay = targetParameter && !targetParameter.uncertain ? this.optionallyCheckedValue(display, targetParameter) : display;
-    this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(targetParameter?.name ?? target)}, ${checkedDisplay});`, pos);
+    const checkedDisplay = targetParameter && !targetParameter.uncertain ? this.optionallyCheckedValue(BOUND, targetParameter) : BOUND;
+    this.stmtBound(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(targetParameter?.name ?? target)}, ${checkedDisplay});`, pos, display, boundEntries);
     // InputBase keys EditContext validation on a plain field-name string
     // (v1 contract): derive it from the bound member path — `this.model.name`
     // and `Model!.name` register under "name", matching the validators map's
@@ -3189,9 +3259,11 @@ class Codegen {
         this.stmt(`${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(expressionName)}, ${JSON.stringify(bound.field)});`, pos);
       }
     }
-    this.stmt(
+    this.stmtBound(
       `${BUILDER}.addAttribute(${this.seq()}, ${JSON.stringify(changedParameter?.name ?? changed)}, ${this.eventCallback()}.bind(this, ${handler}));`,
       pos,
+      display,
+      boundEntries,
     );
   }
 

@@ -1,8 +1,19 @@
-import { compile, type ExpressionValue, type ImportSuggestion, type TypedTagInferenceRequest, type UninferredTypeArguments } from "@tsazor/compiler";
+import {
+  compile,
+  DiagnosticBag,
+  parseDocument,
+  parseImportDirective,
+  type ExpressionValue,
+  type ImportSuggestion,
+  type SourceMapEntry,
+  type TypedTagInferenceRequest,
+  type UninferredTypeArguments,
+} from "@tsazor/compiler";
 import { collectImports, createFileContext, mapPath, rebaseSpecifier, resolutionOptions } from "@tsazor/workspace";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import * as ts from "typescript";
 import { TsazorGenMap } from "./ts-mapping.js";
 
 /**
@@ -38,6 +49,8 @@ export interface ShadowModule {
   expressionValues?: readonly ExpressionValue[];
   /** F29: the `@import` each unbound name in `@code` would need (TS2304's hint and quick fix). */
   importSuggestions?: readonly ImportSuggestion[];
+  /** The specifiers of the `@import`s inherited from _Imports.tsazor files: their errors are reported there. */
+  inheritedSpecifiers?: ReadonlySet<string>;
 }
 
 /** Synthetic path of a shadow module: `X.tsazor` → `X.tsazor.gen.ts`. */
@@ -70,11 +83,7 @@ export async function buildShadowModule(
     const fileDir = path.dirname(filePath);
     const chain = await collectImports(fileDir, projectRoot);
 
-    if (path.basename(filePath) === "_Imports.tsazor") {
-      // _Imports.tsazor contributes directives only; it is never a component.
-      const virtualPath = shadowPathFor(filePath);
-      return { virtualPath, realPath: filePath, code: "export default null;\n", map: new TsazorGenMap([]), className: "_Imports" };
-    }
+    if (path.basename(filePath) === "_Imports.tsazor") return importsShadow(filePath, source);
 
     const context = createFileContext(filePath, chain);
     const extraImports: string[] = [];
@@ -100,8 +109,10 @@ export async function buildShadowModule(
         rebaseTypeImport: (reference) => {
           // Reference types bind through the shadow graph: an import the
           // declaring module resolved relatively is rebased to the consuming
-          // shadow's directory; bare package specifiers resolve anywhere.
+          // shadow's directory; a bare package specifier resolves from the
+          // declaring module when the app can't see the package itself.
           if (reference.specifier === undefined || reference.file === undefined) return undefined;
+          if (!reference.specifier.startsWith(".")) return bareTypeSpecifier(reference.specifier, path.resolve(reference.file), fileDir);
           return rebaseSpecifier(reference.specifier, path.dirname(path.resolve(reference.file)), fileDir);
         },
       },
@@ -142,12 +153,63 @@ export async function buildShadowModule(
       ...(compiled.uninferredTypeArguments !== undefined ? { uninferredTypeArguments: compiled.uninferredTypeArguments } : {}),
       ...(compiled.expressionValues !== undefined ? { expressionValues: compiled.expressionValues } : {}),
       ...(compiled.importSuggestions !== undefined ? { importSuggestions: compiled.importSuggestions } : {}),
+      inheritedSpecifiers: new Set(context.inheritedImports.map((info) => info.specifier)),
     };
   } catch {
     // Compiler-level failures (TZS035-style) → no type layer; the v1 layer
     // still publishes compiler diagnostics.
     return null;
   }
+}
+
+/**
+ * _Imports.tsazor contributes directives only; it is never a component. Its shadow is its own `@import`s, each line
+ * mapped onto its directive: an import that doesn't resolve (a typo in the specifier, a name the module doesn't
+ * export) is reported here, once — in the files below that inherit it, the import is plumbing that maps nowhere.
+ */
+function importsShadow(filePath: string, source: string): ShadowModule {
+  const lines: string[] = [];
+  const mappings: SourceMapEntry[] = [];
+  for (const directive of parseDocument(source, new DiagnosticBag()).directives) {
+    if (directive.name !== "import" || !parseImportDirective(directive.value).ok) continue;
+    const valueStart = directive.valueStart ?? directive.pos;
+    mappings.push({ genLine: lines.length + 1, genCol: 0, srcLine: directive.pos.line - 1, srcCol: directive.pos.column });
+    directive.value.split("\n").forEach((part, index) => {
+      const prefix = index === 0 ? "import " : "";
+      mappings.push({ genLine: lines.length + 1, genCol: prefix.length, srcLine: valueStart.line - 1 + index, srcCol: index === 0 ? valueStart.column : 0 });
+      lines.push(`${prefix}${part}`);
+    });
+    if (!directive.value.trimEnd().endsWith(";")) lines[lines.length - 1] += ";";
+  }
+  const code = `${lines.map((line) => `${line}\n`).join("")}export {};\n`;
+  return { virtualPath: shadowPathFor(filePath), realPath: filePath, code, map: new TsazorGenMap(mappings), className: "_Imports" };
+}
+
+/* Type imports of parameter types -------------------------------------------- */
+
+const RESOLUTION: ts.CompilerOptions = { module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler };
+const bareTypeSpecifiers = new Map<string, string>();
+
+/**
+ * A parameter type's bare import as the consuming shadow writes it: the specifier itself when the app resolves the
+ * package too, else the file the declaring module resolves it to. Under pnpm a skin's own dependency (`@tsazor/ui`,
+ * where `Intent` and `Size` live) is not visible from the app: the unresolved import left those parameters `any`.
+ */
+function bareTypeSpecifier(specifier: string, declaringFile: string, fileDir: string): string {
+  const key = `${specifier}\0${declaringFile}\0${fileDir}`;
+  const known = bareTypeSpecifiers.get(key);
+  if (known !== undefined) return known;
+  let result = specifier;
+  if (ts.resolveModuleName(specifier, path.join(fileDir, "index.ts"), RESOLUTION, ts.sys).resolvedModule === undefined) {
+    const declared = ts.resolveModuleName(specifier, declaringFile, RESOLUTION, ts.sys).resolvedModule;
+    if (declared !== undefined) {
+      const target = declared.resolvedFileName.replace(/\.d\.(m|c)?ts$|\.(m|c)?ts$/, "");
+      const relative = path.relative(fileDir, target).replace(/\\/g, "/");
+      result = path.isAbsolute(relative) || relative.startsWith("../") ? relative : `./${relative}`;
+    }
+  }
+  bareTypeSpecifiers.set(key, result);
+  return result;
 }
 
 /* Import rewriting ---------------------------------------------------------- */

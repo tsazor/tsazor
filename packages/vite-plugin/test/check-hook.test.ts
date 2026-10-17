@@ -5,9 +5,10 @@
  * TS findings mapped back to `.tsazor` source positions; a clean project
  * reports none.
  */
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatCheckDiagnostic, runBuildCheck } from "../src/check-hook";
 
@@ -21,6 +22,10 @@ afterEach(async () => {
 async function makeProject(files: Record<string, string>): Promise<string> {
   const root = await mkdtemp(path.join(tmpdir(), "tsazor-check-"));
   roots.push(root);
+  // The project's @tsazor/runtime: the workspace's own package, linked as pnpm links it (without it, the check
+  // reports the unresolved runtime import — the classes have no base to check against).
+  await mkdir(path.join(root, "node_modules", "@tsazor"), { recursive: true });
+  await symlink(fileURLToPath(new URL("../../runtime", import.meta.url)), path.join(root, "node_modules", "@tsazor", "runtime"), "junction");
   for (const [relative, content] of Object.entries(files)) {
     const file = path.join(root, relative);
     await mkdir(path.dirname(file), { recursive: true });
@@ -48,12 +53,8 @@ describe("runBuildCheck (vite `check: true`)", () => {
       "Counter.tsazor": '<Greeter Name="@this.count" />\n\n@code {\n    private count = 1;\n}\n',
       "Greeter.tsazor": "<p>Hello, @Name!</p>\n\n@code {\n    @Parameter() Name?: string;\n}\n",
     });
-    // The temp project has no @tsazor/runtime in node_modules — the check
-    // only needs the satisfied value type (string vs number), which the
-    // compiler metadata path derives without runtime imports. TS2307 noise
-    // from that unresolved runtime import is excluded here explicitly.
     const diagnostics = await runBuildCheck(root, () => {});
-    const finding = diagnostics.find((d) => d.code.startsWith("TS") && d.code !== "TS2307");
+    const finding = diagnostics.find((d) => d.code.startsWith("TS"));
     expect(finding).toBeDefined();
     expect(finding!.file.endsWith(path.join(root, "Counter.tsazor"))).toBe(true);
   });

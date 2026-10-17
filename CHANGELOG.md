@@ -5,6 +5,24 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`tsazor check` loses no type error and doubles none** (the first external integration's findings, I1–I9 in
+  `docs/migration-practices.md`):
+  - An `_Imports.tsazor`'s own `@import`s are type-checked, at their directives — a typo in an inherited specifier
+    used to leave its names `any` without a word. `@inject` errors land on the directive (TS1361 for a type-only
+    import, with the fix), and an error in generated code is reported on the file's first line, quoting the line,
+    instead of being dropped — a missing `@tsazor/runtime` among them.
+  - A component's parameter types from a package the app doesn't depend on itself (`@tsazor/ui` behind a skin)
+    resolve through the declaring package: under pnpm they were `any`, and the markup's typed checks skipped them.
+  - TS2307 names the folder a specifier resolves from and the specifier that finds the module; a bare one is
+    "not installed where this file looks for packages".
+  - An error in a `@bind` expression is reported once, where it is written (it came up to four times, at columns
+    past the attribute). `@bind:event` on a component naming no callback it declares is TZS008 — on a `TextInput`,
+    `oninput` used to vanish among the input's extra attributes; the message points at `immediate`.
+  - TZS024 shows the template literal for a C# interpolated string, and the type layer adds no errors of its own
+    to it.
+  - `Rating` (both skins): an unbound rating's first arrow key picked `NaN` — its star count getter was named
+    `value` and shadowed by InputBase's parameter field.
+
 - **`@tsazor/primitives` (E12): the five .NET value types.** A new dependency-free package — `Decimal`
   (an immutable scaled integer with exact arithmetic and `MidpointRounding` modes), `DateOnly`, `TimeOnly`,
   `TimeSpan` and `Guid`. `Decimal` is a first-class `@bind` and validation value in `@tsazor/runtime`

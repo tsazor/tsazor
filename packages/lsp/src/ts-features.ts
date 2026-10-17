@@ -12,7 +12,7 @@ import * as ts from "typescript";
 import { explainExpressionValue, explainTypeScriptError, unresolvedName, type ImportSuggestion, type UninferredTypeArguments } from "@tsazor/compiler";
 import type { AnalyzedFile } from "./analysis.js";
 import { nodeAt } from "./analysis.js";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import {
   shadowOffsetToPos,
@@ -422,9 +422,24 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 }
 
 /**
+ * "Declared but never used" (`noUnusedLocals`/`noUnusedParameters`): never an error of generated code (the runtime
+ * import names what the body might use), and an _Imports.tsazor imports for the files below, never for itself.
+ */
+const UNUSED_CODES = new Set([6133, 6138, 6192, 6196, 6198, 6205]);
+
+/** The specifier of a generated import line (a `.gen` shadow rewrite stripped), or undefined. */
+function importLineSpecifier(line: string): string | undefined {
+  return /^import\b[^"']*["']([^"']+)["'];?\s*$/.exec(line.trim())?.[1]?.replace(/\.gen$/, "");
+}
+
+/**
  * Type diagnostics of one shadow (syntactic + semantic) mapped back to .tsazor
- * coordinates: diagnostics that do not map (synthetic regions, plumbing) are
- * dropped — that leaves only squiggles anchored on real source. Capped at 200.
+ * coordinates. An error that doesn't map (generated plumbing: the class
+ * declaration, a resolved component's import) is still an error: it is
+ * reported once on the file's first line, quoting the generated line — so a
+ * gap in the shadow or a component's class problem is never lost silently.
+ * Inherited `@import`s are the exception: their errors belong to the
+ * _Imports.tsazor that declares them, whose own shadow reports them. Capped at 200.
  *
  * Syntactic diagnostics catch @code parse errors (e.g. `private pass word = "";`)
  * that otherwise only surface at build time (esbuild), not in the editor.
@@ -439,6 +454,9 @@ function parameterPropertySpans(code: string): Array<{ start: number; end: numbe
 export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, cap = 200): TsDiagnostic[] {
   const parameterSpans = parameterPropertySpans(entry.shadow.code);
   const results: TsDiagnostic[] = [];
+  const seen = new Set<string>();
+  let unresolvedModule = false;
+  const imports = entry.shadow.className === "_Imports";
   const diagnostics = [
     ...service.syntacticDiagnosticsOnShadow(entry),
     ...service.semanticDiagnosticsOnShadow(entry),
@@ -448,10 +466,28 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
     // Shadow-false positives (see docstring above) — match before mapping.
     if (diag.code === 2307 && isAssetModuleSpecifier(ts.flattenDiagnosticMessageText(diag.messageText, " "))) continue;
     if (diag.code === 2564 && parameterSpans.some((span) => diag.start! >= span.start && diag.start! < span.end)) continue;
+    if (imports && UNUSED_CODES.has(diag.code)) continue;
     const length = diag.length ?? 1;
     const genPos = shadowOffsetToPos(entry.shadow.code, diag.start);
     const src = entry.shadow.map.genToSrc(genPos.line, genPos.column);
-    if (!src) continue;
+    if (!src) {
+      if (diag.category !== ts.DiagnosticCategory.Error || UNUSED_CODES.has(diag.code)) continue;
+      const genLine = entry.shadow.code.split("\n")[genPos.line]?.trim() ?? "";
+      const specifier = importLineSpecifier(genLine);
+      if (specifier !== undefined && entry.shadow.inheritedSpecifiers?.has(specifier)) continue;
+      const message = ts.flattenDiagnosticMessageText(diag.messageText, " ");
+      // A generated import that doesn't resolve (`@tsazor/runtime` not installed) leaves the class without its base:
+      // what follows in generated code is that one cause again.
+      if (unresolvedModule && diag.code !== 2307) continue;
+      if (diag.code === 2307) unresolvedModule = true;
+      if (seen.has(`${diag.code}:${message}`)) continue;
+      seen.add(`${diag.code}:${message}`);
+      const quoted = genLine.length > 100 ? `${genLine.slice(0, 100)}…` : genLine;
+      const explained = explainTypeScriptError(diag.code, withModuleHint(diag.code, message, entry.shadow.realPath));
+      results.push({ line: 0, character: 0, endLine: 0, endCharacter: 1, code: diag.code, message: `${explained} (In the code generated from this file: \`${quoted}\`.)` });
+      if (results.length >= cap) break;
+      continue;
+    }
     // The failing token/expression's end maps like the start; when the end
     // does not map (plumbing after the token) or precedes the start, the
     // range stays one character wide so the editor still underlines it.
@@ -460,6 +496,10 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
     const endLine = srcEnd && (srcEnd.line > src.line || srcEnd.character > src.character) ? srcEnd.line : src.line;
     const endCharacter =
       srcEnd && (srcEnd.line > src.line || srcEnd.character > src.character) ? srcEnd.character + 1 : src.character + 1;
+    // One source expression can be emitted more than once (a bind's value and its write-back): one error, once.
+    const placed = `${src.line}:${src.character}:${diag.code}:${ts.flattenDiagnosticMessageText(diag.messageText, " ")}`;
+    if (seen.has(placed)) continue;
+    seen.add(placed);
     results.push({
       line: src.line,
       character: src.character,
@@ -471,7 +511,7 @@ export function tsDiagnostics(service: TsazorTypeService, entry: ShadowEntry, ca
         diag.code,
         explainExpressionValue(
           diag.code,
-          withImportHint(diag.code, ts.flattenDiagnosticMessageText(diag.messageText, " "), entry),
+          withModuleHint(diag.code, withImportHint(diag.code, ts.flattenDiagnosticMessageText(diag.messageText, " "), entry), entry.shadow.realPath),
           { line: src.line + 1, column: src.character },
           entry.shadow.expressionValues,
         ),
@@ -507,6 +547,86 @@ function withUninferredHint(code: number, message: string, at: { line: number; c
 function importSuggestionFor(entry: ShadowEntry, message: string): ImportSuggestion | undefined {
   const name = unresolvedName(message);
   return name === undefined ? undefined : entry.shadow.importSuggestions?.find((suggestion) => suggestion.name === name);
+}
+
+/* ------------------------------------------------------------------ */
+/* TS2307: where a specifier was looked for                            */
+/* ------------------------------------------------------------------ */
+
+const MODULE_EXTENSIONS = [".d.ts", ".ts", ".tsx", ".mts", ".js", ".mjs", ".tsazor", ".json"];
+
+function isModuleAt(base: string): boolean {
+  try {
+    if (statSync(base).isFile()) return true;
+  } catch {
+    // Not a file as written: try the extensions.
+  }
+  return MODULE_EXTENSIONS.some((extension) => existsSync(base + extension) || existsSync(path.join(base, `index${extension}`)));
+}
+
+/** A module file in `dir` whose name is a near miss of `name` (case, a typo): its name, or undefined. */
+function nearModule(dir: string, name: string): string | undefined {
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return undefined;
+  }
+  const wanted = name.toLowerCase();
+  const limit = Math.max(1, Math.floor(name.length / 3));
+  let best: { name: string; distance: number } | undefined;
+  for (const file of names) {
+    const extension = MODULE_EXTENSIONS.find((candidate) => file.endsWith(candidate));
+    if (extension === undefined || file.endsWith(".gen.ts")) continue;
+    const stem = file.slice(0, -extension.length);
+    const distance = editDistance(stem.toLowerCase(), wanted);
+    if (distance <= limit && (best === undefined || distance < best.distance)) best = { name: extension === ".tsazor" ? file : stem, distance };
+  }
+  return best?.name;
+}
+
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) current[j] = Math.min(previous[j]! + 1, current[j - 1]! + 1, previous[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+    previous = current;
+  }
+  return previous[b.length]!;
+}
+
+function specifierFrom(fromDir: string, target: string): string {
+  const relative = path.relative(fromDir, target).replace(/\\/g, "/");
+  return relative.startsWith(".") ? relative : `./${relative}`;
+}
+
+/**
+ * TS2307 in a .tsazor: the folder the specifier was resolved from — the file's own, as in any TypeScript module
+ * (an _Imports.tsazor's for its own @imports) — and the specifier that finds the module when one does: the same
+ * name a folder or two up (a page in Pages/ importing `./Store` meant `../Store`), or a near-miss name where it points.
+ * A bare specifier is a package not installed where the file looks for packages.
+ */
+function withModuleHint(code: number, message: string, file: string): string {
+  if (code !== 2307 || message.includes(" Hint: ")) return message;
+  const specifier = /Cannot find module '([^']+)'/.exec(message)?.[1];
+  if (specifier === undefined) return message;
+  const dir = path.dirname(file);
+  const folder = `${path.basename(path.dirname(dir))}/${path.basename(dir)}/`;
+  if (!specifier.startsWith("./") && !specifier.startsWith("../")) {
+    const name = specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]!;
+    return `${message} Hint: '${name}' is not installed where this file looks for packages (a node_modules folder above ${folder}): add it to the app's dependencies.`;
+  }
+  const target = path.resolve(dir, specifier);
+  let found: string | undefined;
+  const name = specifier.replace(/^(\.\.?\/)+/, "");
+  for (let up = path.dirname(dir), level = 0; found === undefined && level < 3; up = path.dirname(up), level++) {
+    if (isModuleAt(path.join(up, name))) found = specifierFrom(dir, path.join(up, name));
+  }
+  if (found === undefined) {
+    const near = nearModule(path.dirname(target), path.basename(target));
+    if (near !== undefined) found = specifierFrom(dir, path.join(path.dirname(target), near));
+  }
+  return `${message} Hint: a relative specifier resolves from the folder of the file it is written in (${folder}), as in any TypeScript module${found !== undefined ? ` — '${found}' finds it` : ""}.`;
 }
 
 /**

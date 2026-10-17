@@ -24,6 +24,9 @@ const HINTS: ReadonlyMap<number, string> = new Map([
   [2551, "Probably a typo — see the suggestion."],
   [2304, "Markup and `@code` see the component's members, `@inject` fields and `@import`ed names: declare, inject or import it."],
   [2552, "Probably a typo — see the suggestion."],
+  // A type-only import used as a value.
+  [1361, "`import type` erases the name at runtime: import it without `type` to use it as a value — `@inject` needs the class itself, it is the service's key (or leave the import out: `@inject` finds a class in `X.ts` by name)."],
+  [1362, "`export type` erases the name at runtime: export it as a value to use it as one (`@inject` needs the class itself)."],
   // Types that don't fit.
   [2322, "The value's type doesn't fit where it goes (a field, a parameter, a return value): convert it, or change the declared type."],
   [2345, "The argument's type doesn't fit the parameter: convert it, or pass a different value."],

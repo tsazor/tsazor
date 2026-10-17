@@ -127,6 +127,8 @@ describe("syntax errors in markup expressions (A7, TZS024)", () => {
     const source = '<p>@($"Hi {name}, {count:C}")</p>';
     const found = errors(source);
     expect(found.map((d) => d.code)).toEqual(["TZS024"]);
+    // The message names the result: the command line shows no quick fix.
+    expect(found[0]!.message).toContain('C# interpolated string $"Hi {name}, {count:C}" — use the template literal `Hi ${name}, ${count}`');
     const fix = found[0]!.fix!;
     expect(fix.title).toContain("Use a template literal");
     expect(fix.edits).toEqual([
