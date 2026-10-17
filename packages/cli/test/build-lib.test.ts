@@ -94,6 +94,18 @@ describe("buildLibrary (D9)", () => {
     expect(existsSync(path.join(root, "dist", "Removed.js"))).toBe(false);
   });
 
+  it("compiles a .ts helper's decorators as the components' are — none left raw for the browser (X9)", async () => {
+    // A template's model module: its field rule was passed through as stage-3 decorator syntax, which no browser parses.
+    const root = await library({
+      "src/credentials.ts": 'import { Required } from "@tsazor/runtime";\n\n/** The sign-in form\'s model. */\nexport class Credentials {\n  @Required() email = "";\n}\n',
+    });
+    const result = await buildLibrary({ packageDir: root, log: () => {} });
+    expect(result.errors).toEqual([]);
+    const built = await read(root, "credentials.js");
+    expect(built).not.toMatch(/^\s*@\w+\(/m);
+    expect(built).toContain("Required");
+  });
+
   it("keeps what it wrote though the clock stepped back during the build (WSL's does when it syncs)", async () => {
     const root = await library();
     // The build starts a minute later than the files it writes are stamped.
