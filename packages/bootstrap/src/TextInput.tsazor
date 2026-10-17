@@ -40,7 +40,7 @@
     @Parameter() help?: string;
     /** Placeholder text. */
     @Parameter() placeholder?: string;
-    /** The native input type. */
+    /** The native input type, for text. A date or a time is a DateInput, a number a NumberInput (Blazor's InputDate, InputNumber). */
     @Parameter() type: "text" | "password" | "email" | "search" | "tel" | "url" = "text";
     /** Disables the input. */
     @Parameter() disabled: boolean = false;

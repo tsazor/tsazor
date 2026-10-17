@@ -60,6 +60,33 @@ The CLI also runs from an installed tarball: `npx tsazor check` or
 `@tsazor/testing` as well (the Vitest config needs the same plugin call so that `.tsazor`
 imports load in tests — see the form in the [Tests](#tests) section).
 
+### Before the npm release: a local registry
+
+Until `@tsazor/*` is on npm, an app outside this repository gets the packages from a local registry: the
+same packed files and dependencies npm will serve. In the Tsazor repository:
+
+```bash
+pnpm install && pnpm -r build
+pnpm registry        # Verdaccio on http://localhost:4873 — keep it running
+pnpm release:local   # publishes every @tsazor/* package and create-tsazor to it
+```
+
+Then, anywhere else:
+
+```bash
+npm create tsazor@next my-app --registry http://localhost:4873/ -- --ui @tsazor/bootstrap
+```
+
+An existing app adds one line to its `.npmrc` (`@tsazor:registry=http://localhost:4873/`) and installs with the
+`next` tag (`pnpm add @tsazor/runtime@next …`).
+
+Not with `link:` to the repository's package folders: a linked package resolves its own dependencies
+(`@tsazor/ui` behind a skin) from the repository's `node_modules`, a wrong relative depth only shows as missing
+modules, and the build of a package's `dist` is yours to remember. When something is not installed where a
+file looks for it, `tsazor check` says so — `TS2307 … Hint: '@tsazor/ui' is not installed where this file looks
+for packages`. pnpm 10 lists `esbuild` under "Ignored build scripts": harmless for Vite (esbuild's binary comes
+as an optional dependency); `pnpm approve-builds` silences it.
+
 ## Project structure
 
 The minimal layout below; for an app that grows past a few pages (feature folders, services, containers

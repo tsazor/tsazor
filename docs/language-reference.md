@@ -578,7 +578,7 @@ Markup only starts
 | `<input @bind-value="name">`, `@bind-value:event="oninput"` | On an *element*, `@bind-<attr>` binds the attribute `<attr>` (Razor: `@bind-value` = `@bind` spelled out) with `onchange`; modifiers and `number`/`date` coercion as with `@bind`; the value comes from the change event (`checked` for checkboxes, otherwise `value`) |
 | `<Stepper @bind-Value="current" />` | `Value` + `ValueChanged` (EventCallback) |
 | `<Stepper @bind-Value="v" @bind-Value:after="f" />`, `@bind-Value:get`/`:set` | The same modifiers on components |
-| `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-callback parameter `OnPick` instead of `ValueChanged` (Blazor) |
+| `<Stepper @bind-Value="v" @bind-Value:event="OnPick" />` | Change-callback parameter `OnPick` instead of `ValueChanged` (Blazor); a name the component doesn't declare is TZS008 — `<TextInput @bind="s" @bind:event="oninput">` would hand `oninput` to the input's unmatched attributes, and no value would come back (see *Reacting at once* below) |
 | `<InputText @bind="name" />` | Component tag ⇒ same as `@bind-Value` |
 | `@Bindable() accessor Value = 0` (in the component) | Tsazor extension: declares `Value` + `ValueChanged` in one line; `@bind-Value` works unchanged — see [Two-way parameters](#two-way-parameters-bindable-tsazor-extension) |
 
@@ -596,6 +596,17 @@ below the variable that holds the model (`Model!.Title` ⇒ `"Title"`, `model.bi
 `model.items[0].name` ⇒ `"items.0.name"`), also from `:get`; StandardSchemaValidator keys a nested issue the same
 way. A path with an index known only at run time (`items[i].name`) keys by its last member. DataAnnotations rules
 apply to the model's own properties, as in Blazor before .NET 10's nested validation.
+
+**A path into another object** binds like a field: `<Select @bind="this.Store.filterYear">` writes the injected
+store's property, and `tsazor check` checks the bound value against that property's type (a misspelled property is
+TS2339 at the bind). The component re-renders after the event as after any; other components that show the store
+render again when the store tells them (`this.observe(this.Store)`).
+
+**Reacting at once.** On an element, `@bind:event="oninput"` writes on every keystroke. A component decides when
+it reports a change: the skins' `TextInput` and `TextArea` take `immediate` (and `immediateDelay`); `Select`,
+`Switch`, `Checkbox` and `DateInput` report on change, which already is the pick. To run code once the value has
+arrived — filter a list again — add `@bind:after="applyFilters"`, no `Value`/`ValueChanged` pair needed. Often
+nothing is needed at all: a getter that filters by the bound fields renders the new result anyway.
 
 **Combinations** (Blazor .NET 7, RZ10004/RZ10015–RZ10019) ⇒ TZS008: `@bind` together with
 `:get`; `:get` without `:set` and vice versa; `:set` together with `:after` (call the `:after` code from

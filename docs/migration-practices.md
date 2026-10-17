@@ -480,6 +480,43 @@ and TanStack Query, the client a .NET team wrote after leaving Blazor.
 - **Lazy pages compile on first request in the dev server**: a test run that opens them all at once times out —
   `server.warmup` compiles them at startup.
 
+## A new app, by someone new to Tsazor
+
+What the first external integration met (2026-10-16: a Vite app outside this repository, written by an agent with
+no prior knowledge of Tsazor; a data-driven review UI with forms, filters, a PDF preview and live SSE data, then
+three feature rounds on it). Its findings, I1–I9; each one Tsazor changed for has a test now.
+
+- **Make `tsazor check` the build's first step** (`tsazor check && vite build`). Most of the first 73 errors came
+  with their fix in the message, and in the feature rounds it caught what the browser would have swallowed (a lost
+  `this` in a callback). Read its output before the docs.
+- **Before npm, install from a local registry, not with `link:`** (I1). A `link:` into this repository resolves the
+  linked package's own dependencies from the repository, and a wrong depth only shows as missing modules
+  ([getting-started.md](getting-started.md#before-the-npm-release-a-local-registry)). A package the app can't
+  resolve is now named in `tsazor check`'s TS2307 hint, and a missing `@tsazor/runtime` is reported instead of
+  leaving every type unchecked.
+- **`@inject` needs the class itself** (I2). `@import type { Store } from "./Store"` in an `_Imports.tsazor` erases
+  the name, and `@inject Store store` then has nothing to inject: TS1361 at the `@inject`, with the fix. Usually no
+  import is needed at all — `@inject` finds a class in `Store.ts` by name. (Before, this showed only as "Object is of
+  type 'unknown'", and a typo in an inherited `@import` was reported nowhere; both fixed.)
+- **A specifier resolves from the file it is written in** (I6), as in any TypeScript module: a page in `Pages/`
+  imports `../Store`, an `_Imports.tsazor` in `src/` writes `./Store` and Tsazor rebases it for the files below.
+  TS2307 names the folder and the specifier that finds the module.
+- **Bind to a store's property directly** (I4): `<Select @bind="this.Store.filterYear">` works and is
+  type-checked; no local copy needed.
+- **"Apply at once" needs no `Value`/`ValueChanged` rewrite** (I7). `Select`, `Switch`, `Checkbox` report on
+  change; `TextInput` takes `immediate`; code after the change is `@bind:after="applyFilters"`. `@bind:event` on a
+  component names a change callback the component declares — `@bind:event="oninput"` on a `TextInput` is TZS008 now
+  (it used to vanish among the input's extra attributes).
+- **A date is a `DateInput`** (I3), a number a `NumberInput`, as in Blazor (`InputDate`, `InputNumber`); `TextInput`
+  is for text.
+- **C# interpolation becomes a template literal** (I5): `Href="@($"/review/{id}")"` is
+  `` Href="@(`/review/${id}`)" `` (or Razor's mixed form `Href="/review/@id"`). TZS024 shows the literal itself now.
+- **Generated clients mark absent members optional** (I8): `content?: string | null` is `undefined` when the
+  server leaves it out, so check `content == null` — `=== null` misses `undefined`
+  ([csharp-to-typescript.md](csharp-to-typescript.md)).
+- **One mistake, one error** (I9): a misspelled member in a `@bind` was reported up to four times, at columns past
+  the attribute; now once, where it is written.
+
 ## Tests
 
 - **bUnit becomes `@tsazor/testing`.** `render(Component, { parameters })` mounts it, `settle()` waits until the
