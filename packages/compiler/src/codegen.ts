@@ -643,6 +643,9 @@ class Codegen {
     // H4: the cache slots of the stable fragments (`declare` emits no field).
     this.stableFragments.forEach((type, index) => this.line(`  declare private [${alias(`f${index}`)}]?: ${type};`));
     this.line("}");
+    // The class by its name too, as a package index exports it: `@import { Alert } from "./Alert.tsazor"` works in
+    // a build as it type-checks (only the default was emitted, and the import failed at run time).
+    this.line(`export { ${this.options.className} };`);
     this.line("");
     if (this.usesDeferred) this.line(`declare const ${alias("deferred")}: boolean;`);
     // H2: one array per reusable row site — its identity names the site (a

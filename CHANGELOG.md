@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A library laid out in folders builds** (`tsazor build-lib`; a port of Radzen Blazor that consumed only the
+  packages found it): `.ts` helpers in subfolders (`base/`, `utilities/`, `enums/`) land at their paths in `dist`
+  (they were never emitted), a specifier that names its file already (`./x.js`, NodeNext's form) stays (it became
+  `./x.js.js`), a folder import (`./enums`) points at its `index.js`, and a component in a subfolder is a build error
+  instead of missing from `dist`.
+- **A compiled component exports its class by name too** (`@tsazor/compiler`): `@import { Alert } from
+  "./Alert.tsazor"` type-checked but failed at run time, the module had only the default export.
+
 ## 1.0.0-next.2 (2026-10-17)
 
 ### The extended line (post-1.0, developed alongside — its API may still change)

@@ -143,10 +143,9 @@ export async function buildShadowModule(
     return {
       virtualPath: shadowPathFor(filePath),
       realPath: filePath,
-      // The component class ships as `export default class`; keep it importable
-      // by name too — apps import package components as named imports
-      // (`import { Button } from "@tsazor/fluent"` → rewrite B → shadow).
-      code: `${code.trimEnd()}\nexport { ${context.className} };\n`,
+      // The compiled component exports its class by default and by name (apps import package components as named
+      // imports: `import { Button } from "@tsazor/fluent"` → rewrite B → shadow).
+      code: `${code.trimEnd()}\n`,
       map: new TsazorGenMap(mappings),
       className: context.className,
       ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),

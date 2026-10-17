@@ -11,6 +11,7 @@ import { compactFieldDecorators, compile, DECORATOR_HELPER_PROBE, shareHelpers, 
 import { checkProject } from "@tsazor/lsp";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
@@ -90,12 +91,21 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   const written = new Set<string>();
   const emit = async (file: string, text: string): Promise<void> => {
     const target = path.join(outDir, file);
+    await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, text);
     written.add(target);
   };
   await mkdir(outDir, { recursive: true });
 
   const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
+  // A component in a subfolder was left out of `dist` without a word: the build says so instead.
+  const nested = await nestedComponents(srcDir);
+  if (nested.length > 0) {
+    const nestedErrors = nested.map((file) => ({ file, message: "  a component in a subfolder is not built: a library's components live at the top level of its src/ (subfolders hold the .ts helpers)" }));
+    for (const error of nestedErrors) log(`[${packageName}] ${error.file}
+${error.message}`);
+    return { components: [], errors: nestedErrors };
+  }
   const chain = await collectImports(srcDir, packageDir);
   const layerErrors = chain.layers.flatMap((layer) =>
     layer.diagnostics.filter((d) => d.severity === "error").map((d) => `  ${d.code} (${d.pos.line}:${d.pos.column}): ${layer.file}: ${d.message}`),
@@ -125,7 +135,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
       }
       // Tsazor's field decorators applied after the class (`decorateFields`), as an app's build does.
       const transpiled = transformSync(compactFieldDecorators(packageRelativeSources(compiled.code, packageDir), filePath), { ...COMPONENT_TRANSFORM, sourcefile: filePath });
-      await emit(`${className}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
+      await emit(`${className}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators"), srcDir));
       if (!internal.has(className)) exported.push(className);
     } catch (error) {
       errors.push({ file, message: `  ${error instanceof Error ? (error.stack ?? error.message) : String(error)}` });
@@ -140,11 +150,14 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
   // — compiled as the components are: registering field decorators (@Required(), …) compacted first, the rest
   // lowered by esbuild (supported.decorators: false does that; the plain ts transform passed decorators through raw,
   // which the browser rejects: a template's model module was invalid syntax in the dev server).
-  for (const name of (await readdir(srcDir)).filter((name) => name.endsWith(".ts") && !name.endsWith(".d.ts")).sort()) {
-    const source = await readFile(path.join(srcDir, name), "utf8");
+  // Subfolders included (`base/`, `utilities/`, `enums/`): each helper lands at its own path in `dist`.
+  for (const name of await helperSources(srcDir)) {
+    const sourceFile = path.join(srcDir, name);
+    const source = await readFile(sourceFile, "utf8");
     const stem = name.slice(0, -".ts".length);
-    const transpiled = transformSync(compactFieldDecorators(source, name), { ...COMPONENT_TRANSFORM, sourcefile: path.join(srcDir, name) });
-    await emit(`${stem}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
+    const toRoot = path.posix.relative(path.posix.dirname(name), ".") || ".";
+    const transpiled = transformSync(compactFieldDecorators(source, name), { ...COMPONENT_TRANSFORM, sourcefile: sourceFile });
+    await emit(`${stem}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, `${toRoot}/_decorators`), path.dirname(sourceFile)));
     const declaration = ts.transpileDeclaration(source, { fileName: name, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } });
     if ((declaration.diagnostics ?? []).length === 0) await emit(`${stem}.d.ts`, declaration.outputText);
   }
@@ -216,12 +229,49 @@ function referencedTypeExports(manifest: ReturnType<typeof buildPackageManifest>
 const COMPONENT_TRANSFORM = { loader: "ts", supported: { decorators: false }, tsconfigRaw: { compilerOptions: { target: "es2022" } } } as const;
 
 /** A built module's relative imports point at the built siblings: `./Tab.tsazor`, `./ids` and `./x.ts` → `./….js`. */
-function builtSpecifiers(code: string): string {
+/**
+ * The relative specifiers of a built module, as the files in `dist` are named: `.tsazor` and `.ts` become `.js`, a
+ * specifier that names its file already (`./x.js`, NodeNext's form) stays, a folder (`./enums`) is its `index.js`,
+ * and a bare name gets `.js`. `fromDir` is the source module's folder.
+ */
+function builtSpecifiers(code: string, fromDir: string): string {
   return code.replace(/(from\s*")(\.\.?\/[^"]*)(")/g, (_, from: string, specifier: string, quote: string) => {
     if (specifier.endsWith(".tsazor")) return `${from}${specifier.slice(0, -".tsazor".length)}.js${quote}`;
     if (specifier.endsWith(".ts")) return `${from}${specifier.slice(0, -".ts".length)}.js${quote}`;
+    if (/\.(m|c)?js$|\.json$|\.css$/.test(specifier)) return `${from}${specifier}${quote}`;
+    const target = path.resolve(fromDir, specifier);
+    if (!existsSync(`${target}.ts`) && !existsSync(`${target}.tsazor`) && existsSync(path.join(target, "index.ts"))) {
+      return `${from}${specifier}/index.js${quote}`;
+    }
     return `${from}${specifier}.js${quote}`;
   });
+}
+
+/** The `.ts` sources below `dir` (subfolders included, no declarations), as paths relative to it. */
+async function helperSources(dir: string, prefix = ""): Promise<string[]> {
+  const found: string[] = [];
+  for (const entry of (await readdir(dir, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.isDirectory()) {
+      if (entry.name !== "node_modules") found.push(...(await helperSources(path.join(dir, entry.name), `${prefix}${entry.name}/`)));
+    } else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) {
+      found.push(`${prefix}${entry.name}`);
+    }
+  }
+  return found;
+}
+
+/** The `.tsazor` components in subfolders of `dir`: a library's components live at its top level. */
+async function nestedComponents(dir: string, prefix = ""): Promise<string[]> {
+  const found: string[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === "node_modules") continue;
+    const sub = path.join(dir, entry.name);
+    for (const name of await readdir(sub)) {
+      if (name.endsWith(".tsazor") && name !== "_Imports.tsazor") found.push(`${prefix}${entry.name}/${name}`);
+    }
+    found.push(...(await nestedComponents(sub, `${prefix}${entry.name}/`)));
+  }
+  return found.sort();
 }
 
 /** The compiler's `@code (file:line)` comments name the source from the package: no build machine's path in `dist`. */

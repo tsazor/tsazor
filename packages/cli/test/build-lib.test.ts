@@ -94,6 +94,41 @@ describe("buildLibrary (D9)", () => {
     expect(existsSync(path.join(root, "dist", "Removed.js"))).toBe(false);
   });
 
+  it("builds a library laid out in folders: helpers at any depth, NodeNext `.js` specifiers, folder imports, named component imports", async () => {
+    // A port of Radzen found three gaps (F7–F9): `./x.js` became `./x.js.js`, helpers in subfolders were never
+    // emitted, and a component imported by name resolved in the type check but not in the build.
+    const root = await library({
+      "src/Greeting.tsazor": '@import { shout } from "./utilities/text.js"\n@import { Tone } from "./enums"\n@import { Part } from "./Part.tsazor"\n<p>@shout(this.name) @Tone.Loud</p><Part />\n@code {\n    @Parameter() name = "world";\n}\n',
+      "src/utilities/text.ts": 'import { exclaim } from "../helper";\n\n/** The text in capitals. */\nexport function shout(text: string): string {\n  return exclaim(text.toUpperCase());\n}\n',
+      "src/helper.ts": "/** The text with an exclamation mark. */\nexport function exclaim(text: string): string {\n  return `${text}!`;\n}\n",
+      "src/enums/index.ts": 'export { Tone } from "./tone.js";\n',
+      "src/enums/tone.ts": 'export enum Tone {\n  Loud = "loud",\n}\n',
+      "src/base/store.ts": 'import { State } from "@tsazor/runtime";\n\nexport class Store {\n  @State() accessor count = 0;\n}\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+    expect(result.errors).toEqual([]);
+
+    const greeting = await read(root, "Greeting.js");
+    expect(greeting).toContain('from "./utilities/text.js"');
+    expect(greeting).toContain('from "./enums/index.js"');
+    expect(greeting).not.toContain(".js.js");
+    expect(await read(root, "utilities/text.js")).toContain('from "../helper.js"');
+    expect(await read(root, "enums/index.js")).toContain('from "./tone.js"');
+    // A decorator esbuild lowers takes the shared helpers from the package's root, a folder up here.
+    expect(await read(root, "base/store.js")).toMatch(/from "\.\.\/_decorators\.js"/);
+    expect(existsSync(path.join(root, "dist", "utilities", "text.d.ts"))).toBe(true);
+    // The component exports its class by name as well: the named import resolves in the built module.
+    expect(await read(root, "Part.js")).toMatch(/export \{[^}]*\bPart\b[^}]*\}/);
+  });
+
+  it("refuses a component in a subfolder instead of leaving it out of dist", async () => {
+    const root = await library({ "src/forms/Field.tsazor": "<input />\n" });
+    const lines: string[] = [];
+    const result = await buildLibrary({ packageDir: root, log: (line) => lines.push(line) });
+    expect(result.errors.map((error) => error.file)).toEqual(["forms/Field.tsazor"]);
+    expect(lines.join("\n")).toContain("a component in a subfolder is not built");
+  });
+
   it("compiles a .ts helper's decorators as the components' are — none left raw for the browser (X9)", async () => {
     // A template's model module: its field rule was passed through as stage-3 decorator syntax, which no browser parses.
     const root = await library({
