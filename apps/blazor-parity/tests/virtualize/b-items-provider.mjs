@@ -62,10 +62,18 @@ async function canExpandDataSetAndRetainScrollPosition(t, containerId) {
   const sample = setInterval(() => {
     page.evaluate((containerId) => {
       const element = document.getElementById(containerId) ?? document.querySelector(containerId);
-      if (!element) return;
+      if (!element) return null;
       const styled = [...element.querySelectorAll("[aria-hidden]")].filter((hidden) => hidden instanceof HTMLElement && hidden.hasAttribute("style"));
-      trajectory.push(`${Date.now() % 1000000} top=${Math.round(element.scrollTop)} h=${element.scrollHeight} before=${styled[0]?.style.height} after=${styled[1]?.style.height} rows=${element.querySelectorAll(".person").length}`);
-    }, containerId).catch(() => undefined);
+      return { top: Math.round(element.scrollTop), h: element.scrollHeight, ch: element.clientHeight, before: styled[0]?.style.height, after: styled[1]?.style.height, beforeOff: Math.round(styled[0]?.offsetTop ?? -1), afterOff: Math.round(styled[1]?.offsetTop ?? -1), rows: element.querySelectorAll(".person").length };
+    }, containerId)
+      .then((m) => {
+        if (m === null) {
+          trajectory.push(`${Date.now() % 1000000} no element`);
+          return;
+        }
+        trajectory.push(`${Date.now() % 1000000} top=${m.top}/h=${m.h} ch=${m.ch} before=${m.before}@${m.beforeOff} after=${m.after}@${m.afterOff} rows=${m.rows}`);
+      })
+      .catch((error) => trajectory.push(`${Date.now() % 1000000} eval failed: ${error.message?.split("\n")[0]}`));
   }, 250);
   const diagnostic = async () => {
     const scrollTop = await getScrollTop(container);
