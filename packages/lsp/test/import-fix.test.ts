@@ -67,3 +67,23 @@ describe("the @import a type in @code lacks (F29)", () => {
     expect(tsImportFixes(service, entry, { start: { line: 0, character: 0 }, end: { line: 1, character: 0 } })).toEqual([]);
   });
 });
+
+describe("the @import an enum in markup lacks (G2)", () => {
+  // A port of Radzen: `Shade="Shade.Dark"` without the enum's import read `Shade` as a member, and the error named
+  // the component's type ("Property 'Shade' does not exist on type 'Page'") instead of the import.
+  it("names the exact @import in TS2339's message and offers it as a quick fix; a lowercase file keeps its case", async () => {
+    await mkdir(path.join(root, "Tones"), { recursive: true });
+    await writeFile(path.join(root, "Tones", "shade.ts"), 'export enum Shade {\n  Light = "light",\n  Dark = "dark",\n}\n');
+    const source = ["@using ./Tones", "", "<p>@Shade.Dark</p>", ""].join("\n");
+    const file = path.join(root, "Tinted.tsazor");
+    await writeFile(file, source);
+    const entry = (await service.ensureTsazor(file, source))!;
+    const missing = tsDiagnostics(service, entry).filter((d) => d.code === 2339);
+    expect(missing.map((d) => d.message)).toEqual([
+      "Property 'Shade' does not exist on type 'Tinted'. Hint: `Shade` is no member of the component — an import is missing, as in any TypeScript: " +
+        '`@import { Shade } from "./Tones/shade"` (quick fix).',
+    ]);
+    const fixes = tsImportFixes(service, entry, { start: { line: 2, character: 0 }, end: { line: 2, character: 20 } });
+    expect(fixes.map((fix) => fix.title)).toEqual(['Add @import { Shade } from "./Tones/shade"']);
+  });
+});

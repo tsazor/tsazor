@@ -12,6 +12,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   instead of missing from `dist`.
 - **A compiled component exports its class by name too** (`@tsazor/compiler`): `@import { Alert } from
   "./Alert.tsazor"` type-checked but failed at run time, the module had only the default export.
+- **Blazor APIs a component library reaches for** (`@tsazor/runtime`, the same port):
+  - `EditContext.fieldCssClass(field)` and `setFieldCssClassProvider(provider)` with `FieldCssClassProvider`
+    (Blazor's FieldCssClass, SetFieldCssClassProvider): InputBase's `fieldClass` reads the provider, so a form can
+    switch every input to Bootstrap's `is-valid`/`is-invalid`.
+  - The `ServiceProvider` resolves itself, as Blazor's `IServiceProvider`: `@inject ServiceProvider services`, then
+    `services.tryGet(X)` for a service that may be unregistered (C#'s `GetService<T>() ?? fallback`).
+  - `ParameterView.fromDictionary(object)`, toDictionary's counterpart (Blazor's FromDictionary).
+  - `CultureInfo.numberFormatInfo` (.NET's NumberFormat): the culture's decimal and group separators, percent,
+    signs, NaN and infinity symbols.
+- **A missing import in markup is named** (`tsazor check`, the editor): `Shade="Shade.Dark"` without importing the
+  enum read `Shade` as a member, "Property 'Shade' does not exist on type 'Page'"; the message now names the
+  `@import` and offers it as a quick fix. A type a file resolves by name keeps the file's own case (`./shade`, not the
+  `./Shade` Windows matched).
 
 ## 1.0.0-next.2 (2026-10-17)
 

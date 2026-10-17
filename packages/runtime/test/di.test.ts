@@ -139,3 +139,14 @@ describe("dispose", () => {
     expect(journal).toEqual(["Logger", "Logger disposed"]);
   });
 });
+describe("the provider as a service (Blazor's IServiceProvider)", () => {
+  it("resolves itself — the requesting scope — so a component can ask tryGet for an optional service", () => {
+    const root = new ServiceCollection().registerType(Clock).build();
+    const scope = root.createScope();
+    expect(root.get(ServiceProvider)).toBe(root);
+    expect(scope.get(ServiceProvider)).toBe(scope);
+    // C#'s `GetService<T>() ?? fallback`: tryGet answers undefined for what nobody registered.
+    expect(scope.get(ServiceProvider).tryGet(Logger)).toBeUndefined();
+    expect(scope.get(ServiceProvider).tryGet(Clock)).toBeInstanceOf(Clock);
+  });
+});

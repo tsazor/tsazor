@@ -139,6 +139,8 @@ export interface FakeStore<T> {
     subscribe(listener: (value: T) => void): () => void;
 }
 
+// FieldCssClassProvider: re-exported from @tsazor/runtime
+
 // FieldDecorator: re-exported from @tsazor/runtime
 
 // FieldRuleDecorator: re-exported from @tsazor/runtime
@@ -220,6 +222,8 @@ export interface FakeStore<T> {
 // NavLink: re-exported from @tsazor/runtime
 
 // NavLinkMatch: re-exported from @tsazor/runtime
+
+// NumberFormatInfo: re-exported from @tsazor/runtime
 
 // ObserveListener: re-exported from @tsazor/runtime
 

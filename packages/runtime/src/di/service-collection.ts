@@ -111,6 +111,9 @@ export class ServiceProvider {
     if (this.disposed) {
       throw new Error(`Cannot access a disposed object. Service provider: ${describeToken(token)}`);
     }
+    // Blazor's IServiceProvider: the provider resolves itself (the requesting scope), so a component that resolves
+    // a service only when one is registered injects it and asks `tryGet` (C#'s `GetService<T>() ?? fallback`).
+    if (token === (ServiceProvider as unknown as Token<unknown>)) return this;
     const tokenAny = token as unknown as Token<never>;
     let registration = this.registrations.get(tokenAny);
     if (!registration) {

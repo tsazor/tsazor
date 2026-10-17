@@ -43,7 +43,7 @@ export { inject } from "./di/service-provider.js";
 
 // Localization (E8): CultureInfo over Intl, the app-wide CultureService, the
 // IStringLocalizer counterpart (docs/design-localization.md).
-export { CultureInfo } from "./localization/culture-info.js";
+export { CultureInfo, type NumberFormatInfo } from "./localization/culture-info.js";
 export { CultureService, type CultureChangedEventArgs } from "./localization/culture-service.js";
 export { StringLocalizer, formatMessage, type StringTable, type StringTableSource, type StringLocalizerOptions, type PlaceholdersOf } from "./localization/string-localizer.js";
 
@@ -95,6 +95,7 @@ export { TsazorHttp, TsazorHttpError, type TsazorHttpOptions, type RequestInterc
 // Forms
 export {
   EditContext,
+  FieldCssClassProvider,
   ValidationMessageStore,
   type DataAnnotationsValidationOptions,
   type EventSubscription,

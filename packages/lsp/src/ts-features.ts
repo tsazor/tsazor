@@ -543,10 +543,19 @@ function withUninferredHint(code: number, message: string, at: { line: number; c
 /* F29: the @import a name in @code lacks                              */
 /* ------------------------------------------------------------------ */
 
-/** The suggestion for a TS2304 message, when the name has one. */
-function importSuggestionFor(entry: ShadowEntry, message: string): ImportSuggestion | undefined {
-  const name = unresolvedName(message);
+/**
+ * The suggestion for a TS2304 message — or a TS2339 on the component itself (G2: markup read an import left out as a
+ * member, `Shade="Shade.Dark"` ⇒ "Property 'Shade' does not exist on type 'Page'") — when the name has one.
+ */
+function importSuggestionFor(entry: ShadowEntry, message: string, code = 2304): ImportSuggestion | undefined {
+  const name = code === 2339 ? missingMemberOfComponent(message, entry.shadow.className) : unresolvedName(message);
   return name === undefined ? undefined : entry.shadow.importSuggestions?.find((suggestion) => suggestion.name === name);
+}
+
+/** The property TS2339 reports as missing on the component's own class, if the message is one. */
+function missingMemberOfComponent(message: string, className: string): string | undefined {
+  const match = /^Property '([^']+)' does not exist on type '([^'<]+)/.exec(message);
+  return match !== null && match[2] === className ? match[1] : undefined;
 }
 
 /* ------------------------------------------------------------------ */
@@ -634,8 +643,9 @@ function withModuleHint(code: number, message: string, file: string): string {
  * exact `@import`. In TypeScript code a type comes from an import; a Blazor `@ref` field meets this.
  */
 function withImportHint(code: number, message: string, entry: ShadowEntry): string {
-  const suggestion = code === 2304 ? importSuggestionFor(entry, message) : undefined;
+  const suggestion = code === 2304 || code === 2339 ? importSuggestionFor(entry, message, code) : undefined;
   if (suggestion === undefined) return message;
+  if (code === 2339) return `${message} Hint: \`${suggestion.name}\` is no member of the component — an import is missing, as in any TypeScript: \`${suggestion.directive}\` (quick fix).`;
   return `${message} Hint: markup finds \`${suggestion.name}\` by name, but in \`@code\` a type comes from an import, as in any TypeScript: \`${suggestion.directive}\` (quick fix).`;
 }
 
@@ -648,8 +658,8 @@ export function tsImportFixes(
   const fixes: TsQuickFix[] = [];
   const seen = new Set<string>();
   for (const diagnostic of service.semanticDiagnosticsOnShadow(entry)) {
-    if (diagnostic.code !== 2304 || diagnostic.start === undefined) continue;
-    const suggestion = importSuggestionFor(entry, ts.flattenDiagnosticMessageText(diagnostic.messageText, " "));
+    if ((diagnostic.code !== 2304 && diagnostic.code !== 2339) || diagnostic.start === undefined) continue;
+    const suggestion = importSuggestionFor(entry, ts.flattenDiagnosticMessageText(diagnostic.messageText, " "), diagnostic.code);
     if (suggestion === undefined) continue;
     const gen = shadowOffsetToPos(entry.shadow.code, diagnostic.start);
     const start = entry.shadow.map.genToSrc(gen.line, gen.column);
@@ -658,7 +668,7 @@ export function tsImportFixes(
     const at = { line: suggestion.insertLine, character: 0 };
     fixes.push({
       title: `Add ${suggestion.directive}`,
-      code: 2304,
+      code: diagnostic.code,
       line: start.line,
       character: start.character,
       edits: [{ range: { start: at, end: at }, newText: `${suggestion.directive}\n` }],

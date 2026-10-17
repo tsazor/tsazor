@@ -376,6 +376,8 @@ class Codegen {
   /** 2.4: plain-text values of non-string parameters (typed-shadow builds only). */
   private readonly expressionValues: ExpressionValue[] = [];
   private readonly importSuggestions: ImportSuggestion[] = [];
+  /** Names markup reads as members though no member is declared (an inherited one, or an import left out). */
+  private readonly assumedMembers = new Set<string>();
   /** F15: the shadow calls a deferred function in place (deferred()), so it declares the flag. */
   private usesDeferred = false;
   /** The subset of importedNames bound to runtime values (usable as component tags). */
@@ -687,6 +689,7 @@ class Codegen {
       this.writer.insertLines(runtimeImportLine, [...lines, ""]);
     }
 
+    if (this.options.typedShadow !== undefined) this.suggestMarkupImports(document.directives);
     const code = this.writer.toString();
     return {
       code,
@@ -1178,6 +1181,20 @@ class Codegen {
     }
   }
 
+  /**
+   * G2 (typed shadow only): a name markup reads as a member that the file's resolution finds as an export — an
+   * enum in `Shade="Shade.Dark"`, a type beside the component — is an import left out, not a misspelled member:
+   * TS2339 ("Property 'Shade' does not exist on type 'Page'") gets the `@import` that binds it.
+   */
+  private suggestMarkupImports(directives: readonly DirectiveNode[]): void {
+    const insertLine = directives.reduce((line, directive) => Math.max(line, directive.endPos.line), 0);
+    for (const name of this.assumedMembers) {
+      if (!/^[A-Z]/.test(name) || this.importSuggestions.some((suggestion) => suggestion.name === name)) continue;
+      const resolved = this.options.resolveType?.(name, this.metadata.usings) ?? null;
+      if (resolved !== null) this.importSuggestions.push({ name, directive: importDirective(name, resolved, "value"), insertLine });
+    }
+  }
+
   private seq(): number {
     return this.seqStack[this.seqStack.length - 1]!.next++;
   }
@@ -1262,6 +1279,7 @@ class Codegen {
       // A declared member wins over an import or a global of the same name.
       if (this.members.instance.has(name)) return receiver();
       if (this.importedNames.has(name) || LIB_GLOBALS.has(name)) return null;
+      this.assumedMembers.add(name);
       return receiver();
     },
   };

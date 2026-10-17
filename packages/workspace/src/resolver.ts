@@ -1,5 +1,5 @@
 import type { CompileOptions, ComponentMetadata, ImportInfo, InheritedAuthorization, ResolvedComponent, ResolvedType } from "@tsazor/compiler";
-import { existsSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import path from "node:path";
 import { RUNTIME_COMPONENTS, RUNTIME_PACKAGE, RUNTIME_TYPES } from "./builtins.js";
 import { exportsOfFile, importKindOf, packageExports } from "./exports.js";
@@ -88,10 +88,21 @@ export function createFileContext(filePath: string, chain: ImportsChain): FileCo
     }
     return names;
   };
+  const listings = new Map<string, readonly string[]>();
   const inDir = (dir: string, name: string, extensions: readonly string[]): string | undefined => {
+    let names = listings.get(dir);
+    if (names === undefined) {
+      try {
+        names = readdirSync(dir);
+      } catch {
+        names = [];
+      }
+      listings.set(dir, names);
+    }
+    // The name's own case, as a case-sensitive file system (Linux, CI) sees it: on Windows `Shade` found shade.ts,
+    // and the import it suggested (`./Shade`) broke elsewhere.
     for (const extension of extensions) {
-      const candidate = path.join(dir, `${name}${extension}`);
-      if (existsSync(candidate)) return candidate;
+      if (names.includes(`${name}${extension}`)) return path.join(dir, `${name}${extension}`);
     }
     return undefined;
   };

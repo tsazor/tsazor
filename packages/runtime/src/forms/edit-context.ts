@@ -4,6 +4,21 @@ import { resolveValidationMessage, rulesForField, validationRulesOf, type Valida
 export const formElements = new WeakMap<EditContext, HTMLFormElement>();
 
 /**
+ * Blazor's FieldCssClassProvider: the validation CSS class of a field. Subclass it and pass an instance to
+ * `editContext.setFieldCssClassProvider` — for Bootstrap, `is-valid`/`is-invalid` once the field was modified.
+ */
+export class FieldCssClassProvider {
+  /** The default: `"modified valid"`, `"modified invalid"`, `"valid"` or `"invalid"` (Blazor's four states). */
+  getFieldCssClass(editContext: EditContext, field: string): string {
+    const isValid = editContext.getValidationMessages(field).length === 0;
+    if (editContext.isModified(field)) return isValid ? "modified valid" : "modified invalid";
+    return isValid ? "valid" : "invalid";
+  }
+}
+
+const defaultFieldCssClassProvider = new FieldCssClassProvider();
+
+/**
  * EditContext, port of Blazor's EditContext.cs (src/Components/Forms/src):
  * change tracking and validation state for a model object, used by EditForm
  * and the Input* components.
@@ -98,6 +113,21 @@ export class EditContext {
   /** Blazor's GetFieldState(field).IsModified. */
   isModified(field: string): boolean {
     return this.fieldStates.get(field)?.isModified ?? false;
+  }
+
+  #fieldCssClassProvider: FieldCssClassProvider | undefined;
+
+  /**
+   * Blazor's FieldCssClass: the field's validation CSS class from the context's provider — by default
+   * `"modified valid"`, `"modified invalid"`, `"valid"` or `"invalid"`. InputBase's `fieldClass` reads it.
+   */
+  fieldCssClass(field: string): string {
+    return (this.#fieldCssClassProvider ?? defaultFieldCssClassProvider).getFieldCssClass(this, field);
+  }
+
+  /** Blazor's SetFieldCssClassProvider: the classes every input of this form shows (Bootstrap's `is-valid`/`is-invalid`, say). */
+  setFieldCssClassProvider(provider: FieldCssClassProvider): void {
+    this.#fieldCssClassProvider = provider;
   }
 
   /**

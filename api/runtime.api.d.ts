@@ -253,6 +253,7 @@ export declare class CultureInfo {
     readonly name: string;
     constructor(locale: string);
     get displayName(): string;
+    get numberFormatInfo(): NumberFormatInfo;
     numberFormat(options?: Intl.NumberFormatOptions): Intl.NumberFormat;
     dateFormat(options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat;
     formatNumber(value: number, options?: Intl.NumberFormatOptions): string;
@@ -325,6 +326,8 @@ export declare class EditContext {
     setValidator(field: string, validator: ModelValidator): void;
     markAsUnmodified(field: string): void;
     isModified(field: string): boolean;
+    fieldCssClass(field: string): string;
+    setFieldCssClassProvider(provider: FieldCssClassProvider): void;
     validate(): boolean;
     isValid(field?: string): boolean;
     getValidationMessages(field?: string): string[];
@@ -411,6 +414,11 @@ export declare enum EventHandlerFlags {
 // EventSubscription
 export interface EventSubscription<Handler extends (...args: never[]) => void> {
     subscribe(handler: Handler): () => void;
+}
+
+// FieldCssClassProvider
+export declare class FieldCssClassProvider {
+    getFieldCssClass(editContext: EditContext, field: string): string;
 }
 
 // FieldDecorator
@@ -771,6 +779,17 @@ export declare enum NavLinkMatch {
     All = 1
 }
 
+// NumberFormatInfo
+export interface NumberFormatInfo {
+    readonly numberDecimalSeparator: string;
+    readonly numberGroupSeparator: string;
+    readonly percentSymbol: string;
+    readonly negativeSign: string;
+    readonly positiveSign: string;
+    readonly nanSymbol: string;
+    readonly positiveInfinitySymbol: string;
+}
+
 // ObserveListener
 export interface ObserveListener<T> {
     (value?: T): void;
@@ -823,6 +842,7 @@ export declare class ParameterView {
         string,
         unknown
     ]>): ParameterView;
+    static fromDictionary(parameters: Readonly<Record<string, unknown>>): ParameterView;
     static empty(): ParameterView;
     getValue<T = unknown>(name: string): T | undefined;
     has(name: string): boolean;

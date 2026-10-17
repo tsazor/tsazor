@@ -18,6 +18,14 @@ export class ParameterView {
     return new ParameterView(new Map(entries));
   }
 
+  /**
+   * Blazor's ParameterView.FromDictionary: a view of the object's own properties — toDictionary's counterpart. A
+   * component that passes on a filtered view: `ParameterView.fromDictionary(rest)` after taking a key out.
+   */
+  static fromDictionary(parameters: Readonly<Record<string, unknown>>): ParameterView {
+    return new ParameterView(new Map(Object.entries(parameters)));
+  }
+
   /** Blazor's ParameterView.Empty: a view without parameters (a new instance per call). */
   static empty(): ParameterView {
     return new ParameterView(new Map());
