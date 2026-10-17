@@ -18,8 +18,7 @@ Type `3.14159` and leave the field: the box shows `3.14`, `price` holds the pars
 > with the invariant culture — culture-aware number binds exist as a Tsazor extension
 > (`@bind:culture`, together with localization in Part 3). Number formats `F<n>`, `N<n>`
 > and digit masks (`0.00`, `#,##0.0`), and the date tokens `yyyy MM dd HH mm ss` (plus
-> `yy M d H m s`). It applies to `type="number"`, `type="range"` and `type="date"` inputs.
-> The common Blazor idiom — a *text* input bound to a `DateTime` with
-> `@bind:format="dd.MM.yyyy"` — isn't supported: the compiler can't see that the field is a
-> `Date`, treats the bind as a string bind and warns (TZS008) that the format has no effect.
-> Use `type="date"`, or `@bind:get`/`@bind:set` with your own formatting.
+> `yy M d H m s`). It applies to `type="number"`, `type="range"` and `type="date"` inputs,
+> and to a text input by the value it is bound to — so the common Blazor idiom works as it
+> does there: a *text* input bound to a `Date` with `@bind:format="dd.MM.yyyy"` shows
+> `02.10.2026` and reads the typed text back as a date.

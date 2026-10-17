@@ -660,9 +660,22 @@ describe("numeric-inputs", () => {
     expect(m.instance.a).toBe(1);
   });
 
-  it("a number field bound to a text input is a type error", () => {
-    expect(typeCodes(app(`<input @bind="a" />`, "a = 1;"))).toEqual(["TS2322"]);
-    expect(typeCodes(app(`<input type="number" @bind="a" /><input type="range" @bind="a" />`, "a = 1;"))).toEqual([]);
+  it("a number field on a plain text input stays a number: the text is read by the value's type (K.7/K.8)", async () => {
+    const files = app(`<input @bind="a" /><p>@(a + 1)</p>`, "a = 1;");
+    expect(typeCodes(files)).toEqual([]);
+    const m = await mount(files);
+    setValue(m, "input", "5");
+    await m.settle();
+    expect(m.instance.a).toBe(5);
+    expect(m.html()).toContain("<p>6</p>");
+    setValue(m, "input", "abc");
+    await m.settle();
+    expect(m.instance.a).toBe(5);
+    // A field that starts as null has no value to go by: it gets the text.
+    const empty = await mount(app(`<input @bind="a" />`, "a: number | null = null;"));
+    setValue(empty, "input", "5");
+    await empty.settle();
+    expect(empty.instance.a).toBe("5");
   });
 });
 
@@ -695,8 +708,16 @@ describe("select-bindings", () => {
     expect(m.instance.selected).toBe("school");
   });
 
-  it("binding a number field to a select is a type error", () => {
-    expect(typeCodes(app(`<select @bind="n"><option value="1">1</option></select>`, "n = 1;"))).toEqual(["TS2322"]);
+  it("a number field bound to a select gets the chosen option as a number (K.7/K.8)", async () => {
+    const files = app(`<select @bind="n"><option value="1">1</option><option value="2">2</option></select><p>@(n + 1)</p>`, "n = 1;");
+    expect(typeCodes(files)).toEqual([]);
+    const m = await mount(files);
+    const select = m.container.querySelector("select")!;
+    select.value = "2";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await m.settle();
+    expect(m.instance.n).toBe(2);
+    expect(m.html()).toContain("<p>3</p>");
   });
 });
 
@@ -748,8 +769,18 @@ describe("bind-format", () => {
     expect(m.html()).toContain("<p>2025-12-24 0</p>");
   });
 
-  it("a format on a text input warns TZS008 (no effect); @bind:culture compiles clean (E8)", () => {
-    expect(codes(app(`<input @bind="day" @bind:format="dd.MM.yyyy" />`, "day = new Date();"))).toEqual(["warning:TZS008"]);
+  it("a text input bound to a Date with a format shows and reads that format — Blazor's idiom (K.7)", async () => {
+    const files = app(`<input @bind="day" @bind:format="dd.MM.yyyy" /><p>@day.getFullYear()-@(day.getMonth() + 1)-@day.getDate()</p>`, "day = new Date(2026, 9, 2);");
+    expect(codes(files)).toEqual([]);
+    const m = await mount(files);
+    const input = m.container.querySelector("input")!;
+    expect(input.value).toBe("02.10.2026");
+    setValue(m, "input", "24.12.2025");
+    await m.settle();
+    expect(m.html()).toContain("<p>2025-12-24</p>");
+  });
+
+  it("@bind:culture compiles clean on a number input (E8); on a date input it warns TZS008", () => {
     // E8: a culture-aware number bind exists (Part 3 covers it) — it compiles
     // without diagnostics; a culture on non-number binds is the TZS008 warning.
     expect(codes(app(`<input type="number" @bind="n" @bind:culture="de" />`, "de = new CultureInfo('de-DE'); n = 1;"))).toEqual([]);

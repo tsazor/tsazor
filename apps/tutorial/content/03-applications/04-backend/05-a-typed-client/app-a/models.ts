@@ -12,6 +12,7 @@ export class Order {
     quantity = 0;
     @Required()
     state!: "open" | "picked-up";
+    static fromJson(data: unknown): Order { return data as Order; }
 }
 
 export class NewOrder {
@@ -23,6 +24,7 @@ export class NewOrder {
     @Range(1, 10)
     quantity = 0;
     pickup?: boolean;
+    static fromJson(data: unknown): NewOrder { return data as NewOrder; }
 }
 
 export class ProblemDetails {
@@ -30,4 +32,5 @@ export class ProblemDetails {
     title?: string | null;
     status?: number | null;
     detail?: string | null;
+    static fromJson(data: unknown): ProblemDetails { return data as ProblemDetails; }
 }

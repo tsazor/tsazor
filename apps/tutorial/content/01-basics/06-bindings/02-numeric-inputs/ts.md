@@ -18,7 +18,8 @@ Bind the four inputs:
 value with `Number()` before assigning it, and keeps the old value when the text isn't a
 number at all.
 
-The conversion is chosen by the input's `type`, because that's what the compiler can see.
-Bind a number field to a plain text input and `@bind` would assign a string — a type error
-that `tsazor check` reports (`Type 'string' is not assignable to type 'number'`). The
-check has your back here: the field says `number`, and every assignment has to agree.
+A plain text input would work too: there, `@bind` reads the text the way the field's value
+is, so a field that holds a number gets a number. Tsazor goes by the value, not by the
+field's declared type, because TypeScript's types are gone when the page runs — the value
+is still there. So give a number field a number to start with (`a = 0`): a field that starts
+as `null` has nothing to go by and gets the text as it is.

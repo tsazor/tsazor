@@ -122,5 +122,10 @@ Decided by the owner the same day, as proposed, and done:
   records edited in place, the changes as per-record patches to save), plus TSV text in and out for the clipboard.
 - **The extended line in the CHANGELOG (D-X12):** a section of its own, marked post-1.0.
 
-Still open: X8 as above; the tutorial's four failing tests (K.7/K.8 and the typed client after E12's mapping) stop
-`ci:local` at `pnpm -r test` before `api:check`, the smoke and the rehearsal.
+The tutorial's four failing tests (they stopped `ci:local` at `pnpm -r test`, before `api:check`, the smoke and
+the rehearsal) were stale claims: since K.7/K.8 `@bind` on a text input or a select reads by the bound value's type
+(a number stays a number, a text input with `dd.MM.yyyy` binds a `Date`), and since E12 the generator gives every
+model a `fromJson`. The three bindings lessons say so now, with runtime claims behind them; the typed client's
+`models.ts` is regenerated.
+
+Still open: X8 as above.
