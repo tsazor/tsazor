@@ -347,7 +347,11 @@ export async function scrollToOffsetWithStabilization(container, targetScrollTop
 
 function spacerMetrics(container) {
   return container.evaluate((c) => {
-    const spacers = c.querySelectorAll("[aria-hidden]");
+    // Virtualize's spacers are the styled aria-hidden elements (spacerBefore/After carry the height in a style).
+    // A bare [aria-hidden] would now also catch the grid header's decorative svgs and the sort indicator,
+    // whose offsetHeight is undefined/wrong (the first QuickGrid jump to start read one of them, not a spacer).
+    const isSpacerStyle = (hidden) => hidden instanceof HTMLElement && hidden.hasAttribute("style");
+    const spacers = [...c.querySelectorAll("[aria-hidden]")].filter(isSpacerStyle);
     return {
       spacerAfterHeight: spacers.length >= 2 ? spacers[spacers.length - 1].offsetHeight : 999,
       spacerBeforeHeight: spacers.length >= 1 ? spacers[0].offsetHeight : 999,
