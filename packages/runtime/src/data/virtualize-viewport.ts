@@ -494,7 +494,9 @@ export function createVirtualizeViewport(
   const keydownTarget: EventTarget = scrollContainer ?? document;
   function handleJumpKeys(e: Event): void {
     const ke = e as KeyboardEvent;
-    if (isEditable(ke.target)) return;
+    // Tsazor (A17): a key a widget already handled (a tab list's or a listbox's Home, through roving focus) is the
+    // widget's, not a jump: the listener sits on the container, or on the document with window scrolling.
+    if (ke.defaultPrevented || isEditable(ke.target)) return;
     if (ke.key === "End") {
       // Tsazor (A12): the jump is the convergence's, not the UA's: preventDefault, because the key's own
       // smooth scroll would be counted as a user scroll (A16) and end the convergence the key just started —

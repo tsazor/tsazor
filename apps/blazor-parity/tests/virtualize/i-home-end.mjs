@@ -316,6 +316,27 @@ export const tests = [
     },
   },
   {
+    // Tsazor deviation A17: Home in a widget that handles it itself (a tab list, a listbox, a rating — roving focus
+    // calls preventDefault) is the widget's key, not the list's. The jump keys listen on the scroll container (on
+    // the document with window scrolling), so before, Home in a row's widget also sent the list to the top.
+    name: "Tsazor_HomeHandledByAWidgetInARow_LeavesTheListWhereItIs",
+    async run(t) {
+      const { page } = t;
+      const container = await mountAnchorModeComponent(t, "0");
+      await waitTrue(async () => (await count(container, ".item[data-index='0']")) > 0);
+      await scrollMidListAndWaitForRender(container);
+      const before = await metric(container, "scrollTop");
+      await page.evaluate(() => {
+        const row = [...document.querySelectorAll("#scroll-container .item")].at(-1);
+        row.addEventListener("keydown", (e) => e.preventDefault(), { once: true });
+        row.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true, cancelable: true }));
+      });
+      await page.waitForTimeout(500);
+      const after = await metric(container, "scrollTop");
+      assert(Math.abs(after - before) < 1, `Home handled by a widget in a row moved the list (scrollTop ${before} → ${after}).`);
+    },
+  },
+  {
     // Tsazor deviation A16: a scroll away from the edge during a convergence toward it is the reader's (or the
     // app's), so it ends the convergence. Blazor ignores every scroll while converging, and the next pin pulled the
     // list back to the bottom; a live feed that converges after each append did that to a reader in Firefox and
