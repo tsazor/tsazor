@@ -496,8 +496,10 @@ export function createVirtualizeViewport(
     const ke = e as KeyboardEvent;
     if (isEditable(ke.target)) return;
     if (ke.key === "End") {
-      // Tsazor (A12): a jump reverses a convergence still running toward the other edge. Blazor keeps both
-      // running, and the bottom one wins: Home pressed soon after End was pulled back to the bottom.
+      // Tsazor (A12): the jump is the convergence's, not the UA's: preventDefault, because the key's own
+      // smooth scroll would be counted as a user scroll (A16) and end the convergence the key just started —
+      // an End pressed over a Home's still-running animation included. The convergence does the jumping.
+      ke.preventDefault();
       if (convergence.top) stopConvergenceObserving();
       scrollActivity.source = ScrollSource.UserScroll;
       reobserveSpacers();
@@ -508,8 +510,14 @@ export function createVirtualizeViewport(
         bottomTracking.following = true;
         bottomTracking.reached = true;
       }
-      if (!convergence.bottom && spacerAfter.offsetHeight > 0) startConvergenceObserving("bottom");
+      startConvergenceObserving("bottom");
+      if (spacerAfter.offsetHeight > 0) {
+        scrollActivity.ignoreNextScroll();
+        setScrollTop(scrollElement.scrollHeight);
+      }
     } else if (ke.key === "Home") {
+      // Same as the End branch: the key's smooth UA scroll is not asked for.
+      ke.preventDefault();
       if (convergence.bottom) stopConvergenceObserving();
       scrollActivity.source = ScrollSource.UserScroll;
       reobserveSpacers();
@@ -517,7 +525,10 @@ export function createVirtualizeViewport(
       pendingJumpToStart = true;
       pendingJumpToEnd = false;
       clearBottomFollow();
-      if (!convergence.top && spacerBefore.offsetHeight > 0) startConvergenceObserving("top");
+      // The jump moves on its own scroll: the spacers' IO reports follow from the scroll event.
+      startConvergenceObserving("top");
+      scrollActivity.ignoreNextScroll();
+      setScrollTop(0);
     } else if (userScrollKeys.has(ke.key)) {
       handleUserScrollInput();
     }
