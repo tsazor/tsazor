@@ -33,6 +33,8 @@ export default defineConfig({
       "packages/markdown",
       "packages/charts",
       "packages/worker",
+      "packages/primitives",
+      "packages/spreadsheet",
     ],
   },
 });

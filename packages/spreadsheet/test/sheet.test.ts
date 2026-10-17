@@ -1,6 +1,6 @@
 /**
- * The sheet's model: the A1 round-trips, the range's selection, the set's
- * steps (undo/redo), copy/paste (CSV-text shaped).
+ * The sheet's model: the A1 round-trips, the range's selection, the steps
+ * (undo/redo; a paste is one), copy/paste of a range within the sheet.
  */
 import { describe, expect, it, vi } from "vitest";
 import { SheetModel, parseAddress, formatAddress, columnNumber, formatColumn, rangeHolds } from "../src/index";
@@ -87,5 +87,49 @@ describe("the sheet", () => {
     expect(sheet.valueOf("A1")).toBe("old");
     await sheet.undoAsync();
     expect(sheet.valueOf("A1")).toBe(1);
+  });
+
+  it("a paste is one step and one render: one undo takes the whole range back, one redo puts it again", async () => {
+    const onChange = vi.fn();
+    const sheet = new SheetModel(onChange);
+    await sheet.setAsync("A1", 1);
+    await sheet.setAsync("B1", 2);
+    await sheet.setAsync("A2", 3);
+    await sheet.setAsync("B2", 4);
+    await sheet.setAsync("E2", "kept");
+    sheet.select("A1", "B2");
+    sheet.copy();
+    onChange.mockClear();
+    await sheet.pasteAsync("D1");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const pasted = () => ["D1", "E1", "D2", "E2"].map((address) => sheet.valueOf(address));
+    expect(pasted()).toEqual([1, 2, 3, 4]);
+    await sheet.undoAsync();
+    expect(pasted()).toEqual([undefined, undefined, undefined, "kept"]);
+    expect(sheet.valueOf("B2")).toBe(4);
+    await sheet.redoAsync();
+    expect(pasted()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("a new step after an undo drops the undone ones; a { column, row } in capitals is the same cell", async () => {
+    const sheet = new SheetModel(() => undefined);
+    await sheet.setAsync("A1", "a");
+    await sheet.setAsync("A2", "b");
+    await sheet.undoAsync();
+    await sheet.setAsync({ column: "C", row: 1 }, "c");
+    expect(sheet.canRedo).toBe(false);
+    expect(sheet.valueOf("C1")).toBe("c");
+    await sheet.undoAsync();
+    await sheet.undoAsync();
+    expect([sheet.valueOf("A1"), sheet.valueOf("A2"), sheet.valueOf("C1")]).toEqual([undefined, undefined, undefined]);
+    expect(sheet.canUndo).toBe(false);
+  });
+
+  it("stays linear over a long session: 20,000 sets in well under a second", async () => {
+    const sheet = new SheetModel(() => undefined);
+    const start = performance.now();
+    for (let row = 1; row <= 20_000; row++) await sheet.setAsync({ column: "a", row }, row);
+    expect(performance.now() - start).toBeLessThan(500);
+    expect(sheet.valueOf("A20000")).toBe(20_000);
   });
 });

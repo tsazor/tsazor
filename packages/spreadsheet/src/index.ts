@@ -2,7 +2,8 @@
  * The spreadsheet's model (design-extended-library.md §2.6, v1 without
  * formulas — D-X4): a sheet of cells addressed in A1 notation, range
  * selection with a keyboard and a pointer, the undo stack over the cell
- * values, copy and paste (CSV-text shaped). The DOM and the chrome live in
+ * values (a paste is one step), copy and paste of a range within the sheet
+ * (the system clipboard is not involved yet). The DOM and the chrome live in
  * an app's own markup (the engine cascades change like the library's
  * models). Doctrine of the value types: a cell's value is a string or a
  * number — a `Decimal` cell (the E12's value types) is a later decision.
@@ -73,6 +74,13 @@ export function rangeHolds(range: CellRange, cell: Cell): boolean {
 /** A cell's value: text or a number; empty (an untouched cell) is undefined. */
 export type CellValue = string | number | undefined;
 
+/** One cell's change in an undo step. */
+interface CellChange {
+  address: string;
+  from: CellValue;
+  to: CellValue;
+}
+
 /**
  * The sheet: the cells set, the selection's range, the undo stack. A skin
  * renders `selection` (the range) and asks `valueOf` per cell; the changes
@@ -82,15 +90,16 @@ export class SheetModel {
   private cells = new Map<string, CellValue>();
   private fromCell: Cell | undefined;
   private toCell: Cell | undefined;
-  /** The undo stack: the steps of a cell's before/after, in order. */
-  private steps: readonly { address: string; from: CellValue; to: CellValue }[] = [];
+  /** The undo stack, in order: a step is the cells one action changed (a set: one; a paste: the range), each with its before and after. */
+  private readonly steps: CellChange[][] = [];
   private undone = 0;
   private clipboard: { range: CellRange; values: CellValue[] } | undefined;
 
   constructor(private readonly onChange: () => void) {}
 
   private key(cell: Cell): string {
-    return `${cell.column}:${cell.row}`;
+    // A { column, row } from the app may spell the column in capitals ("B"); an A1 address arrives lowercased.
+    return `${cell.column.toLowerCase()}:${cell.row}`;
   }
 
   private normalize(text: CellAddress | Cell | null | undefined): Cell | undefined {
@@ -108,14 +117,30 @@ export class SheetModel {
   async setAsync(cell: CellAddress | Cell, value: CellValue): Promise<void> {
     const normalized = this.normalize(cell);
     if (normalized === undefined) throw new RangeError("SheetModel: set a valid cell (A1 notation, or a { column, row }).");
-    const address = this.format(normalized);
-    const valueNow = this.cells.get(address);
-    if (Object.is(valueNow, value)) return;
-    this.steps = [...this.steps.slice(0, this.steps.length - this.undone), { address, from: valueNow, to: value }];
+    this.apply([{ cell: normalized, value }]);
+  }
+
+  /** Writes the values that change as one undo step, and renders once; nothing changes, nothing happens. */
+  private apply(writes: readonly { cell: Cell; value: CellValue }[]): void {
+    const step: CellChange[] = [];
+    for (const { cell, value } of writes) {
+      const address = this.key(cell);
+      const valueNow = this.cells.get(address);
+      if (Object.is(valueNow, value)) continue;
+      step.push({ address, from: valueNow, to: value });
+      this.write(address, value);
+    }
+    if (step.length === 0) return;
+    // A new step drops the undone ones (in place: a long editing session stays linear).
+    this.steps.length -= this.undone;
+    this.steps.push(step);
     this.undone = 0;
+    this.onChange();
+  }
+
+  private write(address: string, value: CellValue): void {
     if (value === undefined) this.cells.delete(address);
     else this.cells.set(address, value);
-    this.onChange();
   }
 
   /** Marks the selection (the range's corners; a single cell is its own range). */
@@ -161,18 +186,19 @@ export class SheetModel {
     this.clipboard = { range: selection, values: this.selectedValues().values };
   }
 
-  /** Pastes the clipboard's values at a cell (a copy's shape; the values overwrite). */
+  /** Pastes the clipboard's values at a cell (a copy's shape; the values overwrite) — one undo step, one render. */
   async pasteAsync(at: CellAddress | Cell): Promise<void> {
     const pasted = this.normalize(at);
     if (pasted === undefined || this.clipboard === undefined) return;
     const { range, values } = this.clipboard;
     const rectangle = rangeRectangle(range);
     const width = columnNumber(rectangle.to.column) - columnNumber(rectangle.from.column) + 1;
-    for (let offset = 0; offset < values.length; offset++) {
-      const row = pasted.row + Math.floor(offset / width);
-      const cell = { column: formatColumn(columnNumber(pasted.column) + (offset % width)), row };
-      await this.setAsync(cell, values[offset]);
-    }
+    this.apply(
+      values.map((value, offset) => ({
+        cell: { column: formatColumn(columnNumber(pasted.column) + (offset % width)), row: pasted.row + Math.floor(offset / width) },
+        value,
+      })),
+    );
   }
 
   /** Whether a paste is possible now. */
@@ -190,13 +216,11 @@ export class SheetModel {
     return this.undone > 0;
   }
 
-  /** Undoes the last set. */
+  /** Undoes the last step (a set, or a whole paste). */
   async undoAsync(): Promise<void> {
     const next = this.undone + 1;
     if (next > this.steps.length) return;
-    const step = this.steps[this.steps.length - next]!;
-    if (step.from === undefined) this.cells.delete(step.address);
-    else this.cells.set(step.address, step.from);
+    for (const change of this.steps[this.steps.length - next]!) this.write(change.address, change.from);
     this.undone = next;
     this.onChange();
   }
@@ -204,14 +228,8 @@ export class SheetModel {
   /** Redoes the last undone step. */
   async redoAsync(): Promise<void> {
     if (this.undone === 0) return;
-    const step = this.steps[this.steps.length - this.undone]!;
-    if (step.to === undefined) this.cells.delete(step.address);
-    else this.cells.set(step.address, step.to);
+    for (const change of this.steps[this.steps.length - this.undone]!) this.write(change.address, change.to);
     this.undone = this.undone - 1;
     this.onChange();
-  }
-
-  private format(cell: Cell): string {
-    return `${cell.column}:${cell.row}`;
   }
 }
