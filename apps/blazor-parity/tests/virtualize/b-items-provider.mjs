@@ -56,20 +56,49 @@ async function canExpandDataSetAndRetainScrollPosition(t, containerId) {
   const container = await exists(page, byId(containerId));
 
   // Scroll to the end of a medium list
+  // Temporary diagnostics: sample the scroll over the whole expansion (the drift happens between the waits).
   await dataSetLengthSelector.selectOption({ label: "1000" });
+  const trajectory = [];
+  const sample = setInterval(() => {
+    page.evaluate((containerId) => {
+      const element = document.getElementById(containerId) ?? document.querySelector(containerId);
+      if (!element) return;
+      const styled = [...element.querySelectorAll("[aria-hidden]")].filter((hidden) => hidden instanceof HTMLElement && hidden.hasAttribute("style"));
+      trajectory.push(`${Date.now() % 1000000} top=${Math.round(element.scrollTop)} h=${element.scrollHeight} before=${styled[0]?.style.height} after=${styled[1]?.style.height} rows=${element.querySelectorAll(".person").length}`);
+    }, containerId).catch(() => undefined);
+  }, 250);
+  const diagnostic = async () => {
+    const scrollTop = await getScrollTop(container);
+    const names = await getPeopleNames(container);
+    const spacers = await container.evaluate((element) => {
+      const styled = [...element.querySelectorAll("[aria-hidden]")].filter((hidden) => hidden instanceof HTMLElement && hidden.hasAttribute("style"));
+      return `${styled.length} spacers@${styled.map((s) => s.style.height).join("+")}; scrollHeight=${element.scrollHeight}`;
+    });
+    return `Person 1000 should be visible after scrolling to the end of the 1000-item list (scrollTop=${scrollTop}, ${spacers}, first/last=${names[0] ?? "none"}/${names[names.length - 1] ?? "none"}, ${names.length} rows)`;
+  };
   await waitEqual(1000, () => dataSetLengthLastRendered(page));
   await waitTrue(async () => {
     await scrollTopToEnd(container);
     return (await getPeopleNames(container)).includes("Person 1000");
-  });
+  }, { message: diagnostic });
 
   // Expand the data set
   await dataSetLengthSelector.selectOption({ label: "100000" });
   await waitEqual(100000, () => dataSetLengthLastRendered(page));
 
   // See that the old data is still visible, because the scroll position is preserved as a pixel count,
-  // not a scroll percentage
-  await waitTrue(async () => (await getPeopleNames(container)).includes("Person 1000"));
+  // not a scroll percentage — sampled: the scroll's trajectory while the data changes (temporary diagnostics)
+  const deadline = Date.now() + 10_000;
+  let reached = false;
+  while (!reached && Date.now() < deadline) {
+    reached = (await getPeopleNames(container)).includes("Person 1000");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  if (!reached) {
+    clearInterval(sample);
+    throw new Error(`Person 1000 should stay visible while the data expands (pixel scroll is preserved); trajectory:\n  ${trajectory.join("\n  ")}`);
+  }
+  clearInterval(sample);
 }
 
 /** CanHandleDataSetShrinkingWithExistingOffsetAlreadyBeyondNewListEnd (:660). */

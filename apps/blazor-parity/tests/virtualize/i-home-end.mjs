@@ -283,6 +283,14 @@ export const tests = [
       const { page } = t;
       const container = await mountAnchorModeComponent(t, "0", { variableHeight: true });
       await waitTrue(async () => (await count(container, ".item[data-index='0']")) > 0);
+      const trajectory = [];
+      const sample = setInterval(() => {
+        page.evaluate(() => {
+          const c = document.getElementById("scroll-container");
+          if (!c) return;
+          trajectory.push(`${Date.now() % 1000000} top=${Math.round(c.scrollTop)} h=${c.scrollHeight} items=${c.querySelectorAll(".item").length}`);
+        }).catch(() => undefined);
+      }, 120);
       await page.evaluate(() => {
         const c = document.getElementById("scroll-container");
         const observer = new MutationObserver(() => {
@@ -294,9 +302,17 @@ export const tests = [
         observer.observe(c, { childList: true, subtree: true });
       });
       await sendKey(container, "End");
-      await waitTrue(async () => (await count(container, ".item[data-index='0']")) > 0 && (await metric(container, "scrollTop")) < 1, {
-        message: async () => `Home while End still converged should reach item 0 at the top (scrollTop=${await metric(container, "scrollTop")}).`,
-      });
+      let ok = false;
+      try {
+        await waitTrue(async () => (await count(container, ".item[data-index='0']")) > 0 && (await metric(container, "scrollTop")) < 1, {
+          message: async () => `Home while End still converged should reach item 0 at the top (scrollTop=${await metric(container, "scrollTop")}).`,
+        });
+        ok = true;
+      } finally {
+        clearInterval(sample);
+        if (!ok) trajectory.push(`${Date.now() % 1000000} FINAL top=${await metric(container, "scrollTop")}`);
+        if (!ok) throw new Error(`Home while End still converged was pulled back; trajectory:\n  ${trajectory.join("\n  ")}`);
+      }
     },
   },
   {
