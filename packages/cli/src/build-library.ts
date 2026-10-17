@@ -136,12 +136,15 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     return { components: [], errors };
   }
 
-  // The helpers the components import, beside them, with the declarations TypeScript derives from each file alone.
+  // The helpers the components import, beside them, with the declarations TypeScript derives from each file alone
+  // — compiled as the components are: registering field decorators (@Required(), …) compacted first, the rest
+  // lowered by esbuild (supported.decorators: false does that; the plain ts transform passed decorators through raw,
+  // which the browser rejects: a template's model module was invalid syntax in the dev server).
   for (const name of (await readdir(srcDir)).filter((name) => name.endsWith(".ts") && !name.endsWith(".d.ts")).sort()) {
     const source = await readFile(path.join(srcDir, name), "utf8");
     const stem = name.slice(0, -".ts".length);
-    const transpiled = transformSync(source, { loader: "ts", sourcefile: path.join(srcDir, name), tsconfigRaw: { compilerOptions: { target: "es2022" } } });
-    await emit(`${stem}.js`, transpiled.code);
+    const transpiled = transformSync(compactFieldDecorators(source, name), { ...COMPONENT_TRANSFORM, sourcefile: path.join(srcDir, name) });
+    await emit(`${stem}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators")));
     const declaration = ts.transpileDeclaration(source, { fileName: name, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } });
     if ((declaration.diagnostics ?? []).length === 0) await emit(`${stem}.d.ts`, declaration.outputText);
   }
