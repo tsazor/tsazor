@@ -1,3 +1,21 @@
+/** .NET's NumberFormatInfo, the parts a numeric input needs (the .NET property names, camelCased). */
+export interface NumberFormatInfo {
+  /** "," in de-DE, "." in en-US. */
+  readonly numberDecimalSeparator: string;
+  /** "." in de-DE, "," in en-US; "" in a locale that doesn't group digits. */
+  readonly numberGroupSeparator: string;
+  /** "%" in most locales. */
+  readonly percentSymbol: string;
+  /** "-" in most locales; "−" (U+2212) in some (sv-SE). */
+  readonly negativeSign: string;
+  /** "+". */
+  readonly positiveSign: string;
+  /** "NaN" in most locales. */
+  readonly nanSymbol: string;
+  /** Intl's "∞" (.NET's invariant culture writes "Infinity"). */
+  readonly positiveInfinitySymbol: string;
+}
+
 /**
  * CultureInfo — Blazor's System.Globalization.CultureInfo counterpart, built on
  * Intl (E8, design-localization.md). Immutable and thin: the locale tag is the
@@ -8,21 +26,6 @@
  * fixed, with no locale negotiation — `Intl`'s own default (the runtime
  * locale) would otherwise leak into "invariant" output.
  */
-/** .NET's NumberFormatInfo, the parts a numeric input needs (the .NET property names, camelCased). */
-export interface NumberFormatInfo {
-  /** "," in de-DE, "." in en-US. */
-  readonly numberDecimalSeparator: string;
-  /** "." in de-DE, "," in en-US; "" in a locale that doesn't group digits. */
-  readonly numberGroupSeparator: string;
-  readonly percentSymbol: string;
-  readonly negativeSign: string;
-  readonly positiveSign: string;
-  /** "NaN" in most locales. */
-  readonly nanSymbol: string;
-  /** Intl's "∞" (.NET's invariant culture writes "Infinity"). */
-  readonly positiveInfinitySymbol: string;
-}
-
 export class CultureInfo {
   /** .NET's CultureInfo.InvariantCulture (name "", formatting fixed to en-US). */
   static readonly invariant: CultureInfo = new CultureInfo("");
