@@ -5,6 +5,28 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+### The extended line (post-1.0, developed alongside — its API may still change)
+
+The components data-driven apps need beyond Blazor's set (`docs/design-extended-library.md`; D-X2: they don't
+hold up 1.0, and they are not covered by the stability promise until they say so).
+
+- **DataGrid advanced** (both skins): a built-in column filter and density, column aggregates, resize and reorder,
+  inline editing of a row, grouping, column persistence, CSV/TSV export.
+- **RichText**: a dependency-free wrapper over an external editor engine (`RichTextEditorContract`,
+  `RichTextFactory` in `@tsazor/ui`; D-X9/D-X10).
+- **Scheduler**: month, week and day views; creating, moving and resizing an appointment by drag.
+- **AI components**: `ChatState`, `Chat` and `PromptInput` over an app-supplied stream and an `AbortSignal`
+  (D-X5: the library opens no connection).
+- **Templates and blocks**: `EmptyState`, `AuthLogin`, `AuthRegister`, `SettingsPane`, `OrdersCrud`, copied into an
+  app (Bootstrap through the skin's copy-in command, D-X8).
+- **PivotDataGrid** (both skins).
+- **`@tsazor/spreadsheet`** (new package): the headless sheet model — A1 cells and ranges, an undo stack (a paste
+  is one step), copy and paste within the sheet and as TSV text for the system clipboard. Its values live in a
+  source (D-X11): `FreeSheetSource`, or `RecordSheetSource` over the app's records, which edits them in place and
+  hands back the changes as per-record patches to save.
+
+### The 1.0 line
+
 - **`tsazor check` loses no type error and doubles none** (the first external integration's findings, I1–I9 in
   `docs/migration-practices.md`):
   - An `_Imports.tsazor`'s own `@import`s are type-checked, at their directives — a typo in an inherited specifier

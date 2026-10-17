@@ -116,13 +116,11 @@ The report and this handoff held; four things didn't, and the external integrati
 | `packages/primitives` and `packages/spreadsheet` were missing from the root vitest projects (`pnpm test` green without them; CI's `pnpm -r test` ran them); `api:check` failed on the spreadsheet's missing snapshot | both in the projects; `api/spreadsheet.api.d.ts` written |
 | The feedback (I1–I9): inherited `@import`s and `@inject` lost their errors, class-level errors were dropped (that hid a real `Rating` bug), skin parameter types from `@tsazor/ui` were `any` under pnpm, `@bind` errors came fourfold, `@bind:event` on a component vanished, TZS024 cascaded | `3c68a92`, `f92151c`, `0d611e6`; see CHANGELOG and migration-practices.md |
 
-Open, for the owner:
+Decided by the owner the same day, as proposed, and done:
 
-- **The spreadsheet's data source.** The model is a free A1 sheet; a data-driven app wants a sheet over records
-  (rows from the backend, columns its properties, typed cells, the changes as patches to save). Proposal: a source
-  interface before the chrome, with a record adapter and the free sheet as two implementations. Also open: TSV in
-  and out of the system clipboard (pasting from Excel).
-- **The CHANGELOG has no entries for the extended line** (DataGrid advanced, RichText, Scheduler, AI, templates,
-  PivotDataGrid, spreadsheet), though they change the skins' public API: a section of their own, or entries as they
-  stabilize?
-- X8 as above.
+- **The spreadsheet's data source (D-X11):** `SheetSource` with `FreeSheetSource` and `RecordSheetSource` (the app's
+  records edited in place, the changes as per-record patches to save), plus TSV text in and out for the clipboard.
+- **The extended line in the CHANGELOG (D-X12):** a section of its own, marked post-1.0.
+
+Still open: X8 as above; the tutorial's four failing tests (K.7/K.8 and the typed client after E12's mapping) stop
+`ci:local` at `pnpm -r test` before `api:check`, the smoke and the rehearsal.

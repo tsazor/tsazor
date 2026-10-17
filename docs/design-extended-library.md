@@ -108,6 +108,11 @@ copy/paste) plus the rendered sheet. V1 scope: editing experience only — cells
 navigation, paste, undo, basic formatting (bold, align, number formats through
 `@tsazor/primitives`). Formulas are D-X4 and come later, a project of their own like charts were.
 
+**Status (2026-10-17):** the model is in — A1 cells and ranges, an undo stack whose step is one action (a paste
+included), copy/paste within the sheet and as TSV text. Its values live in a source (D-X11): a free sheet, or the
+app's records with the changes as patches to save — the data-driven case the target teams meet first: edit what
+came from the backend as in Excel, paste from Excel, save what changed. The chrome comes on the owner's word.
+
 ### 2.7 Rich text — the RichText2 wrapper (done, 2026-10-16)
 
 - A `RichText` component in both skins: the wrapper the owner asked into the library. It mounts
@@ -228,3 +233,5 @@ Core and component gaps found while building the extended layer. Each is fixed w
 | D-X8 | Copy-in for Bootstrap | A `npx` CLI like Fluent's, at least for templates |
 | D-X9 | The RichText2 wrapper in the library | **Yes (owner, 2026-10-16).** Dependency-free wrapper in both skins over a `createEditor`-shaped contract; RichText2 provides the factory, the app adds the engine |
 | D-X10 | Rich text sanitization | **Refined when shipped (2026-10-16):** `sanitize` is the wrapper's `(html) => string` parameter, none by default — a per-keystroke sanitizer mangles real editor content; the app opts in loudly (RichText2's HTMLSanitizer or its `sanitizeHtml` config). The docs' XSS note stands |
+| D-X11 | Where the spreadsheet's values live | **A source (owner, 2026-10-17), before any chrome.** `SheetModel` reads and writes through `SheetSource`: `FreeSheetSource` (any cell, text or a number) or `RecordSheetSource` over the app's records — a row per record, a column per property (read-only, typed, the column's own parse/format), edited in place, the changes as per-record patches to save (`changes()`, `accept()`). TSV text in and out (`copyText`, `pasteTextAsync`): pasting from Excel; the chrome or the app wires the clipboard events |
+| D-X12 | The extended line in the CHANGELOG | **Its own section, from now on (owner, 2026-10-17):** its API changes are public too; marked post-1.0, may still change |
