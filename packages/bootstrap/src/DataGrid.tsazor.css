@@ -86,11 +86,13 @@
   table-layout: fixed;
 }
 
-/* The reorder grip: a grabbable, focusable handle of a column — its tap target is 24 px. */
+/* The reorder grip: a grabbable, focusable handle of a column — its tap target is 24 px; flex:none
+   keeps it there (the header's row squeezes otherwise: an axe's target-size complaint said 12px). */
 .tz-grid-grip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   width: 1.5rem;
   height: 1.5rem;
   margin-inline-start: -0.25rem;
