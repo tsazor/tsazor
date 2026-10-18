@@ -570,6 +570,8 @@ function isModuleAt(base: string): boolean {
   } catch {
     // Not a file as written: try the extensions.
   }
+  // NodeNext's form: `./x.js` names the source `./x.ts`.
+  if (/\.js$/.test(base) && (existsSync(base.replace(/\.js$/, ".ts")) || existsSync(base.replace(/\.js$/, ".tsx")))) return true;
   return MODULE_EXTENSIONS.some((extension) => existsSync(base + extension) || existsSync(path.join(base, `index${extension}`)));
 }
 
@@ -581,8 +583,9 @@ function nearModule(dir: string, name: string): string | undefined {
   } catch {
     return undefined;
   }
-  const wanted = name.toLowerCase();
-  const limit = Math.max(1, Math.floor(name.length / 3));
+  // `./Paper.js` wants the module `Paper`, whatever its extension (a component's is `.tsazor`).
+  const wanted = name.toLowerCase().replace(/\.(m|c)?js$|\.tsx?$/, "");
+  const limit = Math.max(1, Math.floor(wanted.length / 3));
   let best: { name: string; distance: number } | undefined;
   for (const file of names) {
     const extension = MODULE_EXTENSIONS.find((candidate) => file.endsWith(candidate));
@@ -610,12 +613,13 @@ function specifierFrom(fromDir: string, target: string): string {
 }
 
 /**
- * TS2307 in a .tsazor: the folder the specifier was resolved from — the file's own, as in any TypeScript module
- * (an _Imports.tsazor's for its own @imports) — and the specifier that finds the module when one does: the same
- * name a folder or two up (a page in Pages/ importing `./Store` meant `../Store`), or a near-miss name where it points.
- * A bare specifier is a package not installed where the file looks for packages.
+ * TS2307 in a .tsazor or a .ts module: the folder the specifier was resolved from — the file's own, as in any
+ * TypeScript module (an _Imports.tsazor's for its own @imports) — and the specifier that finds the module when one
+ * does: the same name in the file's folder or a folder or two up (a page in Pages/ importing `./Store` meant
+ * `../Store`; `../base/x.js` from src/ meant `./base/x.js`), or a near-miss name where it points (`./X.js` for a
+ * component is `./X.tsazor`). A bare specifier is a package not installed where the file looks for packages.
  */
-function withModuleHint(code: number, message: string, file: string): string {
+export function withModuleHint(code: number, message: string, file: string): string {
   if (code !== 2307 || message.includes(" Hint: ")) return message;
   const specifier = /Cannot find module '([^']+)'/.exec(message)?.[1];
   if (specifier === undefined) return message;
@@ -628,8 +632,9 @@ function withModuleHint(code: number, message: string, file: string): string {
   const target = path.resolve(dir, specifier);
   let found: string | undefined;
   const name = specifier.replace(/^(\.\.?\/)+/, "");
-  for (let up = path.dirname(dir), level = 0; found === undefined && level < 3; up = path.dirname(up), level++) {
-    if (isModuleAt(path.join(up, name))) found = specifierFrom(dir, path.join(up, name));
+  for (let up = dir, level = 0; found === undefined && level < 4; up = path.dirname(up), level++) {
+    const candidate = path.join(up, name);
+    if (path.resolve(candidate) !== target && isModuleAt(candidate)) found = specifierFrom(dir, candidate);
   }
   if (found === undefined) {
     const near = nearModule(path.dirname(target), path.basename(target));

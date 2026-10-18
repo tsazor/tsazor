@@ -8,7 +8,7 @@ import { CHECK_CODES, explainTypeScriptError } from "@tsazor/compiler";
 import { defaultMetadataCache } from "@tsazor/workspace";
 import { analyzeSource } from "./analysis.js";
 import { ProjectRegistry } from "./projects.js";
-import { tsDiagnostics } from "./ts-features.js";
+import { tsDiagnostics, withModuleHint } from "./ts-features.js";
 import { findTsazorFiles } from "./ts-service.js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -111,7 +111,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
               column: diagnostic.character + 1,
               code: `TS${diagnostic.code}`,
               severity: "error",
-              message: explainTypeScriptError(diagnostic.code, diagnostic.message),
+              message: explainTypeScriptError(diagnostic.code, withModuleHint(diagnostic.code, diagnostic.message, source)),
             });
           }
         }

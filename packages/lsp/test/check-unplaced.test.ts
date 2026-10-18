@@ -73,6 +73,11 @@ beforeAll(async () => {
   // A page importing as if it sat beside the module: the hint names the folder and the specifier that finds it.
   await mkdir(path.join(src, "pages"), { recursive: true });
   await writeFile(path.join(src, "pages", "List.tsazor"), '@import type { Entry } from "./Store"\n<p>list</p>\n\n@code {\n    entry?: Entry;\n}\n');
+  // One `../` too many (a MudBlazor port's F105), and a .ts helper naming a component `.js` (its F1000).
+  await mkdir(path.join(src, "base"), { recursive: true });
+  await writeFile(path.join(src, "base", "paper-base.ts"), "export interface PaperBase {\n    elevation: number;\n}\n");
+  await writeFile(path.join(src, "Paper.tsazor"), '@import type { PaperBase } from "../base/paper-base.js"\n<p>paper</p>\n\n@code {\n    base?: PaperBase;\n}\n');
+  await writeFile(path.join(src, "base", "paper-ref.ts"), 'import type Paper from "../Paper.js";\n\nexport type PaperRef = Paper | undefined;\n');
   // A C# string: one TZS024 that names the template literal, no type errors after it.
   await writeFile(path.join(src, "Greeting.tsazor"), '<p>@($"Hi {name}")</p>\n\n@code {\n    name = "x";\n}\n');
   diagnostics = (await checkProject(root)).diagnostics;
@@ -104,6 +109,13 @@ describe("tsazor check — no error lost on the way back to the source", () => {
     expect(missing?.code).toBe("TS2307");
     expect(missing?.message).toContain("Hint: a relative specifier resolves from the folder of the file it is written in (src/pages/), as in any TypeScript module — '../Store' finds it.");
     expect(of("typo/_Imports.tsazor")[0]!.message).toContain("(src/typo/)");
+  });
+
+  it("names the specifier in the file's own folder, a .ts source by its .js name, and a component's .tsazor from a .ts module", () => {
+    expect(of("Paper.tsazor")[0]!.message).toContain("— './base/paper-base.js' finds it.");
+    const [helper] = of("base/paper-ref.ts");
+    expect(helper?.code).toBe("TS2307");
+    expect(helper?.message).toContain("(src/base/), as in any TypeScript module — '../Paper.tsazor' finds it.");
   });
 
   it("reports a C# string once, as TZS024 with the template literal — the type layer adds nothing", () => {

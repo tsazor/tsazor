@@ -65,6 +65,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   fix `@* … *@`; a call after the last `@code` block (module-level code) renders and never runs: it belongs in a
   `static { }` block in `@code`. Text inside an element is content and isn't checked. It found Blazing Pizza's Poller
   rendering its doc comment.
+- **TS2307's hint finds more** (`tsazor check`): the module in the file's own folder (`../base/x.js` from `src/` is
+  `./base/x.js` — one `../` too many), a `.ts` source by its `.js` name, a component's `.tsazor` for `./X.js`
+  whatever the name's length, and in a `.ts` module too (only `.tsazor` files had the hint).
 - **`RenderFragment<TItem>` called in a generic component says what to do** (`tsazor check`): its two TS2345 errors
   (TypeScript keeps the conditional type open while `TItem` is) name the form that works, `(item: TItem) =>
   RenderFragment`; the language reference and the migration guide say it too.
