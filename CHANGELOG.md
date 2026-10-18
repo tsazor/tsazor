@@ -60,6 +60,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   renders as before. Overridden with `return callback.invokeAsync(arg);` a component handles its events without a
   render — what a MudBlazor port's `EventUtil.AsNonRenderingEventHandler` had nothing to map to. `EventCallbackWorkItem`
   is the handler it gets.
+- **TZS038, code-like text in markup** (`@tsazor/compiler`, a warning): a `//` or `/* … */` comment outside every
+  element renders as text, as in Razor — a MudBlazor port's copyright headers showed on every page — and gets the quick
+  fix `@* … *@`; a call after the last `@code` block (module-level code) renders and never runs: it belongs in a
+  `static { }` block in `@code`. Text inside an element is content and isn't checked. It found Blazing Pizza's Poller
+  rendering its doc comment.
 - **`RenderFragment<TItem>` called in a generic component says what to do** (`tsazor check`): its two TS2345 errors
   (TypeScript keeps the conditional type open while `TItem` is) name the form that works, `(item: TItem) =>
   RenderFragment`; the language reference and the migration guide say it too.

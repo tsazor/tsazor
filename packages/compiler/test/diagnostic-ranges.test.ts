@@ -85,6 +85,22 @@ describe("diagnostic ranges (A7)", () => {
     }
   });
 
+  it("TZS038: a comment outside every element, with the fix to '@* … *@'; a call after @code", () => {
+    // A MudBlazor port's copyright headers rendered on every page; its module-level registrations never ran.
+    const line = "// Copyright (c) Contoso\n<p>Hello</p>\n";
+    const [comment] = compileDiagnostics(line).filter((d) => d.code === "TZS038");
+    expect([comment!.severity, textOf(line, comment!)]).toEqual(["warning", "// Copyright (c) Contoso"]);
+    expect(applyFix(line, comment!)).toBe("@* Copyright (c) Contoso *@\n<p>Hello</p>\n");
+    const block = "/** The card. */\n<div>x</div>\n";
+    expect(applyFix(block, compileDiagnostics(block).find((d) => d.code === "TZS038")!)).toBe("@** The card. *@\n<div>x</div>\n");
+    const call = '<p>x</p>\n@code {\n    n = 1;\n}\nregisterThing("Text", Foo);\n';
+    expect(covered(call, "TZS038")).toBe('registerThing("Text", Foo);');
+    // Content inside an element, and markup after @code, are what they look like.
+    for (const source of ["<p>a // b</p>\n<pre>/* x */</pre>\n", "@code {\n    n = 1;\n}\n<p>after (ok);</p>\nHello world\n"]) {
+      expect(compileDiagnostics(source).filter((d) => d.code === "TZS038"), source).toEqual([]);
+    }
+  });
+
   it("TZS004 on a component's attribute only where the value is read as text — a value parameter reads an expression", () => {
     const chart = withComponents({ Chart: metadataOf("Chart", { title: "string", count: "value", enabled: "value" }) });
     const tzs004 = (source: string) => compileDiagnostics(`${source}\n@code { private x = 1; private busy = false; }`, chart).filter((d) => d.code === "TZS004").map((d) => d.message);

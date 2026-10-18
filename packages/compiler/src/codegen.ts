@@ -495,6 +495,7 @@ class Codegen {
     }
     this.resolveAuthorization();
     this.checkCascadingTypeParameters();
+    this.checkCodeLikeText(document);
 
     if (this.metadata.inherits) {
       const base = this.metadata.inherits;
@@ -2438,6 +2439,45 @@ class Codegen {
   }
 
   /**
+   * TZS038 (a warning, no Razor counterpart: there it is text too): top-level text — outside every element — that is
+   * code, not content. A `//` or `/* … *\/` comment renders as text (a port's copyright header showed on every page;
+   * a `@name` or `<Tag>` in it is markup); a call after the last `@code` block (module-level code) renders as text and
+   * never runs. Inside an element text is content (`<p>a // b</p>`): not checked.
+   */
+  private checkCodeLikeText(document: DocumentNode): void {
+    const lastCode = [...document.codeBlocks, ...document.body].filter((node): node is CodeBlockNode => node.kind === "codeBlock" && node.member === true).sort((a, b) => comparePos(a.pos, b.pos)).at(-1);
+    for (const node of document.body) {
+      if (node.kind !== "text") continue;
+      const content = node.content;
+      const offset = content.length - content.trimStart().length;
+      const rest = content.slice(offset);
+      const start = advancePos(node.pos, content.slice(0, offset));
+      if (rest.startsWith("//") || rest.startsWith("/*")) {
+        // The comment within this text: a line comment to the line's end, a block comment to its `*/`.
+        const close = rest.startsWith("//") ? rest.search(/\r?\n|$/) : rest.indexOf("*/");
+        const end = rest.startsWith("//") ? close : close < 0 ? -1 : close + 2;
+        const comment = end < 0 ? undefined : rest.slice(0, end);
+        const body = comment === undefined ? undefined : comment.startsWith("//") ? comment.slice(2) : comment.slice(2, -2);
+        const range = { pos: start, endPos: advancePos(start, comment ?? rest.split("\n")[0]!) };
+        this.diagnostics.warning(
+          "TZS038",
+          range,
+          "A comment outside `@code` is markup text, as in Razor: it renders. A markup comment is `@* … *@`.",
+          body === undefined || body.includes("*@") ? undefined : { title: "Write it as '@* … *@'", edits: [{ ...range, text: rest.startsWith("//") ? `@*${body} *@` : `@*${body}*@` }] },
+        );
+        continue;
+      }
+      if (lastCode !== undefined && comparePos(node.pos, lastCode.endPos) >= 0 && /^[A-Za-z_$][\w$.]*\s*\([^]*\)\s*;?\s*$/.test(rest)) {
+        this.diagnostics.warning(
+          "TZS038",
+          { pos: start, endPos: advancePos(start, rest.trimEnd()) },
+          "A call after `@code` is markup text, as in Razor: it renders and never runs. Code that runs once, when the module loads, goes into a `static { }` block in `@code`.",
+        );
+      }
+    }
+  }
+
+  /**
    * Blazor's RZ2012: a parameter marked `@EditorRequired()` that the tag leaves out — set by no attribute, no
    * `@bind-`, no child content element and (for ChildContent) no element content. A warning, as in Razor; a tag
    * with `@attributes` may supply it through the splat, so it isn't checked.
@@ -3516,6 +3556,11 @@ class Codegen {
     });
     return baked;
   }
+}
+
+/** Source order of two positions: negative when `a` comes first. */
+function comparePos(a: SourcePos, b: SourcePos): number {
+  return a.line - b.line || a.column - b.column;
 }
 
 /** Whether `offset` lies strictly inside one of `spans` (after its start, before its end). */

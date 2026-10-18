@@ -421,6 +421,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS035: "The compiler failed.";
     readonly TZS036: "Component manifest unreadable or newer.";
     readonly TZS037: "Editor-required parameter not provided.";
+    readonly TZS038: "Code-like text in markup.";
 };
 
 // DiagnosticBag

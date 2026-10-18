@@ -84,6 +84,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS035: "The compiler failed.",
   TZS036: "Component manifest unreadable or newer.",
   TZS037: "Editor-required parameter not provided.",
+  TZS038: "Code-like text in markup.",
 } as const;
 
 

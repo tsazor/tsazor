@@ -1,7 +1,7 @@
-/**
+@**
  * Port of the workshop's Poller component (BlazingPizza.ComponentsLibrary):
  * invokes OnTick every Interval milliseconds while it is rendered.
- */
+ *@
 @code {
     @Parameter() interval?: number;
     @Parameter() onTick?: EventCallback;

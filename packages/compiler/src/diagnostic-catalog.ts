@@ -313,4 +313,12 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
       "A component's parameter is marked `@EditorRequired()` (Blazor's `[EditorRequired]`, warning RZ2012), and the tag sets it by no attribute, no `@bind-`, no child content element — and, for `ChildContent`, no element content. A warning, as in Razor: the component still renders with the parameter's initializer. A tag with `@attributes` isn't checked (the splat may supply it).",
     fix: "Set the parameter (`<Pager PageCount=\"@pages\" />` for `@EditorRequired() @Parameter() pageCount = 0;`), or drop `@EditorRequired()` from it when it is optional.",
   },
+  {
+    code: "TZS038",
+    severity: "warning",
+    description:
+      "Text outside every element that is code, not content — as in Razor it is markup text and renders: a `//` or `/* … */` comment outside `@code` (a copyright header shows on every page; a `@name` or `<Tag>` in it is markup too), or a call after the last `@code` block (module-level code: it renders and never runs). Text inside an element (`<p>a // b</p>`) is content and isn't checked.",
+    example: "// Copyright (c) Contoso\n<p>Hello</p>\n",
+    fix: "A markup comment is `@* … *@` (the quick fix). Code that runs once, when the module loads, goes into a `static { }` block in `@code`.",
+  },
 ];
