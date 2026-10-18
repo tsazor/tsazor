@@ -29,6 +29,17 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **`moduleResolution: nodenext` works** (`tsazor check`, the editor): in an ESM package every import between
   components — a bare tag, a default, named or type import — was TS2307, because the typed check's modules import
   each other without an extension, which `nodenext` refuses. They resolve as under `bundler` now.
+- **`tsazor build-lib` hands on what an app can use** (`@tsazor/cli`; the MudBlazor port fixed its `dist` with four
+  scripts):
+  - The declarations import what the sources import, as built: a base class of the library's own (`@inherits
+    MudComponentBase`) came from `@tsazor/runtime`, a parameter's library type pointed back into `src/`, and a
+    helper's declaration kept its `.tsazor` specifier — every component failed in an app's TypeScript (hidden by
+    `skipLibCheck`). The manifest records where a component's base comes from (`base.specifier`, `base.imported`).
+  - An index statement naming a file the build didn't write is an error (it built green and failed in the app),
+    and a name the `exports` option exports itself isn't exported a second time (a duplicate export doesn't load).
+  - A warning without `"tsazor": { "components" }` in package.json: an app would read no parameters (TZS026).
+  - One build at a time per output (`dist/.tsazor-build.lock`): two concurrent builds removed each other's files.
+- Documented: Vite's `server.fs.allow` for a library installed from a folder beside the app.
 
 ## 1.0.0-next.4 (2026-10-18)
 

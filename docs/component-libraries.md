@@ -70,8 +70,12 @@ app:
 
 - every `src/*.tsazor` (but `_Imports.tsazor`) becomes `dist/<Name>.js`, exported from
   `dist/index.js`, with a declaration `dist/<Name>.d.ts` from its parameters;
-- every `src/*.ts` helper becomes `dist/<name>.js` beside them, with the declaration TypeScript
-  derives from the file alone (a function needs its return type written for that);
+- every `.ts` helper below `src/` becomes `dist/<name>.js` at the same path (`src/utilities/x.ts` is
+  `dist/utilities/x.js`), with the declaration TypeScript derives from the file alone (a function needs its
+  return type written for that);
+- the declarations import what the sources import, as built: a base class of the library's own
+  (`@inherits MudComponentBase`) from its module in `dist`, a parameter's type from the helper or component that
+  declares it — an app's TypeScript reads them without `skipLibCheck`;
 - `dist/tsazor-components.json` is the manifest;
 - Tsazor's field decorators (`@Parameter()` and the like) are applied after each class, as in an
   app; `dist/_decorators.js` holds esbuild's helpers for the decorators that stay, once for all
@@ -79,6 +83,13 @@ app:
 - the `@code (src/X.tsazor:line)` comments name the source from the package;
 - with `--stylesheet`, `src/styles/*.css` and each component's `<Name>.tsazor.css` are joined
   into `dist/<file>` in that order.
+
+The build checks what it hands on: an index statement whose relative specifier names a file the build didn't write
+(`./css-builder.js` for `./utilities/css-builder.js`) is an error, and a name the `exports` option exports itself is
+not exported a second time (a duplicate export is a module that doesn't load). Without `"tsazor": { "components" }`
+in package.json it warns: an app would read none of the components' parameters. One build at a time writes an
+output — a second one, started while the first runs (an agent's beside a person's), is refused
+(`dist/.tsazor-build.lock`; a lock whose process is gone is taken over).
 
 A library that needs more writes a build script around `buildLibrary`, which takes the same
 defaults:
@@ -140,4 +151,15 @@ createTsazorApp({ root: App, routes, services: addMyComponents });
 ```
 @* Layout/MainLayout.tsazor *@
 <ToastRegion />
+```
+
+A library installed from a folder beside the app (`"my-components": "file:../my-components"`) lies outside the
+app's root, and Vite's dev server serves files outside it only when allowed:
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [tsazor()],
+  server: { fs: { allow: [".."] } }, // the app and the library beside it
+});
 ```

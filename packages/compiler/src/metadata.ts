@@ -147,7 +147,11 @@ export interface ComponentMetadata {
   /** `@CascadingTypeParameter("T")`: type parameters that flow to same-named ones of the components inside its content. */
   cascadingTypeParameters?: string[];
   /** Direct base class as written (`codeBehind` for a .tsazor's X.tsazor.ts class). */
-  base?: { name: string; typeArguments?: string[]; resolved: boolean; codeBehind?: boolean };
+  /**
+   * The base class. `specifier`/`imported`: the import that binds it, when it isn't the runtime's (a library's own
+   * `MudComponentBase`, another package's base) — a declaration imports it from there.
+   */
+  base?: { name: string; typeArguments?: string[]; resolved: boolean; codeBehind?: boolean; specifier?: string; imported?: string };
   /** All parameters, inherited first (runtime order: a re-declaration keeps the base's slot). */
   parameters: ComponentParameter[];
   /** The public methods the class declares itself (inherited ones come with its base). */
@@ -741,6 +745,11 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
     result.base = { name: record.base.name, resolved: base !== undefined };
     if (record.base.typeArguments.length > 0) result.base.typeArguments = record.base.typeArguments;
     if (record.base.codeBehind) result.base.codeBehind = true;
+    const binding = module.imports.get(record.base.name.split(".")[0]!);
+    if (base && binding && binding.specifier !== RUNTIME_MODULE && !record.base.codeBehind && !module.runtimeInternal) {
+      result.base.specifier = binding.specifier;
+      result.base.imported = binding.imported;
+    }
     if (base) {
       result.isComponent = base.isComponent;
       if (base.incomplete) result.incomplete = true;

@@ -565,29 +565,35 @@ export function componentTypeDeclaration(
     return path.resolve(options.packageDir, path.dirname(toPosixPath(relative)));
   };
 
+  /** A specifier the declaring file wrote, as the declaration writes it. */
+  const declarationSpecifier = (written: string, file: string | undefined): string => {
+    const fromDir = declaringDirOf(file);
+    const declarationDir = options?.declarationDir;
+    // Another component of the library: its declaration lands next to this one
+    // (`Menu.d.ts`, imported as `./Menu.js`), not the `.tsazor` the package doesn't ship.
+    if (declarationDir !== undefined && written.endsWith(".tsazor") && isPathLike(written)) return `./${path.basename(written, ".tsazor")}.js`;
+    return fromDir !== undefined && isPathLike(written) ? rebaseSpecifier(written, fromDir, declarationDir ?? fromDir) : written;
+  };
+  /** A type import of the declaration: `name` from `specifier`, exported there as `imported`. */
+  const importType = (specifier: string, name: string, imported: string): void => {
+    if (imported === "default") {
+      defaultImports.set(specifier, name);
+      return;
+    }
+    const names = typeImports.get(specifier) ?? new Set<string>();
+    names.add(imported === name ? name : `${imported} as ${name}`);
+    typeImports.set(specifier, names);
+  };
+
   const collectReferences = (references: readonly TypeReference[] | undefined, own: boolean): void => {
     for (const reference of references ?? []) {
       if (!own) continue; // inherited members come through the base class chain
       if (reference.kind === "runtime" && reference.imported !== "*") {
         runtimeNames.add(reference.imported ?? reference.name);
       } else if (reference.kind === "import" && reference.specifier !== undefined && reference.file !== undefined) {
-        const fromDir = declaringDirOf(reference.file);
-        const declarationDir = options?.declarationDir;
-        // Another component of the library: its declaration lands next to this one
-        // (`Menu.d.ts`, imported as `./Menu.js`), not the `.tsazor` the package doesn't ship.
-        const sibling = declarationDir !== undefined && reference.specifier.endsWith(".tsazor") && isPathLike(reference.specifier);
-        const specifier = sibling
-          ? `./${path.basename(reference.specifier, ".tsazor")}.js`
-          : fromDir !== undefined && isPathLike(reference.specifier)
-            ? rebaseSpecifier(reference.specifier, fromDir, declarationDir ?? fromDir)
-            : reference.specifier;
-        if (reference.imported === "default") {
-          defaultImports.set(specifier, reference.name);
-          continue;
-        }
-        const names = typeImports.get(specifier) ?? new Set<string>();
-        names.add(reference.imported ?? reference.name);
-        typeImports.set(specifier, names);
+        const specifier = declarationSpecifier(reference.specifier, reference.file);
+        if (reference.imported === "default") importType(specifier, reference.name, "default");
+        else importType(specifier, reference.imported ?? reference.name, reference.imported ?? reference.name);
       }
       // `local` types are not importable from the manifest — the type stays
       // written as-is; `global` types need no import; `typeParameter`s are
@@ -606,10 +612,12 @@ export function componentTypeDeclaration(
   for (const method of entry.methods ?? []) {
     if (method.declaredBy === ownName) collectReferences(method.references, true);
   }
-  if (base !== undefined && base.resolved) {
-    // For these library builds the base is a runtime class (`@inherits InputBase<string>`);
-    // a code-behind base is part of the consuming project and not importable here.
-    if (!base.codeBehind) runtimeNames.add(base.name);
+  if (base !== undefined && base.resolved && !base.codeBehind) {
+    // A runtime class (`@inherits InputBase<string>`), or the import that binds it: the library's own base
+    // (`MudComponentBase` from `./base/…`) or another package's. A code-behind base is part of the consuming
+    // project and not importable here.
+    if (base.specifier === undefined || base.imported === undefined || base.imported === "*") runtimeNames.add(base.name);
+    else importType(declarationSpecifier(base.specifier, entry.file), base.name, base.imported);
   }
   if (runtimeNames.size === 0 && (base === undefined || !base.resolved)) runtimeNames.add("ComponentBase");
 

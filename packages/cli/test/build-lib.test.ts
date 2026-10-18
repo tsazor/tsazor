@@ -5,6 +5,7 @@
  */
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -173,6 +174,78 @@ describe("buildLibrary (D9)", () => {
     for (const file of ["_decorators.js", "Greeting.js", "Part.js", "index.js", "index.d.ts", "tsazor-components.json"]) {
       expect(existsSync(path.join(root, "dist", file)), file).toBe(true);
     }
+  });
+
+  it("writes declarations a consumer's TypeScript reads: a library base class, a library type, a helper's component import", async () => {
+    // A MudBlazor port (F4000) fixed dist with four scripts: the base came from @tsazor/runtime, a parameter's type
+    // pointed back into src/, a helper's declaration kept its .tsazor specifier — every component failed in an app.
+    const root = await library({
+      "src/base/mud-component-base.ts": 'import { ComponentBase, Parameter } from "@tsazor/runtime";\n\nexport abstract class MudComponentBase extends ComponentBase {\n  @Parameter() userClass = "";\n}\n',
+      "src/utilities/elevation.ts": "export class Elevation {\n  constructor(readonly level: number) {}\n}\n",
+      "src/utilities/paper-ref.ts": 'import type Paper from "../Paper.tsazor";\n\nexport function elevationOf(paper: Paper): number {\n  return paper.elevation.level;\n}\n',
+      "src/Badge.ts": 'import { ComponentBase, Parameter, type RenderTreeBuilder } from "@tsazor/runtime";\n\nexport class Badge extends ComponentBase {\n  @Parameter() text = "";\n\n  protected override buildRenderTree(b: RenderTreeBuilder): void {\n    b.addContent(0, this.text);\n  }\n}\n',
+      "src/Paper.tsazor": '@import { MudComponentBase } from "./base/mud-component-base.js"\n@import { Elevation } from "./utilities/elevation"\n@import type { Badge } from "./Badge"\n@inherits MudComponentBase\n<div class="@userClass">paper @elevation.level</div>\n@code {\n    @Parameter() elevation: Elevation = new Elevation(1);\n    @Parameter() badge?: Badge;\n}\n',
+      "consumer.ts": 'import type { ComponentBase } from "@tsazor/runtime";\nimport { Badge, Paper } from "./dist/index.js";\nimport { elevationOf } from "./dist/utilities/paper-ref.js";\n\nconst types: (abstract new () => ComponentBase)[] = [Paper, Badge];\ndeclare const paper: Paper;\nexport const level: number = elevationOf(paper) + paper.elevation.level;\nexport const user: string = paper.userClass;\nexport { types };\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], exports: ['export { elevationOf } from "./utilities/paper-ref.js"'], log: () => {} });
+    expect(result.errors).toEqual([]);
+    const paper = await read(root, "Paper.d.ts");
+    expect(paper).toContain('import type { MudComponentBase } from "./base/mud-component-base.js";');
+    expect(paper).toContain('import type { Elevation } from "./utilities/elevation.js";');
+    expect(paper).toContain('import type { Badge } from "./Badge.js";');
+    expect(paper).toContain("export default class Paper extends MudComponentBase {");
+    expect(await read(root, "utilities/paper-ref.d.ts")).toContain('from "../Paper.js"');
+    // The consumer's view, without skipLibCheck: the declarations themselves are checked.
+    const ts = (await import("typescript")).default;
+    const program = ts.createProgram([path.join(root, "consumer.ts")], {
+      strict: true, noEmit: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    });
+    const problems = ts.getPreEmitDiagnostics(program)
+      .filter((d) => d.file === undefined || !d.file.fileName.includes("/runtime/"))
+      .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+    expect(problems).toEqual([]);
+  });
+
+  it("exports a name the `exports` option exports once — an automatic second export was a module that doesn't load", async () => {
+    const root = await library({
+      "src/Badge.ts": 'import { ComponentBase, type RenderTreeBuilder } from "@tsazor/runtime";\n\nexport class Badge extends ComponentBase {\n  protected override buildRenderTree(b: RenderTreeBuilder): void {\n    b.addContent(0, "badge");\n  }\n}\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], exports: ['export { Badge } from "./Badge.js"', 'export { default as Greeting } from "./Greeting.js"'], log: () => {} });
+    expect(result.errors).toEqual([]);
+    expect(await read(root, "index.js")).toBe('export { Badge } from "./Badge.js";\nexport { default as Greeting } from "./Greeting.js";\n');
+  });
+
+  it("refuses an index export of a file it didn't write — it built green and failed in the consuming app", async () => {
+    const root = await library({ "src/utilities/css-builder.ts": "export class CssBuilder {}\n" });
+    const lines: string[] = [];
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], exports: ['export { CssBuilder } from "./css-builder.js"'], log: (line) => lines.push(line) });
+    expect(result.errors.map((error) => error.file)).toEqual(["index.js", "index.d.ts"]);
+    expect(result.errors[0]!.message).toContain("exports from './css-builder.js', but the build wrote no dist/css-builder.js");
+    expect(existsSync(path.join(root, "dist", "index.js"))).toBe(false);
+  });
+
+  it("warns when package.json doesn't point tsazor.components at the manifest — an app would read no parameters", async () => {
+    const root = await library({ "package.json": JSON.stringify({ name: "my-lib", type: "module" }) });
+    const lines: string[] = [];
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: (line) => lines.push(line) });
+    expect(result.errors).toEqual([]);
+    expect(lines.at(-1)).toContain('warning: package.json has no "tsazor": { "components": … } pointing at dist/tsazor-components.json');
+    expect(lines.at(-1)).toContain('Add "tsazor": { "components": "dist/tsazor-components.json" }');
+  });
+
+  it("builds one at a time per output: a second concurrent build is refused, a crashed one's lock taken over", async () => {
+    // Two builds into one dist (an agent's and a person's): one removed what the other had just written.
+    const root = await library();
+    const results = await Promise.all([1, 2].map(() => buildLibrary({ packageDir: root, internal: ["Part"], check: false, log: () => {} })));
+    const refused = results.filter((result) => result.errors.length > 0);
+    expect(refused).toHaveLength(1);
+    expect(refused[0]!.errors[0]!.message).toContain("another build is writing this output");
+    expect(existsSync(path.join(root, "dist", ".tsazor-build.lock"))).toBe(false);
+    // A lock whose process is gone (a build that crashed) is taken over.
+    const gone = spawnSync(process.execPath, ["-e", ""]).pid;
+    await writeFile(path.join(root, "dist", ".tsazor-build.lock"), `${gone}\n`);
+    expect((await buildLibrary({ packageDir: root, internal: ["Part"], check: false, log: () => {} })).errors).toEqual([]);
+    expect(existsSync(path.join(root, "dist", ".tsazor-build.lock"))).toBe(false);
   });
 
   it("is `tsazor build-lib [dir] [--stylesheet <file>]`: 0 when it built, 1 on a compile error, 2 on a wrong option", async () => {

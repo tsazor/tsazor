@@ -323,6 +323,8 @@ export interface ComponentMetadata {
         typeArguments?: string[];
         resolved: boolean;
         codeBehind?: boolean;
+        specifier?: string;
+        imported?: string;
     };
     parameters: ComponentParameter[];
     methods?: ComponentMethod[];
