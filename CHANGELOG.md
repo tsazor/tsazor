@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.4 (2026-10-18)
+
 - **The migration guide ships with the runtime**: `@tsazor/runtime/MIGRATION.md` (docs/migration-guide.md) — Razor →
   `.tsazor`, every Blazor API area, the C# keywords and .NET calls with their TypeScript forms, what isn't there, the
   first diagnostics and the traps, one page for a person or an agent porting an app.
