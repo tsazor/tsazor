@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.3 (2026-10-18)
+
 - **A library laid out in folders builds** (`tsazor build-lib`; a port of Radzen Blazor that consumed only the
   packages found it): `.ts` helpers in subfolders (`base/`, `utilities/`, `enums/`) land at their paths in `dist`
   (they were never emitted), a specifier that names its file already (`./x.js`, NodeNext's form) stays (it became
