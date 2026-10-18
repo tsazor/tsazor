@@ -361,6 +361,10 @@ the type layer — TS2339 in the language server and in `tsazor check`, see
   `@onclick="item.toggle"` calls `toggle` on `item` (receiver evaluated at render time,
   like a C# delegate), and the component re-renders afterwards.
 - Mixed attribute values: `class="btn @(cond ? "on" : null)"` — `null`/`undefined` becomes empty.
+- The component's own class is in scope in `@code` under its name, as in C#: `parentMenu?: Menu;` in
+  `Menu.tsazor` needs no `@import` of the file itself (which would import the module into itself). Code that runs
+  once, when the module loads — a registration, C#'s static constructor — is a `static { … }` block in `@code`;
+  text after `@code` is markup like any other, it renders and never runs (TZS038).
 
 ## Expressions
 
@@ -1329,8 +1333,8 @@ typed:
   directory, exit 1 on errors) checks in
   two passes: compiler diagnostics + shadow build of all project `.tsazor` files
   (including unsaved files), then TS diagnostics across the complete
-  shadow graph — the shadows **and** the real `.ts` sources they pull in below the
-  root (code-behind classes `X.tsazor.ts`, imported modules), so a type error in a
+  shadow graph — the shadows **and** every real `.ts` source the tsconfig includes
+  (code-behind classes `X.tsazor.ts`, imported modules, a helper nothing imports yet), so a type error in a
   code-behind fails the gate too. In that program a `.tsazor` import of a `.ts`
   file resolves to the component's shadow (`import type Child from "./Child.tsazor"`
   types a `@ref` field as the class), and the tsconfig's own `.d.ts` files
@@ -1348,7 +1352,9 @@ typed:
   the permissive `export const X: any` index is gone.
 - **Ambient types.** `*.tsazor` (default component) and `virtual:tsazor-routes`
   are declared as `@tsazor/vite-plugin/client` — apps add that to
-  `compilerOptions.types` instead of copying `types.d.ts`.
+  `compilerOptions.types` instead of copying `types.d.ts`. That declaration is all plain `tsc` knows of a
+  `.tsazor`: a component value, not its class — so `tsazor check`, not `tsc`, is the gate for `.ts` files that
+  import a component's type (`import type Paper from "./Paper.tsazor"`).
 
 ## Compatibility .razor ↔ .tsazor
 

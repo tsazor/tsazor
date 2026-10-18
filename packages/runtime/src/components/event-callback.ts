@@ -63,7 +63,11 @@ export class EventCallback<TArg = unknown> {
     return new EventCallback(receiver, delegate);
   }
 
-  /** Creates a callback without an owning component (no auto re-render). */
+  /**
+   * Creates a callback without an owning component (no auto re-render). Its delegate runs with no `this`: pass an
+   * arrow function (`EventCallback.unbound(() => this.save())`), not a method (`this.save` loses its object). A
+   * component that handles its own events without a render overrides `handleEventAsync` instead.
+   */
   static unbound<TArg>(delegate: (arg: TArg) => unknown): EventCallback<TArg> {
     return new EventCallback(null, delegate);
   }

@@ -65,6 +65,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   fix `@* … *@`; a call after the last `@code` block (module-level code) renders and never runs: it belongs in a
   `static { }` block in `@code`. Text inside an element is content and isn't checked. It found Blazing Pizza's Poller
   rendering its doc comment.
+- **Documented, from the MudBlazor port's findings**: `tsazor check` is the gate for `.ts` files too (plain `tsc` sees a
+  `.tsazor` import only as a component value); the component's own class is in scope in `@code`; code that runs at
+  module load is a `static { }` block in `@code`; a nullable value is `T | null`, an absent one `?:`, and a `@bind`
+  field and its parameter pick the same (the migration guide contradicted itself); .NET's `\p{L}` needs JavaScript's
+  `u` flag; `Substring(start, length)` is not `substring(a, b)`; `EventCallback.unbound(this.save)` loses `this`.
 - **TS2307's hint finds more** (`tsazor check`): the module in the file's own folder (`../base/x.js` from `src/` is
   `./base/x.js` — one `../` too many), a `.ts` source by its `.js` name, a component's `.tsazor` for `./X.js`
   whatever the name's length, and in a `.ts` module too (only `.tsazor` files had the hint).

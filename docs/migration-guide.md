@@ -23,7 +23,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | Run the old app and the new one side by side, page by page | [migration.md](migration.md) (gateway, one sign-in, the API boundary) |
 | Convert the markup | `npx tsazor codemod src/Pages --write` (writes `X.tsazor` next to `X.razor`) |
 | Port each `@code` block to TypeScript | sections 3–5 below |
-| Check | `npx tsazor check` — fix what it reports |
+| Check | `npx tsazor check` — fix what it reports. It is the gate for the `.ts` files too: plain `tsc` sees a `.tsazor` import only as a component value, not its class |
 | Before npm: install from the local registry | [getting-started.md](getting-started.md#before-the-npm-release-a-local-registry) |
 | Lessons from real ports | [migration-practices.md](migration-practices.md) |
 
@@ -44,6 +44,9 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `@attribute [Authorize(Roles = "Admin")]` | `@authorize({ roles: ["Admin"] })` | `@allowAnonymous` for `[AllowAnonymous]` |
 | `@attribute [Route("/x")]` | `@page "/x"` | the codemod does it |
 | `@code { … }` / `@functions { … }` | the same, the content in TypeScript | |
+| the component's own type in `@code` (`MudMenu ParentMenu`) | the class name: `parentMenu?: MudMenu;` | in scope as in C#; no `@import` of the file itself |
+| a static constructor, code that runs once when the class loads | `static { … }` in `@code` | text after `@code` is markup: it renders, never runs (TZS038) |
+| `// …`, `/* … */` outside `@code` | `@* … *@` | markup text in Razor too — it renders (TZS038, a quick fix) |
 | `@namespace`, `@implements`, `@rendermode`, `@preservewhitespace` | accepted and ignored | no render modes: Tsazor is a client SPA |
 | `@Name`, `@(a + b)`, `@@`, `@* … *@`, `<text>`, `@:` | the same | |
 | `@($"Hi {name}")` | `` @(`Hi ${name}`) `` | TZS024 names the literal |
@@ -220,7 +223,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `void` | `void` |
 | `null` | `null`; absent is `undefined` — `x == null` matches both |
 | `true`, `false` | the same |
-| `string? s` / `int? n` | `s: string \| null` / `n?: number` |
+| `string? s` / `int? n` (a value that can be null) | `s: string \| null` / `n: number \| null` — an optional member that can be absent is `n?: number` (`undefined`); a `@bind` field and the parameter it binds pick the same one (TS1360 otherwise) |
 | `x?.y`, `x ?? y`, `x ??= y`, `x!` | the same |
 | `new Order()` | `new Order()` (or an object literal `{ id: 1 }` for data) |
 | `this`, `base.Save()`, `base(name)` | `this` (required), `super.save()`, `super(name)` |
@@ -295,6 +298,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `Random.Shared.Next(n)` | `Math.floor(Math.random() * n)` |
 | `Stopwatch` | `performance.now()` |
 | `Regex.IsMatch(s, p)` | `/p/.test(s)` |
+| `Regex` with `\p{L}`, `RegexOptions.IgnoreCase` | `/\p{L}/u`, `/…/i` — a Unicode class needs the `u` (or `v`) flag: without it `\p{L}` silently matches the text `p{L}`. No inline `(?i)`, no atomic groups `(?>…)` or possessive quantifiers; `(?<name>…)` is the same |
 | `Encoding.UTF8.GetBytes` | `new TextEncoder().encode(s)` |
 
 More: strings, numbers, dates, collections, exceptions, disposal — [csharp-to-typescript.md](csharp-to-typescript.md).
@@ -323,6 +327,8 @@ More: strings, numbers, dates, collections, exceptions, disposal — [csharp-to-
 | TZS005 | an unresolved component tag | `@using` the folder or package, or `@import` the component |
 | TZS025 | an unknown component parameter | the spelling; the message suggests the closest |
 | TZS037 (warning) | an `@EditorRequired()` parameter the tag leaves out | set it (an attribute, `@bind-`, element content for `ChildContent`) |
+| TZS038 (warning) | a `//` or `/* … */` comment outside every element, a call after `@code` — text that renders | `@* … *@` (quick fix); code that runs at load in `static { }` in `@code` |
+| TZS004 | an `@` no expression follows — in an attribute value too (``transform="@`…`"``) | `@name`, `@(…)` (the quick fix for a template literal), `@@` for the character |
 | TZS008 | a misused directive attribute (`@bind:event` naming no callback, `:after` with `:set`) | as the message says |
 | TS2304 | a name `@code` doesn't know | `@import` it — the message names the import |
 | TS2339 on the component | markup read a missing import as a member (`Shade.Dark`) | the `@import` the message names |
@@ -338,11 +344,14 @@ All codes with examples: the reference's Diagnostics page, [language-reference.m
 2. **`||` is not `??`.** `count || 10` replaces `0` too; use `??`.
 3. **`=== null` misses `undefined`.** Generated clients mark absent members optional: check `x == null`.
 4. **`sort()` sorts in place and as strings.** Use `toSorted((a, b) => a - b)`.
-5. **A method passed on loses `this`.** `setTimeout(this.tick, 100)` — write `() => this.tick()` (markup's `@onclick="tick"` keeps it for you).
+5. **A method passed on loses `this`.** `setTimeout(this.tick, 100)`, `EventCallback.unbound(this.tick)` — write `() => this.tick()` (markup's `@onclick="tick"` and a method passed to a parameter keep it for you).
 6. **`@bind` on a field that starts as `null`** gets the text: start number fields with a number.
 7. **Relative specifiers resolve from the file they're written in** — a page in `Pages/` imports `../Store`.
 8. **`@inject` needs the class at run time**: not an `import type`, not an interface.
 9. **An enum in markup needs its `@import`** (`Shade="Shade.Dark"`).
 10. **Objects compare by reference.** Where Blazor relied on `Equals`, give a key: `@key`, `ItemKey`, `ItemComparer`.
+11. **`substring(a, b)` is not `Substring(start, length)`.** Its second argument is the end: `s.Substring(1, s.Length - 2)` is `s.slice(1, -1)` — the wrong one cuts quietly.
+12. **`\p{L}` without the `u` flag matches the text `p{L}`.** A .NET pattern with a Unicode class needs `/…/u`; atomic groups and possessive quantifiers have no JavaScript form.
+13. **A comment outside `@code` renders.** `// …` and `/** … */` are markup text, as in Razor (TZS038): `@* … *@` — a leading `@** … *@` is the component's doc comment.
 
 More, with the ports they came from: [migration-practices.md](migration-practices.md).
