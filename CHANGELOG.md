@@ -18,6 +18,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **A method written with `this.` binds as a delegate** (`@tsazor/compiler`): `Filter="@(this.filterFunc1)"` on a
   function-typed parameter passed the method unbound (`this` undefined when the component called it), while
   `Filter="@filterFunc1"` was bound — both are Razor's method group now.
+- **`verbatimModuleSyntax` works** (`@tsazor/compiler`, `tsazor check`; Vite's TypeScript templates turn it on): the
+  types the compiler imports itself were value imports — TS1484 on `RouteData` (`<RouteView RouteData>`) and
+  `ComponentType` (`<DynamicComponent Type>`). They are type imports now, and so is a tag's type argument resolved
+  through `@using` (`TItem="Person"` for an interface), which the typed check didn't import at all (TS2304).
 
 ## 1.0.0-next.4 (2026-10-18)
 

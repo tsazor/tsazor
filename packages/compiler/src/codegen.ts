@@ -308,6 +308,8 @@ class Codegen {
   private readonly runtimeImports = new Set<string>();
   /** Runtime APIs of the generated code, imported under hygienic aliases. */
   private readonly runtimeAliases = new Set<string>();
+  /** Runtime types the typed shadow names only as types (a parameter's `RouteData`): `type` aliases, so a tsconfig with `verbatimModuleSyntax` accepts them. */
+  private readonly runtimeTypeAliases = new Set<string>();
   /** F5: keyed rows of loops, where `@animate` may stand. */
   private readonly animatableRows = new Set<ElementNode>();
   /** Component members, syntactically: `@code`, code-behind, `@inject` fields. */
@@ -333,6 +335,8 @@ class Codegen {
   private readonly contextStack: Array<{ name: string; element: string; component: string }> = [];
   private readonly unavailableWarned = new Set<string>();
   private readonly typeImports = new Map<string, string>(); // typeName → local
+  /** The `typeImports` the code needs as values (`@inject`, `@inherits`); the others are `import type`. */
+  private readonly valueTypeImports = new Set<string>();
   private readonly plainImports: string[] = [];
   private readonly seqStack: SeqScope[] = [{ next: 0 }];
   /** Locals declared by loops / inline code — emitted without a `this.` prefix —
@@ -569,14 +573,6 @@ class Codegen {
     }
     if (this.componentImports.size > 0) this.line("");
 
-    for (const [typeName, local] of this.typeImports) {
-      const resolved = this.options.resolveType?.(typeName, this.metadata.usings) ?? null;
-      const spec = resolved?.specifier ?? typeName;
-      if (resolved?.exportName) this.line(`import { ${resolved.exportName} as ${typeName} } from "${spec}";`);
-      else this.line(`import ${typeName} from "${spec}";`);
-    }
-    if (this.typeImports.size > 0) this.line("");
-
     // @import directives: the file's own verbatim (mapped for the LSP), then
     // the inherited ones that no nearer declaration shadows.
     for (const directive of this.ownImportDirectives) this.emitImportDirective(directive);
@@ -675,6 +671,8 @@ class Codegen {
     const runtimeNames = [
       ...[...this.runtimeImports].filter((name) => !this.importedNames.has(name)).sort(),
       ...[...this.runtimeAliases].sort().map((name) => `${name} as ${alias(name)}`),
+      // A name the generated code also uses as a value keeps its value alias.
+      ...[...this.runtimeTypeAliases].filter((name) => !this.runtimeAliases.has(name)).sort().map((name) => `type ${name} as ${alias(name)}`),
     ];
     if (runtimeNames.length > 0) {
       this.writer.insertLines(runtimeImportLine, [`import { ${runtimeNames.join(", ")} } from "@tsazor/runtime";`, ""]);
@@ -688,6 +686,19 @@ class Codegen {
         imp.imported !== undefined
           ? `import type { ${imp.imported} as ${name} } from "${imp.specifier}";`
           : `import type ${name} from "${imp.specifier}";`);
+      this.writer.insertLines(runtimeImportLine, [...lines, ""]);
+    }
+
+    // Types resolved through `@using`: `@inject`/`@inherits` ahead of the body, a tag's type arguments (`TItem="Person"`)
+    // while it was emitted — so they too join the spliced header. One the code needs only as a type is `import type`,
+    // as `verbatimModuleSyntax` requires.
+    if (this.typeImports.size > 0) {
+      const lines = [...this.typeImports.keys()].map((typeName) => {
+        const resolved = this.options.resolveType?.(typeName, this.metadata.usings) ?? null;
+        const spec = resolved?.specifier ?? typeName;
+        const keyword = this.valueTypeImports.has(typeName) ? "import" : "import type";
+        return resolved?.exportName ? `${keyword} { ${resolved.exportName} as ${typeName} } from "${spec}";` : `${keyword} ${typeName} from "${spec}";`;
+      });
       this.writer.insertLines(runtimeImportLine, [...lines, ""]);
     }
 
@@ -1152,14 +1163,21 @@ class Codegen {
     return local;
   }
 
-  private resolveType(name: string): string {
+  /** Imports the type `name` names, resolved through `@using`; `value`: the code needs it at run time too (`@inject`, `@inherits`). */
+  private resolveType(name: string, value = true): string {
     // A generic reference (`Base<number>`) imports its root identifier.
     const root = /^[A-Za-z_$][\w$]*/.exec(name)?.[0] ?? name;
-    if (this.typeImports.has(root)) return name;
+    if (this.typeImports.has(root)) {
+      if (value) this.valueTypeImports.add(root);
+      return name;
+    }
     // Explicitly imported (e.g. `@import { CounterService } from …`): already bound.
     if (this.importedNames.has(root)) return name;
     const resolved = this.options.resolveType?.(root, this.metadata.usings) ?? null;
-    if (resolved) this.typeImports.set(root, root);
+    if (resolved) {
+      this.typeImports.set(root, root);
+      if (value) this.valueTypeImports.add(root);
+    }
     return name;
   }
 
@@ -2184,7 +2202,7 @@ class Codegen {
     let previous = ts.SyntaxKind.Unknown;
     for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
       if (token === ts.SyntaxKind.Identifier && previous !== ts.SyntaxKind.DotToken) {
-        this.resolveType(scanner.getTokenText());
+        this.resolveType(scanner.getTokenText(), false);
       }
       previous = token;
     }
@@ -2223,7 +2241,7 @@ class Codegen {
           // A runtime type: through the hygienic alias (shadow builds only,
           // so the extra alias never reaches a real build's import header).
           const runtimeName = ref.imported === undefined || ref.imported === "*" ? ref.name : ref.imported;
-          this.runtimeAliases.add(runtimeName);
+          this.runtimeTypeAliases.add(runtimeName);
           substitution.set(ref.name, { text: alias(runtimeName) });
           break;
         }
