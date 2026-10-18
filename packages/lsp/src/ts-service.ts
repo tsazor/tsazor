@@ -614,6 +614,14 @@ export class TsazorTypeService {
               return { resolvedModule: { resolvedFileName: shadow, extension: ts.Extension.Ts, isExternalLibraryImport: false } };
             }
           }
+          // A shadow's import of another component's shadow (`./Icon.tsazor.gen`, written without an extension):
+          // resolved here, as `bundler` would — `nodenext` requires the extension of a relative ESM import (TS2307).
+          if (name.endsWith(".gen") && name.startsWith(".")) {
+            const shadow = `${path.resolve(path.dirname(containingFile), name)}.ts`;
+            if (this.exists(shadow)) {
+              return { resolvedModule: { resolvedFileName: shadow, extension: ts.Extension.Ts, isExternalLibraryImport: false } };
+            }
+          }
           return ts.resolveModuleName(
             name,
             containingFile,

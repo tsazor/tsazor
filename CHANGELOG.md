@@ -26,6 +26,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   `import.meta.glob(…, { query: "?raw" })`, as a gallery showing a component's source does: the plugin compiled the
   string module Vite loads for `?raw` as a component (a 500 in dev, a failed build). `?raw`, `?url`, `?worker` and
   (but for CSS) `?inline` are Vite's now.
+- **`moduleResolution: nodenext` works** (`tsazor check`, the editor): in an ESM package every import between
+  components — a bare tag, a default, named or type import — was TS2307, because the typed check's modules import
+  each other without an extension, which `nodenext` refuses. They resolve as under `bundler` now.
 
 ## 1.0.0-next.4 (2026-10-18)
 
