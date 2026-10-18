@@ -1120,7 +1120,9 @@ member name: `Appearance="…"` sets `appearance`). Markup stays Razor; the valu
 An element that is a **direct** child of a component and whose tag names a
 `RenderFragment`/`RenderFragment<T>` parameter of that component is a
 child content element (Blazor templates) and is set as that parameter —
-it is no longer rendered as `ChildContent` or as a component:
+it is no longer rendered as `ChildContent` or as a component. A generic component declares its templates as
+`(item: TItem) => RenderFragment` (the same template to the compiler): `RenderFragment<TItem>` is a conditional type
+that TypeScript can't call while `TItem` is open (`tsazor check` says so at the call):
 
 ```razor
 <Router>

@@ -35,12 +35,21 @@ const HINTS: ReadonlyMap<number, string> = new Map([
 ]);
 
 /**
+ * `RenderFragment<TItem>` called in a generic component (`@ChildContent?.(item)`): its conditional type — a builder
+ * for `void`, a template otherwise — stays open while `TItem` is, and TypeScript calls both branches at once.
+ */
+const OPEN_FRAGMENT = /RenderTreeBuilder & |'void \| \(\(builder: RenderTreeBuilder\) => void\)/;
+const OPEN_FRAGMENT_HINT =
+  "In a generic component `RenderFragment<TItem>` can't be called while `TItem` is open (it is a conditional type): " +
+  "declare the parameter as `(item: TItem) => RenderFragment` — the same template to the compiler and to its users.";
+
+/**
  * The message with a plain-language hint appended for the common TypeScript
  * errors; others (and messages that already carry an explanation, see
  * explainExpressionValue) come back unchanged.
  */
 export function explainTypeScriptError(code: number, message: string): string {
-  const hint = HINTS.get(code);
+  const hint = code === 2345 && OPEN_FRAGMENT.test(message) ? OPEN_FRAGMENT_HINT : HINTS.get(code);
   if (hint === undefined || message.includes(" Note: ") || message.includes(" Hint: ")) return message;
   return `${message} Hint: ${hint}`;
 }

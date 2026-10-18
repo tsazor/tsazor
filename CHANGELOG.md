@@ -60,6 +60,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   renders as before. Overridden with `return callback.invokeAsync(arg);` a component handles its events without a
   render — what a MudBlazor port's `EventUtil.AsNonRenderingEventHandler` had nothing to map to. `EventCallbackWorkItem`
   is the handler it gets.
+- **`RenderFragment<TItem>` called in a generic component says what to do** (`tsazor check`): its two TS2345 errors
+  (TypeScript keeps the conditional type open while `TItem` is) name the form that works, `(item: TItem) =>
+  RenderFragment`; the language reference and the migration guide say it too.
 
 ## 1.0.0-next.4 (2026-10-18)
 

@@ -101,6 +101,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `EventCallback.Factory.Create(this, handler)` | `EventCallback.bind(this, handler)` |
 | `[Parameter] public T Value` + `ValueChanged` (two-way) | the same pair — or `@Bindable() accessor value` (both in one line) |
 | `RenderFragment` / `RenderFragment<T>` | `RenderFragment` / `RenderFragment<T>` |
+| `RenderFragment<TItem>` in a generic component (`@typeparam TItem`), called as `@ChildContent(item)` | `(item: TItem) => RenderFragment` — `RenderFragment<TItem>` is a conditional type TypeScript can't call while `TItem` is open |
 | `ChildContent` | `childContent` (markup: the element's content) |
 | `builder.OpenElement(…)` in `BuildRenderTree` | the markup — `buildRenderTree` is generated; hand-written only in `.ts` components |
 
