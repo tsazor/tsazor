@@ -8,6 +8,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **A multi-line template literal keeps its value** (`@tsazor/compiler`; found with a MudBlazor port): `@code` and
   `@{ }` are emitted re-indented, and the lines inside a template literal were indented too — `` `a\nb` `` became
   `"a\n  b"`. A line that starts inside a template literal now stays as written.
+- **Cascading by type** (`@tsazor/runtime`, the same port):
+  - A `{ prototype, name }` token — the shape `CascadingTypeToken` allows — threw "Right-hand side of 'instanceof' is
+    not callable" while matching; it matches now (by `isPrototypeOf`).
+  - `type` takes an arrow function, read when the cascade is matched: `@CascadingParameter({ type: () => Menu })
+    parentMenu?: Menu;` in Menu — the component's own class (Blazor's nested menu), which `type: Menu` can't name
+    while the class is being defined (TS2449). The same form takes a class whose module imports this one.
+  - Documented: a primitive cascades by type with its constructor (`type: Boolean`).
 
 ## 1.0.0-next.4 (2026-10-18)
 

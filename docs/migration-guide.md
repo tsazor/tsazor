@@ -89,6 +89,8 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `[Parameter(CaptureUnmatchedValues = true)] Dictionary<string, object> Attrs` | `@Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;` |
 | `[Parameter, EditorRequired] public Todo Todo { get; set; } = default!;` | `@EditorRequired() @Parameter() todo!: Todo;` — a tag without it: warning TZS037 (Razor's RZ2012) |
 | `[CascadingParameter] Theme Theme` | `@CascadingParameter({ type: Theme }) theme?: Theme;` (by type: name the class) |
+| `[CascadingParameter] MudMenu ParentMenu` in `MudMenu` (its own type) | `@CascadingParameter({ type: () => MudMenu }) parentMenu?: MudMenu;` (an arrow: read when matched) |
+| `[CascadingParameter] bool RightToLeft` (a primitive by type) | `@CascadingParameter({ type: Boolean }) rightToLeft?: boolean;` (`Number`, `String` alike) |
 | `[CascadingParameter(Name = "Theme")]` | `@CascadingParameter({ name: "Theme" })` |
 | `<CascadingValue Value="@theme" Name="…" IsFixed="true">` | the same |
 | `[SupplyParameterFromQuery] public int Page { get; set; }` | `@SupplyParameterFromQuery({ type: "int" }) page?: number;` |

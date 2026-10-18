@@ -17,8 +17,8 @@ export interface ParameterMeta {
   readonly cascading?: boolean;
   /** Cascading parameters: match by name instead of type. */
   readonly cascadingName?: string;
-  /** Cascading parameters: type token for by-type matching. */
-  readonly cascadingType?: CascadingTypeToken;
+  /** Cascading parameters: type token for by-type matching — the class, or an arrow function that returns it. */
+  readonly cascadingType?: CascadingTypeToken | (() => CascadingTypeToken);
   /** Captures attributes the parent passed that have no matching parameter. */
   readonly captureUnmatchedValues?: boolean;
   /**
@@ -271,8 +271,13 @@ export type CascadingTypeToken = { readonly prototype: object; readonly name: st
 /** [CascadingParameter]-equivalent field decorator. */
 export function CascadingParameter(options?: {
   name?: string;
-  /** Type token for by-type matching (TS has no property type metadata). */
-  type?: CascadingTypeToken;
+  /**
+   * Type token for by-type matching (TS has no property type metadata): the class — or an arrow function that
+   * returns it, read when the cascade is matched instead of while this class is defined: the component's own class
+   * (`@CascadingParameter({ type: () => Menu }) parentMenu?: Menu;` in Menu, Blazor's nested menu) or a class whose
+   * module imports this one.
+   */
+  type?: CascadingTypeToken | (() => CascadingTypeToken);
 }): (value: unknown, context: ParameterDecoratorContext) => void {
   return (_value, context) => {
     register(context, "@CascadingParameter()", {

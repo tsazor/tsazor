@@ -11,7 +11,7 @@ import { SectionRegistry } from "../sections/section-registry.js";
 import { ServiceCollection, ServiceProvider, type Token } from "../di/service-collection.js";
 import { withServices } from "../di/service-provider.js";
 import { mayHaveChanged } from "../components/change-detection.js";
-import { canSupplyValue, isCascadingValueSupplier, type CascadingValueSupplier } from "./cascading-value.js";
+import { canSupplyValue, isCascadingValueSupplier, requestedTypeOf, type CascadingValueSupplier } from "./cascading-value.js";
 import { DEV } from "../components/observe.js";
 import { NavigationManager } from "../navigation/navigation-manager.js";
 import { queryParameterValue } from "../routing/supply-parameter-from-query.js";
@@ -183,7 +183,7 @@ export class Renderer {
     // notifications (design-localization.md §3).
     const autoObserve: unknown[] = [];
     const component = withServices(this.services, () => Reflect.construct(definition.type as unknown as new () => ComponentBase, []), autoObserve);
-    for (const service of autoObserve) componentInternals.autoObserve(component, service);
+    for (const service of autoObserve) componentInternals.autoObserve(component, service);
     const state = new ComponentState(id, component, definition, parent);
     (state.renderHandle as { render: () => void }).render = () => this.enqueueRender(state);
     (state.renderHandle as { track?: unknown }).track = (promise: Promise<unknown>) => this.trackFor(state, promise, `${componentName(state)}: tracked work`);
@@ -982,7 +982,7 @@ const warnedPlainObjectCascades = new Set<string>();
  * the parameter stays unset without a word. Once per component and parameter.
  */
 function warnPlainObjectCascade(component: ComponentBase, meta: ParameterMeta): void {
-  const type = meta.cascadingType?.name ?? "the type";
+  const type = meta.cascadingType === undefined ? "the type" : requestedTypeOf(meta.cascadingType).name;
   const key = `${component.constructor.name}.${meta.propertyName}`;
   if (warnedPlainObjectCascades.has(key)) return;
   warnedPlainObjectCascades.add(key);

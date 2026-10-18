@@ -147,7 +147,7 @@ export declare class CascadingAuthenticationState extends ComponentBase implemen
 // CascadingParameter
 export declare function CascadingParameter(options?: {
     name?: string;
-    type?: CascadingTypeToken;
+    type?: CascadingTypeToken | (() => CascadingTypeToken);
 }): (value: unknown, context: ParameterDecoratorContext) => void;
 
 // CascadingTypeParameter
@@ -870,7 +870,7 @@ export interface ParameterMeta {
     readonly propertyName: string;
     readonly cascading?: boolean;
     readonly cascadingName?: string;
-    readonly cascadingType?: CascadingTypeToken;
+    readonly cascadingType?: CascadingTypeToken | (() => CascadingTypeToken);
     readonly captureUnmatchedValues?: boolean;
     readonly query?: QueryParameterMeta;
 }

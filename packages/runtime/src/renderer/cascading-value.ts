@@ -43,7 +43,15 @@ export function isCascadingValueSupplier(value: unknown): value is CascadingValu
 /** What a cascading parameter requests (from its @CascadingParameter metadata). */
 export interface CascadingParameterRequest {
   readonly cascadingName?: string;
-  readonly cascadingType?: CascadingTypeToken;
+  readonly cascadingType?: CascadingTypeToken | (() => CascadingTypeToken);
+}
+
+/**
+ * The class a by-type request names: `type: () => Menu` is read now, when the cascade is matched. An arrow function
+ * has no `prototype` of its own; a class (and a `{ prototype, name }` token) has one.
+ */
+export function requestedTypeOf(type: CascadingTypeToken | (() => CascadingTypeToken)): CascadingTypeToken {
+  return typeof type === "function" && !Object.hasOwn(type, "prototype") ? (type as () => CascadingTypeToken)() : type;
 }
 
 /**
@@ -64,17 +72,20 @@ export function canSupplyValue(supplier: CascadingValueSupplier, request: Cascad
   const supplierName = supplier.cascadeName;
   const requestedName = request.cascadingName;
   if (requestedName === undefined && (supplierName === undefined || supplierName === null)) {
-    const requestedType = request.cascadingType;
-    if (requestedType === undefined) return "yes";
-    const token = requestedType as unknown as new () => unknown;
+    if (request.cascadingType === undefined) return "yes";
+    const token = requestedTypeOf(request.cascadingType);
+    // `isPrototypeOf`, not `instanceof`: a token is any object with a prototype — a `{ prototype, name }` token isn't
+    // callable, and `instanceof` throws on it.
+    const isInstance = (candidate: object): boolean => Object.prototype.isPrototypeOf.call(token.prototype, candidate);
     const suppliedType = supplier.cascadeType;
     if (suppliedType !== undefined) {
       // Blazor: requestedType.IsAssignableFrom(typeof(TValue)).
-      return suppliedType === requestedType || (suppliedType as unknown as { prototype: unknown }).prototype instanceof token ? "yes" : "no";
+      return (suppliedType as unknown) === token || isInstance(suppliedType.prototype) ? "yes" : "no";
     }
     const value = supplier.cascadeValue;
     if (value === null || value === undefined) return "pending";
-    return value instanceof token || (value as object).constructor === token ? "yes" : "no";
+    // A primitive is no instance: `type: Boolean` matches `true` by its constructor.
+    return isInstance(value) || (value as object).constructor === token ? "yes" : "no";
   }
   if (requestedName === undefined || supplierName === undefined || supplierName === null) return "no";
   return requestedName.toLowerCase() === supplierName.toLowerCase() ? "yes" : "no";

@@ -1102,6 +1102,12 @@ member name: `Appearance="…"` sets `appearance`). Markup stays Razor; the valu
   `<Target>Expression` is omitted as well.
 - Cascading: `@CascadingParameter({ type: EditContext })` (by type) or
   `@CascadingParameter({ name: "x" })` (by name) — supplied by `CascadingValue`/`EditForm`.
+  By type matches instances of the class and its subclasses (any class: abstract, or one with a private
+  constructor). A primitive matches by its constructor: `@CascadingParameter({ type: Boolean }) rightToLeft?: boolean`
+  takes an unnamed `<CascadingValue Value="@rtl">`. The component's own class — Blazor's nested menu,
+  `[CascadingParameter] MudMenu ParentMenu` — is an arrow function, read when the cascade is matched:
+  `@CascadingParameter({ type: () => Menu }) parentMenu?: Menu;` (`type: Menu` would read the class while it is
+  being defined, TS2449). The same form takes a class whose module imports this one.
 
 ### Templated components: named slots and template contexts (2.3)
 

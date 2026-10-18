@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CascadingParameter,
   CascadingValue,
+  type CascadingValueSupplier,
   ComponentBase,
   Parameter,
   defineComponent,
@@ -162,6 +163,60 @@ describe("B5 — matching", () => {
   it("a named parameter without a matching supplier stays unset", async () => {
     const h = await mount((b) => cascade(b, { Name: "Other", Value: "x" }, component(NamedConsumer)));
     expect(h.container.textContent).toBe("none");
+  });
+
+  it("a { prototype, name } token matches an instance and a typed supplier — it isn't callable, instanceof threw", async () => {
+    class TokenConsumer extends ComponentBase {
+      @CascadingParameter({ type: { prototype: Box.prototype, name: "Box" } }) box?: Box;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, this.box === undefined ? "none" : String(this.box.n));
+      }
+    }
+    class TypedSupplier extends ComponentBase implements CascadingValueSupplier {
+      readonly isCascadingValueSupplier = true;
+      readonly isFixed = true;
+      readonly cascadeType = SubBox;
+      readonly cascadeValue = new SubBox(4);
+      @Parameter() childContent?: RenderFragment;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        this.childContent?.(b);
+      }
+    }
+    const byValue = await mount((b) => cascade(b, { Value: new SubBox(3) }, component(TokenConsumer)));
+    expect(byValue.container.textContent).toBe("3");
+    const byType = await mount((b) => {
+      b.openComponent(0, defineComponent(TypedSupplier));
+      b.addAttribute(1, "ChildContent", component(TokenConsumer));
+      b.closeComponent();
+    });
+    expect(byType.container.textContent).toBe("4");
+  });
+
+  it("type: () => Menu names the component's own class: a nested menu gets its parent (Blazor's nested MudMenu)", async () => {
+    class Menu extends ComponentBase {
+      @CascadingParameter({ type: () => Menu }) parentMenu?: Menu;
+      @Parameter() label = "";
+      @Parameter() childContent?: RenderFragment;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        cascade(b, { Value: this, IsFixed: true }, (inner) => {
+          inner.addContent(0, `[${this.label}<${this.parentMenu?.label ?? "root"}]`);
+          this.childContent?.(inner);
+        });
+      }
+    }
+    const h = await mount(component(Menu, { Label: "file", ChildContent: component(Menu, { Label: "recent" }) }));
+    expect(h.container.textContent).toBe("[file<root][recent<file]");
+  });
+
+  it("type: Boolean matches a primitive by its constructor", async () => {
+    class Flag extends ComponentBase {
+      @CascadingParameter({ type: Boolean }) rightToLeft?: boolean;
+      protected override buildRenderTree(b: RenderTreeBuilder): void {
+        b.addContent(0, `rtl=${String(this.rightToLeft)}`);
+      }
+    }
+    const h = await mount((b) => cascade(b, { Value: true }, component(Flag)));
+    expect(h.container.textContent).toBe("rtl=true");
   });
 });
 

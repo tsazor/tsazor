@@ -247,6 +247,7 @@ export default class C extends ComponentBase {
   @Parameter() set width(value: number) {}
   @CascadingParameter({ name: "theme" }) theme?: string;
   @CascadingParameter({ type: EditContext }) editContext?: EditContext;
+  @CascadingParameter({ type: () => C }) parent?: C;
   @Parameter() static nope = 1;
   @Param() foreign?: string;
 }`,
@@ -255,7 +256,8 @@ export default class C extends ComponentBase {
     expect(param(m, "width")).toMatchObject({ member: "setter", type: "number", category: "value" });
     expect(param(m, "theme").cascading).toEqual({ name: "theme" });
     expect(param(m, "editContext").cascading).toEqual({ type: "EditContext" });
-    expect(m.parameters.map((p) => p.name)).toEqual(["heading", "width", "theme", "editContext"]);
+    expect(param(m, "parent").cascading).toEqual({ type: "C" });
+    expect(m.parameters.map((p) => p.name)).toEqual(["heading", "width", "theme", "editContext", "parent"]);
   });
 
   it("reads defineParameter() calls of decorator-free components", () => {

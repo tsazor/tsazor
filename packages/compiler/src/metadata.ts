@@ -568,6 +568,11 @@ function typeParameterInfo(parameter: ts.TypeParameterDeclaration, file: ts.Sour
   return info;
 }
 
+/** The class a cascading `type` names: `EditContext`, or `Menu` for the arrow function `() => Menu`. */
+function cascadingTypeText(type: ts.Expression, file: ts.SourceFile): string {
+  return ts.isArrowFunction(type) && type.parameters.length === 0 && !ts.isBlock(type.body) ? type.body.getText(file) : type.getText(file);
+}
+
 /** Whether a decorator is `@EditorRequired()`. */
 function isEditorRequired(decorator: ts.Decorator, module: ModuleMetadata): boolean {
   return ts.isCallExpression(decorator.expression) && runtimeName(module, decorator.expression.expression) === "EditorRequired";
@@ -600,7 +605,7 @@ function decoratorOptions(
     const name = options.get("name");
     if (name && ts.isStringLiteralLike(name)) cascading.name = name.text;
     const type = options.get("type");
-    if (type) cascading.type = type.getText(file);
+    if (type) cascading.type = cascadingTypeText(type, file);
     return { cascading };
   }
   const capture = options.get("captureUnmatchedValues");
@@ -681,7 +686,7 @@ function defineParameterCall(expression: ts.Expression, file: ts.SourceFile, mod
     const cascadingName = properties.get("cascadingName");
     if (cascadingName && ts.isStringLiteralLike(cascadingName)) parameter.cascading.name = cascadingName.text;
     const cascadingType = properties.get("cascadingType");
-    if (cascadingType) parameter.cascading.type = cascadingType.getText(file);
+    if (cascadingType) parameter.cascading.type = cascadingTypeText(cascadingType, file);
   } else if (properties.get("captureUnmatchedValues")?.kind === ts.SyntaxKind.TrueKeyword) {
     parameter.captureUnmatchedValues = true;
   }
