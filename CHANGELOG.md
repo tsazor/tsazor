@@ -46,6 +46,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **A fragment whose context is the component itself is typed** (`tsazor check`): `RenderFragment<Upload<T>>` gave
   the consumer's context `any` (a MudBlazor port's upload hands its own instance to the template); it is the tag's
   component with its type arguments now, and a missing member is TS2339.
+- **`@ref` takes Razor's lvalue** (`@tsazor/compiler`): a member or element access — `@ref="panel.panelRef"` on each
+  tab of a loop (a MudBlazor port's tabs keep the reference on the panel), `@ref="inputs[i]"` — on elements and
+  components, typed like a member; a call or `?.` stays TZS008. A mistyped capture is reported on the reference (it
+  mapped past the end of the line).
 
 ## 1.0.0-next.4 (2026-10-18)
 

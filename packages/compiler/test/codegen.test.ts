@@ -171,11 +171,23 @@ describe("codegen", () => {
     expect(code).toContain("__builder.addElementReferenceCapture(1, (el) => { this.listItem = el; });");
   });
 
-  it("takes @ref as this.name too, as markup writes members elsewhere; anything else is TZS008", () => {
+  it("takes @ref as this.name too, as markup writes members elsewhere", () => {
     const { code } = gen('<li @ref="this.listItem">x</li>');
     expect(code).toContain("__builder.addElementReferenceCapture(1, (el) => { this.listItem = el; });");
-    const { diagnostics } = gen('<li @ref="items[0]">x</li>');
-    expect(diagnostics.all.find((d) => d.code === "TZS008")?.message).toBe("Unsupported directive attribute. @ref requires a property name (`name` or `this.name`).");
+  });
+
+  it("takes @ref as an assignable member or element access (Razor's lvalue): a loop's variable stays local", () => {
+    // A MudBlazor port's tabs: `@ref="panel.PanelRef"` on each tab's div, the reference kept on the panel.
+    const { code, diagnostics } = gen('@foreach (const panel of panels) {\n    <div @ref="panel.panelRef">x</div>\n}\n<li @ref="items[0]!">y</li>');
+    expect(diagnostics.all).toEqual([]);
+    expect(code).toContain("(el) => { panel.panelRef = el; }");
+    expect(code).toContain("(el) => { this.items[0]! = el; }");
+    // A call, `?.` and other expressions can't be assigned to.
+    for (const target of ["make()", "panel?.panelRef", "a + b"]) {
+      expect(gen(`<li @ref="${target}">x</li>`).diagnostics.all.find((d) => d.code === "TZS008")?.message, target).toBe(
+        "Unsupported directive attribute. @ref takes a member (`name`, `this.name`) or an assignable member or element access (`panel.panelRef`, `refs[i]`).",
+      );
+    }
   });
 
   it("emits if/else chains inside buildRenderTree", () => {

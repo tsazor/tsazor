@@ -53,6 +53,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `@onclick:preventDefault`, `:stopPropagation` | the same | |
 | `@bind="Name"`, `@bind:event="oninput"`, `@bind:after`, `@bind:get`/`:set`, `@bind:format`, `@bind-Value` | the same | a text input or select converts by the bound value's type; `:culture` for culture-aware numbers |
 | `@ref="input"` (an `ElementReference`) | `@ref="input"` (the DOM `Element`) | `input?.focus()` instead of `FocusAsync()` |
+| `@ref="panel.PanelRef"` (a member of another object, in a loop) | `@ref="panel.panelRef"` | any assignable member or element access |
 | `@key="item.Id"`, `@attributes="Extra"` | the same | |
 | `(MarkupString)html` | `new MarkupString(html)` or `html as MarkupString` | |
 | `@<p>@context</p>` (Razor template) | the same | in `@code` as well |

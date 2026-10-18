@@ -29,7 +29,7 @@ An unknown `@word` is not a directive but an implicit expression (Razor).
 | `@on<event>` (+ `:preventDefault`, `:stopPropagation`) | `@onclick="save"` | Event handler, see [Expressions](#expressions) |
 | `@bind`, `@bind-<Param>` (+ modifiers) | `@bind="name"` | Two-way binding, see [@bind](#bind-blazor-net-7-semantics) |
 | `@key` | `@key="item.id"` | Diff key of an element or component |
-| `@ref` | `@ref="input"` | Captures the element (or component instance) into a member |
+| `@ref` | `@ref="input"` | Captures the element (or component instance) into a member — or, as Razor's lvalue, into a member or element access (`@ref="panel.panelRef"` in a loop, `@ref="inputs[i]"`) |
 | `@attributes` | `@attributes="extra"` | Attribute splat |
 | `@attach`, `@attach:<name>` | `@attach="autofocus"` | Tsazor extension: runs a function with the element once it is in the DOM, with cleanup — see [@attach](#attach-tsazor-extension) |
 

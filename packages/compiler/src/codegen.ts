@@ -2004,11 +2004,11 @@ class Codegen {
     for (const raw of refs) {
       if (raw.kind !== "ref") continue;
       const ref = refMember(raw);
-      if (ref === undefined) {
-        this.diagnostics.error("TZS008", raw, "@ref requires a property name (`name` or `this.name`).");
+      if (ref === undefined && !isAssignableReference(raw.code)) {
+        this.diagnostics.error("TZS008", raw, REF_TARGET_MESSAGE);
         continue;
       }
-      this.emitRefStmt(ref, node.pos, name);
+      this.emitRefStmt(ref ?? raw, node.pos, name, ref === undefined);
     }
     this.emitNodes(node.children, node.pos);
     this.plumbingStmt(`${BUILDER}.closeElement();`);
@@ -2020,19 +2020,28 @@ class Codegen {
    *  / `SVGElementTagNameMap[tag]`, unknown tags without a cast — so the usual
    *  `@ref` field type (`input`) typechecks (the TS2740 false positive). Real
    *  builds stay untyped (`el`); their output is byte-identical. */
-  private emitRefStmt(ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos, elementName?: string): void {
-    const seq = this.seq();
+  private emitRefStmt(ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos, elementName?: string, expression = false): void {
     const cast = elementName !== undefined && this.options.typedShadow !== undefined ? elementRefCastTag(elementName) : undefined;
-    const value = `el${cast !== undefined ? ` as ${cast}` : ""}`;
-    const text = `${BUILDER}.addElementReferenceCapture(${seq}, (el) => { this.${ref.code} = ${value}; });`;
+    this.emitCaptureStmt("addElementReferenceCapture", "el", `el${cast !== undefined ? ` as ${cast}` : ""}`, ref, pos, expression);
+  }
+
+  /**
+   * A `@ref` capture: `(el) => { <target> = <value>; }` — a member (`this.name`), or, as Razor's lvalue, an expression
+   * as markup reads it (`panel.panelRef`: a loop's `panel` stays local). TypeScript reports a mistyped capture at the
+   * target's start, `this.` included: it maps to the reference as written.
+   */
+  private emitCaptureStmt(method: string, parameter: string, value: string, ref: Extract<AttributeNode, { kind: "ref" }>, pos: SourcePos, expression: boolean): void {
+    const seq = this.seq();
+    const target = expression ? this.expr(ref.code, ref.codeStart) : `this.${ref.code}`;
+    const text = `${BUILDER}.${method}(${seq}, (${parameter}) => { ${target} = ${value}; });`;
+    const at = text.indexOf(`{ ${target} = `) + 2;
     if (ref.codeStart !== undefined) {
-      this.pendingExprEntries.push({
-        outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
-        srcLine: ref.codeStart.line - 1,
-        srcCol: ref.codeStart.column,
-      });
+      const source = { srcLine: ref.codeStart.line - 1, srcCol: ref.codeStart.column };
+      // The expression's own entries are relative to it; a member's to the statement.
+      if (expression) this.pendingExprEntries.unshift({ outOffset: 0, ...source });
+      else this.pendingExprEntries.push({ outOffset: at, ...source }, { outOffset: at + "this.".length, ...source });
     }
-    this.stmt(text, pos);
+    this.stmt(text, pos, expression ? at : undefined);
   }
 
   /**
@@ -2304,20 +2313,12 @@ class Codegen {
     pos: SourcePos,
     local: string,
     cast: "instance" | "never",
+    expression = false,
   ): void {
-    const seq = this.seq();
     const referenceText = cast === "instance"
       ? `comp as ${local}${this.typeArgumentSuffix()}`
       : "comp as unknown as never";
-    const text = `${BUILDER}.addComponentReferenceCapture(${seq}, (comp) => { this.${ref.code} = ${referenceText}; });`;
-    if (ref.codeStart !== undefined) {
-      this.pendingExprEntries.push({
-        outOffset: text.indexOf(`this.${ref.code}`) + "this.".length,
-        srcLine: ref.codeStart.line - 1,
-        srcCol: ref.codeStart.column,
-      });
-    }
-    this.stmt(text, pos);
+    this.emitCaptureStmt("addComponentReferenceCapture", "comp", referenceText, ref, pos, expression);
   }
 
   /** `<>…` of the current tag's resolved type arguments, in the component's type-parameter order ("" without type parameters). */
@@ -2415,15 +2416,16 @@ class Codegen {
     for (const raw of refs) {
       if (raw.kind !== "ref") continue;
       const ref = refMember(raw);
-      if (ref === undefined) {
-        this.diagnostics.error("TZS008", raw, "@ref on components requires a property name (`name` or `this.name`).");
+      if (ref === undefined && !isAssignableReference(raw.code)) {
+        this.diagnostics.error("TZS008", raw, REF_TARGET_MESSAGE);
         continue;
       }
       this.emitComponentRefStmt(
-        ref,
+        ref ?? raw,
         node.pos,
         local,
         (component.metadata?.typeParameters.length ?? 0) === 0 || (tagTypeArgs?.size ?? 0) === (component.metadata?.typeParameters.length ?? 0) ? "instance" : "never",
+        ref === undefined,
       );
     }
     this.checkEditorRequired(node, component, regular, slots, loose);
@@ -3795,6 +3797,22 @@ export type { MapEntry };
  * The member an `@ref` captures into: `name`, or `this.name` as markup writes members elsewhere (Razor takes
  * any assignable expression). The result names the bare member, its source start moved past `this.`.
  */
+const REF_TARGET_MESSAGE = "@ref takes a member (`name`, `this.name`) or an assignable member or element access (`panel.panelRef`, `refs[i]`).";
+
+/**
+ * `@ref` beyond a member name, as Razor's lvalue: a member or element access (`panel.panelRef`, `refs[i]`, with `!`)
+ * — not a call, and no `?.` (which can't be assigned to).
+ */
+function isAssignableReference(code: string): boolean {
+  let expression = parseExpression(code);
+  while (expression !== null && ts.isNonNullExpression(expression)) expression = expression.expression;
+  if (expression === null || !(ts.isPropertyAccessExpression(expression) || ts.isElementAccessExpression(expression))) return false;
+  for (let node: ts.Expression = expression; ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node) || ts.isNonNullExpression(node); node = node.expression) {
+    if (!ts.isNonNullExpression(node) && node.questionDotToken !== undefined) return false;
+  }
+  return true;
+}
+
 function refMember(ref: Extract<AttributeNode, { kind: "ref" }>): Extract<AttributeNode, { kind: "ref" }> | undefined {
   const match = /^(this\.)?([A-Za-z_$][A-Za-z0-9_$]*)$/.exec(ref.code);
   if (match === null) return undefined;
