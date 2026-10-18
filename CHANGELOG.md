@@ -15,6 +15,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     parentMenu?: Menu;` in Menu — the component's own class (Blazor's nested menu), which `type: Menu` can't name
     while the class is being defined (TS2449). The same form takes a class whose module imports this one.
   - Documented: a primitive cascades by type with its constructor (`type: Boolean`).
+- **A method written with `this.` binds as a delegate** (`@tsazor/compiler`): `Filter="@(this.filterFunc1)"` on a
+  function-typed parameter passed the method unbound (`this` undefined when the component called it), while
+  `Filter="@filterFunc1"` was bound — both are Razor's method group now.
 
 ## 1.0.0-next.4 (2026-10-18)
 

@@ -108,6 +108,10 @@ describe("delegate parameters: method groups are bound (Razor delegate conversio
     // A member method: bound to this component (cached per receiver + method by the runtime).
     ['onlyIf="isVisible"', "__tsazor_bindMethod(this, this.isVisible)"],
     ['onlyIf="@isVisible"', "__tsazor_bindMethod(this, this.isVisible)"],
+    // Written with `this.` (a MudBlazor port's `Filter="@(this.filterFunc1)"` arrived unbound).
+    ['onlyIf="this.isVisible"', "__tsazor_bindMethod(this, this.isVisible)"],
+    ['onlyIf="@(this.isVisible)"', "__tsazor_bindMethod(this, this.isVisible)"],
+    ['onlyIf="this.pred"', "this.pred"],
     // A method group with a receiver keeps it, as for EventCallbacks (A4/C18).
     ['onlyIf="svc.ok"', "__tsazor_bindMethod(this.svc, this.svc.ok)"],
     // An inherited (undeclared) member is a method group too.

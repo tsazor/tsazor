@@ -1595,17 +1595,19 @@ class Codegen {
    * EventCallback): a method group becomes a function bound to its receiver,
    * like a C# delegate — a member method (`isVisible` ⇒ bound to this
    * component; also a name the component does not declare, i.e. an inherited
-   * member) or a method group with a receiver (`svc.isVisible`, as for
-   * EventCallbacks). Lambdas, calls, declared fields and accessors, and any
-   * other expression stay plain TypeScript. The runtime caches the bound
-   * function per (receiver, method), so it is the same function every render.
+   * member, written `isVisible` or `this.isVisible`) or a method group with a
+   * receiver (`svc.isVisible`, as for EventCallbacks). Lambdas, calls, declared
+   * fields and accessors, and any other expression stay plain TypeScript. The
+   * runtime caches the bound function per (receiver, method), so it is the same
+   * function every render.
    */
   private delegateValue(code: string, start?: SourcePos): string {
     const rewritten = this.exprRewrite(code, start);
     const baked = rewritten?.text ?? code.trim();
     if (rewritten?.methodGroup) return this.boundMethodGroup(rewritten, baked);
-    const name = code.trim();
-    const isMemberMethod = bareIdentifier(name) && baked === `this.${name}` &&
+    const written = code.trim();
+    const name = bareIdentifier(written) ? written : /^this\.([A-Za-z_$][\w$]*)$/.exec(written)?.[1];
+    const isMemberMethod = name !== undefined && baked === `this.${name}` &&
       (this.members.methods.has(name) || !this.members.instance.has(name));
     if (!isMemberMethod) return baked;
     this.needsBindMethod = true;
