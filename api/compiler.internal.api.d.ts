@@ -357,6 +357,7 @@ export interface ComponentParameter {
     };
     doc?: string;
     uncertain?: boolean;
+    editorRequired?: boolean;
     delegate?: boolean;
     references?: TypeReference[];
     declaredBy: string;
@@ -417,6 +418,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS034: "File not readable.";
     readonly TZS035: "The compiler failed.";
     readonly TZS036: "Component manifest unreadable or newer.";
+    readonly TZS037: "Editor-required parameter not provided.";
 };
 
 // DiagnosticBag
@@ -659,6 +661,7 @@ export interface OwnParameter {
         changed: string;
         expression?: string;
     };
+    editorRequired?: boolean;
     synthesized?: {
         of: string;
         role: "changed" | "expression";

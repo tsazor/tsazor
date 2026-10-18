@@ -359,6 +359,9 @@ export declare class EditForm extends ComponentBase implements CascadingValueSup
     dispose(): void;
 }
 
+// EditorRequired
+export declare function EditorRequired(): (value: unknown, context: ParameterDecoratorContext) => void;
+
 // EmailAddress
 export declare function EmailAddress(override?: ValidationMessageOverride): FieldRuleDecorator;
 
@@ -543,6 +546,44 @@ export declare class InputFileChangeEventArgs {
 
 // InputNumber
 export declare class InputNumber extends InputBase<number | string> {
+    protected buildRenderTree(b: RenderTreeBuilder): void;
+}
+
+// InputRadio
+export declare class InputRadio<TValue> extends ComponentBase {
+    #private;
+    value?: TValue;
+    name?: string;
+    additionalAttributes?: Record<string, unknown>;
+    cascadedContext?: InputRadioContext;
+    element?: HTMLElement;
+    protected onParametersSet(): void;
+    protected buildRenderTree(b: RenderTreeBuilder): void;
+}
+
+// InputRadioContext
+export declare class InputRadioContext {
+    readonly parentContext: InputRadioContext | undefined;
+    readonly groupName: string;
+    readonly currentValue: unknown;
+    readonly fieldClass: string;
+    readonly select: (value: unknown) => void;
+    constructor(parentContext: InputRadioContext | undefined, groupName: string, currentValue: unknown, fieldClass: string, select: (value: unknown) => void);
+    findContextInAncestors(groupName: string): InputRadioContext | undefined;
+}
+
+// InputRadioGroup
+export declare class InputRadioGroup<TValue> extends InputBase<TValue> implements CascadingValueSupplier {
+    #private;
+    childContent?: RenderFragment;
+    name?: string;
+    cascadedContext?: InputRadioContext;
+    readonly isCascadingValueSupplier = true;
+    readonly isFixed = false;
+    readonly cascadeType: typeof InputRadioContext;
+    get cascadeValue(): unknown;
+    protected onParametersSet(): void;
+    private createContext;
     protected buildRenderTree(b: RenderTreeBuilder): void;
 }
 

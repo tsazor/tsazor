@@ -5,6 +5,18 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **The migration guide ships with the runtime**: `@tsazor/runtime/MIGRATION.md` (docs/migration-guide.md) — Razor →
+  `.tsazor`, every Blazor API area, the C# keywords and .NET calls with their TypeScript forms, what isn't there, the
+  first diagnostics and the traps, one page for a person or an agent porting an app.
+- **`InputRadioGroup<TValue>` and `InputRadio<TValue>`** (`@tsazor/runtime`), Blazor's pair: the group binds one value
+  (`@bind-Value`), its radios share one `name` and the one whose `Value` equals the group's is checked; choosing one
+  writes its value back typed — a number or an enum member, not the text. A radio names an enclosing group with
+  `Name`; one without a group throws Blazor's message.
+- **`@EditorRequired()`** (`@tsazor/runtime`, `@tsazor/compiler`), Blazor's `[EditorRequired]`: a tag that leaves such
+  a parameter out is the warning TZS037 (Razor's RZ2012) in `tsazor check`, the editor and the Vite plugin — set by
+  an attribute, a `@bind-`, a child content element or, for `ChildContent`, element content; a tag with
+  `@attributes` isn't checked. A component library's manifest carries the marker to its consumers.
+
 ## 1.0.0-next.3 (2026-10-18)
 
 - **A library laid out in folders builds** (`tsazor build-lib`; a port of Radzen Blazor that consumed only the

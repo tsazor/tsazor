@@ -832,6 +832,13 @@ entries) does not change language on a culture switch. Store the **key**, transl
   `<EditForm>` child receives the context as its slot context (`@context` — ChildContent is
   `(context: EditContext) => RenderFragment`).
 
+- `InputRadioGroup<TValue>` / `InputRadio<TValue>` — Blazor's pair: the group binds one value
+  (`<InputRadioGroup @bind-Value="size">`), each `<InputRadio Value="@Size.Small" />` inside it is a
+  `<input type="radio">`, checked when its value equals the group's (`Object.is`). Choosing one writes its value
+  back as it is — a number stays a number, an enum member an enum member, no text parsing. The group renders no
+  element of its own and gives its radios one `name` (its `Name`, or a generated one); a radio inside a nested
+  group reaches an outer one with `Name="…"`. A radio without a group throws Blazor's message.
+
 - Data-annotation validation (3.6) — Blazor's `DataAnnotationsValidator` plus the
   validation model behind it. Decided per the roadmap recommendation "decorators" (enables
   5.2 schema ⇒ validators): the model declares the rules with TC39 field decorators —
@@ -906,6 +913,10 @@ entries) does not change language on a culture switch. Store the **key**, transl
   parameter (`<Found Context="routeData">…` — see below).
 - Unknown attributes → the parameter with `captureUnmatchedValues` (`additionalAttributes`);
   without one ⇒ error TZS025 (see below).
+- `@EditorRequired() @Parameter() label = "";` is Blazor's `[EditorRequired]`: a tag that leaves the parameter
+  out is warning TZS037 (Razor's RZ2012). An attribute, a `@bind-Label` and, for `ChildContent`, element content
+  supply it; a tag with `@attributes` isn't checked (the splat may supply it). As in Blazor, nothing changes at
+  runtime — a parameter left out keeps its initializer.
 
 ### Two-way parameters: `@Bindable()` (Tsazor extension)
 

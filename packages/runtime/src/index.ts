@@ -5,7 +5,7 @@ export { FrameType, EventHandlerFlags } from "./render-tree/frame-type.js";
 // Components
 export { ComponentBase } from "./components/component-base.js";
 export { ParameterView } from "./components/parameter-view.js";
-export { Parameter, CascadingParameter, decorateFields, defineParameter, type CascadingTypeToken, type FieldDecorator, type ParameterDecoratorContext, type ParameterMeta } from "./components/parameter-metadata.js";
+export { Parameter, CascadingParameter, EditorRequired, decorateFields, defineParameter, type CascadingTypeToken, type FieldDecorator, type ParameterDecoratorContext, type ParameterMeta } from "./components/parameter-metadata.js";
 export { Bindable, type BindableOptions } from "./components/bindable.js";
 export { State } from "./components/state.js";
 export { CascadingTypeParameter } from "./components/cascading-type-parameter.js";
@@ -105,6 +105,7 @@ export {
 export type { ModelValidator } from "./forms/edit-form.js";
 export { InputBase } from "./forms/input-base.js";
 export { InputText, InputTextArea, InputNumber, InputCheckbox, InputDate, InputSelect, type InputDateType } from "./forms/input-text.js";
+export { InputRadio, InputRadioContext, InputRadioGroup } from "./forms/input-radio.js";
 export { EditForm } from "./forms/edit-form.js";
 export { ValidationMessage, ValidationSummary } from "./forms/validation.js";
 export { FocusOnInvalidSubmit } from "./forms/focus-on-invalid-submit.js";

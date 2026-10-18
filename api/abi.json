@@ -10,6 +10,7 @@
     "CascadingTypeParameter",
     "ComponentBase",
     "decorateFields",
+    "EditorRequired",
     "EventCallback",
     "formatValue",
     "inject",

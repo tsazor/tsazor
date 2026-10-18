@@ -306,4 +306,11 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
       "A component package's manifest (`tsazor.components` in its package.json) can't be read — not JSON, or no `components` — so none of its tags resolve (each would be a TZS005). As a warning: the manifest is a newer format version than this Tsazor reads; its components are read as far as this version knows them.",
     fix: "Unreadable: reinstall or rebuild the package. Newer: update Tsazor to the package's version, or use a release of the package built for this Tsazor.",
   },
+  {
+    code: "TZS037",
+    severity: "warning",
+    description:
+      "A component's parameter is marked `@EditorRequired()` (Blazor's `[EditorRequired]`, warning RZ2012), and the tag sets it by no attribute, no `@bind-`, no child content element — and, for `ChildContent`, no element content. A warning, as in Razor: the component still renders with the parameter's initializer. A tag with `@attributes` isn't checked (the splat may supply it).",
+    fix: "Set the parameter (`<Pager PageCount=\"@pages\" />` for `@EditorRequired() @Parameter() pageCount = 0;`), or drop `@EditorRequired()` from it when it is optional.",
+  },
 ];

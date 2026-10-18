@@ -87,6 +87,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `[Parameter] public int? Count { get; set; }` | `@Parameter() count?: number;` |
 | a parameter property with logic (`get => _x ?? Default; set => _x = value;`) | `@Parameter() set title(value) { … }` with its getter, or `@Parameter() accessor title` |
 | `[Parameter(CaptureUnmatchedValues = true)] Dictionary<string, object> Attrs` | `@Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;` |
+| `[Parameter, EditorRequired] public Todo Todo { get; set; } = default!;` | `@EditorRequired() @Parameter() todo!: Todo;` — a tag without it: warning TZS037 (Razor's RZ2012) |
 | `[CascadingParameter] Theme Theme` | `@CascadingParameter({ type: Theme }) theme?: Theme;` (by type: name the class) |
 | `[CascadingParameter(Name = "Theme")]` | `@CascadingParameter({ name: "Theme" })` |
 | `<CascadingValue Value="@theme" Name="…" IsFixed="true">` | the same |
@@ -122,7 +123,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `<DataAnnotationsValidator />`, `<ValidationSummary />` | the same |
 | `<ValidationMessage For="@(() => model.Name)" />` | `<ValidationMessage For="name" />` (the field's path) |
 | `<InputText>`, `<InputTextArea>`, `<InputNumber>`, `<InputDate>`, `<InputCheckbox>`, `<InputSelect>`, `<InputFile>` | the same names |
-| `<InputRadioGroup>` / `<InputRadio>` | the skins' `RadioGroup` (`@tsazor/bootstrap`, `@tsazor/fluent`) |
+| `<InputRadioGroup @bind-Value="…">` / `<InputRadio Value="…">` | the same — the chosen value comes back typed (a number, an enum member); the skins' `RadioGroup` styles it |
 | `[Required]`, `[StringLength]`, `[Range]`, `[EmailAddress]`, `[RegularExpression]`, `[Compare]`, `[MinLength]`, `[MaxLength]` | `@Required()`, `@StringLength(…)`, `@Range(…)`, `@EmailAddress()`, `@RegularExpression(…)`, `@Compare(…)`, `@MinLength(…)`, `@MaxLength(…)` |
 | `[Range]` on `decimal` | `@Range` on a `Decimal` (`@tsazor/primitives`), `@Precision(p, s)` |
 | `editContext.Validate()`, `IsModified`, `GetValidationMessages`, `NotifyFieldChanged` | `validate()`, `isModified(field)`, `getValidationMessages(field)`, `notifyFieldChanged(field)` |
@@ -304,8 +305,6 @@ More: strings, numbers, dates, collections, exceptions, disposal — [csharp-to-
 | `ElementReference.Id` | the `Element` itself |
 | `ParameterView.DidParameterChange` (a Radzen extension, not Blazor) | `parameters.getValue("x") !== this.x` |
 | the field's C# type deciding `@bind`'s conversion | the bound value's type at run time; a field that starts as `null` gets the text — start a number field with a number |
-| `<InputRadioGroup>` | the skins' `RadioGroup` |
-| `[EditorRequired]` (Blazor's warning RZ2012) | no check yet: a parameter left out keeps its initializer (or `undefined`) |
 
 ## 7. Diagnostics you meet first
 
@@ -317,6 +316,7 @@ More: strings, numbers, dates, collections, exceptions, disposal — [csharp-to-
 | TZS032 | a Blazor lifecycle name (`OnInitializedAsync`, `Dispose`) | `onInitialized`, `dispose` (the quick fix renames) |
 | TZS005 | an unresolved component tag | `@using` the folder or package, or `@import` the component |
 | TZS025 | an unknown component parameter | the spelling; the message suggests the closest |
+| TZS037 (warning) | an `@EditorRequired()` parameter the tag leaves out | set it (an attribute, `@bind-`, element content for `ChildContent`) |
 | TZS008 | a misused directive attribute (`@bind:event` naming no callback, `:after` with `:set`) | as the message says |
 | TS2304 | a name `@code` doesn't know | `@import` it — the message names the import |
 | TS2339 on the component | markup read a missing import as a member (`Shade.Dark`) | the `@import` the message names |

@@ -102,6 +102,8 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 
 // EditForm: re-exported from @tsazor/runtime
 
+// EditorRequired: re-exported from @tsazor/runtime
+
 // EmailAddress: re-exported from @tsazor/runtime
 
 // enableDataAnnotationsValidation: re-exported from @tsazor/runtime
@@ -174,6 +176,12 @@ export interface FakeStore<T> {
 // InputFileChangeEventArgs: re-exported from @tsazor/runtime
 
 // InputNumber: re-exported from @tsazor/runtime
+
+// InputRadio: re-exported from @tsazor/runtime
+
+// InputRadioContext: re-exported from @tsazor/runtime
+
+// InputRadioGroup: re-exported from @tsazor/runtime
 
 // InputSelect: re-exported from @tsazor/runtime
 

@@ -76,6 +76,8 @@ export const RUNTIME_TYPES: ReadonlySet<string> = new Set([
   "InputCheckbox",
   "InputDate",
   "InputSelect",
+  "InputRadioGroup",
+  "InputRadio",
   "EditForm",
   "ModelValidator",
   "ValidationMessage",

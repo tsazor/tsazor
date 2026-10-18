@@ -1874,6 +1874,236 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         ]
       }
     },
+    "InputRadio": {
+      "name": "InputRadio",
+      "file": "src/forms/input-radio.ts",
+      "isComponent": true,
+      "typeParameters": [
+        {
+          "name": "TValue"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "value",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadio",
+          "type": "TValue",
+          "references": [
+            {
+              "name": "TValue",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "The value the group takes when this radio is chosen."
+        },
+        {
+          "name": "name",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadio",
+          "type": "string",
+          "doc": "The group to belong to, by its `Name` — for a radio inside a nested group."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadio",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Pass-through attributes (class, id, disabled, …)."
+        },
+        {
+          "name": "cascadedContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadio",
+          "type": "InputRadioContext",
+          "references": [
+            {
+              "name": "InputRadioContext",
+              "kind": "local",
+              "file": "src/forms/input-radio.ts"
+            }
+          ],
+          "cascading": {
+            "type": "InputRadioContext"
+          },
+          "doc": "The nearest group's context."
+        }
+      ],
+      "doc": "Blazor's InputRadio<TValue>: one radio button of the enclosing InputRadioGroup — checked while the group's value\nequals `Value`, and choosing it makes `Value` the group's value. `Name` picks an enclosing group by its name.\nWithout a group it throws, as Blazor's.",
+      "base": {
+        "name": "ComponentBase",
+        "resolved": true
+      }
+    },
+    "InputRadioGroup": {
+      "name": "InputRadioGroup",
+      "file": "src/forms/input-radio.ts",
+      "isComponent": true,
+      "typeParameters": [
+        {
+          "name": "TValue"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "value",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "TValue | null",
+          "references": [
+            {
+              "name": "TValue",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "The bound value (two-way via ValueChanged). It may be null, as Blazor's `TValue? Value`: a\n`string | null` field binds to a text input, which hands back a string."
+        },
+        {
+          "name": "valueChanged",
+          "category": "EventCallback<T>",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "EventCallback<TValue>",
+          "references": [
+            {
+              "name": "EventCallback",
+              "kind": "runtime",
+              "imported": "EventCallback"
+            },
+            {
+              "name": "TValue",
+              "kind": "typeParameter"
+            }
+          ],
+          "doc": "Invoked when the user edits the input (compiler @bind-Value emits this).",
+          "typeArgument": "TValue"
+        },
+        {
+          "name": "valueExpression",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "string",
+          "doc": "Field name used for EditContext registration and validation."
+        },
+        {
+          "name": "editContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "EditContext",
+          "references": [
+            {
+              "name": "EditContext",
+              "kind": "runtime",
+              "imported": "EditContext"
+            }
+          ],
+          "cascading": {
+            "type": "EditContext"
+          },
+          "doc": "Resolved from the nearest EditForm (by-type cascading)."
+        },
+        {
+          "name": "additionalAttributes",
+          "category": "captureUnmatchedValues",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputBase",
+          "type": "Record<string, unknown>",
+          "references": [
+            {
+              "name": "Record",
+              "kind": "global"
+            }
+          ],
+          "doc": "Pass-through attributes (class, style, placeholder, …), as the caller gave them."
+        },
+        {
+          "name": "childContent",
+          "category": "RenderFragment",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadioGroup",
+          "type": "RenderFragment",
+          "references": [
+            {
+              "name": "RenderFragment",
+              "kind": "runtime",
+              "imported": "RenderFragment"
+            }
+          ],
+          "doc": "The InputRadio components, and any markup around them."
+        },
+        {
+          "name": "name",
+          "category": "string",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadioGroup",
+          "type": "string",
+          "doc": "The radios' `name` attribute; generated when absent."
+        },
+        {
+          "name": "cascadedContext",
+          "category": "value",
+          "optional": true,
+          "hasInitializer": false,
+          "member": "field",
+          "declaredBy": "InputRadioGroup",
+          "type": "InputRadioContext",
+          "references": [
+            {
+              "name": "InputRadioContext",
+              "kind": "local",
+              "file": "src/forms/input-radio.ts"
+            }
+          ],
+          "cascading": {
+            "type": "InputRadioContext"
+          },
+          "doc": "An enclosing group's context (Blazor's CascadedContext)."
+        }
+      ],
+      "doc": "Blazor's InputRadioGroup<TValue>: binds one value to the InputRadio components inside it (`@bind-Value`, as every\ninput). It renders no element of its own — only its content — and cascades an InputRadioContext; a new context\nper parameter set is what makes the radios render again when the value changes. `Name` names the radios' group\n(a unique one when absent), so an InputRadio inside a nested group can pick this one.",
+      "base": {
+        "name": "InputBase",
+        "resolved": true,
+        "typeArguments": [
+          "TValue"
+        ]
+      }
+    },
     "EditForm": {
       "name": "EditForm",
       "file": "src/forms/edit-form.ts",

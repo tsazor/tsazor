@@ -61,6 +61,11 @@ describe("compactFieldDecorators", () => {
     expect(compact).not.toContain("__tsazor_decorateFields(B");
   });
 
+  it("compacts @EditorRequired() beside @Parameter(): a marker that does nothing at runtime", () => {
+    const code = `import { Parameter, EditorRequired } from "@tsazor/runtime";\nexport class Field { @EditorRequired() @Parameter() label = ""; }\n`;
+    expect(compactFieldDecorators(code)).toContain("} __tsazor_decorateFields(Field, { label: [EditorRequired(), Parameter()] });");
+  });
+
   it("compacts the runtime's own sources too: their decorators imported relatively, decorateFields from its module", () => {
     const code = `import { Parameter } from "../components/parameter-metadata.js";\nexport class NavLink { @Parameter() href = ""; }\n`;
     expect(compactFieldDecorators(code)).toBe(code);

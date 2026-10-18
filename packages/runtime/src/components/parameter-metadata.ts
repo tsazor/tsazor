@@ -254,6 +254,15 @@ export function Parameter(options?: {
 }
 
 /**
+ * [EditorRequired]-equivalent marker (`@EditorRequired() @Parameter() title = "";`): a tag that leaves the parameter
+ * out gets the compiler's warning TZS037 (Blazor's RZ2012). Like Blazor's, it changes nothing at runtime — the
+ * parameter can still arrive unset (a splat, a hand-written render tree).
+ */
+export function EditorRequired(): (value: unknown, context: ParameterDecoratorContext) => void {
+  return () => {};
+}
+
+/**
  * The class a cascading parameter matches by (`instanceof`, Blazor's parameter type): any class — abstract, or one
  * whose constructor is private, as SignalR's HubConnection, which a builder creates.
  */

@@ -83,6 +83,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS034: "File not readable.",
   TZS035: "The compiler failed.",
   TZS036: "Component manifest unreadable or newer.",
+  TZS037: "Editor-required parameter not provided.",
 } as const;
 
 

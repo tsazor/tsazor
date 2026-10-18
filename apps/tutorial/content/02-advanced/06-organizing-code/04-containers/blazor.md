@@ -42,5 +42,5 @@ todos; the `EventCallback` re-renders its owner, `TodoList`, after the toggle.
 
 > **Coming from Blazor:** `[Parameter, EditorRequired] public Todo Todo { get; set; } = default!;`
 > becomes `@Parameter() todo!: Todo;` — `!` is TypeScript's definite-assignment assertion, the
-> counterpart of `= default!`. There's no `EditorRequired` check: a missing `todo` is
-> `undefined` at runtime.
+> counterpart of `= default!`. `[EditorRequired]` is `@EditorRequired()` before it: a tag without
+> `todo` gets the warning TZS037, and at runtime a missing `todo` is `undefined`.

@@ -90,6 +90,8 @@ export interface ComponentParameter {
   doc?: string;
   /** The category rests on a name that could not be followed (counts as `value`). */
   uncertain?: boolean;
+  /** `@EditorRequired()` (Blazor's `[EditorRequired]`): a tag that leaves the parameter out gets TZS037. */
+  editorRequired?: boolean;
   /**
    * A `value` parameter whose type is a function type (also through aliases,
    * or a union of function types with `null`/`undefined`) — Blazor's
@@ -192,6 +194,8 @@ export interface OwnParameter {
   doc?: string;
   /** `@Bindable()`: see ComponentParameter.bindable. */
   bindable?: { changed: string; expression?: string };
+  /** `@EditorRequired()` on the member. */
+  editorRequired?: boolean;
   /**
    * A parameter `@Bindable()` synthesizes for the parameter `of`: the change
    * callback (`EventCallback<value type>`) or the `string` expression name.
@@ -375,7 +379,7 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
 }
 
 /** Runtime names the compiler imports itself when the file does not bind them. */
-const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "CascadingTypeParameter", "Bindable", "State", "EventCallback", "RenderFragment"];
+const COMPILER_RUNTIME_NAMES = ["ComponentBase", "Parameter", "CascadingParameter", "CascadingTypeParameter", "Bindable", "State", "EditorRequired", "EventCallback", "RenderFragment"];
 
 function emptyModule(file: string, kind: ModuleMetadata["kind"], runtimeInternal: boolean | undefined): ModuleMetadata {
   const module: ModuleMetadata = {
@@ -471,6 +475,7 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
     }
     const doc = jsDocOf(member);
     if (doc) parameter.doc = doc;
+    if ((ts.getDecorators(member) ?? []).some((d) => isEditorRequired(d, module))) parameter.editorRequired = true;
     record.parameters.push(parameter);
     if (decorator.kind === "Bindable") record.parameters.push(...bindableParameters(parameter));
   }
@@ -561,6 +566,11 @@ function typeParameterInfo(parameter: ts.TypeParameterDeclaration, file: ts.Sour
   }
   if (parameter.default) info.default = parameter.default.getText(file);
   return info;
+}
+
+/** Whether a decorator is `@EditorRequired()`. */
+function isEditorRequired(decorator: ts.Decorator, module: ModuleMetadata): boolean {
+  return ts.isCallExpression(decorator.expression) && runtimeName(module, decorator.expression.expression) === "EditorRequired";
 }
 
 /** The `@Parameter(...)` / `@CascadingParameter(...)` call of a decorator, if it is one. */
@@ -838,6 +848,7 @@ function resolveOwnParameter(own: OwnParameter, declaredBy: string, module: Modu
   if (own.cascading) parameter.cascading = own.cascading;
   if (own.doc) parameter.doc = own.doc;
   if (own.bindable) parameter.bindable = own.bindable;
+  if (own.editorRequired) parameter.editorRequired = true;
   if (own.synthesized) parameter.synthesizedBy = own.synthesized.of;
   categorizeParameter(parameter, own, host);
   return parameter;

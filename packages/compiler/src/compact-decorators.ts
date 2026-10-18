@@ -14,11 +14,12 @@
  */
 import ts from "typescript";
 
-/** The runtime's field decorators that only record the field (no initializer, no `addInitializer`). */
+/** The runtime's field decorators that only record the field or, as `@EditorRequired()`, do nothing (no initializer, no `addInitializer`). */
 const REGISTERING_DECORATORS: ReadonlySet<string> = new Set([
   "Parameter",
   "CascadingParameter",
   "SupplyParameterFromQuery",
+  "EditorRequired",
   "Required",
   "MinLength",
   "MaxLength",

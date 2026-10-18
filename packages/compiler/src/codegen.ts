@@ -516,6 +516,7 @@ class Codegen {
     if (/@CascadingParameter\s*\(/.test(memberSource)) this.runtimeImports.add("CascadingParameter");
     if (/@Bindable\s*\(/.test(memberSource)) this.runtimeImports.add("Bindable");
     if (/@State\s*\(/.test(memberSource)) this.runtimeImports.add("State");
+    if (/@EditorRequired\s*\(/.test(memberSource)) this.runtimeImports.add("EditorRequired");
     // `@Parameter() onPick?: EventCallback<T>` in a component without event
     // handlers: the type is used only by the member code.
     if (/\bEventCallback\b/.test(memberSource)) this.runtimeImports.add("EventCallback");
@@ -2391,11 +2392,48 @@ class Codegen {
         (component.metadata?.typeParameters.length ?? 0) === 0 || (tagTypeArgs?.size ?? 0) === (component.metadata?.typeParameters.length ?? 0) ? "instance" : "never",
       );
     }
+    this.checkEditorRequired(node, component, regular, slots, loose);
     this.plumbingStmt(`${BUILDER}.closeComponent();`);
     this.tagTypeArgs = previousTagArgs;
     this.tagTypeArgsOrder = previousOrder;
     this.cascadedTypeArgs = previousCascade;
     this.openCascadedTypeArgs = previousOpenCascade;
+  }
+
+  /**
+   * Blazor's RZ2012: a parameter marked `@EditorRequired()` that the tag leaves out — set by no attribute, no
+   * `@bind-`, no child content element and (for ChildContent) no element content. A warning, as in Razor; a tag
+   * with `@attributes` may supply it through the splat, so it isn't checked.
+   */
+  private checkEditorRequired(node: ElementNode, component: ComponentTarget, attributes: readonly AttributeNode[], slots: readonly ElementNode[], loose: readonly MarkupNode[]): void {
+    const metadata = component.metadata;
+    const required = metadata?.parameters.filter((parameter) => parameter.editorRequired) ?? [];
+    if (!metadata || required.length === 0 || attributes.some((attr) => attr.kind === "attributes")) return;
+    const supplied = new Set<ComponentParameter>();
+    const supply = (name: string): void => {
+      const parameter = findParameter(metadata, name);
+      if (parameter) supplied.add(parameter);
+    };
+    for (const attr of attributes) {
+      if (attr.kind === "bind") {
+        const target = attr.bindTarget ?? "Value";
+        supply(target);
+        supply(attr.event ?? `${target}Changed`);
+      } else if ("name" in attr) {
+        supply(attr.name);
+      }
+    }
+    for (const slot of slots) {
+      const parameter = this.slotElements.get(slot);
+      if (parameter) supplied.add(parameter);
+    }
+    if (loose.some((child) => !isWhitespaceText(child))) supply("ChildContent");
+    for (const parameter of required) {
+      if (supplied.has(parameter)) continue;
+      // Named as the tag's attribute is written (Razor's casing), as TZS025's suggestion.
+      const attribute = parameter.name[0]!.toUpperCase() + parameter.name.slice(1);
+      this.diagnostics.warning("TZS037", tagNameRange(node), `Component '${node.tagName}' expects a value for the parameter '${attribute}', but a value may not have been provided.`);
+    }
   }
 
   /**

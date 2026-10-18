@@ -187,7 +187,7 @@ describe("runtime manifest", () => {
         "ErrorBoundary",
         "FocusOnInvalidSubmit", "FocusOnNavigate",
         "HeadContent", "HeadOutlet",
-        "InputCheckbox", "InputDate", "InputFile", "InputNumber", "InputSelect", "InputText", "InputTextArea", "LayoutView",
+        "InputCheckbox", "InputDate", "InputFile", "InputNumber", "InputRadio", "InputRadioGroup", "InputSelect", "InputText", "InputTextArea", "LayoutView",
         "NavLink", "NavigationLock", "PageTitle", "RouteView", "Router", "SectionContent", "SectionOutlet", "StandardSchemaValidator",
         "ValidationMessage", "ValidationSummary", "Virtualize",
       ].sort(),
