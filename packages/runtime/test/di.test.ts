@@ -139,6 +139,24 @@ describe("dispose", () => {
     expect(journal).toEqual(["Logger", "Logger disposed"]);
   });
 });
+describe("TryAdd (Blazor's TryAddSingleton/TryAddScoped/TryAddTransient)", () => {
+  it("registers only what isn't registered: a library's add-function keeps the app's own and runs twice harmlessly", () => {
+    const appClock = new Clock();
+    appClock.ticks = 7;
+    const addLibrary = (services: ServiceCollection): ServiceCollection =>
+      services.tryRegisterType(Clock).tryRegister(Logger, () => new Logger([]), { lifetime: "scoped" }).tryRegisterValue(Session, new Session([]));
+    const services = new ServiceCollection().registerValue(Clock, appClock);
+    expect(services.has(Logger)).toBe(false);
+    addLibrary(addLibrary(services));
+    expect(services.has(Logger)).toBe(true);
+    const root = services.build();
+    expect(root.get(Clock)).toBe(appClock);
+    const scope = root.createScope();
+    expect(scope.get(Logger)).toBe(scope.get(Logger));
+    expect(scope.get(Logger)).not.toBe(root.createScope().get(Logger));
+  });
+});
+
 describe("the provider as a service (Blazor's IServiceProvider)", () => {
   it("resolves itself — the requesting scope — so a component can ask tryGet for an optional service", () => {
     const root = new ServiceCollection().registerType(Clock).build();

@@ -51,6 +51,30 @@ export class ServiceCollection {
     return this;
   }
 
+  /** Whether `token` is registered (Blazor's `services.Any(d => d.ServiceType == typeof(T))`). */
+  has(token: Token<unknown>): boolean {
+    return this.registrations.has(token as unknown as Token<never>);
+  }
+
+  /**
+   * Blazor's TryAddSingleton/TryAddScoped/TryAddTransient with a factory: `register`, unless `token` is registered
+   * already — a library's `addMyComponents(services)` doesn't replace what the app registered before it, and runs
+   * twice harmlessly.
+   */
+  tryRegister<T>(token: Token<T>, factory: (services: ServiceProvider) => T, options?: { lifetime?: ServiceLifetime }): this {
+    return this.has(token) ? this : this.register(token, factory, options);
+  }
+
+  /** Blazor's TryAdd… with a type: `registerType`, unless `token` is registered already. */
+  tryRegisterType<T>(token: Token<T>, options?: { lifetime?: ServiceLifetime }): this {
+    return this.has(token) ? this : this.registerType(token, options);
+  }
+
+  /** Blazor's TryAddSingleton with an instance: `registerValue`, unless `token` is registered already. */
+  tryRegisterValue<T>(token: Token<T>, value: T): this {
+    return this.has(token) ? this : this.registerValue(token, value);
+  }
+
   /** Blazor's BuildServiceProvider: creates the root provider from a snapshot of the registrations (later registrations do not affect it). */
   build(): ServiceProvider {
     return new ServiceProvider(new Map(this.registrations));

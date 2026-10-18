@@ -50,6 +50,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   tab of a loop (a MudBlazor port's tabs keep the reference on the panel), `@ref="inputs[i]"` — on elements and
   components, typed like a member; a call or `?.` stays TZS008. A mistyped capture is reported on the reference (it
   mapped past the end of the line).
+- **`TryAdd` for the DI** (`@tsazor/runtime`): `services.tryRegister(…)`, `tryRegisterType(…)`, `tryRegisterValue(…)`
+  register only what isn't registered yet, and `services.has(token)` asks — a library's `addMyComponents(services)`
+  keeps the app's own registrations and runs twice harmlessly (`register` replaces).
 
 ## 1.0.0-next.4 (2026-10-18)
 

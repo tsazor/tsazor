@@ -666,6 +666,7 @@ classes (identity-based — TS instead of interfaces):
 | `…, { lifetime: "transient" }` | transient — new per resolution |
 | `registerType(Foo, options?)` | Factory `new Foo(services)` with the lifetime from the options |
 | `registerValue(Foo, instance)` | Constant — disposed by its owner, not by the provider |
+| `tryRegister…(Foo, …)`, `has(Foo)` | `TryAdd…`: registers only when `Foo` isn't registered yet — a library's `addMyComponents(services)` keeps the app's own |
 
 - **Scopes** (Blazor's `CreateScope`): `provider.createScope()` derives a scope that shares the
   registrations but caches its scoped services itself; singletons fall through to the

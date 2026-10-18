@@ -1123,6 +1123,14 @@ export declare class ServiceCollection {
         lifetime?: ServiceLifetime;
     }): this;
     registerValue<T>(token: Token<T>, value: T): this;
+    has(token: Token<unknown>): boolean;
+    tryRegister<T>(token: Token<T>, factory: (services: ServiceProvider) => T, options?: {
+        lifetime?: ServiceLifetime;
+    }): this;
+    tryRegisterType<T>(token: Token<T>, options?: {
+        lifetime?: ServiceLifetime;
+    }): this;
+    tryRegisterValue<T>(token: Token<T>, value: T): this;
     build(): ServiceProvider;
 }
 

@@ -146,6 +146,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `AddSingleton<IFoo, Foo>()` | an abstract class as the token: `services.register(Foo, (sp) => new SqlFoo(sp.get(Db)))` — interfaces don't exist at run time |
 | `AddSingleton(sp => new X(sp.GetRequiredService<Y>()))` | `services.register(X, (sp) => new X(sp.get(Y)))` |
 | `AddSingleton(instance)` | `services.registerValue(X, instance)` |
+| `TryAddSingleton<X>()`, `TryAddScoped(…)`, `services.Any(d => d.ServiceType == typeof(X))` | `services.tryRegisterType(X)`, `tryRegister(X, factory, { lifetime })`, `tryRegisterValue`, `services.has(X)` |
 | `[Inject] IServiceProvider Services`, `GetService<T>()` / `GetRequiredService<T>()` | `@inject ServiceProvider services`, `services.tryGet(T)` / `services.get(T)` |
 | a library's `services.AddXyz()` | the same function over `ServiceCollection` — or `registerServiceDefault(T, create)` in the service's module |
 | `IOptions<T>`, `IConfiguration`, `appsettings.json` | plain values: `import.meta.env.VITE_API_URL` (Vite), registered with `registerValue` |
