@@ -140,6 +140,8 @@ createTsazorApp({ root: App, routes });
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
+- [Migration guide: Blazor → Tsazor at a glance (C# keywords, Razor, Blazor APIs)](docs/migration-guide.md)
+- [Migrating from Blazor (side by side, the codemod, the API boundary)](docs/migration.md)
 - [C# to TypeScript (cheat sheet)](docs/csharp-to-typescript.md)
 - [Design principles](docs/design-principles.md)
 - [Language reference (.tsazor)](docs/language-reference.md)

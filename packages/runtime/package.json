@@ -49,13 +49,14 @@
   },
   "files": [
     "dist",
-    "!dist/.tsbuildinfo"
+    "!dist/.tsbuildinfo",
+    "MIGRATION.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -b && node scripts/compact-components.mjs && node scripts/build-manifest.mjs",
+    "build": "tsc -b && node scripts/compact-components.mjs && node scripts/build-manifest.mjs && node scripts/migration-guide.mjs",
     "test": "vitest run"
   },
   "dependencies": {

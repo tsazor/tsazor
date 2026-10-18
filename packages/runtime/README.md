@@ -29,6 +29,9 @@ The fastest start is `npm create tsazor@latest my-app`.
 
 ## Coming from Blazor: where things are
 
+The full migration guide — every C# keyword, Razor directive and Blazor API with its Tsazor form, the
+diagnostics you meet first, the traps — ships in this package: [MIGRATION.md](MIGRATION.md). The essentials:
+
 | Blazor | Tsazor |
 |---|---|
 | `[Parameter] public string Title { get; set; }` | `@Parameter() title = "";` — markup's `Title="…"` sets the camelCase member |

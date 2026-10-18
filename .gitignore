@@ -17,3 +17,5 @@ apps/bench/*/node_modules/
 .claude/worktrees/
 # release.mjs pack: the tarballs
 .release/
+# runtime build: the migration guide, generated from docs/migration-guide.md
+packages/runtime/MIGRATION.md

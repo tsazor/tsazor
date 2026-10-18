@@ -3,6 +3,8 @@
 Tsazor's markup is Razor, its component model is Blazor's — so a Blazor app migrates page by
 page, not in a big bang. This guide covers running both side by side (E6), then the work per page:
 the codemod, what stays manual, the API boundary of a Blazor Server app and what to expect (E7).
+Every C# keyword, Razor directive and Blazor API with its Tsazor form, at a glance:
+[migration-guide.md](migration-guide.md).
 
 The reference setup is [apps/migration-sample](../apps/migration-sample/README.md): a Blazor Server
 app, a YARP gateway and Tsazor pages, checked end to end in CI.
