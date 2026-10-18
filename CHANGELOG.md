@@ -40,6 +40,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   - A warning without `"tsazor": { "components" }` in package.json: an app would read no parameters (TZS026).
   - One build at a time per output (`dist/.tsazor-build.lock`): two concurrent builds removed each other's files.
 - Documented: Vite's `server.fs.allow` for a library installed from a folder beside the app.
+- **An `@` that starts no expression in an attribute value is TZS004** (`@tsazor/compiler`), as in element content and
+  as Razor's RZ1005: ``transform="@`translate(${x}px)`"`` rendered its own source, `title="@!x"` too. A template
+  literal gets the quick fix `@(`…`)`; a non-string component parameter's value stays an expression (`Count="@4000"`).
+- **A fragment whose context is the component itself is typed** (`tsazor check`): `RenderFragment<Upload<T>>` gave
+  the consumer's context `any` (a MudBlazor port's upload hands its own instance to the template); it is the tag's
+  component with its type arguments now, and a missing member is TS2339.
 
 ## 1.0.0-next.4 (2026-10-18)
 

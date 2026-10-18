@@ -296,6 +296,11 @@ export type AttributeNode =
 export interface RawAttributeValue {
   text: string;
   start: SourceSpan["pos"];
+  /**
+   * On a component's attribute: each `@` in the value that no expression follows (TZS004), reported only where the
+   * value is read as text — a non-string parameter reads it as an expression, where `@4000` and `@!busy` are valid.
+   */
+  strayAt?: Array<SourceSpan & { detail: string; fix?: { title: string; edits: Array<SourceSpan & { text: string }> } }>;
 }
 
 export type BindModifier = "event" | "format" | "culture" | "get" | "set" | "after";

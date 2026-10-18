@@ -122,6 +122,12 @@ export class TSScanner {
     return i;
   }
 
+  /** The end of the template literal whose backtick is at `index` (after its closing backtick), or -1 when it never closes. */
+  scanTemplateLiteral(index: number): number {
+    const end = this.skipTemplate(index);
+    return end > index + 1 && this.source[end - 1] === "`" ? end : -1;
+  }
+
   private skipTemplate(index: number): number {
     let i = index + 1;
     while (i < this.source.length) {

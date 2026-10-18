@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateCode } from "../src/codegen";
 import { DiagnosticBag, type SourcePos, type SourceRange, type TszDiagnostic } from "../src/diagnostics";
 import { parseDocument } from "../src/parser";
+import { metadataOf, withComponents } from "./component-metadata";
 
 /**
  * A7: every diagnostic carries the range of the offending construct
@@ -68,6 +69,31 @@ describe("diagnostic ranges (A7)", () => {
     expect(covered("<p>@(a + </p>", "TZS003")).toBe("@(");
     expect(covered("x }", "TZS003")).toBe("}");
     expect(covered("<p>@!</p>", "TZS004")).toBe("@!");
+  });
+
+  it("TZS004 in an attribute value too (it was silently text): a template literal gets the fix to '@(`…`)'", () => {
+    // A MudBlazor port's charts rendered `transform="@`translate(…)`"` as their own source.
+    const source = '<g transform="@`translate(${x}, 0)`"></g>\n@code { private x = 1; }';
+    expect(covered(source, "TZS004")).toBe("@`translate(${x}, 0)`");
+    const [diagnostic] = compileDiagnostics(source).filter((d) => d.code === "TZS004");
+    expect(applyFix(source, diagnostic!)).toBe('<g transform="@(`translate(${x}, 0)`)"></g>\n@code { private x = 1; }');
+    expect(covered('<p title="@!x"></p>', "TZS004")).toBe("@!");
+    expect(covered('<p title="a @ b"></p>', "TZS004")).toBe("@ ");
+    // An e-mail address, `@@` and an expression stay as they were.
+    for (const value of ["mail@example.com", "@@x", "@x", "@(x + 1)"]) {
+      expect(compileDiagnostics(`<p title="${value}"></p>\n@code { private x = 1; }`).filter((d) => d.code === "TZS004"), value).toEqual([]);
+    }
+  });
+
+  it("TZS004 on a component's attribute only where the value is read as text — a value parameter reads an expression", () => {
+    const chart = withComponents({ Chart: metadataOf("Chart", { title: "string", count: "value", enabled: "value" }) });
+    const tzs004 = (source: string) => compileDiagnostics(`${source}\n@code { private x = 1; private busy = false; }`, chart).filter((d) => d.code === "TZS004").map((d) => d.message);
+    expect(tzs004('<Chart Title="@`n: ${x}`" />')).toEqual([
+      "Invalid implicit expression. Unexpected character after '@'. A template literal in an attribute value is an expression: write '@(`…`)'.",
+    ]);
+    // Razor's optional transition before a non-string parameter's expression.
+    expect(tzs004('<Chart Count="@4000" Enabled="@!busy" />')).toEqual([]);
+    expect(tzs004('<Chart Count="@`${x}`.length" />')).toEqual([]);
   });
 
   it("TZS005/TZS017: the component tag name", () => {

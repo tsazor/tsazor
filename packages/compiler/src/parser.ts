@@ -10,6 +10,7 @@ import type {
   ExpressionNode,
   IfNode,
   MarkupNode,
+  RawAttributeValue,
   RazorTemplate,
   SwitchCase,
   SwitchNode,
@@ -107,6 +108,8 @@ class Parser {
   private readonly ts: TSScanner;
   private readonly code: CodeScanner;
   private i = 0;
+  /** While a component tag's attribute value is read: its stray `@`s (see RawAttributeValue.strayAt); null elsewhere. */
+  private strayAts: NonNullable<RawAttributeValue["strayAt"]> | null = null;
   /** Accumulated text between transitions. */
   private textStart = -1;
   private textParts: string[] = [];
@@ -1119,7 +1122,7 @@ class Parser {
         this.skipRazorComment();
         continue;
       }
-      const attr = this.parseAttribute();
+      const attr = this.parseAttribute(/^[A-Z]/.test(tagName) || tagName.includes("."));
       if (!attr) continue;
       // Event modifiers are attributes of their own (Blazor), also without a
       // handler; each at most once per event.
@@ -1181,7 +1184,7 @@ class Parser {
     }
   }
 
-  private parseAttribute(): AttributeNode | null {
+  private parseAttribute(onComponent = false): AttributeNode | null {
     const src = this.source;
     const pos = this.locator(this.i);
     const nameStart = this.i;
@@ -1204,7 +1207,10 @@ class Parser {
     this.i++; // '='
 
     const valueAt = this.i;
+    this.strayAts = onComponent ? [] : null;
     const value = this.parseAttributeValue();
+    const strayAt = this.strayAts;
+    this.strayAts = null;
     if (value === null) return null;
 
     const codePos = (start: number | undefined): SourceSpan["pos"] | undefined =>
@@ -1214,9 +1220,10 @@ class Parser {
       // The value as written (quotes stripped): a TS expression where the
       // target is a non-string component parameter (2.2).
       const quoted = src[valueAt] === '"' || src[valueAt] === "'";
-      const raw = {
+      const raw: RawAttributeValue = {
         text: quoted ? src.slice(valueAt + 1, this.i - 1) : src.slice(valueAt, this.i),
         start: this.locator(quoted ? valueAt + 1 : valueAt),
+        ...(strayAt !== null && strayAt.length > 0 ? { strayAt } : {}),
       };
       const parts = value.parts.map((p) => (p.code !== undefined ? { code: p.code, codeStart: codePos(p.start) } : { text: p.text }));
       if (parts.length === 1 && parts[0]!.code !== undefined) {
@@ -1438,6 +1445,29 @@ class Parser {
     return null;
   }
 
+  /**
+   * TZS004 for an `@` in an attribute value that no expression follows. A template literal after it gets the fix
+   * that makes it one: ``@`…` `` ⇒ ``@(`…`)``.
+   */
+  private reportAtInAttributeValue(at: number): void {
+    const src = this.source;
+    const templateEnd = src[at + 1] === "`" ? this.ts.scanTemplateLiteral(at + 1) : -1;
+    const stray: NonNullable<RawAttributeValue["strayAt"]>[number] =
+      templateEnd > 0
+        ? {
+            ...this.range(at, templateEnd),
+            detail: "Unexpected character after '@'. A template literal in an attribute value is an expression: write '@(`…`)'.",
+            fix: { title: "Write it as '@(`…`)'", edits: [{ ...this.range(at, templateEnd), text: `@(${src.slice(at + 1, templateEnd)})` }] },
+          }
+        : {
+            ...this.range(at, Math.min(at + 2, src.length)),
+            detail: "Unexpected character after '@'. An attribute value takes '@name' or '@(expression)'; a literal '@' is '@@'.",
+          };
+    // A component's attribute: the code generator reports it where the value is read as text.
+    if (this.strayAts !== null) this.strayAts.push(stray);
+    else this.diagnostics.error("TZS004", stray, stray.detail, stray.fix);
+  }
+
   /** One parenthesized expression value `@(...)`: `code` is the text between
    *  the parens, `start` its absolute index. `at` is on the `@`. Unbalanced
    *  parens are TZS003, parsing resumes at the end of the file. */
@@ -1527,6 +1557,9 @@ class Parser {
           this.i = end;
           continue;
         }
+        // Anything else after `@` is no expression (Razor's RZ1005) — as in element content, not silently text:
+        // ``transform="@`translate(${x}px)`"`` rendered its own source.
+        if (!emailLike && src[this.i + 1] !== "*") this.reportAtInAttributeValue(this.i);
       }
       textPartsBuffer.push(ch);
       if (partTextStart === undefined) partTextStart = this.i;

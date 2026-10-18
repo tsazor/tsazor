@@ -60,10 +60,10 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS004",
     severity: "error",
     description:
-      "An `@` in markup is followed by neither an identifier nor `(`, `{`, `:`, `*` or `@`, so it starts no expression (`@ name`, `@-1`).",
+      "An `@` in markup is followed by neither an identifier nor `(`, `{`, `:`, `*` or `@`, so it starts no expression (`@ name`, `@-1`). In an attribute value too (Razor's RZ1005): ``transform=\"@`translate(${x}px)`\"`` was its own text — but not where the value is a non-string component parameter's expression (`Count=\"@4000\"`).",
     example: "<p>Price: @ price</p>\n\n@code {\n  price = 10;\n}\n",
     fix:
-      "Write the expression right after the `@` (`@price`, `@(price * 2)`), or escape a literal at sign as `@@`.",
+      "Write the expression right after the `@` (`@price`, `@(price * 2)`), or escape a literal at sign as `@@`. A template literal in an attribute value is `@(`…`)` (the quick fix).",
   },
   {
     code: "TZS005",

@@ -370,6 +370,8 @@ class Codegen {
   private tagTypeArgs?: ReadonlyMap<string, string>;
   /** The component's type-parameter order (for `Local<A, B>` suffixes). */
   private tagTypeArgsOrder: readonly string[] | undefined;
+  /** The component class of the tag being emitted and this module's import of it (its own class in its types). */
+  private tagComponent: { readonly name: string; readonly local: string } | undefined;
   /** `@CascadingTypeParameter`: the type arguments the enclosing component tags pass down, by name. */
   private cascadedTypeArgs: ReadonlyMap<string, string> = new Map();
   /** Cascading type parameters an enclosing tag left open: that tag, not the ones inside, gets the RZ10001 hint. */
@@ -2253,7 +2255,12 @@ class Codegen {
           break;
         }
         case "local": {
-          // Declared in the parameter's own module and not re-exported: not
+          // The component's own class (a context `RenderFragment<Upload<T>>`): this module's import of the tag.
+          if (this.tagComponent !== undefined && ref.name === this.tagComponent.name) {
+            substitution.set(ref.name, { text: this.tagComponent.local });
+            break;
+          }
+          // Else declared in the parameter's own module and not re-exported: not
           // expressible from this module — no check (no import to fake it).
           return undefined;
         }
@@ -2339,6 +2346,8 @@ class Codegen {
     const previousOrder = this.tagTypeArgsOrder;
     this.tagTypeArgs = tagTypeArgs;
     this.tagTypeArgsOrder = component.metadata?.typeParameters.map((t) => t.name);
+    const previousComponent = this.tagComponent;
+    this.tagComponent = component.metadata ? { name: component.metadata.name, local } : undefined;
     // Its content sees the tag's cascading type arguments; an unresolved one
     // hides an outer cascade of the same name (that one is not this grid's).
     const previousCascade = this.cascadedTypeArgs;
@@ -2421,6 +2430,7 @@ class Codegen {
     this.plumbingStmt(`${BUILDER}.closeComponent();`);
     this.tagTypeArgs = previousTagArgs;
     this.tagTypeArgsOrder = previousOrder;
+    this.tagComponent = previousComponent;
     this.cascadedTypeArgs = previousCascade;
     this.openCascadedTypeArgs = previousOpenCascade;
   }
@@ -2869,6 +2879,9 @@ class Codegen {
     const category = parameter && !parameter.uncertain ? parameter.category : undefined;
     const name = parameter?.name ?? attr.name;
     if (category === undefined || category === "string") {
+      // Read as text: an `@` that no expression follows is TZS004, as on an element (`@4000` is a value's).
+      const raw = attr.kind === "expression" ? undefined : attr.raw;
+      for (const stray of raw?.strayAt ?? []) this.diagnostics.error("TZS004", stray, stray.detail, stray.fix);
       // 2.4: a string parameter's value — plain text, `@expr` or mixed — is
       // checked against the declared type in the shadow module.
       const checkType = category === "string" && parameter !== undefined ? this.shadowParamType(parameter) : undefined;

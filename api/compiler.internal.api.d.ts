@@ -692,6 +692,15 @@ export declare function parseImportDirective(value: string): ParsedImport;
 export interface RawAttributeValue {
     text: string;
     start: SourceSpan["pos"];
+    strayAt?: Array<SourceSpan & {
+        detail: string;
+        fix?: {
+            title: string;
+            edits: Array<SourceSpan & {
+                text: string;
+            }>;
+        };
+    }>;
 }
 
 // RazorTemplate
@@ -838,6 +847,7 @@ export declare class TSScanner {
     private eatIdentifier;
     private skipString;
     skipStringFor(index: number, quote: string): number;
+    scanTemplateLiteral(index: number): number;
     private skipTemplate;
     private skipLineComment;
     private skipBlockComment;
