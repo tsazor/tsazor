@@ -345,4 +345,45 @@ export default class BeCode extends ComponentBase {
     // Bare markup identifiers (baked to this.*) resolve to code-behind members.
     expect(container.querySelector('[data-testid="double"]')?.textContent).toBe("2");
   });
+
+  it("keeps the value of a multi-line template literal: re-indented code leaves the string's lines as written", async () => {
+    const source = [
+      '<pre id="field">@text</pre>',
+      '<pre id="method">@joined()</pre>',
+      "@{",
+      "    const block = `x",
+      "  y`;",
+      "}",
+      '<pre id="block">@block</pre>',
+      '<pre id="expression">@(`p',
+      "    q`)</pre>",
+      "",
+      "@code {",
+      "  text = `line1",
+      "line2",
+      "    line3`;",
+      "  joined(): string {",
+      '    const name = "n";',
+      "    return `head ${name}",
+      "  middle ${`inner",
+      " nested`}",
+      "tail`;",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+    const { code, diagnostics } = compile(source, { className: "Literals", fileName: "Literals.tsazor", generateSourceMap: false });
+    expect(diagnostics.hasErrors).toBe(false);
+    const mod = await instantiate(code);
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(mod.default as never, container);
+    await renderer.waitUntilIdle();
+    const text = (id: string) => container.querySelector(`#${id}`)?.textContent;
+    expect(text("field")).toBe("line1\nline2\n    line3");
+    expect(text("method")).toBe("head n\n  middle inner\n nested\ntail");
+    expect(text("block")).toBe("x\n  y");
+    expect(text("expression")).toBe("p\n    q");
+  });
 });

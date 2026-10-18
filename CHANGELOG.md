@@ -5,6 +5,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A multi-line template literal keeps its value** (`@tsazor/compiler`; found with a MudBlazor port): `@code` and
+  `@{ }` are emitted re-indented, and the lines inside a template literal were indented too — `` `a\nb` `` became
+  `"a\n  b"`. A line that starts inside a template literal now stays as written.
+
 ## 1.0.0-next.4 (2026-10-18)
 
 - **The migration guide ships with the runtime**: `@tsazor/runtime/MIGRATION.md` (docs/migration-guide.md) — Razor →

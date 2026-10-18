@@ -37,6 +37,7 @@ import type { ExpressionValue } from "./expression-values.js";
 import { importDirective, namesUsedInMembers, type ImportSuggestion } from "./import-suggestions.js";
 import { BLAZOR_LIFECYCLE_NAMES, bodyMemberNames, RESERVED_MEMBERS } from "./reserved-members.js";
 import { staticMarkupOf } from "./static-markup.js";
+import { templateTextSpans } from "./code-scanner.js";
 import * as ts from "typescript";
 
 export interface ResolvedComponent {
@@ -1700,17 +1701,20 @@ class Codegen {
    * absolute position of code[0]; every line is anchored at its first content
    * (the first line relative to origin's column, later ones at their own
    * column — tabs are kept, so columns stay exact). `tokens` are extra precise
-   * entries with outOffsets relative to `code` (baked identifiers).
+   * entries with outOffsets relative to `code` (baked identifiers). A line
+   * that starts inside a template literal is part of its value: it stays as
+   * written.
    */
   private emitCodeVerbatim(code: string, origin: SourcePos, indent: number, tokens: readonly PendingEntry[] = []): void {
     const prefix = " ".repeat(indent);
     const anchors: WriterAnchor[] = [];
+    const templateText = templateTextSpans(code);
     let text = "";
     let lineStart = 0; // offset of the current line within `code`
     let tokenIndex = 0;
     const lines = code.split("\n");
     lines.forEach((line, index) => {
-      const pad = line.length > 0 ? prefix : "";
+      const pad = line.length > 0 && !insideSpan(templateText, lineStart) ? prefix : "";
       // Shift from `code` offsets to `text` offsets on this line.
       const shift = text.length + pad.length - lineStart;
       if (line.trim().length > 0) {
@@ -1768,11 +1772,12 @@ class Codegen {
   private verbatimPiece(code: string, origin: SourcePos, indent: number, carry: string): { text: string; anchors: WriterAnchor[] } {
     const prefix = " ".repeat(indent);
     const anchors: WriterAnchor[] = [];
+    const templateText = templateTextSpans(code);
     let text = carry;
     let lineStart = 0;
     const lines = code.split("\n");
     lines.forEach((line, index) => {
-      const pad = index === 0 && carry !== "" ? "" : line.length > 0 ? prefix : "";
+      const pad = index === 0 && carry !== "" ? "" : line.length > 0 && !insideSpan(templateText, lineStart) ? prefix : "";
       const shift = text.length + pad.length - lineStart;
       if (line.trim().length > 0) {
         const firstContent = line.length - line.trimStart().length;
@@ -3476,6 +3481,11 @@ class Codegen {
     });
     return baked;
   }
+}
+
+/** Whether `offset` lies strictly inside one of `spans` (after its start, before its end). */
+function insideSpan(spans: ReadonlyArray<readonly [number, number]>, offset: number): boolean {
+  return spans.some(([start, end]) => offset > start && offset < end);
 }
 
 /**

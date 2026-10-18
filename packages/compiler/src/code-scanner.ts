@@ -200,6 +200,23 @@ export class CodeScanner {
   }
 }
 
+/**
+ * The text spans of the template literals in `code` (`start`, `end` of each literal piece: a whole `` `…` `` or the
+ * head, middles and tail around `${}`). A line that starts inside one is part of the string's value — code that is
+ * re-indented must leave it as it is.
+ */
+export function templateTextSpans(code: string): Array<readonly [number, number]> {
+  const scanner = new CodeScanner(code);
+  scanner.reset(0);
+  const spans: Array<readonly [number, number]> = [];
+  for (;;) {
+    const token = scanner.next();
+    if (token.kind === SK.EndOfFileToken) return spans;
+    if (token.kind === SK.NoSubstitutionTemplateLiteral || token.kind === SK.TemplateHead ||
+      token.kind === SK.TemplateMiddle || token.kind === SK.TemplateTail) spans.push([token.start, token.end]);
+  }
+}
+
 /** Names a run of statements binds in its own scope, plus TS parse errors. */
 export interface StatementInfo {
   declares: string[];
