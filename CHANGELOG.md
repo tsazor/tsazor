@@ -43,6 +43,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **An `@` that starts no expression in an attribute value is TZS004** (`@tsazor/compiler`), as in element content and
   as Razor's RZ1005: ``transform="@`translate(${x}px)`"`` rendered its own source, `title="@!x"` too. A template
   literal gets the quick fix `@(`…`)`; a non-string component parameter's value stays an expression (`Count="@4000"`).
+  It found two in the skins' sign-up and settings templates (`@tsazor/bootstrap`, `@tsazor/fluent`): `MaxLength="@40"`,
+  no parameter of TextInput, reached the input as `maxlength="@40"`, which the browser ignores — `maxlength="40"` now.
 - **A fragment whose context is the component itself is typed** (`tsazor check`): `RenderFragment<Upload<T>>` gave
   the consumer's context `any` (a MudBlazor port's upload hands its own instance to the template); it is the tag's
   component with its type arguments now, and a missing member is TS2339.
@@ -53,6 +55,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **`TryAdd` for the DI** (`@tsazor/runtime`): `services.tryRegister(…)`, `tryRegisterType(…)`, `tryRegisterValue(…)`
   register only what isn't registered yet, and `services.has(token)` asks — a library's `addMyComponents(services)`
   keeps the app's own registrations and runs twice harmlessly (`register` replaces).
+- **`handleEventAsync` — Blazor's `IHandleEvent`** (`@tsazor/runtime`): a component's events (an `@onclick` in its
+  markup, an EventCallback bound to it) go through its protected `handleEventAsync(callback, arg)`; ComponentBase's
+  renders as before. Overridden with `return callback.invokeAsync(arg);` a component handles its events without a
+  render — what a MudBlazor port's `EventUtil.AsNonRenderingEventHandler` had nothing to map to. `EventCallbackWorkItem`
+  is the handler it gets.
 
 ## 1.0.0-next.4 (2026-10-18)
 

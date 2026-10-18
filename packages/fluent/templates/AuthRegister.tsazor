@@ -10,7 +10,7 @@
     <section class="fui-auth">
         <Typography Variant="h2">Register</Typography>
         <FormField Label="Display name" Id="register-name" For="displayName" Help="The name the team sees.">
-            <TextInput @bind-Value="@credentials.displayName" Required="@true" Placeholder="Their name" MaxLength="@40" />
+            <TextInput @bind-Value="@credentials.displayName" Required="@true" Placeholder="Their name" maxlength="40" />
         </FormField>
         <FormField Label="E-mail" Id="register-email" For="email">
             <TextInput @bind-Value="@credentials.email" Type="email" Autocomplete="email" Placeholder="person@organization.example" Required="@true" />

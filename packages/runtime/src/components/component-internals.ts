@@ -1,4 +1,5 @@
 import type { ComponentBase } from "./component-base.js";
+import type { EventCallbackWorkItem } from "./event-callback.js";
 import type { ParameterView } from "./parameter-view.js";
 import type { RenderTreeBuilder } from "../render-tree/render-tree.js";
 import type { RenderHandle } from "../renderer/render-handle.js";
@@ -41,6 +42,8 @@ export interface ComponentInternals {
   dispose(component: ComponentBase): void;
   /** Writes the parameters into the component's properties (its protected applyParameterValues). */
   applyParameters(component: ComponentBase, parameters: ParameterView): void;
+  /** An event the receiver handles — a component in its protected handleEventAsync (Blazor's IHandleEvent); any other receiver just runs the handler. */
+  handleEvent(receiver: object, callback: EventCallbackWorkItem, arg: unknown): Promise<void>;
 }
 
 /** See ComponentInternals. */

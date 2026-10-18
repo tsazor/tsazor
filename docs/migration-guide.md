@@ -71,6 +71,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `OnParametersSet()` / `OnParametersSetAsync()` | `onParametersSet()` / `async onParametersSet()` |
 | `OnAfterRender(bool firstRender)` / `…Async` | `onAfterRender(firstRender: boolean)` / `async onAfterRender(…)` |
 | `ShouldRender()` | `shouldRender()` |
+| `@implements IHandleEvent` + `HandleEventAsync`, `EventUtil.AsNonRenderingEventHandler` | `protected override handleEventAsync(callback, arg) { return callback.invokeAsync(arg); }` — the component's events without a render |
 | `SetParametersAsync(ParameterView)` | `setParametersAsync(parameters: ParameterView)` |
 | `StateHasChanged()` | `this.stateHasChanged()` |
 | `InvokeAsync(StateHasChanged)`, `InvokeAsync(() => …)` | call directly: one thread, nothing to marshal |

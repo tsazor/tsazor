@@ -9,7 +9,7 @@
  * Kept in sync with the runtime by a test in @tsazor/workspace (which reads
  * ComponentBase's declaration). Not listed: the lifecycle methods a
  * component overrides on purpose (`onInitialized`, `onParametersSet`,
- * `onAfterRender`, `shouldRender`, `setParametersAsync`) and
+ * `onAfterRender`, `shouldRender`, `setParametersAsync`, `handleEventAsync`) and
  * `buildRenderTree` (TZS020).
  */
 import * as ts from "typescript";
@@ -46,6 +46,7 @@ export const BLAZOR_LIFECYCLE_NAMES: ReadonlyMap<string, string> = new Map([
   ["SetParametersAsync", "setParametersAsync"],
   ["Dispose", "dispose"],
   ["DisposeAsync", "disposeAsync"],
+  ["HandleEventAsync", "handleEventAsync"],
 ]);
 
 /** The ComponentBase members a component overrides on purpose (lifecycle hooks). */
@@ -55,6 +56,7 @@ export const OVERRIDABLE_MEMBERS: ReadonlySet<string> = new Set([
   "onAfterRender",
   "shouldRender",
   "setParametersAsync",
+  "handleEventAsync",
   "buildRenderTree",
 ]);
 

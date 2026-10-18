@@ -114,6 +114,8 @@ export declare function createFakeStore<T>(initial: T): FakeStore<T>;
 
 // EventCallback: re-exported from @tsazor/runtime
 
+// EventCallbackWorkItem: re-exported from @tsazor/runtime
+
 // EventHandlerFlags: re-exported from @tsazor/runtime
 
 // EventSubscription: re-exported from @tsazor/runtime

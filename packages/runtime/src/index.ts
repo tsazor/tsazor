@@ -10,7 +10,7 @@ export { Bindable, type BindableOptions } from "./components/bindable.js";
 export { State } from "./components/state.js";
 export { CascadingTypeParameter } from "./components/cascading-type-parameter.js";
 export type { ObserveSource, ObserveListener, ObserveTeardown, Subscribable } from "./components/observe.js";
-export { EventCallback } from "./components/event-callback.js";
+export { EventCallback, EventCallbackWorkItem } from "./components/event-callback.js";
 export { bindMethod } from "./components/bind-method.js";
 export { addAttachment, type Attachment } from "./components/attachment.js";
 export {

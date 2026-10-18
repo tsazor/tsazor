@@ -208,6 +208,7 @@ export declare abstract class ComponentBase {
     protected onInitialized(): void | Promise<void>;
     protected onParametersSet(): void | Promise<void>;
     protected onAfterRender(firstRender: boolean): void | Promise<void>;
+    protected handleEventAsync(callback: EventCallbackWorkItem, arg: unknown): Promise<void>;
     protected shouldRender(): boolean;
     protected stateHasChanged(): void;
     protected buildRenderTree(builder: RenderTreeBuilder): void;
@@ -405,6 +406,15 @@ export declare class EventCallback<TArg = unknown> {
     get hasDelegate(): boolean;
     equals(other: EventCallback<never>): boolean;
     private createDelegate;
+}
+
+// EventCallbackWorkItem
+export declare class EventCallbackWorkItem {
+    private readonly receiver;
+    private readonly delegate;
+    constructor(receiver: unknown, delegate: (arg: unknown) => unknown);
+    invokeAsync(arg?: unknown): Promise<void>;
+    static readonly completed: Promise<void>;
 }
 
 // EventHandlerFlags

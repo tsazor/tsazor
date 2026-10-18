@@ -4,6 +4,7 @@ import type { RenderHandle } from "../renderer/render-handle.js";
 import type { RenderErrorPhase } from "../renderer/renderer.js";
 import { parameterInfoOf } from "./parameter-metadata.js";
 import { componentInternals } from "./component-internals.js";
+import { EventCallbackWorkItem } from "./event-callback.js";
 import { collectAutoObserve, getCurrentServices, isAutoRender } from "../di/service-provider.js";
 import { DEV, release, type ObserveListener, type ObserveSource, type ObserveTeardown } from "./observe.js";
 
@@ -135,6 +136,20 @@ export abstract class ComponentBase {
 
   /** Blazor's OnAfterRender / OnAfterRenderAsync. */
   protected onAfterRender(firstRender: boolean): void | Promise<void> {}
+
+  /**
+   * Blazor's IHandleEvent.HandleEventAsync: how the component handles an event of its own — an `@onclick` in its
+   * markup, an EventCallback bound to it. The handler runs, and the component renders: after the handler's
+   * synchronous part (so `busy = true; await …` shows its intermediate state) and, for an async handler, once more when
+   * it completes; a failed async handler renders no second time, its error propagates. Override it to handle events
+   * otherwise — without a render, Blazor's `@implements IHandleEvent`: `return callback.invokeAsync(arg);`.
+   */
+  protected handleEventAsync(callback: EventCallbackWorkItem, arg: unknown): Promise<void> {
+    const task = callback.invokeAsync(arg);
+    componentInternals.requestRender(this);
+    if (task === EventCallbackWorkItem.completed) return task;
+    return task.then(() => componentInternals.requestRender(this));
+  }
 
   /** Blazor's ShouldRender: consulted by stateHasChanged, never for the first render. */
   protected shouldRender(): boolean {
@@ -392,6 +407,9 @@ export abstract class ComponentBase {
       reportError: (component: ComponentBase, error: unknown, phase: RenderErrorPhase): void => component.#reportError(error, phase),
       dispose: (component: ComponentBase): void => component.#dispose(),
       applyParameters: (component: ComponentBase, parameters: ParameterView): void => component.applyParameterValues(parameters),
+      // Blazor: `Receiver is IHandleEvent` — a receiver that isn't a component just runs the handler.
+      handleEvent: (receiver: object, callback: EventCallbackWorkItem, arg: unknown): Promise<void> =>
+        #renderHandle in receiver ? (receiver as ComponentBase).handleEventAsync(callback, arg) : callback.invokeAsync(arg),
     } satisfies typeof componentInternals);
   }
 }

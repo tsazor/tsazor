@@ -85,17 +85,11 @@ export class EventCallback<TArg = unknown> {
     // Call with the receiver as `this` (Blazor's Factory.Bind semantics): the
     // compiler passes method references like `this.incrementCount`, which are
     // not bound — without this, `this.state` inside the handler is undefined.
-    const result = delegate.call(this.receiver, arg);
-    // Blazor's ComponentBase.HandleEventAsync: the owning component re-renders
-    // after the handler's synchronous part — so `busy = true; await …` shows
-    // its intermediate state — and, for an async handler, again once it
-    // completes (CallStateHasChangedOnAsyncCompletion). A failed async handler
-    // does not re-render a second time; its error propagates.
-    if (this.receiver !== null) componentInternals.requestRender(this.receiver);
-    if (result instanceof Promise) {
-      await result;
-      if (this.receiver !== null) componentInternals.requestRender(this.receiver);
-    }
+    const item = new EventCallbackWorkItem(this.receiver, delegate as (arg: unknown) => unknown);
+    // Blazor: a receiver handles its events (IHandleEvent — ComponentBase's re-renders it); without one the
+    // handler just runs.
+    if (this.receiver === null) await item.invokeAsync(arg);
+    else await componentInternals.handleEvent(this.receiver, item, arg);
   }
 
   /** Blazor's EventCallback.HasDelegate: false for `EventCallback.empty`, whose invocation does nothing. */
@@ -145,3 +139,31 @@ export class EventCallback<TArg = unknown> {
 }
 
 const NO_ARGS: readonly unknown[] = [];
+
+/** The task of a handler that completed synchronously (Blazor's Task.CompletedTask). */
+const COMPLETED: Promise<void> = Promise.resolve();
+
+/**
+ * Blazor's EventCallbackWorkItem: the handler of an event a component handles in `handleEventAsync` (IHandleEvent).
+ * `invokeAsync` runs it, with its receiver as `this`.
+ */
+export class EventCallbackWorkItem {
+  /** Created by EventCallback for each invocation (a test of a `handleEventAsync` creates one too). */
+  constructor(
+    private readonly receiver: unknown,
+    private readonly delegate: (arg: unknown) => unknown,
+  ) {}
+
+  /**
+   * Runs the handler. For a synchronous one the task is `EventCallbackWorkItem.completed`, already settled (Blazor's
+   * Task.CompletedTask) — a handler that throws synchronously throws here, as in Blazor; an async handler's task is
+   * its own.
+   */
+  invokeAsync(arg?: unknown): Promise<void> {
+    const result = this.delegate.call(this.receiver, arg);
+    return result instanceof Promise ? result.then(() => undefined) : COMPLETED;
+  }
+
+  /** The task `invokeAsync` returns for a handler that completed synchronously. */
+  static readonly completed: Promise<void> = COMPLETED;
+}

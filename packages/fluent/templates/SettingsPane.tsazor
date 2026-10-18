@@ -8,7 +8,7 @@
     <section class="fui-settings">
         <Typography Variant="h3">Profile</Typography>
         <FormField Label="Display name" Id="settings-name" For="displayName" Help="The name the team sees.">
-            <TextInput @bind-Value="@profile.displayName" Required="@true" MaxLength="@40" />
+            <TextInput @bind-Value="@profile.displayName" Required="@true" maxlength="40" />
         </FormField>
         <FormField Label="E-mail for notifications" Id="settings-email" For="email">
             <TextInput @bind-Value="@profile.email" Type="email" Placeholder="person@organization.example" />

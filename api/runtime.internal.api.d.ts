@@ -30,6 +30,7 @@ export interface ComponentInternals {
     reportError(component: ComponentBase, error: unknown, phase: RenderErrorPhase): void;
     dispose(component: ComponentBase): void;
     applyParameters(component: ComponentBase, parameters: ParameterView): void;
+    handleEvent(receiver: object, callback: EventCallbackWorkItem, arg: unknown): Promise<void>;
 }
 
 // ComponentState

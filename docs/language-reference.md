@@ -918,6 +918,11 @@ entries) does not change language on a culture switch. Store the **key**, transl
   out is warning TZS037 (Razor's RZ2012). An attribute, a `@bind-Label` and, for `ChildContent`, element content
   supply it; a tag with `@attributes` isn't checked (the splat may supply it). As in Blazor, nothing changes at
   runtime — a parameter left out keeps its initializer.
+- A component's events — an `@onclick` in its markup, an `EventCallback` bound to it — go through its
+  `handleEventAsync(callback, arg)` (Blazor's `IHandleEvent`): the handler runs, and the component renders after the
+  handler's synchronous part and once more when an async handler completes. A component that overrides it decides
+  itself — `return callback.invokeAsync(arg);` handles its events without a render (Blazor's
+  `@implements IHandleEvent`, the counterpart of `EventUtil.AsNonRenderingEventHandler`).
 
 ### Two-way parameters: `@Bindable()` (Tsazor extension)
 
