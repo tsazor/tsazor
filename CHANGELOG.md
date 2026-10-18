@@ -22,6 +22,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   types the compiler imports itself were value imports — TS1484 on `RouteData` (`<RouteView RouteData>`) and
   `ComponentType` (`<DynamicComponent Type>`). They are type imports now, and so is a tag's type argument resolved
   through `@using` (`TItem="Person"` for an interface), which the typed check didn't import at all (TS2304).
+- **`import source from "./Example.tsazor?raw"` works** (`@tsazor/vite-plugin`) — from a `.tsazor`, a `.ts` module or
+  `import.meta.glob(…, { query: "?raw" })`, as a gallery showing a component's source does: the plugin compiled the
+  string module Vite loads for `?raw` as a component (a 500 in dev, a failed build). `?raw`, `?url`, `?worker` and
+  (but for CSS) `?inline` are Vite's now.
 
 ## 1.0.0-next.4 (2026-10-18)
 

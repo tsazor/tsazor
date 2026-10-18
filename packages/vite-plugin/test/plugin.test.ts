@@ -381,6 +381,40 @@ describe("tsazor vite plugin", () => {
     }
   });
 
+  it("leaves `?raw` and `?url` imports of a .tsazor to Vite — in a .tsazor, a .ts module and import.meta.glob", async () => {
+    const { createServer } = await import("vite");
+    const dir = path.join(root, "raw");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "Example.tsazor"), '<p class="x">Hello @name</p>\n\n@code {\n    name = "you";\n}\n');
+    await writeFile(path.join(dir, "Show.tsazor"), '@import source from "./Example.tsazor?raw"\n<pre>@source</pre>\n');
+    await writeFile(path.join(dir, "sources.ts"), 'import source from "./Example.tsazor?raw";\nimport url from "./Example.tsazor?url";\nexport const all = { source, url, globbed: import.meta.glob("./*.tsazor", { query: "?raw", import: "default", eager: true }) };\n');
+    const server = await createServer({
+      root,
+      configFile: false,
+      logLevel: "silent",
+      appType: "custom",
+      server: { middlewareMode: true, hmr: false, watch: null },
+      optimizeDeps: { noDiscovery: true, include: [] },
+      // The compiled Show.tsazor imports the runtime; the temporary root has no node_modules.
+      resolve: { alias: { "@tsazor/runtime": path.resolve(import.meta.dirname, "../../runtime/src/index.ts") } },
+      plugins: [tsazor({ root })],
+    });
+    try {
+      // The import of the source, re-issued by Vite as `?import&raw`, is the file's text.
+      const raw = await server.transformRequest("/raw/Example.tsazor?import&raw");
+      expect(raw!.code).toContain('export default "<p class=\\"x\\">Hello @name</p>');
+      // The component that shows it compiles; the module that imports it and globs the folder loads.
+      expect((await server.transformRequest("/raw/Show.tsazor"))!.code).toContain("Example.tsazor?import&raw");
+      const sources = (await server.ssrLoadModule("/raw/sources.ts")) as { all: { source: string; url: string; globbed: Record<string, string> } };
+      expect(sources.all.source).toContain("@code {");
+      expect(sources.all.url).toMatch(/Example\.tsazor/);
+      expect(Object.keys(sources.all.globbed).sort()).toEqual(["./Example.tsazor", "./Show.tsazor"]);
+      expect(sources.all.globbed["./Show.tsazor"]).toContain("@import source");
+    } finally {
+      await server.close();
+    }
+  });
+
   it("keeps .tsazor files without a .ts sidecar on ComponentBase", async () => {
     const plugin = await createPlugin();
     const result = await plugin.transform?.call({} as never, COUNTER, path.join(root, "Pages", "Counter.tsazor"));

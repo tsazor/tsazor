@@ -155,6 +155,9 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
     async transform(code, id) {
       const filePath = stripQuery(id);
       if (filePath.startsWith("\0")) return null;
+      // `X.tsazor?raw` (a gallery showing a component's source), `?url`, a worker: Vite loads the file as something
+      // else — its text as a string module, its URL — so it isn't Tsazor's to compile (that was a 500 and a failed build).
+      if (isAssetRequest(id)) return null;
 
       // A built library's decorator helpers (its _decorators.js, or the copy in a component built before it had one)
       // become the app's, where they are the same text: one copy for the app, not one per library.
@@ -212,6 +215,15 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
   function stripQuery(id: string): string {
     const query = id.indexOf("?");
     return query >= 0 ? id.slice(0, query) : id;
+  }
+
+  /** Vite's queries that load a file as something else: `raw`, `url`, `worker`, and `inline` for anything but CSS. */
+  function isAssetRequest(id: string): boolean {
+    const query = id.indexOf("?");
+    if (query < 0) return false;
+    const params = new URLSearchParams(id.slice(query + 1));
+    if (params.has("raw") || params.has("url") || params.has("worker") || params.has("sharedworker")) return true;
+    return params.has("inline") && !id.slice(0, query).endsWith(".css");
   }
 
   return plugin;
