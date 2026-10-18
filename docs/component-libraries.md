@@ -68,8 +68,11 @@ app:
 "scripts": { "build": "tsazor build-lib --stylesheet my-components.css" }
 ```
 
-- every `src/*.tsazor` (but `_Imports.tsazor`) becomes `dist/<Name>.js`, exported from
-  `dist/index.js`, with a declaration `dist/<Name>.d.ts` from its parameters;
+- every `.tsazor` below `src/` (but `_Imports.tsazor`) becomes `dist/<Name>.js` at the same path
+  (`src/forms/Field.tsazor` is `dist/forms/Field.js`, a folder per component as MudBlazor's), exported from
+  `dist/index.js`, with a declaration `<Name>.d.ts` beside it from its parameters. Each folder's `_Imports.tsazor`
+  applies as in an app (`@using ./buttons` in `src/_Imports.tsazor` lets every component use the buttons). A tag finds
+  a component by its name, so two components of one name in different folders are a build error;
 - every `.ts` helper below `src/` becomes `dist/<name>.js` at the same path (`src/utilities/x.ts` is
   `dist/utilities/x.js`), with the declaration TypeScript derives from the file alone (a function needs its
   return type written for that);

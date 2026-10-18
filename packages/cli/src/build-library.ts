@@ -1,7 +1,8 @@
 /**
  * `buildLibrary` (and `tsazor build-lib`): a component library's build, as an app's — the sources type-checked first
  * (`tsazor check`), then, as the Vite plugin compiles an app, each
- * `src/*.tsazor` through the compiler with the workspace's resolution, its standard decorators lowered; the plain
+ * `.tsazor` below `src/` (at the same path in `dist`) through the compiler with the workspace's resolution, its
+ * standard decorators lowered; the plain
  * `.ts` helpers beside them; the component manifest (`tsazor-components.json`) and a declaration per component; the
  * index; and, if asked for, one stylesheet of the shared styles and the components' sidecars. esbuild's decorator
  * helpers go once into `_decorators.js`, which the components import (a copy per component was half their size). docs/component-libraries.md
@@ -20,7 +21,11 @@ import ts from "typescript";
 export interface BuildLibraryOptions {
   /** The package's directory, with its package.json. Default: the current directory. */
   packageDir?: string;
-  /** The sources: each `*.tsazor` but `_Imports.tsazor` is a component, each `*.ts` a helper. Default: `src`. */
+  /**
+   * The sources: each `*.tsazor` but `_Imports.tsazor` is a component, each `*.ts` a helper — at any depth, built at
+   * the same path in the output; two components of one name are an error (a tag finds a component by its name).
+   * Default: `src`.
+   */
   srcDir?: string;
   /** The output. Default: `dist`. */
   outDir?: string;
@@ -111,18 +116,32 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
 
   /** Everything the build writes, under the lock. */
   async function writeOutput(): Promise<BuildLibraryResult> {
-    const files = (await readdir(srcDir)).filter((name) => name.endsWith(".tsazor") && name !== "_Imports.tsazor").sort();
-    // A component in a subfolder was left out of `dist` without a word: the build says so instead.
-    const nested = await nestedComponents(srcDir);
-    if (nested.length > 0) {
-      const nestedErrors = nested.map((file) => ({ file, message: "  a component in a subfolder is not built: a library's components live at the top level of its src/ (subfolders hold the .ts helpers)" }));
-      for (const error of nestedErrors) log(`[${packageName}] ${error.file}\n${error.message}`);
-      return { components: [], errors: nestedErrors };
+    // The components at any depth (a library laid out as MudBlazor's, a folder per component): each builds at its path
+    // in `dist`. A tag finds a component by its name, so a name is one component — two in different folders are an error.
+    const files = await componentSources(srcDir);
+    const byName = new Map<string, string[]>();
+    for (const file of files) {
+      const name = path.posix.basename(file, ".tsazor");
+      byName.set(name, [...(byName.get(name) ?? []), file]);
     }
-    const chain = await collectImports(srcDir, packageDir);
-    const layerErrors = chain.layers.flatMap((layer) =>
-      layer.diagnostics.filter((d) => d.severity === "error").map((d) => `  ${d.code} (${d.pos.line}:${d.pos.column}): ${layer.file}: ${d.message}`),
-    );
+    const duplicates = [...byName].filter(([, paths]) => paths.length > 1);
+    if (duplicates.length > 0) {
+      const duplicateErrors = duplicates.map(([name, paths]) => ({
+        file: paths.join(", "),
+        message: `  two components named ${name}: a tag finds a component by its name, so a library has one of each name`,
+      }));
+      for (const error of duplicateErrors) log(`[${packageName}] ${error.file}\n${error.message}`);
+      return { components: [], errors: duplicateErrors };
+    }
+    /** Each component's path below src/ without `.tsazor` (`forms/Field`), by name: its path in `dist` too. */
+    const componentStem = new Map([...byName].map(([name, [file]]) => [name, file!.slice(0, -".tsazor".length)]));
+    // Each folder's `_Imports.tsazor` chain, as the Vite plugin resolves a component in it.
+    const chains = new Map<string, Awaited<ReturnType<typeof collectImports>>>();
+    const chainFor = async (dir: string) => {
+      let chain = chains.get(dir);
+      if (chain === undefined) chains.set(dir, (chain = await collectImports(dir, packageDir)));
+      return chain;
+    };
     // esbuild's decorator helpers, from a probe transformed as the components are: one module the components import.
     const helpers = sharedHelperModule(transformSync(DECORATOR_HELPER_PROBE, COMPONENT_TRANSFORM).code);
     await emit("_decorators.js", helpers.code);
@@ -131,12 +150,17 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     const exported: string[] = [];
     for (const file of files) {
       const filePath = path.join(srcDir, file);
-      const className = path.basename(file, ".tsazor");
+      const className = path.posix.basename(file, ".tsazor");
+      const toRoot = path.posix.relative(path.posix.dirname(file), ".") || ".";
       try {
         const sidecar = await readFile(`${filePath}.css`, "utf8").catch(() => null);
         if (sidecar !== null) sidecars.push(`/* ${className} (.tsazor.css) */\n${sidecar}`);
         // The Vite plugin's resolution: explicit @imports (own and inherited from _Imports.tsazor), tags and @inject
         // types resolved strictly.
+        const chain = await chainFor(path.dirname(filePath));
+        const layerErrors = chain.layers.flatMap((layer) =>
+          layer.diagnostics.filter((d) => d.severity === "error").map((d) => `  ${d.code} (${d.pos.line}:${d.pos.column}): ${layer.file}: ${d.message}`),
+        );
         const compiled = compile(await readFile(filePath, "utf8"), { ...resolutionOptions(createFileContext(filePath, chain)), generateSourceMap: false });
         const fileErrors = [
           ...layerErrors,
@@ -148,7 +172,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
         }
         // Tsazor's field decorators applied after the class (`decorateFields`), as an app's build does.
         const transpiled = transformSync(compactFieldDecorators(packageRelativeSources(compiled.code, packageDir), filePath), { ...COMPONENT_TRANSFORM, sourcefile: filePath });
-        await emit(`${className}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, "./_decorators"), srcDir));
+        await emit(`${componentStem.get(className)!}.js`, builtSpecifiers(shareHelpers(transpiled.code, helpers, `${toRoot}/_decorators`), path.dirname(filePath)));
         if (!internal.has(className)) exported.push(className);
       } catch (error) {
         errors.push({ file, message: `  ${error instanceof Error ? (error.stack ?? error.message) : String(error)}` });
@@ -183,8 +207,10 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     for (const name of (await readdir(srcDir)).filter((name) => /^[A-Z]\w*\.ts$/.test(name))) {
       const stem = name.slice(0, -".ts".length);
       const kind = importKindOf(path.join(srcDir, name), stem);
-      if (kind !== undefined && !files.includes(`${stem}.tsazor`)) handWritten.set(stem, kind);
+      if (kind !== undefined && !componentStem.has(stem)) handWritten.set(stem, kind);
     }
+    /** A compiled component's (or an alias's target's) path below src/ and in dist, without extension. */
+    const stemOf = (name: string): string => componentStem.get(name) ?? componentStem.get(aliases[name] ?? "") ?? aliases[name] ?? name;
 
     // The parameters of every component: editors and `tsazor check` read them instead of the sources (package.json
     // `tsazor.components` points here), and a declaration per component is written from them.
@@ -192,17 +218,20 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
       packageDir,
       packageName,
       entries: [
-        ...exported.map((name) => ({ exportName: name, file: path.join(srcDir, `${name}.tsazor`) })),
+        ...exported.map((name) => ({ exportName: name, file: path.join(srcDir, `${stemOf(name)}.tsazor`) })),
         ...[...handWritten].filter(([name]) => !internal.has(name)).map(([name, kind]) => ({ exportName: name, file: path.join(srcDir, `${name}.ts`), localExport: kind === "named" ? name : "default" })),
-        ...Object.entries(aliases).map(([alias, target]) => ({ exportName: alias, file: path.join(srcDir, `${target}.tsazor`) })),
+        ...Object.keys(aliases).map((alias) => ({ exportName: alias, file: path.join(srcDir, `${stemOf(alias)}.tsazor`) })),
       ],
     });
     await emit("tsazor-components.json", `${JSON.stringify(manifest, null, 2)}\n`);
     const handWrittenComponents = [...handWritten].filter(([name]) => manifest.components[name] !== undefined);
     // `dist` mirrors `src`: a specifier a component wrote reaches the same module there, as built (`./base/x.js`,
-    // `./Menu.js`) — not rebased to `dist`, which pointed back into `src/`.
+    // `./Menu.js`) — not rebased to `dist`, which pointed back into `src/`. Each declaration lands in its component's
+    // folder (an alias's in its target's).
     for (const [exportName, declaration] of Object.entries(componentTypeDeclarations(manifest, { packageDir }))) {
-      if (!handWritten.has(exportName)) await emit(`${exportName}.d.ts`, builtSpecifiers(declaration, srcDir));
+      if (handWritten.has(exportName)) continue;
+      const dir = path.posix.dirname(stemOf(exportName));
+      await emit(`${dir === "." ? "" : `${dir}/`}${exportName}.d.ts`, builtSpecifiers(declaration, path.join(srcDir, dir)));
     }
     for (const [file, text] of Object.entries(options.declarations ?? {})) await emit(file, text);
 
@@ -210,10 +239,10 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     // exports itself isn't exported a second time (a duplicate export is a module that doesn't load).
     const explicit = exportedNames(options.exports ?? []);
     const index = [
-      ...exported.filter((name) => !explicit.has(name)).map((name) => `export { default as ${name} } from "./${name}.js"`),
+      ...exported.filter((name) => !explicit.has(name)).map((name) => `export { default as ${name} } from "./${stemOf(name)}.js"`),
       ...handWrittenComponents.filter(([name]) => !explicit.has(name)).map(([name, kind]) => (kind === "named" ? `export { ${name} } from "./${name}.js"` : `export { default as ${name} } from "./${name}.js"`)),
       ...(options.exports ?? []),
-      ...Object.entries(aliases).filter(([alias]) => !explicit.has(alias)).map(([alias, target]) => `export { default as ${alias} } from "./${target}.js"`),
+      ...Object.keys(aliases).filter((alias) => !explicit.has(alias)).map((alias) => `export { default as ${alias} } from "./${stemOf(alias)}.js"`),
     ].map(statement);
     const typeIndex = [...index, ...referencedTypeExports(manifest, options), ...(options.typeExports ?? []).map(statement)];
     // Each relative export names a file the build wrote — a wrong path built green and failed in the consuming app.
@@ -333,16 +362,15 @@ async function helperSources(dir: string, prefix = ""): Promise<string[]> {
   return found;
 }
 
-/** The `.tsazor` components in subfolders of `dir`: a library's components live at its top level. */
-async function nestedComponents(dir: string, prefix = ""): Promise<string[]> {
+/** The `.tsazor` components below `dir` (subfolders included, no `_Imports.tsazor`), as paths relative to it, sorted. */
+async function componentSources(dir: string, prefix = ""): Promise<string[]> {
   const found: string[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name === "node_modules") continue;
-    const sub = path.join(dir, entry.name);
-    for (const name of await readdir(sub)) {
-      if (name.endsWith(".tsazor") && name !== "_Imports.tsazor") found.push(`${prefix}${entry.name}/${name}`);
+    if (entry.isDirectory()) {
+      if (entry.name !== "node_modules") found.push(...(await componentSources(path.join(dir, entry.name), `${prefix}${entry.name}/`)));
+    } else if (entry.name.endsWith(".tsazor") && entry.name !== "_Imports.tsazor") {
+      found.push(`${prefix}${entry.name}`);
     }
-    found.push(...(await nestedComponents(sub, `${prefix}${entry.name}/`)));
   }
   return found.sort();
 }

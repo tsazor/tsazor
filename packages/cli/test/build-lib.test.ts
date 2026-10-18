@@ -141,12 +141,43 @@ describe("buildLibrary (D9)", () => {
     expect(await read(root, "Badge.d.ts")).toContain("export declare class Badge extends ComponentBase");
   });
 
-  it("refuses a component in a subfolder instead of leaving it out of dist", async () => {
-    const root = await library({ "src/forms/Field.tsazor": "<input />\n" });
+  it("builds components in folders (a folder per component, as MudBlazor lays them out) at their paths in dist", async () => {
+    const root = await library({
+      "src/_Imports.tsazor": "@using ./buttons\n",
+      "src/buttons/Button.tsazor": '@import type { RenderFragment } from "@tsazor/runtime"\n<button class="btn">@ChildContent</button>\n@code {\n    @Parameter() ChildContent?: RenderFragment;\n}\n',
+      "src/forms/Field.tsazor": '@import { shout } from "../helper"\n<label>@shout(this.label) @count</label><Button>ok</Button>\n@code {\n    @Parameter() label = "";\n    @State() accessor count = 0;\n}\n',
+      "consumer.ts": 'import type { ComponentBase } from "@tsazor/runtime";\nimport { Button, Field, Input } from "./dist/index.js";\n\nconst types: (abstract new () => ComponentBase)[] = [Button, Field, Input];\ndeclare const field: Field;\nexport const label: string = field.label;\nexport { types };\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], aliases: { Input: "Field" }, log: () => {} });
+    expect(result.errors).toEqual([]);
+    expect(result.components).toEqual(["Greeting", "Button", "Field", "Input"]);
+    const field = await read(root, "forms/Field.js");
+    expect(field).toContain('from "../buttons/Button.js"');
+    expect(field).toContain('from "../helper.js"');
+    expect(field).toMatch(/from "\.\.\/_decorators\.js"/);
+    expect(await read(root, "index.js")).toBe(
+      'export { default as Greeting } from "./Greeting.js";\nexport { default as Button } from "./buttons/Button.js";\nexport { default as Field } from "./forms/Field.js";\nexport { default as Input } from "./forms/Field.js";\n',
+    );
+    expect(existsSync(path.join(root, "dist", "forms", "Field.d.ts"))).toBe(true);
+    const manifest = JSON.parse(await read(root, "tsazor-components.json")) as { components: Record<string, unknown> };
+    expect(Object.keys(manifest.components)).toEqual(["Greeting", "Button", "Field", "Input"]);
+    // The consumer's view of the nested declarations, without skipLibCheck.
+    const ts = (await import("typescript")).default;
+    const program = ts.createProgram([path.join(root, "consumer.ts")], {
+      strict: true, noEmit: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    });
+    const problems = ts.getPreEmitDiagnostics(program)
+      .filter((d) => d.file === undefined || !d.file.fileName.includes("/runtime/"))
+      .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+    expect(problems).toEqual([]);
+  });
+
+  it("refuses two components of one name in different folders — a tag finds a component by its name", async () => {
+    const root = await library({ "src/a/Item.tsazor": "<li>a</li>\n", "src/b/Item.tsazor": "<li>b</li>\n" });
     const lines: string[] = [];
-    const result = await buildLibrary({ packageDir: root, log: (line) => lines.push(line) });
-    expect(result.errors.map((error) => error.file)).toEqual(["forms/Field.tsazor"]);
-    expect(lines.join("\n")).toContain("a component in a subfolder is not built");
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: (line) => lines.push(line) });
+    expect(result.errors.map((error) => error.file)).toEqual(["a/Item.tsazor, b/Item.tsazor"]);
+    expect(lines.join("\n")).toContain("two components named Item");
   });
 
   it("compiles a .ts helper's decorators as the components' are — none left raw for the browser (X9)", async () => {

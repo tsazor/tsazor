@@ -39,6 +39,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
     and a name the `exports` option exports itself isn't exported a second time (a duplicate export doesn't load).
   - A warning without `"tsazor": { "components" }` in package.json: an app would read no parameters (TZS026).
   - One build at a time per output (`dist/.tsazor-build.lock`): two concurrent builds removed each other's files.
+- **A library's components in folders** (`tsazor build-lib`): every `.tsazor` below `src/` builds at its path in `dist`
+  (`src/forms/Field.tsazor` → `dist/forms/Field.js` and `Field.d.ts`) — a folder per component, as MudBlazor lays
+  them out; a nested component was a build error. Each folder's `_Imports.tsazor` applies, aliases find their target
+  in its folder, and two components of one name are a build error (a tag finds a component by its name).
 - Documented: Vite's `server.fs.allow` for a library installed from a folder beside the app.
 - **An `@` that starts no expression in an attribute value is TZS004** (`@tsazor/compiler`), as in element content and
   as Razor's RZ1005: ``transform="@`translate(${x}px)`"`` rendered its own source, `title="@!x"` too. A template
