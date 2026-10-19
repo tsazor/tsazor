@@ -317,8 +317,8 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     code: "TZS038",
     severity: "warning",
     description:
-      "Text outside every element that is code, not content — as in Razor it is markup text and renders: a `//` or `/* … */` comment outside `@code` (a copyright header shows on every page; a `@name` or `<Tag>` in it is markup too), or a call after the last `@code` block (module-level code: it renders and never runs). Text inside an element (`<p>a // b</p>`) is content and isn't checked.",
+      "Text outside every element that is code, not content — as in Razor it is markup text and renders: a `//` or `/* … */` comment outside `@code` (a copyright header shows on every page; a `@name` or `<Tag>` in it is markup too), or a call after the last `@code` block (module-level code: it renders and never runs). Text inside an element (`<p>a // b</p>`) is content and isn't checked. Also text right after an expression that starts with an operator (`??`, `||`, `&&`, a comparison, `=>`, `? … :`): `title=\"@label ?? undefined\"` reads `@label` and renders ` ?? undefined`; a component's value parameter, which reads the whole value as an expression, isn't checked.",
     example: "// Copyright (c) Contoso\n<p>Hello</p>\n",
-    fix: "A markup comment is `@* … *@` (the quick fix). Code that runs once, when the module loads, goes into a `static { }` block in `@code`.",
+    fix: "A markup comment is `@* … *@` (the quick fix). Code that runs once, when the module loads, goes into a `static { }` block in `@code`. An expression with an operator is written whole: `@(label ?? undefined)` (the quick fix in an attribute value).",
   },
 ];

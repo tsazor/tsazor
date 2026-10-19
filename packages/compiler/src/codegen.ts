@@ -496,6 +496,7 @@ class Codegen {
     this.resolveAuthorization();
     this.checkCascadingTypeParameters();
     this.checkCodeLikeText(document);
+    this.checkOperatorAfterExpression(document);
 
     if (this.metadata.inherits) {
       const base = this.metadata.inherits;
@@ -2478,6 +2479,53 @@ class Codegen {
   }
 
   /**
+   * TZS038 as well: content right after an expression that starts with an operator — `<p>@a ?? "none"</p>` reads
+   * `@a` and renders ` ?? "none"`, as Razor does (a Radzen port met it about 30 times).
+   */
+  private checkOperatorAfterExpression(document: DocumentNode): void {
+    const visit = (nodes: readonly MarkupNode[]): void => {
+      nodes.forEach((node, index) => {
+        const next = nodes[index + 1];
+        if (node.kind === "expression" && next?.kind === "text") {
+          const operator = leadingOperator(next.content);
+          if (operator !== undefined) {
+            const start = advancePos(next.pos, next.content.slice(0, next.content.length - next.content.trimStart().length));
+            const rendered = next.content.trim().split("\n")[0]!;
+            this.diagnostics.warning(
+              "TZS038",
+              { pos: start, endPos: advancePos(start, rendered) },
+              `Text after '@${node.code}' that starts with an operator (${operator}) is markup text, as in Razor: '${rendered}' renders. An expression with an operator is written whole in '@(…)'.`,
+            );
+          }
+        }
+        visit(childNodes(node));
+      });
+    };
+    visit(document.body);
+  }
+
+  /** The attribute value's form of checkOperatorAfterExpression, with the fix `@(expr op rest)` for `@expr` + text. */
+  private checkOperatorAfterValueExpression(attr: Extract<AttributeNode, { kind: "mixedValue" }>): void {
+    attr.parts.forEach((part, index) => {
+      const next = attr.parts[index + 1];
+      if (part.code === undefined || next?.text === undefined) return;
+      const operator = leadingOperator(next.text);
+      if (operator === undefined) return;
+      const raw = attr.raw;
+      // `@label ?? undefined` and nothing else: the whole value is the expression.
+      const whole = raw !== undefined && attr.parts.length === 2 && raw.text === `@${part.code}${next.text}`;
+      const range = whole ? { pos: raw.start, endPos: advancePos(raw.start, raw.text) } : attr;
+      const fixed = `@(${part.code}${next.text.trimEnd()})`;
+      this.diagnostics.warning(
+        "TZS038",
+        range,
+        `Text after '@${part.code}' that starts with an operator (${operator}) is markup text, as in Razor: '${next.text.trim()}' renders. An expression with an operator is written whole in '@(…)'${whole ? `: '${fixed}'` : ""}.`,
+        whole ? { title: `Write it as '${fixed}'`, edits: [{ ...range, text: fixed }] } : undefined,
+      );
+    });
+  }
+
+  /**
    * Blazor's RZ2012: a parameter marked `@EditorRequired()` that the tag leaves out — set by no attribute, no
    * `@bind-`, no child content element and (for ChildContent) no element content. A warning, as in Razor; a tag
    * with `@attributes` may supply it through the splat, so it isn't checked.
@@ -2763,6 +2811,7 @@ class Codegen {
       this.emitComponentAttribute(attr, ctx, ctx.component);
       return;
     }
+    if (attr.kind === "mixedValue") this.checkOperatorAfterValueExpression(attr);
     switch (attr.kind) {
       case "static": {
         // A minimized attribute is `true` (Razor) — the DOM applier then sets
@@ -3556,6 +3605,15 @@ class Codegen {
     });
     return baked;
   }
+}
+
+/**
+ * The operator text starts with, when it can only continue an expression: `??`, `||`, `&&`, a comparison, `=>`, or
+ * a conditional (`? x : y`). Prose doesn't start with these; `-` and `+` stay content (`@from - @to`).
+ */
+function leadingOperator(text: string): string | undefined {
+  const match = /^\s*(\?\?|\|\||&&|===|!==|==|!=|=>)/.exec(text) ?? /^\s*(\?)\s+\S[^\n]*\s:\s/.exec(text);
+  return match?.[1];
 }
 
 /** Source order of two positions: negative when `a` comes first. */

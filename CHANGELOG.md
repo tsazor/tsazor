@@ -23,6 +23,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   expression stopped at `.#` — `style="@this.#contentStyle"` rendered `[object Object].#contentStyle`.
 - **`RenderFragment<any>` is a template** (`@tsazor/runtime`; C#'s `RenderFragment<object>` ported loosely, the Radzen
   port's F245): the conditional type took both branches for `any`, so calling it was two TS2345 errors.
+- **TZS038 also warns about an operator after an expression** (`@tsazor/compiler`): `title="@label ?? undefined"` and
+  `<p>@count ?? "none"</p>` read the expression and render the rest — as in Razor, but the Radzen port met it about 30
+  times and the MudBlazor port 9 times (`tabindex="@disabled ? -1 : 0"`). `??`, `||`, `&&`, comparisons, `=>` and
+  `? … :`; an attribute value that is just `@expr` and the rest gets the quick fix `@(…)`. A component's value parameter
+  reads the whole value as an expression and isn't affected.
 
 ## 1.0.0-next.5 (2026-10-18)
 

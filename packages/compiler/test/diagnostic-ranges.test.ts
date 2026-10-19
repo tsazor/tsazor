@@ -101,6 +101,25 @@ describe("diagnostic ranges (A7)", () => {
     }
   });
 
+  it("TZS038: text after an expression that starts with an operator — in content, and in a value with the fix '@(…)'", () => {
+    // A Radzen port met `title="@label ?? undefined"` about 30 times: Razor reads `@label` and renders the rest.
+    const members = "\n@code { private label = \"\"; private count = 1; private ok = true; private from = 1; private to = 2; }";
+    const attribute = `<p title="@label ?? undefined">x</p>${members}`;
+    const [inValue] = compileDiagnostics(attribute).filter((d) => d.code === "TZS038");
+    expect(inValue!.message).toContain("Text after '@label' that starts with an operator (??) is markup text, as in Razor: '?? undefined' renders.");
+    expect(applyFix(attribute, inValue!)).toBe(`<p title="@(label ?? undefined)">x</p>${members}`);
+    expect(covered(`<p>@count ?? "none"</p>${members}`, "TZS038")).toBe('?? "none"');
+    expect(covered(`<p>@ok ? "yes" : "no"</p>${members}`, "TZS038")).toBe('? "yes" : "no"');
+    // A dash between two values, prose, and an expression written whole are content.
+    for (const source of ["<p>@from - @to</p>", "<p>@label, are you there?</p>", '<p title="@(label ?? count)">ok</p>']) {
+      expect(compileDiagnostics(`${source}${members}`).filter((d) => d.code === "TZS038"), source).toEqual([]);
+    }
+    // A component's value parameter reads the whole value as an expression; a string parameter reads text.
+    const chart = withComponents({ Chart: metadataOf("Chart", { title: "string", enabled: "value" }) });
+    expect(compileDiagnostics(`<Chart Enabled="@ok === false" />${members}`, chart).filter((d) => d.code === "TZS038")).toEqual([]);
+    expect(compileDiagnostics(`<Chart Title="@label ?? undefined" />${members}`, chart).filter((d) => d.code === "TZS038")).toHaveLength(1);
+  });
+
   it("TZS004 on a component's attribute only where the value is read as text — a value parameter reads an expression", () => {
     const chart = withComponents({ Chart: metadataOf("Chart", { title: "string", count: "value", enabled: "value" }) });
     const tzs004 = (source: string) => compileDiagnostics(`${source}\n@code { private x = 1; private busy = false; }`, chart).filter((d) => d.code === "TZS004").map((d) => d.message);
