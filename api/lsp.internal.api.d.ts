@@ -47,6 +47,12 @@ export interface CheckResult {
     diagnostics: CheckDiagnostic[];
 }
 
+// emitDeclarations
+export declare function emitDeclarations(root: string, files: readonly string[]): Promise<Map<string, {
+    text?: string;
+    errors: string[];
+}>>;
+
 // findNearestTsconfig
 export declare function findNearestTsconfig(dir: string, bound: string): string | undefined;
 
@@ -128,7 +134,12 @@ export declare class TsazorTypeService {
     private readonly ambientDeclarations;
     private projectSources;
     private readonly configPath;
+    private options;
     constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup);
+    declarationOf(fileName: string): {
+        text?: string;
+        errors: string[];
+    };
     dispose(): void;
     includeProjectSources(): void;
     ensureTsazor(tsazorPath: string, source?: string): Promise<ShadowEntry | null>;

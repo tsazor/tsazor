@@ -13,6 +13,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   `stepper.Steps` — was TS2339 in an app (parameters and methods were declared, getters not). Read-only without a
   setter; fields stay out (a `@code` field without a modifier is the component's state), and so does the cascade
   supplier protocol (`cascadeValue`, …). The skins' declarations gain their getters (`openIndex`, `activeIndex`, …).
+- **Every helper gets its declaration** (`tsazor build-lib`): one TypeScript can't derive from the file alone — an
+  unannotated return type, a shorthand property (TS9xxx), a component's type through `./X.tsazor` — was left out
+  without a word (the MudBlazor port's `Icons`, `DialogService`; the Radzen port rebuilt its helpers' with tsc, which
+  can't see the components' types). It now comes from the program `tsazor check` builds, every component's shadow in
+  view; one that can't be given either is a build error naming why. A specifier in a comment stays as written (a
+  JSDoc example was rewritten to `.js`).
 
 ## 1.0.0-next.5 (2026-10-18)
 

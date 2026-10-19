@@ -265,6 +265,44 @@ describe("buildLibrary (D9)", () => {
     expect(problems).toEqual([]);
   });
 
+  it("declares a helper the file alone can't (an inferred type, a component's type) from the program; refuses one it can't at all", async () => {
+    // The MudBlazor port's icons.ts (shorthand properties, TS9016) and dialog-service had no declaration — left out
+    // without a word, an app's import of them lost its types; the Radzen port rebuilt its helpers' with tsc.
+    const files = {
+      "src/Paper.tsazor": "<div>@level</div>\n@code {\n    @Parameter() level = 1;\n}\n",
+      "src/icons.ts": 'const close = "M0 0";\nexport const Icons = { close, open: "M1 1" };\n',
+      "src/tip.ts": '/** Import it as `import { tip } from "./tip"`. */\nexport const tip: string = "x";\n',
+      "src/utilities/paper-ref.ts": 'import type Paper from "../Paper.tsazor";\n\nexport function levelOf(paper: Paper) {\n  return paper.level;\n}\n',
+      "consumer.ts": 'import { Icons } from "./dist/icons.js";\nimport { levelOf } from "./dist/utilities/paper-ref.js";\n\nexport const path: string = Icons.close;\ndeclare const paper: Parameters<typeof levelOf>[0];\nexport const level: number = levelOf(paper);\n',
+    };
+    const root = await library(files);
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+    expect(result.errors).toEqual([]);
+    expect(await read(root, "icons.d.ts")).toContain("close: string;");
+    // A specifier in a comment is text: it stays as written (a JSDoc example was rewritten to `./tip.js`).
+    expect(await read(root, "tip.d.ts")).toContain('import { tip } from "./tip"');
+    const paperRef = await read(root, "utilities/paper-ref.d.ts");
+    expect(paperRef).toContain("levelOf(paper: Paper): number;");
+    expect(paperRef).toContain('from "../Paper.js"');
+    const ts = (await import("typescript")).default;
+    const program = ts.createProgram([path.join(root, "consumer.ts")], {
+      strict: true, noEmit: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    });
+    const problems = ts.getPreEmitDiagnostics(program)
+      .filter((d) => d.file === undefined || !d.file.fileName.includes("/runtime/"))
+      .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+    expect(problems).toEqual([]);
+
+    // One the program can't give either — here a helper the tsconfig leaves out — is an error, not a gap.
+    const outside = await library({
+      "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, target: "ES2022", module: "ESNext", moduleResolution: "bundler", noEmit: true }, include: ["src"], exclude: ["src/extra"] }),
+      "src/extra/inferred.ts": "export function twice(n: number) {\n  return n * 2;\n}\n",
+    });
+    const refused = await buildLibrary({ packageDir: outside, internal: ["Part"], log: () => {} });
+    expect(refused.errors.map((error) => error.file)).toEqual(["extra/inferred.ts"]);
+    expect(refused.errors[0]!.message).toContain("no declaration: not part of the project's program — annotate the exported types");
+  });
+
   it("exports a name the `exports` option exports once — an automatic second export was a module that doesn't load", async () => {
     const root = await library({
       "src/Badge.ts": 'import { ComponentBase, type RenderTreeBuilder } from "@tsazor/runtime";\n\nexport class Badge extends ComponentBase {\n  protected override buildRenderTree(b: RenderTreeBuilder): void {\n    b.addContent(0, "badge");\n  }\n}\n',

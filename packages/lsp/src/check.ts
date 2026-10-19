@@ -122,6 +122,35 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
   }
   return { files: files.length, diagnostics };
 }
+
+/**
+ * The declarations of real `.ts` sources below `root`, from the program `tsazor check` builds — every component's
+ * shadow in view, so a `./X.tsazor` import has its class and an unannotated return type is inferred. `tsazor
+ * build-lib` asks for the helpers whose declaration the file alone can't give; `errors` says why one has none.
+ */
+export async function emitDeclarations(root: string, files: readonly string[]): Promise<Map<string, { text?: string; errors: string[] }>> {
+  const projectRoot = path.resolve(root);
+  const registry = new ProjectRegistry([projectRoot]);
+  const declarations = new Map<string, { text?: string; errors: string[] }>();
+  try {
+    for (const file of findTsazorFiles(projectRoot)) {
+      try {
+        await registry.ensureTsazor(file, readFileSync(file, "utf8"));
+      } catch {
+        // An unreadable component: the check reports it; its importers' declarations say what's missing.
+      }
+    }
+    for (const file of files) {
+      const project = registry.projectFor(file);
+      project.service.includeProjectSources();
+      declarations.set(file, project.service.declarationOf(path.resolve(file)));
+    }
+  } finally {
+    registry.dispose();
+  }
+  return declarations;
+}
+
 /** The strict family: `strict` turns them on; each can still be switched off on its own. */
 const STRICT_FLAGS = ["noImplicitAny", "strictNullChecks", "strictFunctionTypes", "strictBindCallApply", "strictPropertyInitialization", "noImplicitThis", "useUnknownInCatchVariables", "alwaysStrict"] as const;
 

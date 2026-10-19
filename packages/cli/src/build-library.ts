@@ -9,7 +9,7 @@
  * describes the package around it.
  */
 import { compactFieldDecorators, compile, DECORATOR_HELPER_PROBE, shareHelpers, sharedHelperModule } from "@tsazor/compiler";
-import { checkProject } from "@tsazor/lsp";
+import { checkProject, emitDeclarations } from "@tsazor/lsp";
 import { buildPackageManifest, collectImports, componentTypeDeclarations, createFileContext, importKindOf, resolutionOptions } from "@tsazor/workspace";
 import { transformSync } from "esbuild";
 import { existsSync } from "node:fs";
@@ -188,6 +188,7 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
     // lowered by esbuild (supported.decorators: false does that; the plain ts transform passed decorators through raw,
     // which the browser rejects: a template's model module was invalid syntax in the dev server).
     // Subfolders included (`base/`, `utilities/`, `enums/`): each helper lands at its own path in `dist`.
+    const needsProgram: { sourceFile: string; stem: string }[] = [];
     for (const name of await helperSources(srcDir)) {
       const sourceFile = path.join(srcDir, name);
       const source = await readFile(sourceFile, "utf8");
@@ -198,6 +199,29 @@ export async function buildLibrary(options: BuildLibraryOptions = {}): Promise<B
       const declaration = ts.transpileDeclaration(source, { fileName: name, compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } });
       // Its imports as the module's: `../Paper.tsazor` is `../Paper.js` in dist, where Paper.d.ts is.
       if ((declaration.diagnostics ?? []).length === 0) await emit(`${stem}.d.ts`, builtSpecifiers(declaration.outputText, path.dirname(sourceFile)));
+      else if (options.declarations?.[`${stem}.d.ts`] === undefined) needsProgram.push({ sourceFile, stem });
+    }
+    // A declaration the file alone can't give (an unannotated return type, a shorthand property, a component's type
+    // through `./X.tsazor`) comes from the program `tsazor check` builds, every component's shadow in view; one that
+    // can't be given either is an error — it was left out without a word, and an app's import lost its types.
+    if (needsProgram.length > 0) {
+      const declarations = await emitDeclarations(srcDir, needsProgram.map((helper) => helper.sourceFile));
+      const declarationErrors: { file: string; message: string }[] = [];
+      for (const { sourceFile, stem } of needsProgram) {
+        const declaration = declarations.get(sourceFile);
+        if (declaration?.text !== undefined) {
+          await emit(`${stem}.d.ts`, builtSpecifiers(declaration.text, path.dirname(sourceFile)));
+        } else {
+          declarationErrors.push({
+            file: path.relative(srcDir, sourceFile).replace(/\\/g, "/"),
+            message: `  no declaration: ${(declaration?.errors ?? []).join("; ")} — annotate the exported types, or give the declaration with \`declarations\``,
+          });
+        }
+      }
+      if (declarationErrors.length > 0) {
+        for (const error of declarationErrors) log(`[${packageName}] ${error.file}\n${error.message}`);
+        return { components: [], errors: declarationErrors };
+      }
     }
 
     // A hand-written component — `src/<Name>.ts` exporting its component class `<Name>`, file and class one name as
@@ -337,16 +361,26 @@ const COMPONENT_TRANSFORM = { loader: "ts", supported: { decorators: false }, ts
  * and a bare name gets `.js`. `fromDir` is the source module's folder.
  */
 function builtSpecifiers(code: string, fromDir: string): string {
-  return code.replace(/(from\s*")(\.\.?\/[^"]*)(")/g, (_, from: string, specifier: string, quote: string) => {
-    if (specifier.endsWith(".tsazor")) return `${from}${specifier.slice(0, -".tsazor".length)}.js${quote}`;
-    if (specifier.endsWith(".ts")) return `${from}${specifier.slice(0, -".ts".length)}.js${quote}`;
-    if (/\.(m|c)?js$|\.json$|\.css$/.test(specifier)) return `${from}${specifier}${quote}`;
-    const target = path.resolve(fromDir, specifier);
-    if (!existsSync(`${target}.ts`) && !existsSync(`${target}.tsazor`) && existsSync(path.join(target, "index.ts"))) {
-      return `${from}${specifier}/index.js${quote}`;
-    }
-    return `${from}${specifier}.js${quote}`;
-  });
+  // The specifiers TypeScript's scanner finds — imports, re-exports, `import("…")` types — not text in a comment (a
+  // JSDoc example was rewritten). Back to front, so the positions hold.
+  const specifiers = ts.preProcessFile(code, true, true).importedFiles.filter((file) => /^\.\.?\//.test(file.fileName));
+  let built = code;
+  for (const { fileName, pos } of specifiers.reverse()) {
+    const start = built[pos] === '"' || built[pos] === "'" ? pos + 1 : pos;
+    built = `${built.slice(0, start)}${builtSpecifier(fileName, fromDir)}${built.slice(start + fileName.length)}`;
+  }
+  return built;
+}
+
+function builtSpecifier(specifier: string, fromDir: string): string {
+  // A component's typed shadow, in a declaration TypeScript inferred from the program: the component's module.
+  if (specifier.endsWith(".tsazor.gen")) return `${specifier.slice(0, -".tsazor.gen".length)}.js`;
+  if (specifier.endsWith(".tsazor")) return `${specifier.slice(0, -".tsazor".length)}.js`;
+  if (specifier.endsWith(".ts")) return `${specifier.slice(0, -".ts".length)}.js`;
+  if (/\.(m|c)?js$|\.json$|\.css$/.test(specifier)) return specifier;
+  const target = path.resolve(fromDir, specifier);
+  if (!existsSync(`${target}.ts`) && !existsSync(`${target}.tsazor`) && existsSync(path.join(target, "index.ts"))) return `${specifier}/index.js`;
+  return `${specifier}.js`;
 }
 
 /** The `.ts` sources below `dir` (subfolders included, no declarations), as paths relative to it. */

@@ -212,13 +212,37 @@ export class TsazorTypeService {
   private projectSources: readonly string[] = [];
   private readonly configPath: string | undefined;
 
+  /** The program's compiler options; `declarationOf` turns declaration emit on. */
+  private options: ts.CompilerOptions;
+
   constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup) {
     this.projectRoot = path.resolve(projectRoot);
     this.lookup = lookup;
     this.configPath = configPath;
-    const options = loadProjectOptions(this.projectRoot, configPath);
+    this.options = loadProjectOptions(this.projectRoot, configPath);
     this.ambientDeclarations = loadAmbientDeclarations(this.projectRoot, configPath);
-    this.ls = ts.createLanguageService(this.createHost(options));
+    this.ls = ts.createLanguageService(this.createHost());
+  }
+
+  /**
+   * The declaration TypeScript emits for a real `.ts` source of the program, with the shadows in view: for a helper
+   * whose declaration the file alone can't give (an inferred return type, a component's type through `./X.tsazor`)
+   * — `tsazor build-lib`'s fallback. `errors` says why there is none.
+   */
+  declarationOf(fileName: string): { text?: string; errors: string[] } {
+    if (!this.options.declaration) {
+      this.options = { ...this.options, noEmit: false, declaration: true, emitDeclarationOnly: true, declarationMap: false, sourceMap: false, inlineSourceMap: false };
+    }
+    const program = this.ls.getProgram();
+    const sourceFile = program?.getSourceFile(fileName);
+    if (!program || !sourceFile) return { errors: ["not part of the project's program"] };
+    const errors = program.getDeclarationDiagnostics(sourceFile).map((diagnostic) => {
+      const { line, character } = sourceFile.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
+      return `(${line + 1},${character + 1}) TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`;
+    });
+    if (errors.length > 0) return { errors };
+    const text = this.ls.getEmitOutput(fileName, true).outputFiles.find((file) => file.name.endsWith(".d.ts"))?.text;
+    return text === undefined ? { errors: ["TypeScript emitted no declaration"] } : { text, errors: [] };
   }
 
   dispose(): void {
@@ -551,9 +575,10 @@ export class TsazorTypeService {
   /* Host                                                                */
   /* ------------------------------------------------------------------ */
 
-  private createHost(options: ts.CompilerOptions): ts.LanguageServiceHost {
+  private createHost(): ts.LanguageServiceHost {
+    const options = this.options;
     const base: ts.LanguageServiceHost = {
-      getCompilationSettings: () => options,
+      getCompilationSettings: () => this.options,
       getScriptFileNames: () => [
         ...this.ambientDeclarations,
         ...this.projectSources,
