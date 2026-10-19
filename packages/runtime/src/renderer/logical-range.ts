@@ -149,6 +149,55 @@ export function logicalChildContains(first: Node, node: Node): boolean {
 const FOLLOWING = 4;
 const PRECEDING = 2;
 
+const PORTAL = Symbol("tsazor.portal");
+type PortalNode = Node & { [PORTAL]?: Node };
+/** The placeholders of the elements `portal` moved, for the sweep after a render removed some. */
+const portals = new Set<Comment>();
+
+/**
+ * Moves an element the renderer rendered to another place in the document — a popup escaping its container's
+ * clipping and stacking, as Radzen's `openPopup` moves it to `document.body` — and leaves a placeholder where it was.
+ * The renderer keeps addressing the element through the placeholder: its updates apply, its removal takes it along.
+ * Moved by hand (`document.body.appendChild`), the renderer lost it: the next update failed (Blazor tracks its
+ * logical children apart from the DOM; Tsazor walks the DOM). Returns the undo, which puts it back.
+ */
+export function portal(element: Element, target: Element = document.body): () => void {
+  const parent = element.parentNode;
+  if (parent === null || (element as PortalNode)[PORTAL] !== undefined) return () => {};
+  const placeholder = document.createComment("tsazor-portal") as Comment & PortalNode;
+  placeholder[PORTAL] = element;
+  (element as PortalNode)[PORTAL] = placeholder;
+  parent.insertBefore(placeholder, element);
+  target.appendChild(element);
+  portals.add(placeholder);
+  return () => {
+    if (!portals.delete(placeholder)) return;
+    placeholder.parentNode?.insertBefore(element, placeholder);
+    placeholder.remove();
+    delete (element as PortalNode)[PORTAL];
+  };
+}
+
+/** The element a portal placeholder stands for; any other node as it is. */
+export function portalElement(node: Node | null): Node | null {
+  return node !== null && node.nodeType === Node.COMMENT_NODE ? ((node as PortalNode)[PORTAL] ?? node) : node;
+}
+
+/** After a render: an element whose placeholder the render removed (with it, or with an ancestor) goes too. */
+export function sweepPortals(): void {
+  for (const placeholder of portals) {
+    if (placeholder.isConnected) continue;
+    portals.delete(placeholder);
+    const element = (placeholder as PortalNode)[PORTAL] as ChildNode | undefined;
+    element?.remove();
+  }
+}
+
+/** Whether `portal` moved an element that may need the sweep. */
+export function hasPortals(): boolean {
+  return portals.size > 0;
+}
+
 /** Moves the logical child starting at `first` before `before` in `parent`. */
 export function moveLogicalChild(first: Node, parent: Node, before: Node | null, journal: DomJournal | null): void {
   moveRun(first, lastNodeOf(first), parent, before, journal);

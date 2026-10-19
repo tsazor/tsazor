@@ -262,6 +262,8 @@ export type ParametersOf<TComponent extends ComponentBase> = ComponentBase exten
 
 // PlaceholdersOf: re-exported from @tsazor/runtime
 
+// portal: re-exported from @tsazor/runtime
+
 // Precision: re-exported from @tsazor/runtime
 
 // QueryParameterDecorator: re-exported from @tsazor/runtime

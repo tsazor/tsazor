@@ -27,6 +27,7 @@ export { defineComponent, type ComponentDefinition, type ComponentType } from ".
 export { CascadingValue } from "./components/cascading-value.js";
 export { DynamicComponent } from "./components/dynamic-component.js";
 export { MarkupString } from "./components/markup-string.js";
+export { portal } from "./renderer/logical-range.js";
 export { ErrorBoundaryBase, ErrorBoundary } from "./components/error-boundary.js";
 export { Await } from "./components/await.js";
 export { SectionOutlet } from "./sections/section-outlet.js";

@@ -8,7 +8,7 @@ import { selectOf, setAttributeValue, syncSelectValue, type EventHandlerHost } f
 import { DomJournal } from "./dom-journal.js";
 import { attachmentHost } from "./attachment-host.js";
 import { motionHost, type MotionWork } from "./motion-host.js";
-import { LogicalChildren, LogicalRange, markLeaving, nextLogicalSibling, removeLogicalChild } from "./logical-range.js";
+import { hasPortals, LogicalChildren, LogicalRange, markLeaving, nextLogicalSibling, portalElement, removeLogicalChild, sweepPortals } from "./logical-range.js";
 import type { Renderer } from "./renderer.js";
 import { componentInternals } from "../components/component-internals.js";
 
@@ -125,14 +125,14 @@ export class DomRenderer implements EventHandlerHost {
         }
         case RenderTreeEditType.SetAttribute: {
           const frame = frames[edit.referenceFrameIndex]!;
-          const element = level.at(edit.siblingIndex) as Element;
+          const element = portalElement(level.at(edit.siblingIndex)) as Element;
           if (frame.frameType === FrameType.Attachment) this.queueDirective(state, element, frame.attributeName!, frame.attributeValue, false, firstPass);
           else setAttributeValue(this, state, element, frame.attributeName!, frame.attributeValue, frame.eventHandlerFlags ?? 0, journal);
           break;
         }
         case RenderTreeEditType.RemoveAttribute: {
           const name = edit.removedAttributeName!;
-          const element = level.at(edit.siblingIndex) as Element;
+          const element = portalElement(level.at(edit.siblingIndex)) as Element;
           // F2: `@attach…` is an attachment frame's name (the `@` namespace is reserved).
           if (name.charCodeAt(0) === 64) {
             if (isAttachName(name)) this.queueAttachment(state, element, name, null);
@@ -154,7 +154,7 @@ export class DomRenderer implements EventHandlerHost {
           break;
         }
         case RenderTreeEditType.StepIn: {
-          const element = level.at(edit.siblingIndex) as Element;
+          const element = portalElement(level.at(edit.siblingIndex)) as Element;
           stack.push(level);
           level = new LogicalChildren(element);
           break;
@@ -179,6 +179,8 @@ export class DomRenderer implements EventHandlerHost {
     if (selects !== null) {
       for (const select of selects) syncSelectValue(select, journal);
     }
+    // An element `portal` moved goes with its placeholder, also when an ancestor was removed.
+    if (removed && hasPortals()) sweepPortals();
   }
 
   /** F2: queues an attachment change of `element` (`element === null`: check for removed attached elements). */

@@ -23,6 +23,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   expression stopped at `.#` — `style="@this.#contentStyle"` rendered `[object Object].#contentStyle`.
 - **`RenderFragment<any>` is a template** (`@tsazor/runtime`; C#'s `RenderFragment<object>` ported loosely, the Radzen
   port's F245): the conditional type took both branches for `any`, so calling it was two TS2345 errors.
+- **`portal(element)`** (`@tsazor/runtime`; the Radzen port's F333): moves a rendered element elsewhere — a popup to
+  `document.body`, as Radzen's `openPopup` does — leaving a placeholder through which the renderer keeps addressing it:
+  updates inside and beside it apply, events work, and it goes when the render removes it or an ancestor; returns the
+  undo. Moved by hand, the next update failed ("StepIn hits null"): Tsazor finds its elements through the DOM, where
+  Blazor keeps a logical tree of its own.
 - **A misspelled package names the installed one** (`tsazor check`, the editor): `@tszor/runtime` — agents porting
   MudBlazor and Radzen corrupted the name again and again — gets "'@tsazor/runtime' is: a typo?" in TS2307's hint.
 - **TZS038 also warns about an operator after an expression** (`@tsazor/compiler`): `title="@label ?? undefined"` and

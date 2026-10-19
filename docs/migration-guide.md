@@ -210,6 +210,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `IJSObjectReference` / a JS module import | `import { chart } from "./chart.js"` |
 | `[JSInvokable]`, `DotNetObjectReference` | none: pass a function |
 | `ElementReference` + JS for focus/scroll/measure | the `Element`: `focus()`, `scrollIntoView()`, `getBoundingClientRect()` |
+| JS that moves a rendered element elsewhere (a popup to `document.body`, Radzen's `openPopup`) | `portal(element)` (`@tsazor/runtime`; returns the undo) — the renderer keeps addressing it. Moved by hand, the next update fails: Tsazor finds its elements through the DOM, Blazor through its own logical tree |
 
 ## 4. C# keywords → TypeScript
 

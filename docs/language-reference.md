@@ -438,6 +438,11 @@ unchanged in Tsazor. `@attach` ties the cleanup to the element's lifetime instea
   row containing one is always built (H2).
 - Hand-written render code: `addAttachment(builder, sequence, "@attach", value)`; the attachment
   support is only bundled when used.
+- **Moving an element elsewhere** — a popup to `document.body`, out of a container that clips it — is
+  `portal(element, target = document.body)` from an attachment or `onAfterRender`; it returns the undo:
+  `popup: Attachment = (element) => portal(element);`. The renderer finds its elements through the DOM (Blazor keeps a
+  logical tree of its own), so an element moved by hand (`document.body.appendChild`) is lost to it and the next update
+  fails; `portal` leaves a placeholder through which updates apply, and the element goes when the render removes it.
 
 ## @transition, @in, @out (Tsazor extension)
 

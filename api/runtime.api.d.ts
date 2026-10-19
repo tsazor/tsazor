@@ -923,6 +923,9 @@ export type PlaceholdersOf<Message extends string> = Message extends `${string}{
     [K in Name]: string | number;
 } & PlaceholdersOf<Rest> : unknown;
 
+// portal
+export declare function portal(element: Element, target?: Element): () => void;
+
 // Precision
 export declare function Precision(precision: number, scale?: number, override?: ValidationMessageOverride): FieldRuleDecorator;
 
