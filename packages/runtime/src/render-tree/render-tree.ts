@@ -8,7 +8,12 @@ import { MarkupString } from "../components/markup-string.js";
  *  The generic form is Blazor's templated delegate `RenderFragment<T>`: a function that takes the
  *  template context and returns the fragment — `(item: T) => @<li>…</li>`. `RenderFragment` without
  *  a type argument stays the plain fragment. */
-export type RenderFragment<T = void> = [T] extends [void] ? (builder: RenderTreeBuilder) => void : (context: T) => (builder: RenderTreeBuilder) => void;
+export type RenderFragment<T = void> = 0 extends 1 & T
+  ? // `any` (C#'s `RenderFragment<object>` ported loosely) is a template: the conditional below would be both branches.
+    (context: T) => (builder: RenderTreeBuilder) => void
+  : [T] extends [void]
+    ? (builder: RenderTreeBuilder) => void
+    : (context: T) => (builder: RenderTreeBuilder) => void;
 
 /**
  * One entry of the flat render tree. Frames are kept as small object literals

@@ -346,6 +346,21 @@ export default class BeCode extends ComponentBase {
     expect(container.querySelector('[data-testid="double"]')?.textContent).toBe("2");
   });
 
+  it("reads a private member in markup: @this.#name (the scan stopped at `.#` and rendered the rest as text)", async () => {
+    // A Radzen port's F340: `style="@this.#contentStyle"` rendered `[object Object].#contentStyle`.
+    const source = '<div id="box" style="@this.#contentStyle">@this.#label</div>\n\n@code {\n  #contentStyle = "color: red";\n  #label = "private";\n}\n';
+    const { code, diagnostics } = compile(source, { className: "Private", fileName: "Private.tsazor", generateSourceMap: false });
+    expect(diagnostics.all).toEqual([]);
+    const mod = await instantiate(code);
+    const { Renderer } = mod as unknown as typeof import("../../runtime/src/internal");
+    const container = document.createElement("div");
+    const renderer = new Renderer();
+    renderer.renderInContainer(mod.default as never, container);
+    await renderer.waitUntilIdle();
+    const box = container.querySelector("#box") as HTMLElement;
+    expect([box.getAttribute("style"), box.textContent]).toEqual(["color: red", "private"]);
+  });
+
   it("keeps the value of a multi-line template literal: re-indented code leaves the string's lines as written", async () => {
     const source = [
       '<pre id="field">@text</pre>',

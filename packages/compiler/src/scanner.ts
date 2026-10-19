@@ -59,6 +59,10 @@ export class TSScanner {
       if (ch === "." && isIdStart(next ?? "")) {
         i += 2;
         i = this.eatIdentifier(i);
+      } else if (ch === "." && next === "#" && isIdStart(this.source[i + 2] ?? "")) {
+        // A private member, `@this.#contentStyle` (TypeScript's; the scan stopped at `.#` and the rest was text).
+        i += 3;
+        i = this.eatIdentifier(i);
       } else if (ch === "?" && next === ".") {
         // Optional chaining `?.`: member access, `?.(` call or `?.[` indexer.
         // A bare `??` (nullish coalescing) must still terminate (Blazor parity).

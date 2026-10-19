@@ -46,6 +46,8 @@ beforeAll(async () => {
   );
   await writeFile(path.join(root, "Open.tsazor"), list("RenderFragment<TItem>"));
   await writeFile(path.join(root, "Factory.tsazor"), list("(item: TItem) => RenderFragment"));
+  // C#'s RenderFragment<object>, ported loosely as RenderFragment<any>: a template too (it was both branches, two TS2345).
+  await writeFile(path.join(root, "AnyTemplate.tsazor"), list("RenderFragment<any>"));
   diagnostics = (await checkProject(root)).diagnostics;
 }, 60_000);
 
@@ -59,5 +61,6 @@ describe("tsazor check — RenderFragment<TItem> in a generic component", () => 
     expect(open.map((d) => d.code)).toEqual(["TS2345", "TS2345"]);
     for (const d of open) expect(d.message).toContain("declare the parameter as `(item: TItem) => RenderFragment`");
     expect(diagnostics.filter((d) => path.basename(d.file) === "Factory.tsazor")).toEqual([]);
+    expect(diagnostics.filter((d) => path.basename(d.file) === "AnyTemplate.tsazor")).toEqual([]);
   });
 });

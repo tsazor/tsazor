@@ -19,6 +19,10 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   can't see the components' types). It now comes from the program `tsazor check` builds, every component's shadow in
   view; one that can't be given either is a build error naming why. A specifier in a comment stays as written (a
   JSDoc example was rewritten to `.js`).
+- **`@this.#name` in markup reads the private member** (`@tsazor/compiler`; the Radzen port's F340): the implicit
+  expression stopped at `.#` — `style="@this.#contentStyle"` rendered `[object Object].#contentStyle`.
+- **`RenderFragment<any>` is a template** (`@tsazor/runtime`; C#'s `RenderFragment<object>` ported loosely, the Radzen
+  port's F245): the conditional type took both branches for `any`, so calling it was two TS2345 errors.
 
 ## 1.0.0-next.5 (2026-10-18)
 

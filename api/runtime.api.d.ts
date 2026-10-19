@@ -952,7 +952,7 @@ export declare function registerServiceDefault<T>(token: Token<T>, create: Servi
 export declare function RegularExpression(pattern: string, override?: ValidationMessageOverride): FieldRuleDecorator;
 
 // RenderFragment
-export type RenderFragment<T = void> = [
+export type RenderFragment<T = void> = 0 extends 1 & T ? (context: T) => (builder: RenderTreeBuilder) => void : [
     T
 ] extends [
     void
