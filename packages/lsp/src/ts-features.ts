@@ -607,6 +607,39 @@ function editDistance(a: string, b: string): number {
   return previous[b.length]!;
 }
 
+/** An installed package (in a node_modules folder above `fromDir`) whose name is a near miss of `name`, or undefined. */
+function nearPackage(fromDir: string, name: string): string | undefined {
+  const wanted = name.toLowerCase();
+  const limit = Math.max(1, Math.min(2, Math.floor(wanted.length / 4)));
+  let best: { name: string; distance: number } | undefined;
+  for (let dir = path.resolve(fromDir); ; dir = path.dirname(dir)) {
+    const modules = path.join(dir, "node_modules");
+    let entries: string[] = [];
+    try {
+      entries = readdirSync(modules);
+    } catch {
+      // No node_modules here.
+    }
+    for (const entry of entries) {
+      if (entry.startsWith(".")) continue;
+      let names = [entry];
+      if (entry.startsWith("@")) {
+        try {
+          names = readdirSync(path.join(modules, entry)).map((sub) => `${entry}/${sub}`);
+        } catch {
+          names = [];
+        }
+      }
+      for (const candidate of names) {
+        const distance = editDistance(candidate.toLowerCase(), wanted);
+        if (distance > 0 && distance <= limit && (best === undefined || distance < best.distance)) best = { name: candidate, distance };
+      }
+    }
+    if (path.dirname(dir) === dir) break;
+  }
+  return best?.name;
+}
+
 function specifierFrom(fromDir: string, target: string): string {
   const relative = path.relative(fromDir, target).replace(/\\/g, "/");
   return relative.startsWith(".") ? relative : `./${relative}`;
@@ -627,6 +660,9 @@ export function withModuleHint(code: number, message: string, file: string): str
   const folder = `${path.basename(path.dirname(dir))}/${path.basename(dir)}/`;
   if (!specifier.startsWith("./") && !specifier.startsWith("../")) {
     const name = specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]!;
+    // A near miss of an installed package: agents porting to Tsazor wrote `@tszor/lsp`.
+    const near = nearPackage(dir, name);
+    if (near !== undefined) return `${message} Hint: '${name}' is not installed — '${near}' is: a typo?`;
     return `${message} Hint: '${name}' is not installed where this file looks for packages (a node_modules folder above ${folder}): add it to the app's dependencies.`;
   }
   const target = path.resolve(dir, specifier);

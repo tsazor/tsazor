@@ -78,6 +78,8 @@ beforeAll(async () => {
   await writeFile(path.join(src, "base", "paper-base.ts"), "export interface PaperBase {\n    elevation: number;\n}\n");
   await writeFile(path.join(src, "Paper.tsazor"), '@import type { PaperBase } from "../base/paper-base.js"\n<p>paper</p>\n\n@code {\n    base?: PaperBase;\n}\n');
   await writeFile(path.join(src, "base", "paper-ref.ts"), 'import type Paper from "../Paper.js";\n\nexport type PaperRef = Paper | undefined;\n');
+  // A package name an agent corrupted (both ports met `@tszor/…`): the hint names the installed one.
+  await writeFile(path.join(src, "Typo.tsazor"), '@import { ComponentBase } from "@tszor/runtime"\n<p>typo</p>\n');
   // A C# string: one TZS024 that names the template literal, no type errors after it.
   await writeFile(path.join(src, "Greeting.tsazor"), '<p>@($"Hi {name}")</p>\n\n@code {\n    name = "x";\n}\n');
   diagnostics = (await checkProject(root)).diagnostics;
@@ -109,6 +111,10 @@ describe("tsazor check — no error lost on the way back to the source", () => {
     expect(missing?.code).toBe("TS2307");
     expect(missing?.message).toContain("Hint: a relative specifier resolves from the folder of the file it is written in (src/pages/), as in any TypeScript module — '../Store' finds it.");
     expect(of("typo/_Imports.tsazor")[0]!.message).toContain("(src/typo/)");
+  });
+
+  it("names the installed package a misspelled one is near", () => {
+    expect(of("Typo.tsazor").find((d) => d.code === "TS2307")?.message).toContain("Hint: '@tszor/runtime' is not installed — '@tsazor/runtime' is: a typo?");
   });
 
   it("names the specifier in the file's own folder, a .ts source by its .js name, and a component's .tsazor from a .ts module", () => {
