@@ -66,6 +66,19 @@ Two tooling lessons (both bit me here, both in the test files now): a `page.eval
 — fill Node-side arrays from the returned value; and keep an "eval failed" catch in samplers, a swallowed rejection
 reads like a frozen page.
 
+**2026-10-19 — no longer reproducible; the distribution stays Blazor's.** A light trace (short tags per report, no
+stack traces) of the expansion in every container: `refreshDataAsync` keeps the recalibrated size (38.99 = the
+measured average in every passing run), the provider's 100,000 grows the after spacer, the ResizeObserver re-observes
+it, and the **after** spacer reports (UserScroll, it sits at the view's edge at the list's end — Blazor gets the same
+report): `itemsBefore` moves by 17–19 and Person 1000 stays in the window. The failing runs of 2026-10-17 had the item
+height still at the estimate (~49) when the refresh came, so the after spacer drawn with 49 was counted with 39: the
+re-point. With that state no longer occurring, the test passed **160 of 160** in groups a,b (10 runs with the trace,
+10 without) and **4 full suites at 515/515** — so no change to the distribution: the hardening that suggests itself
+(count a spacer's items with the height it was drawn with) departs from Blazor's arithmetic and couldn't be shown to
+fix anything. If it comes back: the item height at the refresh is the first thing to read (the trajectory sampler
+stays in the test). Tooling: Edge took up an auto-detected system proxy and hung every page load of the gates —
+`scripts/browsers.mjs` launches it with `--no-proxy-server` (the gates load localhost only).
+
 ## X9 — the templates' model modules were invalid JS (fixed)
 
 The gallery's login page threw `SyntaxError: Invalid or unexpected token` in
@@ -97,7 +110,7 @@ showcase is supposed to deliver ("copied snippet = what the page runs, and it mu
 
 | Item | Note |
 |---|---|
-| **X8** (new) | the provider-expansion re-point — the one reproducible flake left in the parity suite |
+| ~~**X8**~~ | the provider-expansion re-point — no longer reproducible (2026-10-19: 160/160, 4 full suites) |
 | Spreadsheet, cluster 7 chrome | only "on the owner's word" (design doc: markup v1 without formulas per D-X4) |
 | RichText2 engine swap | one line once RichText2 is on npm (the showcase's stub factory already points there) |
 | ~~feedback.md / feedback-2.md integrate~~ | done later the same day (I1–I9, see the review below) |
@@ -128,4 +141,4 @@ the rehearsal) were stale claims: since K.7/K.8 `@bind` on a text input or a sel
 model a `fromJson`. The three bindings lessons say so now, with runtime claims behind them; the typed client's
 `models.ts` is regenerated.
 
-Still open: X8 as above.
+Still open: none — X8 no longer reproduces (2026-10-19, above).

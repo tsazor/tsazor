@@ -18,7 +18,9 @@ export function launchBrowser(playwright, options = {}) {
     case "webkit":
       return playwright.webkit.launch({ headless: true, ...options });
     case "edge":
-      return playwright.chromium.launch({ channel: "msedge", headless: true, ...options });
+      // The gates load localhost only: no proxy. Edge follows the system's proxy detection, and a machine that
+      // gets one (a VPN's, an auto-detected PAC) left every page load hanging.
+      return playwright.chromium.launch({ channel: "msedge", headless: true, ...options, args: ["--no-proxy-server", ...(options.args ?? [])] });
     default:
       throw new Error(`TSAZOR_BROWSER=${BROWSER}: expected edge, firefox or webkit.`);
   }
