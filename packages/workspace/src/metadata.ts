@@ -485,7 +485,10 @@ export function buildRuntimeManifest(runtimeDir: string): ComponentManifest {
     entries: manifestEntriesOfModule(path.join(runtimeDir, "src", "index.ts")),
     runtimeInternal: true,
   });
-  for (const metadata of Object.values(manifest.components)) delete metadata.methods;
+  for (const metadata of Object.values(manifest.components)) {
+    delete metadata.methods;
+    delete metadata.properties;
+  }
   return manifest;
 }
 
@@ -500,6 +503,9 @@ function relativizeComponent(metadata: ComponentMetadata, packageDir: string): C
   }) };
   if (metadata.methods) {
     result.methods = metadata.methods.map((method) => (method.references ? { ...method, references: method.references.map((ref) => mapFile(ref, relative)) } : method));
+  }
+  if (metadata.properties) {
+    result.properties = metadata.properties.map((property) => (property.references ? { ...property, references: property.references.map((ref) => mapFile(ref, relative)) } : property));
   }
   if (metadata.file !== undefined) result.file = relative(metadata.file);
   return result;
@@ -518,6 +524,9 @@ function absolutizeManifest(manifest: ComponentManifest, packageDir: string): Co
     };
     if (metadata.methods) {
       components[name]!.methods = metadata.methods.map((method) => (method.references ? { ...method, references: method.references.map((ref) => mapFile(ref, absolute)) } : method));
+    }
+    if (metadata.properties) {
+      components[name]!.properties = metadata.properties.map((property) => (property.references ? { ...property, references: property.references.map((ref) => mapFile(ref, absolute)) } : property));
     }
   }
   return { ...manifest, components };
@@ -612,6 +621,9 @@ export function componentTypeDeclaration(
   for (const method of entry.methods ?? []) {
     if (method.declaredBy === ownName) collectReferences(method.references, true);
   }
+  for (const property of entry.properties ?? []) {
+    if (property.declaredBy === ownName) collectReferences(property.references, true);
+  }
   if (base !== undefined && base.resolved && !base.codeBehind) {
     // A runtime class (`@inherits InputBase<string>`), or the import that binds it: the library's own base
     // (`MudComponentBase` from `./base/…`) or another package's. A code-behind base is part of the consuming
@@ -652,7 +664,15 @@ export function componentTypeDeclaration(
     if (method.doc) lines.push(`  /** ${method.doc.replace(/\n/g, " ")} */`);
     lines.push(`  ${method.name}${method.typeParameters ?? ""}(${method.parameters}): ${method.returnType};`);
   }
+  // Its public getters: what a `@ref` reads (Blazor's public properties).
+  for (const property of entry.properties ?? []) {
+    if (property.declaredBy !== ownName) continue;
+    if (property.doc) lines.push(`  /** ${property.doc.replace(/\n/g, " ")} */`);
+    lines.push(`  ${property.readonly ? "get " : ""}${property.readonly ? `${property.name}(): ${property.type}` : `${property.name}: ${property.type}`};`);
+  }
   lines.push("}");
+  // By name too, as the compiled module exports it: a component built on this one imports it either way.
+  lines.push(`export { ${exportName} };`);
   return `${lines.join("\n")}\n`;
 }
 

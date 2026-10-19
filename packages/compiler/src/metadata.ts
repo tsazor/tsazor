@@ -133,6 +133,24 @@ export interface ComponentMethod {
   declaredBy: string;
 }
 
+/**
+ * A public getter a component declares itself (`get steps(): Step[]`), for its published declaration: what a `@ref`
+ * reads, as Blazor's public properties. Read-write with a setter. Parameters, private, protected, static and
+ * `@internal` ones are left out; so are fields — in `@code` a field without a modifier is the component's state.
+ */
+export interface ComponentProperty {
+  name: string;
+  /** The getter's return type, else the setter's parameter type, else `unknown`. */
+  type: string;
+  /** No setter. */
+  readonly?: boolean;
+  doc?: string;
+  /** Bindings of the root identifiers in the type (empty/absent: none). */
+  references?: TypeReference[];
+  /** Class that declares the property. */
+  declaredBy: string;
+}
+
 export interface ComponentMetadata {
   name: string;
   /** The component's doc comment: the class JSDoc, or a leading `@** … *@` in a .tsazor file. */
@@ -156,6 +174,8 @@ export interface ComponentMetadata {
   parameters: ComponentParameter[];
   /** The public methods the class declares itself (inherited ones come with its base). */
   methods?: ComponentMethod[];
+  /** The public getters the class declares itself (see ComponentProperty). */
+  properties?: ComponentProperty[];
   /** A base class could not be resolved: inherited parameters are missing. */
   incomplete?: boolean;
 }
@@ -219,6 +239,8 @@ export interface ClassRecord {
   parameters: OwnParameter[];
   /** Its public methods (see ComponentMethod). */
   methods?: Omit<ComponentMethod, "references" | "declaredBy">[];
+  /** Its public getters (see ComponentProperty). */
+  properties?: Omit<ComponentProperty, "references" | "declaredBy">[];
 }
 
 /** Syntactic facts of one module (.ts or .tsazor) — what resolution needs, nothing else. */
@@ -378,7 +400,10 @@ export function extractTsazorMetadata(source: string, fileName: string, options:
   }
   module.classes.push(record);
   module.declarations.add(options.className);
+  // A compiled component exports its class by name too: `@import { Button } from "./Button.tsazor"` + `@inherits
+  // Button` resolves as the default import does (both MudBlazor's and Radzen's ports lost the derived component).
   module.exports.set("default", options.className);
+  module.exports.set(options.className, options.className);
   return module;
 }
 
@@ -500,8 +525,29 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
     if (doc) method.doc = doc;
     (record.methods ??= []).push(method);
   }
+  // Public getters that aren't parameters: what a `@ref` reads (MudBlazor's `stepper.Steps`).
+  const parameterNames = new Set(record.parameters.map((parameter) => parameter.name));
+  for (const member of cls.members) {
+    if (!ts.isGetAccessorDeclaration(member) || !ts.isIdentifier(member.name)) continue;
+    const name = member.name.text;
+    if (parameterNames.has(name) || SUPPLIER_PROTOCOL.has(name) || record.properties?.some((property) => property.name === name)) continue;
+    if (hasModifier(member, ts.SyntaxKind.PrivateKeyword) || hasModifier(member, ts.SyntaxKind.ProtectedKeyword) || hasModifier(member, ts.SyntaxKind.StaticKeyword)) continue;
+    if (ts.getJSDocTags(member).some((tag) => tag.tagName.text === "internal")) continue;
+    const setter = cls.members.find((other): other is ts.SetAccessorDeclaration => ts.isSetAccessorDeclaration(other) && ts.isIdentifier(other.name) && other.name.text === name);
+    const property: Omit<ComponentProperty, "references" | "declaredBy"> = {
+      name,
+      type: member.type?.getText(file) ?? setter?.parameters[0]?.type?.getText(file) ?? "unknown",
+    };
+    if (setter === undefined || hasModifier(setter, ts.SyntaxKind.PrivateKeyword) || hasModifier(setter, ts.SyntaxKind.ProtectedKeyword)) property.readonly = true;
+    const doc = jsDocOf(member);
+    if (doc) property.doc = doc;
+    (record.properties ??= []).push(property);
+  }
   return record;
 }
+
+/** The runtime's CascadingValueSupplier protocol: public on a supplier, the renderer's to read — not its API. */
+const SUPPLIER_PROTOCOL: ReadonlySet<string> = new Set(["isCascadingValueSupplier", "cascadeValue", "cascadeName", "cascadeType", "isFixed"]);
 
 /** One parameter of a public method as a declaration writes it: `signal?: AbortSignal`, `returnFocus?: boolean` for `returnFocus = true`. */
 function methodParameterText(parameter: ts.ParameterDeclaration, index: number, file: ts.SourceFile): string {
@@ -773,6 +819,14 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
       const references = referencesOf(`${own.typeParameters ?? ""}(${own.parameters}) => ${own.returnType}`, module, ownTypeParameters);
       if (references.length > 0) method.references = references;
       return method;
+    });
+  }
+  if (record.properties && record.properties.length > 0) {
+    result.properties = record.properties.map((own) => {
+      const property: ComponentProperty = { ...own, declaredBy: record.name };
+      const references = referencesOf(own.type, module, ownTypeParameters);
+      if (references.length > 0) property.references = references;
+      return property;
     });
   }
   visiting.delete(key);

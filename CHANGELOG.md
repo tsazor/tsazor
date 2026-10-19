@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A base imported by name** (`@tsazor/compiler`, `tsazor build-lib`; both the MudBlazor and the Radzen port):
+  `@import { Button } from "./Button.tsazor"` + `@inherits Button` resolved for the default import only — by name, the
+  derived component was missing from the library's manifest, had no declaration, and its tags were TZS026 in an app.
+  A component's declaration exports its class by name too (`export { Button };`), as its module does.
+- **A component's public getters are in its declaration** (`tsazor build-lib`): what a `@ref` reads — MudBlazor's
+  `stepper.Steps` — was TS2339 in an app (parameters and methods were declared, getters not). Read-only without a
+  setter; fields stay out (a `@code` field without a modifier is the component's state), and so does the cascade
+  supplier protocol (`cascadeValue`, …). The skins' declarations gain their getters (`openIndex`, `activeIndex`, …).
+
 ## 1.0.0-next.5 (2026-10-18)
 
 - **A multi-line template literal keeps its value** (`@tsazor/compiler`; found with a MudBlazor port): `@code` and

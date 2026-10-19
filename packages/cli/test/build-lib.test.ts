@@ -237,6 +237,34 @@ describe("buildLibrary (D9)", () => {
     expect(problems).toEqual([]);
   });
 
+  it("takes a base imported by name (`@import { Button }` + `@inherits Button`) and declares the public getters a @ref reads", async () => {
+    // Both the MudBlazor and the Radzen port lost every component built on another by a named import: no manifest
+    // entry, no declaration (the default import worked). And `stepper.steps`, a public getter, was missing.
+    const root = await library({
+      "src/Button.tsazor": '<button>@text</button>\n@code {\n    @Parameter() text = "";\n    /** How often it was pressed. */\n    get pressedCount(): number {\n        return 0;\n    }\n    private get hidden(): number {\n        return 1;\n    }\n}\n',
+      "src/Toggle.tsazor": '@import { Button } from "./Button.tsazor"\n@inherits Button\n<span>@pressed</span>\n@code {\n    @Parameter() pressed = false;\n    get label(): string {\n        return "";\n    }\n    set label(value: string) {}\n}\n',
+      "consumer.ts": 'import type { ComponentBase } from "@tsazor/runtime";\nimport { Button, Toggle } from "./dist/index.js";\n\nconst types: (abstract new () => ComponentBase)[] = [Button, Toggle];\ndeclare const toggle: Toggle;\nexport const count: number = toggle.pressedCount;\nexport const text: string = toggle.text;\nexport const pressed: boolean = toggle.pressed;\ntoggle.label = "on";\nexport { types };\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+    expect(result.errors).toEqual([]);
+    const manifest = JSON.parse(await read(root, "tsazor-components.json")) as { components: Record<string, { parameters: { name: string }[] }> };
+    expect(manifest.components["Toggle"]?.parameters.map((parameter) => parameter.name)).toEqual(["text", "pressed"]);
+    expect(await read(root, "Toggle.d.ts")).toContain('import type { Button } from "./Button.js";');
+    const button = await read(root, "Button.d.ts");
+    expect(button).toContain("  get pressedCount(): number;");
+    expect(button).not.toContain("hidden");
+    expect(button).toContain("export { Button };");
+    expect(await read(root, "Toggle.d.ts")).toContain("  label: string;");
+    const ts = (await import("typescript")).default;
+    const program = ts.createProgram([path.join(root, "consumer.ts")], {
+      strict: true, noEmit: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    });
+    const problems = ts.getPreEmitDiagnostics(program)
+      .filter((d) => d.file === undefined || !d.file.fileName.includes("/runtime/"))
+      .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+    expect(problems).toEqual([]);
+  });
+
   it("exports a name the `exports` option exports once — an automatic second export was a module that doesn't load", async () => {
     const root = await library({
       "src/Badge.ts": 'import { ComponentBase, type RenderTreeBuilder } from "@tsazor/runtime";\n\nexport class Badge extends ComponentBase {\n  protected override buildRenderTree(b: RenderTreeBuilder): void {\n    b.addContent(0, "badge");\n  }\n}\n',

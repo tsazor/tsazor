@@ -6,6 +6,7 @@
 export default class Accordion extends ComponentBase {
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
+    get openIndex(): number;
 }
 
 // AccordionItem
@@ -808,6 +809,7 @@ export default class SplitterPane extends ComponentBase {
     label?: string;
     childContent?: RenderFragment;
     dispose(): void;
+    get isCollapsed(): boolean;
 }
 
 // Navbar
@@ -1205,6 +1207,7 @@ export default class SplitterPane extends ComponentBase {
     label?: string;
     childContent?: RenderFragment;
     dispose(): void;
+    get isCollapsed(): boolean;
 }
 
 // SplitterResizeEventArgs: re-exported from @tsazor/ui
@@ -1235,6 +1238,7 @@ export default class Tab extends ComponentBase {
     iconStart?: IconValue;
     additionalAttributes?: Record<string, unknown>;
     childContent?: RenderFragment;
+    get active(): boolean;
 }
 
 // Table
@@ -1261,6 +1265,7 @@ export default class Tabs extends ComponentBase {
     additionalAttributes?: Record<string, unknown>;
     onSelected?: EventCallback<number>;
     childContent?: RenderFragment;
+    get activeIndex(): number;
 }
 
 // TemplateColumn
@@ -1465,6 +1470,7 @@ export default class WizardStep extends ComponentBase {
     onChange?: EventCallback<WizardStepChangeEventArgs>;
     childContent?: RenderFragment;
     dispose(): void;
+    get current(): boolean;
 }
 
 // WizardStepChangeEventArgs: re-exported from @tsazor/ui

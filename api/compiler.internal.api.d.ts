@@ -180,6 +180,7 @@ export interface ClassRecord {
     };
     parameters: OwnParameter[];
     methods?: Omit<ComponentMethod, "references" | "declaredBy">[];
+    properties?: Omit<ComponentProperty, "references" | "declaredBy">[];
 }
 
 // CodeBlockNode
@@ -328,6 +329,7 @@ export interface ComponentMetadata {
     };
     parameters: ComponentParameter[];
     methods?: ComponentMethod[];
+    properties?: ComponentProperty[];
     incomplete?: boolean;
 }
 
