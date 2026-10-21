@@ -889,6 +889,7 @@ export default class Paginator extends ComponentBase {
     size: Size;
     pageSizeOptions?: number[];
     pageSizeLabel?: string;
+    showPageNumber: boolean;
 }
 
 // PatternMask: re-exported from @tsazor/ui

@@ -647,6 +647,7 @@ export interface LoadedRoute {
 export interface LocalizationOptions {
     readonly defaultCulture?: string;
     readonly tables?: Readonly<Record<string, StringTableSource>>;
+    readonly documentLanguage?: boolean;
 }
 
 // LocationChangedEventArgs
@@ -1231,6 +1232,8 @@ export declare class StringLocalizer<Table extends StringTable = StringTable> {
     private readonly handlers;
     private readonly cultureSubscription;
     constructor(options?: StringLocalizerOptions);
+    private textLanguage;
+    private updateDocumentLanguage;
     get culture(): string;
     get<K extends keyof Table & string>(key: K, params?: PlaceholdersOf<Table[K]>): string;
     all(culture?: string): readonly {
@@ -1251,6 +1254,7 @@ export interface StringLocalizerOptions {
     readonly tables?: Readonly<Record<string, StringTableSource>>;
     readonly defaultCulture?: string;
     readonly culture?: CultureService;
+    readonly documentLanguage?: boolean;
 }
 
 // StringTable

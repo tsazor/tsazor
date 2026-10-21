@@ -5,6 +5,13 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`<html lang>` follows the language of the texts** (`@tsazor/runtime`; the BlazorHero port's B34, WCAG 3.1.1):
+  with `createTsazorApp({ localization })` the page's language is the current culture when a table serves it (its own
+  or a parent's, `ar-SA` → `ar`), else the default culture, and follows a change. Blazor leaves the attribute as
+  `index.html` has it; `localization: { documentLanguage: false }` does too.
+- **`Paginator showPageNumber`** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudDataGridPager's `ShowPageNumber`): false
+  leaves out the "Page 2 of 7" between the arrows. Default true.
+
 - **A component's declaration names what it implements of its base's abstract members** (`tsazor build-lib`; owner
   2026-10-21, found in the Radzen port): a field or a `protected` member that implements an `abstract` one (a chart
   series' `kind`, a validator's `validate`) was missing from the `.d.ts`, so a consumer checking without

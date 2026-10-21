@@ -24,7 +24,9 @@
         <div class="fui-pagination">
             <button type="button" class="fui-pagination__button" aria-label="@t("pagination.first")" title="@t("pagination.first")" disabled="@(!canGoBack)" @onclick="() => go(0)"><Icon value="@ChevronDoubleLeft20Regular" size="16" /></button>
             <button type="button" class="fui-pagination__button" aria-label="@t("pagination.previous")" title="@t("pagination.previous")" disabled="@(!canGoBack)" @onclick="() => go(state.currentPageIndex - 1)"><Icon value="@ChevronLeft20Regular" size="16" /></button>
-            <span class="fui-paginator__page" aria-current="page">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span>
+            @if (this.showPageNumber) {
+                <span class="fui-paginator__page" aria-current="page">@t("paginator.page", { page: state.currentPageIndex + 1, pages: lastPage + 1 })</span>
+            }
             <button type="button" class="fui-pagination__button" aria-label="@t("pagination.next")" title="@t("pagination.next")" disabled="@(!canGoForward)" @onclick="() => go(state.currentPageIndex + 1)"><Icon value="@ChevronRight20Regular" size="16" /></button>
             <button type="button" class="fui-pagination__button" aria-label="@t("pagination.last")" title="@t("pagination.last")" disabled="@(!canGoForward)" @onclick="() => go(lastPage)"><Icon value="@ChevronDoubleRight20Regular" size="16" /></button>
         </div>
@@ -44,6 +46,8 @@
     @Parameter() pageSizeOptions?: number[];
     /** The page size choice's label (MudBlazor's RowsPerPageString). */
     @Parameter() pageSizeLabel?: string;
+    /** The current page and the count between the arrows ("Page 2 of 7"; MudDataGridPager's ShowPageNumber). Default true. */
+    @Parameter() showPageNumber: boolean = true;
 
     private observed?: PaginationState;
     private stopObserving?: () => void;

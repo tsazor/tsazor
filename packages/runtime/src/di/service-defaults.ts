@@ -38,5 +38,7 @@ export class LocalizationSettings {
     readonly defaultCulture: string,
     /** String tables per culture, as in `LocalizationOptions.tables`. */
     readonly tables: Record<string, unknown> | undefined,
+    /** `<html lang>` follows the language of the texts, as in `LocalizationOptions.documentLanguage`. */
+    readonly documentLanguage: boolean = true,
   ) {}
 }

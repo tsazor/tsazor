@@ -67,6 +67,11 @@ export interface StringLocalizerOptions {
    * pass the shared one.
    */
   readonly culture?: CultureService;
+  /**
+   * Keep `<html lang>` at the language of the texts: the current culture when a table serves it (its own or a
+   * parent's), else the default culture. Default false here; `createTsazorApp({ localization })` turns it on.
+   */
+  readonly documentLanguage?: boolean;
 }
 
 /**
@@ -95,8 +100,27 @@ export class StringLocalizer<Table extends StringTable = StringTable> {
     }
     this.cultureService = options.culture ?? new CultureService();
     markAutoRender(this);
+    const followDocument = options.documentLanguage === true && Object.keys(this.tables).length > 0 && typeof document !== "undefined";
+    if (followDocument) this.updateDocumentLanguage();
     // A culture change re-localizes every consumer (the auto-render source).
-    this.cultureSubscription = this.cultureService.subscribe(() => this.notify());
+    this.cultureSubscription = this.cultureService.subscribe(() => {
+      if (followDocument) this.updateDocumentLanguage();
+      this.notify();
+    });
+  }
+
+  /**
+   * The language of the texts the localizer shows: the current culture when a table serves it (its own or a
+   * parent's — `ar-SA` reads `ar`), else the default culture, whose table is the fallback.
+   */
+  private textLanguage(): string {
+    return withParents(this.culture).some((culture) => this.tables[culture] !== undefined) ? this.culture : this.defaultCulture;
+  }
+
+  /** `<html lang>` at the texts' language (WCAG 3.1.1: a screen reader reads Arabic with an Arabic voice). */
+  private updateDocumentLanguage(): void {
+    const language = this.textLanguage();
+    if (language !== "" && document.documentElement.lang !== language) document.documentElement.lang = language;
   }
 
   /** The culture the localizer translates for (the CultureService's current). */
@@ -273,5 +297,6 @@ registerServiceDefault(StringLocalizer, (services) => {
     culture: services.get(CultureService),
     tables: settings?.tables as Record<string, StringTableSource> | undefined,
     defaultCulture: settings?.defaultCulture || undefined,
+    documentLanguage: settings?.documentLanguage ?? false,
   });
 });

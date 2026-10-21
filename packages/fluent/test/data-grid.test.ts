@@ -104,6 +104,18 @@ describe("DataGrid", () => {
     expect(container.querySelector<HTMLButtonElement>("[aria-label='Last page']")!.disabled).toBe(true);
   });
 
+  it("leaves the page text out with showPageNumber false (MudTablePager has none), the arrows stay", async () => {
+    const pagination = new PaginationState();
+    pagination.itemsPerPage = 3;
+    const { container, ...renderer } = await renderTree((b) => {
+      component(b, 0, DataGrid, { items: orders, pagination, childContent: ((inner: RenderTreeBuilder) => component(inner, 0, PropertyColumn, { property: customer })) as RenderFragment });
+      component(b, 10, Paginator, { state: pagination, showPageNumber: false });
+    });
+    await settle(renderer);
+    expect(container.querySelector(".fui-paginator__page")).toBeNull();
+    expect(container.querySelector("[aria-label='Next page']")).not.toBeNull();
+  });
+
   it("loads pages from an ItemsProvider, with the sort as property names", async () => {
     const requests: GridItemsProviderRequest<Order>[] = [];
     const pagination = new PaginationState();

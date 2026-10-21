@@ -189,6 +189,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `CultureInfo.CurrentCulture` | `cultures.current` (a `CultureInfo`) |
 | `culture.NumberFormat.NumberDecimalSeparator` | `culture.numberFormatInfo.numberDecimalSeparator` |
 | `value.ToString("N2", culture)` | `culture.formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })` |
+| `<html lang>` (Blazor leaves it as `index.html` has it) | follows the texts' language with `createTsazorApp({ localization })`; `documentLanguage: false` leaves it alone |
 
 ### Built-in components
 
@@ -201,6 +202,8 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `<Virtualize Items="@xs">`, `ItemsProvider`, `RefreshDataAsync()` | the same, `refreshDataAsync()` |
 | `QuickGrid` | the skins' `DataGrid` with `PropertyColumn` / `TemplateColumn` |
 | MudBlazor, Radzen, Fluent UI Blazor | `@tsazor/fluent`, `@tsazor/bootstrap` ([component-libraries.md](component-libraries.md)) |
+| `<MudChart ChartType="ChartType.Bar" Width="100%" Height="300px">` | `<Chart chartType="bar" width="760" height="300">` (`@tsazor/charts`): `width`/`height` are the drawing's units — its shape — and the chart takes its container's width; MudChart's are CSS lengths of the box |
+| `QuickGrid` / `FluentDataGrid ResizableColumns`, `MudDataGrid DragDropColumnReordering` | `DataGrid resizableColumns`, `reorderableColumns` — both off by default |
 
 ### JavaScript interop
 

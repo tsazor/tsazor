@@ -74,6 +74,12 @@ export interface LocalizationOptions {
   readonly defaultCulture?: string;
   /** Culture → table (a record, or an async loader — `import()` works). */
   readonly tables?: Readonly<Record<string, StringTableSource>>;
+  /**
+   * `<html lang>` follows the language of the texts the app shows: the current culture when a table serves it (its
+   * own or a parent's, `ar-SA` → `ar`), else the default culture. Default true — a screen reader reads the page in
+   * its language (WCAG 3.1.1); Blazor leaves the attribute as `index.html` has it. False leaves it alone.
+   */
+  readonly documentLanguage?: boolean;
 }
 
 /** A running app (`createTsazorApp`'s result): its root services, its NavigationManager, and the way to stop it. */
@@ -127,7 +133,11 @@ export function createTsazorApp(options: TsazorAppOptions): TsazorApp {
   if (options.localization) {
     collection.registerValue(
       LocalizationSettings as unknown as Token<LocalizationSettings>,
-      new LocalizationSettings(options.localization.defaultCulture ?? "", options.localization.tables as Record<string, StringTableSource> | undefined),
+      new LocalizationSettings(
+        options.localization.defaultCulture ?? "",
+        options.localization.tables as Record<string, StringTableSource> | undefined,
+        options.localization.documentLanguage ?? true,
+      ),
     );
   }
   options.services?.(collection);
