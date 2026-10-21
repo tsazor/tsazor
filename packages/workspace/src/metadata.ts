@@ -672,6 +672,20 @@ export function componentTypeDeclaration(
     if (property.doc) lines.push(`  /** ${property.doc.replace(/\n/g, " ")} */`);
     lines.push(`  ${property.readonly ? "get " : ""}${property.readonly ? `${property.name}(): ${property.type}` : `${property.name}: ${property.type}`};`);
   }
+  // What it implements of its base's abstract members (a field, a protected method), typed by the base itself: left
+  // out, a consumer checking without skipLibCheck sees TS2654 here. Members written above are named already.
+  if (base !== undefined && base.resolved && !base.codeBehind) {
+    const written = new Set([
+      ...entry.parameters.filter((parameter) => parameter.declaredBy === ownName && !parameter.cascading).map((parameter) => parameter.name),
+      ...(entry.methods ?? []).filter((method) => method.declaredBy === ownName).map((method) => method.name),
+      ...(entry.properties ?? []).filter((property) => property.declaredBy === ownName).map((property) => property.name),
+    ]);
+    for (const implementation of entry.abstractImplementations ?? []) {
+      if (written.has(implementation.name)) continue;
+      const modifiers = `${implementation.protected ? "protected " : ""}${implementation.readonly ? "readonly " : ""}`;
+      lines.push(`  ${modifiers}${implementation.name}: ${baseName}${baseArgs}[${JSON.stringify(implementation.name)}];`);
+    }
+  }
   lines.push("}");
   // By name too, as the compiled module exports it: a component built on this one imports it either way.
   lines.push(`export { ${exportName} };`);

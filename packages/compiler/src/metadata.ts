@@ -185,8 +185,27 @@ export interface ComponentMetadata {
   methods?: ComponentMethod[];
   /** The public getters the class declares itself (see ComponentProperty). */
   properties?: ComponentProperty[];
+  /** The abstract members of its chain that no class of it implements yet: what a derived class's declaration names. */
+  abstractMembers?: AbstractMember[];
+  /**
+   * The members the class declares itself that implement one of those: its declaration names them
+   * (`kind: Series["kind"]`), or a consumer checking without `skipLibCheck` sees TS2654 in it.
+   */
+  abstractImplementations?: AbstractImplementation[];
   /** A base class could not be resolved: inherited parameters are missing. */
   incomplete?: boolean;
+}
+
+/** An abstract member of a class (`abstract kind: string`, `protected abstract validate(): boolean`). */
+export interface AbstractMember {
+  name: string;
+  /** `abstract readonly`: its implementation is declared `readonly` too. */
+  readonly?: boolean;
+}
+
+/** A member that implements an inherited abstract one, as the class declares it. */
+export interface AbstractImplementation extends AbstractMember {
+  protected?: boolean;
 }
 
 /**
@@ -250,6 +269,10 @@ export interface ClassRecord {
   methods?: Omit<ComponentMethod, "references" | "declaredBy">[];
   /** Its public getters (see ComponentProperty). */
   properties?: Omit<ComponentProperty, "references" | "declaredBy">[];
+  /** Its own abstract members. */
+  abstractMembers?: AbstractMember[];
+  /** The names it declares itself (not `private`, not static), for the abstract members they implement. */
+  declaredMembers?: { name: string; protected?: boolean }[];
 }
 
 /** Syntactic facts of one module (.ts or .tsazor) — what resolution needs, nothing else. */
@@ -552,6 +575,22 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
     if (doc) property.doc = doc;
     (record.properties ??= []).push(property);
   }
+  // Its abstract members, and the names it declares: a member that implements an inherited abstract one belongs in
+  // its declaration (resolveClass matches them).
+  for (const member of cls.members) {
+    const isMember = ts.isPropertyDeclaration(member) || ts.isMethodDeclaration(member) || ts.isGetAccessorDeclaration(member) || ts.isSetAccessorDeclaration(member);
+    if (!isMember || !member.name || !(ts.isIdentifier(member.name) || ts.isStringLiteral(member.name))) continue;
+    if (hasModifier(member, ts.SyntaxKind.StaticKeyword) || hasModifier(member, ts.SyntaxKind.PrivateKeyword)) continue;
+    const name = member.name.text;
+    if (hasModifier(member, ts.SyntaxKind.AbstractKeyword)) {
+      if (record.abstractMembers?.some((abstract) => abstract.name === name)) continue;
+      const abstract: AbstractMember = { name };
+      if (hasModifier(member, ts.SyntaxKind.ReadonlyKeyword)) abstract.readonly = true;
+      (record.abstractMembers ??= []).push(abstract);
+    } else if (!record.declaredMembers?.some((declared) => declared.name === name)) {
+      (record.declaredMembers ??= []).push(hasModifier(member, ts.SyntaxKind.ProtectedKeyword) ? { name, protected: true } : { name });
+    }
+  }
   return record;
 }
 
@@ -812,6 +851,19 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
     if (base) {
       result.isComponent = base.isComponent;
       if (base.incomplete) result.incomplete = true;
+      // The chain's open abstract members: the ones this class implements go into its declaration, the rest stay open.
+      const open: AbstractMember[] = [];
+      for (const abstract of base.abstractMembers ?? []) {
+        const declared = record.declaredMembers?.find((member) => member.name === abstract.name);
+        if (declared === undefined) {
+          open.push(abstract);
+          continue;
+        }
+        const implementation: AbstractImplementation = { ...abstract };
+        if (declared.protected) implementation.protected = true;
+        (result.abstractImplementations ??= []).push(implementation);
+      }
+      if (open.length > 0) result.abstractMembers = open;
       const args = record.base.typeArguments.map((text) => ({ text, references: referencesOf(text, module, ownTypeParameters) }));
       for (const parameter of base.parameters) {
         parameters.set(parameter.name, substituteParameter(parameter, base.typeParameters, args, host));
@@ -821,6 +873,10 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
     }
   } else if (record.name === "ComponentBase" && module.runtimeInternal) {
     result.isComponent = true; // the root of every component chain
+  }
+  // Its own abstract members are open for the classes built on it.
+  for (const abstract of record.abstractMembers ?? []) {
+    if (!result.abstractMembers?.some((open) => open.name === abstract.name)) (result.abstractMembers ??= []).push(abstract);
   }
   for (const own of record.parameters) {
     parameters.set(own.name, resolveOwnParameter(own, record.name, module, ownTypeParameters, host));

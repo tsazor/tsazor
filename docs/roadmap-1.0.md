@@ -303,7 +303,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**BlazorHero phases 5 and 6** — the dashboard with charts and the chat (SignalR); the languages with right-to-left~~ **done 2026-10-21** | Owner 2026-10-15: they test charts, real time and RTL in the skins before the freeze |
 | ~~**P.8** — an unnamed `@CascadingParameter()` without `type` takes any unnamed cascade~~ **done 2026-10-21**: `tsazor check` warns (TZS039), in `@code` and in `.ts` classes, with the annotation's class as the fix | Owner 2026-10-21: the Radzen port had 15 such bugs (spreadsheet tools got an `UndoRedoStack` as their worksheet) |
 | ~~**B32** — every DataGrid column had a move grip and a resize handle~~ **done 2026-10-21**: `resizableColumns`, `reorderableColumns`, off by default | Owner 2026-10-21: no reference grid has them by default; changing it after 1.0 would break |
-| **Abstract members in component declarations** — a field or `protected` member that implements an abstract base member is missing from the `.d.ts` (TS2654 without `skipLibCheck`) | Owner 2026-10-21: the targeted fix (the base chain's abstract members in the metadata), before 1.0 |
+| ~~**Abstract members in component declarations** — a field or `protected` member that implements an abstract base member was missing from the `.d.ts` (TS2654 without `skipLibCheck`)~~ **done 2026-10-21**: declared by the base's own type (`kind: Series<number>["kind"]`) | Owner 2026-10-21: the targeted fix (the base chain's abstract members in the metadata), before 1.0 |
 | **`<html lang>` follows the culture** (BlazorHero B34) | A default to decide before 1.0 (WCAG 3.1.1) |
 
 ### For the owner to decide

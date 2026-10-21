@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A component's declaration names what it implements of its base's abstract members** (`tsazor build-lib`; owner
+  2026-10-21, found in the Radzen port): a field or a `protected` member that implements an `abstract` one (a chart
+  series' `kind`, a validator's `validate`) was missing from the `.d.ts`, so a consumer checking without
+  `skipLibCheck` saw TS2654 in the library. It is declared by the base's own type (`kind: Series<number>["kind"]`),
+  across abstract middle classes; the manifest carries `abstractMembers` and `abstractImplementations`.
+
 - **TZS039: a cascading parameter with neither a name nor a type** (`@tsazor/compiler`, `tsazor check`; owner
   2026-10-21, pulled before 1.0 — the Radzen port had 15): `@CascadingParameter()` takes the nearest unnamed cascade,
   whatever its value, where Blazor matches by the property's type. A warning in `@code` and in a component's `.ts`

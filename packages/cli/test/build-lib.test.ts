@@ -261,6 +261,32 @@ describe("buildLibrary (D9)", () => {
     expect(problems).toEqual([]);
   });
 
+  it("declares the members that implement a base's abstract ones (a field, a protected method), across an abstract middle class", async () => {
+    // The Radzen port's chart series implement `abstract readonly kind` as a field and validators a protected
+    // `validate`: left out of the declarations, a consumer without skipLibCheck saw TS2654 in every one of them.
+    const root = await library({
+      "src/base/series.ts": 'import { ComponentBase } from "@tsazor/runtime";\n\nexport abstract class Series<T> extends ComponentBase {\n  abstract readonly kind: string;\n  abstract data: T[];\n  protected abstract validate(value: T): boolean;\n}\n',
+      "src/base/axis-series.ts": 'import { Series } from "./series.js";\n\nexport abstract class AxisSeries<T> extends Series<T> {\n  protected abstract get axis(): string;\n}\n',
+      "src/BarSeries.tsazor": '@import { AxisSeries } from "./base/axis-series.js"\n@inherits AxisSeries<number>\n<span>bar</span>\n@code {\n    readonly kind = "bar";\n    data: number[] = [];\n    protected validate(value: number): boolean {\n        return value >= 0;\n    }\n    protected get axis(): string {\n        return "x";\n    }\n    private hidden = 1;\n}\n',
+      "consumer.ts": 'import { BarSeries } from "./dist/index.js";\n\nexport const bar = new BarSeries();\nexport const kind: string = bar.kind;\nexport const data: number[] = bar.data;\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+    expect(result.errors).toEqual([]);
+    const declaration = await read(root, "BarSeries.d.ts");
+    expect(declaration).toContain('  readonly kind: AxisSeries<number>["kind"];');
+    expect(declaration).toContain('  protected validate: AxisSeries<number>["validate"];');
+    expect(declaration).toContain('  protected axis: AxisSeries<number>["axis"];');
+    expect(declaration).not.toContain("hidden");
+    const ts = (await import("typescript")).default;
+    const program = ts.createProgram([path.join(root, "consumer.ts")], {
+      strict: true, noEmit: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    });
+    const problems = ts.getPreEmitDiagnostics(program)
+      .filter((d) => d.file === undefined || !d.file.fileName.includes("/runtime/"))
+      .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: TS${d.code} ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+    expect(problems).toEqual([]);
+  });
+
   it("takes a base imported by name (`@import { Button }` + `@inherits Button`) and declares the public getters a @ref reads", async () => {
     // Both the MudBlazor and the Radzen port lost every component built on another by a named import: no manifest
     // entry, no declaration (the default import worked). And `stepper.steps`, a public getter, was missing.

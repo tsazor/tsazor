@@ -181,6 +181,11 @@ export interface ClassRecord {
     parameters: OwnParameter[];
     methods?: Omit<ComponentMethod, "references" | "declaredBy">[];
     properties?: Omit<ComponentProperty, "references" | "declaredBy">[];
+    abstractMembers?: AbstractMember[];
+    declaredMembers?: {
+        name: string;
+        protected?: boolean;
+    }[];
 }
 
 // CodeBlockNode
@@ -331,6 +336,8 @@ export interface ComponentMetadata {
     parameters: ComponentParameter[];
     methods?: ComponentMethod[];
     properties?: ComponentProperty[];
+    abstractMembers?: AbstractMember[];
+    abstractImplementations?: AbstractImplementation[];
     incomplete?: boolean;
 }
 
