@@ -1460,6 +1460,7 @@ text }] }`, exposed in the LSP as a quick fix (code action):
 | `TZS022` `var` | ⇒ `let` |
 | `TZS030` `@Bindable() value = 0` | ⇒ `@Bindable() accessor value = 0` |
 | `TZS038` a `//` or `/* … */` comment outside every element (it renders, as in Razor) | ⇒ `@* … *@` |
+| `TZS039` `@CascadingParameter() worksheet?: Worksheet` (neither a name nor a type: it takes any unnamed cascade) | ⇒ `@CascadingParameter({ type: Worksheet })` (the own class: `type: () => X`; `boolean`: `type: Boolean`) |
 | `TZS004` ``attr="@`…`"`` (a template literal after `@` in an attribute value) | ⇒ ``attr="@(`…`)"`` |
 | `TZS032` a member under Blazor's lifecycle name (`onInitializedAsync`, `OnParametersSet`, `Dispose`, …) | Name ⇒ Tsazor's hook (`onInitialized`, `onParametersSet`, `dispose`); the hook may be `async` |
 | `TZS024` C# interpolated string `$"…{x}…"` / `$@"…"` / verbatim `@"…"` | Template literal: holes ⇒ `${…}` (a Razor `@` in the hole is dropped), `{{`/`}}` ⇒ braces, C# layout `{x,2:C}` is dropped (since 2.5; fix only when the string is the cause of the error — TZS024 has no fix otherwise; for the limitation see [Codemod](#codemod-razor--tsazor-25)) |

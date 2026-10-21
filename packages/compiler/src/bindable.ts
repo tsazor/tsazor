@@ -83,6 +83,67 @@ export function stateMembers(body: string): StateMember[] {
   return result;
 }
 
+/**
+ * A `@CascadingParameter()` with neither `name` nor `type` (TZS039): it takes the nearest unnamed cascade, whatever
+ * its value. Blazor matches it by the property's type, which TypeScript erases.
+ */
+export interface UntypedCascade {
+  name: string;
+  /** Offset of the decorator (`@CascadingParameter(…)`), for the warning's range. */
+  decoratorOffset: number;
+  /** The decorator's text, `@CascadingParameter()` or `@CascadingParameter({})`. */
+  decoratorText: string;
+  /** What the quick fix writes for `type`: the annotation's class (`Worksheet`, `Map` for `Map<K, V>`, `Boolean`). */
+  typeToken?: string;
+}
+
+/** Every untyped `@CascadingParameter()` in `@code` text (a class body). */
+export function untypedCascades(body: string): UntypedCascade[] {
+  if (!body.includes("CascadingParameter")) return [];
+  const { file, cls } = parseBody(body);
+  if (!cls) return [];
+  return untypedCascadesOf(cls, file, PREFIX.length);
+}
+
+const PRIMITIVE_TOKENS: Readonly<Record<string, string>> = { string: "String", number: "Number", boolean: "Boolean" };
+
+/** The untyped `@CascadingParameter()`s of a class declaration (offsets relative to `base`). */
+export function untypedCascadesOf(cls: ts.ClassLikeDeclaration, file: ts.SourceFile, base = 0): UntypedCascade[] {
+  const result: UntypedCascade[] = [];
+  for (const member of cls.members) {
+    const call = decoratorCall(member, "CascadingParameter");
+    const name = memberName(member);
+    if (!call || name === undefined) continue;
+    const options = call.arguments[0];
+    if (options !== undefined) {
+      // Anything but a plain literal (a variable, a spread) may carry a name or a type: not this warning's to judge.
+      if (!ts.isObjectLiteralExpression(options) || options.properties.length > 0) continue;
+    }
+    const decorator = call.parent;
+    const entry: UntypedCascade = {
+      name,
+      decoratorOffset: decorator.getStart(file) - base,
+      decoratorText: decorator.getText(file),
+    };
+    const annotation = ts.isPropertyDeclaration(member) ? member.type : ts.isSetAccessorDeclaration(member) ? member.parameters[0]?.type : undefined;
+    const token = annotation === undefined ? undefined : typeTokenOf(annotation, file);
+    if (token !== undefined) entry.typeToken = token;
+    result.push(entry);
+  }
+  return result;
+}
+
+/** The runtime token of a type annotation: one class or primitive, `| undefined` and `| null` aside. */
+function typeTokenOf(type: ts.TypeNode, file: ts.SourceFile): string | undefined {
+  const parts = ts.isUnionTypeNode(type)
+    ? type.types.filter((part) => part.kind !== ts.SyntaxKind.UndefinedKeyword && !(ts.isLiteralTypeNode(part) && part.literal.kind === ts.SyntaxKind.NullKeyword))
+    : [type];
+  if (parts.length !== 1) return undefined;
+  const only = parts[0]!;
+  if (ts.isTypeReferenceNode(only)) return only.typeName.getText(file);
+  return PRIMITIVE_TOKENS[only.getText(file)];
+}
+
 /** Every member `@Bindable()` decorates in `@code` text (a class body). */
 export function bindableMembers(body: string): BindableMember[] {
   if (!body.includes("Bindable")) return [];

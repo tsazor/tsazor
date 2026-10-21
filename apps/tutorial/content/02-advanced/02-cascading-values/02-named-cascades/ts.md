@@ -7,9 +7,9 @@ focus: Greeting.tsazor
 Two cascades now: a theme and a language. But `Greeting` says *theme: de, language: de* — both
 of its cascading parameters got the language.
 
-An unnamed `@CascadingParameter()` takes the value of the nearest unnamed `<CascadingValue>`
-above it, whatever that value is. With one cascade that's exactly what you want; with two,
-the inner one wins for both. Give them names:
+`{ type: String }` takes the nearest unnamed `<CascadingValue>` above it whose value is a string.
+With one string cascade that's exactly what you want; with two, the inner one wins for both. Give them
+names:
 
 ```tsazor
 <CascadingValue Value="@theme" Name="theme">
@@ -28,7 +28,7 @@ A named parameter only matches a cascade of the same name (case doesn't matter),
 one never matches a named cascade — so names are the safe default for strings, numbers and
 other plain values.
 
-**Matching by type.** For an object of a class you can match on the class instead:
+**Matching by class.** For an object of a class, the type is the class:
 
 ```ts
 @CascadingParameter({ type: Session }) session?: Session;

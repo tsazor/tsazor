@@ -2,5 +2,5 @@
 
 @code {
     @Parameter() label = "";
-    @CascadingParameter() theme = "light";
+    @CascadingParameter({ type: String }) theme = "light";
 }

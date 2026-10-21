@@ -18,7 +18,7 @@ import { importStatements, parseImportDirective, type ImportInfo } from "./impor
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
 import { RUNTIME_MODULE, replaceIdentifiers } from "./metadata.js";
-import { bindableMembers, stateMembers } from "./bindable.js";
+import { bindableMembers, stateMembers, untypedCascades } from "./bindable.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -541,6 +541,7 @@ class Codegen {
     for (const block of memberCode) collectBodyMembers(block.code, declaredMembers, false);
     const bindableDeclarations = this.checkBindables(memberCode, declaredMembers);
     this.checkStates(memberCode);
+    this.checkUntypedCascades(memberCode);
     for (const inject of this.metadata.injects) this.members.instance.add(inject.name);
     this.checkRenderMethodConflict(memberCode);
     this.checkReservedMembers(memberCode);
@@ -896,6 +897,29 @@ class Codegen {
             { title: "Insert 'accessor'", edits: [{ pos, endPos: pos, text: "accessor " }] },
           );
         }
+      }
+    }
+  }
+
+  /**
+   * TZS039: a `@CascadingParameter()` with neither `name` nor `type` takes the nearest unnamed cascade, whatever its
+   * value (Blazor matches by the property's type, which TypeScript erases). The quick fix gives the annotation's class
+   * as `type` — a thunk for the component's own class, which isn't declared yet where the decorator runs.
+   */
+  private checkUntypedCascades(memberCode: CodeBlockNode[]): void {
+    for (const block of memberCode) {
+      for (const cascade of untypedCascades(block.code)) {
+        const pos = block.codeStart ? advancePos(block.codeStart, block.code.slice(0, cascade.decoratorOffset)) : block.pos;
+        const range = textRange(pos, cascade.decoratorText);
+        const token = cascade.typeToken === this.options.className ? `() => ${cascade.typeToken}` : cascade.typeToken;
+        this.diagnostics.warning(
+          "TZS039",
+          range,
+          `@CascadingParameter() on '${cascade.name}' has neither a name nor a type: it takes the nearest unnamed cascade, whatever its value. Blazor matches it by the property's type, which TypeScript erases — give it: @CascadingParameter({ type: ${token ?? "X"} }), or the name its supplier gives.`,
+          token === undefined
+            ? undefined
+            : { title: `Cascade by type: { type: ${token} }`, edits: [{ pos, endPos: range.endPos, text: `@CascadingParameter({ type: ${token} })` }] },
+        );
       }
     }
   }

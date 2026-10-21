@@ -300,7 +300,11 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**Stale docs** — roadmap-tutorial (M4), §3c, E8, design-virtualize, design-localization, the BlazorHero B3 row, a comment in `codegen.ts`~~ **done 2026-10-15** | Going public |
 | **E9** — the screen-reader audit, by a person: [screen-reader-audit.md](screen-reader-audit.md) | WCAG 2.2 AA |
 | ~~**E12 `@tsazor/primitives`** — `Decimal` (with `@bind` and validation), `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid`; `@tsazor/dotnet` maps to them by default~~ **done 2026-10-15** ([design-extensions-primitives.md](design-extensions-primitives.md)) | Owner 2026-10-15 (X4): the mapping is the default from 1.0 on, so the types come first |
-| **BlazorHero phases 5 and 6** — the dashboard with charts and the chat (SignalR); the languages with right-to-left | Owner 2026-10-15: they test charts, real time and RTL in the skins before the freeze |
+| ~~**BlazorHero phases 5 and 6** — the dashboard with charts and the chat (SignalR); the languages with right-to-left~~ **done 2026-10-21** | Owner 2026-10-15: they test charts, real time and RTL in the skins before the freeze |
+| ~~**P.8** — an unnamed `@CascadingParameter()` without `type` takes any unnamed cascade~~ **done 2026-10-21**: `tsazor check` warns (TZS039), in `@code` and in `.ts` classes, with the annotation's class as the fix | Owner 2026-10-21: the Radzen port had 15 such bugs (spreadsheet tools got an `UndoRedoStack` as their worksheet) |
+| ~~**B32** — every DataGrid column had a move grip and a resize handle~~ **done 2026-10-21**: `resizableColumns`, `reorderableColumns`, off by default | Owner 2026-10-21: no reference grid has them by default; changing it after 1.0 would break |
+| **Abstract members in component declarations** — a field or `protected` member that implements an abstract base member is missing from the `.d.ts` (TS2654 without `skipLibCheck`) | Owner 2026-10-21: the targeted fix (the base chain's abstract members in the metadata), before 1.0 |
+| **`<html lang>` follows the culture** (BlazorHero B34) | A default to decide before 1.0 (WCAG 3.1.1) |
 
 ### For the owner to decide
 
@@ -314,9 +318,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 
 ### After 1.0 (additive)
 
-Cascades: an unnamed `@CascadingParameter()` without `type` takes any unnamed cascade (P.8); the behavior is documented
-and taught (the lesson "Names and types"), and the compiler can't derive `type` safely (a class or an interface?), so
-a `tsazor check` warning that asks for `{ type: X }` follows, additively. Type checks and tooling: the event argument's type against the event (K.9), the LSP's squiggle after a
+Type checks and tooling: the event argument's type against the event (K.9), the LSP's squiggle after a
 `satisfies` (K.10), `tsazor check` excludes (H.4), `@ref` typing (H.6/P.7), `RenderFragment` in the auto-imports
 (P.6), a self-import hint (R.9), fullstackhero F19, a `FileSystemHost` (G.2), the recovery after a mid-line
 `@page` (two follow-up errors). Library: TreeView children on demand and as a dropdown, a virtual option list, the

@@ -321,4 +321,12 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     example: "// Copyright (c) Contoso\n<p>Hello</p>\n",
     fix: "A markup comment is `@* … *@` (the quick fix). Code that runs once, when the module loads, goes into a `static { }` block in `@code`. An expression with an operator is written whole: `@(label ?? undefined)` (the quick fix in an attribute value).",
   },
+  {
+    code: "TZS039",
+    severity: "warning",
+    description:
+      "A `@CascadingParameter()` with neither `name` nor `type` takes the nearest unnamed cascade above it, whatever its value. Blazor matches an unnamed `[CascadingParameter]` by the property's type; TypeScript erases the annotation, so the runtime can't. A supplier added between them later (a `CascadingValue` of something else) silently takes its place. Checked in `@code` and in a component's `.ts` class.",
+    example: "@code {\n    @CascadingParameter() worksheet?: Worksheet;\n}\n",
+    fix: "Give its type, as Blazor reads it from the property: `@CascadingParameter({ type: Worksheet })` (the quick fix; `type: () => Worksheet` for the component's own class or an import cycle, `type: Boolean` for a primitive). An interface has no runtime value: cascade it by a name its supplier gives, `@CascadingParameter({ name: \"Worksheet\" })`.",
+  },
 ];

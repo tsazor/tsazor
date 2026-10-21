@@ -1,8 +1,8 @@
 <p class="greeting @theme">@greetings[language] <small>(theme: @theme, language: @language)</small></p>
 
 @code {
-    @CascadingParameter() theme = "light";
-    @CascadingParameter() language = "en";
+    @CascadingParameter({ type: String }) theme = "light";
+    @CascadingParameter({ type: String }) language = "en";
 
     greetings: Record<string, string> = { en: "Hello!", de: "Hallo!", fr: "Bonjour !" };
 }

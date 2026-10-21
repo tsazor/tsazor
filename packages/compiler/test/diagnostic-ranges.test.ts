@@ -101,6 +101,31 @@ describe("diagnostic ranges (A7)", () => {
     }
   });
 
+  it("TZS039: a @CascadingParameter() with neither a name nor a type, with the fix to the annotation's class", () => {
+    // The Radzen port had 15: its spreadsheet tools got an UndoRedoStack as their worksheet, the nearest unnamed cascade.
+    const tool = "<p>x</p>\n@code {\n    @CascadingParameter() worksheet?: Worksheet;\n}\n";
+    const [warning] = compileDiagnostics(tool).filter((d) => d.code === "TZS039");
+    expect([warning!.severity, textOf(tool, warning!)]).toEqual(["warning", "@CascadingParameter()"]);
+    expect(warning!.message).toContain("'worksheet'");
+    expect(applyFix(tool, warning!)).toBe("<p>x</p>\n@code {\n    @CascadingParameter({ type: Worksheet }) worksheet?: Worksheet;\n}\n");
+    // A primitive by its constructor, the own class by a thunk, `{}` as no options; an interface-like union gets no fix.
+    const fixed = (source: string) => applyFix(source, compileDiagnostics(source).find((d) => d.code === "TZS039")!);
+    const unannotated = compileDiagnostics("@code {\n    @CascadingParameter() theme = undefined;\n}\n").find((d) => d.code === "TZS039");
+    expect([unannotated?.severity, unannotated?.fix]).toEqual(["warning", undefined]);
+    expect(fixed("@code {\n    @CascadingParameter() parentDisabled?: boolean;\n}\n")).toBe("@code {\n    @CascadingParameter({ type: Boolean }) parentDisabled?: boolean;\n}\n");
+    expect(fixed("@code {\n    @CascadingParameter() parent?: Demo;\n}\n")).toBe("@code {\n    @CascadingParameter({ type: () => Demo }) parent?: Demo;\n}\n");
+    expect(fixed("@code {\n    @CascadingParameter({}) cells?: Map<string, number>;\n}\n")).toBe("@code {\n    @CascadingParameter({ type: Map }) cells?: Map<string, number>;\n}\n");
+    expect(compileDiagnostics("@code {\n    @CascadingParameter() value?: A | B;\n}\n").find((d) => d.code === "TZS039")?.fix).toBeUndefined();
+    // A name or a type is what it asks for; options it can't read (a variable) aren't its to judge.
+    for (const source of [
+      '@code {\n    @CascadingParameter({ name: "Grid" }) grid?: Grid;\n}\n',
+      "@code {\n    @CascadingParameter({ type: Grid }) grid?: Grid;\n}\n",
+      "@code {\n    @CascadingParameter(options) grid?: Grid;\n}\n",
+    ]) {
+      expect(compileDiagnostics(source).filter((d) => d.code === "TZS039"), source).toEqual([]);
+    }
+  });
+
   it("TZS038: text after an expression that starts with an operator — in content, and in a value with the fix '@(…)'", () => {
     // A Radzen port met `title="@label ?? undefined"` about 30 times: Razor reads `@label` and renders the rest.
     const members = "\n@code { private label = \"\"; private count = 1; private ok = true; private from = 1; private to = 2; }";

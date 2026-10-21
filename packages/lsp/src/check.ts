@@ -4,7 +4,7 @@
  * (TS syntactic + semantic diagnostics, filtered like the LSP layer). The
  * gate form of the same pipeline the language server runs live.
  */
-import { CHECK_CODES, explainTypeScriptError } from "@tsazor/compiler";
+import { CHECK_CODES, explainTypeScriptError, untypedCascadesOf } from "@tsazor/compiler";
 import { defaultMetadataCache } from "@tsazor/workspace";
 import { analyzeSource } from "./analysis.js";
 import { ProjectRegistry } from "./projects.js";
@@ -114,6 +114,7 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
               message: explainTypeScriptError(diagnostic.code, withModuleHint(diagnostic.code, diagnostic.message, source)),
             });
           }
+          diagnostics.push(...untypedCascadeWarnings(path.resolve(source)));
         }
       }
     }
@@ -160,6 +161,43 @@ const STRICT_FLAGS = ["noImplicitAny", "strictNullChecks", "strictFunctionTypes"
  * tsconfig of the checked files that leaves `strict` (or one of its flags)
  * off. A file without a tsconfig is checked with Tsazor's strict defaults.
  */
+/**
+ * TZS039 in a component written as a `.ts` class (a library's base, a tool shell): a `@CascadingParameter()` with
+ * neither `name` nor `type` takes the nearest unnamed cascade, whatever its value — as the compiler reports it in
+ * `@code`. Read syntactically; a file that can't be read has its TS diagnostics already.
+ */
+function untypedCascadeWarnings(file: string): CheckDiagnostic[] {
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch {
+    return [];
+  }
+  if (!text.includes("CascadingParameter")) return [];
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const warnings: CheckDiagnostic[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isClassLike(node)) {
+      for (const cascade of untypedCascadesOf(node, source)) {
+        const { line, character } = source.getLineAndCharacterOfPosition(cascade.decoratorOffset);
+        const own = node.name?.text === cascade.typeToken;
+        const type = cascade.typeToken === undefined ? "X" : own ? `() => ${cascade.typeToken}` : cascade.typeToken;
+        warnings.push({
+          file,
+          line: line + 1,
+          column: character + 1,
+          code: "TZS039",
+          severity: "warning",
+          message: `@CascadingParameter() on '${cascade.name}' has neither a name nor a type: it takes the nearest unnamed cascade, whatever its value. Blazor matches it by the property's type, which TypeScript erases — give it: @CascadingParameter({ type: ${type} }), or the name its supplier gives.`,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return warnings;
+}
+
 function strictWarnings(files: readonly string[]): CheckDiagnostic[] {
   const configs = new Set<string>();
   for (const file of files) {

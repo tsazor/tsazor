@@ -156,7 +156,7 @@ fields are private at runtime too.
 | --- | --- |
 | `[Parameter]` | `@Parameter()` |
 | `[Parameter(CaptureUnmatchedValues = true)]` | `@Parameter({ captureUnmatchedValues: true })` |
-| `[CascadingParameter]` | `@CascadingParameter()` |
+| `[CascadingParameter]` | `@CascadingParameter({ type: X })` — Blazor matches by the property's type, TypeScript has none at runtime (TZS039 without it) |
 | `[Inject]` | the `@inject Type Name` directive |
 | `[Required]`, `[StringLength(80)]`, `[Range(1, 10)]` | `@Required()`, `@StringLength(80)`, `@Range(1, 10)` |
 | `[EmailAddress]`, `[RegularExpression(…)]`, `[Compare(…)]` | `@EmailAddress()`, `@RegularExpression(…)`, `@Compare(…)` |

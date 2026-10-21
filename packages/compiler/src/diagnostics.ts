@@ -85,6 +85,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS036: "Component manifest unreadable or newer.",
   TZS037: "Editor-required parameter not provided.",
   TZS038: "Code-like text in markup.",
+  TZS039: "Cascading parameter with neither a name nor a type.",
 } as const;
 
 

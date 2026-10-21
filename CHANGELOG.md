@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **TZS039: a cascading parameter with neither a name nor a type** (`@tsazor/compiler`, `tsazor check`; owner
+  2026-10-21, pulled before 1.0 — the Radzen port had 15): `@CascadingParameter()` takes the nearest unnamed cascade,
+  whatever its value, where Blazor matches by the property's type. A warning in `@code` and in a component's `.ts`
+  class, with the annotation's class as the quick fix (`{ type: Worksheet }`, `{ type: () => X }` for the own class,
+  `{ type: Boolean }` for a primitive). The lessons "Passing values down" and "Names and types" give the type.
+
 - **A DataGrid's columns are moved and resized only when the grid asks for it** (`@tsazor/fluent`,
   `@tsazor/bootstrap`; owner 2026-10-21, the BlazorHero port's B32): `resizableColumns` and `reorderableColumns`, both
   off by default, as Fluent UI Blazor's `ResizableColumns` and MudBlazor's `DragDropColumnReordering`. Since the column

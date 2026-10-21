@@ -330,6 +330,7 @@ More: strings, numbers, dates, collections, exceptions, disposal — [csharp-to-
 | TZS025 | an unknown component parameter | the spelling; the message suggests the closest |
 | TZS037 (warning) | an `@EditorRequired()` parameter the tag leaves out | set it (an attribute, `@bind-`, element content for `ChildContent`) |
 | TZS038 (warning) | a `//` or `/* … */` comment outside every element, a call after `@code` — text that renders | `@* … *@` (quick fix); code that runs at load in `static { }` in `@code` |
+| TZS039 (warning) | an unnamed `@CascadingParameter()` without `type` — Blazor matches it by the property's type, Tsazor can't | `{ type: X }` (quick fix from the annotation), or the name its supplier gives |
 | TZS004 | an `@` no expression follows — in an attribute value too (``transform="@`…`"``) | `@name`, `@(…)` (the quick fix for a template literal), `@@` for the character |
 | TZS008 | a misused directive attribute (`@bind:event` naming no callback, `:after` with `:set`) | as the message says |
 | TS2304 | a name `@code` doesn't know | `@import` it — the message names the import |

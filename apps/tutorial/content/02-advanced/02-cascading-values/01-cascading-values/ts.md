@@ -21,12 +21,16 @@ theme:
 and let the button ask for it:
 
 ```ts
-@CascadingParameter() theme = "light";
+@CascadingParameter({ type: String }) theme = "light";
 ```
 
 Tick "Dark mode": both buttons switch, and `Toolbar` didn't change at all. Every component
 below the `<CascadingValue>` can declare a `@CascadingParameter()`, at any depth; the
 initializer is the value it uses when no cascade is around.
+
+`type: String` says which cascade it wants: the nearest one above it whose value is a string. Tsazor asks for the
+type because TypeScript's types are gone when the code runs — a parameter without one would take any cascade, and
+`tsazor check` warns about it (TZS039).
 
 When the value changes, the components that use it update — the ones in between don't even
 re-render: `Toolbar` has no parameters that changed, so it's skipped, and each button gets its

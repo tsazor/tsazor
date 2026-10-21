@@ -114,6 +114,36 @@ describe("tsazor check — code-behind and imported sources", () => {
 });
 
 describe("tsazor check — every source the tsconfig includes", () => {
+  it("warns about an untyped @CascadingParameter() in a component's .ts class too (TZS039; the Radzen port's tool shells)", async () => {
+    const project = await mkdtemp(path.join(tmpdir(), "tsazor-check-cascade-"));
+    try {
+      await writeFile(
+        path.join(project, "tsconfig.json"),
+        JSON.stringify({ compilerOptions: { target: "ES2022", module: "ESNext", moduleResolution: "bundler", strict: true, skipLibCheck: true, noEmit: true }, include: ["src"] }),
+      );
+      await mkdir(path.join(project, "src", "tools"), { recursive: true });
+      await writeFile(path.join(project, "src", "Hello.tsazor"), "<p>hello</p>\n");
+      await writeFile(
+        path.join(project, "src", "tools", "tool-base.ts"),
+        [
+          "declare function CascadingParameter(options?: { name?: string; type?: unknown }): (value: undefined, context: ClassFieldDecoratorContext) => void;",
+          "export class Worksheet {}",
+          "export class ToolBase {",
+          "  @CascadingParameter() worksheet?: Worksheet;",
+          '  @CascadingParameter({ name: "Spreadsheet" }) spreadsheet?: object;',
+          "}",
+          "",
+        ].join("\n"),
+      );
+      const result = await checkProject(project);
+      const warnings = result.diagnostics.filter((d) => d.code === "TZS039");
+      expect(warnings.map((d) => [path.basename(d.file), d.line, d.column, d.severity])).toEqual([["tool-base.ts", 4, 3, "warning"]]);
+      expect(warnings[0]!.message).toContain("@CascadingParameter({ type: Worksheet })");
+    } finally {
+      await rm(project, { recursive: true, force: true });
+    }
+  });
+
   it("checks a helper no component imports (a library's index exports it): a Radzen port's F1", async () => {
     const orphan = await mkdtemp(path.join(tmpdir(), "tsazor-check-orphan-"));
     try {

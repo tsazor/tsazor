@@ -425,6 +425,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS036: "Component manifest unreadable or newer.";
     readonly TZS037: "Editor-required parameter not provided.";
     readonly TZS038: "Code-like text in markup.";
+    readonly TZS039: "Cascading parameter with neither a name nor a type.";
 };
 
 // DiagnosticBag
@@ -905,6 +906,17 @@ export interface UninferredTypeArguments {
 
 // unresolvedName
 export declare function unresolvedName(message: string): string | undefined;
+
+// UntypedCascade
+export interface UntypedCascade {
+    name: string;
+    decoratorOffset: number;
+    decoratorText: string;
+    typeToken?: string;
+}
+
+// untypedCascadesOf
+export declare function untypedCascadesOf(cls: ts.ClassLikeDeclaration, file: ts.SourceFile, base?: number): UntypedCascade[];
 
 // WhileNode
 export interface WhileNode extends SourceSpan {
