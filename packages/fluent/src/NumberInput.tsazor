@@ -30,6 +30,8 @@
     @Parameter() placeholder?: string;
     /** true disables the native input. */
     @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** true sets the native required attribute. */
     @Parameter() required: boolean = false;
     /** Native min attribute (null skips it). */
@@ -70,6 +72,7 @@
             class: this.inputClass,
             placeholder: this.placeholder,
             disabled: this.disabled ? true : undefined,
+            readonly: this.readOnly ? true : undefined,
             required: this.required ? true : undefined,
             min: this.min ?? undefined,
             max: this.max ?? undefined,

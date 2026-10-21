@@ -7,7 +7,7 @@
 @inherits InputBase<boolean>
 
 <div class="@wrapperClass">
-    <input @ref="element" id="@field.id(id)" type="checkbox" role="@switchRole" checked="@(currentValue === true)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    <input @ref="element" id="@field.id(id)" type="checkbox" role="@switchRole" checked="@(currentValue === true)" disabled="@disabled" required="@required" aria-label="@ariaLabel" aria-readonly="@(readOnly ? "true" : null)" @attributes="@withClass(inputClass, inputAttributes)" @onclick:preventDefault="@readOnly" @onchange="handleChange" />
     @if (label) {
         <label class="form-check-label" for="@field.id(id)">@label</label>
     }
@@ -30,6 +30,8 @@
     @Parameter() switch: boolean = false;
     /** Disables the box. */
     @Parameter() disabled: boolean = false;
+    /** true shows the state without letting it change: the box stays focusable and says aria-readonly, a click or Space changes nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** Marks the box as required (it must be ticked). */
     @Parameter() required: boolean = false;
     /** The box's id; generated when omitted. */

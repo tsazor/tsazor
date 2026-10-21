@@ -1333,6 +1333,7 @@ export declare class TsazorHttp {
     addResponseInterceptor(interceptor: ResponseInterceptor): () => void;
     send(request: Request): Promise<Response>;
     getJson<T>(url: string, init?: RequestInit): Promise<T>;
+    getString(url: string, init?: RequestInit): Promise<string>;
     postJson<T>(url: string, body: unknown, init?: RequestInit): Promise<T>;
     putJson<T>(url: string, body: unknown, init?: RequestInit): Promise<T>;
     deleteJson<T>(url: string, init?: RequestInit): Promise<T>;

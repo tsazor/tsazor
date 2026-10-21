@@ -5,6 +5,18 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Read-only inputs** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's and Fluent UI Blazor's `ReadOnly`, the
+  BlazorHero port's B48): `readOnly` on `TextInput`, `TextArea` and `NumberInput` sets the native `readonly` — the
+  value stays focusable, selectable and submitted, where `disabled` greys it out and leaves the tab order. On
+  `Checkbox` and `Switch` it says `aria-readonly`, and a click or Space changes nothing.
+- **`TsazorHttp.getString(url)`** (`@tsazor/runtime`; HttpClient's `GetStringAsync`, the BlazorHero port's B49): a GET
+  whose body comes back as text, unparsed — an API that answers `text/plain` (a base64 export). A non-2xx status throws
+  `TsazorHttpError`, as `getJson` does.
+- **AppLayout follows the window past its breakpoint** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's responsive
+  drawer, the BlazorHero port's B52): a window narrowing past 960px closes the navigation column, one widening past it
+  opens the column again, and `@bind-navOpen` hears of both. Before, only the first render looked at the width: a
+  column closed in a narrow window (a click on the content) stayed closed in a wide one.
+
 ## 1.0.0-next.8 (2026-10-21)
 
 - **Abstract components** (`@tsazor/compiler`, `tsazor build-lib`; the BlazorHero port's ExtendedAttributesBase, B38):

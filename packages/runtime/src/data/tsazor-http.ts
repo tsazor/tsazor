@@ -126,6 +126,16 @@ export class TsazorHttp {
   }
 
   /**
+   * Sends a GET and returns the body as text, unparsed (HttpClient's `GetStringAsync`): an API that answers
+   * text/plain — a base64 export, a token. A non-2xx status throws `TsazorHttpError`.
+   */
+  async getString(url: string, init?: RequestInit): Promise<string> {
+    const response = await this.send(new Request(this.resolve(url), { method: "GET", headers: this.headers(), ...init }));
+    if (!response.ok) throw new TsazorHttpError(response, await safeBody(response));
+    return response.text();
+  }
+
+  /**
    * Sends `body` as JSON with POST and parses the JSON response (Blazor's
    * `PostAsJsonAsync` + `ReadFromJsonAsync`). Empty body → `null`; non-2xx throws `TsazorHttpError`.
    */

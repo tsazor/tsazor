@@ -7,7 +7,7 @@
 @inherits InputBase<boolean>
 
 <label class="@this.wrapperClass" for="@this.elementId">
-    <input @ref="element" id="@this.elementId" type="checkbox" checked="@this.isChecked" role="switch" @attributes="@this.inputAttributes" @onchange="this.handleChange" />
+    <input @ref="element" id="@this.elementId" type="checkbox" checked="@this.isChecked" role="switch" @attributes="@this.inputAttributes" @onclick:preventDefault="@this.readOnly" @onchange="this.handleChange" />
     <span class="fui-switch__track" aria-hidden="true"></span>
     @if (this.label) {
         <span class="fui-switch__label">@this.label</span>
@@ -24,6 +24,8 @@
     @Parameter() help?: string;
     /** true disables the native checkbox and dims the switch. */
     @Parameter() disabled: boolean = false;
+    /** true shows the state without letting it change: the switch stays focusable and says aria-readonly, a click or Space changes nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** Element id; generated automatically when omitted (label `for` association). */
     @Parameter() id?: string;
     /** Overrides the accessible name (when unlabelled). */
@@ -47,6 +49,7 @@
         return withAttributes({
             class: "fui-switch__native",
             disabled: this.disabled ? true : undefined,
+            "aria-readonly": this.readOnly ? "true" : undefined,
             "aria-label": this.ariaLabel,
             "aria-describedby": this.help ? this.helpId : undefined,
         }, this.additionalAttributes);

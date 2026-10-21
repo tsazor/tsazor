@@ -21,6 +21,30 @@ function windowWidth(width: number): void {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("max-width") && width < 960, media: query }));
 }
 
+/** A window whose width changes: the returned function resizes it and tells the queries whose answer changed. */
+function resizableWindow(width: number): { resize: (next: number) => void; listeners: () => number } {
+  let current = width;
+  const listeners = new Set<(event: { matches: boolean }) => void>();
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    get matches() {
+      return query.includes("max-width") && current < 960;
+    },
+    media: query,
+    addEventListener: (_type: string, listener: (event: { matches: boolean }) => void, options?: { signal?: AbortSignal }) => {
+      listeners.add(listener);
+      options?.signal?.addEventListener("abort", () => listeners.delete(listener));
+    },
+  }));
+  return {
+    resize(next) {
+      const crossed = (current < 960) !== (next < 960);
+      current = next;
+      if (crossed) for (const listener of listeners) listener({ matches: next < 960 });
+    },
+    listeners: () => listeners.size,
+  };
+}
+
 class Shell extends ComponentBase {
   static last: Shell | undefined;
   static withNav = true;
@@ -105,6 +129,25 @@ describe("AppLayout", () => {
       expect(column(container).hidden).toBe(true);
       expect(Shell.last!.open).toBe(false);
     }
+  });
+
+  it("follows the window past the breakpoint: narrower closes the column, wider opens it again (MudBlazor's responsive drawer)", async () => {
+    const viewport = resizableWindow(1400);
+    const result = await mount();
+    const { container, ...renderer } = result;
+    expect(column(container).hidden).toBe(false);
+    viewport.resize(800);
+    await renderer.settle();
+    expect([column(container).hidden, Shell.last!.open]).toEqual([true, false]);
+    viewport.resize(1400);
+    await renderer.settle();
+    expect([column(container).hidden, Shell.last!.open]).toEqual([false, true]);
+    viewport.resize(1200);
+    await renderer.settle();
+    expect(column(container).hidden).toBe(false);
+    result.dispose();
+    mounted.splice(mounted.indexOf(result), 1);
+    expect(viewport.listeners()).toBe(0);
   });
 
   it("without a nav it is the header over the page: no column, and a narrow window changes nothing", async () => {

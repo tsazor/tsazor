@@ -26,6 +26,21 @@ describe("TsazorHttp", () => {
     expect(request.headers.get("content-type")).toBe("application/json");
   });
 
+  it("getString returns the body as text and throws on an error status", async () => {
+    const fetchMock = vi.fn(async (request: Request) =>
+      request.url.endsWith("/export") ? new Response("UEsDBBQ=", { status: 200, headers: { "content-type": "text/plain" } }) : new Response("gone", { status: 410 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const http = new TsazorHttp({ baseUrl: "https://api.example.com" });
+    expect(await http.getString("api/users/export")).toBe("UEsDBBQ=");
+    const [request] = fetchMock.mock.calls[0] as [Request];
+    expect([request.method, request.url]).toEqual(["GET", "https://api.example.com/api/users/export"]);
+    const error = await http.getString("api/users/old").catch((e: TsazorHttpError) => e);
+    expect(error).toBeInstanceOf(TsazorHttpError);
+    expect([error.status, error.body]).toEqual([410, "gone"]);
+  });
+
   it("posts JSON bodies", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ created: true }), { status: 201 }));
     vi.stubGlobal("fetch", fetchMock);

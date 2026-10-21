@@ -10,7 +10,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <input @ref="element" id="@field.id(id)" type="number" value="@(currentValue ?? "")" min="@min" max="@max" step="@step" placeholder="@placeholder" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    <input @ref="element" id="@field.id(id)" type="number" value="@(currentValue ?? "")" min="@min" max="@max" step="@step" placeholder="@placeholder" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -36,6 +36,8 @@
     @Parameter() step: number | null = null;
     /** Disables the field. */
     @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** Marks the field as required. */
     @Parameter() required: boolean = false;
     /** The field's id; generated when omitted. */

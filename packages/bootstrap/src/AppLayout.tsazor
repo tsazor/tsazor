@@ -1,8 +1,8 @@
 @** The app's frame (MudBlazor's MudLayout with MudAppBar, a persistent MudDrawer and MudMainContent; Fluent UI
     Blazor's FluentLayout): a header bar across the top, a navigation column beside the content, and the content as
     the page's main landmark. `navOpen` (two-way: @bind-navOpen) shows or hides the column. In a window narrower than
-    960px the column starts closed and, opened, lies over the content: Escape or a click on the content closes it,
-    as MudBlazor's responsive drawer does. Put a SidebarNav — the nav landmark — into `nav`; without one the layout is the
+    960px the column starts closed and, opened, lies over the content: Escape or a click on the content closes it.
+    The window crossing 960px closes the column (narrower) or opens it (wider), as MudBlazor's responsive drawer does. Put a SidebarNav — the nav landmark — into `nav`; without one the layout is the
     header over the content (a signed-out page). The header is Bootstrap's primary color, dark-themed so its buttons and
     links stay light. *@
 @import { withClass } from "./attributes"
@@ -26,20 +26,28 @@
     @Parameter() childContent?: RenderFragment;
     /** Whether the navigation column shows; with `@bind-navOpen` the parent learns when the layout closes it. */
     @Parameter() navOpen = true;
-    /** Raised when the layout opens or closes the column itself (a narrow window, Escape, a click on the content). */
+    /** Raised when the layout opens or closes the column itself (the window's width, Escape, a click on the content). */
     @Parameter() navOpenChanged?: EventCallback<boolean>;
     /** `@attributes` pass-through (class appends; see src/attributes.ts). */
     @Parameter({ captureUnmatchedValues: true }) additionalAttributes?: Record<string, unknown>;
 
     private open = true;
+    /** The CSS breakpoint: below it the column lies over the content. */
+    private static readonly narrowQuery = "(max-width: 959.98px)";
 
     protected override onParametersSet(): void {
         this.open = this.navOpen;
     }
 
     protected override async onAfterRender(firstRender: boolean): Promise<void> {
+        if (!firstRender) return;
         // A narrow window starts with the column closed: open, it would cover the page.
-        if (firstRender && this.nav && this.open && this.narrow()) await this.change(false);
+        if (this.nav && this.open && this.narrow()) await this.change(false);
+        // Past the breakpoint the column follows the window: closed when it narrows, open again when it widens.
+        const query = typeof matchMedia === "function" ? matchMedia(AppLayout.narrowQuery) : undefined;
+        query?.addEventListener?.("change", (event: MediaQueryListEvent) => {
+            if (this.nav) void this.change(!event.matches);
+        }, { signal: this.disposeSignal });
     }
 
     private get rootAttributes(): Record<string, unknown> {
@@ -48,7 +56,7 @@
 
     /** The column lies over the content (the CSS breakpoint). */
     private narrow(): boolean {
-        return typeof matchMedia === "function" && matchMedia("(max-width: 959.98px)").matches;
+        return typeof matchMedia === "function" && matchMedia(AppLayout.narrowQuery).matches;
     }
 
     private async keydown(e: KeyboardEvent): Promise<void> {

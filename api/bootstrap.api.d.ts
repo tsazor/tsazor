@@ -253,6 +253,7 @@ export default class Checkbox extends InputBase<boolean> {
     help?: string;
     switch: boolean;
     disabled: boolean;
+    readOnly: boolean;
     required: boolean;
     id?: string;
 }
@@ -828,6 +829,7 @@ export default class NumberInput extends InputBase<number> {
     max: number | null;
     step: number | null;
     disabled: boolean;
+    readOnly: boolean;
     required: boolean;
     id?: string;
 }
@@ -1216,6 +1218,7 @@ export default class Switch extends InputBase<boolean> {
     label?: string;
     help?: string;
     disabled: boolean;
+    readOnly: boolean;
     id?: string;
     ariaLabel?: string;
 }
@@ -1289,6 +1292,7 @@ export default class TextArea extends InputBase<string> {
     placeholder?: string;
     rows: number;
     disabled: boolean;
+    readOnly: boolean;
     required: boolean;
     id?: string;
     immediate: boolean;
@@ -1303,6 +1307,7 @@ export default class TextInput extends InputBase<string> {
     placeholder?: string;
     type: "text" | "password" | "email" | "search" | "tel" | "url";
     disabled: boolean;
+    readOnly: boolean;
     required: boolean;
     id?: string;
     immediate: boolean;

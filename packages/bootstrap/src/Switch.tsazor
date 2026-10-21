@@ -7,7 +7,7 @@
 @inherits InputBase<boolean>
 
 <div class="form-check form-switch mb-3">
-    <input @ref="element" id="@field.id(id)" type="checkbox" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" />
+    <input @ref="element" id="@field.id(id)" type="checkbox" role="switch" checked="@(currentValue === true)" disabled="@disabled" aria-label="@ariaLabel" aria-readonly="@(readOnly ? "true" : null)" @attributes="@withClass(inputClass, inputAttributes)" @onclick:preventDefault="@readOnly" @onchange="handleChange" />
     @if (label) {
         <label class="form-check-label" for="@field.id(id)">@label</label>
     }
@@ -26,6 +26,8 @@
     @Parameter() help?: string;
     /** Disables the switch. */
     @Parameter() disabled: boolean = false;
+    /** true shows the state without letting it change: the switch stays focusable and says aria-readonly, a click or Space changes nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** The switch's id; generated when omitted. */
     @Parameter() id?: string;
     /** The accessible name when there is no label. */

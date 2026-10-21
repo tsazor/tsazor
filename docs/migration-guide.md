@@ -166,6 +166,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | --- | --- |
 | `@inject HttpClient Http` | `@inject TsazorHttp http` |
 | `Http.GetFromJsonAsync<T>(url)` | `http.getJson<T>(url)` |
+| `Http.GetStringAsync(url)`, `response.Content.ReadAsStringAsync()` | `http.getString(url)` — the body unparsed (a text/plain answer) |
 | `Http.PostAsJsonAsync(url, body)` | `http.postJson<T>(url, body)` (`putJson`, `deleteJson`, `send`) |
 | `DelegatingHandler` | `http.addRequestInterceptor(…)`, `addResponseInterceptor(…)` |
 | NSwag / Kiota client from OpenAPI | `npx tsazor-dotnet generate <openapi.json> --out src/api` (`@tsazor/dotnet`) |

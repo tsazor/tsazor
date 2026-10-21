@@ -17,11 +17,11 @@
         @* Bootstrap's input group: the slots' own classes (.input-group-text, .btn) style them. *@
         <div class="input-group">
             @contentBefore
-            <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+            <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
             @contentAfter
         </div>
     } else {
-        <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
+        <input @ref="element" id="@field.id(id)" type="@type" value="@displayValue" placeholder="@placeholder" inputmode="@(toMask(mask)?.numeric ? "numeric" : null)" disabled="@disabled" readonly="@readOnly" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange" @oninput="handleInput" />
     }
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
@@ -44,6 +44,8 @@
     @Parameter() type: "text" | "password" | "email" | "search" | "tel" | "url" = "text";
     /** Disables the input. */
     @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the native readonly — focusable, selectable, submitted (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** Marks the input as required (the native attribute). */
     @Parameter() required: boolean = false;
     /** The input's id; generated when omitted. */
