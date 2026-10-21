@@ -117,6 +117,9 @@
             searchString: this.searchString,
             orderBy,
         });
+        // A newer request (a search, Enter after the search's own reload) superseded this one: the grid drops its
+        // answer, and so does the edit dialog's list — kept, it lost the row the grid shows (B37).
+        if (request.signal.aborted) return { items: [], totalItemCount: 0 } satisfies GridItemsProviderResult<GetAllPagedProductsResponse>;
         if (!response.succeeded) {
             for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
             return { items: [], totalItemCount: 0 } satisfies GridItemsProviderResult<GetAllPagedProductsResponse>;

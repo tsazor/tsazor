@@ -612,7 +612,8 @@ try {
   const stored = await page.evaluate(() => ({ token: JSON.parse(localStorage.getItem("authToken")), refresh: JSON.parse(localStorage.getItem("refreshToken")) }));
   check(stored.token?.split(".").length === 3 && Boolean(stored.refresh), "the JWT and the refresh token are in localStorage, as the original keeps them");
   check((await text(page, "main h1")).startsWith("Blazor Hero"), "the home page renders in the frame");
-  check(await page.getByText(ADMIN.email).isVisible(), "the user card shows the signed-in user");
+  // The frame renders the card once its start is done (the hub, the user's check): wait for it, a cold backend is slow.
+  check(await page.getByText(ADMIN.email).first().waitFor({ timeout: 15_000 }).then(() => true, () => false), "the user card shows the signed-in user");
   const adminNav = await navigationOf(page);
   check(
     JSON.stringify(Object.keys(adminNav)) === JSON.stringify(["", "Personal", "Document Management", "Administrator", "Communication", "Catalog Management"]) &&

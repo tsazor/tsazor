@@ -28,9 +28,7 @@ const headers = { "accept-language": culture.split("-")[0]! };
 // The stored language is the user's choice: explicit, so the app default (en, the tables' fallback) stays below it.
 const cultureService = new CultureService();
 cultureService.setExplicit(culture);
-// The page's language is the user's (WCAG 3.1.1): a screen reader reads Arabic with an Arabic voice. Neither Blazor
-// nor the original sets <html lang> (B34); a language change loads the page again, so once is enough.
-document.documentElement.lang = culture;
+// <html lang> follows it (WCAG 3.1.1): the runtime's localization keeps it at the texts' language (B34).
 
 // The token endpoints are anonymous and the refresh must not wait for itself: a client of their own.
 const tokens = new TsazorHttp({ defaultHeaders: headers });

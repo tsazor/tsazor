@@ -171,6 +171,10 @@ render in the browser.
   reads and writes those names behind its own camelCase types (BlazorHero's preference, B33).
 - **Set `<html lang>` to the culture.** Blazor doesn't, and an app in Arabic that says `lang="en"` is read with an
   English voice (WCAG 3.1.1). Set it where the culture is chosen (B34).
+- **An ItemsProvider that keeps its rows beside the grid checks `request.signal`.** The grid drops an answer a newer
+  request overtook; a field the provider fills for an edit dialog (BlazorHero's `_pagedData`) does not, and holds
+  rows the grid doesn't show. After the await: `if (request.signal.aborted) return …` — QuickGrid's
+  `CancellationToken` (B37). A slow backend shows it; a warm one hides it.
 - **A cascaded value that comes later arrives as a parameter.** A layout that builds a service in its async
   `OnInitializedAsync` (BlazorHero's hub connection) cascades null to the page first when the page is loaded at its
   address: the page's `OnInitialized` has run by the time the value comes. Take the value where it arrives, in
