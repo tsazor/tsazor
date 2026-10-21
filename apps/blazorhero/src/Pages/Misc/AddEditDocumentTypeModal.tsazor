@@ -1,0 +1,55 @@
+@* Client/Pages/Misc/AddEditDocumentTypeModal.razor(.cs): shown by the DialogService with the type to edit, or a new
+   one; Save submits the form, a saved type closes the dialog with its id (the page tells the hub). *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { AddEditDocumentTypeCommand } from "../../Application/Misc"
+@import { addEditDocumentTypeValidators } from "../../Application/Validators/Misc"
+@inject DocumentTypeManager documentTypeManager
+@inject Toaster toaster
+
+<FluentForm model="@addEditDocumentTypeModel" validators="@validators" onValidSubmit="@saveAsync" novalidate>
+    <Dialog title="@(isNew ? L("Add Document Type") : L("Update Document Type"))">
+        <ChildContent>
+            <div class="bh-form-grid">
+                @if (!isNew) {
+                    <NumberInput label="@L("Id")" @bind-Value="addEditDocumentTypeModel.id" disabled />
+                }
+                <TextInput label="@L("Name")" @bind-Value="addEditDocumentTypeModel.name" />
+                <TextInput label="@L("Description")" @bind-Value="addEditDocumentTypeModel.description" />
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            @if (isNew) {
+                <Button type="submit" intent="success">@L("Save")</Button>
+            } else {
+                <Button type="submit" intent="secondary">@L("Update")</Button>
+            }
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() addEditDocumentTypeModel = new AddEditDocumentTypeCommand();
+
+    private readonly L = localizerFor("AddEditDocumentTypeModal");
+    private readonly validators = addEditDocumentTypeValidators(localizerFor("AddEditDocumentTypeCommandValidator"));
+
+    private get isNew(): boolean {
+        return this.addEditDocumentTypeModel.id === 0;
+    }
+
+    private async saveAsync(): Promise<void> {
+        const response = await this.documentTypeManager.saveAsync(this.addEditDocumentTypeModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close(response.data);
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

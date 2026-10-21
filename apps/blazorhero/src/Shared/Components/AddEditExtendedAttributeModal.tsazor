@@ -1,0 +1,127 @@
+@* Client/Shared/Components/AddEditExtendedAttributeModal.razor(.cs): one extended attribute, generic over its and its
+   entity's ids. The value field follows the type: a Decimal (@tsazor/primitives, through @bind on a number input —
+   the skins' NumberInput is number-only, B42), a text, a date and a time (MudDatePicker + MudTimePicker, combined on
+   save as the original does), or JSON. The original injects its generic manager; here the page hands it over. *@
+@typeparam TId
+@typeparam TEntityId
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { ValidationMessage } from "@tsazor/runtime"
+@import { Decimal } from "@tsazor/primitives"
+@import { AddEditExtendedAttributeCommand, EntityExtendedAttributeType } from "../../Application/Misc"
+@import { addEditExtendedAttributeValidators } from "../../Application/Validators/Misc"
+@import type { ExtendedAttributeManager } from "../../Infrastructure/Managers/MiscManagers"
+@inject Toaster toaster
+
+<FluentForm model="@addEditExtendedAttributeModel" validators="@validators" onValidSubmit="@saveAsync" novalidate>
+    <Dialog title="@(isNew ? L("Add Extended Attribute") : L("Update Extended Attribute"))">
+        <ChildContent>
+            <div class="bh-form-grid">
+                @if (!isNew) {
+                    <TextInput label="@L("Id")" Value="@String(addEditExtendedAttributeModel.id)" disabled />
+                }
+                <TextInput label="@L("Entity Id")" Value="@String(addEditExtendedAttributeModel.entityId)" disabled />
+                @* MudSelect<EntityExtendedAttributeType>: the skins' Select binds a string (B43), so the type goes by its name. *@
+                <Select label="@L("Type")" @bind-Value="typeName">
+                    @foreach (const name of typeNames) {
+                        <option value="@name">@name</option>
+                    }
+                </Select>
+                <TextInput label="@L("Key")" @bind-Value="addEditExtendedAttributeModel.key" />
+                @if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.Decimal) {
+                    <div class="fui-input-wrapper">
+                        <label class="fui-input__label" for="bh-attribute-decimal">@L("Decimal")</label>
+                        @* A Decimal that starts as null would bind as text (B46): the text, parsed on save. *@
+                        <input id="bh-attribute-decimal" class="fui-input" type="text" inputmode="decimal" @bind="decimalText" />
+                        <ValidationMessage For="decimal" />
+                    </div>
+                } else if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.Text) {
+                    <TextInput label="@L("Text")" @bind-Value="addEditExtendedAttributeModel.text" />
+                } else if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.DateTime) {
+                    <DatePicker label="@L("Date")" @bind-Value="date" />
+                    <TimePicker label="@L("Time")" @bind-Value="time" />
+                } else if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.Json) {
+                    <TextArea label="@L("Json")" @bind-Value="addEditExtendedAttributeModel.json" rows="10" />
+                }
+                <TextInput label="@L("External Id")" @bind-Value="addEditExtendedAttributeModel.externalId" />
+                <TextInput label="@L("Group")" @bind-Value="addEditExtendedAttributeModel.group" />
+                <TextInput label="@L("Description")" @bind-Value="addEditExtendedAttributeModel.description" />
+                <Checkbox label="@L("Is Active")" @bind-Value="addEditExtendedAttributeModel.isActive" />
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            @if (isNew) {
+                <Button type="submit" intent="success">@L("Save")</Button>
+            } else {
+                <Button type="submit" intent="secondary">@L("Update")</Button>
+            }
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+    @Parameter() addEditExtendedAttributeModel!: AddEditExtendedAttributeCommand<TId | undefined, TEntityId>;
+    /** The entity's manager (the original's injected IExtendedAttributeManager<TId, TEntityId, …>). */
+    @Parameter() extendedAttributeManager!: ExtendedAttributeManager<TId, TEntityId>;
+
+    private readonly L = localizerFor("AddEditExtendedAttributeModalLocalization");
+    private readonly validators = addEditExtendedAttributeValidators(localizerFor("AddEditExtendedAttributeCommandValidatorLocalization"));
+    /** Enum.GetNames(typeof(EntityExtendedAttributeType)): the select's options. */
+    private readonly typeNames = [EntityExtendedAttributeType.Decimal, EntityExtendedAttributeType.Text, EntityExtendedAttributeType.DateTime, EntityExtendedAttributeType.Json]
+        .map((type) => EntityExtendedAttributeType[type]);
+
+    private get typeName(): string {
+        return EntityExtendedAttributeType[this.addEditExtendedAttributeModel.type];
+    }
+
+    private set typeName(name: string) {
+        this.addEditExtendedAttributeModel.type = EntityExtendedAttributeType[name as keyof typeof EntityExtendedAttributeType];
+    }
+    /** The Decimal as typed (invariant, "12.5"); each change parses into the model, so its validator sees it. */
+    private decimalDraft = "";
+
+    private get decimalText(): string {
+        return this.decimalDraft;
+    }
+
+    private set decimalText(text: string) {
+        this.decimalDraft = text;
+        this.addEditExtendedAttributeModel.decimal = text.trim() === "" ? null : Decimal.parse(text);
+    }
+    /** The DateTime's date and time, as the two pickers hold them (ISO strings). */
+    private date = "";
+    private time = "";
+
+    private get isNew(): boolean {
+        return this.addEditExtendedAttributeModel.id === undefined;
+    }
+
+    protected override onInitialized(): void {
+        this.decimalDraft = this.addEditExtendedAttributeModel.decimal?.toString() ?? "";
+        const dateTime = this.addEditExtendedAttributeModel.dateTime;
+        if (dateTime !== null) {
+            const pad = (n: number): string => String(n).padStart(2, "0");
+            this.date = `${dateTime.getFullYear()}-${pad(dateTime.getMonth() + 1)}-${pad(dateTime.getDate())}`;
+            this.time = `${pad(dateTime.getHours())}:${pad(dateTime.getMinutes())}`;
+        }
+    }
+
+    private async saveAsync(): Promise<void> {
+        // SaveAsync: the date with the time picked (midnight without one).
+        if (this.addEditExtendedAttributeModel.type === EntityExtendedAttributeType.DateTime && this.date !== "") {
+            this.addEditExtendedAttributeModel.dateTime = new Date(`${this.date}T${this.time || "00:00"}`);
+        }
+        const response = await this.extendedAttributeManager.saveAsync(this.addEditExtendedAttributeModel as AddEditExtendedAttributeCommand<TId, TEntityId>);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close(response.data);
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+}

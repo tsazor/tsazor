@@ -1,9 +1,6 @@
-@* The original's pages this port doesn't have yet (docs/port-blazorhero.md, phases 3 and 4). Its menu links them, as the
+@* The original's pages this port doesn't have yet (docs/port-blazorhero.md, phase 3). Its menu links them, as the
    original's does, so they say so instead of "doesn't exist". *@
 @page "/account"
-@page "/audit-trails"
-@page "/document-store"
-@page "/document-types"
 @page "/identity/users"
 @page "/identity/roles"
 @inject NavigationManager navigation
@@ -11,8 +8,8 @@
 <div class="bh-not-ported">
     <Typography variant="h4">@(this.current?.name ?? "This page")</Typography>
     <Alert intent="info">
-        Not ported yet: phase @(this.current?.phase ?? "3 or 4") of the BlazorHero port (docs/port-blazorhero.md).
-        Ported so far: Home, the Dashboard, Products and Brands under Catalog, and the Chat.
+        Not ported yet: phase @(this.current?.phase ?? 3) of the BlazorHero port (docs/port-blazorhero.md).
+        Ported so far: everything but the identity pages (phase 3).
     </Alert>
 </div>
 
@@ -20,9 +17,6 @@
     /** Each route the menu links, the original's page it stands for, and the port's phase that brings it. */
     private static readonly pages: Readonly<Record<string, { name: string; phase: number }>> = {
         "account": { name: "Account", phase: 3 },
-        "audit-trails": { name: "Audit Trails", phase: 4 },
-        "document-store": { name: "Document Store", phase: 4 },
-        "document-types": { name: "Document Types", phase: 4 },
         "identity/users": { name: "Users", phase: 3 },
         "identity/roles": { name: "Roles", phase: 3 },
     };

@@ -11,6 +11,7 @@
 @import type { ChatHistory, ChatHistoryResponse, ChatUserResponse } from "../../Application/Chat"
 @import { StorageConstants } from "../../Application/Constants"
 @import { getFirstName, getLastName, getUserId } from "../../Extensions/ClaimsPrincipalExtensions"
+@import { formatGeneral } from "../../Extensions/Dates"
 @import { LocalStorage } from "../../Infrastructure/LocalStorage"
 @inject ChatManager chatManager
 @inject UserManager userManager
@@ -261,11 +262,9 @@
         return isOnline ? "success" : "danger";
     }
 
-    /** CreatedDate.ToString("G", CultureInfo.CurrentCulture): the short date and the long time, a space between. */
+    /** CreatedDate.ToString("G", CultureInfo.CurrentCulture). */
     private formatDate(createdDate: string): string {
-        const date = new Date(createdDate);
-        const culture = this.culture.current;
-        return `${culture.formatDate(date, { year: "numeric", month: "numeric", day: "numeric" })} ${culture.formatDate(date, { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
+        return formatGeneral(createdDate, this.culture.current);
     }
 
     private scrollToBottom(): void {

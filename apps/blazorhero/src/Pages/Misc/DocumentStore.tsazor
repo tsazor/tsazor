@@ -1,0 +1,212 @@
+@* Client/Pages/Misc/DocumentStore.razor(.cs): the documents, a page at a time from the API (MudTable ServerData becomes
+   a DataGrid with an ItemsProvider), sorted within the page by the column's SortLabel as the original does, with the
+   owner's actions — edit, delete — and everyone's: the extended attributes and the download. *@
+@page "/document-store"
+@authorize({ policy: "Permissions.Documents.View" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { DialogService, PaginationState, Toaster, type DataGrid, type GridItemsProvider, type GridItemsProviderResult } from "@tsazor/fluent"
+@import { CultureService } from "@tsazor/runtime"
+@import { AddEditDocumentCommand, type GetAllDocumentsResponse } from "../../Application/Misc"
+@import { getUserId } from "../../Extensions/ClaimsPrincipalExtensions"
+@import { formatGeneral } from "../../Extensions/Dates"
+@import AddEditDocumentModal from "./AddEditDocumentModal.tsazor"
+@import DeleteConfirmation from "../../Shared/Dialogs/DeleteConfirmation.tsazor"
+@inject DocumentManager documentManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject NavigationManager navigation
+@inject CultureService culture
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<HeroTitle title="@L("Document Store")" description="@L("Browse Available Documents.")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Document Store")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canCreateDocuments) {
+                <Button intent="primary" iconStart="@Icons.Add" onClick="@(() => invokeModal(0))">@L("Create")</Button>
+            }
+            <Button intent="secondary" iconStart="@Icons.ArrowClockwise" onClick="@(() => onSearch(""))">@L("Reload")</Button>
+        </div>
+        @if (canSearchDocuments) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search")" placeholder="@L("Search")" Value="@searchString" ValueChanged="@((text: string) => onSearch(text))">
+                <ContentBefore><Icon value="@Icons.Search" /></ContentBefore>
+            </TextInput>
+        }
+    </div>
+    <DataGrid @ref="table" TGridItem="GetAllDocumentsResponse" itemsProvider="@serverReload" pagination="@pagination" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Document Store")">
+        <PropertyColumn property="(document) => document.id" title="@L("Id")" sortable sortKey="documentIdField" />
+        <TemplateColumn title="@L("Title")" sortable sortKey="documentTitleField" Context="document">
+            <Highlighter text="@document.title" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Description")" sortable sortKey="documentDescriptionField" Context="document">
+            <Highlighter text="@document.description" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Document Type")" sortable sortKey="documentDocumentTypeField" Context="document">
+            <Highlighter text="@document.documentType" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Is Public")" sortable sortKey="documentIsPublicField" Context="document">
+            <Checkbox Value="@document.isPublic" disabled ariaLabel='@(`${L("Is Public")}: ${document.title}`)' />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Date Created")" sortable sortKey="documentDateCreatedField" Context="document">
+            @formatGeneral(document.createdOn, culture.current)
+        </TemplateColumn>
+        <TemplateColumn title="@L("Owner")" sortable sortKey="documentOwnerField" Context="document">
+            @if (document.createdBy === currentUserId) {
+                <Button size="small" iconStart="@Icons.Emoji" href="/account">@L("you")</Button>
+            }
+        </TemplateColumn>
+        <TemplateColumn title="@L("Actions")" align="end" Context="document">
+            @if (canEditDocuments || canDeleteDocuments || canViewDocumentExtendedAttributes) {
+                <Menu label="@L("Actions")" ariaLabel='@(`${L("Actions")}: ${document.title}`)' placement="bottom-end">
+                    @if (canViewDocumentExtendedAttributes) {
+                        <MenuItem onSelect="@(() => manageExtendedAttributes(document.id))">@L("Manage Extended Attributes")</MenuItem>
+                    }
+                    @if (document.createdBy === currentUserId) {
+                        @if (canEditDocuments) {
+                            <MenuItem onSelect="@(() => invokeModal(document.id))">@L("Edit")</MenuItem>
+                        }
+                        @if (canDeleteDocuments) {
+                            <MenuItem onSelect="@(() => deleteAsync(document.id))">@L("Delete")</MenuItem>
+                        }
+                    }
+                    <MenuItem href="@(document.url ?? undefined)" target="_blank" disabled="@(!document.url)">@L("Download")</MenuItem>
+                </Menu>
+            } else {
+                <Button size="small" iconStart="@Icons.HandRight" disabled>@L("No Allowed Actions")</Button>
+            }
+        </TemplateColumn>
+    </DataGrid>
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+
+    private readonly L = localizerFor("DocumentStore");
+    private readonly pagination = new PaginationState();
+    private table?: DataGrid<GetAllDocumentsResponse>;
+    /** The rows on the page shown, for the edit dialog (the original's _pagedData). */
+    private pagedData: readonly GetAllDocumentsResponse[] = [];
+    private searchString = "";
+    private currentUserId = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canCreateDocuments = false;
+    private canEditDocuments = false;
+    private canDeleteDocuments = false;
+    private canSearchDocuments = false;
+    private canViewDocumentExtendedAttributes = false;
+    private loaded = false;
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.currentUserId = getUserId(user);
+        const can = async (policy: string): Promise<boolean> => this.authorization.isAuthorized(user, { policy });
+        this.canCreateDocuments = await can(Permissions.Documents.Create);
+        this.canEditDocuments = await can(Permissions.Documents.Edit);
+        this.canDeleteDocuments = await can(Permissions.Documents.Delete);
+        this.canSearchDocuments = await can(Permissions.Documents.Search);
+        this.canViewDocumentExtendedAttributes = await can(Permissions.DocumentExtendedAttributes.View);
+        this.loaded = true;
+    }
+
+    /** The SortLabel's key, for sorting within the page as LoadData does. */
+    private static readonly sortKeys: Readonly<Record<string, (document: GetAllDocumentsResponse) => string | number | boolean>> = {
+        documentIdField: (document) => document.id,
+        documentTitleField: (document) => document.title,
+        documentDescriptionField: (document) => document.description,
+        documentDocumentTypeField: (document) => document.documentType,
+        documentIsPublicField: (document) => document.isPublic,
+        documentDateCreatedField: (document) => document.createdOn,
+        documentOwnerField: (document) => document.createdBy,
+    };
+
+    /** ServerReload/LoadData: one page from the API, filtered and sorted within it as the original does. */
+    private readonly serverReload: GridItemsProvider<GetAllDocumentsResponse> = async (request) => {
+        const pageSize = request.count ?? this.pagination.itemsPerPage;
+        const response = await this.documentManager.getAllAsync(Math.floor(request.startIndex / pageSize) + 1, pageSize, this.searchString);
+        // Superseded by a newer request: the grid drops this answer, so does the edit dialog's list (B37).
+        if (request.signal.aborted) return { items: [], totalItemCount: 0 } satisfies GridItemsProviderResult<GetAllDocumentsResponse>;
+        if (!response.succeeded) {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+            return { items: [], totalItemCount: 0 } satisfies GridItemsProviderResult<GetAllDocumentsResponse>;
+        }
+        const search = this.searchString.trim().toLowerCase();
+        let data = search === "" ? response.data : response.data.filter((document) => [document.title, document.description, document.documentType].some((text) => text.toLowerCase().includes(search)));
+        const [sort] = request.getSortByProperties();
+        const key = sort === undefined ? undefined : DocumentStore.sortKeys[sort.propertyName];
+        if (sort !== undefined && key !== undefined) {
+            const direction = sort.direction === "ascending" ? 1 : -1;
+            data = [...data].sort((a, b) => (key(a) < key(b) ? -direction : key(a) > key(b) ? direction : 0));
+        }
+        this.pagedData = data;
+        return { items: data, totalItemCount: response.totalCount };
+    };
+
+    /** OnSearch: a new search (or Reload) loads the first page again (the original resets the page on every reload, U9). */
+    private async onSearch(text: string): Promise<void> {
+        this.searchString = text;
+        if (this.pagination.currentPageIndex !== 0) await this.pagination.setCurrentPageIndexAsync(0);
+        else await this.table?.refreshDataAsync();
+    }
+
+    private manageExtendedAttributes(documentId: number): void {
+        this.navigation.navigateTo(`/extended-attributes/Document/${documentId}`);
+    }
+
+    private async invokeModal(id: number): Promise<void> {
+        const document = id === 0 ? undefined : this.pagedData.find((candidate) => candidate.id === id);
+        const model = Object.assign(new AddEditDocumentCommand(), document && {
+            id: document.id,
+            title: document.title,
+            description: document.description,
+            url: document.url,
+            isPublic: document.isPublic,
+            documentTypeId: document.documentTypeId,
+        });
+        const dialog = this.dialogs.show(AddEditDocumentModal, {
+            title: id === 0 ? this.L("Create") : this.L("Edit"),
+            size: "medium",
+            closeOnBackdrop: false,
+            parameters: { addEditDocumentModel: model },
+        });
+        if ((await dialog.result).canceled) return;
+        await this.updateDashboard();
+        await this.onSearch("");
+    }
+
+    private async deleteAsync(id: number): Promise<void> {
+        const dialog = this.dialogs.show(DeleteConfirmation, {
+            title: this.L("Delete"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { contentText: this.L("Delete Content", { 0: id }) },
+        });
+        if ((await dialog.result).canceled) return;
+        const response = await this.documentManager.deleteAsync(id);
+        await this.onSearch("");
+        if (response.succeeded) {
+            await this.updateDashboard();
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    /** The original's dialog and Delete send UpdateDashboard, so open dashboards reload their counts. */
+    private async updateDashboard(): Promise<void> {
+        await this.hubConnection?.send(ApplicationConstants.SignalR.SendUpdateDashboard);
+    }
+}

@@ -14,6 +14,7 @@ import { AuthenticationManager } from "./Infrastructure/Managers/AuthenticationM
 import { ClientPreferenceManager } from "./Infrastructure/Managers/ClientPreferenceManager";
 import { BrandManager, ProductManager } from "./Infrastructure/Managers/CatalogManagers";
 import { ChatManager, DashboardManager } from "./Infrastructure/Managers/CommunicationManagers";
+import { AuditManager, DocumentExtendedAttributeManager, DocumentManager, DocumentTypeManager } from "./Infrastructure/Managers/MiscManagers";
 import { AccountManager, RoleManager, UserManager } from "./Infrastructure/Managers/IdentityManagers";
 
 // Client/Program.cs and WebAssemblyHostBuilderExtensions.AddClientServices.
@@ -62,6 +63,11 @@ const app = createTsazorApp({
         services.registerValue(ProductManager, new ProductManager(http));
         services.registerValue(DashboardManager, new DashboardManager(http));
         services.registerValue(ChatManager, new ChatManager(http));
+        services.registerValue(DocumentTypeManager, new DocumentTypeManager(http));
+        services.registerValue(DocumentManager, new DocumentManager(http));
+        // AddTransient(typeof(IExtendedAttributeManager<int, int, Document, DocumentExtendedAttribute>), …): a class per entity.
+        services.registerValue(DocumentExtendedAttributeManager, new DocumentExtendedAttributeManager(http));
+        services.registerValue(AuditManager, new AuditManager(http));
         addFluent(services);
     },
 });

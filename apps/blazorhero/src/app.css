@@ -451,3 +451,38 @@ h1:focus {
         display: none;
     }
 }
+
+/* AuditTrails.razor: the date range and the value switches above the grid; the open trail's details below it. */
+.bh-audit-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+    margin-bottom: var(--fui-spacing-m);
+}
+
+.bh-audit-range summary {
+    cursor: pointer;
+    padding: var(--fui-spacing-xs) 0;
+}
+
+.bh-audit-dates {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fui-spacing-xs);
+}
+
+.bh-audit-details {
+    margin-top: var(--fui-spacing-m);
+}
+
+.bh-audit-details__table th {
+    text-align: start;
+    padding: var(--fui-spacing-s) var(--fui-spacing-m) var(--fui-spacing-s) 0;
+    vertical-align: top;
+}
+
+.bh-audit-details__table td > * {
+    margin: 0 var(--fui-spacing-xs) var(--fui-spacing-xs) 0;
+}

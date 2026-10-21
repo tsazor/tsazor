@@ -20,5 +20,6 @@
 @import { AccountManager, RoleManager, UserManager } from "./Infrastructure/Managers/IdentityManagers"
 @import { BrandManager, ProductManager } from "./Infrastructure/Managers/CatalogManagers"
 @import { ChatManager, DashboardManager } from "./Infrastructure/Managers/CommunicationManagers"
+@import { AuditManager, DocumentExtendedAttributeManager, DocumentManager, DocumentTypeManager } from "./Infrastructure/Managers/MiscManagers"
 @import { ClientPreferenceManager } from "./Infrastructure/Managers/ClientPreferenceManager"
 @import { BlazorHeroLogo } from "./Infrastructure/Settings/BlazorHeroTheme"

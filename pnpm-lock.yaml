@@ -197,6 +197,9 @@ importers:
       '@tsazor/fluent-icons':
         specifier: workspace:*
         version: link:../../packages/fluent-icons
+      '@tsazor/primitives':
+        specifier: workspace:*
+        version: link:../../packages/primitives
       '@tsazor/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime

@@ -171,6 +171,14 @@ render in the browser.
   reads and writes those names behind its own camelCase types (BlazorHero's preference, B33).
 - **Set `<html lang>` to the culture.** Blazor doesn't, and an app in Arabic that says `lang="en"` is read with an
   English voice (WCAG 3.1.1). Set it where the culture is chosen (B34).
+- **An open-generic service becomes a class per closed type.** `AddTransient(typeof(IManager<,>), typeof(Manager<,>))`
+  and `[Inject] IManager<int, Document> M` rely on the type arguments at run time — BlazorHero's extended attribute
+  manager even builds its routes from `typeof(TEntity).Name`. TypeScript erases them: write the generic class with
+  what it read from the type as a value (`entityName`), a subclass per closed type, and register that subclass; a
+  generic component that needs it declares it abstract and its page supplies it (B39).
+- **A `decimal` from JSON loses its scale.** System.Text.Json writes `12.50`; `JSON.parse` makes it the number `12.5`.
+  Where the digits matter (money), read the JSON's source text (a reviver's `context.source`) or have the API write
+  decimals as strings; `Decimal` (@tsazor/primitives) keeps them from there on (B47).
 - **An ItemsProvider that keeps its rows beside the grid checks `request.signal`.** The grid drops an answer a newer
   request overtook; a field the provider fills for an edit dialog (BlazorHero's `_pagedData`) does not, and holds
   rows the grid doesn't show. After the await: `if (request.signal.aborted) return …` — QuickGrid's

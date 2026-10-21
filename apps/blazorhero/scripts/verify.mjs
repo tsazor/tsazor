@@ -10,15 +10,15 @@
  *   basic user sees only what the role allows → an unknown address: the not-found layout → axe on each layout, the
  *   dialog and the menus
  *
- * Phase 2, the catalog (`catalog`), and phase 5, the dashboard and the chat with a second user (`realTime`), run
- * between the language and the logout.
+ * Phase 2, the catalog (`catalog`), phase 4, the documents (`documents`), phase 5, the dashboard and the chat with a
+ * second user (`realTime`), and phase 6, the languages (`inEveryLanguage`), run between the language and the logout.
  *
  * Starts the backend when it isn't running (the first run clones and builds BlazorHero, scripts/backend.mjs), builds
  * the app, and fails on every console error.
  * Run: node scripts/verify.mjs
  */
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -343,6 +343,117 @@ async function catalog(page, stamp) {
     const brandsLeft = await api(page, "GET", "/api/v1/brands").catch(() => ({ data: [] }));
     for (const brand of (brandsLeft.data ?? []).filter((candidate) => candidate.name === brandName)) await api(page, "DELETE", `/api/v1/brands/${brand.id}`);
     rmSync(downloads, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Phase 4, documents and audit, as the administrator. A document type added in its dialog after the validators'
+ * messages; a document of that type, picked in an Autocomplete, with a file uploaded; its Download a link entry
+ * (B40); its extended attributes, the generic abstract page (B38): a text and a Decimal attribute in two groups, a
+ * tab per group with its "active/all" badge, the group's tab gone with its last attribute (B41); the audit trails of
+ * all that, with a trail's details. What the run creates carries `stamp` and is removed at the end.
+ */
+async function documents(page, stamp) {
+  const dialog = page.getByRole("dialog");
+  const typeName = `Verify Type ${stamp}`;
+  const title = `Verify Doc ${stamp}`;
+  const downloads = mkdtempSync(path.join(os.tmpdir(), "blazorhero-verify-documents-"));
+  try {
+    // Document types.
+    await page.getByRole("link", { name: "Document Types" }).click();
+    await page.getByRole("table", { name: "Document Types" }).waitFor();
+    await page.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("heading", { name: "Add Document Type" }).waitFor();
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await dialog.getByText("Description is required!").waitFor();
+    check(JSON.stringify(await dialog.getByRole("alert").allInnerTexts()) === JSON.stringify(["Name is required!", "Description is required!"]), "Document types: Save shows AddEditDocumentTypeCommandValidator's messages");
+    await dialog.getByLabel("Name").fill(typeName);
+    await dialog.getByLabel("Description").fill("Made by the verify run");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await dialog.waitFor({ state: "detached" });
+    await page.getByRole("table", { name: "Document Types" }).getByText(typeName).waitFor();
+    check(true, "a document type is saved and listed");
+    await axe(page, "the document types");
+
+    // The document store: a document with a file.
+    await page.getByRole("link", { name: "Document Store" }).click();
+    const store = page.getByRole("table", { name: "Document Store" });
+    await store.waitFor();
+    await page.getByRole("button", { name: "Create", exact: true }).click();
+    await dialog.getByRole("heading", { name: "Add Document" }).waitFor();
+    await dialog.getByLabel("Title").fill(title);
+    await dialog.getByLabel("Description").fill("Uploaded by the verify run");
+    await dialog.getByRole("combobox", { name: "Document Type" }).fill(stamp);
+    await page.getByRole("listbox").getByRole("option", { name: typeName }).click();
+    const file = path.join(downloads, "notes.txt");
+    writeFileSync(file, `notes of ${stamp}`);
+    await dialog.locator("input[type=file]").setInputFiles(file);
+    await dialog.getByText("notes.txt").waitFor();
+    await axe(page, "the document dialog");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await dialog.waitFor({ state: "detached" });
+    const row = store.locator("tbody tr").filter({ hasText: title });
+    await row.waitFor();
+    check((await row.innerText()).includes(typeName), "a document is saved with its file and its type");
+    await row.getByRole("button", { name: `Actions: ${title}` }).click();
+    const link = await page.getByRole("menuitem", { name: "Download" }).evaluate((element) => ({ tag: element.tagName, href: element.getAttribute("href"), target: element.getAttribute("target") }));
+    check(link.tag === "A" && Boolean(link.href) && link.target === "_blank", `its Download is a link entry to the stored file (${link.tag} ${link.href?.slice(0, 30)})`);
+    await page.getByRole("menuitem", { name: "Manage Extended Attributes" }).click();
+
+    // Its extended attributes: the abstract generic page.
+    await page.waitForURL(/\/extended-attributes\/Document\/\d+$/);
+    await page.getByRole("heading", { level: 1, name: "Manage Document Extended Attributes" }).waitFor();
+    const tabs = async () => (await page.getByRole("tab").allInnerTexts()).map((text) => text.replace(/\s+/g, " ").trim());
+    check(JSON.stringify(await tabs()) === JSON.stringify(["All Groups 0/0"]), `the extended attributes: the generic base's page, one tab (${(await tabs()).join(", ")})`);
+    const add = async (fill) => {
+      await page.getByRole("button", { name: "Create", exact: true }).click();
+      await dialog.getByRole("heading", { name: "Add Extended Attribute" }).waitFor();
+      await fill();
+      await dialog.getByRole("button", { name: "Save" }).click();
+      await dialog.waitFor({ state: "detached" });
+    };
+    await add(async () => {
+      await dialog.getByLabel("Key").fill("color");
+      await dialog.getByLabel("Text").fill("blue");
+      await dialog.getByLabel("Group").fill("Looks");
+    });
+    await add(async () => {
+      await dialog.getByLabel("Type").selectOption("Decimal");
+      await dialog.getByLabel("Key").fill("price");
+      await dialog.getByLabel("Decimal").fill("12.50");
+      await dialog.getByLabel("Group").fill("Money");
+      await dialog.getByLabel("Is Active").uncheck();
+    });
+    await page.getByRole("tab", { name: /Money/ }).waitFor();
+    check(JSON.stringify(await tabs()) === JSON.stringify(["All Groups 1/2", "Looks 1/1", "Money 0/1"]), `a tab per group with its active/all badge (${(await tabs()).join(", ")})`);
+    const values = (await page.locator("tbody tr").allInnerTexts()).map((text) => text.replace(/\s+/g, " "));
+    check(values.some((text) => text.includes("Text color blue")) && values.some((text) => text.includes("Decimal price 12.5")), "a text and a Decimal attribute, each value by its type");
+    await axe(page, "the extended attributes");
+    await page.locator("tbody tr").filter({ hasText: "price" }).getByRole("button", { name: "Actions: price" }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+    await dialog.getByRole("button", { name: "Confirm" }).click();
+    await page.waitForFunction(() => ![...document.querySelectorAll("[role=tab]")].some((tab) => tab.textContent.includes("Money")), null, { timeout: 10_000 }).catch(() => undefined);
+    check(JSON.stringify(await tabs()) === JSON.stringify(["All Groups 1/1", "Looks 1/1"]), `the group's tab goes with its last attribute (${(await tabs()).join(", ")})`);
+
+    // The audit trails of all that.
+    await page.getByRole("link", { name: "Audit Trails" }).click();
+    await page.getByRole("table", { name: "Audit Trails" }).waitFor();
+    await page.getByRole("textbox", { name: "Search for Trails" }).fill("DocumentExtendedAttribute");
+    await page.getByRole("button", { name: "Show Trail Details" }).first().click();
+    const details = page.locator(".bh-audit-details");
+    await details.getByText("Details for Trail ID").waitFor();
+    check((await details.innerText()).includes("Primary Key"), "the audit trails: searched by table name, a trail's details");
+    await axe(page, "the audit trails with a trail's details");
+  } finally {
+    rmSync(downloads, { recursive: true, force: true });
+    const found = await api(page, "GET", `/api/documents?pageNumber=1&pageSize=50&searchString=${stamp}`).catch(() => ({ data: [] }));
+    for (const document of found.data ?? []) {
+      const attributes = await api(page, "GET", `/api/DocumentExtendedAttributes/by-entity/${document.id}`).catch(() => ({ data: [] }));
+      for (const attribute of attributes.data ?? []) await api(page, "DELETE", `/api/DocumentExtendedAttributes/${attribute.id}`);
+      await api(page, "DELETE", `/api/documents/${document.id}`);
+    }
+    const types = await api(page, "GET", "/api/documentTypes").catch(() => ({ data: [] }));
+    for (const type of (types.data ?? []).filter((candidate) => candidate.name === typeName)) await api(page, "DELETE", `/api/documentTypes/${type.id}`);
   }
 }
 
@@ -674,6 +785,9 @@ try {
 
   // Phase 2: the catalog.
   await catalog(page, Date.now().toString(36));
+
+  // Phase 4: documents, extended attributes, audit trails.
+  await documents(page, Date.now().toString(36));
 
   // Phase 5: the dashboard and the chat.
   await realTime(page, Date.now().toString(36));

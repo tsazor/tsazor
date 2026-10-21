@@ -1,0 +1,44 @@
+@* Client/Pages/Misc/ExtendedAttribute/DocumentExtendedAttributes.razor: a document's extended attributes — the generic
+   base's page with the document's id type, policies and manager; its markup is the base's (@Inherited()). *@
+@page "/extended-attributes/{entityName}/{entityIdString}"
+@authorize({ policy: "Permissions.DocumentExtendedAttributes.View" })
+@import { ExtendedAttributes } from "../../../Shared/Components/ExtendedAttributes"
+@inherits ExtendedAttributes<number, number>
+@inject DocumentExtendedAttributeManager documentExtendedAttributeManager
+
+@this.inherited()
+
+@code {
+    /** The manager the original injects as IExtendedAttributeManager<int, int, Document, DocumentExtendedAttribute>. */
+    protected override get extendedAttributeManager(): DocumentExtendedAttributeManager {
+        return this.documentExtendedAttributeManager;
+    }
+
+    protected override fromStringToEntityIdTypeConverter(text: string): number {
+        return Number.parseInt(text, 10);
+    }
+
+    protected override get extendedAttributesViewPolicyName(): string {
+        return Permissions.DocumentExtendedAttributes.View;
+    }
+
+    protected override get extendedAttributesEditPolicyName(): string {
+        return Permissions.DocumentExtendedAttributes.Edit;
+    }
+
+    protected override get extendedAttributesCreatePolicyName(): string {
+        return Permissions.DocumentExtendedAttributes.Create;
+    }
+
+    protected override get extendedAttributesDeletePolicyName(): string {
+        return Permissions.DocumentExtendedAttributes.Delete;
+    }
+
+    protected override get extendedAttributesExportPolicyName(): string {
+        return Permissions.DocumentExtendedAttributes.Export;
+    }
+
+    protected override get extendedAttributesSearchPolicyName(): string {
+        return Permissions.DocumentExtendedAttributes.Search;
+    }
+}

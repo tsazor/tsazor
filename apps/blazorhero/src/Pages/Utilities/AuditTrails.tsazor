@@ -1,0 +1,223 @@
+@* Client/Pages/Utilities/AuditTrails.razor(.cs): the signed-in user's trails, searched (in the table name, and in the
+   old and the new values when asked) and limited to a date range in the browser, exported. The original opens one
+   trail's details as a child row (MudTable ChildRowContent); the DataGrid has none (B44), so the open trail's details
+   follow the grid — one at a time, as ShowBtnPress keeps them. The date range is a range Calendar in a disclosure
+   (MudDateRangePicker has no counterpart, B45). *@
+@page "/audit-trails"
+@authorize({ policy: "Permissions.AuditTrails.View" })
+@import { GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import { CultureService } from "@tsazor/runtime"
+@import type { AuditResponse } from "../../Application/Misc"
+@import { formatGeneral } from "../../Extensions/Dates"
+@import { downloadBase64, fileStamp } from "../../Extensions/Files"
+@inject AuditManager auditManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject CultureService culture
+@inject Toaster toaster
+
+<HeroTitle title="@L("Audit Trails")" description="@L("Your Recent Activities.")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Audit Trails")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canExportAuditTrails) {
+                <Button iconStart="@Icons.DocumentTable" onClick="@exportToExcelAsync">@L("Export To Excel")</Button>
+            }
+        </div>
+        @if (canSearchAuditTrails) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search for Trails")" placeholder="@L("Search for Trails")" @bind-Value="searchString" immediate>
+                <ContentBefore><Icon value="@Icons.Search" /></ContentBefore>
+            </TextInput>
+        }
+    </div>
+    @if (canSearchAuditTrails) {
+        <div class="bh-audit-search">
+            <details class="bh-audit-range">
+                <summary>@L("Date Range For Searching")@if (dateRange.length > 0) {<text>: @rangeText</text>}</summary>
+                <Calendar selectMode="range" @bind-selectedDates="dateRange" />
+                <Button size="small" appearance="transparent" onClick="@(() => dateRange = [])">@L("Clear")</Button>
+            </details>
+            <div class="bh-table-footer__switches">
+                <Switch label="@L("Search in Old Values")" @bind-Value="searchInOldValues" />
+                <Switch label="@L("Search in New Values")" @bind-Value="searchInNewValues" />
+            </div>
+        </div>
+    }
+    <DataGrid items="@filteredTrails" pagination="@pagination" striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Audit Trails")">
+        <PropertyColumn property="(trail) => trail.id" title="@L("Id")" sortable />
+        <TemplateColumn title="@L("Table Name")" sortBy="@byTableName" Context="trail">
+            <Highlighter text="@trail.tableName" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Date")" sortBy="@byDate" Context="trail">
+            <div class="bh-audit-dates">
+                <Chip text='@(`${L("Local")} : ${formatGeneral(utcOf(trail.dateTime), culture.current)}`)' />
+                <Chip text='@(`${L("UTC")} : ${formatUtc(trail.dateTime)}`)' />
+            </div>
+        </TemplateColumn>
+        <PropertyColumn property="(trail) => trail.type" title="@L("Type")" sortable />
+        <TemplateColumn title="" align="end" Context="trail">
+            <Button size="small" iconEnd="@Icons.ChevronDown" aria-expanded="@(openTrailId === trail.id ? "true" : "false")" onClick="@(() => showBtnPress(trail.id))">
+                @(openTrailId === trail.id ? L("Hide") : L("Show")) @L("Trail Details")
+            </Button>
+        </TemplateColumn>
+    </DataGrid>
+    @if (openTrail !== undefined) {
+        <Card class="bh-audit-details" ariaLabel='@(`${L("Details for Trail ID")} : ${openTrail.id}`)'>
+            <Alert intent="info">@L("Details for Trail ID") : <strong>@openTrail.id</strong></Alert>
+            <table class="bh-audit-details__table">
+                <tbody>
+                    @if (openTrail.affectedColumns) {
+                        <tr>
+                            <th scope="row">@L("Columns Affected")</th>
+                            <td>
+                                @foreach (const column of splitValues(openTrail.affectedColumns, "[", "]")) {
+                                    <Chip text="@column" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                    <tr>
+                        <th scope="row">@L("Primary Key")</th>
+                        <td><Chip text="@splitValues(openTrail.primaryKey, "{", "}").join(", ")" /></td>
+                    </tr>
+                    @if (openTrail.oldValues) {
+                        <tr>
+                            <th scope="row">@L("Old Values")</th>
+                            <td>
+                                @foreach (const value of splitValues(openTrail.oldValues, "{", "}")) {
+                                    <Chip intent="warning">
+                                        @if (searchInOldValues) {
+                                            <Highlighter text="@value" highlightedText="@searchString" />
+                                        } else {
+                                            @value
+                                        }
+                                    </Chip>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (openTrail.newValues) {
+                        <tr>
+                            <th scope="row">@L("New Values")</th>
+                            <td>
+                                @foreach (const value of splitValues(openTrail.newValues, "{", "}")) {
+                                    <Chip intent="success">
+                                        @if (searchInNewValues) {
+                                            <Highlighter text="@value" highlightedText="@searchString" />
+                                        } else {
+                                            @value
+                                        }
+                                    </Chip>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </Card>
+    }
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    private readonly L = localizerFor("AuditTrails");
+    private readonly pagination = new PaginationState();
+    private trails: AuditResponse[] = [];
+    private searchString = "";
+    private searchInOldValues = false;
+    private searchInNewValues = false;
+    /** The range Calendar's days (ISO dates): the start, and the end once picked. */
+    private dateRange: string[] = [];
+    private openTrailId: number | undefined;
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canExportAuditTrails = false;
+    private canSearchAuditTrails = false;
+    private loaded = false;
+
+    private readonly byTableName = GridSort.byAscending((trail: AuditResponse) => trail.tableName);
+    private readonly byDate = GridSort.byAscending((trail: AuditResponse) => trail.dateTime);
+
+    private get openTrail(): AuditResponse | undefined {
+        return this.trails.find((trail) => trail.id === this.openTrailId);
+    }
+
+    private get rangeText(): string {
+        return this.dateRange.map((day) => this.culture.current.formatDate(new Date(`${day}T00:00`), { year: "numeric", month: "numeric", day: "numeric" })).join(" – ");
+    }
+
+    /** Search: the table name, the old and the new values when asked; then the date range, the end day whole (U14). */
+    private get filteredTrails(): AuditResponse[] {
+        const search = this.searchString.trim().toLowerCase();
+        const [start, end] = this.dateRange;
+        const from = start === undefined ? undefined : new Date(`${start}T00:00`);
+        const to = end === undefined ? undefined : new Date(`${end}T23:59:59.999`);
+        return this.trails.filter((trail) => {
+            const found = search === ""
+                || trail.tableName.toLowerCase().includes(search)
+                || (this.searchInOldValues && trail.oldValues?.toLowerCase().includes(search) === true)
+                || (this.searchInNewValues && trail.newValues?.toLowerCase().includes(search) === true);
+            const at = this.utcOf(trail.dateTime);
+            return found && (from === undefined || at >= from) && (to === undefined || at <= to);
+        });
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.canExportAuditTrails = await this.authorization.isAuthorized(user, { policy: Permissions.AuditTrails.Export });
+        this.canSearchAuditTrails = await this.authorization.isAuthorized(user, { policy: Permissions.AuditTrails.Search });
+        await this.getDataAsync();
+        this.loaded = true;
+    }
+
+    private async getDataAsync(): Promise<void> {
+        const response = await this.auditManager.getCurrentUserTrailsAsync();
+        if (response.succeeded) this.trails = response.data;
+        else for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+    }
+
+    /** The trail's time is UTC without a zone (DateTime.SpecifyKind(…, Utc) in the original). */
+    private utcOf(dateTime: string): Date {
+        return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(dateTime) ? dateTime : `${dateTime}Z`);
+    }
+
+    /** The UTC time as .NET's "G" writes it in the current culture. */
+    private formatUtc(dateTime: string): string {
+        const date = this.utcOf(dateTime);
+        return formatGeneral(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds()), this.culture.current);
+    }
+
+    /** `Trim('{').Trim('}').Split(',')` and each `Replace('"', ' ').Trim()`: the JSON's members as text. */
+    private splitValues(text: string, open: string, close: string): string[] {
+        let trimmed = text;
+        while (trimmed.startsWith(open)) trimmed = trimmed.slice(1);
+        while (trimmed.endsWith(close)) trimmed = trimmed.slice(0, -1);
+        return trimmed.split(",").map((part) => part.replace(/"/g, " ").trim());
+    }
+
+    /** ShowBtnPress: this trail's details, the others closed. */
+    private showBtnPress(id: number): void {
+        this.openTrailId = this.openTrailId === id ? undefined : id;
+    }
+
+    private async exportToExcelAsync(): Promise<void> {
+        const response = await this.auditManager.downloadFileAsync(this.searchString, this.searchInOldValues, this.searchInNewValues);
+        if (response.succeeded) {
+            downloadBase64(response.data, `audittrails_${fileStamp()}.xlsx`, ApplicationConstants.MimeTypes.OpenXml);
+            this.toaster.show({ message: this.searchString.trim() === "" ? this.L("Audit Trails exported") : this.L("Filtered Audit Trails exported"), intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+}

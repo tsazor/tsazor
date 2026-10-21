@@ -73,3 +73,9 @@
   flex: none;
   margin-inline-end: var(--fui-gap-sm);
 }
+
+/* A tab's badge (MudTabPanel's BadgeData) after its title. */
+.fui-tab__badge {
+  flex: none;
+  margin-inline-start: var(--fui-gap-sm);
+}
