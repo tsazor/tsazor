@@ -15,7 +15,7 @@ DataGridModel, uniqueId, type AggregateScope, type EditingMode, type GridColumn,
 type IconValue,
 } from "@tsazor/ui"
 @import { gridExportCsv, startColumnResize, startColumnReorder } from "@tsazor/ui"
-@import { toggleAll, toggleSelection } from "@tsazor/ui/kit"
+@import { isRightToLeft, logicalArrowKey, toggleAll, toggleSelection } from "@tsazor/ui/kit"
 @import { libraryTexts } from "@tsazor/ui"
 
 <CascadingValue Value="model">
@@ -426,7 +426,8 @@ type IconValue,
         event.preventDefault();
         const set = this.model.widthOf(column);
         if (set !== undefined && !set.endsWith("px")) return;
-        const step = (event.shiftKey ? 20 : 5) * (event.key === "ArrowRight" ? 1 : -1);
+        // Right to left: the handle is at the column's left edge, so ArrowLeft widens it.
+        const step = (event.shiftKey ? 20 : 5) * (logicalArrowKey(event.key, isRightToLeft(event.target as Element)) === "ArrowRight" ? 1 : -1);
         const current = set !== undefined ? parseFloat(set.replace(/px$/, "")) : 80;
         await this.model.setColumnWidthAsync(column, `${Math.round(current + step)}px`);
     }
@@ -450,7 +451,8 @@ type IconValue,
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
         const index = this.model.indexOfColumn(column);
-        this.model.moveColumnAsync(column, index + (event.key === "ArrowRight" ? 1 : -1));
+        // Right to left: ArrowLeft moves it towards the end.
+        this.model.moveColumnAsync(column, index + (logicalArrowKey(event.key, isRightToLeft(event.target as Element)) === "ArrowRight" ? 1 : -1));
     }
 
     private get headClass(): string | null {

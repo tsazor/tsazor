@@ -277,6 +277,9 @@ export declare function isDateDisabled(date: IsoDate, limits: DateLimits): boole
 // isMonthDisabled
 export declare function isMonthDisabled(year: number, month: number, limits: DateLimits, checkAllDays?: boolean): boolean;
 
+// isRightToLeft
+export declare function isRightToLeft(element: Element): boolean;
+
 // isTypingTarget
 export declare function isTypingTarget(target: EventTarget | null): boolean;
 
@@ -291,6 +294,9 @@ export declare function libraryPlural(localizer: StringLocalizer, text: LibraryP
 
 // libraryText
 export declare function libraryText(localizer: StringLocalizer, text: LibraryText, params?: Record<string, unknown>): string;
+
+// logicalArrowKey
+export declare function logicalArrowKey(key: string, rtl: boolean): string;
 
 // markSubmitAttempt
 export declare function markSubmitAttempt(context: EditContext): void;

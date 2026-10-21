@@ -232,3 +232,8 @@
   cursor: ns-resize;
   touch-action: none;
 }
+
+/* Right to left: previous points right, next left. */
+.tz-schedule-step:dir(rtl) {
+  transform: scaleX(-1);
+}

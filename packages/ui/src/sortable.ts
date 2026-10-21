@@ -9,6 +9,7 @@ import type { Attachment } from "@tsazor/runtime";
 import type { Orientation } from "./vocabulary.js";
 import { englishLibraryTexts, type LibraryTexts } from "./library-texts.js";
 import { showInTopLayer } from "./behaviors/top-layer.js";
+import { isRightToLeft, logicalArrowKey } from "./direction.js";
 
 /** Where an item went (Fluent UI Blazor's `FluentSortableListEventArgs`). */
 export class SortableListEventArgs {
@@ -256,6 +257,8 @@ export function sortableList(handle: () => SortableListHandle, options: { indica
         await grab.list.key(key);
         return;
       }
+      // Right to left: ArrowLeft goes forward, along a row and to the list beside (WAI-ARIA APG).
+      key = logicalArrowKey(key, isRightToLeft(target));
       const settings = handle();
       const along = settings.orientation === "horizontal" ? ["ArrowLeft", "ArrowRight"] : ["ArrowUp", "ArrowDown"];
       const across = settings.orientation === "horizontal" ? ["ArrowUp", "ArrowDown"] : ["ArrowLeft", "ArrowRight"];

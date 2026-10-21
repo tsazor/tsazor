@@ -4,7 +4,7 @@
     select. A click selects a node; its chevron opens and closes it. The selected node's ancestors
     start open, so the selection is in view — the same parameters as the Fluent skin's TreeView. *@
 @import { type TreeViewItem } from "@tsazor/ui"
-@import { initiallyExpanded, treeKeyAction, treePath, visibleTreeItems } from "@tsazor/ui/kit"
+@import { initiallyExpanded, isRightToLeft, logicalArrowKey, treeKeyAction, treePath, visibleTreeItems } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 <ul role="tree" aria-label="@this.ariaLabel" @attributes="@withClass("tz-tree", this.additionalAttributes)" @ref="root" @onkeydown="handleKeydown">
@@ -82,7 +82,8 @@
     private handleKeydown(e: KeyboardEvent): Promise<void> | undefined {
         const focused = this.focusedId ?? this.selectedItem?.id ?? this.items[0]?.id;
         if (focused === undefined) return undefined;
-        const action = treeKeyAction(this.items, this.expanded ?? new Set(), focused, e.key);
+        // Right to left: ArrowLeft opens an item, ArrowRight closes it (WAI-ARIA APG).
+        const action = treeKeyAction(this.items, this.expanded ?? new Set(), focused, logicalArrowKey(e.key, isRightToLeft(e.target as Element)));
         if (action === null) return undefined;
         e.preventDefault();
         const item = visibleTreeItems(this.items, this.expanded ?? new Set()).find((node) => node.item.id === action.id)?.item;

@@ -151,3 +151,8 @@ button.tz-calendar__title:hover {
   background: var(--bs-primary-bg-subtle);
   filter: none;
 }
+
+/* Right to left: the step arrows point the way the months go. */
+.tz-calendar__step:dir(rtl) .bi {
+  transform: scaleX(-1);
+}

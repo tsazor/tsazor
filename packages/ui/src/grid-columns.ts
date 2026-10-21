@@ -11,6 +11,8 @@
  * it when the handle's element goes away (its dispose signal).
  */
 
+import { isRightToLeft } from "./direction.js";
+
 /** Options of `startColumnResize`. */
 export interface ColumnResizeOptions {
   /** The drag's starting pointer (the handle's `pointerdown`). */
@@ -33,10 +35,12 @@ export interface ColumnResizeOptions {
  */
 export function startColumnResize(options: ColumnResizeOptions): () => void {
   const fromX = options.pointer.clientX;
+  // Right to left: the handle sits at the column's left edge, so moving left widens it.
+  const rtl = options.pointer.target instanceof Element && isRightToLeft(options.pointer.target);
   const from = Math.max(options.min ?? 40, Math.round(options.initialWidth));
   let width = from;
   const move = (event: PointerEvent): void => {
-    width = Math.max(options.min ?? 40, Math.round(from + (event.clientX - fromX)));
+    width = Math.max(options.min ?? 40, Math.round(from + (rtl ? fromX - event.clientX : event.clientX - fromX)));
     options.onResize(width);
   };
   const finish = (event: PointerEvent): void => {

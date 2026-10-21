@@ -6,6 +6,7 @@
  */
 
 export { englishLibraryTexts, libraryPlural, libraryText } from "./library-texts.js";
+export { isRightToLeft, logicalArrowKey } from "./direction.js";
 export { iconSize } from "./icons.js";
 export { nextChipSelection } from "./chips.js";
 export { resizeSplitter, splitterKeyDelta, splitterPercent } from "./splitter.js";

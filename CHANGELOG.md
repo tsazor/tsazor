@@ -9,6 +9,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   next.6 turned declaration emit on only when the tsconfig didn't set `declaration` itself — with
   `"declaration": true` the program stayed `noEmit`, and every helper whose declaration the file alone can't give
   (`icons.ts`'s shorthand properties) was refused with "TypeScript emitted no declaration".
+- **Right to left in the skins** (`@tsazor/ui`, `@tsazor/fluent`, `@tsazor/bootstrap`; the BlazorHero port in Arabic):
+  the horizontal arrow keys follow what the reader sees (WAI-ARIA APG) — ArrowLeft is the next tab, toolbar control,
+  month or year in the Calendar, opens a tree item, moves a sortable item or a DataGrid column towards the end and
+  widens a column; dragging a column's resize handle left widens it. The pager's, Pagination's and the Scheduler's
+  arrows (and Bootstrap's Calendar steps) are mirrored. Left to right is unchanged. The kit has `isRightToLeft` and
+  `logicalArrowKey`.
 - **A base's type arguments are imported into a component's declaration** (`tsazor build-lib`; the Radzen port):
   `@inherits Picker<DateRange>` wrote `extends Picker<DateRange>` without importing `DateRange`, so the consumer's
   inherited members lost their type. The manifest's `base` carries `typeArgumentReferences`.

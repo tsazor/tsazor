@@ -30,3 +30,8 @@
 .fui-paginator__size .fui-paginator__size-select {
   width: auto;
 }
+
+/* Right to left: the arrows point the way the pages go (first and previous at the right). */
+.fui-pagination__button:dir(rtl) .fui-icon {
+  transform: scaleX(-1);
+}

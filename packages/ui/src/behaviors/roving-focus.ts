@@ -1,4 +1,5 @@
 import type { Attachment } from "@tsazor/runtime";
+import { isRightToLeft, logicalArrowKey } from "../direction.js";
 import { focusElement } from "../focus.js";
 import type { Orientation } from "../vocabulary.js";
 
@@ -44,6 +45,8 @@ export function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement
 
     const onKeydown = (event: KeyboardEvent): void => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      // Right to left: ArrowLeft goes to the next item (WAI-ARIA APG).
+      const key = logicalArrowKey(event.key, orientation !== "vertical" && isRightToLeft(element));
       const items = [...element.querySelectorAll<HTMLElement>(options.items)].filter(
         (item) => !item.hasAttribute("disabled") && item.getAttribute("aria-disabled") !== "true",
       );
@@ -51,8 +54,8 @@ export function rovingFocus(options: RovingFocusOptions): Attachment<HTMLElement
       const active = element.ownerDocument.activeElement;
       const current = items.findIndex((item) => item === active || item.contains(active));
       let next = -1;
-      if (forward.includes(event.key)) next = current < 0 ? 0 : current + 1;
-      else if (backward.includes(event.key)) next = current < 0 ? items.length - 1 : current - 1;
+      if (forward.includes(key)) next = current < 0 ? 0 : current + 1;
+      else if (backward.includes(key)) next = current < 0 ? items.length - 1 : current - 1;
       else if (event.key === "Home") next = 0;
       else if (event.key === "End") next = items.length - 1;
       else if (options.typeahead && event.key.length === 1 && event.key !== " ") {

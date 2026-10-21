@@ -19,7 +19,7 @@
 @import { withClass } from "./attributes"
 @import { ChevronLeft, ChevronRight } from "./core-icons"
 @import { libraryTexts } from "@tsazor/ui"
-@import { calendarLabelsFrom } from "@tsazor/ui/kit"
+@import { calendarLabelsFrom, isRightToLeft, logicalArrowKey } from "@tsazor/ui/kit"
 
 @inherits InputBase<string>
 
@@ -440,7 +440,9 @@
         }
         const index = this.shownYear * 12 + this.focusMonth - 1;
         const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3, PageUp: -12, PageDown: 12 };
-        let next = moves[e.key] !== undefined ? index + moves[e.key]! : undefined;
+        // Right to left: ArrowLeft is the next month, as in the day grid.
+        const key = logicalArrowKey(e.key, this.root !== undefined && isRightToLeft(this.root));
+        let next = moves[key] !== undefined ? index + moves[key]! : undefined;
         if (e.key === "Home") next = this.shownYear * 12;
         if (e.key === "End") next = this.shownYear * 12 + 11;
         if (next === undefined) return;
@@ -488,7 +490,8 @@
         }
         const years = this.years;
         const moves: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3, PageUp: -12, PageDown: 12 };
-        let next = moves[e.key] !== undefined ? this.focusYear + moves[e.key]! : undefined;
+        const key = logicalArrowKey(e.key, this.root !== undefined && isRightToLeft(this.root));
+        let next = moves[key] !== undefined ? this.focusYear + moves[key]! : undefined;
         if (e.key === "Home") next = years[0];
         if (e.key === "End") next = years[years.length - 1];
         if (next === undefined) return;

@@ -1,4 +1,5 @@
 import type { Attachment } from "@tsazor/runtime";
+import { isRightToLeft, logicalArrowKey } from "../direction.js";
 import { focusElement } from "../focus.js";
 import type { Orientation } from "../vocabulary.js";
 
@@ -57,12 +58,14 @@ export function toolbarFocus(options: ToolbarFocusOptions = {}): Attachment<HTML
       const editing = target.matches("input:not([type=checkbox]):not([type=radio]):not([type=button]), textarea, [contenteditable=true]");
       const forward = horizontal ? "ArrowRight" : "ArrowDown";
       const backward = horizontal ? "ArrowLeft" : "ArrowUp";
+      // Right to left: ArrowLeft goes to the next control (WAI-ARIA APG).
+      const key = logicalArrowKey(event.key, horizontal && isRightToLeft(toolbar));
       const all = controls();
       if (all.length === 0) return;
       const at = all.findIndex((item) => item === target || item.contains(target));
       let next: number;
-      if (event.key === forward && !editing) next = (at + 1) % all.length;
-      else if (event.key === backward && !editing) next = (at - 1 + all.length) % all.length;
+      if (key === forward && !editing) next = (at + 1) % all.length;
+      else if (key === backward && !editing) next = (at - 1 + all.length) % all.length;
       else if (event.key === "Home" && !editing) next = 0;
       else if (event.key === "End" && !editing) next = all.length - 1;
       else return;

@@ -41,3 +41,8 @@
     text-align: center;
     color: var(--fui-foreground-3);
 }
+
+/* Right to left: the arrows point the way the pages go (first and previous at the right). */
+.fui-pagination__button:dir(rtl) .fui-icon {
+  transform: scaleX(-1);
+}

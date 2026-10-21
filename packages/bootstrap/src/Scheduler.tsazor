@@ -14,9 +14,9 @@ type IsoDate, type IsoDateTime, type ScheduleAppointment, type ScheduleBlock, ty
 
 <section class="tz-schedule" aria-label="@(ariaLabel ?? t("schedule.label"))" @attributes="otherAttributes">
     <div class="tz-schedule-toolbar">
-        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("previous"))" AriaLabel="@t("schedule.previous")"><Icon value="@ChevronLeft" size="14" /></Button>
+        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("previous"))" AriaLabel="@t("schedule.previous")"><Icon value="@ChevronLeft" size="14" class="tz-schedule-step" /></Button>
         <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("today"))">@t("schedule.today")</Button>
-        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("next"))" AriaLabel="@t("schedule.next")"><Icon value="@ChevronRight" size="14" /></Button>
+        <Button Size="small" Appearance="outline" OnClick="@(() => this.model.navigate("next"))" AriaLabel="@t("schedule.next")"><Icon value="@ChevronRight" size="14" class="tz-schedule-step" /></Button>
         <span class="tz-schedule-period">@this.period</span>
         <div class="tz-schedule-views" role="group" aria-label="@t("schedule.label")">
             @foreach (const candidate of ["month", "week", "day"] as const) {
