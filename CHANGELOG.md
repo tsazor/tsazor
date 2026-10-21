@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.8 (2026-10-21)
+
 - **Abstract components** (`@tsazor/compiler`, `tsazor build-lib`; the BlazorHero port's ExtendedAttributesBase, B38):
   a `.tsazor` whose `@code` declares an abstract member, or whose code-behind class is abstract, compiles to an
   abstract class — as a C# class is abstract when one of its partial parts says so. Its markup is the base's
