@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.6 (2026-10-21)
+
 - **A base imported by name** (`@tsazor/compiler`, `tsazor build-lib`; both the MudBlazor and the Radzen port):
   `@import { Button } from "./Button.tsazor"` + `@inherits Button` resolved for the default import only — by name, the
   derived component was missing from the library's manifest, had no declaration, and its tags were TZS026 in an app.
