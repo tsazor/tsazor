@@ -105,10 +105,13 @@
         }
     }
 
-    /** The hub: sign in to it, and what it tells the client (MainBody.razor.cs' OnInitializedAsync). */
+    /**
+     * The hub: sign in to it, and what it tells the client (MainBody.razor.cs' OnInitializedAsync). The pages get it
+     * once it is connected, so they can send at once; a page rendered before that gets it as a new parameter value
+     * (the original's pages build a connection of their own then, TryInitialize — B31).
+     */
     private async connectHub(): Promise<void> {
         const hub = createHubConnection(this.navigation, this.stateProvider);
-        this.hubConnection = hub;
         this.disposeSignal.addEventListener("abort", () => void hub.stop());
         const signalR = ApplicationConstants.SignalR;
         hub.on(signalR.ReceiveChatNotification, (message: string, receiverUserId: string, senderUserId: string) => {
@@ -150,6 +153,7 @@
         });
         await hub.start();
         await hub.send(signalR.OnConnect, this.currentUserId);
+        this.hubConnection = hub;
     }
 
     private drawerToggle(): void {

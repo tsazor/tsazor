@@ -185,6 +185,9 @@ importers:
       '@microsoft/signalr':
         specifier: ^10.0.11
         version: 10.0.11
+      '@tsazor/charts':
+        specifier: workspace:*
+        version: link:../../packages/charts
       '@tsazor/dotnet':
         specifier: workspace:*
         version: link:../../packages/dotnet

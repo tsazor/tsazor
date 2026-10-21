@@ -40,7 +40,12 @@ stops moving while the port goes on, judged with a sense of proportion
 3. **Identity:** users, roles, role permissions, user roles, profile and account (password, picture), register,
    forgot and reset password.
 4. **Documents and audit:** document store and types, extended attributes, audit trails.
-5. **Real time:** the chat page, the dashboard with its charts.
+5. **Real time** — done 2026-10-21 (`scripts/verify.mjs`, 83 checks with phases 1 and 2): the dashboard — the counts
+   as tiles, what was added each month as a bar chart (`@tsazor/charts`), the hub's UpdateDashboard from a brand
+   saved in another tab — and the chat, with a second user in a browser context of its own (the run gives the basic
+   role the chat's permission and takes it back): who is online by the hub (ConnectUser, the ping, DisconnectUser),
+   a message on both sides at once, the receiver's notification with its "Chat?", the contacts in a Drawer on a
+   narrow window.
 6. **Languages:** the switch between the eleven, right-to-left for Arabic.
 
 Each phase ends with its part of `scripts/verify.mjs` (the app in a browser against the real backend).
@@ -92,3 +97,9 @@ say "Not ported yet" with their phase (`Pages/Content/NotPorted.tsazor`; the own
 | U8 | Upstream | The delete confirmation formats "Delete Content" with the id, but its resources say "Delete Content" (no `{0}`), in English and German alike | Kept (parity) |
 | U9 | Upstream | `ServerReload` goes back to the first page whenever a search is set, on every reload: the search's results can't be paged | Port: a new search starts on the first page; its results page |
 | U10 | Upstream | The search string goes into the product and export URLs unencoded (`&` or `#` in a search breaks them) | Port: encoded |
+| B30 | Library (charts) | `MudChart Width="100%" Height="300px"` sizes the SVG box by CSS lengths around a fixed drawing; the Chart's `width` and `height` are the drawing's units, and the chart takes its container's width (`tsazor check` rejects the strings, so nothing fails silently) | Port: `width="760" height="300"`, the drawing's shape in the card. Open: whether `width`/`height` should also take CSS lengths, as MudChart's |
+| B31 | Migration (Blazor) | `MainBody` cascades the hub connection, but a page loaded at its address renders before `MainBody`'s `OnInitializedAsync` has built it: the cascade is null in the page's `OnInitialized`. The original's pages then build a connection of their own (`HubConnection.TryInitialize`), so two connections run | Port: `MainBody` cascades the hub once it is connected; Dashboard and Chat take it in `onParametersSet` — a cascade's new value comes as a new parameter, as in Blazor (migration-practices.md) |
+| B32 | Library (default) | Every DataGrid column has a grip to move it and a handle to resize it, each a tab stop, since the extended line's column work (b7b1d60) — none of the references does this by default (QuickGrid neither; Fluent UI Blazor `ResizableColumns`, MudBlazor `DragDropColumnReordering`/`ColumnResizeMode` opt in). `verify.mjs`'s header clicks met two buttons | Open (owner): opt-in parameters before the freeze. `verify.mjs` names the sort button |
+| U11 | Upstream | Dashboard and Chat register their hub handlers (`HubConnection.On`) in `OnInitializedAsync` and never remove them: every visit adds one more, and the handlers of left pages still run (`StateHasChanged` on disposed components) | Port: the handlers go with the page (`disposeSignal`) |
+| U12 | Upstream | Enter in the chat sends nothing: `@onkeypress` runs before the `change` that Enter commits, so `CurrentMessage` is still the old value (empty) — the text stays in the field; checked in the original | Port: `@onkeyup`, which comes after the change |
+| U13 | Upstream | The dashboard's series have thirteen values for the twelve months (`new double[13]`, filled 0–11): the chart draws a thirteenth, empty slot | Port: the chart takes twelve |

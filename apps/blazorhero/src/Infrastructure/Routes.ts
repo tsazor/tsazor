@@ -23,6 +23,16 @@ export const RolesEndpoints = {
     GetAll: "api/identity/role",
 } as const;
 
+export const DashboardEndpoints = {
+    GetData: "api/v1/dashboard",
+} as const;
+
+export const ChatEndpoint = {
+    GetAvailableUsers: "api/chats/users",
+    SaveMessage: "api/chats",
+    getChatHistory: (userId: string) => `api/chats/${userId}`,
+} as const;
+
 export const BrandsEndpoints = {
     GetAll: "api/v1/brands",
     Save: "api/v1/brands",

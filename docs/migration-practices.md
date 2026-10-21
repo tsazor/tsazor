@@ -166,6 +166,11 @@ render in the browser.
   missing component is a finding: the completeness plan ([design-library-completeness.md](design-library-completeness.md))
   closes the gaps before 1.0. Icons are the first wall (F17). Both skins have the same components and parameters
   (only Fluent's Indicator and Spacer are missing in Bootstrap), so the skin is a choice of looks, not of features.
+- **A cascaded value that comes later arrives as a parameter.** A layout that builds a service in its async
+  `OnInitializedAsync` (BlazorHero's hub connection) cascades null to the page first when the page is loaded at its
+  address: the page's `OnInitialized` has run by the time the value comes. Take the value where it arrives, in
+  `onParametersSet` (once, by comparing with the one you took), and cascade it only once it is usable (the hub when
+  it is connected). BlazorHero's pages build a second connection instead (`TryInitialize`) — B31.
 - **Dialogs opened from code stay dialogs opened from code.** MudBlazor's `DialogService.Show<T>(title, parameters,
   options)` becomes `dialogs.show(T, { title, parameters, size })` (`@inject DialogService dialogs`, from
   `@tsazor/ui`), and `await dialog.Result` becomes `await dialog.result` (`{ canceled, data }`). In the dialog,

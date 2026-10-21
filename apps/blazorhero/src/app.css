@@ -232,3 +232,222 @@ h1:focus {
     gap: 1rem;
     max-width: 40rem;
 }
+
+/* Dashboard.razor: MudGrid with MudItem xs="12" sm="6" md="3" — four tiles a row from md (960px), two from sm (600px);
+   the chart (sm="8") and its neighbour (sm="4") share a row from sm. */
+.bh-dashboard {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--fui-spacing-l);
+}
+
+.bh-dashboard > * {
+    grid-column: span 12;
+}
+
+@media (min-width: 600px) {
+    .bh-dashboard > .bh-tile {
+        grid-column: span 6;
+    }
+
+    .bh-dashboard > .bh-dashboard__chart {
+        grid-column: span 8;
+    }
+
+    .bh-dashboard > .bh-dashboard__aside {
+        grid-column: span 4;
+    }
+}
+
+@media (min-width: 960px) {
+    .bh-dashboard > .bh-tile {
+        grid-column: span 3;
+    }
+}
+
+/* MudPaper Elevation="25" Class="d-flex flex-row pt-6 pb-4" Style="height:100px". */
+.bh-tile {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: 100px;
+    box-sizing: border-box;
+}
+
+.bh-tile__icon {
+    flex: none;
+    margin: 0 var(--fui-spacing-l);
+}
+
+/* MudBlazor's palette (Color.Primary is BlazorHero's, the others MudBlazor's defaults). */
+.bh-tile__icon--primary {
+    color: var(--fui-accent);
+}
+
+.bh-tile__icon--secondary {
+    color: #ff4081;
+}
+
+.bh-tile__icon--error {
+    color: #f44336;
+}
+
+.bh-tile__icon--success {
+    color: #007e33;
+}
+
+.bh-tile__icon--warning {
+    color: #ff9800;
+}
+
+.bh-tile__label {
+    margin: 0;
+    color: var(--fui-foreground-2);
+}
+
+.bh-tile__value {
+    margin: 0;
+    font-size: var(--fui-font-size-title);
+    font-weight: var(--fui-font-weight-semibold);
+}
+
+/* MudPaper Class="pa-4" Style="height:400px". */
+.bh-dashboard__chart,
+.bh-dashboard__aside {
+    min-height: 400px;
+    box-sizing: border-box;
+}
+
+/* Chat.razor: the conversation and the contacts side by side; the contacts in a Drawer below md (MudHidden). */
+.bh-chat {
+    display: flex;
+    flex-direction: row;
+    gap: var(--fui-spacing-xl);
+    align-items: flex-start;
+}
+
+.bh-chat__conversation {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.bh-chat__contacts {
+    flex: none;
+    min-width: 350px;
+}
+
+.bh-chat__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+    min-height: 48px;
+}
+
+.bh-chat__bar h1,
+.bh-chat__bar h2 {
+    margin: 0;
+}
+
+.bh-chat__spacer {
+    flex: 1 1 auto;
+}
+
+/* style="max-height:65vh;min-height:65vh; overflow:scroll" (and 70vh for the contacts). */
+.bh-chat__messages {
+    display: flex;
+    flex-direction: column;
+    height: 65vh;
+    overflow: auto;
+    padding: 0 var(--fui-spacing-l);
+}
+
+.bh-chat__contact-list {
+    height: 70vh;
+    overflow: auto;
+}
+
+.bh-chat__message {
+    display: flex;
+    flex-direction: row;
+    gap: var(--fui-spacing-l);
+    margin: var(--fui-spacing-l) 0;
+}
+
+.bh-chat__from,
+.bh-chat__date {
+    margin: 0;
+}
+
+.bh-chat__date {
+    font-size: xx-small;
+    color: var(--fui-foreground-2);
+}
+
+.bh-chat__text {
+    margin: 5px 0 0;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.bh-chat__compose {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--fui-spacing-s);
+    padding: var(--fui-spacing-s);
+}
+
+.bh-chat__input {
+    flex: 1 1 auto;
+}
+
+.bh-chat__input .fui-input-wrapper,
+.bh-chat__input input {
+    width: 100%;
+}
+
+.bh-chat__contact {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--fui-spacing-l);
+}
+
+.bh-chat__contact-name,
+.bh-chat__contact-email {
+    display: block;
+}
+
+.bh-chat__contact-email {
+    font-size: xx-small;
+}
+
+/* MudBadge Overlap Bottom Dot: the status dot on the avatar's lower end corner. */
+.bh-presence {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-end: 0;
+}
+
+.bh-presence .fui-indicator__dot {
+    width: 12px;
+    height: 12px;
+    box-shadow: 0 0 0 2px var(--fui-background-1);
+}
+
+.bh-chat__guide {
+    margin: 10px 0 20px;
+}
+
+/* MudHidden Breakpoint.MdAndUp and .SmAndDown: shown only below 960px, or only from it on. */
+@media (min-width: 960px) {
+    .bh-narrow-only {
+        display: none;
+    }
+}
+
+@media (max-width: 959.98px) {
+    .bh-wide-chat-only {
+        display: none;
+    }
+}

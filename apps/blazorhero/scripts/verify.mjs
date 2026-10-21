@@ -10,6 +10,9 @@
  *   basic user sees only what the role allows → an unknown address: the not-found layout → axe on each layout, the
  *   dialog and the menus
  *
+ * Phase 2, the catalog (`catalog`), and phase 5, the dashboard and the chat with a second user (`realTime`), run
+ * between the language and the logout.
+ *
  * Starts the backend when it isn't running (the first run clones and builds BlazorHero, scripts/backend.mjs), builds
  * the app, and fails on every console error.
  * Run: node scripts/verify.mjs
@@ -227,9 +230,9 @@ async function catalog(page, stamp) {
     await brandSearch.fill("");
 
     const nameHeader = brands.locator("thead th").filter({ hasText: "Name" });
-    await nameHeader.getByRole("button").click();
+    await nameHeader.getByRole("button", { name: "Name" }).click();
     const sortedOnce = await nameHeader.getAttribute("aria-sort");
-    await nameHeader.getByRole("button").click();
+    await nameHeader.getByRole("button", { name: "Name" }).click();
     check(sortedOnce === "ascending" && (await nameHeader.getAttribute("aria-sort")) === "descending", "a column sorts in the browser, then the other way (aria-sort)");
 
     // Products.
@@ -297,7 +300,7 @@ async function catalog(page, stamp) {
     await page.getByLabel("Rows per page:").selectOption("10");
 
     const productNameHeader = products.locator("thead th").filter({ hasText: "Name" });
-    await productNameHeader.getByRole("button").click();
+    await productNameHeader.getByRole("button", { name: "Name" }).click();
     await page.waitForFunction(() => document.querySelector("table[aria-label=Products] th[aria-sort=ascending]") !== null);
     check(productRequest().query.get("orderBy") === "Name Ascending", `a template column sorts on the server by its sortKey (orderBy=${productRequest().query.get("orderBy")})`);
 
@@ -340,6 +343,140 @@ async function catalog(page, stamp) {
     const brandsLeft = await api(page, "GET", "/api/v1/brands").catch(() => ({ data: [] }));
     for (const brand of (brandsLeft.data ?? []).filter((candidate) => candidate.name === brandName)) await api(page, "DELETE", `/api/v1/brands/${brand.id}`);
     rmSync(downloads, { recursive: true, force: true });
+  }
+}
+
+/** The basic role's permissions: `Permissions.Communication.Chat` granted or taken back (the API as the administrator). */
+async function setBasicChat(page, selected) {
+  const roles = await api(page, "GET", "/api/identity/role");
+  const basic = roles.data.find((role) => role.name === "Basic");
+  const permissions = await api(page, "GET", `/api/identity/role/permissions/${basic.id}`);
+  const roleClaims = permissions.data.roleClaims.map((claim) => (claim.value === "Permissions.Communication.Chat" ? { ...claim, selected } : claim));
+  return api(page, "PUT", "/api/identity/role/permissions/update", { roleId: basic.id, roleClaims });
+}
+
+/**
+ * Phase 5, real time, as the administrator and, in a browser context of their own, the basic user. The dashboard:
+ * the tiles hold the API's counts, the bar chart a series per entity and a bar per month; a brand saved in another
+ * tab (its dialog sends the hub's UpdateDashboard) raises the count without a reload. The chat (the basic role gets
+ * its permission for the run): who is online follows the hub (ConnectUser, the ping, DisconnectUser) with a toast; a
+ * message sent with Enter appears on both sides at once; the receiver on another page gets the notification, whose
+ * "Chat?" opens the conversation with the message in its history; on a narrow window the contacts are in a drawer.
+ * The brand is removed at the end; the messages stay (the API deletes none).
+ */
+async function realTime(page, stamp) {
+  const brandName = `Verify Live ${stamp}`;
+  let basicContext;
+  try {
+    // The dashboard: the API's numbers.
+    await page.getByRole("link", { name: "Dashboard" }).click();
+    await page.getByRole("heading", { level: 1, name: "Dashboard" }).waitFor();
+    await page.locator(".bh-tile").first().waitFor();
+    const counts = (await api(page, "GET", "/api/v1/dashboard")).data;
+    const tile = async (label) => Number((await page.locator(".bh-tile").filter({ hasText: label }).locator(".bh-tile__value").innerText()).trim());
+    const expected = { Products: counts.productCount, Brands: counts.brandCount, "Registered Users": counts.userCount, "Registered Roles": counts.roleCount, "Document Types": counts.documentTypeCount };
+    const shown = {};
+    for (const label of Object.keys(expected)) shown[label] = await tile(label);
+    check(JSON.stringify(shown) === JSON.stringify(expected), `the tiles show the API's counts (${Object.entries(shown).map(([label, count]) => `${label} ${count}`).join(", ")})`);
+    const chart = page.locator(".bh-dashboard__chart");
+    check(await chart.getByRole("img", { name: "Quick Insights." }).isVisible(), "the bar chart is an image named by its aria-label");
+    const legend = await chart.locator(".tz-chart__legend").innerText().catch(() => "");
+    check(
+      (await chart.locator(".tz-chart__bar").count()) === counts.dataEnterBarChart.length * 12 && counts.dataEnterBarChart.every((series) => legend.includes(series.name)),
+      `the bar chart: a bar per month for each of the ${counts.dataEnterBarChart.length} series, named in the legend`,
+    );
+    await axe(page, "the dashboard");
+
+    // UpdateDashboard: a brand saved in another tab raises the count here, without a reload.
+    const other = await page.context().newPage();
+    await other.goto(`${APP}/catalog/brands`);
+    await other.getByRole("table", { name: "Brands" }).waitFor();
+    await other.getByRole("button", { name: "Create" }).click();
+    const otherDialog = other.getByRole("dialog");
+    await otherDialog.getByLabel("Name").fill(brandName);
+    await otherDialog.getByLabel("Description").fill("Made by the verify run");
+    await otherDialog.getByLabel("Tax").fill("5");
+    await otherDialog.getByRole("button", { name: "Save" }).click();
+    await otherDialog.waitFor({ state: "detached" });
+    await page.waitForFunction((count) => [...document.querySelectorAll(".bh-tile")].find((tile) => tile.textContent.includes("Brands"))?.querySelector(".bh-tile__value")?.textContent.trim() === String(count), counts.brandCount + 1, { timeout: 10_000 }).catch(() => undefined);
+    check((await tile("Brands")) === counts.brandCount + 1, `a brand saved in another tab raises the dashboard's count at once (UpdateDashboard: ${counts.brandCount} → ${await tile("Brands")})`);
+    await other.close();
+
+    // The chat. The basic user signs in now, so the token carries the permission.
+    check((await setBasicChat(page, true)).succeeded === true, "the basic role gets the chat's permission for the run");
+    const users = (await api(page, "GET", "/api/identity/user")).data;
+    const admin = users.find((user) => user.email === ADMIN.email);
+    const basic = users.find((user) => user.email === BASIC.email);
+    await page.getByRole("link", { name: "Chat" }).click();
+    await page.getByRole("heading", { level: 1, name: "chat" }).waitFor();
+    const contact = page.locator(".bh-chat__contacts").getByRole("button", { name: /John Doe/ });
+    await contact.waitFor();
+    const presence = () => contact.locator(".bh-presence").getAttribute("class");
+    check((await presence()).includes("danger"), "the contacts: the basic user, offline (the red dot)");
+
+    basicContext = await page.context().browser().newContext({ viewport: { width: 1400, height: 900 } });
+    const john = await basicContext.newPage();
+    john.on("pageerror", (error) => check(false, `the basic user's page: ${error.message}`));
+    await john.goto(`${APP}/login`);
+    await signIn(john, BASIC);
+    await page.getByText("johndoe Logged In.").first().waitFor();
+    check((await presence()).includes("success"), "the basic user signs in: online at once (ConnectUser), with a toast");
+
+    await contact.click();
+    await page.waitForURL(`${APP}/chat/${basic.id}`);
+    await page.getByRole("heading", { level: 1, name: "John Doe" }).waitFor();
+    check(true, "a contact opens the conversation at its address (chat/{id})");
+    await axe(page, "the chat");
+
+    await john.goto(`${APP}/chat/${admin.id}`);
+    await john.getByRole("heading", { level: 1, name: "Mukesh Murugan" }).waitFor();
+    // The page pinged at its start: the administrator, whose shell answered, is online.
+    await john.waitForFunction(() => document.querySelector(".bh-chat__contacts .bh-presence")?.classList.contains("fui-indicator--success"), null, { timeout: 5000 }).catch(() => undefined);
+    check(await john.locator(".bh-chat__contacts .bh-presence.fui-indicator--success").count() === 1, "a page opened at its address pings: the administrator shows online (PingRequest, PingResponse)");
+    const message = `Hello from the verify run ${stamp}`;
+    const input = john.getByRole("textbox", { name: "Enter your message..." });
+    await input.click();
+    await input.pressSequentially(message);
+    await input.press("Enter");
+    await page.getByRole("log").getByText(message).waitFor({ timeout: 10_000 });
+    await john.getByRole("log").getByText(message).waitFor();
+    check((await input.inputValue()) === "", "Enter sends: the message on both sides at once, the field empty (U12)");
+
+    // The receiver elsewhere: the notification, and its action opens the conversation.
+    await page.getByRole("link", { name: "Home" }).click();
+    await page.getByRole("heading", { level: 1 }).first().waitFor();
+    await input.fill(`${message} again`);
+    await john.getByRole("button", { name: "Send" }).click();
+    const notification = page.getByText("New Message From John Doe");
+    await notification.waitFor({ timeout: 10_000 });
+    await page.getByRole("button", { name: "Chat?" }).click();
+    await page.waitForURL(`${APP}/chat/${basic.id}`);
+    await page.getByRole("log").getByText(`${message} again`).waitFor();
+    check(true, "the receiver on another page gets the notification; Chat? opens the conversation, the message in its history");
+
+    // The contacts in a drawer on a narrow window.
+    await page.setViewportSize({ width: 800, height: 900 });
+    check(!(await page.locator(".bh-chat__contacts").isVisible()), "on a narrow window the contacts leave the page");
+    await page.getByRole("button", { name: "contacts" }).click();
+    const drawer = page.getByRole("dialog", { name: "contacts" });
+    await drawer.getByRole("button", { name: /John Doe/ }).waitFor();
+    check(true, "and open in a drawer");
+    await axe(page, "the chat's drawer");
+    await page.keyboard.press("Escape");
+    await drawer.waitFor({ state: "detached" });
+    await page.setViewportSize({ width: 1400, height: 900 });
+
+    // The basic user signs out: offline, with a toast.
+    await john.getByRole("button", { name: /^Account:/ }).click();
+    await john.getByRole("menuitem", { name: "Logout" }).click();
+    await john.getByRole("dialog", { name: "Logout Confirmation" }).getByRole("button", { name: "Logout" }).click();
+    await page.getByText("johndoe Logged Out.").first().waitFor({ timeout: 10_000 });
+    check((await presence()).includes("danger"), "the basic user signs out: offline at once (DisconnectUser), with a toast");
+  } finally {
+    await basicContext?.close();
+    await setBasicChat(page, false).catch(() => undefined);
+    const brandsLeft = await api(page, "GET", "/api/v1/brands").catch(() => ({ data: [] }));
+    for (const brand of (brandsLeft.data ?? []).filter((candidate) => candidate.name === brandName)) await api(page, "DELETE", `/api/v1/brands/${brand.id}`);
   }
 }
 
@@ -469,6 +606,9 @@ try {
 
   // Phase 2: the catalog.
   await catalog(page, Date.now().toString(36));
+
+  // Phase 5: the dashboard and the chat.
+  await realTime(page, Date.now().toString(36));
 
   // The logout dialog: Cancel stays, Logout leaves.
   await page.getByRole("button", { name: /^Account:/ }).click();
