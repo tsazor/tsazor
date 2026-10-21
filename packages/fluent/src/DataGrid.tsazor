@@ -43,7 +43,9 @@ type IconValue,
                         @foreach (const column of this.model.orderedColumns) {
                             <th scope="col" class="@this.alignClass(column)" aria-sort="@this.ariaSort(column)">
                                 <div class="fui-datagrid__header">
-                                    <div class="fui-datagrid__grip" role="button" tabindex="0" aria-label="@t("dataGrid.reorder")" @onpointerdown="(event: PointerEvent) => this.startReorder(column, event)" @onkeydown="(event: KeyboardEvent) => this.reorderKey(column, event)"><Icon value="@Drag20Regular" size="12" /></div>
+                                    @if (this.reorderableColumns) {
+                                        <div class="fui-datagrid__grip" role="button" tabindex="0" aria-label="@t("dataGrid.reorder")" @onpointerdown="(event: PointerEvent) => this.startReorder(column, event)" @onkeydown="(event: KeyboardEvent) => this.reorderKey(column, event)"><Icon value="@Drag20Regular" size="12" /></div>
+                                    }
                                     @if ((column.filterable || column.columnOptions !== undefined) && column.align === "end") {
                                         <button type="button" class="@this.optionsClass(column)" aria-label="@t("dataGrid.columnOptions")" aria-expanded="@this.optionsExpanded(column)" @onclick="() => this.toggleOptions(column)"><Icon value="@Filter20Regular" size="16" /></button>
                                     }
@@ -82,7 +84,9 @@ type IconValue,
                                         @if (column.columnOptions !== undefined) { @column.columnOptions }
                                     </div>
                                 }
-                                <div class="fui-datagrid__resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" aria-valuenow="@this.widthNow(column)" aria-valuemin="40" aria-valuemax="1920" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
+                                @if (this.resizableColumns) {
+                                    <div class="fui-datagrid__resize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="@t("dataGrid.resize")" aria-valuenow="@this.widthNow(column)" aria-valuemin="40" aria-valuemax="1920" @onpointerdown="(event: PointerEvent) => this.startResize(column, event)" @onkeydown="(event: KeyboardEvent) => this.resizeKey(column, event)"></div>
+                                }
                             </th>
                         }
                     </tr>
@@ -201,6 +205,16 @@ type IconValue,
     @Parameter() small: boolean = false;
     /** comfortable (the normal row height) or compact (the dense table). */
     @Parameter() density?: "comfortable" | "compact";
+    /**
+     * Each column gets a handle to change its width: dragged, or the arrow keys (Fluent UI Blazor's `ResizableColumns`,
+     * MudBlazor's `ColumnResizeMode`). Off by default; widths set in code (`setColumnWidthAsync`) apply either way.
+     */
+    @Parameter() resizableColumns: boolean = false;
+    /**
+     * Each column gets a grip to move it: dragged, or the arrow keys (MudBlazor's `DragDropColumnReordering`). Off by
+     * default; an order set in code (`moveColumnAsync`) applies either way.
+     */
+    @Parameter() reorderableColumns: boolean = false;
     /**
      * What a column's footer aggregates over: all the grid's rows (the default) or the current
      * page's. With an ItemsProvider the grid holds one window, so the scope is that window.

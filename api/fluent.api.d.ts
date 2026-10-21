@@ -379,6 +379,8 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     bordered: boolean;
     small: boolean;
     density?: "comfortable" | "compact";
+    resizableColumns: boolean;
+    reorderableColumns: boolean;
     aggregateScope: AggregateScope;
     responsive: boolean;
     virtualize: boolean;

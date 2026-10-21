@@ -7,7 +7,7 @@ import { render, renderTree, type RenderResult } from "@tsazor/testing";
 import { ComponentBase, NavigationManager, type RenderTreeBuilder } from "@tsazor/runtime";
 import { icon } from "@tsazor/ui";
 import { Badge, Button, DataGrid, DropdownItem, Icon, NavbarLink, PropertyColumn, Tab, Tabs } from "../dist/index.js";
-import { ArrowDownUp, CaretUpFill, GripVertical } from "../src/core-icons";
+import { ArrowDownUp, CaretUpFill } from "../src/core-icons";
 
 const save = icon("save", '<svg viewBox="0 0 16 16"><path d="M1 1h14"/></svg>');
 const open = icon("open", '<svg viewBox="0 0 16 16"><path d="M2 2h12"/></svg>');
@@ -150,10 +150,10 @@ describe("the skin's own icons", () => {
     }));
     await settle(result);
     const head = result.container.querySelector("th")!;
-    // The header now carries the reorder grip's icon too (the grip is its own button).
-    expect(paths(head)).toEqual([pathOf(GripVertical), pathOf(ArrowDownUp)]);
+    // Without reorderableColumns the header carries the sort indicator only (no grip).
+    expect(paths(head)).toEqual([pathOf(ArrowDownUp)]);
     head.querySelector("button")!.click();
     await settle(result);
-    expect(paths(result.container.querySelector("th")!)).toEqual([pathOf(GripVertical), pathOf(CaretUpFill)]);
+    expect(paths(result.container.querySelector("th")!)).toEqual([pathOf(CaretUpFill)]);
   });
 });

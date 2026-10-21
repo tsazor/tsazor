@@ -48,7 +48,10 @@ design-component-library.md §4 alone: a built-in column filter and density. Wha
   original (QuickGrid has none) — modeled on Radzen and MudBlazor's grid, kept QuickGrid-shaped
   where they overlap.
 - **Column resize and reorder:** pointer and keyboard (resize handles with a `Handle` role, arrow
-  keys); the state is the headless part, the handles are skin markup.
+  keys); the state is the headless part, the handles are skin markup. Opt-in (owner 2026-10-21, the BlazorHero
+  port's B32): `resizableColumns` and `reorderableColumns`, both off by default, as Fluent UI Blazor's
+  `ResizableColumns` and MudBlazor's `DragDropColumnReordering` — a grid shows no grips and no extra tab stops
+  unless it asks.
 - **Inline editing:** cell and row edit modes, validation through `EditContext` (the input
   components already speak it), commit/cancel via Enter/Escape.
 - **Aggregates:** per-column footer summaries (`sum`, `avg`, `count`, `min`, `max`, a custom one),

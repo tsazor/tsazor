@@ -5,6 +5,12 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A DataGrid's columns are moved and resized only when the grid asks for it** (`@tsazor/fluent`,
+  `@tsazor/bootstrap`; owner 2026-10-21, the BlazorHero port's B32): `resizableColumns` and `reorderableColumns`, both
+  off by default, as Fluent UI Blazor's `ResizableColumns` and MudBlazor's `DragDropColumnReordering`. Since the column
+  work (next.2) every header had a grip and a resize handle, each a tab stop, which no reference grid has by default.
+  Widths and an order set in code (`setColumnWidthAsync`, `moveColumnAsync`, a restored snapshot) apply either way.
+
 ## 1.0.0-next.7 (2026-10-21)
 
 - **A helper's declaration from the program, whatever the tsconfig says** (`tsazor build-lib`; the MudBlazor port):

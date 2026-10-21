@@ -442,9 +442,21 @@ describe("DataGrid", () => {
     expect(container.querySelector("table")!.className).toContain("table-sm");
   });
 
-  it("resizes a column by the handle's arrow keys (Shift makes a bigger step) and lays the cols out", async () => {
+  it("has no column grips or resize handles unless asked for (resizableColumns, reorderableColumns)", async () => {
     const { container, ...renderer } = await renderTree(
       grid({ items: orders }, (b) => {
+        component(b, 0, PropertyColumn, { property: customer });
+      }),
+    );
+    await settle(renderer);
+    expect(container.querySelectorAll(".tz-grid-grip, .tz-grid-resize")).toHaveLength(0);
+    // No extra tab stops in the header: the sortable header's button is the only one.
+    expect(container.querySelectorAll("thead [tabindex='0']")).toHaveLength(0);
+  });
+
+  it("resizes a column by the handle's arrow keys (Shift makes a bigger step) and lays the cols out", async () => {
+    const { container, ...renderer } = await renderTree(
+      grid({ items: orders, resizableColumns: true }, (b) => {
         component(b, 0, PropertyColumn, { property: customer });
         component(b, 10, PropertyColumn, { property: total, title: "Total" });
       }),
@@ -468,6 +480,7 @@ describe("DataGrid", () => {
     const { container, ...renderer } = await renderTree((b) => {
       component(b, 0, DataGrid, {
         items: orders,
+        reorderableColumns: true,
         childContent: ((inner: RenderTreeBuilder) => {
           component(inner, 0, PropertyColumn, { property: customer });
           component(inner, 4, PropertyColumn, { property: total, title: "Total", aggregate: "count" });
