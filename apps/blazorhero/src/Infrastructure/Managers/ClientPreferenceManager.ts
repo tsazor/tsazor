@@ -1,7 +1,7 @@
 import { StorageConstants, LocalizationConstants } from "../../Application/Constants";
 import type { LocalStorage } from "../LocalStorage";
 
-/** Client.Infrastructure/Settings/ClientPreference.cs, as the original stores it in localStorage. */
+/** Client.Infrastructure/Settings/ClientPreference.cs. */
 export interface ClientPreference {
     isDarkMode: boolean;
     isRTL: boolean;
@@ -19,13 +19,13 @@ export class ClientPreferenceManager {
     constructor(private readonly localStorage: LocalStorage) {}
 
     getPreference(): ClientPreference {
+        const stored = this.localStorage.getItem<Partial<StoredPreference>>(StorageConstants.Local.Preference) ?? {};
         return {
-            isDarkMode: false,
-            isRTL: false,
-            isDrawerOpen: false,
-            primaryColor: null,
-            languageCode: LocalizationConstants.SupportedLanguages[0].code,
-            ...this.localStorage.getItem<Partial<ClientPreference>>(StorageConstants.Local.Preference),
+            isDarkMode: stored.IsDarkMode ?? false,
+            isRTL: stored.IsRTL ?? false,
+            isDrawerOpen: stored.IsDrawerOpen ?? false,
+            primaryColor: stored.PrimaryColor ?? null,
+            languageCode: stored.LanguageCode ?? LocalizationConstants.SupportedLanguages[0].code,
         };
     }
 
@@ -58,6 +58,25 @@ export class ClientPreferenceManager {
     }
 
     private setPreference(preference: ClientPreference): void {
-        this.localStorage.setItem(StorageConstants.Local.Preference, preference);
+        const stored: StoredPreference = {
+            IsDarkMode: preference.isDarkMode,
+            IsRTL: preference.isRTL,
+            IsDrawerOpen: preference.isDrawerOpen,
+            PrimaryColor: preference.primaryColor,
+            LanguageCode: preference.languageCode,
+        };
+        this.localStorage.setItem(StorageConstants.Local.Preference, stored);
     }
+}
+
+/**
+ * The preference as the original stores it: Blazored.LocalStorage writes it with System.Text.Json's defaults, so the
+ * names are the C# ones (`IsRTL`, `LanguageCode`) — unlike the API's camelCase JSON (ASP.NET's web defaults, B33).
+ */
+interface StoredPreference {
+    IsDarkMode: boolean;
+    IsRTL: boolean;
+    IsDrawerOpen: boolean;
+    PrimaryColor: string | null;
+    LanguageCode: string;
 }

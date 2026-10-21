@@ -46,7 +46,11 @@ stops moving while the port goes on, judged with a sense of proportion
    role the chat's permission and takes it back): who is online by the hub (ConnectUser, the ping, DisconnectUser),
    a message on both sides at once, the receiver's notification with its "Chat?", the contacts in a Drawer on a
    narrow window.
-6. **Languages:** the switch between the eleven, right-to-left for Arabic.
+6. **Languages** — done 2026-10-21 (`scripts/verify.mjs`, 90 checks): each of the eleven loads the app in it (the
+   page's language, the navigation's headings from its table, the API asked in it), the preference stored as the
+   original stores it (B33), Arabic right to left on the products, the dashboard and the chat (the navigation on the
+   right, the pager's arrows mirrored, axe). Compared with the original in Arabic: both mirror the frame, the tiles
+   and the toolbar; neither mirrors the chart's month axis. The skins' right-to-left gaps it found are fixed (B35).
 
 Each phase ends with its part of `scripts/verify.mjs` (the app in a browser against the real backend).
 
@@ -102,4 +106,8 @@ say "Not ported yet" with their phase (`Pages/Content/NotPorted.tsazor`; the own
 | B32 | Library (default) | Every DataGrid column has a grip to move it and a handle to resize it, each a tab stop, since the extended line's column work (b7b1d60) — none of the references does this by default (QuickGrid neither; Fluent UI Blazor `ResizableColumns`, MudBlazor `DragDropColumnReordering`/`ColumnResizeMode` opt in). `verify.mjs`'s header clicks met two buttons | Open (owner): opt-in parameters before the freeze. `verify.mjs` names the sort button |
 | U11 | Upstream | Dashboard and Chat register their hub handlers (`HubConnection.On`) in `OnInitializedAsync` and never remove them: every visit adds one more, and the handlers of left pages still run (`StateHasChanged` on disposed components) | Port: the handlers go with the page (`disposeSignal`) |
 | U12 | Upstream | Enter in the chat sends nothing: `@onkeypress` runs before the `change` that Enter commits, so `CurrentMessage` is still the old value (empty) — the text stays in the field; checked in the original | Port: `@onkeyup`, which comes after the change |
+| B33 | Migration (Blazor) | The original's preference (`clientPreference`) is stored with the C# names (`IsRTL`, `LanguageCode`): Blazored.LocalStorage serializes with System.Text.Json's defaults, while the API's JSON is camelCase (ASP.NET's web defaults). The port had read and written camelCase, so the two apps' preferences didn't carry over | Port: `ClientPreferenceManager` stores the C# names behind its camelCase interface (migration-practices.md) |
+| B34 | Accessibility | Neither Blazor nor the original sets `<html lang>`: in Arabic the page said `lang="en"` and a screen reader read Arabic with an English voice (WCAG 3.1.1) | Port: `Program.ts` sets it to the culture at the start (a language change loads the page again). Open: whether `CultureService` should keep `<html lang>` in step itself |
+| B35 | Library (right to left) | In Arabic the pager's arrows pointed left to right, and the horizontal arrow keys didn't follow the reader (WAI-ARIA APG) in tabs, toolbars, trees, sortable lists, the Calendar's month and year views and the DataGrid's column keys; a resize drag to the left narrowed a column | Fixed in both skins (`isRightToLeft`, `logicalArrowKey` in the kit; mirrored pager, Pagination, Scheduler and Bootstrap Calendar arrows); `test/direction.test.ts`, the pager's mirroring in `verify.mjs` |
+| B36 | Library (i18n) | The Paginator always shows "Page 1 of 7" (QuickGrid's paginator does; MudTablePager doesn't), and the DataGrid shows "No entries" where MudTable shows nothing. Both are library texts (B29), English unless the app's tables translate them, and BlazorHero has no resources for them, so they stay English in Arabic | Kept: the mechanism exists (B29); the original's texts have no counterpart to port. Open: a Paginator option without the page text |
 | U13 | Upstream | The dashboard's series have thirteen values for the twelve months (`new double[13]`, filled 0–11): the chart draws a thirteenth, empty slot | Port: the chart takes twelve |

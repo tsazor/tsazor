@@ -166,6 +166,11 @@ render in the browser.
   missing component is a finding: the completeness plan ([design-library-completeness.md](design-library-completeness.md))
   closes the gaps before 1.0. Icons are the first wall (F17). Both skins have the same components and parameters
   (only Fluent's Indicator and Spacer are missing in Bootstrap), so the skin is a choice of looks, not of features.
+- **What Blazored.LocalStorage stored has the C# names.** It serializes with System.Text.Json's defaults
+  (`{"IsRTL":true,"LanguageCode":"ar"}`), not with the API's camelCase. A port that keeps the users' stored settings
+  reads and writes those names behind its own camelCase types (BlazorHero's preference, B33).
+- **Set `<html lang>` to the culture.** Blazor doesn't, and an app in Arabic that says `lang="en"` is read with an
+  English voice (WCAG 3.1.1). Set it where the culture is chosen (B34).
 - **A cascaded value that comes later arrives as a parameter.** A layout that builds a service in its async
   `OnInitializedAsync` (BlazorHero's hub connection) cascades null to the page first when the page is loaded at its
   address: the page's `OnInitialized` has run by the time the value comes. Take the value where it arrives, in

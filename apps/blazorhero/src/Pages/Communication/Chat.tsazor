@@ -261,9 +261,11 @@
         return isOnline ? "success" : "danger";
     }
 
-    /** CreatedDate.ToString("G", CultureInfo.CurrentCulture): the short date (with the whole year) and the long time. */
+    /** CreatedDate.ToString("G", CultureInfo.CurrentCulture): the short date and the long time, a space between. */
     private formatDate(createdDate: string): string {
-        return this.culture.current.formatDate(new Date(createdDate), { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" });
+        const date = new Date(createdDate);
+        const culture = this.culture.current;
+        return `${culture.formatDate(date, { year: "numeric", month: "numeric", day: "numeric" })} ${culture.formatDate(date, { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
     }
 
     private scrollToBottom(): void {

@@ -480,6 +480,71 @@ async function realTime(page, stamp) {
   }
 }
 
+/** The stored preference changed as the original stores it (Blazored.LocalStorage: the C# names, B33). */
+async function setPreference(page, changes) {
+  await page.evaluate((changes) => {
+    const current = JSON.parse(localStorage.getItem("clientPreference") ?? "{}");
+    localStorage.setItem("clientPreference", JSON.stringify({ ...current, ...changes }));
+  }, changes);
+}
+
+/**
+ * Phase 6, the languages, as the administrator. Each of the eleven loads the app in it: the page's language
+ * (`<html lang>`, B34), the navigation's headings from its table (English where it has none, as .NET falls back), the
+ * API asked in its two letters. Arabic right to left: the navigation on the right, the pager's arrows mirrored, axe on
+ * the products, the dashboard and the chat. The run ends in English, left to right.
+ */
+async function inEveryLanguage(page, apiLanguages) {
+  const { LocalizationConstants, cultureOf } = await import("../src/Application/Constants.ts");
+  const en = (await import("../src/i18n/en.ts")).default;
+  const tableOf = async (neutral) => (neutral === "en" ? en : (await import(`../src/i18n/${neutral}.ts`)).default);
+  const wrong = [];
+  for (const { code } of LocalizationConstants.SupportedLanguages) {
+    const culture = cultureOf(code);
+    const neutral = culture.split("-")[0];
+    const personal = (await tableOf(neutral))["NavMenu.Personal"] ?? en["NavMenu.Personal"];
+    await setPreference(page, { LanguageCode: code, IsRTL: false });
+    apiLanguages.length = 0;
+    await page.reload();
+    const shown = await page.getByRole("group", { name: personal }).waitFor({ timeout: 10_000 }).then(() => true, () => false);
+    const lang = await page.evaluate(() => document.documentElement.lang);
+    const asked = [...new Set(apiLanguages)];
+    if (!shown || lang !== culture || asked.some((language) => language !== neutral)) wrong.push(`${code}: heading ${shown ? "ok" : `not "${personal}"`}, lang ${lang}, API ${asked.join("/")}`);
+  }
+  check(wrong.length === 0, `the eleven languages each load the app in them: <html lang>, the navigation's headings, the API's language${wrong.length ? ` — ${wrong.join("; ")}` : ""}`);
+
+  // Arabic, right to left.
+  const ar = await tableOf("ar");
+  await setPreference(page, { LanguageCode: "ar", IsRTL: true });
+  await page.goto(`${APP}/catalog/products`);
+  await page.getByRole("heading", { level: 1, name: ar["Products.Products"] }).waitFor();
+  await page.getByRole("table").waitFor();
+  const layout = await page.evaluate(() => {
+    const nav = document.querySelector("nav").getBoundingClientRect();
+    const main = document.querySelector("main").getBoundingClientRect();
+    const arrow = document.querySelector(".fui-paginator .fui-pagination__button .fui-icon");
+    return {
+      navOnTheRight: nav.left > main.left,
+      dir: document.querySelector("body [data-fluent-theme]").getAttribute("dir"),
+      lang: document.documentElement.lang,
+      arrow: arrow === null ? "none" : getComputedStyle(arrow).transform,
+    };
+  });
+  check(layout.navOnTheRight && layout.dir === "rtl" && layout.lang === "ar", `Arabic right to left: the navigation on the right, the theme root rtl, the page's language ar (${JSON.stringify(layout)})`);
+  check(layout.arrow === "matrix(-1, 0, 0, 1, 0, 0)", `the pager's arrows point the way the pages go (mirrored: ${layout.arrow})`);
+  await axe(page, "the products in Arabic, right to left");
+  await page.goto(`${APP}/dashboard`);
+  await page.locator(".bh-tile").first().waitFor();
+  await axe(page, "the dashboard in Arabic, right to left");
+  await page.goto(`${APP}/chat`);
+  await page.getByRole("log").waitFor();
+  await axe(page, "the chat in Arabic, right to left");
+
+  await setPreference(page, { LanguageCode: "en-US", IsRTL: false });
+  await page.goto(`${APP}/`);
+  await page.getByRole("group", { name: "Personal" }).waitFor();
+}
+
 let browser;
 try {
   await ensureServers();
@@ -587,6 +652,8 @@ try {
   await page.reload();
   await page.getByRole("navigation").first().waitFor();
   check(JSON.stringify(await theme()) === JSON.stringify({ theme: "dark", dir: "rtl" }), "both survive a reload (clientPreference)");
+  const preference = await page.evaluate(() => JSON.parse(localStorage.getItem("clientPreference")));
+  check(preference.IsDarkMode === true && preference.IsRTL === true && typeof preference.LanguageCode === "string", `the preference is stored as the original stores it, with the C# names (B33: ${Object.keys(preference).join(", ")})`);
   await page.getByRole("button", { name: "Toggle Dark Mode" }).click();
   await page.getByRole("button", { name: "Toggle right-to-left/left-to-right" }).click();
   check(JSON.stringify(await theme()) === JSON.stringify({ theme: "light", dir: "ltr" }), "and switch back");
@@ -609,6 +676,9 @@ try {
 
   // Phase 5: the dashboard and the chat.
   await realTime(page, Date.now().toString(36));
+
+  // Phase 6: the eleven languages, Arabic right to left.
+  await inEveryLanguage(page, languages);
 
   // The logout dialog: Cancel stays, Logout leaves.
   await page.getByRole("button", { name: /^Account:/ }).click();

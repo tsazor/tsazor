@@ -290,7 +290,8 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | LINQ `Where`, `Select`, `First(OrDefault)`, `Any`, `All`, `OrderBy`, `GroupBy`, `Sum`, `Distinct`, `Take`, `Skip` | `filter`, `map`, `find`, `some`, `every`, `toSorted`, `Object.groupBy`, `reduce`, `[...new Set(xs)]`, `slice(0, n)`, `slice(n)` — [the full table](csharp-to-typescript.md#linq-to-objects) |
 | `DateTime.Now`, `DateTime.UtcNow` | `new Date()` (an instant; local or UTC only when formatted) |
 | `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid` | `DateOnly`, `TimeOnly`, `TimeSpan`, `Guid` (`@tsazor/primitives`) |
-| `date.ToString("d", culture)` | `culture.formatDate(date, { dateStyle: "short" })` |
+| `date.ToString("d", culture)` | `culture.formatDate(date, { year: "numeric", month: "numeric", day: "numeric" })` — `dateStyle: "short"` writes the year with two digits (`21.10.26`), .NET's `d` with four |
+| `date.ToString("G", culture)` | the `d` above, a space, then `culture.formatDate(date, { hour: "numeric", minute: "2-digit", second: "2-digit" })` (Intl's own date-and-time joiner differs: `21/10/2026، 8:29` in Arabic) |
 | `Guid.NewGuid()` | `Guid.newGuid()` (or `crypto.randomUUID()`) |
 | `Exception`, `InvalidOperationException`, `ArgumentException` | `Error`, `class InvalidOperationError extends Error {}` |
 | `JsonSerializer.Serialize` / `Deserialize<T>` | `JSON.stringify` / `JSON.parse(text) as T` (unchecked) |
