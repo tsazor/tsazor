@@ -652,7 +652,7 @@ export function componentTypeDeclaration(
   }
   if (lines.length > 0) lines.push("");
 
-  lines.push(`export default class ${exportName}${typeDecl} extends ${baseName}${baseArgs} {`);
+  lines.push(`export default ${entry.abstract ? "abstract " : ""}class ${exportName}${typeDecl} extends ${baseName}${baseArgs} {`);
   for (const parameter of entry.parameters) {
     // A cascading member is the component's own wiring: not settable from markup, so not part of its type.
     if (parameter.declaredBy !== ownName || parameter.cascading) continue;

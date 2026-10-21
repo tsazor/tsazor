@@ -5,6 +5,19 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **Abstract components** (`@tsazor/compiler`, `tsazor build-lib`; the BlazorHero port's ExtendedAttributesBase, B38):
+  a `.tsazor` whose `@code` declares an abstract member, or whose code-behind class is abstract, compiles to an
+  abstract class — as a C# class is abstract when one of its partial parts says so. Its markup is the base's
+  `buildRenderTree`, which a `.ts` class between it and a page hands out (`(builder) => super.buildRenderTree(builder)`);
+  the manifest and the declaration say `abstract`.
+- **A menu entry that is a link** (`@tsazor/fluent` `MenuItem`, `@tsazor/bootstrap` `DropdownItem`; MudMenuItem's
+  `Href`/`Target`): `href` and `target` make it an `<a role="menuitem">` (`rel="noopener"` for `_blank`); disabled,
+  it stays a button.
+- **Tabs over a changing set** (`@tsazor/fluent`, `@tsazor/bootstrap`; the BlazorHero port's extended attribute
+  groups, B41): a `Tab`'s `badge` and `badgeIntent` (MudTabPanel's `BadgeData`/`BadgeColor`); a changed title, icon or
+  badge shows in the tab list, and a Tab that goes leaves it (the ones after it move up). Before, a tab list kept every
+  tab it had ever seen, with its first title.
+
 - **`<html lang>` follows the language of the texts** (`@tsazor/runtime`; the BlazorHero port's B34, WCAG 3.1.1):
   with `createTsazorApp({ localization })` the page's language is the current culture when a table serves it (its own
   or a parent's, `ar-SA` → `ar`), else the default culture, and follows a change. Blazor leaves the attribute as

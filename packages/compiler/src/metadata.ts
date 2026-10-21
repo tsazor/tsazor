@@ -591,6 +591,8 @@ function classRecord(cls: ts.ClassDeclaration, name: string, file: ts.SourceFile
       (record.declaredMembers ??= []).push(hasModifier(member, ts.SyntaxKind.ProtectedKeyword) ? { name, protected: true } : { name });
     }
   }
+  // A component whose @code declares an abstract member is abstract (the compiler writes `abstract class`).
+  if (record.abstractMembers !== undefined) record.abstract = true;
   return record;
 }
 
@@ -851,6 +853,8 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
     if (base) {
       result.isComponent = base.isComponent;
       if (base.incomplete) result.incomplete = true;
+      // An abstract code-behind class makes its .tsazor abstract, as one abstract partial part does a C# class.
+      if (record.base.codeBehind && base.abstract) result.abstract = true;
       // The chain's open abstract members: the ones this class implements go into its declaration, the rest stay open.
       const open: AbstractMember[] = [];
       for (const abstract of base.abstractMembers ?? []) {

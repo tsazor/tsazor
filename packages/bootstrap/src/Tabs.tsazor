@@ -11,7 +11,7 @@
     <ul class="nav nav-tabs" role="tablist" aria-label="@ariaLabel" @attach="keys">
         @for (let i = 0; i < this.tabs.length; i++) {
             <li class="nav-item" role="presentation">
-                <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@if (this.tabs[i]!.iconStart) {<Icon value="@this.tabs[i]!.iconStart" class="me-2" />}@this.tabs[i]!.title</button>
+                <button class="@this.tabClassFor(i)" type="button" role="tab" id="@this.tabId(i)" aria-controls="@this.panelId(i)" aria-selected="@this.selectedText(i)" tabindex="@this.tabIndexOf(i)" @onclick="() => this.select(i)">@if (this.tabs[i]!.iconStart) {<Icon value="@this.tabs[i]!.iconStart" class="me-2" />}@this.tabs[i]!.title@if (this.tabs[i]!.badge) {<Badge intent="@this.tabs[i]!.badgeIntent" class="ms-2">@this.tabs[i]!.badge</Badge>}</button>
             </li>
         }
     </ul>
@@ -70,6 +70,21 @@
         this.tabs.push(tab);
         // The tab list only exists after the children have registered, so the
         // nav needs one more render pass than the initial one.
+        this.stateHasChanged();
+    }
+
+    /** @internal Called by a Tab that goes: the ones after it move up, the active one stays where it can. */
+    unregisterTab(tab: Tab): void {
+        const at = this.tabs.indexOf(tab);
+        if (at < 0) return;
+        this.tabs.splice(at, 1);
+        this.tabs.forEach((remaining, index) => remaining.setIndex(index));
+        if (this.activeIndexInternal > at || this.activeIndexInternal >= this.tabs.length) this.activeIndexInternal = Math.max(0, this.activeIndexInternal - 1);
+        this.stateHasChanged();
+    }
+
+    /** @internal A Tab's title, icon or badge changed: the nav shows it. */
+    tabChanged(): void {
         this.stateHasChanged();
     }
 

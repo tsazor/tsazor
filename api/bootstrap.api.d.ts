@@ -518,6 +518,8 @@ export default class DropdownItem extends ComponentBase {
     childContent?: RenderFragment;
     iconStart?: IconValue;
     iconEnd?: IconValue;
+    href?: string;
+    target?: string;
 }
 
 // EditingMode: re-exported from @tsazor/ui
@@ -753,6 +755,8 @@ export default class DropdownItem extends ComponentBase {
     childContent?: RenderFragment;
     iconStart?: IconValue;
     iconEnd?: IconValue;
+    href?: string;
+    target?: string;
 }
 
 // Modal
@@ -1220,6 +1224,8 @@ export default class Switch extends InputBase<boolean> {
 export default class Tab extends ComponentBase {
     title: string;
     iconStart?: IconValue;
+    badge?: string;
+    badgeIntent: Intent;
     childContent?: RenderFragment;
     additionalAttributes?: Record<string, unknown>;
 }

@@ -77,6 +77,9 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | `@implements IHandleEvent` + `HandleEventAsync`, `EventUtil.AsNonRenderingEventHandler` | `protected override handleEventAsync(callback, arg) { return callback.invokeAsync(arg); }` — the component's events without a render |
 | `SetParametersAsync(ParameterView)` | `setParametersAsync(parameters: ParameterView)` |
 | `StateHasChanged()` | `this.stateHasChanged()` |
+| `public abstract partial class XBase` (an abstract component with markup) | abstract members in `@code` (`protected abstract get policy(): string;`) or an abstract code-behind class: the component is abstract |
+| `builder => base.BuildRenderTree(builder)` (a page with markup that renders its base's) | `(builder) => super.buildRenderTree(builder)` in a `.ts` class between them, `@this.inherited()` in the page |
+| `AddTransient(typeof(IManager<,>), typeof(Manager<,>))`, `[Inject] IManager<T> M` | a subclass per closed type, registered as its own class: type arguments don't exist at run time |
 | `InvokeAsync(StateHasChanged)`, `InvokeAsync(() => …)` | call directly: one thread, nothing to marshal |
 | `DispatchExceptionAsync(ex)` | `this.dispatchExceptionAsync(ex)` |
 | `IDisposable.Dispose()` / `IAsyncDisposable.DisposeAsync()` | `dispose()` / `async disposeAsync()` (no interface needed) |

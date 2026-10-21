@@ -144,6 +144,25 @@ function typeTokenOf(type: ts.TypeNode, file: ts.SourceFile): string | undefined
   return PRIMITIVE_TOKENS[only.getText(file)];
 }
 
+/**
+ * Whether `@code` text (a class body) declares an abstract member (`protected abstract get policy(): string;`): the
+ * component is abstract then, as a C# class is when one of its partial parts says so (Razor's code-behind).
+ */
+export function hasAbstractMembers(body: string): boolean {
+  if (!body.includes("abstract")) return false;
+  const { cls } = parseBody(body);
+  return cls?.members.some((member) => hasModifier(member, ts.SyntaxKind.AbstractKeyword)) ?? false;
+}
+
+/** Whether a code-behind file's default-exported class is abstract (`export default abstract class XBase`). */
+export function isAbstractDefaultClass(source: string): boolean {
+  if (!source.includes("abstract")) return false;
+  const file = ts.createSourceFile("code-behind.ts", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  return file.statements.some(
+    (statement) => ts.isClassDeclaration(statement) && hasModifier(statement, ts.SyntaxKind.DefaultKeyword) && hasModifier(statement, ts.SyntaxKind.AbstractKeyword),
+  );
+}
+
 /** Every member `@Bindable()` decorates in `@code` text (a class body). */
 export function bindableMembers(body: string): BindableMember[] {
   if (!body.includes("Bindable")) return [];

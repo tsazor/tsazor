@@ -4,7 +4,11 @@
 @import type { IconValue } from "@tsazor/ui"
 @import type Menu from "./Menu.tsazor"
 <li role="none">
-    <button class="fui-menu__item" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="fui-menu__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-menu__icon fui-menu__icon--end" />}</button>
+    @if (href !== undefined && !disabled) {
+        <a class="fui-menu__item" role="menuitem" tabindex="-1" href="@href" target="@target" rel="@rel" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="fui-menu__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-menu__icon fui-menu__icon--end" />}</a>
+    } else {
+        <button class="fui-menu__item" type="button" role="menuitem" tabindex="-1" disabled="@disabled" @onclick="handleClick">@if (iconStart) {<Icon value="@iconStart" class="fui-menu__icon" />}@childContent@if (iconEnd) {<Icon value="@iconEnd" class="fui-menu__icon fui-menu__icon--end" />}</button>
+    }
 </li>
 
 @code {
@@ -18,9 +22,17 @@
     @Parameter() iconStart?: IconValue;
     /** An icon after the label (`IconEnd`), at the item's far end. */
     @Parameter() iconEnd?: IconValue;
+    /** Makes the item a link (MudMenuItem's `Href`): choosing it follows the address; disabled, it stays a button. */
+    @Parameter() href?: string;
+    /** Where the link opens (`_blank`: a new tab, with `rel="noopener"`). */
+    @Parameter() target?: string;
 
     /** Resolved from the nearest Menu ancestor; selection closes the menu. */
     @CascadingParameter({ name: "FluentMenu" }) menu?: Menu;
+
+    private get rel(): string | undefined {
+        return this.target === "_blank" ? "noopener" : undefined;
+    }
 
     private handleClick(e: MouseEvent): Promise<void> | undefined {
         const selected = this.onSelect?.invokeAsync(e);

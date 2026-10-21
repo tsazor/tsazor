@@ -365,6 +365,11 @@ the type layer — TS2339 in the language server and in `tsazor check`, see
   `Menu.tsazor` needs no `@import` of the file itself (which would import the module into itself). Code that runs
   once, when the module loads — a registration, C#'s static constructor — is a `static { … }` block in `@code`;
   text after `@code` is markup like any other, it renders and never runs (TZS038).
+- A component with an abstract member in `@code` (`protected abstract get policy(): string;`), or with an abstract
+  code-behind class, is abstract — as a C# class is when one of its partial parts says so. Its markup is its
+  `buildRenderTree`: a component built on it implements the members, and one with markup of its own renders the
+  base's through a `.ts` class in between (`protected inherited(): RenderFragment { return (builder) =>
+  super.buildRenderTree(builder); }`, then `@this.inherited()`) — Blazor's `base.BuildRenderTree(builder)`.
 
 ## Expressions
 

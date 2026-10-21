@@ -18,7 +18,7 @@ import { importStatements, parseImportDirective, type ImportInfo } from "./impor
 import type { ComponentMetadata, ComponentParameter, ParameterCategory, TypeReference } from "./metadata.js";
 import { componentTarget, findParameter, suggestParameter, uncertainReason, type ComponentTarget } from "./component-params.js";
 import { RUNTIME_MODULE, replaceIdentifiers } from "./metadata.js";
-import { bindableMembers, stateMembers, untypedCascades } from "./bindable.js";
+import { bindableMembers, hasAbstractMembers, isAbstractDefaultClass, stateMembers, untypedCascades } from "./bindable.js";
 import {
   bodyMemberOffset,
   checkBindTarget,
@@ -395,6 +395,8 @@ class Codegen {
   /** Where each `@inject`'s type starts (parallel to metadata.injects): the member line maps onto it. */
   private readonly injectTypeStarts: Array<SourcePos | undefined> = [];
   private inheritsBase = "ComponentBase";
+  /** The component declares abstract members (or its code-behind class is abstract): the class is abstract. */
+  private abstractComponent = false;
   /** `@attribute @decorator(…)` directives, emitted on the class. */
   private readonly decorators: DirectiveNode[] = [];
   /** Requirements of each `@authorize` (all must pass, like Blazor's several `[Authorize]`). */
@@ -518,6 +520,8 @@ class Codegen {
     // templates masked (TypeScript can't read markup); the emission writes each template as a fragment.
     const memberBlocks = document.body.filter((n): n is Extract<MarkupNode, { kind: "codeBlock" }> => n.kind === "codeBlock" && n.member === true);
     const memberCode = memberBlocks.map((block) => (block.templates ? { ...block, code: maskedCode(block) } : block));
+    this.abstractComponent =
+      memberCode.some((block) => hasAbstractMembers(block.code)) || (this.options.codeBehindSource !== undefined && isAbstractDefaultClass(this.options.codeBehindSource));
     const renderBody = document.body.filter((n) => !(n.kind === "codeBlock" && n.member === true));
 
     const memberSource = memberCode.map((n) => n.code).join("\n");
@@ -608,7 +612,7 @@ class Codegen {
       const start = decorator.valueStart ?? decorator.pos;
       this.writer.line(decorator.value.trim(), [{ offset: 0, srcLine: start.line - 1, srcCol: start.column }]);
     }
-    this.line(`export default class ${this.options.className}${typeDecl} extends ${this.inheritsBase} {`);
+    this.line(`export default ${this.abstractComponent ? "abstract " : ""}class ${this.options.className}${typeDecl} extends ${this.inheritsBase} {`);
     if (this.metadata.routeTemplate) {
       this.line("  static routeTemplate = routeTemplate;");
       if (this.metadata.routeTemplates.length > 1) this.line("  static routeTemplates = routeTemplates;");

@@ -65,3 +65,9 @@
   background: transparent;
   cursor: not-allowed;
 }
+
+/* A link entry (href) looks like the others. */
+a.fui-menu__item {
+  text-decoration: none;
+  color: inherit;
+}
