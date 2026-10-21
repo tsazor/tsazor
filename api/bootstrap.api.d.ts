@@ -61,6 +61,7 @@ export default class Autocomplete<TOption> extends ComponentBase {
     maximumSelectedOptions?: number;
     maximumOptionsSearch: number;
     disabled: boolean;
+    readOnly: boolean;
     id?: string;
     additionalAttributes?: Record<string, unknown>;
 }
@@ -269,6 +270,7 @@ export default class CheckboxGroup extends InputBase<string[]> {
     inline: boolean;
     help?: string;
     disabled: boolean;
+    readOnly: boolean;
     id?: string;
 }
 
@@ -420,6 +422,7 @@ export default class DateInput extends InputBase<string> {
     min?: string;
     max?: string;
     disabled: boolean;
+    readOnly: boolean;
     required: boolean;
     id?: string;
 }
@@ -981,6 +984,7 @@ export default class RadioGroup extends InputBase<string> {
     inline: boolean;
     help?: string;
     disabled: boolean;
+    readOnly: boolean;
     id?: string;
 }
 
@@ -1068,6 +1072,7 @@ export default class Select extends InputBase<string> {
     label?: string;
     help?: string;
     disabled: boolean;
+    readOnly: boolean;
     required: boolean;
     id?: string;
     childContent?: RenderFragment;
@@ -1124,6 +1129,7 @@ export default class Slider extends InputBase<number> {
     orientation: Orientation;
     size: "small" | "medium";
     disabled: boolean;
+    readOnly: boolean;
     immediate: boolean;
     immediateDelay: number;
     tickMarks: boolean;

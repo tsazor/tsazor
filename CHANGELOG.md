@@ -8,7 +8,11 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 - **Read-only inputs** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's and Fluent UI Blazor's `ReadOnly`, the
   BlazorHero port's B48): `readOnly` on `TextInput`, `TextArea` and `NumberInput` sets the native `readonly` — the
   value stays focusable, selectable and submitted, where `disabled` greys it out and leaves the tab order. On
-  `Checkbox` and `Switch` it says `aria-readonly`, and a click or Space changes nothing.
+  `Checkbox` and `Switch` it says `aria-readonly`, and a click or Space changes nothing. The other inputs of the
+  library have it too: `DateInput` (the native readonly), `Autocomplete` (a readonly input, no list, no removable
+  chips), and where HTML has no readonly the value says `aria-readonly` and holds — `Select` (doesn't open, the keys
+  pick nothing), `RadioGroup` (a `radiogroup`; a click or an arrow key picks nothing), `CheckboxGroup`, `Slider`
+  (a drag or a key moves nothing). `DatePicker`, `TimePicker`, `Calendar`, `Rating` and `ColorPickerInput` had it.
 - **`TsazorHttp.getString(url)`** (`@tsazor/runtime`; HttpClient's `GetStringAsync`, the BlazorHero port's B49): a GET
   whose body comes back as text, unparsed — an API that answers `text/plain` (a base64 export). A non-2xx status throws
   `TsazorHttpError`, as `getJson` does.

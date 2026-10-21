@@ -14,7 +14,7 @@
     <div class="@optionsClass">
         @for (let i = 0; i < options.length; i++) {
             <div class="fui-checkbox">
-                <input id="@optionId(i)" type="checkbox" class="fui-checkbox__native" value="@options[i]!.value" checked="@this.isChecked(options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" @onchange="handleChange" />
+                <input id="@optionId(i)" type="checkbox" class="fui-checkbox__native" value="@options[i]!.value" checked="@this.isChecked(options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" aria-readonly="@(readOnly ? "true" : null)" @onclick:preventDefault="@readOnly" @onchange="handleChange" />
                 <label class="fui-checkbox__label" for="@optionId(i)">@options[i]!.label</label>
             </div>
         }
@@ -38,6 +38,8 @@
     @Parameter() help?: string;
     /** Disables every option. */
     @Parameter() disabled: boolean = false;
+    /** true shows the choices without letting them change: each box says aria-readonly, a click or Space changes nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** The group's id; generated when omitted. */
     @Parameter() id?: string;
 

@@ -34,6 +34,8 @@
     @Parameter() max?: string;
     /** Disables the input. */
     @Parameter() disabled: boolean = false;
+    /** true shows the date without letting it change: the native readonly — focusable, no picker (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** Marks the input as required (the native attribute). */
     @Parameter() required: boolean = false;
     /** The input's id; generated when omitted. */
@@ -60,6 +62,7 @@
             min: this.min,
             max: this.max,
             disabled: this.disabled ? true : undefined,
+            readonly: this.readOnly ? true : undefined,
             required: this.required ? true : undefined,
             ...this.field.aria(this.message, !!this.help, this.id),
         }, this.additionalAttributes);

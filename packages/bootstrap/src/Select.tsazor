@@ -10,7 +10,7 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <select @ref="element" id="@field.id(id)" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" @onchange="handleChange">@childContent</select>
+    <select @ref="element" id="@field.id(id)" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" aria-readonly="@(readOnly ? "true" : null)" @attributes="@withClass(inputClass, inputAttributes)" @onmousedown:preventDefault="@readOnly" @onkeydown="keepValue" @onchange="handleChange">@childContent</select>
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -28,6 +28,8 @@
     @Parameter() help?: string;
     /** Disables the list. */
     @Parameter() disabled: boolean = false;
+    /** true shows the choice without letting it change: the list says aria-readonly and doesn't open, the keys pick nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** Marks the list as required. */
     @Parameter() required: boolean = false;
     /** The list's id; generated when omitted. */
@@ -51,6 +53,16 @@
     }
 
     private handleChange(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLSelectElement).value = this.currentValue ?? "";
+            return;
+        }
         this.currentValue = (e.target as HTMLSelectElement).value;
+    }
+
+    /** readOnly: a key that would change the value does nothing; Tab, Escape and the browser's shortcuts still work. */
+    private keepValue(e: KeyboardEvent): void {
+        if (!this.readOnly || e.key === "Tab" || e.key === "Escape" || ((e.ctrlKey || e.metaKey) && !e.key.startsWith("Arrow"))) return;
+        e.preventDefault();
     }
 }

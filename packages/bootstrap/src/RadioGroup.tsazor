@@ -12,7 +12,7 @@
     }
     @for (let i = 0; i < options.length; i++) {
         <div class="@checkClass">
-            <input id="@optionId(i)" type="radio" class="@inputClass" name="@field.id(id)" value="@options[i]!.value" checked="@(currentValue === options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" @onchange="handleChange" />
+            <input id="@optionId(i)" type="radio" class="@inputClass" name="@field.id(id)" value="@options[i]!.value" checked="@(currentValue === options[i]!.value)" disabled="@(disabled || options[i]!.disabled === true)" @onclick:preventDefault="@readOnly" @onkeydown="keepChoice" @onchange="handleChange" />
             <label class="form-check-label" for="@optionId(i)">@options[i]!.label</label>
         </div>
     }
@@ -35,6 +35,8 @@
     @Parameter() help?: string;
     /** Disables every option. */
     @Parameter() disabled: boolean = false;
+    /** true shows the choice without letting it change: the group is a radiogroup that says aria-readonly, a click or an arrow key picks nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** The group's id (also the radios' name); generated when omitted. */
     @Parameter() id?: string;
 
@@ -54,7 +56,8 @@
     }
 
     private get groupAttributes(): Record<string, unknown> {
-        return { id: this.field.id(this.id), ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
+        const readOnly = this.readOnly ? { role: "radiogroup", "aria-readonly": "true" } : {};
+        return { id: this.field.id(this.id), ...readOnly, ...this.field.aria(this.message, !!this.help, this.id), ...this.additionalAttributes };
     }
 
     private optionId(index: number): string {
@@ -63,5 +66,10 @@
 
     private handleChange(e: Event): void {
         this.currentValue = (e.target as HTMLInputElement).value;
+    }
+
+    /** readOnly: the arrow keys, which would pick the next option, do nothing. */
+    private keepChoice(e: KeyboardEvent): void {
+        if (this.readOnly && e.key.startsWith("Arrow")) e.preventDefault();
     }
 }

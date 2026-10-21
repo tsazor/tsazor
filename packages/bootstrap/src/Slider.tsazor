@@ -17,7 +17,7 @@
     }
     <div class="tz-slider__control">
         <div class="tz-slider__rail">
-            <input @ref="element" id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@(valueFormat ? valueText : null)" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @oninput="handleInput" @onchange="handleChange" />
+            <input @ref="element" id="@field.id(id)" type="range" min="@min" max="@max" step="@step" disabled="@disabled" aria-readonly="@(readOnly ? "true" : null)" aria-orientation="@(orientation === "vertical" ? "vertical" : null)" aria-valuetext="@(valueFormat ? valueText : null)" aria-label="@ariaLabel" @attributes="@withClass(inputClass, inputAttributes)" value="@shownValue" @onmousedown:preventDefault="@readOnly" @ontouchstart:preventDefault="@readOnly" @onkeydown="keepValue" @oninput="handleInput" @onchange="handleChange" />
             @if (tickMarks) {
                 <div class="tz-slider__ticks" aria-hidden="true">
                     @foreach (const tick of ticks) {
@@ -61,6 +61,8 @@
     @Parameter() size: "small" | "medium" = "medium";
     /** Disables the slider. */
     @Parameter() disabled: boolean = false;
+    /** true shows the value without letting it change: the slider says aria-readonly, a drag or a key moves nothing (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** The value follows the drag (MudBlazor's `Immediate`, true by default); false updates it on release. */
     @Parameter() immediate: boolean = true;
     /** The pause in ms before an immediate update (`ImmediateDelay`, 60 as in Fluent UI Blazor). */
@@ -125,6 +127,10 @@
     }
 
     private handleInput(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLInputElement).value = String(this.shownValue);
+            return;
+        }
         this.moving = Number((e.target as HTMLInputElement).value);
         if (!this.immediate) return;
         this.immediateInput ??= new ImmediateInput(this.disposeSignal);
@@ -134,8 +140,18 @@
     }
 
     private handleChange(e: Event): void {
+        if (this.readOnly) {
+            (e.target as HTMLInputElement).value = String(this.shownValue);
+            return;
+        }
         this.immediateInput?.cancel();
         this.moving = undefined;
         this.currentValue = Number((e.target as HTMLInputElement).value);
+    }
+
+    /** readOnly: a key that would change the value does nothing; Tab, Escape and the browser's shortcuts still work. */
+    private keepValue(e: KeyboardEvent): void {
+        if (!this.readOnly || e.key === "Tab" || e.key === "Escape" || ((e.ctrlKey || e.metaKey) && !e.key.startsWith("Arrow"))) return;
+        e.preventDefault();
     }
 }

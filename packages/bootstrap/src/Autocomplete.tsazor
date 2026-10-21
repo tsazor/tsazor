@@ -24,13 +24,13 @@
             @foreach (const option of selectedOptions) {
                 <span class="badge text-bg-light border tz-autocomplete__chip" @key="this.keyOf(option)">
                     @optionText(option)
-                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@disabled" @onclick="() => this.remove(option)"></button>
+                    <button type="button" class="btn-close tz-autocomplete__remove" aria-label="@t("remove", { name: optionText(option) })" disabled="@(disabled || readOnly)" @onclick="() => this.remove(option)"></button>
                 </span>
             }
         }
         <input id="@this.inputId" class="tz-autocomplete__input" type="text" role="combobox" autocomplete="off"
                aria-autocomplete="list" aria-expanded="@(this.open ? "true" : "false")" aria-controls="@this.listId"
-               aria-activedescendant="@this.activeId" aria-label="@ariaLabel" placeholder="@placeholder" disabled="@disabled"
+               aria-activedescendant="@this.activeId" aria-label="@ariaLabel" placeholder="@placeholder" disabled="@disabled" readonly="@readOnly"
                aria-invalid="@(this.message ? "true" : null)" aria-describedby="@(this.message ? this.messageId : null)"
                value="@this.inputText" @oninput="this.input" @onkeydown="this.keydown" />
     </div>
@@ -93,6 +93,8 @@
     @Parameter() maximumOptionsSearch: number = 9;
     /** Disables the input and the chips' remove buttons. */
     @Parameter() disabled: boolean = false;
+    /** true shows the picked options without letting them change: the native readonly on the input, no list, no removable chips (MudBlazor's and Fluent UI Blazor's `ReadOnly`). */
+    @Parameter() readOnly: boolean = false;
     /** The input's id; generated when omitted. */
     @Parameter() id?: string;
     /** `@attributes` pass-through to the root (class appends; see src/attributes.ts). */
@@ -195,6 +197,8 @@
     }
 
     private async keydown(e: KeyboardEvent): Promise<void> {
+        // Read-only: the keys open no list and remove no chip.
+        if (this.readOnly) return;
         const action = comboboxKeyAction(e.key, {
             open: this.open,
             active: this.active,
