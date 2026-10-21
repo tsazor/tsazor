@@ -314,6 +314,11 @@ Collected from the port documents, the design documents, the handoffs and the co
 | **The skins' own repository at 1.0** | Lockstep (one version for every package) and the skins' own versions after the move: when do they move? |
 | ~~**The rc on npm**~~ | **Decided 2026-10-15:** release candidates only in the local registry; npm gets 1.0.0 first |
 | **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
+| **A `Decimal` field in the skins** (BlazorHero B42) | `NumberInput` is number-only: a generic `NumberInput<TValue>` (`FluentNumberField<TValue>`, `MudNumericField<T>`) or a `DecimalInput`? A generic one changes an existing component's type |
+| **A typed `Select`** (B43) | `Select` binds a string: a `Select<TValue>` with typed options (`FluentSelect<TOption>`, `MudSelect<T>`) — the same question of an existing component's type |
+| **DataGrid detail rows** (B44) | MudTable's `ChildRowContent`, MudDataGrid's `HierarchyColumn`: the API, with virtualization and grouping |
+| **A DateRangePicker** (B45) | MudDateRangePicker; the Calendar already selects a range |
+| **`@bind` by the declared type** (B46) | A `Decimal \| null` (or `number \| null`) that starts as null binds the text: the compiler knows the declared type and could hand the converter over — a behavior change of K.7/K.8's documented rule |
 | ~~**Cleanup**~~ | **Done 2026-10-15:** `apps/fluentcms-admin` deleted (`apps/fluentcms` replaced it); the fullstackhero containers, their images and volumes removed (owner) |
 
 ### After 1.0 (additive)
