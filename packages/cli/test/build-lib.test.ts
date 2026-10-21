@@ -293,6 +293,17 @@ describe("buildLibrary (D9)", () => {
       .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
     expect(problems).toEqual([]);
 
+    // A tsconfig that asks for declarations itself (the MudBlazor port's: `declaration`, `declarationMap`) left the
+    // program's `noEmit` on, so every helper of this kind was refused (next.6).
+    const declaring = await library({
+      ...files,
+      "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, target: "ES2022", module: "ESNext", moduleResolution: "bundler", noEmit: true, declaration: true, declarationMap: true }, include: ["src"] }),
+    });
+    const declared = await buildLibrary({ packageDir: declaring, internal: ["Part"], log: () => {} });
+    expect(declared.errors).toEqual([]);
+    expect(await read(declaring, "icons.d.ts")).toContain("close: string;");
+    expect(await read(declaring, "utilities/paper-ref.d.ts")).toContain("levelOf(paper: Paper): number;");
+
     // One the program can't give either — here a helper the tsconfig leaves out — is an error, not a gap.
     const outside = await library({
       "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, target: "ES2022", module: "ESNext", moduleResolution: "bundler", noEmit: true }, include: ["src"], exclude: ["src/extra"] }),

@@ -235,6 +235,18 @@ describe("tsazor vite plugin", () => {
     expect(config({ esbuild: false })).toEqual({ build: { target: "es2022" } });
   });
 
+  it("keeps one copy of each @tsazor package the app depends on (a library linked with its own node_modules brought a second runtime)", async () => {
+    const app = await mkdtemp(path.join(tmpdir(), "tsazor-dedupe-"));
+    try {
+      const manifest = { dependencies: { "@tsazor/runtime": "1.0.0", "@tsazor/fluent": "1.0.0", "my-lib": "file:../my-lib" }, devDependencies: { "@tsazor/vite-plugin": "1.0.0" } };
+      await writeFile(path.join(app, "package.json"), JSON.stringify(manifest));
+      const config = tsazor({ root: app }).config as unknown as (user: Record<string, unknown>) => Record<string, unknown>;
+      expect(config({}).resolve).toEqual({ dedupe: ["@tsazor/runtime", "@tsazor/fluent", "@tsazor/vite-plugin"] });
+    } finally {
+      await rm(app, { recursive: true, force: true });
+    }
+  });
+
   it("resolves the virtual routes module id", async () => {
     const plugin = await createPlugin();
     expect(plugin.resolveId?.call({} as never, "virtual:tsazor-routes")).toBe("\0virtual:tsazor-routes");

@@ -214,6 +214,8 @@ export class TsazorTypeService {
 
   /** The program's compiler options; `declarationOf` turns declaration emit on. */
   private options: ts.CompilerOptions;
+  /** Whether `declarationOf` has turned declaration emit on (`noEmit` off) yet. */
+  private emitsDeclarations = false;
 
   constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup) {
     this.projectRoot = path.resolve(projectRoot);
@@ -230,7 +232,9 @@ export class TsazorTypeService {
    * — `tsazor build-lib`'s fallback. `errors` says why there is none.
    */
   declarationOf(fileName: string): { text?: string; errors: string[] } {
-    if (!this.options.declaration) {
+    // Always once, whatever the tsconfig says: its own `declaration: true` still left `noEmit` on, and nothing came out.
+    if (!this.emitsDeclarations) {
+      this.emitsDeclarations = true;
       this.options = { ...this.options, noEmit: false, declaration: true, emitDeclarationOnly: true, declarationMap: false, sourceMap: false, inlineSourceMap: false };
     }
     const program = this.ls.getProgram();

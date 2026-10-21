@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { CHECK_CODES, compactFieldDecorators, compile, shareHelpers, type TszDiagnostic } from "@tsazor/compiler";
 import { defaultMetadataCache } from "@tsazor/workspace";
@@ -71,7 +71,12 @@ export function tsazor(options: TsazorPluginOptions = {}): Plugin {
       // Tsazor's build target, ES2022 (docs/browser-support.md), unless the app names one: Vite's default (Safari 16)
       // lacks static blocks, and esbuild then lowers each class that has one with all its private members — WeakMap
       // lookups instead of fields, in the runtime's components too.
-      const build = userConfig.build?.target === undefined ? { build: { target: "es2022" } } : {};
+      const build: Record<string, unknown> = userConfig.build?.target === undefined ? { build: { target: "es2022" } } : {};
+      // One copy of each @tsazor package the app depends on, the app's: a library linked with `file:` and its own
+      // node_modules brought a second runtime, and its components rendered with a renderer, cascades and services the
+      // app's don't know. Only the app's own dependencies — Vite resolves a deduped package from the app's root.
+      const dedupe = tsazorDependencies(path.resolve(options.root ?? userConfig.root ?? process.cwd()));
+      if (dedupe.length > 0) build.resolve = { dedupe };
       // The app's own .ts files (code-behind, hand-written components) use
       // the runtime's standard decorators too. Vite's dev transform targets
       // esnext, which leaves decorators as written — no engine runs them
@@ -239,6 +244,16 @@ async function warmupTsazorModules(server: ViteDevServer, projectRoot: string): 
 }
 
 /** Manifest problems already printed (TZS036): once per manifest file and message. */
+/** The @tsazor packages the app's package.json depends on (dev dependencies too); none without one. */
+function tsazorDependencies(root: string): string[] {
+  try {
+    const manifest = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+    return Object.keys({ ...manifest.dependencies, ...manifest.devDependencies }).filter((name) => name.startsWith("@tsazor/"));
+  } catch {
+    return [];
+  }
+}
+
 const reportedManifestProblems = new Set<string>();
 
 /** A package's component manifest that is unreadable or newer than this Tsazor: said once, as the check says it. */

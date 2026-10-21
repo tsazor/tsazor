@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **A helper's declaration from the program, whatever the tsconfig says** (`tsazor build-lib`; the MudBlazor port):
+  next.6 turned declaration emit on only when the tsconfig didn't set `declaration` itself — with
+  `"declaration": true` the program stayed `noEmit`, and every helper whose declaration the file alone can't give
+  (`icons.ts`'s shorthand properties) was refused with "TypeScript emitted no declaration".
+- **One copy of each @tsazor package** (`@tsazor/vite-plugin`; found reviewing the MudBlazor port): the plugin dedupes
+  the `@tsazor/*` packages the app's package.json depends on (`resolve.dedupe`), so a library linked with `file:` and
+  its own `node_modules` no longer brings a second runtime whose components the app's renderer, cascades and services
+  don't know.
+
 ## 1.0.0-next.6 (2026-10-21)
 
 - **A base imported by name** (`@tsazor/compiler`, `tsazor build-lib`; both the MudBlazor and the Radzen port):
