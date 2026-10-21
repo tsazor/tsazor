@@ -1,8 +1,8 @@
-# Handoff 2026-10-21 — BlazorHero phases 4–6, the owner's pre-1.0 decisions, the ports' task lists, next.6–next.8
+# Handoff 2026-10-21 — BlazorHero complete (phases 3–6), the owner's pre-1.0 decisions, the ports' task lists, next.6–next.8
 
 The owner's plan for the day: push, BlazorHero phases 5 and 6, a task list for each library port (MudBlazor, Radzen),
 then — after deciding four questions ("Ja" to every recommendation) — "Arbeite autonom weiter": the decisions, the
-smaller defaults, BlazorHero phase 4.
+smaller defaults, BlazorHero phase 4, then phase 3 (identity), the last one. Every page of the original is ported.
 
 ## State
 
@@ -10,9 +10,9 @@ smaller defaults, BlazorHero phase 4.
 |---|---|
 | Pushed | through `81f853e` (next.7) |
 | Local registry | **1.0.0-next.8** (`c4f529d`); Verdaccio running from this session (`pnpm registry`) |
-| Unpushed | `dd27138` … `c4f529d` (9 commits); `ci:local` green on `e32d3e8` |
-| BlazorHero | phases 0–2, 4, 5, 6 done; `scripts/verify.mjs` 103 checks; phase 3 (identity) open |
-| Gates | skins, both a11y, gallery green on `a4bc1d3`; the parity gate was stopped in Edge after its QuickGrid tests passed (441 checks) — run the full one again |
+| Unpushed | `dd27138` … `c0963b9` (13 commits); `ci:local` green on `ee1ee4f` |
+| BlazorHero | **all phases (0–6) done**; `scripts/verify.mjs` 153 checks, all pass |
+| Gates | **all 35 green** on `c0963b9` (`pnpm gates`, a fresh build, 5420 s) |
 
 ## Done
 
@@ -30,16 +30,30 @@ smaller defaults, BlazorHero phase 4.
 | `a4bc1d3` | BlazorHero: the products' provider keeps nothing from a superseded request (B37, a cold backend showed it) |
 | `caa6fca` | Abstract components (B38); menu link entries (B40); Tabs over a changing set, a tab's badge (B41) |
 | `ff95acd` | BlazorHero phase 4: document types, the document store, extended attributes on the abstract generic base, the audit trails |
+| `b58f492` | `readOnly` on TextInput, TextArea, NumberInput, Checkbox, Switch (B48); `TsazorHttp.getString` (B49); AppLayout follows the breakpoint (B52) |
+| `ee1ee4f` | BlazorHero phase 3: users, roles, role permissions (a row's edit, B50), user roles, profiles, the account, sign-up, forgot and reset password; the NotPorted placeholder is gone |
+| `c0963b9` | `readOnly` on the other 1.0 inputs: Select, RadioGroup, CheckboxGroup, Slider, DateInput, Autocomplete |
 
-Port findings: docs/port-blazorhero.md B30–B47, U11–U14. Migration lessons (migration-practices.md): a cascaded value
+Port findings: docs/port-blazorhero.md B30–B52, U11–U18. Migration lessons (migration-practices.md): a cascaded value
 that comes later (B31), Blazored.LocalStorage's C# names (B33), `<html lang>` (B34), the provider's `signal` (B37),
-open-generic services (B39), a decimal's scale from JSON (B47).
+open-generic services (B39), a decimal's scale from JSON (B47), a row's edit by a button (B50), `ReadOnly` (B48), an
+answer that isn't JSON (B49), a resource key only another culture has (B51).
+
+## BlazorHero phase 3, how it runs
+
+- `scripts/backend.mjs` sets BlazorHero's mail host to `127.0.0.1:9`: a registration's confirmation and a reset mail
+  go nowhere (BlazorHero logs the failed send). `verify.mjs` reads the reset link's token from the job Hangfire stored
+  (`sqlcmd … -y 0`, table `HangFire.Job`).
+- The API deletes no users: each verify run leaves two (named by its stamp); the run's role is deleted at the end.
+- A verify lesson: a field whose message goes on its change (on blur) shifts the layout under the next click — commit
+  the field (Tab) and wait for the message to go before clicking what follows it.
 
 ## The ports' task lists
 
 `D:\Own\MudTsazor\TASKS.md` (English, M1–M23 + C1–C9) and `D:\Own\RadzenTsazor\TASKS.md` (German, R1–R30), each
 self-contained, now on **next.8**: from the `file:` links into this working tree to the registry, the port bugs, the
-workarounds next.5–next.8 made obsolete, versioned tests. Not committed in the port repositories.
+workarounds next.5–next.8 made obsolete, versioned tests. Not committed in the port repositories. The `readOnly`
+parameters (B48) and AppLayout's breakpoint (B52) come with the next release.
 
 ## Open for the owner (also in roadmap-1.0.md §7)
 
@@ -48,4 +62,11 @@ workarounds next.5–next.8 made obsolete, versioned tests. Not committed in the
 - **B44** DataGrid detail rows, **B45** a DateRangePicker — MudBlazor features the port worked around.
 - **B46** `@bind` of a `Decimal | null` that starts as null binds the text (the runtime converts by the current
   value); the compiler knows the declared type — a change of K.7/K.8's documented rule.
-- BlazorHero phase 3 (identity) is next.
+- The push of the 13 commits, and whether next.9 goes to the local registry now (readOnly, getString, AppLayout).
+
+## Gates on `c0963b9`
+
+`pnpm gates` with a fresh build: all 35 green in 5420 s — the 15 gates in Edge (the tutorial twice, Blazing Pizza, the
+gallery, the demo under a strict CSP, the workers, both accessibility gates, the skins, Blazor parity in full, the
+starter, the incremental migration, FluentCMS, fullstackhero, the Sleipnir ticker), the ten browser gates again in
+Firefox and WebKit. BlazorHero runs outside the gates (`node scripts/verify.mjs`, 153 checks, all pass).

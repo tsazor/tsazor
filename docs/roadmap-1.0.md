@@ -305,6 +305,9 @@ Collected from the port documents, the design documents, the handoffs and the co
 | ~~**B32** — every DataGrid column had a move grip and a resize handle~~ **done 2026-10-21**: `resizableColumns`, `reorderableColumns`, off by default | Owner 2026-10-21: no reference grid has them by default; changing it after 1.0 would break |
 | ~~**Abstract members in component declarations** — a field or `protected` member that implements an abstract base member was missing from the `.d.ts` (TS2654 without `skipLibCheck`)~~ **done 2026-10-21**: declared by the base's own type (`kind: Series<number>["kind"]`) | Owner 2026-10-21: the targeted fix (the base chain's abstract members in the metadata), before 1.0 |
 | ~~**`<html lang>` follows the culture** (BlazorHero B34)~~ **done 2026-10-21**: on by default with `localization`, `documentLanguage: false` turns it off | A default to decide before 1.0 (WCAG 3.1.1) |
+| ~~**BlazorHero phase 3** — identity: users, roles, role permissions, user roles, the account, sign-up, forgot and reset password~~ **done 2026-10-21**: every page of the original ported, `verify.mjs` 153 checks | The last phase; with it the port is complete |
+| ~~**`readOnly` on the inputs** (BlazorHero B48)~~ **done 2026-10-21**: every 1.0 input of both skins (the native readonly, else `aria-readonly` and a value that holds) | MudBlazor's and Fluent UI Blazor's `ReadOnly`; `disabled` was the only way, which greys a value out |
+| ~~**AppLayout follows the breakpoint** (BlazorHero B52)~~ **done 2026-10-21**: narrower past 960px closes the column, wider opens it | MudBlazor's responsive drawer; a column closed on a narrow window stayed closed |
 
 ### For the owner to decide
 
