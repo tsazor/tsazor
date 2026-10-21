@@ -1764,6 +1764,12 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true,
         "typeArguments": [
           "Date | string"
+        ],
+        "typeArgumentReferences": [
+          {
+            "name": "Date",
+            "kind": "global"
+          }
         ]
       }
     },
@@ -2101,6 +2107,12 @@ export const RUNTIME_MANIFEST: ComponentManifest = {
         "resolved": true,
         "typeArguments": [
           "TValue"
+        ],
+        "typeArgumentReferences": [
+          {
+            "name": "TValue",
+            "kind": "typeParameter"
+          }
         ]
       }
     },

@@ -630,6 +630,8 @@ export function componentTypeDeclaration(
     // project and not importable here.
     if (base.specifier === undefined || base.imported === undefined || base.imported === "*") runtimeNames.add(base.name);
     else importType(declarationSpecifier(base.specifier, entry.file), base.name, base.imported);
+    // And what its type arguments name (`Picker<DateRange>`).
+    collectReferences(base.typeArgumentReferences, true);
   }
   if (runtimeNames.size === 0 && (base === undefined || !base.resolved)) runtimeNames.add("ComponentBase");
 

@@ -169,7 +169,16 @@ export interface ComponentMetadata {
    * The base class. `specifier`/`imported`: the import that binds it, when it isn't the runtime's (a library's own
    * `MudComponentBase`, another package's base) — a declaration imports it from there.
    */
-  base?: { name: string; typeArguments?: string[]; resolved: boolean; codeBehind?: boolean; specifier?: string; imported?: string };
+  base?: {
+    name: string;
+    typeArguments?: string[];
+    /** The types the arguments name (`DateRange` in `Picker<DateRange>`): what a declaration imports for them. */
+    typeArgumentReferences?: TypeReference[];
+    resolved: boolean;
+    codeBehind?: boolean;
+    specifier?: string;
+    imported?: string;
+  };
   /** All parameters, inherited first (runtime order: a re-declaration keeps the base's slot). */
   parameters: ComponentParameter[];
   /** The public methods the class declares itself (inherited ones come with its base). */
@@ -789,7 +798,11 @@ function resolveClass(module: ModuleMetadata, record: ClassRecord, host: Metadat
   if (record.base) {
     const base = resolveBase(module, record, host, visiting);
     result.base = { name: record.base.name, resolved: base !== undefined };
-    if (record.base.typeArguments.length > 0) result.base.typeArguments = record.base.typeArguments;
+    if (record.base.typeArguments.length > 0) {
+      result.base.typeArguments = record.base.typeArguments;
+      const references = record.base.typeArguments.flatMap((text) => referencesOf(text, module, ownTypeParameters));
+      if (references.length > 0) result.base.typeArgumentReferences = references;
+    }
     if (record.base.codeBehind) result.base.codeBehind = true;
     const binding = module.imports.get(record.base.name.split(".")[0]!);
     if (base && binding && binding.specifier !== RUNTIME_MODULE && !record.base.codeBehind && !module.runtimeInternal) {

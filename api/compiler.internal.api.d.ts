@@ -322,6 +322,7 @@ export interface ComponentMetadata {
     base?: {
         name: string;
         typeArguments?: string[];
+        typeArgumentReferences?: TypeReference[];
         resolved: boolean;
         codeBehind?: boolean;
         specifier?: string;

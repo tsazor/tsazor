@@ -237,6 +237,30 @@ describe("buildLibrary (D9)", () => {
     expect(problems).toEqual([]);
   });
 
+  it("imports a base's type arguments into the declaration (`@inherits Picker<DateRange>`)", async () => {
+    // The Radzen port's RadzenDateRangePicker.d.ts named DateRange without importing it: the consumer's inherited
+    // `value` lost its type.
+    const root = await library({
+      "src/base/picker.ts": 'import { ComponentBase, Parameter } from "@tsazor/runtime";\n\nexport abstract class Picker<T> extends ComponentBase {\n  /** The picked value. */\n  @Parameter() value?: T;\n}\n',
+      "src/utilities/date-range.ts": "export class DateRange {\n  constructor(readonly start: Date, readonly end: Date) {}\n}\n",
+      "src/RangePicker.tsazor": '@import { Picker } from "./base/picker.js"\n@import { DateRange } from "./utilities/date-range"\n@inherits Picker<DateRange>\n<span>range</span>\n',
+      "consumer.ts": 'import { RangePicker } from "./dist/index.js";\nimport type { DateRange } from "./dist/utilities/date-range.js";\n\ndeclare const picker: RangePicker;\nexport const start: Date | undefined = picker.value?.start;\nexport const range: DateRange | undefined = picker.value;\n',
+    });
+    const result = await buildLibrary({ packageDir: root, internal: ["Part"], log: () => {} });
+    expect(result.errors).toEqual([]);
+    const declaration = await read(root, "RangePicker.d.ts");
+    expect(declaration).toContain("extends Picker<DateRange>");
+    expect(declaration).toContain('import type { DateRange } from "./utilities/date-range.js";');
+    const ts = (await import("typescript")).default;
+    const program = ts.createProgram([path.join(root, "consumer.ts")], {
+      strict: true, noEmit: true, skipLibCheck: false, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
+    });
+    const problems = ts.getPreEmitDiagnostics(program)
+      .filter((d) => d.file === undefined || !d.file.fileName.includes("/runtime/"))
+      .map((d) => `${d.file ? path.relative(root, d.file.fileName) : ""}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`);
+    expect(problems).toEqual([]);
+  });
+
   it("takes a base imported by name (`@import { Button }` + `@inherits Button`) and declares the public getters a @ref reads", async () => {
     // Both the MudBlazor and the Radzen port lost every component built on another by a named import: no manifest
     // entry, no declaration (the default import worked). And `stepper.steps`, a public getter, was missing.

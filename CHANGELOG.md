@@ -9,6 +9,9 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
   next.6 turned declaration emit on only when the tsconfig didn't set `declaration` itself — with
   `"declaration": true` the program stayed `noEmit`, and every helper whose declaration the file alone can't give
   (`icons.ts`'s shorthand properties) was refused with "TypeScript emitted no declaration".
+- **A base's type arguments are imported into a component's declaration** (`tsazor build-lib`; the Radzen port):
+  `@inherits Picker<DateRange>` wrote `extends Picker<DateRange>` without importing `DateRange`, so the consumer's
+  inherited members lost their type. The manifest's `base` carries `typeArgumentReferences`.
 - **One copy of each @tsazor package** (`@tsazor/vite-plugin`; found reviewing the MudBlazor port): the plugin dedupes
   the `@tsazor/*` packages the app's package.json depends on (`resolve.dedupe`), so a library linked with `file:` and
   its own `node_modules` no longer brings a second runtime whose components the app's renderer, cascades and services

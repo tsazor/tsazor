@@ -135,6 +135,7 @@ export declare class TsazorTypeService {
     private projectSources;
     private readonly configPath;
     private options;
+    private emitsDeclarations;
     constructor(projectRoot: string, configPath?: string, lookup?: ShadowLookup);
     declarationOf(fileName: string): {
         text?: string;
