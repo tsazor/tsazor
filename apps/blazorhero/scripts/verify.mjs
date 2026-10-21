@@ -11,7 +11,8 @@
  *   dialog and the menus
  *
  * Phase 2, the catalog (`catalog`), phase 4, the documents (`documents`), phase 5, the dashboard and the chat with a
- * second user (`realTime`), and phase 6, the languages (`inEveryLanguage`), run between the language and the logout.
+ * second user (`realTime`), phase 3, identity — users, roles, permissions, the account, a password reset, the sign-up
+ * (`identity`) —, and phase 6, the languages (`inEveryLanguage`), run between the language and the logout.
  *
  * Starts the backend when it isn't running (the first run clones and builds BlazorHero, scripts/backend.mjs), builds
  * the app, and fails on every console error.
@@ -25,7 +26,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as playwright from "playwright-core";
 import { launchBrowser } from "../../../scripts/browsers.mjs";
-import { ADMIN, BACKEND, BASIC } from "./backend.mjs";
+import { ADMIN, BACKEND, BASIC, DATABASE, SQL_SERVER } from "./backend.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = "http://localhost:5353";
@@ -403,6 +404,8 @@ async function documents(page, stamp) {
     // Its extended attributes: the abstract generic page.
     await page.waitForURL(/\/extended-attributes\/Document\/\d+$/);
     await page.getByRole("heading", { level: 1, name: "Manage Document Extended Attributes" }).waitFor();
+    // The heading shows before the attributes have come (a cold backend is slow): wait for the tab.
+    await page.getByRole("tab").first().waitFor();
     const tabs = async () => (await page.getByRole("tab").allInnerTexts()).map((text) => text.replace(/\s+/g, " ").trim());
     check(JSON.stringify(await tabs()) === JSON.stringify(["All Groups 0/0"]), `the extended attributes: the generic base's page, one tab (${(await tabs()).join(", ")})`);
     const add = async (fill) => {
@@ -588,6 +591,410 @@ async function realTime(page, stamp) {
     await setBasicChat(page, false).catch(() => undefined);
     const brandsLeft = await api(page, "GET", "/api/v1/brands").catch(() => ({ data: [] }));
     for (const brand of (brandsLeft.data ?? []).filter((candidate) => candidate.name === brandName)) await api(page, "DELETE", `/api/v1/brands/${brand.id}`);
+  }
+}
+
+/** The reset link's token, from the job Hangfire stored for the mail (the backend sends none: backend.mjs). */
+function resetToken(email) {
+  const query = `SET NOCOUNT ON; SELECT TOP 1 Arguments FROM HangFire.Job WHERE Arguments LIKE '%reset-password%' AND Arguments LIKE '%${email}%' ORDER BY Id DESC`;
+  const result = spawnSync("sqlcmd", ["-S", SQL_SERVER, "-d", DATABASE, "-y", "0", "-Q", query], { encoding: "utf8" });
+  return /Token=([A-Za-z0-9_-]+)/.exec(result.stdout)?.[1] ?? "";
+}
+
+/** A PNG of the given size, drawn in the page. */
+function drawPicture(page, width, height) {
+  return page.evaluate(({ width, height }) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ff4081";
+    context.fillRect(0, 0, width, height);
+    return canvas.toDataURL("image/png").split(",")[1];
+  }, { width, height });
+}
+
+/** The login form, filled with a user's own address and password. */
+async function signInAs(page, email, password) {
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign In" }).click();
+}
+
+async function waitForRows(table, count) {
+  await table.page().waitForFunction(({ table, count }) => table.querySelectorAll("tbody tr").length === count, { table: await table.elementHandle(), count });
+}
+
+/**
+ * Phase 3, identity, as the administrator and a user the run registers. Users: the list with its read-only boxes,
+ * searched and exported (the API answers the workbook as text); a user registered in the dialog after the
+ * validators' messages; the profile's activation. Roles: one created and edited in the dialog, its permissions
+ * ticked and commented (a row's edit) in the groups' tabs with their badges, saved — every client renews its token
+ * —, given to the user on the user roles page, and refused for deletion while the user has it. The user: signs in
+ * with the role's page in the menu, then the account — the picture shrunk and uploaded, then deleted, the details
+ * (they sign out), the password; signed out, the password forgotten and reset by the mail's link (the token from
+ * Hangfire's job) and the sign-up, which leaves the new user inactive. The run's role is deleted at the end; the
+ * API deletes no users, so the two users stay (named by the run's stamp).
+ */
+async function identity(page, stamp) {
+  const dialog = page.getByRole("dialog");
+  const downloads = mkdtempSync(path.join(os.tmpdir(), "blazorhero-verify-"));
+  const userName = `verify${stamp}`;
+  const email = `vera.${stamp}@tsazor.test`;
+  const lastName = `Fy${stamp}`;
+  const fullName = `Vera ${lastName}`;
+  const roleName = `Verify Role ${stamp}`;
+  // Capital, lowercase, digit, eight or more: RegisterRequestValidator's rules.
+  const passwords = [`Verify${stamp}1`, `Verify${stamp}2`, `Verify${stamp}3`];
+  let userContext;
+  let roleId;
+  let userId;
+
+  try {
+    // Users.
+    await page.getByRole("link", { name: "Users", exact: true }).click();
+    const users = page.getByRole("table", { name: "Users" });
+    await users.locator("tbody tr").first().waitFor();
+    check(await page.getByRole("heading", { level: 1, name: "Users" }).isVisible(), "Users: the page's heading (HeroTitle) is its h1");
+    const confirmed = users.getByRole("checkbox", { name: "Email Confirmation: johndoe" });
+    await confirmed.click();
+    check(
+      (await confirmed.getAttribute("aria-readonly")) === "true" && (await confirmed.isChecked()) && !(await confirmed.isDisabled()),
+      "the flags are read-only boxes: not disabled, aria-readonly, a click changes nothing (MudCheckBox ReadOnly, B48)",
+    );
+    await axe(page, "the users");
+
+    await page.getByRole("button", { name: "Register New User" }).click();
+    await dialog.getByRole("heading", { name: "Register User" }).waitFor();
+    await dialog.getByRole("button", { name: "Register" }).click();
+    await dialog.getByText("UserName is required").waitFor();
+    const registerMessages = await dialog.getByRole("alert").allInnerTexts();
+    check(
+      JSON.stringify(registerMessages) === JSON.stringify(["UserName is required", "First Name is required", "Last Name is required", "Email is required", "Password is required!", "Password Confirmation is required!"]),
+      `Register shows RegisterRequestValidator's messages (${registerMessages.join(", ")})`,
+    );
+    await axe(page, "the register dialog with its messages");
+    await dialog.getByLabel("User Name").fill(userName);
+    await dialog.getByLabel("First Name").fill("Vera");
+    await dialog.getByLabel("Last Name").fill(lastName);
+    await dialog.getByLabel("Email", { exact: true }).fill(email);
+    await dialog.getByLabel("Password", { exact: true }).fill("short");
+    await dialog.getByLabel("Confirm Password").fill("other");
+    await dialog.getByRole("button", { name: "Register" }).click();
+    await dialog.getByText("Password must be at least of length 8").waitFor();
+    check(await dialog.getByText("Passwords don't match").isVisible(), "the password's rules and the confirmation's (Equal) speak too");
+    await dialog.getByLabel("Password", { exact: true }).fill(passwords[0]);
+    await dialog.getByLabel("Confirm Password").fill(passwords[0]);
+    // The confirmation's message goes on its change (its blur): commit it first, or the boxes below move under the click.
+    await dialog.getByLabel("Confirm Password").press("Tab");
+    await dialog.getByText("Passwords don't match").waitFor({ state: "detached" });
+    await dialog.getByLabel("Activate User?").check();
+    await dialog.getByLabel("Auto Confirm Email?").check();
+    await dialog.getByRole("button", { name: "Register" }).click();
+    await dialog.waitFor({ state: "detached" });
+    await page.getByText(`User ${userName} Registered.`).first().waitFor();
+    const userSearch = page.getByRole("textbox", { name: "Search For Users" });
+    await userSearch.fill(stamp);
+    await waitForRows(users, 1);
+    const userRow = users.locator("tbody tr").first();
+    check(
+      (await userRow.innerText()).includes(email) && (await userRow.getByRole("checkbox", { name: `Active: ${userName}` }).isChecked()),
+      "a registered user: the API's message as a toast, the user in the reloaded list, active and confirmed",
+    );
+    userId = (await api(page, "GET", "/api/identity/user")).data.find((user) => user.email === email).id;
+
+    const [usersExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export" }).click()]);
+    const workbook = path.join(downloads, usersExport.suggestedFilename());
+    await usersExport.saveAs(workbook);
+    await page.getByText("Filtered Users exported").first().waitFor();
+    check(
+      /^users_\d{14}\.xlsx$/.test(usersExport.suggestedFilename()) && readFileSync(workbook).subarray(0, 2).toString() === "PK",
+      `Export saves the filtered users as a workbook — the API answers it as text (getString, B49: ${usersExport.suggestedFilename()})`,
+    );
+
+    await userRow.getByRole("button", { name: `Actions: ${userName}` }).click();
+    await page.getByRole("menuitem", { name: "View Profile" }).click();
+    await page.getByRole("heading", { level: 1, name: `${fullName}'s Profile` }).waitFor();
+    const profileName = page.getByLabel("First Name");
+    check(
+      (await profileName.inputValue()) === "Vera" && (await profileName.evaluate((input) => input.readOnly && !input.disabled)) && (await page.getByText("This is an Administrator Only View.").isVisible()),
+      "View Profile: the user's fields read-only (MudField, B48), the administrator's card (AuthorizeView Roles)",
+    );
+    await axe(page, "a user's profile");
+    await page.getByLabel("Active?").uncheck();
+    await page.getByRole("button", { name: "Save Changes" }).click();
+    await page.getByText("Updated User Status.").first().waitFor();
+    await page.waitForURL(`${APP}/identity/users`);
+    await users.locator("tbody tr").first().waitFor();
+    await userSearch.fill(stamp);
+    await waitForRows(users, 1);
+    check(!(await users.getByRole("checkbox", { name: `Active: ${userName}` }).isChecked()), "Save Changes deactivates the user (ToggleUserStatus) and goes back to the users");
+    await api(page, "POST", "/api/identity/user/toggle-status", { activateUser: true, userId });
+
+    await userSearch.fill("mukesh@");
+    await waitForRows(users, 1);
+    await users.getByRole("button", { name: "Actions: mukesh" }).click();
+    await page.getByRole("menuitem", { name: "Manage Roles" }).click();
+    await page.getByText("Not Allowed.").first().waitFor();
+    check(new URL(page.url()).pathname === "/identity/users", "the seeded administrator's roles are not to be managed: a toast, the page stays");
+
+    // Roles.
+    await page.getByRole("link", { name: "Roles", exact: true }).click();
+    const roles = page.getByRole("table", { name: "Roles" });
+    await roles.locator("tbody tr").first().waitFor();
+    await axe(page, "the roles");
+    await page.getByRole("button", { name: "Create" }).click();
+    await dialog.getByRole("heading", { name: "Add Role" }).waitFor();
+    check((await dialog.getByLabel("Role ID").isDisabled()) && (await dialog.getByLabel("Role ID").inputValue()) === "", "Create: the role's id, empty and disabled");
+    await dialog.getByRole("button", { name: "Save Role" }).click();
+    await dialog.getByText("Name is required").waitFor();
+    check(true, "Save Role shows RoleRequestValidator's message");
+    await dialog.getByLabel("Role Name").fill(roleName);
+    await dialog.getByLabel("Description").fill("Made by the verify run");
+    await dialog.getByRole("button", { name: "Save Role" }).click();
+    await dialog.waitFor({ state: "detached" });
+    await page.getByText(`Role ${roleName} Created.`).first().waitFor();
+    const roleSearch = page.getByRole("textbox", { name: "Search for Roles..." });
+    await roleSearch.fill(stamp);
+    await waitForRows(roles, 1);
+    check(true, "a new role: the API's message, the role in the list");
+    await roles.getByRole("button", { name: `Actions: ${roleName}` }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await dialog.getByRole("heading", { name: "Update Role" }).waitFor();
+    roleId = await dialog.getByLabel("Role ID").inputValue();
+    await dialog.getByLabel("Description").fill("Edited by the verify run");
+    await dialog.getByRole("button", { name: "Update Role" }).click();
+    await page.getByText(`Role ${roleName} Updated.`).first().waitFor();
+    await roles.locator("tbody tr").filter({ hasText: "Edited by the verify run" }).waitFor();
+    check(roleId !== "", "Edit shows the role's id and updates the role");
+
+    // The role's permissions.
+    await roles.getByRole("button", { name: `Actions: ${roleName}` }).click();
+    await page.getByRole("menuitem", { name: "Manage Permission" }).click();
+    await page.getByRole("heading", { level: 1, name: "Manage Permission" }).waitFor();
+    await page.getByText(`Manage ${roleId} ${roleName}'s Permissions`).waitFor();
+    const claims = (await api(page, "GET", `/api/identity/role/permissions/${roleId}`)).data.roleClaims;
+    const group = claims.find((claim) => claim.value === "Permissions.Products.View").group;
+    const inGroup = claims.filter((claim) => claim.group === group).length;
+    const allTab = page.getByRole("tab").first();
+    const groupTab = page.getByRole("tab", { name: new RegExp(`^${group}\\b`) });
+    check(
+      (await allTab.innerText()).replace(/\s+/g, " ").trim() === `All Permissions 0/${claims.length}` && (await groupTab.innerText()).includes(`0/${inGroup}`),
+      `the tabs: All Permissions first, a tab per group, each with its badge "selected/all" (${(await allTab.innerText()).replace(/\s+/g, " ").trim()})`,
+    );
+    await groupTab.click();
+    const grid = page.getByRole("table", { name: group });
+    await grid.getByRole("checkbox", { name: "Status: Permissions.Products.View" }).check();
+    check((await groupTab.innerText()).includes(`1/${inGroup}`) && (await allTab.innerText()).includes(`1/${claims.length}`), "a ticked permission counts in its group's badge and in All Permissions' (the claims are shared)");
+    await grid.getByRole("button", { name: "Edit: Permissions.Products.View" }).click();
+    const comment = grid.getByRole("textbox", { name: "Description: Permissions.Products.View" });
+    await comment.waitFor();
+    check(await grid.getByText("Here you can leave a comment for this permission for the current role").isVisible(), "a row's edit (RowEditingTemplate) opens the comment of a selected permission");
+    await axe(page, "the role's permissions, a row in its edit");
+    await comment.fill(`Verify comment ${stamp}`);
+    await grid.getByRole("button", { name: "Apply: Permissions.Products.View" }).click();
+    await grid.getByText(`Verify comment ${stamp}`).waitFor();
+    check((await comment.count()) === 0, "Apply ends the edit: the comment in the row");
+    await grid.getByRole("button", { name: "Edit: Permissions.Products.Create" }).click();
+    check(
+      (await grid.getByRole("textbox", { name: "Description: Permissions.Products.Create" }).isDisabled()) && (await grid.getByText("Will be saved only when selected Permission").isVisible()),
+      "an unselected permission's comment is disabled, and says why",
+    );
+    await grid.getByRole("button", { name: "Apply: Permissions.Products.Create" }).click();
+    await page.getByRole("button", { name: "Update Role Permissions" }).click();
+    await page.getByText("Permissions Updated.").first().waitFor();
+    await page.waitForURL(`${APP}/identity/roles`);
+    const saved = (await api(page, "GET", `/api/identity/role/permissions/${roleId}`)).data.roleClaims.filter((claim) => claim.selected);
+    check(
+      saved.length === 1 && saved[0].value === "Permissions.Products.View" && saved[0].description === `Verify comment ${stamp}`,
+      "Update Role Permissions saves the ticked permission with its comment and goes back to the roles",
+    );
+    check(await page.getByText("Refreshed Token.").first().waitFor({ timeout: 10_000 }).then(() => true, () => false), "the hub has every client renew its token (RegenerateTokens): a toast");
+
+    // The user's roles.
+    await page.getByRole("link", { name: "Users", exact: true }).click();
+    await users.locator("tbody tr").first().waitFor();
+    await userSearch.fill(stamp);
+    await waitForRows(users, 1);
+    await users.getByRole("button", { name: `Actions: ${userName}` }).click();
+    await page.getByRole("menuitem", { name: "Manage Roles" }).click();
+    await page.getByRole("heading", { level: 1, name: fullName }).waitFor();
+    const userRoles = page.getByRole("table", { name: fullName });
+    await userRoles.locator("tbody tr").first().waitFor();
+    check(
+      (await page.getByText(`Manage Vera ${lastName}'s Roles`).isVisible()) && (await userRoles.getByRole("checkbox", { name: "Status: Basic" }).isChecked()),
+      "Manage Roles: the user's name, every role, the user's ticked (Basic, as registered)",
+    );
+    await axe(page, "a user's roles");
+    await page.getByRole("textbox", { name: "Search For User Roles" }).fill(stamp);
+    await waitForRows(userRoles, 1);
+    await userRoles.getByRole("checkbox", { name: `Status: ${roleName}` }).check();
+    await page.getByRole("button", { name: "Update User Roles" }).click();
+    await page.getByText("Roles Updated").first().waitFor();
+    await page.waitForURL(`${APP}/identity/users`);
+    const given = (await api(page, "GET", `/api/identity/user/roles/${userId}`)).data.userRoles.filter((role) => role.selected).map((role) => role.roleName);
+    check(JSON.stringify(given.sort()) === JSON.stringify(["Basic", roleName].sort()), `Update User Roles gives the user the role (${given.join(", ")})`);
+
+    // The role can't go while a user has it — and the API says so as a success (U17).
+    await page.getByRole("link", { name: "Roles", exact: true }).click();
+    await roles.locator("tbody tr").first().waitFor();
+    await roleSearch.fill(stamp);
+    await waitForRows(roles, 1);
+    await roles.getByRole("button", { name: `Actions: ${roleName}` }).click();
+    await page.getByRole("menuitem", { name: "Delete" }).click();
+    await dialog.getByRole("heading", { name: "Delete Confirmation" }).waitFor();
+    check((await dialog.innerText()).includes(`Do you want to delete the role with Id ${roleId}?`), "Delete asks first, with the role's id");
+    await dialog.getByRole("button", { name: "Confirm" }).click();
+    await page.getByText(`Not allowed to delete ${roleName} Role as it is being used.`).first().waitFor();
+    await waitForRows(roles, 1);
+    check(true, "a role a user has stays: the API's refusal as a toast");
+
+    // The user: the role's page in the menu, then the account.
+    userContext = await page.context().browser().newContext({ viewport: { width: 1400, height: 900 } });
+    const vera = await userContext.newPage();
+    vera.on("pageerror", (error) => check(false, `the user's page: ${error.message}`));
+    const uploads = [];
+    vera.on("request", (request) => {
+      if (request.method() === "POST" && request.url().includes("/api/identity/account/profile-picture/")) uploads.push(JSON.parse(request.postData()));
+    });
+    await vera.goto(`${APP}/login`);
+    await signInAs(vera, email, passwords[0]);
+    await vera.getByRole("navigation").first().waitFor();
+    const veraNav = await navigationOf(vera);
+    check(veraNav["Catalog Management"]?.join("|") === "Products", `the user signs in: the role's one permission brings its page into the menu (${JSON.stringify(veraNav["Catalog Management"] ?? [])})`);
+
+    await vera.getByRole("button", { name: /^Account:/ }).click();
+    await vera.getByRole("menuitem", { name: "Account" }).click();
+    await vera.getByRole("heading", { level: 1, name: "Account" }).waitFor();
+    await vera.getByLabel("First Name").waitFor();
+    check(
+      (await vera.getByLabel("First Name").inputValue()) === "Vera" && (await vera.getByLabel("Last Name").inputValue()) === lastName && (await vera.getByLabel("Email").isDisabled()),
+      "Account, Profile: the details from the token's claims, the email disabled",
+    );
+    await axe(vera, "the account's profile");
+    const picture = await drawPicture(vera, 1000, 500);
+    await vera.locator("input[type=file]").setInputFiles({ name: "vera.png", mimeType: "image/png", buffer: Buffer.from(picture, "base64") });
+    await vera.locator(".bh-profile__picture img").waitFor({ timeout: 15_000 });
+    check(
+      uploads.length === 1 && pngSize(uploads[0].data) === "400x200" && uploads[0].uploadType === 1 && uploads[0].fileName.startsWith(`${userId}-`),
+      `Upload Image: the picture shrunk into 400 × 400 (${uploads[0] ? pngSize(uploads[0].data) : "none"}), named by the user, then the page loads again with it`,
+    );
+    check((await vera.locator(".bh-user-card img").count()) === 1, "the app bar's user card shows the new picture (the reload)");
+    await vera.getByRole("button", { name: "Delete Image" }).click();
+    const veraDialog = vera.getByRole("dialog");
+    await veraDialog.getByRole("heading", { name: "Delete Confirmation" }).waitFor();
+    check((await veraDialog.innerText()).includes(`Do you want to delete the profile picture of ${email}?`), "Delete Image asks first");
+    await veraDialog.getByRole("button", { name: "Confirm" }).click();
+    await vera.waitForFunction(() => document.querySelector(".bh-profile__picture .fui-avatar__initials")?.textContent === "V", null, { timeout: 15_000 });
+    check((await vera.locator(".bh-user-card img").count()) === 0, "deleted: the first letter of the name again, here and in the user card");
+
+    await vera.getByLabel("Last Name").fill(`${lastName}x`);
+    await vera.getByRole("button", { name: "Save Changes" }).click();
+    await vera.getByText("Your Profile has been updated. Please Login to Continue.").first().waitFor();
+    await vera.getByRole("heading", { name: "Sign In" }).waitFor();
+    check(true, "changed details: saved, and the user signed out to sign in again");
+    await signInAs(vera, email, passwords[0]);
+    await vera.getByRole("navigation").first().waitFor();
+    await vera.goto(`${APP}/account`);
+    await vera.getByRole("tab", { name: "Security" }).click();
+    await vera.getByRole("button", { name: "Change Password" }).click();
+    await vera.getByText("Current Password is required!").waitFor();
+    const securityMessages = await vera.getByRole("alert").allInnerTexts();
+    check(
+      JSON.stringify(securityMessages) === JSON.stringify(["Password is required!", "Password Confirmation is required!", "Current Password is required!"]),
+      `Security: Change Password shows ChangePasswordRequestValidator's messages (${securityMessages.join(", ")})`,
+    );
+    await axe(vera, "the account's security");
+    await vera.getByLabel("Password", { exact: true }).fill(passwords[1]);
+    await vera.getByLabel("Password Confirmation").fill(passwords[1]);
+    await vera.getByLabel("Current Password").fill("Wrong1234");
+    await vera.getByLabel("Current Password").press("Tab");
+    await vera.getByRole("alert").first().waitFor({ state: "detached" });
+    await vera.getByRole("button", { name: "Show password" }).first().click();
+    check(
+      (await vera.getByLabel("Password Confirmation").getAttribute("type")) === "text" && (await vera.getByLabel("Current Password").getAttribute("type")) === "password",
+      "one eye shows both new fields, not the current password",
+    );
+    await vera.getByRole("button", { name: "Change Password" }).click();
+    await vera.getByText("Incorrect password.").first().waitFor();
+    check(true, "a wrong current password: Identity's message as a toast");
+    await vera.getByLabel("Current Password").fill(passwords[0]);
+    await vera.getByRole("button", { name: "Change Password" }).click();
+    await vera.getByText("Password Changed!").first().waitFor();
+    check((await vera.getByLabel("Current Password").inputValue()) === "" && (await vera.getByLabel("Password", { exact: true }).inputValue()) === "", "the password is changed, the fields emptied");
+
+    // Signed out: the password forgotten, reset by the mail's link.
+    await vera.getByRole("button", { name: /^Account:/ }).click();
+    await vera.getByRole("menuitem", { name: "Logout" }).click();
+    await vera.getByRole("dialog", { name: "Logout Confirmation" }).getByRole("button", { name: "Logout" }).click();
+    await vera.getByRole("heading", { name: "Sign In" }).waitFor();
+    await vera.getByRole("link", { name: "Forgot password?" }).click();
+    await vera.getByRole("heading", { name: "Forgot password?" }).waitFor();
+    await axe(vera, "forgot password");
+    await vera.getByLabel("E-mail").fill("vera");
+    await vera.getByRole("button", { name: "Reset Password" }).click();
+    await vera.getByText("Email is not correct").waitFor();
+    await vera.getByLabel("E-mail").fill(email);
+    await vera.getByLabel("E-mail").press("Tab");
+    await vera.getByText("Email is not correct").waitFor({ state: "detached" });
+    await vera.getByRole("button", { name: "Reset Password" }).click();
+    await vera.getByText("Done!").first().waitFor();
+    await vera.waitForURL(`${APP}/`);
+    const token = resetToken(email);
+    check(token.length > 100, `Reset Password: a reset mail with its link (the token, ${token.length} characters, read from Hangfire's job)`);
+
+    await vera.goto(`${APP}/account/reset-password`);
+    await vera.getByRole("heading", { name: "Reset password" }).waitFor();
+    await vera.getByLabel("E-mail").fill(email);
+    await vera.getByLabel("Password", { exact: true }).fill(passwords[2]);
+    await vera.getByLabel("Confirm Password").fill(passwords[2]);
+    await vera.getByRole("button", { name: "Reset Password" }).click();
+    await vera.getByText("Token Not Found!").first().waitFor();
+    check(true, "the reset page without a token says so (U15)");
+    await vera.goto(`${APP}/account/reset-password?Token=${token}`);
+    await vera.getByRole("heading", { name: "Reset password" }).waitFor();
+    await axe(vera, "reset password");
+    await vera.getByLabel("E-mail").fill(email);
+    await vera.getByLabel("Password", { exact: true }).fill(passwords[2]);
+    await vera.getByLabel("Confirm Password").fill(passwords[2]);
+    await vera.getByRole("button", { name: "Reset Password" }).click();
+    await vera.getByText("Password Reset Successful!").first().waitFor();
+    await vera.getByRole("heading", { name: "Sign In" }).waitFor();
+    await signInAs(vera, email, passwords[2]);
+    await vera.getByRole("navigation").first().waitFor();
+    check(true, "the link's token resets the password: the user signs in with the new one");
+    await vera.getByRole("button", { name: /^Account:/ }).click();
+    await vera.getByRole("menuitem", { name: "Logout" }).click();
+    await vera.getByRole("dialog", { name: "Logout Confirmation" }).getByRole("button", { name: "Logout" }).click();
+    await vera.getByRole("heading", { name: "Sign In" }).waitFor();
+
+    // Signing up: the new user is inactive until an administrator activates them.
+    await vera.getByRole("link", { name: "Register here" }).click();
+    await vera.getByRole("heading", { name: "Register" }).waitFor();
+    await axe(vera, "the sign-up");
+    const selfName = `self${stamp}`;
+    const selfEmail = `selma.${stamp}@tsazor.test`;
+    await vera.getByLabel("User Name").fill(selfName);
+    await vera.getByLabel("First Name").fill("Selma");
+    await vera.getByLabel("Last Name").fill(lastName);
+    await vera.getByLabel("E-mail").fill(selfEmail);
+    await vera.getByLabel("Password", { exact: true }).fill(passwords[0]);
+    await vera.getByLabel("Confirm Password").fill(passwords[0]);
+    await vera.getByRole("button", { name: "Register", exact: true }).click();
+    await vera.getByText(`User ${selfName} Registered. Please check your Mailbox to verify!`).first().waitFor();
+    await vera.waitForURL(`${APP}/login`);
+    await signInAs(vera, selfEmail, passwords[0]);
+    await vera.getByText("User Not Active. Please contact the administrator.").first().waitFor();
+    check(true, "a signed-up user: the API's message, the login; inactive until an administrator activates them");
+  } finally {
+    await userContext?.close();
+    if (userId !== undefined && roleId !== undefined) {
+      const current = await api(page, "GET", `/api/identity/user/roles/${userId}`).catch(() => undefined);
+      const userRoles = (current?.data?.userRoles ?? []).map((role) => ({ ...role, selected: role.selected && role.roleName !== roleName }));
+      await api(page, "PUT", `/api/identity/user/roles/${userId}`, { userId, userRoles }).catch(() => undefined);
+    }
+    if (roleId !== undefined) await api(page, "DELETE", `/api/identity/role/${roleId}`).catch(() => undefined);
+    rmSync(downloads, { recursive: true, force: true });
   }
 }
 
@@ -791,6 +1198,9 @@ try {
 
   // Phase 5: the dashboard and the chat.
   await realTime(page, Date.now().toString(36));
+
+  // Phase 3: identity.
+  await identity(page, Date.now().toString(36));
 
   // Phase 6: the eleven languages, Arabic right to left.
   await inEveryLanguage(page, languages);

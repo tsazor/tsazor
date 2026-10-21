@@ -1,0 +1,73 @@
+@* Client/Pages/Identity/RegisterUserModal.razor(.cs): an administrator registers a user — active or not, the email
+   confirmed or a confirmation mail sent. The form wraps the dialog as the original's EditForm wrapped MudDialog, so
+   Register submits it. Register stays enabled, as on the login (U6): a submit shows the messages. *@
+@import { DialogReference, Toaster } from "@tsazor/fluent"
+@import { RegisterRequest } from "../../Application/Identity"
+@import { registerRequestValidators } from "../../Application/Validators/Identity"
+@inject UserManager userManager
+@inject Toaster toaster
+
+<FluentForm model="@registerUserModel" validators="@validators" onValidSubmit="@submitAsync" novalidate>
+    <Dialog title="@L("Register User")">
+        <ChildContent>
+            <div class="bh-form-grid">
+                <TextInput label="@L("User Name")" @bind-Value="registerUserModel.userName" />
+                <TextInput label="@L("First Name")" @bind-Value="registerUserModel.firstName" />
+                <TextInput label="@L("Last Name")" @bind-Value="registerUserModel.lastName" />
+                <TextInput label="@L("Email")" type="email" @bind-Value="registerUserModel.email" />
+                <TextInput label="@L("Phone Number")" @bind-Value="registerUserModel.phoneNumber" />
+                <TextInput label="@L("Password")" type="@passwordType" @bind-Value="registerUserModel.password">
+                    <ContentAfter>
+                        <Button appearance="transparent" size="small" iconStart="@passwordIcon" ariaLabel="@passwordToggleLabel" onClick="@togglePasswordVisibility" />
+                    </ContentAfter>
+                </TextInput>
+                <TextInput label="@L("Confirm Password")" type="password" @bind-Value="registerUserModel.confirmPassword" />
+                <Checkbox label="@L("Activate User?")" @bind-Value="registerUserModel.activateUser" />
+                <Checkbox label="@L("Auto Confirm Email?")" @bind-Value="registerUserModel.autoConfirmEmail" />
+            </div>
+        </ChildContent>
+        <Footer>
+            <Button onClick="@cancel">@L("Cancel")</Button>
+            <Button type="submit" intent="success">@L("Register")</Button>
+        </Footer>
+    </Dialog>
+</FluentForm>
+
+@code {
+    @CascadingParameter({ type: DialogReference }) dialog?: DialogReference;
+
+    private readonly L = localizerFor("RegisterUserModal");
+    private readonly validators = registerRequestValidators(localizerFor("RegisterRequestValidator"));
+    private readonly registerUserModel = new RegisterRequest();
+    private passwordVisible = false;
+
+    private get passwordType(): "password" | "text" {
+        return this.passwordVisible ? "text" : "password";
+    }
+
+    private get passwordIcon() {
+        return this.passwordVisible ? Icons.Eye : Icons.EyeOff;
+    }
+
+    private get passwordToggleLabel(): string {
+        return this.passwordVisible ? "Hide password" : "Show password";
+    }
+
+    private async submitAsync(): Promise<void> {
+        const response = await this.userManager.registerUserAsync(this.registerUserModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+            this.dialog?.close();
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private cancel(): void {
+        this.dialog?.cancel();
+    }
+
+    private togglePasswordVisibility(): void {
+        this.passwordVisible = !this.passwordVisible;
+    }
+}

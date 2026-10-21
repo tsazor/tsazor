@@ -1,0 +1,101 @@
+@* Client/Pages/Identity/UserProfile.razor(.cs): a user's profile as others see it — the picture (or the first letter of
+   the name), the name, the email and the phone in read-only fields (MudField, B48) — and, for an administrator only
+   (AuthorizeView Roles), the user's activation. The original's page breaks on an id without a user (`_firstName`
+   is null, U16); here the page stays empty. *@
+@page "/user-profile/{id}"
+@import { Toaster } from "@tsazor/fluent"
+@inject UserManager userManager
+@inject AccountManager accountManager
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<HeroTitle title="@title" description="@description" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Profile")" />
+} else {
+    <div class="bh-profile">
+        <AuthorizeView roles="@RoleConstants.AdministratorRole">
+            <Card class="bh-profile__admin">
+                <CardHeader>
+                    <Typography variant="body" as="h2">@L("Administrator Settings.")</Typography>
+                    <Typography variant="body" as="p">@L("This is an Administrator Only View.")</Typography>
+                </CardHeader>
+                <div class="bh-profile__admin-row">
+                    <Checkbox label="@L("Active?")" @bind-Value="active" />
+                    <Button intent="primary" onClick="@toggleUserStatus">@L("Save Changes")</Button>
+                </div>
+            </Card>
+        </AuthorizeView>
+        <Card class="bh-profile__card">
+            <CardHeader><Typography variant="body" as="h2">@L("Profile")</Typography></CardHeader>
+            <div class="bh-profile__picture">
+                @if (imageDataUrl) {
+                    <Avatar image="@imageDataUrl" name="@fullName" size="250" />
+                } else {
+                    <Avatar initials="@firstLetterOfName" name="@fullName" color="pink" size="250" />
+                }
+            </div>
+            <Typography variant="h5" as="p" class="bh-profile__name">@firstName @lastName</Typography>
+            <p class="bh-profile__email">@email</p>
+        </Card>
+        <Card class="bh-profile__details">
+            <CardHeader><Typography variant="body" as="h2">@L("Public Profile")</Typography></CardHeader>
+            <div class="bh-form-grid">
+                <TextInput label="@L("First Name")" value="@firstName" readOnly />
+                <TextInput label="@L("Last Name")" value="@lastName" readOnly />
+                <TextInput label="@L("Phone Number")" value="@phoneNumber" readOnly />
+                <TextInput label="@L("Email")" value="@email" readOnly />
+            </div>
+        </Card>
+    </div>
+}
+
+@code {
+    @Parameter() id = "";
+
+    private readonly L = localizerFor("UserProfile");
+    private title = "";
+    private description = "";
+    private active = false;
+    private firstLetterOfName = "";
+    private firstName = "";
+    private lastName = "";
+    private phoneNumber = "";
+    private email = "";
+    private imageDataUrl: string | null = null;
+    private loaded = false;
+
+    private get fullName(): string {
+        return `${this.firstName} ${this.lastName}`;
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const result = await this.userManager.getAsync(this.id);
+        if (result.succeeded) {
+            const user = result.data;
+            if (user !== null) {
+                this.firstName = user.firstName;
+                this.lastName = user.lastName;
+                this.email = user.email;
+                this.phoneNumber = user.phoneNumber ?? "";
+                this.active = user.isActive;
+                const data = await this.accountManager.getProfilePictureAsync(this.id);
+                if (data.succeeded) this.imageDataUrl = data.data;
+            }
+            this.title = `${this.firstName} ${this.lastName}'s ${this.L("Profile")}`;
+            this.description = this.email;
+            this.firstLetterOfName = this.firstName.charAt(0);
+        }
+        this.loaded = true;
+    }
+
+    private async toggleUserStatus(): Promise<void> {
+        const result = await this.userManager.toggleUserStatusAsync({ activateUser: this.active, userId: this.id });
+        if (result.succeeded) {
+            this.toaster.show({ message: this.L("Updated User Status."), intent: "success" });
+            this.navigation.navigateTo("/identity/users");
+        } else {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+}

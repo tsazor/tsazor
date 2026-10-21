@@ -94,6 +94,19 @@ for (const [project, only] of PROJECTS) {
   }
 }
 
+// A key only other cultures have: in English .NET finds no resource and shows the key itself (ResourceNotFound), so
+// the English table — the fallback of every culture — gets it with its name as the text, and the localizer's type
+// knows it (UserRoles has "Description" in Spanish only).
+const english = (tables.en ??= {});
+let named = 0;
+for (const table of Object.values(tables)) {
+  for (const key of Object.keys(table)) {
+    if (key in english) continue;
+    english[key] = key.slice(key.indexOf(".") + 1);
+    named++;
+  }
+}
+
 mkdirSync(out, { recursive: true });
 for (const [culture, table] of Object.entries(tables)) {
   const lines = Object.keys(table)
@@ -107,5 +120,5 @@ for (const [culture, table] of Object.entries(tables)) {
 }
 console.log(
   `resx: ${Object.keys(tables).length} cultures (${Object.entries(tables).map(([c, t]) => `${c} ${Object.keys(t).length}`).join(", ")}); ` +
-    `${owners.size} resources, ${stale.size} stale left out (${[...stale].join(", ")}); ${marked} file names with right-to-left marks.`,
+    `${owners.size} resources, ${stale.size} stale left out (${[...stale].join(", ")}); ${marked} file names with right-to-left marks; ${named} English texts named by their keys.`,
 );

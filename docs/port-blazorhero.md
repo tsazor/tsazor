@@ -23,6 +23,9 @@ stops moving while the port goes on, judged with a sense of proportion
   `john@blazorhero.com`, password `123Pa$$word!`).
 - **Ports:** the backend on 5350 (its own WebAssembly client, the reference, at `/`; Swagger at `/swagger`), the
   Tsazor app's dev server on 5352.
+- **Mail:** BlazorHero's appsettings name an ethereal.email account; the script sets the mail host to a port on this
+  machine where nothing listens, so a registration's confirmation and a reset link go nowhere (BlazorHero logs the
+  failed send). The reset link stays in the job Hangfire stored, where `verify.mjs` reads its token (`sqlcmd`).
 
 ## Phases
 
@@ -37,8 +40,14 @@ stops moving while the port goes on, judged with a sense of proportion
    server-paged tables with search, add/edit dialogs, delete confirmation, Excel export and import. Brands are a
    DataGrid of the filtered list (MudTable Items + Filter), products one with an ItemsProvider (ServerData); the
    product dialog picks its brand in an Autocomplete and shrinks the picture with `requestImageFileAsync`.
-3. **Identity:** users, roles, role permissions, user roles, profile and account (password, picture), register,
-   forgot and reset password.
+3. **Identity** — done 2026-10-21 (`scripts/verify.mjs`, 153 checks with every phase): the users — their flags in
+   read-only boxes (B48), searched, exported (the API answers the workbook as text, B49), one registered in the
+   dialog, a user's profile with the administrator's activation (AuthorizeView Roles); the roles — added and edited in
+   the dialog, refused for deletion while a user has one (U17); a role's permissions, a tab per group with its
+   "selected/all" badge, ticked and commented in a row's edit (B50), saved — every client renews its token by the hub;
+   a user's roles; the user signed in with the role's page in the menu, the account (the picture shrunk and uploaded,
+   then deleted; the details, which sign out; the password); signed out, the password forgotten and reset by the
+   mail's link (U15), and the sign-up, whose user stays inactive. The API deletes no users: each run leaves two.
 4. **Documents and audit** — done 2026-10-21 (`scripts/verify.mjs`, 103 checks): the document types (dialog, the
    validators' messages); the document store, a page at a time from the API, a document with its type picked in an
    Autocomplete and its file uploaded, its Download a link entry; its extended attributes — the original's abstract
@@ -59,9 +68,9 @@ stops moving while the port goes on, judged with a sense of proportion
 
 Each phase ends with its part of `scripts/verify.mjs` (the app in a browser against the real backend).
 
-The menu links every page of the original, as the original's does. Until their phase comes, the pages of phases 3–5
-say "Not ported yet" with their phase (`Pages/Content/NotPorted.tsazor`; the owner, clicking through, took the
-"doesn't exist" page for a broken app, 2026-10-15).
+The menu links every page of the original, as the original's does. While phases were open, their pages said "Not
+ported yet" (the owner, clicking through, had taken the "doesn't exist" page for a broken app, 2026-10-15); with
+phase 3 every page is ported and the placeholder is gone.
 
 ## Findings
 
@@ -128,3 +137,12 @@ say "Not ported yet" with their phase (`Pages/Content/NotPorted.tsazor`; the own
 | B47 | Migration (Blazor) | A `decimal` written as `12.50` arrives as the number `12.5` — `JSON.parse` keeps no scale — so the grid shows `12.5` where the original shows `12.50` | Kept (noted): exact decimals need the JSON's source text (a reviver with `context.source`, or the API writing them as strings) |
 | U14 | Upstream | The date range's end is extended by `new TimeSpan(0, 11, 59, 59, 999)` — days, hours, …: to 11:59 a.m., not the end of the day | Port: the end day whole |
 | U13 | Upstream | The dashboard's series have thirteen values for the twelve months (`new double[13]`, filled 0–11): the chart draws a thirteenth, empty slot | Port: the chart takes twelve |
+| B48 | Library | `MudCheckBox ReadOnly` (a user's "Email Confirmation" and "Active", a document's "Is Public", an attribute's "Is Active") and `MudField` (a user's profile) show a value without letting it change. The skins' inputs had only `disabled`, which greys the value out and takes it from the tab order — phases 2 and 4 had used it | **Fixed:** `readOnly` on `TextInput`, `TextArea`, `NumberInput` (the native `readonly`), `Checkbox` and `Switch` (`aria-readonly`, a click or Space changes nothing), both skins; the earlier pages use it now |
+| B49 | Runtime | The users' export answers the workbook as text (`Ok(string)` is `text/plain`), which the original reads with `ReadAsStringAsync`; `TsazorHttp` had only JSON methods | **Fixed:** `http.getString(url)` (HttpClient's `GetStringAsync`) |
+| B50 | Migration (Blazor) | `MudTable RowEditingTemplate` starts a row's edit on a click on the row — the mouse's only way, nothing says the row can be edited — and ends it with its commit button ("Apply"). The DataGrid's edit (`editing="row"`, a column's `EditContent`) starts from the app | Port: an Edit button per row (a tab stop, named by the permission) and the Apply button; a `@ref="grids[group]"` holds each tab's grid (migration-practices.md) |
+| B51 | Migration (i18n) | A key only another culture's resources have (UserRoles' "Description", in Spanish only): in English .NET finds no resource and shows the key. The localizer's type knew English's keys only, so the page couldn't name it | Port: `resx.mjs` gives English such a key with its name as its text (six keys) — what .NET shows, and the type knows it (migration-practices.md) |
+| U15 | Upstream | The reset page's validator has a Token rule, but the token has no field: without one, Reset Password stays disabled with no reason shown, and the page's own "Token Not Found!" can't be reached | Port: the page checks the token itself and says "Token Not Found!" |
+| U16 | Upstream | A user's profile at an id without a user throws (`_firstName.Length` on null) | Port: the page stays empty |
+| U17 | Upstream | Deleting a role a user has (or a seeded role) is answered as a success — `Result.SuccessAsync("Not allowed to delete …")` — so the refusal comes as a green toast | Kept (parity: the API's answer) |
+| B52 | Library (bug) | After the chat's contacts drawer on a narrow window, the app's navigation stayed closed when the window was wide again: the click on the content had closed the column (as MudBlazor's responsive drawer does), but AppLayout looked at the width only on its first render — MudBlazor's drawer opens again past the breakpoint | **Fixed** (both skins): narrower past 960px closes the column, wider opens it, `@bind-navOpen` hears of both |
+| U18 | Upstream | The reset page's button and the profile's delete dialog name keys their resources lack ("Reset Password", "Delete"): .NET shows the key, in every language | Kept (parity) |

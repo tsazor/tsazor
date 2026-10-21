@@ -1,0 +1,162 @@
+@* Client/Pages/Identity/Roles.razor(.cs): every role, searched and sorted in the browser, with the actions the user's
+   permissions allow: a role's permissions, add and edit in a dialog, delete after a confirmation. The page tells
+   the hub (UpdateDashboard) after a save and a delete — the dialog sits in the DialogProvider, outside MainBody's
+   cascade, where the original's RoleModal opened a connection of its own. *@
+@page "/identity/roles"
+@authorize({ policy: "Permissions.Roles.View" })
+@import { HubConnection } from "@microsoft/signalr"
+@import { DialogService, GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import { RoleRequest, type RoleResponse } from "../../Application/Identity"
+@import RoleModal from "./RoleModal.tsazor"
+@import DeleteConfirmation from "../../Shared/Dialogs/DeleteConfirmation.tsazor"
+@inject RoleManager roleManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject NavigationManager navigation
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<HeroTitle title="@L("Roles")" description="@L("Manage Roles.")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Roles")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canCreateRoles) {
+                <Button intent="primary" iconStart="@Icons.Add" onClick="@(() => invokeModal())">@L("Create")</Button>
+            }
+            <Button intent="secondary" iconStart="@Icons.ArrowClockwise" onClick="@getRolesAsync">@L("Reload")</Button>
+        </div>
+        @if (canSearchRoles) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search for Roles...")" placeholder="@L("Search for Roles...")" @bind-Value="searchString" immediate>
+                <ContentBefore><Icon value="@Icons.Search" /></ContentBefore>
+            </TextInput>
+        }
+    </div>
+    <DataGrid items="@filteredRoles" pagination="@pagination" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Roles")">
+        <PropertyColumn property="(role) => role.id" title="@L("Id")" sortable />
+        <TemplateColumn title="@L("Role")" sortBy="@byName" Context="role">
+            <Highlighter text="@role.name" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Description")" sortBy="@byDescription" Context="role">
+            <Highlighter text="@(role.description ?? "")" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Actions")" align="end" Context="role">
+            @if (canViewRoleClaims || canEditRoles || canDeleteRoles) {
+                <Menu label="@L("Actions")" ariaLabel='@(`${L("Actions")}: ${role.name}`)' placement="bottom-end">
+                    @if (canViewRoleClaims) {
+                        <MenuItem onSelect="@(() => managePermissions(role.id))">@L("Manage Permission")</MenuItem>
+                    }
+                    @if (canEditRoles) {
+                        <MenuItem onSelect="@(() => invokeModal(role.id))">@L("Edit")</MenuItem>
+                    }
+                    @if (canDeleteRoles) {
+                        <MenuItem onSelect="@(() => deleteAsync(role.id))">@L("Delete")</MenuItem>
+                    }
+                </Menu>
+            } else {
+                <Button size="small" iconStart="@Icons.HandRight" disabled>@L("No Allowed Actions")</Button>
+            }
+        </TemplateColumn>
+    </DataGrid>
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    @CascadingParameter({ type: HubConnection }) hubConnection?: HubConnection;
+
+    private readonly L = localizerFor("Roles");
+    private readonly pagination = new PaginationState();
+    private roleList: RoleResponse[] = [];
+    private searchString = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canCreateRoles = false;
+    private canEditRoles = false;
+    private canDeleteRoles = false;
+    private canSearchRoles = false;
+    private canViewRoleClaims = false;
+    private loaded = false;
+
+    private readonly byName = GridSort.byAscending((role: RoleResponse) => role.name);
+    private readonly byDescription = GridSort.byAscending((role: RoleResponse) => role.description ?? "");
+
+    /** MudTable's Filter: the name or the description contains the search, in any case. */
+    private get filteredRoles(): RoleResponse[] {
+        if (this.searchString.trim() === "") return this.roleList;
+        const search = this.searchString.toLowerCase();
+        return this.roleList.filter((role) => role.name.toLowerCase().includes(search) || role.description?.toLowerCase().includes(search) === true);
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        const can = async (policy: string): Promise<boolean> => this.authorization.isAuthorized(user, { policy });
+        this.canCreateRoles = await can(Permissions.Roles.Create);
+        this.canEditRoles = await can(Permissions.Roles.Edit);
+        this.canDeleteRoles = await can(Permissions.Roles.Delete);
+        this.canSearchRoles = await can(Permissions.Roles.Search);
+        this.canViewRoleClaims = await can(Permissions.RoleClaims.View);
+
+        await this.getRolesAsync();
+        this.loaded = true;
+    }
+
+    private async getRolesAsync(): Promise<void> {
+        const response = await this.roleManager.getRolesAsync();
+        if (response.succeeded) {
+            this.roleList = response.data;
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async deleteAsync(id: string): Promise<void> {
+        const dialog = this.dialogs.show(DeleteConfirmation, {
+            title: this.L("Delete"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { contentText: this.L("Delete Content", { 0: id }) },
+        });
+        if ((await dialog.result).canceled) return;
+        const response = await this.roleManager.deleteAsync(id);
+        await this.getRolesAsync();
+        if (response.succeeded) {
+            await this.updateDashboard();
+            this.toaster.show({ message: response.messages[0]!, intent: "success" });
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private async invokeModal(id?: string): Promise<void> {
+        const role = id === undefined ? undefined : this.roleList.find((candidate) => candidate.id === id);
+        const model = Object.assign(new RoleRequest(), role && { id: role.id, name: role.name, description: role.description ?? "" });
+        const dialog = this.dialogs.show(RoleModal, {
+            title: id === undefined ? this.L("Create") : this.L("Edit"),
+            size: "small",
+            closeOnBackdrop: false,
+            parameters: { roleModel: model },
+        });
+        if ((await dialog.result).canceled) return;
+        await this.updateDashboard();
+        await this.getRolesAsync();
+    }
+
+    private managePermissions(roleId: string): void {
+        this.navigation.navigateTo(`/identity/role-permissions/${roleId}`);
+    }
+
+    /** The original's RoleModal and Delete send UpdateDashboard, so open dashboards reload their counts. */
+    private async updateDashboard(): Promise<void> {
+        await this.hubConnection?.send(ApplicationConstants.SignalR.SendUpdateDashboard);
+    }
+}

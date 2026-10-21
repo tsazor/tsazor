@@ -48,7 +48,7 @@
             <Highlighter text="@document.documentType" highlightedText="@searchString" />
         </TemplateColumn>
         <TemplateColumn title="@L("Is Public")" sortable sortKey="documentIsPublicField" Context="document">
-            <Checkbox Value="@document.isPublic" disabled ariaLabel='@(`${L("Is Public")}: ${document.title}`)' />
+            <Checkbox Value="@document.isPublic" readOnly ariaLabel='@(`${L("Is Public")}: ${document.title}`)' />
         </TemplateColumn>
         <TemplateColumn title="@L("Date Created")" sortable sortKey="documentDateCreatedField" Context="document">
             @formatGeneral(document.createdOn, culture.current)

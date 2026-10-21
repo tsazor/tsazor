@@ -17,10 +17,19 @@ export const UserEndpoints = {
     GetAll: "api/identity/user",
     get: (userId: string) => `api/identity/user/${userId}`,
     getUserRoles: (userId: string) => `api/identity/user/roles/${userId}`,
+    export: (searchString: string) => (searchString.trim() === "" ? "api/identity/user/export" : `api/identity/user/export?searchString=${encodeURIComponent(searchString)}`),
+    Register: "api/identity/user",
+    ToggleUserStatus: "api/identity/user/toggle-status",
+    ForgotPassword: "api/identity/user/forgot-password",
+    ResetPassword: "api/identity/user/reset-password",
 } as const;
 
 export const RolesEndpoints = {
     GetAll: "api/identity/role",
+    Save: "api/identity/role",
+    delete: (id: string) => `api/identity/role/${id}`,
+    getPermissions: (roleId: string) => `api/identity/role/permissions/${roleId}`,
+    UpdatePermissions: "api/identity/role/permissions/update",
 } as const;
 
 export const DashboardEndpoints = {

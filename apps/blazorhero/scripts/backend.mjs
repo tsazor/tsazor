@@ -12,6 +12,10 @@
  * the .NET 6 SDK into .backend/dotnet with Microsoft's dotnet-install script (no admin, nothing system-wide) and
  * builds and runs BlazorHero with it. The clone lives in .backend/ too (git-ignored). The database is a LocalDB
  * database of its own (`TsazorBlazorHero`), set through the connection string, not in BlazorHero's files.
+ *
+ * The mails BlazorHero sends (a registration's confirmation, a password reset) go nowhere: its appsettings name an
+ * ethereal.email account, so the mail host is set to a port on this machine where nothing listens — the send fails,
+ * BlazorHero logs it and goes on. The reset link stays readable in the job Hangfire stored (`resetToken`).
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
@@ -25,8 +29,8 @@ export const BASIC = { email: "john@blazorhero.com", password: "123Pa$$word!" };
 
 const UPSTREAM = "https://github.com/fullstackhero/blazor-starter-kit.git";
 const COMMIT = "11f810d97cb66a251dfbee335b581fa9f1d1beab";
-const DATABASE = "TsazorBlazorHero";
-const SQL_SERVER = "(localdb)\\mssqllocaldb";
+export const DATABASE = "TsazorBlazorHero";
+export const SQL_SERVER = "(localdb)\\mssqllocaldb";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const work = path.join(root, ".backend");
@@ -129,6 +133,8 @@ async function main() {
         ASPNETCORE_ENVIRONMENT: "Development",
         ASPNETCORE_URLS: BACKEND,
         ConnectionStrings__DefaultConnection: `Data Source=${SQL_SERVER};Initial Catalog=${DATABASE};Integrated Security=True;MultipleActiveResultSets=True`,
+        MailConfiguration__Host: "127.0.0.1",
+        MailConfiguration__Port: "9",
         Logging__LogLevel__Default: "Warning",
         Serilog__MinimumLevel__Default: "Warning",
       },

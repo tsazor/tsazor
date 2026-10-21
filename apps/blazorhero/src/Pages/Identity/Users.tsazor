@@ -1,0 +1,153 @@
+@* Client/Pages/Identity/Users.razor(.cs): every user, searched and sorted in the browser — MudTable with Items and
+   Filter becomes a DataGrid of the filtered list —, the email's confirmation and the activation in read-only boxes
+   (MudCheckBox ReadOnly, B48); register a user in a dialog, export the (filtered) users, and from a row's menu the
+   user's profile and roles. *@
+@page "/identity/users"
+@authorize({ policy: "Permissions.Users.View" })
+@import { DialogService, GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import type { UserResponse } from "../../Application/Identity"
+@import { downloadBase64, fileStamp } from "../../Extensions/Files"
+@import RegisterUserModal from "./RegisterUserModal.tsazor"
+@inject UserManager userManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject NavigationManager navigation
+@inject DialogService dialogs
+@inject Toaster toaster
+
+<HeroTitle title="@L("Users")" description="@L("Manage Users")" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Users")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canCreateUsers) {
+                <Button intent="primary" iconStart="@Icons.Add" onClick="@invokeModal">@L("Register New User")</Button>
+            }
+            <Button intent="secondary" iconStart="@Icons.ArrowClockwise" onClick="@getUsersAsync">@L("Reload")</Button>
+            @if (canExportUsers) {
+                <Button iconStart="@Icons.DocumentTable" onClick="@exportToExcel">@L("Export")</Button>
+            }
+        </div>
+        @if (canSearchUsers) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search For Users")" placeholder="@L("Search For Users")" @bind-Value="searchString" immediate>
+                <ContentAfter><Icon value="@Icons.Search" /></ContentAfter>
+            </TextInput>
+        }
+    </div>
+    <DataGrid items="@filteredUsers" pagination="@pagination" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@L("Users")">
+        <TemplateColumn title="@L("First Name")" sortBy="@byFirstName" Context="user">
+            <Highlighter text="@user.firstName" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Last Name")" sortBy="@byLastName" Context="user">
+            <Highlighter text="@user.lastName" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("UserName")" sortBy="@byUserName" Context="user">
+            <Highlighter text="@user.userName" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Email")" sortBy="@byEmail" Context="user">
+            <Highlighter text="@user.email" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("PhoneNumber")" sortBy="@byPhoneNumber" Context="user">
+            <Highlighter text="@(user.phoneNumber ?? "")" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Email Confirmation")" sortBy="@byEmailConfirmed" Context="user">
+            <Checkbox value="@user.emailConfirmed" readOnly ariaLabel='@(`${L("Email Confirmation")}: ${user.userName}`)' />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Active")" sortBy="@byIsActive" Context="user">
+            <Checkbox value="@user.isActive" readOnly ariaLabel='@(`${L("Active")}: ${user.userName}`)' />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Actions")" align="end" Context="user">
+            <Menu label="@L("Actions")" ariaLabel='@(`${L("Actions")}: ${user.userName}`)' placement="bottom-end">
+                <MenuItem onSelect="@(() => viewProfile(user.id))">@L("View Profile")</MenuItem>
+                @if (canViewRoles) {
+                    <MenuItem onSelect="@(() => manageRoles(user.id, user.email))">@L("Manage Roles")</MenuItem>
+                }
+            </Menu>
+        </TemplateColumn>
+    </DataGrid>
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    private readonly L = localizerFor("Users");
+    private readonly pagination = new PaginationState();
+    private userList: UserResponse[] = [];
+    private searchString = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canCreateUsers = false;
+    private canSearchUsers = false;
+    private canExportUsers = false;
+    private canViewRoles = false;
+    private loaded = false;
+
+    private readonly byFirstName = GridSort.byAscending((user: UserResponse) => user.firstName);
+    private readonly byLastName = GridSort.byAscending((user: UserResponse) => user.lastName);
+    private readonly byUserName = GridSort.byAscending((user: UserResponse) => user.userName);
+    private readonly byEmail = GridSort.byAscending((user: UserResponse) => user.email);
+    private readonly byPhoneNumber = GridSort.byAscending((user: UserResponse) => user.phoneNumber ?? "");
+    private readonly byEmailConfirmed = GridSort.byAscending((user: UserResponse) => user.emailConfirmed);
+    private readonly byIsActive = GridSort.byAscending((user: UserResponse) => user.isActive);
+
+    /** MudTable's Filter: a name, the user name, the email or the phone number contains the search, in any case. */
+    private get filteredUsers(): UserResponse[] {
+        if (this.searchString.trim() === "") return this.userList;
+        const search = this.searchString.toLowerCase();
+        const contains = (value: string | null) => value?.toLowerCase().includes(search) === true;
+        return this.userList.filter((user) =>
+            contains(user.firstName) || contains(user.lastName) || contains(user.email) || contains(user.phoneNumber) || contains(user.userName));
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        const can = async (policy: string): Promise<boolean> => this.authorization.isAuthorized(user, { policy });
+        this.canCreateUsers = await can(Permissions.Users.Create);
+        this.canSearchUsers = await can(Permissions.Users.Search);
+        this.canExportUsers = await can(Permissions.Users.Export);
+        this.canViewRoles = await can(Permissions.Roles.View);
+
+        await this.getUsersAsync();
+        this.loaded = true;
+    }
+
+    private async getUsersAsync(): Promise<void> {
+        const response = await this.userManager.getAllAsync();
+        if (response.succeeded) {
+            this.userList = response.data;
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    /** The API answers the workbook itself, not a Result: no failure to show but the request's. */
+    private async exportToExcel(): Promise<void> {
+        const base64 = await this.userManager.exportToExcelAsync(this.searchString);
+        downloadBase64(base64, `users_${fileStamp()}.xlsx`, ApplicationConstants.MimeTypes.OpenXml);
+        this.toaster.show({ message: this.searchString.trim() === "" ? this.L("Users exported") : this.L("Filtered Users exported"), intent: "success" });
+    }
+
+    private async invokeModal(): Promise<void> {
+        const dialog = this.dialogs.show(RegisterUserModal, { title: this.L("Register New User"), size: "small", closeOnBackdrop: false });
+        if (!(await dialog.result).canceled) await this.getUsersAsync();
+    }
+
+    private viewProfile(userId: string): void {
+        this.navigation.navigateTo(`/user-profile/${userId}`);
+    }
+
+    /** The seeded administrator's roles are not to be changed (the API refuses it too). */
+    private manageRoles(userId: string, email: string): void {
+        if (email === "mukesh@blazorhero.com") this.toaster.show({ message: this.L("Not Allowed."), intent: "danger" });
+        else this.navigation.navigateTo(`/identity/user-roles/${userId}`);
+    }
+}

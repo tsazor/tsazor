@@ -1,0 +1,35 @@
+@* Client/Pages/Identity/Forgot.razor(.cs): the address for the reset link. The API mails a link to the reset page
+   (account/reset-password?Token=…) to a confirmed user; it answers an unknown or unconfirmed address with an error,
+   without saying which. *@
+@page "/account/forgot-password"
+@allowAnonymous
+@import { Toaster } from "@tsazor/fluent"
+@import { ForgotPasswordRequest } from "../../Application/Identity"
+@import { forgotPasswordRequestValidators } from "../../Application/Validators/Identity"
+@inject UserManager userManager
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<FluentForm model="@emailModel" validators="@validators" onValidSubmit="@submitAsync" novalidate class="bh-login">
+    <Icon value="@BlazorHeroLogo" size="100" class="bh-login__logo" />
+    <Typography variant="h1" class="bh-login__title">@L("Forgot password?")</Typography>
+    <p class="bh-login__text">@L("Enter email for password reset")</p>
+    <TextInput label="@L("E-mail")" type="email" @bind-Value="emailModel.email" />
+    <Button type="submit" intent="primary" size="large" class="bh-login__submit">@L("Reset Password")</Button>
+</FluentForm>
+
+@code {
+    private readonly L = localizerFor("Forgot");
+    private readonly validators = forgotPasswordRequestValidators(localizerFor("ForgotPasswordRequestValidator"));
+    private readonly emailModel = new ForgotPasswordRequest();
+
+    private async submitAsync(): Promise<void> {
+        const result = await this.userManager.forgotPasswordAsync(this.emailModel);
+        if (result.succeeded) {
+            this.toaster.show({ message: this.L("Done!"), intent: "success" });
+            this.navigation.navigateTo("/");
+        } else {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+}

@@ -14,7 +14,7 @@
 @* The app's own (Blazor: @using BlazorHero.CleanArchitecture.Client.Infrastructure.*, Shared.Constants.*). *@
 @import * as Icons from "@tsazor/fluent-icons/regular/size20"
 @import { localizerFor } from "./i18n"
-@import { ApplicationConstants, LocalizationConstants, Permissions } from "./Application/Constants"
+@import { ApplicationConstants, LocalizationConstants, Permissions, RoleConstants, StorageConstants } from "./Application/Constants"
 @import { BlazorHeroStateProvider } from "./Infrastructure/Authentication/BlazorHeroStateProvider"
 @import { AuthenticationManager } from "./Infrastructure/Managers/AuthenticationManager"
 @import { AccountManager, RoleManager, UserManager } from "./Infrastructure/Managers/IdentityManagers"

@@ -401,6 +401,17 @@ render in the browser.
   - `MudTablePager` is a `Paginator` on the grid's `PaginationState`: `PageSizeOptions` and `RowsPerPageString` keep
     their meaning as `pageSizeOptions` and `pageSizeLabel`, and an `InfoFormat` becomes its `summaryContent`.
   - `table.ReloadServerData()` is `grid.refreshDataAsync()` (or a page change on the PaginationState).
+  - `RowEditingTemplate` is the grid's `editing="row"` with a column's `EditContent`. MudTable starts a row's edit on
+    a click on the row; give the row an Edit button instead (`grid.editRowAsync(item)`; its Apply calls
+    `endEditAsync("commit")`), which the keyboard reaches and a screen reader names (BlazorHero's permissions, B50).
+    In a loop of tabs, `@ref="grids[group]"` keeps each tab's grid.
+- **`ReadOnly` is `readOnly`** (B48): a read-only box (`MudCheckBox ReadOnly`) or field (`MudField`, a
+  `MudTextField ReadOnly`) stays readable and focusable, where `disabled` would grey it out.
+- **An answer that isn't JSON** (`response.Content.ReadAsStringAsync()`, an API's `Ok(string)`, which is
+  `text/plain`) is `http.getString(url)` (B49).
+- **A resource key only another culture has** shows its name in English (.NET's ResourceNotFound). A typed
+  localizer needs the key in the English table: give it the key's name as its text when you convert the resx files
+  (BlazorHero's `resx.mjs`, B51).
 - **MudAutocomplete becomes Autocomplete** (B26). `T="int"` with `SearchFunc` and `ToStringFunc` over the ids:
   `TOption="number"`, `items` the ids, `optionText` the name of an id. `For`'s part in the form comes with
   `@bind-selectedOption`: the field's message after a submit, the invalid state. "No value" is `null` where

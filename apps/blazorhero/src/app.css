@@ -226,11 +226,88 @@ h1:focus {
     gap: var(--fui-spacing-xs);
 }
 
-/* Pages/Content/NotPorted.tsazor: the original pages this port doesn't have yet. */
-.bh-not-ported {
+/* Profile.razor and UserProfile.razor: MudGrid with the picture (MudItem xs="12" sm="4" md="3") beside the details
+   (sm="8" md="9"); the administrator's card (xs="12") above them. */
+.bh-profile {
     display: grid;
-    gap: 1rem;
-    max-width: 40rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--fui-spacing-l);
+    align-items: start;
+}
+
+.bh-profile > * {
+    grid-column: span 12;
+}
+
+@media (min-width: 600px) {
+    .bh-profile > .bh-profile__card {
+        grid-column: span 4;
+    }
+
+    .bh-profile > .bh-profile__details {
+        grid-column: span 8;
+    }
+}
+
+@media (min-width: 960px) {
+    .bh-profile > .bh-profile__card {
+        grid-column: span 3;
+    }
+
+    .bh-profile > .bh-profile__details {
+        grid-column: span 9;
+    }
+}
+
+.bh-profile__picture {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--fui-spacing-l);
+}
+
+/* MudAvatar Style="height:250px; width:250px", in a narrow column too. */
+.bh-profile__picture .fui-avatar {
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+}
+
+.bh-profile__name,
+.bh-profile__email {
+    margin: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.bh-profile__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--fui-spacing-xs);
+    margin-top: var(--fui-spacing-m);
+}
+
+.bh-profile__admin-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--fui-spacing-m);
+}
+
+/* MudCardActions Class="pb-4 pl-4" with the button at the end (ml-auto). */
+.bh-profile__footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.bh-security__current {
+    margin-top: var(--fui-spacing-m);
+}
+
+/* Account.razor: MudTabs PanelClass="mt-6". */
+.bh-account [role="tabpanel"] {
+    margin-top: var(--fui-spacing-xl);
 }
 
 /* Dashboard.razor: MudGrid with MudItem xs="12" sm="6" md="3" — four tiles a row from md (960px), two from sm (600px);

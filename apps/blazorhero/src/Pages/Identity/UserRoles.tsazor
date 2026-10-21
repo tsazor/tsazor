@@ -1,0 +1,104 @@
+@* Client/Pages/Identity/UserRoles.razor(.cs): a user's roles — every role, the user's ticked —, searched and sorted in
+   the browser; ticked and saved by a user who may edit users. *@
+@page "/identity/user-roles/{id}"
+@authorize({ policy: "Permissions.Roles.View" })
+@import { GridSort, PaginationState, Toaster } from "@tsazor/fluent"
+@import type { UserRoleModel } from "../../Application/Identity"
+@inject UserManager userManager
+@inject AuthenticationStateProvider stateProvider
+@inject AuthorizationService authorization
+@inject NavigationManager navigation
+@inject Toaster toaster
+
+<HeroTitle title="@title" description="@description" />
+@if (!loaded) {
+    <Spinner ariaLabel="@L("Update User Roles")" />
+} else {
+    <div class="bh-table-toolbar">
+        <div class="bh-table-toolbar__actions">
+            @if (canEditUsers) {
+                <Button intent="primary" onClick="@saveAsync">@L("Update User Roles")</Button>
+            }
+        </div>
+        @if (canSearchRoles) {
+            <TextInput class="bh-table-toolbar__search" ariaLabel="@L("Search For User Roles")" placeholder="@L("Search For User Roles")" @bind-Value="searchString" immediate>
+                <ContentAfter><Icon value="@Icons.Search" /></ContentAfter>
+            </TextInput>
+        }
+    </div>
+    <DataGrid items="@filteredUserRoles" pagination="@pagination" hover striped="@striped" bordered="@bordered" small="@dense" ariaLabel="@(title || L("Update User Roles"))">
+        <TemplateColumn title="@L("Role Name")" sortBy="@byRoleName" Context="userRole">
+            <Highlighter text="@userRole.roleName" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Description")" sortBy="@byRoleDescription" Context="userRole">
+            <Highlighter text="@(userRole.roleDescription ?? "")" highlightedText="@searchString" />
+        </TemplateColumn>
+        <TemplateColumn title="@L("Status")" sortBy="@bySelected" Context="userRole">
+            <Checkbox @bind-Value="userRole.selected" disabled="@(!canEditUsers)" ariaLabel='@(`${L("Status")}: ${userRole.roleName}`)' />
+        </TemplateColumn>
+    </DataGrid>
+    <div class="bh-table-footer">
+        <div class="bh-table-footer__switches">
+            <Switch label="@L("Dense")" @bind-Value="dense" />
+            <Switch label="@L("Striped")" @bind-Value="striped" />
+            <Switch label="@L("Bordered")" @bind-Value="bordered" />
+        </div>
+        <TablePager state="@pagination" />
+    </div>
+}
+
+@code {
+    @Parameter() id = "";
+
+    private readonly L = localizerFor("UserRoles");
+    private readonly pagination = new PaginationState();
+    private userRolesList: UserRoleModel[] = [];
+    private title = "";
+    private description = "";
+    private searchString = "";
+    private dense = false;
+    private striped = true;
+    private bordered = false;
+
+    private canEditUsers = false;
+    private canSearchRoles = false;
+    private loaded = false;
+
+    private readonly byRoleName = GridSort.byAscending((userRole: UserRoleModel) => userRole.roleName);
+    private readonly byRoleDescription = GridSort.byAscending((userRole: UserRoleModel) => userRole.roleDescription ?? "");
+    private readonly bySelected = GridSort.byAscending((userRole: UserRoleModel) => userRole.selected);
+
+    /** MudTable's Filter: the role's name or description contains the search, in any case. */
+    private get filteredUserRoles(): UserRoleModel[] {
+        if (this.searchString.trim() === "") return this.userRolesList;
+        const search = this.searchString.toLowerCase();
+        return this.userRolesList.filter((userRole) =>
+            userRole.roleName.toLowerCase().includes(search) || userRole.roleDescription?.toLowerCase().includes(search) === true);
+    }
+
+    protected override async onInitialized(): Promise<void> {
+        const user = (await this.stateProvider.getAuthenticationStateAsync()).user;
+        this.canEditUsers = await this.authorization.isAuthorized(user, { policy: Permissions.Users.Edit });
+        this.canSearchRoles = await this.authorization.isAuthorized(user, { policy: Permissions.Roles.Search });
+
+        const result = await this.userManager.getAsync(this.id);
+        if (result.succeeded && result.data !== null) {
+            const found = result.data;
+            this.title = `${found.firstName} ${found.lastName}`;
+            this.description = this.L("Manage {0} {1}'s Roles", { 0: found.firstName, 1: found.lastName });
+            const response = await this.userManager.getRolesAsync(found.id);
+            this.userRolesList = response.data.userRoles;
+        }
+        this.loaded = true;
+    }
+
+    private async saveAsync(): Promise<void> {
+        const result = await this.userManager.updateRolesAsync({ userId: this.id, userRoles: this.userRolesList });
+        if (result.succeeded) {
+            this.toaster.show({ message: result.messages[0]!, intent: "success" });
+            this.navigation.navigateTo("/identity/users");
+        } else {
+            for (const message of result.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+}

@@ -72,7 +72,7 @@
                         <Highlighter text="@(attribute.description ?? "")" highlightedText="@searchString" />
                     </TemplateColumn>
                     <TemplateColumn title="@L("Is Active")" sortBy="@byIsActive" Context="attribute">
-                        <Checkbox Value="@attribute.isActive" disabled ariaLabel='@(`${L("Is Active")}: ${attribute.key}`)' />
+                        <Checkbox Value="@attribute.isActive" readOnly disabled="@(!canEditExtendedAttributes)" ariaLabel='@(`${L("Is Active")}: ${attribute.key}`)' />
                     </TemplateColumn>
                     <TemplateColumn title="@L("Owner")" Context="attribute">
                         @if (attribute.createdBy === currentUserId) {

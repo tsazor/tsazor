@@ -10,6 +10,12 @@ export const StorageConstants = {
     },
 } as const;
 
+/** Shared/Constants/Role/RoleConstants.cs: the seeded roles. */
+export const RoleConstants = {
+    AdministratorRole: "Administrator",
+    BasicRole: "Basic",
+} as const;
+
 /** Shared/Constants/Application/ApplicationConstants.cs: the SignalR hub and its messages. */
 export const ApplicationConstants = {
     SignalR: {

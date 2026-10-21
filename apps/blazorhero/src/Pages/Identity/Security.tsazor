@@ -1,0 +1,58 @@
+@* Client/Pages/Identity/Security.razor(.cs): the signed-in user changes the password. One eye shows both new fields,
+   the other the current password, as the original's two toggles. Changed, the fields are emptied. *@
+@import { Toaster } from "@tsazor/fluent"
+@import { ChangePasswordRequest } from "../../Application/Identity"
+@import { changePasswordRequestValidators } from "../../Application/Validators/Identity"
+@inject AccountManager accountManager
+@inject Toaster toaster
+
+<FluentForm model="@passwordModel" validators="@validators" onValidSubmit="@changePasswordAsync" novalidate>
+    <Card>
+        <CardHeader><Typography variant="body" as="h2">@L("Change Password")</Typography></CardHeader>
+        <div class="bh-form-grid">
+            <TextInput label="@L("Password")" type="@(newPasswordVisible ? "text" : "password")" @bind-Value="passwordModel.newPassword">
+                <ContentAfter>
+                    <Button appearance="transparent" size="small" iconStart="@(newPasswordVisible ? Icons.Eye : Icons.EyeOff)" ariaLabel="@(newPasswordVisible ? "Hide password" : "Show password")" onClick="@(() => togglePasswordVisibility(true))" />
+                </ContentAfter>
+            </TextInput>
+            <TextInput label="@L("Password Confirmation")" type="@(newPasswordVisible ? "text" : "password")" @bind-Value="passwordModel.confirmNewPassword">
+                <ContentAfter>
+                    <Button appearance="transparent" size="small" iconStart="@(newPasswordVisible ? Icons.Eye : Icons.EyeOff)" ariaLabel="@(newPasswordVisible ? "Hide password" : "Show password")" onClick="@(() => togglePasswordVisibility(true))" />
+                </ContentAfter>
+            </TextInput>
+        </div>
+        <TextInput label="@L("Current Password")" type="@(currentPasswordVisible ? "text" : "password")" @bind-Value="passwordModel.password" class="bh-security__current">
+            <ContentAfter>
+                <Button appearance="transparent" size="small" iconStart="@(currentPasswordVisible ? Icons.Eye : Icons.EyeOff)" ariaLabel="@(currentPasswordVisible ? "Hide password" : "Show password")" onClick="@(() => togglePasswordVisibility(false))" />
+            </ContentAfter>
+        </TextInput>
+        <CardFooter class="bh-profile__footer">
+            <Button type="submit" intent="primary">@L("Change Password")</Button>
+        </CardFooter>
+    </Card>
+</FluentForm>
+
+@code {
+    private readonly L = localizerFor("Security");
+    private readonly validators = changePasswordRequestValidators(localizerFor("ChangePasswordRequestValidator"));
+    private readonly passwordModel = new ChangePasswordRequest();
+    private currentPasswordVisible = false;
+    private newPasswordVisible = false;
+
+    private async changePasswordAsync(): Promise<void> {
+        const response = await this.accountManager.changePasswordAsync(this.passwordModel);
+        if (response.succeeded) {
+            this.toaster.show({ message: this.L("Password Changed!"), intent: "success" });
+            this.passwordModel.password = "";
+            this.passwordModel.newPassword = "";
+            this.passwordModel.confirmNewPassword = "";
+        } else {
+            for (const message of response.messages) this.toaster.show({ message, intent: "danger" });
+        }
+    }
+
+    private togglePasswordVisibility(newPassword: boolean): void {
+        if (newPassword) this.newPasswordVisible = !this.newPasswordVisible;
+        else this.currentPasswordVisible = !this.currentPasswordVisible;
+    }
+}
