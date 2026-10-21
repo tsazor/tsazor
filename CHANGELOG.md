@@ -5,6 +5,8 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+## 1.0.0-next.7 (2026-10-21)
+
 - **A helper's declaration from the program, whatever the tsconfig says** (`tsazor build-lib`; the MudBlazor port):
   next.6 turned declaration emit on only when the tsconfig didn't set `declaration` itself — with
   `"declaration": true` the program stayed `noEmit`, and every helper whose declaration the file alone can't give
