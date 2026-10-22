@@ -39,9 +39,14 @@ const TRACES = [
   { pattern: /\b[A-Za-z]:[\\/]{1,2}Own[\\/]|\/[a-z]\/Own\//, what: "a path on the maintainer's machine" },
   { pattern: /\bhandoff-(20\d\d|sleipnir|bench-perf|lsp-v2)/, what: "an internal handoff" },
   { pattern: /\broadmap(-1\.0|-sleipnir|-ssr|-tutorial)?\.md\b|\breview-2026-09-30\b|\bapi-review-1\.0\.md\b/, what: "an internal roadmap or review" },
-  { pattern: /\(owner\b|\bowner,? 20\d\d-\d\d|\bthe owner's (word|decision|choice|company)/i, what: "a note about the owner" },
+  // In prose only: code names its owners (`EventCallback.bind(owner, …)`).
+  { pattern: /\(owner(,? 20\d\d|\)|:)|\bowner,? 20\d\d-\d\d|\bthe owner's (word|decision|choice|company)|\b(by|for) the owner\b/i, what: "a note about the owner", only: /\.md$/ },
   { pattern: /\bfeedback(-2)?\.md\b/, what: "the private feedback notes" },
 ];
+
+/** Links that are no file of the tree: the tutorial's lessons link its routes; the build writes MIGRATION.md. */
+const LINKS_UNCHECKED = [/^apps\/tutorial\/content\//];
+const BUILT = ["packages/runtime/MIGRATION.md"];
 
 /** Files no trace check reads: generated, binary, or naming the traces themselves. */
 const UNCHECKED = [/^pnpm-lock\.yaml$/, /^scripts\/public-tree\.mjs$/, /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|otf|pdf|zip|gz|wasm|mp3|wav)$/i];
@@ -70,7 +75,8 @@ const head = run("git", ["rev-parse", "--short", "HEAD"], { cwd: repoRoot }).std
 step(`export ${head} into ${out}`);
 const archive = spawnSync("git", ["archive", "--format=tar", "HEAD"], { cwd: repoRoot, maxBuffer: 1 << 30 });
 if (archive.status !== 0) throw new Error(`git archive failed: ${archive.stderr}`);
-const untar = spawnSync("tar", ["-x", "-C", out], { input: archive.stdout, maxBuffer: 1 << 30 });
+// In the directory itself: GNU tar (Git Bash's) reads `C:` in a -C path as a remote host.
+const untar = spawnSync("tar", ["-x"], { cwd: out, input: archive.stdout, maxBuffer: 1 << 30 });
 if (untar.status !== 0) throw new Error(`tar failed: ${untar.stderr}`);
 
 const all = run("git", ["ls-tree", "-r", "--name-only", "HEAD"], { cwd: repoRoot }).stdout.split("\n").filter(Boolean);
@@ -108,8 +114,8 @@ for (const file of files) {
   texts.set(file, text);
   const lines = text.split(/\r?\n/);
   lines.forEach((line, index) => {
-    for (const { pattern, what } of TRACES) {
-      if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${what} — ${line.trim().slice(0, 140)}`);
+    for (const { pattern, what, only } of TRACES) {
+      if ((only === undefined || only.test(file)) && pattern.test(line)) findings.push(`${file}:${index + 1}: ${what} — ${line.trim().slice(0, 140)}`);
     }
   });
 }
@@ -117,11 +123,11 @@ report(findings, "no traces");
 
 // 3. Markdown links.
 step("relative links in Markdown");
-const inTree = new Set(files);
+const inTree = new Set([...files, ...BUILT]);
 const dirs = new Set(files.flatMap((file) => ancestors(file)));
 const broken = [];
 for (const [file, text] of texts) {
-  if (!file.endsWith(".md")) continue;
+  if (!file.endsWith(".md") || LINKS_UNCHECKED.some((pattern) => pattern.test(file))) continue;
   const prose = text.replace(/```[\s\S]*?```/g, "").replace(/`[^`\n]*`/g, "");
   for (const match of prose.matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
     const target = match[1];
