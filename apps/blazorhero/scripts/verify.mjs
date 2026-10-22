@@ -688,6 +688,10 @@ async function identity(page, stamp) {
     const users = page.getByRole("table", { name: "Users" });
     await users.locator("tbody tr").first().waitFor();
     check(await page.getByRole("heading", { level: 1, name: "Users" }).isVisible(), "Users: the page's heading (HeroTitle) is its h1");
+    // Every run leaves two users, so John's row moves to a later page: search for him, as a user would.
+    const userSearch = page.getByRole("textbox", { name: "Search For Users" });
+    await userSearch.fill("johndoe");
+    await waitForRows(users, 1);
     const confirmed = users.getByRole("checkbox", { name: "Email Confirmation: johndoe" });
     await confirmed.click();
     check(
@@ -725,8 +729,9 @@ async function identity(page, stamp) {
     await dialog.getByRole("button", { name: "Register" }).click();
     await dialog.waitFor({ state: "detached" });
     await page.getByText(`User ${userName} Registered.`).first().waitFor();
-    const userSearch = page.getByRole("textbox", { name: "Search For Users" });
     await userSearch.fill(stamp);
+    // One row before and after (John's, then the new user's): wait for the new user's.
+    await users.locator("tbody tr", { hasText: email }).waitFor();
     await waitForRows(users, 1);
     const userRow = users.locator("tbody tr").first();
     check(
