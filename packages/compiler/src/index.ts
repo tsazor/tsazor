@@ -1,7 +1,7 @@
 export { compile, type CompileOptions, type CompileResult } from "./compile.js";
 export { codemodSource, applyTextEdits, blankCodeBlocks, apiFormEdits, type CodemodResult } from "./codemod.js";
 export { parseDocument } from "./parser.js";
-export { generateCode, type CodegenOptions, type CodegenResult, type ResolvedComponent, type ResolvedType, type MapEntry, type TypedTagInferenceRequest, type UninferredTypeArguments } from "./codegen.js";
+export { generateCode, type CodegenOptions, type CodegenResult, type ResolvedComponent, type ResolvedType, type MapEntry, type TextBindRequest, type TypedTagInferenceRequest, type UninferredTypeArguments } from "./codegen.js";
 export {
   DiagnosticBag,
   type TszDiagnostic,

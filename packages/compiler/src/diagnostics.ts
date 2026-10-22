@@ -86,6 +86,7 @@ export const DIAGNOSTIC_MESSAGES = {
   TZS037: "Editor-required parameter not provided.",
   TZS038: "Code-like text in markup.",
   TZS039: "Cascading parameter with neither a name nor a type.",
+  TZS040: "A text field bound to a number, a Decimal or a date that can be null.",
 } as const;
 
 

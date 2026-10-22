@@ -326,7 +326,7 @@ More: strings, numbers, dates, collections, exceptions, disposal — [csharp-to-
 | an interface as a DI token or a cascading type | a class (an abstract class works) |
 | `ElementReference.Id` | the `Element` itself |
 | `ParameterView.DidParameterChange` (a Radzen extension, not Blazor) | `parameters.getValue("x") !== this.x` |
-| the field's C# type deciding `@bind`'s conversion | the bound value's type at run time; a field that starts as `null` gets the text — start a number field with a number |
+| the field's C# type deciding `@bind`'s conversion | the bound value's type at run time; a field that is `null` gets the text — `tsazor check` warns where the declared type can be null (TZS040): bind `type="number"`/`"date"` or a `NumberInput`/`DecimalInput`/`DateInput` |
 
 ## 7. Diagnostics you meet first
 

@@ -5,6 +5,14 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **TZS040: a text field bound to a number, a Decimal or a date that can be null** (`@tsazor/compiler`, `@tsazor/lsp`,
+  `tsazor check`; the BlazorHero port's B46, owner 2026-10-22): a text input, a textarea or a select converts by the
+  bound value's type at run time (K.7/K.8), so a field declared `number | null` (`Decimal | null`, `Date | null`) that is
+  null gets the text — a string in a number field. Blazor converts by the declared type; TypeScript erases it, but the
+  type layer knows it: a warning in `tsazor check` and the editor, which names the bind or the component that converts
+  by itself. The runtime's rule stays as documented. The shadow check had cast the write-back `as never`, so nothing
+  caught it before.
+
 - **`DateRangePicker`** (`@tsazor/fluent`, `@tsazor/bootstrap`; MudBlazor's `MudDateRangePicker`; the BlazorHero port's
   B45): a `DateRange | null` of ISO dates (`{ start, end }`, either end open) — two fields as the locale writes a date,
   and a range Calendar in a dialog: a picked start, then a picked end close it; the start picked again makes a range

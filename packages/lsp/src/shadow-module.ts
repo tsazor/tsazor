@@ -6,6 +6,7 @@ import {
   type ExpressionValue,
   type ImportSuggestion,
   type SourceMapEntry,
+  type TextBindRequest,
   type TypedTagInferenceRequest,
   type UninferredTypeArguments,
 } from "@tsazor/compiler";
@@ -43,6 +44,8 @@ export interface ShadowModule {
   /** 2.4: the tag-level `TItem` inference requests when the shadow was built
    *  without resolved type arguments for all generic tags. */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** B46: the element value binds that convert by the bound value's type (TZS040 reads their declared type). */
+  textBinds?: readonly TextBindRequest[];
   /** The generic tags whose type arguments stay open (Razor's RZ10001): errors inside them get a hint. */
   uninferredTypeArguments?: readonly UninferredTypeArguments[];
   /** 2.4: plain-text values of non-string parameters — unknown names in them get a note. */
@@ -149,6 +152,7 @@ export async function buildShadowModule(
       map: new TsazorGenMap(mappings),
       className: context.className,
       ...(compiled.typedInference !== undefined ? { typedInference: compiled.typedInference } : {}),
+      ...(compiled.textBinds !== undefined ? { textBinds: compiled.textBinds } : {}),
       ...(compiled.uninferredTypeArguments !== undefined ? { uninferredTypeArguments: compiled.uninferredTypeArguments } : {}),
       ...(compiled.expressionValues !== undefined ? { expressionValues: compiled.expressionValues } : {}),
       ...(compiled.importSuggestions !== undefined ? { importSuggestions: compiled.importSuggestions } : {}),

@@ -177,6 +177,21 @@ export interface TypedTagInferenceRequest {
   value: SourcePos;
 }
 
+/**
+ * B46: an element's value bind that converts by the bound value's type at run time (a text input, a textarea, a
+ * select — K.7/K.8). The type layer reads the bound expression's declared type there: a number, a Decimal or a date
+ * that can be null gets the text once it is null (TZS040).
+ */
+export interface TextBindRequest {
+  /** The element: `input`, `textarea`, `select`. */
+  element: string;
+  /** Where the bound expression starts in the source (`@bind`'s, or `@bind:get`'s). */
+  value: SourcePos;
+  /** The bind attribute, for the warning's range. */
+  start: SourcePos;
+  end: SourcePos;
+}
+
 /** A generic tag whose type arguments stay open: neither set, inferred nor cascaded (Razor's RZ10001). */
 export interface UninferredTypeArguments {
   tagName: string;
@@ -219,6 +234,8 @@ export interface CodegenResult {
   };
   /** 2.4: the tag-level TItem inference requests (shadow layer only). */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** B46: the element value binds that convert by the bound value's type (shadow layer only). */
+  textBinds?: readonly TextBindRequest[];
   /** The generic tags with open type arguments (shadow layer only). */
   uninferredTypeArguments?: readonly UninferredTypeArguments[];
   /** 2.4: plain-text values read as expressions (shadow layer only) — see expression-values.ts. */
@@ -379,6 +396,7 @@ class Codegen {
   /** `import type` lines the shadow module needs for the parameter types. */
   private readonly shadowTypeImports = new Map<string, { specifier: string; imported?: string }>();
   private readonly inferenceRequests: TypedTagInferenceRequest[] = [];
+  private readonly textBindRequests: TextBindRequest[] = [];
   private readonly uninferredTypeArguments: UninferredTypeArguments[] = [];
   /** 2.4: plain-text values of non-string parameters (typed-shadow builds only). */
   private readonly expressionValues: ExpressionValue[] = [];
@@ -718,6 +736,7 @@ class Codegen {
       mappings: this.takeMappings(),
       metadata: this.metadata,
       ...(this.options.typedShadow !== undefined && this.inferenceRequests.length > 0 ? { typedInference: this.inferenceRequests } : {}),
+      ...(this.options.typedShadow !== undefined && this.textBindRequests.length > 0 ? { textBinds: this.textBindRequests } : {}),
       ...(this.uninferredTypeArguments.length > 0 ? { uninferredTypeArguments: this.uninferredTypeArguments } : {}),
       ...(this.expressionValues.length > 0 ? { expressionValues: this.expressionValues } : {}),
       ...(this.importSuggestions.length > 0 ? { importSuggestions: this.importSuggestions } : {}),
@@ -3228,6 +3247,10 @@ class Codegen {
 
     // Value side: @bind or @bind:get — baked with its source position, so every copy of it maps token by token.
     const displayStart = attr.get !== undefined ? attr.codeStarts?.get : attr.codeStarts?.expression;
+    // B46: the type layer checks what this bind converts to (the declared type is known there, not here).
+    if (isStringValue && displayStart !== undefined && this.options.typedShadow !== undefined) {
+      this.textBindRequests.push({ element: tag, value: displayStart, start: attr.pos, end: attr.endPos });
+    }
     const display = this.expr(attr.get ?? attr.expression ?? "", displayStart, displayStart);
     const boundEntries = displayStart !== undefined ? this.pendingExprEntries : [];
     this.pendingExprEntries = [];

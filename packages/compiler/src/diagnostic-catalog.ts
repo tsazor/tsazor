@@ -329,4 +329,11 @@ export const DIAGNOSTIC_CATALOG: readonly DiagnosticInfo[] = [
     example: "@code {\n    @CascadingParameter() worksheet?: Worksheet;\n}\n",
     fix: "Give its type, as Blazor reads it from the property: `@CascadingParameter({ type: Worksheet })` (the quick fix; `type: () => Worksheet` for the component's own class or an import cycle, `type: Boolean` for a primitive). An interface has no runtime value: cascade it by a name its supplier gives, `@CascadingParameter({ name: \"Worksheet\" })`.",
   },
+  {
+    code: "TZS040",
+    severity: "warning",
+    description:
+      "A text input, a textarea or a select bound with `@bind` converts the text by the bound value's type at run time (K.7/K.8): a number parses back as a number, a `Decimal` as a `Decimal`, a `Date` as a date. A field declared `number | null` (`Decimal | null`, `Date | null`) that is null — from the start, or set so by code (a reset, an API's null) — has no type to go by, so it gets the text: a string in a number field (clearing the text keeps the value, as a failed TryParse). Blazor converts by the property's declared type; TypeScript erases it. Reported by `tsazor check` and the editor, which know the declared type: `<input @bind=\"price\" />` with `private price: number | null = null;`.",
+    fix: "Bind an input that converts by itself: `<input type=\"number\" @bind=\"price\">` (`type=\"date\"` for a date), or a component — `NumberInput`, `DecimalInput`, `DateInput`, `DatePicker`. A number that is never null (`price: number = 0`) binds as it is; for a `<select>` of numbers, the skins' `Select` with `items` hands the option back typed.",
+  },
 ];

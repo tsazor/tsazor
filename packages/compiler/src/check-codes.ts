@@ -8,4 +8,6 @@ export const CHECK_CODES = {
   compilerFailure: "TZS035",
   /** A package's component manifest is unreadable, or newer than this Tsazor reads. */
   manifest: "TZS036",
+  /** A text field bound to a number, a Decimal or a date that can be null (the type layer reads the declared type, B46). */
+  textBind: "TZS040",
 } as const;

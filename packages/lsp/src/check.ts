@@ -90,6 +90,10 @@ export async function checkProject(root: string, options?: { tsDiagnostics?: boo
             message: diagnostic.message,
           });
         }
+        // B46: a text field bound to a number, a Decimal or a date that can be null.
+        for (const warning of registry.projectFor(file).service.textBindWarnings(entry)) {
+          diagnostics.push({ file, line: warning.start.line, column: warning.start.column + 1, code: CHECK_CODES.textBind, severity: "warning", message: warning.message });
+        }
       }
       // Pass 3: the real .ts sources of the graph (code-behind classes and the
       // modules the components import) — part of the component, so part of

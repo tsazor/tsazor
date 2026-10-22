@@ -161,6 +161,7 @@ export declare const CHECK_CODES: {
     readonly unreadable: "TZS034";
     readonly compilerFailure: "TZS035";
     readonly manifest: "TZS036";
+    readonly textBind: "TZS040";
 };
 
 // childNodes
@@ -254,6 +255,7 @@ export interface CodegenResult {
         codeBehindClass?: string;
     };
     typedInference?: readonly TypedTagInferenceRequest[];
+    textBinds?: readonly TextBindRequest[];
     uninferredTypeArguments?: readonly UninferredTypeArguments[];
     expressionValues?: readonly ExpressionValue[];
     importSuggestions?: readonly ImportSuggestion[];
@@ -300,6 +302,7 @@ export interface CompileResult {
     diagnostics: DiagnosticBag;
     metadata: CodegenResult["metadata"];
     typedInference?: readonly TypedTagInferenceRequest[];
+    textBinds?: readonly TextBindRequest[];
     uninferredTypeArguments?: readonly UninferredTypeArguments[];
     expressionValues?: readonly ExpressionValue[];
     importSuggestions?: readonly ImportSuggestion[];
@@ -433,6 +436,7 @@ export declare const DIAGNOSTIC_MESSAGES: {
     readonly TZS037: "Editor-required parameter not provided.";
     readonly TZS038: "Code-like text in markup.";
     readonly TZS039: "Cascading parameter with neither a name nor a type.";
+    readonly TZS040: "A text field bound to a number, a Decimal or a date that can be null.";
 };
 
 // DiagnosticBag
@@ -822,6 +826,14 @@ export interface SwitchNode extends SourceSpan {
     code: string;
     codeStart?: SourceSpan["pos"];
     cases: SwitchCase[];
+}
+
+// TextBindRequest
+export interface TextBindRequest {
+    element: string;
+    value: SourcePos;
+    start: SourcePos;
+    end: SourcePos;
 }
 
 // TextEdit

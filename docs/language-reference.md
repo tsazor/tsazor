@@ -650,7 +650,7 @@ Not implemented: integer zero padding (`D5`/`00000#` padding) — a deviation, n
 roadmap. A format applies to any `value` bind — `type="number"`, `type="range"`,
 `type="date"`, and also a plain text input, textarea or select (K.7/K.8). The compiler
 cannot see the field's type, so a non-typed value bind converts by the bound value's
-*runtime* type (`parseBindValue`): a `number` parses back as a number, a `Date` as a date
+*runtime* type (`parseBindValue`; a field declared `number | null`, `Decimal | null` or `Date | null` gets the text while it is null — `tsazor check` warns, TZS040): a `number` parses back as a number, a `Date` as a date
 (ISO by default, the format otherwise), a `Decimal` as a `Decimal`, anything else stays a string. Blazor's idiom of a
 text input bound to a `DateTime` with `@bind:format="dd.MM.yyyy"` therefore works, and a
 `<select>` bound to a `number` writes a number, not a string. Only a format on a non-value
@@ -1466,6 +1466,7 @@ text }] }`, exposed in the LSP as a quick fix (code action):
 | `TZS030` `@Bindable() value = 0` | ⇒ `@Bindable() accessor value = 0` |
 | `TZS038` a `//` or `/* … */` comment outside every element (it renders, as in Razor) | ⇒ `@* … *@` |
 | `TZS039` `@CascadingParameter() worksheet?: Worksheet` (neither a name nor a type: it takes any unnamed cascade) | ⇒ `@CascadingParameter({ type: Worksheet })` (the own class: `type: () => X`; `boolean`: `type: Boolean`) |
+| `TZS040` `<input @bind="price">` with `price: number \| null` (a text input, textarea or select converts by the current value: a null one gets the text) | ⇒ `<input type="number" @bind="price">` (`type="date"`), a `NumberInput`/`DecimalInput`/`DateInput`, the skins' `Select` with `items` — or a field that is never null |
 | `TZS004` ``attr="@`…`"`` (a template literal after `@` in an attribute value) | ⇒ ``attr="@(`…`)"`` |
 | `TZS032` a member under Blazor's lifecycle name (`onInitializedAsync`, `OnParametersSet`, `Dispose`, …) | Name ⇒ Tsazor's hook (`onInitialized`, `onParametersSet`, `dispose`); the hook may be `async` |
 | `TZS024` C# interpolated string `$"…{x}…"` / `$@"…"` / verbatim `@"…"` | Template literal: holes ⇒ `${…}` (a Razor `@` in the hole is dropped), `{{`/`}}` ⇒ braces, C# layout `{x,2:C}` is dropped (since 2.5; fix only when the string is the cause of the error — TZS024 has no fix otherwise; for the limitation see [Codemod](#codemod-razor--tsazor-25)) |

@@ -1,6 +1,6 @@
 import type { DocumentNode } from "./ast.js";
 import { DiagnosticBag } from "./diagnostics.js";
-import { generateCode, type CodegenOptions, type CodegenResult, type MapEntry, type TypedTagInferenceRequest, type UninferredTypeArguments } from "./codegen.js";
+import { generateCode, type CodegenOptions, type CodegenResult, type MapEntry, type TextBindRequest, type TypedTagInferenceRequest, type UninferredTypeArguments } from "./codegen.js";
 import { parseDocument } from "./parser.js";
 import { buildSourceMap } from "./source-map.js";
 import type { ExpressionValue } from "./expression-values.js";
@@ -21,6 +21,8 @@ export interface CompileResult {
   metadata: CodegenResult["metadata"];
   /** 2.4: tag-level `TItem` inference requests (typed-shadow builds only). */
   typedInference?: readonly TypedTagInferenceRequest[];
+  /** B46: the element value binds that convert by the bound value's type (typed-shadow builds only). */
+  textBinds?: readonly TextBindRequest[];
   /** The generic tags with open type arguments (typed-shadow builds only). */
   uninferredTypeArguments?: readonly UninferredTypeArguments[];
   /** 2.4: plain-text values read as expressions (typed-shadow builds only). */
@@ -33,13 +35,14 @@ export interface CompileResult {
 export function compile(source: string, options: CompileOptions): CompileResult {
   const diagnostics = new DiagnosticBag();
   const document: DocumentNode = parseDocument(source, diagnostics);
-  const { code, metadata, mappings, typedInference, uninferredTypeArguments, expressionValues, importSuggestions } = generateCode(document, options, diagnostics);
+  const { code, metadata, mappings, typedInference, textBinds, uninferredTypeArguments, expressionValues, importSuggestions } = generateCode(document, options, diagnostics);
   const result: CompileResult = {
     code,
     diagnostics,
     metadata,
     mappings,
     ...(typedInference !== undefined ? { typedInference } : {}),
+    ...(textBinds !== undefined ? { textBinds } : {}),
     ...(uninferredTypeArguments !== undefined ? { uninferredTypeArguments } : {}),
     ...(expressionValues !== undefined ? { expressionValues } : {}),
     ...(importSuggestions !== undefined ? { importSuggestions } : {}),

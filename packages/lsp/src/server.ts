@@ -24,6 +24,7 @@ import {
   FileChangeType,
 } from "vscode-languageserver/node.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { CHECK_CODES } from "@tsazor/compiler";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { analyzeSource, bindableHoverAt, bindableRefactorsAt, definitionAt, directiveAttributeHoverAt, hoverAt, lspRange, quickFixesAt, type AnalyzedFile } from "./analysis.js";
@@ -145,6 +146,19 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
               code: diag.code,
               source: "tsazor-ts",
               message: diag.message,
+            });
+          }
+          // B46: a text field bound to a number, a Decimal or a date that can be null.
+          for (const warning of registry.projectFor(uriToPath(document.uri)).service.textBindWarnings(entry)) {
+            items.push({
+              severity: DiagnosticSeverity.Warning,
+              range: {
+                start: { line: warning.start.line - 1, character: warning.start.column },
+                end: { line: warning.end.line - 1, character: warning.end.column },
+              },
+              code: CHECK_CODES.textBind,
+              source: "tsazor",
+              message: warning.message,
             });
           }
         }

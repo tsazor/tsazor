@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as ts from "typescript";
-import { inferTypeArgument, type TypedTagInferenceRequest } from "@tsazor/compiler";
+import { inferTypeArgument, type SourcePos, type TypedTagInferenceRequest } from "@tsazor/compiler";
 
 /**
  * The TypeScript type layer (v2): one `ts.LanguageService` per workspace over
@@ -466,6 +466,31 @@ export class TsazorTypeService {
     return this.ls.getSemanticDiagnostics(entry.shadow.virtualPath) as ts.DiagnosticWithLocation[];
   }
 
+  /**
+   * B46 (TZS040): the element value binds — a text input, a textarea, a select — whose bound expression is declared a
+   * number, a `Decimal` or a `Date` that can be null. The runtime converts by the current value (K.7/K.8), so once
+   * the value is null the field gets the text. Blazor converts by the declared type, which only the checker knows.
+   */
+  textBindWarnings(entry: ShadowEntry): { start: SourcePos; end: SourcePos; message: string }[] {
+    const requests = entry.shadow.textBinds ?? [];
+    if (requests.length === 0) return [];
+    const program = this.ls.getProgram();
+    const sourceFile = program?.getSourceFile(entry.shadow.virtualPath);
+    if (program === undefined || sourceFile === undefined) return [];
+    const checker = program.getTypeChecker();
+    const warnings: { start: SourcePos; end: SourcePos; message: string }[] = [];
+    for (const request of requests) {
+      const gen = entry.shadow.map.srcToGen(request.value.line - 1, request.value.column);
+      if (!gen) continue;
+      const node = expressionStartingAt(sourceFile, offsetIn(entry.shadow.code, gen.line, gen.column));
+      if (node === undefined) continue;
+      const kind = nullableConvertedKind(checker.getTypeAtLocation(node));
+      if (kind === undefined) continue;
+      warnings.push({ start: request.start, end: request.end, message: textBindMessage(request.element, node.getText(sourceFile), kind) });
+    }
+    return warnings;
+  }
+
   /** TypeScript's own code fixes for a diagnostic span of the shadow (S4: "infer from usage"). */
   codeFixesOnShadow(entry: ShadowEntry, start: number, end: number, errorCodes: readonly number[]): readonly ts.CodeFixAction[] {
     try {
@@ -763,6 +788,44 @@ function shadowKey(tsazorPath: string): string {
 }
 
 /** 0-based line/column → text offset inside a generated module's code. */
+/** The outermost expression that starts at `offset` (the bound expression, not a member of it). */
+function expressionStartingAt(sourceFile: ts.SourceFile, offset: number): ts.Expression | undefined {
+  let found: ts.Expression | undefined;
+  const visit = (node: ts.Node): void => {
+    if (found !== undefined || offset < node.getStart(sourceFile) || offset >= node.getEnd()) return;
+    if (ts.isExpression(node) && node.getStart(sourceFile) === offset) {
+      found = node;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sourceFile, visit);
+  return found;
+}
+
+/** A number, a Decimal or a Date (all of the union's other members) that can be null or undefined; else undefined. */
+function nullableConvertedKind(type: ts.Type): "number" | "Decimal" | "Date" | undefined {
+  if (!type.isUnion()) return undefined;
+  const empty = ts.TypeFlags.Null | ts.TypeFlags.Undefined;
+  if (!type.types.some((member) => (member.flags & empty) !== 0)) return undefined;
+  const rest = type.types.filter((member) => (member.flags & empty) === 0);
+  if (rest.length === 0) return undefined;
+  if (rest.every((member) => (member.flags & ts.TypeFlags.NumberLike) !== 0)) return "number";
+  for (const name of ["Decimal", "Date"] as const) {
+    if (rest.every((member) => member.getSymbol()?.getName() === name)) return name;
+  }
+  return undefined;
+}
+
+/** TZS040's message: what goes wrong, and the bind or the component that converts by itself. */
+function textBindMessage(element: string, expression: string, kind: "number" | "Decimal" | "Date"): string {
+  const typed = kind === "number" ? '<input type="number">, a NumberInput' : kind === "Decimal" ? "a DecimalInput" : '<input type="date">, a DateInput or a DatePicker';
+  const instead = element === "select" ? "the skins' Select with items, which hands the option back typed" : typed;
+  return `@bind on <${element}> converts the text by the value's type at run time, and '${expression}' is a ${kind} that can be null: ` +
+    `while it is null — from the start, or set so by code (a reset, an API's null) — the next text goes in as a string (Blazor converts by the declared type). ` +
+    `Bind ${instead} instead, or keep the field from null.`;
+}
+
 function offsetIn(code: string, line0: number, col: number): number {
   let offset = 0;
   let line = 0;
