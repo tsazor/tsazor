@@ -889,7 +889,8 @@ async function identity(page, stamp) {
       uploads.length === 1 && pngSize(uploads[0].data) === "400x200" && uploads[0].uploadType === 1 && uploads[0].fileName.startsWith(`${userId}-`),
       `Upload Image: the picture shrunk into 400 × 400 (${uploads[0] ? pngSize(uploads[0].data) : "none"}), named by the user, then the page loads again with it`,
     );
-    check((await vera.locator(".bh-user-card img").count()) === 1, "the app bar's user card shows the new picture (the reload)");
+    // The card loads the picture from the API once the frame has started: wait for it.
+    check(await vera.locator(".bh-user-card img").waitFor({ timeout: 15_000 }).then(() => true, () => false), "the app bar's user card shows the new picture (the reload)");
     await vera.getByRole("button", { name: "Delete Image" }).click();
     const veraDialog = vera.getByRole("dialog");
     await veraDialog.getByRole("heading", { name: "Delete Confirmation" }).waitFor();

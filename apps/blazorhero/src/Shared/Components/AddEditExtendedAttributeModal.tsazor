@@ -18,12 +18,8 @@
                     <TextInput label="@L("Id")" Value="@String(addEditExtendedAttributeModel.id)" disabled />
                 }
                 <TextInput label="@L("Entity Id")" Value="@String(addEditExtendedAttributeModel.entityId)" disabled />
-                @* MudSelect<EntityExtendedAttributeType>: the skins' Select binds a string (B43), so the type goes by its name. *@
-                <Select label="@L("Type")" @bind-Value="typeName">
-                    @foreach (const name of typeNames) {
-                        <option value="@name">@name</option>
-                    }
-                </Select>
+                @* MudSelect<EntityExtendedAttributeType>: the Select's typed options (B43), the enum member itself. *@
+                <Select label="@L("Type")" items="@types" optionText="@((type: EntityExtendedAttributeType) => EntityExtendedAttributeType[type])" @bind-selectedOption="addEditExtendedAttributeModel.type" />
                 <TextInput label="@L("Key")" @bind-Value="addEditExtendedAttributeModel.key" />
                 @if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.Decimal) {
                     <DecimalInput label="@L("Decimal")" @bind-Value="addEditExtendedAttributeModel.decimal" />
@@ -60,17 +56,8 @@
 
     private readonly L = localizerFor("AddEditExtendedAttributeModalLocalization");
     private readonly validators = addEditExtendedAttributeValidators(localizerFor("AddEditExtendedAttributeCommandValidatorLocalization"));
-    /** Enum.GetNames(typeof(EntityExtendedAttributeType)): the select's options. */
-    private readonly typeNames = [EntityExtendedAttributeType.Decimal, EntityExtendedAttributeType.Text, EntityExtendedAttributeType.DateTime, EntityExtendedAttributeType.Json]
-        .map((type) => EntityExtendedAttributeType[type]);
-
-    private get typeName(): string {
-        return EntityExtendedAttributeType[this.addEditExtendedAttributeModel.type];
-    }
-
-    private set typeName(name: string) {
-        this.addEditExtendedAttributeModel.type = EntityExtendedAttributeType[name as keyof typeof EntityExtendedAttributeType];
-    }
+    /** Enum.GetValues(typeof(EntityExtendedAttributeType)): the select's options. */
+    private readonly types = [EntityExtendedAttributeType.Decimal, EntityExtendedAttributeType.Text, EntityExtendedAttributeType.DateTime, EntityExtendedAttributeType.Json];
     /** The DateTime's date and time, as the two pickers hold them (ISO strings). */
     private date = "";
     private time = "";
