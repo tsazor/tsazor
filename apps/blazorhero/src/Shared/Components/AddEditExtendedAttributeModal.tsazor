@@ -1,12 +1,10 @@
 @* Client/Shared/Components/AddEditExtendedAttributeModal.razor(.cs): one extended attribute, generic over its and its
-   entity's ids. The value field follows the type: a Decimal (@tsazor/primitives, through @bind on a number input —
-   the skins' NumberInput is number-only, B42), a text, a date and a time (MudDatePicker + MudTimePicker, combined on
-   save as the original does), or JSON. The original injects its generic manager; here the page hands it over. *@
+   entity's ids. The value field follows the type: a Decimal (@tsazor/primitives, in a DecimalInput — MudNumericField
+   <decimal?>, B42), a text, a date and a time (MudDatePicker + MudTimePicker, combined on save as the original
+   does), or JSON. The original injects its generic manager; here the page hands it over. *@
 @typeparam TId
 @typeparam TEntityId
 @import { DialogReference, Toaster } from "@tsazor/fluent"
-@import { ValidationMessage } from "@tsazor/runtime"
-@import { Decimal } from "@tsazor/primitives"
 @import { AddEditExtendedAttributeCommand, EntityExtendedAttributeType } from "../../Application/Misc"
 @import { addEditExtendedAttributeValidators } from "../../Application/Validators/Misc"
 @import type { ExtendedAttributeManager } from "../../Infrastructure/Managers/MiscManagers"
@@ -28,12 +26,7 @@
                 </Select>
                 <TextInput label="@L("Key")" @bind-Value="addEditExtendedAttributeModel.key" />
                 @if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.Decimal) {
-                    <div class="fui-input-wrapper">
-                        <label class="fui-input__label" for="bh-attribute-decimal">@L("Decimal")</label>
-                        @* A Decimal that starts as null would bind as text (B46): the text, parsed on save. *@
-                        <input id="bh-attribute-decimal" class="fui-input" type="text" inputmode="decimal" @bind="decimalText" />
-                        <ValidationMessage For="decimal" />
-                    </div>
+                    <DecimalInput label="@L("Decimal")" @bind-Value="addEditExtendedAttributeModel.decimal" />
                 } else if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.Text) {
                     <TextInput label="@L("Text")" @bind-Value="addEditExtendedAttributeModel.text" />
                 } else if (addEditExtendedAttributeModel.type === EntityExtendedAttributeType.DateTime) {
@@ -78,17 +71,6 @@
     private set typeName(name: string) {
         this.addEditExtendedAttributeModel.type = EntityExtendedAttributeType[name as keyof typeof EntityExtendedAttributeType];
     }
-    /** The Decimal as typed (invariant, "12.5"); each change parses into the model, so its validator sees it. */
-    private decimalDraft = "";
-
-    private get decimalText(): string {
-        return this.decimalDraft;
-    }
-
-    private set decimalText(text: string) {
-        this.decimalDraft = text;
-        this.addEditExtendedAttributeModel.decimal = text.trim() === "" ? null : Decimal.parse(text);
-    }
     /** The DateTime's date and time, as the two pickers hold them (ISO strings). */
     private date = "";
     private time = "";
@@ -98,7 +80,6 @@
     }
 
     protected override onInitialized(): void {
-        this.decimalDraft = this.addEditExtendedAttributeModel.decimal?.toString() ?? "";
         const dateTime = this.addEditExtendedAttributeModel.dateTime;
         if (dateTime !== null) {
             const pad = (n: number): string => String(n).padStart(2, "0");

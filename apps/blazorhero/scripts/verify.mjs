@@ -423,8 +423,16 @@ async function documents(page, stamp) {
     await add(async () => {
       await dialog.getByLabel("Type").selectOption("Decimal");
       await dialog.getByLabel("Key").fill("price");
-      await dialog.getByLabel("Decimal").fill("12.50");
+      // The DecimalInput (B42): "12,50" is no number in en-US — the text stays, the field says so, nothing is saved.
+      const decimal = dialog.getByLabel("Decimal");
+      await decimal.fill("12,50");
       await dialog.getByLabel("Group").fill("Money");
+      await dialog.getByRole("button", { name: "Save" }).click();
+      await dialog.getByText("The Decimal field must be a number.").waitFor();
+      check((await decimal.inputValue()) === "12,50" && (await decimal.getAttribute("inputmode")) === "decimal", "a Decimal in a DecimalInput (B42): text that is no number stays, with the parsing message, and the form doesn't submit");
+      await decimal.fill("12.50");
+      await decimal.press("Tab");
+      await dialog.getByText("The Decimal field must be a number.").waitFor({ state: "detached" });
       await dialog.getByLabel("Is Active").uncheck();
     });
     await page.getByRole("tab", { name: /Money/ }).waitFor();
@@ -556,7 +564,9 @@ async function realTime(page, stamp) {
     await john.getByRole("log").getByText(message).waitFor();
     check((await input.inputValue()) === "", "Enter sends: the message on both sides at once, the field empty (U12)");
 
-    // The receiver elsewhere: the notification, and its action opens the conversation.
+    // The receiver elsewhere: the notification, and its action opens the conversation. Every message notifies, as in
+    // the original — the first one's toast (10 s) goes first, or the two would be told apart only by their order.
+    await page.getByText("New Message From John Doe").first().waitFor({ state: "detached", timeout: 15_000 });
     await page.getByRole("link", { name: "Home" }).click();
     await page.getByRole("heading", { level: 1 }).first().waitFor();
     await input.fill(`${message} again`);
