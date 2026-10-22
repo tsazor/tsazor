@@ -135,9 +135,12 @@ async function main() {
     check((await text(".track-order-title p")) === "Status: Preparing", "initial status is Preparing");
     check((await page.locator(".delivery-map").count()) === 1, "delivery map present");
     // Tiles come from the public OSM servers: wait for the first one instead of
-    // a fixed delay (a 1 s sleep made this check flaky on slow responses).
+    // a fixed delay (a 1 s sleep made this check flaky on slow responses). WebKit
+    // took 10 s for the first tile in two of five runs (Edge: milliseconds) — a
+    // connection delay to the tile server, not the app's — so allow 30 s; the
+    // delivery window (60 s) still covers the status checks below.
     const tilesLoaded = await page
-      .waitForSelector(".leaflet-tile-loaded", { timeout: 10_000 })
+      .waitForSelector(".leaflet-tile-loaded", { timeout: 30_000 })
       .then(() => true, () => false);
     check(tilesLoaded, "leaflet tiles loaded");
     check((await page.locator(".leaflet-popup-content").allTextContents()).includes("You"), "'You' marker popup open");
