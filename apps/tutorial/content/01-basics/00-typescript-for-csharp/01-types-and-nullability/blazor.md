@@ -8,7 +8,7 @@ This short chapter is for C# developers new to TypeScript. The good news first: 
 already know most of it.** TypeScript and C# share a designer, Anders Hejlsberg, and it
 shows: classes, interfaces, generics, `async`/`await`, lambdas, `?.` and `??` look the way
 you expect. Each lesson covers one thing that looks the same but isn't; the
-[C# to TypeScript cheat sheet](https://github.com/HolgerTheHuck/Tsazor/blob/main/docs/csharp-to-typescript.md)
+[C# to TypeScript cheat sheet](https://github.com/tsazor/tsazor/blob/main/docs/csharp-to-typescript.md)
 has the full tables. Already fluent? Skip ahead to [Welcome](blazor/welcome).
 
 | C# | TypeScript |

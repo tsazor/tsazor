@@ -19,10 +19,10 @@ component (run it in CI, like a build), and `npx vitest` runs your bUnit-style t
 Moving existing `.razor` files? `npx tsazor codemod Pages --write` converts the mechanical
 C# leftovers in the markup: `@foreach (var x in xs)`, `var`, `$"…"` strings,
 `.ToString()`. The C# in `@code` you port to TypeScript yourself. The
-[C# to TypeScript cheat sheet](https://github.com/HolgerTheHuck/Tsazor/blob/main/docs/csharp-to-typescript.md)
+[C# to TypeScript cheat sheet](https://github.com/tsazor/tsazor/blob/main/docs/csharp-to-typescript.md)
 maps the language and the base class library.
 
 > **Coming from Blazor:** your ASP.NET Core backend stays as it is. Point
 > `npx tsazor-dotnet generate` at its OpenAPI document for a typed client, as in the
 > backend chapter. The full setup is in the
-> [getting started guide](https://github.com/HolgerTheHuck/Tsazor/blob/main/docs/getting-started.md).
+> [getting started guide](https://github.com/tsazor/tsazor/blob/main/docs/getting-started.md).

@@ -32,6 +32,6 @@ Two more commands do what this tutorial did for you:
 - `npx vitest` runs your `*.test.ts` files. Add `@tsazor/testing`, and the same `tsazor()`
   plugin to the Vitest config.
 
-The [getting started guide](https://github.com/HolgerTheHuck/Tsazor/blob/main/docs/getting-started.md)
+The [getting started guide](https://github.com/tsazor/tsazor/blob/main/docs/getting-started.md)
 has the complete setup, including the recommended `tsconfig.json` (strict, as everywhere in
 Tsazor).

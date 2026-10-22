@@ -23,5 +23,5 @@ a library (`date-fns`, Luxon) for date math.
 
 > **Coming from C#:** this chapter and the .NET types you'll reach for (`List`,
 > `Dictionary`, `DateTime`, `IDisposable`, …) are in the
-> [C# to TypeScript cheat sheet](https://github.com/HolgerTheHuck/Tsazor/blob/main/docs/csharp-to-typescript.md).
+> [C# to TypeScript cheat sheet](https://github.com/tsazor/tsazor/blob/main/docs/csharp-to-typescript.md).
 > Next up: Tsazor itself.
