@@ -2,6 +2,7 @@
 @import type { InputFileChangeEventArgs } from "@tsazor/runtime"
 @import { PatternMask } from "@tsazor/ui"
 @import type { Decimal } from "@tsazor/primitives"
+@import { Shape } from "../shape"
 @import { formatFileSize, uploadTo, type FileUploadErrorEventArgs, type FileUploadEventArgs } from "@tsazor/bootstrap"
 
 <Typography Variant="h1">Forms</Typography>
@@ -33,8 +34,9 @@
     <Typography Variant="h2">Choices</Typography>
     <CheckboxGroup Label="Allergens to leave out" Options="@allergenOptions" Inline="@true" @bind-Value="allergens" />
     <Autocomplete Label="Toppings" Items="@toppingOptions" Placeholder="Type to search" @bind-SelectedOptions="toppings" />
+    <Select Label="Shape" Items="@shapes" OptionText="@((shape: Shape | null) => shape === null ? "" : Shape[shape])" Placeholder="Any shape" @bind-SelectedOption="shape" />
     <Typography Variant="caption">
-        Leave out <span class="choice-allergens">@allergens.join(", ")</span>; toppings <span class="choice-toppings">@toppings.join(", ")</span>.
+        Leave out <span class="choice-allergens">@allergens.join(", ")</span>; toppings <span class="choice-toppings">@toppings.join(", ")</span>; shape <span class="choice-shape">@(shape === null ? "any" : `${Shape[shape]} (${shape})`)</span>.
     </Typography>
 </section>
 
@@ -155,6 +157,9 @@
     private allergens: string[] = ["nuts"];
     private readonly allergenOptions = [{ value: "gluten", label: "Gluten" }, { value: "nuts", label: "Nuts" }, { value: "sesame", label: "Sesame" }];
     private toppings: string[] = [];
+    /** A typed Select (B43): the enum member itself, null for the placeholder's "Any shape". */
+    private shape: Shape | null = null;
+    private readonly shapes: (Shape | null)[] = [Shape.Round, Shape.Long, Shape.Tin];
     private readonly toppingOptions = ["Sesame", "Poppy seeds", "Sunflower seeds", "Pumpkin seeds", "Flax", "Oats", "Caraway"];
 
     private pickupDay = "2026-10-10";

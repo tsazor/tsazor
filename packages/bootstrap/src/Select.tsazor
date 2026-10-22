@@ -1,7 +1,11 @@
-@** A Bootstrap dropdown list (`select.form-select`; InputBase — bind it with @bind) for a string
-    value, with an optional label and help text; the `<option>`s come from the child content.
-    Validation state and message as with TextInput. *@
-@import { FieldState } from "@tsazor/ui/kit"
+@** A Bootstrap dropdown list (`select.form-select`; InputBase) with an optional label and help text, in two ways.
+    For a string, bind it with @bind-Value and give the `<option>`s as child content. For typed options
+    (MudSelect<T>, Fluent UI Blazor's FluentSelect<TOption>), give `items` and `optionText` and bind
+    @bind-selectedOption: the choice is the option itself — an enum member, a number, an object — with nothing
+    parsed; `placeholder` adds an empty choice, null (bind a `T | null` then). Validation state and message as with
+    TextInput. *@
+@typeparam TOption = string
+@import { FieldState, optionAtValue, selectedOptionIndex } from "@tsazor/ui/kit"
 @import { withClass } from "./attributes"
 
 @inherits InputBase<string>
@@ -10,7 +14,19 @@
     @if (label) {
         <label class="form-label" for="@field.id(id)">@label</label>
     }
-    <select @ref="element" id="@field.id(id)" value="@(currentValue ?? "")" disabled="@disabled" required="@required" aria-label="@ariaLabel" aria-readonly="@(readOnly ? "true" : null)" @attributes="@withClass(inputClass, inputAttributes)" @onmousedown:preventDefault="@readOnly" @onkeydown="keepValue" @onchange="handleChange">@childContent</select>
+    <select @ref="element" id="@field.id(id)" value="@selectValue" disabled="@disabled" required="@required" aria-label="@ariaLabel" aria-readonly="@(readOnly ? "true" : null)" @attributes="@withClass(inputClass, inputAttributes)" @onmousedown:preventDefault="@readOnly" @onkeydown="keepValue" @onchange="handleChange">
+        @if (items !== undefined) {
+            @if (placeholder !== undefined || selectedIndex < 0) {
+                @* Without a placeholder the empty choice only shows that nothing is chosen yet: it can't be picked again. *@
+                <option value="" disabled="@(placeholder === undefined)" hidden="@(placeholder === undefined)">@(placeholder ?? "")</option>
+            }
+            @for (let i = 0; i < items.length; i++) {
+                <option value="@String(i)" disabled="@(optionDisabled?.(items[i]!) === true)">@optionText(items[i]!)</option>
+            }
+        } else {
+            @childContent
+        }
+    </select>
     @if (help) {
         <div class="form-text" id="@field.helpId(id)">@help</div>
     }
@@ -20,6 +36,22 @@
 </div>
 
 @code {
+    /** The typed options (FluentSelect's `Items`); with them the list binds `selectedOption`, not `value`. */
+    @Parameter() items?: TOption[];
+    /** An option's text (FluentSelect's `OptionText`). */
+    @Parameter() optionText: (option: TOption) => string = (option) => String(option);
+    /** What makes two options the same, for an option that is an equal copy (by default its text). */
+    @Parameter() optionKey?: (option: TOption) => unknown;
+    /** Whether an option can't be chosen (FluentSelect's `OptionDisabled`). */
+    @Parameter() optionDisabled?: (option: TOption) => boolean;
+    /** The chosen option, with `items` (bind with `@bind-selectedOption`). */
+    @Parameter() selectedOption?: TOption | null;
+    /** Raised with the option the user chose (null for the placeholder's empty choice). */
+    @Parameter() selectedOptionChanged?: EventCallback<TOption>;
+    /** The bound field in a form (`@bind-selectedOption` passes it), as an input's ValueExpression. */
+    @Parameter() selectedOptionExpression?: string;
+    /** An empty first choice with this text, which chooses null: only for options whose type takes null (`T | null`). */
+    @Parameter() placeholder?: null extends TOption ? string : "a placeholder chooses null: give options whose type takes it (TOption=\"T | null\")";
     /** The accessible name when there is no visible label. */
     @Parameter() ariaLabel?: string;
     /** The field's label. */
@@ -34,17 +66,35 @@
     @Parameter() required: boolean = false;
     /** The list's id; generated when omitted. */
     @Parameter() id?: string;
-    /** The `<option>` elements. */
+    /** The `<option>` elements (the string way). */
     @Parameter() childContent?: RenderFragment;
 
     private readonly field = new FieldState("tz-select");
 
+    /** The chosen option's place in `items`, or -1. */
+    private get selectedIndex(): number {
+        return this.items === undefined ? -1 : selectedOptionIndex(this.items, this.selectedOption, this.optionKey ?? this.optionText);
+    }
+
+    /** The native select's value: the string, or the chosen option's index ("" for none). */
+    private get selectValue(): string {
+        if (this.items === undefined) return this.currentValue ?? "";
+        const index = this.selectedIndex;
+        return index < 0 ? "" : String(index);
+    }
+
+    /** The bound field: the value's, or with `items` the chosen option's. */
+    private get fieldExpression(): string | undefined {
+        return this.items === undefined ? this.valueExpression : this.selectedOptionExpression;
+    }
+
     private get message(): string {
-        return this.field.message(this.editContext, this.valueExpression);
+        return this.field.message(this.editContext, this.fieldExpression);
     }
 
     private get inputClass(): string {
-        const validity = this.field.validity(this.fieldClass);
+        const field = this.fieldExpression;
+        const validity = this.field.validity(field !== undefined && this.editContext ? this.editContext.fieldCssClass(field) : "");
         return validity === "invalid" ? "form-select is-invalid" : validity === "valid" ? "form-select is-valid" : "form-select";
     }
 
@@ -53,11 +103,20 @@
     }
 
     private handleChange(e: Event): void {
+        const select = e.target as HTMLSelectElement;
         if (this.readOnly) {
-            (e.target as HTMLSelectElement).value = this.currentValue ?? "";
+            select.value = this.selectValue;
             return;
         }
-        this.currentValue = (e.target as HTMLSelectElement).value;
+        if (this.items === undefined) {
+            this.currentValue = select.value;
+            return;
+        }
+        // The option itself, typed; "" is the placeholder's null.
+        const option = optionAtValue(this.items, select.value) as TOption;
+        this.selectedOption = option;
+        void this.selectedOptionChanged?.invokeAsync(option);
+        if (this.selectedOptionExpression && this.editContext) this.editContext.notifyFieldChanged(this.selectedOptionExpression, option);
     }
 
     /** readOnly: a key that would change the value does nothing; Tab, Escape and the browser's shortcuts still work. */

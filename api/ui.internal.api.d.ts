@@ -343,6 +343,9 @@ export declare function numberSeparators(locale: string): {
     group: string;
 };
 
+// optionAtValue
+export declare function optionAtValue<T>(items: readonly T[], value: string): T | null;
+
 // overflowFit
 export declare function overflowFit(sizes: readonly number[], available: number, more: number, gap?: number): number;
 
@@ -433,6 +436,9 @@ export declare class SearchRunner<TOption> {
     runAsync(text: string): Promise<readonly TOption[] | undefined>;
     cancel(): void;
 }
+
+// selectedOptionIndex
+export declare function selectedOptionIndex<T>(items: readonly T[], selected: T | null | undefined, key: (option: T) => unknown): number;
 
 // sliderFraction
 export declare function sliderFraction(value: number, min: number, max: number): number;

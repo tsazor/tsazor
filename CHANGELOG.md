@@ -5,6 +5,15 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **`Select` with typed options** (`@tsazor/fluent`, `@tsazor/bootstrap`; Fluent UI Blazor's `FluentSelect<TOption>`,
+  `MudSelect<T>`; the BlazorHero port's B43): `items`, `optionText`, `optionKey`, `optionDisabled` and
+  `@bind-selectedOption` — the choice is the option itself (an enum member, a number, an object), nothing parsed: each
+  `<option>` carries its index. `placeholder` adds an empty choice that chooses null, and only where the options' type
+  takes null (`(Shape | null)[]`, or `TOption="Shape | null"`); elsewhere `tsazor check` says so in the error. Without a
+  placeholder, the empty choice only shows that nothing is chosen yet and can't be picked again, so a non-null field
+  never gets null. The string way (`@bind-Value` with `<option>`s as content) is unchanged: `@typeparam TOption = string`.
+  The kit has `selectedOptionIndex` and `optionAtValue`.
+
 - **`DecimalInput`** (`@tsazor/fluent`, `@tsazor/bootstrap`; Blazor's `InputNumber<decimal?>`, `FluentNumberField<decimal?>`,
   `MudNumericField<decimal?>`; the BlazorHero port's B42): a field for a `Decimal | null` (`@tsazor/primitives`) — a
   text field (`inputmode="decimal"`) in the locale's separators, exact (no floating point, the scale kept), null when

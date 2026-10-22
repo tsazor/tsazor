@@ -1084,7 +1084,15 @@ export default class ScrollToTop extends ComponentBase {
 }
 
 // Select
-export default class Select extends InputBase<string> {
+export default class Select<TOption = string> extends InputBase<string> {
+    items?: TOption[];
+    optionText: (option: TOption) => string;
+    optionKey?: (option: TOption) => unknown;
+    optionDisabled?: (option: TOption) => boolean;
+    selectedOption?: TOption | null;
+    selectedOptionChanged?: EventCallback<TOption>;
+    selectedOptionExpression?: string;
+    placeholder?: null extends TOption ? string : "a placeholder chooses null: give options whose type takes it (TOption=\"T | null\")";
     ariaLabel?: string;
     label?: string;
     help?: string;

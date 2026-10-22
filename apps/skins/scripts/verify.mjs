@@ -629,6 +629,14 @@ try {
     await choices.getByRole("button", { name: "Remove Pumpkin seeds" }).click();
     await choiceIs("toppings", "");
     say(true, "autocomplete: a chip's button removes it");
+    // A typed Select (B43): the choice is the enum member itself; the placeholder's empty choice is null.
+    const shape = choices.getByLabel("Shape");
+    await shape.selectOption({ label: "Long" });
+    await choiceIs("shape", "Long (1)");
+    say(true, "select with items: the choice is the option itself, typed (an enum member)");
+    await shape.selectOption({ label: "Any shape" });
+    await choiceIs("shape", "any");
+    say(true, "select with items: the placeholder chooses null");
     const choiceViolations = await axe(page);
     say(choiceViolations.length === 0, `axe /forms with the choices${choiceViolations.length ? `: ${choiceViolations.join(" | ")}` : ""}`);
 

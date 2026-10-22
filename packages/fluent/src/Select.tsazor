@@ -1,10 +1,13 @@
-@** A Fluent UI 2 dropdown (native select, InputBase; bind it with @bind) for a string value, with
-    an optional label; the options come from child content. Inside a FluentForm it shows the field's
-    first validation message (role="alert", aria-invalid, aria-describedby) once a submit was
-    attempted. *@
+@** A Fluent UI 2 dropdown (native select, InputBase) with an optional label, in two ways. For a string, bind it
+    with @bind-Value and give the `<option>`s as child content. For typed options (Fluent UI Blazor's
+    FluentSelect<TOption>, MudSelect<T>), give `items` and `optionText` and bind @bind-selectedOption: the choice is
+    the option itself — an enum member, a number, an object — with nothing parsed; `placeholder` adds an empty choice,
+    null (bind a `T | null` then). Inside a FluentForm it shows the field's first validation message (role="alert",
+    aria-invalid, aria-describedby) once a submit was attempted. *@
+@typeparam TOption = string
 @import { withAttributes } from "./attributes"
 @import { uniqueId } from "@tsazor/ui"
-@import { hasSubmitAttempt } from "@tsazor/ui/kit"
+@import { hasSubmitAttempt, optionAtValue, selectedOptionIndex } from "@tsazor/ui/kit"
 
 @inherits InputBase<string>
 
@@ -12,7 +15,19 @@
     @if (this.label) {
         <label class="fui-input__label" for="@this.elementId">@this.label</label>
     }
-    <select @ref="element" id="@this.elementId" value="@this.currentValue" @attributes="@this.inputAttributes" @onmousedown:preventDefault="@this.readOnly" @onkeydown="this.keepValue" @onchange="this.handleChange">@childContent</select>
+    <select @ref="element" id="@this.elementId" value="@this.selectValue" @attributes="@this.inputAttributes" @onmousedown:preventDefault="@this.readOnly" @onkeydown="this.keepValue" @onchange="this.handleChange">
+        @if (this.items !== undefined) {
+            @if (this.placeholder !== undefined || this.selectedIndex < 0) {
+                @* Without a placeholder the empty choice only shows that nothing is chosen yet: it can't be picked again. *@
+                <option value="" disabled="@(this.placeholder === undefined)" hidden="@(this.placeholder === undefined)">@(this.placeholder ?? "")</option>
+            }
+            @for (let i = 0; i < this.items.length; i++) {
+                <option value="@String(i)" disabled="@(this.optionDisabled?.(this.items[i]!) === true)">@this.optionText(this.items[i]!)</option>
+            }
+        } else {
+            @childContent
+        }
+    </select>
     @if (this.help) {
         <span class="fui-input__help" id="@this.helpId">@this.help</span>
     }
@@ -22,6 +37,22 @@
 </div>
 
 @code {
+    /** The typed options (FluentSelect's `Items`); with them the select binds `selectedOption`, not `value`. */
+    @Parameter() items?: TOption[];
+    /** An option's text (FluentSelect's `OptionText`). */
+    @Parameter() optionText: (option: TOption) => string = (option) => String(option);
+    /** What makes two options the same, for an option that is an equal copy (by default its text). */
+    @Parameter() optionKey?: (option: TOption) => unknown;
+    /** Whether an option can't be chosen (FluentSelect's `OptionDisabled`). */
+    @Parameter() optionDisabled?: (option: TOption) => boolean;
+    /** The chosen option, with `items` (bind with `@bind-selectedOption`). */
+    @Parameter() selectedOption?: TOption | null;
+    /** Raised with the option the user chose (null for the placeholder's empty choice). */
+    @Parameter() selectedOptionChanged?: EventCallback<TOption>;
+    /** The bound field in a form (`@bind-selectedOption` passes it), as an input's ValueExpression. */
+    @Parameter() selectedOptionExpression?: string;
+    /** An empty first choice with this text, which chooses null: only for options whose type takes null (`T | null`). */
+    @Parameter() placeholder?: null extends TOption ? string : "a placeholder chooses null: give options whose type takes it (TOption=\"T | null\")";
     /** Optional field label. */
     @Parameter() label?: string;
     /** A hint below the field, linked to it for screen readers. */
@@ -36,7 +67,7 @@
     @Parameter() id?: string;
     /** Overrides the select's accessible name. */
     @Parameter() ariaLabel?: string;
-    /** Option elements rendered inside the select. */
+    /** Option elements rendered inside the select (the string way). */
     @Parameter() childContent?: RenderFragment;
 
     private generatedId?: string;
@@ -49,10 +80,32 @@
         return this.elementId;
     }
 
+    /** The chosen option's place in `items`, or -1. */
+    private get selectedIndex(): number {
+        return this.items === undefined ? -1 : selectedOptionIndex(this.items, this.selectedOption, this.optionKey ?? this.optionText);
+    }
+
+    /** The native select's value: the string, or the chosen option's index ("" for none). */
+    private get selectValue(): string {
+        if (this.items === undefined) return this.currentValue ?? "";
+        const index = this.selectedIndex;
+        return index < 0 ? "" : String(index);
+    }
+
+    /** The bound field: the value's, or with `items` the chosen option's. */
+    private get fieldExpression(): string | undefined {
+        return this.items === undefined ? this.valueExpression : this.selectedOptionExpression;
+    }
+
+    private get validityClass(): string {
+        const field = this.fieldExpression;
+        return field !== undefined && this.editContext ? this.editContext.fieldCssClass(field) : "";
+    }
+
     private get wrapperClass(): string {
         const base = "fui-input-wrapper fui-select-wrapper";
-        if (this.fieldClass.includes("invalid")) return `${base} fui-input-wrapper--invalid`;
-        if (this.fieldClass) return `${base} fui-input-wrapper--valid`;
+        if (this.validityClass.includes("invalid")) return `${base} fui-input-wrapper--invalid`;
+        if (this.validityClass) return `${base} fui-input-wrapper--valid`;
         return base;
     }
 
@@ -84,18 +137,26 @@
 
     /** The message row only shows once a submit was attempted (role="alert" stays submit-bound). */
     private get message(): string {
-        if (!hasSubmitAttempt(this.editContext)) return "";
-        if (!this.editContext || !this.valueExpression) return "";
-        const messages = this.editContext.getValidationMessages(this.valueExpression);
-        return messages[0] ?? "";
+        const field = this.fieldExpression;
+        if (!hasSubmitAttempt(this.editContext) || !this.editContext || field === undefined) return "";
+        return this.editContext.getValidationMessages(field)[0] ?? "";
     }
 
     private handleChange(e: Event): void {
+        const select = e.target as HTMLSelectElement;
         if (this.readOnly) {
-            (e.target as HTMLSelectElement).value = this.currentValue ?? "";
+            select.value = this.selectValue;
             return;
         }
-        this.currentValue = (e.target as HTMLSelectElement).value as never;
+        if (this.items === undefined) {
+            this.currentValue = select.value as never;
+            return;
+        }
+        // The option itself, typed; "" is the placeholder's null.
+        const option = optionAtValue(this.items, select.value) as TOption;
+        this.selectedOption = option;
+        void this.selectedOptionChanged?.invokeAsync(option);
+        if (this.selectedOptionExpression && this.editContext) this.editContext.notifyFieldChanged(this.selectedOptionExpression, option);
     }
 
     /** readOnly: a key that would change the value does nothing; Tab, Escape and the browser's shortcuts still work. */
