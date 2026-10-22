@@ -157,8 +157,12 @@ function report(list, okText) {
 // 4. Install, build, test.
 let verified = true;
 if (flag("--verify")) {
+  // CI's order (ci.yml's check job): the packages' bins exist once they are built, so the apps link them on the
+  // second install.
   for (const [title, command] of [
     ["install", ["install", "--frozen-lockfile"]],
+    ["build of the packages", ["-r", "--filter", "./packages/*", "build"]],
+    ["install with the packages' bins", ["install", "--frozen-lockfile"]],
     ["build", ["-r", "build"]],
     ["test", ["-r", "test"]],
   ]) {
@@ -174,7 +178,7 @@ if (flag("--verify")) {
 }
 
 const green = findings.length === 0 && broken.length === 0 && verified;
-console.log(`\npublic-tree: ${green ? "GREEN" : "RED"} — ${files.length} files of ${head}${flag("--verify") ? ", installed, built and tested" : ""}`);
+console.log(`\npublic-tree: ${green ? "GREEN" : "RED"} — ${files.length} files of ${head}${flag("--verify") && verified ? ", installed, built and tested" : ""}`);
 if (!dirArg && !flag("--keep")) rmSync(out, { recursive: true, force: true });
 else console.log(`the tree: ${out}`);
 process.exit(green ? 0 : 1);
