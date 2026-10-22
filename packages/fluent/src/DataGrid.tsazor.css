@@ -182,6 +182,54 @@ th[aria-sort] .fui-datagrid__sort-indicator {
   background: var(--fui-control-fill-subtle);
 }
 
+/* A row's details (detailContent): a full-width row below it, set off from the data rows; the DetailsColumn's
+   chevron turns down while they show (and mirrors right to left). */
+.fui-datagrid__detail > td {
+  padding: var(--fui-spacing-m) var(--fui-spacing-l);
+  background: var(--fui-background-2);
+}
+
+.fui-datagrid__details-column {
+  inline-size: 1%;
+  white-space: nowrap;
+}
+
+.fui-datagrid__details-toggle {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--fui-radius-sm);
+  background: transparent;
+  color: var(--fui-foreground-2);
+  cursor: pointer;
+}
+
+.fui-datagrid__details-toggle:hover {
+  background: var(--fui-control-fill-hover);
+  color: var(--fui-foreground-1);
+}
+
+.fui-datagrid__details-toggle:focus-visible {
+  outline: 2px solid var(--fui-control-focus-stroke);
+  outline-offset: 0;
+}
+
+.fui-datagrid__details-toggle .fui-icon {
+  transition: transform 100ms ease;
+}
+
+[dir="rtl"] .fui-datagrid__details-toggle .fui-icon {
+  transform: scaleX(-1);
+}
+
+.fui-datagrid__details-toggle--open .fui-icon,
+[dir="rtl"] .fui-datagrid__details-toggle--open .fui-icon {
+  transform: rotate(90deg);
+}
+
 /* The group: a full-width header row of its own; the chevron turns with the open rows underneath. */
 .fui-datagrid__group-cell {
   padding: 0;

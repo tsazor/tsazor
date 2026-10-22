@@ -211,6 +211,7 @@ are linked. (This page also ships inside `@tsazor/runtime` as `MIGRATION.md`.)
 | MudBlazor, Radzen, Fluent UI Blazor | `@tsazor/fluent`, `@tsazor/bootstrap` ([component-libraries.md](component-libraries.md)) |
 | `<MudChart ChartType="ChartType.Bar" Width="100%" Height="300px">` | `<Chart chartType="bar" width="760" height="300">` (`@tsazor/charts`): `width`/`height` are the drawing's units — its shape — and the chart takes its container's width; MudChart's are CSS lengths of the box |
 | `QuickGrid` / `FluentDataGrid ResizableColumns`, `MudDataGrid DragDropColumnReordering` | `DataGrid resizableColumns`, `reorderableColumns` — both off by default |
+| `MudDataGrid` `<ChildRowContent>` with a `HierarchyColumn`, `MudTable` `<ChildRowContent>` with your own toggle | the DataGrid's `<DetailContent Context="item">` with a `DetailsColumn` (`rowName` names the row in its label), or your own button calling `toggleDetailsAsync(item)` on an `@ref` (`isDetailsOpen`, `detailsId` for its aria-controls). `detailsMode="single"` keeps one open, as a MudTable that shows one row's child content does; give the grid an `itemKey` so open details survive a reload |
 
 ### JavaScript interop
 

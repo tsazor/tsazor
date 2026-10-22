@@ -35,6 +35,11 @@ export const libraryTextDefaults = catalog({
   "dataGrid.selectAll": "Select all rows",
   "dataGrid.selected": "Selected",
   "dataGrid.selectRow": "Select row {row}",
+  // A DetailsColumn's toggle (MudDataGrid's HierarchyColumn): its row's name when the column gives one.
+  "dataGrid.showDetails": "Show details",
+  "dataGrid.hideDetails": "Hide details",
+  "dataGrid.showDetailsOf": "Show details of {name}",
+  "dataGrid.hideDetailsOf": "Hide details of {name}",
   "dataGrid.columnOptions": "Column options",
   "dataGrid.resize": "Resize the column (arrow keys, Shift makes a bigger step)",
   "dataGrid.reorder": "Move the column (arrow keys, or drag it)",

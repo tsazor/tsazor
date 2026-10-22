@@ -60,6 +60,35 @@
   background: rgba(var(--bs-primary-rgb), 0.05);
 }
 
+/* A row's details (detailContent): a full-width row below it, set off from the data rows; the DetailsColumn's
+   chevron turns down while they show (and mirrors right to left). */
+.tz-grid-detail > td {
+  padding: 0.75rem 1rem;
+  background: var(--bs-tertiary-bg);
+}
+
+.tz-grid-details-column {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tz-grid-details-toggle {
+  line-height: 1;
+}
+
+.tz-grid-details-toggle .bi {
+  transition: transform 100ms ease;
+}
+
+[dir="rtl"] .tz-grid-details-toggle .bi {
+  transform: scaleX(-1);
+}
+
+.tz-grid-details-toggle-open .bi,
+[dir="rtl"] .tz-grid-details-toggle-open .bi {
+  transform: rotate(90deg);
+}
+
 /* The group: a full-width header row of its own; the chevron turns with the open rows underneath. */
 .tz-grid-group-cell {
   padding: 0;

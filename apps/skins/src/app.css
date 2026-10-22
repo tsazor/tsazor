@@ -293,3 +293,15 @@ body {
 .treemap__tile--drinks text {
   fill: var(--fui-foreground-on-brand, #000);
 }
+
+/* An order's details in its grid's detail row: label and value side by side. */
+.order-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.order-details dd {
+  margin: 0;
+}

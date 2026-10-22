@@ -90,6 +90,24 @@ function findClosestScrollContainer(element: HTMLElement | null): HTMLElement | 
   return findClosestScrollContainer(element.parentElement);
 }
 
+/**
+ * Tsazor: an item may render more than one element (a DataGrid row and its detail row); the ones after its first say
+ * `data-virtualize-continuation`. Stepping item by item — an index in the window, the anchor — skips them; measuring
+ * the window takes them all, as part of their item. Without the marker every element is an item, as in Blazor.
+ */
+export function firstItemElement(spacerBefore: Element, spacerAfter: Element): Element | null {
+  let el = spacerBefore.nextElementSibling;
+  while (el && el !== spacerAfter && el.hasAttribute("data-virtualize-continuation")) el = el.nextElementSibling;
+  return el;
+}
+
+/** The element of the item after the one `el` starts (see firstItemElement). */
+export function nextItemElement(el: Element, spacerAfter: Element): Element | null {
+  let next = el.nextElementSibling;
+  while (next && next !== spacerAfter && next.hasAttribute("data-virtualize-continuation")) next = next.nextElementSibling;
+  return next;
+}
+
 /** CSS transform, zoom or scale on the list: lengths go to the component in unscaled CSS px. */
 function getScaleFactor(spacerBefore: HTMLElement, spacerAfter: HTMLElement): number {
   const el = spacerBefore.offsetHeight > 0 ? spacerBefore : spacerAfter.offsetHeight > 0 ? spacerAfter : null;
@@ -389,8 +407,8 @@ export function createVirtualizeViewport(
 
     // Correct the drift left by spacer space turned into rows of other heights.
     if (pendingScrollCorrection) {
-      let el: Element | null = spacerBefore.nextElementSibling;
-      for (let i = 0; i < scrollCorrectionItemIndex && el && el !== spacerAfter; i++) el = el.nextElementSibling;
+      let el: Element | null = firstItemElement(spacerBefore, spacerAfter);
+      for (let i = 0; i < scrollCorrectionItemIndex && el && el !== spacerAfter; i++) el = nextItemElement(el, spacerAfter);
       if (el && el !== spacerAfter) {
         pendingScrollCorrection = false;
         const delta = el.getBoundingClientRect().top - containerTop() - scrollCorrectionOffset;
@@ -611,8 +629,8 @@ export function createVirtualizeViewport(
 
   /** The top of the window's row at `localIndex`, relative to the scroll container; NaN when it isn't rendered. */
   function measureLocalChildOffset(localIndex: number): number {
-    let el: Element | null = spacerBefore.nextElementSibling;
-    for (let i = 0; i < localIndex && el && el !== spacerAfter; i++) el = el.nextElementSibling;
+    let el: Element | null = firstItemElement(spacerBefore, spacerAfter);
+    for (let i = 0; i < localIndex && el && el !== spacerAfter; i++) el = nextItemElement(el, spacerAfter);
     if (!el || el === spacerAfter) return Number.NaN;
     const top = scrollElement === document.documentElement ? 0 : scrollElement.getBoundingClientRect().top;
     return el.getBoundingClientRect().top - top;
@@ -739,7 +757,7 @@ export function createVirtualizeViewport(
     bottomTracking.wasAtBottomLastRender = isViewportAtBottom();
     const top = containerTop();
     let anchorItemIndex = 0;
-    for (let el = spacerBefore.nextElementSibling; el && el !== spacerAfter; el = el.nextElementSibling) {
+    for (let el = firstItemElement(spacerBefore, spacerAfter); el && el !== spacerAfter; el = nextItemElement(el, spacerAfter)) {
       const rect = el.getBoundingClientRect();
       if (rect.bottom > top) {
         const nativeAnchoringUnavailable = !useNativeAnchoring || (scrollContainer !== null && isAtScrollTop());
@@ -856,7 +874,7 @@ export function createVirtualizeViewport(
       if (convergence.isConverging()) return;
       const top = containerTop();
       let localIndex = 0;
-      for (let el = spacerBefore.nextElementSibling; el && el !== spacerAfter; el = el.nextElementSibling, localIndex++) {
+      for (let el = firstItemElement(spacerBefore, spacerAfter); el && el !== spacerAfter; el = nextItemElement(el, spacerAfter), localIndex++) {
         const rect = el.getBoundingClientRect();
         if (rect.bottom > top) {
           scrollCorrectionItemIndex = localIndex;

@@ -319,7 +319,7 @@ Collected from the port documents, the design documents, the handoffs and the co
 | **The first public commit** | Which files it carries (no handoffs or internal notes; THIRD-PARTY-NOTICES.md) |
 | ~~**A `Decimal` field in the skins** (BlazorHero B42)~~ | **Decided and done 2026-10-22:** a `DecimalInput` (TypeScript erases a generic `NumberInput<TValue>`'s type argument) |
 | ~~**A typed `Select`** (B43)~~ | **Decided and done 2026-10-22:** `items`, `optionText` and `@bind-selectedOption` on the same `Select` (`@typeparam TOption = string`, so the string way stays) |
-| **DataGrid detail rows** (B44) | MudTable's `ChildRowContent`, MudDataGrid's `HierarchyColumn`: the API, with virtualization and grouping |
+| ~~**DataGrid detail rows** (B44)~~ | **Decided and done 2026-10-22:** `detailContent` and a `DetailsColumn` (or `toggleDetailsAsync`), `detailsMode="single"`, with grouping and virtualization |
 | ~~**A DateRangePicker** (B45)~~ | **Decided and done 2026-10-22:** `DateRangePicker` in both skins, a `DateRange \| null` of ISO dates |
 | ~~**`@bind` by the declared type** (B46)~~ | **Decided and done 2026-10-22:** K.7/K.8's rule stays; `tsazor check` warns where it bites (TZS040, from the declared type) |
 | ~~**Cleanup**~~ | **Done 2026-10-15:** `apps/fluentcms-admin` deleted (`apps/fluentcms` replaced it); the fullstackhero containers, their images and volumes removed (owner) |

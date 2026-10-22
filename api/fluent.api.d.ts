@@ -401,12 +401,18 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     }>;
     group?: (item: TGridItem) => unknown;
     groupFormat?: (value: unknown) => string;
+    detailContent?: (item: TGridItem) => RenderFragment;
+    detailsMode: "multiple" | "single";
     scrollToItemAsync(index: number, signal?: AbortSignal): Promise<void>;
     refreshDataAsync(): Promise<void>;
     sortByColumnAsync(column: GridColumn<TGridItem>, direction?: "auto" | "ascending" | "descending"): Promise<void>;
     editRowAsync(item: TGridItem): Promise<void>;
     endEditAsync(reason: "commit" | "cancel"): Promise<void>;
     isEditing(item: TGridItem): boolean;
+    toggleDetailsAsync(item: TGridItem): Promise<void>;
+    isDetailsOpen(item: TGridItem): boolean;
+    detailsId(item: TGridItem): string;
+    closeAllDetailsAsync(): Promise<void>;
     columnsSnapshot(): GridColumnsSnapshot;
     restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void>;
     exportCsv(scope?: "all" | "page", delimiter?: "," | ";" | "	"): string;
@@ -493,6 +499,13 @@ export default class DecimalInput extends InputBase<Decimal | null> {
     parsingErrorMessage?: string;
     contentBefore?: RenderFragment;
     contentAfter?: RenderFragment;
+}
+
+// DetailsColumn
+export default class DetailsColumn<TGridItem> extends ComponentBase {
+    title: string;
+    rowName?: (item: TGridItem) => string;
+    class?: string;
 }
 
 // Dialog

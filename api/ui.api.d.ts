@@ -209,6 +209,12 @@ export declare class DataGridModel<T> {
     private readonly filters;
     private filterVersion;
     private editedRowItem;
+    private readonly openDetails;
+    private detailsKey;
+    private detailsSingle;
+    private readonly detailsPrefix;
+    private readonly detailsObjectIds;
+    private detailsNextId;
     private groupBy;
     private groupSource;
     private readonly groupCollapsed;
@@ -246,6 +252,14 @@ export declare class DataGridModel<T> {
     isEditing(item: T): boolean;
     editRow(item: T): void;
     endEdit(): void;
+    configureDetails(options: {
+        key: (item: T) => unknown;
+        single: boolean;
+    }): void;
+    isDetailsOpen(item: T): boolean;
+    toggleDetails(item: T): void;
+    detailsId(item: T): string;
+    closeAllDetails(): void;
     setGroup(groupBy: ((item: T) => unknown) | undefined): boolean;
     get group(): ((item: T) => unknown) | undefined;
     toggleGroup(value: unknown): void;
@@ -608,6 +622,10 @@ export declare const libraryTextDefaults: {
     readonly "dataGrid.selectAll": string;
     readonly "dataGrid.selected": string;
     readonly "dataGrid.selectRow": string;
+    readonly "dataGrid.showDetails": string;
+    readonly "dataGrid.hideDetails": string;
+    readonly "dataGrid.showDetailsOf": string;
+    readonly "dataGrid.hideDetailsOf": string;
     readonly "dataGrid.columnOptions": string;
     readonly "dataGrid.resize": string;
     readonly "dataGrid.reorder": string;

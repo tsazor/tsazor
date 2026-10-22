@@ -108,6 +108,11 @@ type IconValue,
                                         <td class="@this.cellClass(column)">@this.cellContent(column, row)</td>
                                     }
                                 </tr>
+                                @if (detailContent !== undefined && this.model.isDetailsOpen(row)) {
+                                    <tr @key="this.detailKeyOf(row)" id="@this.model.detailsId(row)" class="fui-datagrid__detail" data-virtualize-continuation>
+                                        <td colspan="@this.columnCount">@detailContent(row)</td>
+                                    </tr>
+                                }
                             </ItemContent>
                             <Placeholder Context="placeholder">
                                 <tr class="fui-datagrid__placeholder" aria-rowindex="@(placeholder.index + 2)" style="@(`height: ${placeholder.size}px;`)"><td colspan="@this.columnCount"></td></tr>
@@ -151,6 +156,11 @@ type IconValue,
                                 <td class="@this.cellClass(column)">@this.cellContent(column, item)</td>
                             }
                         </tr>
+                        @if (detailContent !== undefined && this.model.isDetailsOpen(item)) {
+                            <tr @key="this.detailKeyOf(item)" id="@this.model.detailsId(item)" class="fui-datagrid__detail">
+                                <td colspan="@this.columnCount">@detailContent(item)</td>
+                            </tr>
+                        }
                         }
                     }
                     }
@@ -260,6 +270,14 @@ type IconValue,
     @Parameter() group?: (item: TGridItem) => unknown;
     /** Formats a group's value for its header (default: the value as text; Date: its ISO date). */
     @Parameter() groupFormat?: (value: unknown) => string;
+    /**
+     * A row's details, in a row of their own below it while they show (MudDataGrid's ChildRowContent, MudTable's
+     * ChildRowContent): open them with a DetailsColumn's toggle or toggleDetailsAsync. In a grouped grid they stay
+     * with their row; in a virtualized one the detail row is part of its row's item (its height measured with it).
+     */
+    @Parameter() detailContent?: (item: TGridItem) => RenderFragment;
+    /** "multiple" (default): each row's details open and close by themselves; "single": opening one closes the others. */
+    @Parameter() detailsMode: "multiple" | "single" = "multiple";
 
     private readonly model = new DataGridModel<TGridItem>(() => this.stateHasChanged());
     private readonly groupName = uniqueId("fui-grid-select");
@@ -288,6 +306,7 @@ type IconValue,
         }
         const changed = this.model.setSource({ items: this.items, itemsProvider: this.itemsProvider, pagination: this.pagination });
         this.model.setGroup(this.group);
+        this.model.configureDetails({ key: (item) => this.keyOf(item), single: this.detailsMode === "single" });
         this.model.setVirtualization(this.virtualize ? () => this.virtualizer?.refreshDataAsync() ?? Promise.resolve() : undefined);
         if (changed && this.rendered && this.itemsProvider !== undefined) void this.model.refreshDataAsync();
     }
@@ -615,6 +634,37 @@ type IconValue,
     /** Whether `item` is the row in the grid's edit (your edit row's buttons render by it). */
     isEditing(item: TGridItem): boolean {
         return this.model.isEditing(item);
+    }
+
+    /** Opens or closes a row's details (`detailContent`); with `detailsMode="single"` the others close. */
+    async toggleDetailsAsync(item: TGridItem): Promise<void> {
+        if (this.detailContent === undefined) throw new Error("DataGrid: a row's details need a detailContent.");
+        this.model.toggleDetails(item);
+    }
+
+    /** Whether `item`'s details show. */
+    isDetailsOpen(item: TGridItem): boolean {
+        return this.model.isDetailsOpen(item);
+    }
+
+    /** The id of `item`'s detail row while it shows, for your own toggle's aria-controls. */
+    detailsId(item: TGridItem): string {
+        return this.model.detailsId(item);
+    }
+
+    /** Closes every row's details. */
+    async closeAllDetailsAsync(): Promise<void> {
+        this.model.closeAllDetails();
+    }
+
+    /** The detail rows' keys: one token per row key, so a detail row never takes its row's key. */
+    private readonly detailKeys = new Map<unknown, object>();
+
+    private detailKeyOf(item: TGridItem): object {
+        const key = this.keyOf(item);
+        let token = this.detailKeys.get(key);
+        if (token === undefined) this.detailKeys.set(key, (token = {}));
+        return token;
     }
 
     /** The grid's state as plain data (the columns' order and widths, the sort, the filters); the app stores it where it wants. */

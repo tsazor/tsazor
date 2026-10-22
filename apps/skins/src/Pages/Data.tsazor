@@ -6,13 +6,22 @@
 
 <section class="demo">
     <Typography Variant="h2">DataGrid</Typography>
-    <DataGrid Items="@orders" Pagination="@pagination" SelectionMode="multiple" @bind-SelectedItems="selected" AriaLabel="Orders" Striped="@true" Hover="@true">
-        <PropertyColumn Property="(o) => o.id" Title="#" Sortable="@true" />
-        <PropertyColumn Property="(o) => o.customer" Title="Customer" Sortable="@true" IsDefaultSortColumn="@true" />
-        <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Sortable="@true" />
-        <TemplateColumn Title="Status" Context="order" SortBy="@byStatus">
-            <Badge Intent="@(order.paid ? "success" : "warning")">@(order.paid ? "paid" : "open")</Badge>
-        </TemplateColumn>
+    <DataGrid Items="@orders" ItemKey="@((o: SkinOrder) => o.id)" Pagination="@pagination" SelectionMode="multiple" @bind-SelectedItems="selected" AriaLabel="Orders" Striped="@true" Hover="@true">
+        <ChildContent>
+            <DetailsColumn RowName="@((o: SkinOrder) => `order ${o.id}`)" />
+            <PropertyColumn Property="(o) => o.id" Title="#" Sortable="@true" />
+            <PropertyColumn Property="(o) => o.customer" Title="Customer" Sortable="@true" IsDefaultSortColumn="@true" />
+            <PropertyColumn Property="(o) => o.total" Title="Total" Format="(v) => v.toFixed(2)" Align="end" Sortable="@true" />
+            <TemplateColumn Title="Status" Context="order" SortBy="@byStatus">
+                <Badge Intent="@(order.paid ? "success" : "warning")">@(order.paid ? "paid" : "open")</Badge>
+            </TemplateColumn>
+        </ChildContent>
+        <DetailContent Context="order">
+            <dl class="order-details">
+                <dt>Items</dt><dd>@(order.id % 4 + 1) boxes of pastries</dd>
+                <dt>Pickup</dt><dd>@(order.paid ? "at the counter" : "after payment")</dd>
+            </dl>
+        </DetailContent>
     </DataGrid>
     <Paginator State="@pagination" />
     <Typography Variant="caption"><span class="grid-selection">@selected.length selected</span></Typography>

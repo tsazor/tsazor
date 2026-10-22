@@ -1,4 +1,5 @@
 import type { RenderFragment } from "@tsazor/runtime";
+import { uniqueId } from "./ids.js";
 
 /**
  * The DataGrid core (design-component-library.md §5, extended per
@@ -419,6 +420,13 @@ export class DataGridModel<T> {
   private readonly filters = new Map<object, GridFilterRule>();
   private filterVersion = 0;
   private editedRowItem: T | undefined;
+  /** The rows whose details show (MudDataGrid's open hierarchies), by the grid's row key. */
+  private readonly openDetails = new Set<unknown>();
+  private detailsKey: (item: T) => unknown = (item) => item;
+  private detailsSingle = false;
+  private readonly detailsPrefix = uniqueId("tsazor-details");
+  private readonly detailsObjectIds = new WeakMap<object, number>();
+  private detailsNextId = 0;
   /** The grouping (by its source, so a re-render's fresh lambda stays the same group). */
   private groupBy: ((item: T) => unknown) | undefined;
   private groupSource: string | undefined;
@@ -710,6 +718,53 @@ export class DataGridModel<T> {
   endEdit(): void {
     if (this.editedRowItem === undefined) return;
     this.editedRowItem = undefined;
+    this.onChange();
+  }
+
+  /* Detail rows ------------------------------------------------------------- */
+
+  /**
+   * How the grid tells rows apart for their details (its `itemKey`, else the row itself), and whether opening one
+   * row's details closes the others' (`detailsMode="single"`). The grid sets it on every render.
+   */
+  configureDetails(options: { key: (item: T) => unknown; single: boolean }): void {
+    this.detailsKey = options.key;
+    this.detailsSingle = options.single;
+  }
+
+  /** Whether `item` shows its details (the grid's `detailContent`). */
+  isDetailsOpen(item: T): boolean {
+    return this.openDetails.has(this.detailsKey(item));
+  }
+
+  /**
+   * Opens or closes `item`'s details; in single mode the others close. Open rows are kept by their key, so a
+   * provider's fresh row objects keep their details when the grid keys them (`itemKey`).
+   */
+  toggleDetails(item: T): void {
+    const key = this.detailsKey(item);
+    const open = !this.openDetails.has(key);
+    if (this.detailsSingle) this.openDetails.clear();
+    if (open) this.openDetails.add(key);
+    else this.openDetails.delete(key);
+    this.onChange();
+  }
+
+  /** The id of `item`'s detail row, for the toggle's `aria-controls`: the same for the same row, render after render. */
+  detailsId(item: T): string {
+    const key = this.detailsKey(item);
+    if (typeof key === "object" && key !== null) {
+      let id = this.detailsObjectIds.get(key);
+      if (id === undefined) this.detailsObjectIds.set(key, (id = this.detailsNextId++));
+      return `${this.detailsPrefix}-o${id}`;
+    }
+    return `${this.detailsPrefix}-${String(key).replace(/[^\w-]/g, "_")}`;
+  }
+
+  /** Closes every row's details. */
+  closeAllDetails(): void {
+    if (this.openDetails.size === 0) return;
+    this.openDetails.clear();
     this.onChange();
   }
 

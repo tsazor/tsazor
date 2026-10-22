@@ -783,6 +783,9 @@ entries) does not change language on a culture switch. Store the **key**, transl
     in an `ItemsProvider` list.
   - **Scrolling:** `InitialItemIndex`, and `scrollToItemAsync(index, signal?)` on an `@ref`; `refreshDataAsync()`
     asks the provider again.
+  - **An item of more than one element** (Tsazor): the elements after an item's first carry
+    `data-virtualize-continuation` — a DataGrid's detail row below its row. They are measured with their item and
+    skipped when the window steps item by item. Without the marker every element is an item, as in Blazor.
   - `ItemTemplate` and `Overscan` are Tsazor's earlier names and still work. Tsazor fixes some of Blazor 11's
     bugs (design-virtualize.md §6), for example a delete above the viewport keeps the visible rows in place.
   - In tests (`@tsazor/testing`) there is no layout. As with bUnit, a Virtualize then renders its rows up to

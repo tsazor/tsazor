@@ -5,6 +5,20 @@ Notable changes to the published `@tsazor/*` packages. A change to a package's p
 
 ## Unreleased
 
+- **DataGrid detail rows** (`@tsazor/fluent`, `@tsazor/bootstrap`, `@tsazor/ui`, `@tsazor/runtime`; MudDataGrid's
+  `ChildRowContent` and `HierarchyColumn`, MudTable's `ChildRowContent`; the BlazorHero port's B44): `detailContent`
+  (`<DetailContent Context="order">`) renders below its row, in a row of its own across every column, while the row's
+  details show. A `DetailsColumn` gives each row a toggle — aria-expanded, aria-controls on the detail row while it
+  shows, a label that names the row with `rowName` ("Show details of order 42", the library texts
+  `dataGrid.showDetailsOf`/`hideDetailsOf`); your own button uses `toggleDetailsAsync`, `isDetailsOpen` and
+  `detailsId` on an `@ref`, and `closeAllDetailsAsync` closes them all. `detailsMode="single"` keeps one open at a time.
+  Open details follow the grid's `itemKey`, so a reload of fresh row objects keeps them; they stay with their row when
+  grouped, and in a virtualized grid the detail row is part of its row's item. The kit's `DataGridModel` has
+  `configureDetails`, `toggleDetails`, `isDetailsOpen`, `detailsId` and `closeAllDetails`.
+- **Virtualize: an item of more than one element** (`@tsazor/runtime`): the elements after an item's first say
+  `data-virtualize-continuation` — measured with their item, skipped when the window steps item by item (the anchor,
+  the scroll correction, an index). Without the marker every element is an item, as in Blazor.
+
 - **TZS040: a text field bound to a number, a Decimal or a date that can be null** (`@tsazor/compiler`, `@tsazor/lsp`,
   `tsazor check`; the BlazorHero port's B46, owner 2026-10-22): a text input, a textarea or a select converts by the
   bound value's type at run time (K.7/K.8), so a field declared `number | null` (`Decimal | null`, `Date | null`) that is

@@ -392,6 +392,8 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     }>;
     group?: (item: TGridItem) => unknown;
     groupFormat?: (value: unknown) => string;
+    detailContent?: (item: TGridItem) => RenderFragment;
+    detailsMode: "multiple" | "single";
     responsive: boolean;
     virtualize: boolean;
     itemSize: number;
@@ -407,6 +409,10 @@ export default class DataGrid<TGridItem> extends ComponentBase {
     editRowAsync(item: TGridItem): Promise<void>;
     endEditAsync(reason: "commit" | "cancel"): Promise<void>;
     isEditing(item: TGridItem): boolean;
+    toggleDetailsAsync(item: TGridItem): Promise<void>;
+    isDetailsOpen(item: TGridItem): boolean;
+    detailsId(item: TGridItem): string;
+    closeAllDetailsAsync(): Promise<void>;
     columnsSnapshot(): GridColumnsSnapshot;
     restoreColumnsAsync(snapshot: GridColumnsSnapshot): Promise<void>;
     exportCsv(scope?: "all" | "page", delimiter?: "," | ";" | "	"): string;
@@ -493,6 +499,13 @@ export default class DecimalInput extends InputBase<Decimal | null> {
     parsingErrorMessage?: string;
     contentBefore?: RenderFragment;
     contentAfter?: RenderFragment;
+}
+
+// DetailsColumn
+export default class DetailsColumn<TGridItem> extends ComponentBase {
+    title: string;
+    rowName?: (item: TGridItem) => string;
+    class?: string;
 }
 
 // Dialog

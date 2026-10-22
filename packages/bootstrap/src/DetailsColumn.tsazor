@@ -1,0 +1,62 @@
+@** A Bootstrap DataGrid column of toggles for the rows' details (MudDataGrid's HierarchyColumn): a button per row that opens and
+    closes the row's detail row — the grid's `detailContent` —, with aria-expanded, and aria-controls while the details
+    show. `rowName` names the row in the toggle's label ("Show details of Order 42"), so each toggle says whose details
+    it opens. Place it inside a DataGrid with a detailContent; `detailsMode="single"` keeps one open at a time. *@
+@typeparam TGridItem
+@import { DataGridModel, libraryTexts } from "@tsazor/ui"
+@import { ChevronRight } from "./core-icons"
+@{ this.register(); }
+
+@code {
+    private readonly t = libraryTexts();
+
+    /** The grid this column belongs to. */
+    @CascadingParameter({ type: DataGridModel }) grid?: DataGridModel<TGridItem>;
+    /** The column's header text (empty by default: the toggles speak for themselves). */
+    @Parameter() title: string = "";
+    /** The row's name in the toggle's label ("Show details of {name}"). */
+    @Parameter() rowName?: (item: TGridItem) => string;
+    /** Extra classes for the column's cells. */
+    @Parameter() class?: string;
+
+    private register(): void {
+        const grid = this.grid;
+        if (grid === undefined) throw new Error("DetailsColumn must be placed inside a DataGrid.");
+        grid.addColumn({
+            owner: this,
+            title: this.title,
+            cell: (item) => this.toggle(grid, item),
+            sortable: false,
+            className: this.class === undefined ? "tz-grid-details-column" : `tz-grid-details-column ${this.class}`,
+        });
+    }
+
+    /** The row's toggle: a button with the chevron, turned down while the details show. */
+    private toggle(grid: DataGridModel<TGridItem>, item: TGridItem): RenderFragment {
+        return (b: RenderTreeBuilder) => {
+            const open = grid.isDetailsOpen(item);
+            const name = this.rowName?.(item);
+            const label = name === undefined
+                ? this.t(open ? "dataGrid.hideDetails" : "dataGrid.showDetails")
+                : this.t(open ? "dataGrid.hideDetailsOf" : "dataGrid.showDetailsOf", { name });
+            b.openElement(0, "button");
+            b.addAttribute(1, "type", "button");
+            b.addAttribute(2, "class", open ? "btn btn-sm btn-link p-1 tz-grid-details-toggle tz-grid-details-toggle-open" : "btn btn-sm btn-link p-1 tz-grid-details-toggle");
+            b.addAttribute(3, "aria-expanded", open ? "true" : "false");
+            if (open) b.addAttribute(4, "aria-controls", grid.detailsId(item));
+            b.addAttribute(5, "aria-label", label);
+            b.addEventHandler(6, "onclick", EventCallback.bind(this, () => grid.toggleDetails(item)));
+            b.openElement(7, "svg");
+            b.addAttribute(8, "class", "bi");
+            b.addAttribute(9, "width", 16);
+            b.addAttribute(10, "height", 16);
+            b.addAttribute(11, "viewBox", ChevronRight.viewBox);
+            b.addAttribute(12, "fill", "currentColor");
+            b.addAttribute(13, "aria-hidden", "true");
+            b.addAttribute(14, "focusable", "false");
+            b.addMarkupContent(15, ChevronRight.content);
+            b.closeElement();
+            b.closeElement();
+        };
+    }
+}
